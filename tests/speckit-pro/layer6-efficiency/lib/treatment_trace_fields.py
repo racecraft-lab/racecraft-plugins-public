@@ -258,7 +258,12 @@ def _reroute_disposition(
             admitted = trusted.get(evidence["qualification_evidence_id"])
             if admitted is None or canonical_bytes(admitted) != canonical_bytes(evidence):
                 return "hard_fail", ["reroute_destination_untrusted"]
-        if trace["supported_effective_model"] != event["toModel"] or trace["supported_effective_effort"] is not None:
+        if trace["supported_effective_model"] != event["toModel"]:
+            return "hard_fail", ["reroute_effective_destination_mismatch"]
+        if trace["supported_effective_effort"] is not None and (
+            canonical["effort"] is None
+            or trace["supported_effective_effort"] != canonical["effort"]
+        ):
             return "hard_fail", ["reroute_effective_destination_mismatch"]
     if set(by_event) != {event["event_id"] for event in events}: return "hard_fail", ["orphan_reroute_destination_assessment"]
     return "non_scorable_rerouted", ["service_reroute_requested_route_non_scorable"]

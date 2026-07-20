@@ -8,6 +8,21 @@ if __package__:
 else:
     from treatment_trace_fields import *
 
+
+def _effective_effort_route(
+    events: list[dict], assessments: list[dict], supported_route: dict | None,
+    canonical_routes: dict[str, dict[str, object]],
+) -> dict | None:
+    if not events:
+        return supported_route
+    if len(events) != 1:
+        return None
+    matches = [item for item in assessments if item["event_id"] == events[0]["event_id"]]
+    if len(matches) != 1:
+        return None
+    return canonical_routes.get(matches[0]["destination_candidate_route_id"])
+
+
 def _validate_trace(trace: object, profile: list[dict], environments: dict[str, dict],
                     policies: dict[str, dict], resolutions: dict[str, dict],
                     qualification: dict[str, dict], trusted: dict[str, dict],
@@ -115,9 +130,12 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
             raise ValueError("supported effective route does not bind its canonical effective model")
         if supported_route["effort"] is not None and row["supported_effective_effort"] != supported_route["effort"]:
             raise ValueError("supported effective route does not bind its canonical effective effort")
+    effective_effort_route = _effective_effort_route(
+        events, assessments, supported_route, canonical_routes,
+    )
     if row["supported_effective_effort"] is not None and (
-        supported_route is None or supported_route["effort"] is None
-        or row["supported_effective_effort"] != supported_route["effort"]
+        effective_effort_route is None or effective_effort_route["effort"] is None
+        or row["supported_effective_effort"] != effective_effort_route["effort"]
     ):
         derived_codes.append("effort_mismatch")
     if row["supported_effective_model"] is not None and (

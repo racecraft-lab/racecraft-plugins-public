@@ -2865,6 +2865,32 @@ class TreatmentContractTests(unittest.TestCase):
         )
         self.assertEqual(result["treatment_traces"][0]["treatment_disposition"], "non_scorable_rerouted")
         self.assertEqual(result["route_resolutions"][0], resolver_before_reroute)
+
+        effort_bound = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        effort_trace = effort_bound["treatment_traces"][0]
+        effort_trace["supported_effective_effort"] = "high"
+        routes = treatment_authority._canonical_routes(load_json(MANIFEST_PATH))
+        destination_route_id = effort_trace["reroute_destination_assessments"][0]["destination_candidate_route_id"]
+        routes[destination_route_id]["effort"] = "high"
+        trusted = trusted_external_qualification(effort_bound)
+        qualification = {
+            item["qualification_evidence_id"]: item
+            for item in effort_bound["qualification_evidence_registry"]
+        }
+        disposition, reasons = treatment_fields._reroute_disposition(
+            effort_trace, effort_trace["service_reroute_events"],
+            effort_trace["reroute_destination_assessments"], qualification, trusted, routes,
+        )
+        self.assertEqual((disposition, reasons), (
+            "non_scorable_rerouted", ["service_reroute_requested_route_non_scorable"],
+        ))
+        self.assertEqual(
+            treatment_bundle._effective_effort_route(
+                effort_trace["service_reroute_events"],
+                effort_trace["reroute_destination_assessments"], None, routes,
+            ),
+            routes[destination_route_id],
+        )
         for authority in ("synthetic_fixture", "missing", "mismatched"):
             with self.subTest(authority=authority):
                 bundle = make_treatment_reroute_case(copy.deepcopy(self.bundle), authority)
