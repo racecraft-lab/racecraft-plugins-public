@@ -5,7 +5,7 @@
   "changed_file_manifest": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json",
   "changed_file_manifest_base_commit": "48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-20T12:49:42Z",
+  "updated_at": "2026-07-20T13:17:05Z",
   "active_step": "Phase 7: Validate Restacked Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -357,25 +357,25 @@
       "status": "pending",
       "tasks_completed": 5,
       "tasks_total": 5,
-      "focused_tests": "86/86 pass; validator 33/33 pass; contract parity 71/71 pass",
+      "focused_tests": "87/87 pass; validator 33/33 pass; contract parity 71/71 pass",
       "privacy_scan": "10/10 pass",
       "full_suite": "2849/2849 pass",
       "docs_reference_check": "pass",
-      "independent_review": "live-range-review-9FBA02 eighth P1 review at a7cbcb60 remediated at 7f846a02; exact live-head re-review pending",
+      "independent_review": "live-range-review-9FBA02 ninth P1 review at 9ddc51c8 remediated at a324f4e9; exact live-head re-review pending",
       "independent_review_chat_id": "live-range-review-9FBA02",
       "independent_review_findings": [
-        "workflow US2 superseded checkpoint drift was not cross-validated",
-        "retention lock pathname replacement could create concurrent critical sections"
+        "workflow checkpoint claims were not marker-specific",
+        "raw-root replacement could acquire a different retention directory lock"
       ],
-      "implementation_commit": "7f846a02254c6337eb207fee7dba6a06cd485a00",
+      "implementation_commit": "a324f4e95bfddb7b37e4612879d5b57c9d2af412",
       "evidence_finalization_scope": "The following commit changes evidence metadata only; implementation and verification inputs remain those at implementation_commit.",
       "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
       "treatment_fixture_digest": "sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788",
       "replay_digest": "sha256:c8a69de446be0ba98ec876ee37c715b008e21c97dcebc067866405a9d92d5eb4",
       "marker_id": "us3",
-      "reviewability": "aggregate size-only block at 5,737 source / 5,212 nonblank non-comment lines across 25 safely subdivided modules; maximum module size is 396 lines",
-      "checkpoint": "7f846a02254c6337eb207fee7dba6a06cd485a00",
-      "updated_at": "2026-07-20T12:49:42Z"
+      "reviewability": "aggregate size-only block at 5,748 source / 5,216 nonblank non-comment lines across 26 safely subdivided modules; maximum module size is 396 lines",
+      "checkpoint": "a324f4e95bfddb7b37e4612879d5b57c9d2af412",
+      "updated_at": "2026-07-20T13:17:05Z"
     },
     "Phase 7: Implement - Integration and Polish": {
       "status": "pending",
@@ -384,28 +384,28 @@
       "tasks_total": 9,
       "completed_task_ids": ["T031", "T032", "T033", "T034", "T035", "T036", "T037", "T038", "T039"],
       "pending_task_ids": [],
-      "focused_tests": "86/86 pass; validator 33/33 pass; contract parity 71/71 pass",
+      "focused_tests": "87/87 pass; validator 33/33 pass; contract parity 71/71 pass",
       "privacy_scan": "10/10 pass",
       "full_suite": "2849/2849 pass",
       "docs_reference_check": "pass",
       "release_readiness_title_gate": "pass",
-      "changed_file_manifest": "104/104 exact",
-      "independent_review": "live-range-review-9FBA02 eighth P1 review at a7cbcb60 remediated at 7f846a02; exact live-head re-review pending",
+      "changed_file_manifest": "105/105 exact",
+      "independent_review": "live-range-review-9FBA02 ninth P1 review at 9ddc51c8 remediated at a324f4e9; exact live-head re-review pending",
       "independent_review_chat_id": "live-range-review-9FBA02",
       "independent_review_findings": [
-        "workflow US2 superseded checkpoint drift was not cross-validated",
-        "retention lock pathname replacement could create concurrent critical sections"
+        "workflow checkpoint claims were not marker-specific",
+        "raw-root replacement could acquire a different retention directory lock"
       ],
-      "updated_at": "2026-07-20T12:49:42Z"
+      "updated_at": "2026-07-20T13:17:05Z"
     }
   },
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
     "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
     "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
-    "reviewability_sha": "sha256:539e871dd7b0bcdfa16bbae9c15807eca7ffab761a5c1b867700322ab06174f1",
+    "reviewability_sha": "sha256:74eadc6cd184b5b00cd25dc5a2455b5af17bc35a7d825d58030d3cd71f183beb",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
-    "changed_file_manifest_sha": "sha256:e664915cc972e58bca950e7bdaecca46cc3a97e5e1e61ecbd521152cc3202cc1"
+    "changed_file_manifest_sha": "sha256:a5ff91aa88daa59aaa1828ffe090bf55bfe60acc7bd68ab1f7ed7d48a5f13e16"
   },
   "pr_marker_plan": {
     "schema_version": "pr-marker-plan.v2",
@@ -416,9 +416,9 @@
       "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
       "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
       "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
-      "reviewability_sha": "sha256:539e871dd7b0bcdfa16bbae9c15807eca7ffab761a5c1b867700322ab06174f1",
+      "reviewability_sha": "sha256:74eadc6cd184b5b00cd25dc5a2455b5af17bc35a7d825d58030d3cd71f183beb",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
-      "changed_file_manifest_sha": "sha256:e664915cc972e58bca950e7bdaecca46cc3a97e5e1e61ecbd521152cc3202cc1"
+      "changed_file_manifest_sha": "sha256:a5ff91aa88daa59aaa1828ffe090bf55bfe60acc7bd68ab1f7ed7d48a5f13e16"
     },
     "markers": [
       {
@@ -1102,7 +1102,7 @@
           "mode": "implementation",
           "scope": "us3",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "head_sha": "7f846a02254c6337eb207fee7dba6a06cd485a00"
+          "head_sha": "a324f4e95bfddb7b37e4612879d5b57c9d2af412"
         },
         "hazards": [
           "fixture-provenance",
@@ -1117,19 +1117,19 @@
               "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py",
               "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"
             ],
-            "module_count": 25,
+            "module_count": 26,
             "max_module_source_lines": 396
           }
         },
         "implementation_checkpoint": {
           "status": "pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json",
-          "checkpoint_evidence_sha": "sha256:a42000f12fe96638fa349de154d5caa20fadaa2ba85b4a0c6a63d453e04d2094",
-          "checkpoint_evidence_commit_sha": "a77f3edf695393157b1bc1a31153916829395e97",
+          "checkpoint_evidence_sha": "sha256:ff24287d5d573310ff8b4ae010cee2841339249b3fe661d0f9dd79b93d8c4c1d",
+          "checkpoint_evidence_commit_sha": "f16e83e22a2a344cddca220430d17bf921e5a7a5",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "verification_evidence_sha": "sha256:539e871dd7b0bcdfa16bbae9c15807eca7ffab761a5c1b867700322ab06174f1",
-          "commit_sha": "7f846a02254c6337eb207fee7dba6a06cd485a00",
-          "head_sha": "7f846a02254c6337eb207fee7dba6a06cd485a00",
+          "verification_evidence_sha": "sha256:74eadc6cd184b5b00cd25dc5a2455b5af17bc35a7d825d58030d3cd71f183beb",
+          "commit_sha": "a324f4e95bfddb7b37e4612879d5b57c9d2af412",
+          "head_sha": "a324f4e95bfddb7b37e4612879d5b57c9d2af412",
           "completed_task_ids": [
             "T026",
             "T027",
@@ -1151,8 +1151,8 @@
             "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
             "python3 tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
             "python3 -u tests/speckit-pro/run-all.py: 2849/2849 pass",
-            "release-readiness title and 104-file changed-file manifest gates: pass",
-            "RepoPrompt CE live-range-review-9FBA02 eighth P1 review at a7cbcb60 remediated at 7f846a02; exact live-head re-review pending"
+            "release-readiness title and 105-file changed-file manifest gates: pass",
+            "RepoPrompt CE live-range-review-9FBA02 ninth P1 review at 9ddc51c8 remediated at a324f4e9; exact live-head re-review pending"
           ],
           "freshness": {
             "source_fingerprint_contract": "marker-task-lines.v2",
@@ -1161,7 +1161,7 @@
             "current_tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
             "checkpoint_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
             "current_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
-              "validated_at": "2026-07-20T12:49:42Z"
+              "validated_at": "2026-07-20T13:17:05Z"
           }
         },
         "emission_mapping": {
@@ -1176,9 +1176,9 @@
             "source": "synthetic-replay-reviewability",
             "details": {
               "marker_id": "us3",
-              "actual_source_lines": 5737,
-              "actual_nonblank_noncomment_lines": 5212,
-              "production_modules": 25,
+              "actual_source_lines": 5748,
+              "actual_nonblank_noncomment_lines": 5216,
+              "production_modules": 26,
               "max_module_source_lines": 396
             }
           }
