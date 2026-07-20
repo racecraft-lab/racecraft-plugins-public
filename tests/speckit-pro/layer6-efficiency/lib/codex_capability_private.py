@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_matrix import *
+if __package__:
+    from .codex_capability_matrix import *
+else:
+    from codex_capability_matrix import *
 
 def _private_directory_descriptor(path, expected_identity):
     nofollow = getattr(os, "O_NOFOLLOW", 0)

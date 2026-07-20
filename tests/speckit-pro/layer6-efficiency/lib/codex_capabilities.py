@@ -4,14 +4,32 @@
 from __future__ import annotations
 
 import sys
+from importlib.machinery import ModuleSpec
 from pathlib import Path
+from types import ModuleType
 
 LIB_DIR = Path(__file__).resolve().parent
-if str(LIB_DIR) not in sys.path:
-    sys.path.insert(0, str(LIB_DIR))
 
-from codex_capability_cli import main
-from codex_capability_contract import (
+
+def _ensure_runtime_package() -> str:
+    package_name = "_g56r_capability_runtime"
+    package = sys.modules.get(package_name)
+    if package is None:
+        package = ModuleType(package_name)
+        package.__package__ = package_name
+        package.__path__ = [str(LIB_DIR)]
+        package.__spec__ = ModuleSpec(package_name, loader=None, is_package=True)
+        sys.modules[package_name] = package
+    elif list(getattr(package, "__path__", ())) != [str(LIB_DIR)]:
+        raise RuntimeError("capability runtime package is bound to another checkout")
+    return package_name
+
+
+if not __package__:
+    __package__ = _ensure_runtime_package()
+
+from .codex_capability_cli import main
+from .codex_capability_contract import (
     APPROVED_CANARY_EXECUTORS,
     APPROVED_LIVE_COLLECTION_METHODS,
     CANONICAL_MANIFEST_DIGEST,
@@ -34,7 +52,7 @@ from codex_capability_contract import (
     canonical_bytes,
     digest,
 )
-from codex_capability_freeze import (
+from .codex_capability_freeze import (
     build_canary_successor,
     build_freeze,
     build_runtime_snapshot,
@@ -42,14 +60,14 @@ from codex_capability_freeze import (
     validate_freeze,
     validate_tuple_decisions,
 )
-from codex_capability_io import digest_regular_file
-from codex_capability_matrix import (
+from .codex_capability_io import digest_regular_file
+from .codex_capability_matrix import (
     evaluate_surface_matrix,
     validate_canary_result,
     validate_canary_results,
     validate_surface_matrix,
 )
-from codex_capability_observations import (
+from .codex_capability_observations import (
     build_client_identity,
     build_repository_binding,
     candidate_tuples_from_manifest,
@@ -62,7 +80,7 @@ from codex_capability_observations import (
     validate_repository_binding,
     validate_work_item,
 )
-from codex_capability_private import (
+from .codex_capability_private import (
     materialize_source_capture,
     materialize_unknown_capture,
     read_content_addressed_private_file,
@@ -74,15 +92,15 @@ from codex_capability_private import (
     validate_source_capture_evidence,
     validate_unknown_observation_evidence,
 )
-from codex_capability_retention import reconcile_raw_evidence_retention
-from codex_capability_sources import (
+from .codex_capability_retention import reconcile_raw_evidence_retention
+from .codex_capability_sources import (
     normalize_source_refreshes,
     validate_manifest,
     validate_published_source_refreshes,
     validate_source_refreshes,
 )
 
-del LIB_DIR, Path, sys
+del LIB_DIR, ModuleSpec, ModuleType, Path, _ensure_runtime_package, sys
 globals().pop("annotations", None)
 
 __all__ = (

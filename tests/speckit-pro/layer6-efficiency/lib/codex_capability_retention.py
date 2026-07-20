@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_retention_records import *
+if __package__:
+    from .codex_capability_retention_records import *
+else:
+    from codex_capability_retention_records import *
 
 
 def _unlink_descriptor_relative(filename, parent_descriptor):

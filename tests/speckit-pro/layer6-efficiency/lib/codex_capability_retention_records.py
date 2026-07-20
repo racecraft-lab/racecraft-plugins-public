@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_private import *
+if __package__:
+    from .codex_capability_private import *
+else:
+    from codex_capability_private import *
 
 def _retention_now():
     return datetime.now(timezone.utc)

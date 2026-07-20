@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_retention import *
+if __package__:
+    from .codex_capability_retention import *
+else:
+    from codex_capability_retention import *
 
 def validate_tuple_decisions(decisions, *, require_snapshot=False):
     if any(item.get("decision") == "included" for item in decisions) and not isinstance(decisions, _BoundDecisionSet):

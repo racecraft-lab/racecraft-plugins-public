@@ -79,36 +79,25 @@ TASK_LINE_RE = re.compile(r"^- \[[ xX]\] (T[0-9]+)\b")
 UTC_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 WINDOWS_ABSOLUTE_PATH_RE = re.compile(r"^[A-Za-z]:")
 SUPPORTED_MARKER_PLAN_VERSIONS = frozenset({"pr-marker-plan.v1", "pr-marker-plan.v2"})
+MARKER_PLAN_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "contracts" / "pr-marker-plan.schema.json"
 MARKER_PLAN_STATUSES = frozenset({
     "planned", "checkpointing", "emission_ready", "emitting", "emitted",
     "collapsed", "stale", "invalid",
 })
-MARKER_PLAN_ROOT_FIELDS = frozenset({
-    "schema_version", "kind", "feature_id", "status", "source_fingerprint",
-    "markers", "warnings", "created_at", "updated_at",
-})
-MARKER_PLAN_REQUIRED_FIELDS = frozenset({
-    "schema_version", "kind", "feature_id", "status", "source_fingerprint",
-    "markers", "warnings",
-})
-MARKER_REQUIRED_FIELDS = frozenset({
-    "id", "review_order", "kind", "parent_marker_id", "source_boundary",
-    "task_ids", "folded_polish_task_ids", "folded_polish_target_reason",
-    "declared_files", "declared_tests", "reviewability", "hazards", "subdivision",
-    "implementation_checkpoint", "emission_mapping", "warnings",
-})
-MARKER_ALLOWED_FIELDS = MARKER_REQUIRED_FIELDS | {"title_description"}
 COMPLETE_CHECKPOINT_STRING_FIELDS = (
     "evidence_path",
     "checkpoint_evidence_sha",
     "checkpoint_evidence_commit_sha",
     "verification_evidence_path",
+    "verification_evidence_sha",
     "commit_sha",
     "head_sha",
     "completed_at",
     "summary",
 )
-COMPLETE_CHECKPOINT_LIST_FIELDS = ("completed_task_ids", "validation")
+COMPLETE_CHECKPOINT_LIST_FIELDS = (
+    "completed_task_ids", "required_verification_gate_ids", "validation",
+)
 COMPLETE_CHECKPOINT_OBJECT_FIELDS = ("freshness",)
 
 
@@ -312,56 +301,174 @@ def _marker_plan_version_errors(marker_plan: object) -> list[str]:
     return []
 
 
+def _json_values_equal(left: object, right: object) -> bool:
+    if isinstance(left, bool) or isinstance(right, bool):
+        return type(left) is type(right) and left == right
+    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+        return left == right
+    return type(left) is type(right) and left == right
+
+
+def _json_schema_type_matches(value: object, expected: object) -> bool:
+    expected_types = expected if isinstance(expected, list) else [expected]
+    checks = {
+        "array": lambda candidate: isinstance(candidate, list),
+        "boolean": lambda candidate: isinstance(candidate, bool),
+        "integer": lambda candidate: isinstance(candidate, int) and not isinstance(candidate, bool),
+        "null": lambda candidate: candidate is None,
+        "number": lambda candidate: isinstance(candidate, (int, float)) and not isinstance(candidate, bool),
+        "object": lambda candidate: isinstance(candidate, dict),
+        "string": lambda candidate: isinstance(candidate, str),
+    }
+    return any(
+        isinstance(name, str) and name in checks and checks[name](value)
+        for name in expected_types
+    )
+
+
+def _resolve_schema_reference(root: dict[str, Any], reference: object) -> object | None:
+    if not isinstance(reference, str) or not reference.startswith("#/"):
+        return None
+    resolved: object = root
+    for token in reference[2:].split("/"):
+        key = token.replace("~1", "/").replace("~0", "~")
+        if not isinstance(resolved, dict) or key not in resolved:
+            return None
+        resolved = resolved[key]
+    return resolved
+
+
+def _json_schema_matches(value: object, schema: object, root: dict[str, Any]) -> bool:
+    return not _json_schema_errors(value, schema, root, "candidate")
+
+
+def _json_schema_errors(
+    value: object,
+    schema: object,
+    root: dict[str, Any],
+    path: str,
+) -> list[str]:
+    if schema is True:
+        return []
+    if schema is False or not isinstance(schema, dict):
+        return [f"{path} is rejected by schema"]
+
+    errors: list[str] = []
+    if "$ref" in schema:
+        resolved = _resolve_schema_reference(root, schema["$ref"])
+        if resolved is None:
+            errors.append(f"{path} uses an unresolved schema reference")
+        else:
+            errors.extend(_json_schema_errors(value, resolved, root, path))
+
+    for branch in schema.get("allOf", ()) if isinstance(schema.get("allOf"), list) else ():
+        errors.extend(_json_schema_errors(value, branch, root, path))
+    any_of = schema.get("anyOf")
+    if isinstance(any_of, list) and not any(
+        _json_schema_matches(value, branch, root) for branch in any_of
+    ):
+        errors.append(f"{path} does not match any allowed schema shape")
+    one_of = schema.get("oneOf")
+    if isinstance(one_of, list) and sum(
+        _json_schema_matches(value, branch, root) for branch in one_of
+    ) != 1:
+        errors.append(f"{path} does not match exactly one allowed schema shape")
+    negated = schema.get("not")
+    if isinstance(negated, dict) and _json_schema_matches(value, negated, root):
+        errors.append(f"{path} matches a prohibited schema shape")
+    condition = schema.get("if")
+    if isinstance(condition, dict):
+        branch = schema.get("then") if _json_schema_matches(value, condition, root) else schema.get("else")
+        if branch is not None:
+            errors.extend(_json_schema_errors(value, branch, root, path))
+
+    if "const" in schema and not _json_values_equal(value, schema["const"]):
+        errors.append(f"{path} does not match its schema constant")
+    enum = schema.get("enum")
+    if isinstance(enum, list) and not any(_json_values_equal(value, item) for item in enum):
+        errors.append(f"{path} is outside its schema enum")
+    expected_type = schema.get("type")
+    if expected_type is not None and not _json_schema_type_matches(value, expected_type):
+        errors.append(f"{path} has the wrong schema type")
+        return errors
+
+    if isinstance(value, str):
+        minimum_length = schema.get("minLength")
+        if isinstance(minimum_length, int) and len(value) < minimum_length:
+            errors.append(f"{path} is shorter than allowed")
+        pattern = schema.get("pattern")
+        if isinstance(pattern, str):
+            try:
+                matched = re.search(pattern, value) is not None
+            except re.error:
+                matched = False
+            if not matched:
+                errors.append(f"{path} does not match its schema pattern")
+    if (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and isinstance(schema.get("minimum"), (int, float))
+        and value < schema["minimum"]
+    ):
+        errors.append(f"{path} is below its schema minimum")
+    if isinstance(value, list):
+        minimum_items = schema.get("minItems")
+        if isinstance(minimum_items, int) and len(value) < minimum_items:
+            errors.append(f"{path} has too few items")
+        if schema.get("uniqueItems") is True:
+            serialized = [
+                json.dumps(item, sort_keys=True, separators=(",", ":"), allow_nan=False)
+                for item in value
+            ]
+            if len(set(serialized)) != len(serialized):
+                errors.append(f"{path} must contain unique items")
+        item_schema = schema.get("items")
+        if item_schema is not None:
+            for index, item in enumerate(value):
+                errors.extend(_json_schema_errors(item, item_schema, root, f"{path}[{index}]"))
+        contains = schema.get("contains")
+        if contains is not None and not any(
+            _json_schema_matches(item, contains, root) for item in value
+        ):
+            errors.append(f"{path} does not contain a required schema item")
+    if isinstance(value, dict):
+        required = schema.get("required") if isinstance(schema.get("required"), list) else []
+        missing = sorted(
+            key for key in required if isinstance(key, str) and key not in value
+        )
+        if missing:
+            errors.append(f"{path} is missing required fields: {', '.join(missing)}")
+        minimum_properties = schema.get("minProperties")
+        if isinstance(minimum_properties, int) and len(value) < minimum_properties:
+            errors.append(f"{path} has too few properties")
+        properties = schema.get("properties") if isinstance(schema.get("properties"), dict) else {}
+        for key, child_schema in properties.items():
+            if key in value:
+                errors.extend(
+                    _json_schema_errors(value[key], child_schema, root, f"{path}.{key}")
+                )
+        additional = schema.get("additionalProperties")
+        extra = sorted(str(key) for key in value.keys() - properties.keys())
+        if additional is False and extra:
+            errors.append(f"{path} has unsupported fields: {', '.join(extra)}")
+        elif isinstance(additional, dict):
+            for key in value.keys() - properties.keys():
+                errors.extend(
+                    _json_schema_errors(value[key], additional, root, f"{path}.{key}")
+                )
+    return errors
+
+
 def _marker_plan_shape_errors(marker_plan: object) -> list[str]:
     if not isinstance(marker_plan, dict) or marker_plan.get("schema_version") != "pr-marker-plan.v2":
         return []
-    errors: list[str] = []
-    missing = sorted(MARKER_PLAN_REQUIRED_FIELDS - set(marker_plan))
-    extra = sorted(set(marker_plan) - MARKER_PLAN_ROOT_FIELDS)
-    if missing:
-        errors.append(f"pr_marker_plan is missing required fields: {', '.join(missing)}")
-    if extra:
-        errors.append(f"pr_marker_plan has unsupported fields: {', '.join(extra)}")
-    if marker_plan.get("kind") != "pr_marker_plan":
-        errors.append("pr_marker_plan.kind must be pr_marker_plan")
-    if not isinstance(marker_plan.get("feature_id"), str) or not marker_plan["feature_id"]:
-        errors.append("pr_marker_plan.feature_id is invalid")
-    if marker_plan.get("status") not in MARKER_PLAN_STATUSES:
-        errors.append("pr_marker_plan.status is invalid")
-    if not isinstance(marker_plan.get("source_fingerprint"), dict):
-        errors.append("pr_marker_plan.source_fingerprint must be an object")
-    if not isinstance(marker_plan.get("warnings"), list):
-        errors.append("pr_marker_plan.warnings must be an array")
-    markers = marker_plan.get("markers")
-    if not isinstance(markers, list) or not markers:
-        errors.append("pr_marker_plan.markers must be a non-empty array")
-        return errors
-    for index, marker in enumerate(markers):
-        if not isinstance(marker, dict):
-            errors.append(f"pr_marker_plan.markers[{index}] must be an object")
-            continue
-        missing_marker = sorted(MARKER_REQUIRED_FIELDS - set(marker))
-        extra_marker = sorted(set(marker) - MARKER_ALLOWED_FIELDS)
-        if missing_marker:
-            errors.append(
-                f"pr_marker_plan.markers[{index}] is missing required fields: {', '.join(missing_marker)}"
-            )
-        if extra_marker:
-            errors.append(
-                f"pr_marker_plan.markers[{index}] has unsupported fields: {', '.join(extra_marker)}"
-            )
-        source_boundary = marker.get("source_boundary")
-        if not isinstance(source_boundary, dict) or not {
-            "section", "start_task_id", "end_task_id",
-        }.issubset(source_boundary):
-            errors.append(f"pr_marker_plan.markers[{index}].source_boundary is incomplete")
-        for field in ("declared_files", "declared_tests", "hazards", "warnings"):
-            if not isinstance(marker.get(field), list):
-                errors.append(f"pr_marker_plan.markers[{index}].{field} must be an array")
-        for field in ("reviewability", "subdivision", "implementation_checkpoint", "emission_mapping"):
-            if not isinstance(marker.get(field), dict):
-                errors.append(f"pr_marker_plan.markers[{index}].{field} must be an object")
-    return errors
+    try:
+        schema = json.loads(read_text(MARKER_PLAN_SCHEMA_PATH))
+    except json.JSONDecodeError:
+        return ["canonical pr-marker-plan schema is malformed"]
+    if not isinstance(schema, dict):
+        return ["canonical pr-marker-plan schema root must be an object"]
+    return _json_schema_errors(marker_plan, schema, schema, "pr_marker_plan")
 
 
 def _marker_tasks_sha_text(tasks_text: str, task_ids: set[str]) -> str | None:
@@ -772,7 +879,12 @@ def validate_projection_integrity(
                             )
                     for required in COMPLETE_CHECKPOINT_LIST_FIELDS:
                         value = checkpoint.get(required)
-                        if not isinstance(value, list) or not value or not all(isinstance(item, str) and item for item in value):
+                        if (
+                            not isinstance(value, list)
+                            or not value
+                            or not all(isinstance(item, str) and item for item in value)
+                            or len(set(value)) != len(value)
+                        ):
                             checkpoint_evidence_errors.append(
                                 f"pr_marker_plan.markers[{index}].implementation_checkpoint.{required}"
                             )
@@ -804,6 +916,7 @@ def validate_projection_integrity(
                             f"pr_marker_plan.markers[{index}] checkpoint/reviewability head mismatch"
                         )
                     if repo_root:
+                        committed_verification_bytes: bytes | None = None
                         evidence_commit_sha = checkpoint.get("checkpoint_evidence_commit_sha")
                         claimed_commit_sha = checkpoint.get("commit_sha")
                         if not _git_commit_exists(repo_root, evidence_commit_sha):
@@ -831,6 +944,14 @@ def validate_projection_integrity(
                                 )
                         evidence_target = _repo_file(repo_root, checkpoint.get("evidence_path"))
                         evidence_ref = checkpoint.get("evidence_path")
+                        verification_target = _repo_file(
+                            repo_root, checkpoint.get("verification_evidence_path")
+                        )
+                        verification_ref = checkpoint.get("verification_evidence_path")
+                        if evidence_ref == verification_ref:
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}] checkpoint and verification evidence paths must differ"
+                            )
                         committed_evidence_bytes = (
                             _git_file_at_commit(
                                 repo_root,
@@ -853,6 +974,33 @@ def validate_projection_integrity(
                             if evidence_target is None or not evidence_target.is_file() or evidence_target.read_bytes() != committed_evidence_bytes:
                                 checkpoint_file_errors.append(
                                     f"pr_marker_plan.markers[{index}].implementation_checkpoint immutable evidence differs from checkpoint commit"
+                                )
+                        committed_verification_bytes = (
+                            _git_file_at_commit(
+                                repo_root,
+                                checkpoint.get("checkpoint_evidence_commit_sha"),
+                                verification_ref,
+                            )
+                            if isinstance(verification_ref, str)
+                            else None
+                        )
+                        if committed_verification_bytes is None:
+                            checkpoint_file_errors.append(
+                                f"pr_marker_plan.markers[{index}].implementation_checkpoint verification evidence is absent from checkpoint commit"
+                            )
+                        else:
+                            expected_verification_sha = _sha256_bytes(committed_verification_bytes)
+                            if checkpoint.get("verification_evidence_sha") != expected_verification_sha:
+                                checkpoint_file_errors.append(
+                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint.verification_evidence_sha"
+                                )
+                            if (
+                                verification_target is None
+                                or not verification_target.is_file()
+                                or verification_target.read_bytes() != committed_verification_bytes
+                            ):
+                                checkpoint_file_errors.append(
+                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint immutable verification evidence differs from checkpoint commit"
                                 )
 
                 evidence_ref = checkpoint.get("evidence_path")
@@ -879,6 +1027,33 @@ def validate_projection_integrity(
                         )
                     else:
                         expected_feature_id = marker_plan.get("feature_id") if isinstance(marker_plan, dict) else None
+                        required_gate_ids = _string_list(
+                            checkpoint.get("required_verification_gate_ids")
+                        )
+                        evidence_gate_ids = _string_list(
+                            evidence.get("required_verification_gate_ids")
+                        )
+                        verification = evidence.get("verification")
+                        gate_sets_match = (
+                            required_gate_ids is not None
+                            and evidence_gate_ids is not None
+                            and len(required_gate_ids) == len(set(required_gate_ids))
+                            and len(evidence_gate_ids) == len(set(evidence_gate_ids))
+                            and set(required_gate_ids) == set(evidence_gate_ids)
+                            and isinstance(verification, dict)
+                            and set(verification) == set(required_gate_ids)
+                        )
+                        passing_results = (
+                            gate_sets_match
+                            and all(
+                                isinstance(result, dict)
+                                and set(result) == {"status", "evidence"}
+                                and result.get("status") == "pass"
+                                and isinstance(result.get("evidence"), str)
+                                and bool(result["evidence"].strip())
+                                for result in verification.values()
+                            )
+                        )
                         evidence_checks = {
                             "schema_version": evidence.get("schema_version") == "marker-checkpoint.v1",
                             "feature_id": evidence.get("feature_id") == expected_feature_id,
@@ -890,11 +1065,14 @@ def validate_projection_integrity(
                                 and re.fullmatch(r"sha256:[0-9a-f]{64}", evidence["tasks_sha"]) is not None
                             ),
                             "source_fingerprint_status": evidence.get("source_fingerprint_status") == "current",
-                            "verification": (
-                                isinstance(evidence.get("verification"), dict)
-                                and bool(evidence["verification"])
-                                and not _pending_value_paths(evidence["verification"], "verification")
+                            "verification_evidence_sha": (
+                                committed_verification_bytes is not None
+                                and evidence.get("verification_evidence_sha")
+                                == checkpoint.get("verification_evidence_sha")
+                                == _sha256_bytes(committed_verification_bytes)
                             ),
+                            "required_verification_gate_ids": gate_sets_match,
+                            "verification": passing_results,
                         }
                         checkpoint_evidence_errors.extend(
                             f"pr_marker_plan.markers[{index}] checkpoint evidence {field} is invalid"
@@ -904,6 +1082,36 @@ def validate_projection_integrity(
                             checkpoint_evidence_errors.append(
                                 f"pr_marker_plan.markers[{index}] checkpoint/evidence implementation commit mismatch"
                             )
+                        checkpoint_schema = (
+                            _repo_file(
+                                repo_root,
+                                f"{feature_dir}/contracts/marker-checkpoint.schema.json",
+                            )
+                            if isinstance(feature_dir, str)
+                            else None
+                        )
+                        if checkpoint_schema is not None and checkpoint_schema.is_file():
+                            try:
+                                schema_value = json.loads(read_text(checkpoint_schema))
+                            except json.JSONDecodeError:
+                                checkpoint_evidence_errors.append(
+                                    f"pr_marker_plan.markers[{index}] checkpoint evidence schema is malformed"
+                                )
+                            else:
+                                if not isinstance(schema_value, dict):
+                                    checkpoint_evidence_errors.append(
+                                        f"pr_marker_plan.markers[{index}] checkpoint evidence schema root is invalid"
+                                    )
+                                else:
+                                    checkpoint_evidence_errors.extend(
+                                        f"pr_marker_plan.markers[{index}] checkpoint evidence schema: {error}"
+                                        for error in _json_schema_errors(
+                                            evidence,
+                                            schema_value,
+                                            schema_value,
+                                            "checkpoint_evidence",
+                                        )
+                                    )
                     if repo_root:
                         if not _git_commit_exists(repo_root, claimed_commit):
                             checkpoint_evidence_errors.append(

@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_io import *
+if __package__:
+    from .codex_capability_io import *
+else:
+    from codex_capability_io import *
 
 def _extract_claim_dependencies(source):
     bindings = set(source["claim_bindings"])

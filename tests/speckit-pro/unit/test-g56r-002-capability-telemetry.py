@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import copy
 import base64
+import importlib
+import importlib.machinery
 import importlib.util
 import itertools
 import json
@@ -16,6 +18,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import types
 import unittest
 from pathlib import Path
@@ -115,14 +118,15 @@ if treatment_spec is None or treatment_spec.loader is None:
 treatment = importlib.util.module_from_spec(treatment_spec)
 treatment_spec.loader.exec_module(treatment)
 
-capability_contract = sys.modules["codex_capability_contract"]
-capability_freeze = sys.modules["codex_capability_freeze"]
-capability_io = sys.modules["codex_capability_io"]
-capability_observations = sys.modules["codex_capability_observations"]
-capability_private = sys.modules["codex_capability_private"]
-capability_publish_io = sys.modules["codex_capability_publish_io"]
-capability_retention = sys.modules["codex_capability_retention"]
-capability_retention_records = sys.modules["codex_capability_retention_records"]
+CAPABILITY_RUNTIME_PACKAGE = "_g56r_capability_runtime"
+capability_contract = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_contract"]
+capability_freeze = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_freeze"]
+capability_io = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_io"]
+capability_observations = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_observations"]
+capability_private = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_private"]
+capability_publish_io = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_publish_io"]
+capability_retention = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_retention"]
+capability_retention_records = sys.modules[f"{CAPABILITY_RUNTIME_PACKAGE}.codex_capability_retention_records"]
 treatment_bundle = sys.modules["treatment_trace_bundle"]
 treatment_authority = sys.modules["treatment_trace_authority"]
 treatment_fields = sys.modules["treatment_trace_fields"]
@@ -3487,6 +3491,55 @@ class TreatmentReplayTests(unittest.TestCase):
             with mock.patch.object(sys, "path", [str(shadow_root), *sys.path]):
                 capability = treatment_authority._capability_module()
             self.assertTrue(callable(capability.validate_manifest))
+
+    def test_private_capability_load_never_publishes_partial_canonical_module(self) -> None:
+        missing = object()
+        original_canonical = sys.modules.pop("codex_capability_contract", missing)
+        entered = threading.Event()
+        release = threading.Event()
+        failures: list[BaseException] = []
+        original_exec_module = importlib.machinery.SourceFileLoader.exec_module
+
+        def blocking_exec_module(loader, module):
+            if (
+                module.__name__.startswith("_g56r_treatment_capability_")
+                and module.__name__.endswith(".codex_capability_contract")
+            ):
+                entered.set()
+                if not release.wait(timeout=5):
+                    raise RuntimeError("timed out waiting for concurrent canonical import")
+            return original_exec_module(loader, module)
+
+        def load_private_capability() -> None:
+            try:
+                treatment_authority._capability_module()
+            except BaseException as exc:  # pragma: no cover - asserted below
+                failures.append(exc)
+
+        worker = threading.Thread(target=load_private_capability)
+        try:
+            with mock.patch.object(
+                importlib.machinery.SourceFileLoader,
+                "exec_module",
+                new=blocking_exec_module,
+            ):
+                worker.start()
+                self.assertTrue(entered.wait(timeout=5))
+                canonical = importlib.import_module("codex_capability_contract")
+                self.assertEqual(canonical.__name__, "codex_capability_contract")
+                self.assertFalse(
+                    canonical.__name__.startswith("_g56r_treatment_capability_")
+                )
+                release.set()
+                worker.join(timeout=5)
+            self.assertFalse(worker.is_alive())
+            self.assertEqual(failures, [])
+        finally:
+            release.set()
+            worker.join(timeout=5)
+            sys.modules.pop("codex_capability_contract", None)
+            if original_canonical is not missing:
+                sys.modules["codex_capability_contract"] = original_canonical
 
     def test_eight_case_matrix_is_explicit_and_canary_never_promotes(self) -> None:
         bundle = load_json(TREATMENT_FIXTURE_PATH)

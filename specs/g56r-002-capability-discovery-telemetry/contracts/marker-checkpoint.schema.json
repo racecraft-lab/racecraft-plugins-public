@@ -52,6 +52,19 @@
       "type": "object",
       "minProperties": 1
     },
+    "verification_evidence_sha": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "required_verification_gate_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "source_fingerprint_status": {
       "enum": [
         "current",
@@ -101,12 +114,32 @@
         "required": ["status"]
       },
       "then": {
-        "required": ["completed_at"],
+        "required": [
+          "completed_at",
+          "verification_evidence_sha",
+          "required_verification_gate_ids"
+        ],
         "properties": {
-          "source_fingerprint_status": {"const": "current"}
+          "source_fingerprint_status": {"const": "current"},
+          "verification": {
+            "additionalProperties": {
+              "$ref": "#/$defs/verification_result"
+            }
+          }
         }
       }
     }
   ],
+  "$defs": {
+    "verification_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence"],
+      "properties": {
+        "status": {"const": "pass"},
+        "evidence": {"type": "string", "minLength": 1}
+      }
+    }
+  },
   "additionalProperties": true
 }

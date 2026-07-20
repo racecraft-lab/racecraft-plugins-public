@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_contract import *
+if __package__:
+    from .codex_capability_contract import *
+else:
+    from codex_capability_contract import *
 
 def _stable_file_identity(metadata):
     return (

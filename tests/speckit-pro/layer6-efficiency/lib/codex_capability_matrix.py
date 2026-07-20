@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_observations import *
+if __package__:
+    from .codex_capability_observations import *
+else:
+    from codex_capability_observations import *
 
 def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expected_integrity_digest=_UNSET):
     if any(row.get("source_admitted") for row in source_tuples) and not isinstance(source_tuples, _AuthorityTupleSet):

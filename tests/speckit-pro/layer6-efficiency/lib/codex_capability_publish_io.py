@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_freeze import *
+if __package__:
+    from .codex_capability_freeze import *
+else:
+    from codex_capability_freeze import *
 
 def _read(path, *, require_canonical=False):
     raw = _read_bounded_regular_file(path)
