@@ -32,7 +32,7 @@
     "declared_claim_exactness": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass after restack",
-    "full_suite": "pending after verification-authority remediation",
+    "full_suite": "2843/2843 pass after verification-authority remediation",
     "independent_review": "exact-range-review-905F43 verification-authority findings remediated; exact-head re-review pending"
   },
   "decomposition": {

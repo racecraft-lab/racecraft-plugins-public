@@ -874,8 +874,8 @@ For every task:
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
 | 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
-| 3 - Synthetic replay | In Progress | 5 | Verification-authority remediation passes 73/73 telemetry tests and 28/28 validator tests; the refreshed full suite and exact-head re-review are pending |
-| Polish and validation | In Progress | 9 | T031-T039 remain implemented; reference and generated artifacts are current; refreshed 80-file manifest and release-title gates are pending |
+| 3 - Synthetic replay | In Progress | 5 | Verification-authority remediation passes 73/73 telemetry tests, 28/28 validator tests, and the 2843/2843 full suite; exact-head re-review is pending |
+| Polish and validation | In Progress | 9 | T031-T039 remain implemented; reference and generated artifacts are current; the 80/80 manifest and live release-title gates pass |
 
 ### Capability Checkpoint Evidence
 
@@ -945,8 +945,8 @@ For every task:
 - Replay output: `sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda` with byte-identical two-pass verification.
 - Cases: eight exact success, null, unavailable, misdelivery, approved reroute,
   unapproved reroute, discovery-loss, and surface-disagreement classes.
-- Verification: 73/73 focused tests and 28/28 validator tests pass; the refreshed
-  full suite is pending. Generated references and byte-identical replay remain current.
+- Verification: 73/73 focused tests, 28/28 validator tests, and the 2843/2843
+  full suite pass. Generated references and byte-identical replay remain current.
 - Reviewability: aggregate size-only `block` at 5,168 source / 4,665 nonblank,
   non-comment lines across 24 safely subdivided modules; the largest module is
   381 lines and the two public entry points retain their APIs.
@@ -983,7 +983,7 @@ For every task:
   change implementation or verification inputs.
 - Folded polish: T031-T039 are complete. The final reviewability, title, and
   Historical 78-file base-to-head manifest gates passed before restack; the
-  current 80-file manifest is pending refreshed current-head validation.
+  current 80/80 manifest passes exact current-head validation.
 
 ## PR Marker Plan Evidence
 
@@ -999,7 +999,7 @@ For every task:
 | Feature spec | `sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046` |
 | Plan-declared scope | `sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f` |
 | Tasks | `sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782` |
-| Reviewability evidence | `sha256:0906bb1257699f469756705a019c1f25e126b118d94f7e68e39e28de08194759` |
+| Reviewability evidence | `sha256:0a7d7b258d2557fe8bc99240bf8d8f55932622cd6e12c361de9d8a6a6f3963d2` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 | Changed-file manifest | `sha256:b7145c5d5ffe0614bdf5e507488360854345e9feb8fa2ae1ab70e97bf4afc827` |
 
