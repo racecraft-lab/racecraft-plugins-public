@@ -8,30 +8,30 @@
     "T033", "T034", "T035", "T036", "T037", "T038", "T039"
   ],
   "implementation_baseline_sha": "0d5df513fe95a5201c422b908e2c6b7330b91552",
-  "implementation_checkpoint_sha": "3608f0dbeaca34be5585375f87e7f3ebc5feba6b",
-  "last_reviewed_head_sha": "ff0c4d57f630dcc4058e1d4180ef24aaabae277c",
+  "implementation_checkpoint_sha": "1430eb0f6414064900044cd153b8adfb7ba5917c",
+  "last_reviewed_head_sha": "00d8b1c2118b54cab59770f6b2598db98a0724d7",
   "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
   "treatment_fixture_digest": "sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53",
   "replay_digest": "sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda",
   "verification": {
     "focused_tests": "72/72 pass",
     "privacy_scan": "10/10 pass",
-    "full_suite": "2841/2841 pass",
+    "full_suite": "pending after lifecycle-evidence remediation",
     "docs_reference_check": "pass",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_offline_replay": "pass",
     "eight_class_semantic_binding": "pass",
-    "independent_critical_high_review": "exact-range-review-905F43 findings remediated; exact-head re-review pending",
+    "independent_critical_high_review": "exact-range-review-905F43 lifecycle findings remediated; exact-head re-review pending",
     "release_readiness_title_gate": "pass",
-    "changed_file_manifest": "66/66 exact"
+    "changed_file_manifest": "68-file current-head validation pending"
   },
   "source_fingerprint_contract": "marker-task-lines.v2",
   "source_fingerprint_status": "current_marker_scope",
-  "tasks_sha": "sha256:783199a2a1bb36d652d91bcac96a995313dd6f6258bec5e2248451ffd6995898",
+  "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
   "tasks_sha_scope": "checkpoint_time_whole_file",
   "current_tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
   "checkpoint_marker_tasks_sha": "sha256:937ba1ff7f1cc7a8a8886de399f16affa63059098e936b7fa8b5ba3007c43072",
   "current_marker_tasks_sha": "sha256:937ba1ff7f1cc7a8a8886de399f16affa63059098e936b7fa8b5ba3007c43072",
-  "updated_at": "2026-07-20T05:23:26Z"
+  "updated_at": "2026-07-20T05:48:22Z"
 }

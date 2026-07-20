@@ -136,6 +136,7 @@
   "source_fingerprint_status": "current",
   "tasks_sha": "sha256:b5d612ef42a570443ee397da0bda8fa604fea586efd2b58c2197c51a49066446",
   "implementation_completed_at": "2026-07-20T03:06:58Z",
+  "completed_at": "2026-07-20T03:50:24Z",
   "review_updated_at": "2026-07-20T03:50:24Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }

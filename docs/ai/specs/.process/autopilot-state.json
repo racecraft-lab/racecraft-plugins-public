@@ -5,7 +5,7 @@
   "changed_file_manifest": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json",
   "changed_file_manifest_base_commit": "48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-20T05:24:38Z",
+  "updated_at": "2026-07-20T05:48:22Z",
   "active_step": "Phase 7: Validate Restacked Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -359,24 +359,23 @@
       "tasks_total": 5,
       "focused_tests": "72/72 pass after exact-range review remediation",
       "privacy_scan": "10/10 pass",
-      "full_suite": "2841/2841 pass after exact-range review remediation",
+      "full_suite": "pending after lifecycle-evidence remediation",
       "docs_reference_check": "pass after restack",
-      "independent_review": "exact-range-review-905F43 findings remediated; exact-head re-review pending",
+      "independent_review": "exact-range-review-905F43 lifecycle findings remediated; exact-head re-review pending",
       "independent_review_chat_id": "exact-range-review-905F43",
       "independent_review_findings": [
-        "same-path stale or earlier sys.path shadow capability dependencies could cross the replay trust boundary",
-        "missing or unsupported marker-plan schema versions bypassed strict validation",
-        "the changed-file manifest base was not bound to an existing HEAD ancestor and state authority",
-        "folded polish tasks were omitted from immutable checkpoint evidence and freshness digests"
+        "strict v2 plans could omit required closed-shape lifecycle fields",
+        "complete plan checkpoints could reference pending or malformed checkpoint evidence",
+        "checkpoint evidence commits were not required to be commits in HEAD history after implementation"
       ],
-      "implementation_commit": "3608f0dbeaca34be5585375f87e7f3ebc5feba6b",
+      "implementation_commit": "1430eb0f6414064900044cd153b8adfb7ba5917c",
       "evidence_finalization_scope": "The following commit changes evidence metadata only; implementation and verification inputs remain those at implementation_commit.",
       "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
       "treatment_fixture_digest": "sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53",
       "replay_digest": "sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda",
       "marker_id": "us3",
       "reviewability": "aggregate size-only block at 5,168 source / 4,665 nonblank non-comment lines across 24 safely subdivided modules; maximum module size is 381 lines",
-      "checkpoint": "3608f0dbeaca34be5585375f87e7f3ebc5feba6b",
+      "checkpoint": "1430eb0f6414064900044cd153b8adfb7ba5917c",
       "checkpoint_evidence_commit": "a64c65edba3b790555bf1da911f2ac058dddfa26",
       "completed_at": "2026-07-20T02:15:18Z"
     },
@@ -388,17 +387,16 @@
       "pending_task_ids": [],
       "focused_tests": "72/72 pass after exact-range review remediation",
       "privacy_scan": "10/10 pass",
-      "full_suite": "2841/2841 pass after exact-range review remediation",
+      "full_suite": "pending after lifecycle-evidence remediation",
       "docs_reference_check": "pass after restack",
       "release_readiness_title_gate": "pass",
-      "changed_file_manifest": "67/67 exact after exact-range review remediation",
-      "independent_review": "exact-range-review-905F43 findings remediated; exact-head re-review pending",
+      "changed_file_manifest": "68-file current-head validation pending",
+      "independent_review": "exact-range-review-905F43 lifecycle findings remediated; exact-head re-review pending",
       "independent_review_chat_id": "exact-range-review-905F43",
       "independent_review_findings": [
-        "same-path stale or earlier sys.path shadow capability dependencies could cross the replay trust boundary",
-        "missing or unsupported marker-plan schema versions bypassed strict validation",
-        "the changed-file manifest base was not bound to an existing HEAD ancestor and state authority",
-        "folded polish tasks were omitted from immutable checkpoint evidence and freshness digests"
+        "strict v2 plans could omit required closed-shape lifecycle fields",
+        "complete plan checkpoints could reference pending or malformed checkpoint evidence",
+        "checkpoint evidence commits were not required to be commits in HEAD history after implementation"
       ],
       "completed_at": "2026-07-20T02:15:18Z"
     }
@@ -407,9 +405,9 @@
     "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
     "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
     "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
-    "reviewability_sha": "sha256:f59ca7266cabad97a81e40fea085eb9076480ac129f6c87cf3f0794b6ee29a0f",
+    "reviewability_sha": "sha256:5df9c18cef0d5465252f5f21c5ef0d1f677597569d94cfc09a81a340c8074978",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
-    "changed_file_manifest_sha": "sha256:33be41580e9af00728055f6c9b85fcb47d111eecd5d0ffc7fd6f616cedc9da0d"
+    "changed_file_manifest_sha": "sha256:6a49cc0d5ae63b6c7ae1c1b662260cc9c4e5fe0208d3f23bfa1d0ab1ce987eab"
   },
   "pr_marker_plan": {
     "schema_version": "pr-marker-plan.v2",
@@ -420,9 +418,9 @@
       "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
       "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
       "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
-      "reviewability_sha": "sha256:f59ca7266cabad97a81e40fea085eb9076480ac129f6c87cf3f0794b6ee29a0f",
+      "reviewability_sha": "sha256:5df9c18cef0d5465252f5f21c5ef0d1f677597569d94cfc09a81a340c8074978",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
-      "changed_file_manifest_sha": "sha256:33be41580e9af00728055f6c9b85fcb47d111eecd5d0ffc7fd6f616cedc9da0d"
+      "changed_file_manifest_sha": "sha256:6a49cc0d5ae63b6c7ae1c1b662260cc9c4e5fe0208d3f23bfa1d0ab1ce987eab"
     },
     "markers": [
       {
@@ -529,7 +527,12 @@
         ],
         "folded_polish_task_ids": [],
         "folded_polish_target_reason": "Treatment is independently checkpointed before replay integration.",
-        "declared_files": [],
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json"
+          }
+        ],
         "declared_tests": [
           "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"
         ],
@@ -561,7 +564,7 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
-          "checkpoint_evidence_sha": "sha256:4ae251bd0ba2e7dea865e8f14f8413269124c005d58836cd24ae83bc2cef2926",
+          "checkpoint_evidence_sha": "sha256:d305188ef88e708e2c1c37401ed3e70f10ff4c5fb56091d6da2f08ecfb858a6c",
           "checkpoint_evidence_commit_sha": "48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
           "commit_sha": "42cdf743346c880c1b7e8cb172e842a82ab6f343",
@@ -940,7 +943,7 @@
           "mode": "implementation",
           "scope": "us3",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "head_sha": "3608f0dbeaca34be5585375f87e7f3ebc5feba6b"
+          "head_sha": "1430eb0f6414064900044cd153b8adfb7ba5917c"
         },
         "hazards": [
           "fixture-provenance",
@@ -962,11 +965,11 @@
         "implementation_checkpoint": {
           "status": "pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json",
-          "checkpoint_evidence_sha": "sha256:61ad2a8011c6c2adf98ffdd167446b8c7212526c1e27c5be9168babf3c046657",
+          "checkpoint_evidence_sha": "sha256:6540e9eaba23038e122988e97d5793a82cdc22dccff254dbc2b6ca1632b70883",
           "checkpoint_evidence_commit_sha": "a64c65edba3b790555bf1da911f2ac058dddfa26",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "commit_sha": "3608f0dbeaca34be5585375f87e7f3ebc5feba6b",
-          "head_sha": "3608f0dbeaca34be5585375f87e7f3ebc5feba6b",
+          "commit_sha": "1430eb0f6414064900044cd153b8adfb7ba5917c",
+          "head_sha": "1430eb0f6414064900044cd153b8adfb7ba5917c",
           "completed_task_ids": [
             "T026",
             "T027",
@@ -983,13 +986,13 @@
             "T038",
             "T039"
           ],
-          "summary": "Current exact-range remediation source passes focused validation and awaits full-suite and exact-head re-review.",
+          "summary": "Current lifecycle-evidence remediation passes focused validation and awaits full-suite and exact-head re-review.",
           "validation": [
             "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
             "python3 tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
-            "python3 -u tests/speckit-pro/run-all.py: 2841/2841 pass",
-            "release-readiness title and 67-file changed-file manifest gates: pass",
-            "RepoPrompt CE exact-range-review-905F43 findings remediated; exact-head re-review pending"
+            "python3 -u tests/speckit-pro/run-all.py: pending after lifecycle-evidence remediation",
+            "release-readiness title and 68-file changed-file manifest gates: pending refreshed validation",
+            "RepoPrompt CE exact-range-review-905F43 lifecycle findings remediated; exact-head re-review pending"
           ],
           "freshness": {
             "source_fingerprint_contract": "marker-task-lines.v2",
@@ -998,7 +1001,7 @@
             "current_tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
             "checkpoint_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
             "current_marker_tasks_sha": "sha256:0549f955b6e0a56b176378614d3bd2c6cc014f030d63f4dfb170d99f49259995",
-            "validated_at": "2026-07-20T05:23:26Z"
+            "validated_at": "2026-07-20T05:48:22Z"
           }
         },
         "emission_mapping": {
