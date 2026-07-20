@@ -126,6 +126,7 @@ capability_io = CAPABILITY_INTERNALS["codex_capability_io"]
 capability_observations = CAPABILITY_INTERNALS["codex_capability_observations"]
 capability_private = CAPABILITY_INTERNALS["codex_capability_private"]
 capability_publish_io = CAPABILITY_INTERNALS["codex_capability_publish_io"]
+capability_capture_retention = CAPABILITY_INTERNALS["codex_capability_capture_retention"]
 capability_retention = CAPABILITY_INTERNALS["codex_capability_retention"]
 capability_retention_records = CAPABILITY_INTERNALS["codex_capability_retention_records"]
 
@@ -1536,7 +1537,7 @@ class CapabilityContractTests(unittest.TestCase):
                 [source_capture_digest, *(item["raw_evidence_digest"] for item in observations)]
             )
             self.assertEqual(pending_before_recovery["retained_evidence_digests"], expected_retained)
-            self.assertEqual(len(pending_before_recovery["pending_retention_record_digests"]), 4)
+            self.assertEqual(len(pending_before_recovery["pending_retention_record_digests"]), 8)
             with mock.patch.object(
                 capability_retention_records, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
@@ -1560,7 +1561,7 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities.publish_with_raw_evidence_retention(
                     future_freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
                 )
-            self.assertEqual(len(list((raw_root / capabilities.RETENTION_RECORDS_DIR).iterdir())), 4)
+            self.assertEqual(len(list((raw_root / capabilities.RETENTION_RECORDS_DIR).iterdir())), 8)
             failed_publication_path = Path(tmp) / "failed-candidate-freeze.json"
             later_failed_publication_path = Path(tmp) / "later-failed-candidate-freeze.json"
             failed_publication_paths = {failed_publication_path, later_failed_publication_path}
@@ -1585,8 +1586,8 @@ class CapabilityContractTests(unittest.TestCase):
                 raw_root, ROOT, "2026-08-14T23:59:59Z",
             )
             self.assertEqual(pending_after_registration["retained_evidence_digests"], expected_retained)
-            self.assertEqual(len(pending_after_registration["pending_retention_record_digests"]), 8)
-            self.assertEqual(len(pending_after_registration["retention_record_digests"]), 12)
+            self.assertEqual(len(pending_after_registration["pending_retention_record_digests"]), 12)
+            self.assertEqual(len(pending_after_registration["retention_record_digests"]), 16)
             raw_identity = capability_io._stable_directory_identity(
                 os.stat(raw_root, follow_symlinks=False),
             )
@@ -1611,8 +1612,8 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(json.loads(retention_output.read_text()), retained_report)
             self.assertEqual(retained_report["retained_evidence_digests"], expected_retained)
             self.assertTrue(set(publication["retention_record_digests"]) <= set(retained_report["retention_record_digests"]))
-            self.assertEqual(len(retained_report["retention_record_digests"]), 12)
-            self.assertEqual(len(retained_report["pending_retention_record_digests"]), 8)
+            self.assertEqual(len(retained_report["retention_record_digests"]), 16)
+            self.assertEqual(len(retained_report["pending_retention_record_digests"]), 12)
             self.assertEqual(retained_report["publication_receipt_digests"], [publication["publication_receipt_digest"]])
             self.assertEqual(source_capture_path.read_bytes(), capture_bytes)
             missing_digest = source_capture_digest
@@ -2089,6 +2090,100 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertFalse(target.exists())
             self.assertEqual(list(private_parent.iterdir()), [])
             self.assertEqual(list(moved_parent.iterdir()), [])
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_abandoned_prepublication_capture_is_recovered_and_deleted(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            raw = Path(temporary) / "raw"
+            raw.mkdir(mode=0o700)
+            capture_bytes = b"[]\n"
+            evidence_digest = capabilities.digest(capture_bytes)
+            target = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
+            registered = capability_contract._parsed_timestamp(
+                "2026-06-01T00:00:00Z", "test registration clock",
+            )
+            current = capability_contract._parsed_timestamp(
+                "2026-07-02T00:00:00Z", "test cleanup clock",
+            )
+            with mock.patch.object(
+                capability_capture_retention, "_retention_now", return_value=registered,
+            ), mock.patch.object(
+                capability_capture_retention,
+                "_store_private_record",
+                side_effect=OSError("simulated pending-record persistence failure"),
+            ), self.assertRaisesRegex(OSError, "pending-record persistence"):
+                capabilities.materialize_source_capture(raw, ROOT, capture_bytes)
+            self.assertTrue(target.is_file())
+            os.utime(
+                target,
+                (registered.timestamp(), registered.timestamp()),
+                follow_symlinks=False,
+            )
+            with mock.patch.object(
+                capability_retention, "_retention_now", return_value=current,
+            ):
+                report = capabilities.reconcile_raw_evidence_retention(
+                    raw, ROOT, apply=True,
+                )
+            self.assertEqual(report["deleted_evidence_digests"], [evidence_digest])
+            self.assertFalse(target.exists())
+            with self.assertRaisesRegex(ValueError, "after deletion"):
+                capabilities.materialize_source_capture(raw, ROOT, capture_bytes)
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_post_unlink_concurrent_rematerialization_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            raw = Path(temporary) / "raw"
+            raw.mkdir(mode=0o700)
+            capture_bytes = b"[]\n"
+            registered = capability_contract._parsed_timestamp(
+                "2026-06-01T00:00:00Z", "test registration clock",
+            )
+            current = capability_contract._parsed_timestamp(
+                "2026-07-02T00:00:00Z", "test cleanup clock",
+            )
+            with mock.patch.object(
+                capability_capture_retention, "_retention_now", return_value=registered,
+            ):
+                evidence_digest, target = capabilities.materialize_source_capture(
+                    raw, ROOT, capture_bytes,
+                )
+            original_unlink = capability_retention._unlink_descriptor_relative
+            attempts: list[BaseException] = []
+            raced = False
+
+            def rematerialize() -> None:
+                try:
+                    capabilities.materialize_source_capture(raw, ROOT, capture_bytes)
+                except BaseException as exc:  # pragma: no branch - asserted below
+                    attempts.append(exc)
+
+            def unlink_then_race(filename: str, parent_descriptor: int) -> None:
+                nonlocal raced
+                original_unlink(filename, parent_descriptor)
+                worker = threading.Thread(target=rematerialize, daemon=True)
+                worker.start(); worker.join(timeout=2)
+                if worker.is_alive():
+                    self.fail("post-unlink rematerialization blocked on retention lock")
+                raced = True
+
+            with mock.patch.object(
+                capability_retention, "_retention_now", return_value=current,
+            ), mock.patch.object(
+                capability_retention,
+                "_unlink_descriptor_relative",
+                side_effect=unlink_then_race,
+            ):
+                report = capabilities.reconcile_raw_evidence_retention(
+                    raw, ROOT, apply=True,
+                )
+            self.assertTrue(raced)
+            self.assertTrue(attempts)
+            self.assertIn("already in progress", str(attempts[0]))
+            self.assertEqual(report["deleted_evidence_digests"], [evidence_digest])
+            self.assertFalse(target.exists())
+            with self.assertRaisesRegex(ValueError, "after deletion"):
+                capabilities.materialize_source_capture(raw, ROOT, capture_bytes)
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_retention_lock_releases_descriptor_after_validation_error(self) -> None:

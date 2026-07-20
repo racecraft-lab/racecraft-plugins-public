@@ -4,9 +4,9 @@
 from __future__ import annotations
 
 if __package__:
-    from .codex_capability_retention_records import *
+    from .codex_capability_capture_retention import *
 else:
-    from codex_capability_retention_records import *
+    from codex_capability_capture_retention import *
 
 
 def _unlink_descriptor_relative(filename, parent_descriptor):
@@ -240,6 +240,9 @@ def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=N
 
 
 def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root, as_of, current, *, apply):
+    _register_untracked_raw_evidence_locked(
+        raw, raw_identity, repository_root, apply=apply,
+    )
     all_retention_records = [(_validate_retention_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / RETENTION_RECORDS_DIR, repository_root, "retention record")]
     retention_by_digest = {record_digest: record for record, record_digest in all_retention_records}
     publication_receipts = [(_validate_publication_receipt(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / PUBLICATION_RECEIPTS_DIR, repository_root, "publication receipt")]

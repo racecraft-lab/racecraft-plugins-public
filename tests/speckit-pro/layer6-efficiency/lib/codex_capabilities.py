@@ -22,6 +22,7 @@ def _load_runtime_dependencies() -> dict[str, object]:
         "codex_capability_matrix",
         "codex_capability_private",
         "codex_capability_retention_records",
+        "codex_capability_capture_retention",
         "codex_capability_retention",
         "codex_capability_freeze",
         "codex_capability_publish_io",
@@ -116,12 +117,15 @@ _EXPORTS_BY_MODULE = (
     (
         "codex_capability_private",
         (
-            "materialize_source_capture", "materialize_unknown_capture",
             "read_content_addressed_private_file", "read_private_external_file",
             "validate_canary_evidence", "validate_content_addressed_private_file",
             "validate_private_external_file", "validate_raw_evidence_root",
             "validate_source_capture_evidence", "validate_unknown_observation_evidence",
         ),
+    ),
+    (
+        "codex_capability_capture_retention",
+        ("materialize_source_capture", "materialize_unknown_capture"),
     ),
     ("codex_capability_retention", ("reconcile_raw_evidence_retention",)),
     (
