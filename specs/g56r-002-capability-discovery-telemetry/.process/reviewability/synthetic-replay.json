@@ -5,7 +5,7 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "3df135e624b6c001c691d85a72dfe1588f5ee095",
+  "head_sha": "af4f8832764b46247c4d37cd4d2458757923a083",
   "reason_class": "aggregate_size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
@@ -19,7 +19,7 @@
   },
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "67/67 pass",
+    "focused_tests": "68/68 pass",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_fixture_serialization": "pass",
@@ -30,7 +30,7 @@
     "declared_claim_exactness": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass",
-    "full_suite": "2834/2834 pass",
+    "full_suite": "2839/2839 pass",
     "independent_review": "findings_open: untitled-chat-B2AE31"
   },
   "decomposition": {

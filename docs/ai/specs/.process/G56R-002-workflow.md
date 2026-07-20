@@ -928,13 +928,13 @@ For every task:
 
 ### Synthetic Replay Checkpoint Evidence
 
-- Reviewed remediation head: `3df135e624b6c001c691d85a72dfe1588f5ee095`
+- Reviewed remediation source head: `af4f8832764b46247c4d37cd4d2458757923a083`
 - Capability fixture: `sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a`.
 - Treatment fixture: `sha256:3983dc1d4efe42542ffe0cb72830c970d24cecf490ddfe0c93e24be749ffaa53`.
 - Replay output: `sha256:07ab78a7c34ef07957abb66c764be3c66fd47f1b296b141b8969a2e3a2c9ecda` with byte-identical two-pass verification.
 - Cases: eight exact success, null, unavailable, misdelivery, approved reroute,
   unapproved reroute, discovery-loss, and surface-disagreement classes.
-- Verification: 67/67 focused tests, 10/10 privacy scan, 2834/2834 full
+- Verification: 68/68 focused tests, 10/10 privacy scan, 2839/2839 full
   suite, and current generated references.
 - Reviewability: aggregate size-only `block` at 4,935 source / 4,454 nonblank,
   non-comment lines across 23 safely subdivided modules; the largest module is
@@ -945,6 +945,8 @@ For every task:
   compatibility, unsafe path/timestamp inputs, and incomplete module
   documentation. The current remediation addresses all seven and remains
   pending until its exact source-bearing head returns `NO FINDINGS`.
+- Evidence finalization after the source head is metadata-only; it does not
+  change implementation or verification inputs.
 - Folded polish: T031-T037 are complete; T038 and T039 are intentionally
   unchecked until reviewability evidence and release readiness are rerun for
   the same clean head.
@@ -963,7 +965,7 @@ For every task:
 | Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
 | Plan-declared scope | `sha256:14ba3fca340c75af86e370254e0c3fbc72f6615daad3c5ee550dc1b21f168cf4` |
 | Tasks | `sha256:216b86cb34bbcc40c7f6e23b153379ec047616885f89ae6c11a41674df68b447` |
-| Reviewability evidence | `sha256:9254705099259c898090acdcaf2f77310ede55866cbc853a68fa43244d862f12` |
+| Reviewability evidence | `sha256:02bfbb1ce7b694323f14d85476621a6e6576768c04c7dbac7eeac2d3232cbaf6` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 | Changed-file manifest | `sha256:6768d7be78fab50abdc6d33c6ac38212f2745bde89b7410b58dc71cee9814893` |
 
@@ -971,7 +973,7 @@ For every task:
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `1190e3c1205744fd50afb37a12c0f9527ad5ee53` | Only T026-T030 replay growth remains authorized |
-| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Checkpointing from reviewed head `3df135e624b6c001c691d85a72dfe1588f5ee095` | T038-T039 finalization remains open |
+| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Checkpointing from source head `af4f8832764b46247c4d37cd4d2458757923a083` | T038-T039 finalization remains open |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
