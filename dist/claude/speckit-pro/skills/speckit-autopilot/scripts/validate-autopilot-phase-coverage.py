@@ -79,6 +79,25 @@ TASK_LINE_RE = re.compile(r"^- \[[ xX]\] (T[0-9]+)\b")
 UTC_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 WINDOWS_ABSOLUTE_PATH_RE = re.compile(r"^[A-Za-z]:")
 SUPPORTED_MARKER_PLAN_VERSIONS = frozenset({"pr-marker-plan.v1", "pr-marker-plan.v2"})
+MARKER_PLAN_STATUSES = frozenset({
+    "planned", "checkpointing", "emission_ready", "emitting", "emitted",
+    "collapsed", "stale", "invalid",
+})
+MARKER_PLAN_ROOT_FIELDS = frozenset({
+    "schema_version", "kind", "feature_id", "status", "source_fingerprint",
+    "markers", "warnings", "created_at", "updated_at",
+})
+MARKER_PLAN_REQUIRED_FIELDS = frozenset({
+    "schema_version", "kind", "feature_id", "status", "source_fingerprint",
+    "markers", "warnings",
+})
+MARKER_REQUIRED_FIELDS = frozenset({
+    "id", "review_order", "kind", "parent_marker_id", "source_boundary",
+    "task_ids", "folded_polish_task_ids", "folded_polish_target_reason",
+    "declared_files", "declared_tests", "reviewability", "hazards", "subdivision",
+    "implementation_checkpoint", "emission_mapping", "warnings",
+})
+MARKER_ALLOWED_FIELDS = MARKER_REQUIRED_FIELDS | {"title_description"}
 COMPLETE_CHECKPOINT_STRING_FIELDS = (
     "evidence_path",
     "checkpoint_evidence_sha",
@@ -293,6 +312,58 @@ def _marker_plan_version_errors(marker_plan: object) -> list[str]:
     return []
 
 
+def _marker_plan_shape_errors(marker_plan: object) -> list[str]:
+    if not isinstance(marker_plan, dict) or marker_plan.get("schema_version") != "pr-marker-plan.v2":
+        return []
+    errors: list[str] = []
+    missing = sorted(MARKER_PLAN_REQUIRED_FIELDS - set(marker_plan))
+    extra = sorted(set(marker_plan) - MARKER_PLAN_ROOT_FIELDS)
+    if missing:
+        errors.append(f"pr_marker_plan is missing required fields: {', '.join(missing)}")
+    if extra:
+        errors.append(f"pr_marker_plan has unsupported fields: {', '.join(extra)}")
+    if marker_plan.get("kind") != "pr_marker_plan":
+        errors.append("pr_marker_plan.kind must be pr_marker_plan")
+    if not isinstance(marker_plan.get("feature_id"), str) or not marker_plan["feature_id"]:
+        errors.append("pr_marker_plan.feature_id is invalid")
+    if marker_plan.get("status") not in MARKER_PLAN_STATUSES:
+        errors.append("pr_marker_plan.status is invalid")
+    if not isinstance(marker_plan.get("source_fingerprint"), dict):
+        errors.append("pr_marker_plan.source_fingerprint must be an object")
+    if not isinstance(marker_plan.get("warnings"), list):
+        errors.append("pr_marker_plan.warnings must be an array")
+    markers = marker_plan.get("markers")
+    if not isinstance(markers, list) or not markers:
+        errors.append("pr_marker_plan.markers must be a non-empty array")
+        return errors
+    for index, marker in enumerate(markers):
+        if not isinstance(marker, dict):
+            errors.append(f"pr_marker_plan.markers[{index}] must be an object")
+            continue
+        missing_marker = sorted(MARKER_REQUIRED_FIELDS - set(marker))
+        extra_marker = sorted(set(marker) - MARKER_ALLOWED_FIELDS)
+        if missing_marker:
+            errors.append(
+                f"pr_marker_plan.markers[{index}] is missing required fields: {', '.join(missing_marker)}"
+            )
+        if extra_marker:
+            errors.append(
+                f"pr_marker_plan.markers[{index}] has unsupported fields: {', '.join(extra_marker)}"
+            )
+        source_boundary = marker.get("source_boundary")
+        if not isinstance(source_boundary, dict) or not {
+            "section", "start_task_id", "end_task_id",
+        }.issubset(source_boundary):
+            errors.append(f"pr_marker_plan.markers[{index}].source_boundary is incomplete")
+        for field in ("declared_files", "declared_tests", "hazards", "warnings"):
+            if not isinstance(marker.get(field), list):
+                errors.append(f"pr_marker_plan.markers[{index}].{field} must be an array")
+        for field in ("reviewability", "subdivision", "implementation_checkpoint", "emission_mapping"):
+            if not isinstance(marker.get(field), dict):
+                errors.append(f"pr_marker_plan.markers[{index}].{field} must be an object")
+    return errors
+
+
 def _marker_tasks_sha_text(tasks_text: str, task_ids: set[str]) -> str | None:
     selected: list[str] = []
     found: set[str] = set()
@@ -334,14 +405,18 @@ def _git_commit_exists(repo_root: Path, commit_sha: object) -> bool:
     return completed.returncode == 0
 
 
-def _git_commit_is_ancestor_of_head(repo_root: Path, commit_sha: str) -> bool:
+def _git_commit_is_ancestor(repo_root: Path, ancestor_sha: str, descendant_sha: str) -> bool:
     completed = subprocess.run(
-        ["git", "-C", str(repo_root), "merge-base", "--is-ancestor", commit_sha, "HEAD"],
+        ["git", "-C", str(repo_root), "merge-base", "--is-ancestor", ancestor_sha, descendant_sha],
         capture_output=True,
         shell=False,
         check=False,
     )
     return completed.returncode == 0
+
+
+def _git_commit_is_ancestor_of_head(repo_root: Path, commit_sha: str) -> bool:
+    return _git_commit_is_ancestor(repo_root, commit_sha, "HEAD")
 
 
 def _load_json_object(path: Path) -> dict[str, Any] | None:
@@ -547,6 +622,7 @@ def validate_projection_integrity(
         and marker_plan.get("schema_version") == "pr-marker-plan.v2"
     )
     marker_plan_status_errors.extend(_marker_plan_version_errors(marker_plan))
+    marker_plan_status_errors.extend(_marker_plan_shape_errors(marker_plan))
 
     phases = phase_results if isinstance(phase_results, dict) else {}
     for phase_name, raw_result in phases.items():
@@ -728,6 +804,25 @@ def validate_projection_integrity(
                             f"pr_marker_plan.markers[{index}] checkpoint/reviewability head mismatch"
                         )
                     if repo_root:
+                        evidence_commit_sha = checkpoint.get("checkpoint_evidence_commit_sha")
+                        claimed_commit_sha = checkpoint.get("commit_sha")
+                        if not _git_commit_exists(repo_root, evidence_commit_sha):
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_commit_sha is not an existing commit"
+                            )
+                        elif not _git_commit_is_ancestor_of_head(repo_root, evidence_commit_sha):
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_commit_sha is not an ancestor of HEAD"
+                            )
+                        elif (
+                            _git_commit_exists(repo_root, claimed_commit_sha)
+                            and not _git_commit_is_ancestor(
+                                repo_root, claimed_commit_sha, evidence_commit_sha,
+                            )
+                        ):
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}] implementation commit is not an ancestor of evidence commit"
+                            )
                         for required in ("evidence_path", "verification_evidence_path"):
                             target = _repo_file(repo_root, checkpoint.get(required))
                             if target is None or not target.is_file():
@@ -776,12 +871,39 @@ def validate_projection_integrity(
                 if checkpoint_status != "complete":
                     evidence_path = _repo_file(repo_root, evidence_ref) if repo_root else None
                     evidence = _load_json_object(evidence_path) if evidence_path and evidence_path.is_file() else None
-                if checkpoint_status == "complete" and strict_contract and isinstance(evidence, dict):
+                if checkpoint_status == "complete" and strict_contract and repo_root:
                     claimed_commit = checkpoint.get("commit_sha")
-                    if evidence.get("implementation_checkpoint_sha") != claimed_commit:
+                    if not isinstance(evidence, dict):
                         checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}] checkpoint/evidence implementation commit mismatch"
+                            f"pr_marker_plan.markers[{index}] checkpoint evidence must be a JSON object"
                         )
+                    else:
+                        expected_feature_id = marker_plan.get("feature_id") if isinstance(marker_plan, dict) else None
+                        evidence_checks = {
+                            "schema_version": evidence.get("schema_version") == "marker-checkpoint.v1",
+                            "feature_id": evidence.get("feature_id") == expected_feature_id,
+                            "marker_id": evidence.get("marker_id") == marker_id,
+                            "status": evidence.get("status") == "complete",
+                            "completed_at": _is_utc_timestamp(evidence.get("completed_at")),
+                            "tasks_sha": (
+                                isinstance(evidence.get("tasks_sha"), str)
+                                and re.fullmatch(r"sha256:[0-9a-f]{64}", evidence["tasks_sha"]) is not None
+                            ),
+                            "source_fingerprint_status": evidence.get("source_fingerprint_status") == "current",
+                            "verification": (
+                                isinstance(evidence.get("verification"), dict)
+                                and bool(evidence["verification"])
+                                and not _pending_value_paths(evidence["verification"], "verification")
+                            ),
+                        }
+                        checkpoint_evidence_errors.extend(
+                            f"pr_marker_plan.markers[{index}] checkpoint evidence {field} is invalid"
+                            for field, passed in evidence_checks.items() if not passed
+                        )
+                        if evidence.get("implementation_checkpoint_sha") != claimed_commit:
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}] checkpoint/evidence implementation commit mismatch"
+                            )
                     if repo_root:
                         if not _git_commit_exists(repo_root, claimed_commit):
                             checkpoint_evidence_errors.append(
