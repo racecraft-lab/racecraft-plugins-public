@@ -2186,6 +2186,60 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities.materialize_source_capture(raw, ROOT, capture_bytes)
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_private_materializer_aliases_enforce_retention_after_deletion(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            raw = Path(temporary) / "raw"
+            raw.mkdir(mode=0o700)
+            capture_bytes = b"[]\n"
+            repository = capabilities.build_repository_binding("0" * 40, "1" * 40)
+            work_item = {"kind": "fixture", "id": "G56R-002-PRIVATE-ALIAS"}
+            registered = capability_contract._parsed_timestamp(
+                "2026-06-01T00:00:00Z", "test registration clock",
+            )
+            current = capability_contract._parsed_timestamp(
+                "2026-07-02T00:00:00Z", "test cleanup clock",
+            )
+            with mock.patch.object(
+                capability_capture_retention, "_retention_now", return_value=registered,
+            ):
+                source_digest, source_target = capability_private.materialize_source_capture(
+                    raw, ROOT, capture_bytes,
+                )
+                unknown_digest, unknown_target = capability_private.materialize_unknown_capture(
+                    raw,
+                    ROOT,
+                    "cli",
+                    self.identity["client_identity_id"],
+                    repository,
+                    work_item,
+                    "2026-06-01T00:00:00Z",
+                )
+            with mock.patch.object(
+                capability_retention, "_retention_now", return_value=current,
+            ):
+                report = capabilities.reconcile_raw_evidence_retention(
+                    raw, ROOT, apply=True,
+                )
+            self.assertEqual(
+                set(report["deleted_evidence_digests"]),
+                {source_digest, unknown_digest},
+            )
+            self.assertFalse(source_target.exists())
+            self.assertFalse(unknown_target.exists())
+            with self.assertRaisesRegex(ValueError, "after deletion"):
+                capability_private.materialize_source_capture(raw, ROOT, capture_bytes)
+            with self.assertRaisesRegex(ValueError, "after deletion"):
+                capability_private.materialize_unknown_capture(
+                    raw,
+                    ROOT,
+                    "cli",
+                    self.identity["client_identity_id"],
+                    repository,
+                    work_item,
+                    "2026-06-01T00:00:00Z",
+                )
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_retention_lock_releases_descriptor_after_validation_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             raw_root = Path(tmp) / "raw"

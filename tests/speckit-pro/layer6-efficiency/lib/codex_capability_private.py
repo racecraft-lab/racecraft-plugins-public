@@ -214,26 +214,29 @@ def read_content_addressed_private_file(path, repository_root, label):
     return resolved, raw
 
 
+_retained_source_capture_authority = None
+_retained_unknown_capture_authority = None
+
+
+def _bind_capture_retention_authority(source_authority, unknown_authority):
+    global _retained_source_capture_authority, _retained_unknown_capture_authority
+    if not callable(source_authority) or not callable(unknown_authority):
+        raise TypeError("capture retention authorities must be callable")
+    if (
+        _retained_source_capture_authority not in (None, source_authority)
+        or _retained_unknown_capture_authority not in (None, unknown_authority)
+    ):
+        raise RuntimeError("capture retention authority is already bound")
+    _retained_source_capture_authority = source_authority
+    _retained_unknown_capture_authority = unknown_authority
+
+
 def materialize_source_capture(raw_root, repository_root, capture_bytes):
-    captured = _parse_json_bytes(capture_bytes)
-    if not isinstance(captured, list):
-        raise ValueError("captured refresh must be a JSON list")
-    raw, raw_identity = _validated_raw_evidence_root_binding(raw_root, repository_root)
-    capture_digest = digest(capture_bytes)
-    target = raw / f"{capture_digest.removeprefix('sha256:')}.json"
-    if target.exists():
-        _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
-        if retained != capture_bytes: raise ValueError("content-addressed source capture bytes disagree")
-    else:
-        _write_private_bytes(
-            target, capture_bytes, append_only=True,
-            expected_parent_identity=raw_identity,
-        )
-    validate_raw_evidence_root(raw, repository_root)
-    _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
-    if retained != capture_bytes:
-        raise ValueError("source capture was not retained under its content identity")
-    return capture_digest, target
+    if _retained_source_capture_authority is None:
+        raise RuntimeError("capture retention authority is not initialized")
+    return _retained_source_capture_authority(
+        raw_root, repository_root, capture_bytes,
+    )
 
 
 def validate_source_capture_evidence(manifest, refreshes, raw_root, repository_root):
@@ -264,20 +267,17 @@ def validate_canary_evidence(raw_root, repository_root, result):
 
 
 def materialize_unknown_capture(raw_root, repository_root, surface, client_identity_id, repository_binding, work_item, captured_at):
-    raw, raw_identity = _validated_raw_evidence_root_binding(raw_root, repository_root)
-    record = _unknown_capture_record(surface, client_identity_id, repository_binding, work_item, captured_at)
-    stored = canonical_bytes(record) + b"\n"; evidence = digest(stored)
-    target = raw / f"{evidence.removeprefix('sha256:')}.json"
-    if target.exists():
-        _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
-        if retained != stored: raise ValueError("content-addressed unknown capture bytes disagree")
-    else:
-        _write(target, record, private=True, expected_parent_identity=raw_identity)
-    validate_raw_evidence_root(raw, repository_root)
-    _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
-    if retained != stored or digest(retained) != evidence:
-        raise ValueError("unknown capture was not retained under its content identity")
-    return evidence, target
+    if _retained_unknown_capture_authority is None:
+        raise RuntimeError("capture retention authority is not initialized")
+    return _retained_unknown_capture_authority(
+        raw_root,
+        repository_root,
+        surface,
+        client_identity_id,
+        repository_binding,
+        work_item,
+        captured_at,
+    )
 
 
 def validate_unknown_observation_evidence(observation, raw_root, repository_root):

@@ -9,8 +9,6 @@ else:
     from codex_capability_retention_records import *
 
 
-_materialize_source_capture_unlocked = materialize_source_capture
-_materialize_unknown_capture_unlocked = materialize_unknown_capture
 _PENDING_CAPTURE_FREEZE_ID = digest(b"G56R-002 pending raw evidence capture v1")
 
 
@@ -141,6 +139,9 @@ def _register_untracked_raw_evidence_locked(
 
 
 def materialize_source_capture(raw_root, repository_root, capture_bytes):
+    captured = _parse_json_bytes(capture_bytes)
+    if not isinstance(captured, list):
+        raise ValueError("captured refresh must be a JSON list")
     raw, raw_identity = _validated_raw_evidence_root_binding(
         raw_root, repository_root,
     )
@@ -148,15 +149,30 @@ def materialize_source_capture(raw_root, repository_root, capture_bytes):
     with _retention_lock(raw, raw_identity):
         if capture_digest in _deletion_started_evidence_digests(raw, repository_root):
             raise ValueError("raw evidence cannot be materialized after deletion has begun")
-        retained_digest, target = _materialize_source_capture_unlocked(
-            raw, repository_root, capture_bytes,
+        target = raw / f"{capture_digest.removeprefix('sha256:')}.json"
+        if target.exists():
+            _, retained = read_content_addressed_private_file(
+                target, repository_root, "source capture",
+            )
+            if retained != capture_bytes:
+                raise ValueError("content-addressed source capture bytes disagree")
+        else:
+            _write_private_bytes(
+                target,
+                capture_bytes,
+                append_only=True,
+                expected_parent_identity=raw_identity,
+            )
+        validate_raw_evidence_root(raw, repository_root)
+        _, retained = read_content_addressed_private_file(
+            target, repository_root, "source capture",
         )
-        if retained_digest != capture_digest:
-            raise ValueError("source capture identity changed during materialization")
+        if retained != capture_bytes:
+            raise ValueError("source capture was not retained under its content identity")
         _register_pending_capture_locked(
             capture_digest, raw, raw_identity, repository_root,
         )
-        return retained_digest, target
+        return capture_digest, target
 
 
 def materialize_unknown_capture(
@@ -173,21 +189,36 @@ def materialize_unknown_capture(
     with _retention_lock(raw, raw_identity):
         if evidence_digest in _deletion_started_evidence_digests(raw, repository_root):
             raise ValueError("raw evidence cannot be materialized after deletion has begun")
-        retained_digest, target = _materialize_unknown_capture_unlocked(
-            raw,
-            repository_root,
-            surface,
-            client_identity_id,
-            repository_binding,
-            work_item,
-            captured_at,
+        stored = canonical_bytes(record) + b"\n"
+        target = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
+        if target.exists():
+            _, retained = read_content_addressed_private_file(
+                target, repository_root, "unknown capture",
+            )
+            if retained != stored:
+                raise ValueError("content-addressed unknown capture bytes disagree")
+        else:
+            _write(
+                target,
+                record,
+                private=True,
+                expected_parent_identity=raw_identity,
+            )
+        validate_raw_evidence_root(raw, repository_root)
+        _, retained = read_content_addressed_private_file(
+            target, repository_root, "unknown capture",
         )
-        if retained_digest != evidence_digest:
-            raise ValueError("unknown capture identity changed during materialization")
+        if retained != stored or digest(retained) != evidence_digest:
+            raise ValueError("unknown capture was not retained under its content identity")
         _register_pending_capture_locked(
             evidence_digest, raw, raw_identity, repository_root,
         )
-        return retained_digest, target
+        return evidence_digest, target
+
+
+_bind_capture_retention_authority(
+    materialize_source_capture, materialize_unknown_capture,
+)
 
 
 __all__ = [name for name in globals() if not name.startswith("__")]
