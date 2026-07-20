@@ -38,35 +38,35 @@ TREATMENT_FIXTURE_PATH = "tests/speckit-pro/unit/fixtures/capability-treatment-r
 REPLAY_DIGEST_MANIFEST_PATH = "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json"
 REPLAY_FIXTURE_PATHS = (CAPABILITY_FIXTURE_PATH, TREATMENT_FIXTURE_PATH)
 REPLAY_CASES = (
-    ("TRACE-SUCCESS", "success", "unknown", ("effective_treatment_unknown",), None, "sha256:e8b73e9a64580eb85b0fc482c702f629b7f368de8dbb1e89d5e4e37cfc5766f2"),
-    ("TRACE-EXPLICIT-NULL", "explicit_null", "unknown", ("effective_treatment_unknown",), None, "sha256:21067534aafd4cd11c7641f78b21b87d0a60f16a601b1b523baebc88e3d76e69"),
-    ("TRACE-UNAVAILABLE", "unavailable", "unknown", ("effective_treatment_unknown",), None, "sha256:a1547f4a1eeaf32e173e8275305997c69b8336ce4cd4153e5c981351bff0172d"),
-    ("TRACE-MISDELIVERY", "misdelivery", "hard_fail", ("agent_mismatch", "effective_treatment_unknown"), None, "sha256:f6ec4e7b3f705d65c2bd46532abfda661c51398499ae0d73720271eeabab4cae"),
-    ("TRACE-APPROVED-SAME-AGENT-REROUTE", "approved_same_agent_reroute", "non_scorable_rerouted", ("service_reroute_requested_route_non_scorable",), None, "sha256:8b6d51927aeeb4cbd97e9a53bd367b7938abfa8e555bc3bac4ca23b97b9de312"),
+    ("TRACE-SUCCESS", "success", "unknown", ("effective_treatment_unknown",), None, "sha256:0c5f2e407d0caea2a0139a0fdac97882eb45ee8dab6db2aad5736d216e2732d9"),
+    ("TRACE-EXPLICIT-NULL", "explicit_null", "unknown", ("effective_treatment_unknown",), None, "sha256:1dd3f74c9de86b5e1cae10614f1919d307aa75c0dcd6426ca04229e98b691df2"),
+    ("TRACE-UNAVAILABLE", "unavailable", "unknown", ("effective_treatment_unknown",), None, "sha256:e54959b7d357c5e41c441b867b3332b35262dc29959448251057567b134f420e"),
+    ("TRACE-MISDELIVERY", "misdelivery", "hard_fail", ("agent_mismatch", "effective_treatment_unknown"), None, "sha256:c34374c78a1fb95889144587effbd8de961189d12c1ec8dd4ea4a77fa0a0b9bd"),
+    ("TRACE-APPROVED-SAME-AGENT-REROUTE", "approved_same_agent_reroute", "non_scorable_rerouted", ("service_reroute_requested_route_non_scorable",), None, "sha256:20439fba89b8f3d23425adae6e46d23819ecc1fe53c3ef4da7a95353111805e8"),
     (
         "TRACE-UNAPPROVED-UNIDENTIFIABLE-REROUTE",
         "unapproved_unidentifiable_reroute",
         "hard_fail",
         ("reroute_destination_missing", "reroute_unidentifiable"),
         None,
-        "sha256:ac347882d6b84ddcbaa91209495e985de3c72e5b3cfbefb83776469403fe9c25",
+        "sha256:4edf8ddf03120ec835e295c3852aef551f2042bd20eca0092a505aaead164c3e",
     ),
-    ("TRACE-DISCOVERY-LOSS", "discovery_loss", "unknown", ("effective_treatment_unknown",), "partial_surface", "sha256:1df39f99442e0bc7e3d2a78c616d04e8009ac174cb483d4f312b80415f74ebd1"),
-    ("TRACE-SURFACE-DISAGREEMENT", "surface_disagreement", "unknown", ("effective_treatment_unknown",), "surface_disagreement", "sha256:5ca1a8b4c004e69522671b9acc4ccedc6ca4adddb8918fe976aee33d7315e810"),
+    ("TRACE-DISCOVERY-LOSS", "discovery_loss", "unknown", ("effective_treatment_unknown",), "partial_surface", "sha256:739e64329c52c019929ecc67bc9153371d914ddbfca857ffdeba01f648e4ff9f"),
+    ("TRACE-SURFACE-DISAGREEMENT", "surface_disagreement", "unknown", ("effective_treatment_unknown",), "surface_disagreement", "sha256:81170575d042c30863349fd364a321ce66f8bb04c3f01f2055cecbeb78152864"),
 )
 REPLAY_DISCOVERY_MODEL_DELTAS = {
     "explicit_null": ("explicit_null", None),
     "discovery_loss": ("missing", None),
 }
 REPLAY_TRACE_BASELINE_DIGESTS = {
-    "TRACE-SUCCESS": "sha256:e79b7b33aacf6c41e5dfec9ed7cb7668d658eefcc0fc7f84b412a727dbebae91",
-    "TRACE-EXPLICIT-NULL": "sha256:e16a8035cdfcbf3c3742a91ee5a5dc377ec38094169af080e67db2575830e794",
-    "TRACE-UNAVAILABLE": "sha256:9ff04fc8c42d9fde007d79dbbda06ac2ac2fac1ab0247b838eebd7eda2adae0f",
-    "TRACE-MISDELIVERY": "sha256:248eb26e9f430d2ce5293e35f0068ee9622063bb9d92198ee809f306b532625b",
-    "TRACE-APPROVED-SAME-AGENT-REROUTE": "sha256:d40bdea7d2b551f58875a521a141ccc2b3f9d7c5c72bcd5265487d5586ddbf87",
-    "TRACE-UNAPPROVED-UNIDENTIFIABLE-REROUTE": "sha256:e466217dfaa2df09d4bce607a2613754fae509cf31bc83da7ae3ee20f67771e2",
-    "TRACE-DISCOVERY-LOSS": "sha256:f4d0887f015307b75e0df2a307026aa617c592943d369a7b6693080d403f4087",
-    "TRACE-SURFACE-DISAGREEMENT": "sha256:bff29cfbc3dcb78761e3af65d65040ab446acc7257039f3ce9404fe1d92bf485",
+    "TRACE-SUCCESS": "sha256:88a8d0808a32f62a33942cafcae532f7705c6885b814ebf03408c7e0111e0616",
+    "TRACE-EXPLICIT-NULL": "sha256:2a16e4e0583b2c9665e79ad0ff9d0d8f54aecc7aa99bf276637c83aae3fc34b3",
+    "TRACE-UNAVAILABLE": "sha256:11f88c9e2d69dc82ccd1ee2f330bf7bda8bc30ce69b166632feb33e6c0a000c3",
+    "TRACE-MISDELIVERY": "sha256:56f229647dabef2d4af0835373f497e7d74f9479f0242af264cbce4b47c71cc9",
+    "TRACE-APPROVED-SAME-AGENT-REROUTE": "sha256:b5511625683001152b130d9eb00bc04655f10d8c888111cc57b2f7579a850e14",
+    "TRACE-UNAPPROVED-UNIDENTIFIABLE-REROUTE": "sha256:324867af769df11809f5748b7fed52c99492ddef85cdd48b67cb7fcd2a019a79",
+    "TRACE-DISCOVERY-LOSS": "sha256:85965184a8e5b984f48f418eeb5dba42f96dc3b21e5a7fd667d39c8e5cfecc2e",
+    "TRACE-SURFACE-DISAGREEMENT": "sha256:0660f3fe2f08904c9578cd8c73cf26471f23bbf749ba6e138c2e091f3172240e",
 }
 REPLAY_RUNTIME_EFFORT_AUTHORITY = {
     "schema_version": "1.0.0",
@@ -243,7 +243,7 @@ DISPOSITION_REASON_CODES = frozenset(set(FAILURE_DISPOSITIONS) | {
     "reroute_destination_different_agent", "reroute_destination_model_mismatch",
     "reroute_destination_non_authoritative", "reroute_destination_untrusted",
     "reroute_effective_destination_mismatch", "reroute_source_model_mismatch",
-    "orphan_reroute_destination_assessment",
+    "reroute_self_target", "orphan_reroute_destination_assessment",
 })
 
 DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")

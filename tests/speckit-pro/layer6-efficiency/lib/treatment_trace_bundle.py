@@ -45,6 +45,8 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     _identifier(row["work_item_id"], "trace work_item_id")
     for field in ("named_agent", "assigned_route_id", "requested_model", "requested_effort"):
         _text(row[field], f"trace {field}")
+    _correlation_id(row["launch_id"], "trace launch ID", "launch")
+    _digest(row["consumption_evidence_digest"], "trace consumption evidence")
     _text(row["supported_effective_model"], "supported effective model", nullable=True); _text(row["supported_effective_effort"], "supported effective effort", nullable=True)
     _digest(row["instruction_hash"], "trace instruction hash"); _digest(row["configuration_hash"], "trace configuration hash")
     env_equalities = {
@@ -205,6 +207,7 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
         "reroute_destination_different_agent": "reroute_different_agent", "reroute_destination_model_mismatch": "model_mismatch",
         "reroute_destination_non_authoritative": "reroute_unapproved", "reroute_destination_untrusted": "reroute_unapproved",
         "reroute_effective_destination_mismatch": "model_mismatch", "reroute_source_model_mismatch": "model_mismatch",
+        "reroute_self_target": "reroute_unapproved",
         "orphan_reroute_destination_assessment": "reroute_ambiguous",
     }
     if reroute_disposition == "hard_fail": derived_codes.extend(reason_codes[item] for item in reasons)

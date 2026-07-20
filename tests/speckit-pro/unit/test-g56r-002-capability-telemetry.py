@@ -293,6 +293,7 @@ REROUTE_REASON_FAILURES = {
     "reroute_destination_untrusted": "reroute_unapproved",
     "reroute_effective_destination_mismatch": "model_mismatch",
     "reroute_source_model_mismatch": "model_mismatch",
+    "reroute_self_target": "reroute_unapproved",
     "orphan_reroute_destination_assessment": "reroute_ambiguous",
 }
 
@@ -2391,6 +2392,26 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertIsNone(trace["supported_effective_model"])
         self.assertIsNone(trace["supported_effective_effort"])
 
+        replayed = copy.deepcopy(self.bundle)
+        replayed["treatment_traces"][0]["configured_route_proof"] = copy.deepcopy(
+            replay_trace(self.replay_bundle, "TRACE-EXPLICIT-NULL")["configured_route_proof"]
+        )
+        self.assert_bundle_not_proven(
+            replayed, "hard_fail",
+            ["configuration_mismatch", "effective_treatment_unknown"],
+            "a configured-route proof from another launch must not be reusable",
+        )
+
+        mismatched_consumption = copy.deepcopy(self.bundle)
+        proof = mismatched_consumption["treatment_traces"][0]["configured_route_proof"]
+        proof["consumption_evidence_digest"] = "sha256:" + "3" * 64
+        proof["proof_id"] = treatment.content_id(proof, "proof_id")
+        self.assert_bundle_not_proven(
+            mismatched_consumption, "hard_fail",
+            ["configuration_mismatch", "effective_treatment_unknown"],
+            "configured-route consumption evidence must bind the execution trace",
+        )
+
     def test_configuration_materialization_and_failure_taxonomy_are_derived(self) -> None:
         mismatch_cases = [
             ("assignment.named_agent", "different-agent", "agent_mismatch", "hard_fail"),
@@ -2861,6 +2882,32 @@ class TreatmentContractTests(unittest.TestCase):
             self.rebound(ambiguous), trusted_qualification_evidence=trusted
         )
         self.assertEqual(failed["treatment_traces"][0]["treatment_disposition"], "hard_fail")
+
+        self_target = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        trace = self_target["treatment_traces"][0]
+        owner = self_target["qualification_evidence_registry"][0]
+        owner["destination_candidate_route_id"] = trace["assigned_route_id"]
+        owner["qualification_evidence_id"] = treatment.content_id(owner, "qualification_evidence_id")
+        assessment = trace["reroute_destination_assessments"][0]
+        assessment["destination_candidate_route_id"] = trace["assigned_route_id"]
+        assessment["prequalification_evidence_id"] = owner["qualification_evidence_id"]
+        event = trace["service_reroute_events"][0]
+        event["toModel"] = trace["requested_model"]
+        event["event_id"] = treatment.content_id(event, "event_id")
+        assessment["event_id"] = event["event_id"]
+        trace["supported_effective_model"] = event["toModel"]
+        next(item for item in trace["observations"] if item["field_path"] == "reroute.events")["value"] = [copy.deepcopy(event)]
+        next(
+            item for item in trace["observations"]
+            if item["field_path"] == "assignment.supported_effective_model"
+        )["value"] = event["toModel"]
+        trusted = {owner["qualification_evidence_id"]: copy.deepcopy(owner)}
+        declare_reroute_result(self_target, trusted)
+        self_target_result = treatment.validate_treatment_bundle(
+            self.rebound(self_target), trusted_qualification_evidence=trusted
+        )
+        self.assertEqual(self_target_result["treatment_traces"][0]["treatment_disposition"], "hard_fail")
+        self.assertIn("reroute_self_target", self_target_result["treatment_traces"][0]["disposition_reasons"])
         self.assertEqual(treatment.FAILURE_DISPOSITIONS["effective_treatment_unknown"], "unknown")
         self.assertTrue(all(value in {"unknown", "hard_fail"} for value in treatment.FAILURE_DISPOSITIONS.values()))
 

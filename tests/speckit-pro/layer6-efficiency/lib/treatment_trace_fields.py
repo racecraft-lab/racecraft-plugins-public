@@ -175,6 +175,11 @@ def _proof_failure_codes(proof: dict | None, trace: dict, profile: list[dict]) -
     if proof["candidate_route_id"] != objective["candidate_route_id"]: codes.append("configuration_mismatch")
     if proof["instruction_hash"] != trace["instruction_hash"] or proof["configuration_hash"] != trace["configuration_hash"]: codes.append("configuration_mismatch")
     if proof["client_identity_id"] != trace["client_identity_id"]: codes.append("client_or_override_mismatch")
+    if (
+        proof["launch_id"] != trace["launch_id"]
+        or proof["consumption_evidence_digest"] != trace["consumption_evidence_digest"]
+    ):
+        codes.append("configuration_mismatch")
     expected_overrides = trace["controlled_overrides"]
     if any(proof["controlled_overrides"][field] != expected_overrides[field] for field in ("model", "effort")): codes.append("client_or_override_mismatch")
     hashes = {trace["configuration_hash"], expected_overrides["configuration_hash"], proof["configuration_hash"], proof["controlled_overrides"]["configuration_hash"]}
@@ -230,6 +235,11 @@ def _reroute_disposition(
         if len(matches) != 1: return "hard_fail", ["reroute_destination_missing" if not matches else "reroute_destination_ambiguous"]
         item = matches[0]; evidence = qualification.get(item["prequalification_evidence_id"])
         if item["assessment"] != "prequalified_same_agent" or evidence is None: return "hard_fail", ["reroute_destination_unapproved"]
+        if (
+            item["destination_candidate_route_id"] == trace["assigned_route_id"]
+            or event["toModel"] == trace["requested_model"]
+        ):
+            return "hard_fail", ["reroute_self_target"]
         canonical = canonical_routes.get(item["destination_candidate_route_id"])
         if canonical is None: return "hard_fail", ["reroute_destination_unidentifiable"]
         if item["destination_named_agent"] != canonical["named_agent"]: return "hard_fail", ["reroute_destination_different_agent"]
@@ -259,6 +269,7 @@ TRACE_KEYS = {
     "repository_revision", "repository_tree_digest", "work_item_kind", "work_item_id",
     "named_agent", "assigned_route_id", "requested_model", "requested_effort",
     "supported_effective_model", "supported_effective_effort", "configured_route_proof",
+    "launch_id", "consumption_evidence_digest",
     "service_reroute_events", "reroute_destination_assessments", "instruction_hash",
     "configuration_hash", "sandbox", "approvals", "mutation_class",
     "expected_skills_mcp_tools", "loaded_skills_mcp_tools", "parent_configuration",

@@ -98,6 +98,15 @@
     "workItemKind": {
       "enum": ["task", "fixture", "objective"]
     },
+    "launchId": {
+      "oneOf": [
+        {"$ref": "#/$defs/digest"},
+        {
+          "type": "string",
+          "pattern": "^launch-fixture-[A-Za-z0-9._-]{1,96}$"
+        }
+      ]
+    },
     "telemetryFieldPath": {
       "enum": [
         "discovery.models",
@@ -906,7 +915,7 @@
         "configuration_hash": {"$ref": "#/$defs/digest"},
         "client_identity_id": {"$ref": "#/$defs/digest"},
         "controlled_overrides": {"$ref": "#/$defs/controlledOverrides"},
-        "launch_id": {"type": "string", "minLength": 1},
+        "launch_id": {"$ref": "#/$defs/launchId"},
         "consumption_evidence_digest": {"$ref": "#/$defs/digest"},
         "reroute_monitoring_complete": {"type": "boolean"}
       }
@@ -1169,6 +1178,8 @@
         "requested_effort",
         "supported_effective_model",
         "supported_effective_effort",
+        "launch_id",
+        "consumption_evidence_digest",
         "configured_route_proof",
         "service_reroute_events",
         "reroute_destination_assessments",
@@ -1215,6 +1226,8 @@
         "requested_effort": {"type": "string", "minLength": 1},
         "supported_effective_model": {"$ref": "#/$defs/nullableNonEmptyString"},
         "supported_effective_effort": {"$ref": "#/$defs/nullableNonEmptyString"},
+        "launch_id": {"$ref": "#/$defs/launchId"},
+        "consumption_evidence_digest": {"$ref": "#/$defs/digest"},
         "configured_route_proof": {
           "oneOf": [{"$ref": "#/$defs/configuredRouteProof"}, {"type": "null"}]
         },
@@ -1316,6 +1329,7 @@
               "reroute_destination_untrusted",
               "reroute_effective_destination_mismatch",
               "reroute_source_model_mismatch",
+              "reroute_self_target",
               "orphan_reroute_destination_assessment"
             ]
           }

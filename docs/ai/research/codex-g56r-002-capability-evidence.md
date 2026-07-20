@@ -5,9 +5,9 @@
 The current append-only treatment successor preserves a valid capability freeze
 with zero eligible tuples:
 
-- Candidate freeze: `sha256:7744c9ffd84f9de36c478963fcb348390fd9ffe2854b66a6337fe0490df596eb`
-- Telemetry profile: `sha256:b3247fa4b0a3805b276b63240dcddd1cfa47b09b2803b9825ece58c5fcf99138`
-- Treatment contract: `sha256:6eaa96a0e5f371d6f12e88fb37b8b3a65b23c7d167c2d6a429becf755c814de3`
+- Candidate freeze: `sha256:f1f0f614a722541b0c185fb023582cda035b5da54110a3d36eb25c3d76a493ef`
+- Telemetry profile: `sha256:37e1c1f1491637dd255c61a87c62120efc100ee146be9b75224771e172c58c56`
+- Treatment contract: `sha256:b390c3d3240fb20e405910f4710d220e875ea46748ced6400aecc6bb970a8289`
 - Published at: `2026-07-18T19:40:00Z`
 - Runtime snapshot: `sha256:450a655fabafb765b19bfc9ff3cbefe4b075d6c40fdbc5fd9dbc8ce8c4cfc3fe`
 - Surface matrix: `sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2`
@@ -90,11 +90,11 @@ be limited to one 30-second, 64 KiB, zero-retry attempt per snapshot/model/effor
 and could prove only pinned-environment availability.
 
 The published treatment successor binds telemetry profile
-`sha256:b3247fa4b0a3805b276b63240dcddd1cfa47b09b2803b9825ece58c5fcf99138`
+`sha256:37e1c1f1491637dd255c61a87c62120efc100ee146be9b75224771e172c58c56`
 and treatment contract
-`sha256:6eaa96a0e5f371d6f12e88fb37b8b3a65b23c7d167c2d6a429becf755c814de3`.
+`sha256:b390c3d3240fb20e405910f4710d220e875ea46748ced6400aecc6bb970a8289`.
 Candidate freeze
-`sha256:7744c9ffd84f9de36c478963fcb348390fd9ffe2854b66a6337fe0490df596eb`
+`sha256:f1f0f614a722541b0c185fb023582cda035b5da54110a3d36eb25c3d76a493ef`
 supersedes the pending-treatment predecessor
 `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
 without editing the predecessor identity. Any later source, client, surface,
@@ -112,7 +112,7 @@ identity.
 Candidate freeze
 `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
 was the first committed G56R-002 capability freeze. Treatment-bound candidate
-freeze `sha256:7744c9ffd84f9de36c478963fcb348390fd9ffe2854b66a6337fe0490df596eb`
+freeze `sha256:f1f0f614a722541b0c185fb023582cda035b5da54110a3d36eb25c3d76a493ef`
 is its committed successor. Earlier identities produced during rejected,
 uncommitted implementation reviews were drafts and are neither published
 predecessors nor part of this lineage. The CLI requires explicit predecessor

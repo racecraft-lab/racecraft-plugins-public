@@ -40,6 +40,8 @@ def execution_trace_identity(trace: dict) -> str:
         "repository_tree_digest": trace["repository_tree_digest"],
         "work_item_kind": trace["work_item_kind"],
         "work_item_id": trace["work_item_id"],
+        "launch_id": trace["launch_id"],
+        "consumption_evidence_digest": trace["consumption_evidence_digest"],
         "context": trace["context"],
     })
 
