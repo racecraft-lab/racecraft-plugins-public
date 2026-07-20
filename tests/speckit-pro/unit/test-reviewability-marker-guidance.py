@@ -3,9 +3,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import runpy
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -477,6 +479,66 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
             self.assertEqual(
                 freshness["checkpoint_marker_tasks_sha"],
                 freshness["current_marker_tasks_sha"],
+            )
+
+    def test_completed_marker_corrections_are_append_only_and_chained(self) -> None:
+        state = json.loads(
+            (REPO_ROOT / "docs/ai/specs/.process/autopilot-state.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        for marker in state["pr_marker_plan"]["markers"][:2]:
+            checkpoint = marker["implementation_checkpoint"]
+            corrections = checkpoint["corrections"]
+            self.assertEqual(len(corrections), 1)
+            correction = corrections[0]
+            self.assertEqual(correction["sequence"], 1)
+            self.assertEqual(
+                (
+                    correction["supersedes_evidence_path"],
+                    correction["supersedes_evidence_commit_sha"],
+                    correction["supersedes_evidence_sha"],
+                ),
+                (
+                    checkpoint["evidence_path"],
+                    checkpoint["checkpoint_evidence_commit_sha"],
+                    checkpoint["checkpoint_evidence_sha"],
+                ),
+            )
+            correction_path = REPO_ROOT / correction["evidence_path"]
+            correction_bytes = correction_path.read_bytes()
+            self.assertEqual(
+                correction["checkpoint_evidence_sha"],
+                "sha256:" + hashlib.sha256(correction_bytes).hexdigest(),
+            )
+            correction_record = json.loads(correction_bytes)
+            self.assertEqual(correction_record["sequence"], correction["sequence"])
+            self.assertEqual(correction_record["marker_id"], marker["id"])
+            self.assertEqual(
+                (
+                    correction_record["supersedes_evidence_path"],
+                    correction_record["supersedes_evidence_commit_sha"],
+                    correction_record["supersedes_evidence_sha"],
+                ),
+                (
+                    correction["supersedes_evidence_path"],
+                    correction["supersedes_evidence_commit_sha"],
+                    correction["supersedes_evidence_sha"],
+                ),
+            )
+            introduction_commits = subprocess.run(
+                [
+                    "git", "-C", str(REPO_ROOT), "log", "--diff-filter=A",
+                    "--format=%H", "--reverse", "HEAD", "--",
+                    correction["evidence_path"],
+                ],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.splitlines()
+            self.assertTrue(introduction_commits)
+            self.assertEqual(
+                introduction_commits[0], correction["checkpoint_evidence_commit_sha"]
             )
 
 

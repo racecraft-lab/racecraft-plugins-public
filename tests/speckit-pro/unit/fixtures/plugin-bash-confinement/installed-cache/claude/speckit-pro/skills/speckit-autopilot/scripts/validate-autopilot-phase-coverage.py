@@ -260,13 +260,50 @@ def validate_workflow(text: str) -> dict[str, list[str]]:
     }
 
 
+_RAW_HTML_BLOCK_STARTS: tuple[tuple[re.Pattern[str], re.Pattern[str] | None], ...] = (
+    (re.compile(r"^[ \t]{0,3}<(script|pre|style|textarea)(?:[ \t>]|$)", re.IGNORECASE), None),
+    (re.compile(r"^[ \t]{0,3}<\?"), re.compile(r"\?>")),
+    (re.compile(r"^[ \t]{0,3}<![A-Z]"), re.compile(r">")),
+    (re.compile(r"^[ \t]{0,3}<!\[CDATA\["), re.compile(r"\]\]>")),
+    (
+        re.compile(
+            r"^[ \t]{0,3}</?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[1-6]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|nav|noframes|ol|optgroup|option|p|param|search|section|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?:[ \t/>]|$)",
+            re.IGNORECASE,
+        ),
+        re.compile(r"^$"),
+    ),
+    (
+        re.compile(
+            r"^[ \t]{0,3}(?:</[A-Za-z][A-Za-z0-9-]*[ \t]*>|<[A-Za-z][A-Za-z0-9-]*(?:[ \t]+[^<>]*)?[ \t]*/?>)[ \t]*$"
+        ),
+        re.compile(r"^$"),
+    ),
+)
+
+
+def _raw_html_block_end(line: str) -> re.Pattern[str] | None | bool:
+    for start, end in _RAW_HTML_BLOCK_STARTS:
+        match = start.search(line)
+        if match is None:
+            continue
+        if match.lastindex and match.group(1):
+            return re.compile(rf"</{re.escape(match.group(1))}[ \t]*>", re.IGNORECASE)
+        return end
+    return False
+
+
 def _visible_markdown(text: str) -> str:
-    """Return Markdown outside HTML comments and fenced code blocks."""
+    """Return Markdown outside comments, code blocks, and raw HTML blocks."""
     visible_lines: list[str] = []
     fence_character: str | None = None
     fence_length = 0
     in_html_comment = False
+    raw_html_end: re.Pattern[str] | None | bool = False
     for raw_line in text.splitlines():
+        if raw_html_end is not False:
+            if raw_html_end is None or raw_html_end.search(raw_line):
+                raw_html_end = False
+            continue
         if fence_character is not None:
             closing_fence = re.match(r"^[ \t]{0,3}(`{3,}|~{3,})[ \t]*$", raw_line)
             if (
@@ -298,6 +335,11 @@ def _visible_markdown(text: str) -> str:
             offset = comment_start + 4
         line = "".join(line_parts)
         if re.match(r"^(?: {4}| {0,3}\t)", line):
+            continue
+        raw_html_end = _raw_html_block_end(line)
+        if raw_html_end is not False:
+            if raw_html_end is not None and raw_html_end.search(line):
+                raw_html_end = False
             continue
         if fence_character is None:
             opening_fence = re.match(r"^[ \t]{0,3}(`{3,}|~{3,})", line)
@@ -918,6 +960,32 @@ def _git_commit_is_ancestor_of_head(repo_root: Path, commit_sha: str) -> bool:
     return _git_commit_is_ancestor(repo_root, commit_sha, "HEAD")
 
 
+def _git_path_introduction_commit(
+    repo_root: Path, path: object, head_sha: object,
+) -> str | None:
+    if (
+        not _is_normalized_repo_path(path)
+        or not isinstance(head_sha, str)
+        or not re.fullmatch(r"[0-9a-f]{40}", head_sha)
+    ):
+        return None
+    completed = subprocess.run(
+        [
+            "git", "-C", str(repo_root), "log", "--diff-filter=A", "--format=%H",
+            "--reverse", head_sha, "--", path,
+        ],
+        text=True,
+        capture_output=True,
+        env=_git_env(),
+        shell=False,
+        check=False,
+    )
+    if completed.returncode != 0:
+        return None
+    commits = [line for line in completed.stdout.splitlines() if line]
+    return commits[0] if commits else None
+
+
 def _git_tree_entries(repo_root: Path, commit_sha: object) -> dict[str, str] | None:
     if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
         return None
@@ -1342,6 +1410,14 @@ def validate_changed_file_manifest(
                     )
                     if isinstance(path, str)
                 }
+                corrections = checkpoint.get("corrections")
+                if isinstance(corrections, list):
+                    carrier_paths.update(
+                        correction.get("evidence_path")
+                        for correction in corrections
+                        if isinstance(correction, dict)
+                        and isinstance(correction.get("evidence_path"), str)
+                    )
                 marker_files = marker.get("declared_files")
                 if not isinstance(marker_files, list):
                     continue
@@ -1784,6 +1860,117 @@ def validate_projection_integrity(
                                     f"pr_marker_plan.markers[{index}].implementation_checkpoint immutable verification evidence differs from checkpoint commit"
                                 )
 
+                pending_authority_fields = (
+                    "checkpoint_evidence_sha",
+                    "checkpoint_evidence_commit_sha",
+                    "verification_evidence_path",
+                    "verification_evidence_sha",
+                )
+                if (
+                    checkpoint_status == "pending"
+                    and strict_contract
+                    and repo_root
+                    and any(field in checkpoint for field in pending_authority_fields)
+                ):
+                    evidence_commit_sha = checkpoint.get("checkpoint_evidence_commit_sha")
+                    claimed_commit_sha = checkpoint.get("commit_sha")
+                    evidence_ref = checkpoint.get("evidence_path")
+                    verification_ref = checkpoint.get("verification_evidence_path")
+                    if not _git_commit_exists(repo_root, evidence_commit_sha):
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_commit_sha is not an existing commit"
+                        )
+                    elif not (
+                        isinstance(expected_head_commit, str)
+                        and _git_commit_is_ancestor(
+                            repo_root, evidence_commit_sha, expected_head_commit,
+                        )
+                    ):
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_commit_sha is not an ancestor of the authorized PR head"
+                        )
+                    elif (
+                        _git_commit_exists(repo_root, claimed_commit_sha)
+                        and not _git_commit_is_ancestor(
+                            repo_root, claimed_commit_sha, evidence_commit_sha,
+                        )
+                    ):
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}] implementation commit is not an ancestor of evidence commit"
+                        )
+                    if evidence_ref == verification_ref:
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}] checkpoint and verification evidence paths must differ"
+                        )
+                    committed_pending_evidence = (
+                        _git_file_at_commit(repo_root, evidence_commit_sha, evidence_ref)
+                        if isinstance(evidence_ref, str)
+                        else None
+                    )
+                    authorized_pending_evidence = (
+                        _git_file_at_commit(repo_root, expected_head_commit, evidence_ref)
+                        if isinstance(evidence_ref, str)
+                        else None
+                    )
+                    evidence_target = _repo_file(repo_root, evidence_ref)
+                    if committed_pending_evidence is None:
+                        checkpoint_file_errors.append(
+                            f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_commit_sha"
+                        )
+                    else:
+                        if checkpoint.get("checkpoint_evidence_sha") != _sha256_bytes(
+                            committed_pending_evidence
+                        ):
+                            checkpoint_file_errors.append(
+                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_sha"
+                            )
+                        if authorized_pending_evidence != committed_pending_evidence:
+                            checkpoint_file_errors.append(
+                                f"pr_marker_plan.markers[{index}] pending checkpoint evidence differs from checkpoint commit"
+                            )
+                        if (
+                            evidence_target is None
+                            or not evidence_target.is_file()
+                            or evidence_target.read_bytes() != committed_pending_evidence
+                        ):
+                            checkpoint_file_errors.append(
+                                f"pr_marker_plan.markers[{index}] pending checkpoint evidence worktree differs from checkpoint commit"
+                            )
+                    committed_pending_verification = (
+                        _git_file_at_commit(repo_root, evidence_commit_sha, verification_ref)
+                        if isinstance(verification_ref, str)
+                        else None
+                    )
+                    authorized_pending_verification = (
+                        _git_file_at_commit(repo_root, expected_head_commit, verification_ref)
+                        if isinstance(verification_ref, str)
+                        else None
+                    )
+                    verification_target = _repo_file(repo_root, verification_ref)
+                    if committed_pending_verification is None:
+                        checkpoint_file_errors.append(
+                            f"pr_marker_plan.markers[{index}].implementation_checkpoint verification evidence is absent from checkpoint commit"
+                        )
+                    else:
+                        if checkpoint.get("verification_evidence_sha") != _sha256_bytes(
+                            committed_pending_verification
+                        ):
+                            checkpoint_file_errors.append(
+                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.verification_evidence_sha"
+                            )
+                        if authorized_pending_verification != committed_pending_verification:
+                            checkpoint_file_errors.append(
+                                f"pr_marker_plan.markers[{index}] pending verification evidence differs from checkpoint commit"
+                            )
+                        if (
+                            verification_target is None
+                            or not verification_target.is_file()
+                            or verification_target.read_bytes() != committed_pending_verification
+                        ):
+                            checkpoint_file_errors.append(
+                                f"pr_marker_plan.markers[{index}] pending verification evidence worktree differs from checkpoint commit"
+                            )
+
                 evidence_ref = checkpoint.get("evidence_path")
                 authorized_evidence_bytes: bytes | None = None
                 if strict_contract and repo_root and isinstance(evidence_ref, str):
@@ -1833,6 +2020,7 @@ def validate_projection_integrity(
                     checkpoint_evidence_errors.append(
                         f"pr_marker_plan.markers[{index}] checkpoint evidence must be a JSON object"
                     )
+                projection_evidence = evidence
                 if strict_contract and isinstance(evidence, dict):
                     if checkpoint_evidence_schema is not None:
                         checkpoint_evidence_errors.extend(
@@ -1844,6 +2032,249 @@ def validate_projection_integrity(
                                 "checkpoint_evidence",
                             )
                         )
+                    corrections = checkpoint.get("corrections")
+                    correction_prefix = (
+                        f"{feature_dir}/.process/checkpoint-corrections/{marker_id}-"
+                    )
+                    authorized_tree = _git_tree_entries(
+                        repo_root, expected_head_commit,
+                    ) if repo_root is not None else None
+                    discovered_corrections = sorted(
+                        path
+                        for path in authorized_tree or {}
+                        if path.startswith(correction_prefix)
+                        and re.fullmatch(
+                            rf"{re.escape(correction_prefix)}[0-9]{{3}}\.json",
+                            path,
+                        )
+                    )
+                    declared_corrections = (
+                        [
+                            correction.get("evidence_path")
+                            for correction in corrections
+                            if isinstance(correction, dict)
+                        ]
+                        if isinstance(corrections, list)
+                        else []
+                    )
+                    if discovered_corrections != declared_corrections:
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}] checkpoint correction state does not cover the authorized append-only correction files"
+                        )
+                    if checkpoint_status == "complete" and corrections is not None:
+                        if not isinstance(corrections, list) or not corrections:
+                            checkpoint_evidence_errors.append(
+                                f"pr_marker_plan.markers[{index}].implementation_checkpoint.corrections must be a non-empty array"
+                            )
+                        elif repo_root is not None:
+                            projection_evidence = json.loads(json.dumps(evidence))
+                            previous_path = evidence_ref
+                            previous_commit = checkpoint.get(
+                                "checkpoint_evidence_commit_sha"
+                            )
+                            previous_sha = checkpoint.get("checkpoint_evidence_sha")
+                            correction_paths: set[str] = set()
+                            correction_schema = {
+                                "$ref": "#/$defs/checkpoint_correction_record"
+                            }
+                            for correction_index, correction in enumerate(corrections):
+                                prefix = (
+                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint."
+                                    f"corrections[{correction_index}]"
+                                )
+                                if not isinstance(correction, dict):
+                                    checkpoint_evidence_errors.append(
+                                        f"{prefix} must be an object"
+                                    )
+                                    continue
+                                correction_valid = True
+                                if correction.get("sequence") != correction_index + 1:
+                                    checkpoint_evidence_errors.append(
+                                        f"{prefix}.sequence must be append-only and contiguous"
+                                    )
+                                    correction_valid = False
+                                supersedes = (
+                                    correction.get("supersedes_evidence_path"),
+                                    correction.get("supersedes_evidence_commit_sha"),
+                                    correction.get("supersedes_evidence_sha"),
+                                )
+                                if supersedes != (
+                                    previous_path, previous_commit, previous_sha,
+                                ):
+                                    checkpoint_evidence_errors.append(
+                                        f"{prefix} does not supersede the previous authorized checkpoint evidence"
+                                    )
+                                    correction_valid = False
+                                correction_path = correction.get("evidence_path")
+                                correction_commit = correction.get(
+                                    "checkpoint_evidence_commit_sha"
+                                )
+                                correction_sha = correction.get(
+                                    "checkpoint_evidence_sha"
+                                )
+                                if (
+                                    not _is_normalized_repo_path(correction_path)
+                                    or correction_path
+                                    != f"{correction_prefix}{correction_index + 1:03d}.json"
+                                    or correction_path == previous_path
+                                    or correction_path in correction_paths
+                                ):
+                                    checkpoint_file_errors.append(
+                                        f"{prefix}.evidence_path is invalid or reused"
+                                    )
+                                    correction_valid = False
+                                else:
+                                    correction_paths.add(correction_path)
+                                if not _git_commit_exists(repo_root, correction_commit):
+                                    checkpoint_evidence_errors.append(
+                                        f"{prefix}.checkpoint_evidence_commit_sha is not an existing commit"
+                                    )
+                                    correction_valid = False
+                                introduction_commit = _git_path_introduction_commit(
+                                    repo_root, correction_path, expected_head_commit,
+                                )
+                                if introduction_commit != correction_commit:
+                                    checkpoint_evidence_errors.append(
+                                        f"{prefix}.checkpoint_evidence_commit_sha is not the immutable path-introduction commit"
+                                    )
+                                    correction_valid = False
+                                elif not (
+                                    isinstance(expected_head_commit, str)
+                                    and _git_commit_is_ancestor(
+                                        repo_root, correction_commit, expected_head_commit,
+                                    )
+                                ):
+                                    checkpoint_evidence_errors.append(
+                                        f"{prefix}.checkpoint_evidence_commit_sha is not an ancestor of the authorized PR head"
+                                    )
+                                    correction_valid = False
+                                elif (
+                                    isinstance(previous_commit, str)
+                                    and not _git_commit_is_ancestor(
+                                        repo_root, previous_commit, correction_commit,
+                                    )
+                                ):
+                                    checkpoint_evidence_errors.append(
+                                        f"{prefix} does not descend from the superseded evidence commit"
+                                    )
+                                    correction_valid = False
+                                committed_correction = (
+                                    _git_file_at_commit(
+                                        repo_root, correction_commit, correction_path,
+                                    )
+                                    if isinstance(correction_path, str)
+                                    else None
+                                )
+                                authorized_correction = (
+                                    _git_file_at_commit(
+                                        repo_root, expected_head_commit, correction_path,
+                                    )
+                                    if isinstance(correction_path, str)
+                                    else None
+                                )
+                                correction_target = _repo_file(
+                                    repo_root, correction_path,
+                                )
+                                if committed_correction is None:
+                                    checkpoint_file_errors.append(
+                                        f"{prefix} evidence is absent from its correction commit"
+                                    )
+                                    correction_valid = False
+                                else:
+                                    if correction_sha != _sha256_bytes(
+                                        committed_correction
+                                    ):
+                                        checkpoint_file_errors.append(
+                                            f"{prefix}.checkpoint_evidence_sha"
+                                        )
+                                        correction_valid = False
+                                    if authorized_correction != committed_correction:
+                                        checkpoint_file_errors.append(
+                                            f"{prefix} differs from the authorized PR head"
+                                        )
+                                        correction_valid = False
+                                    if (
+                                        correction_target is None
+                                        or not correction_target.is_file()
+                                        or correction_target.read_bytes()
+                                        != committed_correction
+                                    ):
+                                        checkpoint_file_errors.append(
+                                            f"{prefix} worktree bytes differ from its correction commit"
+                                        )
+                                        correction_valid = False
+                                correction_record = _load_json_bytes(
+                                    committed_correction
+                                )
+                                if not isinstance(correction_record, dict):
+                                    checkpoint_evidence_errors.append(
+                                        f"{prefix} evidence must be a JSON object"
+                                    )
+                                    correction_valid = False
+                                elif checkpoint_evidence_schema is not None:
+                                    correction_schema_errors = _json_schema_errors(
+                                        correction_record,
+                                        correction_schema,
+                                        checkpoint_evidence_schema,
+                                        "checkpoint_correction",
+                                    )
+                                    checkpoint_evidence_errors.extend(
+                                        f"{prefix} schema: {error}"
+                                        for error in correction_schema_errors
+                                    )
+                                    correction_valid = (
+                                        correction_valid
+                                        and not correction_schema_errors
+                                    )
+                                if isinstance(correction_record, dict):
+                                    record_authority = (
+                                        correction_record.get(
+                                            "supersedes_evidence_path"
+                                        ),
+                                        correction_record.get(
+                                            "supersedes_evidence_commit_sha"
+                                        ),
+                                        correction_record.get(
+                                            "supersedes_evidence_sha"
+                                        ),
+                                    )
+                                    if (
+                                        correction_record.get("feature_id")
+                                        != marker_plan.get("feature_id")
+                                        or correction_record.get("marker_id")
+                                        != marker_id
+                                        or correction_record.get("sequence")
+                                        != correction_index + 1
+                                        or record_authority != supersedes
+                                    ):
+                                        checkpoint_evidence_errors.append(
+                                            f"{prefix} evidence authority does not match marker state"
+                                        )
+                                        correction_valid = False
+                                if correction_valid and isinstance(
+                                    correction_record, dict
+                                ):
+                                    removals = correction_record.get(
+                                        "remove_evidence_owners"
+                                    )
+                                    for removal in removals or []:
+                                        container_name, field_name = removal.split(".", 1)
+                                        container = projection_evidence.get(
+                                            container_name
+                                        )
+                                        if (
+                                            not isinstance(container, dict)
+                                            or field_name not in container
+                                        ):
+                                            checkpoint_evidence_errors.append(
+                                                f"{prefix} removes a missing evidence owner {removal!r}"
+                                            )
+                                            correction_valid = False
+                                            break
+                                        del container[field_name]
+                                previous_path = correction_path
+                                previous_commit = correction_commit
+                                previous_sha = correction_sha
                     if evidence.get("status") != checkpoint_status:
                         checkpoint_evidence_errors.append(
                             f"pr_marker_plan.markers[{index}] checkpoint evidence status does not match checkpoint status"
@@ -1873,7 +2304,7 @@ def validate_projection_integrity(
                             if phase_field in PHASE_RESULT_PROJECTION_FIELDS:
                                 continue
                             owner, evidence_value = _phase_evidence_owner(
-                                phase_field, evidence,
+                                phase_field, projection_evidence,
                             )
                             if owner is None:
                                 checkpoint_evidence_errors.append(
@@ -1883,7 +2314,7 @@ def validate_projection_integrity(
                                 checkpoint_evidence_errors.append(
                                     f"pr_marker_plan.markers[{index}] phase_results[{phase_name}] {phase_field} has multiple checkpoint evidence owners"
                                 )
-                            elif phase_value != evidence_value:
+                            elif not _json_values_equal(phase_value, evidence_value):
                                 checkpoint_evidence_errors.append(
                                     f"pr_marker_plan.markers[{index}] phase_results[{phase_name}] {phase_field} does not match checkpoint evidence"
                                 )

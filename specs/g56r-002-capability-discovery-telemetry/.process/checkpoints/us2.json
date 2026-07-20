@@ -90,6 +90,7 @@
     "independent_critical_high_review": {"status": "pass", "evidence": "pass"}
   },
   "verification_details": {
+    "focused_tests": "53/53 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
@@ -135,11 +136,15 @@
     "us2_cli_documentation": "pass",
     "module_cli_validation": "pass",
     "malformed_predecessor_error_normalization": "pass",
+    "privacy_scan": "10/10 pass",
+    "docs_reference_check": "pass",
+    "full_suite": "2821/2821 pass",
     "capability_public_api_preserved": "pass",
     "capability_safe_module_boundaries": "pass; 12 capability modules, maximum 363 source lines",
     "completion_probe_failure_restoration": "pass",
     "exact_public_facade_exports": "pass",
     "private_trust_primitives_hidden": "pass",
+    "independent_critical_high_review": "pass",
     "independent_review_chat_id": "audit-us2-remediation-F4E33F",
     "independent_review_findings": []
   },

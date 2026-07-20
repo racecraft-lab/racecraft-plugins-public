@@ -451,10 +451,14 @@
         "task_ids": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014", "T015"],
         "folded_polish_task_ids": [],
         "folded_polish_target_reason": "No polish tasks fold into the integrity-coupled capability checkpoint.",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json"
+          "declared_files": [
+            {
+              "operation": "NEW",
+              "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoint-corrections/us1-001.json"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json"
           },
           {
             "operation": "NEW",
@@ -557,10 +561,14 @@
         ],
         "folded_polish_task_ids": [],
         "folded_polish_target_reason": "Treatment is independently checkpointed before replay integration.",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json"
+          "declared_files": [
+            {
+              "operation": "NEW",
+              "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoint-corrections/us2-001.json"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json"
           },
           {
             "operation": "NEW",

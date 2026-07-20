@@ -208,6 +208,20 @@
       "marker_ids": ["us3"]
     },
     {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoint-corrections/us1-001.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us1"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoint-corrections/us2-001.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us2"]
+    },
+    {
       "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json",
       "operation": "MODIFIED",
       "category": "process",

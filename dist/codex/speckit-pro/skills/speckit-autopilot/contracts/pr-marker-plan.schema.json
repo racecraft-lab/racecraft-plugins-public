@@ -126,6 +126,9 @@
                     "head_sha": {"pattern": "^[0-9a-f]{40}$"},
                     "checkpoint_evidence_commit_sha": {"pattern": "^[0-9a-f]{40}$"},
                     "checkpoint_evidence_sha": {"pattern": "^sha256:[0-9a-f]{64}$"},
+                    "corrections": {
+                      "items": {"$ref": "#/$defs/checkpoint_correction"}
+                    },
                     "completed_at": {"$ref": "#/$defs/utc_timestamp"},
                     "freshness": {"$ref": "#/$defs/checkpoint_freshness"}
                   },
@@ -159,7 +162,28 @@
                         "required": ["status"]
                       },
                       "then": {
-                        "required": ["evidence_path", "commit_sha"]
+                        "required": ["evidence_path", "commit_sha"],
+                        "allOf": [
+                          {
+                            "if": {
+                              "anyOf": [
+                                {"required": ["checkpoint_evidence_sha"]},
+                                {"required": ["checkpoint_evidence_commit_sha"]},
+                                {"required": ["verification_evidence_path"]},
+                                {"required": ["verification_evidence_sha"]}
+                              ]
+                            },
+                            "then": {
+                              "required": [
+                                "checkpoint_evidence_sha",
+                                "checkpoint_evidence_commit_sha",
+                                "verification_evidence_path",
+                                "verification_evidence_sha",
+                                "head_sha"
+                              ]
+                            }
+                          }
+                        ]
                       }
                     }
                   ]
@@ -969,6 +993,13 @@
           "type": "string",
           "minLength": 1
         },
+        "corrections": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/checkpoint_correction"
+          }
+        },
         "completed_at": {
           "type": "string",
           "minLength": 1
@@ -1006,6 +1037,47 @@
         },
         "freshness": {
           "$ref": "#/$defs/checkpoint_freshness"
+        }
+      }
+    },
+    "checkpoint_correction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "evidence_path",
+        "checkpoint_evidence_commit_sha",
+        "checkpoint_evidence_sha",
+        "supersedes_evidence_path",
+        "supersedes_evidence_commit_sha",
+        "supersedes_evidence_sha"
+      ],
+      "properties": {
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "evidence_path": {
+          "$ref": "#/$defs/repo_path"
+        },
+        "checkpoint_evidence_commit_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "checkpoint_evidence_sha": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "supersedes_evidence_path": {
+          "$ref": "#/$defs/repo_path"
+        },
+        "supersedes_evidence_commit_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "supersedes_evidence_sha": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
         }
       }
     },
