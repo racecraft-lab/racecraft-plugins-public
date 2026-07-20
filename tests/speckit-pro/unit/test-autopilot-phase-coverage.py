@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -14,6 +15,14 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 VALIDATOR = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "scripts" / "validate-autopilot-phase-coverage.py"
+CANONICAL_SCHEMA_PATHS = tuple(
+    VALIDATOR.parents[1] / "contracts" / name
+    for name in (
+        "pr-marker-plan.schema.json",
+        "changed-file-manifest.schema.json",
+        "verification-report.schema.json",
+    )
+)
 REPORT_SCHEMA = (
     REPO_ROOT
     / "tests"
@@ -144,9 +153,10 @@ def state_json(*, include_confidence: bool = True, include_post: bool = True, co
 
 class AutopilotPhaseCoverageTests(unittest.TestCase):
     def run_validator_paths(self, workflow_path: Path, state_path: Path) -> tuple[int, dict[str, object]]:
+        local_validator = state_path.parent / VALIDATOR.relative_to(REPO_ROOT)
         command = [
             sys.executable,
-            str(VALIDATOR),
+            str(local_validator if local_validator.is_file() else VALIDATOR),
             "--workflow",
             str(workflow_path),
             "--state",
@@ -360,6 +370,60 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             missing_claim["workflow_checkpoint_errors"],
         )
 
+        prefix, evidence_section = corrected_workflow.split(
+            "## PR Marker Plan Evidence", 1,
+        )
+        fenced_section_workflow = (
+            prefix
+            + "```markdown\n## PR Marker Plan Evidence"
+            + evidence_section
+            + "\n```\n"
+        )
+        _, fenced_section = self.run_validator(fenced_section_workflow, state)
+        self.assertIn(
+            "workflow must contain exactly one PR Marker Plan Evidence section",
+            fenced_section["workflow_checkpoint_errors"],
+        )
+
+        claim = f"- Implementation checkpoint [us1]: `{expected_commit}`\n"
+        commented_claim_workflow = corrected_workflow.replace(
+            claim, f"<!-- {claim.strip()} -->\n",
+        )
+        _, commented_claim = self.run_validator(commented_claim_workflow, state)
+        self.assertIn(
+            "workflow must contain exactly one current checkpoint claim for marker 'us1'",
+            commented_claim["workflow_checkpoint_errors"],
+        )
+
+    def test_pending_phase_claim_requires_checkpoint_authority(self) -> None:
+        state = self.projected_state(
+            plan_status="pending",
+            phase_status="pending",
+            checkpoint={"status": "pending"},
+            phase_fields={"focused_tests": "not independently evidenced"},
+        )
+        exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(exit_code, 1)
+        self.assertTrue(
+            any(
+                "implementation_checkpoint is missing required fields: commit_sha, evidence_path"
+                in error
+                for error in report["marker_plan_status_errors"]
+            )
+        )
+        self.assertIn(
+            "pr_marker_plan.markers[0] pending checkpoint with phase claims requires evidence_path",
+            report["checkpoint_evidence_errors"],
+        )
+        self.assertIn(
+            "pr_marker_plan.markers[0] pending checkpoint with phase claims requires commit_sha",
+            report["checkpoint_evidence_errors"],
+        )
+        self.assertIn(
+            "workflow must contain exactly one current checkpoint claim for marker 'us1'",
+            report["workflow_checkpoint_errors"],
+        )
+
     def test_completed_phase_rejects_pending_verification_fields(self) -> None:
         state = self.projected_state(
             plan_status="completed",
@@ -552,7 +616,11 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 state = self.projected_state(
                     plan_status="in_progress",
                     phase_status="in_progress",
-                    checkpoint={"status": "pending"},
+                    checkpoint={
+                        "status": "pending",
+                        "evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
+                        "commit_sha": "a" * 40,
+                    },
                 )
                 state["pr_marker_plan"].update({"status": plan_status, "warnings": []})
                 _exit_code, report = self.run_validator(workflow_text(), state)
@@ -735,6 +803,15 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ),
                 encoding="utf-8",
             )
+            local_validator = root / VALIDATOR.relative_to(REPO_ROOT)
+            local_validator.parent.mkdir(parents=True)
+            shutil.copy2(VALIDATOR, local_validator)
+            local_schema_paths: list[Path] = []
+            for source_schema in CANONICAL_SCHEMA_PATHS:
+                local_schema = root / source_schema.relative_to(REPO_ROOT)
+                local_schema.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source_schema, local_schema)
+                local_schema_paths.append(local_schema)
             subprocess.run(["git", "init", "-q", str(root)], check=True)
             subprocess.run(["git", "-C", str(root), "add", "."], check=True)
             subprocess.run(
@@ -1141,6 +1218,29 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             self.assertEqual(report["changed_file_manifest_errors"], [])
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
 
+            schema_error_buckets = (
+                "marker_plan_status_errors",
+                "changed_file_manifest_errors",
+                "checkpoint_evidence_errors",
+            )
+            schema_labels = (
+                "pr-marker-plan",
+                "changed-file manifest",
+                "verification report",
+            )
+            for schema_path, error_bucket, schema_label in zip(
+                local_schema_paths, schema_error_buckets, schema_labels,
+            ):
+                clean_schema_bytes = schema_path.read_bytes()
+                schema_path.write_bytes(clean_schema_bytes + b"\n")
+                exit_code, report = self.run_validator_paths(workflow_path, state_path)
+                self.assertEqual(exit_code, 1)
+                self.assertIn(
+                    f"canonical {schema_label} schema differs from the authorized PR head",
+                    report[error_bucket],
+                )
+                schema_path.write_bytes(clean_schema_bytes)
+
             committed_workflow = workflow_path.read_bytes()
             workflow_path.write_bytes(committed_workflow + b"\nmutable worktree claim\n")
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
@@ -1418,7 +1518,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             missing_authority = subprocess.run(
                 [
                     sys.executable,
-                    str(VALIDATOR),
+                    str(local_validator),
                     "--workflow",
                     str(workflow_path),
                     "--state",
@@ -1446,7 +1546,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             stale_head_authority = subprocess.run(
                 [
                     sys.executable,
-                    str(VALIDATOR),
+                    str(local_validator),
                     "--workflow",
                     str(workflow_path),
                     "--state",

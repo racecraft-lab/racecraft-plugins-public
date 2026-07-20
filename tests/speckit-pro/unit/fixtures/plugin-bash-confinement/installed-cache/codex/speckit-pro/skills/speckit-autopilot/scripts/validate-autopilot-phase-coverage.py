@@ -237,6 +237,32 @@ def validate_workflow(text: str) -> dict[str, list[str]]:
     }
 
 
+def _visible_markdown(text: str) -> str:
+    """Return Markdown outside HTML comments and fenced code blocks."""
+    uncommented = re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
+    visible_lines: list[str] = []
+    fence_character: str | None = None
+    fence_length = 0
+    for line in uncommented.splitlines():
+        if fence_character is None:
+            opening_fence = re.match(r"^[ \t]{0,3}(`{3,}|~{3,})", line)
+            if opening_fence:
+                fence_character = opening_fence.group(1)[0]
+                fence_length = len(opening_fence.group(1))
+                continue
+            visible_lines.append(line)
+            continue
+        closing_fence = re.match(r"^[ \t]{0,3}(`{3,}|~{3,})[ \t]*$", line)
+        if (
+            closing_fence
+            and closing_fence.group(1)[0] == fence_character
+            and len(closing_fence.group(1)) >= fence_length
+        ):
+            fence_character = None
+            fence_length = 0
+    return "\n".join(visible_lines)
+
+
 def validate_workflow_checkpoint_bindings(
     text: str, state: dict[str, Any],
 ) -> dict[str, list[str]]:
@@ -248,15 +274,19 @@ def validate_workflow_checkpoint_bindings(
     if not isinstance(markers, list):
         return {"workflow_checkpoint_errors": errors}
 
-    expected: dict[str, str] = {}
+    visible_text = _visible_markdown(text)
+    expected: dict[str, str | None] = {}
     expected_superseded: dict[str, str] = {}
     for marker in markers:
         if not isinstance(marker, dict) or not isinstance(marker.get("id"), str):
             continue
         checkpoint = marker.get("implementation_checkpoint")
         commit_sha = checkpoint.get("commit_sha") if isinstance(checkpoint, dict) else None
-        if isinstance(commit_sha, str) and re.fullmatch(r"[0-9a-f]{40}", commit_sha):
-            expected[marker["id"]] = commit_sha
+        expected[marker["id"]] = (
+            commit_sha
+            if isinstance(commit_sha, str) and re.fullmatch(r"[0-9a-f]{40}", commit_sha)
+            else None
+        )
         superseded_sha = (
             checkpoint.get("superseded_commit_sha")
             if isinstance(checkpoint, dict)
@@ -264,23 +294,24 @@ def validate_workflow_checkpoint_bindings(
         )
         if isinstance(superseded_sha, str) and re.fullmatch(r"[0-9a-f]{40}", superseded_sha):
             expected_superseded[marker["id"]] = superseded_sha
-    if not expected:
+    strict_contract = marker_plan.get("schema_version") == "pr-marker-plan.v2"
+    if not strict_contract and not any(expected.values()):
         return {"workflow_checkpoint_errors": errors}
 
-    checkpoint_claims = WORKFLOW_CHECKPOINT_CLAIM_RE.findall(text)
+    checkpoint_claims = WORKFLOW_CHECKPOINT_CLAIM_RE.findall(visible_text)
     for marker_id, claimed_sha in checkpoint_claims:
         if expected.get(marker_id) != claimed_sha:
             errors.append(
                 f"workflow checkpoint claim for marker {marker_id!r} does not match its pr_marker_plan commit_sha"
             )
-    for marker_id, claimed_sha in WORKFLOW_SUPERSEDED_CHECKPOINT_CLAIM_RE.findall(text):
+    for marker_id, claimed_sha in WORKFLOW_SUPERSEDED_CHECKPOINT_CLAIM_RE.findall(visible_text):
         if expected_superseded.get(marker_id) != claimed_sha:
             errors.append(
                 f"workflow superseded checkpoint claim for marker {marker_id!r} does not match its pr_marker_plan superseded_commit_sha"
             )
-    if WORKFLOW_UNSCOPED_CHECKPOINT_CLAIM_RE.search(text):
+    if WORKFLOW_UNSCOPED_CHECKPOINT_CLAIM_RE.search(visible_text):
         errors.append("workflow checkpoint claims must name their marker")
-    if marker_plan.get("schema_version") == "pr-marker-plan.v2":
+    if strict_contract:
         for marker_id in expected:
             claim_count = sum(
                 claimed_marker_id == marker_id
@@ -292,11 +323,11 @@ def validate_workflow_checkpoint_bindings(
                 )
 
     section_token = "## PR Marker Plan Evidence"
-    section_count = len(re.findall(r"(?m)^## PR Marker Plan Evidence\s*$", text))
-    if marker_plan.get("schema_version") == "pr-marker-plan.v2" and section_count != 1:
+    section_count = len(re.findall(r"(?m)^## PR Marker Plan Evidence\s*$", visible_text))
+    if strict_contract and section_count != 1:
         errors.append("workflow must contain exactly one PR Marker Plan Evidence section")
     if section_count == 1:
-        section = text.split(section_token, 1)[1].split("\n## ", 1)[0]
+        section = visible_text.split(section_token, 1)[1].split("\n## ", 1)[0]
         marker_row_counts = {marker_id: 0 for marker_id in expected}
         for line in section.splitlines():
             if not line.startswith("|") or not line.endswith("|"):
@@ -309,9 +340,15 @@ def validate_workflow_checkpoint_bindings(
                 continue
             marker_row_counts[marker_id] += 1
             checkpoint_shas = set(re.findall(r"\b[0-9a-f]{40}\b", cells[4]))
-            if expected[marker_id] not in checkpoint_shas:
+            expected_sha = expected[marker_id]
+            if expected_sha is None or expected_sha not in checkpoint_shas:
+                expected_binding = (
+                    expected_sha
+                    if expected_sha is not None
+                    else "its pr_marker_plan commit_sha"
+                )
                 errors.append(
-                    f"workflow PR Marker Plan Evidence marker {marker_id!r} checkpoint does not bind {expected[marker_id]}"
+                    f"workflow PR Marker Plan Evidence marker {marker_id!r} checkpoint does not bind {expected_binding}"
                 )
         for marker_id, row_count in marker_row_counts.items():
             if row_count != 1:
@@ -612,13 +649,17 @@ def _json_schema_errors(
     return errors
 
 
-def _marker_plan_shape_errors(marker_plan: object) -> list[str]:
+def _marker_plan_shape_errors(
+    marker_plan: object,
+    schema: dict[str, Any] | None = None,
+) -> list[str]:
     if not isinstance(marker_plan, dict) or marker_plan.get("schema_version") != "pr-marker-plan.v2":
         return []
-    try:
-        schema = _strict_json_loads(read_text(MARKER_PLAN_SCHEMA_PATH))
-    except (json.JSONDecodeError, ValueError):
-        return ["canonical pr-marker-plan schema is malformed"]
+    if schema is None:
+        try:
+            schema = _strict_json_loads(read_text(MARKER_PLAN_SCHEMA_PATH))
+        except (json.JSONDecodeError, ValueError):
+            return ["canonical pr-marker-plan schema is malformed"]
     if not isinstance(schema, dict):
         return ["canonical pr-marker-plan schema root must be an object"]
     return _json_schema_errors(marker_plan, schema, schema, "pr_marker_plan")
@@ -656,6 +697,54 @@ def _git_file_at_commit(repo_root: Path, commit_sha: object, relative_path: str)
         check=False,
     )
     return completed.stdout if completed.returncode == 0 else None
+
+
+def _canonical_schema(
+    schema_path: Path,
+    label: str,
+    *,
+    repo_root: Path | None = None,
+    expected_head_commit: str | None = None,
+) -> tuple[dict[str, Any] | None, list[str]]:
+    """Load a canonical schema from the authorized head when one is supplied."""
+    errors: list[str] = []
+    schema_bytes: bytes | None = None
+    exact_head = (
+        repo_root is not None
+        and isinstance(expected_head_commit, str)
+        and re.fullmatch(r"[0-9a-f]{40}", expected_head_commit) is not None
+    )
+    if exact_head:
+        try:
+            schema_ref = schema_path.resolve().relative_to(repo_root.resolve()).as_posix()
+        except ValueError:
+            return None, [f"canonical {label} schema is outside the authorized repository"]
+        schema_bytes = _git_file_at_commit(repo_root, expected_head_commit, schema_ref)
+        if schema_bytes is None:
+            return None, [f"canonical {label} schema is absent from the authorized PR head"]
+        try:
+            worktree_schema_bytes = schema_path.read_bytes()
+        except OSError:
+            worktree_schema_bytes = None
+        if worktree_schema_bytes != schema_bytes:
+            errors.append(f"canonical {label} schema differs from the authorized PR head")
+    else:
+        try:
+            schema_bytes = schema_path.read_bytes()
+        except OSError:
+            schema_bytes = None
+    try:
+        schema = (
+            _strict_json_loads(schema_bytes.decode("utf-8"))
+            if schema_bytes is not None
+            else None
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError, ValueError):
+        schema = None
+    if not isinstance(schema, dict):
+        errors.append(f"canonical {label} schema is malformed")
+        return None, errors
+    return schema, errors
 
 
 def _authorized_workflow_text(
@@ -925,12 +1014,15 @@ def validate_changed_file_manifest(
             authority_errors.append(
                 "changed-file manifest differs from the authorized PR head"
             )
-    try:
-        manifest_schema = _strict_json_loads(read_text(CHANGED_FILE_MANIFEST_SCHEMA_PATH))
-    except (ValidationError, json.JSONDecodeError, ValueError):
-        return {"changed_file_manifest_errors": ["canonical changed-file manifest schema is malformed"]}
-    if not isinstance(manifest_schema, dict):
-        return {"changed_file_manifest_errors": ["canonical changed-file manifest schema root is invalid"]}
+    manifest_schema, manifest_schema_errors = _canonical_schema(
+        CHANGED_FILE_MANIFEST_SCHEMA_PATH,
+        "changed-file manifest",
+        repo_root=repo_root if strict_contract else None,
+        expected_head_commit=expected_head_commit if strict_contract else None,
+    )
+    authority_errors.extend(manifest_schema_errors)
+    if manifest_schema is None:
+        return {"changed_file_manifest_errors": authority_errors}
     schema_errors = _json_schema_errors(
         manifest,
         manifest_schema,
@@ -1250,7 +1342,29 @@ def validate_projection_integrity(
         and marker_plan.get("schema_version") == "pr-marker-plan.v2"
     )
     marker_plan_status_errors.extend(_marker_plan_version_errors(marker_plan))
-    marker_plan_status_errors.extend(_marker_plan_shape_errors(marker_plan))
+    marker_plan_schema: dict[str, Any] | None = None
+    verification_report_schema: dict[str, Any] | None = None
+    if strict_contract:
+        marker_plan_schema, marker_schema_errors = _canonical_schema(
+            MARKER_PLAN_SCHEMA_PATH,
+            "pr-marker-plan",
+            repo_root=repo_root,
+            expected_head_commit=expected_head_commit,
+        )
+        marker_plan_status_errors.extend(marker_schema_errors)
+        if marker_plan_schema is not None:
+            marker_plan_status_errors.extend(
+                _marker_plan_shape_errors(marker_plan, marker_plan_schema)
+            )
+        verification_report_schema, verification_schema_errors = _canonical_schema(
+            VERIFICATION_REPORT_SCHEMA_PATH,
+            "verification report",
+            repo_root=repo_root,
+            expected_head_commit=expected_head_commit,
+        )
+        checkpoint_evidence_errors.extend(verification_schema_errors)
+    else:
+        marker_plan_status_errors.extend(_marker_plan_shape_errors(marker_plan))
 
     checkpoint_evidence_schema: dict[str, Any] | None = None
     if strict_contract and repo_root:
@@ -1461,6 +1575,23 @@ def validate_projection_integrity(
             checkpoint = raw_marker.get("implementation_checkpoint")
             if isinstance(checkpoint, dict):
                 checkpoint_status = checkpoint.get("status")
+                pending_phase_claims = [
+                    (phase_name, phase_field)
+                    for phase_name, phase_result in phases_by_marker.get(marker_id, [])
+                    for phase_field in phase_result
+                    if phase_field not in PHASE_RESULT_PROJECTION_FIELDS
+                ]
+                if strict_contract and checkpoint_status == "pending" and pending_phase_claims:
+                    if not _is_normalized_repo_path(checkpoint.get("evidence_path")):
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}] pending checkpoint with phase claims requires evidence_path"
+                        )
+                    if not isinstance(checkpoint.get("commit_sha"), str) or not re.fullmatch(
+                        r"[0-9a-f]{40}", checkpoint["commit_sha"]
+                    ):
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}] pending checkpoint with phase claims requires commit_sha"
+                        )
                 for path_field in ("evidence_path", "verification_evidence_path") if strict_contract else ():
                     path_value = checkpoint.get(path_field)
                     if path_value is not None and (
@@ -1692,30 +1823,16 @@ def validate_projection_integrity(
                         checkpoint_evidence_errors.append(
                             f"pr_marker_plan.markers[{index}] verification report must be a JSON object"
                         )
-                    else:
-                        try:
-                            verification_schema = _strict_json_loads(
-                                read_text(VERIFICATION_REPORT_SCHEMA_PATH)
+                    elif verification_report_schema is not None:
+                        checkpoint_evidence_errors.extend(
+                            f"pr_marker_plan.markers[{index}] verification report schema: {error}"
+                            for error in _json_schema_errors(
+                                verification_report,
+                                verification_report_schema,
+                                verification_report_schema,
+                                "verification_report",
                             )
-                        except (ValidationError, json.JSONDecodeError, ValueError):
-                            checkpoint_evidence_errors.append(
-                                f"pr_marker_plan.markers[{index}] canonical verification report schema is malformed"
-                            )
-                        else:
-                            if not isinstance(verification_schema, dict):
-                                checkpoint_evidence_errors.append(
-                                    f"pr_marker_plan.markers[{index}] canonical verification report schema root is invalid"
-                                )
-                            else:
-                                checkpoint_evidence_errors.extend(
-                                    f"pr_marker_plan.markers[{index}] verification report schema: {error}"
-                                    for error in _json_schema_errors(
-                                        verification_report,
-                                        verification_schema,
-                                        verification_schema,
-                                        "verification_report",
-                                    )
-                                )
+                        )
                     if not isinstance(evidence, dict):
                         checkpoint_evidence_errors.append(
                             f"pr_marker_plan.markers[{index}] checkpoint evidence must be a JSON object"

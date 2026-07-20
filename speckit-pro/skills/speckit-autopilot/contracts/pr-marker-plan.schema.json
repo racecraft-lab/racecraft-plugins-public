@@ -919,7 +919,9 @@
       "type": "object",
       "additionalProperties": true,
       "required": [
-        "status"
+        "status",
+        "evidence_path",
+        "commit_sha"
       ],
       "properties": {
         "status": {
