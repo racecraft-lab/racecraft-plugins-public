@@ -128,6 +128,7 @@ capability_private = CAPABILITY_INTERNALS["codex_capability_private"]
 capability_publish_io = CAPABILITY_INTERNALS["codex_capability_publish_io"]
 capability_capture_retention = CAPABILITY_INTERNALS["codex_capability_capture_retention"]
 capability_retention = CAPABILITY_INTERNALS["codex_capability_retention"]
+capability_retention_lock = CAPABILITY_INTERNALS["codex_capability_retention_lock"]
 capability_retention_records = CAPABILITY_INTERNALS["codex_capability_retention_records"]
 
 
@@ -2258,7 +2259,7 @@ class CapabilityContractTests(unittest.TestCase):
                 original_assert(path, descriptor, expected_identity)
 
             with mock.patch.object(
-                capability_retention_records, "_assert_private_directory_current",
+                capability_retention_lock, "_assert_private_directory_current",
                 side_effect=fail_release_validation,
             ), self.assertRaisesRegex(ValueError, "release validation failure"):
                 with capability_retention_records._retention_lock(raw_root, raw_identity):
@@ -2322,6 +2323,63 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertTrue(attempts)
             self.assertIn("already in progress", str(attempts[0]))
             self.assertFalse(target.exists())
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_replaced_raw_root_cannot_overlap_cleanup_and_materialization(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            raw = Path(temporary) / "raw"
+            raw.mkdir(mode=0o700)
+            capture_bytes = b"[]\n"
+            registered = capability_contract._parsed_timestamp(
+                "2026-06-01T00:00:00Z", "test registration clock",
+            )
+            current = capability_contract._parsed_timestamp(
+                "2026-07-02T00:00:00Z", "test cleanup clock",
+            )
+            with mock.patch.object(
+                capability_capture_retention, "_retention_now", return_value=registered,
+            ):
+                _, target = capabilities.materialize_source_capture(
+                    raw, ROOT, capture_bytes,
+                )
+            original_unlink = capability_retention._unlink_descriptor_relative
+            moved_raw = Path(temporary) / "raw-held"
+            attempts: list[BaseException] = []
+            replaced = False
+
+            def materialize() -> None:
+                try:
+                    capabilities.materialize_source_capture(raw, ROOT, capture_bytes)
+                except BaseException as exc:  # pragma: no branch - asserted below
+                    attempts.append(exc)
+
+            def replace_root_then_unlink(filename: str, parent_descriptor: int) -> None:
+                nonlocal replaced
+                if not replaced:
+                    raw.rename(moved_raw)
+                    raw.mkdir(mode=0o700)
+                    worker = threading.Thread(target=materialize, daemon=True)
+                    worker.start(); worker.join(timeout=2)
+                    if worker.is_alive():
+                        self.fail("replacement-root materialization blocked")
+                    replaced = True
+                original_unlink(filename, parent_descriptor)
+
+            with mock.patch.object(
+                capability_retention, "_retention_now", return_value=current,
+            ), mock.patch.object(
+                capability_retention,
+                "_unlink_descriptor_relative",
+                side_effect=replace_root_then_unlink,
+            ), self.assertRaisesRegex(ValueError, "parent changed"):
+                capabilities.reconcile_raw_evidence_retention(
+                    raw, ROOT, apply=True,
+                )
+            self.assertTrue(replaced)
+            self.assertTrue(attempts)
+            self.assertIn("already in progress", str(attempts[0]))
+            self.assertEqual(list(raw.iterdir()), [])
+            self.assertFalse((moved_raw / target.name).exists())
 
     @unittest.skipUnless(
         capabilities.HAS_DESCRIPTOR_RELATIVE_IO

@@ -312,8 +312,10 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             checkpoint=checkpoint,
         )
         workflow = workflow_text() + (
-            f"\n- Implementation checkpoint: `{wrong_commit}`\n"
-            f"- Superseded marker checkpoint: `{wrong_superseded}`\n\n"
+            f"\n- Implementation checkpoint [us1]: `{wrong_commit}`\n"
+            f"- Current remediation source head [us2]: `{expected_commit}`\n"
+            f"- Superseded marker checkpoint [us1]: `{wrong_superseded}`\n"
+            f"- Implementation checkpoint: `{expected_commit}`\n\n"
             "## PR Marker Plan Evidence\n\n"
             "| Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |\n"
             "|---|---|---|---|---|---|\n"
@@ -324,14 +326,18 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertEqual(
             report["workflow_checkpoint_errors"],
             [
-                f"workflow checkpoint claim {wrong_commit} does not match any pr_marker_plan marker commit_sha",
-                f"workflow superseded checkpoint claim {wrong_superseded} does not match any pr_marker_plan marker superseded_commit_sha",
+                "workflow checkpoint claim for marker 'us1' does not match its pr_marker_plan commit_sha",
+                "workflow checkpoint claim for marker 'us2' does not match its pr_marker_plan commit_sha",
+                "workflow superseded checkpoint claim for marker 'us1' does not match its pr_marker_plan superseded_commit_sha",
+                "workflow checkpoint claims must name their marker",
                 f"workflow PR Marker Plan Evidence marker 'us1' checkpoint does not bind {expected_commit}",
             ],
         )
         _, corrected = self.run_validator(
             workflow.replace(wrong_commit, expected_commit).replace(
                 wrong_superseded, expected_superseded,
+            ).replace("[us2]", "[us1]").replace(
+                f"- Implementation checkpoint: `{expected_commit}`\n", "",
             ),
             state,
         )

@@ -376,6 +376,13 @@
       "marker_ids": ["us3"]
     },
     {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_lock.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
       "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py",
       "operation": "MODIFIED",
       "category": "implementation",

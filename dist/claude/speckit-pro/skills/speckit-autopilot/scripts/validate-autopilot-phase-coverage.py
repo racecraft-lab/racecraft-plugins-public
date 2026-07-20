@@ -110,10 +110,13 @@ PHASE_VERIFICATION_GATE_ALIASES = {
     "independent_critical_high_review": "independent_review",
 }
 WORKFLOW_CHECKPOINT_CLAIM_RE = re.compile(
-    r"(?m)^-\s+(?:Implementation checkpoint|Current remediation source head):\s+`([0-9a-f]{40})`\s*$"
+    r"(?m)^-\s+(?:Implementation checkpoint|Current remediation source head)\s+\[([a-z0-9][a-z0-9_-]*)\]:\s+`([0-9a-f]{40})`\s*$"
 )
 WORKFLOW_SUPERSEDED_CHECKPOINT_CLAIM_RE = re.compile(
-    r"(?m)^-\s+Superseded marker checkpoint:\s+`([0-9a-f]{40})`\s*$"
+    r"(?m)^-\s+Superseded marker checkpoint\s+\[([a-z0-9][a-z0-9_-]*)\]:\s+`([0-9a-f]{40})`\s*$"
+)
+WORKFLOW_UNSCOPED_CHECKPOINT_CLAIM_RE = re.compile(
+    r"(?m)^-\s+(?:Implementation checkpoint|Current remediation source head|Superseded marker checkpoint):\s+`[0-9a-f]{40}`\s*$"
 )
 
 
@@ -238,18 +241,18 @@ def validate_workflow_checkpoint_bindings(
     if not expected:
         return {"workflow_checkpoint_errors": errors}
 
-    expected_shas = set(expected.values())
-    for claimed_sha in WORKFLOW_CHECKPOINT_CLAIM_RE.findall(text):
-        if claimed_sha not in expected_shas:
+    for marker_id, claimed_sha in WORKFLOW_CHECKPOINT_CLAIM_RE.findall(text):
+        if expected.get(marker_id) != claimed_sha:
             errors.append(
-                f"workflow checkpoint claim {claimed_sha} does not match any pr_marker_plan marker commit_sha"
+                f"workflow checkpoint claim for marker {marker_id!r} does not match its pr_marker_plan commit_sha"
             )
-    expected_superseded_shas = set(expected_superseded.values())
-    for claimed_sha in WORKFLOW_SUPERSEDED_CHECKPOINT_CLAIM_RE.findall(text):
-        if claimed_sha not in expected_superseded_shas:
+    for marker_id, claimed_sha in WORKFLOW_SUPERSEDED_CHECKPOINT_CLAIM_RE.findall(text):
+        if expected_superseded.get(marker_id) != claimed_sha:
             errors.append(
-                f"workflow superseded checkpoint claim {claimed_sha} does not match any pr_marker_plan marker superseded_commit_sha"
+                f"workflow superseded checkpoint claim for marker {marker_id!r} does not match its pr_marker_plan superseded_commit_sha"
             )
+    if WORKFLOW_UNSCOPED_CHECKPOINT_CLAIM_RE.search(text):
+        errors.append("workflow checkpoint claims must name their marker")
 
     section_token = "## PR Marker Plan Evidence"
     if section_token in text:

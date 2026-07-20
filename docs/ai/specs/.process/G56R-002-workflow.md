@@ -889,7 +889,7 @@ For every task:
   destructive-clock, and hard-link durability remediation. Exact-head
   RepoPrompt reviews returned `NO FINDINGS` for the core
   (`untitled-chat-337E74`) and process state (`untitled-chat-55E370`).
-- Implementation checkpoint: `2b7096dacdaa7a6af62b3c12b36e83cf4515213e`
+- Implementation checkpoint [us1]: `2b7096dacdaa7a6af62b3c12b36e83cf4515213e`
 
 ### Treatment Checkpoint Evidence
 
@@ -898,7 +898,7 @@ For every task:
 - Superseded candidate freeze: `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
 - Telemetry profile: `sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb`
 - Treatment contract: `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`
-- Superseded marker checkpoint: `8a179bdbb6aef08849bbfc4ed07c547c26f8194a`
+- Superseded marker checkpoint [us2]: `8a179bdbb6aef08849bbfc4ed07c547c26f8194a`
 - Reviewability: size-only `block` at 4,214 source / 3,843 nonblank,
   non-comment lines across the current two production modules
   (`codex_capabilities.py`: 2,470 / 2,243; `treatment_trace_schema.py`:
@@ -924,7 +924,7 @@ For every task:
   reroutes, detailed reroute reasons, and normalized malformed-predecessor
   errors. The exact-head RepoPrompt review returned `NO FINDINGS`
   (`windows-telemetry-review-D88461`).
-- Implementation checkpoint: `42cdf743346c880c1b7e8cb172e842a82ab6f343`
+- Implementation checkpoint [us2]: `42cdf743346c880c1b7e8cb172e842a82ab6f343`
 
 ### Synthetic Replay Checkpoint Evidence
 
@@ -941,7 +941,7 @@ For every task:
 - Current verification-authority findings head: `61014105efd7c99e04e6a40008c85e9d718a4db7`
 - Initial whole-range findings head: `41643ee0b93eab88758c655bdbcb23cd05fe6473`
 - Latest exact-head findings head: `a7cbcb6081b12129c617995b8fe585550de547ec`
-- Current remediation source head: `7f846a02254c6337eb207fee7dba6a06cd485a00`
+- Current remediation source head [us3]: `7f846a02254c6337eb207fee7dba6a06cd485a00`
 - Capability fixture: `sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a`.
 - Treatment fixture: `sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788`.
 - Replay output: `sha256:c8a69de446be0ba98ec876ee37c715b008e21c97dcebc067866405a9d92d5eb4` with byte-identical two-pass verification.

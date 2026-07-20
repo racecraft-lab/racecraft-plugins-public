@@ -20,6 +20,7 @@ _CAPABILITY_DEPENDENCY_NAMES = (
     "codex_capability_observations",
     "codex_capability_matrix",
     "codex_capability_private",
+    "codex_capability_retention_lock",
     "codex_capability_retention_records",
     "codex_capability_capture_retention",
     "codex_capability_retention",

@@ -21,6 +21,7 @@ def _load_runtime_dependencies() -> dict[str, object]:
         "codex_capability_observations",
         "codex_capability_matrix",
         "codex_capability_private",
+        "codex_capability_retention_lock",
         "codex_capability_retention_records",
         "codex_capability_capture_retention",
         "codex_capability_retention",
