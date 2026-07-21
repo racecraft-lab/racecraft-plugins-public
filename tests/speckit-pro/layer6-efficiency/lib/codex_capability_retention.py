@@ -18,6 +18,16 @@ def _descriptor_entry_exists(parent_descriptor, filename):
         return False
 
 
+def _deletion_intent_file_identity(metadata):
+    return {
+        "device": metadata.st_dev,
+        "inode": metadata.st_ino,
+        "size": metadata.st_size,
+        "mtime_ns": metadata.st_mtime_ns,
+        "mode": stat.S_IMODE(metadata.st_mode),
+    }
+
+
 def _delete_single_link_private_file(
     target, raw, expected_digest, expected_raw_identity, *,
     deletion_record, deletion_directory, deletion_directory_identity, repository_root,
@@ -317,7 +327,15 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
                 raise ValueError("deletion completion record still has retained raw evidence bytes")
             deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
         if intent is not None:
-            raise ValueError("raw evidence deletion was interrupted before link-count completion proof")
+            if not target.exists():
+                raise ValueError("raw evidence deletion was interrupted after the target unlink")
+            target_metadata = os.stat(target, follow_symlinks=False)
+            if (
+                not stat.S_ISREG(target_metadata.st_mode)
+                or _deletion_intent_file_identity(target_metadata)
+                != intent_record["target_file_identity"]
+            ):
+                raise ValueError("raw evidence deletion intent target identity changed before retry")
         if current < deadline:
             if intent is not None: raise ValueError("raw evidence deletion intent precedes its governing deadline")
             read_content_addressed_private_file(target, repository_root, "retained raw evidence")
@@ -325,10 +343,14 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
         if not target.exists(): raise ValueError("expired raw evidence is missing without a deletion record")
         if not apply: raise ValueError("expired raw evidence requires cleanup")
         if intent is None:
+            target_metadata = os.stat(target, follow_symlinks=False)
+            if not stat.S_ISREG(target_metadata.st_mode) or target_metadata.st_nlink != 1:
+                raise ValueError("expired raw evidence must be a single-link regular non-symlink file")
             intent_record = {
-                "schema_version": "raw-evidence-deletion-intent.v1",
+                "schema_version": "raw-evidence-deletion-intent.v2",
                 "raw_evidence_digest": evidence_digest,
                 "retention_record_digests": record_digests,
+                "target_file_identity": _deletion_intent_file_identity(target_metadata),
                 "delete_after": deadline_text,
                 "deletion_started_at": as_of,
             }

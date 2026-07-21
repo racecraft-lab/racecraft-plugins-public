@@ -297,8 +297,9 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention 
   --output /absolute/path/outside/repository/g56r-002-raw/retention-report.json
 ```
 
-Cleanup first appends and directory-fsyncs an immutable intent under
-`deletion-intents/`. It then unlinks the expired raw bytes, proves through the
+Cleanup first appends and directory-fsyncs an immutable v2 intent under
+`deletion-intents/`, binding the original private file identity. It then
+unlinks the expired raw bytes, proves through the
 still-open descriptor that the link count is zero and the content digest is
 unchanged, and directory-fsyncs the raw store. Only after those checks does it
 append and directory-fsync the immutable v2 completion proof under
@@ -307,7 +308,10 @@ history, governing deadline, deletion time, and proof method. Repeated cleanup
 is idempotent. Every raw file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal;
 cleanup fails closed if a power-loss artifact or any alternate hard link still
-reaches governed bytes. Registration and cleanup serialize through the persistent
+reaches governed bytes. A retry may resume only when the canonical target still
+has the exact intent-bound identity, which proves interruption happened before
+unlink; a missing or restored/replaced target remains blocked. Registration and
+cleanup serialize through the persistent
 mode-`0600` `.retention-lock` advisory-lock file. A process crash releases the
 kernel lock automatically, while another live operation fails closed. Do not
 remove the lock file: unlinking it during an active operation can defeat

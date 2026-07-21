@@ -110,14 +110,26 @@ def _validate_deletion_record(record_digest, record):
 
 
 def _validate_deletion_intent(record_digest, record):
-    keys = {"schema_version", "raw_evidence_digest", "retention_record_digests", "delete_after", "deletion_started_at"}
-    if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-deletion-intent.v1":
-        raise ValueError("raw evidence deletion intent must use the closed v1 shape")
+    keys = {"schema_version", "raw_evidence_digest", "retention_record_digests", "target_file_identity", "delete_after", "deletion_started_at"}
+    if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-deletion-intent.v2":
+        raise ValueError("raw evidence deletion intent must use the closed v2 shape")
     _need_digest(record_digest, "deletion intent digest"); _need_digest(record["raw_evidence_digest"], "raw_evidence_digest")
     refs = record["retention_record_digests"]
     if not isinstance(refs, list) or not refs or refs != sorted(set(refs)):
         raise ValueError("raw evidence deletion intent requires unique retention records")
     for value in refs: _need_digest(value, "retention_record_digest")
+    identity = record["target_file_identity"]
+    identity_keys = {"device", "inode", "size", "mtime_ns", "mode"}
+    if (
+        not isinstance(identity, dict)
+        or set(identity) != identity_keys
+        or any(
+            not isinstance(identity[key], int) or isinstance(identity[key], bool) or identity[key] < 0
+            for key in identity_keys
+        )
+        or identity["mode"] != 0o600
+    ):
+        raise ValueError("raw evidence deletion intent requires a private target file identity")
     deadline = _parsed_timestamp(record["delete_after"], "deletion intent deadline")
     if _parsed_timestamp(record["deletion_started_at"], "deletion intent timestamp") < deadline:
         raise ValueError("raw evidence deletion intent precedes its retention deadline")

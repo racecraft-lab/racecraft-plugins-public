@@ -1673,6 +1673,12 @@ def _validate_publishable_treatment_evidence(
 ) -> str:
     if not isinstance(trusted_evidence, Mapping):
         raise ValueError("treatment successor requires trusted evidence bytes")
+    evidence_snapshot = dict(trusted_evidence)
+    if any(
+        not isinstance(key, str) or not isinstance(value, bytes)
+        for key, value in evidence_snapshot.items()
+    ):
+        raise ValueError("trusted treatment evidence must map string owners to exact bytes")
     expected_keys: set[str] = set()
     observations_by_ref: dict[str, list[dict]] = {}
     for trace in bundle["treatment_traces"]:
@@ -1702,7 +1708,7 @@ def _validate_publishable_treatment_evidence(
                 },
             }
             actual_proof = _trusted_evidence_object(
-                trusted_evidence, evidence_digest, "configured-route consumption evidence",
+                evidence_snapshot, evidence_digest, "configured-route consumption evidence",
                 digest_bound=True,
             )
             if actual_proof != expected_proof:
@@ -1719,7 +1725,7 @@ def _validate_publishable_treatment_evidence(
             ),
         }
         actual_observations = _trusted_evidence_object(
-            trusted_evidence, evidence_ref, "observation evidence", digest_bound=False,
+            evidence_snapshot, evidence_ref, "observation evidence", digest_bound=False,
         )
         if actual_observations != expected_observations:
             raise ValueError("trusted observation evidence does not bind the treatment observations")
@@ -1732,19 +1738,19 @@ def _validate_publishable_treatment_evidence(
         "sanitized_treatment_bundle_digest": digest(bundle_binding),
     }
     actual_source = _trusted_evidence_object(
-        trusted_evidence, raw_evidence_digest, "treatment source evidence",
+        evidence_snapshot, raw_evidence_digest, "treatment source evidence",
         digest_bound=True,
     )
     if actual_source != expected_source:
         raise ValueError("trusted source evidence does not bind the sanitized treatment bundle")
-    if set(trusted_evidence) != expected_keys:
+    if set(evidence_snapshot) != expected_keys:
         raise ValueError("trusted treatment evidence contains missing or orphan owners")
     return digest({
         "schema_version": TREATMENT_EVIDENCE_SET_VERSION,
         "evidence_owners": [
             {
                 "evidence_ref": key,
-                "content_digest": digest(trusted_evidence[key]),
+                "content_digest": digest(evidence_snapshot[key]),
             }
             for key in sorted(expected_keys)
         ],

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import base64
+from collections.abc import Mapping
 import importlib.util
 import itertools
 import json
@@ -1450,7 +1451,7 @@ class CapabilityContractTests(unittest.TestCase):
             with mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), self.assertRaisesRegex(ValueError, "interrupted before link-count completion proof"):
+            ), self.assertRaisesRegex(ValueError, "target identity changed"):
                 capabilities.reconcile_raw_evidence_retention(race_root, ROOT, apply=True)
             deletion_directory = race_root / capabilities.DELETION_RECORDS_DIR
             self.assertFalse(deletion_directory.exists() and any(deletion_directory.iterdir()))
@@ -1476,7 +1477,7 @@ class CapabilityContractTests(unittest.TestCase):
             with mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), self.assertRaisesRegex(ValueError, "interrupted before link-count completion proof"):
+            ), self.assertRaisesRegex(ValueError, "target identity changed"):
                 capabilities.reconcile_raw_evidence_retention(mutation_root, ROOT, apply=True)
             write_failure_root = Path(tmp) / "deletion-record-write-failure-root"
             shutil.copytree(raw_root, write_failure_root)
@@ -1503,8 +1504,61 @@ class CapabilityContractTests(unittest.TestCase):
             with mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), self.assertRaisesRegex(ValueError, "interrupted before link-count completion proof"):
+            ), self.assertRaisesRegex(ValueError, "target identity changed"):
                 capabilities.reconcile_raw_evidence_retention(write_failure_root, ROOT, apply=True)
+            pre_unlink_root = Path(tmp) / "pre-unlink-crash-root"
+            shutil.copytree(raw_root, pre_unlink_root)
+            class SimulatedPreUnlinkTermination(BaseException):
+                pass
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), mock.patch.object(
+                capability_retention, "_delete_single_link_private_file",
+                side_effect=SimulatedPreUnlinkTermination,
+            ), self.assertRaises(SimulatedPreUnlinkTermination):
+                capabilities.reconcile_raw_evidence_retention(pre_unlink_root, ROOT, apply=True)
+            pre_unlink_intents = list((pre_unlink_root / capabilities.DELETION_INTENTS_DIR).iterdir())
+            self.assertEqual(len(pre_unlink_intents), 1)
+            pre_unlink_intent = json.loads(pre_unlink_intents[0].read_text())
+            self.assertEqual(pre_unlink_intent["schema_version"], "raw-evidence-deletion-intent.v2")
+            self.assertEqual(pre_unlink_intent["target_file_identity"]["mode"], 0o600)
+            malformed_intent = copy.deepcopy(pre_unlink_intent)
+            malformed_intent["target_file_identity"]["inode"] = True
+            malformed_intent_digest = capabilities.digest(
+                capabilities.canonical_bytes(malformed_intent) + b"\n",
+            )
+            with self.assertRaisesRegex(ValueError, "private target file identity"):
+                capability_retention_records._validate_deletion_intent(
+                    malformed_intent_digest, malformed_intent,
+                )
+            pre_unlink_target = pre_unlink_root / (
+                f"{pre_unlink_intent['raw_evidence_digest'].removeprefix('sha256:')}.json"
+            )
+            pre_unlink_link = Path(tmp) / "pre-unlink-retained-link.json"
+            os.link(pre_unlink_target, pre_unlink_link)
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
+            ), self.assertRaisesRegex(ValueError, "alternate hard links"):
+                capabilities.reconcile_raw_evidence_retention(pre_unlink_root, ROOT, apply=True)
+            self.assertTrue(pre_unlink_target.is_file())
+            pre_unlink_link.unlink()
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
+            ):
+                resumed_cleanup = capabilities.reconcile_raw_evidence_retention(
+                    pre_unlink_root, ROOT, apply=True,
+                )
+            self.assertEqual(
+                resumed_cleanup["deleted_evidence_digests"],
+                retained_report["retained_evidence_digests"],
+            )
+            self.assertTrue(all(
+                json.loads(path.read_text())["deleted_at"] == "2026-08-16T00:00:00Z"
+                for path in (pre_unlink_root / capabilities.DELETION_RECORDS_DIR).iterdir()
+            ))
             original_delete = capability_retention._delete_single_link_private_file
             class SimulatedProcessTermination(BaseException):
                 pass
@@ -3267,6 +3321,31 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertEqual(successor["treatment_contract_digest"], successor_bundle["treatment_contract_digest"])
         self.assertEqual(successor["treatment_evidence_digest"], published["treatment_evidence_digest"])
         self.assertEqual(successor["published_at"], TREATMENT_SUCCESSOR_PUBLISHED_AT)
+        class SwitchingEvidence(Mapping[str, bytes]):
+            def __init__(self, values: dict[str, bytes], target: str) -> None:
+                self.values = values
+                self.target = target
+                self.reads: dict[str, int] = {}
+
+            def __getitem__(self, key: str) -> bytes:
+                self.reads[key] = self.reads.get(key, 0) + 1
+                value = self.values[key]
+                return value + b" " if key == self.target and self.reads[key] > 1 else value
+
+            def __iter__(self):
+                return iter(self.values)
+
+            def __len__(self) -> int:
+                return len(self.values)
+
+        switching_evidence = SwitchingEvidence(
+            successor_evidence,
+            successor_bundle["fixture_provenance"]["raw_evidence_digest"],
+        )
+        self.assertEqual(treatment.build_treatment_successor(
+            prior, successor_bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+            trusted_treatment_evidence=switching_evidence,
+        ), successor)
         rerouted = self.rebound(make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external"))
         trusted = trusted_external_qualification(rerouted)
         declare_reroute_result(rerouted, trusted)

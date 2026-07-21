@@ -254,6 +254,10 @@ They become governing only when a content-addressed publication receipt binds
 the candidate freeze ID, exact artifact digest, publication time, and complete
 retention-record set after the output bytes exist. Unreceipted records are
 reported as pending and do not participate in the effective deletion deadline.
+Deletion intents bind the original private file identity. An interrupted
+cleanup resumes only while that exact canonical file remains reachable; a
+missing or identity-changed target cannot prove pre-unlink interruption and
+remains fail-closed without a completion record.
 
 ## Telemetry and Treatment Records
 
