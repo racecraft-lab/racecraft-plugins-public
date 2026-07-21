@@ -36,14 +36,14 @@ def _fsync_directory(path):
 
 
 def _write_private_bytes_at(parent_descriptor, parent_path, filename, payload, *, append_only, expected_parent_identity):
-    temporary = None; descriptor = None
+    temporary = None; descriptor = None; target_descriptor = None
     try:
         for _ in range(64):
             candidate = f".g56r-002-{secrets.token_hex(16)}"
             try:
                 descriptor = os.open(
                     candidate,
-                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+                    os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
                     0o600,
                     dir_fd=parent_descriptor,
                 )
@@ -54,8 +54,7 @@ def _write_private_bytes_at(parent_descriptor, parent_path, filename, payload, *
         if descriptor is None or temporary is None:
             raise ValueError("private output temporary name allocation failed")
         os.fchmod(descriptor, 0o600)
-        with os.fdopen(descriptor, "wb") as stream:
-            descriptor = None
+        with os.fdopen(os.dup(descriptor), "wb") as stream:
             stream.write(payload); stream.flush(); os.fsync(stream.fileno())
         _assert_private_directory_current(parent_path, parent_descriptor, expected_parent_identity)
         if append_only:
@@ -63,8 +62,41 @@ def _write_private_bytes_at(parent_descriptor, parent_path, filename, payload, *
                 temporary, filename, src_dir_fd=parent_descriptor, dst_dir_fd=parent_descriptor,
                 follow_symlinks=False,
             )
+            target_descriptor = os.open(
+                filename,
+                os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+                dir_fd=parent_descriptor,
+            )
+            temporary_metadata = os.fstat(descriptor)
+            target_before = os.fstat(target_descriptor)
+            if (
+                not stat.S_ISREG(target_before.st_mode)
+                or (target_before.st_dev, target_before.st_ino)
+                != (temporary_metadata.st_dev, temporary_metadata.st_ino)
+            ):
+                raise ValueError("append-only published target does not match its temporary file")
+            retained = bytearray()
+            while len(retained) <= len(payload):
+                chunk = os.read(target_descriptor, min(1024 * 1024, len(payload) + 1 - len(retained)))
+                if not chunk: break
+                retained.extend(chunk)
+            target_after = os.fstat(target_descriptor)
+            current_target = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
+            if (
+                bytes(retained) != payload
+                or _stable_file_identity(target_after) != _stable_file_identity(target_before)
+                or _stable_file_identity(current_target) != _stable_file_identity(target_after)
+            ):
+                raise ValueError("append-only published target changed during verification")
             os.fsync(parent_descriptor)
             os.unlink(temporary, dir_fd=parent_descriptor); temporary = None
+            final_target = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
+            if (
+                _stable_file_content_identity(final_target)
+                != _stable_file_content_identity(target_after)
+                or final_target.st_nlink != 1
+            ):
+                raise ValueError("append-only published target changed during commit")
         else:
             os.replace(
                 temporary, filename, src_dir_fd=parent_descriptor, dst_dir_fd=parent_descriptor,
@@ -73,6 +105,9 @@ def _write_private_bytes_at(parent_descriptor, parent_path, filename, payload, *
         os.fsync(parent_descriptor)
         _assert_private_directory_current(parent_path, parent_descriptor, expected_parent_identity)
     finally:
+        if target_descriptor is not None:
+            try: os.close(target_descriptor)
+            except OSError: pass  # Best-effort cleanup must not mask the original failure.
         if descriptor is not None:
             try: os.close(descriptor)
             except OSError: pass  # Best-effort cleanup must not mask the original failure.
@@ -98,6 +133,33 @@ def _write_private_bytes(path, payload, *, append_only=False, expected_parent_id
         os.close(parent_descriptor)
 
 
+def _write_public_append_only_bytes(path, payload):
+    if not HAS_DESCRIPTOR_RELATIVE_IO:
+        raise ValueError("append-only publication requires descriptor-relative filesystem operations")
+    if len(payload) > PRIVATE_REFRESH_MAX_BYTES:
+        raise ValueError("append-only publication exceeds the bounded size")
+    target = Path(os.path.abspath(path)); parent = target.parent
+    metadata = os.stat(parent, follow_symlinks=False)
+    if not stat.S_ISDIR(metadata.st_mode):
+        raise ValueError("append-only publication parent must be a real directory")
+    parent_identity = _stable_directory_identity(metadata)
+    parent_descriptor = _private_directory_descriptor(parent, parent_identity)
+    try:
+        _write_private_bytes_at(
+            parent_descriptor, parent, target.name, payload, append_only=True,
+            expected_parent_identity=parent_identity,
+        )
+        retained = _read_bounded_regular_file(
+            target, allowed_root=parent, expected_parent_identity=parent_identity,
+            require_single_link=True,
+        )
+        if retained != payload:
+            raise ValueError("append-only published target bytes disagree")
+        _assert_private_directory_current(parent, parent_descriptor, parent_identity)
+    finally:
+        os.close(parent_descriptor)
+
+
 def _write(path, value, *, private=False, append_only=False, expected_parent_identity=None):
     payload = canonical_bytes(value) + b"\n"
     if private:
@@ -111,22 +173,7 @@ def _write(path, value, *, private=False, append_only=False, expected_parent_ide
         )
         return
     if append_only:
-        descriptor, temporary = tempfile.mkstemp(prefix=".g56r-002-publish-", dir=Path(path).parent)
-        try:
-            with os.fdopen(descriptor, "wb") as stream:
-                stream.write(payload); stream.flush(); os.fsync(stream.fileno())
-            os.link(temporary, path)
-            _fsync_directory(Path(path).parent)
-            os.unlink(temporary); temporary = None
-            _fsync_directory(Path(path).parent)
-        except Exception:
-            try: os.close(descriptor)
-            except OSError: pass  # Best-effort cleanup must not mask the original failure.
-            raise
-        finally:
-            if temporary is not None:
-                try: os.unlink(temporary)
-                except OSError: pass  # Best-effort cleanup must not mask the original failure.
+        _write_public_append_only_bytes(path, payload)
         return
     Path(path).write_bytes(payload)
 

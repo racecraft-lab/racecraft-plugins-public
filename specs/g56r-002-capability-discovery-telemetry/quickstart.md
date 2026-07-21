@@ -276,7 +276,14 @@ governing only after the exact freeze bytes exist and an immutable receipt is
 directory-fsynced under `publication-receipts/`. Re-running the same publication
 recovers a crash between those steps; a different artifact at the output path
 fails before registration. Records left by failed publication remain reported
-as pending and cannot extend deletion. Before the deadline, verify that every
+as pending and cannot extend deletion. Before registration, publication
+semantically revalidates the source capture, every non-fixture observation, and
+every canary result against the retained private bytes. It publishes and
+re-reads the exact canonical output through one identity-bound parent
+descriptor before issuing a receipt. Private record directories are likewise
+enumerated and opened through one identity-bound descriptor; directory
+replacement, entry substitution, or a changed before/after entry set fails
+closed. Before the deadline, verify that every
 governing retained digest still has its exact bytes:
 
 ```sh

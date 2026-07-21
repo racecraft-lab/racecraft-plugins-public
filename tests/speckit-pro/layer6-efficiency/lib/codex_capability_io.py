@@ -128,6 +128,88 @@ def _read_bounded_regular_file(
         for directory_descriptor in reversed(directory_descriptors): os.close(directory_descriptor)
 
 
+def _load_descriptor_bound_private_records(directory, label):
+    directory = Path(os.path.abspath(directory))
+    try:
+        metadata = os.stat(directory, follow_symlinks=False)
+    except FileNotFoundError:
+        return []
+    if not stat.S_ISDIR(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o700:
+        raise ValueError(f"{label} path must be a private directory")
+    directory_identity = _stable_directory_identity(metadata)
+    descriptor = os.open(
+        directory,
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_DIRECTORY", 0),
+    )
+    file_descriptor = None
+    try:
+        if _stable_directory_identity(os.fstat(descriptor)) != directory_identity:
+            raise ValueError(f"{label} directory changed before it was opened")
+        names = sorted(os.listdir(descriptor))
+        if any(Path(name).name != name or Path(name).suffix != ".json" for name in names):
+            raise ValueError(f"{label} directory contains an undeclared entry")
+        records = []
+        for name in names:
+            current_directory = os.stat(directory, follow_symlinks=False)
+            if (
+                _stable_directory_identity(current_directory) != directory_identity
+                or _stable_directory_identity(os.fstat(descriptor)) != directory_identity
+            ):
+                raise ValueError(f"{label} directory changed while records were being loaded")
+            before = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+            if (
+                not stat.S_ISREG(before.st_mode)
+                or stat.S_IMODE(before.st_mode) != 0o600
+                or before.st_nlink != 1
+                or before.st_size > PRIVATE_REFRESH_MAX_BYTES
+            ):
+                raise ValueError(f"{label} must be a bounded single-link private regular file")
+            file_descriptor = os.open(
+                name,
+                os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+                dir_fd=descriptor,
+            )
+            opened = os.fstat(file_descriptor)
+            if _stable_file_identity(opened) != _stable_file_identity(before):
+                raise ValueError(f"{label} pathname changed before it was read")
+            chunks, total = [], 0
+            while True:
+                chunk = os.read(file_descriptor, min(1024 * 1024, PRIVATE_REFRESH_MAX_BYTES + 1 - total))
+                if not chunk: break
+                chunks.append(chunk); total += len(chunk)
+                if total > PRIVATE_REFRESH_MAX_BYTES:
+                    raise ValueError(f"{label} exceeds the bounded size")
+            after = os.fstat(file_descriptor)
+            current = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+            if (
+                _stable_file_identity(after) != _stable_file_identity(opened)
+                or _stable_file_identity(current) != _stable_file_identity(after)
+                or total != after.st_size
+            ):
+                raise ValueError(f"{label} changed while it was being read")
+            os.close(file_descriptor); file_descriptor = None
+            raw = b"".join(chunks)
+            if name != f"{digest(raw).removeprefix('sha256:')}.json":
+                raise ValueError(f"{label} must use its exact content digest as the filename")
+            record = _parse_json_bytes(raw)
+            if raw != canonical_bytes(record) + b"\n":
+                raise ValueError(f"{label} must use canonical JSON bytes")
+            records.append((digest(raw), record))
+        if sorted(os.listdir(descriptor)) != names:
+            raise ValueError(f"{label} directory changed while records were being loaded")
+        current_directory = os.stat(directory, follow_symlinks=False)
+        if (
+            _stable_directory_identity(current_directory) != directory_identity
+            or _stable_directory_identity(os.fstat(descriptor)) != directory_identity
+        ):
+            raise ValueError(f"{label} directory changed while records were being loaded")
+        return records
+    finally:
+        if file_descriptor is not None: os.close(file_descriptor)
+        os.close(descriptor)
+
+
 def digest_regular_file(path):
     source = Path(os.path.abspath(path)); flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
     try:

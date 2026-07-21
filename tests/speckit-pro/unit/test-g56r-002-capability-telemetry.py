@@ -1215,6 +1215,20 @@ class CapabilityContractTests(unittest.TestCase):
             evidence_path = raw_root / f"{result['evidence_digest'].removeprefix('sha256:')}.json"
             evidence_path.write_bytes(evidence_bytes); evidence_path.chmod(0o600)
             self.assertEqual(capabilities.validate_canary_evidence(raw_root, ROOT, result), evidence_bytes)
+            unrelated_bytes = b'{"unrelated":true}\n'
+            unrelated_result = copy.deepcopy(result)
+            unrelated_result["evidence_digest"] = capabilities.digest(unrelated_bytes)
+            unrelated_result["executor_result_digest"] = capabilities.digest({
+                key: value for key, value in unrelated_result.items()
+                if key not in {"executor_result_digest", "availability_disposition"}
+            })
+            unrelated_path = raw_root / f"{unrelated_result['evidence_digest'].removeprefix('sha256:')}.json"
+            unrelated_path.write_bytes(unrelated_bytes); unrelated_path.chmod(0o600)
+            with self.assertRaisesRegex(ValueError, "canary evidence"):
+                capability_freeze._validate_retained_freeze_evidence({
+                    "surface_matrix": {"observations": []},
+                    "canary_results": [unrelated_result],
+                }, raw_root, ROOT)
             with mock.patch.object(capability_freeze, "APPROVED_CANARY_EXECUTORS", (approval,)), mock.patch.object(
                 capability_freeze, "_validate_freeze_payload", side_effect=lambda freeze, manifest, **kwargs: freeze,
             ):
@@ -1334,10 +1348,14 @@ class CapabilityContractTests(unittest.TestCase):
             with mock.patch.object(
                 capability_retention_records, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
-            ):
+            ), mock.patch.object(
+                capability_freeze, "validate_unknown_observation_evidence",
+                wraps=capability_freeze.validate_unknown_observation_evidence,
+            ) as validate_unknown_evidence:
                 publication = capabilities.publish_with_raw_evidence_retention(
                     freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
                 )
+            self.assertEqual(validate_unknown_evidence.call_count, 3)
             self.assertEqual(len(publication["retention_record_digests"]), 4)
             self.assertEqual(capabilities.publish_with_raw_evidence_retention(
                 freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
@@ -2072,12 +2090,11 @@ class CapabilityContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "not canonical"):
                 capability_publish_io._read(noncanonical, require_canonical=True)
             canonical = root / "canonical.json"
-            with mock.patch.object(
-                capability_private, "_fsync_directory", wraps=capability_private._fsync_directory,
-            ) as fsync_directory:
+            original_fsync = capability_private.os.fsync
+            with mock.patch.object(capability_private.os, "fsync", wraps=original_fsync) as fsync:
                 capability_private._write(canonical, {"b": 1, "a": 2}, append_only=True)
-            self.assertEqual(fsync_directory.call_count, 2)
-            self.assertFalse(any(root.glob(".g56r-002-publish-*")))
+            self.assertGreaterEqual(fsync.call_count, 3)
+            self.assertFalse(any(root.glob(".g56r-002-*")))
             self.assertEqual(capability_publish_io._read(canonical, require_canonical=True), {"a": 2, "b": 1})
             replacement = root / "replacement.json"
             replacement.write_bytes(b'{}\n')
@@ -2195,6 +2212,50 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertFalse(target.exists())
             self.assertEqual(list(private_parent.iterdir()), [])
             self.assertEqual(list(moved_parent.iterdir()), [])
+            public_parent = root / "public"
+            public_parent.mkdir()
+            public_target = public_parent / "published.json"
+            moved_public_parent = root / "validated-public"
+            public_swapped = False
+
+            def swap_public_parent(path: Path, descriptor: int, expected_identity: object) -> None:
+                nonlocal public_swapped
+                if Path(path) == public_parent and not public_swapped:
+                    public_parent.rename(moved_public_parent)
+                    public_parent.mkdir()
+                    public_swapped = True
+                original_assert(path, descriptor, expected_identity)
+
+            with mock.patch.object(
+                capability_private, "_assert_private_directory_current", side_effect=swap_public_parent,
+            ), self.assertRaisesRegex(ValueError, "parent changed"):
+                capability_private._write(public_target, {"published": True}, append_only=True)
+            self.assertTrue(public_swapped)
+            self.assertEqual(list(public_parent.iterdir()), [])
+            self.assertEqual(list(moved_public_parent.iterdir()), [])
+            substituted_parent = root / "substituted-public"
+            substituted_parent.mkdir()
+            substituted_target = substituted_parent / "published.json"
+            original_link = capability_private.os.link
+
+            def substitute_linked_target(source: str, destination: str, **kwargs: object) -> None:
+                original_link(source, destination, **kwargs)
+                destination_descriptor = kwargs["dst_dir_fd"]
+                os.unlink(destination, dir_fd=destination_descriptor)
+                replacement_descriptor = os.open(
+                    destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                    0o600, dir_fd=destination_descriptor,
+                )
+                try:
+                    os.write(replacement_descriptor, b'{"substituted":true}\n')
+                finally:
+                    os.close(replacement_descriptor)
+
+            with mock.patch.object(
+                capability_private.os, "link", side_effect=substitute_linked_target,
+            ), self.assertRaisesRegex(ValueError, "does not match its temporary file"):
+                capability_private._write(substituted_target, {"published": True}, append_only=True)
+            self.assertEqual(substituted_target.read_bytes(), b'{"substituted":true}\n')
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_retention_lock_releases_descriptor_after_validation_error(self) -> None:
@@ -2222,6 +2283,64 @@ class CapabilityContractTests(unittest.TestCase):
                     pass
             with capability_retention_records._retention_lock(raw_root, raw_identity):
                 pass
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_private_record_loader_rejects_directory_races(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_root = Path(tmp) / "raw"
+            raw_root.mkdir(mode=0o700)
+            raw, raw_identity = capability_private._validated_raw_evidence_root_binding(
+                raw_root, ROOT,
+            )
+            records, records_identity = capability_retention_records._private_record_directory(
+                raw, capabilities.RETENTION_RECORDS_DIR, raw_identity,
+            )
+            capability_retention_records._store_private_record(
+                records, {"schema_version": "test-record.v1", "value": "first"},
+                ROOT, records_identity,
+            )
+            moved_records = Path(tmp) / "moved-records"
+            original_listdir = capability_io.os.listdir
+            replaced = False
+
+            def replace_after_snapshot(descriptor: int) -> list[str]:
+                nonlocal replaced
+                names = original_listdir(descriptor)
+                if not replaced:
+                    records.rename(moved_records)
+                    records.mkdir(mode=0o700)
+                    replaced = True
+                return names
+
+            with mock.patch.object(
+                capability_io.os, "listdir", side_effect=replace_after_snapshot,
+            ), self.assertRaisesRegex(ValueError, "directory changed"):
+                capability_retention_records._load_private_records(
+                    records, ROOT, "retention record",
+                )
+            self.assertTrue(replaced)
+            records.rmdir()
+            moved_records.rename(records)
+            extra = {"schema_version": "test-record.v1", "value": "second"}
+            extra_bytes = capabilities.canonical_bytes(extra) + b"\n"
+            extra_path = records / f"{capabilities.digest(extra_bytes).removeprefix('sha256:')}.json"
+            snapshots = 0
+
+            def add_after_snapshot(descriptor: int) -> list[str]:
+                nonlocal snapshots
+                names = original_listdir(descriptor)
+                snapshots += 1
+                if snapshots == 1:
+                    extra_path.write_bytes(extra_bytes)
+                    extra_path.chmod(0o600)
+                return names
+
+            with mock.patch.object(
+                capability_io.os, "listdir", side_effect=add_after_snapshot,
+            ), self.assertRaisesRegex(ValueError, "directory changed"):
+                capability_retention_records._load_private_records(
+                    records, ROOT, "retention record",
+                )
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_deletion_recovery_refuses_replaced_raw_root(self) -> None:

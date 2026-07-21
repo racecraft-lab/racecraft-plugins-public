@@ -140,6 +140,11 @@ Freeze and canary publication stage one content-addressed retention record per
 non-fixture digest. Each record binds the freeze ID, publication time, and exact
 30-day deletion deadline, but becomes governing only after the exact artifact
 bytes exist and a content-addressed publication receipt is directory-fsynced.
+Before registration, publication semantically revalidates the source capture,
+every non-fixture observation, and every canary result against the retained
+private bytes. The public append-only target is created, inode-checked, and
+re-read through one identity-bound parent descriptor; the exact canonical
+bytes are checked again before the receipt is written.
 An interrupted publication can be recovered idempotently; unreceipted records
 remain pending and cannot extend deletion. The deterministic
 `retention` command verifies pre-deadline presence, fails closed on missing or
@@ -164,4 +169,7 @@ files; offline committed-artifact validation remains platform-neutral.
 Append-only private writes directory-fsync after both final-name publication
 and temporary-name removal. Every governed raw file must have one hard link;
 cleanup fails closed if a crash artifact or alternate name still reaches the
-same inode.
+same inode. Retention, receipt, intent, and deletion-record directories are
+loaded through one identity-bound directory descriptor, with descriptor-relative
+entry opens and an unchanged before/after entry set; directory replacement or
+a mixed snapshot fails closed.

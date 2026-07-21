@@ -230,9 +230,12 @@ Repository tests must pass with the network disabled and no raw evidence store.
 - `raw_evidence_root` must resolve outside the repository, use `0700`
   directories and single-link `0600` files, and retain captures for 30 days after freeze
   publication. Source refresh copies and binds the exact aggregate body capture
-  into that store. Publication stages content-addressed retention records and
-  makes them governing only by appending a receipt after the exact freeze bytes
-  exist; failed-publication records cannot extend deletion. Deterministic
+  into that store. Before registration, publication semantically revalidates
+  the source capture, each non-fixture observation, and every canary result
+  against the retained bytes. It publishes and re-reads the exact canonical
+  freeze bytes through one identity-bound parent descriptor, then makes staged
+  content-addressed retention records governing only by appending a receipt;
+  failed-publication records cannot extend deletion. Deterministic
   verification fails on missing or overdue bytes. Cleanup first appends and
   directory-fsyncs a content-addressed deletion-intent record, then performs a
   descriptor-relative rename to a deterministic quarantine name, fsyncs the raw
@@ -247,6 +250,9 @@ Repository tests must pass with the network disabled and no raw evidence store.
   private-root lock, and destructive cleanup derives its timestamp from current
   UTC. Append-only writes directory-fsync both final-name publication and
   temporary-name removal; any alternate hard link blocks cleanup.
+  Record loaders bind one private directory descriptor for enumeration and
+  entry opens, require an unchanged before/after entry set, and reject directory
+  replacement or mixed snapshots.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
   bound to exact bytes by the adjacent out-of-band digest manifest.

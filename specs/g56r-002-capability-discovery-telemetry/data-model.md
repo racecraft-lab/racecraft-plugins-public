@@ -257,6 +257,12 @@ is allowed; publication before any route resolution or non-null observation
 capture is rejected.
 
 Raw-evidence retention records are staged before append-only artifact output.
+Before registration, publication semantically revalidates the source capture,
+every non-fixture observation, and every canary result against the retained
+private bytes; content-address identity alone is insufficient. The public
+append-only output is created and verified through one identity-bound parent
+descriptor, and its exact canonical bytes are re-read before any receipt is
+issued.
 They become governing only when a content-addressed publication receipt binds
 the candidate freeze ID, exact artifact digest, publication time, and complete
 retention-record set after the output bytes exist. Unreceipted records are
@@ -275,6 +281,10 @@ actual successful cleanup time. A v3 intent with neither its quarantine nor a
 durable completion record is indeterminate and remains fail-closed; absence
 alone never certifies deletion. Reappeared targets and missing, forked, or
 disconnected intent chains likewise remain fail-closed.
+Every retention, receipt, intent, and deletion-record directory is loaded
+through one identity-bound directory descriptor. Entry names and identities
+are verified descriptor-relative, and the entry set must match before and
+after the load; directory replacement or a mixed snapshot fails closed.
 
 ## Telemetry and Treatment Records
 

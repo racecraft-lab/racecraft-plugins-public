@@ -328,6 +328,14 @@ def build_canary_successor(
     )
 
 
+def _validate_retained_freeze_evidence(freeze, raw, repository_root):
+    for observation in freeze["surface_matrix"]["observations"]:
+        if observation["collection_method_id"] != "fixture-enumeration-v1":
+            validate_unknown_observation_evidence(observation, raw, repository_root)
+    for result in freeze["canary_results"]:
+        validate_canary_evidence(raw, repository_root, result)
+
+
 def publish_with_raw_evidence_retention(
     freeze, output, raw_evidence_root, repository_root, *, manifest,
     predecessor=None, expected_telemetry_profile_id=None, expected_treatment_contract_digest=None,
@@ -355,10 +363,13 @@ def publish_with_raw_evidence_retention(
         if set(_freeze_raw_evidence_digests(freeze)) & deleted_digests:
             raise ValueError("raw evidence cannot be registered after deletion has begun")
         validate_source_capture_evidence(manifest, freeze["official_source_refreshes"], raw, repository_root)
+        _validate_retained_freeze_evidence(freeze, raw, repository_root)
         already_published = _publication_target_matches(output, payload)
         retention_record_digests = _register_raw_evidence_retention_locked(freeze, raw, raw_identity, repository_root)
         if not already_published:
             _write(output, freeze, append_only=True)
+        if not _publication_target_matches(output, payload):
+            raise ValueError("publication output was not retained under its canonical bytes")
         receipt_digest = _store_publication_receipt_locked(
             freeze, retention_record_digests, raw, raw_identity, repository_root,
         )

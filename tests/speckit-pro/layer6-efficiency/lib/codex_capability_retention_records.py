@@ -61,18 +61,7 @@ def _store_private_record(directory, value, repository_root, expected_directory_
 
 
 def _load_private_records(directory, repository_root, label):
-    if not directory.exists(): return []
-    if directory.is_symlink() or not directory.is_dir(): raise ValueError(f"{label} path must be a private directory")
-    entries = sorted(directory.iterdir(), key=lambda path: path.name)
-    if any(path.is_symlink() or not path.is_file() or path.suffix != ".json" for path in entries):
-        raise ValueError(f"{label} directory contains an undeclared entry")
-    records = []
-    for path in entries:
-        _, raw = read_content_addressed_private_file(path, repository_root, label)
-        record = _parse_json_bytes(raw)
-        if raw != canonical_bytes(record) + b"\n": raise ValueError(f"{label} must use canonical JSON bytes")
-        records.append((digest(raw), record))
-    return records
+    return _load_descriptor_bound_private_records(directory, label)
 
 
 def _validate_retention_record(record_digest, record):
