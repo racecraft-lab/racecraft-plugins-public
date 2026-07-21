@@ -65,7 +65,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | 39 TDD-first tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Nine findings remediated; G6 passed |
 | Confidence Gate | G6.5 | Complete | Advisory score 0.99 passed the 0.90 threshold |
-| Implement | `$speckit-implement` | In Progress | T001-T039 are implemented; the restacked US3 head passes full validation and awaits exact live-head review |
+| Implement | `$speckit-implement` | In Progress | T001-T039 are implemented; the restacked US3 implementation/evidence head returned `NO FINDINGS`, with final metadata-head review pending |
 | Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -874,7 +874,7 @@ For every task:
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
 | 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
-| 3 - Synthetic replay | In Progress | 5 | Live-range remediation passes 88/88 telemetry tests, 35/35 validator tests, 77/77 contract tests, and the 2857/2857 full suite; exact live-head re-review is pending |
+| 3 - Synthetic replay | In Progress | 5 | Live-range remediation passes 88/88 telemetry tests, 35/35 validator tests, 77/77 contract tests, and the 2857/2857 full suite; exact review at `4842c331` returned `NO FINDINGS` and final metadata-head review is pending |
 | Polish and validation | In Progress | 9 | T031-T039 remain implemented; reference and generated artifacts are current; the 107/107 manifest and live release-title gates pass |
 
 ### Capability Checkpoint Evidence
@@ -929,8 +929,9 @@ For every task:
 ### Synthetic Replay Checkpoint Evidence
 
 > The evidence below records the historical pre-restack checkpoint. The current
-> US3 head is review-pending until the exact live-head independent-review gate
-> passes. The refreshed full-suite, manifest, and release-readiness gates pass.
+> US3 implementation/evidence head passed the exact live-head independent-review
+> gate. Final metadata synchronization remains review-pending. The refreshed
+> full-suite, manifest, and release-readiness gates pass.
 
 - Historical reviewed remediation source head: `096605e6a4987c0f580c525bc377a68c438a9a22`
 - Historical exact reviewed PR head: `3d7bd9eff79a1889830c74b6bcd22ae8945098c0`
@@ -942,6 +943,7 @@ For every task:
 - Initial whole-range findings head: `41643ee0b93eab88758c655bdbcb23cd05fe6473`
 - Latest exact-head findings head: `a0e4e62c6a173a4d51dc6fb070d16d95aa443c9c`
 - Current remediation source head [us3]: `aea7282a9b3c64c2d04928104e13b35defeaa0f3`
+- Latest clean exact reviewed head: `4842c33172bef31634180c7e9585e412f0786059`
 - Capability fixture: `sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a`.
 - Treatment fixture: `sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788`.
 - Replay output: `sha256:c8a69de446be0ba98ec876ee37c715b008e21c97dcebc067866405a9d92d5eb4` with byte-identical two-pass verification.
@@ -1113,8 +1115,9 @@ For every task:
   validator rejects any Current claim whose visible rows do not exactly match
   `pr_marker_plan.source_fingerprint`. The digest-drift regression and the full
   2857/2857 suite pass at
-  `aea7282a9b3c64c2d04928104e13b35defeaa0f3`; exact live-head re-review is
-  pending.
+  `aea7282a9b3c64c2d04928104e13b35defeaa0f3`. Exact live-head re-review at
+  `4842c33172bef31634180c7e9585e412f0786059` returned `NO FINDINGS`; the final
+  metadata-only binding head remains to be reviewed.
 - Evidence finalization after the source head is metadata-only; it does not
   change implementation or verification inputs.
 - Folded polish: T031-T039 are complete. The current reviewability and title
@@ -1143,7 +1146,7 @@ For every task:
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `42cdf743346c880c1b7e8cb172e842a82ab6f343` | Only T026-T030 replay growth remains authorized |
-| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Remediation source `aea7282a9b3c64c2d04928104e13b35defeaa0f3`; focused and full validation pass; exact live-head review pending | No correctness or safety exception remains |
+| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Remediation source `aea7282a9b3c64c2d04928104e13b35defeaa0f3`; exact review at `4842c33172bef31634180c7e9585e412f0786059` returned `NO FINDINGS`; final metadata-head review pending | No correctness or safety exception remains |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
