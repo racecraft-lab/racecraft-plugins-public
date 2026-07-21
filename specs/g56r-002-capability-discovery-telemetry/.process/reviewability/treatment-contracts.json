@@ -8,8 +8,8 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 4776,
-  "actual_nonblank_noncomment_lines": 4356,
+  "actual_source_lines": 4786,
+  "actual_nonblank_noncomment_lines": 4365,
   "production_modules": 13,
   "max_capability_module_source_lines": 395,
   "primary_surface": "harness/adapters",
@@ -23,16 +23,16 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 350, "nonblank_noncomment_lines": 307},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 297, "nonblank_noncomment_lines": 256},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {"source_lines": 15, "nonblank_noncomment_lines": 10},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 395, "nonblank_noncomment_lines": 380},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 380, "nonblank_noncomment_lines": 346},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 389, "nonblank_noncomment_lines": 374},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 395, "nonblank_noncomment_lines": 360},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 213, "nonblank_noncomment_lines": 196},
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
-      "source_lines": 1884,
-      "nonblank_noncomment_lines": 1736
+      "source_lines": 1885,
+      "nonblank_noncomment_lines": 1737
     }
   },
   "correctness_checks": {
-    "focused_tests": "53/53 pass",
+    "focused_tests": "54/54 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
@@ -102,16 +102,19 @@
     "post_unlink_recovery_intent_successor": "pass",
     "recovery_intent_chain_integrity": "pass",
     "post_persistence_retry_completion": "pass",
+    "retry_quarantine_directory_sync": "pass",
+    "configured_proof_reachable": "pass",
+    "effective_evidence_reachable": "pass",
     "identity_bound_quarantine_before_unlink": "pass",
     "pre_persistence_quarantine_resume": "pass",
     "post_persistence_quarantine_resume": "pass",
     "interrupted_completion_resume": "pass",
     "post_unlink_completion_resume": "pass",
     "current_treatment_evidence_narrative": "pass",
-    "independent_review_chat_id": "pr-367-re-review-40F2F7",
+    "independent_review_chat_id": "pr-367-rereview-112186",
     "independent_review_findings": [
-      "failure before v3 publication left v2 with a missing canonical target and no supported retry",
-      "tasks reviewability measurements contradicted the current checkpoint evidence"
+      "resumed quarantine could persist v3 before directory-syncing and revalidating the rename",
+      "configured-proof and effective-evidence proven dispositions were unreachable under the authorized profile"
     ]
   },
   "exception": {

@@ -312,7 +312,7 @@
       "status": "review_pending",
       "tasks_completed": 10,
       "tasks_total": 10,
-      "focused_tests": "53/53 pass",
+      "focused_tests": "54/54 pass",
       "windows_safe_offline_replay": "pass",
       "canonical_manifest_snapshot": "pass",
       "canonical_route_resolution_membership": "pass",
@@ -349,6 +349,9 @@
       "post_unlink_recovery_intent_successor": "pass",
       "recovery_intent_chain_integrity": "pass",
       "post_persistence_retry_completion": "pass",
+      "retry_quarantine_directory_sync": "pass",
+      "configured_proof_reachable": "pass",
+      "effective_evidence_reachable": "pass",
       "identity_bound_quarantine_before_unlink": "pass",
       "pre_persistence_quarantine_resume": "pass",
       "post_persistence_quarantine_resume": "pass",
@@ -356,30 +359,30 @@
       "post_unlink_completion_resume": "pass",
       "current_treatment_evidence_narrative": "pass",
       "independent_review": "pending_reaudit",
-      "independent_review_chat_id": "pr-367-re-review-40F2F7",
+      "independent_review_chat_id": "pr-367-rereview-112186",
       "independent_review_findings": [
-        "failure before v3 publication left v2 with a missing canonical target and no supported retry",
-        "tasks reviewability measurements contradicted the current checkpoint evidence"
+        "resumed quarantine could persist v3 before directory-syncing and revalidating the rename",
+        "configured-proof and effective-evidence proven dispositions were unreachable under the authorized profile"
       ],
       "baseline_commit": "bbffc774c815594edc64cf412a2b5f91127ef213",
-      "candidate_freeze_id": "sha256:44e11e240b8305e73aa3e04794aa85a43e29d757818fd7a1b39e35d59ac75013",
-      "telemetry_profile_id": "sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb",
+      "candidate_freeze_id": "sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c",
+      "telemetry_profile_id": "sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979",
       "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
-      "treatment_evidence_digest": "sha256:087242317e9b4be18693eca15413b2de185df82cafe24f2fc03c9b3ffd4cea35",
+      "treatment_evidence_digest": "sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f",
       "marker_id": "us2",
-      "reviewability": "aggregate size-only block at 4,776 source / 4,356 nonblank non-comment lines across 13 production modules; 12 capability modules are safely split with a 395-line maximum, the facade exports exactly the supported API, and only the treatment module retains a typed size-only exception",
-      "checkpoint": "ce64616342ab977fc5bbaa675b8b9ca7ed192108",
-      "superseded_checkpoint": "c3052ff151563d9b146de347b392e79f688cd3eb",
+      "reviewability": "aggregate size-only block at 4,786 source / 4,365 nonblank non-comment lines across 13 production modules; 12 capability modules are safely split with a 395-line maximum, the facade exports exactly the supported API, and only the treatment module retains a typed size-only exception",
+      "checkpoint": "e041319053e1a650d92953869a9ecec5c15f8879",
+      "superseded_checkpoint": "ce64616342ab977fc5bbaa675b8b9ca7ed192108",
       "implementation_completed_at": "2026-07-20T03:06:58Z",
       "completed_at": "2026-07-20T03:50:24Z",
-      "review_updated_at": "2026-07-21T18:47:01Z"
+      "review_updated_at": "2026-07-21T19:26:19Z"
     }
   },
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:ab005c9cf824271500e21576c99b8888e5692263cf89bfbf93377ae3ee0f1246",
-    "plan_declared_scope_sha": "sha256:1739c2859203e5223a8df3189a25af1a98f9f750ea3bb923bf7d953120e2f147",
-    "tasks_sha": "sha256:462e72e589d22a05fcb7ecf22af0328fa6dc329b5ddf50ce8c6b907d66c42ffe",
-    "reviewability_sha": "sha256:0691fcd722fc5835e9e2022c4abf5fb46f9bf15f56dcc71bc23459cac8f10b07",
+    "plan_declared_scope_sha": "sha256:a4d8887f5535c1927c31f37f78c964788ae31adbb422ba2d330f0ce20c3f409f",
+    "tasks_sha": "sha256:3f4cfff053dd11d658c992d77239d8f8b6b3a825d1e631d90ebeeb400a207261",
+    "reviewability_sha": "sha256:1ef8f530442850777852cc255cf37c1c43bdee23f06d910fced4838171ed8655",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
   },
   "pr_marker_plan": {
@@ -389,9 +392,9 @@
     "status": "checkpointing",
     "source_fingerprint": {
       "feature_spec_sha": "sha256:ab005c9cf824271500e21576c99b8888e5692263cf89bfbf93377ae3ee0f1246",
-      "plan_declared_scope_sha": "sha256:1739c2859203e5223a8df3189a25af1a98f9f750ea3bb923bf7d953120e2f147",
-      "tasks_sha": "sha256:462e72e589d22a05fcb7ecf22af0328fa6dc329b5ddf50ce8c6b907d66c42ffe",
-      "reviewability_sha": "sha256:0691fcd722fc5835e9e2022c4abf5fb46f9bf15f56dcc71bc23459cac8f10b07",
+      "plan_declared_scope_sha": "sha256:a4d8887f5535c1927c31f37f78c964788ae31adbb422ba2d330f0ce20c3f409f",
+      "tasks_sha": "sha256:3f4cfff053dd11d658c992d77239d8f8b6b3a825d1e631d90ebeeb400a207261",
+      "reviewability_sha": "sha256:1ef8f530442850777852cc255cf37c1c43bdee23f06d910fced4838171ed8655",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
     },
     "markers": [
@@ -518,7 +521,7 @@
           "mode": "implementation",
           "scope": "us2",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
-          "head_sha": "ce64616342ab977fc5bbaa675b8b9ca7ed192108"
+          "head_sha": "e041319053e1a650d92953869a9ecec5c15f8879"
         },
         "hazards": ["six-id-join", "exact-treatment", "service-reroute"],
         "subdivision": {
@@ -533,8 +536,8 @@
         "implementation_checkpoint": {
           "status": "review_pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
-          "commit_sha": "ce64616342ab977fc5bbaa675b8b9ca7ed192108",
-          "superseded_commit_sha": "c3052ff151563d9b146de347b392e79f688cd3eb"
+          "commit_sha": "e041319053e1a650d92953869a9ecec5c15f8879",
+          "superseded_commit_sha": "ce64616342ab977fc5bbaa675b8b9ca7ed192108"
         },
         "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us2.json"},
         "warnings": [
@@ -545,12 +548,12 @@
             "source": "treatment-contracts-reviewability",
             "details": {
               "marker_id": "us2",
-              "actual_source_lines": 4776,
-              "actual_nonblank_noncomment_lines": 4356,
+              "actual_source_lines": 4786,
+              "actual_nonblank_noncomment_lines": 4365,
               "production_modules": 13,
               "module_measurements": {
-                "capability_group": {"production_modules": 12, "source_lines": 2892, "nonblank_noncomment_lines": 2620, "max_module_source_lines": 395},
-                "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {"source_lines": 1884, "nonblank_noncomment_lines": 1736}
+                "capability_group": {"production_modules": 12, "source_lines": 2901, "nonblank_noncomment_lines": 2628, "max_module_source_lines": 395},
+                "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {"source_lines": 1885, "nonblank_noncomment_lines": 1737}
               }
             }
           }
