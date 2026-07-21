@@ -117,13 +117,16 @@ def _write(path, value, *, private=False, append_only=False, expected_parent_ide
                 stream.write(payload); stream.flush(); os.fsync(stream.fileno())
             os.link(temporary, path)
             _fsync_directory(Path(path).parent)
+            os.unlink(temporary); temporary = None
+            _fsync_directory(Path(path).parent)
         except Exception:
             try: os.close(descriptor)
             except OSError: pass  # Best-effort cleanup must not mask the original failure.
             raise
         finally:
-            try: os.unlink(temporary)
-            except OSError: pass  # Best-effort cleanup must not mask the original failure.
+            if temporary is not None:
+                try: os.unlink(temporary)
+                except OSError: pass  # Best-effort cleanup must not mask the original failure.
         return
     Path(path).write_bytes(payload)
 

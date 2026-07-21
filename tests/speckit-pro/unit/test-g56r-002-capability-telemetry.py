@@ -1506,6 +1506,42 @@ class CapabilityContractTests(unittest.TestCase):
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
             ), self.assertRaisesRegex(ValueError, "target identity changed"):
                 capabilities.reconcile_raw_evidence_retention(write_failure_root, ROOT, apply=True)
+            pre_unlink_error_root = Path(tmp) / "pre-unlink-error-root"
+            shutil.copytree(raw_root, pre_unlink_error_root)
+            failed_pre_unlink_filename = None
+            def fail_before_unlink(filename: str, parent_descriptor: int) -> None:
+                nonlocal failed_pre_unlink_filename
+                failed_pre_unlink_filename = filename
+                raise OSError("simulated pre-unlink failure")
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), mock.patch.object(
+                capability_retention, "_unlink_descriptor_relative", side_effect=fail_before_unlink,
+            ), self.assertRaisesRegex(ValueError, "could not be deleted safely"):
+                capabilities.reconcile_raw_evidence_retention(pre_unlink_error_root, ROOT, apply=True)
+            self.assertIsNotNone(failed_pre_unlink_filename)
+            pre_unlink_error_intents = list(
+                (pre_unlink_error_root / capabilities.DELETION_INTENTS_DIR).iterdir()
+            )
+            self.assertEqual(len(pre_unlink_error_intents), 1)
+            pre_unlink_error_intent = json.loads(pre_unlink_error_intents[0].read_text())
+            pre_unlink_error_target = pre_unlink_error_root / str(failed_pre_unlink_filename)
+            self.assertEqual(
+                capability_retention._deletion_intent_file_identity(pre_unlink_error_target.stat()),
+                pre_unlink_error_intent["target_file_identity"],
+            )
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
+            ):
+                pre_unlink_error_cleanup = capabilities.reconcile_raw_evidence_retention(
+                    pre_unlink_error_root, ROOT, apply=True,
+                )
+            self.assertEqual(
+                pre_unlink_error_cleanup["deleted_evidence_digests"],
+                retained_report["retained_evidence_digests"],
+            )
             pre_unlink_root = Path(tmp) / "pre-unlink-crash-root"
             shutil.copytree(raw_root, pre_unlink_root)
             class SimulatedPreUnlinkTermination(BaseException):
@@ -1782,7 +1818,12 @@ class CapabilityContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "not canonical"):
                 capability_publish_io._read(noncanonical, require_canonical=True)
             canonical = root / "canonical.json"
-            capability_private._write(canonical, {"b": 1, "a": 2}, append_only=True)
+            with mock.patch.object(
+                capability_private, "_fsync_directory", wraps=capability_private._fsync_directory,
+            ) as fsync_directory:
+                capability_private._write(canonical, {"b": 1, "a": 2}, append_only=True)
+            self.assertEqual(fsync_directory.call_count, 2)
+            self.assertFalse(any(root.glob(".g56r-002-publish-*")))
             self.assertEqual(capability_publish_io._read(canonical, require_canonical=True), {"a": 2, "b": 1})
             replacement = root / "replacement.json"
             replacement.write_bytes(b'{}\n')

@@ -61,10 +61,10 @@ not a size claim. The binding human estimate remains 297 reviewable LOC; the
 
 **Implementation checkpoint**: The capability adapter is safely subdivided
 behind the stable `codex_capabilities.py` facade into 12 focused modules totaling
-2,790 source lines and 2,517 nonblank, non-comment lines; the largest is 395
+2,789 source lines and 2,515 nonblank, non-comment lines; the largest is 391
 source lines. The treatment validator remains 1,884 source lines and 1,736
-nonblank, non-comment lines, so the current 13-module US2 marker totals 4,674
-source lines and 4,253 nonblank, non-comment lines and the aggregate 400-LOC
+nonblank, non-comment lines, so the current 13-module US2 marker totals 4,673
+source lines and 4,251 nonblank, non-comment lines and the aggregate 400-LOC
 trigger remains active. Capability work T001-T015 no longer relies on a
 `no_safe_boundary` exception: source, observation, matrix, private I/O,
 retention, freeze, contract, and CLI responsibilities have independent module

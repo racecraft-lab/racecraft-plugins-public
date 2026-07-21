@@ -126,6 +126,19 @@ def _delete_single_link_private_file(
         except (OSError, ValueError):
             return False
 
+    def preserve_or_restore_verified_payload():
+        if verified_payload is None:
+            return
+        if _descriptor_entry_exists(parent_descriptor, filename):
+            current, opened = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False), os.fstat(descriptor)
+            if not stat.S_ISREG(current.st_mode) or _stable_file_identity(current) != _stable_file_identity(opened) or _stable_file_identity(opened) != _stable_file_identity(before):
+                raise ValueError("expired raw evidence changed before deletion recovery")
+            return
+        _write_private_bytes_at(
+            parent_descriptor, raw, filename, verified_payload, append_only=True,
+            expected_parent_identity=expected_raw_identity,
+        )
+
     try:
         deletion_directory_descriptor = _private_directory_descriptor(
             deletion_directory, deletion_directory_identity,
@@ -198,26 +211,13 @@ def _delete_single_link_private_file(
         )
         return deletion_record_digest
     except _BlockingHardLinkRace:
-        if (
-            verified_payload is not None
-            and parent_descriptor is not None
-            and not _descriptor_entry_exists(parent_descriptor, filename)
-        ):
-            _write_private_bytes_at(
-                parent_descriptor, raw, filename, verified_payload,
-                append_only=True,
-                expected_parent_identity=expected_raw_identity,
-            )
+        preserve_or_restore_verified_payload()
         raise
     except OSError as error:
         if verified_payload is not None:
             if durable_completion_survived_failure():
                 return deletion_record_digest
-            _write_private_bytes_at(
-                parent_descriptor, raw, filename, verified_payload,
-                append_only=not _descriptor_entry_exists(parent_descriptor, filename),
-                expected_parent_identity=expected_raw_identity,
-            )
+            preserve_or_restore_verified_payload()
             if deletion_proved:
                 raise
         raise ValueError("expired raw evidence could not be deleted safely") from error
@@ -225,11 +225,7 @@ def _delete_single_link_private_file(
         if verified_payload is not None:
             if durable_completion_survived_failure():
                 return deletion_record_digest
-            _write_private_bytes_at(
-                parent_descriptor, raw, filename, verified_payload,
-                append_only=not _descriptor_entry_exists(parent_descriptor, filename),
-                expected_parent_identity=expected_raw_identity,
-            )
+            preserve_or_restore_verified_payload()
         raise
     finally:
         if descriptor is not None: os.close(descriptor)
