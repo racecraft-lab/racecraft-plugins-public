@@ -5,9 +5,9 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "b43333f0268c442696f8bd48ce4f8f225da56a6a",
+  "head_sha": "aea7282a9b3c64c2d04928104e13b35defeaa0f3",
   "head_scope": "current_remediation_source",
-  "current_restack_review_status": "live-range-review-9FBA02 fifteenth review at 723e4882 remediated at b43333f0; exact live-head re-review pending",
+  "current_restack_review_status": "untitled-chat-9B00BE sixteenth review at cf962cc5 found stale visible workflow fingerprints; remediated at aea7282a; exact live-head re-review pending",
   "reason_class": "aggregate_size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
@@ -47,10 +47,11 @@
     "pending_evidence_authority": "pass",
     "immutable_checkpoint_correction_chain": "pass",
     "json_primitive_type_equality": "pass",
+    "workflow_fingerprint_binding": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass after restack",
     "full_suite": "2857/2857 pass after live-range remediation",
-    "independent_review": "live-range-review-9FBA02 fifteenth review at 723e4882 remediated at b43333f0; exact live-head re-review pending"
+    "independent_review": "untitled-chat-9B00BE sixteenth review at cf962cc5 found stale visible workflow fingerprints; remediated at aea7282a; exact live-head re-review pending"
   },
   "decomposition": {
     "status": "complete",

@@ -941,7 +941,7 @@ For every task:
 - Current verification-authority findings head: `61014105efd7c99e04e6a40008c85e9d718a4db7`
 - Initial whole-range findings head: `41643ee0b93eab88758c655bdbcb23cd05fe6473`
 - Latest exact-head findings head: `a0e4e62c6a173a4d51dc6fb070d16d95aa443c9c`
-- Current remediation source head [us3]: `b43333f0268c442696f8bd48ce4f8f225da56a6a`
+- Current remediation source head [us3]: `aea7282a9b3c64c2d04928104e13b35defeaa0f3`
 - Capability fixture: `sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a`.
 - Treatment fixture: `sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788`.
 - Replay output: `sha256:c8a69de446be0ba98ec876ee37c715b008e21c97dcebc067866405a9d92d5eb4` with byte-identical two-pass verification.
@@ -1105,6 +1105,16 @@ For every task:
   Authority, correction-chain, raw-HTML, and boolean-versus-integer regressions
   pass at `b43333f0268c442696f8bd48ce4f8f225da56a6a`; exact live-head re-review is
   pending.
+- Exact live-head re-review `untitled-chat-9B00BE` at
+  `cf962cc5480c6e84a10c1889bc34cfc475dc1128` found one further P1 boundary:
+  the visible workflow claimed Current fingerprints while retaining stale
+  reviewability-evidence and changed-file-manifest digests. The workflow now
+  mirrors all six authoritative marker-plan fingerprints, and the strict
+  validator rejects any Current claim whose visible rows do not exactly match
+  `pr_marker_plan.source_fingerprint`. The digest-drift regression and the full
+  2857/2857 suite pass at
+  `aea7282a9b3c64c2d04928104e13b35defeaa0f3`; exact live-head re-review is
+  pending.
 - Evidence finalization after the source head is metadata-only; it does not
   change implementation or verification inputs.
 - Folded polish: T031-T039 are complete. The current reviewability and title
@@ -1133,7 +1143,7 @@ For every task:
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `42cdf743346c880c1b7e8cb172e842a82ab6f343` | Only T026-T030 replay growth remains authorized |
-| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Remediation source `b43333f0268c442696f8bd48ce4f8f225da56a6a`; focused validation passes; full and exact live-head review pending | No correctness or safety exception remains |
+| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Remediation source `aea7282a9b3c64c2d04928104e13b35defeaa0f3`; focused and full validation pass; exact live-head review pending | No correctness or safety exception remains |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank

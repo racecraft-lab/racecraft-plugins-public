@@ -8,8 +8,8 @@
     "T033", "T034", "T035", "T036", "T037", "T038", "T039"
   ],
   "implementation_baseline_sha": "0d5df513fe95a5201c422b908e2c6b7330b91552",
-  "implementation_checkpoint_sha": "b43333f0268c442696f8bd48ce4f8f225da56a6a",
-  "last_reviewed_head_sha": "723e488225453937b8a8d72185af9f53c9774ba8",
+  "implementation_checkpoint_sha": "aea7282a9b3c64c2d04928104e13b35defeaa0f3",
+  "last_reviewed_head_sha": "cf962cc5480c6e84a10c1889bc34cfc475dc1128",
   "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
   "treatment_fixture_digest": "sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788",
   "replay_digest": "sha256:c8a69de446be0ba98ec876ee37c715b008e21c97dcebc067866405a9d92d5eb4",
@@ -39,7 +39,8 @@
     "pending_evidence_authority": "pass",
     "immutable_checkpoint_correction_chain": "pass",
     "json_primitive_type_equality": "pass",
-    "independent_critical_high_review": "live-range-review-9FBA02 fifteenth review at 723e4882 remediated at b43333f0; exact live-head re-review pending",
+    "workflow_fingerprint_binding": "pass",
+    "independent_critical_high_review": "untitled-chat-9B00BE sixteenth review at cf962cc5 found stale visible workflow fingerprints; remediated at aea7282a; exact live-head re-review pending",
     "release_readiness_title_gate": "pass",
     "changed_file_manifest": "107/107 exact"
   },
@@ -50,5 +51,5 @@
   "current_tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
   "checkpoint_marker_tasks_sha": "sha256:937ba1ff7f1cc7a8a8886de399f16affa63059098e936b7fa8b5ba3007c43072",
   "current_marker_tasks_sha": "sha256:937ba1ff7f1cc7a8a8886de399f16affa63059098e936b7fa8b5ba3007c43072",
-  "updated_at": "2026-07-20T17:15:00Z"
+  "updated_at": "2026-07-21T14:21:24Z"
 }

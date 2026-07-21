@@ -378,23 +378,21 @@
       "pending_evidence_authority": "pass",
       "immutable_checkpoint_correction_chain": "pass",
       "json_primitive_type_equality": "pass",
-      "independent_review": "live-range-review-9FBA02 fifteenth review at 723e4882 remediated at b43333f0; exact live-head re-review pending",
-      "independent_review_chat_id": "live-range-review-9FBA02",
+      "workflow_fingerprint_binding": "pass",
+      "independent_review": "untitled-chat-9B00BE sixteenth review at cf962cc5 found stale visible workflow fingerprints; remediated at aea7282a; exact live-head re-review pending",
+      "independent_review_chat_id": "untitled-chat-9B00BE",
       "independent_review_findings": [
-        "pending checkpoint evidence commit and digest claims were not authenticated",
-        "completed checkpoint evidence could be rewritten and rebound",
-        "raw HTML blocks could hide mandatory workflow authority",
-        "phase evidence comparison did not preserve JSON primitive types"
+        "Current workflow fingerprints did not match authoritative marker-plan fingerprints"
       ],
-      "implementation_commit": "b43333f0268c442696f8bd48ce4f8f225da56a6a",
+      "implementation_commit": "aea7282a9b3c64c2d04928104e13b35defeaa0f3",
       "evidence_finalization_scope": "The following commit changes evidence metadata only; implementation and verification inputs remain those at implementation_commit.",
       "capability_fixture_digest": "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a",
       "treatment_fixture_digest": "sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788",
       "replay_digest": "sha256:c8a69de446be0ba98ec876ee37c715b008e21c97dcebc067866405a9d92d5eb4",
       "marker_id": "us3",
       "reviewability": "aggregate size-only block at 5,773 source / 5,237 nonblank non-comment lines across 26 safely subdivided modules; maximum module size is 396 lines",
-      "checkpoint": "b43333f0268c442696f8bd48ce4f8f225da56a6a",
-      "updated_at": "2026-07-20T17:15:00Z"
+      "checkpoint": "aea7282a9b3c64c2d04928104e13b35defeaa0f3",
+      "updated_at": "2026-07-21T14:21:24Z"
     },
     "Phase 7: Implement - Integration and Polish": {
       "status": "pending",
@@ -409,15 +407,12 @@
       "docs_reference_check": "pass",
       "release_readiness_title_gate": "pass",
       "changed_file_manifest": "107/107 exact",
-      "independent_review": "live-range-review-9FBA02 fifteenth review at 723e4882 remediated at b43333f0; exact live-head re-review pending",
-      "independent_review_chat_id": "live-range-review-9FBA02",
+      "independent_review": "untitled-chat-9B00BE sixteenth review at cf962cc5 found stale visible workflow fingerprints; remediated at aea7282a; exact live-head re-review pending",
+      "independent_review_chat_id": "untitled-chat-9B00BE",
       "independent_review_findings": [
-        "pending checkpoint evidence commit and digest claims were not authenticated",
-        "completed checkpoint evidence could be rewritten and rebound",
-        "raw HTML blocks could hide mandatory workflow authority",
-        "phase evidence comparison did not preserve JSON primitive types"
+        "Current workflow fingerprints did not match authoritative marker-plan fingerprints"
       ],
-      "updated_at": "2026-07-20T17:15:00Z"
+      "updated_at": "2026-07-21T14:21:24Z"
     }
   },
   "current_source_fingerprint": {
@@ -1157,7 +1152,7 @@
           "mode": "implementation",
           "scope": "us3",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "head_sha": "b43333f0268c442696f8bd48ce4f8f225da56a6a"
+          "head_sha": "aea7282a9b3c64c2d04928104e13b35defeaa0f3"
         },
         "hazards": [
           "fixture-provenance",
@@ -1183,8 +1178,8 @@
           "checkpoint_evidence_commit_sha": "6da665ebe27f23cef7d0f1f102e58d91a82e600d",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
           "verification_evidence_sha": "sha256:68e4eb8ca50178d96d574917b0c527370f43d56e94bbb2112571b2a9b975f6b6",
-          "commit_sha": "b43333f0268c442696f8bd48ce4f8f225da56a6a",
-          "head_sha": "b43333f0268c442696f8bd48ce4f8f225da56a6a",
+          "commit_sha": "aea7282a9b3c64c2d04928104e13b35defeaa0f3",
+          "head_sha": "aea7282a9b3c64c2d04928104e13b35defeaa0f3",
           "completed_task_ids": [
             "T026",
             "T027",
@@ -1201,13 +1196,13 @@
             "T038",
             "T039"
           ],
-          "summary": "Fifteenth-review evidence-authority remediation passes focused validation and awaits exact live-head re-review.",
+          "summary": "Sixteenth-review workflow-fingerprint remediation passes focused and full validation and awaits exact live-head re-review.",
           "validation": [
             "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
             "python3 tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
             "python3 -u tests/speckit-pro/run-all.py: 2857/2857 pass",
             "release-readiness title and 107-file changed-file manifest gates: pass",
-            "RepoPrompt CE live-range-review-9FBA02 fifteenth review at 723e4882 remediated at b43333f0; exact live-head re-review pending"
+            "RepoPrompt CE untitled-chat-9B00BE sixteenth review at cf962cc5 found stale visible workflow fingerprints; remediated at aea7282a; exact live-head re-review pending"
           ],
           "freshness": {
             "source_fingerprint_contract": "marker-task-lines.v2",
