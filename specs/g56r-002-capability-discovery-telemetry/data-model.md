@@ -240,7 +240,7 @@ only narrow this set.
 | `included_candidate_route_ids` | array | May be empty; never inferred |
 | `excluded_candidates` | array | Every excluded tuple and its explicit reasons |
 | `approved_canary_executors` / `canary_results` | arrays | Closed approval and replay-safe result records; both empty in the first freeze |
-| `published_at` | timestamp | Required |
+| `published_at` | timestamp | Required; treatment successors cannot predate any bound route resolution or non-null observation capture |
 | `supersedes_candidate_freeze_id` | string or null | Successor only; prior freeze is immutable |
 
 `candidate_freeze_id` hashes the complete published object except that ID
@@ -248,6 +248,13 @@ itself. Validation rebuilds the manifest binding, source refresh, matrix,
 runtime snapshot, tuple decisions, derived candidate lists, canary state,
 treatment evidence set, and whole-freeze identity. Any source, build, evidence, normalization, telemetry,
 or disposition change must produce a successor ID.
+
+A treatment-bound successor may retain `unknown`, failed, or non-scorable traces
+for excluded tuples, but it may publish `proven` only when the assigned prior
+tuple is included, source-admitted, availability-supported, surface-agreed, and
+pending exact-treatment evaluation. Publication at the latest evidence timestamp
+is allowed; publication before any route resolution or non-null observation
+capture is rejected.
 
 Raw-evidence retention records are staged before append-only artifact output.
 They become governing only when a content-addressed publication receipt binds

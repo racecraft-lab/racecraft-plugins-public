@@ -3643,6 +3643,61 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertEqual(successor["treatment_contract_digest"], successor_bundle["treatment_contract_digest"])
         self.assertEqual(successor["treatment_evidence_digest"], published["treatment_evidence_digest"])
         self.assertEqual(successor["published_at"], TREATMENT_SUCCESSOR_PUBLISHED_AT)
+        proven_excluded = copy.deepcopy(self.bundle)
+        reroute_observation = next(
+            item for item in proven_excluded["treatment_traces"][0]["observations"]
+            if item["field_path"] == "reroute.events"
+        )
+        reroute_observation.update({
+            "observation_state": "observed_value", "value": [],
+            "evidence_ref": "fixture://trace/reroute-monitoring",
+            "captured_at": "2026-07-17T04:01:00Z",
+        })
+        declare_treatment_result(
+            proven_excluded, [], "proven",
+            ["configured_route_proof_and_complete_reroute_monitoring"],
+        )
+        proven_excluded, proven_excluded_evidence = bind_trusted_treatment_evidence(
+            self.rebound(proven_excluded)
+        )
+        self.assertEqual(
+            treatment.validate_treatment_bundle(copy.deepcopy(proven_excluded))[
+                "treatment_traces"
+            ][0]["treatment_disposition"],
+            "proven",
+        )
+        with self.assertRaisesRegex(ValueError, "cannot prove a non-executable prior tuple"):
+            treatment.build_treatment_successor(
+                prior, proven_excluded, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=proven_excluded_evidence,
+            )
+        future_route = copy.deepcopy(self.bundle)
+        future_route["route_resolutions"][0]["resolved_at"] = "2026-07-19T04:01:00Z"
+        next(
+            item for item in future_route["treatment_traces"][0]["observations"]
+            if item["field_path"] == "route.resolved_at"
+        )["value"] = "2026-07-19T04:01:00Z"
+        future_route, future_route_evidence = bind_trusted_treatment_evidence(
+            self.rebound(rebind_treatment_owners(future_route))
+        )
+        with self.assertRaisesRegex(ValueError, "publication timestamp precedes treatment evidence"):
+            treatment.build_treatment_successor(
+                prior, future_route, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=future_route_evidence,
+            )
+        future_observation = copy.deepcopy(self.bundle)
+        next(
+            item for item in future_observation["treatment_traces"][0]["observations"]
+            if item["captured_at"] is not None
+        )["captured_at"] = "2026-07-19T04:01:00Z"
+        future_observation, future_observation_evidence = bind_trusted_treatment_evidence(
+            self.rebound(future_observation)
+        )
+        with self.assertRaisesRegex(ValueError, "publication timestamp precedes treatment evidence"):
+            treatment.build_treatment_successor(
+                prior, future_observation, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=future_observation_evidence,
+            )
         class SwitchingEvidence(Mapping[str, bytes]):
             def __init__(self, values: dict[str, bytes], target: str) -> None:
                 self.values = values

@@ -792,6 +792,12 @@ def _timestamp(value: object, label: str, *, nullable: bool = False) -> str | No
     return value
 
 
+def _parsed_timestamp(value: object, label: str) -> datetime:
+    timestamp = _timestamp(value, label)
+    assert isinstance(timestamp, str)
+    return datetime.fromisoformat(timestamp.removesuffix("Z") + "+00:00")
+
+
 def _strings(value: object, label: str) -> list[str]:
     if not isinstance(value, list) or any(not isinstance(item, str) or not item for item in value):
         raise ValueError(f"{label} must be an array of non-empty strings")
@@ -1815,20 +1821,41 @@ def build_treatment_successor(
     bundle_repositories.update((item["repository_revision"], item["repository_tree_digest"]) for item in validated["treatment_traces"])
     if bundle_repositories != expected_repository:
         raise ValueError("treatment bundle repository binding does not match the prior freeze")
+    treatment_evidence_times = [
+        *(_parsed_timestamp(item["resolved_at"], "route resolution timestamp") for item in validated["route_resolutions"]),
+        *(
+            _parsed_timestamp(observation["captured_at"], "observation capture timestamp")
+            for trace in validated["treatment_traces"]
+            for observation in trace["observations"]
+            if observation["captured_at"] is not None
+        ),
+    ]
+    if treatment_evidence_times and _parsed_timestamp(
+        published_at, "treatment successor publication timestamp",
+    ) < max(treatment_evidence_times):
+        raise ValueError("treatment successor publication timestamp precedes treatment evidence")
     prior_tuples = {
-        (item["candidate_route_id"], item["agent_contract_id"]): (
-            item["instruction_sha256"], item["role_instruction_sha256"], item["canonical_effort"]
-        )
+        (item["candidate_route_id"], item["agent_contract_id"]): item
         for item in prior_freeze["tuple_decisions"]
     }
     for trace in validated["treatment_traces"]:
         objective = trace["objective_binding"]
-        instruction_identity = prior_tuples.get((objective["candidate_route_id"], objective["agent_contract_id"]))
-        if instruction_identity is None:
+        prior_tuple = prior_tuples.get((objective["candidate_route_id"], objective["agent_contract_id"]))
+        if prior_tuple is None:
             raise ValueError("treatment bundle candidate tuple is not present in the prior freeze")
-        if instruction_identity[:2] != (trace["instruction_hash"], trace["instruction_hash"]):
+        if trace["treatment_disposition"] == "proven" and (
+            prior_tuple["decision"] != "included"
+            or prior_tuple["source_admitted"] is not True
+            or prior_tuple["surface_disposition"] != "agreed"
+            or prior_tuple["availability_disposition"] != "supported"
+            or prior_tuple["exact_treatment_readiness"] != "pending"
+        ):
+            raise ValueError("treatment bundle cannot prove a non-executable prior tuple")
+        if (prior_tuple["instruction_sha256"], prior_tuple["role_instruction_sha256"]) != (
+            trace["instruction_hash"], trace["instruction_hash"],
+        ):
             raise ValueError("treatment bundle instruction identity does not match the prior freeze")
-        prior_effort = instruction_identity[2]
+        prior_effort = prior_tuple["canonical_effort"]
         if prior_effort is not None and trace["requested_effort"] != prior_effort:
             raise ValueError("treatment bundle requested effort does not match the prior freeze")
         if prior_effort is None and trace["treatment_disposition"] == "proven":

@@ -162,6 +162,10 @@ stop condition.
   evidence-backed complete reroute capture, while effective evidence requires
   an observed supported route that binds a canonical non-null model/effort
   tuple without populating undocumented effective-effort telemetry.
+- Publish a `proven` trace only when its prior-freeze tuple is included,
+  source-admitted, availability-supported, and surface-agreed. Successor
+  publication must not predate any bound route resolution or non-null
+  observation capture.
 - Replay committed fixtures twice offline and reject hash drift, undeclared
   fields, raw-store dependencies, inferred values, or nondeterminism.
 

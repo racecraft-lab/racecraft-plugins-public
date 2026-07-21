@@ -99,6 +99,13 @@ and treatment evidence set
 Any later source, client, surface, normalization, telemetry, treatment-evidence,
 or tuple-decision change creates another successor ID.
 
+Success-path fixtures exercise the standalone treatment contract, but successor
+publication cannot turn that evidence into capability authority. A `proven`
+trace must map to an included, source-admitted, availability-supported,
+surface-agreed prior tuple; excluded tuples may retain only non-authoritative
+dispositions. The successor timestamp is also ordered after every bound route
+resolution and non-null observation capture.
+
 Raw-evidence cleanup begins with an identity-bound v2 deletion intent. It
 renames that inode to a deterministic quarantine name, synchronizes the raw
 root, and journals a v3 successor binding the quarantine name and identity
