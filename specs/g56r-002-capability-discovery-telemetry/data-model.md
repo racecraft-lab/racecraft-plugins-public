@@ -257,14 +257,13 @@ reported as pending and do not participate in the effective deletion deadline.
 Deletion intents bind the original private file identity. An interrupted
 cleanup resumes only while that exact canonical file remains reachable; a
 missing or arbitrarily identity-changed target cannot prove pre-unlink
-interruption and remains fail-closed without a completion record. When cleanup
-has already proved unlink completion but cannot persist the completion record,
-it may restore the verified bytes and append an immutable recovery-intent
-transition. A v3 stage binds the prior intent and verified post-unlink proof
-before replacement publication; a v4 successor then binds the stage and exact
-replacement identity. A retry can finalize a missing staged target or validate
-and promote an already-restored target. Only the unique terminal intent in that
-closed, unforked chain can authorize the next retry.
+interruption and remains fail-closed without a completion record. Once cleanup
+has proved and directory-synchronized the unlink, it appends an immutable v3
+successor that binds the prior intent and verified post-unlink proof before it
+attempts the completion record. Raw bytes are never republished after v3. A
+retry may use the unique terminal v3 only while the canonical target remains
+absent, and may then retry only the completion record. Reappeared targets and
+missing, forked, or disconnected intent chains remain fail-closed.
 
 ## Telemetry and Treatment Records
 

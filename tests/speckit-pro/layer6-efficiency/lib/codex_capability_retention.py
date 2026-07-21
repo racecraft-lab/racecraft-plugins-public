@@ -27,8 +27,7 @@ def _delete_single_link_private_file(
     filename = Path(target).name
     if Path(target).parent != raw:
         raise ValueError("raw evidence deletion target must be an immediate child of its private root")
-    deletion_payload = canonical_bytes(deletion_record) + b"\n"
-    deletion_record_digest = digest(deletion_payload)
+    deletion_record_digest = digest(canonical_bytes(deletion_record) + b"\n")
     _validate_deletion_record(deletion_record_digest, deletion_record)
     if deletion_record["raw_evidence_digest"] != expected_digest or Path(deletion_directory).parent != raw:
         raise ValueError("deletion completion record does not bind its private evidence target")
@@ -37,102 +36,18 @@ def _delete_single_link_private_file(
     file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
     parent_descriptor = descriptor = deletion_directory_descriptor = None
     verified_payload = None; deletion_proved = False
-    completion_filename = f"{deletion_record_digest.removeprefix('sha256:')}.json"
 
-    def completion_record_is_durable():
-        if deletion_directory_descriptor is None:
-            return False
-        try:
-            pathname = os.stat(
-                completion_filename,
-                dir_fd=deletion_directory_descriptor,
-                follow_symlinks=False,
-            )
-        except FileNotFoundError:
-            return False
-        if (
-            not stat.S_ISREG(pathname.st_mode)
-            or stat.S_IMODE(pathname.st_mode) != 0o600
-            or pathname.st_nlink != 1
-            or pathname.st_size != len(deletion_payload)
-        ):
-            raise ValueError("deletion completion record is not a private single-link file")
-        record_descriptor = os.open(
-            completion_filename, file_flags, dir_fd=deletion_directory_descriptor,
-        )
-        try:
-            opened = os.fstat(record_descriptor)
-            if _stable_file_identity(pathname) != _stable_file_identity(opened):
-                raise ValueError("deletion completion record changed before verification")
-            chunks, total = [], 0
-            while total < len(deletion_payload):
-                chunk = os.read(record_descriptor, len(deletion_payload) - total)
-                if not chunk:
-                    break
-                chunks.append(chunk); total += len(chunk)
-            after = os.fstat(record_descriptor)
-            if (
-                _stable_file_identity(after) != _stable_file_identity(opened)
-                or b"".join(chunks) != deletion_payload
-            ):
-                raise ValueError("deletion completion record bytes disagree after persistence failure")
-        finally:
-            os.close(record_descriptor)
-        after_pathname = os.stat(
-            completion_filename,
-            dir_fd=deletion_directory_descriptor,
-            follow_symlinks=False,
-        )
-        if _stable_file_identity(after_pathname) != _stable_file_identity(after):
-            raise ValueError("deletion completion record pathname changed during verification")
-        _assert_private_directory_current(
-            deletion_directory, deletion_directory_descriptor, deletion_directory_identity,
-        )
-        canonical_pathname = os.stat(deletion_directory / completion_filename, follow_symlinks=False)
-        if _stable_file_identity(canonical_pathname) != _stable_file_identity(after_pathname):
-            raise ValueError("deletion completion record is not reachable through its canonical path")
-        os.fsync(deletion_directory_descriptor)
-        _assert_private_directory_current(
-            deletion_directory, deletion_directory_descriptor, deletion_directory_identity,
-        )
-        final_pathname = os.stat(
-            completion_filename,
-            dir_fd=deletion_directory_descriptor,
-            follow_symlinks=False,
-        )
-        final_canonical = os.stat(deletion_directory / completion_filename, follow_symlinks=False)
-        if (
-            _stable_file_identity(final_pathname) != _stable_file_identity(after_pathname)
-            or _stable_file_identity(final_canonical) != _stable_file_identity(after_pathname)
-        ):
-            raise ValueError("deletion completion record changed after directory synchronization")
-        return True
-
-    def durable_completion_survived_failure():
-        if not deletion_proved: return False
-        try:
-            return completion_record_is_durable()
-        except (OSError, ValueError):
-            return False
-    def preserve_or_restore_verified_payload():
+    def preserve_verified_payload_before_proof():
         if verified_payload is None: return
         if _descriptor_entry_exists(parent_descriptor, filename):
             current, opened = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False), os.fstat(descriptor)
             if not stat.S_ISREG(current.st_mode) or _stable_file_identity(current) != _stable_file_identity(opened) or _stable_file_identity(opened) != _stable_file_identity(before):
                 raise ValueError("expired raw evidence changed before deletion recovery")
             return
-        staged = None
-        if deletion_proved:
-            staged = _store_staged_recovery_intent(raw, expected_raw_identity, repository_root, deletion_record)
         _write_private_bytes_at(
             parent_descriptor, raw, filename, verified_payload, append_only=True,
             expected_parent_identity=expected_raw_identity,
         )
-        if staged is not None:
-            staged_record, staged_digest = staged
-            _store_restored_recovery_intent(
-                raw, expected_raw_identity, repository_root, staged_record, staged_digest, raw / filename, deletion_record["deleted_at"],
-            )
     try:
         deletion_directory_descriptor = _private_directory_descriptor(
             deletion_directory, deletion_directory_identity,
@@ -194,32 +109,30 @@ def _delete_single_link_private_file(
         if _stable_directory_identity(raw_after) != _stable_directory_identity(raw_open):
             raise ValueError("raw evidence root changed during deletion")
         deletion_proved = True
-        stored_digest = _store_private_record(
-            deletion_directory, deletion_record, repository_root, deletion_directory_identity,
+        staged_record, staged_digest = _store_staged_recovery_intent(
+            raw, expected_raw_identity, repository_root, deletion_record,
         )
-        if stored_digest != deletion_record_digest:
-            raise ValueError("deletion completion record identity changed while it was stored")
+        _, stored_digest = _store_staged_recovery_completion(
+            raw, expected_raw_identity, repository_root, staged_record, staged_digest,
+        )
         os.fsync(deletion_directory_descriptor)
         _assert_private_directory_current(
             deletion_directory, deletion_directory_descriptor, deletion_directory_identity,
         )
-        return deletion_record_digest
+        return stored_digest, staged_record, staged_digest
     except _BlockingHardLinkRace:
-        preserve_or_restore_verified_payload()
+        preserve_verified_payload_before_proof()
         raise
     except OSError as error:
         if verified_payload is not None:
-            if durable_completion_survived_failure():
-                return deletion_record_digest
-            preserve_or_restore_verified_payload()
+            if not deletion_proved:
+                preserve_verified_payload_before_proof()
             if deletion_proved:
                 raise
         raise ValueError("expired raw evidence could not be deleted safely") from error
     except ValueError:
-        if verified_payload is not None:
-            if durable_completion_survived_failure():
-                return deletion_record_digest
-            preserve_or_restore_verified_payload()
+        if verified_payload is not None and not deletion_proved:
+            preserve_verified_payload_before_proof()
         raise
     finally:
         if descriptor is not None: os.close(descriptor)
@@ -317,19 +230,13 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
                 if not apply:
                     raise ValueError("staged raw evidence recovery requires cleanup")
                 if target.exists():
-                    intent_record, intent_digest = _store_restored_recovery_intent(
-                        raw, raw_identity, repository_root, intent_record, intent[1], target, as_of,
-                    )
-                    deletion_intents.append((intent_record, intent_digest))
-                    intent_by_evidence[evidence_digest] = (intent_record, intent_digest)
-                    intent = (intent_record, intent_digest)
-                else:
-                    record, record_digest = _store_staged_recovery_completion(
-                        raw, raw_identity, repository_root, intent_record, intent[1],
-                    )
-                    deletion_records.append((record, record_digest))
-                    deletion_by_evidence[evidence_digest] = (record, record_digest)
-                    deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
+                    raise ValueError("staged raw evidence deletion target reappeared")
+                record, record_digest = _store_staged_recovery_completion(
+                    raw, raw_identity, repository_root, intent_record, intent[1],
+                )
+                deletion_records.append((record, record_digest))
+                deletion_by_evidence[evidence_digest] = (record, record_digest)
+                deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
             if not target.exists():
                 raise ValueError("raw evidence deletion was interrupted after the target unlink")
             target_metadata = os.stat(target, follow_symlinks=False)
@@ -377,13 +284,15 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
             "deleted_at": as_of,
         }
         directory, directory_identity = _private_record_directory(raw, DELETION_RECORDS_DIR, raw_identity)
-        record_digest = _delete_single_link_private_file(
+        record_digest, staged_record, staged_digest = _delete_single_link_private_file(
             target, raw, evidence_digest, raw_identity,
             deletion_record=deletion_record,
             deletion_directory=directory,
             deletion_directory_identity=directory_identity,
             repository_root=repository_root,
         )
+        deletion_intents.append((staged_record, staged_digest))
+        intent_by_evidence[evidence_digest] = (staged_record, staged_digest)
         deleted.append(evidence_digest); deletion_digests.append(record_digest)
     validate_raw_evidence_root(raw, repository_root)
     return {

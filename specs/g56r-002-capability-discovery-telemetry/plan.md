@@ -228,11 +228,11 @@ Repository tests must pass with the network disabled and no raw evidence store.
   verification fails on missing or overdue bytes. Cleanup first appends and
   directory-fsyncs a content-addressed deletion-intent record, then performs a
   descriptor-relative unlink, proves zero remaining links and the retained-byte
-  digest, directory-fsyncs the raw root, and only then appends the terminal
-  deletion-completion record. If completion persistence fails after that proof,
-  cleanup first journals a v3 recovery stage, then restores the verified bytes
-  and appends a v4 successor binding the stage and replacement identity before
-  a retry. Registration and cleanup share an atomic
+  digest, directory-fsyncs the raw root, appends a v3 successor binding that
+  proof, and only then appends the terminal deletion-completion record. If
+  completion persistence fails after v3, cleanup leaves the raw bytes absent
+  and a retry attempts only the completion record; a reappeared canonical
+  target fails closed. Registration and cleanup share an atomic
   private-root lock, and destructive cleanup derives its timestamp from current
   UTC. Append-only writes directory-fsync both final-name publication and
   temporary-name removal; any alternate hard link blocks cleanup.

@@ -100,11 +100,11 @@ Any later source, client, surface, normalization, telemetry, treatment-evidence,
 or tuple-decision change creates another successor ID.
 
 Raw-evidence cleanup begins with an identity-bound v2 deletion intent. After a
-proved unlink whose completion record cannot be persisted, it journals a v3
-recovery stage before publishing any replacement bytes, then binds the exact
-restored inode with a v4 successor. A retry can finalize a missing staged target
-or validate and promote an already-restored target; arbitrary identity changes,
-forked recovery chains, and hard-link races remain fail-closed.
+proved and directory-synchronized unlink, it journals a v3 successor before
+attempting the completion record. No raw bytes are republished after v3. A
+retry can use that durable proof only to retry the completion record while the
+canonical target remains absent; reappeared targets, forked intent chains, and
+hard-link races remain fail-closed.
 
 The published-freeze validator rechecks the pinned manifest digest, all 22
 sanitized source-refresh rows, matrix integrity and canonical observation

@@ -302,21 +302,21 @@ Cleanup first appends and directory-fsyncs an immutable v2 intent under
 unlinks the expired raw bytes, proves through the
 still-open descriptor that the link count is zero and the content digest is
 unchanged, and directory-fsyncs the raw store. Only after those checks does it
-append and directory-fsync the immutable v2 completion proof under
+append and directory-fsync an immutable v3 successor under
+`deletion-intents/` that binds the initial intent and post-unlink proof. It then
+appends and directory-fsyncs the immutable v2 completion proof under
 `deletion-records/`. The proof retains the raw digest, complete retention record
-history, governing deadline, deletion time, and proof method. If completion
-persistence fails after unlink was proved, cleanup restores the verified bytes
-only after appending an immutable v3 stage that binds the prior intent and
-post-unlink proof. It then appends a v4 successor binding that stage and the
-replacement identity. A retry can finalize a missing staged target or validate
-and promote an already-restored target. Only the unique terminal intent in that
-closed, unforked chain may resume cleanup. Repeated cleanup is
+history, governing deadline, deletion time, proof method, and v3 authority. If
+completion persistence fails after v3, cleanup does not republish the governed
+bytes; a retry may attempt only the completion record while the canonical target
+remains absent. Reappeared targets and missing, forked, or disconnected intent
+chains remain fail-closed. Repeated cleanup is
 idempotent. Every raw file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal;
 cleanup fails closed if a power-loss artifact or any alternate hard link still
-reaches governed bytes. A retry may resume only when the canonical target still
-has the exact terminal intent-bound identity. A missing or arbitrarily
-restored/replaced target remains blocked. Registration and
+reaches governed bytes. Before unlink proof, a retry may resume only when the
+canonical target has the exact initial intent-bound identity; after durable v3,
+the canonical target must remain absent. Registration and
 cleanup serialize through the persistent
 mode-`0600` `.retention-lock` advisory-lock file. A process crash releases the
 kernel lock automatically, while another live operation fails closed. Do not
