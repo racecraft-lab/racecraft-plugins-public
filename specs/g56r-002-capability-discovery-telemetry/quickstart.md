@@ -279,12 +279,17 @@ fails before registration. Records left by failed publication remain reported
 as pending and cannot extend deletion. Before registration, publication
 semantically revalidates the source capture, every non-fixture observation, and
 every canary result against the retained private bytes. It publishes and
-re-reads the exact canonical output through one identity-bound parent
-descriptor before issuing a receipt. Private record directories are likewise
+re-reads the exact canonical output as a single-link target through one
+identity-bound parent descriptor before issuing a receipt. Recovery rejects an
+existing matching output if any alternate hard link remains. Private record directories are likewise
 enumerated and opened through one identity-bound descriptor; directory
 replacement, entry substitution, or a changed before/after entry set fails
 closed. Before the deadline, verify that every
 governing retained digest still has its exact bytes:
+
+Every capability JSON input is strict UTF-8 JSON with unique object keys and
+finite numbers. Inputs deeper than 64 levels or larger than 100,000 total nodes
+fail closed, including parser recursion failures.
 
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \

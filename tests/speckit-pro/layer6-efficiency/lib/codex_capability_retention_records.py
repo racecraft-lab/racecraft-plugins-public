@@ -363,7 +363,7 @@ def _publication_target_matches(path, payload):
     target = Path(path)
     if not target.exists():
         return False
-    if _read_bounded_regular_file(target) != payload:
+    if _read_bounded_regular_file(target, require_single_link=True) != payload:
         raise ValueError("publication output already exists with different bytes")
     return True
 

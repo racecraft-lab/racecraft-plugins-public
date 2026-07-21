@@ -1324,6 +1324,18 @@ class CapabilityContractTests(unittest.TestCase):
                 manifest=self.manifest, raw_evidence_root=raw_root, repository_root=ROOT,
             )
             self.assertEqual(capabilities.validate_freeze(freeze, self.manifest), freeze)
+            hard_link_source = Path(tmp) / "hard-linked-source.json"
+            hard_link_output = Path(tmp) / "hard-linked-output.json"
+            hard_link_source.write_bytes(capabilities.canonical_bytes(freeze) + b"\n")
+            os.link(hard_link_source, hard_link_output)
+            with mock.patch.object(
+                capability_freeze, "_store_publication_receipt_locked",
+            ) as store_receipt, self.assertRaisesRegex(ValueError, "single-link"):
+                capabilities.publish_with_raw_evidence_retention(
+                    freeze, hard_link_output, raw_root, ROOT, manifest=self.manifest,
+                )
+            store_receipt.assert_not_called()
+            hard_link_output.unlink(); hard_link_source.unlink()
             publication_path = Path(tmp) / "candidate-freeze.json"
             with mock.patch.object(
                 capability_retention_records, "_retention_now",
@@ -2083,6 +2095,20 @@ class CapabilityContractTests(unittest.TestCase):
                     capability_publish_io._read(nonfinite)
                 with self.assertRaisesRegex(ValueError, "non-JSON numeric constant"):
                     capability_publish_io._read(nonfinite, require_canonical=True)
+            deeply_nested = root / "deeply-nested.json"
+            deeply_nested.write_bytes(b"[" * 65 + b"0" + b"]" * 65)
+            with self.assertRaisesRegex(ValueError, "maximum nesting depth"):
+                capability_publish_io._read(deeply_nested)
+            node_heavy = root / "node-heavy.json"
+            node_heavy.write_bytes(b'{"values":[1,2]}')
+            with mock.patch.object(
+                capability_contract, "CAPABILITY_JSON_MAX_TOTAL_NODES", 4,
+            ), self.assertRaisesRegex(ValueError, "maximum node count"):
+                capability_publish_io._read(node_heavy)
+            with mock.patch.object(
+                capability_contract.json, "loads", side_effect=RecursionError("too deep"),
+            ), self.assertRaisesRegex(ValueError, "strict UTF-8 JSON"):
+                capability_publish_io._read(node_heavy)
             with self.assertRaises(ValueError):
                 capabilities.canonical_bytes({"value": float("nan")})
             noncanonical = root / "noncanonical.json"

@@ -233,7 +233,9 @@ Repository tests must pass with the network disabled and no raw evidence store.
   into that store. Before registration, publication semantically revalidates
   the source capture, each non-fixture observation, and every canary result
   against the retained bytes. It publishes and re-reads the exact canonical
-  freeze bytes through one identity-bound parent descriptor, then makes staged
+  freeze bytes as a single-link target through one identity-bound parent
+  descriptor; recovered existing outputs must satisfy the same invariant. It
+  then makes staged
   content-addressed retention records governing only by appending a receipt;
   failed-publication records cannot extend deletion. Deterministic
   verification fails on missing or overdue bytes. Cleanup first appends and
@@ -253,6 +255,9 @@ Repository tests must pass with the network disabled and no raw evidence store.
   Record loaders bind one private directory descriptor for enumeration and
   entry opens, require an unchanged before/after entry set, and reject directory
   replacement or mixed snapshots.
+- Capability JSON parsing is strict UTF-8, rejects duplicate keys and non-finite
+  values, limits nesting to 64 and total nodes to 100,000, and normalizes parser
+  recursion to a fail-closed validation error.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
   bound to exact bytes by the adjacent out-of-band digest manifest.

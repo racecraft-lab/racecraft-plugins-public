@@ -261,8 +261,9 @@ Before registration, publication semantically revalidates the source capture,
 every non-fixture observation, and every canary result against the retained
 private bytes; content-address identity alone is insufficient. The public
 append-only output is created and verified through one identity-bound parent
-descriptor, and its exact canonical bytes are re-read before any receipt is
-issued.
+descriptor, and its exact canonical bytes are re-read as a single-link target
+before any receipt is issued. Recovery accepts an existing matching output only
+when it satisfies that same single-link invariant.
 They become governing only when a content-addressed publication receipt binds
 the candidate freeze ID, exact artifact digest, publication time, and complete
 retention-record set after the output bytes exist. Unreceipted records are
@@ -285,6 +286,10 @@ Every retention, receipt, intent, and deletion-record directory is loaded
 through one identity-bound directory descriptor. Entry names and identities
 are verified descriptor-relative, and the entry set must match before and
 after the load; directory replacement or a mixed snapshot fails closed.
+All capability JSON inputs use strict UTF-8 parsing with duplicate-key and
+non-finite-number rejection, a maximum nesting depth of 64, and at most 100,000
+total nodes. Parser recursion and resource-bound failures surface as
+fail-closed validation errors.
 
 ## Telemetry and Treatment Records
 

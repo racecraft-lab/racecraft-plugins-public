@@ -143,8 +143,10 @@ bytes exist and a content-addressed publication receipt is directory-fsynced.
 Before registration, publication semantically revalidates the source capture,
 every non-fixture observation, and every canary result against the retained
 private bytes. The public append-only target is created, inode-checked, and
-re-read through one identity-bound parent descriptor; the exact canonical
-bytes are checked again before the receipt is written.
+re-read through one identity-bound parent descriptor as a single-link file; the
+exact canonical bytes are checked again before the receipt is written. An
+existing matching output is recoverable only when it satisfies the same
+single-link invariant.
 An interrupted publication can be recovered idempotently; unreceipted records
 remain pending and cannot extend deletion. The deterministic
 `retention` command verifies pre-deadline presence, fails closed on missing or
@@ -173,3 +175,6 @@ same inode. Retention, receipt, intent, and deletion-record directories are
 loaded through one identity-bound directory descriptor, with descriptor-relative
 entry opens and an unchanged before/after entry set; directory replacement or
 a mixed snapshot fails closed.
+Capability JSON parsing also fails closed on duplicate keys, non-finite values,
+invalid UTF-8, parser recursion, nesting beyond 64 levels, or more than 100,000
+total nodes.
