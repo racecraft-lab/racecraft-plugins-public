@@ -8,8 +8,8 @@
     "T021", "T022", "T023", "T024", "T025"
   ],
   "implementation_baseline_sha": "bbffc774c815594edc64cf412a2b5f91127ef213",
-  "implementation_checkpoint_sha": "6afcf8c9e4a5a482be03bb300d4d39e2f5d499f8",
-  "superseded_checkpoint_sha": "cc04e5460bbc2050c803875a5193f525a47f381c",
+  "implementation_checkpoint_sha": "ed1e442cc2507c72ef46702a36dee79bdee08135",
+  "superseded_checkpoint_sha": "6afcf8c9e4a5a482be03bb300d4d39e2f5d499f8",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "candidate_freeze_id": "sha256:44e11e240b8305e73aa3e04794aa85a43e29d757818fd7a1b39e35d59ac75013",
   "treatment_evidence_digest": "sha256:087242317e9b4be18693eca15413b2de185df82cafe24f2fc03c9b3ffd4cea35",
@@ -17,9 +17,9 @@
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
   "reviewability_measurements": {
     "production_modules": 13,
-    "source_lines": 4634,
-    "nonblank_noncomment_lines": 4215,
-    "max_capability_module_source_lines": 373,
+    "source_lines": 4674,
+    "nonblank_noncomment_lines": 4253,
+    "max_capability_module_source_lines": 395,
     "modules": {
       "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
         "source_lines": 114,
@@ -58,20 +58,20 @@
         "nonblank_noncomment_lines": 10
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {
-        "source_lines": 373,
-        "nonblank_noncomment_lines": 356
+        "source_lines": 395,
+        "nonblank_noncomment_lines": 376
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {
-        "source_lines": 269,
-        "nonblank_noncomment_lines": 238
+        "source_lines": 281,
+        "nonblank_noncomment_lines": 250
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {
         "source_lines": 213,
         "nonblank_noncomment_lines": 196
       },
       "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
-        "source_lines": 1878,
-        "nonblank_noncomment_lines": 1730
+        "source_lines": 1884,
+        "nonblank_noncomment_lines": 1736
       }
     }
   },
@@ -125,27 +125,29 @@
     "malformed_predecessor_error_normalization": "pass",
     "trusted_treatment_evidence_binding": "pass",
     "published_treatment_evidence_set_binding": "pass",
+    "single_snapshot_treatment_evidence_mapping": "pass",
     "non_initial_successor_lineage": "pass",
     "public_lineage_validator_no_bypass": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass",
     "full_suite": "2821/2821 pass",
     "capability_public_api_preserved": "pass",
-    "capability_safe_module_boundaries": "pass; 12 capability modules, maximum 373 source lines",
+    "capability_safe_module_boundaries": "pass; 12 capability modules, maximum 395 source lines",
     "completion_probe_failure_restoration": "pass",
     "exact_public_facade_exports": "pass",
     "private_trust_primitives_hidden": "pass",
     "independent_critical_high_review": "pending_reaudit",
-    "independent_review_chat_id": "review-us2-remediation-5AD0BD",
+    "identity_bound_deletion_intent_resume": "pass",
+    "independent_review_chat_id": "re-review-pr-367-747B1B",
     "independent_review_findings": [
-      "published treatment successor did not bind the exact retained evidence set into its candidate identity",
-      "public freeze validation exposed a lineage-bypass flag",
-      "capability module boundary evidence retained a stale 363-line maximum"
+      "persisted deletion intent permanently blocked safe pre-unlink cleanup retries",
+      "publishable treatment evidence read arbitrary mapping values more than once",
+      "plan reviewability measurements were stale"
     ]
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:cc6200065ab9168843dc3e3cd868901edd5eb6af538da07bf364acefdbbd20e1",
+  "tasks_sha": "sha256:d638396237158fca103550b669614a47f649a8c0726b2646d639dd41f7080472",
   "implementation_completed_at": "2026-07-20T03:06:58Z",
-  "review_updated_at": "2026-07-21T15:33:54Z",
+  "review_updated_at": "2026-07-21T15:59:38Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }

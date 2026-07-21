@@ -8,10 +8,10 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 4634,
-  "actual_nonblank_noncomment_lines": 4215,
+  "actual_source_lines": 4674,
+  "actual_nonblank_noncomment_lines": 4253,
   "production_modules": 13,
-  "max_capability_module_source_lines": 373,
+  "max_capability_module_source_lines": 395,
   "primary_surface": "harness/adapters",
   "module_measurements": {
     "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 114, "nonblank_noncomment_lines": 105},
@@ -23,12 +23,12 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 350, "nonblank_noncomment_lines": 307},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 294, "nonblank_noncomment_lines": 253},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {"source_lines": 15, "nonblank_noncomment_lines": 10},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 373, "nonblank_noncomment_lines": 356},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 269, "nonblank_noncomment_lines": 238},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 395, "nonblank_noncomment_lines": 376},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 281, "nonblank_noncomment_lines": 250},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 213, "nonblank_noncomment_lines": 196},
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
-      "source_lines": 1878,
-      "nonblank_noncomment_lines": 1730
+      "source_lines": 1884,
+      "nonblank_noncomment_lines": 1736
     }
   },
   "correctness_checks": {
@@ -89,17 +89,19 @@
     "malformed_predecessor_error_normalization": "pass",
     "trusted_treatment_evidence_binding": "pass",
     "published_treatment_evidence_set_binding": "pass",
+    "single_snapshot_treatment_evidence_mapping": "pass",
     "non_initial_successor_lineage": "pass",
     "public_lineage_validator_no_bypass": "pass",
     "completion_probe_failure_restoration": "pass",
     "exact_public_facade_exports": "pass",
     "private_trust_primitives_hidden": "pass",
     "independent_review": "pending_reaudit",
-    "independent_review_chat_id": "review-us2-remediation-5AD0BD",
+    "identity_bound_deletion_intent_resume": "pass",
+    "independent_review_chat_id": "re-review-pr-367-747B1B",
     "independent_review_findings": [
-      "published treatment successor did not bind the exact retained evidence set into its candidate identity",
-      "public freeze validation exposed a lineage-bypass flag",
-      "capability module boundary evidence retained a stale 363-line maximum"
+      "persisted deletion intent permanently blocked safe pre-unlink cleanup retries",
+      "publishable treatment evidence read arbitrary mapping values more than once",
+      "plan reviewability measurements were stale"
     ]
   },
   "exception": {
