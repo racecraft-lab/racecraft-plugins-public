@@ -1509,11 +1509,17 @@ class CapabilityContractTests(unittest.TestCase):
                 item for item in write_failure_intents
                 if item[0]["schema_version"] == "raw-evidence-deletion-intent.v2"
             )
-            recovery_intent, recovery_intent_digest = next(
+            staged_intent, staged_intent_digest = next(
                 item for item in write_failure_intents
                 if item[0]["schema_version"] == "raw-evidence-deletion-intent.v3"
             )
-            self.assertEqual(recovery_intent["predecessor_deletion_intent_digest"], initial_intent_digest)
+            recovery_intent, recovery_intent_digest = next(
+                item for item in write_failure_intents
+                if item[0]["schema_version"] == "raw-evidence-deletion-intent.v4"
+            )
+            self.assertEqual(staged_intent["predecessor_deletion_intent_digest"], initial_intent_digest)
+            self.assertEqual(staged_intent["recovery_proof"], "verified-post-unlink-recovery-stage-v1")
+            self.assertEqual(recovery_intent["predecessor_deletion_intent_digest"], staged_intent_digest)
             self.assertEqual(recovery_intent["recovery_proof"], "verified-post-unlink-restoration-v1")
             recovered_target = write_failure_root / (
                 f"{recovery_intent['raw_evidence_digest'].removeprefix('sha256:')}.json"
@@ -1530,6 +1536,7 @@ class CapabilityContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "missing or forked"):
                 capability_retention_records._terminal_deletion_intents([
                     (initial_intent, initial_intent_digest),
+                    (staged_intent, staged_intent_digest),
                     (recovery_intent, recovery_intent_digest),
                     (forked_recovery, forked_recovery_digest),
                 ])
@@ -1544,6 +1551,95 @@ class CapabilityContractTests(unittest.TestCase):
                 write_failure_cleanup["deleted_evidence_digests"],
                 retained_report["retained_evidence_digests"],
             )
+            interrupted_recovery_root = Path(tmp) / "interrupted-recovery-root"
+            shutil.copytree(raw_root, interrupted_recovery_root)
+            class SimulatedRecoveryCommitTermination(BaseException):
+                pass
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), mock.patch.object(
+                capability_private, "_write_private_bytes_at", side_effect=fail_deletion_record_write,
+            ), mock.patch.object(
+                capability_retention, "_store_restored_recovery_intent",
+                side_effect=SimulatedRecoveryCommitTermination,
+            ), self.assertRaises(SimulatedRecoveryCommitTermination):
+                capabilities.reconcile_raw_evidence_retention(interrupted_recovery_root, ROOT, apply=True)
+            interrupted_intents = [
+                json.loads(path.read_text())
+                for path in (interrupted_recovery_root / capabilities.DELETION_INTENTS_DIR).iterdir()
+            ]
+            self.assertEqual(
+                sorted(item["schema_version"] for item in interrupted_intents),
+                ["raw-evidence-deletion-intent.v2", "raw-evidence-deletion-intent.v3"],
+            )
+            staged_after_crash = next(
+                item for item in interrupted_intents
+                if item["schema_version"] == "raw-evidence-deletion-intent.v3"
+            )
+            self.assertTrue((interrupted_recovery_root / (
+                f"{staged_after_crash['raw_evidence_digest'].removeprefix('sha256:')}.json"
+            )).is_file())
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
+            ):
+                interrupted_recovery_cleanup = capabilities.reconcile_raw_evidence_retention(
+                    interrupted_recovery_root, ROOT, apply=True,
+                )
+            self.assertEqual(
+                interrupted_recovery_cleanup["deleted_evidence_digests"],
+                retained_report["retained_evidence_digests"],
+            )
+            self.assertTrue(any(
+                json.loads(path.read_text())["schema_version"] == "raw-evidence-deletion-intent.v4"
+                for path in (interrupted_recovery_root / capabilities.DELETION_INTENTS_DIR).iterdir()
+            ))
+            missing_staged_root = Path(tmp) / "missing-staged-recovery-root"
+            shutil.copytree(raw_root, missing_staged_root)
+            class SimulatedPreRestoreTermination(BaseException):
+                pass
+            def terminate_before_restore(
+                parent_descriptor: int, parent_path: Path, filename: str, payload: bytes, **kwargs: object,
+            ) -> None:
+                if Path(parent_path).name == capabilities.DELETION_RECORDS_DIR:
+                    raise OSError("simulated deletion-record write failure")
+                original_private_write(parent_descriptor, parent_path, filename, payload, **kwargs)
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), mock.patch.object(
+                capability_private, "_write_private_bytes_at", side_effect=terminate_before_restore,
+            ), mock.patch.object(
+                capability_retention, "_write_private_bytes_at",
+                side_effect=SimulatedPreRestoreTermination,
+            ), self.assertRaises(SimulatedPreRestoreTermination):
+                capabilities.reconcile_raw_evidence_retention(missing_staged_root, ROOT, apply=True)
+            staged_path = next(
+                path for path in (missing_staged_root / capabilities.DELETION_INTENTS_DIR).iterdir()
+                if json.loads(path.read_text())["schema_version"] == "raw-evidence-deletion-intent.v3"
+            )
+            missing_stage = json.loads(staged_path.read_text())
+            self.assertFalse((missing_staged_root / (
+                f"{missing_stage['raw_evidence_digest'].removeprefix('sha256:')}.json"
+            )).exists())
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
+            ):
+                missing_staged_cleanup = capabilities.reconcile_raw_evidence_retention(
+                    missing_staged_root, ROOT, apply=True,
+                )
+            self.assertEqual(
+                missing_staged_cleanup["deleted_evidence_digests"],
+                retained_report["retained_evidence_digests"],
+            )
+            missing_completion = next(
+                json.loads(path.read_text())
+                for path in (missing_staged_root / capabilities.DELETION_RECORDS_DIR).iterdir()
+                if json.loads(path.read_text())["raw_evidence_digest"] == missing_stage["raw_evidence_digest"]
+            )
+            self.assertEqual(missing_completion["deletion_intent_digest"], f"sha256:{staged_path.stem}")
             pre_unlink_error_root = Path(tmp) / "pre-unlink-error-root"
             shutil.copytree(raw_root, pre_unlink_error_root)
             failed_pre_unlink_filename = None

@@ -61,10 +61,10 @@ not a size claim. The binding human estimate remains 297 reviewable LOC; the
 
 **Implementation checkpoint**: The capability adapter is safely subdivided
 behind the stable `codex_capabilities.py` facade into 12 focused modules totaling
-2,859 source lines and 2,581 nonblank, non-comment lines; the largest is 382
+2,914 source lines and 2,641 nonblank, non-comment lines; the largest is 399
 source lines. The treatment validator remains 1,884 source lines and 1,736
-nonblank, non-comment lines, so the current 13-module US2 marker totals 4,743
-source lines and 4,317 nonblank, non-comment lines and the aggregate 400-LOC
+nonblank, non-comment lines, so the current 13-module US2 marker totals 4,798
+source lines and 4,377 nonblank, non-comment lines and the aggregate 400-LOC
 trigger remains active. Capability work T001-T015 no longer relies on a
 `no_safe_boundary` exception: source, observation, matrix, private I/O,
 retention, freeze, contract, and CLI responsibilities have independent module
@@ -230,9 +230,9 @@ Repository tests must pass with the network disabled and no raw evidence store.
   descriptor-relative unlink, proves zero remaining links and the retained-byte
   digest, directory-fsyncs the raw root, and only then appends the terminal
   deletion-completion record. If completion persistence fails after that proof,
-  cleanup restores the verified bytes and appends a recovery-intent successor
-  binding the predecessor and replacement identity before a retry. Registration
-  and cleanup share an atomic
+  cleanup first journals a v3 recovery stage, then restores the verified bytes
+  and appends a v4 successor binding the stage and replacement identity before
+  a retry. Registration and cleanup share an atomic
   private-root lock, and destructive cleanup derives its timestamp from current
   UTC. Append-only writes directory-fsync both final-name publication and
   temporary-name removal; any alternate hard link blocks cleanup.

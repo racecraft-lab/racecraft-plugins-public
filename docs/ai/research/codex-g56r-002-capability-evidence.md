@@ -90,11 +90,21 @@ before consuming a result while that allowlist is empty. A separately reviewed e
 be limited to one 30-second, 64 KiB, zero-retry attempt per snapshot/model/effort
 and could prove only pinned-environment availability.
 
-The telemetry-profile ID currently binds an explicit pending-treatment
-placeholder. Increment 2 must publish a successor freeze when the closed
-telemetry and exact-treatment contract is available; it must not edit this
-content identity. Any later source, client, surface, normalization, or tuple
-decision change likewise creates a successor ID.
+The current successor binds telemetry profile
+`sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb`,
+exact-treatment contract
+`sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`,
+and treatment evidence set
+`sha256:087242317e9b4be18693eca15413b2de185df82cafe24f2fc03c9b3ffd4cea35`.
+Any later source, client, surface, normalization, telemetry, treatment-evidence,
+or tuple-decision change creates another successor ID.
+
+Raw-evidence cleanup begins with an identity-bound v2 deletion intent. After a
+proved unlink whose completion record cannot be persisted, it journals a v3
+recovery stage before publishing any replacement bytes, then binds the exact
+restored inode with a v4 successor. A retry can finalize a missing staged target
+or validate and promote an already-restored target; arbitrary identity changes,
+forked recovery chains, and hard-link races remain fail-closed.
 
 The published-freeze validator rechecks the pinned manifest digest, all 22
 sanitized source-refresh rows, matrix integrity and canonical observation

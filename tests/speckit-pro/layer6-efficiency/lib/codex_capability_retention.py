@@ -109,30 +109,30 @@ def _delete_single_link_private_file(
         return True
 
     def durable_completion_survived_failure():
-        if not deletion_proved:
-            return False
+        if not deletion_proved: return False
         try:
             return completion_record_is_durable()
         except (OSError, ValueError):
             return False
-
     def preserve_or_restore_verified_payload():
-        if verified_payload is None:
-            return
+        if verified_payload is None: return
         if _descriptor_entry_exists(parent_descriptor, filename):
             current, opened = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False), os.fstat(descriptor)
             if not stat.S_ISREG(current.st_mode) or _stable_file_identity(current) != _stable_file_identity(opened) or _stable_file_identity(opened) != _stable_file_identity(before):
                 raise ValueError("expired raw evidence changed before deletion recovery")
             return
+        staged = None
+        if deletion_proved:
+            staged = _store_staged_recovery_intent(raw, expected_raw_identity, repository_root, deletion_record)
         _write_private_bytes_at(
             parent_descriptor, raw, filename, verified_payload, append_only=True,
             expected_parent_identity=expected_raw_identity,
         )
-        if deletion_proved:
-            _store_recovery_deletion_intent(
-                raw, expected_raw_identity, repository_root, deletion_record, raw / filename,
+        if staged is not None:
+            staged_record, staged_digest = staged
+            _store_restored_recovery_intent(
+                raw, expected_raw_identity, repository_root, staged_record, staged_digest, raw / filename, deletion_record["deleted_at"],
             )
-
     try:
         deletion_directory_descriptor = _private_directory_descriptor(
             deletion_directory, deletion_directory_identity,
@@ -313,6 +313,23 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
                 raise ValueError("deletion completion record still has retained raw evidence bytes")
             deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
         if intent is not None:
+            if intent_record["schema_version"] == "raw-evidence-deletion-intent.v3":
+                if not apply:
+                    raise ValueError("staged raw evidence recovery requires cleanup")
+                if target.exists():
+                    intent_record, intent_digest = _store_restored_recovery_intent(
+                        raw, raw_identity, repository_root, intent_record, intent[1], target, as_of,
+                    )
+                    deletion_intents.append((intent_record, intent_digest))
+                    intent_by_evidence[evidence_digest] = (intent_record, intent_digest)
+                    intent = (intent_record, intent_digest)
+                else:
+                    record, record_digest = _store_staged_recovery_completion(
+                        raw, raw_identity, repository_root, intent_record, intent[1],
+                    )
+                    deletion_records.append((record, record_digest))
+                    deletion_by_evidence[evidence_digest] = (record, record_digest)
+                    deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
             if not target.exists():
                 raise ValueError("raw evidence deletion was interrupted after the target unlink")
             target_metadata = os.stat(target, follow_symlinks=False)

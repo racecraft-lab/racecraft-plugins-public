@@ -306,9 +306,11 @@ append and directory-fsync the immutable v2 completion proof under
 `deletion-records/`. The proof retains the raw digest, complete retention record
 history, governing deadline, deletion time, and proof method. If completion
 persistence fails after unlink was proved, cleanup restores the verified bytes
-and appends an immutable v3 recovery-intent successor that binds the prior
-intent, replacement identity, and restoration proof. Only the unique terminal
-intent in that closed, unforked chain may resume cleanup. Repeated cleanup is
+only after appending an immutable v3 stage that binds the prior intent and
+post-unlink proof. It then appends a v4 successor binding that stage and the
+replacement identity. A retry can finalize a missing staged target or validate
+and promote an already-restored target. Only the unique terminal intent in that
+closed, unforked chain may resume cleanup. Repeated cleanup is
 idempotent. Every raw file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal;
 cleanup fails closed if a power-loss artifact or any alternate hard link still

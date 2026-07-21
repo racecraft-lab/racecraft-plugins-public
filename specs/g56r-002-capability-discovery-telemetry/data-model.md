@@ -260,9 +260,11 @@ missing or arbitrarily identity-changed target cannot prove pre-unlink
 interruption and remains fail-closed without a completion record. When cleanup
 has already proved unlink completion but cannot persist the completion record,
 it may restore the verified bytes and append an immutable recovery-intent
-successor that binds the prior intent, exact replacement identity, and verified
-post-unlink restoration proof. Only the unique terminal intent in that closed,
-unforked chain can authorize the next retry.
+transition. A v3 stage binds the prior intent and verified post-unlink proof
+before replacement publication; a v4 successor then binds the stage and exact
+replacement identity. A retry can finalize a missing staged target or validate
+and promote an already-restored target. Only the unique terminal intent in that
+closed, unforked chain can authorize the next retry.
 
 ## Telemetry and Treatment Records
 
