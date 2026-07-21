@@ -8,8 +8,8 @@
     "T021", "T022", "T023", "T024", "T025"
   ],
   "implementation_baseline_sha": "bbffc774c815594edc64cf412a2b5f91127ef213",
-  "implementation_checkpoint_sha": "c3052ff151563d9b146de347b392e79f688cd3eb",
-  "superseded_checkpoint_sha": "a47b00e2257c165236a9f8796d93ca32c0362bf0",
+  "implementation_checkpoint_sha": "ce64616342ab977fc5bbaa675b8b9ca7ed192108",
+  "superseded_checkpoint_sha": "c3052ff151563d9b146de347b392e79f688cd3eb",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "candidate_freeze_id": "sha256:44e11e240b8305e73aa3e04794aa85a43e29d757818fd7a1b39e35d59ac75013",
   "treatment_evidence_digest": "sha256:087242317e9b4be18693eca15413b2de185df82cafe24f2fc03c9b3ffd4cea35",
@@ -17,9 +17,9 @@
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
   "reviewability_measurements": {
     "production_modules": 13,
-    "source_lines": 4674,
-    "nonblank_noncomment_lines": 4255,
-    "max_capability_module_source_lines": 368,
+    "source_lines": 4776,
+    "nonblank_noncomment_lines": 4356,
+    "max_capability_module_source_lines": 395,
     "modules": {
       "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
         "source_lines": 114,
@@ -58,12 +58,12 @@
         "nonblank_noncomment_lines": 10
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {
-        "source_lines": 308,
-        "nonblank_noncomment_lines": 293
+        "source_lines": 395,
+        "nonblank_noncomment_lines": 380
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {
-        "source_lines": 365,
-        "nonblank_noncomment_lines": 332
+        "source_lines": 380,
+        "nonblank_noncomment_lines": 346
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {
         "source_lines": 213,
@@ -132,7 +132,7 @@
     "docs_reference_check": "pass",
     "full_suite": "2821/2821 pass",
     "capability_public_api_preserved": "pass",
-    "capability_safe_module_boundaries": "pass; 12 capability modules, maximum 368 source lines",
+    "capability_safe_module_boundaries": "pass; 12 capability modules, maximum 395 source lines",
     "pre_journal_failure_restoration": "pass",
     "exact_public_facade_exports": "pass",
     "private_trust_primitives_hidden": "pass",
@@ -143,19 +143,21 @@
     "post_unlink_recovery_intent_successor": "pass",
     "recovery_intent_chain_integrity": "pass",
     "post_persistence_retry_completion": "pass",
-    "post_unlink_journal_before_completion": "pass",
+    "identity_bound_quarantine_before_unlink": "pass",
+    "pre_persistence_quarantine_resume": "pass",
+    "post_persistence_quarantine_resume": "pass",
     "interrupted_completion_resume": "pass",
-    "missing_staged_target_completion": "pass",
+    "post_unlink_completion_resume": "pass",
     "current_treatment_evidence_narrative": "pass",
-    "independent_review_chat_id": "pr-367-rereview-A6C704",
+    "independent_review_chat_id": "pr-367-re-review-40F2F7",
     "independent_review_findings": [
-      "terminal v3 could record deletion while restored temporary or hard-linked bytes remained",
-      "US2 checkpoint was complete while independent review remained pending"
+      "failure before v3 publication left v2 with a missing canonical target and no supported retry",
+      "tasks reviewability measurements contradicted the current checkpoint evidence"
     ]
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:ef07cc724dc3be91f3cb555fc5cd92d7fe3f6cd1207d6e5613c70dc1cbf21bd7",
+  "tasks_sha": "sha256:462e72e589d22a05fcb7ecf22af0328fa6dc329b5ddf50ce8c6b907d66c42ffe",
   "implementation_completed_at": "2026-07-20T03:06:58Z",
-  "review_updated_at": "2026-07-21T18:20:53Z",
+  "review_updated_at": "2026-07-21T18:47:01Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }
