@@ -8,8 +8,8 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 4782,
-  "actual_nonblank_noncomment_lines": 4361,
+  "actual_source_lines": 4809,
+  "actual_nonblank_noncomment_lines": 4386,
   "production_modules": 13,
   "max_capability_module_source_lines": 395,
   "primary_surface": "harness/adapters",
@@ -27,8 +27,8 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 395, "nonblank_noncomment_lines": 360},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 213, "nonblank_noncomment_lines": 196},
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
-      "source_lines": 1885,
-      "nonblank_noncomment_lines": 1737
+      "source_lines": 1912,
+      "nonblank_noncomment_lines": 1762
     }
   },
   "correctness_checks": {
@@ -112,11 +112,13 @@
     "post_unlink_without_completion_fail_closed": "pass",
     "post_unlink_hard_link_crash_fail_closed": "pass",
     "retry_completion_actual_time": "pass",
+    "proven_tuple_executable_authority": "pass",
+    "treatment_evidence_publication_order": "pass",
     "current_treatment_evidence_narrative": "pass",
-    "independent_review_chat_id": "review-treatment-contrac-F02243",
+    "independent_review_chat_id": "review-retention-remedia-D1A187",
     "independent_review_findings": [
-      "post-unlink v3 recovery could falsely certify deletion when an external hard link retained evidence",
-      "resumed deletion records backdated the actual retry unlink"
+      "a proven trace could target a tuple the authoritative prior freeze marked excluded",
+      "successor publication could predate route-resolution or observation evidence timestamps"
     ]
   },
   "exception": {
