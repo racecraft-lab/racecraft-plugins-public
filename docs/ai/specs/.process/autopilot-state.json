@@ -3,7 +3,7 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-21T20:25:36Z",
+  "updated_at": "2026-07-21T20:56:37Z",
   "active_step": "Phase 7: Implement - Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -312,7 +312,7 @@
       "status": "review_pending",
       "tasks_completed": 10,
       "tasks_total": 10,
-      "focused_tests": "54/54 pass",
+      "focused_tests": "55/55 pass",
       "windows_safe_offline_replay": "pass",
       "canonical_manifest_snapshot": "pass",
       "canonical_route_resolution_membership": "pass",
@@ -362,11 +362,15 @@
       "proven_tuple_executable_authority": "pass",
       "treatment_evidence_publication_order": "pass",
       "current_treatment_evidence_narrative": "pass",
+      "semantic_retained_evidence_before_receipt": "pass",
+      "descriptor_bound_public_append_only_publication": "pass",
+      "descriptor_bound_record_directory_snapshot": "pass",
       "independent_review": "pending_reaudit",
-      "independent_review_chat_id": "review-retention-remedia-D1A187",
+      "independent_review_chat_id": "capability-remediation-r-9F1346",
       "independent_review_findings": [
-        "a proven trace could target a tuple the authoritative prior freeze marked excluded",
-        "successor publication could predate route-resolution or observation evidence timestamps"
+        "retained unknown-observation and canary evidence was content-address checked but not semantically revalidated before receipt",
+        "public append-only publication used pathname-based temporary and target operations without descriptor binding",
+        "private record loading could mix directory snapshots across pathname enumeration and entry reopen"
       ],
       "baseline_commit": "bbffc774c815594edc64cf412a2b5f91127ef213",
       "candidate_freeze_id": "sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c",
@@ -374,19 +378,19 @@
       "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
       "treatment_evidence_digest": "sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f",
       "marker_id": "us2",
-      "reviewability": "aggregate size-only block at 4,809 source / 4,386 nonblank non-comment lines across 13 production modules; 12 capability modules are safely split with a 395-line maximum, the facade exports exactly the supported API, and only the treatment module retains a typed size-only exception",
-      "checkpoint": "7ddf5763681f9862c642664dcac8146cab51e4d9",
-      "superseded_checkpoint": "aef759559688ecf53ef74de0fbbfd000b1de6871",
+      "reviewability": "aggregate size-only block at 4,938 source / 4,509 nonblank non-comment lines across 13 production modules; 12 capability modules are safely split with a 385-line maximum, the facade exports exactly the supported API, and only the treatment module retains a typed size-only exception",
+      "checkpoint": "9d9ceea3b7aa1abd641afb46660d1deb838fa25c",
+      "superseded_checkpoint": "7ddf5763681f9862c642664dcac8146cab51e4d9",
       "implementation_completed_at": "2026-07-20T03:06:58Z",
       "completed_at": "2026-07-20T03:50:24Z",
-      "review_updated_at": "2026-07-21T20:25:36Z"
+      "review_updated_at": "2026-07-21T20:56:37Z"
     }
   },
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:ab005c9cf824271500e21576c99b8888e5692263cf89bfbf93377ae3ee0f1246",
-    "plan_declared_scope_sha": "sha256:f2bab88202a2552d1c75a44b0ff9eb837b9f556cc4a40826166c8d44efb8e3f6",
-    "tasks_sha": "sha256:08a4b31805b706fe53cc40b0ac49db3b5d037e856b9f15addab82343d56cd123",
-    "reviewability_sha": "sha256:7d4457a64cbb0dd2a2e93d1faed0bdb8de60a77f739cf77585708797789307b6",
+    "plan_declared_scope_sha": "sha256:49a45b0535e7d07d1fc14e116bb168d40ca61aca8ee8c10fa25f0b9bb6ebd3c7",
+    "tasks_sha": "sha256:60fc28f540612af450576be253f8098ef599c8df2041dd74af96039da9c0d1cf",
+    "reviewability_sha": "sha256:18c95f96a4ec797b468a8357519324bdb26788c60c96c83390551007a547e42d",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
   },
   "pr_marker_plan": {
@@ -396,9 +400,9 @@
     "status": "checkpointing",
     "source_fingerprint": {
       "feature_spec_sha": "sha256:ab005c9cf824271500e21576c99b8888e5692263cf89bfbf93377ae3ee0f1246",
-      "plan_declared_scope_sha": "sha256:f2bab88202a2552d1c75a44b0ff9eb837b9f556cc4a40826166c8d44efb8e3f6",
-      "tasks_sha": "sha256:08a4b31805b706fe53cc40b0ac49db3b5d037e856b9f15addab82343d56cd123",
-      "reviewability_sha": "sha256:7d4457a64cbb0dd2a2e93d1faed0bdb8de60a77f739cf77585708797789307b6",
+      "plan_declared_scope_sha": "sha256:49a45b0535e7d07d1fc14e116bb168d40ca61aca8ee8c10fa25f0b9bb6ebd3c7",
+      "tasks_sha": "sha256:60fc28f540612af450576be253f8098ef599c8df2041dd74af96039da9c0d1cf",
+      "reviewability_sha": "sha256:18c95f96a4ec797b468a8357519324bdb26788c60c96c83390551007a547e42d",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
     },
     "markers": [
@@ -525,14 +529,14 @@
           "mode": "implementation",
           "scope": "us2",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
-          "head_sha": "7ddf5763681f9862c642664dcac8146cab51e4d9"
+          "head_sha": "9d9ceea3b7aa1abd641afb46660d1deb838fa25c"
         },
         "hazards": ["six-id-join", "exact-treatment", "service-reroute"],
         "subdivision": {
           "status": "no_safe_boundary",
           "details": {
             "reason": "Capability responsibilities are safely subdivided behind a stable facade with an exact supported-name export list and no private trust primitives; field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
-            "capability_subdivision": {"status": "safe_split", "production_modules": 12, "max_module_source_lines": 395},
+            "capability_subdivision": {"status": "safe_split", "production_modules": 12, "max_module_source_lines": 385},
             "exception_kind": "typed_size_only",
             "growth_limit": "Capability modules must remain below 400 source lines with no public API loss. Only finding-driven remediation and the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze."
           }
@@ -540,8 +544,8 @@
         "implementation_checkpoint": {
           "status": "review_pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
-          "commit_sha": "7ddf5763681f9862c642664dcac8146cab51e4d9",
-          "superseded_commit_sha": "aef759559688ecf53ef74de0fbbfd000b1de6871"
+          "commit_sha": "9d9ceea3b7aa1abd641afb46660d1deb838fa25c",
+          "superseded_commit_sha": "7ddf5763681f9862c642664dcac8146cab51e4d9"
         },
         "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us2.json"},
         "warnings": [
@@ -552,11 +556,11 @@
             "source": "treatment-contracts-reviewability",
             "details": {
               "marker_id": "us2",
-              "actual_source_lines": 4809,
-              "actual_nonblank_noncomment_lines": 4386,
+              "actual_source_lines": 4938,
+              "actual_nonblank_noncomment_lines": 4509,
               "production_modules": 13,
               "module_measurements": {
-                "capability_group": {"production_modules": 12, "source_lines": 2897, "nonblank_noncomment_lines": 2624, "max_module_source_lines": 395},
+                "capability_group": {"production_modules": 12, "source_lines": 3026, "nonblank_noncomment_lines": 2747, "max_module_source_lines": 385},
                 "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {"source_lines": 1912, "nonblank_noncomment_lines": 1762}
               }
             }
@@ -621,7 +625,7 @@
       }
     ],
     "created_at": "2026-07-17T04:50:02Z",
-    "updated_at": "2026-07-21T20:25:36Z"
+    "updated_at": "2026-07-21T20:56:37Z"
   },
   "layer_plan": {
     "status": "skipped",

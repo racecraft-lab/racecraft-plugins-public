@@ -8,23 +8,23 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 4809,
-  "actual_nonblank_noncomment_lines": 4386,
+  "actual_source_lines": 4938,
+  "actual_nonblank_noncomment_lines": 4509,
   "production_modules": 13,
-  "max_capability_module_source_lines": 395,
+  "max_capability_module_source_lines": 385,
   "primary_surface": "harness/adapters",
   "module_measurements": {
     "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 114, "nonblank_noncomment_lines": 105},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {"source_lines": 139, "nonblank_noncomment_lines": 132},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {"source_lines": 241, "nonblank_noncomment_lines": 199},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {"source_lines": 368, "nonblank_noncomment_lines": 339},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {"source_lines": 162, "nonblank_noncomment_lines": 149},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {"source_lines": 379, "nonblank_noncomment_lines": 348},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {"source_lines": 244, "nonblank_noncomment_lines": 229},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {"source_lines": 218, "nonblank_noncomment_lines": 201},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 350, "nonblank_noncomment_lines": 307},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 297, "nonblank_noncomment_lines": 256},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 344, "nonblank_noncomment_lines": 301},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {"source_lines": 15, "nonblank_noncomment_lines": 10},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 385, "nonblank_noncomment_lines": 370},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 395, "nonblank_noncomment_lines": 360},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 384, "nonblank_noncomment_lines": 349},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 213, "nonblank_noncomment_lines": 196},
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
       "source_lines": 1912,
@@ -32,7 +32,7 @@
     }
   },
   "correctness_checks": {
-    "focused_tests": "54/54 pass",
+    "focused_tests": "55/55 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
@@ -115,17 +115,21 @@
     "proven_tuple_executable_authority": "pass",
     "treatment_evidence_publication_order": "pass",
     "current_treatment_evidence_narrative": "pass",
-    "independent_review_chat_id": "review-retention-remedia-D1A187",
+    "semantic_retained_evidence_before_receipt": "pass",
+    "descriptor_bound_public_append_only_publication": "pass",
+    "descriptor_bound_record_directory_snapshot": "pass",
+    "independent_review_chat_id": "capability-remediation-r-9F1346",
     "independent_review_findings": [
-      "a proven trace could target a tuple the authoritative prior freeze marked excluded",
-      "successor publication could predate route-resolution or observation evidence timestamps"
+      "retained unknown-observation and canary evidence was content-address checked but not semantically revalidated before receipt",
+      "public append-only publication used pathname-based temporary and target operations without descriptor binding",
+      "private record loading could mix directory snapshots across pathname enumeration and entry reopen"
     ]
   },
   "exception": {
     "kind": "typed_size_only",
     "status": "honored_for_checkpoint",
     "subdivision": "capability_safe_split_treatment_no_safe_boundary",
-    "rationale": "Capability source authority, observation, matrix, private I/O, retention, freeze, contract, and CLI responsibilities are separated behind the stable codex_capabilities.py facade, which exports exactly the supported public API and no private trust primitives. Every capability module remains below 400 source lines. Field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
+    "rationale": "Capability source authority, observation, matrix, private I/O, retention, freeze, contract, and CLI responsibilities are separated behind the stable codex_capabilities.py facade, which exports exactly the supported public API and no private trust primitives. Every capability module remains below 400 source lines, with a 385-line maximum. Field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
     "growth_limit": "Capability modules must remain below 400 source lines with no public API loss. Only finding-driven review remediation and the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze."
   },
   "later_markers": [
