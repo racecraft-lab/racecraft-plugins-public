@@ -8,8 +8,8 @@
     "T021", "T022", "T023", "T024", "T025"
   ],
   "implementation_baseline_sha": "bbffc774c815594edc64cf412a2b5f91127ef213",
-  "implementation_checkpoint_sha": "92ccbbaefd290a64fd70f2a28487b67cd5ff9d29",
-  "superseded_checkpoint_sha": "ed1e442cc2507c72ef46702a36dee79bdee08135",
+  "implementation_checkpoint_sha": "c76e3fd6654e9a57a417a35aed829437954e53b4",
+  "superseded_checkpoint_sha": "92ccbbaefd290a64fd70f2a28487b67cd5ff9d29",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "candidate_freeze_id": "sha256:44e11e240b8305e73aa3e04794aa85a43e29d757818fd7a1b39e35d59ac75013",
   "treatment_evidence_digest": "sha256:087242317e9b4be18693eca15413b2de185df82cafe24f2fc03c9b3ffd4cea35",
@@ -17,9 +17,9 @@
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
   "reviewability_measurements": {
     "production_modules": 13,
-    "source_lines": 4673,
-    "nonblank_noncomment_lines": 4251,
-    "max_capability_module_source_lines": 391,
+    "source_lines": 4743,
+    "nonblank_noncomment_lines": 4317,
+    "max_capability_module_source_lines": 382,
     "modules": {
       "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
         "source_lines": 114,
@@ -58,12 +58,12 @@
         "nonblank_noncomment_lines": 10
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {
-        "source_lines": 391,
-        "nonblank_noncomment_lines": 371
+        "source_lines": 382,
+        "nonblank_noncomment_lines": 364
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {
-        "source_lines": 281,
-        "nonblank_noncomment_lines": 250
+        "source_lines": 360,
+        "nonblank_noncomment_lines": 323
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {
         "source_lines": 213,
@@ -132,7 +132,7 @@
     "docs_reference_check": "pass",
     "full_suite": "2821/2821 pass",
     "capability_public_api_preserved": "pass",
-    "capability_safe_module_boundaries": "pass; 12 capability modules, maximum 391 source lines",
+    "capability_safe_module_boundaries": "pass; 12 capability modules, maximum 382 source lines",
     "completion_probe_failure_restoration": "pass",
     "exact_public_facade_exports": "pass",
     "private_trust_primitives_hidden": "pass",
@@ -140,15 +140,17 @@
     "identity_bound_deletion_intent_resume": "pass",
     "pre_unlink_error_identity_preservation": "pass",
     "public_append_only_temp_unlink_durability": "pass",
-    "independent_review_chat_id": "pr-367-rereview-B3E562",
+    "post_unlink_recovery_intent_successor": "pass",
+    "recovery_intent_chain_integrity": "pass",
+    "post_persistence_retry_completion": "pass",
+    "independent_review_chat_id": "pr-367-rereview-5B3AA1",
     "independent_review_findings": [
-      "a transient pre-unlink error replaced the intent-bound inode and blocked later cleanup",
-      "public append-only publication did not directory-fsync temporary-name removal"
+      "post-unlink restoration invalidated the persisted deletion intent and blocked later cleanup"
     ]
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:8b44c5afe0a46e7f76d29d4bf7b2eaa759eae407ae31ff1013c0f9c9feb97ceb",
+  "tasks_sha": "sha256:1ec7e4bbaefbdfdb5e436ae5539246a31df108c118a1f3a55a61f821272103fc",
   "implementation_completed_at": "2026-07-20T03:06:58Z",
-  "review_updated_at": "2026-07-21T16:19:01Z",
+  "review_updated_at": "2026-07-21T16:39:47Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }

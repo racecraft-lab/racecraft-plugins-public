@@ -874,7 +874,7 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Review pending | 10 | 53/53 focused tests, standalone validation, docs-reference checks, and the 2821/2821 full suite pass after the latest two exact-head findings were remediated; exact-head re-audit pending |
+| 2 - Treatment contracts | Review pending | 10 | 53/53 focused tests, standalone validation, docs-reference checks, and the 2821/2821 full suite pass after the latest exact-head finding was remediated; exact-head re-audit pending |
 | 3 - Synthetic replay | In Progress | 0 | T026-T030 exist on the next marker branch; restack and exact-head review follow US2 approval |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -901,10 +901,10 @@ For every task:
 - Treatment contract: `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`
 - Treatment evidence set: `sha256:087242317e9b4be18693eca15413b2de185df82cafe24f2fc03c9b3ffd4cea35`
 - Superseded marker checkpoint: `cc04e5460bbc2050c803875a5193f525a47f381c`
-- Reviewability: aggregate size-only `block` at 4,673 source / 4,251
+- Reviewability: aggregate size-only `block` at 4,743 source / 4,317
   nonblank, non-comment lines across 13 production modules. The stable
-  capability facade and 11 focused internal modules total 2,789 / 2,515 with
-  a 391-line maximum; capability code no longer uses a `no_safe_boundary`
+  capability facade and 11 focused internal modules total 2,859 / 2,581 with
+  a 382-line maximum; capability code no longer uses a `no_safe_boundary`
   exception. `treatment_trace_schema.py` remains 1,884 / 1,736 under its
   treatment-only typed exception, with only T026-T030 replay growth reserved.
 - Review: PENDING after direct canonical validation of the actual
@@ -978,7 +978,17 @@ For every task:
   entry is absent, and synchronizes the public temporary-link removal. Focused
   53/53, standalone treatment, docs-reference, and full 2821/2821 gates pass;
   exact-head re-audit remains pending.
-- Implementation checkpoint: `92ccbbaefd290a64fd70f2a28487b67cd5ff9d29`
+  The next exact-head review (`pr-367-rereview-5B3AA1`) found one remaining P1:
+  verified bytes restored after completion-record persistence failed received a
+  new inode that no durable intent authorized, permanently blocking supported
+  cleanup. Remediation at `c76e3fd6654e9a57a417a35aed829437954e53b4`
+  appends an immutable recovery-intent successor only after post-unlink proof,
+  binds the predecessor, exact replacement identity, and restoration proof,
+  rejects missing, forked, disconnected, or cyclic chains, and resumes from the
+  unique terminal intent. Hard-link races and unverified mutations remain
+  fail-closed. Focused 53/53, standalone treatment, docs-reference, and full
+  2821/2821 gates pass; exact-head re-audit remains pending.
+- Implementation checkpoint: `c76e3fd6654e9a57a417a35aed829437954e53b4`
 
 ## PR Marker Plan Evidence
 
@@ -991,22 +1001,22 @@ For every task:
 | Fingerprint input | SHA-256 |
 |---|---|
 | Feature spec | `sha256:ab005c9cf824271500e21576c99b8888e5692263cf89bfbf93377ae3ee0f1246` |
-| Plan-declared scope | `sha256:25c2f62fa9e9e5148ad1ea831756bf947c004a3d6991ae8fecffa30bcc0d4ba8` |
-| Tasks | `sha256:8b44c5afe0a46e7f76d29d4bf7b2eaa759eae407ae31ff1013c0f9c9feb97ceb` |
-| Reviewability evidence | `sha256:5c4dd11e8e23efbdb22dbb399a28da5863931e7755e6256c9c0c27926d3664b2` |
+| Plan-declared scope | `sha256:c8debe2e76cd0dfd2dde212afe2b0461c4e0cbaa90499138a20dca3ce1abc9ba` |
+| Tasks | `sha256:1ec7e4bbaefbdfdb5e436ae5539246a31df108c118a1f3a55a61f821272103fc` |
+| Reviewability evidence | `sha256:62543ebfef0aa3f56f2a2c98cb6f98341978dc7c69f7529088ba6bfea28882de` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `92ccbbaefd290a64fd70f2a28487b67cd5ff9d29` | Exact-head re-audit required before restack |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `c76e3fd6654e9a57a417a35aed829437954e53b4` | Exact-head re-audit required before restack |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines under its historical typed exception; the current US2 marker is 4,673 /
-  4,251 across 13 modules against the aggregate 400-LOC boundary. Capability
-  modules are safely split with a 391-line maximum; only the treatment module
+  lines under its historical typed exception; the current US2 marker is 4,743 /
+  4,317 across 13 modules against the aggregate 400-LOC boundary. Capability
+  modules are safely split with a 382-line maximum; only the treatment module
   retains a typed size-only exception.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
