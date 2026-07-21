@@ -346,7 +346,7 @@
         "folded_polish_target_reason": "No polish tasks fold into the integrity-coupled capability checkpoint.",
         "declared_files": [
           {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/unit/test-codex-capability-contract.py"},
           {"operation": "NEW", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/data-model.md"},
@@ -360,7 +360,7 @@
           {"operation": "MODIFIED", "path": "docs/ai/specs/.process/autopilot-state.json"}
         ],
         "declared_tests": [
-          "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+          "python3 tests/speckit-pro/unit/test-codex-capability-contract.py",
           "python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py validate-freeze --manifest docs/ai/research/codex-agent-route-candidate-manifest.json --freeze docs/ai/research/codex-g56r-002-executable-candidate-freeze.json",
           "python3 /tmp/g56r-002-schema-validate.py specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json docs/ai/research/codex-g56r-002-executable-candidate-freeze.json"
         ],
@@ -418,14 +418,14 @@
         "declared_files": [
           {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"},
           {"operation": "NEW", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"},
+          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-codex-capability-contract.py"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"},
           {"operation": "MODIFIED", "path": "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/tasks.md"},
           {"operation": "MODIFIED", "path": "docs/ai/specs/.process/G56R-002-workflow.md"},
           {"operation": "MODIFIED", "path": "docs/ai/specs/.process/autopilot-state.json"}
         ],
-        "declared_tests": ["python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"],
+        "declared_tests": ["python3 tests/speckit-pro/unit/test-codex-capability-contract.py"],
         "reviewability": {"status": "not_estimated", "mode": "implementation", "scope": "us2"},
         "hazards": ["six-id-join", "exact-treatment", "service-reroute"],
         "subdivision": {"status": "none", "details": {}},
@@ -450,7 +450,7 @@
         "folded_polish_target_reason": "Integration, generated references, verification, and release gates validate the replay marker as a whole.",
         "declared_files": [
           {"operation": "MODIFIED", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"},
+          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-codex-capability-contract.py"},
           {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"},
           {"operation": "NEW", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json"},
           {"operation": "MODIFIED", "path": "tests/speckit-pro/suite-manifest.json"},
@@ -461,7 +461,7 @@
           {"operation": "MODIFIED", "path": "docs/ai/specs/.process/autopilot-state.json"}
         ],
         "declared_tests": [
-          "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+          "python3 tests/speckit-pro/unit/test-codex-capability-contract.py",
           "python3 -u tests/speckit-pro/run-all.py --layer 1",
           "python3 -u tests/speckit-pro/run-all.py",
           "pnpm --dir docs-site reference:check"

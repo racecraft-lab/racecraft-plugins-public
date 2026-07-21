@@ -23,7 +23,10 @@ if str(LIB_DIR) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 
-SPEC_ID_NAME = re.compile(r"(?:^|[-_])(?:doc|prsg|spec|tacd|xplat)-\d", re.IGNORECASE)
+SPEC_ID_NAME = re.compile(
+    r"(?:^|[-_])[a-z][a-z0-9]*-\d{3}[a-z]?(?=$|[-_])",
+    re.IGNORECASE,
+)
 PURPOSE_NAMED_ROOTS = (
     FIXTURE_ROOT,
     TEST_ROOT / "parity",
@@ -108,6 +111,21 @@ class UnitLayoutTests(unittest.TestCase):
                 if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
                     if SPEC_ID_NAME.search(node.name):
                         violations.append(f"{path.relative_to(TEST_ROOT)}::{node.name}")
+        self.assertEqual(violations, [])
+
+    def test_authored_script_files_are_behavior_named(self) -> None:
+        violations: list[str] = []
+        for root in (REPO_ROOT / "speckit-pro", TEST_ROOT):
+            for path in root.rglob("*"):
+                relative = path.relative_to(root)
+                if (
+                    not path.is_file()
+                    or path.suffix not in {".py", ".sh"}
+                    or "fixtures" in relative.parts
+                ):
+                    continue
+                if SPEC_ID_NAME.search(path.stem):
+                    violations.append(str(path.relative_to(REPO_ROOT)))
         self.assertEqual(violations, [])
 
     def test_tracked_paths_have_no_legacy_layout_names(self) -> None:

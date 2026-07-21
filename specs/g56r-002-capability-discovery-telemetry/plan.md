@@ -74,7 +74,7 @@ in `docs/ai/specs/.process/autopilot-state.json`.
 
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py
-- NEW tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py
+- NEW tests/speckit-pro/unit/test-codex-capability-contract.py
 - NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json
 - NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json
 - NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json
@@ -233,7 +233,7 @@ tests/speckit-pro/layer6-efficiency/lib/
 └── treatment_trace_schema.py
 
 tests/speckit-pro/unit/
-├── test-g56r-002-capability-telemetry.py
+├── test-codex-capability-contract.py
 └── fixtures/capability-treatment-replay/
     ├── capability-matrix.json
     ├── treatment-replay.json

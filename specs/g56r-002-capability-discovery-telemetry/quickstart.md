@@ -34,7 +34,7 @@ chmod 0600 /absolute/path/outside/repository/g56r-002-private/CAPTURE_SHA256.jso
 ## 1. Run the Focused Offline Tests
 
 ```sh
-python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py
+python3 tests/speckit-pro/unit/test-codex-capability-contract.py
 ```
 
 This step requires no network, Codex client, or raw evidence store.
@@ -236,7 +236,7 @@ raw-store access.
 ## 8. Repository Verification
 
 ```sh
-python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py
+python3 tests/speckit-pro/unit/test-codex-capability-contract.py
 python3 -u tests/speckit-pro/run-all.py --layer 1
 pnpm --dir docs-site reference:generate
 pnpm --dir docs-site reference:check

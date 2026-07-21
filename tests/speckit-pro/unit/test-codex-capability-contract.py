@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused deterministic tests for the G56R-002 capability contract."""
+"""Focused deterministic tests for the Codex capability contract."""
 
 from __future__ import annotations
 
