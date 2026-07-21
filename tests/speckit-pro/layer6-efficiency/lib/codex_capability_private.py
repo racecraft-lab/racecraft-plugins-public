@@ -39,6 +39,8 @@ def _fsync_directory(path):
 def _write_private_bytes_at(parent_descriptor, parent_path, filename, payload, *, append_only, expected_parent_identity):
     temporary = None; descriptor = None; target_descriptor = None
     try:
+        _acquire_append_only_directory_lock(parent_descriptor, wait=True)
+        _assert_private_directory_current(parent_path, parent_descriptor, expected_parent_identity)
         for _ in range(64):
             candidate = f".g56r-002-{secrets.token_hex(16)}"
             try:

@@ -337,9 +337,11 @@ is indeterminate and remains fail-closed. Reappeared targets, identity-changed
 quarantine entries, and missing, forked, or disconnected intent chains remain
 fail-closed. Repeated cleanup after durable completion is idempotent. Every raw
 file must have exactly one hard link. Append-only writes
-directory-fsync after both final-name publication and temporary-name removal;
-every reserved temporary holds an advisory lock until commit. After a crash,
-the next operation acquires that lock and re-proves its directory-relative
+directory-fsync after both final-name publication and temporary-name removal.
+A shared parent-directory advisory lock is acquired before a reserved temporary
+pathname appears and held through writer commit or recovery; every temporary
+also holds its own advisory lock until commit. After a crash, the next operation
+holds both locks and re-proves the temporary's directory-relative
 pathname and inode before discarding a single-link pre-publication file. If both
 names survive, recovery additionally proves the temporary is the sole alternate
 link to the exact target and re-syncs the directory. Public append-only outputs

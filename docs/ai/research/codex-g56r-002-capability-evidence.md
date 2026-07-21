@@ -181,8 +181,10 @@ Capability JSON parsing also fails closed on duplicate keys, non-finite values,
 invalid UTF-8, parser recursion, nesting beyond 64 levels, or more than 100,000
 total nodes.
 Source-capture materialization rejects non-bytes-like or greater-than-32-MiB
-input before parsing or hashing. Every reserved append-only temporary holds an
-advisory lock until commit. Recovery obtains that lock and re-proves the
+input before parsing or hashing. A shared parent-directory advisory lock is
+acquired before any reserved temporary pathname appears and is held through
+writer commit or recovery. Every temporary also holds an advisory lock until
+commit. Recovery obtains both locks and re-proves the
 directory-relative pathname and inode before removing an abandoned single-link
 pre-publication file. A linked temporary additionally must be the sole alternate
 name for the exact target and bytes; recovery syncs before and after unlink and

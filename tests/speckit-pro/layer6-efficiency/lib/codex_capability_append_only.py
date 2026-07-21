@@ -11,11 +11,11 @@ _APPEND_ONLY_TEMPORARY_NAME = re.compile(r"\.g56r-002-[0-9a-f]{32}")
 _APPEND_ONLY_LOCK_WAIT_SECONDS = 5.0
 
 
-def _acquire_append_only_temporary_lock(descriptor, *, wait):
+def _acquire_append_only_lock(descriptor, *, wait, label):
     try:
         import fcntl
     except ImportError as error:
-        raise ValueError("append-only temporary recovery requires advisory file locking") from error
+        raise ValueError("append-only recovery requires advisory file locking") from error
     deadline = time.monotonic() + _APPEND_ONLY_LOCK_WAIT_SECONDS
     while True:
         try:
@@ -23,8 +23,16 @@ def _acquire_append_only_temporary_lock(descriptor, *, wait):
             return
         except BlockingIOError as error:
             if not wait or time.monotonic() >= deadline:
-                raise ValueError("append-only temporary operation is already in progress") from error
+                raise ValueError(f"append-only {label} operation is already in progress") from error
             time.sleep(0.01)
+
+
+def _acquire_append_only_directory_lock(descriptor, *, wait):
+    _acquire_append_only_lock(descriptor, wait=wait, label="directory")
+
+
+def _acquire_append_only_temporary_lock(descriptor, *, wait):
+    _acquire_append_only_lock(descriptor, wait=wait, label="temporary")
 
 
 def _read_open_descriptor(descriptor):
@@ -40,7 +48,7 @@ def _read_open_descriptor(descriptor):
     return b"".join(chunks)
 
 
-def _recover_append_only_target(path, payload, expected_parent_identity=None):
+def _recover_append_only_target(path, payload, expected_parent_identity=None, *, directory_lock_held=False):
     if not HAS_DESCRIPTOR_RELATIVE_IO:
         raise ValueError("append-only recovery requires descriptor-relative filesystem operations")
     target = Path(os.path.abspath(path)); parent = target.parent
@@ -58,6 +66,13 @@ def _recover_append_only_target(path, payload, expected_parent_identity=None):
     try:
         if _stable_directory_identity(os.fstat(parent_descriptor)) != parent_identity:
             raise ValueError("append-only recovery parent changed before it was opened")
+        if not directory_lock_held:
+            _acquire_append_only_directory_lock(parent_descriptor, wait=True)
+            if (
+                _stable_directory_identity(os.stat(parent, follow_symlinks=False)) != parent_identity
+                or _stable_directory_identity(os.fstat(parent_descriptor)) != parent_identity
+            ):
+                raise ValueError("append-only recovery parent changed while locking")
         try:
             target_descriptor = os.open(
                 target.name, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
@@ -154,6 +169,12 @@ def _recover_append_only_directory(directory, expected_identity, *, require_cont
     try:
         if _stable_directory_identity(os.fstat(descriptor)) != expected_identity:
             raise ValueError("append-only recovery directory changed before it was opened")
+        _acquire_append_only_directory_lock(descriptor, wait=True)
+        if (
+            _stable_directory_identity(os.stat(directory, follow_symlinks=False)) != expected_identity
+            or _stable_directory_identity(os.fstat(descriptor)) != expected_identity
+        ):
+            raise ValueError("append-only recovery directory changed while locking")
         for temporary_name in os.listdir(descriptor):
             if not _APPEND_ONLY_TEMPORARY_NAME.fullmatch(temporary_name):
                 continue
@@ -210,7 +231,9 @@ def _recover_append_only_directory(directory, expected_identity, *, require_cont
             payload = _read_bounded_regular_file(target, allowed_root=directory, expected_parent_identity=expected_identity)
             if require_content_addressed and target.name != f"{digest(payload).removeprefix('sha256:')}.json":
                 raise ValueError("append-only recovery target is not content-addressed")
-            _recover_append_only_target(target, payload, expected_identity)
+            _recover_append_only_target(
+                target, payload, expected_identity, directory_lock_held=True,
+            )
         if (
             any(_APPEND_ONLY_TEMPORARY_NAME.fullmatch(name) for name in os.listdir(descriptor))
             or _stable_directory_identity(os.stat(directory, follow_symlinks=False)) != expected_identity

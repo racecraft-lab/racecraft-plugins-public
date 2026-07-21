@@ -255,8 +255,10 @@ Repository tests must pass with the network disabled and no raw evidence store.
   cleanup share an atomic
   private-root lock, and destructive cleanup derives its timestamp from current
   UTC. Append-only writes directory-fsync both final-name publication and
-  temporary-name removal. Every reserved temporary holds an advisory lock until
-  commit. Recovery first acquires that lock and re-proves its directory-relative
+  temporary-name removal. Writers acquire a shared parent-directory advisory
+  lock before creating a reserved temporary and hold it through commit; recovery
+  holds the same lock while scanning or removing names. Every reserved
+  temporary also holds an advisory lock until commit. Recovery then re-proves its directory-relative
   pathname and inode: an abandoned single-link pre-publication file is removed,
   while a linked file additionally requires the sole exact target and matching
   bytes. Public append-only directories use the same recovery; any unrecognized

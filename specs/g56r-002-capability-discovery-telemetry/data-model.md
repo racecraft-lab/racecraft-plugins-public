@@ -296,8 +296,10 @@ total nodes. Parser recursion and resource-bound failures surface as
 fail-closed validation errors.
 Source-capture materialization rejects non-bytes-like or greater-than-32-MiB
 input before parsing, hashing, root validation, or allocation of the decoded
-JSON value. Every `.g56r-002-*` temporary holds an advisory lock until commit.
-Recovery acquires that lock and re-proves the descriptor-bound pathname and
+JSON value. A shared parent-directory advisory lock is acquired before any
+`.g56r-002-*` pathname appears and held through writer commit or recovery.
+Every temporary additionally holds an advisory lock until commit. Recovery
+acquires both locks and re-proves the descriptor-bound pathname and
 inode before removing an abandoned single-link pre-publication file. A linked
 temporary additionally must be the sole alternate name for one matching target;
 private targets must match their content address and exact bytes. Recovery

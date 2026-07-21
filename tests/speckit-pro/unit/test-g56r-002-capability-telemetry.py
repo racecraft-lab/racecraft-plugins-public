@@ -2142,6 +2142,66 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(target.stat().st_nlink, 1)
             self.assertFalse(any(raw_root.glob(".g56r-002-*")))
 
+    def test_append_only_directory_lock_precedes_temporary_visibility(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_root = Path(tmp) / "raw"
+            raw_root.mkdir(mode=0o700)
+            raw, raw_identity = capability_private._validated_raw_evidence_root_binding(raw_root, ROOT)
+            payload = b"[]\n"
+            target = raw / f"{capabilities.digest(payload).removeprefix('sha256:')}.json"
+            temporary_visible = threading.Event()
+            release_writer = threading.Event()
+            recovery_waiting = threading.Event()
+            errors = []
+            original_temporary_lock = capability_private._acquire_append_only_temporary_lock
+            original_directory_lock = capability_append_only._acquire_append_only_directory_lock
+
+            def pause_before_temporary_lock(descriptor: int, *, wait: bool) -> None:
+                temporary_visible.set()
+                if not release_writer.wait(timeout=5):
+                    raise TimeoutError("test did not release the paused writer")
+                original_temporary_lock(descriptor, wait=wait)
+
+            def observe_recovery_lock(descriptor: int, *, wait: bool) -> None:
+                recovery_waiting.set()
+                original_directory_lock(descriptor, wait=wait)
+
+            def write() -> None:
+                try:
+                    capability_private._write_private_bytes(
+                        target, payload, append_only=True, expected_parent_identity=raw_identity,
+                    )
+                except BaseException as error:
+                    errors.append(error)
+
+            def recover() -> None:
+                try:
+                    capabilities.validate_raw_evidence_root(raw, ROOT)
+                except BaseException as error:
+                    errors.append(error)
+
+            writer = threading.Thread(target=write)
+            recovery = threading.Thread(target=recover)
+            with mock.patch.object(
+                capability_private, "_acquire_append_only_temporary_lock",
+                side_effect=pause_before_temporary_lock,
+            ), mock.patch.object(
+                capability_append_only, "_acquire_append_only_directory_lock",
+                side_effect=observe_recovery_lock,
+            ):
+                writer.start()
+                self.assertTrue(temporary_visible.wait(timeout=5))
+                recovery.start()
+                self.assertTrue(recovery_waiting.wait(timeout=5))
+                self.assertTrue(any(raw.glob(".g56r-002-*")))
+                release_writer.set()
+                writer.join(timeout=10); recovery.join(timeout=10)
+            self.assertFalse(writer.is_alive() or recovery.is_alive())
+            self.assertEqual(errors, [])
+            self.assertEqual(target.read_bytes(), payload)
+            self.assertEqual(target.stat().st_nlink, 1)
+            self.assertFalse(any(raw.glob(".g56r-002-*")))
+
     def test_json_inputs_executable_hashing_and_publication_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

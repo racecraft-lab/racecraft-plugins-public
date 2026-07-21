@@ -166,8 +166,10 @@
   Unreceipted claims remain non-governing but protect evidence only until the
   earlier of their declared deadline or 30 days after registration; deletion
   uses the latest governing or individually capped pending deadline. A
-  crash-retained reserved temporary is removed only after its advisory lock
-  proves no writer remains: a single-link pre-publication file is discarded,
+  shared parent-directory advisory lock is acquired before any reserved
+  temporary pathname appears and is held through writer commit or recovery.
+  The temporary lock then proves no writer remains: a single-link
+  pre-publication file is discarded,
   while a linked file additionally requires exact descriptor-bound target,
   inode, and byte proof. Concurrent identical source captures accept the
   verified single-link winner. Expired bytes are
