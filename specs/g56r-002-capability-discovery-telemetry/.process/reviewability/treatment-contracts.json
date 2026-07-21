@@ -8,10 +8,10 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 4743,
-  "actual_nonblank_noncomment_lines": 4317,
+  "actual_source_lines": 4798,
+  "actual_nonblank_noncomment_lines": 4377,
   "production_modules": 13,
-  "max_capability_module_source_lines": 382,
+  "max_capability_module_source_lines": 399,
   "primary_surface": "harness/adapters",
   "module_measurements": {
     "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 114, "nonblank_noncomment_lines": 105},
@@ -23,8 +23,8 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 350, "nonblank_noncomment_lines": 307},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 297, "nonblank_noncomment_lines": 256},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {"source_lines": 15, "nonblank_noncomment_lines": 10},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 382, "nonblank_noncomment_lines": 364},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 360, "nonblank_noncomment_lines": 323},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 399, "nonblank_noncomment_lines": 383},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 398, "nonblank_noncomment_lines": 364},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 213, "nonblank_noncomment_lines": 196},
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
       "source_lines": 1884,
@@ -102,9 +102,14 @@
     "post_unlink_recovery_intent_successor": "pass",
     "recovery_intent_chain_integrity": "pass",
     "post_persistence_retry_completion": "pass",
-    "independent_review_chat_id": "pr-367-rereview-5B3AA1",
+    "staged_recovery_journal_before_restoration": "pass",
+    "interrupted_restoration_resume": "pass",
+    "missing_staged_target_completion": "pass",
+    "current_treatment_evidence_narrative": "pass",
+    "independent_review_chat_id": "pr-367-rereview-6DC2A3",
     "independent_review_findings": [
-      "post-unlink restoration invalidated the persisted deletion intent and blocked later cleanup"
+      "restoration and its recovery authority were not crash-atomic",
+      "capability evidence still described treatment publication as pending"
     ]
   },
   "exception": {
