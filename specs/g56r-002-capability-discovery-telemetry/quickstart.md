@@ -276,7 +276,9 @@ governing only after the exact freeze bytes exist and an immutable receipt is
 directory-fsynced under `publication-receipts/`. Re-running the same publication
 recovers a crash between those steps; a different artifact at the output path
 fails before registration. Records left by failed publication remain reported
-as pending and cannot extend deletion. Before registration, publication
+as non-governing pending claims. Each protects its evidence only until the
+earlier of its declared deadline or 30 days after registration; cleanup uses
+the latest governing or individually capped pending deadline. Before registration, publication
 semantically revalidates the source capture, every non-fixture observation, and
 every canary result against the retained private bytes. It publishes and
 re-reads the exact canonical output as a single-link target through one
@@ -290,6 +292,8 @@ governing retained digest still has its exact bytes:
 Every capability JSON input is strict UTF-8 JSON with unique object keys and
 finite numbers. Inputs deeper than 64 levels or larger than 100,000 total nodes
 fail closed, including parser recursion failures.
+Source-capture materialization accepts only bytes-like input no larger than
+32 MiB and enforces that bound before parsing or hashing.
 
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \
@@ -334,6 +338,9 @@ quarantine entries, and missing, forked, or disconnected intent chains remain
 fail-closed. Repeated cleanup after durable completion is idempotent. Every raw
 file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal;
+if a crash preserves both names, the next operation removes the reserved
+temporary only after descriptor-bound proof that it is the sole alternate link
+to the exact content-addressed target and re-syncs the directory;
 cleanup fails closed if a power-loss artifact or any alternate hard link still
 reaches governed bytes. Before quarantine, a retry requires the exact canonical
 v2 identity; afterward it requires the exact v2- or v3-bound quarantine identity

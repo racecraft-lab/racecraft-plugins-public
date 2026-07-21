@@ -193,6 +193,19 @@ def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=N
         )
 
 
+def _effective_retention_deadline(grouped, governing_record_digests, current):
+    deadlines = []
+    for record, record_digest in grouped:
+        registered = _parsed_timestamp(record["registered_at"], "retention registration timestamp")
+        if current < registered:
+            raise ValueError("retention as-of timestamp precedes the registration record")
+        deadline = _parsed_timestamp(record["delete_after"], "retention deletion deadline")
+        if record_digest not in governing_record_digests:
+            deadline = min(deadline, registered + timedelta(days=RAW_EVIDENCE_PENDING_DAYS))
+        deadlines.append(deadline)
+    return max(deadlines)
+
+
 def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root, as_of, current, *, apply):
     all_retention_records = [(_validate_retention_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / RETENTION_RECORDS_DIR, repository_root, "retention record")]
     retention_by_digest = {record_digest: record for record, record_digest in all_retention_records}
@@ -233,17 +246,7 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
     for evidence_digest in sorted(retention_by_evidence):
         grouped = retention_by_evidence[evidence_digest]
         record_digests = sorted(record_digest for _, record_digest in grouped)
-        governing_deadlines, pending_deadlines = [], []
-        for record, record_digest in grouped:
-            registered = _parsed_timestamp(record["registered_at"], "retention registration timestamp")
-            if current < registered:
-                raise ValueError("retention as-of timestamp precedes the registration record")
-            deadline = _parsed_timestamp(record["delete_after"], "retention deletion deadline")
-            if record_digest in governing_record_digests:
-                governing_deadlines.append(deadline)
-            else:
-                pending_deadlines.append(min(deadline, registered + timedelta(days=RAW_EVIDENCE_PENDING_DAYS)))
-        deadline = max(governing_deadlines) if governing_deadlines else min(pending_deadlines)
+        deadline = _effective_retention_deadline(grouped, governing_record_digests, current)
         deadline_text = _format_timestamp(deadline); target = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
         deletion_target = target; quarantined = False
         intent = intent_by_evidence.get(evidence_digest)

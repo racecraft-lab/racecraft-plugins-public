@@ -267,7 +267,11 @@ when it satisfies that same single-link invariant.
 They become governing only when a content-addressed publication receipt binds
 the candidate freeze ID, exact artifact digest, publication time, and complete
 retention-record set after the output bytes exist. Unreceipted records are
-reported as pending and do not participate in the effective deletion deadline.
+reported as pending and never become governing authority. Each pending claim
+nevertheless protects reachable evidence until the earlier of its declared
+deadline or 30 days after registration. The effective deletion deadline is the
+latest governing or individually capped pending deadline, so an expired older
+receipt cannot delete evidence still covered by a newer bounded pending claim.
 Deletion intents bind the original private file identity. An interrupted
 cleanup resumes only while that exact canonical file remains reachable; a
 missing or arbitrarily identity-changed target cannot prove pre-unlink
@@ -290,6 +294,13 @@ All capability JSON inputs use strict UTF-8 parsing with duplicate-key and
 non-finite-number rejection, a maximum nesting depth of 64, and at most 100,000
 total nodes. Parser recursion and resource-bound failures surface as
 fail-closed validation errors.
+Source-capture materialization rejects non-bytes-like or greater-than-32-MiB
+input before parsing, hashing, root validation, or allocation of the decoded
+JSON value. A crash-retained `.g56r-002-*` append-only temporary is recoverable
+only when it is private, descriptor-bound, and the sole alternate link to one
+matching content-addressed target. Recovery verifies the inode and exact bytes,
+directory-syncs the target, removes the temporary link, syncs again, and proves
+the target is single-link; any unrecognized alternate link still fails closed.
 
 ## Telemetry and Treatment Records
 

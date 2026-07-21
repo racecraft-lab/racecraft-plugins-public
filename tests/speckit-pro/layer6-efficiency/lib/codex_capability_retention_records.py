@@ -46,6 +46,7 @@ def _store_private_record(directory, value, repository_root, expected_directory_
     payload = canonical_bytes(value) + b"\n"; record_digest = digest(payload)
     target = directory / f"{record_digest.removeprefix('sha256:')}.json"
     if target.exists():
+        _recover_append_only_target(target, payload, expected_directory_identity)
         _, retained = read_content_addressed_private_file(target, repository_root, "raw evidence record")
         if retained != payload: raise ValueError("content-addressed raw evidence record bytes disagree")
         return record_digest
@@ -363,6 +364,7 @@ def _publication_target_matches(path, payload):
     target = Path(path)
     if not target.exists():
         return False
+    _recover_append_only_target(target, payload)
     if _read_bounded_regular_file(target, require_single_link=True) != payload:
         raise ValueError("publication output already exists with different bytes")
     return True

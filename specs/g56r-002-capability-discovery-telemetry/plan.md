@@ -237,7 +237,9 @@ Repository tests must pass with the network disabled and no raw evidence store.
   descriptor; recovered existing outputs must satisfy the same invariant. It
   then makes staged
   content-addressed retention records governing only by appending a receipt;
-  failed-publication records cannot extend deletion. Deterministic
+  pending records remain non-governing but protect evidence until their
+  individually capped deadline, at most 30 days after registration. Deletion
+  uses the latest governing or capped pending deadline. Deterministic
   verification fails on missing or overdue bytes. Cleanup first appends and
   directory-fsyncs a content-addressed deletion-intent record, then performs a
   descriptor-relative rename to a deterministic quarantine name, fsyncs the raw
@@ -251,13 +253,17 @@ Repository tests must pass with the network disabled and no raw evidence store.
   cleanup share an atomic
   private-root lock, and destructive cleanup derives its timestamp from current
   UTC. Append-only writes directory-fsync both final-name publication and
-  temporary-name removal; any alternate hard link blocks cleanup.
+  temporary-name removal. A crash-retained reserved temporary is recovered only
+  after descriptor-bound proof that it is the sole alternate link to the exact
+  content-addressed target; any unrecognized alternate hard link blocks cleanup.
   Record loaders bind one private directory descriptor for enumeration and
   entry opens, require an unchanged before/after entry set, and reject directory
   replacement or mixed snapshots.
 - Capability JSON parsing is strict UTF-8, rejects duplicate keys and non-finite
   values, limits nesting to 64 and total nodes to 100,000, and normalizes parser
   recursion to a fail-closed validation error.
+- Source-capture callers must provide bytes-like input no larger than 32 MiB;
+  the bound is enforced before JSON parsing or digest calculation.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
   bound to exact bytes by the adjacent out-of-band digest manifest.

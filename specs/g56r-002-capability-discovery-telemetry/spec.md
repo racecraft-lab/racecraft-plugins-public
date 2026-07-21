@@ -162,8 +162,12 @@
   are operator-only mode `0700`; files are mode `0600` and have exactly one hard
   link. Captures remain for
   30 days after freeze publication. Retention records become governing only
-  after an immutable receipt proves publication of the exact freeze bytes;
-  failed-publication records cannot extend the deadline. Expired bytes are
+  after an immutable receipt proves publication of the exact freeze bytes.
+  Unreceipted claims remain non-governing but protect evidence only until the
+  earlier of their declared deadline or 30 days after registration; deletion
+  uses the latest governing or individually capped pending deadline. A
+  crash-retained reserved temporary link is removed only after exact
+  descriptor-bound inode and byte proof. Expired bytes are
   deleted while their digest and a deletion record remain. Live private-store
   operations fail closed on Windows until equivalent owner-only DACL validation
   exists. Repository tests never require raw-store access.

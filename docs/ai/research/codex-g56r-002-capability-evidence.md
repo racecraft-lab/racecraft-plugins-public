@@ -148,7 +148,9 @@ exact canonical bytes are checked again before the receipt is written. An
 existing matching output is recoverable only when it satisfies the same
 single-link invariant.
 An interrupted publication can be recovered idempotently; unreceipted records
-remain pending and cannot extend deletion. The deterministic
+remain non-governing pending claims, but each protects evidence until the
+earlier of its declared deadline or 30 days after registration. The effective
+deadline is the latest governing or individually capped pending deadline. The deterministic
 `retention` command verifies pre-deadline presence, fails closed on missing or
 overdue bytes, and in `cleanup` mode first appends and directory-fsyncs a
 deletion-intent record. It then unlinks the expired bytes descriptor-relative,
@@ -178,3 +180,8 @@ a mixed snapshot fails closed.
 Capability JSON parsing also fails closed on duplicate keys, non-finite values,
 invalid UTF-8, parser recursion, nesting beyond 64 levels, or more than 100,000
 total nodes.
+Source-capture materialization rejects non-bytes-like or greater-than-32-MiB
+input before parsing or hashing. A crash-retained reserved append-only
+temporary is removed only after descriptor-bound proof that it is the sole
+alternate link to the exact content-addressed target; recovery syncs before and
+after unlink and re-proves the target is single-link.

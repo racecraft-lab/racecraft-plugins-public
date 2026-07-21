@@ -1260,6 +1260,16 @@ class CapabilityContractTests(unittest.TestCase):
             raw_file.chmod(0o600)
             self.assertEqual(stat.S_IMODE(raw_root.stat().st_mode), 0o700)
             capabilities.validate_raw_evidence_root(raw_root, ROOT)
+            with mock.patch.object(
+                capability_private, "PRIVATE_REFRESH_MAX_BYTES", 4,
+            ), mock.patch.object(
+                capability_private, "_parse_json_bytes",
+                wraps=capability_private._parse_json_bytes,
+            ) as parse_capture, self.assertRaisesRegex(ValueError, "bounded private-file size"):
+                capabilities.materialize_source_capture(raw_root, ROOT, b'["oversized"]')
+            parse_capture.assert_not_called()
+            with self.assertRaisesRegex(ValueError, "bytes-like"):
+                capabilities.materialize_source_capture(raw_root, ROOT, "[]")
             repository = capabilities.build_repository_binding("0" * 40, "1" * 40)
             work_item = {"kind": "fixture", "id": "G56R-002-RAW-REFERENCE"}
             evidence, retained = capabilities.materialize_unknown_capture(
@@ -1395,7 +1405,7 @@ class CapabilityContractTests(unittest.TestCase):
                 original_write(path, value, **kwargs)
             with mock.patch.object(
                 capability_retention_records, "_retention_now",
-                return_value=capability_contract._parsed_timestamp("2026-07-18T00:00:00Z", "test clock"),
+                return_value=capability_contract._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
             ), mock.patch.object(capability_freeze, "_write", side_effect=fail_publication):
                 for failed_freeze, failed_path in (
                     (future_freeze, failed_publication_path),
@@ -1483,6 +1493,7 @@ class CapabilityContractTests(unittest.TestCase):
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
             ), self.assertRaisesRegex(ValueError, "target identity changed"):
                 capabilities.reconcile_raw_evidence_retention(race_root, ROOT, apply=True)
+
             deletion_directory = race_root / capabilities.DELETION_RECORDS_DIR
             self.assertFalse(deletion_directory.exists() and any(deletion_directory.iterdir()))
             race_link.unlink()
@@ -2041,6 +2052,23 @@ class CapabilityContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "collection window"):
             capabilities.validate_observation(reversed_window)
 
+    def test_retention_deadline_includes_every_bounded_pending_claim(self) -> None:
+        grouped = [
+            ({"registered_at": "2026-07-01T00:00:00Z", "delete_after": "2026-08-15T00:00:00Z"}, "governing"),
+            ({"registered_at": "2026-07-17T00:00:00Z", "delete_after": "2026-09-01T00:00:00Z"}, "pending-earlier"),
+            ({"registered_at": "2026-07-18T00:00:00Z", "delete_after": "2026-10-01T00:00:00Z"}, "pending-later"),
+        ]
+        current = capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock")
+        expected = capability_contract._parsed_timestamp("2026-08-17T00:00:00Z", "test deadline")
+        self.assertEqual(
+            capability_retention._effective_retention_deadline(grouped, {"governing"}, current),
+            expected,
+        )
+        self.assertEqual(
+            capability_retention._effective_retention_deadline(grouped[1:], set(), current),
+            expected,
+        )
+
     def test_repository_binding_requires_a_clean_committed_checkout(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             repository = Path(tmp) / "repository"
@@ -2122,6 +2150,27 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertGreaterEqual(fsync.call_count, 3)
             self.assertFalse(any(root.glob(".g56r-002-*")))
             self.assertEqual(capability_publish_io._read(canonical, require_canonical=True), {"a": 2, "b": 1})
+            crash_payload = capabilities.canonical_bytes({"recovered": True}) + b"\n"
+            crash_temporary = root / f".g56r-002-{'a' * 32}"
+            crash_target = root / "crash-recovered.json"
+            crash_temporary.write_bytes(crash_payload); crash_temporary.chmod(0o600)
+            os.link(crash_temporary, crash_target); capability_private._fsync_directory(root)
+            with self.assertRaises(FileExistsError):
+                capability_private._write(crash_target, {"recovered": True}, append_only=True)
+            self.assertFalse(crash_temporary.exists())
+            self.assertEqual(crash_target.stat().st_nlink, 1)
+            self.assertEqual(crash_target.read_bytes(), crash_payload)
+            private_recovery_root = root / "raw-recovery"
+            private_recovery_root.mkdir(mode=0o700)
+            private_payload = b'[{"capture":"recovered"}]\n'
+            private_temporary = private_recovery_root / f".g56r-002-{'b' * 32}"
+            private_target = private_recovery_root / f"{capabilities.digest(private_payload).removeprefix('sha256:')}.json"
+            private_temporary.write_bytes(private_payload); private_temporary.chmod(0o600)
+            os.link(private_temporary, private_target); capability_private._fsync_directory(private_recovery_root)
+            capabilities.validate_raw_evidence_root(private_recovery_root, ROOT)
+            self.assertFalse(private_temporary.exists())
+            self.assertEqual(private_target.stat().st_nlink, 1)
+            self.assertEqual(private_target.read_bytes(), private_payload)
             replacement = root / "replacement.json"
             replacement.write_bytes(b'{}\n')
             replacement_metadata = replacement.stat(); original_stat = capability_io.os.stat

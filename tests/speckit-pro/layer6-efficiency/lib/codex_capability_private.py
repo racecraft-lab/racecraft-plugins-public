@@ -143,6 +143,9 @@ def _write_public_append_only_bytes(path, payload):
     if not stat.S_ISDIR(metadata.st_mode):
         raise ValueError("append-only publication parent must be a real directory")
     parent_identity = _stable_directory_identity(metadata)
+    if target.exists():
+        _recover_append_only_target(target, payload, parent_identity)
+        raise FileExistsError(f"append-only publication target already exists: {target}")
     parent_descriptor = _private_directory_descriptor(parent, parent_identity)
     try:
         _write_private_bytes_at(
@@ -187,6 +190,7 @@ def validate_raw_evidence_root(raw_root, repository_root):
     if raw == repo or repo in raw.parents or _git_worktree_ancestor(raw):
         raise ValueError("raw_evidence_root must resolve outside every Git worktree")
     if not raw.is_dir(): raise ValueError("raw_evidence_root must be a directory")
+    _recover_content_addressed_append_only_links(raw)
     for path in (raw, *raw.rglob("*")):
         if path.is_symlink(): raise ValueError("raw_evidence_root cannot contain symlinks")
         if os.name != "nt":
@@ -262,6 +266,13 @@ def read_content_addressed_private_file(path, repository_root, label):
 
 
 def materialize_source_capture(raw_root, repository_root, capture_bytes):
+    try:
+        capture_size = memoryview(capture_bytes).nbytes
+    except TypeError as error:
+        raise ValueError("source capture must be bytes-like") from error
+    if capture_size > PRIVATE_REFRESH_MAX_BYTES:
+        raise ValueError("source capture exceeds the bounded private-file size")
+    capture_bytes = bytes(capture_bytes)
     captured = _parse_json_bytes(capture_bytes)
     if not isinstance(captured, list):
         raise ValueError("captured refresh must be a JSON list")
