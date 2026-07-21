@@ -1125,9 +1125,9 @@ For every task:
 | Feature spec | `sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046` |
 | Plan-declared scope | `sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f` |
 | Tasks | `sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782` |
-| Reviewability evidence | `sha256:f04bca5185a93129a3364b982b0d1ba1d52022db0fde4aa3e48f36a680926c01` |
+| Reviewability evidence | `sha256:68e4eb8ca50178d96d574917b0c527370f43d56e94bbb2112571b2a9b975f6b6` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
-| Changed-file manifest | `sha256:a5ff91aa88daa59aaa1828ffe090bf55bfe60acc7bd68ab1f7ed7d48a5f13e16` |
+| Changed-file manifest | `sha256:094dad4a3cfd7f56e68c2448c069de96c9b5b08ed983d4176c4cad81f1058f49` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|

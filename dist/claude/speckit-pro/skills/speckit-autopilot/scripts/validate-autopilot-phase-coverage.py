@@ -147,6 +147,14 @@ WORKFLOW_SUPERSEDED_CHECKPOINT_CLAIM_RE = re.compile(
 WORKFLOW_UNSCOPED_CHECKPOINT_CLAIM_RE = re.compile(
     r"(?m)^-\s+(?:Implementation checkpoint|Current remediation source head|Superseded marker checkpoint):\s+`[0-9a-f]{40}`\s*$"
 )
+WORKFLOW_FINGERPRINT_FIELDS = (
+    ("Feature spec", "feature_spec_sha"),
+    ("Plan-declared scope", "plan_declared_scope_sha"),
+    ("Tasks", "tasks_sha"),
+    ("Reviewability evidence", "reviewability_sha"),
+    ("Hazard route", "hazard_route_sha"),
+    ("Changed-file manifest", "changed_file_manifest_sha"),
+)
 
 
 @dataclass(frozen=True)
@@ -416,6 +424,41 @@ def validate_workflow_checkpoint_bindings(
         errors.append("workflow must contain exactly one PR Marker Plan Evidence section")
     if section_count == 1:
         section = visible_text.split(section_token, 1)[1].split("\n## ", 1)[0]
+        fingerprint_statuses = re.findall(
+            r"(?m)^-\s+Fingerprint status:\s*([^\n]+?)\s*$", section,
+        )
+        if strict_contract and any(
+            status.casefold() == "current" for status in fingerprint_statuses
+        ):
+            if fingerprint_statuses != ["Current"]:
+                errors.append(
+                    "workflow PR Marker Plan Evidence must contain exactly one exact "
+                    "Fingerprint status: Current claim"
+                )
+            source_fingerprint = marker_plan.get("source_fingerprint")
+            if not isinstance(source_fingerprint, dict):
+                errors.append(
+                    "workflow Current fingerprint claim requires "
+                    "pr_marker_plan.source_fingerprint"
+                )
+            else:
+                fingerprint_rows: dict[str, list[str]] = {
+                    label: [] for label, _field in WORKFLOW_FINGERPRINT_FIELDS
+                }
+                for line in section.splitlines():
+                    if not line.startswith("|") or not line.endswith("|"):
+                        continue
+                    cells = [cell.strip() for cell in line[1:-1].split("|")]
+                    if len(cells) != 2 or cells[0] not in fingerprint_rows:
+                        continue
+                    fingerprint_rows[cells[0]].append(cells[1].strip("` "))
+                for label, field in WORKFLOW_FINGERPRINT_FIELDS:
+                    expected_value = source_fingerprint.get(field)
+                    if fingerprint_rows[label] != [expected_value]:
+                        errors.append(
+                            f"workflow Current fingerprint {label!r} does not exactly "
+                            f"match pr_marker_plan.source_fingerprint.{field}"
+                        )
         marker_row_counts = {marker_id: 0 for marker_id in expected}
         for line in section.splitlines():
             if not line.startswith("|") or not line.endswith("|"):

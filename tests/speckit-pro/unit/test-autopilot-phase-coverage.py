@@ -1183,6 +1183,32 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "hazard_route_sha": "sha256:" + "d" * 64,
                 "changed_file_manifest_sha": manifest_sha,
             }
+            fingerprint_rows = (
+                ("Feature spec", "feature_spec_sha"),
+                ("Plan-declared scope", "plan_declared_scope_sha"),
+                ("Tasks", "tasks_sha"),
+                ("Reviewability evidence", "reviewability_sha"),
+                ("Hazard route", "hazard_route_sha"),
+                ("Changed-file manifest", "changed_file_manifest_sha"),
+            )
+            fingerprint_table = (
+                "- Fingerprint status: Current\n\n"
+                "| Fingerprint input | SHA-256 |\n"
+                "|---|---|\n"
+                + "".join(
+                    f"| {label} | `{fingerprint[field]}` |\n"
+                    for label, field in fingerprint_rows
+                )
+                + "\n"
+            )
+            workflow_path.write_text(
+                workflow_path.read_text(encoding="utf-8").replace(
+                    "## PR Marker Plan Evidence\n\n",
+                    "## PR Marker Plan Evidence\n\n" + fingerprint_table,
+                    1,
+                ),
+                encoding="utf-8",
+            )
             state["current_source_fingerprint"] = fingerprint
             state["pr_marker_plan"]["source_fingerprint"] = dict(fingerprint)
             state["pr_marker_plan"]["markers"][0]["implementation_checkpoint"][
@@ -1250,6 +1276,44 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             self.assertEqual(exit_code, 0, report)
             self.assertEqual(report["changed_file_manifest_errors"], [])
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
+
+            current_workflow = workflow_path.read_bytes()
+            workflow_path.write_text(
+                workflow_path.read_text(encoding="utf-8").replace(
+                    fingerprint["reviewability_sha"],
+                    "sha256:" + "0" * 64,
+                    1,
+                ),
+                encoding="utf-8",
+            )
+            subprocess.run(["git", "-C", str(root), "add", "workflow.md"], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "stale visible workflow fingerprint",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "workflow Current fingerprint 'Reviewability evidence' does not exactly "
+                "match pr_marker_plan.source_fingerprint.reviewability_sha",
+                report["workflow_checkpoint_errors"],
+            )
+            workflow_path.write_bytes(current_workflow)
+            subprocess.run(["git", "-C", str(root), "add", "workflow.md"], check=True)
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "restore visible workflow fingerprint",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 0, report)
 
             schema_error_buckets = (
                 "marker_plan_status_errors",
