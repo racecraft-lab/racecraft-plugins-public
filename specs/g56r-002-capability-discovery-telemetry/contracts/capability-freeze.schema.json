@@ -4,6 +4,10 @@
   "title": "G56R-002 Executable Candidate Freeze",
   "type": "object",
   "additionalProperties": false,
+  "dependentRequired": {
+    "treatment_contract_digest": ["treatment_evidence_digest"],
+    "treatment_evidence_digest": ["treatment_contract_digest"]
+  },
   "required": [
     "schema_version",
     "candidate_freeze_id",
@@ -47,6 +51,8 @@
     "runtime_capability_snapshot": {"$ref": "#/$defs/runtimeCapabilitySnapshot"},
     "runtime_capability_snapshot_id": {"$ref": "#/$defs/digest"},
     "telemetry_profile_id": {"$ref": "#/$defs/digest"},
+    "treatment_contract_digest": {"$ref": "#/$defs/digest"},
+    "treatment_evidence_digest": {"$ref": "#/$defs/digest"},
     "current_ledger_digest": {"$ref": "#/$defs/digest"},
     "surface_matrix_digest": {"$ref": "#/$defs/digest"},
     "tuple_decision_digest": {"$ref": "#/$defs/digest"},

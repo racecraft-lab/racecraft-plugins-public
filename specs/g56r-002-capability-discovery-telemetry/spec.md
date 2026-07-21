@@ -378,7 +378,9 @@ validate every fixture hash.
   missing value MUST NOT be fabricated. Exact treatment MUST require observed
   effective treatment or an approved configured-route proof meeting the
   clarified consumption-evidence contract and permitted by the profile plus
-  complete reroute monitoring; configured intent alone MUST NOT prove an
+  complete reroute monitoring. Before publication, the successor freeze MUST
+  bind a content-addressed digest of the exact retained observation,
+  configured-route, and sanitized source evidence owner set; configured intent alone MUST NOT prove an
   undocumented effective value, and missing proof MUST produce the `unknown`
   disposition without replacing the typed value or observation state.
 - **[FR-006] Joined route-resolution and execution-trace contract**: Every

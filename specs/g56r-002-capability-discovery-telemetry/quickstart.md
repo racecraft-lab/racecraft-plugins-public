@@ -145,9 +145,10 @@ validated predecessor cannot be overwritten. Approval comes only from the
 repository-owned executor-ID allowlist, which is intentionally empty in this
 slice; an arbitrary result file cannot self-approve, so this command exits
 nonzero before consuming an executor result. When `--freeze` is already
-treatment-bound, also pass both
-`--expected-telemetry-profile-id` and `--expected-treatment-contract-digest`
-from the separately validated treatment bundle; omitting either fails closed.
+treatment-bound, also pass `--expected-telemetry-profile-id`,
+`--expected-treatment-contract-digest`, and
+`--expected-treatment-evidence-digest` from the separately validated treatment
+bundle and retained evidence set; omitting any binding fails closed.
 Default repository tests inject a deterministic
 allowlist and fake result and launch no process. Only a future separately
 reviewed admitted executor plus exit zero and the predeclared sentinel may
@@ -215,15 +216,16 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py validate-f
   --freeze docs/ai/research/codex-g56r-002-executable-candidate-freeze.json \
   --predecessor-freeze /tmp/g56r-002-capability-predecessor-freeze.json \
   --expected-telemetry-profile-id sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb \
-  --expected-treatment-contract-digest sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199
+  --expected-treatment-contract-digest sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199 \
+  --expected-treatment-evidence-digest sha256:087242317e9b4be18693eca15413b2de185df82cafe24f2fc03c9b3ffd4cea35
 ```
 
 The predecessor path must be the trusted, canonical US1 artifact retained by
-the operator. The expected treatment IDs come from the separately validated
+the operator. The three expected treatment IDs come from the separately validated
 treatment bundle, never from the successor artifact itself. This rebuilds the
 manifest binding, sanitized source refresh, surface matrix, runtime snapshot,
 tuple decisions, derived candidate lists, canary records, lineage, treatment
-binding, and the whole-freeze content identity.
+contract and exact evidence-set bindings, and the whole-freeze content identity.
 
 Any later evidence change creates a successor freeze rather than editing the
 published ID in place.

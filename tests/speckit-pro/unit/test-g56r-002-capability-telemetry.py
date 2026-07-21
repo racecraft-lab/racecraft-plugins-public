@@ -477,12 +477,20 @@ class CapabilityContractTests(unittest.TestCase):
             "Pinned client identity": freeze["client_identity_id"],
             "Current source-refresh set": freeze["source_refresh_set_digest"],
             "Complete tuple decisions": freeze["tuple_decision_digest"],
+            "Treatment evidence set": freeze["treatment_evidence_digest"],
         }
         self.assertEqual({key: summary.get(key) for key in expected}, expected)
 
     def test_schema_negative_constraints_match_runtime(self) -> None:
         schema = load_json(ROOT / "specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json")
         self.assertEqual(schema["properties"]["tuple_decisions"]["minItems"], 1)
+        self.assertEqual(
+            schema["dependentRequired"],
+            {
+                "treatment_contract_digest": ["treatment_evidence_digest"],
+                "treatment_evidence_digest": ["treatment_contract_digest"],
+            },
+        )
         excluded_reasons = schema["$defs"]["excludedCandidate"]["properties"]["reasons"]
         self.assertEqual(excluded_reasons["minItems"], 1)
         effort_rule = schema["$defs"]["tupleDecision"]["properties"]["canonical_effort"]["oneOf"][0]
@@ -1197,7 +1205,7 @@ class CapabilityContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "regular non-symlink file"):
                 capabilities.validate_canary_evidence(raw_root, ROOT, result)
             with mock.patch.object(capability_freeze, "APPROVED_CANARY_EXECUTORS", (approval,)), mock.patch.object(
-                capability_freeze, "validate_freeze", side_effect=lambda freeze, manifest, **kwargs: freeze,
+                capability_freeze, "_validate_freeze_payload", side_effect=lambda freeze, manifest, **kwargs: freeze,
             ), self.assertRaisesRegex(ValueError, "regular non-symlink file"):
                 capabilities.build_canary_successor(
                     predecessor, result, self.manifest, "2026-07-16T00:00:01Z",
@@ -1207,7 +1215,7 @@ class CapabilityContractTests(unittest.TestCase):
             evidence_path.write_bytes(evidence_bytes); evidence_path.chmod(0o600)
             self.assertEqual(capabilities.validate_canary_evidence(raw_root, ROOT, result), evidence_bytes)
             with mock.patch.object(capability_freeze, "APPROVED_CANARY_EXECUTORS", (approval,)), mock.patch.object(
-                capability_freeze, "validate_freeze", side_effect=lambda freeze, manifest, **kwargs: freeze,
+                capability_freeze, "_validate_freeze_payload", side_effect=lambda freeze, manifest, **kwargs: freeze,
             ):
                 successor = capabilities.build_canary_successor(
                     predecessor, result, self.manifest, "2026-07-16T00:00:01Z",
@@ -3167,10 +3175,12 @@ class TreatmentContractTests(unittest.TestCase):
         forged["candidate_freeze_id"] = capabilities.digest(capability_freeze._freeze_identity_payload(forged))
         expected_profile = self.bundle["telemetry_profile_id"]
         expected_contract = self.bundle["treatment_contract_digest"]
+        expected_evidence = published["treatment_evidence_digest"]
         prior = copy.deepcopy(published)
         prior["candidate_freeze_id"] = published["supersedes_candidate_freeze_id"]
         prior["telemetry_profile_id"] = "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
         prior.pop("treatment_contract_digest")
+        prior.pop("treatment_evidence_digest")
         prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
         prior["supersedes_candidate_freeze_id"] = None
         self.assertEqual(capabilities.digest(capability_freeze._freeze_identity_payload(prior)), prior["candidate_freeze_id"])
@@ -3180,6 +3190,10 @@ class TreatmentContractTests(unittest.TestCase):
                 capabilities.publish_with_raw_evidence_retention(
                     forged, Path(directory) / "forged.json", raw_root, ROOT, manifest=manifest,
                 )
+            with self.assertRaises(TypeError):
+                capabilities.validate_freeze(
+                    forged, manifest, _enforce_lineage=False,
+                )
             forged_predecessor = copy.deepcopy(prior)
             forged_predecessor["candidate_freeze_id"] = capabilities.digest(b"forged-predecessor")
             with self.assertRaisesRegex(ValueError, "identity"):
@@ -3188,6 +3202,7 @@ class TreatmentContractTests(unittest.TestCase):
                     predecessor=forged_predecessor,
                     expected_telemetry_profile_id=forged["telemetry_profile_id"],
                     expected_treatment_contract_digest=forged["treatment_contract_digest"],
+                    expected_treatment_evidence_digest=forged["treatment_evidence_digest"],
                 )
             with self.assertRaisesRegex(ValueError, "binding disagree"):
                 capabilities.publish_with_raw_evidence_retention(
@@ -3195,6 +3210,7 @@ class TreatmentContractTests(unittest.TestCase):
                     predecessor=prior,
                     expected_telemetry_profile_id=expected_profile,
                     expected_treatment_contract_digest=expected_contract,
+                    expected_treatment_evidence_digest=expected_evidence,
                 )
             decisions = capability_contract._BoundDecisionSet(copy.deepcopy(published["tuple_decisions"]))
             with mock.patch.object(capability_freeze, "validate_unknown_observation_evidence"), self.assertRaisesRegex(
@@ -3207,6 +3223,7 @@ class TreatmentContractTests(unittest.TestCase):
                     raw_evidence_root=raw_root, repository_root=ROOT,
                     expected_predecessor_telemetry_profile_id=expected_profile,
                     expected_predecessor_treatment_contract_digest=expected_contract,
+                    expected_predecessor_treatment_evidence_digest=expected_evidence,
                 )
             with self.assertRaisesRegex(ValueError, "binding disagree"):
                 capabilities.build_canary_successor(
@@ -3214,6 +3231,7 @@ class TreatmentContractTests(unittest.TestCase):
                     raw_evidence_root=raw_root, repository_root=ROOT,
                     expected_telemetry_profile_id=expected_profile,
                     expected_treatment_contract_digest=expected_contract,
+                    expected_treatment_evidence_digest=expected_evidence,
                 )
 
     def test_successor_freeze_preserves_capability_payload(self) -> None:
@@ -3222,6 +3240,7 @@ class TreatmentContractTests(unittest.TestCase):
         prior["candidate_freeze_id"] = "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
         prior["telemetry_profile_id"] = "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
         prior.pop("treatment_contract_digest", None)
+        prior.pop("treatment_evidence_digest", None)
         prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
         prior["supersedes_candidate_freeze_id"] = None
         self.assertEqual(treatment.content_id(prior, "candidate_freeze_id"), prior["candidate_freeze_id"])
@@ -3246,16 +3265,21 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertEqual(successor["supersedes_candidate_freeze_id"], prior["candidate_freeze_id"])
         self.assertEqual(successor["telemetry_profile_id"], successor_bundle["telemetry_profile_id"])
         self.assertEqual(successor["treatment_contract_digest"], successor_bundle["treatment_contract_digest"])
+        self.assertEqual(successor["treatment_evidence_digest"], published["treatment_evidence_digest"])
         self.assertEqual(successor["published_at"], TREATMENT_SUCCESSOR_PUBLISHED_AT)
         rerouted = self.rebound(make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external"))
         trusted = trusted_external_qualification(rerouted)
         declare_reroute_result(rerouted, trusted)
         rerouted, rerouted_evidence = bind_trusted_treatment_evidence(rerouted)
-        self.assertEqual(treatment.build_treatment_successor(
+        rerouted_successor = treatment.build_treatment_successor(
             prior, rerouted, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
             trusted_qualification_evidence=trusted,
             trusted_treatment_evidence=rerouted_evidence,
-        ), published)
+        )
+        self.assertEqual(rerouted_successor["telemetry_profile_id"], published["telemetry_profile_id"])
+        self.assertEqual(rerouted_successor["treatment_contract_digest"], published["treatment_contract_digest"])
+        self.assertNotEqual(rerouted_successor["treatment_evidence_digest"], published["treatment_evidence_digest"])
+        self.assertNotEqual(rerouted_successor["candidate_freeze_id"], published["candidate_freeze_id"])
         with self.assertRaisesRegex(ValueError, "declared treatment"):
             treatment.build_treatment_successor(
                 prior, rerouted, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
@@ -3292,6 +3316,7 @@ class TreatmentContractTests(unittest.TestCase):
             published, manifest, predecessor=prior,
             expected_telemetry_profile_id=self.bundle["telemetry_profile_id"],
             expected_treatment_contract_digest=self.bundle["treatment_contract_digest"],
+            expected_treatment_evidence_digest=successor["treatment_evidence_digest"],
         ), published)
         for key in prior:
             if key not in {"candidate_freeze_id", "telemetry_profile_id", "published_at", "supersedes_candidate_freeze_id"}:
@@ -3345,6 +3370,7 @@ class TreatmentContractTests(unittest.TestCase):
                 trusted_treatment_evidence=successor_evidence,
                 expected_prior_telemetry_profile_id=successor["telemetry_profile_id"],
                 expected_prior_treatment_contract_digest=successor["treatment_contract_digest"],
+                expected_prior_treatment_evidence_digest=successor["treatment_evidence_digest"],
             )
         second_successor = treatment.build_treatment_successor(
             successor, successor_bundle, published_at=later_published_at,
@@ -3352,6 +3378,7 @@ class TreatmentContractTests(unittest.TestCase):
             prior_freeze_predecessor=prior,
             expected_prior_telemetry_profile_id=successor["telemetry_profile_id"],
             expected_prior_treatment_contract_digest=successor["treatment_contract_digest"],
+            expected_prior_treatment_evidence_digest=successor["treatment_evidence_digest"],
         )
         self.assertEqual(
             second_successor["supersedes_candidate_freeze_id"],
@@ -3374,6 +3401,7 @@ class TreatmentContractTests(unittest.TestCase):
         prior["candidate_freeze_id"] = "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
         prior["telemetry_profile_id"] = "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
         prior.pop("treatment_contract_digest", None)
+        prior.pop("treatment_evidence_digest", None)
         prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
         prior["supersedes_candidate_freeze_id"] = None
 

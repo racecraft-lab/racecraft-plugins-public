@@ -235,6 +235,8 @@ only narrow this set.
 | `runtime_capability_snapshot` | object | Embedded rebuilt runtime snapshot |
 | `runtime_capability_snapshot_id` | digest | Required |
 | `telemetry_profile_id` | digest | Slice 1 must equal the named pending-treatment placeholder authority; a later slice replaces this only through its validated telemetry artifact contract |
+| `treatment_contract_digest` | digest | Treatment-aware successors bind the exact canonical treatment schema bytes |
+| `treatment_evidence_digest` | digest | Treatment-aware successors bind the exact owner-to-content-digest set for retained observation, configured-route, and sanitized source evidence |
 | `included_candidate_route_ids` | array | May be empty; never inferred |
 | `excluded_candidates` | array | Every excluded tuple and its explicit reasons |
 | `approved_canary_executors` / `canary_results` | arrays | Closed approval and replay-safe result records; both empty in the first freeze |
@@ -243,8 +245,8 @@ only narrow this set.
 
 `candidate_freeze_id` hashes the complete published object except that ID
 itself. Validation rebuilds the manifest binding, source refresh, matrix,
-runtime snapshot, tuple decisions, derived candidate lists, canary state, and
-whole-freeze identity. Any source, build, evidence, normalization, telemetry,
+runtime snapshot, tuple decisions, derived candidate lists, canary state,
+treatment evidence set, and whole-freeze identity. Any source, build, evidence, normalization, telemetry,
 or disposition change must produce a successor ID.
 
 Raw-evidence retention records are staged before append-only artifact output.

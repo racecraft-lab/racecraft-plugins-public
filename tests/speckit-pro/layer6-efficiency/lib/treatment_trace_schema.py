@@ -34,6 +34,7 @@ SCHEMA_VERSION = "1.0.0"
 OBSERVATION_EVIDENCE_VERSION = "treatment-observation-evidence.v1"
 CONSUMPTION_EVIDENCE_VERSION = "configured-route-consumption-evidence.v1"
 SOURCE_EVIDENCE_VERSION = "treatment-source-evidence.v1"
+TREATMENT_EVIDENCE_SET_VERSION = "treatment-evidence-set.v1"
 SURFACES = ("app_server", "cli", "interactive_picker")
 CLASSIFICATIONS = (
     "stable_native", "experimental_native", "derived_from_controlled_configuration",
@@ -1669,7 +1670,7 @@ def _trusted_evidence_object(
 
 def _validate_publishable_treatment_evidence(
     bundle: dict, trusted_evidence: Mapping[str, bytes] | None,
-) -> None:
+) -> str:
     if not isinstance(trusted_evidence, Mapping):
         raise ValueError("treatment successor requires trusted evidence bytes")
     expected_keys: set[str] = set()
@@ -1738,6 +1739,16 @@ def _validate_publishable_treatment_evidence(
         raise ValueError("trusted source evidence does not bind the sanitized treatment bundle")
     if set(trusted_evidence) != expected_keys:
         raise ValueError("trusted treatment evidence contains missing or orphan owners")
+    return digest({
+        "schema_version": TREATMENT_EVIDENCE_SET_VERSION,
+        "evidence_owners": [
+            {
+                "evidence_ref": key,
+                "content_digest": digest(trusted_evidence[key]),
+            }
+            for key in sorted(expected_keys)
+        ],
+    })
 
 
 def _capability_module():
@@ -1755,6 +1766,7 @@ def build_treatment_successor(
     prior_freeze_predecessor: dict | None = None,
     expected_prior_telemetry_profile_id: str | None = None,
     expected_prior_treatment_contract_digest: str | None = None,
+    expected_prior_treatment_evidence_digest: str | None = None,
 ) -> dict:
     manifest = _read_manifest_snapshot(manifest_path)
     validated = _validate_treatment_bundle(
@@ -1770,6 +1782,7 @@ def build_treatment_successor(
             predecessor=copy.deepcopy(prior_freeze_predecessor),
             expected_telemetry_profile_id=expected_prior_telemetry_profile_id,
             expected_treatment_contract_digest=expected_prior_treatment_contract_digest,
+            expected_treatment_evidence_digest=expected_prior_treatment_evidence_digest,
         )
     except (AttributeError, KeyError, TypeError, ValueError) as exc:
         raise ValueError(f"prior freeze identity or semantics are invalid: {exc}") from exc
@@ -1813,20 +1826,24 @@ def build_treatment_successor(
             raise ValueError("treatment bundle requested effort does not match the prior freeze")
         if prior_effort is None and trace["treatment_disposition"] == "proven":
             raise ValueError("treatment bundle cannot prove an effort absent from the prior freeze")
-    _validate_publishable_treatment_evidence(validated, trusted_treatment_evidence)
+    treatment_evidence_digest = _validate_publishable_treatment_evidence(
+        validated, trusted_treatment_evidence,
+    )
     successor = copy.deepcopy(prior_freeze); prior_id = prior_freeze["candidate_freeze_id"]
     successor["telemetry_profile_id"] = validated["telemetry_profile_id"]
     successor["treatment_contract_digest"] = validated["treatment_contract_digest"]
+    successor["treatment_evidence_digest"] = treatment_evidence_digest
     successor["published_at"] = published_at
     successor["supersedes_candidate_freeze_id"] = prior_id
     successor["candidate_freeze_id"] = digest({key: value for key, value in successor.items() if key != "candidate_freeze_id"})
     for key, value in prior_freeze.items():
-        if key not in {"candidate_freeze_id", "telemetry_profile_id", "published_at", "supersedes_candidate_freeze_id"} and canonical_bytes(successor[key]) != canonical_bytes(value):
+        if key not in {"candidate_freeze_id", "telemetry_profile_id", "treatment_contract_digest", "treatment_evidence_digest", "published_at", "supersedes_candidate_freeze_id"} and canonical_bytes(successor[key]) != canonical_bytes(value):
             raise ValueError("treatment successor changed frozen capability evidence")
     capability.validate_freeze(
         successor, manifest, predecessor=prior_freeze,
         expected_telemetry_profile_id=validated["telemetry_profile_id"],
         expected_treatment_contract_digest=validated["treatment_contract_digest"],
+        expected_treatment_evidence_digest=treatment_evidence_digest,
         expected_predecessor_telemetry_profile_id=(
             prior_freeze["telemetry_profile_id"]
             if "treatment_contract_digest" in prior_freeze
@@ -1834,6 +1851,9 @@ def build_treatment_successor(
         ),
         expected_predecessor_treatment_contract_digest=prior_freeze.get(
             "treatment_contract_digest"
+        ),
+        expected_predecessor_treatment_evidence_digest=prior_freeze.get(
+            "treatment_evidence_digest"
         ),
     )
     if successor["supersedes_candidate_freeze_id"] != prior_id: raise ValueError("treatment successor does not bind the actual prior freeze")

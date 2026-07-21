@@ -94,6 +94,7 @@ def build_freeze(
     raw_evidence_root=None, repository_root=None,
     expected_predecessor_telemetry_profile_id=None,
     expected_predecessor_treatment_contract_digest=None,
+    expected_predecessor_treatment_evidence_digest=None,
 ):
     identity = build_client_identity(identity); matrix = validate_surface_matrix(matrix); decisions = validate_tuple_decisions(decisions)
     if (raw_evidence_root is None) != (repository_root is None):
@@ -104,11 +105,12 @@ def build_freeze(
         for observation in matrix["observations"]:
             validate_unknown_observation_evidence(observation, raw_evidence_root, repository_root)
     if predecessor is not None:
-        predecessor = validate_freeze(
+        predecessor = _validate_freeze_payload(
             predecessor, manifest,
             expected_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
             expected_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
-            _enforce_lineage=False,
+            expected_treatment_evidence_digest=expected_predecessor_treatment_evidence_digest,
+            require_predecessor=False,
         )
     if len(refreshes) != 22 or len({item.get("official_source_ledger_id") for item in refreshes}) != 22:
         raise ValueError("freeze requires all 22 source refreshes")
@@ -147,6 +149,7 @@ def build_freeze(
         result, manifest, predecessor=predecessor,
         expected_predecessor_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
         expected_predecessor_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
+        expected_predecessor_treatment_evidence_digest=expected_predecessor_treatment_evidence_digest,
     )
 
 
@@ -168,30 +171,37 @@ def _validate_canary_tuple_binding(decisions, result, snapshot_id, observations)
     return admitted
 
 
-def validate_freeze(
+def _validate_freeze_payload(
     freeze, manifest, *, predecessor=None, expected_telemetry_profile_id=None,
-    expected_treatment_contract_digest=None, expected_predecessor_telemetry_profile_id=None,
-    expected_predecessor_treatment_contract_digest=None, _enforce_lineage=True,
+    expected_treatment_contract_digest=None, expected_treatment_evidence_digest=None,
+    expected_predecessor_telemetry_profile_id=None,
+    expected_predecessor_treatment_contract_digest=None,
+    expected_predecessor_treatment_evidence_digest=None, require_predecessor=True,
 ):
     keys = {"schema_version", "candidate_freeze_id", "source_manifest_binding", "client_identity", "client_identity_id", "official_source_refreshes", "source_refresh_set_digest", "surface_matrix", "surface_matrix_id", "runtime_capability_snapshot", "runtime_capability_snapshot_id", "telemetry_profile_id", "current_ledger_digest", "surface_matrix_digest", "tuple_decision_digest", "included_candidate_route_ids", "excluded_candidates", "tuple_decisions", "approved_canary_executors", "canary_results", "published_at", "supersedes_candidate_freeze_id"}
     actual_keys = set(freeze) if isinstance(freeze, dict) else set()
-    treatment_bound = "treatment_contract_digest" in actual_keys
-    expected_keys = keys | ({"treatment_contract_digest"} if treatment_bound else set())
+    treatment_fields = {"treatment_contract_digest", "treatment_evidence_digest"}
+    present_treatment_fields = actual_keys & treatment_fields
+    if present_treatment_fields and present_treatment_fields != treatment_fields:
+        raise ValueError("freeze treatment contract and evidence bindings must be present together")
+    treatment_bound = present_treatment_fields == treatment_fields
+    expected_keys = keys | (treatment_fields if treatment_bound else set())
     if not isinstance(freeze, dict) or actual_keys != expected_keys or freeze.get("schema_version") != SCHEMA_VERSION: raise ValueError("freeze must use the closed v1 shape")
     validate_manifest(manifest); identity = build_client_identity(freeze["client_identity"])
     if predecessor is not None:
-        predecessor = validate_freeze(
+        predecessor = _validate_freeze_payload(
             predecessor, manifest,
             expected_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
             expected_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
-            _enforce_lineage=False,
+            expected_treatment_evidence_digest=expected_predecessor_treatment_evidence_digest,
+            require_predecessor=False,
         )
     supersedes = freeze["supersedes_candidate_freeze_id"]
     if supersedes is None and predecessor is not None:
         raise ValueError("initial freeze cannot declare a predecessor")
     if supersedes is not None:
         _need_digest(supersedes, "supersedes_candidate_freeze_id")
-        if _enforce_lineage and predecessor is None:
+        if require_predecessor and predecessor is None:
             raise ValueError("successor freeze requires its validated predecessor")
         if predecessor is not None and supersedes != predecessor["candidate_freeze_id"]:
             raise ValueError("successor freeze predecessor identity is invalid")
@@ -222,18 +232,35 @@ def validate_freeze(
     if freeze["included_candidate_route_ids"] != included or freeze["excluded_candidates"] != excluded: raise ValueError("freeze derived candidate lists disagree")
     _need_digest(freeze["candidate_freeze_id"], "candidate_freeze_id")
     if freeze["telemetry_profile_id"] == PENDING_TELEMETRY_PROFILE_ID:
-        if treatment_bound or expected_telemetry_profile_id is not None or expected_treatment_contract_digest is not None:
+        if (
+            treatment_bound
+            or expected_telemetry_profile_id is not None
+            or expected_treatment_contract_digest is not None
+            or expected_treatment_evidence_digest is not None
+        ):
             raise ValueError("pending-treatment freeze cannot claim a treatment contract binding")
     else:
-        if expected_telemetry_profile_id is None or expected_treatment_contract_digest is None:
-            raise ValueError("treatment-aware freeze validation requires the expected profile and contract binding")
+        if (
+            expected_telemetry_profile_id is None
+            or expected_treatment_contract_digest is None
+            or expected_treatment_evidence_digest is None
+        ):
+            raise ValueError(
+                "treatment-aware freeze validation requires the expected profile, contract, and evidence binding"
+            )
         _need_digest(expected_telemetry_profile_id, "expected telemetry profile ID")
         _need_digest(expected_treatment_contract_digest, "expected treatment contract digest")
+        _need_digest(expected_treatment_evidence_digest, "expected treatment evidence digest")
         if not treatment_bound:
-            raise ValueError("treatment-aware freeze must retain its treatment contract digest")
+            raise ValueError("treatment-aware freeze must retain its treatment contract and evidence digests")
         _need_digest(freeze["treatment_contract_digest"], "treatment contract digest")
-        if freeze["telemetry_profile_id"] != expected_telemetry_profile_id or freeze["treatment_contract_digest"] != expected_treatment_contract_digest:
-            raise ValueError("freeze treatment profile and contract binding disagree")
+        _need_digest(freeze["treatment_evidence_digest"], "treatment evidence digest")
+        if (
+            freeze["telemetry_profile_id"] != expected_telemetry_profile_id
+            or freeze["treatment_contract_digest"] != expected_treatment_contract_digest
+            or freeze["treatment_evidence_digest"] != expected_treatment_evidence_digest
+        ):
+            raise ValueError("freeze treatment profile, contract, and evidence binding disagree")
     canonical_approvals = list(_validated_canary_approvals(APPROVED_CANARY_EXECUTORS))
     if freeze["approved_canary_executors"] != canonical_approvals:
         raise ValueError("published canary approvals do not match the repository-owned allowlist")
@@ -248,15 +275,36 @@ def validate_freeze(
     return freeze
 
 
+def validate_freeze(
+    freeze, manifest, *, predecessor=None, expected_telemetry_profile_id=None,
+    expected_treatment_contract_digest=None, expected_treatment_evidence_digest=None,
+    expected_predecessor_telemetry_profile_id=None,
+    expected_predecessor_treatment_contract_digest=None,
+    expected_predecessor_treatment_evidence_digest=None,
+):
+    return _validate_freeze_payload(
+        freeze, manifest, predecessor=predecessor,
+        expected_telemetry_profile_id=expected_telemetry_profile_id,
+        expected_treatment_contract_digest=expected_treatment_contract_digest,
+        expected_treatment_evidence_digest=expected_treatment_evidence_digest,
+        expected_predecessor_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
+        expected_predecessor_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
+        expected_predecessor_treatment_evidence_digest=expected_predecessor_treatment_evidence_digest,
+        require_predecessor=True,
+    )
+
+
 def build_canary_successor(
     predecessor, result, manifest, published_at, *, raw_evidence_root, repository_root,
     expected_telemetry_profile_id=None, expected_treatment_contract_digest=None,
+    expected_treatment_evidence_digest=None,
 ):
-    predecessor = validate_freeze(
+    predecessor = _validate_freeze_payload(
         predecessor, manifest,
         expected_telemetry_profile_id=expected_telemetry_profile_id,
         expected_treatment_contract_digest=expected_treatment_contract_digest,
-        _enforce_lineage=False,
+        expected_treatment_evidence_digest=expected_treatment_evidence_digest,
+        require_predecessor=False,
     )
     evidence_bytes = validate_canary_evidence(raw_evidence_root, repository_root, result)
     validated = validate_canary_result(result, APPROVED_CANARY_EXECUTORS, evidence_bytes=evidence_bytes)
@@ -273,23 +321,29 @@ def build_canary_successor(
         successor, manifest, predecessor=predecessor,
         expected_telemetry_profile_id=expected_telemetry_profile_id,
         expected_treatment_contract_digest=expected_treatment_contract_digest,
+        expected_treatment_evidence_digest=expected_treatment_evidence_digest,
         expected_predecessor_telemetry_profile_id=expected_telemetry_profile_id,
         expected_predecessor_treatment_contract_digest=expected_treatment_contract_digest,
+        expected_predecessor_treatment_evidence_digest=expected_treatment_evidence_digest,
     )
 
 
 def publish_with_raw_evidence_retention(
     freeze, output, raw_evidence_root, repository_root, *, manifest,
     predecessor=None, expected_telemetry_profile_id=None, expected_treatment_contract_digest=None,
-    expected_predecessor_telemetry_profile_id=None, expected_predecessor_treatment_contract_digest=None,
+    expected_treatment_evidence_digest=None, expected_predecessor_telemetry_profile_id=None,
+    expected_predecessor_treatment_contract_digest=None,
+    expected_predecessor_treatment_evidence_digest=None,
 ):
     raw, raw_identity = _validated_raw_evidence_root_binding(raw_evidence_root, repository_root)
     freeze = validate_freeze(
         freeze, manifest, predecessor=predecessor,
         expected_telemetry_profile_id=expected_telemetry_profile_id,
         expected_treatment_contract_digest=expected_treatment_contract_digest,
+        expected_treatment_evidence_digest=expected_treatment_evidence_digest,
         expected_predecessor_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
         expected_predecessor_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
+        expected_predecessor_treatment_evidence_digest=expected_predecessor_treatment_evidence_digest,
     )
     payload = canonical_bytes(freeze) + b"\n"
     with _retention_lock(raw, raw_identity):
