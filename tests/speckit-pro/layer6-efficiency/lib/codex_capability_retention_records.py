@@ -117,10 +117,17 @@ def _deletion_intent_file_identity(metadata):
         "mode": stat.S_IMODE(metadata.st_mode),
     }
 
+def _deletion_quarantine_filename(initial_intent_digest):
+    _need_digest(initial_intent_digest, "initial deletion intent digest")
+    return f".g56r-002-delete-{initial_intent_digest.removeprefix('sha256:')}.json"
+
 def _validate_deletion_intent(record_digest, record):
     authority_keys = {"schema_version", "raw_evidence_digest", "retention_record_digests", "delete_after", "deletion_started_at"}
     initial_keys = authority_keys | {"target_file_identity"}
-    staged_keys = authority_keys | {"predecessor_deletion_intent_digest", "recovery_proof"}
+    staged_keys = authority_keys | {
+        "predecessor_deletion_intent_digest", "quarantine_filename",
+        "recovery_proof", "target_file_identity",
+    }
     version = record.get("schema_version") if isinstance(record, dict) else None
     if not isinstance(record, dict) or (
         version == "raw-evidence-deletion-intent.v2" and set(record) != initial_keys
@@ -133,7 +140,7 @@ def _validate_deletion_intent(record_digest, record):
     if not isinstance(refs, list) or not refs or refs != sorted(set(refs)):
         raise ValueError("raw evidence deletion intent requires unique retention records")
     for value in refs: _need_digest(value, "retention_record_digest")
-    if version == "raw-evidence-deletion-intent.v2":
+    if version in {"raw-evidence-deletion-intent.v2", "raw-evidence-deletion-intent.v3"}:
         identity = record["target_file_identity"]
         identity_keys = {"device", "inode", "size", "mtime_ns", "mode"}
         if (
@@ -151,8 +158,12 @@ def _validate_deletion_intent(record_digest, record):
         raise ValueError("raw evidence deletion intent precedes its retention deadline")
     if version == "raw-evidence-deletion-intent.v3":
         _need_digest(record["predecessor_deletion_intent_digest"], "predecessor_deletion_intent_digest")
-        if record["recovery_proof"] != "verified-post-unlink-recovery-stage-v1":
-            raise ValueError("raw evidence recovery intent requires its verified phase proof")
+        if (
+            record["quarantine_filename"]
+            != _deletion_quarantine_filename(record["predecessor_deletion_intent_digest"])
+            or record["recovery_proof"] != "verified-quarantine-transition-v1"
+        ):
+            raise ValueError("raw evidence recovery intent requires its verified quarantine transition")
     return record
 
 def _terminal_deletion_intents(deletion_intents):
@@ -194,7 +205,9 @@ def _terminal_deletion_intents(deletion_intents):
         terminals[evidence_digest] = (by_digest[current], current)
     return terminals
 
-def _store_staged_recovery_intent(raw, raw_identity, repository_root, deletion_record):
+def _store_staged_recovery_intent(
+    raw, raw_identity, repository_root, deletion_record, quarantine_filename, quarantine_metadata,
+):
     staged = {
         "schema_version": "raw-evidence-deletion-intent.v3",
         "raw_evidence_digest": deletion_record["raw_evidence_digest"],
@@ -202,7 +215,9 @@ def _store_staged_recovery_intent(raw, raw_identity, repository_root, deletion_r
         "delete_after": deletion_record["delete_after"],
         "deletion_started_at": deletion_record["deleted_at"],
         "predecessor_deletion_intent_digest": deletion_record["deletion_intent_digest"],
-        "recovery_proof": "verified-post-unlink-recovery-stage-v1",
+        "quarantine_filename": quarantine_filename,
+        "recovery_proof": "verified-quarantine-transition-v1",
+        "target_file_identity": _deletion_intent_file_identity(quarantine_metadata),
     }
     directory, directory_identity = _private_record_directory(raw, DELETION_INTENTS_DIR, raw_identity)
     return staged, _store_private_record(directory, staged, repository_root, directory_identity)

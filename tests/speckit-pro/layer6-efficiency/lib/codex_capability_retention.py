@@ -20,13 +20,22 @@ def _descriptor_entry_exists(parent_descriptor, filename):
 
 def _delete_single_link_private_file(
     target, raw, expected_digest, expected_raw_identity, *,
-    deletion_record, deletion_directory, deletion_directory_identity, repository_root,
+    expected_target_identity, deletion_record, deletion_directory,
+    deletion_directory_identity, repository_root, staged_intent=None, quarantined=False,
 ):
     if not HAS_DESCRIPTOR_RELATIVE_IO:
         raise ValueError("raw evidence deletion requires descriptor-relative path validation")
     filename = Path(target).name
     if Path(target).parent != raw:
         raise ValueError("raw evidence deletion target must be an immediate child of its private root")
+    staged_record, staged_digest = staged_intent or (None, None)
+    quarantine_filename = (
+        staged_record["quarantine_filename"] if staged_record is not None
+        else _deletion_quarantine_filename(deletion_record["deletion_intent_digest"])
+    )
+    expected_filename = quarantine_filename if quarantined else f"{expected_digest.removeprefix('sha256:')}.json"
+    if filename != expected_filename:
+        raise ValueError("raw evidence deletion target does not match its deletion phase")
     deletion_record_digest = digest(canonical_bytes(deletion_record) + b"\n")
     _validate_deletion_record(deletion_record_digest, deletion_record)
     if deletion_record["raw_evidence_digest"] != expected_digest or Path(deletion_directory).parent != raw:
@@ -35,13 +44,18 @@ def _delete_single_link_private_file(
     directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow | getattr(os, "O_DIRECTORY", 0)
     file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
     parent_descriptor = descriptor = deletion_directory_descriptor = None
-    verified_payload = None; deletion_proved = False
+    verified_payload = None; deletion_proved = False; quarantine_durable = quarantined
 
     def preserve_verified_payload_before_proof():
         if verified_payload is None: return
         if _descriptor_entry_exists(parent_descriptor, filename):
             current, opened = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False), os.fstat(descriptor)
-            if not stat.S_ISREG(current.st_mode) or _stable_file_identity(current) != _stable_file_identity(opened) or _stable_file_identity(opened) != _stable_file_identity(before):
+            if (
+                not stat.S_ISREG(current.st_mode)
+                or current.st_nlink != 1
+                or _stable_file_content_identity(current) != _stable_file_content_identity(opened)
+                or _stable_file_content_identity(opened) != _stable_file_content_identity(before)
+            ):
                 raise ValueError("expired raw evidence changed before deletion recovery")
             return
         _write_private_bytes_at(
@@ -65,7 +79,11 @@ def _delete_single_link_private_file(
             raise ValueError("expired raw evidence must be a single-link regular non-symlink file")
         descriptor = os.open(filename, file_flags, dir_fd=parent_descriptor)
         before = os.fstat(descriptor)
-        if _stable_file_identity(pathname_before) != _stable_file_identity(before) or stat.S_IMODE(before.st_mode) != 0o600:
+        if (
+            _stable_file_identity(pathname_before) != _stable_file_identity(before)
+            or stat.S_IMODE(before.st_mode) != 0o600
+            or _deletion_intent_file_identity(before) != expected_target_identity
+        ):
             raise ValueError("expired raw evidence changed before deletion")
         chunks, total = [], 0
         while True:
@@ -74,7 +92,7 @@ def _delete_single_link_private_file(
             chunks.append(chunk); total += len(chunk)
             if total > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("expired raw evidence exceeds the maximum size")
         payload = b"".join(chunks)
-        if total != before.st_size or digest(payload) != expected_digest or filename != f"{expected_digest.removeprefix('sha256:')}.json":
+        if total != before.st_size or digest(payload) != expected_digest:
             raise ValueError("expired raw evidence does not match its content identity")
         verified_payload = payload
         current = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
@@ -86,6 +104,31 @@ def _delete_single_link_private_file(
             raise ValueError("expired raw evidence changed after digest verification")
         if _stable_directory_identity(raw_current) != _stable_directory_identity(raw_open):
             raise ValueError("raw evidence root changed before deletion")
+        if not quarantined:
+            if _descriptor_entry_exists(parent_descriptor, quarantine_filename):
+                raise ValueError("raw evidence deletion quarantine already exists")
+            os.rename(
+                filename, quarantine_filename,
+                src_dir_fd=parent_descriptor, dst_dir_fd=parent_descriptor,
+            )
+            filename = quarantine_filename
+            os.fsync(parent_descriptor)
+            quarantined_pathname = os.stat(
+                filename, dir_fd=parent_descriptor, follow_symlinks=False,
+            )
+            if (
+                _descriptor_entry_exists(parent_descriptor, expected_filename)
+                or _stable_file_content_identity(quarantined_pathname)
+                != _stable_file_content_identity(before)
+                or quarantined_pathname.st_nlink != 1
+            ):
+                raise ValueError("raw evidence quarantine transition changed its target")
+            quarantine_durable = True
+        if staged_record is None:
+            staged_record, staged_digest = _store_staged_recovery_intent(
+                raw, expected_raw_identity, repository_root, deletion_record,
+                quarantine_filename, os.fstat(descriptor),
+            )
         _unlink_descriptor_relative(filename, parent_descriptor)
         after_unlink = os.fstat(descriptor)
         if after_unlink.st_nlink != 0:
@@ -109,9 +152,6 @@ def _delete_single_link_private_file(
         if _stable_directory_identity(raw_after) != _stable_directory_identity(raw_open):
             raise ValueError("raw evidence root changed during deletion")
         deletion_proved = True
-        staged_record, staged_digest = _store_staged_recovery_intent(
-            raw, expected_raw_identity, repository_root, deletion_record,
-        )
         _, stored_digest = _store_staged_recovery_completion(
             raw, expected_raw_identity, repository_root, staged_record, staged_digest,
         )
@@ -125,8 +165,10 @@ def _delete_single_link_private_file(
         raise
     except OSError as error:
         if verified_payload is not None:
-            if not deletion_proved:
+            if not deletion_proved and not quarantine_durable:
                 preserve_verified_payload_before_proof()
+            if quarantine_durable:
+                _assert_private_directory_current(raw, parent_descriptor, expected_raw_identity)
             if deletion_proved:
                 raise
         raise ValueError("expired raw evidence could not be deleted safely") from error
@@ -208,6 +250,7 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
                 pending_deadlines.append(min(deadline, registered + timedelta(days=RAW_EVIDENCE_PENDING_DAYS)))
         deadline = max(governing_deadlines) if governing_deadlines else min(pending_deadlines)
         deadline_text = _format_timestamp(deadline); target = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
+        deletion_target = target; quarantined = False
         intent = intent_by_evidence.get(evidence_digest)
         if intent is not None:
             intent_record, _ = intent
@@ -222,7 +265,12 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
                 raise ValueError("raw evidence deletion record does not bind the complete retention history")
             if current < _parsed_timestamp(record["deleted_at"], "deletion timestamp"):
                 raise ValueError("retention as-of timestamp precedes the deletion record")
-            if target.exists():
+            quarantine = (
+                raw / intent_record["quarantine_filename"]
+                if intent_record["schema_version"] == "raw-evidence-deletion-intent.v3"
+                else None
+            )
+            if target.exists() or (quarantine is not None and quarantine.exists()):
                 raise ValueError("deletion completion record still has retained raw evidence bytes")
             deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
         if intent is not None:
@@ -231,15 +279,52 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
                     raise ValueError("staged raw evidence recovery requires cleanup")
                 if target.exists():
                     raise ValueError("staged raw evidence deletion target reappeared")
+                quarantine = raw / intent_record["quarantine_filename"]
+                if quarantine.exists():
+                    quarantine_metadata = os.stat(quarantine, follow_symlinks=False)
+                    if (
+                        not stat.S_ISREG(quarantine_metadata.st_mode)
+                        or _deletion_intent_file_identity(quarantine_metadata)
+                        != intent_record["target_file_identity"]
+                    ):
+                        raise ValueError("staged raw evidence target identity changed before retry")
+                    deletion_record = {
+                        "schema_version": "raw-evidence-deletion.v2",
+                        "completion_proof": "post-unlink-nlink-zero-rehashed-v1",
+                        "raw_evidence_digest": evidence_digest,
+                        "retention_record_digests": record_digests,
+                        "deletion_intent_digest": intent[1],
+                        "delete_after": deadline_text,
+                        "deleted_at": intent_record["deletion_started_at"],
+                    }
+                    directory, directory_identity = _private_record_directory(
+                        raw, DELETION_RECORDS_DIR, raw_identity,
+                    )
+                    record_digest, _, _ = _delete_single_link_private_file(
+                        quarantine, raw, evidence_digest, raw_identity,
+                        expected_target_identity=intent_record["target_file_identity"],
+                        deletion_record=deletion_record,
+                        deletion_directory=directory,
+                        deletion_directory_identity=directory_identity,
+                        repository_root=repository_root,
+                        staged_intent=intent,
+                        quarantined=True,
+                    )
+                    deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
                 record, record_digest = _store_staged_recovery_completion(
                     raw, raw_identity, repository_root, intent_record, intent[1],
                 )
                 deletion_records.append((record, record_digest))
                 deletion_by_evidence[evidence_digest] = (record, record_digest)
                 deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
-            if not target.exists():
-                raise ValueError("raw evidence deletion was interrupted after the target unlink")
-            target_metadata = os.stat(target, follow_symlinks=False)
+            quarantine = raw / _deletion_quarantine_filename(intent[1])
+            if target.exists() and quarantine.exists():
+                raise ValueError("raw evidence deletion has both canonical and quarantined targets")
+            if not target.exists() and not quarantine.exists():
+                raise ValueError("raw evidence deletion was interrupted after the quarantine unlink")
+            deletion_target = target if target.exists() else quarantine
+            quarantined = deletion_target == quarantine
+            target_metadata = os.stat(deletion_target, follow_symlinks=False)
             if (
                 not stat.S_ISREG(target_metadata.st_mode)
                 or _deletion_intent_file_identity(target_metadata)
@@ -250,7 +335,7 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
             if intent is not None: raise ValueError("raw evidence deletion intent precedes its governing deadline")
             read_content_addressed_private_file(target, repository_root, "retained raw evidence")
             retained.append(evidence_digest); continue
-        if not target.exists(): raise ValueError("expired raw evidence is missing without a deletion record")
+        if not deletion_target.exists(): raise ValueError("expired raw evidence is missing without a deletion record")
         if not apply: raise ValueError("expired raw evidence requires cleanup")
         if intent is None:
             target_metadata = os.stat(target, follow_symlinks=False)
@@ -285,11 +370,13 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
         }
         directory, directory_identity = _private_record_directory(raw, DELETION_RECORDS_DIR, raw_identity)
         record_digest, staged_record, staged_digest = _delete_single_link_private_file(
-            target, raw, evidence_digest, raw_identity,
+            deletion_target, raw, evidence_digest, raw_identity,
+            expected_target_identity=intent_record["target_file_identity"],
             deletion_record=deletion_record,
             deletion_directory=directory,
             deletion_directory_identity=directory_identity,
             repository_root=repository_root,
+            quarantined=quarantined,
         )
         deletion_intents.append((staged_record, staged_digest))
         intent_by_evidence[evidence_digest] = (staged_record, staged_digest)

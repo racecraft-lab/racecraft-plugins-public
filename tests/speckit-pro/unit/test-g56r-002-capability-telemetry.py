@@ -1473,7 +1473,15 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities.reconcile_raw_evidence_retention(mutation_root, ROOT, apply=True)
             self.assertIsNotNone(mutated_filename)
             restored_mutation_target = mutation_root / str(mutated_filename)
-            self.assertEqual(capabilities.digest(restored_mutation_target.read_bytes()), f"sha256:{restored_mutation_target.stem}")
+            mutated_intent = next(
+                json.loads(path.read_text())
+                for path in (mutation_root / capabilities.DELETION_INTENTS_DIR).iterdir()
+                if json.loads(path.read_text())["schema_version"] == "raw-evidence-deletion-intent.v3"
+            )
+            self.assertEqual(
+                capabilities.digest(restored_mutation_target.read_bytes()),
+                mutated_intent["raw_evidence_digest"],
+            )
             with mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
@@ -1516,7 +1524,7 @@ class CapabilityContractTests(unittest.TestCase):
                 f"{staged_intent['raw_evidence_digest'].removeprefix('sha256:')}.json"
             )).exists())
             self.assertEqual(staged_intent["predecessor_deletion_intent_digest"], initial_intent_digest)
-            self.assertEqual(staged_intent["recovery_proof"], "verified-post-unlink-recovery-stage-v1")
+            self.assertEqual(staged_intent["recovery_proof"], "verified-quarantine-transition-v1")
             forked_recovery = copy.deepcopy(staged_intent)
             forked_recovery["deletion_started_at"] = "2026-08-15T00:00:01Z"
             forked_recovery_digest = capabilities.digest(
@@ -1605,9 +1613,12 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertFalse((journal_failure_root / (
                 f"{missing_stage['raw_evidence_digest'].removeprefix('sha256:')}.json"
             )).exists())
-            self.assertFalse(any(
-                path.name.startswith(".g56r-002-") for path in journal_failure_root.iterdir()
-            ))
+            staged_quarantine = journal_failure_root / missing_stage["quarantine_filename"]
+            self.assertTrue(staged_quarantine.is_file())
+            self.assertEqual(
+                capability_retention._deletion_intent_file_identity(staged_quarantine.stat()),
+                missing_stage["target_file_identity"],
+            )
             with mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
@@ -1625,6 +1636,44 @@ class CapabilityContractTests(unittest.TestCase):
                 if json.loads(path.read_text())["raw_evidence_digest"] == missing_stage["raw_evidence_digest"]
             )
             self.assertEqual(missing_completion["deletion_intent_digest"], f"sha256:{staged_path.stem}")
+            pre_journal_root = Path(tmp) / "pre-journal-persistence-failure-root"
+            shutil.copytree(raw_root, pre_journal_root)
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), mock.patch.object(
+                capability_retention, "_store_staged_recovery_intent",
+                side_effect=ValueError("simulated pre-persistence staged journal failure"),
+            ), self.assertRaisesRegex(ValueError, "pre-persistence staged journal failure"):
+                capabilities.reconcile_raw_evidence_retention(pre_journal_root, ROOT, apply=True)
+            pre_journal_intents = [
+                (json.loads(path.read_text()), f"sha256:{path.stem}")
+                for path in (pre_journal_root / capabilities.DELETION_INTENTS_DIR).iterdir()
+            ]
+            self.assertEqual(
+                sorted(item[0]["schema_version"] for item in pre_journal_intents),
+                ["raw-evidence-deletion-intent.v2"],
+            )
+            pre_journal_intent, pre_journal_digest = pre_journal_intents[0]
+            pre_journal_quarantine = pre_journal_root / (
+                capability_retention._deletion_quarantine_filename(pre_journal_digest)
+            )
+            self.assertTrue(pre_journal_quarantine.is_file())
+            self.assertEqual(
+                capability_retention._deletion_intent_file_identity(pre_journal_quarantine.stat()),
+                pre_journal_intent["target_file_identity"],
+            )
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
+            ):
+                pre_journal_cleanup = capabilities.reconcile_raw_evidence_retention(
+                    pre_journal_root, ROOT, apply=True,
+                )
+            self.assertEqual(
+                pre_journal_cleanup["deleted_evidence_digests"],
+                retained_report["retained_evidence_digests"],
+            )
             pre_unlink_error_root = Path(tmp) / "pre-unlink-error-root"
             shutil.copytree(raw_root, pre_unlink_error_root)
             failed_pre_unlink_filename = None
@@ -1640,11 +1689,18 @@ class CapabilityContractTests(unittest.TestCase):
             ), self.assertRaisesRegex(ValueError, "could not be deleted safely"):
                 capabilities.reconcile_raw_evidence_retention(pre_unlink_error_root, ROOT, apply=True)
             self.assertIsNotNone(failed_pre_unlink_filename)
-            pre_unlink_error_intents = list(
-                (pre_unlink_error_root / capabilities.DELETION_INTENTS_DIR).iterdir()
+            pre_unlink_error_intents = [
+                json.loads(path.read_text())
+                for path in (pre_unlink_error_root / capabilities.DELETION_INTENTS_DIR).iterdir()
+            ]
+            self.assertEqual(
+                sorted(item["schema_version"] for item in pre_unlink_error_intents),
+                ["raw-evidence-deletion-intent.v2", "raw-evidence-deletion-intent.v3"],
             )
-            self.assertEqual(len(pre_unlink_error_intents), 1)
-            pre_unlink_error_intent = json.loads(pre_unlink_error_intents[0].read_text())
+            pre_unlink_error_intent = next(
+                item for item in pre_unlink_error_intents
+                if item["schema_version"] == "raw-evidence-deletion-intent.v3"
+            )
             pre_unlink_error_target = pre_unlink_error_root / str(failed_pre_unlink_filename)
             self.assertEqual(
                 capability_retention._deletion_intent_file_identity(pre_unlink_error_target.stat()),
@@ -2127,6 +2183,7 @@ class CapabilityContractTests(unittest.TestCase):
             ), self.assertRaisesRegex(ValueError, "parent changed"):
                 capability_retention._delete_single_link_private_file(
                     target, raw, evidence_digest, raw_identity,
+                    expected_target_identity=capability_retention._deletion_intent_file_identity(target.stat()),
                     deletion_record=deletion_record,
                     deletion_directory=deletion_directory,
                     deletion_directory_identity=deletion_directory_identity,
@@ -2135,10 +2192,11 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertFalse(target.exists())
             self.assertEqual(list(raw_root.iterdir()), [])
             self.assertEqual(
-                [path.name for path in moved_root.iterdir()],
-                [capabilities.DELETION_RECORDS_DIR],
+                sorted(path.name for path in moved_root.iterdir()),
+                sorted([capabilities.DELETION_INTENTS_DIR, capabilities.DELETION_RECORDS_DIR]),
             )
             self.assertEqual(list((moved_root / capabilities.DELETION_RECORDS_DIR).iterdir()), [])
+            self.assertEqual(len(list((moved_root / capabilities.DELETION_INTENTS_DIR).iterdir())), 1)
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_deletion_recovery_never_restores_after_journaled_completion_failure(self) -> None:
@@ -2180,6 +2238,7 @@ class CapabilityContractTests(unittest.TestCase):
             ), self.assertRaisesRegex(ValueError, "completion persistence failure"):
                 capability_retention._delete_single_link_private_file(
                     target, raw, evidence_digest, raw_identity,
+                    expected_target_identity=capability_retention._deletion_intent_file_identity(target.stat()),
                     deletion_record=deletion_record,
                     deletion_directory=deletion_directory,
                     deletion_directory_identity=deletion_directory_identity,

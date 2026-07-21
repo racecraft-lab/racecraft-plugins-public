@@ -227,12 +227,13 @@ Repository tests must pass with the network disabled and no raw evidence store.
   exist; failed-publication records cannot extend deletion. Deterministic
   verification fails on missing or overdue bytes. Cleanup first appends and
   directory-fsyncs a content-addressed deletion-intent record, then performs a
-  descriptor-relative unlink, proves zero remaining links and the retained-byte
-  digest, directory-fsyncs the raw root, appends a v3 successor binding that
-  proof, and only then appends the terminal deletion-completion record. If
-  completion persistence fails after v3, cleanup leaves the raw bytes absent
-  and a retry attempts only the completion record; a reappeared canonical
-  target fails closed. Registration and cleanup share an atomic
+  descriptor-relative rename to a deterministic quarantine name, fsyncs the raw
+  root, and appends a v3 successor binding that exact inode before unlink.
+  Cleanup then proves zero remaining links and the retained-byte digest,
+  directory-fsyncs the raw root, and appends the terminal deletion-completion
+  record. A retry can resume the identity-bound quarantine from v2 or v3; after
+  verified unlink it attempts only the completion record. Registration and
+  cleanup share an atomic
   private-root lock, and destructive cleanup derives its timestamp from current
   UTC. Append-only writes directory-fsync both final-name publication and
   temporary-name removal; any alternate hard link blocks cleanup.

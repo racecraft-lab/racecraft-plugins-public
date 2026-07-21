@@ -99,12 +99,13 @@ and treatment evidence set
 Any later source, client, surface, normalization, telemetry, treatment-evidence,
 or tuple-decision change creates another successor ID.
 
-Raw-evidence cleanup begins with an identity-bound v2 deletion intent. After a
-proved and directory-synchronized unlink, it journals a v3 successor before
-attempting the completion record. No raw bytes are republished after v3. A
-retry can use that durable proof only to retry the completion record while the
-canonical target remains absent; reappeared targets, forked intent chains, and
-hard-link races remain fail-closed.
+Raw-evidence cleanup begins with an identity-bound v2 deletion intent. It
+renames that inode to a deterministic quarantine name, synchronizes the raw
+root, and journals a v3 successor binding the quarantine name and identity
+before unlink. A failure before v3 can resume from the v2-bound quarantine; a
+failure after v3 can resume the same inode or, after verified unlink, retry only
+the completion record. Reappeared targets, identity-changed quarantines, forked
+intent chains, and hard-link races remain fail-closed.
 
 The published-freeze validator rechecks the pinned manifest digest, all 22
 sanitized source-refresh rows, matrix integrity and canonical observation

@@ -299,24 +299,24 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention 
 
 Cleanup first appends and directory-fsyncs an immutable v2 intent under
 `deletion-intents/`, binding the original private file identity. It then
-unlinks the expired raw bytes, proves through the
-still-open descriptor that the link count is zero and the content digest is
-unchanged, and directory-fsyncs the raw store. Only after those checks does it
-append and directory-fsync an immutable v3 successor under
-`deletion-intents/` that binds the initial intent and post-unlink proof. It then
-appends and directory-fsyncs the immutable v2 completion proof under
+renames that exact inode to a deterministic quarantine name and
+directory-fsyncs the raw store. An immutable v3 successor binds the initial
+intent, quarantine name, and quarantine identity before unlink. Cleanup then
+unlinks the quarantined bytes, proves through the still-open descriptor that
+the link count is zero and the content digest is unchanged, directory-fsyncs
+the raw store, and appends the immutable v2 completion proof under
 `deletion-records/`. The proof retains the raw digest, complete retention record
 history, governing deadline, deletion time, proof method, and v3 authority. If
-completion persistence fails after v3, cleanup does not republish the governed
-bytes; a retry may attempt only the completion record while the canonical target
-remains absent. Reappeared targets and missing, forked, or disconnected intent
-chains remain fail-closed. Repeated cleanup is
+v3 persistence fails, a retry resumes the exact quarantined inode from v2; if
+unlink or completion is interrupted, it resumes from v3. Reappeared targets,
+identity-changed quarantine entries, and missing, forked, or disconnected
+intent chains remain fail-closed. Repeated cleanup is
 idempotent. Every raw file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal;
 cleanup fails closed if a power-loss artifact or any alternate hard link still
-reaches governed bytes. Before unlink proof, a retry may resume only when the
-canonical target has the exact initial intent-bound identity; after durable v3,
-the canonical target must remain absent. Registration and
+reaches governed bytes. Before quarantine, a retry requires the exact canonical
+v2 identity; afterward it requires the exact v2- or v3-bound quarantine identity
+until verified unlink. Registration and
 cleanup serialize through the persistent
 mode-`0600` `.retention-lock` advisory-lock file. A process crash releases the
 kernel lock automatically, while another live operation fails closed. Do not
