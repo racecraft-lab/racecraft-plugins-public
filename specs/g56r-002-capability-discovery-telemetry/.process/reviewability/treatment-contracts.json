@@ -8,21 +8,21 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 5224,
-  "actual_nonblank_noncomment_lines": 4772,
+  "actual_source_lines": 5249,
+  "actual_nonblank_noncomment_lines": 4793,
   "production_modules": 14,
   "max_capability_module_source_lines": 388,
   "primary_surface": "harness/adapters",
   "module_measurements": {
     "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 114, "nonblank_noncomment_lines": 105},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_append_only.py": {"source_lines": 240, "nonblank_noncomment_lines": 221},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_append_only.py": {"source_lines": 263, "nonblank_noncomment_lines": 240},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {"source_lines": 139, "nonblank_noncomment_lines": 132},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {"source_lines": 262, "nonblank_noncomment_lines": 218},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {"source_lines": 379, "nonblank_noncomment_lines": 348},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {"source_lines": 244, "nonblank_noncomment_lines": 229},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {"source_lines": 218, "nonblank_noncomment_lines": 201},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 350, "nonblank_noncomment_lines": 307},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 364, "nonblank_noncomment_lines": 321},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 366, "nonblank_noncomment_lines": 323},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {"source_lines": 15, "nonblank_noncomment_lines": 10},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 388, "nonblank_noncomment_lines": 371},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 386, "nonblank_noncomment_lines": 351},
@@ -33,7 +33,7 @@
     }
   },
   "correctness_checks": {
-    "focused_tests": "57/57 pass",
+    "focused_tests": "58/58 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
@@ -126,13 +126,13 @@
     "descriptor_bound_append_only_temp_recovery": "pass",
     "abandoned_prelink_temp_recovery": "pass for private and public append-only directories",
     "active_temp_lock_protection": "pass",
+    "directory_lock_before_temp_visibility": "pass",
     "concurrent_identical_source_capture": "pass",
     "source_capture_preparse_size_bound": "pass",
     "source_capture_bytes_like_requirement": "pass",
-    "independent_review_chat_id": "review-pr-367-C52F62",
+    "independent_review_chat_id": "untitled-chat-5795B4",
     "independent_review_findings": [
-      "a crash before final-name linking could strand a single-link temporary and wedge the evidence root",
-      "concurrent identical source-capture materialization could propagate FileExistsError instead of accepting the verified winner"
+      "recovery could acquire a newly created temporary's per-file lock before the live writer and unlink the writer's file"
     ]
   },
   "exception": {
