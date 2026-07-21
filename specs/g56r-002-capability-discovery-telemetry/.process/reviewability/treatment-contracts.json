@@ -8,16 +8,16 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 4533,
-  "actual_nonblank_noncomment_lines": 4116,
+  "actual_source_lines": 4634,
+  "actual_nonblank_noncomment_lines": 4215,
   "production_modules": 13,
   "max_capability_module_source_lines": 373,
   "primary_surface": "harness/adapters",
   "module_measurements": {
     "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 114, "nonblank_noncomment_lines": 105},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {"source_lines": 112, "nonblank_noncomment_lines": 105},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {"source_lines": 139, "nonblank_noncomment_lines": 132},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {"source_lines": 241, "nonblank_noncomment_lines": 199},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {"source_lines": 314, "nonblank_noncomment_lines": 287},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {"source_lines": 368, "nonblank_noncomment_lines": 339},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {"source_lines": 162, "nonblank_noncomment_lines": 149},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {"source_lines": 218, "nonblank_noncomment_lines": 201},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 350, "nonblank_noncomment_lines": 307},
@@ -27,8 +27,8 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 269, "nonblank_noncomment_lines": 238},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 213, "nonblank_noncomment_lines": 196},
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
-      "source_lines": 1858,
-      "nonblank_noncomment_lines": 1710
+      "source_lines": 1878,
+      "nonblank_noncomment_lines": 1730
     }
   },
   "correctness_checks": {
@@ -88,16 +88,18 @@
     "successor_cross_binding": "pass",
     "malformed_predecessor_error_normalization": "pass",
     "trusted_treatment_evidence_binding": "pass",
+    "published_treatment_evidence_set_binding": "pass",
     "non_initial_successor_lineage": "pass",
+    "public_lineage_validator_no_bypass": "pass",
     "completion_probe_failure_restoration": "pass",
     "exact_public_facade_exports": "pass",
     "private_trust_primitives_hidden": "pass",
     "independent_review": "pending_reaudit",
-    "independent_review_chat_id": "review-exact-treatments-9ED44E",
+    "independent_review_chat_id": "review-us2-remediation-5AD0BD",
     "independent_review_findings": [
-      "hard-link race removed the canonical raw-evidence path without restoration",
-      "treatment successor did not cryptographically bind retained observation, route-proof, and source evidence",
-      "non-initial treatment freezes could not supply predecessor lineage authority"
+      "published treatment successor did not bind the exact retained evidence set into its candidate identity",
+      "public freeze validation exposed a lineage-bypass flag",
+      "capability module boundary evidence retained a stale 363-line maximum"
     ]
   },
   "exception": {
