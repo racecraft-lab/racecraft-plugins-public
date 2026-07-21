@@ -874,7 +874,7 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Review pending | 10 | 58/58 focused tests, standalone validation, privacy, docs-reference, and 2821/2821 full-suite checks pass after the latest exact-head finding was remediated; exact-head re-audit pending |
+| 2 - Treatment contracts | Review pending | 10 | 58/58 focused tests, 7/7 naming-layout checks, standalone validation, privacy, docs-reference, and 2822/2822 full-suite checks pass after the latest exact-head finding was remediated; exact-head re-audit pending |
 | 3 - Synthetic replay | In Progress | 0 | T026-T030 exist on the next marker branch; restack and exact-head review follow US2 approval |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -1096,7 +1096,20 @@ For every task:
   without deleting the live file. Focused 58/58, standalone treatment, privacy
   10/10, docs-reference, and full 2821/2821 checks pass; exact-head re-audit is
   pending.
-- Implementation checkpoint: `8135e4d3a52c765e828878e559d6a685b3ab42c8`
+  The next exact-head review (`untitled-chat-13CBB8`) found one P1 recovery gap:
+  a post-unlink hard-link race could republish verified quarantine bytes under
+  a replacement inode while leaving the terminal v3 intent bound to the old
+  inode, permanently blocking supported retry. Remediation at
+  `94079dee507bc0d65ff4db0003c305aadcc3fe1a` appends a linear v3 successor with
+  `verified-payload-republication-v1`, descriptor-verifies a crash-restored
+  replacement before reconstructing a missing successor, and covers both the
+  direct and interrupted-journal paths. The focused 58/58, naming-layout 7/7,
+  standalone treatment, privacy 10/10, generated-reference, and full 2822/2822
+  checks pass; the exact-head re-audit is pending. The focused
+  suite was also renamed to the durable capability-based
+  `test-codex-capability-contract.py` path, with a repository guard rejecting
+  SPEC-ID-coupled authored script names.
+- Implementation checkpoint: `94079dee507bc0d65ff4db0003c305aadcc3fe1a`
 
 ## PR Marker Plan Evidence
 
@@ -1108,23 +1121,23 @@ For every task:
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:29a7e68c6aa871c6989247f454b3d41f3da5a938f417da67193ff7458c5ea25d` |
-| Plan-declared scope | `sha256:6f7d7a18bd530575442638d350ed7af9b4fec9699c68228b9ecdf1b435169f2a` |
-| Tasks | `sha256:ae67af4c057c87129ef928390f8df5e89d8f323ee34759c29c3f99e60c9ddd05` |
-| Reviewability evidence | `sha256:60a7df03c8f131065fc0b47ad912bf72cf53930ad51f314f3909ec1f82bd44b1` |
+| Feature spec | `sha256:d64aa879528e142d2309e1773daee35c012780a570d39e8f0181497a915359b4` |
+| Plan-declared scope | `sha256:3b656645db994b32342fd2eb5b65b4e5547d94b58401adc5539c4ff46981996e` |
+| Tasks | `sha256:d942423bba615c031ec56068aa407fe208d0f78400c9d60b9cfd9bf6d76b906e` |
+| Reviewability evidence | `sha256:b0ec5eb30348f8c6b9b31c9773f0a3cfa294db67535725ccbf173da9621a3515` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `8135e4d3a52c765e828878e559d6a685b3ab42c8` | Exact-head re-audit required before restack |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `94079dee507bc0d65ff4db0003c305aadcc3fe1a` | Exact-head re-audit required before restack |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines under its historical typed exception; the current US2 marker is 5,249 /
-  4,793 across 14 modules against the aggregate 400-LOC boundary. Capability
-  modules are safely split with a 388-line maximum; only the treatment module
+  lines under its historical typed exception; the current US2 marker is 5,366 /
+  4,901 across 15 modules against the aggregate 400-LOC boundary. Capability
+  modules are safely split with a 398-line maximum; only the treatment module
   retains a typed size-only exception.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.

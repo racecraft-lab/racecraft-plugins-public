@@ -376,10 +376,14 @@
       "concurrent_identical_source_capture": "pass",
       "source_capture_preparse_size_bound": "pass",
       "source_capture_bytes_like_requirement": "pass",
+      "post_unlink_republication_successor": "pass",
+      "republished_recovery_intent_crash_recovery": "pass",
+      "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
+      "authored_script_spec_id_guard": "7/7 pass",
       "independent_review": "pending_reaudit",
-      "independent_review_chat_id": "untitled-chat-5795B4",
+      "independent_review_chat_id": "untitled-chat-13CBB8",
       "independent_review_findings": [
-        "recovery could acquire a newly created temporary's per-file lock before the live writer and unlink the writer's file"
+        "a post-unlink hard-link race could republish the quarantined payload under a replacement inode while leaving the terminal recovery intent bound to the obsolete inode"
       ],
       "baseline_commit": "bbffc774c815594edc64cf412a2b5f91127ef213",
       "candidate_freeze_id": "sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c",
@@ -387,19 +391,19 @@
       "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
       "treatment_evidence_digest": "sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f",
       "marker_id": "us2",
-      "reviewability": "aggregate size-only block at 5,249 source / 4,793 nonblank non-comment lines across 14 production modules; 13 capability modules are safely split with a 388-line maximum, the facade exports exactly the supported API, and only the treatment module retains a typed size-only exception",
-      "checkpoint": "8135e4d3a52c765e828878e559d6a685b3ab42c8",
-      "superseded_checkpoint": "3c439b154669175226ec2ffed3f26731dcae373f",
+      "reviewability": "aggregate size-only block at 5,366 source / 4,901 nonblank non-comment lines across 15 production modules; 14 capability modules are safely split with a 398-line maximum, the facade exports exactly the supported API, and only the treatment module retains a typed size-only exception",
+      "checkpoint": "94079dee507bc0d65ff4db0003c305aadcc3fe1a",
+      "superseded_checkpoint": "8135e4d3a52c765e828878e559d6a685b3ab42c8",
       "implementation_completed_at": "2026-07-20T03:06:58Z",
       "completed_at": "2026-07-20T03:50:24Z",
-      "review_updated_at": "2026-07-21T22:53:40Z"
+      "review_updated_at": "2026-07-21T23:32:33Z"
     }
   },
   "current_source_fingerprint": {
-    "feature_spec_sha": "sha256:29a7e68c6aa871c6989247f454b3d41f3da5a938f417da67193ff7458c5ea25d",
-    "plan_declared_scope_sha": "sha256:6f7d7a18bd530575442638d350ed7af9b4fec9699c68228b9ecdf1b435169f2a",
-    "tasks_sha": "sha256:ae67af4c057c87129ef928390f8df5e89d8f323ee34759c29c3f99e60c9ddd05",
-    "reviewability_sha": "sha256:60a7df03c8f131065fc0b47ad912bf72cf53930ad51f314f3909ec1f82bd44b1",
+    "feature_spec_sha": "sha256:d64aa879528e142d2309e1773daee35c012780a570d39e8f0181497a915359b4",
+    "plan_declared_scope_sha": "sha256:3b656645db994b32342fd2eb5b65b4e5547d94b58401adc5539c4ff46981996e",
+    "tasks_sha": "sha256:d942423bba615c031ec56068aa407fe208d0f78400c9d60b9cfd9bf6d76b906e",
+    "reviewability_sha": "sha256:b0ec5eb30348f8c6b9b31c9773f0a3cfa294db67535725ccbf173da9621a3515",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
   },
   "pr_marker_plan": {
@@ -408,10 +412,10 @@
     "feature_id": "G56R-002",
     "status": "checkpointing",
     "source_fingerprint": {
-      "feature_spec_sha": "sha256:29a7e68c6aa871c6989247f454b3d41f3da5a938f417da67193ff7458c5ea25d",
-      "plan_declared_scope_sha": "sha256:6f7d7a18bd530575442638d350ed7af9b4fec9699c68228b9ecdf1b435169f2a",
-      "tasks_sha": "sha256:ae67af4c057c87129ef928390f8df5e89d8f323ee34759c29c3f99e60c9ddd05",
-      "reviewability_sha": "sha256:60a7df03c8f131065fc0b47ad912bf72cf53930ad51f314f3909ec1f82bd44b1",
+      "feature_spec_sha": "sha256:d64aa879528e142d2309e1773daee35c012780a570d39e8f0181497a915359b4",
+      "plan_declared_scope_sha": "sha256:3b656645db994b32342fd2eb5b65b4e5547d94b58401adc5539c4ff46981996e",
+      "tasks_sha": "sha256:d942423bba615c031ec56068aa407fe208d0f78400c9d60b9cfd9bf6d76b906e",
+      "reviewability_sha": "sha256:b0ec5eb30348f8c6b9b31c9773f0a3cfa294db67535725ccbf173da9621a3515",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
     },
     "markers": [
@@ -432,7 +436,7 @@
         "folded_polish_target_reason": "No polish tasks fold into the integrity-coupled capability checkpoint.",
         "declared_files": [
           {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"},
-          {"operation": "NEW", "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/unit/test-codex-capability-contract.py"},
           {"operation": "NEW", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/data-model.md"},
@@ -446,7 +450,7 @@
           {"operation": "MODIFIED", "path": "docs/ai/specs/.process/autopilot-state.json"}
         ],
         "declared_tests": [
-          "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+          "python3 tests/speckit-pro/unit/test-codex-capability-contract.py",
           "python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py validate --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json",
           "python3 -m json.tool specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json"
         ],
@@ -517,7 +521,7 @@
           {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py"},
           {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"},
           {"operation": "NEW", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"},
+          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-codex-capability-contract.py"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json"},
           {"operation": "MODIFIED", "path": "specs/g56r-002-capability-discovery-telemetry/spec.md"},
@@ -533,20 +537,20 @@
           {"operation": "MODIFIED", "path": "docs/ai/specs/.process/G56R-002-workflow.md"},
           {"operation": "MODIFIED", "path": "docs/ai/specs/.process/autopilot-state.json"}
         ],
-        "declared_tests": ["python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"],
+        "declared_tests": ["python3 tests/speckit-pro/unit/test-codex-capability-contract.py"],
         "reviewability": {
           "status": "block",
           "mode": "implementation",
           "scope": "us2",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
-          "head_sha": "8135e4d3a52c765e828878e559d6a685b3ab42c8"
+          "head_sha": "94079dee507bc0d65ff4db0003c305aadcc3fe1a"
         },
         "hazards": ["six-id-join", "exact-treatment", "service-reroute"],
         "subdivision": {
           "status": "no_safe_boundary",
           "details": {
             "reason": "Capability responsibilities are safely subdivided behind a stable facade with an exact supported-name export list and no private trust primitives; field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
-            "capability_subdivision": {"status": "safe_split", "production_modules": 13, "max_module_source_lines": 388},
+            "capability_subdivision": {"status": "safe_split", "production_modules": 14, "max_module_source_lines": 398},
             "exception_kind": "typed_size_only",
             "growth_limit": "Capability modules must remain below 400 source lines with no public API loss. Only finding-driven remediation and the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze."
           }
@@ -554,8 +558,8 @@
         "implementation_checkpoint": {
           "status": "review_pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
-          "commit_sha": "8135e4d3a52c765e828878e559d6a685b3ab42c8",
-          "superseded_commit_sha": "3c439b154669175226ec2ffed3f26731dcae373f"
+          "commit_sha": "94079dee507bc0d65ff4db0003c305aadcc3fe1a",
+          "superseded_commit_sha": "8135e4d3a52c765e828878e559d6a685b3ab42c8"
         },
         "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us2.json"},
         "warnings": [
@@ -566,11 +570,11 @@
             "source": "treatment-contracts-reviewability",
             "details": {
               "marker_id": "us2",
-              "actual_source_lines": 5249,
-              "actual_nonblank_noncomment_lines": 4793,
-              "production_modules": 14,
+              "actual_source_lines": 5366,
+              "actual_nonblank_noncomment_lines": 4901,
+              "production_modules": 15,
               "module_measurements": {
-                "capability_group": {"production_modules": 13, "source_lines": 3337, "nonblank_noncomment_lines": 3031, "max_module_source_lines": 388},
+                "capability_group": {"production_modules": 14, "source_lines": 3454, "nonblank_noncomment_lines": 3139, "max_module_source_lines": 398},
                 "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {"source_lines": 1912, "nonblank_noncomment_lines": 1762}
               }
             }
@@ -594,7 +598,7 @@
         "folded_polish_target_reason": "Integration, generated references, verification, and release gates validate the replay marker as a whole.",
         "declared_files": [
           {"operation": "MODIFIED", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"},
-          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"},
+          {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/test-codex-capability-contract.py"},
           {"operation": "MODIFIED", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"},
           {"operation": "NEW", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json"},
           {"operation": "MODIFIED", "path": "tests/speckit-pro/suite-manifest.json"},
@@ -605,7 +609,7 @@
           {"operation": "MODIFIED", "path": "docs/ai/specs/.process/autopilot-state.json"}
         ],
         "declared_tests": [
-          "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+          "python3 tests/speckit-pro/unit/test-codex-capability-contract.py",
           "python3 -u tests/speckit-pro/run-all.py --layer 1",
           "python3 -u tests/speckit-pro/run-all.py",
           "pnpm --dir docs-site reference:check"

@@ -8,10 +8,10 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 5249,
-  "actual_nonblank_noncomment_lines": 4793,
-  "production_modules": 14,
-  "max_capability_module_source_lines": 388,
+  "actual_source_lines": 5366,
+  "actual_nonblank_noncomment_lines": 4901,
+  "production_modules": 15,
+  "max_capability_module_source_lines": 398,
   "primary_surface": "harness/adapters",
   "module_measurements": {
     "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 114, "nonblank_noncomment_lines": 105},
@@ -24,8 +24,9 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 350, "nonblank_noncomment_lines": 307},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 366, "nonblank_noncomment_lines": 323},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {"source_lines": 15, "nonblank_noncomment_lines": 10},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 388, "nonblank_noncomment_lines": 371},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 386, "nonblank_noncomment_lines": 351},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 398, "nonblank_noncomment_lines": 385},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 397, "nonblank_noncomment_lines": 362},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_recovery.py": {"source_lines": 96, "nonblank_noncomment_lines": 83},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 213, "nonblank_noncomment_lines": 196},
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
       "source_lines": 1912,
@@ -78,7 +79,7 @@
     "terminal_and_condition_invariants": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass",
-    "full_suite": "2821/2821 pass",
+    "full_suite": "2822/2822 pass",
     "exact_field_authority": "pass",
     "reroute_monitoring_fail_closed": "pass",
     "owner_registry_integrity": "pass",
@@ -130,16 +131,20 @@
     "concurrent_identical_source_capture": "pass",
     "source_capture_preparse_size_bound": "pass",
     "source_capture_bytes_like_requirement": "pass",
-    "independent_review_chat_id": "untitled-chat-5795B4",
+    "post_unlink_republication_successor": "pass",
+    "republished_recovery_intent_crash_recovery": "pass",
+    "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
+    "authored_script_spec_id_guard": "7/7 pass",
+    "independent_review_chat_id": "untitled-chat-13CBB8",
     "independent_review_findings": [
-      "recovery could acquire a newly created temporary's per-file lock before the live writer and unlink the writer's file"
+      "a post-unlink hard-link race could republish the quarantined payload under a replacement inode while leaving the terminal recovery intent bound to the obsolete inode"
     ]
   },
   "exception": {
     "kind": "typed_size_only",
     "status": "honored_for_checkpoint",
     "subdivision": "capability_safe_split_treatment_no_safe_boundary",
-    "rationale": "Capability source authority, observation, matrix, append-only recovery, private I/O, retention, freeze, contract, and CLI responsibilities are separated behind the stable codex_capabilities.py facade, which exports exactly the supported public API and no private trust primitives. Every capability module remains below 400 source lines, with a 388-line maximum. Field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
+    "rationale": "Capability source authority, observation, matrix, append-only recovery, private I/O, retention recovery, freeze, contract, and CLI responsibilities are separated behind the stable codex_capabilities.py facade, which exports exactly the supported public API and no private trust primitives. Every capability module remains below 400 source lines, with a 398-line maximum. Field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
     "growth_limit": "Capability modules must remain below 400 source lines with no public API loss. Only finding-driven review remediation and the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze."
   },
   "later_markers": [
@@ -150,7 +155,7 @@
     "awk 'NF && $0 !~ /^[[:space:]]*#/ {n++} END{print n}' tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py",
     "wc -l tests/speckit-pro/layer6-efficiency/lib/codex_capabilit*.py",
     "awk 'NF && $0 !~ /^[[:space:]]*#/ {n++} END{print n}' tests/speckit-pro/layer6-efficiency/lib/codex_capabilit*.py",
-    "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+    "python3 tests/speckit-pro/unit/test-codex-capability-contract.py",
     "python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py validate --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
   ]
 }
