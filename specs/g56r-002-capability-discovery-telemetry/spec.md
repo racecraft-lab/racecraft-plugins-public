@@ -172,8 +172,11 @@
   pre-publication file is discarded,
   while a linked file additionally requires exact descriptor-bound target,
   inode, and byte proof. Concurrent identical source captures accept the
-  verified single-link winner. Expired bytes are
-  deleted while their digest and a deletion record remain. Live private-store
+  verified single-link winner. If a detected post-unlink race requires the
+  verified quarantine payload to be republished, a linear successor intent
+  binds the replacement inode before retry; a missing successor can be
+  reconstructed only from the exact bounded, single-link private bytes.
+  Expired bytes are deleted while their digest and a deletion record remain. Live private-store
   operations fail closed on Windows until equivalent owner-only DACL validation
   exists. Repository tests never require raw-store access.
 - **Q: How are deterministic fixtures derived and hashed?** **A:** Sanitize

@@ -284,8 +284,15 @@ quarantined inode. After unlink, cleanup proves zero links and unchanged bytes,
 synchronizes the raw root, and publishes only the completion record with the
 actual successful cleanup time. A v3 intent with neither its quarantine nor a
 durable completion record is indeterminate and remains fail-closed; absence
-alone never certifies deletion. Reappeared targets and missing, forked, or
-disconnected intent chains likewise remain fail-closed.
+alone never certifies deletion. If a post-unlink hard-link race or verified
+content mutation requires the descriptor-verified payload to be republished
+under the same quarantine name, cleanup appends a linear v3 successor with the
+`verified-payload-republication-v1` proof and replacement inode identity before
+retry. A crash between republication and that successor may be recovered only
+when the bounded mode-`0600`, single-link bytes still match the governed digest;
+the recovered successor preserves the prior authority and quarantine name.
+Reappeared targets and missing, forked, or disconnected intent chains likewise
+remain fail-closed.
 Every retention, receipt, intent, and deletion-record directory is loaded
 through one identity-bound directory descriptor. Entry names and identities
 are verified descriptor-relative, and the entry set must match before and

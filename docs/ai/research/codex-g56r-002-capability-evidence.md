@@ -110,11 +110,13 @@ Raw-evidence cleanup begins with an identity-bound v2 deletion intent. It
 renames that inode to a deterministic quarantine name, synchronizes the raw
 root, and journals a v3 successor binding the quarantine name and identity
 before unlink. A failure before v3 can resume from the v2-bound quarantine; a
-failure after v3 can resume only while the exact v3-bound quarantine still
-exists. If unlink occurs without a durable completion record, absence alone
-cannot prove deletion and cleanup remains fail-closed. Reappeared targets,
-identity-changed quarantines, forked intent chains, and hard-link races also
-remain fail-closed.
+failure after v3 normally resumes the exact v3-bound quarantine. A detected
+post-unlink race that republishes descriptor-verified bytes appends a linear v3
+successor binding the replacement inode under the same quarantine name. If
+that successor write is interrupted, recovery accepts only the exact bounded,
+mode-`0600`, single-link governed payload before appending it. Other identity
+changes, unlink without durable completion proof, forked chains, and
+unrecoverable hard-link races remain fail-closed.
 
 The published-freeze validator rechecks the pinned manifest digest, all 22
 sanitized source-refresh rows, matrix integrity and canonical observation
@@ -157,8 +159,10 @@ deletion-intent record. It then unlinks the expired bytes descriptor-relative,
 proves the open descriptor has zero links with unchanged content identity,
 directory-fsyncs the raw store, and only then appends and directory-fsyncs the
 terminal deletion record with the actual successful cleanup time. Replaying
-cleanup after durable completion is idempotent; a v3 intent whose quarantine
-and completion record are both absent is indeterminate and fails closed. The
+cleanup after durable completion is idempotent; verified quarantine
+republication is bound by an append-only v3 successor before retry, while a v3
+intent whose quarantine and completion record are both absent is indeterminate
+and fails closed. The
 digest, retention history, and deletion record remain auditable after the bytes
 are gone. Registration and cleanup share an atomic private-root lock, so a newer
 publication cannot extend a digest while cleanup is deleting it. Destructive

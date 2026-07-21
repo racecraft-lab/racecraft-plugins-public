@@ -90,7 +90,7 @@ in `docs/ai/specs/.process/autopilot-state.json`.
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py
-- NEW tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py
+- NEW tests/speckit-pro/unit/test-codex-capability-contract.py
 - NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json
 - NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json
 - NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json
@@ -249,9 +249,13 @@ Repository tests must pass with the network disabled and no raw evidence store.
   Cleanup then proves zero remaining links and the retained-byte digest,
   directory-fsyncs the raw root, and appends the terminal deletion-completion
   record with the actual successful cleanup time. A retry can resume the
-  identity-bound quarantine from v2 or v3 only while that exact quarantine
-  still exists. If unlink occurs without durable completion proof, the state is
-  indeterminate and cleanup fails closed. Registration and
+  identity-bound quarantine from v2 or v3. When a detected post-unlink race
+  republishes descriptor-verified bytes under the quarantine name, an
+  append-only v3 successor binds the replacement inode before retry. If that
+  successor write is interrupted, recovery accepts only the exact bounded,
+  mode-`0600`, single-link governed payload and appends the missing successor.
+  Other identity changes or unlink without durable completion proof remain
+  indeterminate and fail closed. Registration and
   cleanup share an atomic
   private-root lock, and destructive cleanup derives its timestamp from current
   UTC. Append-only writes directory-fsync both final-name publication and
@@ -320,7 +324,7 @@ tests/speckit-pro/layer6-efficiency/lib/
 └── treatment_trace_schema.py
 
 tests/speckit-pro/unit/
-├── test-g56r-002-capability-telemetry.py
+├── test-codex-capability-contract.py
 └── fixtures/capability-treatment-replay/
     ├── capability-matrix.json
     ├── treatment-replay.json

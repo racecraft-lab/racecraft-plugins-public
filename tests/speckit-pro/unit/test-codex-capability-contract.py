@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused deterministic tests for the G56R-002 capability contract."""
+"""Focused deterministic tests for Codex capability evidence contracts."""
 
 from __future__ import annotations
 
@@ -455,7 +455,7 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertNotIn("_delete_single_link_private_file", vars(capabilities))
         self.assertTrue(callable(capabilities.main))
         implementation_modules = [MODULE_PATH, *sorted(MODULE_PATH.parent.glob("codex_capability_*.py"))]
-        self.assertEqual(len(implementation_modules), 13)
+        self.assertEqual(len(implementation_modules), 14)
         for path in implementation_modules:
             with self.subTest(path=path.name):
                 self.assertLessEqual(len(path.read_text(encoding="utf-8").splitlines()), 400)
@@ -1490,15 +1490,106 @@ class CapabilityContractTests(unittest.TestCase):
             restored_race_target = race_root / str(raced_filename)
             self.assertEqual(restored_race_target.read_bytes(), capture_bytes)
             self.assertEqual(race_link.read_bytes(), capture_bytes)
-            with mock.patch.object(
-                capability_retention, "_retention_now",
-                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), self.assertRaisesRegex(ValueError, "target identity changed"):
-                capabilities.reconcile_raw_evidence_retention(race_root, ROOT, apply=True)
-
+            race_intents = [
+                (json.loads(path.read_text()), f"sha256:{path.stem}")
+                for path in (race_root / capabilities.DELETION_INTENTS_DIR).iterdir()
+            ]
+            transition_intent, transition_digest = next(
+                item for item in race_intents
+                if item[0].get("recovery_proof") == "verified-quarantine-transition-v1"
+            )
+            republished_intent, republished_digest = next(
+                item for item in race_intents
+                if item[0].get("recovery_proof") == "verified-payload-republication-v1"
+            )
+            self.assertEqual(
+                republished_intent["predecessor_deletion_intent_digest"], transition_digest,
+            )
+            self.assertEqual(
+                republished_intent["quarantine_filename"], transition_intent["quarantine_filename"],
+            )
+            self.assertEqual(
+                republished_intent["target_file_identity"],
+                capability_retention._deletion_intent_file_identity(restored_race_target.stat()),
+            )
+            self.assertEqual(
+                capability_retention_records._terminal_deletion_intents(race_intents)[
+                    republished_intent["raw_evidence_digest"]
+                ][1],
+                republished_digest,
+            )
             deletion_directory = race_root / capabilities.DELETION_RECORDS_DIR
             self.assertFalse(deletion_directory.exists() and any(deletion_directory.iterdir()))
             race_link.unlink()
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
+            ):
+                resumed_race_cleanup = capabilities.reconcile_raw_evidence_retention(
+                    race_root, ROOT, apply=True,
+                )
+            self.assertEqual(
+                resumed_race_cleanup["deleted_evidence_digests"],
+                retained_report["retained_evidence_digests"],
+            )
+            self.assertFalse(restored_race_target.exists())
+            race_completion = next(
+                json.loads(path.read_text())
+                for path in deletion_directory.iterdir()
+                if json.loads(path.read_text())["raw_evidence_digest"]
+                == republished_intent["raw_evidence_digest"]
+            )
+            self.assertEqual(race_completion["deletion_intent_digest"], republished_digest)
+
+            republish_failure_root = Path(tmp) / "republish-journal-failure-root"
+            shutil.copytree(raw_root, republish_failure_root)
+            republish_failure_link = Path(tmp) / "republish-journal-failure-link.json"
+            republish_failure_filename = None
+            def link_before_republish_failure_unlink(
+                filename: str, parent_descriptor: int,
+            ) -> None:
+                nonlocal republish_failure_filename
+                republish_failure_filename = filename
+                os.link(republish_failure_root / filename, republish_failure_link)
+                original_unlink_descriptor_relative(filename, parent_descriptor)
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), mock.patch.object(
+                capability_retention, "_unlink_descriptor_relative",
+                side_effect=link_before_republish_failure_unlink,
+            ), mock.patch.object(
+                capability_retention, "_store_republished_recovery_intent",
+                side_effect=ValueError("simulated republished recovery intent failure"),
+            ), self.assertRaisesRegex(ValueError, "republished recovery intent failure"):
+                capabilities.reconcile_raw_evidence_retention(
+                    republish_failure_root, ROOT, apply=True,
+                )
+            self.assertIsNotNone(republish_failure_filename)
+            republish_failure_target = republish_failure_root / str(republish_failure_filename)
+            self.assertEqual(republish_failure_target.read_bytes(), capture_bytes)
+            self.assertEqual(
+                sorted(
+                    json.loads(path.read_text())["schema_version"]
+                    for path in (
+                        republish_failure_root / capabilities.DELETION_INTENTS_DIR
+                    ).iterdir()
+                ),
+                ["raw-evidence-deletion-intent.v2", "raw-evidence-deletion-intent.v3"],
+            )
+            republish_failure_link.unlink()
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
+            ):
+                resumed_republish_failure = capabilities.reconcile_raw_evidence_retention(
+                    republish_failure_root, ROOT, apply=True,
+                )
+            self.assertEqual(
+                resumed_republish_failure["deleted_evidence_digests"],
+                retained_report["retained_evidence_digests"],
+            )
+            self.assertFalse(republish_failure_target.exists())
             mutation_root = Path(tmp) / "post-digest-mutation-root"
             shutil.copytree(raw_root, mutation_root)
             mutated_filename = None
@@ -1519,17 +1610,31 @@ class CapabilityContractTests(unittest.TestCase):
             mutated_intent = next(
                 json.loads(path.read_text())
                 for path in (mutation_root / capabilities.DELETION_INTENTS_DIR).iterdir()
-                if json.loads(path.read_text())["schema_version"] == "raw-evidence-deletion-intent.v3"
+                if json.loads(path.read_text()).get("recovery_proof")
+                == "verified-payload-republication-v1"
             )
             self.assertEqual(
                 capabilities.digest(restored_mutation_target.read_bytes()),
                 mutated_intent["raw_evidence_digest"],
             )
+            self.assertEqual(
+                capability_retention._deletion_intent_file_identity(
+                    restored_mutation_target.stat(),
+                ),
+                mutated_intent["target_file_identity"],
+            )
             with mock.patch.object(
                 capability_retention, "_retention_now",
-                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), self.assertRaisesRegex(ValueError, "target identity changed"):
-                capabilities.reconcile_raw_evidence_retention(mutation_root, ROOT, apply=True)
+                return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
+            ):
+                resumed_mutation_cleanup = capabilities.reconcile_raw_evidence_retention(
+                    mutation_root, ROOT, apply=True,
+                )
+            self.assertEqual(
+                resumed_mutation_cleanup["deleted_evidence_digests"],
+                retained_report["retained_evidence_digests"],
+            )
+            self.assertFalse(restored_mutation_target.exists())
             write_failure_root = Path(tmp) / "deletion-record-write-failure-root"
             shutil.copytree(raw_root, write_failure_root)
             cleanup_clock = mock.patch.object(

@@ -34,7 +34,7 @@ chmod 0600 /absolute/path/outside/repository/g56r-002-private/CAPTURE_SHA256.jso
 ## 1. Run the Focused Offline Tests
 
 ```sh
-python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py
+python3 tests/speckit-pro/unit/test-codex-capability-contract.py
 ```
 
 This step requires no network, Codex client, or raw evidence store.
@@ -257,7 +257,7 @@ until the US3 replay increment is implemented.
 ## 8. Repository Verification
 
 ```sh
-python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py
+python3 tests/speckit-pro/unit/test-codex-capability-contract.py
 python3 -u tests/speckit-pro/run-all.py --layer 1
 pnpm --dir docs-site reference:generate
 pnpm --dir docs-site reference:check
@@ -331,11 +331,13 @@ the raw store, and appends the immutable v2 completion proof under
 `deletion-records/`. The proof retains the raw digest, complete retention record
 history, governing deadline, actual successful cleanup time, proof method, and
 v3 authority. If v3 persistence fails, a retry resumes the exact quarantined
-inode from v2. A retry from v3 proceeds only while the exact bound quarantine
-still exists; if unlink occurs without a durable completion record, the state
-is indeterminate and remains fail-closed. Reappeared targets, identity-changed
-quarantine entries, and missing, forked, or disconnected intent chains remain
-fail-closed. Repeated cleanup after durable completion is idempotent. Every raw
+inode from v2. If a detected post-unlink race republishes the descriptor-verified
+payload, a linear v3 successor using `verified-payload-republication-v1` binds
+the replacement inode under the same quarantine name before retry. A crash
+between republication and successor persistence can be recovered only from the
+exact bounded, mode-`0600`, single-link governed bytes. Other identity changes,
+unlink without a durable completion record, and missing, forked, or disconnected
+intent chains remain fail-closed. Repeated cleanup after durable completion is idempotent. Every raw
 file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal.
 A shared parent-directory advisory lock is acquired before a reserved temporary
@@ -349,8 +351,9 @@ use the same protocol, and identical source-capture writers accept only a
 verified content-addressed, single-link winner;
 cleanup fails closed if a power-loss artifact or any alternate hard link still
 reaches governed bytes. Before quarantine, a retry requires the exact canonical
-v2 identity; afterward it requires the exact v2- or v3-bound quarantine identity
-until verified unlink. Registration and
+v2 identity; afterward it requires the exact terminal v3-bound quarantine
+identity or the separately verified republication successor until verified
+unlink. Registration and
 cleanup serialize through the persistent
 mode-`0600` `.retention-lock` advisory-lock file. A process crash releases the
 kernel lock automatically, while another live operation fails closed. Do not

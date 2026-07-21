@@ -163,12 +163,11 @@ def _validate_deletion_intent(record_digest, record):
         raise ValueError("raw evidence deletion intent precedes its retention deadline")
     if version == "raw-evidence-deletion-intent.v3":
         _need_digest(record["predecessor_deletion_intent_digest"], "predecessor_deletion_intent_digest")
-        if (
-            record["quarantine_filename"]
-            != _deletion_quarantine_filename(record["predecessor_deletion_intent_digest"])
-            or record["recovery_proof"] != "verified-quarantine-transition-v1"
-        ):
-            raise ValueError("raw evidence recovery intent requires its verified quarantine transition")
+        if record["recovery_proof"] not in {
+            "verified-quarantine-transition-v1",
+            "verified-payload-republication-v1",
+        }:
+            raise ValueError("raw evidence recovery intent requires a supported recovery proof")
     return record
 
 def _terminal_deletion_intents(deletion_intents):
@@ -189,7 +188,19 @@ def _terminal_deletion_intents(deletion_intents):
             prior = by_digest.get(predecessor)
             if prior is None or predecessor in successors:
                 raise ValueError("raw evidence deletion intent recovery chain is missing or forked")
-            if prior["schema_version"] != "raw-evidence-deletion-intent.v2":
+            if record["recovery_proof"] == "verified-quarantine-transition-v1":
+                phase_valid = (
+                    prior["schema_version"] == "raw-evidence-deletion-intent.v2"
+                    and record["quarantine_filename"]
+                    == _deletion_quarantine_filename(predecessor)
+                )
+            else:
+                phase_valid = (
+                    prior["schema_version"] == "raw-evidence-deletion-intent.v3"
+                    and record["quarantine_filename"] == prior["quarantine_filename"]
+                    and record["target_file_identity"] != prior["target_file_identity"]
+                )
+            if not phase_valid:
                 raise ValueError("raw evidence deletion intent recovery phases are out of order")
             if (
                 record["retention_record_digests"] != prior["retention_record_digests"]
