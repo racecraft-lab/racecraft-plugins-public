@@ -148,6 +148,7 @@ def _delete_single_link_private_file(
         deletion_proved = True
         _, stored_digest = _store_staged_recovery_completion(
             raw, expected_raw_identity, repository_root, staged_record, staged_digest,
+            deletion_record["deleted_at"],
         )
         os.fsync(deletion_directory_descriptor)
         _assert_private_directory_current(
@@ -289,7 +290,7 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
                         "retention_record_digests": record_digests,
                         "deletion_intent_digest": intent[1],
                         "delete_after": deadline_text,
-                        "deleted_at": intent_record["deletion_started_at"],
+                        "deleted_at": as_of,
                     }
                     directory, directory_identity = _private_record_directory(
                         raw, DELETION_RECORDS_DIR, raw_identity,
@@ -305,12 +306,7 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
                         quarantined=True,
                     )
                     deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
-                record, record_digest = _store_staged_recovery_completion(
-                    raw, raw_identity, repository_root, intent_record, intent[1],
-                )
-                deletion_records.append((record, record_digest))
-                deletion_by_evidence[evidence_digest] = (record, record_digest)
-                deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
+                raise ValueError("staged raw evidence deletion is missing without durable completion proof")
             quarantine = raw / _deletion_quarantine_filename(intent[1])
             if target.exists() and quarantine.exists():
                 raise ValueError("raw evidence deletion has both canonical and quarantined targets")

@@ -263,8 +263,11 @@ directory-synchronizes that transition. It then appends an immutable v3
 successor that binds the quarantine name and identity before unlinking it. A
 retry from either v2 or v3 can therefore resume from the same verified
 quarantined inode. After unlink, cleanup proves zero links and unchanged bytes,
-synchronizes the raw root, and publishes only the completion record. Reappeared
-targets and missing, forked, or disconnected intent chains remain fail-closed.
+synchronizes the raw root, and publishes only the completion record with the
+actual successful cleanup time. A v3 intent with neither its quarantine nor a
+durable completion record is indeterminate and remains fail-closed; absence
+alone never certifies deletion. Reappeared targets and missing, forked, or
+disconnected intent chains likewise remain fail-closed.
 
 ## Telemetry and Treatment Records
 

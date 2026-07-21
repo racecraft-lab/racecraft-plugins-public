@@ -215,9 +215,9 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py validate-f
   --manifest docs/ai/research/codex-agent-route-candidate-manifest.json \
   --freeze docs/ai/research/codex-g56r-002-executable-candidate-freeze.json \
   --predecessor-freeze /tmp/g56r-002-capability-predecessor-freeze.json \
-  --expected-telemetry-profile-id sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb \
+  --expected-telemetry-profile-id sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979 \
   --expected-treatment-contract-digest sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199 \
-  --expected-treatment-evidence-digest sha256:087242317e9b4be18693eca15413b2de185df82cafe24f2fc03c9b3ffd4cea35
+  --expected-treatment-evidence-digest sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f
 ```
 
 The predecessor path must be the trusted, canonical US1 artifact retained by
@@ -309,12 +309,14 @@ unlinks the quarantined bytes, proves through the still-open descriptor that
 the link count is zero and the content digest is unchanged, directory-fsyncs
 the raw store, and appends the immutable v2 completion proof under
 `deletion-records/`. The proof retains the raw digest, complete retention record
-history, governing deadline, deletion time, proof method, and v3 authority. If
-v3 persistence fails, a retry resumes the exact quarantined inode from v2; if
-unlink or completion is interrupted, it resumes from v3. Reappeared targets,
-identity-changed quarantine entries, and missing, forked, or disconnected
-intent chains remain fail-closed. Repeated cleanup is
-idempotent. Every raw file must have exactly one hard link. Append-only writes
+history, governing deadline, actual successful cleanup time, proof method, and
+v3 authority. If v3 persistence fails, a retry resumes the exact quarantined
+inode from v2. A retry from v3 proceeds only while the exact bound quarantine
+still exists; if unlink occurs without a durable completion record, the state
+is indeterminate and remains fail-closed. Reappeared targets, identity-changed
+quarantine entries, and missing, forked, or disconnected intent chains remain
+fail-closed. Repeated cleanup after durable completion is idempotent. Every raw
+file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal;
 cleanup fails closed if a power-loss artifact or any alternate hard link still
 reaches governed bytes. Before quarantine, a retry requires the exact canonical

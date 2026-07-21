@@ -1539,14 +1539,9 @@ class CapabilityContractTests(unittest.TestCase):
             with mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ):
-                write_failure_cleanup = capabilities.reconcile_raw_evidence_retention(
-                    write_failure_root, ROOT, apply=True,
-                )
-            self.assertEqual(
-                write_failure_cleanup["deleted_evidence_digests"],
-                retained_report["retained_evidence_digests"],
-            )
+            ), self.assertRaisesRegex(ValueError, "missing without durable completion proof"):
+                capabilities.reconcile_raw_evidence_retention(write_failure_root, ROOT, apply=True)
+            self.assertEqual(list((write_failure_root / capabilities.DELETION_RECORDS_DIR).iterdir()), [])
             interrupted_recovery_root = Path(tmp) / "interrupted-recovery-root"
             shutil.copytree(raw_root, interrupted_recovery_root)
             class SimulatedCompletionTermination(BaseException):
@@ -1580,14 +1575,41 @@ class CapabilityContractTests(unittest.TestCase):
             with mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
-            ):
-                interrupted_recovery_cleanup = capabilities.reconcile_raw_evidence_retention(
-                    interrupted_recovery_root, ROOT, apply=True,
-                )
-            self.assertEqual(
-                interrupted_recovery_cleanup["deleted_evidence_digests"],
-                retained_report["retained_evidence_digests"],
-            )
+            ), self.assertRaisesRegex(ValueError, "missing without durable completion proof"):
+                capabilities.reconcile_raw_evidence_retention(interrupted_recovery_root, ROOT, apply=True)
+            self.assertFalse((interrupted_recovery_root / capabilities.DELETION_RECORDS_DIR).exists() and any(
+                (interrupted_recovery_root / capabilities.DELETION_RECORDS_DIR).iterdir()
+            ))
+            hard_link_crash_root = Path(tmp) / "post-unlink-hard-link-crash-root"
+            shutil.copytree(raw_root, hard_link_crash_root)
+            hard_link_after_crash = Path(tmp) / "post-unlink-hard-link.json"
+            class SimulatedPostUnlinkTermination(BaseException):
+                pass
+            def hard_link_then_unlink_then_terminate(filename: str, parent_descriptor: int) -> None:
+                os.link(hard_link_crash_root / filename, hard_link_after_crash)
+                original_unlink_descriptor_relative(filename, parent_descriptor)
+                raise SimulatedPostUnlinkTermination
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), mock.patch.object(
+                capability_retention, "_unlink_descriptor_relative",
+                side_effect=hard_link_then_unlink_then_terminate,
+            ), self.assertRaises(SimulatedPostUnlinkTermination):
+                capabilities.reconcile_raw_evidence_retention(hard_link_crash_root, ROOT, apply=True)
+            self.assertEqual(hard_link_after_crash.read_bytes(), capture_bytes)
+            self.assertFalse(any(
+                path.name.startswith(".g56r-002-") for path in hard_link_crash_root.iterdir()
+            ))
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
+            ), self.assertRaisesRegex(ValueError, "missing without durable completion proof"):
+                capabilities.reconcile_raw_evidence_retention(hard_link_crash_root, ROOT, apply=True)
+            self.assertFalse((hard_link_crash_root / capabilities.DELETION_RECORDS_DIR).exists() and any(
+                (hard_link_crash_root / capabilities.DELETION_RECORDS_DIR).iterdir()
+            ))
+            hard_link_after_crash.unlink()
             journal_failure_root = Path(tmp) / "staged-journal-persistence-failure-root"
             shutil.copytree(raw_root, journal_failure_root)
             original_store_staged = capability_retention._store_staged_recovery_intent
@@ -1636,6 +1658,7 @@ class CapabilityContractTests(unittest.TestCase):
                 if json.loads(path.read_text())["raw_evidence_digest"] == missing_stage["raw_evidence_digest"]
             )
             self.assertEqual(missing_completion["deletion_intent_digest"], f"sha256:{staged_path.stem}")
+            self.assertEqual(missing_completion["deleted_at"], "2026-08-16T00:00:00Z")
             pre_journal_root = Path(tmp) / "pre-journal-persistence-failure-root"
             shutil.copytree(raw_root, pre_journal_root)
             with mock.patch.object(

@@ -235,8 +235,10 @@ Repository tests must pass with the network disabled and no raw evidence store.
   root, and appends a v3 successor binding that exact inode before unlink.
   Cleanup then proves zero remaining links and the retained-byte digest,
   directory-fsyncs the raw root, and appends the terminal deletion-completion
-  record. A retry can resume the identity-bound quarantine from v2 or v3; after
-  verified unlink it attempts only the completion record. Registration and
+  record with the actual successful cleanup time. A retry can resume the
+  identity-bound quarantine from v2 or v3 only while that exact quarantine
+  still exists. If unlink occurs without durable completion proof, the state is
+  indeterminate and cleanup fails closed. Registration and
   cleanup share an atomic
   private-root lock, and destructive cleanup derives its timestamp from current
   UTC. Append-only writes directory-fsync both final-name publication and

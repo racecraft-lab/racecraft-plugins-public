@@ -91,11 +91,11 @@ be limited to one 30-second, 64 KiB, zero-retry attempt per snapshot/model/effor
 and could prove only pinned-environment availability.
 
 The current successor binds telemetry profile
-`sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb`,
+`sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979`,
 exact-treatment contract
 `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`,
 and treatment evidence set
-`sha256:087242317e9b4be18693eca15413b2de185df82cafe24f2fc03c9b3ffd4cea35`.
+`sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f`.
 Any later source, client, surface, normalization, telemetry, treatment-evidence,
 or tuple-decision change creates another successor ID.
 
@@ -103,9 +103,11 @@ Raw-evidence cleanup begins with an identity-bound v2 deletion intent. It
 renames that inode to a deterministic quarantine name, synchronizes the raw
 root, and journals a v3 successor binding the quarantine name and identity
 before unlink. A failure before v3 can resume from the v2-bound quarantine; a
-failure after v3 can resume the same inode or, after verified unlink, retry only
-the completion record. Reappeared targets, identity-changed quarantines, forked
-intent chains, and hard-link races remain fail-closed.
+failure after v3 can resume only while the exact v3-bound quarantine still
+exists. If unlink occurs without a durable completion record, absence alone
+cannot prove deletion and cleanup remains fail-closed. Reappeared targets,
+identity-changed quarantines, forked intent chains, and hard-link races also
+remain fail-closed.
 
 The published-freeze validator rechecks the pinned manifest digest, all 22
 sanitized source-refresh rows, matrix integrity and canonical observation
@@ -138,9 +140,11 @@ overdue bytes, and in `cleanup` mode first appends and directory-fsyncs a
 deletion-intent record. It then unlinks the expired bytes descriptor-relative,
 proves the open descriptor has zero links with unchanged content identity,
 directory-fsyncs the raw store, and only then appends and directory-fsyncs the
-terminal deletion record. Replaying cleanup is idempotent; the digest,
-retention history, and deletion record remain auditable after the bytes are
-gone. Registration and cleanup share an atomic private-root lock, so a newer
+terminal deletion record with the actual successful cleanup time. Replaying
+cleanup after durable completion is idempotent; a v3 intent whose quarantine
+and completion record are both absent is indeterminate and fails closed. The
+digest, retention history, and deletion record remain auditable after the bytes
+are gone. Registration and cleanup share an atomic private-root lock, so a newer
 publication cannot extend a digest while cleanup is deleting it. Destructive
 cleanup derives its deletion time from current UTC and rejects `--as-of`;
 arbitrary logical timestamps are read-only verification inputs. The committed

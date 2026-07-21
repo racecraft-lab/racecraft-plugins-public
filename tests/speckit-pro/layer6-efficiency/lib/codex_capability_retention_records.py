@@ -237,7 +237,7 @@ def _store_staged_recovery_intent(
     directory, directory_identity = _private_record_directory(raw, DELETION_INTENTS_DIR, raw_identity)
     return staged, _store_private_record(directory, staged, repository_root, directory_identity)
 
-def _store_staged_recovery_completion(raw, raw_identity, repository_root, staged, staged_digest):
+def _store_staged_recovery_completion(raw, raw_identity, repository_root, staged, staged_digest, deleted_at):
     completion = {
         "schema_version": "raw-evidence-deletion.v2",
         "completion_proof": "post-unlink-nlink-zero-rehashed-v1",
@@ -245,7 +245,7 @@ def _store_staged_recovery_completion(raw, raw_identity, repository_root, staged
         "retention_record_digests": staged["retention_record_digests"],
         "deletion_intent_digest": staged_digest,
         "delete_after": staged["delete_after"],
-        "deleted_at": staged["deletion_started_at"],
+        "deleted_at": deleted_at,
     }
     directory, directory_identity = _private_record_directory(raw, DELETION_RECORDS_DIR, raw_identity)
     return completion, _store_private_record(directory, completion, repository_root, directory_identity)
