@@ -419,7 +419,7 @@
     "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
     "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
     "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
-    "reviewability_sha": "sha256:68e4eb8ca50178d96d574917b0c527370f43d56e94bbb2112571b2a9b975f6b6",
+    "reviewability_sha": "sha256:b17229fa9166956cb9853b2a6e711120dd69b1ddfc4efce1e724c81c47418057",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
     "changed_file_manifest_sha": "sha256:094dad4a3cfd7f56e68c2448c069de96c9b5b08ed983d4176c4cad81f1058f49"
   },
@@ -432,7 +432,7 @@
       "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
       "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
       "tasks_sha": "sha256:26b1fe29448c15325e0245cd9332bc6e890538027edc901d2d1e09e30040e782",
-      "reviewability_sha": "sha256:68e4eb8ca50178d96d574917b0c527370f43d56e94bbb2112571b2a9b975f6b6",
+      "reviewability_sha": "sha256:b17229fa9166956cb9853b2a6e711120dd69b1ddfc4efce1e724c81c47418057",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
       "changed_file_manifest_sha": "sha256:094dad4a3cfd7f56e68c2448c069de96c9b5b08ed983d4176c4cad81f1058f49"
     },
@@ -1174,10 +1174,10 @@
         "implementation_checkpoint": {
           "status": "pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json",
-          "checkpoint_evidence_sha": "sha256:bd223be1dcd657dd73a1167830d8d20a7a52a3402b99f263b899860fb076c6db",
-          "checkpoint_evidence_commit_sha": "6da665ebe27f23cef7d0f1f102e58d91a82e600d",
+          "checkpoint_evidence_sha": "sha256:445c30adfdd3c2d2033b6cf5bb67924324b6f567dece7d169a33060724560c23",
+          "checkpoint_evidence_commit_sha": "117ba76e282afc1b3a309f076f2111bcaa3bb701",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "verification_evidence_sha": "sha256:68e4eb8ca50178d96d574917b0c527370f43d56e94bbb2112571b2a9b975f6b6",
+          "verification_evidence_sha": "sha256:b17229fa9166956cb9853b2a6e711120dd69b1ddfc4efce1e724c81c47418057",
           "commit_sha": "aea7282a9b3c64c2d04928104e13b35defeaa0f3",
           "head_sha": "aea7282a9b3c64c2d04928104e13b35defeaa0f3",
           "completed_task_ids": [
