@@ -8,23 +8,23 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 4959,
-  "actual_nonblank_noncomment_lines": 4528,
+  "actual_source_lines": 5128,
+  "actual_nonblank_noncomment_lines": 4687,
   "production_modules": 13,
-  "max_capability_module_source_lines": 385,
+  "max_capability_module_source_lines": 397,
   "primary_surface": "harness/adapters",
   "module_measurements": {
     "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 114, "nonblank_noncomment_lines": 105},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {"source_lines": 139, "nonblank_noncomment_lines": 132},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {"source_lines": 262, "nonblank_noncomment_lines": 218},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {"source_lines": 379, "nonblank_noncomment_lines": 348},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {"source_lines": 244, "nonblank_noncomment_lines": 229},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {"source_lines": 397, "nonblank_noncomment_lines": 374},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {"source_lines": 218, "nonblank_noncomment_lines": 201},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 350, "nonblank_noncomment_lines": 307},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 344, "nonblank_noncomment_lines": 301},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 355, "nonblank_noncomment_lines": 312},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {"source_lines": 15, "nonblank_noncomment_lines": 10},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 385, "nonblank_noncomment_lines": 370},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 384, "nonblank_noncomment_lines": 349},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 388, "nonblank_noncomment_lines": 371},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 386, "nonblank_noncomment_lines": 351},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 213, "nonblank_noncomment_lines": 196},
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
       "source_lines": 1912,
@@ -32,7 +32,7 @@
     }
   },
   "correctness_checks": {
-    "focused_tests": "55/55 pass",
+    "focused_tests": "56/56 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
@@ -121,17 +121,22 @@
     "existing_publication_single_link_enforcement": "pass",
     "capability_json_resource_bounds": "pass",
     "capability_json_recursion_normalization": "pass",
-    "independent_review_chat_id": "pr-367-review-6D565E",
+    "bounded_pending_claim_deadline": "pass",
+    "descriptor_bound_append_only_temp_recovery": "pass",
+    "source_capture_preparse_size_bound": "pass",
+    "source_capture_bytes_like_requirement": "pass",
+    "independent_review_chat_id": "pr-367-review-D20B53",
     "independent_review_findings": [
-      "an existing matching hard-linked publication target could bypass the single-link invariant before receipt",
-      "deeply nested capability JSON could escape the fail-closed ValueError contract and lacked depth and node bounds"
+      "newer bounded pending retention claims could be ignored when an older governing receipt existed",
+      "a crash after durable append-only linking could strand an unrecoverable temporary hard link",
+      "source-capture materialization parsed caller bytes before enforcing its byte limit"
     ]
   },
   "exception": {
     "kind": "typed_size_only",
     "status": "honored_for_checkpoint",
     "subdivision": "capability_safe_split_treatment_no_safe_boundary",
-    "rationale": "Capability source authority, observation, matrix, private I/O, retention, freeze, contract, and CLI responsibilities are separated behind the stable codex_capabilities.py facade, which exports exactly the supported public API and no private trust primitives. Every capability module remains below 400 source lines, with a 385-line maximum. Field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
+    "rationale": "Capability source authority, observation, matrix, private I/O, retention, freeze, contract, and CLI responsibilities are separated behind the stable codex_capabilities.py facade, which exports exactly the supported public API and no private trust primitives. Every capability module remains below 400 source lines, with a 397-line maximum. Field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
     "growth_limit": "Capability modules must remain below 400 source lines with no public API loss. Only finding-driven review remediation and the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze."
   },
   "later_markers": [
