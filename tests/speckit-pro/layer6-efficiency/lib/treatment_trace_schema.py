@@ -31,6 +31,9 @@ HAS_DESCRIPTOR_RELATIVE_IO = os.open in os.supports_dir_fd and os.stat in os.sup
 IS_WINDOWS = os.name == "nt"
 
 SCHEMA_VERSION = "1.0.0"
+OBSERVATION_EVIDENCE_VERSION = "treatment-observation-evidence.v1"
+CONSUMPTION_EVIDENCE_VERSION = "configured-route-consumption-evidence.v1"
+SOURCE_EVIDENCE_VERSION = "treatment-source-evidence.v1"
 SURFACES = ("app_server", "cli", "interactive_picker")
 CLASSIFICATIONS = (
     "stable_native", "experimental_native", "derived_from_controlled_configuration",
@@ -1646,6 +1649,97 @@ def validate_treatment_bundle(
     )
 
 
+def _trusted_evidence_object(
+    evidence: Mapping[str, bytes], key: str, label: str, *, digest_bound: bool,
+) -> dict:
+    raw = evidence.get(key)
+    if not isinstance(raw, bytes):
+        raise ValueError(f"trusted {label} bytes are missing")
+    if len(raw) > MAX_INPUT_BYTES:
+        raise ValueError(f"trusted {label} exceeds the maximum size")
+    if digest_bound and digest(raw) != key:
+        raise ValueError(f"trusted {label} digest does not match its claimed evidence")
+    value = _parse_json_bytes(raw)
+    if not isinstance(value, dict) or raw != canonical_bytes(value) + b"\n":
+        raise ValueError(f"trusted {label} must use canonical JSON bytes")
+    _validate_resource_bounds(value)
+    _validate_retained_strings(value, f"trusted {label}")
+    return value
+
+
+def _validate_publishable_treatment_evidence(
+    bundle: dict, trusted_evidence: Mapping[str, bytes] | None,
+) -> None:
+    if not isinstance(trusted_evidence, Mapping):
+        raise ValueError("treatment successor requires trusted evidence bytes")
+    expected_keys: set[str] = set()
+    observations_by_ref: dict[str, list[dict]] = {}
+    for trace in bundle["treatment_traces"]:
+        trace_id = trace["objective_binding"]["execution_trace_id"]
+        for observation in trace["observations"]:
+            evidence_ref = observation["evidence_ref"]
+            if evidence_ref is None:
+                continue
+            expected_keys.add(evidence_ref)
+            observations_by_ref.setdefault(evidence_ref, []).append({
+                "execution_trace_id": trace_id,
+                "field_path": observation["field_path"],
+                "observation_state": observation["observation_state"],
+                "value": copy.deepcopy(observation["value"]),
+                "captured_at": observation["captured_at"],
+            })
+        proof = trace["configured_route_proof"]
+        if proof is not None:
+            evidence_digest = proof["consumption_evidence_digest"]
+            expected_keys.add(evidence_digest)
+            expected_proof = {
+                "schema_version": CONSUMPTION_EVIDENCE_VERSION,
+                "consumed_configuration": {
+                    key: copy.deepcopy(value)
+                    for key, value in proof.items()
+                    if key not in {"proof_id", "consumption_evidence_digest"}
+                },
+            }
+            actual_proof = _trusted_evidence_object(
+                trusted_evidence, evidence_digest, "configured-route consumption evidence",
+                digest_bound=True,
+            )
+            if actual_proof != expected_proof:
+                raise ValueError(
+                    "configured-route consumption evidence does not bind the claimed proof"
+                )
+    for evidence_ref, observations in observations_by_ref.items():
+        expected_observations = {
+            "schema_version": OBSERVATION_EVIDENCE_VERSION,
+            "evidence_ref": evidence_ref,
+            "observations": sorted(
+                observations,
+                key=lambda item: (item["execution_trace_id"], item["field_path"]),
+            ),
+        }
+        actual_observations = _trusted_evidence_object(
+            trusted_evidence, evidence_ref, "observation evidence", digest_bound=False,
+        )
+        if actual_observations != expected_observations:
+            raise ValueError("trusted observation evidence does not bind the treatment observations")
+    raw_evidence_digest = bundle["fixture_provenance"]["raw_evidence_digest"]
+    expected_keys.add(raw_evidence_digest)
+    bundle_binding = copy.deepcopy(bundle)
+    del bundle_binding["fixture_provenance"]["raw_evidence_digest"]
+    expected_source = {
+        "schema_version": SOURCE_EVIDENCE_VERSION,
+        "sanitized_treatment_bundle_digest": digest(bundle_binding),
+    }
+    actual_source = _trusted_evidence_object(
+        trusted_evidence, raw_evidence_digest, "treatment source evidence",
+        digest_bound=True,
+    )
+    if actual_source != expected_source:
+        raise ValueError("trusted source evidence does not bind the sanitized treatment bundle")
+    if set(trusted_evidence) != expected_keys:
+        raise ValueError("trusted treatment evidence contains missing or orphan owners")
+
+
 def _capability_module():
     spec = importlib.util.spec_from_file_location("g56r_002_capability_for_treatment", CAPABILITY_MODULE_PATH)
     if spec is None or spec.loader is None: raise RuntimeError("cannot load capability freeze validator")
@@ -1653,9 +1747,15 @@ def _capability_module():
     return module
 
 
-def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, published_at: str,
-                              manifest_path: Path = MANIFEST_PATH,
-                              trusted_qualification_evidence: Mapping[str, dict] | None = None) -> dict:
+def build_treatment_successor(
+    prior_freeze: dict, treatment_bundle: dict, *, published_at: str,
+    manifest_path: Path = MANIFEST_PATH,
+    trusted_qualification_evidence: Mapping[str, dict] | None = None,
+    trusted_treatment_evidence: Mapping[str, bytes] | None = None,
+    prior_freeze_predecessor: dict | None = None,
+    expected_prior_telemetry_profile_id: str | None = None,
+    expected_prior_treatment_contract_digest: str | None = None,
+) -> dict:
     manifest = _read_manifest_snapshot(manifest_path)
     validated = _validate_treatment_bundle(
         treatment_bundle, schema_path=SCHEMA_PATH, manifest=manifest,
@@ -1665,7 +1765,12 @@ def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, pub
     if not isinstance(prior_freeze, dict):
         raise ValueError("prior freeze must be a JSON object")
     try:
-        prior_freeze = capability.validate_freeze(copy.deepcopy(prior_freeze), manifest)
+        prior_freeze = capability.validate_freeze(
+            copy.deepcopy(prior_freeze), manifest,
+            predecessor=copy.deepcopy(prior_freeze_predecessor),
+            expected_telemetry_profile_id=expected_prior_telemetry_profile_id,
+            expected_treatment_contract_digest=expected_prior_treatment_contract_digest,
+        )
     except (AttributeError, KeyError, TypeError, ValueError) as exc:
         raise ValueError(f"prior freeze identity or semantics are invalid: {exc}") from exc
     prior_client_id = prior_freeze["client_identity_id"]
@@ -1708,6 +1813,7 @@ def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, pub
             raise ValueError("treatment bundle requested effort does not match the prior freeze")
         if prior_effort is None and trace["treatment_disposition"] == "proven":
             raise ValueError("treatment bundle cannot prove an effort absent from the prior freeze")
+    _validate_publishable_treatment_evidence(validated, trusted_treatment_evidence)
     successor = copy.deepcopy(prior_freeze); prior_id = prior_freeze["candidate_freeze_id"]
     successor["telemetry_profile_id"] = validated["telemetry_profile_id"]
     successor["treatment_contract_digest"] = validated["treatment_contract_digest"]
@@ -1721,6 +1827,14 @@ def build_treatment_successor(prior_freeze: dict, treatment_bundle: dict, *, pub
         successor, manifest, predecessor=prior_freeze,
         expected_telemetry_profile_id=validated["telemetry_profile_id"],
         expected_treatment_contract_digest=validated["treatment_contract_digest"],
+        expected_predecessor_telemetry_profile_id=(
+            prior_freeze["telemetry_profile_id"]
+            if "treatment_contract_digest" in prior_freeze
+            else None
+        ),
+        expected_predecessor_treatment_contract_digest=prior_freeze.get(
+            "treatment_contract_digest"
+        ),
     )
     if successor["supersedes_candidate_freeze_id"] != prior_id: raise ValueError("treatment successor does not bind the actual prior freeze")
     return successor

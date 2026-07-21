@@ -188,6 +188,16 @@ def _delete_single_link_private_file(
         )
         return deletion_record_digest
     except _BlockingHardLinkRace:
+        if (
+            verified_payload is not None
+            and parent_descriptor is not None
+            and not _descriptor_entry_exists(parent_descriptor, filename)
+        ):
+            _write_private_bytes_at(
+                parent_descriptor, raw, filename, verified_payload,
+                append_only=True,
+                expected_parent_identity=expected_raw_identity,
+            )
         raise
     except OSError as error:
         if verified_payload is not None:
@@ -306,7 +316,7 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
             if target.exists():
                 raise ValueError("deletion completion record still has retained raw evidence bytes")
             deleted.append(evidence_digest); deletion_digests.append(record_digest); continue
-        if intent is not None and not target.exists():
+        if intent is not None:
             raise ValueError("raw evidence deletion was interrupted before link-count completion proof")
         if current < deadline:
             if intent is not None: raise ValueError("raw evidence deletion intent precedes its governing deadline")

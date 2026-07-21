@@ -10,6 +10,7 @@ import itertools
 import json
 import os
 import re
+import shutil
 import stat
 import subprocess
 import sys
@@ -202,6 +203,62 @@ def qualification_owner(authority_kind: str) -> dict:
 def trusted_external_qualification(bundle: dict) -> dict[str, dict]:
     owner = next(item for item in bundle["qualification_evidence_registry"] if item["authority_kind"] == "owned_external")
     return {owner["qualification_evidence_id"]: copy.deepcopy(owner)}
+
+
+def bind_trusted_treatment_evidence(bundle: dict) -> tuple[dict, dict[str, bytes]]:
+    evidence: dict[str, bytes] = {}
+    for trace in bundle["treatment_traces"]:
+        proof = trace["configured_route_proof"]
+        if proof is None:
+            continue
+        payload = {
+            "schema_version": treatment.CONSUMPTION_EVIDENCE_VERSION,
+            "consumed_configuration": {
+                key: copy.deepcopy(value)
+                for key, value in proof.items()
+                if key not in {"proof_id", "consumption_evidence_digest"}
+            },
+        }
+        raw = treatment.canonical_bytes(payload) + b"\n"
+        proof["consumption_evidence_digest"] = treatment.digest(raw)
+        proof["proof_id"] = treatment.content_id(proof, "proof_id")
+        evidence[proof["consumption_evidence_digest"]] = raw
+    rebind_treatment_owners(bundle)
+    observations_by_ref: dict[str, list[dict]] = {}
+    for trace in bundle["treatment_traces"]:
+        trace_id = trace["objective_binding"]["execution_trace_id"]
+        for observation in trace["observations"]:
+            evidence_ref = observation["evidence_ref"]
+            if evidence_ref is None:
+                continue
+            observations_by_ref.setdefault(evidence_ref, []).append({
+                "execution_trace_id": trace_id,
+                "field_path": observation["field_path"],
+                "observation_state": observation["observation_state"],
+                "value": copy.deepcopy(observation["value"]),
+                "captured_at": observation["captured_at"],
+            })
+    for evidence_ref, observations in observations_by_ref.items():
+        payload = {
+            "schema_version": treatment.OBSERVATION_EVIDENCE_VERSION,
+            "evidence_ref": evidence_ref,
+            "observations": sorted(
+                observations,
+                key=lambda item: (item["execution_trace_id"], item["field_path"]),
+            ),
+        }
+        evidence[evidence_ref] = treatment.canonical_bytes(payload) + b"\n"
+    bundle_binding = copy.deepcopy(bundle)
+    del bundle_binding["fixture_provenance"]["raw_evidence_digest"]
+    source_payload = {
+        "schema_version": treatment.SOURCE_EVIDENCE_VERSION,
+        "sanitized_treatment_bundle_digest": treatment.digest(bundle_binding),
+    }
+    source_bytes = treatment.canonical_bytes(source_payload) + b"\n"
+    source_digest = treatment.digest(source_bytes)
+    bundle["fixture_provenance"]["raw_evidence_digest"] = source_digest
+    evidence[source_digest] = source_bytes
+    return bundle, evidence
 
 
 def declare_treatment_result(
@@ -1362,12 +1419,14 @@ class CapabilityContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "alternate hard links"):
                     capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
             stale_hard_link.unlink(); capability_private._fsync_directory(raw_root.resolve())
+            race_root = Path(tmp) / "hard-link-race-root"
+            shutil.copytree(raw_root, race_root)
             race_link = Path(tmp) / "retained-race-link.json"; raced_filename = None
             original_unlink_descriptor_relative = capability_retention._unlink_descriptor_relative
             def create_external_link_before_unlink(filename: str, parent_descriptor: int) -> None:
                 nonlocal raced_filename
                 raced_filename = filename
-                os.link(raw_root / filename, race_link)
+                os.link(race_root / filename, race_link)
                 original_unlink_descriptor_relative(filename, parent_descriptor)
             with mock.patch.object(
                 capability_retention, "_retention_now",
@@ -1375,23 +1434,26 @@ class CapabilityContractTests(unittest.TestCase):
             ), mock.patch.object(
                 capability_retention, "_unlink_descriptor_relative", side_effect=create_external_link_before_unlink,
             ), self.assertRaisesRegex(ValueError, "retains an alternate hard link"):
-                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
+                capabilities.reconcile_raw_evidence_retention(race_root, ROOT, apply=True)
             self.assertIsNotNone(raced_filename)
-            restored_race_target = raw_root / str(raced_filename)
-            self.assertFalse(restored_race_target.exists())
+            restored_race_target = race_root / str(raced_filename)
+            self.assertEqual(restored_race_target.read_bytes(), capture_bytes)
+            self.assertEqual(race_link.read_bytes(), capture_bytes)
             with mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
             ), self.assertRaisesRegex(ValueError, "interrupted before link-count completion proof"):
-                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
-            deletion_directory = raw_root / capabilities.DELETION_RECORDS_DIR
+                capabilities.reconcile_raw_evidence_retention(race_root, ROOT, apply=True)
+            deletion_directory = race_root / capabilities.DELETION_RECORDS_DIR
             self.assertFalse(deletion_directory.exists() and any(deletion_directory.iterdir()))
-            os.link(race_link, restored_race_target); race_link.unlink()
+            race_link.unlink()
+            mutation_root = Path(tmp) / "post-digest-mutation-root"
+            shutil.copytree(raw_root, mutation_root)
             mutated_filename = None
             def mutate_after_digest_before_unlink(filename: str, parent_descriptor: int) -> None:
                 nonlocal mutated_filename
                 mutated_filename = filename
-                mutated = raw_root / filename; mutated.write_bytes(b"mutated-after-digest\n"); mutated.chmod(0o600)
+                mutated = mutation_root / filename; mutated.write_bytes(b"mutated-after-digest\n"); mutated.chmod(0o600)
                 original_unlink_descriptor_relative(filename, parent_descriptor)
             with mock.patch.object(
                 capability_retention, "_retention_now",
@@ -1399,10 +1461,17 @@ class CapabilityContractTests(unittest.TestCase):
             ), mock.patch.object(
                 capability_retention, "_unlink_descriptor_relative", side_effect=mutate_after_digest_before_unlink,
             ), self.assertRaisesRegex(ValueError, "changed while it was being unlinked|verified content identity"):
-                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
+                capabilities.reconcile_raw_evidence_retention(mutation_root, ROOT, apply=True)
             self.assertIsNotNone(mutated_filename)
-            restored_mutation_target = raw_root / str(mutated_filename)
+            restored_mutation_target = mutation_root / str(mutated_filename)
             self.assertEqual(capabilities.digest(restored_mutation_target.read_bytes()), f"sha256:{restored_mutation_target.stem}")
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), self.assertRaisesRegex(ValueError, "interrupted before link-count completion proof"):
+                capabilities.reconcile_raw_evidence_retention(mutation_root, ROOT, apply=True)
+            write_failure_root = Path(tmp) / "deletion-record-write-failure-root"
+            shutil.copytree(raw_root, write_failure_root)
             cleanup_clock = mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
@@ -1418,11 +1487,16 @@ class CapabilityContractTests(unittest.TestCase):
                 capability_private, "_write_private_bytes_at", side_effect=fail_deletion_record_write,
             ):
                 with self.assertRaisesRegex(OSError, "deletion-record write"):
-                    capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
+                    capabilities.reconcile_raw_evidence_retention(write_failure_root, ROOT, apply=True)
             self.assertTrue(all(
-                (raw_root / f"{item.removeprefix('sha256:')}.json").is_file()
+                (write_failure_root / f"{item.removeprefix('sha256:')}.json").is_file()
                 for item in retained_report["retained_evidence_digests"]
             ))
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), self.assertRaisesRegex(ValueError, "interrupted before link-count completion proof"):
+                capabilities.reconcile_raw_evidence_retention(write_failure_root, ROOT, apply=True)
             original_delete = capability_retention._delete_single_link_private_file
             class SimulatedProcessTermination(BaseException):
                 pass
@@ -1447,7 +1521,7 @@ class CapabilityContractTests(unittest.TestCase):
             )
             self.assertEqual(
                 json.loads(committed_intent_path.read_text())["deletion_started_at"],
-                "2026-08-15T00:00:00Z",
+                "2026-08-16T00:00:00Z",
             )
             self.assertEqual(sum(
                 (raw_root / f"{item.removeprefix('sha256:')}.json").is_file()
@@ -3151,6 +3225,9 @@ class TreatmentContractTests(unittest.TestCase):
         prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
         prior["supersedes_candidate_freeze_id"] = None
         self.assertEqual(treatment.content_id(prior, "candidate_freeze_id"), prior["candidate_freeze_id"])
+        successor_bundle, successor_evidence = bind_trusted_treatment_evidence(
+            self.rebound(copy.deepcopy(self.bundle))
+        )
         bounded_reads: list[Path] = []
         original_read = treatment._read_bounded_regular_file
 
@@ -3160,25 +3237,29 @@ class TreatmentContractTests(unittest.TestCase):
 
         with mock.patch.object(treatment, "_read_bounded_regular_file", side_effect=track_authority_reads):
             successor = treatment.build_treatment_successor(
-                prior, self.bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                prior, successor_bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=successor_evidence,
             )
         self.assertEqual(bounded_reads.count(treatment.SCHEMA_PATH), 1)
         self.assertEqual(bounded_reads.count(treatment.MANIFEST_PATH), 1)
         self.assertEqual(successor, published)
         self.assertEqual(successor["supersedes_candidate_freeze_id"], prior["candidate_freeze_id"])
-        self.assertEqual(successor["telemetry_profile_id"], self.bundle["telemetry_profile_id"])
-        self.assertEqual(successor["treatment_contract_digest"], self.bundle["treatment_contract_digest"])
+        self.assertEqual(successor["telemetry_profile_id"], successor_bundle["telemetry_profile_id"])
+        self.assertEqual(successor["treatment_contract_digest"], successor_bundle["treatment_contract_digest"])
         self.assertEqual(successor["published_at"], TREATMENT_SUCCESSOR_PUBLISHED_AT)
         rerouted = self.rebound(make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external"))
         trusted = trusted_external_qualification(rerouted)
         declare_reroute_result(rerouted, trusted)
+        rerouted, rerouted_evidence = bind_trusted_treatment_evidence(rerouted)
         self.assertEqual(treatment.build_treatment_successor(
             prior, rerouted, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
             trusted_qualification_evidence=trusted,
+            trusted_treatment_evidence=rerouted_evidence,
         ), published)
         with self.assertRaisesRegex(ValueError, "declared treatment"):
             treatment.build_treatment_successor(
                 prior, rerouted, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=rerouted_evidence,
             )
         altered_trust = copy.deepcopy(trusted)
         next(iter(altered_trust.values()))["evidence_digest"] = "sha256:" + "0" * 64
@@ -3186,6 +3267,7 @@ class TreatmentContractTests(unittest.TestCase):
             treatment.build_treatment_successor(
                 prior, rerouted, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
                 trusted_qualification_evidence=altered_trust,
+                trusted_treatment_evidence=rerouted_evidence,
             )
         custom_manifest = copy.deepcopy(load_json(MANIFEST_PATH))
         route = next(
@@ -3216,13 +3298,65 @@ class TreatmentContractTests(unittest.TestCase):
                 self.assertEqual(successor[key], prior[key])
         with self.assertRaisesRegex(ValueError, "must be later"):
             treatment.build_treatment_successor(
-                prior, self.bundle, published_at=TREATMENT_PREDECESSOR_PUBLISHED_AT,
+                prior, successor_bundle, published_at=TREATMENT_PREDECESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=successor_evidence,
             )
         tampered = copy.deepcopy(prior); tampered["candidate_freeze_id"] = treatment.digest(b"forged")
         with self.assertRaisesRegex(ValueError, "prior freeze identity"):
             treatment.build_treatment_successor(
                 tampered, self.bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
             )
+
+        with self.assertRaisesRegex(ValueError, "trusted evidence bytes"):
+            treatment.build_treatment_successor(
+                prior, successor_bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+            )
+        forged_evidence = dict(successor_evidence)
+        observation_ref = next(key for key in forged_evidence if key.startswith("fixture://"))
+        forged_evidence[observation_ref] += b" "
+        with self.assertRaisesRegex(ValueError, "canonical JSON bytes"):
+            treatment.build_treatment_successor(
+                prior, successor_bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=forged_evidence,
+            )
+        proof_digest = successor_bundle["treatment_traces"][0][
+            "configured_route_proof"
+        ]["consumption_evidence_digest"]
+        forged_evidence = dict(successor_evidence)
+        forged_evidence[proof_digest] += b" "
+        with self.assertRaisesRegex(ValueError, "digest does not match"):
+            treatment.build_treatment_successor(
+                prior, successor_bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=forged_evidence,
+            )
+        source_digest = successor_bundle["fixture_provenance"]["raw_evidence_digest"]
+        forged_evidence = dict(successor_evidence)
+        forged_evidence[source_digest] += b" "
+        with self.assertRaisesRegex(ValueError, "digest does not match"):
+            treatment.build_treatment_successor(
+                prior, successor_bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=forged_evidence,
+            )
+
+        later_published_at = "2026-07-19T04:01:00Z"
+        with self.assertRaisesRegex(ValueError, "requires its validated predecessor"):
+            treatment.build_treatment_successor(
+                successor, successor_bundle, published_at=later_published_at,
+                trusted_treatment_evidence=successor_evidence,
+                expected_prior_telemetry_profile_id=successor["telemetry_profile_id"],
+                expected_prior_treatment_contract_digest=successor["treatment_contract_digest"],
+            )
+        second_successor = treatment.build_treatment_successor(
+            successor, successor_bundle, published_at=later_published_at,
+            trusted_treatment_evidence=successor_evidence,
+            prior_freeze_predecessor=prior,
+            expected_prior_telemetry_profile_id=successor["telemetry_profile_id"],
+            expected_prior_treatment_contract_digest=successor["treatment_contract_digest"],
+        )
+        self.assertEqual(
+            second_successor["supersedes_candidate_freeze_id"],
+            successor["candidate_freeze_id"],
+        )
 
     def test_successor_normalizes_malformed_predecessor_errors(self) -> None:
         bundle = self.rebound(copy.deepcopy(self.bundle))
