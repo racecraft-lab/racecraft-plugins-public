@@ -181,7 +181,11 @@ Capability JSON parsing also fails closed on duplicate keys, non-finite values,
 invalid UTF-8, parser recursion, nesting beyond 64 levels, or more than 100,000
 total nodes.
 Source-capture materialization rejects non-bytes-like or greater-than-32-MiB
-input before parsing or hashing. A crash-retained reserved append-only
-temporary is removed only after descriptor-bound proof that it is the sole
-alternate link to the exact content-addressed target; recovery syncs before and
-after unlink and re-proves the target is single-link.
+input before parsing or hashing. Every reserved append-only temporary holds an
+advisory lock until commit. Recovery obtains that lock and re-proves the
+directory-relative pathname and inode before removing an abandoned single-link
+pre-publication file. A linked temporary additionally must be the sole alternate
+name for the exact target and bytes; recovery syncs before and after unlink and
+re-proves the target is single-link. Public append-only directories use the same
+protocol, and a concurrent identical source capture accepts only the verified
+content-addressed winner.

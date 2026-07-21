@@ -338,9 +338,13 @@ quarantine entries, and missing, forked, or disconnected intent chains remain
 fail-closed. Repeated cleanup after durable completion is idempotent. Every raw
 file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal;
-if a crash preserves both names, the next operation removes the reserved
-temporary only after descriptor-bound proof that it is the sole alternate link
-to the exact content-addressed target and re-syncs the directory;
+every reserved temporary holds an advisory lock until commit. After a crash,
+the next operation acquires that lock and re-proves its directory-relative
+pathname and inode before discarding a single-link pre-publication file. If both
+names survive, recovery additionally proves the temporary is the sole alternate
+link to the exact target and re-syncs the directory. Public append-only outputs
+use the same protocol, and identical source-capture writers accept only a
+verified content-addressed, single-link winner;
 cleanup fails closed if a power-loss artifact or any alternate hard link still
 reaches governed bytes. Before quarantine, a retry requires the exact canonical
 v2 identity; afterward it requires the exact v2- or v3-bound quarantine identity

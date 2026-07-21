@@ -16,6 +16,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import threading
 import unittest
 from unittest import mock
 from pathlib import Path
@@ -86,6 +87,7 @@ capabilities = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(capabilities)
 
 capability_contract = sys.modules["codex_capability_contract"]
+capability_append_only = sys.modules["codex_capability_append_only"]
 capability_freeze = sys.modules["codex_capability_freeze"]
 capability_io = sys.modules["codex_capability_io"]
 capability_observations = sys.modules["codex_capability_observations"]
@@ -453,7 +455,7 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertNotIn("_delete_single_link_private_file", vars(capabilities))
         self.assertTrue(callable(capabilities.main))
         implementation_modules = [MODULE_PATH, *sorted(MODULE_PATH.parent.glob("codex_capability_*.py"))]
-        self.assertEqual(len(implementation_modules), 12)
+        self.assertEqual(len(implementation_modules), 13)
         for path in implementation_modules:
             with self.subTest(path=path.name):
                 self.assertLessEqual(len(path.read_text(encoding="utf-8").splitlines()), 400)
@@ -2105,6 +2107,41 @@ class CapabilityContractTests(unittest.TestCase):
                     capabilities.repository_binding_from_checkout(repository)
             self.assertEqual(run.call_args_list[2].args[0][-1], f"{resolved}^{{tree}}")
 
+    def test_source_capture_accepts_an_identical_concurrent_winner(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_root = Path(tmp) / "raw"
+            raw_root.mkdir(mode=0o700)
+            capture_bytes = b"[]\n"
+            original_write = capability_private._write_private_bytes
+            writers_ready = threading.Barrier(2)
+            results, errors = [], []
+
+            def synchronized_write(path: Path, payload: bytes, **kwargs: object) -> None:
+                writers_ready.wait(timeout=5)
+                original_write(path, payload, **kwargs)
+
+            def materialize() -> None:
+                try:
+                    results.append(capabilities.materialize_source_capture(raw_root, ROOT, capture_bytes))
+                except BaseException as error:
+                    errors.append(error)
+
+            threads = [threading.Thread(target=materialize) for _ in range(2)]
+            with mock.patch.object(
+                capability_private, "_write_private_bytes", side_effect=synchronized_write,
+            ):
+                for thread in threads: thread.start()
+                for thread in threads: thread.join(timeout=10)
+            self.assertFalse(any(thread.is_alive() for thread in threads))
+            self.assertEqual(errors, [])
+            self.assertEqual(len(results), 2)
+            (capture_digest, target), duplicate = results
+            self.assertEqual(duplicate, (capture_digest, target))
+            self.assertEqual(capture_digest, capabilities.digest(capture_bytes))
+            self.assertEqual(target.read_bytes(), capture_bytes)
+            self.assertEqual(target.stat().st_nlink, 1)
+            self.assertFalse(any(raw_root.glob(".g56r-002-*")))
+
     def test_json_inputs_executable_hashing_and_publication_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -2144,10 +2181,13 @@ class CapabilityContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "not canonical"):
                 capability_publish_io._read(noncanonical, require_canonical=True)
             canonical = root / "canonical.json"
+            public_abandoned = root / f".g56r-002-{'0' * 32}"
+            public_abandoned.write_bytes(b"abandoned pre-link publication"); public_abandoned.chmod(0o600)
             original_fsync = capability_private.os.fsync
             with mock.patch.object(capability_private.os, "fsync", wraps=original_fsync) as fsync:
                 capability_private._write(canonical, {"b": 1, "a": 2}, append_only=True)
             self.assertGreaterEqual(fsync.call_count, 3)
+            self.assertFalse(public_abandoned.exists())
             self.assertFalse(any(root.glob(".g56r-002-*")))
             self.assertEqual(capability_publish_io._read(canonical, require_canonical=True), {"a": 2, "b": 1})
             crash_payload = capabilities.canonical_bytes({"recovered": True}) + b"\n"
@@ -2162,6 +2202,25 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(crash_target.read_bytes(), crash_payload)
             private_recovery_root = root / "raw-recovery"
             private_recovery_root.mkdir(mode=0o700)
+            private_abandoned = private_recovery_root / f".g56r-002-{'1' * 32}"
+            private_abandoned.write_bytes(b"abandoned pre-link capture"); private_abandoned.chmod(0o600)
+            capability_private._fsync_directory(private_recovery_root)
+            capabilities.validate_raw_evidence_root(private_recovery_root, ROOT)
+            self.assertFalse(private_abandoned.exists())
+            active_temporary = private_recovery_root / f".g56r-002-{'2' * 32}"
+            active_temporary.write_bytes(b"active pre-link capture"); active_temporary.chmod(0o600)
+            active_descriptor = os.open(active_temporary, os.O_RDONLY)
+            try:
+                capability_private._acquire_append_only_temporary_lock(active_descriptor, wait=False)
+                with mock.patch.object(
+                    capability_append_only, "_APPEND_ONLY_LOCK_WAIT_SECONDS", 0.05,
+                ), self.assertRaisesRegex(ValueError, "already in progress"):
+                    capabilities.validate_raw_evidence_root(private_recovery_root, ROOT)
+                self.assertTrue(active_temporary.exists())
+            finally:
+                os.close(active_descriptor)
+            capabilities.validate_raw_evidence_root(private_recovery_root, ROOT)
+            self.assertFalse(active_temporary.exists())
             private_payload = b'[{"capture":"recovered"}]\n'
             private_temporary = private_recovery_root / f".g56r-002-{'b' * 32}"
             private_target = private_recovery_root / f"{capabilities.digest(private_payload).removeprefix('sha256:')}.json"

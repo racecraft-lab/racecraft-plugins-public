@@ -7,15 +7,15 @@ smallest GREEN implementation, then REFACTOR and VERIFY without changing the
 predeclared dispositions.
 
 **Reviewability**: The capability adapter triggered the 400-LOC boundary and is
-now safely subdivided behind its stable facade into 12 focused modules totaling
-2,892 source lines (2,620 nonblank, non-comment); every capability module is at
-or below 395 source lines. The treatment validator remains 1,884 source lines
-(1,736 nonblank, non-comment), for 4,776 source lines (4,356 nonblank,
-non-comment) across 13 production modules in the current US2 marker. T001-T015
+now safely subdivided behind its stable facade into 13 capability modules totaling
+3,312 source lines (3,010 nonblank, non-comment); every capability module is at
+or below 388 source lines. The treatment validator remains 1,912 source lines
+(1,762 nonblank, non-comment), for 5,224 source lines (4,772 nonblank,
+non-comment) across 14 production modules in the current US2 marker. T001-T015
 no longer relies on a `no_safe_boundary` exception. The treatment-only size
 exception remains scoped to T016-T025, while T026-T039 remains a separate
-ordered marker; a fourteenth production module or broken independent verification
-is still blocking.
+ordered marker; a capability module above 400 lines or broken independent
+verification is still blocking.
 
 **Format**: Every task includes an exact path, user-story marker, functional
 requirement references, and an objective acceptance check. `[P]` is used only
@@ -81,8 +81,8 @@ non-scorable, or hard-fail disposition without fabricating a field.
 
 ### REFACTOR and VERIFY
 
-- [x] T023 [US2] [FR-005] [FR-007] Refactor shared validation primitives only within `tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py`, retaining vendor-neutral record shapes and leaving Codex collection in `codex_capabilities.py`; Acceptance: focused tests, executable JSON-Schema parity, descriptor-relative retained-file loading through one identity-bound directory snapshot with directory-race detection, sanitized parser/CLI failures, complete path privacy, bounded pending claims participate in the latest effective deletion deadline, crash-retained reserved temporary links recover only after exact inode/byte proof, and authority/condition/lifecycle negative cases remain green without a cross-vendor probing abstraction.
-- [x] T024 [US2] [FR-005] [FR-006] Bind the published telemetry profile, validated treatment-contract digest, and exact retained treatment-evidence-set digest into `docs/ai/research/codex-g56r-002-executable-candidate-freeze.json`, creating a strictly later successor freeze ID rather than editing the prior content identity in place; Acceptance: the actual published successor directly passes the canonical treatment-aware validator, every treatment-bound publication/successor API requires externally supplied expected IDs, the successor references the prior ID, only an included, source-admitted, availability-supported, surface-agreed tuple can publish `proven`, excluded tuples retain non-authoritative dispositions, publication does not predate any bound route resolution or non-null observation capture, retained source/observation/canary evidence is semantically revalidated before registration, an identity-bound append-only output is re-read as exact canonical single-link bytes before its governing receipt, recovered existing outputs preserve that invariant, capability JSON fails closed beyond 64 nesting levels or 100,000 total nodes, and source-capture size/type bounds apply before parsing or hashing.
+- [x] T023 [US2] [FR-005] [FR-007] Refactor shared validation primitives only within `tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py`, retaining vendor-neutral record shapes and leaving Codex collection in `codex_capabilities.py`; Acceptance: focused tests, executable JSON-Schema parity, descriptor-relative retained-file loading through one identity-bound directory snapshot with directory-race detection, sanitized parser/CLI failures, complete path privacy, bounded pending claims participate in the latest effective deletion deadline, crash-retained reserved temporaries recover only after advisory-lock and exact directory-relative inode proof, linked temporaries additionally require exact target/byte proof, and authority/condition/lifecycle negative cases remain green without a cross-vendor probing abstraction.
+- [x] T024 [US2] [FR-005] [FR-006] Bind the published telemetry profile, validated treatment-contract digest, and exact retained treatment-evidence-set digest into `docs/ai/research/codex-g56r-002-executable-candidate-freeze.json`, creating a strictly later successor freeze ID rather than editing the prior content identity in place; Acceptance: the actual published successor directly passes the canonical treatment-aware validator, every treatment-bound publication/successor API requires externally supplied expected IDs, the successor references the prior ID, only an included, source-admitted, availability-supported, surface-agreed tuple can publish `proven`, excluded tuples retain non-authoritative dispositions, publication does not predate any bound route resolution or non-null observation capture, retained source/observation/canary evidence is semantically revalidated before registration, an identity-bound append-only output is re-read as exact canonical single-link bytes before its governing receipt, recovered existing outputs preserve that invariant, capability JSON fails closed beyond 64 nesting levels or 100,000 total nodes, source-capture size/type bounds apply before parsing or hashing, and an identical concurrent capture accepts only its verified content-addressed winner.
 - [x] T025 [US2] [FR-005] [FR-007] Run the US2 independent test in `tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py` and inspect the diff for configured-as-effective, missing-reroute-as-none, service-as-resolver, or fabricated null values; Acceptance: focused tests pass and none of the four prohibited patterns exists.
 
 **Checkpoint**: Capability freeze and treatment contracts are independently

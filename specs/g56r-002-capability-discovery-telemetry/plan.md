@@ -78,6 +78,7 @@ in `docs/ai/specs/.process/autopilot-state.json`.
 
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py
+- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_append_only.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py
@@ -104,7 +105,7 @@ in `docs/ai/specs/.process/autopilot-state.json`.
 
 | Principle | Decision | Evidence |
 |---|---|---|
-| Library-first and CLI contracts | Pass | A stable capability facade and 11 focused capability modules own collection, normalization, retention, and publication; the treatment validator remains a separate importable module; no new framework |
+| Library-first and CLI contracts | Pass | A stable capability facade and 12 focused capability modules own collection, normalization, retention, and publication; the treatment validator remains a separate importable module; no new framework |
 | Test-first development | Pass | Each increment starts with focused failing fixtures and unit assertions before implementation |
 | Integration testing | Pass | Offline replay covers surface joins, treatment, reroutes, hashes, and failure dispositions |
 | Observability | Pass | Every desired field has a profile entry with source, completeness, claim, typed state, and evidence |
@@ -135,6 +136,7 @@ stop condition.
   64 KiB, zero-retry, process-tree-termination bounds and default-empty
   executor-ID allowlist.
 - `codex_capability_io.py` owns strict JSON and descriptor-relative reads;
+  `codex_capability_append_only.py` owns temporary locking and crash recovery;
   `codex_capability_private.py` owns private retained-byte writes and locking.
 - `codex_capability_retention_records.py` owns append-only intent, receipt, and
   completion records; `codex_capability_retention.py` owns verification and
@@ -253,9 +255,12 @@ Repository tests must pass with the network disabled and no raw evidence store.
   cleanup share an atomic
   private-root lock, and destructive cleanup derives its timestamp from current
   UTC. Append-only writes directory-fsync both final-name publication and
-  temporary-name removal. A crash-retained reserved temporary is recovered only
-  after descriptor-bound proof that it is the sole alternate link to the exact
-  content-addressed target; any unrecognized alternate hard link blocks cleanup.
+  temporary-name removal. Every reserved temporary holds an advisory lock until
+  commit. Recovery first acquires that lock and re-proves its directory-relative
+  pathname and inode: an abandoned single-link pre-publication file is removed,
+  while a linked file additionally requires the sole exact target and matching
+  bytes. Public append-only directories use the same recovery; any unrecognized
+  alternate hard link blocks cleanup.
   Record loaders bind one private directory descriptor for enumeration and
   entry opens, require an unchanged before/after entry set, and reject directory
   replacement or mixed snapshots.
@@ -263,7 +268,9 @@ Repository tests must pass with the network disabled and no raw evidence store.
   values, limits nesting to 64 and total nodes to 100,000, and normalizes parser
   recursion to a fail-closed validation error.
 - Source-capture callers must provide bytes-like input no larger than 32 MiB;
-  the bound is enforced before JSON parsing or digest calculation.
+  the bound is enforced before JSON parsing or digest calculation, and a losing
+  concurrent identical writer accepts only the verified content-addressed,
+  single-link winner.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
   bound to exact bytes by the adjacent out-of-band digest manifest.
@@ -297,6 +304,7 @@ specs/g56r-002-capability-discovery-telemetry/
 tests/speckit-pro/layer6-efficiency/lib/
 ├── codex_capabilities.py                  # stable capability facade
 ├── codex_capability_cli.py                # command dispatch
+├── codex_capability_append_only.py        # temporary locking and recovery
 ├── codex_capability_contract.py           # bounds and contract validation
 ├── codex_capability_freeze.py             # freeze construction/publication
 ├── codex_capability_io.py                 # strict JSON and descriptor I/O

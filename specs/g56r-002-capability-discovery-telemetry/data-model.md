@@ -296,11 +296,15 @@ total nodes. Parser recursion and resource-bound failures surface as
 fail-closed validation errors.
 Source-capture materialization rejects non-bytes-like or greater-than-32-MiB
 input before parsing, hashing, root validation, or allocation of the decoded
-JSON value. A crash-retained `.g56r-002-*` append-only temporary is recoverable
-only when it is private, descriptor-bound, and the sole alternate link to one
-matching content-addressed target. Recovery verifies the inode and exact bytes,
-directory-syncs the target, removes the temporary link, syncs again, and proves
-the target is single-link; any unrecognized alternate link still fails closed.
+JSON value. Every `.g56r-002-*` temporary holds an advisory lock until commit.
+Recovery acquires that lock and re-proves the descriptor-bound pathname and
+inode before removing an abandoned single-link pre-publication file. A linked
+temporary additionally must be the sole alternate name for one matching target;
+private targets must match their content address and exact bytes. Recovery
+directory-syncs before and after removal and proves the target is single-link;
+public append-only directories follow the same protocol, and any unrecognized
+alternate link still fails closed. An identical concurrent source-capture
+writer verifies and accepts the single-link winner.
 
 ## Telemetry and Treatment Records
 

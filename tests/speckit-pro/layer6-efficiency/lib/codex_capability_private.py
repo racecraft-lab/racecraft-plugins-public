@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from codex_capability_matrix import *
+from codex_capability_append_only import *
 
 def _private_directory_descriptor(path, expected_identity):
     nofollow = getattr(os, "O_NOFOLLOW", 0)
@@ -50,6 +51,7 @@ def _write_private_bytes_at(parent_descriptor, parent_path, filename, payload, *
             except FileExistsError:
                 continue
             temporary = candidate
+            _acquire_append_only_temporary_lock(descriptor, wait=False)
             break
         if descriptor is None or temporary is None:
             raise ValueError("private output temporary name allocation failed")
@@ -143,6 +145,7 @@ def _write_public_append_only_bytes(path, payload):
     if not stat.S_ISDIR(metadata.st_mode):
         raise ValueError("append-only publication parent must be a real directory")
     parent_identity = _stable_directory_identity(metadata)
+    _recover_append_only_directory(parent, parent_identity, require_content_addressed=False)
     if target.exists():
         _recover_append_only_target(target, payload, parent_identity)
         raise FileExistsError(f"append-only publication target already exists: {target}")
@@ -283,10 +286,16 @@ def materialize_source_capture(raw_root, repository_root, capture_bytes):
         _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
         if retained != capture_bytes: raise ValueError("content-addressed source capture bytes disagree")
     else:
-        _write_private_bytes(
-            target, capture_bytes, append_only=True,
-            expected_parent_identity=raw_identity,
-        )
+        try:
+            _write_private_bytes(
+                target, capture_bytes, append_only=True,
+                expected_parent_identity=raw_identity,
+            )
+        except FileExistsError:
+            _recover_append_only_target(target, capture_bytes, raw_identity)
+            _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
+            if retained != capture_bytes:
+                raise ValueError("concurrent source capture bytes disagree")
     validate_raw_evidence_root(raw, repository_root)
     _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
     if retained != capture_bytes:

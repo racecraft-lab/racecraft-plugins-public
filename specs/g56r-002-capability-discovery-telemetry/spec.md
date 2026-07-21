@@ -166,8 +166,11 @@
   Unreceipted claims remain non-governing but protect evidence only until the
   earlier of their declared deadline or 30 days after registration; deletion
   uses the latest governing or individually capped pending deadline. A
-  crash-retained reserved temporary link is removed only after exact
-  descriptor-bound inode and byte proof. Expired bytes are
+  crash-retained reserved temporary is removed only after its advisory lock
+  proves no writer remains: a single-link pre-publication file is discarded,
+  while a linked file additionally requires exact descriptor-bound target,
+  inode, and byte proof. Concurrent identical source captures accept the
+  verified single-link winner. Expired bytes are
   deleted while their digest and a deletion record remain. Live private-store
   operations fail closed on Windows until equivalent owner-only DACL validation
   exists. Repository tests never require raw-store access.
