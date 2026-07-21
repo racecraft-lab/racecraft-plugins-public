@@ -1674,6 +1674,62 @@ class CapabilityContractTests(unittest.TestCase):
                 pre_journal_cleanup["deleted_evidence_digests"],
                 retained_report["retained_evidence_digests"],
             )
+            rename_sync_failure_root = Path(tmp) / "rename-sync-failure-root"
+            shutil.copytree(raw_root, rename_sync_failure_root)
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            ), mock.patch.object(
+                capability_retention, "_sync_verified_quarantine",
+                side_effect=OSError("simulated quarantine rename fsync failure"),
+            ), self.assertRaisesRegex(ValueError, "could not be deleted safely"):
+                capabilities.reconcile_raw_evidence_retention(rename_sync_failure_root, ROOT, apply=True)
+            sync_failure_intents = [
+                (json.loads(path.read_text()), f"sha256:{path.stem}")
+                for path in (rename_sync_failure_root / capabilities.DELETION_INTENTS_DIR).iterdir()
+            ]
+            self.assertEqual(
+                sorted(item[0]["schema_version"] for item in sync_failure_intents),
+                ["raw-evidence-deletion-intent.v2"],
+            )
+            sync_failure_intent, sync_failure_digest = sync_failure_intents[0]
+            sync_failure_quarantine = rename_sync_failure_root / (
+                capability_retention._deletion_quarantine_filename(sync_failure_digest)
+            )
+            self.assertTrue(sync_failure_quarantine.is_file())
+            class SimulatedPostV3Termination(BaseException):
+                pass
+            retry_sync_calls = []
+            original_sync_quarantine = capability_retention._sync_verified_quarantine
+            original_store_staged = capability_retention._store_staged_recovery_intent
+            def track_retry_sync(*args: object, **kwargs: object) -> object:
+                retry_sync_calls.append(True)
+                return original_sync_quarantine(*args, **kwargs)
+            def terminate_after_v3(*args: object, **kwargs: object) -> None:
+                original_store_staged(*args, **kwargs)
+                raise SimulatedPostV3Termination
+            with mock.patch.object(
+                capability_retention, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
+            ), mock.patch.object(
+                capability_retention, "_sync_verified_quarantine", side_effect=track_retry_sync,
+            ), mock.patch.object(
+                capability_retention, "_store_staged_recovery_intent", side_effect=terminate_after_v3,
+            ), self.assertRaises(SimulatedPostV3Termination):
+                capabilities.reconcile_raw_evidence_retention(rename_sync_failure_root, ROOT, apply=True)
+            self.assertEqual(retry_sync_calls, [True])
+            post_v3_intents = [
+                json.loads(path.read_text())
+                for path in (rename_sync_failure_root / capabilities.DELETION_INTENTS_DIR).iterdir()
+            ]
+            self.assertEqual(
+                sorted(item["schema_version"] for item in post_v3_intents),
+                ["raw-evidence-deletion-intent.v2", "raw-evidence-deletion-intent.v3"],
+            )
+            self.assertTrue(sync_failure_quarantine.is_file())
+            self.assertFalse((rename_sync_failure_root / (
+                f"{sync_failure_intent['raw_evidence_digest'].removeprefix('sha256:')}.json"
+            )).exists())
             pre_unlink_error_root = Path(tmp) / "pre-unlink-error-root"
             shutil.copytree(raw_root, pre_unlink_error_root)
             failed_pre_unlink_filename = None
@@ -2314,7 +2370,7 @@ class TreatmentContractTests(unittest.TestCase):
             ("app_server", "discovery.models", "official_source_ledger_id", "OPENAI-DOC-999"),
             ("app_server", "discovery.models", "official_source_ledger_id", "OPENAI-DOC-001"),
             ("app_server", "assignment.model", "permitted_claims", ["effective_treatment"]),
-            ("app_server", "reroute.events", "condition", None),
+            ("app_server", "reroute.events", "condition", "event-only capture"),
             ("app_server", "terminal.acceptance", "permitted_claims", ["observed_value"]),
             ("interactive_picker", "parent.graph", "condition", None),
             ("cli", "route.supported_effective_route_id", "official_source_ledger_id", "OPENAI-DOC-006"),
@@ -2439,18 +2495,26 @@ class TreatmentContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "cannot retain a top-level claim"):
                     treatment.validate_treatment_bundle(self.rebound(rebind_treatment_owners(bundle)))
 
-    def test_conditional_reroute_event_profile_cannot_self_assert_complete_monitoring(self) -> None:
+    def test_complete_reroute_monitoring_makes_configured_proof_reachable(self) -> None:
         bundle = copy.deepcopy(self.bundle)
         profile = next(item for item in bundle["telemetry_profile"] if item["surface"] == "app_server" and item["field_path"] == "reroute.events")
         trace = bundle["treatment_traces"][0]
-        self.assertEqual(profile["classification"], "conditional")
-        self.assertEqual(profile["completeness_rule"], "condition_bound")
+        self.assertEqual(profile["classification"], "stable_native")
+        self.assertEqual(profile["completeness_rule"], "complete_capture")
         self.assertTrue(trace["configured_route_proof"]["reroute_monitoring_complete"])
         self.assertEqual(trace["service_reroute_events"], [])
+        observation = next(item for item in trace["observations"] if item["field_path"] == "reroute.events")
+        observation.update({
+            "observation_state": "observed_value", "value": [],
+            "evidence_ref": "fixture://trace/reroute-monitoring", "captured_at": "2026-07-17T04:01:00Z",
+        })
+        declare_treatment_result(
+            bundle, [], "proven", ["configured_route_proof_and_complete_reroute_monitoring"],
+        )
         validated = treatment.validate_treatment_bundle(self.rebound(bundle))
         trace = validated["treatment_traces"][0]
-        self.assertEqual(trace["treatment_disposition"], "unknown")
-        self.assertIn("effective_treatment_unknown", {item["failure_code"] for item in trace["treatment_failures"]})
+        self.assertEqual(trace["treatment_disposition"], "proven")
+        self.assertEqual(trace["disposition_reasons"], ["configured_route_proof_and_complete_reroute_monitoring"])
 
     def test_effective_model_and_effort_require_profiled_observation_authority(self) -> None:
         for field, value in (
@@ -2477,14 +2541,14 @@ class TreatmentContractTests(unittest.TestCase):
         validated = treatment.validate_treatment_bundle(self.rebound(fabricated))
         self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "hard_fail")
 
-    def test_manifest_and_predecessor_null_effort_remain_unknown(self) -> None:
+    def test_manifest_null_effort_remains_unknown_without_complete_monitoring(self) -> None:
         trace = self.bundle["treatment_traces"][0]
         route = treatment._canonical_routes(load_json(MANIFEST_PATH))[trace["assigned_route_id"]]
         self.assertIn("effort", route)
         self.assertIsNone(route["effort"])
         validated = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
         self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "unknown")
-        self.assertIn("effective_treatment_unknown", {item["failure_code"] for item in validated["treatment_traces"][0]["treatment_failures"]})
+        self.assertIsNone(validated["treatment_traces"][0]["supported_effective_effort"])
 
         arbitrary = copy.deepcopy(self.bundle)
         arbitrary["treatment_traces"][0]["requested_effort"] = "arbitrary-effort"
@@ -2550,6 +2614,34 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertEqual(trace["treatment_disposition"], "unknown")
         self.assertIsNone(trace["supported_effective_model"])
         self.assertIsNone(trace["supported_effective_effort"])
+
+    def test_observed_supported_route_makes_effective_evidence_reachable(self) -> None:
+        bundle = copy.deepcopy(self.bundle)
+        trace = bundle["treatment_traces"][0]
+        route_id = trace["assigned_route_id"]
+        trace["configured_route_proof"] = None
+        resolution = bundle["route_resolutions"][0]
+        resolution["supported_effective_route_id"] = route_id
+        observation = next(
+            item for item in trace["observations"]
+            if item["field_path"] == "route.supported_effective_route_id"
+        )
+        observation.update({
+            "observation_state": "observed_value", "value": route_id,
+            "evidence_ref": "fixture://trace/effective-route", "captured_at": "2026-07-17T04:01:00Z",
+        })
+        declare_treatment_result(
+            bundle, [], "proven", ["profile_supported_effective_treatment"],
+        )
+        rebind_treatment_owners(bundle)
+        canonical_routes = treatment._canonical_routes(load_json(MANIFEST_PATH))
+        canonical_routes[route_id]["effort"] = trace["requested_effort"]
+        with mock.patch.object(treatment, "_canonical_routes", return_value=canonical_routes):
+            validated = treatment.validate_treatment_bundle(
+                self.rebound(bundle),
+            )
+        self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "proven")
+        self.assertEqual(validated["treatment_traces"][0]["disposition_reasons"], ["profile_supported_effective_treatment"])
 
     def test_configuration_materialization_and_failure_taxonomy_are_derived(self) -> None:
         mismatch_cases = [
@@ -2721,7 +2813,7 @@ class TreatmentContractTests(unittest.TestCase):
             ("preferred different agent", different_agent_route, "preferred"),
             ("attempted different agent", different_agent_route, "attempted"),
             ("supported alternate same agent", same_agent_route, "supported"),
-            ("supported assigned route without model evidence", assigned_route, "supported"),
+            ("supported assigned route without route observation", assigned_route, "supported"),
         )
         for label, route_id, mutation in semantic_cases:
             with self.subTest(semantic_case=label):
@@ -2737,7 +2829,7 @@ class TreatmentContractTests(unittest.TestCase):
                 else:
                     resolution["supported_effective_route_id"] = route_id
                 rebind_treatment_owners(bundle)
-                expected = "different agent contract" if mutation != "supported" or route_id != assigned_route else "canonical effective model"
+                expected = "different agent contract" if mutation != "supported" or route_id != assigned_route else "declared treatment failures"
                 if mutation == "supported" and route_id != assigned_route:
                     expected = "must select the assigned route"
                 with self.assertRaisesRegex(ValueError, expected):
@@ -3349,7 +3441,6 @@ class TreatmentContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "cannot retain a top-level claim"):
                     treatment.validate_treatment_bundle(self.rebound(bundle))
         conditional_fields = {
-            "reroute.events": [],
             "parent.graph": copy.deepcopy(self.bundle["treatment_traces"][0]["parent_child_graph"]),
             "lifecycle.cancellation": copy.deepcopy(self.bundle["treatment_traces"][0]["cancellation"]),
         }
@@ -3363,11 +3454,6 @@ class TreatmentContractTests(unittest.TestCase):
                 })
                 with self.assertRaisesRegex(ValueError, "condition did not occur"):
                     treatment.validate_treatment_bundle(self.rebound(bundle))
-        occurred = make_treatment_reroute_case(copy.deepcopy(self.bundle), "synthetic_fixture")
-        observation = next(item for item in occurred["treatment_traces"][0]["observations"] if item["field_path"] == "reroute.events")
-        observation.update({"observation_state": "missing", "value": None, "evidence_ref": None, "captured_at": None})
-        with self.assertRaisesRegex(ValueError, "condition occurred without an observed value"):
-            treatment.validate_treatment_bundle(self.rebound(occurred))
 
     def test_terminal_lifecycle_invariants_are_schema_and_runtime_authority(self) -> None:
         cases = []

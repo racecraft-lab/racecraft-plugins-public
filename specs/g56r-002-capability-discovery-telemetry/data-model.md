@@ -292,6 +292,12 @@ predicate, completeness rule, permitted claims, prohibited claims, and
 observation-state rules. An omitted key is `undocumented`; classifications do
 not inherit across surfaces.
 
+For app-server traces, `reroute.events` is a `stable_native`,
+`complete_capture` field. A configured-route proof is authoritative only when
+the trace retains an observed event list, including an evidence-backed empty
+list when no reroute occurred; the proof's completeness boolean cannot establish
+that fact by itself.
+
 ### `ConfiguredRouteProof`
 
 Required fields: proof ID/digest, telemetry-profile approval entry, named agent,
@@ -385,6 +391,10 @@ Rules:
 
 - Exact treatment is proven only by supported observed effective treatment or
   approved configured-route proof plus complete reroute monitoring.
+- Supported effective treatment may be proven by an observed
+  `route.supported_effective_route_id` that binds a canonical route with a
+  non-null model and effort. It does not populate or claim the undocumented
+  `assignment.supported_effective_effort` field.
 - Every service reroute makes the requested route non-scorable.
 - Runtime UAT may continue only for an identifiable, prequalified destination
   for the same named agent. Unapproved, unknown, unidentifiable, different-agent,

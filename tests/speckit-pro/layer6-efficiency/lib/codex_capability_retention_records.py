@@ -121,6 +121,21 @@ def _deletion_quarantine_filename(initial_intent_digest):
     _need_digest(initial_intent_digest, "initial deletion intent digest")
     return f".g56r-002-delete-{initial_intent_digest.removeprefix('sha256:')}.json"
 
+def _sync_verified_quarantine(parent_descriptor, raw, expected_raw_identity, canonical_filename, quarantine_filename, expected_target_identity, descriptor):
+    os.fsync(parent_descriptor)
+    _assert_private_directory_current(raw, parent_descriptor, expected_raw_identity)
+    try: os.stat(canonical_filename, dir_fd=parent_descriptor, follow_symlinks=False); raise ValueError("raw evidence canonical target survived its quarantine transition")
+    except FileNotFoundError: pass
+    current, opened = os.stat(quarantine_filename, dir_fd=parent_descriptor, follow_symlinks=False), os.fstat(descriptor)
+    if (
+        current.st_nlink != 1
+        or _stable_file_content_identity(current) != _stable_file_content_identity(opened)
+        or any(identity != expected_target_identity for identity in (
+            _deletion_intent_file_identity(current), _deletion_intent_file_identity(opened)))
+    ):
+        raise ValueError("raw evidence quarantine transition changed its target")
+    return current
+
 def _validate_deletion_intent(record_digest, record):
     authority_keys = {"schema_version", "raw_evidence_digest", "retention_record_digests", "delete_after", "deletion_started_at"}
     initial_keys = authority_keys | {"target_file_identity"}

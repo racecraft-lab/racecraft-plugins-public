@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
-  "telemetry_profile_id": "sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb",
+  "telemetry_profile_id": "sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979",
   "telemetry_profile": [
     {
       "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
@@ -443,10 +443,10 @@
       "client_identity_id": "sha256:5a4532ddce5b4806ee681c6becac4541be13a2f9eb5af2ee2e618e4094dee285",
       "surface": "app_server",
       "field_path": "reroute.events",
-      "classification": "conditional",
+      "classification": "stable_native",
       "official_source_ledger_id": "OPENAI-DOC-006",
-      "condition": "model/rerouted is emitted for a service reroute",
-      "completeness_rule": "condition_bound",
+      "condition": null,
+      "completeness_rule": "complete_capture",
       "observation_state_rules": {
         "allowed_states": [
           "observed_value",
@@ -457,7 +457,7 @@
         "evidence_rule": "required_when_present"
       },
       "permitted_claims": [
-        "condition_bound_presence"
+        "observed_value"
       ],
       "prohibited_claims": [
         "configured_as_effective",

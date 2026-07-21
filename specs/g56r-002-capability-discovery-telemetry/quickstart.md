@@ -239,7 +239,10 @@ python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py valida
 
 The US2 validator checks the closed telemetry inventory, six-ID joins, typed
 null states, configured-route proof, resource/lifecycle fields, and separate
-resolver/service-reroute records. This offline repository command is supported
+resolver/service-reroute records. Its positive fixtures prove both authorized
+success paths: configured proof with complete observed reroute capture, and an
+observed supported route bound to a canonical non-null model/effort tuple. This
+offline repository command is supported
 on macOS, Linux, and Windows: it uses descriptor-relative traversal where
 available and verifies the final Windows file handle against the approved
 repository path. Operator-only raw-evidence commands remain POSIX-only. The

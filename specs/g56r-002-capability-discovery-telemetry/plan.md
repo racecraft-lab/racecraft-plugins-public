@@ -158,6 +158,10 @@ stop condition.
   Controlled environments and qualification evidence live in explicit owner
   registries; synthetic qualification records exercise replay but never
   authorize live continuation.
+- Keep both exact-treatment success paths executable: configured proof requires
+  evidence-backed complete reroute capture, while effective evidence requires
+  an observed supported route that binds a canonical non-null model/effort
+  tuple without populating undocumented effective-effort telemetry.
 - Replay committed fixtures twice offline and reject hash drift, undeclared
   fields, raw-store dependencies, inferred values, or nondeterminism.
 

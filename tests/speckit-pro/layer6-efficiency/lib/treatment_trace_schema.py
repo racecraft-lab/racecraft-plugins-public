@@ -109,7 +109,7 @@ AUTHORIZED_PROFILE_CLASSIFICATIONS = {
     **{("app_server", field): "stable_native" for field in {
         "discovery.models", "discovery.efforts", "discovery.capabilities", "parent.context",
         "resources.raw_token_vector", "resources.request_turn_count", "lifecycle.failed_abandoned_work",
-        "terminal.state", "terminal.outcome",
+        "terminal.state", "terminal.outcome", "reroute.events",
     }},
     **{("app_server", field): "experimental_native" for field in {
         "route.supported_effective_route_id", "treatment.loaded_skills_mcp_tools",
@@ -125,7 +125,7 @@ AUTHORIZED_PROFILE_CLASSIFICATIONS = {
         "treatment.controlled_overrides",
     }},
     **{("app_server", field): "conditional" for field in {
-        "assignment.supported_effective_model", "reroute.events", "parent.graph",
+        "assignment.supported_effective_model", "parent.graph",
         "lifecycle.validation", "lifecycle.cancellation",
     }},
     **{("app_server", field): "undocumented" for field in {
@@ -147,7 +147,6 @@ if any(
 AUTHORIZED_PROFILE_CONDITIONS = {key: None for key in TELEMETRY_INVENTORY}
 AUTHORIZED_PROFILE_CONDITIONS.update({
     ("app_server", "assignment.supported_effective_model"): "model/rerouted observes a destination model",
-    ("app_server", "reroute.events"): "model/rerouted is emitted for a service reroute",
     ("app_server", "parent.graph"): "parent and child identifiers are emitted for nested work",
     ("app_server", "lifecycle.validation"): "validation evidence is emitted when validation runs",
     ("app_server", "lifecycle.cancellation"): "cancellation evidence is emitted when cancellation is requested",
@@ -1370,9 +1369,9 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     if not events and supported_route is not None:
         if supported_route_id != resolution["assigned_route_id"]:
             raise ValueError("supported effective route must select the assigned route without a service reroute")
-        if row["supported_effective_model"] != supported_route["model"]:
+        if row["supported_effective_model"] not in {None, supported_route["model"]}:
             raise ValueError("supported effective route does not bind its canonical effective model")
-        if supported_route["effort"] is not None and row["supported_effective_effort"] != supported_route["effort"]:
+        if row["supported_effective_effort"] not in {None, supported_route["effort"]}:
             raise ValueError("supported effective route does not bind its canonical effective effort")
     if row["supported_effective_effort"] is not None and (
         supported_route is None or supported_route["effort"] is None
@@ -1445,7 +1444,10 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
                 raise ValueError(f"{field} claims an observation when its condition did not occur")
         mismatch = observed["observation_state"] == "observed_value" and not _same_json_value(observed["value"], expected, f"{field} observation")
         mismatch |= observed["observation_state"] == "explicit_null" and expected is not None
-        mismatch |= observed["observation_state"] == "missing" and expected is not None and entry["classification"] not in {"conditional", "undocumented"}
+        mismatch |= (
+            observed["observation_state"] == "missing" and expected is not None
+            and field != "reroute.events" and entry["classification"] not in {"conditional", "undocumented"}
+        )
         if mismatch: derived_codes.append("configuration_mismatch" if field in configuration_fields else observation_failure_codes.get(field, "effective_treatment_unknown"))
     if row["expected_skills_mcp_tools"] != row["loaded_skills_mcp_tools"]: derived_codes.append("skills_mcp_tools_mismatch")
     if row["parent_configuration"]["parent_execution_trace_id"] != row["parent_child_graph"]["parent_execution_trace_id"]: derived_codes.append("parent_configuration_mismatch")
@@ -1467,10 +1469,12 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
         "orphan_reroute_destination_assessment": "reroute_ambiguous",
     }
     if reroute_disposition == "hard_fail": derived_codes.extend(reason_codes[item] for item in reasons)
-    effective_observed = all(
-        path in observations and row[field] is not None and observations[path]["observation_state"] == "observed_value"
-        and _same_json_value(observations[path]["value"], row[field], f"{path} observation")
-        for field, path in (("supported_effective_model", "assignment.supported_effective_model"), ("supported_effective_effort", "assignment.supported_effective_effort"))
+    effective_route_observation = observations.get("route.supported_effective_route_id")
+    effective_observed = (
+        supported_route is not None and supported_route["effort"] is not None
+        and effective_route_observation is not None
+        and effective_route_observation["observation_state"] == "observed_value"
+        and _same_json_value(effective_route_observation["value"], supported_route_id, "effective route observation")
     )
     reroute_profile = profile_entry(profile, row["client_identity_id"], row["surface"], "reroute.events")
     monitoring_authoritative = (
@@ -1480,10 +1484,7 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
         and reroute_observation is not None and reroute_observation["observation_state"] == "observed_value"
     )
     proof_valid = proof is not None and not _proof_failure_codes(proof, row, profile) and monitoring_authoritative
-    hard_failure_derived = any(FAILURE_DISPOSITIONS.get(code) == "hard_fail" for code in derived_codes)
-    if not reroute_disposition and (
-        not proof_valid and not effective_observed or canonical_effort is None and not hard_failure_derived
-    ):
+    if not reroute_disposition and not proof_valid and not effective_observed:
         derived_codes.append("effective_treatment_unknown")
     derived_codes = list(dict.fromkeys(derived_codes))
     declared_by_code = {item["failure_code"]: item for item in validated_failures}

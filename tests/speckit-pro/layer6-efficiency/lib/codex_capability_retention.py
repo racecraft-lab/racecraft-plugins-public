@@ -33,7 +33,8 @@ def _delete_single_link_private_file(
         staged_record["quarantine_filename"] if staged_record is not None
         else _deletion_quarantine_filename(deletion_record["deletion_intent_digest"])
     )
-    expected_filename = quarantine_filename if quarantined else f"{expected_digest.removeprefix('sha256:')}.json"
+    canonical_filename = f"{expected_digest.removeprefix('sha256:')}.json"
+    expected_filename = quarantine_filename if quarantined else canonical_filename
     if filename != expected_filename:
         raise ValueError("raw evidence deletion target does not match its deletion phase")
     deletion_record_digest = digest(canonical_bytes(deletion_record) + b"\n")
@@ -44,7 +45,7 @@ def _delete_single_link_private_file(
     directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow | getattr(os, "O_DIRECTORY", 0)
     file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
     parent_descriptor = descriptor = deletion_directory_descriptor = None
-    verified_payload = None; deletion_proved = False; quarantine_durable = quarantined
+    verified_payload = None; deletion_proved = False; quarantine_durable = False
 
     def preserve_verified_payload_before_proof():
         if verified_payload is None: return
@@ -112,22 +113,15 @@ def _delete_single_link_private_file(
                 src_dir_fd=parent_descriptor, dst_dir_fd=parent_descriptor,
             )
             filename = quarantine_filename
-            os.fsync(parent_descriptor)
-            quarantined_pathname = os.stat(
-                filename, dir_fd=parent_descriptor, follow_symlinks=False,
-            )
-            if (
-                _descriptor_entry_exists(parent_descriptor, expected_filename)
-                or _stable_file_content_identity(quarantined_pathname)
-                != _stable_file_content_identity(before)
-                or quarantined_pathname.st_nlink != 1
-            ):
-                raise ValueError("raw evidence quarantine transition changed its target")
-            quarantine_durable = True
+        quarantined_pathname = _sync_verified_quarantine(
+            parent_descriptor, raw, expected_raw_identity, canonical_filename,
+            filename, expected_target_identity, descriptor,
+        )
+        quarantine_durable = True
         if staged_record is None:
             staged_record, staged_digest = _store_staged_recovery_intent(
                 raw, expected_raw_identity, repository_root, deletion_record,
-                quarantine_filename, os.fstat(descriptor),
+                quarantine_filename, quarantined_pathname,
             )
         _unlink_descriptor_relative(filename, parent_descriptor)
         after_unlink = os.fstat(descriptor)
