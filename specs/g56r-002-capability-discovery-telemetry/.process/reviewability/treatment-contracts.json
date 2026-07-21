@@ -8,10 +8,10 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 4674,
-  "actual_nonblank_noncomment_lines": 4253,
+  "actual_source_lines": 4673,
+  "actual_nonblank_noncomment_lines": 4251,
   "production_modules": 13,
-  "max_capability_module_source_lines": 395,
+  "max_capability_module_source_lines": 391,
   "primary_surface": "harness/adapters",
   "module_measurements": {
     "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 114, "nonblank_noncomment_lines": 105},
@@ -21,9 +21,9 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {"source_lines": 162, "nonblank_noncomment_lines": 149},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {"source_lines": 218, "nonblank_noncomment_lines": 201},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 350, "nonblank_noncomment_lines": 307},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 294, "nonblank_noncomment_lines": 253},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 297, "nonblank_noncomment_lines": 256},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {"source_lines": 15, "nonblank_noncomment_lines": 10},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 395, "nonblank_noncomment_lines": 376},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 391, "nonblank_noncomment_lines": 371},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 281, "nonblank_noncomment_lines": 250},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 213, "nonblank_noncomment_lines": 196},
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
@@ -97,11 +97,12 @@
     "private_trust_primitives_hidden": "pass",
     "independent_review": "pending_reaudit",
     "identity_bound_deletion_intent_resume": "pass",
-    "independent_review_chat_id": "re-review-pr-367-747B1B",
+    "pre_unlink_error_identity_preservation": "pass",
+    "public_append_only_temp_unlink_durability": "pass",
+    "independent_review_chat_id": "pr-367-rereview-B3E562",
     "independent_review_findings": [
-      "persisted deletion intent permanently blocked safe pre-unlink cleanup retries",
-      "publishable treatment evidence read arbitrary mapping values more than once",
-      "plan reviewability measurements were stale"
+      "a transient pre-unlink error replaced the intent-bound inode and blocked later cleanup",
+      "public append-only publication did not directory-fsync temporary-name removal"
     ]
   },
   "exception": {
