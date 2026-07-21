@@ -8,15 +8,15 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 4938,
-  "actual_nonblank_noncomment_lines": 4509,
+  "actual_source_lines": 4959,
+  "actual_nonblank_noncomment_lines": 4528,
   "production_modules": 13,
   "max_capability_module_source_lines": 385,
   "primary_surface": "harness/adapters",
   "module_measurements": {
     "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 114, "nonblank_noncomment_lines": 105},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {"source_lines": 139, "nonblank_noncomment_lines": 132},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {"source_lines": 241, "nonblank_noncomment_lines": 199},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {"source_lines": 262, "nonblank_noncomment_lines": 218},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {"source_lines": 379, "nonblank_noncomment_lines": 348},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {"source_lines": 244, "nonblank_noncomment_lines": 229},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {"source_lines": 218, "nonblank_noncomment_lines": 201},
@@ -118,11 +118,13 @@
     "semantic_retained_evidence_before_receipt": "pass",
     "descriptor_bound_public_append_only_publication": "pass",
     "descriptor_bound_record_directory_snapshot": "pass",
-    "independent_review_chat_id": "capability-remediation-r-9F1346",
+    "existing_publication_single_link_enforcement": "pass",
+    "capability_json_resource_bounds": "pass",
+    "capability_json_recursion_normalization": "pass",
+    "independent_review_chat_id": "pr-367-review-6D565E",
     "independent_review_findings": [
-      "retained unknown-observation and canary evidence was content-address checked but not semantically revalidated before receipt",
-      "public append-only publication used pathname-based temporary and target operations without descriptor binding",
-      "private record loading could mix directory snapshots across pathname enumeration and entry reopen"
+      "an existing matching hard-linked publication target could bypass the single-link invariant before receipt",
+      "deeply nested capability JSON could escape the fail-closed ValueError contract and lacked depth and node bounds"
     ]
   },
   "exception": {
