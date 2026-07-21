@@ -874,7 +874,7 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Review pending | 10 | 56/56 focused tests, standalone validation, docs-reference checks, and the 2821/2821 full suite pass after the latest three exact-head findings were remediated; exact-head re-audit pending |
+| 2 - Treatment contracts | Review pending | 10 | 57/57 focused tests, standalone validation, privacy, docs-reference, and 2821/2821 full-suite checks pass after the latest two exact-head findings were remediated; exact-head re-audit pending |
 | 3 - Synthetic replay | In Progress | 0 | T026-T030 exist on the next marker branch; restack and exact-head review follow US2 approval |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -1076,7 +1076,17 @@ For every task:
   32-MiB source-capture input before parsing or hashing. Focused 56/56,
   standalone treatment, docs-reference, and full 2821/2821 gates pass;
   exact-head re-audit remains pending.
-- Implementation checkpoint: `22aad882c836cf9d2d8a86bde34df154d5caede2`
+  The exact-head review (`review-pr-367-C52F62`) then found one P1 and one P2:
+  a crash before final-name linking could strand a single-link temporary and
+  wedge the evidence root, while concurrent identical source-capture writers
+  could propagate `FileExistsError`. Remediation at
+  `3c439b154669175226ec2ffed3f26731dcae373f` gives every reserved temporary an
+  advisory lock, removes abandoned pre-link files only after lock and
+  descriptor-relative identity proof, applies the same protocol to public
+  append-only directories, and accepts only a verified content-addressed winner.
+  Focused 57/57, standalone treatment, privacy 10/10, docs-reference, and full
+  2821/2821 checks pass; the exact-head re-audit remains pending.
+- Implementation checkpoint: `3c439b154669175226ec2ffed3f26731dcae373f`
 
 ## PR Marker Plan Evidence
 
@@ -1088,23 +1098,23 @@ For every task:
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:b40791e6f5028b4813b2fd59bee27e02b4c13412604ae04d6f8a8ea4774c1c34` |
-| Plan-declared scope | `sha256:1c9348f6e4d02e0eb3f66ab52d4902722c4e2ce9414fea45c36e2f2d97b9a1a0` |
-| Tasks | `sha256:02300f0fb2860829e7fe83e4b214c2d16d8321fee6612bc7097e6bccf5734568` |
-| Reviewability evidence | `sha256:128d97957e2f21f18c1c807914fa9b6545cd75c84e196285e9905212ead35d57` |
+| Feature spec | `sha256:0bbd979954897e669c6579d31cfc80995100e7b037c58f8f9f844a84e381892c` |
+| Plan-declared scope | `sha256:60a1b0f2cea34de0fbb176ca5d3e775730839082967a7b4f1d0fa5d03c37623f` |
+| Tasks | `sha256:d2d55fc31f3a8b560cd51c54d4e4cbd59d2984afc47b71e3b1fc21686ac2b4ac` |
+| Reviewability evidence | `sha256:082e1f4ec9aad898ccafeb68ce86b40eaf3549c72cf4d1c45fa17123f91dc534` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `22aad882c836cf9d2d8a86bde34df154d5caede2` | Exact-head re-audit required before restack |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `3c439b154669175226ec2ffed3f26731dcae373f` | Exact-head re-audit required before restack |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines under its historical typed exception; the current US2 marker is 5,128 /
-  4,687 across 13 modules against the aggregate 400-LOC boundary. Capability
-  modules are safely split with a 397-line maximum; only the treatment module
+  lines under its historical typed exception; the current US2 marker is 5,224 /
+  4,772 across 14 modules against the aggregate 400-LOC boundary. Capability
+  modules are safely split with a 388-line maximum; only the treatment module
   retains a typed size-only exception.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
