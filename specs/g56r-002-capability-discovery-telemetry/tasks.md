@@ -8,9 +8,9 @@ predeclared dispositions.
 
 **Reviewability**: The capability adapter triggered the 400-LOC boundary and is
 now safely subdivided behind its stable facade into 12 focused modules totaling
-2,789 source lines (2,515 nonblank, non-comment); every capability module is at
-or below 391 source lines. The treatment validator remains 1,884 source lines
-(1,736 nonblank, non-comment), for 4,673 source lines (4,251 nonblank,
+2,859 source lines (2,581 nonblank, non-comment); every capability module is at
+or below 382 source lines. The treatment validator remains 1,884 source lines
+(1,736 nonblank, non-comment), for 4,743 source lines (4,317 nonblank,
 non-comment) across 13 production modules in the current US2 marker. T001-T015
 no longer relies on a `no_safe_boundary` exception. The treatment-only size
 exception remains scoped to T016-T025, while T026-T039 remains a separate

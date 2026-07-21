@@ -304,13 +304,17 @@ still-open descriptor that the link count is zero and the content digest is
 unchanged, and directory-fsyncs the raw store. Only after those checks does it
 append and directory-fsync the immutable v2 completion proof under
 `deletion-records/`. The proof retains the raw digest, complete retention record
-history, governing deadline, deletion time, and proof method. Repeated cleanup
-is idempotent. Every raw file must have exactly one hard link. Append-only writes
+history, governing deadline, deletion time, and proof method. If completion
+persistence fails after unlink was proved, cleanup restores the verified bytes
+and appends an immutable v3 recovery-intent successor that binds the prior
+intent, replacement identity, and restoration proof. Only the unique terminal
+intent in that closed, unforked chain may resume cleanup. Repeated cleanup is
+idempotent. Every raw file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal;
 cleanup fails closed if a power-loss artifact or any alternate hard link still
 reaches governed bytes. A retry may resume only when the canonical target still
-has the exact intent-bound identity, which proves interruption happened before
-unlink; a missing or restored/replaced target remains blocked. Registration and
+has the exact terminal intent-bound identity. A missing or arbitrarily
+restored/replaced target remains blocked. Registration and
 cleanup serialize through the persistent
 mode-`0600` `.retention-lock` advisory-lock file. A process crash releases the
 kernel lock automatically, while another live operation fails closed. Do not

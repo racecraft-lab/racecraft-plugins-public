@@ -18,16 +18,6 @@ def _descriptor_entry_exists(parent_descriptor, filename):
         return False
 
 
-def _deletion_intent_file_identity(metadata):
-    return {
-        "device": metadata.st_dev,
-        "inode": metadata.st_ino,
-        "size": metadata.st_size,
-        "mtime_ns": metadata.st_mtime_ns,
-        "mode": stat.S_IMODE(metadata.st_mode),
-    }
-
-
 def _delete_single_link_private_file(
     target, raw, expected_digest, expected_raw_identity, *,
     deletion_record, deletion_directory, deletion_directory_identity, repository_root,
@@ -138,6 +128,10 @@ def _delete_single_link_private_file(
             parent_descriptor, raw, filename, verified_payload, append_only=True,
             expected_parent_identity=expected_raw_identity,
         )
+        if deletion_proved:
+            _store_recovery_deletion_intent(
+                raw, expected_raw_identity, repository_root, deletion_record, raw / filename,
+            )
 
     try:
         deletion_directory_descriptor = _private_directory_descriptor(
@@ -273,11 +267,7 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
     retention_by_evidence = {}
     for record, record_digest in retention_records:
         retention_by_evidence.setdefault(record["raw_evidence_digest"], []).append((record, record_digest))
-    intent_by_evidence = {}
-    for record, record_digest in deletion_intents:
-        if record["raw_evidence_digest"] in intent_by_evidence:
-            raise ValueError("raw evidence digest has multiple deletion intents")
-        intent_by_evidence[record["raw_evidence_digest"]] = (record, record_digest)
+    intent_by_evidence = _terminal_deletion_intents(deletion_intents)
     deletion_by_evidence = {}
     for record, record_digest in deletion_records:
         if record["raw_evidence_digest"] in deletion_by_evidence:
@@ -356,6 +346,7 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
             intent_digest = _store_private_record(
                 intent_directory, intent_record, repository_root, intent_directory_identity,
             )
+            deletion_intents.append((intent_record, intent_digest))
             intent_by_evidence[evidence_digest] = (intent_record, intent_digest)
         else:
             intent_record, intent_digest = intent
@@ -384,7 +375,7 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
         "retention_record_digests": sorted(record_digest for _, record_digest in retention_records),
         "pending_retention_record_digests": pending_record_digests,
         "publication_receipt_digests": sorted(record_digest for _, record_digest in publication_receipts),
-        "deletion_intent_digests": sorted(record_digest for _, record_digest in intent_by_evidence.values()),
+        "deletion_intent_digests": sorted(record_digest for _, record_digest in deletion_intents),
         "deletion_record_digests": sorted(deletion_digests),
     }
 

@@ -1501,11 +1501,49 @@ class CapabilityContractTests(unittest.TestCase):
                 (write_failure_root / f"{item.removeprefix('sha256:')}.json").is_file()
                 for item in retained_report["retained_evidence_digests"]
             ))
+            write_failure_intents = [
+                (json.loads(path.read_text()), f"sha256:{path.stem}")
+                for path in (write_failure_root / capabilities.DELETION_INTENTS_DIR).iterdir()
+            ]
+            initial_intent, initial_intent_digest = next(
+                item for item in write_failure_intents
+                if item[0]["schema_version"] == "raw-evidence-deletion-intent.v2"
+            )
+            recovery_intent, recovery_intent_digest = next(
+                item for item in write_failure_intents
+                if item[0]["schema_version"] == "raw-evidence-deletion-intent.v3"
+            )
+            self.assertEqual(recovery_intent["predecessor_deletion_intent_digest"], initial_intent_digest)
+            self.assertEqual(recovery_intent["recovery_proof"], "verified-post-unlink-restoration-v1")
+            recovered_target = write_failure_root / (
+                f"{recovery_intent['raw_evidence_digest'].removeprefix('sha256:')}.json"
+            )
+            self.assertEqual(
+                capability_retention._deletion_intent_file_identity(recovered_target.stat()),
+                recovery_intent["target_file_identity"],
+            )
+            forked_recovery = copy.deepcopy(recovery_intent)
+            forked_recovery["deletion_started_at"] = "2026-08-15T00:00:01Z"
+            forked_recovery_digest = capabilities.digest(
+                capabilities.canonical_bytes(forked_recovery) + b"\n",
+            )
+            with self.assertRaisesRegex(ValueError, "missing or forked"):
+                capability_retention_records._terminal_deletion_intents([
+                    (initial_intent, initial_intent_digest),
+                    (recovery_intent, recovery_intent_digest),
+                    (forked_recovery, forked_recovery_digest),
+                ])
             with mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), self.assertRaisesRegex(ValueError, "target identity changed"):
-                capabilities.reconcile_raw_evidence_retention(write_failure_root, ROOT, apply=True)
+            ):
+                write_failure_cleanup = capabilities.reconcile_raw_evidence_retention(
+                    write_failure_root, ROOT, apply=True,
+                )
+            self.assertEqual(
+                write_failure_cleanup["deleted_evidence_digests"],
+                retained_report["retained_evidence_digests"],
+            )
             pre_unlink_error_root = Path(tmp) / "pre-unlink-error-root"
             shutil.copytree(raw_root, pre_unlink_error_root)
             failed_pre_unlink_filename = None

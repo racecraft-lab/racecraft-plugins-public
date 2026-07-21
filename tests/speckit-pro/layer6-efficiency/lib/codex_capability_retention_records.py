@@ -109,10 +109,25 @@ def _validate_deletion_record(record_digest, record):
     return record
 
 
+def _deletion_intent_file_identity(metadata):
+    return {
+        "device": metadata.st_dev,
+        "inode": metadata.st_ino,
+        "size": metadata.st_size,
+        "mtime_ns": metadata.st_mtime_ns,
+        "mode": stat.S_IMODE(metadata.st_mode),
+    }
+
+
 def _validate_deletion_intent(record_digest, record):
     keys = {"schema_version", "raw_evidence_digest", "retention_record_digests", "target_file_identity", "delete_after", "deletion_started_at"}
-    if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-deletion-intent.v2":
-        raise ValueError("raw evidence deletion intent must use the closed v2 shape")
+    recovery_keys = keys | {"predecessor_deletion_intent_digest", "recovery_proof"}
+    if not isinstance(record, dict) or (
+        record.get("schema_version") == "raw-evidence-deletion-intent.v2" and set(record) != keys
+        or record.get("schema_version") == "raw-evidence-deletion-intent.v3" and set(record) != recovery_keys
+        or record.get("schema_version") not in {"raw-evidence-deletion-intent.v2", "raw-evidence-deletion-intent.v3"}
+    ):
+        raise ValueError("raw evidence deletion intent must use the closed v2 or v3 shape")
     _need_digest(record_digest, "deletion intent digest"); _need_digest(record["raw_evidence_digest"], "raw_evidence_digest")
     refs = record["retention_record_digests"]
     if not isinstance(refs, list) or not refs or refs != sorted(set(refs)):
@@ -133,7 +148,71 @@ def _validate_deletion_intent(record_digest, record):
     deadline = _parsed_timestamp(record["delete_after"], "deletion intent deadline")
     if _parsed_timestamp(record["deletion_started_at"], "deletion intent timestamp") < deadline:
         raise ValueError("raw evidence deletion intent precedes its retention deadline")
+    if record["schema_version"] == "raw-evidence-deletion-intent.v3":
+        _need_digest(record["predecessor_deletion_intent_digest"], "predecessor_deletion_intent_digest")
+        if record["recovery_proof"] != "verified-post-unlink-restoration-v1":
+            raise ValueError("raw evidence recovery intent requires verified restoration proof")
     return record
+
+
+def _terminal_deletion_intents(deletion_intents):
+    grouped = {}
+    for record, record_digest in deletion_intents:
+        grouped.setdefault(record["raw_evidence_digest"], []).append((record, record_digest))
+    terminals = {}
+    for evidence_digest, records in grouped.items():
+        by_digest = {record_digest: record for record, record_digest in records}
+        roots = [record_digest for record, record_digest in records if record["schema_version"] == "raw-evidence-deletion-intent.v2"]
+        if len(roots) != 1:
+            raise ValueError("raw evidence deletion intent chain requires one initial intent")
+        successors = {}
+        for record, record_digest in records:
+            if record["schema_version"] != "raw-evidence-deletion-intent.v3":
+                continue
+            predecessor = record["predecessor_deletion_intent_digest"]
+            prior = by_digest.get(predecessor)
+            if prior is None or predecessor in successors:
+                raise ValueError("raw evidence deletion intent recovery chain is missing or forked")
+            if (
+                record["retention_record_digests"] != prior["retention_record_digests"]
+                or record["delete_after"] != prior["delete_after"]
+                or _parsed_timestamp(record["deletion_started_at"], "recovery intent timestamp")
+                < _parsed_timestamp(prior["deletion_started_at"], "predecessor intent timestamp")
+            ):
+                raise ValueError("raw evidence recovery intent changes its governing authority")
+            successors[predecessor] = record_digest
+        current, visited = roots[0], set()
+        while current not in visited:
+            visited.add(current)
+            if current not in successors:
+                break
+            current = successors[current]
+        if visited != set(by_digest):
+            raise ValueError("raw evidence deletion intent recovery chain is disconnected or cyclic")
+        terminals[evidence_digest] = (by_digest[current], current)
+    return terminals
+
+
+def _store_recovery_deletion_intent(raw, raw_identity, repository_root, deletion_record, target):
+    resolved, restored = read_content_addressed_private_file(target, repository_root, "restored raw evidence")
+    metadata = os.stat(resolved, follow_symlinks=False)
+    if digest(restored) != deletion_record["raw_evidence_digest"] or metadata.st_nlink != 1:
+        raise ValueError("restored raw evidence does not preserve its deletion authority")
+    recovery = {
+        "schema_version": "raw-evidence-deletion-intent.v3",
+        "raw_evidence_digest": deletion_record["raw_evidence_digest"],
+        "retention_record_digests": deletion_record["retention_record_digests"],
+        "target_file_identity": _deletion_intent_file_identity(metadata),
+        "delete_after": deletion_record["delete_after"],
+        "deletion_started_at": deletion_record["deleted_at"],
+        "predecessor_deletion_intent_digest": deletion_record["deletion_intent_digest"],
+        "recovery_proof": "verified-post-unlink-restoration-v1",
+    }
+    directory, directory_identity = _private_record_directory(raw, DELETION_INTENTS_DIR, raw_identity)
+    recovery_digest = _store_private_record(directory, recovery, repository_root, directory_identity)
+    if _deletion_intent_file_identity(os.stat(resolved, follow_symlinks=False)) != recovery["target_file_identity"]:
+        raise ValueError("restored raw evidence changed while its recovery intent was stored")
+    return recovery_digest
 
 
 def _validate_publication_receipt(record_digest, record):

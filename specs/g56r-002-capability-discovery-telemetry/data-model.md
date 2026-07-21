@@ -256,8 +256,13 @@ retention-record set after the output bytes exist. Unreceipted records are
 reported as pending and do not participate in the effective deletion deadline.
 Deletion intents bind the original private file identity. An interrupted
 cleanup resumes only while that exact canonical file remains reachable; a
-missing or identity-changed target cannot prove pre-unlink interruption and
-remains fail-closed without a completion record.
+missing or arbitrarily identity-changed target cannot prove pre-unlink
+interruption and remains fail-closed without a completion record. When cleanup
+has already proved unlink completion but cannot persist the completion record,
+it may restore the verified bytes and append an immutable recovery-intent
+successor that binds the prior intent, exact replacement identity, and verified
+post-unlink restoration proof. Only the unique terminal intent in that closed,
+unforked chain can authorize the next retry.
 
 ## Telemetry and Treatment Records
 
