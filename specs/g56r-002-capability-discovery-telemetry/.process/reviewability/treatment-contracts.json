@@ -8,8 +8,8 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 4786,
-  "actual_nonblank_noncomment_lines": 4365,
+  "actual_source_lines": 4782,
+  "actual_nonblank_noncomment_lines": 4361,
   "production_modules": 13,
   "max_capability_module_source_lines": 395,
   "primary_surface": "harness/adapters",
@@ -23,7 +23,7 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 350, "nonblank_noncomment_lines": 307},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 297, "nonblank_noncomment_lines": 256},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {"source_lines": 15, "nonblank_noncomment_lines": 10},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 389, "nonblank_noncomment_lines": 374},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 385, "nonblank_noncomment_lines": 370},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 395, "nonblank_noncomment_lines": 360},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 213, "nonblank_noncomment_lines": 196},
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
@@ -108,13 +108,15 @@
     "identity_bound_quarantine_before_unlink": "pass",
     "pre_persistence_quarantine_resume": "pass",
     "post_persistence_quarantine_resume": "pass",
-    "interrupted_completion_resume": "pass",
-    "post_unlink_completion_resume": "pass",
+    "interrupted_completion_without_proof_fail_closed": "pass",
+    "post_unlink_without_completion_fail_closed": "pass",
+    "post_unlink_hard_link_crash_fail_closed": "pass",
+    "retry_completion_actual_time": "pass",
     "current_treatment_evidence_narrative": "pass",
-    "independent_review_chat_id": "pr-367-rereview-112186",
+    "independent_review_chat_id": "review-treatment-contrac-F02243",
     "independent_review_findings": [
-      "resumed quarantine could persist v3 before directory-syncing and revalidating the rename",
-      "configured-proof and effective-evidence proven dispositions were unreachable under the authorized profile"
+      "post-unlink v3 recovery could falsely certify deletion when an external hard link retained evidence",
+      "resumed deletion records backdated the actual retry unlink"
     ]
   },
   "exception": {

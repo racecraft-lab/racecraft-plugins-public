@@ -901,7 +901,7 @@ For every task:
 - Treatment contract: `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`
 - Treatment evidence set: `sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f`
 - Superseded marker checkpoint: `ce64616342ab977fc5bbaa675b8b9ca7ed192108`
-- Reviewability: aggregate size-only `block` at 4,786 source / 4,365
+- Reviewability: aggregate size-only `block` at 4,782 source / 4,361
   nonblank, non-comment lines across 13 production modules. The stable
   capability facade and 11 focused internal modules total 2,901 / 2,628 with
   a 395-line maximum; capability code no longer uses a `no_safe_boundary`
@@ -1026,7 +1026,16 @@ For every task:
   evidence without claiming undocumented effort telemetry. Focused 54/54,
   standalone treatment, docs-reference, and full 2821/2821 gates pass;
   exact-head re-audit remains pending.
-- Implementation checkpoint: `e041319053e1a650d92953869a9ecec5c15f8879`
+  The next exact-head review (`review-treatment-contrac-F02243`) found one P0
+  and one P1: a v3 retry could falsely certify deletion after an interrupted
+  unlink while an external hard link retained the evidence, and the resulting
+  completion record backdated `deleted_at` to the original attempt. Remediation
+  at `aef759559688ecf53ef74de0fbbfd000b1de6871` now resumes v3 only while the
+  exact bound quarantine exists, treats a missing quarantine without durable
+  completion proof as indeterminate, and records the actual successful retry
+  time. Focused 54/54, standalone treatment, docs-reference, and full 2821/2821
+  gates pass; exact-head re-audit remains pending.
+- Implementation checkpoint: `aef759559688ecf53ef74de0fbbfd000b1de6871`
 
 ## PR Marker Plan Evidence
 
@@ -1039,21 +1048,21 @@ For every task:
 | Fingerprint input | SHA-256 |
 |---|---|
 | Feature spec | `sha256:ab005c9cf824271500e21576c99b8888e5692263cf89bfbf93377ae3ee0f1246` |
-| Plan-declared scope | `sha256:a4d8887f5535c1927c31f37f78c964788ae31adbb422ba2d330f0ce20c3f409f` |
+| Plan-declared scope | `sha256:c1158b4333be5e6aa5a5618ce630bda0ca775755bb82c1cda6caf0a46ee59a53` |
 | Tasks | `sha256:3f4cfff053dd11d658c992d77239d8f8b6b3a825d1e631d90ebeeb400a207261` |
-| Reviewability evidence | `sha256:1ef8f530442850777852cc255cf37c1c43bdee23f06d910fced4838171ed8655` |
+| Reviewability evidence | `sha256:d9165d08cb406f502ffd2a9627fd54e3e6ee3d6c38330b66fa2d7768f1fd03ce` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `e041319053e1a650d92953869a9ecec5c15f8879` | Exact-head re-audit required before restack |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `aef759559688ecf53ef74de0fbbfd000b1de6871` | Exact-head re-audit required before restack |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines under its historical typed exception; the current US2 marker is 4,786 /
-  4,365 across 13 modules against the aggregate 400-LOC boundary. Capability
+  lines under its historical typed exception; the current US2 marker is 4,782 /
+  4,361 across 13 modules against the aggregate 400-LOC boundary. Capability
   modules are safely split with a 395-line maximum; only the treatment module
   retains a typed size-only exception.
 - Final `marker_split`: Pending.
