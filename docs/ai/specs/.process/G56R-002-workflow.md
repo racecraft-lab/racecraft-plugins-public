@@ -1212,8 +1212,19 @@ For every task:
   before retention mutation. Focused 59/59, naming-layout 9/9, privacy 10/10,
   docs-reference, and full 2824/2824 gates pass; exact-head re-audit remains
   pending.
-- Implementation checkpoint: `fd9a557a01cf1a85409266e18ab339383b8f9b44`
-- Superseded checkpoint: `57411f1f275728d757549226fcf10d003938b35b`
+- Exact-head publication re-audit `untitled-chat-2B7305` found one remaining P1:
+  the static output-containment check was not held under a descriptor-bound
+  component walk, permitting an intermediate-symlink race. Remediation at
+  `6a52a365a09ab705cc33333460478fa4bff78b62` canonicalizes the destination,
+  opens every output-parent component with descriptor-relative `O_NOFOLLOW`,
+  rejects the raw-root inode at every level, and retains one parent descriptor
+  plus directory lock across recovery, retention, publication, and receipt
+  verification. An adversarial alias swap proves the operation cannot be
+  redirected into raw evidence. Focused 59/59, naming-layout 9/9, privacy
+  10/10, docs-reference, and full 2824/2824 gates pass; exact-head re-audit
+  remains pending.
+- Implementation checkpoint: `6a52a365a09ab705cc33333460478fa4bff78b62`
+- Superseded checkpoint: `fd9a557a01cf1a85409266e18ab339383b8f9b44`
 
 ## PR Marker Plan Evidence
 
@@ -1228,20 +1239,20 @@ For every task:
 | Feature spec | `sha256:708dfaabb460b6efd976a27d159af9145844b5a288f2d9455118bc77ac57b882` |
 | Plan-declared scope | `sha256:b84b5f492ea37f9389e2b6ec1cf123193634b3a374f0a2b09cabe6a66423269d` |
 | Tasks | `sha256:2f1377aa9852e56285dba0d0960017e196598e060a1cce1b24ea9695d70763d2` |
-| Reviewability evidence | `sha256:df9a1bec1c5da0b37027812e046e0286a6ffc6b8138cc355931c910773ae6a0e` |
+| Reviewability evidence | `sha256:bc1c4e2398eb4b91352bf88ac30dd6b3d846da68b35d432bdee134fa431029cf` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `fd9a557a01cf1a85409266e18ab339383b8f9b44` | Exact-head re-audit required before stack advancement |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `6a52a365a09ab705cc33333460478fa4bff78b62` | Exact-head re-audit required before stack advancement |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines under its historical typed exception; the current US2 marker is 5,699 /
-  5,190 across 17 modules against the aggregate 400-LOC boundary. Capability
-  modules are safely split with a 384-line maximum; only the treatment module
+  lines under its historical typed exception; the current US2 marker is 5,817 /
+  5,304 across 17 modules against the aggregate 400-LOC boundary. Capability
+  modules are safely split with a 397-line maximum; only the treatment module
   retains a typed size-only exception.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
