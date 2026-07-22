@@ -105,18 +105,23 @@ class _VisibleText(HTMLParser):
     }
 
     def __init__(self):
-        super().__init__(); self.parts, self.hidden_stack, self.invalid_hidden_markup = [], [], False
+        super().__init__()
+        self.parts, self.hidden_stack = [], []
+        self.invalid_hidden_markup = self.unresolved_visibility = False
 
     def handle_starttag(self, tag, attrs):
         attributes = {name.casefold(): (value or "") for name, value in attrs}
-        style = "".join(attributes.get("style", "").casefold().split())
         hidden = (
             tag in self._ALWAYS_HIDDEN
             or "hidden" in attributes
             or attributes.get("aria-hidden", "").casefold() == "true"
-            or any(declaration.startswith("display:none") for declaration in style.split(";"))
-            or any(declaration.startswith("visibility:hidden") for declaration in style.split(";"))
         )
+        unresolved_css = (
+            tag == "style"
+            or tag == "link" and "stylesheet" in attributes.get("rel", "").casefold().split()
+            or any(name in attributes for name in ("class", "id", "style"))
+        )
+        self.unresolved_visibility = self.unresolved_visibility or unresolved_css
         if tag not in self._VOID_TAGS and (self.hidden_stack or hidden):
             self.hidden_stack.append(tag)
 
@@ -148,6 +153,8 @@ def _visible_text(value):
     parser.close()
     if parser.invalid_hidden_markup or parser.hidden_stack:
         raise ValueError("retrieved body contains malformed hidden markup")
+    if parser.unresolved_visibility:
+        raise ValueError("retrieved body visibility cannot be resolved safely")
     return " ".join(" ".join(parser.parts).split())
 
 

@@ -158,6 +158,12 @@
   joins use deterministic fixture-local pseudonyms generated only at explicitly
   declared schema field paths; caller-supplied `fixture-*` values never create a
   trust exception. Only schema-allowlisted fields may enter a committed fixture.
+- **Q: How is source-body visibility established without a browser renderer?**
+  **A:** Bounded extracts may use normalized plain text or HTML whose visibility
+  is fully decidable from intrinsic markup. Explicit hidden attributes are
+  excluded. Stylesheets, class/id selectors, and all inline CSS are unresolved
+  and make the capture fail closed; the adapter never interprets selected CSS
+  declarations as a substitute for a rendering engine.
 - **Q: Where and how long is raw evidence retained?** **A:** `raw_evidence_root`
   is a required content-addressed location outside the repository. Directories
   are operator-only mode `0700`; files are mode `0600` and have exactly one hard

@@ -44,7 +44,11 @@ This step requires no network, Codex client, or raw evidence store.
 Capture the 22 current official pages outside the repository first. The capture
 JSON must contain the exact requested/canonical locator, RFC3339 UTC retrieval
 time, status, invalidated claim IDs, base64-encoded retrieved UTF-8 body, and
-content-addressed bounded extracts for every source. Then run the adapter's
+content-addressed bounded extracts for every source. Use normalized plain text
+or HTML whose visibility is intrinsic to the captured markup. The adapter
+rejects stylesheet-, class/id-, or inline-CSS-dependent visibility rather than
+guessing that text is visible. Any inline CSS is unresolved. Then run the
+adapter's
 offline normalization and authority check:
 
 `CAPTURE_SHA256` is the lowercase SHA-256 of the complete capture file bytes.

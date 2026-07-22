@@ -128,7 +128,9 @@ stop condition.
   through an exact supported-name export list; private trust primitives are not
   re-exported. `codex_capability_cli.py` owns command dispatch.
 - `codex_capability_contract.py` owns closed identifiers, bounds, canonical
-  JSON/SHA-256, source-ledger validation, and executable contract checks.
+  JSON/SHA-256, source-ledger validation, executable contract checks, and
+  fail-closed visible-text extraction that rejects unresolved stylesheet,
+  class/id, or inline-CSS visibility.
 - `codex_capability_sources.py` owns current source refresh, claim-scoped
   invalidation, and admission without modifying historical `OSL-*` rows.
 - `codex_capability_observations.py` owns identity-bound surface collection,

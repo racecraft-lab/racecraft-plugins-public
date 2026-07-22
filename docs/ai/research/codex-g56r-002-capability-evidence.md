@@ -51,6 +51,10 @@ the current manifest. The raw-body capture and normalized refresh remain
 outside Git in an operator-only directory with mode `0700` and files with mode
 `0600`. The normalized refresh keeps the retrieved body bytes long enough for
 freeze-time revalidation; the published freeze strips them.
+HTML visibility must be decidable from intrinsic markup: explicit hidden states
+are excluded, while stylesheets, class/id selectors, and all inline CSS
+make the capture fail closed instead of letting potentially concealed text
+support a claim. The adapter does not interpret individual CSS declarations.
 The aggregate capture is stored as the exact-byte content-addressed object
 `sha256:26b4bc034cac55e149b1b0b5c7648531be2f84d46385160f3c6c30ac582df70a`;
 the refresh command rejects a filename that does not match those bytes, copies

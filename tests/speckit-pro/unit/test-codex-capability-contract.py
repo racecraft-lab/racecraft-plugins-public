@@ -805,10 +805,6 @@ class CapabilityContractTests(unittest.TestCase):
         for hidden_markup in (
             '<div hidden>{extract}</div>',
             '<div aria-hidden="true">{extract}</div>',
-            '<div style="display: none">{extract}</div>',
-            '<div style="display: none !important">{extract}</div>',
-            '<div style="visibility:hidden">{extract}</div>',
-            '<div style="visibility: hidden !important">{extract}</div>',
         ):
             hidden_only = copy.deepcopy(captured)
             hidden_body = hidden_markup.format(
@@ -817,6 +813,25 @@ class CapabilityContractTests(unittest.TestCase):
             hidden_only[0]["retrieved_body_b64"] = base64.b64encode(hidden_body).decode()
             with self.subTest(hidden_markup=hidden_markup), self.assertRaisesRegex(ValueError, "bounded extract"):
                 capabilities.normalize_source_refreshes(self.manifest, hidden_only)
+        for unresolved_markup in (
+            '<style>.concealed {{ display: none }}</style><div class="concealed">{extract}</div>',
+            '<link rel="stylesheet" href="styles.css"><div>{extract}</div>',
+            '<div class="unresolved">{extract}</div>',
+            '<div id="unresolved">{extract}</div>',
+            '<div style="color:red">{extract}</div>',
+            '<div style="display:none">{extract}</div>',
+            '<div style="visibility:hidden">{extract}</div>',
+            '<div style="opacity:0">{extract}</div>',
+        ):
+            unresolved = copy.deepcopy(captured)
+            unresolved_body = unresolved_markup.format(
+                extract=unresolved[0]["bounded_extracts"][0]["text"],
+            ).encode()
+            unresolved[0]["retrieved_body_b64"] = base64.b64encode(unresolved_body).decode()
+            with self.subTest(unresolved_markup=unresolved_markup), self.assertRaisesRegex(
+                ValueError, "visibility cannot be resolved safely",
+            ):
+                capabilities.normalize_source_refreshes(self.manifest, unresolved)
         malformed_hidden = copy.deepcopy(captured)
         hidden_body = f"<template></head>{malformed_hidden[0]['bounded_extracts'][0]['text']}</template>".encode()
         malformed_hidden[0]["retrieved_body_b64"] = base64.b64encode(hidden_body).decode()

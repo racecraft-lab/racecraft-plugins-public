@@ -59,7 +59,10 @@ join or disposition is evaluated.
 Invariant: an adverse refresh invalidates only bound current claims/routes.
 Historical `OSL-*` evidence is never copied into this record as current. The
 private normalized refresh additionally retains `retrieved_body_b64` so the
-adapter can recheck the body and visible-text extracts. The published
+adapter can recheck the body and visible-text extracts. Without a browser
+renderer, accepted HTML must have visibility fully decidable from intrinsic
+markup: explicit hidden states are excluded, while stylesheets, class/id
+selectors, and all inline CSS are rejected as unresolved. The published
 `OfficialSourceRefresh` strips that field but retains the shared aggregate
 capture digest. Extract normalization is the closed
 `unicode_text_whitespace_collapsed_utf8` contract. Multi-claim sources use the
