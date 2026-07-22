@@ -6069,15 +6069,15 @@ class TreatmentReplayTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "declared treatment disposition"):
                     treatment.validate_treatment_bundle(bundle)
 
-                with tempfile.NamedTemporaryFile(
-                    dir=TREATMENT_FIXTURE_PATH.parent, suffix=".json",
-                ) as forged_fixture:
-                    forged_fixture.write(treatment.canonical_fixture_bytes(bundle))
-                    forged_fixture.flush()
+                with tempfile.TemporaryDirectory(
+                    dir=TREATMENT_FIXTURE_PATH.parent,
+                ) as fixture_directory:
+                    forged_fixture = Path(fixture_directory) / f"forged-{field}.json"
+                    forged_fixture.write_bytes(treatment.canonical_fixture_bytes(bundle))
                     completed = subprocess.run(
                         [
                             sys.executable, str(TREATMENT_MODULE_PATH), "validate",
-                            "--fixture", forged_fixture.name,
+                            "--fixture", str(forged_fixture),
                         ],
                         cwd=ROOT,
                         check=False,
