@@ -8,8 +8,8 @@
     "T021", "T022", "T023", "T024", "T025"
   ],
   "implementation_baseline_sha": "0e66466bb43ef2796664d9c63dde808744717f4c",
-  "implementation_checkpoint_sha": "ea36384f20c9fdcd2360460c89394da428ead440",
-  "superseded_checkpoint_sha": "94079dee507bc0d65ff4db0003c305aadcc3fe1a",
+  "implementation_checkpoint_sha": "3fd5197fb6482ff219eb084a713f370228e259b8",
+  "superseded_checkpoint_sha": "ea36384f20c9fdcd2360460c89394da428ead440",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "candidate_freeze_id": "sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c",
   "treatment_evidence_digest": "sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f",
@@ -17,8 +17,8 @@
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
   "reviewability_measurements": {
     "production_modules": 17,
-    "source_lines": 5508,
-    "nonblank_noncomment_lines": 5021,
+    "source_lines": 5403,
+    "nonblank_noncomment_lines": 4921,
     "max_capability_module_source_lines": 394,
     "modules": {
       "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
@@ -50,12 +50,12 @@
         "nonblank_noncomment_lines": 199
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {
-        "source_lines": 350,
-        "nonblank_noncomment_lines": 307
+        "source_lines": 356,
+        "nonblank_noncomment_lines": 313
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {
-        "source_lines": 368,
-        "nonblank_noncomment_lines": 325
+        "source_lines": 379,
+        "nonblank_noncomment_lines": 336
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publication_records.py": {
         "source_lines": 138,
@@ -66,20 +66,20 @@
         "nonblank_noncomment_lines": 10
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {
-        "source_lines": 374,
-        "nonblank_noncomment_lines": 363
+        "source_lines": 330,
+        "nonblank_noncomment_lines": 320
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_authority.py": {
         "source_lines": 75,
         "nonblank_noncomment_lines": 66
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {
-        "source_lines": 311,
-        "nonblank_noncomment_lines": 283
+        "source_lines": 308,
+        "nonblank_noncomment_lines": 280
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_recovery.py": {
-        "source_lines": 96,
-        "nonblank_noncomment_lines": 83
+        "source_lines": 21,
+        "nonblank_noncomment_lines": 12
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {
         "source_lines": 213,
@@ -114,7 +114,7 @@
     "post_unlink_hard_link_proof": "pass",
     "post_unlink_digest_revalidation": "pass",
     "blocking_hard_link_race_state": "pass",
-    "blocking_hard_link_race_canonical_restoration": "pass",
+    "blocking_hard_link_race_no_republication": "pass",
     "exact_declared_treatment_results": "pass",
     "single_schema_snapshot": "pass",
     "single_manifest_authority_snapshot": "pass",
@@ -156,7 +156,7 @@
     "identity_bound_deletion_intent_resume": "pass",
     "pre_unlink_error_identity_preservation": "pass",
     "public_append_only_temp_unlink_durability": "pass",
-    "post_unlink_recovery_intent_successor": "pass",
+    "post_unlink_substitute_inode_rejection": "pass",
     "recovery_intent_chain_integrity": "pass",
     "post_persistence_retry_completion": "pass",
     "retry_quarantine_directory_sync": "pass",
@@ -193,18 +193,20 @@
     "concurrent_identical_source_capture": "pass",
     "source_capture_preparse_size_bound": "pass",
     "source_capture_bytes_like_requirement": "pass",
-    "post_unlink_republication_successor": "pass",
-    "republished_recovery_intent_crash_recovery": "pass",
+    "unknown_capture_append_only_publication": "pass",
+    "sanitizer_explicit_pseudonym_paths": "pass",
     "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
     "authored_script_spec_id_guard": "9/9 pass",
-    "independent_review_chat_id": "untitled-chat-13CBB8",
+    "independent_review_chat_id": "untitled-chat-22C5B0",
     "independent_review_findings": [
-      "a post-unlink hard-link race could republish the quarantined payload under a replacement inode while leaving the terminal recovery intent bound to the obsolete inode"
+      "post-unlink hard-link proof could be replaced by deletion of a republished substitute inode",
+      "unknown capture publication could overwrite a concurrent target",
+      "caller-supplied fixture-prefixed values could bypass nested sensitive-field rejection"
     ]
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:2b76f86c38b63087a36ff5de3f7c694c53d99a88178275165652b11fde6157a6",
+  "tasks_sha": "sha256:3b4fbdb9647fda13837dbc4c64711d3c25f567b4e241b8750f57e6f114ea9535",
   "implementation_completed_at": "2026-07-20T03:06:58Z",
-  "review_updated_at": "2026-07-22T02:49:35Z",
+  "review_updated_at": "2026-07-22T03:12:13Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }
