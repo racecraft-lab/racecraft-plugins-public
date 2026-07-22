@@ -66,25 +66,28 @@ def _validate_publishable_treatment_evidence(
                 "captured_at": observation["captured_at"],
             })
         proof = trace["configured_route_proof"]
-        if proof is not None:
-            evidence_digest = proof["consumption_evidence_digest"]
-            expected_keys.add(evidence_digest)
-            expected_proof = {
-                "schema_version": CONSUMPTION_EVIDENCE_VERSION,
-                "consumed_configuration": {
-                    key: copy.deepcopy(value)
-                    for key, value in proof.items()
-                    if key not in {"proof_id", "consumption_evidence_digest"}
-                },
-            }
-            actual_proof = _trusted_evidence_object(
-                evidence_snapshot, evidence_digest,
-                "configured-route consumption evidence", digest_bound=True,
+        if proof is None:
+            raise ValueError(
+                "treatment successor requires a configured-route proof for every trace"
             )
-            if actual_proof != expected_proof:
-                raise ValueError(
-                    "configured-route consumption evidence does not bind the claimed proof"
-                )
+        evidence_digest = proof["consumption_evidence_digest"]
+        expected_keys.add(evidence_digest)
+        expected_proof = {
+            "schema_version": CONSUMPTION_EVIDENCE_VERSION,
+            "consumed_configuration": {
+                key: copy.deepcopy(value)
+                for key, value in proof.items()
+                if key not in {"proof_id", "consumption_evidence_digest"}
+            },
+        }
+        actual_proof = _trusted_evidence_object(
+            evidence_snapshot, evidence_digest,
+            "configured-route consumption evidence", digest_bound=True,
+        )
+        if actual_proof != expected_proof:
+            raise ValueError(
+                "configured-route consumption evidence does not bind the claimed proof"
+            )
     for evidence_ref, observations in observations_by_ref.items():
         expected_observations = {
             "schema_version": OBSERVATION_EVIDENCE_VERSION,

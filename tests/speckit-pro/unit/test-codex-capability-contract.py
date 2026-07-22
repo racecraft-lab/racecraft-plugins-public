@@ -4468,15 +4468,71 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertEqual(treatment.FAILURE_DISPOSITIONS["effective_treatment_unknown"], "unknown")
         self.assertTrue(all(value in {"unknown", "hard_fail"} for value in treatment.FAILURE_DISPOSITIONS.values()))
 
-    def test_multi_hop_reroutes_form_one_trusted_ordered_chain(self) -> None:
-        chained = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
-        trusted = trusted_external_qualification(chained)
+    def test_multi_hop_reroutes_reject_cycles_and_no_op_hops(self) -> None:
+        cycle = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
+        trusted = trusted_external_qualification(cycle)
         result = treatment.validate_treatment_bundle(
-            self.rebound(chained), trusted_qualification_evidence=trusted,
+            self.rebound(cycle), trusted_qualification_evidence=trusted,
         )
         self.assertEqual(
-            result["treatment_traces"][0]["treatment_disposition"],
-            "non_scorable_rerouted",
+            result["treatment_traces"][0]["treatment_disposition"], "hard_fail"
+        )
+        self.assertIn(
+            "reroute_self_target",
+            result["treatment_traces"][0]["disposition_reasons"],
+        )
+
+        no_op = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
+        trace = no_op["treatment_traces"][0]
+        first_event, second_event = trace["service_reroute_events"]
+        first_owner, second_owner = no_op["qualification_evidence_registry"]
+        for field in (
+            "destination_candidate_route_id",
+            "destination_agent_contract_id",
+            "destination_named_agent",
+        ):
+            second_owner[field] = first_owner[field]
+        second_owner["evidence_digest"] = treatment.digest(
+            b"fixture-second-no-op-qualification"
+        )
+        second_owner["qualification_evidence_id"] = treatment.content_id(
+            second_owner, "qualification_evidence_id"
+        )
+        second_assessment = trace["reroute_destination_assessments"][1]
+        for field in (
+            "destination_candidate_route_id",
+            "destination_agent_contract_id",
+            "destination_named_agent",
+        ):
+            second_assessment[field] = second_owner[field]
+        second_assessment["prequalification_evidence_id"] = second_owner[
+            "qualification_evidence_id"
+        ]
+        second_event["toModel"] = first_event["toModel"]
+        second_event["event_id"] = treatment.content_id(second_event, "event_id")
+        second_assessment["event_id"] = second_event["event_id"]
+        trace["supported_effective_model"] = second_event["toModel"]
+        next(
+            item
+            for item in trace["observations"]
+            if item["field_path"] == "reroute.events"
+        )["value"] = copy.deepcopy(trace["service_reroute_events"])
+        next(
+            item
+            for item in trace["observations"]
+            if item["field_path"] == "assignment.supported_effective_model"
+        )["value"] = second_event["toModel"]
+        trusted = trusted_external_qualification(no_op)
+        declare_reroute_result(no_op, trusted)
+        result = treatment.validate_treatment_bundle(
+            self.rebound(no_op), trusted_qualification_evidence=trusted,
+        )
+        self.assertEqual(
+            result["treatment_traces"][0]["treatment_disposition"], "hard_fail"
+        )
+        self.assertIn(
+            "reroute_self_target",
+            result["treatment_traces"][0]["disposition_reasons"],
         )
 
         broken = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
@@ -5235,6 +5291,42 @@ class TreatmentContractTests(unittest.TestCase):
             self.rebound(copy.deepcopy(self.bundle))
         )
 
+        proofless = copy.deepcopy(self.bundle)
+        proofless_trace = proofless["treatment_traces"][0]
+        proofless_trace["configured_route_proof"] = None
+        proofless_trace["supported_effective_model"] = None
+        proofless_trace["supported_effective_effort"] = None
+        route_observation = next(
+            item
+            for item in proofless_trace["observations"]
+            if item["field_path"] == "route.supported_effective_route_id"
+        )
+        route_observation.update(
+            {
+                "observation_state": "missing",
+                "value": None,
+                "evidence_ref": None,
+                "captured_at": None,
+            }
+        )
+        declare_treatment_result(
+            proofless,
+            ["effective_treatment_unknown"],
+            "unknown",
+            ["effective_treatment_unknown"],
+        )
+        proofless, proofless_evidence = bind_trusted_treatment_evidence(
+            self.rebound(proofless)
+        )
+        treatment.validate_treatment_bundle(copy.deepcopy(proofless))
+        with self.assertRaisesRegex(ValueError, "requires a configured-route proof"):
+            treatment.build_treatment_successor(
+                prior,
+                proofless,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=proofless_evidence,
+            )
+
         with self.assertRaisesRegex(ValueError, "trusted evidence bytes"):
             treatment.build_treatment_successor(
                 prior,
@@ -5681,6 +5773,64 @@ class TreatmentReplayTests(unittest.TestCase):
             )
             with self.assertRaisesRegex(ValueError, "duplicate JSON key"):
                 treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+    def test_replay_rejects_deep_digest_resealed_json_in_api_and_cli(self) -> None:
+        depths = (treatment.MAX_NESTING_DEPTH + 1, sys.getrecursionlimit() + 10)
+        for depth in depths:
+            with self.subTest(depth=depth), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary).resolve()
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                raw = capability_path.read_bytes()
+                marker = b',"raw_evidence_digest":'
+                self.assertIn(marker, raw)
+                nested = b"[" * depth + b"0" + b"]" * depth
+                capability_path.write_bytes(
+                    raw.replace(marker, b',"deep":' + nested + marker, 1)
+                )
+                manifest = json.loads(manifest_path.read_bytes())
+                entry = next(
+                    item
+                    for item in manifest["fixtures"]
+                    if item["fixture_path"] == FIXTURE_PATH.relative_to(ROOT).as_posix()
+                )
+                entry["fixture_digest"] = treatment.digest(capability_path.read_bytes())
+                manifest_path.write_bytes(treatment.canonical_fixture_bytes(manifest))
+
+                with self.assertRaisesRegex(ValueError, "maximum nesting depth"):
+                    treatment.replay_fixture(
+                        fixture,
+                        manifest_path,
+                        repeat=2,
+                        repository_root=repository_root,
+                    )
+
+                module_path = repository_root / TREATMENT_MODULE_PATH.relative_to(ROOT)
+                module_path.parent.mkdir(parents=True, exist_ok=True)
+                for source_module in TREATMENT_MODULE_PATH.parent.glob(
+                    "treatment_trace_*.py"
+                ):
+                    shutil.copyfile(source_module, module_path.parent / source_module.name)
+                completed = subprocess.run(
+                    [
+                        sys.executable,
+                        str(module_path),
+                        "replay",
+                        "--fixture",
+                        str(fixture),
+                        "--digest-manifest",
+                        str(manifest_path),
+                        "--repeat",
+                        "2",
+                    ],
+                    cwd=repository_root,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(completed.returncode, 2)
+                self.assertIn("maximum nesting depth", completed.stderr)
+                self.assertNotIn("RecursionError", completed.stderr)
 
     def test_replay_requires_declared_manifest_authority(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -228,22 +228,23 @@ def _reroute_disposition(
     by_event: dict[str, list[dict]] = {}
     for assessment in assessments: by_event.setdefault(assessment["event_id"], []).append(assessment)
     expected_source_model = trace["requested_model"]
+    current_route_id = trace["assigned_route_id"]
+    visited_route_ids = {current_route_id}
     final_route = None
-    for index, event in enumerate(events):
+    for event in events:
         if event["fromModel"] != expected_source_model: return "hard_fail", ["reroute_source_model_mismatch"]
         matches = by_event.get(event["event_id"], [])
         if len(matches) != 1: return "hard_fail", ["reroute_destination_missing" if not matches else "reroute_destination_ambiguous"]
         item = matches[0]; evidence = qualification.get(item["prequalification_evidence_id"])
         if item["assessment"] != "prequalified_same_agent" or evidence is None: return "hard_fail", ["reroute_destination_unapproved"]
+        destination_route_id = item["destination_candidate_route_id"]
         if (
-            index == 0
-            and (
-                item["destination_candidate_route_id"] == trace["assigned_route_id"]
-                or event["toModel"] == trace["requested_model"]
-            )
+            destination_route_id == current_route_id
+            or destination_route_id in visited_route_ids
+            or event["toModel"] == expected_source_model
         ):
             return "hard_fail", ["reroute_self_target"]
-        canonical = canonical_routes.get(item["destination_candidate_route_id"])
+        canonical = canonical_routes.get(destination_route_id)
         if canonical is None: return "hard_fail", ["reroute_destination_unidentifiable"]
         if item["destination_named_agent"] != canonical["named_agent"]: return "hard_fail", ["reroute_destination_different_agent"]
         if item["destination_agent_contract_id"] != canonical["agent_contract_id"]: return "hard_fail", ["reroute_destination_manifest_mismatch"]
@@ -262,6 +263,8 @@ def _reroute_disposition(
             if admitted is None or canonical_bytes(admitted) != canonical_bytes(evidence):
                 return "hard_fail", ["reroute_destination_untrusted"]
         expected_source_model = event["toModel"]
+        current_route_id = destination_route_id
+        visited_route_ids.add(destination_route_id)
         final_route = canonical
     if trace["supported_effective_model"] != events[-1]["toModel"]:
         return "hard_fail", ["reroute_effective_destination_mismatch"]

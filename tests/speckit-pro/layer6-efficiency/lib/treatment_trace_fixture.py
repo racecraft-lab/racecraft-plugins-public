@@ -35,8 +35,13 @@ def _unique_json(raw: bytes, label: str) -> object:
         return value
 
     try:
-        return json.loads(text, object_pairs_hook=unique_object)
-    except json.JSONDecodeError as exc:
+        _validate_json_lexical_bounds(text)
+        return json.loads(
+            text,
+            object_pairs_hook=unique_object,
+            parse_constant=_reject_json_constant,
+        )
+    except (json.JSONDecodeError, RecursionError) as exc:
         raise ValueError(f"{label} must be valid JSON") from exc
 
 
