@@ -14,7 +14,7 @@ import stat
 import subprocess
 import tempfile
 import unittest
-from unittest import mock
+import unittest.mock
 from pathlib import Path
 
 
@@ -889,7 +889,7 @@ class CapabilityContractTests(unittest.TestCase):
             raw_root.mkdir(mode=0o700)
             with self.assertRaisesRegex(ValueError, "regular non-symlink file"):
                 capabilities.validate_canary_evidence(raw_root, ROOT, result)
-            with mock.patch.object(capabilities, "APPROVED_CANARY_EXECUTORS", (approval,)), mock.patch.object(
+            with unittest.mock.patch.object(capabilities, "APPROVED_CANARY_EXECUTORS", (approval,)), unittest.mock.patch.object(
                 capabilities, "validate_freeze", side_effect=lambda freeze, manifest, **kwargs: freeze,
             ), self.assertRaisesRegex(ValueError, "regular non-symlink file"):
                 capabilities.build_canary_successor(
@@ -899,7 +899,7 @@ class CapabilityContractTests(unittest.TestCase):
             evidence_path = raw_root / f"{result['evidence_digest'].removeprefix('sha256:')}.json"
             evidence_path.write_bytes(evidence_bytes); evidence_path.chmod(0o600)
             self.assertEqual(capabilities.validate_canary_evidence(raw_root, ROOT, result), evidence_bytes)
-            with mock.patch.object(capabilities, "APPROVED_CANARY_EXECUTORS", (approval,)), mock.patch.object(
+            with unittest.mock.patch.object(capabilities, "APPROVED_CANARY_EXECUTORS", (approval,)), unittest.mock.patch.object(
                 capabilities, "validate_freeze", side_effect=lambda freeze, manifest, **kwargs: freeze,
             ):
                 successor = capabilities.build_canary_successor(
@@ -941,7 +941,7 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities.reconcile_raw_evidence_retention(
                     raw_root, ROOT, "2026-07-16T00:00:00Z",
                 )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
             ):
@@ -962,7 +962,7 @@ class CapabilityContractTests(unittest.TestCase):
             capabilities._validate_raw_evidence_root(
                 raw_root, ROOT, allow_private_temporaries=True,
             )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
             ):
@@ -1034,11 +1034,11 @@ class CapabilityContractTests(unittest.TestCase):
                     failed_capture_fsync = True
                     raise OSError("simulated source-capture directory fsync failure")
                 original_fsync_directory(path)
-            with mock.patch.object(capabilities, "_fsync_directory", side_effect=fail_first_capture_fsync):
+            with unittest.mock.patch.object(capabilities, "_fsync_directory", side_effect=fail_first_capture_fsync):
                 with self.assertRaisesRegex(OSError, "source-capture directory fsync"):
                     capabilities.materialize_source_capture(raw_root, ROOT, capture_bytes)
             self.assertTrue(source_capture_path.is_file())
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capabilities, "_fsync_directory", wraps=original_fsync_directory,
             ) as capture_fsync:
                 source_capture_digest, source_capture_path = capabilities.materialize_source_capture(
@@ -1067,13 +1067,13 @@ class CapabilityContractTests(unittest.TestCase):
                 manifest=self.manifest, raw_evidence_root=raw_root, repository_root=ROOT,
             )
             self.assertEqual(capabilities.validate_freeze(freeze, self.manifest), freeze)
-            registration_clock = mock.patch.object(
+            registration_clock = unittest.mock.patch.object(
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
             )
             registration_clock.start(); self.addCleanup(registration_clock.stop)
             publication_path = Path(tmp) / "candidate-freeze.json"
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capabilities, "_store_publication_intent_locked",
                 side_effect=OSError("simulated publication intent failure"),
             ):
@@ -1092,14 +1092,14 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities.reconcile_raw_evidence_retention(
                     raw_root, ROOT, "2026-07-17T00:00:00Z",
                 )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-07-17T00:00:00Z", "test clock"),
             ), self.assertRaisesRegex(ValueError, "expired pending retention"):
                 capabilities.publish_with_raw_evidence_retention(
                     freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
                 )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capabilities, "_store_publication_receipt_locked",
                 side_effect=OSError("simulated publication receipt failure"),
             ):
@@ -1115,7 +1115,7 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(intent_recovery["pending_retention_record_digests"], [])
             self.assertEqual(len(intent_recovery["publication_intent_digests"]), 1)
             self.assertEqual(intent_recovery["publication_receipt_digests"], [])
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capabilities, "_fsync_directory", wraps=original_fsync_directory,
             ) as publication_fsync:
                 publication = capabilities.publish_with_raw_evidence_retention(
@@ -1153,11 +1153,11 @@ class CapabilityContractTests(unittest.TestCase):
                 if Path(path) == failed_publication_path:
                     raise OSError("simulated publication failure")
                 original_write(path, value, **kwargs)
-            successor_registration_clock = mock.patch.object(
+            successor_registration_clock = unittest.mock.patch.object(
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
             )
-            with successor_registration_clock, mock.patch.object(capabilities, "_write", side_effect=fail_publication):
+            with successor_registration_clock, unittest.mock.patch.object(capabilities, "_write", side_effect=fail_publication):
                 with self.assertRaisesRegex(OSError, "publication failure"):
                     capabilities.publish_with_raw_evidence_retention(
                         future_freeze, failed_publication_path, raw_root, ROOT, manifest=self.manifest,
@@ -1237,14 +1237,14 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2099-01-01T00:00:00Z", apply=True)
             stale_hard_link = raw_root / ".g56r-002-power-loss"
             os.link(source_capture_path, stale_hard_link)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-09-14T00:00:00Z", "test clock"),
             ):
                 with self.assertRaisesRegex(ValueError, "alternate hard links"):
                     capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
             stale_hard_link.unlink(); capabilities._fsync_directory(raw_root.resolve())
-            cleanup_clock = mock.patch.object(
+            cleanup_clock = unittest.mock.patch.object(
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-09-14T00:00:00Z", "test clock"),
             )
@@ -1252,30 +1252,30 @@ class CapabilityContractTests(unittest.TestCase):
                 if Path(path).name == capabilities.DELETION_RECORDS_DIR:
                     raise OSError("simulated deletion-record directory fsync failure")
                 original_fsync_directory(path)
-            with cleanup_clock, mock.patch.object(capabilities, "_fsync_directory", side_effect=fail_deletion_record_fsync):
+            with cleanup_clock, unittest.mock.patch.object(capabilities, "_fsync_directory", side_effect=fail_deletion_record_fsync):
                 with self.assertRaisesRegex(OSError, "deletion-record directory fsync"):
                     capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
             self.assertTrue(all(
                 (raw_root / f"{item.removeprefix('sha256:')}.json").is_file()
                 for item in retained_report["retained_evidence_digests"]
             ))
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-09-14T00:00:00Z", "test clock"),
-            ), mock.patch.object(capabilities, "_fsync_directory", wraps=original_fsync_directory) as fsync_directory:
+            ), unittest.mock.patch.object(capabilities, "_fsync_directory", wraps=original_fsync_directory) as fsync_directory:
                 cleanup_report = capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
             fsync_directory.assert_any_call(raw_root.resolve())
             fsync_directory.assert_any_call(raw_root.resolve() / capabilities.DELETION_RECORDS_DIR)
             self.assertEqual(cleanup_report["deleted_evidence_digests"], retained_report["retained_evidence_digests"])
             self.assertEqual(cleanup_report["retained_evidence_digests"], [])
             self.assertEqual(len(cleanup_report["deletion_record_digests"]), 4)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-09-14T00:00:00Z", "test clock"),
             ):
                 self.assertEqual(capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True), cleanup_report)
             cleanup_output = raw_root / "cleanup-report.json"
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-09-14T00:00:00Z", "test clock"),
             ):
@@ -1312,7 +1312,7 @@ class CapabilityContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "outside every Git worktree"):
                 capabilities.validate_raw_evidence_root(ROOT, ROOT)
             private = Path(tmp) / "capture.json"; private.write_text("{}"); private.chmod(0o600)
-            with mock.patch.object(capabilities.os, "name", "nt"):
+            with unittest.mock.patch.object(capabilities.os, "name", "nt"):
                 with self.assertRaisesRegex(ValueError, "not supported on Windows"):
                     capabilities.validate_raw_evidence_root(raw_root, ROOT)
                 with self.assertRaisesRegex(ValueError, "not supported on Windows"):
@@ -1400,7 +1400,7 @@ class CapabilityContractTests(unittest.TestCase):
                 subprocess.CompletedProcess([], 0, stdout=f"{'b' * 40}\n", stderr=""),
                 subprocess.CompletedProcess([], 0, stdout=f"{'c' * 40}\n", stderr=""),
             ]
-            with mock.patch.object(capabilities.subprocess, "run", side_effect=responses) as run:
+            with unittest.mock.patch.object(capabilities.subprocess, "run", side_effect=responses) as run:
                 with self.assertRaisesRegex(ValueError, "changed during collection binding"):
                     capabilities.repository_binding_from_checkout(repository)
             self.assertEqual(run.call_args_list[2].args[0][-1], f"{resolved}^{{tree}}")
@@ -1434,19 +1434,19 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(capabilities._read(canonical, require_canonical=True), {"a": 2, "b": 1})
             replacement = root / "replacement.json"
             replacement.write_bytes(b'{}\n')
-            with mock.patch.object(capabilities.os, "stat", return_value=replacement.stat()):
+            with unittest.mock.patch.object(capabilities.os, "stat", return_value=replacement.stat()):
                 with self.assertRaisesRegex(ValueError, "pathname changed"):
                     capabilities._read_bounded_regular_file(canonical)
             initial = canonical.stat()
-            changed_ctime = mock.Mock(
+            changed_ctime = unittest.mock.Mock(
                 st_mode=initial.st_mode, st_dev=initial.st_dev, st_ino=initial.st_ino,
                 st_size=initial.st_size, st_mtime_ns=initial.st_mtime_ns,
                 st_ctime_ns=initial.st_ctime_ns + 1,
             )
-            with mock.patch.object(capabilities.os, "fstat", side_effect=[initial, changed_ctime]):
+            with unittest.mock.patch.object(capabilities.os, "fstat", side_effect=[initial, changed_ctime]):
                 with self.assertRaisesRegex(ValueError, "changed while"):
                     capabilities._read_bounded_regular_file(canonical)
-            with mock.patch.object(capabilities, "PRIVATE_REFRESH_MAX_BYTES", 4):
+            with unittest.mock.patch.object(capabilities, "PRIVATE_REFRESH_MAX_BYTES", 4):
                 with self.assertRaisesRegex(ValueError, "exceeds the maximum size"):
                     capabilities._read_bounded_regular_file(canonical)
             with self.assertRaises(FileExistsError):
@@ -1457,36 +1457,36 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(capabilities.digest_regular_file(executable), capabilities.digest(executable.read_bytes()))
             executable_replacement = root / "replacement-client"
             executable_replacement.write_bytes(b"different-client")
-            with mock.patch.object(capabilities.os, "stat", return_value=executable_replacement.stat()):
+            with unittest.mock.patch.object(capabilities.os, "stat", return_value=executable_replacement.stat()):
                 with self.assertRaisesRegex(ValueError, "pathname changed"):
                     capabilities.digest_regular_file(executable)
             executable_before = executable.stat()
-            executable_after = mock.Mock(
+            executable_after = unittest.mock.Mock(
                 st_mode=executable_before.st_mode, st_dev=executable_before.st_dev,
                 st_ino=executable_before.st_ino, st_size=executable_before.st_size,
                 st_mtime_ns=executable_before.st_mtime_ns,
                 st_ctime_ns=executable_before.st_ctime_ns + 1,
             )
-            with mock.patch.object(capabilities.os, "fstat", side_effect=[executable_before, executable_after]):
+            with unittest.mock.patch.object(capabilities.os, "fstat", side_effect=[executable_before, executable_after]):
                 with self.assertRaisesRegex(ValueError, "changed while hashing"):
                     capabilities.digest_regular_file(executable)
             growing = root / "growing-client"
             growing.write_bytes(b"grow")
             growing_before = growing.stat()
-            growing_after = mock.Mock(
+            growing_after = unittest.mock.Mock(
                 st_mode=growing_before.st_mode, st_dev=growing_before.st_dev,
                 st_ino=growing_before.st_ino, st_size=growing_before.st_size + 1,
                 st_mtime_ns=growing_before.st_mtime_ns,
                 st_ctime_ns=growing_before.st_ctime_ns + 1,
             )
-            with mock.patch.object(capabilities.os, "fstat", side_effect=[growing_before, growing_after]), mock.patch.object(
+            with unittest.mock.patch.object(capabilities.os, "fstat", side_effect=[growing_before, growing_after]), unittest.mock.patch.object(
                 capabilities.os, "read", side_effect=lambda descriptor, size: b"x" * size,
             ) as growing_read:
                 with self.assertRaisesRegex(ValueError, "changed while hashing"):
                     capabilities.digest_regular_file(growing)
             self.assertEqual(growing_read.call_count, 1)
             private_output = root / "private-output.json"
-            with mock.patch.object(capabilities.os, "name", "nt"), mock.patch.object(capabilities.os, "fchmod") as fchmod:
+            with unittest.mock.patch.object(capabilities.os, "name", "nt"), unittest.mock.patch.object(capabilities.os, "fchmod") as fchmod:
                 with self.assertRaisesRegex(ValueError, "not supported on Windows"):
                     capabilities._write(private_output, {"private": True}, private=True)
             fchmod.assert_not_called()
