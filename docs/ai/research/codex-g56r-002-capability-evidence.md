@@ -131,7 +131,9 @@ cleanup derives its deletion time from current UTC and rejects `--as-of`;
 arbitrary logical timestamps are read-only verification inputs. The committed
 JSON is deny-by-default sanitized and contains no
 retrieved source bodies, credentials, headers, cookies, prompt content, account
-identifiers, hostnames, absolute paths, or repository remotes.
+identifiers, non-allowlisted or private hostnames, absolute paths, or repository
+remotes. Canonical OpenAI documentation URLs remain only in schema-allowlisted
+authority-evidence fields.
 Private-store operations fail closed on Windows until owner-only DACL validation
 can enforce the same access boundary as POSIX `0700` directories and `0600`
 files; offline committed-artifact validation remains platform-neutral.
