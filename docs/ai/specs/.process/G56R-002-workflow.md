@@ -874,7 +874,7 @@ For every task:
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
 | 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
-| 3 - Synthetic replay | Complete | 5 | Finding-driven remediation passes 95/95 capability tests, 39/39 validator tests, 77/77 reviewability-contract tests, and the 2864/2864 full suite; the review chain through `untitled-chat-3C1A9A` reports no P0/P1 findings |
+| 3 - Synthetic replay | Complete | 5 | Finding-driven remediation passes 95/95 capability tests, 39/39 validator tests, 77/77 reviewability-contract tests, and the 2864/2864 full suite; `checkpoint-evidence-revi-B89AB7` reports no P0/P1 findings at `88624590b29ac20802d2242d71abb0d732fdcc6f` |
 | Polish and validation | Complete | 9 | T031-T039 remain implemented; reference and generated artifacts are current; the 124/124 manifest and live release-title gates pass |
 
 ### Capability Checkpoint Evidence
@@ -889,7 +889,7 @@ For every task:
   destructive-clock, and hard-link durability remediation. Exact-head
   RepoPrompt reviews returned `NO FINDINGS` for the core
   (`untitled-chat-337E74`) and process state (`untitled-chat-55E370`).
-- Implementation checkpoint [us1]: `5624ecd7a68aa09ee8434bca595f10fb276d3c21`
+- Implementation checkpoint [us1]: `88624590b29ac20802d2242d71abb0d732fdcc6f`
 
 ### Treatment Checkpoint Evidence
 
@@ -925,7 +925,7 @@ For every task:
   reroutes, detailed reroute reasons, and normalized malformed-predecessor
   errors. The exact-head RepoPrompt review returned `NO FINDINGS`
   (`windows-telemetry-review-D88461`).
-- Implementation checkpoint [us2]: `5624ecd7a68aa09ee8434bca595f10fb276d3c21`
+- Implementation checkpoint [us2]: `88624590b29ac20802d2242d71abb0d732fdcc6f`
 
 ### Synthetic Replay Checkpoint Evidence
 
@@ -943,7 +943,7 @@ For every task:
 - Current verification-authority findings head: `61014105efd7c99e04e6a40008c85e9d718a4db7`
 - Initial whole-range findings head: `41643ee0b93eab88758c655bdbcb23cd05fe6473`
 - Latest exact-head findings head: `a0e4e62c6a173a4d51dc6fb070d16d95aa443c9c`
-- Current remediation source head [us3]: `5624ecd7a68aa09ee8434bca595f10fb276d3c21`
+- Current remediation source head [us3]: `88624590b29ac20802d2242d71abb0d732fdcc6f`
 - Latest clean exact reviewed head: `4842c33172bef31634180c7e9585e412f0786059`
 - Capability fixture: `sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a`.
 - Treatment fixture: `sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788`.
@@ -1139,15 +1139,15 @@ For every task:
 | Feature spec | `sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046` |
 | Plan-declared scope | `sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f` |
 | Tasks | `sha256:7bd80934ed9521709209774e0233bdf492b9a233fb6bd19d890511c9155245d8` |
-| Reviewability evidence | `sha256:743d43d98417239daabfed3048d6c978600833e4b03ca2639d6826a44dbc9ee4` |
+| Reviewability evidence | `sha256:b92fe79e428ea76a2dc8790b3dd3d6bc5daf0fb8dbff20ad854ed954b6bc0ad9` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 | Changed-file manifest | `sha256:9e4c7ce14d10e05acca4a40460cd5724d60e5bd7e53f5f4ea37e94c8775e2eed` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
-| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `5624ecd7a68aa09ee8434bca595f10fb276d3c21` | Historical checkpoint evidence remains append-only |
-| 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `5624ecd7a68aa09ee8434bca595f10fb276d3c21` | Historical checkpoint evidence remains append-only |
-| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Complete at `5624ecd7a68aa09ee8434bca595f10fb276d3c21`; source review chain through `untitled-chat-3C1A9A` reports no P0/P1 findings; final metadata-head review pending | No correctness or safety exception remains |
+| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `88624590b29ac20802d2242d71abb0d732fdcc6f` | Historical checkpoint evidence remains append-only |
+| 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `88624590b29ac20802d2242d71abb0d732fdcc6f` | Historical checkpoint evidence remains append-only |
+| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Complete at `88624590b29ac20802d2242d71abb0d732fdcc6f`; `checkpoint-evidence-revi-B89AB7` reports no P0/P1 findings at the reviewed implementation head | No correctness or safety exception remains |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
