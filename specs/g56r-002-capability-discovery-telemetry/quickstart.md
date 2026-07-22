@@ -220,7 +220,12 @@ the whole-freeze content identity.
 Any later evidence change creates a successor freeze rather than editing the
 published ID in place.
 
-## 7. Validate Treatment and Replay Twice
+## 7. Validate Treatment and Replay Twice (US2/US3)
+
+Skip this step in the US1-only slice. Run it only after
+`treatment_trace_schema.py`, `treatment-replay.json`, and
+`fixture-digests.json` are present in the checkout from the later US2/US3
+slices.
 
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py replay \
