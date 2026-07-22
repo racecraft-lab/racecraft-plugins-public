@@ -8,26 +8,30 @@
     "T021", "T022", "T023", "T024", "T025"
   ],
   "implementation_baseline_sha": "0e66466bb43ef2796664d9c63dde808744717f4c",
-  "implementation_checkpoint_sha": "102fe80f9d986484099503d9371bda7aeeec7d91",
-  "superseded_checkpoint_sha": "6a52a365a09ab705cc33333460478fa4bff78b62",
+  "implementation_checkpoint_sha": "e08eb7a9fb0201f99e1d926ccf80d322247d9871",
+  "superseded_checkpoint_sha": "102fe80f9d986484099503d9371bda7aeeec7d91",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "candidate_freeze_id": "sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c",
   "treatment_evidence_digest": "sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f",
   "telemetry_profile_id": "sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979",
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
   "reviewability_measurements": {
-    "production_modules": 17,
-    "source_lines": 5823,
-    "nonblank_noncomment_lines": 5310,
-    "max_capability_module_source_lines": 397,
+    "production_modules": 18,
+    "source_lines": 5910,
+    "nonblank_noncomment_lines": 5387,
+    "max_capability_module_source_lines": 399,
     "modules": {
       "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
         "source_lines": 119,
         "nonblank_noncomment_lines": 110
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_append_only.py": {
-        "source_lines": 327,
-        "nonblank_noncomment_lines": 302
+        "source_lines": 334,
+        "nonblank_noncomment_lines": 309
+      },
+      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_capture.py": {
+        "source_lines": 161,
+        "nonblank_noncomment_lines": 138
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {
         "source_lines": 112,
@@ -38,8 +42,8 @@
         "nonblank_noncomment_lines": 242
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {
-        "source_lines": 397,
-        "nonblank_noncomment_lines": 366
+        "source_lines": 399,
+        "nonblank_noncomment_lines": 370
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {
         "source_lines": 362,
@@ -54,28 +58,28 @@
         "nonblank_noncomment_lines": 317
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {
-        "source_lines": 388,
-        "nonblank_noncomment_lines": 343
+        "source_lines": 290,
+        "nonblank_noncomment_lines": 256
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publication_records.py": {
-        "source_lines": 278,
-        "nonblank_noncomment_lines": 251
+        "source_lines": 282,
+        "nonblank_noncomment_lines": 255
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {
         "source_lines": 15,
         "nonblank_noncomment_lines": 10
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {
-        "source_lines": 369,
-        "nonblank_noncomment_lines": 353
+        "source_lines": 381,
+        "nonblank_noncomment_lines": 365
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_authority.py": {
         "source_lines": 75,
         "nonblank_noncomment_lines": 66
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {
-        "source_lines": 315,
-        "nonblank_noncomment_lines": 286
+        "source_lines": 314,
+        "nonblank_noncomment_lines": 285
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_recovery.py": {
         "source_lines": 21,
@@ -92,7 +96,7 @@
     }
   },
   "verification": {
-    "focused_tests": "59/59 pass",
+    "focused_tests": "60/60 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
@@ -148,7 +152,7 @@
     "docs_reference_check": "pass",
     "full_suite": "2824/2824 pass",
     "capability_public_api_preserved": "pass",
-    "capability_safe_module_boundaries": "pass; 16 capability modules, maximum 397 source lines",
+    "capability_safe_module_boundaries": "pass; 17 capability modules, maximum 399 source lines",
     "pre_journal_failure_restoration": "pass",
     "exact_public_facade_exports": "pass",
     "private_trust_primitives_hidden": "pass",
@@ -207,6 +211,10 @@
     "publication_leaf_name_preservation": "pass",
     "publication_leaf_symlink_race_rejection": "pass",
     "pre_retention_leaf_revalidation": "pass",
+    "raw_directory_retention_lock_binding": "pass",
+    "replacement_retention_marker_lock_exclusion": "pass",
+    "bound_raw_append_only_recovery": "pass",
+    "deletion_completion_intent_chronology": "pass",
     "descriptor_bound_append_only_temp_recovery": "pass",
     "abandoned_prelink_temp_recovery": "pass for private and public append-only directories",
     "active_temp_lock_protection": "pass",
@@ -220,14 +228,15 @@
     "deletion_tombstone_rematerialization_rejection": "pass",
     "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
     "authored_script_spec_id_guard": "9/9 pass",
-    "independent_review_chat_id": "untitled-chat-C8F728",
+    "independent_review_chat_id": "untitled-chat-D9D31E",
     "independent_review_findings": [
-      "publication output leaf resolution could follow a final-component symlink planted after the precheck"
+      "retention locking used a replaceable child lock-file inode instead of the identity-bound raw directory",
+      "deletion completion chronology was not checked against its governing terminal intent"
     ]
   },
   "source_fingerprint_status": "current",
   "tasks_sha": "sha256:2f1377aa9852e56285dba0d0960017e196598e060a1cce1b24ea9695d70763d2",
   "implementation_completed_at": "2026-07-20T03:06:58Z",
-  "review_updated_at": "2026-07-22T07:13:05Z",
+  "review_updated_at": "2026-07-22T07:52:36Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }
