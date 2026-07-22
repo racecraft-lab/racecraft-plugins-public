@@ -8,8 +8,8 @@
     "T021", "T022", "T023", "T024", "T025"
   ],
   "implementation_baseline_sha": "0e66466bb43ef2796664d9c63dde808744717f4c",
-  "implementation_checkpoint_sha": "7068c98ec662d69988d3ac132f24074207e66f50",
-  "superseded_checkpoint_sha": "517fe2688107e11b3e54f2fd5c1aedb7198a16af",
+  "implementation_checkpoint_sha": "0042f0e27395692283abf57da0678c6d99834cf9",
+  "superseded_checkpoint_sha": "7068c98ec662d69988d3ac132f24074207e66f50",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "candidate_freeze_id": "sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c",
   "treatment_evidence_digest": "sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f",
@@ -17,8 +17,8 @@
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
   "reviewability_measurements": {
     "production_modules": 17,
-    "source_lines": 5462,
-    "nonblank_noncomment_lines": 4971,
+    "source_lines": 5429,
+    "nonblank_noncomment_lines": 4944,
     "max_capability_module_source_lines": 394,
     "modules": {
       "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
@@ -34,8 +34,8 @@
         "nonblank_noncomment_lines": 132
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {
-        "source_lines": 286,
-        "nonblank_noncomment_lines": 241
+        "source_lines": 240,
+        "nonblank_noncomment_lines": 203
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {
         "source_lines": 394,
@@ -82,8 +82,8 @@
         "nonblank_noncomment_lines": 12
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {
-        "source_lines": 213,
-        "nonblank_noncomment_lines": 196
+        "source_lines": 226,
+        "nonblank_noncomment_lines": 207
       },
       "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
         "source_lines": 1912,
@@ -184,7 +184,10 @@
     "one_day_pending_expiry_and_late_promotion_rejection": "pass",
     "canonical_surface_order_and_parsed_timestamp_extrema": "pass",
     "hidden_html_extract_rejection": "pass",
-    "unresolved_css_visibility_rejection": "pass",
+    "normalized_plain_text_source_rejection": "pass",
+    "exact_source_capture_digest_binding": "pass",
+    "full_body_change_invalidation": "pass",
+    "exact_legacy_predecessor_boundary": "pass",
     "capability_named_temporary_recovery": "pass",
     "content_addressed_adoption_parent_sync": "pass",
     "descriptor_bound_append_only_temp_recovery": "pass",
@@ -200,14 +203,17 @@
     "deletion_tombstone_rematerialization_rejection": "pass",
     "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
     "authored_script_spec_id_guard": "9/9 pass",
-    "independent_review_chat_id": "untitled-chat-66FFF4",
+    "independent_review_chat_id": "untitled-chat-A0BD9D",
     "independent_review_findings": [
-      "source-body visibility used partial CSS guesses, allowing concealed unchanged extracts to avoid claim invalidation"
+      "caller-supplied source_capture_digest was not verified against captured bytes",
+      "HTML intrinsic hidden states could satisfy bounded extracts",
+      "HTML text-node joining could fabricate whitespace absent from rendered text",
+      "changed bodies could retain old extracts and avoid invalidating bound claims"
     ]
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:e4d0088383f3b84fb9241cdf46bbf5f55be66edf47938dc62ba490dd390897f4",
+  "tasks_sha": "sha256:8e48c3fa626b10fa8db85efef80beab23073471de89b4062474c13581186878d",
   "implementation_completed_at": "2026-07-20T03:06:58Z",
-  "review_updated_at": "2026-07-22T04:00:52Z",
+  "review_updated_at": "2026-07-22T04:38:17Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }

@@ -3,7 +3,7 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-22T04:00:52Z",
+  "updated_at": "2026-07-22T04:38:17Z",
   "active_step": "Phase 7: Implement - Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -392,13 +392,19 @@
       "one_day_pending_expiry_and_late_promotion_rejection": "pass",
       "canonical_surface_order_and_parsed_timestamp_extrema": "pass",
       "hidden_html_extract_rejection": "pass",
-      "unresolved_css_visibility_rejection": "pass",
+      "normalized_plain_text_source_rejection": "pass",
+      "exact_source_capture_digest_binding": "pass",
+      "full_body_change_invalidation": "pass",
+      "exact_legacy_predecessor_boundary": "pass",
       "capability_named_temporary_recovery": "pass",
       "content_addressed_adoption_parent_sync": "pass",
       "independent_review": "pending_reaudit",
-      "independent_review_chat_id": "untitled-chat-66FFF4",
+      "independent_review_chat_id": "untitled-chat-A0BD9D",
       "independent_review_findings": [
-        "source-body visibility used partial CSS guesses, allowing concealed unchanged extracts to avoid claim invalidation"
+        "caller-supplied source_capture_digest was not verified against captured bytes",
+        "HTML intrinsic hidden states could satisfy bounded extracts",
+        "HTML text-node joining could fabricate whitespace absent from rendered text",
+        "changed bodies could retain old extracts and avoid invalidating bound claims"
       ],
       "baseline_commit": "0e66466bb43ef2796664d9c63dde808744717f4c",
       "candidate_freeze_id": "sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c",
@@ -406,19 +412,19 @@
       "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
       "treatment_evidence_digest": "sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f",
       "marker_id": "us2",
-      "reviewability": "aggregate size-only block at 5,462 source / 4,971 nonblank non-comment lines across 17 production modules; 16 capability modules are safely split with a 394-line maximum, the facade exports exactly the supported API, and only the treatment module retains a typed size-only exception",
-      "checkpoint": "7068c98ec662d69988d3ac132f24074207e66f50",
-      "superseded_checkpoint": "517fe2688107e11b3e54f2fd5c1aedb7198a16af",
+      "reviewability": "aggregate size-only block at 5,429 source / 4,944 nonblank non-comment lines across 17 production modules; 16 capability modules are safely split with a 394-line maximum, the facade exports exactly the supported API, and only the treatment module retains a typed size-only exception",
+      "checkpoint": "0042f0e27395692283abf57da0678c6d99834cf9",
+      "superseded_checkpoint": "7068c98ec662d69988d3ac132f24074207e66f50",
       "implementation_completed_at": "2026-07-20T03:06:58Z",
       "completed_at": "2026-07-20T03:50:24Z",
-      "review_updated_at": "2026-07-22T04:00:52Z"
+      "review_updated_at": "2026-07-22T04:38:17Z"
     }
   },
   "current_source_fingerprint": {
-    "feature_spec_sha": "sha256:f67ab5ec648690c5e2ed70a311f5ced7b9ce7b7b1f823b76ec120d7101215c06",
-    "plan_declared_scope_sha": "sha256:9d4c51f05d9eeb8fbc3adeddfee0cd496069ff79425dbab1a5525aefd65a22c8",
-    "tasks_sha": "sha256:e4d0088383f3b84fb9241cdf46bbf5f55be66edf47938dc62ba490dd390897f4",
-    "reviewability_sha": "sha256:a76c5a3d6fb590e77a72ef734285c091e3eabdd572486ee9504944b46ea798f4",
+    "feature_spec_sha": "sha256:644b75a31e166ff06c9e28311fe01efe35d25836f15890e07ffb6b8436b278a9",
+    "plan_declared_scope_sha": "sha256:cde2fce3537938d8b9baf572cfb8ce4544be7568e5157a5142deb3f2e0619ae8",
+    "tasks_sha": "sha256:8e48c3fa626b10fa8db85efef80beab23073471de89b4062474c13581186878d",
+    "reviewability_sha": "sha256:21a9b5976a035a9fef6ffacc30cd84611db272ccae8109ea621310bad9c05833",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
   },
   "pr_marker_plan": {
@@ -427,10 +433,10 @@
     "feature_id": "G56R-002",
     "status": "checkpointing",
     "source_fingerprint": {
-      "feature_spec_sha": "sha256:f67ab5ec648690c5e2ed70a311f5ced7b9ce7b7b1f823b76ec120d7101215c06",
-      "plan_declared_scope_sha": "sha256:9d4c51f05d9eeb8fbc3adeddfee0cd496069ff79425dbab1a5525aefd65a22c8",
-      "tasks_sha": "sha256:e4d0088383f3b84fb9241cdf46bbf5f55be66edf47938dc62ba490dd390897f4",
-      "reviewability_sha": "sha256:a76c5a3d6fb590e77a72ef734285c091e3eabdd572486ee9504944b46ea798f4",
+      "feature_spec_sha": "sha256:644b75a31e166ff06c9e28311fe01efe35d25836f15890e07ffb6b8436b278a9",
+      "plan_declared_scope_sha": "sha256:cde2fce3537938d8b9baf572cfb8ce4544be7568e5157a5142deb3f2e0619ae8",
+      "tasks_sha": "sha256:8e48c3fa626b10fa8db85efef80beab23073471de89b4062474c13581186878d",
+      "reviewability_sha": "sha256:21a9b5976a035a9fef6ffacc30cd84611db272ccae8109ea621310bad9c05833",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
     },
     "markers": [
@@ -560,7 +566,7 @@
           "mode": "implementation",
           "scope": "us2",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
-          "head_sha": "7068c98ec662d69988d3ac132f24074207e66f50"
+          "head_sha": "0042f0e27395692283abf57da0678c6d99834cf9"
         },
         "hazards": ["six-id-join", "exact-treatment", "service-reroute"],
         "subdivision": {
@@ -575,8 +581,8 @@
         "implementation_checkpoint": {
           "status": "review_pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
-          "commit_sha": "7068c98ec662d69988d3ac132f24074207e66f50",
-          "superseded_commit_sha": "517fe2688107e11b3e54f2fd5c1aedb7198a16af"
+          "commit_sha": "0042f0e27395692283abf57da0678c6d99834cf9",
+          "superseded_commit_sha": "7068c98ec662d69988d3ac132f24074207e66f50"
         },
         "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us2.json"},
         "warnings": [
@@ -587,11 +593,11 @@
             "source": "treatment-contracts-reviewability",
             "details": {
               "marker_id": "us2",
-              "actual_source_lines": 5462,
-              "actual_nonblank_noncomment_lines": 4971,
+              "actual_source_lines": 5429,
+              "actual_nonblank_noncomment_lines": 4944,
               "production_modules": 17,
               "module_measurements": {
-                "capability_group": {"production_modules": 16, "source_lines": 3550, "nonblank_noncomment_lines": 3209, "max_module_source_lines": 394},
+                "capability_group": {"production_modules": 16, "source_lines": 3517, "nonblank_noncomment_lines": 3182, "max_module_source_lines": 394},
                 "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {"source_lines": 1912, "nonblank_noncomment_lines": 1762}
               }
             }
@@ -656,7 +662,7 @@
       }
     ],
     "created_at": "2026-07-17T04:50:02Z",
-    "updated_at": "2026-07-22T04:00:52Z"
+    "updated_at": "2026-07-22T04:38:17Z"
   },
   "layer_plan": {
     "status": "skipped",

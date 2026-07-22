@@ -1148,8 +1148,21 @@ For every task:
   remain excluded from visible text. Focused 58/58, naming-layout 9/9,
   treatment, privacy 10/10, process coverage 8/8, docs-reference, and full
   2824/2824 gates pass; exact-head re-audit remains pending.
-- Implementation checkpoint: `7068c98ec662d69988d3ac132f24074207e66f50`
-- Superseded checkpoint: `517fe2688107e11b3e54f2fd5c1aedb7198a16af`
+- Exact-head source-contract review `untitled-chat-A0BD9D` found four source
+  integrity gaps: unverified caller-supplied aggregate capture digests,
+  incomplete intrinsic HTML visibility handling, fabricated whitespace between
+  HTML text nodes, and body changes that retained old extracts without full
+  invalidation. Remediation at
+  `0042f0e27395692283abf57da0678c6d99834cf9` binds the aggregate digest to
+  exact canonical capture bytes, requires normalized plain-text bodies and
+  rejects raw markup, preserves only actual body whitespace, and invalidates
+  every binding on a new body identity. The already-published predecessor set
+  is accepted only under its exact immutable aggregate digest. Focused 58/58,
+  naming-layout 9/9, treatment, privacy 10/10, process coverage 8/8,
+  docs-reference, and full 2824/2824 gates pass; exact-head re-audit remains
+  pending.
+- Implementation checkpoint: `0042f0e27395692283abf57da0678c6d99834cf9`
+- Superseded checkpoint: `7068c98ec662d69988d3ac132f24074207e66f50`
 
 ## PR Marker Plan Evidence
 
@@ -1161,22 +1174,22 @@ For every task:
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:f67ab5ec648690c5e2ed70a311f5ced7b9ce7b7b1f823b76ec120d7101215c06` |
-| Plan-declared scope | `sha256:9d4c51f05d9eeb8fbc3adeddfee0cd496069ff79425dbab1a5525aefd65a22c8` |
-| Tasks | `sha256:e4d0088383f3b84fb9241cdf46bbf5f55be66edf47938dc62ba490dd390897f4` |
-| Reviewability evidence | `sha256:a76c5a3d6fb590e77a72ef734285c091e3eabdd572486ee9504944b46ea798f4` |
+| Feature spec | `sha256:644b75a31e166ff06c9e28311fe01efe35d25836f15890e07ffb6b8436b278a9` |
+| Plan-declared scope | `sha256:cde2fce3537938d8b9baf572cfb8ce4544be7568e5157a5142deb3f2e0619ae8` |
+| Tasks | `sha256:8e48c3fa626b10fa8db85efef80beab23073471de89b4062474c13581186878d` |
+| Reviewability evidence | `sha256:21a9b5976a035a9fef6ffacc30cd84611db272ccae8109ea621310bad9c05833` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `7068c98ec662d69988d3ac132f24074207e66f50` | Exact-head re-audit required before stack advancement |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `0042f0e27395692283abf57da0678c6d99834cf9` | Exact-head re-audit required before stack advancement |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines under its historical typed exception; the current US2 marker is 5,462 /
-  4,971 across 17 modules against the aggregate 400-LOC boundary. Capability
+  lines under its historical typed exception; the current US2 marker is 5,429 /
+  4,944 across 17 modules against the aggregate 400-LOC boundary. Capability
   modules are safely split with a 394-line maximum; only the treatment module
   retains a typed size-only exception.
 - Final `marker_split`: Pending.

@@ -8,8 +8,8 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 5462,
-  "actual_nonblank_noncomment_lines": 4971,
+  "actual_source_lines": 5429,
+  "actual_nonblank_noncomment_lines": 4944,
   "production_modules": 17,
   "max_capability_module_source_lines": 394,
   "primary_surface": "harness/adapters",
@@ -17,7 +17,7 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 119, "nonblank_noncomment_lines": 110},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_append_only.py": {"source_lines": 267, "nonblank_noncomment_lines": 244},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {"source_lines": 139, "nonblank_noncomment_lines": 132},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {"source_lines": 286, "nonblank_noncomment_lines": 241},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {"source_lines": 240, "nonblank_noncomment_lines": 203},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {"source_lines": 394, "nonblank_noncomment_lines": 363},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {"source_lines": 244, "nonblank_noncomment_lines": 229},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {"source_lines": 216, "nonblank_noncomment_lines": 199},
@@ -29,7 +29,7 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_authority.py": {"source_lines": 75, "nonblank_noncomment_lines": 66},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 315, "nonblank_noncomment_lines": 286},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_recovery.py": {"source_lines": 21, "nonblank_noncomment_lines": 12},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 213, "nonblank_noncomment_lines": 196},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 226, "nonblank_noncomment_lines": 207},
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
       "source_lines": 1912,
       "nonblank_noncomment_lines": 1762
@@ -131,7 +131,10 @@
     "one_day_pending_expiry_and_late_promotion_rejection": "pass",
     "canonical_surface_order_and_parsed_timestamp_extrema": "pass",
     "hidden_html_extract_rejection": "pass",
-    "unresolved_css_visibility_rejection": "pass",
+    "normalized_plain_text_source_rejection": "pass",
+    "exact_source_capture_digest_binding": "pass",
+    "full_body_change_invalidation": "pass",
+    "exact_legacy_predecessor_boundary": "pass",
     "capability_named_temporary_recovery": "pass",
     "content_addressed_adoption_parent_sync": "pass",
     "descriptor_bound_append_only_temp_recovery": "pass",
@@ -147,9 +150,12 @@
     "deletion_tombstone_rematerialization_rejection": "pass",
     "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
     "authored_script_spec_id_guard": "9/9 pass",
-    "independent_review_chat_id": "untitled-chat-66FFF4",
+    "independent_review_chat_id": "untitled-chat-A0BD9D",
     "independent_review_findings": [
-      "source-body visibility used partial CSS guesses, allowing concealed unchanged extracts to avoid claim invalidation"
+      "caller-supplied source_capture_digest was not verified against captured bytes",
+      "HTML intrinsic hidden states could satisfy bounded extracts",
+      "HTML text-node joining could fabricate whitespace absent from rendered text",
+      "changed bodies could retain old extracts and avoid invalidating bound claims"
     ]
   },
   "exception": {
