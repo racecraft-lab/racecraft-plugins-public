@@ -327,13 +327,6 @@
       "marker_ids": ["us3"]
     },
     {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_capture_retention.py",
-      "operation": "NEW",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
       "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py",
       "operation": "MODIFIED",
       "category": "implementation",
@@ -385,13 +378,6 @@
     {
       "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py",
       "operation": "MODIFIED",
-      "category": "implementation",
-      "provenance": "authored",
-      "marker_ids": ["us3"]
-    },
-    {
-      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_lock.py",
-      "operation": "NEW",
       "category": "implementation",
       "provenance": "authored",
       "marker_ids": ["us3"]
@@ -749,6 +735,139 @@
     },
     {
       "path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "AGENTS.md",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1-remediation.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us1"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2-remediation.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us2"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3-remediation.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/capability-freeze.json",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us1-remediation.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us1"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us2-remediation.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us2"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us3-remediation.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/data-model.md",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_append_only.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_capture.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publication_records.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_authority.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_recovery.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/test-unit-layout.py",
       "operation": "MODIFIED",
       "category": "test",
       "provenance": "authored",
