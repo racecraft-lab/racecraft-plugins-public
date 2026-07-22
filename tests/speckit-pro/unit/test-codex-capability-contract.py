@@ -2183,6 +2183,25 @@ class CapabilityContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "symlink"):
                     capabilities.validate_raw_evidence_root(raw_root, ROOT)
                 link.unlink()
+                nested_race = raw_root / "nested-race"; nested_race.mkdir(mode=0o700)
+                nested_race_file = nested_race / "evidence.json"
+                nested_race_file.write_bytes(b"{}\n"); nested_race_file.chmod(0o600)
+                moved_nested_race = raw_root / "nested-race-original"
+                external_race_target = Path(tmp) / "external-race-target"
+                external_race_target.mkdir(mode=0o700)
+                original_private_open = capability_private.os.open; nested_swapped = False
+                def replace_nested_directory(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                    nonlocal nested_swapped
+                    if path == "nested-race" and kwargs.get("dir_fd") is not None and not nested_swapped:
+                        nested_swapped = True
+                        nested_race.rename(moved_nested_race)
+                        nested_race.symlink_to(external_race_target, target_is_directory=True)
+                    return original_private_open(path, flags, *args, **kwargs)
+                with mock.patch.object(
+                    capability_private.os, "open", side_effect=replace_nested_directory,
+                ), self.assertRaisesRegex(ValueError, "descriptor validation|symlink|changed"):
+                    capabilities.validate_raw_evidence_root(raw_root, ROOT)
+                nested_race.unlink(); moved_nested_race.rename(nested_race)
             with self.assertRaisesRegex(ValueError, "outside every Git worktree"):
                 capabilities.validate_raw_evidence_root(ROOT, ROOT)
             private = Path(tmp) / "capture.json"; private.write_text("{}"); private.chmod(0o600)
@@ -2194,6 +2213,11 @@ class CapabilityContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "not supported on Windows"):
                     capability_private._write_private_bytes(private, b"{}\n")
             self.assertEqual(capabilities.validate_private_external_file(private, ROOT, "capture"), private.resolve())
+            alternate_private = Path(tmp) / "capture-alternate.json"
+            os.link(private, alternate_private)
+            with self.assertRaisesRegex(ValueError, "single-link"):
+                capabilities.validate_private_external_file(private, ROOT, "capture")
+            alternate_private.unlink()
             content = b"content-addressed evidence\n"; content_digest = capabilities.digest(content)
             content_path = Path(tmp) / f"{content_digest.removeprefix('sha256:')}.json"
             content_path.write_bytes(content); content_path.chmod(0o600)
@@ -2212,15 +2236,38 @@ class CapabilityContractTests(unittest.TestCase):
                     replacement = intermediate / "private.json"; replacement.write_bytes(b"replacement\n"); replacement.chmod(0o600)
                 return original_open(path, flags, *args, **kwargs)
             with mock.patch.object(capability_io.os, "open", side_effect=replace_private_directory), self.assertRaisesRegex(
-                ValueError, "directory changed while it was being read|path changed while it was being read"
+                ValueError, "approved root changed while it was being read|directory changed while it was being read|path changed while it was being read"
             ):
                 capabilities.read_private_external_file(raced_private, ROOT, "private input")
+            validation_tree = Path(tmp) / "validation-tree"; validation_tree.mkdir(mode=0o700)
+            validation_parent = validation_tree / "intermediate"; validation_parent.mkdir(mode=0o700)
+            validation_file = validation_parent / "private.json"
+            validation_file.write_bytes(b"original\n"); validation_file.chmod(0o600)
+            moved_validation_parent = validation_tree / "intermediate-original"
+            validation_swapped = False
+            def replace_validated_directory(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                nonlocal validation_swapped
+                if path == "private.json" and kwargs.get("dir_fd") is not None and not validation_swapped:
+                    validation_swapped = True
+                    validation_parent.rename(moved_validation_parent); validation_parent.mkdir(mode=0o700)
+                    replacement = validation_parent / "private.json"
+                    replacement.write_bytes(b"replacement\n"); replacement.chmod(0o600)
+                return original_open(path, flags, *args, **kwargs)
+            with mock.patch.object(capability_io.os, "open", side_effect=replace_validated_directory), self.assertRaisesRegex(
+                ValueError, "approved root changed while it was being read|path changed before it was read|path changed while it was being read"
+            ):
+                capabilities.validate_private_external_file(validation_file, ROOT, "private input")
             with self.assertRaisesRegex(ValueError, "content digest as the filename"):
                 capabilities.validate_content_addressed_private_file(private, ROOT, "capture")
             with self.assertRaisesRegex(ValueError, "outside every Git worktree"):
                 capabilities.validate_private_external_file(ROOT / "capture.json", ROOT, "capture", output=True)
         sanitized = capabilities.sanitize({"surface": "cli", "status": "unknown", "authorization": "secret", "hostname": "machine"}, "surface_status")
         self.assertEqual(sanitized, {"status": "unknown", "surface": "cli"})
+        with self.assertRaisesRegex(ValueError, "non-JSON container type"):
+            capabilities.sanitize(
+                {"surface": "cli", "status": ({"authorization": "secret"},)},
+                "surface_status",
+            )
         first = capabilities.sanitize({"account": "fixture-sensitive"}, "fixture_identity")
         self.assertEqual(first, capabilities.sanitize({"account": "different-sensitive"}, "fixture_identity"))
         self.assertNotIn("fixture-sensitive", first["account"])
@@ -2429,8 +2476,16 @@ class CapabilityContractTests(unittest.TestCase):
             node_heavy.write_bytes(b'{"values":[1,2]}')
             with mock.patch.object(
                 capability_contract, "CAPABILITY_JSON_MAX_TOTAL_NODES", 4,
-            ), self.assertRaisesRegex(ValueError, "maximum node count"):
-                capability_publish_io._read(node_heavy)
+            ), mock.patch.object(capability_contract.json, "loads") as capability_loads:
+                with self.assertRaisesRegex(ValueError, "maximum node count"):
+                    capability_publish_io._read(node_heavy)
+                capability_loads.assert_not_called()
+            with mock.patch.object(
+                treatment, "MAX_TOTAL_NODES", 4,
+            ), mock.patch.object(treatment.json, "loads") as treatment_loads:
+                with self.assertRaisesRegex(ValueError, "maximum node count"):
+                    treatment._parse_json_bytes(node_heavy.read_bytes())
+                treatment_loads.assert_not_called()
             with mock.patch.object(
                 capability_contract.json, "loads", side_effect=RecursionError("too deep"),
             ), self.assertRaisesRegex(ValueError, "strict UTF-8 JSON"):

@@ -99,6 +99,8 @@ def validate_work_item(work_item):
 def _safe_sanitized_value(value, pseudonym_fields=frozenset(), *, require_generated=False):
     if isinstance(value, dict):
         for key, nested in value.items():
+            if not isinstance(key, str):
+                raise ValueError("sanitized output contains a non-string JSON object key")
             lowered = str(key).lower()
             sensitive = any(part in lowered for part in _FORBIDDEN_KEY_PARTS)
             if key in pseudonym_fields:
@@ -112,6 +114,8 @@ def _safe_sanitized_value(value, pseudonym_fields=frozenset(), *, require_genera
         for nested in value: _safe_sanitized_value(nested)
     elif isinstance(value, str) and (value.startswith(("/", "\\")) or "://" in value or re.match(r"^[A-Za-z]:[\\/]", value)):
         raise ValueError("sanitized output contains a path or remote locator")
+    elif value is not None and type(value) not in {str, int, float, bool}:
+        raise ValueError("sanitized output contains a non-JSON container type")
 
 
 def sanitize(record, profile):

@@ -20,6 +20,104 @@ def _stable_file_content_identity(metadata):
     return metadata.st_dev, metadata.st_ino, metadata.st_size, metadata.st_mtime_ns, stat.S_IMODE(metadata.st_mode)
 
 
+def _raw_directory_state(metadata):
+    return (
+        *_stable_directory_identity(metadata), metadata.st_size,
+        metadata.st_mtime_ns, metadata.st_ctime_ns, metadata.st_nlink,
+    )
+
+
+def _raw_evidence_tree_snapshot(raw):
+    directory_flags = (
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_DIRECTORY", 0)
+    )
+    file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    snapshot = {}
+
+    def walk(descriptor, parts, depth):
+        if depth > CAPABILITY_JSON_MAX_NESTING_DEPTH:
+            raise ValueError("raw_evidence_root exceeds the maximum directory depth")
+        directory_before = os.fstat(descriptor)
+        if not stat.S_ISDIR(directory_before.st_mode) or stat.S_IMODE(directory_before.st_mode) != 0o700:
+            raise ValueError("raw evidence directories require 0700")
+        directory_state = _raw_directory_state(directory_before)
+        snapshot[parts] = ("directory", directory_state)
+        if len(snapshot) > CAPABILITY_JSON_MAX_TOTAL_NODES:
+            raise ValueError("raw_evidence_root exceeds the maximum entry count")
+        names = sorted(os.listdir(descriptor))
+        for name in names:
+            if not name or Path(name).name != name:
+                raise ValueError("raw_evidence_root contains an invalid entry name")
+            before = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+            entry_parts = (*parts, name)
+            if stat.S_ISLNK(before.st_mode):
+                raise ValueError("raw_evidence_root cannot contain symlinks")
+            if stat.S_ISDIR(before.st_mode):
+                child = os.open(name, directory_flags, dir_fd=descriptor)
+                try:
+                    opened = os.fstat(child)
+                    if _raw_directory_state(opened) != _raw_directory_state(before):
+                        raise ValueError("raw evidence directory changed before it was opened")
+                    walk(child, entry_parts, depth + 1)
+                    current = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+                    if (
+                        _raw_directory_state(os.fstat(child)) != _raw_directory_state(opened)
+                        or _raw_directory_state(current) != _raw_directory_state(opened)
+                    ):
+                        raise ValueError("raw evidence directory changed during validation")
+                finally:
+                    os.close(child)
+            elif stat.S_ISREG(before.st_mode):
+                if stat.S_IMODE(before.st_mode) != 0o600:
+                    raise ValueError("raw evidence directories require 0700 and files require 0600")
+                if before.st_nlink != 1:
+                    raise ValueError("raw evidence files cannot have alternate hard links")
+                if before.st_size > PRIVATE_REFRESH_MAX_BYTES:
+                    raise ValueError("raw evidence file exceeds the bounded private-file size")
+                source = os.open(name, file_flags, dir_fd=descriptor)
+                try:
+                    opened = os.fstat(source)
+                    current = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+                    if (
+                        _stable_file_identity(opened) != _stable_file_identity(before)
+                        or _stable_file_identity(current) != _stable_file_identity(opened)
+                    ):
+                        raise ValueError("raw evidence file changed during validation")
+                    snapshot[entry_parts] = ("file", _stable_file_identity(opened))
+                    if len(snapshot) > CAPABILITY_JSON_MAX_TOTAL_NODES:
+                        raise ValueError("raw_evidence_root exceeds the maximum entry count")
+                finally:
+                    os.close(source)
+            else:
+                raise ValueError("raw_evidence_root may contain only regular files and directories")
+        if sorted(os.listdir(descriptor)) != names or _raw_directory_state(os.fstat(descriptor)) != directory_state:
+            raise ValueError("raw evidence directory changed during validation")
+
+    root_before = os.stat(raw, follow_symlinks=False)
+    if not stat.S_ISDIR(root_before.st_mode):
+        raise ValueError("raw_evidence_root must be a directory")
+    descriptor = os.open(raw, directory_flags)
+    try:
+        if _raw_directory_state(os.fstat(descriptor)) != _raw_directory_state(root_before):
+            raise ValueError("raw_evidence_root changed before it was opened")
+        walk(descriptor, (), 0)
+        root_after = os.stat(raw, follow_symlinks=False)
+        if _raw_directory_state(root_after) != _raw_directory_state(os.fstat(descriptor)):
+            raise ValueError("raw_evidence_root changed during validation")
+    except OSError as error:
+        raise ValueError("raw_evidence_root changed during descriptor validation") from error
+    finally:
+        os.close(descriptor)
+    return snapshot
+
+
+def _validate_raw_evidence_tree(raw):
+    first = _raw_evidence_tree_snapshot(raw)
+    if _raw_evidence_tree_snapshot(raw) != first:
+        raise ValueError("raw_evidence_root changed between descriptor validation passes")
+
+
 def _read_bounded_regular_file(
     path, *, required_mode=None, allowed_root=None, expected_parent_identity=None,
     require_single_link=False,

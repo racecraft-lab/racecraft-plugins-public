@@ -290,6 +290,16 @@ reachable evidence for at most one day after trusted registration, and an
 expired pending claim cannot later be promoted without cleanup. The effective deletion deadline is the
 latest governing or individually capped pending deadline, so an expired older
 receipt cannot delete evidence still covered by a newer bounded pending claim.
+
+Raw-root and private-input validation is descriptor-relative and no-follow.
+After crash-link recovery, the adapter walks every nested directory and file
+twice, binding entry type, inode identity, permissions, link count, size, and
+directory membership; a changed snapshot fails closed. Validation-only private
+files are opened and rechecked through their parent descriptor and must be
+single-link `0600` regular files. Capability and treatment JSON enforce lexical
+nesting and node ceilings before full parsing, then repeat bounds validation on
+the parsed graph. Sanitized trees admit only JSON-native containers, string
+object keys, and scalar values before recursive sensitive-field checks.
 Deletion intents bind the original private file identity. An interrupted
 cleanup resumes only while that exact canonical file remains reachable; a
 missing or arbitrarily identity-changed target cannot prove pre-unlink

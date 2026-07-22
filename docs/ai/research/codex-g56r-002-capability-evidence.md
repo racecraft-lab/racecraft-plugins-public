@@ -141,7 +141,11 @@ for every later freeze and runtime-snapshot successor.
 
 Raw captures, if any, remain in an operator-only content-addressed store outside
 the repository with directory mode `0700` and file mode `0600`; symlinks,
-special files, permissive descendants, and Git worktree locations are rejected.
+special files, permissive descendants, alternate hard links, and Git worktree
+locations are rejected. After crash-link recovery, nested entries are opened
+no-follow relative to directory descriptors and must match two stable tree
+snapshots. Standalone private-input validation opens and rechecks the file
+through its stable parent descriptor rather than trusting path metadata.
 The source-refresh digest resolves to the aggregate capture containing all 22
 retrieved bodies. Each surface's `raw://sha256:...` reference is backed by a mode-`0600`
 sanitized attempt record named by that exact digest, and collection re-reads
@@ -193,9 +197,12 @@ same inode. Retention, receipt, intent, and deletion-record directories are
 loaded through one identity-bound directory descriptor, with descriptor-relative
 entry opens and an unchanged before/after entry set; directory replacement or
 a mixed snapshot fails closed.
-Capability JSON parsing also fails closed on duplicate keys, non-finite values,
-invalid UTF-8, parser recursion, nesting beyond 64 levels, or more than 100,000
-total nodes.
+Capability and treatment JSON parsing also fails closed on duplicate keys,
+non-finite values, invalid UTF-8, parser recursion, nesting beyond 64 levels, or
+more than 100,000 total nodes. Nesting and node limits are scanned before full
+object allocation and revalidated after parsing. Sanitized trees reject
+non-JSON containers and non-string object keys before recursive sensitive-field
+inspection.
 Source-capture materialization rejects non-bytes-like or greater-than-32-MiB
 input before parsing or hashing. A shared parent-directory advisory lock is
 acquired before any reserved `.capability-evidence-write-*` temporary pathname appears and is held through

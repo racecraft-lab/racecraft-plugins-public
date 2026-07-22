@@ -161,6 +161,9 @@
   joins use deterministic fixture-local pseudonyms generated only at explicitly
   declared schema field paths; caller-supplied `fixture-*` values never create a
   trust exception. Only schema-allowlisted fields may enter a committed fixture.
+  Nested values must use JSON-native dictionaries, lists, and scalar types;
+  alternate serializable containers and non-string object keys are rejected
+  before recursive sensitive-field inspection.
 - **Q: How is source-body visibility established without a browser renderer?**
   **A:** Every captured body must declare `normalized_plain_text`; raw HTML and
   angle-bracket markup are rejected. The adapter collapses only whitespace that
@@ -174,7 +177,10 @@
 - **Q: Where and how long is raw evidence retained?** **A:** `raw_evidence_root`
   is a required content-addressed location outside the repository. Directories
   are operator-only mode `0700`; files are mode `0600` and have exactly one hard
-  link. Captures remain for 30 days after trusted retention registration. An
+  link. Validation walks every nested entry through no-follow directory
+  descriptors, compares two stable snapshots after crash recovery, and applies
+  the same stable single-link descriptor check to standalone private inputs.
+  Captures remain for 30 days after trusted retention registration. An
   immutable publication intent makes its exact record set governing before
   output begins, and a matching receipt proves completion only after the exact
   freeze bytes exist. Claims left before intent remain non-governing, expire
@@ -198,6 +204,10 @@
   Expired bytes are deleted while their digest and a deletion record remain. Live private-store
   operations fail closed on Windows until equivalent owner-only DACL validation
   exists. Repository tests never require raw-store access.
+- **Q: When are JSON resource bounds enforced?** **A:** Both capability and
+  treatment adapters scan strict UTF-8 JSON lexically for the 64-level nesting
+  and 100,000-node ceilings before `json.loads()` can allocate the object graph,
+  then repeat semantic bounds validation on the parsed value.
 - **Q: How are deterministic fixtures derived and hashed?** **A:** Sanitize
   first, keep only schema-allowlisted fields, replace unstable values with fixed
   tokens, serialize canonical UTF-8 JSON with sorted keys and no insignificant

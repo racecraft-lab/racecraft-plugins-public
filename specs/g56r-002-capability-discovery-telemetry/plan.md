@@ -242,7 +242,10 @@ Repository tests must pass with the network disabled and no raw evidence store.
 - `raw_evidence_root` must resolve outside the repository, use `0700`
   directories and single-link `0600` files, and retain captures for 30 days after trusted
   registration. Source refresh copies and binds the exact aggregate body capture
-  into that store. Before registration, publication semantically revalidates
+  into that store. Nested entries are traversed no-follow through directory
+  descriptors and must produce two identical stable post-recovery snapshots;
+  validation-only private files use the same single-link descriptor contract.
+  Before registration, publication semantically revalidates
   the source capture, each non-fixture observation, and every canary result
   against the retained bytes. It publishes and re-reads the exact canonical
   freeze bytes as a single-link target through one identity-bound parent

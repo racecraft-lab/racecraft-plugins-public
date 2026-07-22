@@ -225,10 +225,51 @@ def _validate_capability_json_bounds(value, *, depth=0, counter=None):
             _validate_capability_json_bounds(item, depth=depth + 1, counter=counter)
 
 
+def _validate_json_lexical_bounds(text):
+    nodes = depth = index = 0
+    while index < len(text):
+        character = text[index]
+        if character in " \t\r\n,:]}":
+            if character in "]}":
+                depth = max(0, depth - 1)
+            index += 1
+            continue
+        if character == '"':
+            nodes += 1; index += 1
+            while index < len(text):
+                if text[index] == "\\":
+                    index += 2
+                elif text[index] == '"':
+                    index += 1
+                    break
+                else:
+                    index += 1
+        elif character in "[{":
+            nodes += 1; depth += 1; index += 1
+            if depth > CAPABILITY_JSON_MAX_NESTING_DEPTH:
+                raise ValueError("capability JSON exceeds the maximum nesting depth")
+        elif character in "-0123456789":
+            nodes += 1; index += 1
+            while index < len(text) and text[index] not in " \t\r\n,]}":
+                index += 1
+        elif text.startswith("true", index):
+            nodes += 1; index += 4
+        elif text.startswith("false", index):
+            nodes += 1; index += 5
+        elif text.startswith("null", index):
+            nodes += 1; index += 4
+        else:
+            index += 1
+        if nodes > CAPABILITY_JSON_MAX_TOTAL_NODES:
+            raise ValueError("capability JSON exceeds the maximum node count")
+
+
 def _parse_json_bytes(raw):
     try:
+        text = raw.decode("utf-8", errors="strict")
+        _validate_json_lexical_bounds(text)
         value = json.loads(
-            raw.decode("utf-8", errors="strict"),
+            text,
             object_pairs_hook=_unique_object,
             parse_constant=_reject_json_constant,
         )

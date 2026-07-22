@@ -194,17 +194,8 @@ def validate_raw_evidence_root(raw_root, repository_root):
     raw = lexical.resolve(strict=True)
     if raw == repo or repo in raw.parents or _git_worktree_ancestor(raw):
         raise ValueError("raw_evidence_root must resolve outside every Git worktree")
-    if not raw.is_dir(): raise ValueError("raw_evidence_root must be a directory")
     _recover_content_addressed_append_only_links(raw)
-    for path in (raw, *raw.rglob("*")):
-        if path.is_symlink(): raise ValueError("raw_evidence_root cannot contain symlinks")
-        if os.name != "nt":
-            mode = stat.S_IMODE(path.stat().st_mode)
-            if path.is_dir() and mode != 0o700 or path.is_file() and mode != 0o600:
-                raise ValueError("raw evidence directories require 0700 and files require 0600")
-            if path.is_file() and path.stat().st_nlink != 1:
-                raise ValueError("raw evidence files cannot have alternate hard links")
-        if not path.is_dir() and not path.is_file(): raise ValueError("raw_evidence_root may contain only regular files and directories")
+    _validate_raw_evidence_tree(raw)
     return raw
 
 
@@ -237,10 +228,20 @@ def _private_external_file_binding(path, repository_root, label, *, output=False
     if not stat.S_ISDIR(parent_metadata.st_mode) or stat.S_IMODE(parent_metadata.st_mode) != 0o700:
         raise ValueError(f"{label} parent directory must use mode 0700")
     parent_identity = _stable_directory_identity(parent_metadata)
-    if output and not resolved.exists(): return resolved, parent_identity
-    if not resolved.is_file() or resolved.is_symlink(): raise ValueError(f"{label} must be a regular non-symlink file")
-    if os.name != "nt" and stat.S_IMODE(resolved.stat().st_mode) != 0o600: raise ValueError(f"{label} must use mode 0600")
-    if resolved.stat().st_size > PRIVATE_REFRESH_MAX_BYTES: raise ValueError(f"{label} exceeds the bounded private-file size")
+    parent_descriptor = _private_directory_descriptor(parent, parent_identity)
+    try:
+        try:
+            os.stat(resolved.name, dir_fd=parent_descriptor, follow_symlinks=False)
+        except FileNotFoundError:
+            if output:
+                return resolved, parent_identity
+            raise ValueError(f"{label} must be a regular non-symlink file")
+    finally:
+        os.close(parent_descriptor)
+    _read_bounded_regular_file(
+        resolved, required_mode=0o600, allowed_root=parent,
+        expected_parent_identity=parent_identity, require_single_link=True,
+    )
     return resolved, parent_identity
 
 

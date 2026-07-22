@@ -199,6 +199,10 @@ and verifies its exact deterministic bytes before creating the tracked freeze.
 
 Review that:
 
+- strict UTF-8 JSON nesting/node limits are enforced before full parsing;
+- raw-root and standalone private-file validation are descriptor-bound,
+  no-follow, single-link, and stable across replacement attempts;
+- sanitized nested values use only JSON-native containers and string keys;
 - joins use canonical model ID and effort token;
 - raw labels and disagreements are preserved;
 - runtime evidence never admits a model or effort;
