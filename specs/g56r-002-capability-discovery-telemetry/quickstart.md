@@ -16,7 +16,9 @@ Before collection:
 4. Confirm the resolved Codex executable/package and reported version belong to
    the same build used for app-server, CLI, and picker observations.
 5. Do not paste raw responses, credentials, account identifiers, user prompts,
-   paths, hostnames, or repository remotes into tracked files.
+   paths, non-allowlisted or private hostnames, or repository remotes into
+   tracked files. Canonical OpenAI documentation URLs are permitted only in
+   schema-allowlisted authority-evidence fields.
 
 Create separate private input and raw-evidence directories before running the
 commands below. Their immediate parent directories must be mode `0700`; every

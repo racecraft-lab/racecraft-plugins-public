@@ -157,10 +157,12 @@
   support or non-support.
 - **Q: What is the redaction contract?** **A:** A deny-by-default sanitizer
   removes credentials, headers, cookies, prompt or user content, account
-  identifiers, hostnames, absolute paths, and repository remotes. Required
-  joins use deterministic fixture-local pseudonyms generated only at explicitly
-  declared schema field paths; caller-supplied `fixture-*` values never create a
-  trust exception. Only schema-allowlisted fields may enter a committed fixture.
+  identifiers, non-allowlisted or private hostnames, absolute paths, and
+  repository remotes. Required joins use deterministic fixture-local pseudonyms
+  generated only at explicitly declared schema field paths; caller-supplied
+  `fixture-*` values never create a trust exception. Schema-allowlisted
+  canonical OpenAI documentation URLs may remain only in authority-evidence
+  fields; only schema-allowlisted fields may enter a committed fixture.
   Nested values must use JSON-native dictionaries, lists, and scalar types;
   alternate serializable containers and non-string object keys are rejected
   before recursive sensitive-field inspection.

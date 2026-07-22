@@ -20,7 +20,7 @@ import sys
 import tempfile
 import threading
 import unittest
-from unittest import mock
+import unittest.mock
 from pathlib import Path
 
 
@@ -1246,7 +1246,7 @@ class CapabilityContractTests(unittest.TestCase):
         self_approved_freeze["candidate_freeze_id"] = capabilities.digest(capability_freeze._freeze_identity_payload(self_approved_freeze))
         with self.assertRaisesRegex(ValueError, "repository-owned allowlist"):
             capabilities.validate_freeze(self_approved_freeze, self.manifest)
-        with mock.patch.object(capability_freeze, "APPROVED_CANARY_EXECUTORS", (approval,)), self.assertRaisesRegex(
+        with unittest.mock.patch.object(capability_freeze, "APPROVED_CANARY_EXECUTORS", (approval,)), self.assertRaisesRegex(
             ValueError, "published canary provenance is unavailable"
         ):
             capabilities.validate_freeze(self_approved_freeze, self.manifest)
@@ -1422,7 +1422,7 @@ class CapabilityContractTests(unittest.TestCase):
                     "surface_matrix": {"observations": []},
                     "canary_results": [unrelated_result],
                 }, raw_root, ROOT)
-            with mock.patch.object(capability_freeze, "APPROVED_CANARY_EXECUTORS", (approval,)), mock.patch.object(
+            with unittest.mock.patch.object(capability_freeze, "APPROVED_CANARY_EXECUTORS", (approval,)), unittest.mock.patch.object(
                 capability_freeze, "_validate_freeze_payload", side_effect=lambda freeze, manifest, **kwargs: freeze,
             ), self.assertRaisesRegex(ValueError, "trusted canary invocation and attestation"):
                 capabilities.build_canary_successor(
@@ -1451,9 +1451,9 @@ class CapabilityContractTests(unittest.TestCase):
             raw_file.chmod(0o600)
             self.assertEqual(stat.S_IMODE(raw_root.stat().st_mode), 0o700)
             capabilities.validate_raw_evidence_root(raw_root, ROOT)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_capture, "PRIVATE_REFRESH_MAX_BYTES", 4,
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_capture, "_parse_json_bytes",
                 wraps=capability_capture._parse_json_bytes,
             ) as parse_capture, self.assertRaisesRegex(ValueError, "bounded private-file size"):
@@ -1485,7 +1485,7 @@ class CapabilityContractTests(unittest.TestCase):
                 path = parent / filename
                 path.write_bytes(payload); path.chmod(0o600)
                 raise FileExistsError("simulated concurrent unknown capture")
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_capture, "_write_private_bytes_at",
                 side_effect=publish_concurrent_unknown,
             ):
@@ -1512,7 +1512,7 @@ class CapabilityContractTests(unittest.TestCase):
                 path = parent / filename
                 path.write_bytes(b"{}\n"); path.chmod(0o600)
                 raise FileExistsError("simulated conflicting unknown capture")
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_capture, "_write_private_bytes_at",
                 side_effect=publish_conflicting_unknown,
             ), self.assertRaisesRegex(ValueError, "content digest|content-addressed unknown capture"):
@@ -1554,7 +1554,7 @@ class CapabilityContractTests(unittest.TestCase):
             source_capture_digest, source_capture_path = capabilities.materialize_source_capture(
                 raw_root, ROOT, capture_bytes,
             )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_private.os, "fsync", wraps=capability_private.os.fsync,
             ) as source_capture_fsync:
                 self.assertEqual(
@@ -1599,7 +1599,7 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertFalse((raw_root / capabilities.PUBLICATION_RECEIPTS_DIR).exists())
             oversized_output = Path(tmp) / "oversized-candidate-freeze.json"
             freeze_payload = capabilities.canonical_bytes(freeze) + b"\n"
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_freeze, "PRIVATE_REFRESH_MAX_BYTES", len(freeze_payload) - 1,
             ), self.assertRaisesRegex(ValueError, "publication exceeds the bounded size"):
                 capabilities.publish_with_raw_evidence_retention(
@@ -1616,7 +1616,7 @@ class CapabilityContractTests(unittest.TestCase):
                 Path(tmp), output_parent_identity,
             )
             try:
-                with mock.patch.object(
+                with unittest.mock.patch.object(
                     capability_private, "PRIVATE_REFRESH_MAX_BYTES", len(freeze_payload) - 1,
                 ), self.assertRaisesRegex(ValueError, "private output exceeds the bounded size"):
                     capability_private._write_private_bytes_at(
@@ -1640,7 +1640,7 @@ class CapabilityContractTests(unittest.TestCase):
                 leaf_planted = True
                 original_output_lock(descriptor, wait=wait)
 
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_publication_records, "_acquire_append_only_directory_lock",
                 side_effect=plant_leaf_before_output_lock,
             ), self.assertRaisesRegex(ValueError, "cannot be a symlink"):
@@ -1657,7 +1657,7 @@ class CapabilityContractTests(unittest.TestCase):
             hard_link_output = Path(tmp) / "hard-linked-output.json"
             hard_link_source.write_bytes(capabilities.canonical_bytes(freeze) + b"\n")
             os.link(hard_link_source, hard_link_output)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_freeze, "_store_publication_receipt_locked",
             ) as store_receipt, self.assertRaisesRegex(ValueError, "single-link"):
                 capabilities.publish_with_raw_evidence_retention(
@@ -1666,11 +1666,11 @@ class CapabilityContractTests(unittest.TestCase):
             store_receipt.assert_not_called()
             hard_link_output.unlink(); hard_link_source.unlink()
             publication_path = Path(tmp) / "candidate-freeze.json"
-            registration_clock = mock.patch.object(
+            registration_clock = unittest.mock.patch.object(
                 capability_publication_records, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
             )
-            with registration_clock, mock.patch.object(
+            with registration_clock, unittest.mock.patch.object(
                 capability_freeze, "_store_publication_intent_locked",
                 side_effect=OSError("simulated publication intent failure"),
             ), self.assertRaisesRegex(OSError, "intent failure"):
@@ -1687,17 +1687,17 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities.reconcile_raw_evidence_retention(
                     raw_root, ROOT, "2026-07-17T00:00:00Z",
                 )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_publication_records, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-07-17T00:00:00Z", "test clock"),
             ), self.assertRaisesRegex(ValueError, "expired pending retention"):
                 capabilities.publish_with_raw_evidence_retention(
                     freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
                 )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_publication_records, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_freeze, "_store_publication_receipt_locked",
                 side_effect=OSError("simulated publication receipt failure"),
             ):
@@ -1715,10 +1715,10 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(pending_before_recovery["retained_evidence_digests"], expected_retained)
             self.assertEqual(pending_before_recovery["pending_retention_record_digests"], [])
             self.assertEqual(len(pending_before_recovery["publication_intent_digests"]), 1)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_publication_records, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_freeze, "validate_unknown_observation_evidence",
                 wraps=capability_freeze.validate_unknown_observation_evidence,
             ) as validate_unknown_evidence:
@@ -1751,7 +1751,7 @@ class CapabilityContractTests(unittest.TestCase):
                 with original_retention_lock(*args, **kwargs) as raw_descriptor:
                     yield raw_descriptor
 
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_freeze, "_retention_lock", side_effect=swap_alias_before_retention,
             ):
                 self.assertEqual(capabilities.publish_with_raw_evidence_retention(
@@ -1769,7 +1769,7 @@ class CapabilityContractTests(unittest.TestCase):
                 raced_publication_path.write_bytes(b'{"substituted":true}\n')
                 return receipt_digest
 
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_freeze, "_store_publication_receipt_locked",
                 side_effect=replace_output_during_receipt,
             ), self.assertRaisesRegex(ValueError, "changed while its receipt was committed"):
@@ -1807,10 +1807,10 @@ class CapabilityContractTests(unittest.TestCase):
                 if Path(parent_path) / filename in failed_publication_paths:
                     raise OSError("simulated publication failure")
                 original_write_at(parent_descriptor, parent_path, filename, payload, **kwargs)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_publication_records, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_freeze, "_write_private_bytes_at", side_effect=fail_publication,
             ):
                 for failed_freeze, failed_path in (
@@ -1869,7 +1869,7 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2099-01-01T00:00:00Z", apply=True)
             stale_hard_link = raw_root / ".capability-evidence-stale-link"
             os.link(source_capture_path, stale_hard_link)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
             ):
@@ -1886,10 +1886,10 @@ class CapabilityContractTests(unittest.TestCase):
                 raced_bytes = (race_root / filename).read_bytes()
                 os.link(race_root / filename, race_link)
                 original_unlink_descriptor_relative(filename, parent_descriptor)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_unlink_descriptor_relative", side_effect=create_external_link_before_unlink,
             ), self.assertRaisesRegex(ValueError, "retains an alternate hard link"):
                 capabilities.reconcile_raw_evidence_retention(race_root, ROOT, apply=True)
@@ -1913,14 +1913,14 @@ class CapabilityContractTests(unittest.TestCase):
             deletion_directory = race_root / capabilities.DELETION_RECORDS_DIR
             self.assertFalse(deletion_directory.exists() and any(deletion_directory.iterdir()))
             race_link.unlink()
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ), self.assertRaisesRegex(ValueError, "missing without durable completion proof"):
                 capabilities.reconcile_raw_evidence_retention(race_root, ROOT, apply=True)
             restored_race_target.write_bytes(capture_bytes); restored_race_target.chmod(0o600)
             self.assertEqual(restored_race_target.name, transition_intent["quarantine_filename"])
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ), self.assertRaisesRegex(ValueError, "target identity changed before retry"):
@@ -1928,7 +1928,7 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertFalse(deletion_directory.exists() and any(deletion_directory.iterdir()))
             write_failure_root = Path(tmp) / "deletion-record-write-failure-root"
             shutil.copytree(raw_root, write_failure_root)
-            cleanup_clock = mock.patch.object(
+            cleanup_clock = unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
             )
@@ -1939,7 +1939,7 @@ class CapabilityContractTests(unittest.TestCase):
                 if Path(parent_path).name == capabilities.DELETION_RECORDS_DIR:
                     raise OSError("simulated deletion-record write failure")
                 original_private_write(parent_descriptor, parent_path, filename, payload, **kwargs)
-            with cleanup_clock, mock.patch.object(
+            with cleanup_clock, unittest.mock.patch.object(
                 capability_private, "_write_private_bytes_at", side_effect=fail_deletion_record_write,
             ):
                 with self.assertRaisesRegex(OSError, "deletion-record write"):
@@ -1975,7 +1975,7 @@ class CapabilityContractTests(unittest.TestCase):
                     (staged_intent, staged_intent_digest),
                     (forked_recovery, forked_recovery_digest),
                 ])
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
             ), self.assertRaisesRegex(ValueError, "missing without durable completion proof"):
@@ -1985,10 +1985,10 @@ class CapabilityContractTests(unittest.TestCase):
             shutil.copytree(raw_root, interrupted_recovery_root)
             class SimulatedCompletionTermination(BaseException):
                 pass
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_store_staged_recovery_completion",
                 side_effect=SimulatedCompletionTermination,
             ), self.assertRaises(SimulatedCompletionTermination):
@@ -2011,7 +2011,7 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertFalse(any(
                 path.name.startswith(capabilities.PRIVATE_TEMPORARY_PREFIX) for path in interrupted_recovery_root.iterdir()
             ))
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ), self.assertRaisesRegex(ValueError, "missing without durable completion proof"):
@@ -2031,10 +2031,10 @@ class CapabilityContractTests(unittest.TestCase):
                 os.link(hard_link_crash_root / filename, hard_link_after_crash)
                 original_unlink_descriptor_relative(filename, parent_descriptor)
                 raise SimulatedPostUnlinkTermination
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_unlink_descriptor_relative",
                 side_effect=hard_link_then_unlink_then_terminate,
             ), self.assertRaises(SimulatedPostUnlinkTermination):
@@ -2043,7 +2043,7 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertFalse(any(
                 path.name.startswith(capabilities.PRIVATE_TEMPORARY_PREFIX) for path in hard_link_crash_root.iterdir()
             ))
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ), self.assertRaisesRegex(ValueError, "missing without durable completion proof"):
@@ -2058,13 +2058,13 @@ class CapabilityContractTests(unittest.TestCase):
             def fail_after_staged_journal(*args: object, **kwargs: object) -> None:
                 original_store_staged(*args, **kwargs)
                 raise ValueError("simulated post-persistence staged journal failure")
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_store_staged_recovery_intent",
                 side_effect=fail_after_staged_journal,
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_write_private_bytes_at",
                 side_effect=AssertionError("raw bytes must not be republished after unlink proof"),
             ), self.assertRaisesRegex(ValueError, "staged journal failure"):
@@ -2083,7 +2083,7 @@ class CapabilityContractTests(unittest.TestCase):
                 capability_retention._deletion_intent_file_identity(staged_quarantine.stat()),
                 missing_stage["target_file_identity"],
             )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ):
@@ -2103,10 +2103,10 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(missing_completion["deleted_at"], "2026-08-16T00:00:00Z")
             pre_journal_root = Path(tmp) / "pre-journal-persistence-failure-root"
             shutil.copytree(raw_root, pre_journal_root)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_store_staged_recovery_intent",
                 side_effect=ValueError("simulated pre-persistence staged journal failure"),
             ), self.assertRaisesRegex(ValueError, "pre-persistence staged journal failure"):
@@ -2128,7 +2128,7 @@ class CapabilityContractTests(unittest.TestCase):
                 capability_retention._deletion_intent_file_identity(pre_journal_quarantine.stat()),
                 pre_journal_intent["target_file_identity"],
             )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ):
@@ -2141,10 +2141,10 @@ class CapabilityContractTests(unittest.TestCase):
             )
             rename_sync_failure_root = Path(tmp) / "rename-sync-failure-root"
             shutil.copytree(raw_root, rename_sync_failure_root)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_sync_verified_quarantine",
                 side_effect=OSError("simulated quarantine rename fsync failure"),
             ), self.assertRaisesRegex(ValueError, "could not be deleted safely"):
@@ -2173,12 +2173,12 @@ class CapabilityContractTests(unittest.TestCase):
             def terminate_after_v3(*args: object, **kwargs: object) -> None:
                 original_store_staged(*args, **kwargs)
                 raise SimulatedPostV3Termination
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_sync_verified_quarantine", side_effect=track_retry_sync,
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_store_staged_recovery_intent", side_effect=terminate_after_v3,
             ), self.assertRaises(SimulatedPostV3Termination):
                 capabilities.reconcile_raw_evidence_retention(rename_sync_failure_root, ROOT, apply=True)
@@ -2202,10 +2202,10 @@ class CapabilityContractTests(unittest.TestCase):
                 nonlocal failed_pre_unlink_filename
                 failed_pre_unlink_filename = filename
                 raise OSError("simulated pre-unlink failure")
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_unlink_descriptor_relative", side_effect=fail_before_unlink,
             ), self.assertRaisesRegex(ValueError, "could not be deleted safely"):
                 capabilities.reconcile_raw_evidence_retention(pre_unlink_error_root, ROOT, apply=True)
@@ -2227,7 +2227,7 @@ class CapabilityContractTests(unittest.TestCase):
                 capability_retention._deletion_intent_file_identity(pre_unlink_error_target.stat()),
                 pre_unlink_error_intent["target_file_identity"],
             )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ):
@@ -2242,10 +2242,10 @@ class CapabilityContractTests(unittest.TestCase):
             shutil.copytree(raw_root, pre_unlink_root)
             class SimulatedPreUnlinkTermination(BaseException):
                 pass
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_delete_single_link_private_file",
                 side_effect=SimulatedPreUnlinkTermination,
             ), self.assertRaises(SimulatedPreUnlinkTermination):
@@ -2269,14 +2269,14 @@ class CapabilityContractTests(unittest.TestCase):
             )
             pre_unlink_link = Path(tmp) / "pre-unlink-retained-link.json"
             os.link(pre_unlink_target, pre_unlink_link)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ), self.assertRaisesRegex(ValueError, "alternate hard links"):
                 capabilities.reconcile_raw_evidence_retention(pre_unlink_root, ROOT, apply=True)
             self.assertTrue(pre_unlink_target.is_file())
             pre_unlink_link.unlink()
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ):
@@ -2297,10 +2297,10 @@ class CapabilityContractTests(unittest.TestCase):
             def terminate_after_committed_deletion(*args: object, **kwargs: object) -> None:
                 original_delete(*args, **kwargs)
                 raise SimulatedProcessTermination
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_delete_single_link_private_file",
                 side_effect=terminate_after_committed_deletion,
             ), self.assertRaises(SimulatedProcessTermination):
@@ -2322,12 +2322,12 @@ class CapabilityContractTests(unittest.TestCase):
                 for item in retained_report["retained_evidence_digests"]
             ), 3)
             original_os_fsync = capability_io.os.fsync
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_private, "_write_private_bytes_at", wraps=original_private_write,
-            ) as private_write, mock.patch.object(capability_io.os, "fsync", wraps=original_os_fsync) as fsync:
+            ) as private_write, unittest.mock.patch.object(capability_io.os, "fsync", wraps=original_os_fsync) as fsync:
                 cleanup_report = capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
             self.assertTrue(any(
                 Path(call.args[1]).name == capabilities.DELETION_RECORDS_DIR
@@ -2346,13 +2346,13 @@ class CapabilityContractTests(unittest.TestCase):
                 )
             self.assertFalse((raw_root / f"{source_capture_digest.removeprefix('sha256:')}.json").exists())
             self.assertFalse((raw_root / f"{evidence.removeprefix('sha256:')}.json").exists())
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ):
                 self.assertEqual(capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True), cleanup_report)
             cleanup_output = raw_root / "cleanup-report.json"
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
             ):
@@ -2400,7 +2400,7 @@ class CapabilityContractTests(unittest.TestCase):
                         nested_race.rename(moved_nested_race)
                         nested_race.symlink_to(external_race_target, target_is_directory=True)
                     return original_private_open(path, flags, *args, **kwargs)
-                with mock.patch.object(
+                with unittest.mock.patch.object(
                     capability_private.os, "open", side_effect=replace_nested_directory,
                 ), self.assertRaisesRegex(ValueError, "descriptor validation|symlink|changed"):
                     capabilities.validate_raw_evidence_root(raw_root, ROOT)
@@ -2408,7 +2408,7 @@ class CapabilityContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "outside every Git worktree"):
                 capabilities.validate_raw_evidence_root(ROOT, ROOT)
             private = Path(tmp) / "capture.json"; private.write_text("{}"); private.chmod(0o600)
-            with mock.patch.object(capability_io.os, "name", "nt"):
+            with unittest.mock.patch.object(capability_io.os, "name", "nt"):
                 with self.assertRaisesRegex(ValueError, "not supported on Windows"):
                     capabilities.validate_raw_evidence_root(raw_root, ROOT)
                 with self.assertRaisesRegex(ValueError, "not supported on Windows"):
@@ -2438,7 +2438,7 @@ class CapabilityContractTests(unittest.TestCase):
                     intermediate.rename(moved_intermediate); intermediate.mkdir(mode=0o700)
                     replacement = intermediate / "private.json"; replacement.write_bytes(b"replacement\n"); replacement.chmod(0o600)
                 return original_open(path, flags, *args, **kwargs)
-            with mock.patch.object(capability_io.os, "open", side_effect=replace_private_directory), self.assertRaisesRegex(
+            with unittest.mock.patch.object(capability_io.os, "open", side_effect=replace_private_directory), self.assertRaisesRegex(
                 ValueError, "approved root changed while it was being read|directory changed while it was being read|path changed while it was being read"
             ):
                 capabilities.read_private_external_file(raced_private, ROOT, "private input")
@@ -2456,7 +2456,7 @@ class CapabilityContractTests(unittest.TestCase):
                     replacement = validation_parent / "private.json"
                     replacement.write_bytes(b"replacement\n"); replacement.chmod(0o600)
                 return original_open(path, flags, *args, **kwargs)
-            with mock.patch.object(capability_io.os, "open", side_effect=replace_validated_directory), self.assertRaisesRegex(
+            with unittest.mock.patch.object(capability_io.os, "open", side_effect=replace_validated_directory), self.assertRaisesRegex(
                 ValueError, "approved root changed while it was being read|path changed before it was read|path changed while it was being read"
             ):
                 capabilities.validate_private_external_file(validation_file, ROOT, "private input")
@@ -2562,7 +2562,7 @@ class CapabilityContractTests(unittest.TestCase):
                 subprocess.CompletedProcess([], 0, stdout=f"{'b' * 40}\n", stderr=""),
                 subprocess.CompletedProcess([], 0, stdout=f"{'c' * 40}\n", stderr=""),
             ]
-            with mock.patch.object(capability_observations.subprocess, "run", side_effect=responses) as run:
+            with unittest.mock.patch.object(capability_observations.subprocess, "run", side_effect=responses) as run:
                 with self.assertRaisesRegex(ValueError, "changed during collection binding"):
                     capabilities.repository_binding_from_checkout(repository)
             self.assertEqual(run.call_args_list[2].args[0][-1], f"{resolved}^{{tree}}")
@@ -2633,10 +2633,10 @@ class CapabilityContractTests(unittest.TestCase):
 
             writer = threading.Thread(target=write)
             recovery = threading.Thread(target=recover)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_private, "_acquire_append_only_temporary_lock",
                 side_effect=pause_before_temporary_lock,
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_append_only, "_acquire_append_only_directory_lock",
                 side_effect=observe_recovery_lock,
             ):
@@ -2666,7 +2666,7 @@ class CapabilityContractTests(unittest.TestCase):
             root_identity = capability_io._stable_directory_identity(
                 os.stat(root, follow_symlinks=False),
             )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_append_only, "_bounded_directory_names",
                 wraps=capability_append_only._bounded_directory_names,
             ) as bounded_snapshots:
@@ -2684,7 +2684,7 @@ class CapabilityContractTests(unittest.TestCase):
             bounded_identity = capability_io._stable_directory_identity(
                 os.stat(bounded, follow_symlinks=False),
             )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_io, "CAPABILITY_JSON_MAX_TOTAL_NODES", 2,
             ), self.assertRaisesRegex(ValueError, "maximum entry count"):
                 capability_append_only._recover_append_only_directory(
@@ -2713,7 +2713,7 @@ class CapabilityContractTests(unittest.TestCase):
                     raced_target.write_bytes(b"changed payload\n")
                 return retained
 
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_append_only, "_read_append_only_target_at",
                 side_effect=replace_after_bounded_read,
             ), self.assertRaisesRegex(ValueError, "unexpected bytes"):
@@ -2746,19 +2746,19 @@ class CapabilityContractTests(unittest.TestCase):
                 capability_publish_io._read(deeply_nested)
             node_heavy = root / "node-heavy.json"
             node_heavy.write_bytes(b'{"values":[1,2]}')
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_contract, "CAPABILITY_JSON_MAX_TOTAL_NODES", 4,
-            ), mock.patch.object(capability_contract.json, "loads") as capability_loads:
+            ), unittest.mock.patch.object(capability_contract.json, "loads") as capability_loads:
                 with self.assertRaisesRegex(ValueError, "maximum node count"):
                     capability_publish_io._read(node_heavy)
                 capability_loads.assert_not_called()
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 treatment, "MAX_TOTAL_NODES", 4,
-            ), mock.patch.object(treatment.json, "loads") as treatment_loads:
+            ), unittest.mock.patch.object(treatment.json, "loads") as treatment_loads:
                 with self.assertRaisesRegex(ValueError, "maximum node count"):
                     treatment._parse_json_bytes(node_heavy.read_bytes())
                 treatment_loads.assert_not_called()
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_contract.json, "loads", side_effect=RecursionError("too deep"),
             ), self.assertRaisesRegex(ValueError, "strict UTF-8 JSON"):
                 capability_publish_io._read(node_heavy)
@@ -2772,7 +2772,7 @@ class CapabilityContractTests(unittest.TestCase):
             public_abandoned = root / f"{capabilities.PRIVATE_TEMPORARY_PREFIX}{'0' * 32}"
             public_abandoned.write_bytes(b"abandoned pre-link publication"); public_abandoned.chmod(0o600)
             original_fsync = capability_private.os.fsync
-            with mock.patch.object(capability_private.os, "fsync", wraps=original_fsync) as fsync:
+            with unittest.mock.patch.object(capability_private.os, "fsync", wraps=original_fsync) as fsync:
                 capability_private._write(canonical, {"b": 1, "a": 2}, append_only=True)
             self.assertGreaterEqual(fsync.call_count, 3)
             self.assertFalse(public_abandoned.exists())
@@ -2800,7 +2800,7 @@ class CapabilityContractTests(unittest.TestCase):
             active_descriptor = os.open(active_temporary, os.O_RDONLY)
             try:
                 capability_private._acquire_append_only_temporary_lock(active_descriptor, wait=False)
-                with mock.patch.object(
+                with unittest.mock.patch.object(
                     capability_append_only, "_APPEND_ONLY_LOCK_WAIT_SECONDS", 0.05,
                 ), self.assertRaisesRegex(ValueError, "already in progress"):
                     capabilities.validate_raw_evidence_root(private_recovery_root, ROOT)
@@ -2825,11 +2825,11 @@ class CapabilityContractTests(unittest.TestCase):
                 if path == "canonical.json" and kwargs.get("dir_fd") is not None:
                     return replacement_metadata
                 return original_stat(path, *args, **kwargs)
-            with mock.patch.object(capability_io.os, "stat", side_effect=replaced_path_stat):
+            with unittest.mock.patch.object(capability_io.os, "stat", side_effect=replaced_path_stat):
                 with self.assertRaisesRegex(ValueError, "pathname changed"):
                     capability_publish_io._read_bounded_regular_file(canonical)
             initial = canonical.stat()
-            changed_ctime = mock.Mock(
+            changed_ctime = unittest.mock.Mock(
                 st_mode=initial.st_mode, st_dev=initial.st_dev, st_ino=initial.st_ino,
                 st_size=initial.st_size, st_mtime_ns=initial.st_mtime_ns,
                 st_ctime_ns=initial.st_ctime_ns + 1, st_nlink=initial.st_nlink,
@@ -2842,10 +2842,10 @@ class CapabilityContractTests(unittest.TestCase):
                     regular_fstats += 1
                     if regular_fstats == 2: return changed_ctime
                 return metadata
-            with mock.patch.object(capability_io.os, "fstat", side_effect=changed_file_fstat):
+            with unittest.mock.patch.object(capability_io.os, "fstat", side_effect=changed_file_fstat):
                 with self.assertRaisesRegex(ValueError, "changed while"):
                     capability_publish_io._read_bounded_regular_file(canonical)
-            with mock.patch.object(capability_io, "PRIVATE_REFRESH_MAX_BYTES", 4):
+            with unittest.mock.patch.object(capability_io, "PRIVATE_REFRESH_MAX_BYTES", 4):
                 with self.assertRaisesRegex(ValueError, "exceeds the maximum size"):
                     capability_publish_io._read_bounded_regular_file(canonical)
             with self.assertRaises(FileExistsError):
@@ -2856,36 +2856,36 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(capabilities.digest_regular_file(executable), capabilities.digest(executable.read_bytes()))
             executable_replacement = root / "replacement-client"
             executable_replacement.write_bytes(b"different-client")
-            with mock.patch.object(capability_io.os, "stat", return_value=executable_replacement.stat()):
+            with unittest.mock.patch.object(capability_io.os, "stat", return_value=executable_replacement.stat()):
                 with self.assertRaisesRegex(ValueError, "pathname changed"):
                     capabilities.digest_regular_file(executable)
             executable_before = executable.stat()
-            executable_after = mock.Mock(
+            executable_after = unittest.mock.Mock(
                 st_mode=executable_before.st_mode, st_dev=executable_before.st_dev,
                 st_ino=executable_before.st_ino, st_size=executable_before.st_size,
                 st_mtime_ns=executable_before.st_mtime_ns,
                 st_ctime_ns=executable_before.st_ctime_ns + 1,
             )
-            with mock.patch.object(capability_io.os, "fstat", side_effect=[executable_before, executable_after]):
+            with unittest.mock.patch.object(capability_io.os, "fstat", side_effect=[executable_before, executable_after]):
                 with self.assertRaisesRegex(ValueError, "changed while hashing"):
                     capabilities.digest_regular_file(executable)
             growing = root / "growing-client"
             growing.write_bytes(b"grow")
             growing_before = growing.stat()
-            growing_after = mock.Mock(
+            growing_after = unittest.mock.Mock(
                 st_mode=growing_before.st_mode, st_dev=growing_before.st_dev,
                 st_ino=growing_before.st_ino, st_size=growing_before.st_size + 1,
                 st_mtime_ns=growing_before.st_mtime_ns,
                 st_ctime_ns=growing_before.st_ctime_ns + 1,
             )
-            with mock.patch.object(capability_io.os, "fstat", side_effect=[growing_before, growing_after]), mock.patch.object(
+            with unittest.mock.patch.object(capability_io.os, "fstat", side_effect=[growing_before, growing_after]), unittest.mock.patch.object(
                 capability_io.os, "read", side_effect=lambda descriptor, size: b"x" * size,
             ) as growing_read:
                 with self.assertRaisesRegex(ValueError, "changed while hashing"):
                     capabilities.digest_regular_file(growing)
             self.assertEqual(growing_read.call_count, 1)
             private_output = root / "private-output.json"
-            with mock.patch.object(capability_io.os, "name", "nt"), mock.patch.object(capability_io.os, "fchmod") as fchmod:
+            with unittest.mock.patch.object(capability_io.os, "name", "nt"), unittest.mock.patch.object(capability_io.os, "fchmod") as fchmod:
                 with self.assertRaisesRegex(ValueError, "not supported on Windows"):
                     capability_private._write(private_output, {"private": True}, private=True)
             fchmod.assert_not_called()
@@ -2924,7 +2924,7 @@ class CapabilityContractTests(unittest.TestCase):
                     swapped = True
                 original_assert(path, descriptor, expected_identity)
 
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_private, "_assert_private_directory_current", side_effect=swap_before_commit,
             ), self.assertRaisesRegex(ValueError, "parent changed"):
                 capability_private._write_private_bytes(
@@ -2948,7 +2948,7 @@ class CapabilityContractTests(unittest.TestCase):
                     public_swapped = True
                 original_assert(path, descriptor, expected_identity)
 
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_private, "_assert_private_directory_current", side_effect=swap_public_parent,
             ), self.assertRaisesRegex(ValueError, "parent changed"):
                 capability_private._write(public_target, {"published": True}, append_only=True)
@@ -2973,7 +2973,7 @@ class CapabilityContractTests(unittest.TestCase):
                 finally:
                     os.close(replacement_descriptor)
 
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_private.os, "link", side_effect=substitute_linked_target,
             ), self.assertRaisesRegex(ValueError, "does not match its temporary file"):
                 capability_private._write(substituted_target, {"published": True}, append_only=True)
@@ -2997,7 +2997,7 @@ class CapabilityContractTests(unittest.TestCase):
                     raise ValueError("simulated release validation failure")
                 original_assert(path, descriptor, expected_identity)
 
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention_records, "_assert_private_directory_current",
                 side_effect=fail_release_validation,
             ), self.assertRaisesRegex(ValueError, "release validation failure"):
@@ -3045,7 +3045,7 @@ class CapabilityContractTests(unittest.TestCase):
                     replaced = True
                 return names
 
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_io, "_bounded_directory_names", side_effect=replace_after_snapshot,
             ), self.assertRaisesRegex(ValueError, "directory changed"):
                 capability_retention_records._load_private_records(
@@ -3068,7 +3068,7 @@ class CapabilityContractTests(unittest.TestCase):
                     extra_path.chmod(0o600)
                 return names
 
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_io, "_bounded_directory_names", side_effect=add_after_snapshot,
             ), self.assertRaisesRegex(ValueError, "directory changed"):
                 capability_retention_records._load_private_records(
@@ -3086,20 +3086,20 @@ class CapabilityContractTests(unittest.TestCase):
                 path = records / f"{capabilities.digest(raw).removeprefix('sha256:')}.json"
                 path.write_bytes(raw)
                 path.chmod(0o600)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_io, "PRIVATE_RECORD_MAX_ENTRIES", 2,
             ), self.assertRaisesRegex(ValueError, "maximum entry count"):
                 capability_retention_records._load_private_records(
                     records, ROOT, "retention record",
                 )
             total_bytes = sum(path.stat().st_size for path in records.iterdir())
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_io, "PRIVATE_RECORD_MAX_TOTAL_BYTES", total_bytes - 1,
             ), self.assertRaisesRegex(ValueError, "maximum aggregate size"):
                 capability_retention_records._load_private_records(
                     records, ROOT, "retention record",
                 )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_contract, "CAPABILITY_JSON_MAX_TOTAL_NODES", 6,
             ), self.assertRaisesRegex(ValueError, "maximum node count"):
                 capability_retention_records._load_private_records(
@@ -3140,7 +3140,7 @@ class CapabilityContractTests(unittest.TestCase):
                 raw_root.mkdir(mode=0o700)
                 raise OSError("simulated failure after unlink")
 
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_unlink_descriptor_relative", side_effect=unlink_then_replace,
             ), self.assertRaisesRegex(ValueError, "parent changed"):
                 capability_retention._delete_single_link_private_file(
@@ -3191,10 +3191,10 @@ class CapabilityContractTests(unittest.TestCase):
             def fail_completion(*_args: object, **_kwargs: object) -> None:
                 raise ValueError("simulated completion persistence failure")
 
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_store_staged_recovery_completion",
                 side_effect=fail_completion,
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_write_private_bytes_at",
                 side_effect=AssertionError("raw bytes must not be republished after v3"),
             ), self.assertRaisesRegex(ValueError, "completion persistence failure"):
@@ -3258,10 +3258,10 @@ class CapabilityContractTests(unittest.TestCase):
             current = capability_contract._parsed_timestamp(
                 "2026-08-17T00:00:00Z", "test clock",
             )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 capability_retention, "_load_publication_authority",
                 return_value=([(retention_record, retention_digest)], [], [], {retention_digest}),
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 capability_retention, "_load_private_records", side_effect=load_records,
             ), self.assertRaisesRegex(ValueError, "predates its deletion intent"):
                 capability_retention._reconcile_raw_evidence_retention_locked(
@@ -3600,7 +3600,7 @@ class TreatmentContractTests(unittest.TestCase):
         rebind_treatment_owners(bundle)
         canonical_routes = treatment._canonical_routes(load_json(MANIFEST_PATH))
         canonical_routes[route_id]["effort"] = trace["requested_effort"]
-        with mock.patch.object(treatment, "_canonical_routes", return_value=canonical_routes):
+        with unittest.mock.patch.object(treatment, "_canonical_routes", return_value=canonical_routes):
             validated = treatment.validate_treatment_bundle(
                 self.rebound(bundle),
             )
@@ -4264,33 +4264,33 @@ class TreatmentContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=ROOT) as directory:
             root = Path(directory); source = root / "source.json"; source.write_text("{}", encoding="utf-8")
             self.assertEqual(treatment._read_bounded_regular_file(source, allowed_root=root), b"{}")
-            with mock.patch.object(treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False):
+            with unittest.mock.patch.object(treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False):
                 self.assertEqual(treatment._read_bounded_regular_file(source, allowed_root=root), b"{}")
                 self.assertEqual(
                     treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))["telemetry_profile_id"],
                     self.bundle["telemetry_profile_id"],
                 )
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False,
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 treatment, "IS_WINDOWS", True,
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 treatment, "_windows_final_path_from_descriptor", return_value=source.resolve(),
             ) as final_path:
                 self.assertEqual(treatment._read_bounded_regular_file(source, allowed_root=root), b"{}")
                 self.assertEqual(final_path.call_count, 1)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False,
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 treatment, "IS_WINDOWS", True,
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 treatment, "_windows_final_path_from_descriptor", return_value=root.parent / "escaped.json",
             ), self.assertRaisesRegex(ValueError, "Windows handle escaped"):
                 treatment._read_bounded_regular_file(source, allowed_root=root)
             symlink = root / "symlink.json"; symlink.symlink_to(source)
             with self.assertRaisesRegex(ValueError, "regular non-symlink"):
                 treatment._read_bounded_regular_file(symlink, allowed_root=root)
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False,
             ), self.assertRaisesRegex(ValueError, "non-symlink"):
                 treatment._read_bounded_regular_file(symlink, allowed_root=root)
@@ -4326,7 +4326,7 @@ class TreatmentContractTests(unittest.TestCase):
                     (race_directory / "source.json").write_text('{"outside":"replacement"}', encoding="utf-8")
                 return original_open(path, flags, *args, **kwargs)
 
-            with mock.patch.object(treatment.os, "open", side_effect=replace_directory), self.assertRaisesRegex(
+            with unittest.mock.patch.object(treatment.os, "open", side_effect=replace_directory), self.assertRaisesRegex(
                 ValueError, "directory changed while it was being read"
             ):
                 treatment._read_bounded_regular_file(race_source, allowed_root=root)
@@ -4343,9 +4343,9 @@ class TreatmentContractTests(unittest.TestCase):
                     fallback_source.write_text('{"replacement":true}', encoding="utf-8")
                 return original_open(path, flags, *args, **kwargs)
 
-            with mock.patch.object(
+            with unittest.mock.patch.object(
                 treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False,
-            ), mock.patch.object(
+            ), unittest.mock.patch.object(
                 treatment.os, "open", side_effect=replace_fallback_file,
             ), self.assertRaisesRegex(ValueError, "pathname changed before it was read"):
                 treatment._read_bounded_regular_file(fallback_source, allowed_root=root)
@@ -4561,7 +4561,7 @@ class TreatmentContractTests(unittest.TestCase):
                     expected_treatment_evidence_digest=expected_evidence,
                 )
             decisions = capability_contract._BoundDecisionSet(copy.deepcopy(published["tuple_decisions"]))
-            with mock.patch.object(capability_freeze, "validate_unknown_observation_evidence"), self.assertRaisesRegex(
+            with unittest.mock.patch.object(capability_freeze, "validate_unknown_observation_evidence"), self.assertRaisesRegex(
                 ValueError, "binding disagree"
             ):
                 capabilities.build_freeze(
@@ -4602,7 +4602,7 @@ class TreatmentContractTests(unittest.TestCase):
             bounded_reads.append(Path(path))
             return original_read(path, **kwargs)
 
-        with mock.patch.object(treatment, "_read_bounded_regular_file", side_effect=track_authority_reads):
+        with unittest.mock.patch.object(treatment, "_read_bounded_regular_file", side_effect=track_authority_reads):
             successor = treatment.build_treatment_successor(
                 prior, successor_bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
                 trusted_treatment_evidence=successor_evidence,
