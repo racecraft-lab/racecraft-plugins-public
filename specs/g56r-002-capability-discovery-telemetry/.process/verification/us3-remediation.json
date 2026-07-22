@@ -3,8 +3,8 @@
   "feature_id": "G56R-002",
   "marker_id": "us3",
   "status": "pass",
-  "generated_at": "2026-07-22T16:23:21Z",
-  "verified_commit_sha": "88624590b29ac20802d2242d71abb0d732fdcc6f",
+  "generated_at": "2026-07-22T16:38:01Z",
+  "verified_commit_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
   "required_gate_ids": [
     "focused_tests",
     "validator_tests",
@@ -17,6 +17,6 @@
     "validator_tests": {"status": "pass", "evidence": "39/39 checkpoint-validator tests pass"},
     "reviewability_contract": {"status": "pass", "evidence": "77/77 reviewability-contract tests pass"},
     "full_suite": {"status": "pass", "evidence": "2864/2864 repository tests pass"},
-    "independent_p0_p1_review": {"status": "pass", "evidence": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at 88624590b29ac20802d2242d71abb0d732fdcc6f"}
+    "independent_p0_p1_review": {"status": "pass", "evidence": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at c699b94f34c378bd4a8f3780e8570abaeb23489d"}
   }
 }
