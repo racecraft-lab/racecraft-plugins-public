@@ -194,11 +194,15 @@ def make_two_trace_graph_bundle(source: dict) -> dict:
     return rebind_treatment_owners(bundle)
 
 
-def qualification_owner(authority_kind: str) -> dict:
+def qualification_owner(
+    authority_kind: str,
+    *,
+    destination_candidate_route_id: str = "G56R-001-CR-PHASE-EXECUTOR-GPT55",
+) -> dict:
     owner = {
         "authority_kind": authority_kind,
         "owner_spec_id": "G56R-003" if authority_kind == "owned_external" else "G56R-002",
-        "destination_candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-GPT55",
+        "destination_candidate_route_id": destination_candidate_route_id,
         "destination_agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
         "destination_named_agent": "phase-executor",
         "qualification_status": "prequalified",
@@ -209,8 +213,11 @@ def qualification_owner(authority_kind: str) -> dict:
 
 
 def trusted_external_qualification(bundle: dict) -> dict[str, dict]:
-    owner = next(item for item in bundle["qualification_evidence_registry"] if item["authority_kind"] == "owned_external")
-    return {owner["qualification_evidence_id"]: copy.deepcopy(owner)}
+    return {
+        owner["qualification_evidence_id"]: copy.deepcopy(owner)
+        for owner in bundle["qualification_evidence_registry"]
+        if owner["authority_kind"] == "owned_external"
+    }
 
 
 def bind_trusted_treatment_evidence(bundle: dict) -> tuple[dict, dict[str, bytes]]:
@@ -322,7 +329,7 @@ def declare_reroute_result(bundle: dict, trusted: dict[str, dict] | None = None)
     if trace["supported_effective_effort"] is not None:
         directly_derived.append("effort_mismatch")
     if trace["supported_effective_model"] is not None and (
-        len(events) != 1 or events[0]["toModel"] != trace["supported_effective_model"]
+        not events or events[-1]["toModel"] != trace["supported_effective_model"]
     ):
         directly_derived.append("model_mismatch")
     if events and trace["supported_effective_model"] is None:
@@ -381,6 +388,49 @@ def make_treatment_reroute_case(bundle: dict, authority: str) -> dict:
         "treatment_disposition": disposition,
     }]
     return declare_reroute_result(bundle)
+
+
+def make_two_hop_treatment_reroute_case(bundle: dict) -> dict:
+    bundle = make_treatment_reroute_case(bundle, "owned_external")
+    trace = bundle["treatment_traces"][0]
+    second_owner = qualification_owner(
+        "owned_external",
+        destination_candidate_route_id="G56R-001-CR-PHASE-EXECUTOR-SOL",
+    )
+    bundle["qualification_evidence_registry"].append(second_owner)
+    first_event = trace["service_reroute_events"][0]
+    second_event = {
+        "surface": trace["surface"],
+        "threadId": trace["context"]["threadId"],
+        "turnId": trace["context"]["turnId"],
+        "fromModel": first_event["toModel"],
+        "toModel": trace["requested_model"],
+        "reason": "fixture_second_service_reroute",
+        "evidence_digest": treatment.digest(b"fixture-second-reroute-evidence"),
+    }
+    second_event["event_id"] = treatment.content_id(second_event, "event_id")
+    trace["service_reroute_events"].append(second_event)
+    trace["reroute_destination_assessments"].append({
+        "event_id": second_event["event_id"],
+        "destination_candidate_route_id": second_owner["destination_candidate_route_id"],
+        "destination_agent_contract_id": second_owner["destination_agent_contract_id"],
+        "destination_named_agent": second_owner["destination_named_agent"],
+        "assessment": "prequalified_same_agent",
+        "prequalification_evidence_id": second_owner["qualification_evidence_id"],
+    })
+    trace["supported_effective_model"] = second_event["toModel"]
+    next(
+        item for item in trace["observations"] if item["field_path"] == "reroute.events"
+    )["value"] = copy.deepcopy(trace["service_reroute_events"])
+    next(
+        item for item in trace["observations"]
+        if item["field_path"] == "assignment.supported_effective_model"
+    )["value"] = second_event["toModel"]
+    bundle["fixture_provenance"]["expected_dispositions"] = [{
+        "execution_trace_id": trace["objective_binding"]["execution_trace_id"],
+        "treatment_disposition": "non_scorable_rerouted",
+    }]
+    return declare_reroute_result(bundle, trusted_external_qualification(bundle))
 
 
 def source_capture(manifest: dict, retrieved_at: str = "2026-07-16T00:00:00Z") -> list[dict]:
@@ -3926,6 +3976,37 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertEqual(failed["treatment_traces"][0]["treatment_disposition"], "hard_fail")
         self.assertEqual(treatment.FAILURE_DISPOSITIONS["effective_treatment_unknown"], "unknown")
         self.assertTrue(all(value in {"unknown", "hard_fail"} for value in treatment.FAILURE_DISPOSITIONS.values()))
+
+    def test_multi_hop_reroutes_form_one_trusted_ordered_chain(self) -> None:
+        chained = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
+        trusted = trusted_external_qualification(chained)
+        result = treatment.validate_treatment_bundle(
+            self.rebound(chained), trusted_qualification_evidence=trusted
+        )
+        self.assertEqual(
+            result["treatment_traces"][0]["treatment_disposition"],
+            "non_scorable_rerouted",
+        )
+
+        broken = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
+        trace = broken["treatment_traces"][0]
+        second_event = trace["service_reroute_events"][1]
+        second_event["fromModel"] = trace["requested_model"]
+        second_event["event_id"] = treatment.content_id(second_event, "event_id")
+        trace["reroute_destination_assessments"][1]["event_id"] = second_event["event_id"]
+        next(
+            item for item in trace["observations"] if item["field_path"] == "reroute.events"
+        )["value"] = copy.deepcopy(trace["service_reroute_events"])
+        declare_reroute_result(broken, trusted_external_qualification(broken))
+        self.assert_reroute_hard_failed(
+            broken, trusted=trusted_external_qualification(broken)
+        )
+
+        duplicate = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        duplicate["treatment_traces"][0]["service_reroute_events"].append(
+            copy.deepcopy(duplicate["treatment_traces"][0]["service_reroute_events"][0])
+        )
+        self.assert_bundle_invalid(duplicate)
 
     def test_reroute_association_and_external_qualification_are_exact(self) -> None:
         association_mutations = [

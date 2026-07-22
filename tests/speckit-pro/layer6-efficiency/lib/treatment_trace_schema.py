@@ -1265,12 +1265,11 @@ def _reroute_disposition(
     association = (trace["surface"], trace["context"]["threadId"], trace["context"]["turnId"])
     if any((event["surface"], event["threadId"], event["turnId"]) != association for event in events):
         return "hard_fail", ["reroute_association_mismatch"]
-    if len({(event["surface"], event["threadId"], event["turnId"]) for event in events}) != len(events):
-        return "hard_fail", ["ambiguous_reroute_association"]
     by_event: dict[str, list[dict]] = {}
     for assessment in assessments: by_event.setdefault(assessment["event_id"], []).append(assessment)
+    expected_source_model = trace["requested_model"]
     for event in events:
-        if event["fromModel"] != trace["requested_model"]: return "hard_fail", ["reroute_source_model_mismatch"]
+        if event["fromModel"] != expected_source_model: return "hard_fail", ["reroute_source_model_mismatch"]
         matches = by_event.get(event["event_id"], [])
         if len(matches) != 1: return "hard_fail", ["reroute_destination_missing" if not matches else "reroute_destination_ambiguous"]
         item = matches[0]; evidence = qualification.get(item["prequalification_evidence_id"])
@@ -1286,8 +1285,9 @@ def _reroute_disposition(
         if evidence["authority_kind"] != "owned_external" or evidence["owner_spec_id"] == "G56R-002": return "hard_fail", ["reroute_destination_non_authoritative"]
         admitted = trusted.get(evidence["qualification_evidence_id"])
         if admitted is None or canonical_bytes(admitted) != canonical_bytes(evidence): return "hard_fail", ["reroute_destination_untrusted"]
-        if trace["supported_effective_model"] != event["toModel"] or trace["supported_effective_effort"] is not None:
-            return "hard_fail", ["reroute_effective_destination_mismatch"]
+        expected_source_model = event["toModel"]
+    if trace["supported_effective_model"] != events[-1]["toModel"] or trace["supported_effective_effort"] is not None:
+        return "hard_fail", ["reroute_effective_destination_mismatch"]
     if set(by_event) != {event["event_id"] for event in events}: return "hard_fail", ["orphan_reroute_destination_assessment"]
     return "non_scorable_rerouted", ["service_reroute_requested_route_non_scorable"]
 
@@ -1414,7 +1414,7 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     ):
         derived_codes.append("effort_mismatch")
     if row["supported_effective_model"] is not None and (
-        events and (len(events) != 1 or events[0]["toModel"] != row["supported_effective_model"])
+        events and events[-1]["toModel"] != row["supported_effective_model"]
         or not events and supported_route is None
     ):
         derived_codes.append("model_mismatch")
