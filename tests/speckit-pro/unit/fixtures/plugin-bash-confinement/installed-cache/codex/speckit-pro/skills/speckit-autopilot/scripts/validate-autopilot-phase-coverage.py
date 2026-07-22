@@ -2398,7 +2398,13 @@ def validate_projection_integrity(
                                 "checkpoint_evidence",
                             )
                         )
-                    corrections = checkpoint.get("corrections")
+                    superseded_evidence = checkpoint.get("superseded_evidence")
+                    correction_authority = (
+                        superseded_evidence
+                        if isinstance(superseded_evidence, dict)
+                        else checkpoint
+                    )
+                    corrections = correction_authority.get("corrections")
                     correction_prefix = (
                         f"{feature_dir}/.process/checkpoint-corrections/{marker_id}-"
                     )
@@ -2427,18 +2433,114 @@ def validate_projection_integrity(
                         checkpoint_evidence_errors.append(
                             f"pr_marker_plan.markers[{index}] checkpoint correction state does not cover the authorized append-only correction files"
                         )
+                    correction_projection_evidence = json.loads(json.dumps(evidence))
+                    if superseded_evidence is not None:
+                        prefix = (
+                            f"pr_marker_plan.markers[{index}].implementation_checkpoint."
+                            "superseded_evidence"
+                        )
+                        if not isinstance(superseded_evidence, dict):
+                            checkpoint_evidence_errors.append(
+                                f"{prefix} must be an object"
+                            )
+                        elif repo_root is not None:
+                            superseded_path = superseded_evidence.get("evidence_path")
+                            superseded_commit = superseded_evidence.get(
+                                "checkpoint_evidence_commit_sha"
+                            )
+                            superseded_sha = superseded_evidence.get(
+                                "checkpoint_evidence_sha"
+                            )
+                            committed_superseded = (
+                                _git_file_at_commit(
+                                    repo_root, superseded_commit, superseded_path,
+                                )
+                                if isinstance(superseded_path, str)
+                                else None
+                            )
+                            authorized_superseded = (
+                                _git_file_at_commit(
+                                    repo_root, expected_head_commit, superseded_path,
+                                )
+                                if isinstance(superseded_path, str)
+                                else None
+                            )
+                            if (
+                                not _is_normalized_repo_path(superseded_path)
+                                or superseded_path == evidence_ref
+                            ):
+                                checkpoint_file_errors.append(
+                                    f"{prefix}.evidence_path is invalid or current"
+                                )
+                            if not _git_commit_exists(repo_root, superseded_commit):
+                                checkpoint_evidence_errors.append(
+                                    f"{prefix}.checkpoint_evidence_commit_sha is not an existing commit"
+                                )
+                            elif not (
+                                isinstance(expected_head_commit, str)
+                                and _git_commit_is_ancestor(
+                                    repo_root, superseded_commit, expected_head_commit,
+                                )
+                            ):
+                                checkpoint_evidence_errors.append(
+                                    f"{prefix}.checkpoint_evidence_commit_sha is not an ancestor of the authorized PR head"
+                                )
+                            current_evidence_commit = checkpoint.get(
+                                "checkpoint_evidence_commit_sha"
+                            )
+                            if (
+                                isinstance(current_evidence_commit, str)
+                                and isinstance(superseded_commit, str)
+                                and _git_commit_exists(repo_root, current_evidence_commit)
+                                and not _git_commit_is_ancestor(
+                                    repo_root, superseded_commit, current_evidence_commit,
+                                )
+                            ):
+                                checkpoint_evidence_errors.append(
+                                    f"{prefix} does not precede the current checkpoint evidence"
+                                )
+                            if committed_superseded is None:
+                                checkpoint_file_errors.append(
+                                    f"{prefix} evidence is absent from its evidence commit"
+                                )
+                            else:
+                                if superseded_sha != _sha256_bytes(committed_superseded):
+                                    checkpoint_file_errors.append(
+                                        f"{prefix}.checkpoint_evidence_sha"
+                                    )
+                                if authorized_superseded != committed_superseded:
+                                    checkpoint_file_errors.append(
+                                        f"{prefix} differs from the authorized PR head"
+                                    )
+                                if _read_repo_bytes(repo_root, superseded_path) != committed_superseded:
+                                    checkpoint_file_errors.append(
+                                        f"{prefix} worktree bytes differ from its evidence commit"
+                                    )
+                                parsed_superseded = _load_json_bytes(
+                                    committed_superseded
+                                )
+                                if not isinstance(parsed_superseded, dict):
+                                    checkpoint_evidence_errors.append(
+                                        f"{prefix} evidence must be a JSON object"
+                                    )
+                                else:
+                                    correction_projection_evidence = parsed_superseded
                     if checkpoint_status == "complete" and corrections is not None:
-                        if not isinstance(corrections, list) or not corrections:
+                        if (
+                            not isinstance(corrections, list)
+                            or superseded_evidence is None and not corrections
+                        ):
                             checkpoint_evidence_errors.append(
                                 f"pr_marker_plan.markers[{index}].implementation_checkpoint.corrections must be a non-empty array"
                             )
                         elif repo_root is not None:
-                            projection_evidence = json.loads(json.dumps(evidence))
-                            previous_path = evidence_ref
-                            previous_commit = checkpoint.get(
+                            previous_path = correction_authority.get("evidence_path")
+                            previous_commit = correction_authority.get(
                                 "checkpoint_evidence_commit_sha"
                             )
-                            previous_sha = checkpoint.get("checkpoint_evidence_sha")
+                            previous_sha = correction_authority.get(
+                                "checkpoint_evidence_sha"
+                            )
                             correction_paths: set[str] = set()
                             correction_schema = {
                                 "$ref": "#/$defs/checkpoint_correction_record"
@@ -2621,7 +2723,7 @@ def validate_projection_integrity(
                                     )
                                     for removal in removals or []:
                                         container_name, field_name = removal.split(".", 1)
-                                        container = projection_evidence.get(
+                                        container = correction_projection_evidence.get(
                                             container_name
                                         )
                                         if (
@@ -2637,6 +2739,8 @@ def validate_projection_integrity(
                                 previous_path = correction_path
                                 previous_commit = correction_commit
                                 previous_sha = correction_sha
+                            if superseded_evidence is None:
+                                projection_evidence = correction_projection_evidence
                     if evidence.get("status") != checkpoint_status:
                         checkpoint_evidence_errors.append(
                             f"pr_marker_plan.markers[{index}] checkpoint evidence status does not match checkpoint status"

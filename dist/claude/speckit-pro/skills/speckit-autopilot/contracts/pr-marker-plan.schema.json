@@ -1000,6 +1000,9 @@
             "$ref": "#/$defs/checkpoint_correction"
           }
         },
+        "superseded_evidence": {
+          "$ref": "#/$defs/superseded_checkpoint_evidence"
+        },
         "completed_at": {
           "type": "string",
           "minLength": 1
@@ -1078,6 +1081,35 @@
         "supersedes_evidence_sha": {
           "type": "string",
           "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "superseded_checkpoint_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_path",
+        "checkpoint_evidence_commit_sha",
+        "checkpoint_evidence_sha",
+        "corrections"
+      ],
+      "properties": {
+        "evidence_path": {
+          "$ref": "#/$defs/repo_path"
+        },
+        "checkpoint_evidence_commit_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "checkpoint_evidence_sha": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "corrections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/checkpoint_correction"
+          }
         }
       }
     },

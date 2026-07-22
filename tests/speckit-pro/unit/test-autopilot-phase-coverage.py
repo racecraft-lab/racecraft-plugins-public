@@ -2684,6 +2684,187 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "pr_marker_plan.markers[0] checkpoint marker_scope_unchanged",
                 report["checkpoint_source_fingerprint_errors"],
             )
+            evidence_path.write_bytes(committed_evidence)
+
+            subprocess.run(
+                ["git", "-C", str(root), "add", str(tasks_path)], check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "update completed marker scope",
+                ],
+                check=True,
+            )
+            replacement_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            replacement_evidence_path = (
+                root / "specs/spec-example/.process/checkpoints/us1-current.json"
+            )
+            replacement_verification_path = (
+                root / "specs/spec-example/.process/verification/us1-current.json"
+            )
+            replacement_tasks_sha = (
+                "sha256:" + hashlib.sha256(tasks_path.read_bytes()).hexdigest()
+            )
+            replacement_marker_sha = "sha256:" + hashlib.sha256(
+                b"- [x] T001 Marker task\n- [ ] T002 Changed folded task\n"
+            ).hexdigest()
+            replacement_verification_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "verification-report.v1",
+                        "feature_id": "SPEC-EXAMPLE",
+                        "marker_id": "us1",
+                        "status": "pass",
+                        "generated_at": "2026-07-20T00:00:00Z",
+                        "verified_commit_sha": replacement_commit,
+                        "required_gate_ids": verification_gate_ids,
+                        "results": verification_results,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            replacement_verification_sha = (
+                "sha256:"
+                + hashlib.sha256(replacement_verification_path.read_bytes()).hexdigest()
+            )
+            replacement_evidence_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "marker-checkpoint.v1",
+                        "feature_id": "SPEC-EXAMPLE",
+                        "marker_id": "us1",
+                        "status": "complete",
+                        "task_ids": ["T001", "T002"],
+                        "implementation_checkpoint_sha": replacement_commit,
+                        "verification": verification_results,
+                        "verification_evidence_sha": replacement_verification_sha,
+                        "required_verification_gate_ids": verification_gate_ids,
+                        "source_fingerprint_status": "current",
+                        "tasks_sha": replacement_tasks_sha,
+                        "completed_at": "2026-07-20T00:00:00Z",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            replacement_evidence_sha = (
+                "sha256:"
+                + hashlib.sha256(replacement_evidence_path.read_bytes()).hexdigest()
+            )
+            checkpoint = state["pr_marker_plan"]["markers"][0][
+                "implementation_checkpoint"
+            ]
+            checkpoint.update(
+                {
+                    "evidence_path": "specs/spec-example/.process/checkpoints/us1-current.json",
+                    "checkpoint_evidence_sha": replacement_evidence_sha,
+                    "checkpoint_evidence_commit_sha": "pending replacement evidence commit",
+                    "verification_evidence_path": "specs/spec-example/.process/verification/us1-current.json",
+                    "verification_evidence_sha": replacement_verification_sha,
+                    "commit_sha": replacement_commit,
+                    "head_sha": replacement_commit,
+                    "completed_at": "2026-07-20T00:00:00Z",
+                    "freshness": {
+                        "source_fingerprint_status": "current_marker_scope",
+                        "source_fingerprint_contract": "marker-task-lines.v2",
+                        "tasks_sha_scope": "checkpoint_time_whole_file",
+                        "current_tasks_sha": replacement_tasks_sha,
+                        "checkpoint_marker_tasks_sha": replacement_marker_sha,
+                        "current_marker_tasks_sha": replacement_marker_sha,
+                        "validated_at": "2026-07-20T00:00:00Z",
+                    },
+                    "superseded_evidence": {
+                        "evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
+                        "checkpoint_evidence_commit_sha": evidence_commit,
+                        "checkpoint_evidence_sha": evidence_sha,
+                        "corrections": [],
+                    },
+                }
+            )
+            state["pr_marker_plan"]["markers"][0]["reviewability"][
+                "head_sha"
+            ] = replacement_commit
+            for path in (
+                "specs/spec-example/tasks.md",
+                "specs/spec-example/.process/checkpoints/us1-current.json",
+                "specs/spec-example/.process/verification/us1-current.json",
+            ):
+                operation = "MODIFIED" if path.endswith("tasks.md") else "NEW"
+                state["pr_marker_plan"]["markers"][0]["declared_files"].append(
+                    {"path": path, "operation": operation}
+                )
+                manifest["files"].append(
+                    {
+                        "path": path,
+                        "operation": operation,
+                        "category": "process",
+                        "provenance": "authored",
+                        "marker_ids": ["us1"],
+                    }
+                )
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            replacement_manifest_sha = (
+                "sha256:" + hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+            )
+            for target in (
+                state["current_source_fingerprint"],
+                state["pr_marker_plan"]["source_fingerprint"],
+            ):
+                target["tasks_sha"] = replacement_tasks_sha
+                target["changed_file_manifest_sha"] = replacement_manifest_sha
+            workflow_path.write_text(
+                workflow_path.read_text(encoding="utf-8")
+                .replace(implementation_commit, replacement_commit)
+                .replace(tasks_sha, replacement_tasks_sha)
+                .replace(manifest_sha, replacement_manifest_sha),
+                encoding="utf-8",
+            )
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "add", "autopilot-state.json",
+                    "workflow.md", "changed-file-manifest.json",
+                    str(replacement_evidence_path),
+                    str(replacement_verification_path),
+                ],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "record replacement checkpoint evidence",
+                ],
+                check=True,
+            )
+            replacement_evidence_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            checkpoint["checkpoint_evidence_commit_sha"] = replacement_evidence_commit
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(root), "add", "autopilot-state.json"], check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "bind replacement checkpoint authority",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 0, report)
+            self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
 
     def test_v2_marker_plan_requires_changed_file_manifest_reference(self) -> None:
         state = self.projected_state(
