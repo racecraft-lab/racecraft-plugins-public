@@ -493,7 +493,9 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         )
         for marker in state["pr_marker_plan"]["markers"][:2]:
             checkpoint = marker["implementation_checkpoint"]
-            corrections = checkpoint["corrections"]
+            self.assertNotIn("corrections", checkpoint)
+            superseded_evidence = checkpoint["superseded_evidence"]
+            corrections = superseded_evidence["corrections"]
             self.assertEqual(len(corrections), 1)
             correction = corrections[0]
             self.assertEqual(correction["sequence"], 1)
@@ -504,9 +506,9 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
                     correction["supersedes_evidence_sha"],
                 ),
                 (
-                    checkpoint["evidence_path"],
-                    checkpoint["checkpoint_evidence_commit_sha"],
-                    checkpoint["checkpoint_evidence_sha"],
+                    superseded_evidence["evidence_path"],
+                    superseded_evidence["checkpoint_evidence_commit_sha"],
+                    superseded_evidence["checkpoint_evidence_sha"],
                 ),
             )
             correction_path = REPO_ROOT / correction["evidence_path"]
