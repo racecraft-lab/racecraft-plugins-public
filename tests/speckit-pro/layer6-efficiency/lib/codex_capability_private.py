@@ -7,6 +7,10 @@ if __package__:
     from .codex_capability_matrix import *
 else:
     from codex_capability_matrix import *
+if __package__:
+    from .codex_capability_append_only import *
+else:
+    from codex_capability_append_only import *
 
 def _private_directory_descriptor(path, expected_identity):
     nofollow = getattr(os, "O_NOFOLLOW", 0)
@@ -24,7 +28,7 @@ def _assert_private_directory_current(path, descriptor, expected_identity):
         _stable_directory_identity(current) != expected_identity
         or _stable_directory_identity(os.fstat(descriptor)) != expected_identity
     ):
-        raise ValueError("output parent changed after validation")
+        raise ValueError("private output parent changed after validation")
 
 
 def _fsync_directory(path):
@@ -40,31 +44,33 @@ def _fsync_directory(path):
 
 def _write_private_bytes_at(
     parent_descriptor, parent_path, filename, payload, *, append_only,
-    expected_parent_identity, private=True,
+    expected_parent_identity, directory_lock_held=False,
 ):
     if len(payload) > PRIVATE_REFRESH_MAX_BYTES:
         raise ValueError("private output exceeds the bounded size")
-    temporary = None; descriptor = None
+    temporary = None; descriptor = None; target_descriptor = None
     try:
+        if not directory_lock_held:
+            _acquire_append_only_directory_lock(parent_descriptor, wait=True)
+        _assert_private_directory_current(parent_path, parent_descriptor, expected_parent_identity)
         for _ in range(64):
-            candidate = f".g56r-002-{secrets.token_hex(16)}"
+            candidate = f"{PRIVATE_TEMPORARY_PREFIX}{secrets.token_hex(16)}"
             try:
                 descriptor = os.open(
                     candidate,
-                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
-                    0o600 if private else 0o666,
+                    os.O_RDWR | os.O_CREAT | os.O_EXCL | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+                    0o600,
                     dir_fd=parent_descriptor,
                 )
             except FileExistsError:
                 continue
             temporary = candidate
+            _acquire_append_only_temporary_lock(descriptor, wait=False)
             break
         if descriptor is None or temporary is None:
             raise ValueError("private output temporary name allocation failed")
-        if private:
-            os.fchmod(descriptor, 0o600)
-        with os.fdopen(descriptor, "wb") as stream:
-            descriptor = None
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(os.dup(descriptor), "wb") as stream:
             stream.write(payload); stream.flush(); os.fsync(stream.fileno())
         _assert_private_directory_current(parent_path, parent_descriptor, expected_parent_identity)
         if append_only:
@@ -72,8 +78,41 @@ def _write_private_bytes_at(
                 temporary, filename, src_dir_fd=parent_descriptor, dst_dir_fd=parent_descriptor,
                 follow_symlinks=False,
             )
+            target_descriptor = os.open(
+                filename,
+                os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+                dir_fd=parent_descriptor,
+            )
+            temporary_metadata = os.fstat(descriptor)
+            target_before = os.fstat(target_descriptor)
+            if (
+                not stat.S_ISREG(target_before.st_mode)
+                or (target_before.st_dev, target_before.st_ino)
+                != (temporary_metadata.st_dev, temporary_metadata.st_ino)
+            ):
+                raise ValueError("append-only published target does not match its temporary file")
+            retained = bytearray()
+            while len(retained) <= len(payload):
+                chunk = os.read(target_descriptor, min(1024 * 1024, len(payload) + 1 - len(retained)))
+                if not chunk: break
+                retained.extend(chunk)
+            target_after = os.fstat(target_descriptor)
+            current_target = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
+            if (
+                bytes(retained) != payload
+                or _stable_file_identity(target_after) != _stable_file_identity(target_before)
+                or _stable_file_identity(current_target) != _stable_file_identity(target_after)
+            ):
+                raise ValueError("append-only published target changed during verification")
             os.fsync(parent_descriptor)
             os.unlink(temporary, dir_fd=parent_descriptor); temporary = None
+            final_target = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
+            if (
+                _stable_file_content_identity(final_target)
+                != _stable_file_content_identity(target_after)
+                or final_target.st_nlink != 1
+            ):
+                raise ValueError("append-only published target changed during commit")
         else:
             os.replace(
                 temporary, filename, src_dir_fd=parent_descriptor, dst_dir_fd=parent_descriptor,
@@ -82,6 +121,9 @@ def _write_private_bytes_at(
         os.fsync(parent_descriptor)
         _assert_private_directory_current(parent_path, parent_descriptor, expected_parent_identity)
     finally:
+        if target_descriptor is not None:
+            try: os.close(target_descriptor)
+            except OSError: pass  # Best-effort cleanup must not mask the original failure.
         if descriptor is not None:
             try: os.close(descriptor)
             except OSError: pass  # Best-effort cleanup must not mask the original failure.
@@ -107,38 +149,33 @@ def _write_private_bytes(path, payload, *, append_only=False, expected_parent_id
         os.close(parent_descriptor)
 
 
-def _public_output_binding(path):
+def _write_public_append_only_bytes(path, payload):
     if not HAS_DESCRIPTOR_RELATIVE_IO:
-        raise ValueError("safe public output requires descriptor-relative I/O")
-    target = Path(os.path.abspath(path))
-    parent = target.parent
-    parent_metadata = os.stat(parent, follow_symlinks=False)
-    if not stat.S_ISDIR(parent_metadata.st_mode):
-        raise ValueError("public output parent must be a real directory")
-    return target, _stable_directory_identity(parent_metadata)
-
-
-def _write_public_bytes(path, payload, *, append_only=False):
-    target, parent_identity = _public_output_binding(path)
-    parent = target.parent
+        raise ValueError("append-only publication requires descriptor-relative filesystem operations")
+    if len(payload) > PRIVATE_REFRESH_MAX_BYTES:
+        raise ValueError("append-only publication exceeds the bounded size")
+    target = Path(os.path.abspath(path)); parent = target.parent
+    metadata = os.stat(parent, follow_symlinks=False)
+    if not stat.S_ISDIR(metadata.st_mode):
+        raise ValueError("append-only publication parent must be a real directory")
+    parent_identity = _stable_directory_identity(metadata)
+    _recover_append_only_directory(parent, parent_identity, require_content_addressed=False)
+    if target.exists():
+        _recover_append_only_target(target, payload, parent_identity)
+        raise FileExistsError(f"append-only publication target already exists: {target}")
     parent_descriptor = _private_directory_descriptor(parent, parent_identity)
     try:
-        try:
-            target_metadata = os.stat(
-                target.name, dir_fd=parent_descriptor, follow_symlinks=False,
-            )
-        except FileNotFoundError:
-            target_metadata = None
-        if target_metadata is not None and stat.S_ISLNK(target_metadata.st_mode):
-            raise ValueError("public output cannot replace a symlink")
-        if target_metadata is not None and not stat.S_ISREG(target_metadata.st_mode):
-            raise ValueError("public output target must be a regular file when present")
         _write_private_bytes_at(
-            parent_descriptor, parent, target.name, payload,
-            append_only=append_only,
+            parent_descriptor, parent, target.name, payload, append_only=True,
             expected_parent_identity=parent_identity,
-            private=False,
         )
+        retained = _read_bounded_regular_file(
+            target, allowed_root=parent, expected_parent_identity=parent_identity,
+            require_single_link=True,
+        )
+        if retained != payload:
+            raise ValueError("append-only published target bytes disagree")
+        _assert_private_directory_current(parent, parent_descriptor, parent_identity)
     finally:
         os.close(parent_descriptor)
 
@@ -155,10 +192,16 @@ def _write(path, value, *, private=False, append_only=False, expected_parent_ide
             expected_parent_identity=expected_parent_identity,
         )
         return
-    _write_public_bytes(path, payload, append_only=append_only)
+    if append_only:
+        _write_public_append_only_bytes(path, payload)
+        return
+    Path(path).write_bytes(payload)
 
 
-def validate_raw_evidence_root(raw_root, repository_root):
+def validate_raw_evidence_root(
+    raw_root, repository_root, *, raw_descriptor=None,
+    raw_directory_lock_held=False, expected_raw_identity=None,
+):
     if os.name == "nt":
         raise ValueError("operator-only raw evidence permissions are not supported on Windows")
     lexical, repo = Path(os.path.abspath(raw_root)), Path(repository_root).resolve()
@@ -166,16 +209,17 @@ def validate_raw_evidence_root(raw_root, repository_root):
     raw = lexical.resolve(strict=True)
     if raw == repo or repo in raw.parents or _git_worktree_ancestor(raw):
         raise ValueError("raw_evidence_root must resolve outside every Git worktree")
-    if not raw.is_dir(): raise ValueError("raw_evidence_root must be a directory")
-    for path in (raw, *raw.rglob("*")):
-        if path.is_symlink(): raise ValueError("raw_evidence_root cannot contain symlinks")
-        if os.name != "nt":
-            mode = stat.S_IMODE(path.stat().st_mode)
-            if path.is_dir() and mode != 0o700 or path.is_file() and mode != 0o600:
-                raise ValueError("raw evidence directories require 0700 and files require 0600")
-            if path.is_file() and path.stat().st_nlink != 1:
-                raise ValueError("raw evidence files cannot have alternate hard links")
-        if not path.is_dir() and not path.is_file(): raise ValueError("raw_evidence_root may contain only regular files and directories")
+    if raw_descriptor is not None:
+        if not raw_directory_lock_held or expected_raw_identity is None:
+            raise ValueError("bound raw evidence validation requires its directory lock and identity")
+        _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
+    _recover_content_addressed_append_only_links(
+        raw, raw_descriptor=raw_descriptor,
+        raw_directory_lock_held=raw_directory_lock_held,
+    )
+    _validate_raw_evidence_tree(raw)
+    if raw_descriptor is not None:
+        _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
     return raw
 
 
@@ -208,10 +252,20 @@ def _private_external_file_binding(path, repository_root, label, *, output=False
     if not stat.S_ISDIR(parent_metadata.st_mode) or stat.S_IMODE(parent_metadata.st_mode) != 0o700:
         raise ValueError(f"{label} parent directory must use mode 0700")
     parent_identity = _stable_directory_identity(parent_metadata)
-    if output and not resolved.exists(): return resolved, parent_identity
-    if not resolved.is_file() or resolved.is_symlink(): raise ValueError(f"{label} must be a regular non-symlink file")
-    if os.name != "nt" and stat.S_IMODE(resolved.stat().st_mode) != 0o600: raise ValueError(f"{label} must use mode 0600")
-    if resolved.stat().st_size > PRIVATE_REFRESH_MAX_BYTES: raise ValueError(f"{label} exceeds the bounded private-file size")
+    parent_descriptor = _private_directory_descriptor(parent, parent_identity)
+    try:
+        try:
+            os.stat(resolved.name, dir_fd=parent_descriptor, follow_symlinks=False)
+        except FileNotFoundError:
+            if output:
+                return resolved, parent_identity
+            raise ValueError(f"{label} must be a regular non-symlink file")
+    finally:
+        os.close(parent_descriptor)
+    _read_bounded_regular_file(
+        resolved, required_mode=0o600, allowed_root=parent,
+        expected_parent_identity=parent_identity, require_single_link=True,
+    )
     return resolved, parent_identity
 
 
@@ -240,85 +294,5 @@ def read_content_addressed_private_file(path, repository_root, label):
         raise ValueError(f"{label} must use its exact content digest as the filename")
     return resolved, raw
 
-
-_retained_source_capture_authority = None
-_retained_unknown_capture_authority = None
-
-
-def _bind_capture_retention_authority(source_authority, unknown_authority):
-    global _retained_source_capture_authority, _retained_unknown_capture_authority
-    if not callable(source_authority) or not callable(unknown_authority):
-        raise TypeError("capture retention authorities must be callable")
-    if (
-        _retained_source_capture_authority not in (None, source_authority)
-        or _retained_unknown_capture_authority not in (None, unknown_authority)
-    ):
-        raise RuntimeError("capture retention authority is already bound")
-    _retained_source_capture_authority = source_authority
-    _retained_unknown_capture_authority = unknown_authority
-
-
-def materialize_source_capture(raw_root, repository_root, capture_bytes):
-    if _retained_source_capture_authority is None:
-        raise RuntimeError("capture retention authority is not initialized")
-    return _retained_source_capture_authority(
-        raw_root, repository_root, capture_bytes,
-    )
-
-
-def validate_source_capture_evidence(manifest, refreshes, raw_root, repository_root):
-    capture_digests = {item.get("source_capture_digest") for item in refreshes}
-    if len(capture_digests) != 1:
-        raise ValueError("source refreshes must bind one complete raw source capture")
-    capture_digest = capture_digests.pop(); _need_digest(capture_digest, "source_capture_digest")
-    raw = validate_raw_evidence_root(raw_root, repository_root)
-    target = raw / f"{capture_digest.removeprefix('sha256:')}.json"
-    _, capture_bytes = read_content_addressed_private_file(target, repository_root, "source capture")
-    expected = normalize_source_refreshes(
-        manifest, _parse_json_bytes(capture_bytes), source_capture_digest=capture_digest,
-    )
-    if refreshes and "retrieved_body_b64" not in refreshes[0]:
-        expected = validate_source_refreshes(manifest, expected)["sanitized_refreshes"]
-    if canonical_bytes(expected) != canonical_bytes(refreshes):
-        raise ValueError("normalized source refresh does not match its retained raw capture")
-    return capture_digest
-
-
-def validate_canary_evidence(raw_root, repository_root, result):
-    _need_digest(result.get("evidence_digest"), "evidence_digest")
-    raw = validate_raw_evidence_root(raw_root, repository_root)
-    target = raw / f"{result['evidence_digest'].removeprefix('sha256:')}.json"
-    _, evidence_bytes = read_content_addressed_private_file(target, repository_root, "canary evidence")
-    validate_canary_result(result, evidence_bytes=evidence_bytes)
-    return evidence_bytes
-
-
-def materialize_unknown_capture(raw_root, repository_root, surface, client_identity_id, repository_binding, work_item, captured_at):
-    if _retained_unknown_capture_authority is None:
-        raise RuntimeError("capture retention authority is not initialized")
-    return _retained_unknown_capture_authority(
-        raw_root,
-        repository_root,
-        surface,
-        client_identity_id,
-        repository_binding,
-        work_item,
-        captured_at,
-    )
-
-
-def validate_unknown_observation_evidence(observation, raw_root, repository_root):
-    observation = validate_observation(dict(observation))
-    if observation["collection_method_id"] != "unknown-observation-v1":
-        return
-    raw = validate_raw_evidence_root(raw_root, repository_root)
-    target = raw / f"{observation['raw_evidence_digest'].removeprefix('sha256:')}.json"
-    _, retained = read_content_addressed_private_file(target, repository_root, "unknown observation evidence")
-    expected = canonical_bytes(_unknown_capture_record(
-        observation["surface"], observation["client_identity_id"], observation["repository_binding"],
-        observation["work_item"], observation["started_at"],
-    )) + b"\n"
-    if retained != expected:
-        raise ValueError("unknown observation evidence bytes do not match the deterministic attempt record")
 
 __all__ = [name for name in globals() if not name.startswith("__")]

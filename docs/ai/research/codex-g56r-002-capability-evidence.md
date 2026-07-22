@@ -5,9 +5,10 @@
 The current append-only treatment successor preserves a valid capability freeze
 with zero eligible tuples:
 
-- Candidate freeze: `sha256:f1f0f614a722541b0c185fb023582cda035b5da54110a3d36eb25c3d76a493ef`
+- Candidate freeze: `sha256:0ce569ff7e0c2f79538afa24e11a6732ba54ad593f647a0c4d39370b60033ba4`
 - Telemetry profile: `sha256:37e1c1f1491637dd255c61a87c62120efc100ee146be9b75224771e172c58c56`
 - Treatment contract: `sha256:b390c3d3240fb20e405910f4710d220e875ea46748ced6400aecc6bb970a8289`
+- Treatment evidence set: `sha256:3f40e4a118086b554eaf2ede8c9786db906f72c66fac94d0665a68024d5cf9ad`
 - Published at: `2026-07-18T19:40:00Z`
 - Runtime snapshot: `sha256:450a655fabafb765b19bfc9ff3cbefe4b075d6c40fdbc5fd9dbc8ce8c4cfc3fe`
 - Surface matrix: `sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2`
@@ -43,18 +44,26 @@ committed freeze; raw source bodies do not.
 
 The operator-local capture supplied measured URLs, strict RFC3339 UTC
 timestamps, outcomes, claim-scoped invalidations, bounded extracts, and the
-actual retrieved UTF-8 bodies. The adapter computed every body and extract
-digest itself, reduced HTML to visible text, required each extract to occur in
-that body, and reconstructed facts, bindings, and prior-record identity from
-the current manifest. The raw-body capture and normalized refresh remain
+actual retrieved UTF-8 bodies. The successor adapter requires those bodies to
+declare normalized plain text, rejects raw markup, computes every body and
+extract digest itself, requires each extract to occur in that body, and
+reconstructs facts, bindings, and prior-record identity from the current
+manifest. The raw-body capture and normalized refresh remain
 outside Git in an operator-only directory with mode `0700` and files with mode
 `0600`. The normalized refresh keeps the retrieved body bytes long enough for
 freeze-time revalidation; the published freeze strips them.
+The adapter never interprets HTML, CSS visibility, intrinsic element state, or
+text-node boundaries. Every new body-identity change invalidates all claims
+bound to that source. The historical published refresh set remains accepted
+only under its exact aggregate digest so predecessor validation stays possible;
+any altered row loses that compatibility exception.
 The aggregate capture is stored as the exact-byte content-addressed object
 `sha256:26b4bc034cac55e149b1b0b5c7648531be2f84d46385160f3c6c30ac582df70a`;
 the refresh command rejects a filename that does not match those bytes, copies
 that exact object into `raw_evidence_root`, and binds its digest into every
-sanitized source-refresh row in the freeze.
+sanitized source-refresh row in the freeze. Both normalization and later raw
+revalidation reconstruct the 22 rows in canonical source-ID order and require
+that recomputed identity, so a stale shared digest cannot survive a row change.
 
 The pinned identity records `codex-cli 0.144.4` and an executable SHA-256 rather
 than an absolute executable path. The three surface collections emitted
@@ -85,21 +94,37 @@ normalization, and the same runtime snapshot ID.
 
 The repository-owned canary-executor allowlist is empty. No canary ran and an
 external result or freeze-carried approval cannot self-approve. The CLI exits
-before consuming a result while that allowlist is empty. A separately reviewed executor would still
-be limited to one 30-second, 64 KiB, zero-retry attempt per snapshot/model/effort
-and could prove only pinned-environment availability.
+before consuming every caller-supplied result, standalone envelope validation
+always derives `unknown`, and both published canary arrays must remain empty.
+A separately reviewed trusted invocation or verifiable attestation mechanism
+would still be limited to one 30-second, 64 KiB, zero-retry attempt per
+snapshot/model/effort and could prove only pinned-environment availability.
 
-The published treatment successor binds telemetry profile
-`sha256:37e1c1f1491637dd255c61a87c62120efc100ee146be9b75224771e172c58c56`
-and treatment contract
-`sha256:b390c3d3240fb20e405910f4710d220e875ea46748ced6400aecc6bb970a8289`.
-Candidate freeze
-`sha256:f1f0f614a722541b0c185fb023582cda035b5da54110a3d36eb25c3d76a493ef`
-supersedes the pending-treatment predecessor
-`sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
-without editing the predecessor identity. Any later source, client, surface,
-normalization, telemetry, treatment, or tuple decision change likewise creates
-a successor ID with explicit predecessor lineage.
+The current successor binds telemetry profile
+`sha256:37e1c1f1491637dd255c61a87c62120efc100ee146be9b75224771e172c58c56`,
+exact-treatment contract
+`sha256:b390c3d3240fb20e405910f4710d220e875ea46748ced6400aecc6bb970a8289`,
+and treatment evidence set
+`sha256:3f40e4a118086b554eaf2ede8c9786db906f72c66fac94d0665a68024d5cf9ad`.
+Any later source, client, surface, normalization, telemetry, treatment-evidence,
+or tuple-decision change creates another successor ID.
+
+Success-path fixtures exercise the standalone treatment contract, but successor
+publication cannot turn that evidence into capability authority. A `proven`
+trace must map to an included, source-admitted, availability-supported,
+surface-agreed prior tuple; excluded tuples may retain only non-authoritative
+dispositions. The successor timestamp is also ordered after every bound route
+resolution and non-null observation capture.
+
+Raw-evidence cleanup begins with an identity-bound v2 deletion intent. It
+renames that inode to a deterministic quarantine name, synchronizes the raw
+root, and journals a v3 successor binding the quarantine name and identity
+before unlink. A failure before v3 can resume from the v2-bound quarantine; a
+failure after v3 resumes only the exact v3-bound quarantine. Once unlink begins,
+cleanup never republishes descriptor-verified bytes or rebinds a replacement
+inode. A post-unlink alternate link, any identity change, unlink without durable
+completion proof, and forked chains remain fail-closed for manual investigation
+and cannot produce a completion record.
 
 The published-freeze validator rechecks the pinned manifest digest, all 22
 sanitized source-refresh rows, matrix integrity and canonical observation
@@ -109,36 +134,53 @@ redundant top-level ID. The candidate-freeze ID hashes the complete published
 payload except the ID itself, so a replay or mutation cannot preserve the same
 identity.
 
-Candidate freeze
-`sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
-was the first committed G56R-002 capability freeze. Treatment-bound candidate
-freeze `sha256:f1f0f614a722541b0c185fb023582cda035b5da54110a3d36eb25c3d76a493ef`
-is its committed successor. Earlier identities produced during rejected,
-uncommitted implementation reviews were drafts and are neither published
-predecessors nor part of this lineage. The CLI requires explicit predecessor
-IDs for every later freeze and runtime-snapshot successor.
+This is the first committed G56R-002 freeze. Earlier identities produced during
+the rejected, uncommitted implementation review were drafts rather than
+published predecessors. The CLI nevertheless accepts explicit predecessor IDs
+for every later freeze and runtime-snapshot successor.
 
 Raw captures, if any, remain in an operator-only content-addressed store outside
 the repository with directory mode `0700` and file mode `0600`; symlinks,
-special files, permissive descendants, and Git worktree locations are rejected.
+special files, permissive descendants, alternate hard links, and Git worktree
+locations are rejected. After crash-link recovery, nested entries are opened
+no-follow relative to directory descriptors and must match two stable tree
+snapshots. Standalone private-input validation opens and rechecks the file
+through its stable parent descriptor rather than trusting path metadata.
 The source-refresh digest resolves to the aggregate capture containing all 22
 retrieved bodies. Each surface's `raw://sha256:...` reference is backed by a mode-`0600`
 sanitized attempt record named by that exact digest, and collection re-reads
 the stored bytes before publishing the observation.
 Freeze and canary publication stage one content-addressed retention record per
-non-fixture digest. Each record binds the freeze ID, publication time, and exact
-30-day deletion deadline, but becomes governing only after the exact artifact
-bytes exist and a content-addressed publication receipt is directory-fsynced.
-An interrupted publication can be recovered idempotently; unreceipted records
-remain pending and cannot extend deletion. The deterministic
+non-fixture digest. Each record binds the freeze ID, declared publication time,
+trusted registration time, and exact deletion deadline 30 days after that
+registration. A content-addressed publication intent binds the complete record
+set and exact artifact digest before public output begins, making those records
+governing; the matching receipt is appended only after the exact output bytes
+exist and is completion proof for that durable intent.
+Before registration, publication semantically revalidates the source capture,
+every non-fixture observation, and every canary result against the retained
+private bytes. The public append-only target is created, inode-checked, and
+re-read through one identity-bound parent descriptor as a single-link file; the
+exact canonical bytes are checked again before the receipt is written. An
+existing matching output is recoverable only when it satisfies the same
+single-link invariant.
+An interrupted publication can be recovered idempotently. Records left before
+an intent remain non-governing pending claims and protect evidence for at most
+one day after trusted registration; an expired pending set cannot later be
+promoted without cleanup. Records named by a durable intent remain governing
+even if output or receipt persistence is interrupted. The effective deadline is
+the latest governing or individually capped pending deadline. The deterministic
 `retention` command verifies pre-deadline presence, fails closed on missing or
 overdue bytes, and in `cleanup` mode first appends and directory-fsyncs a
 deletion-intent record. It then unlinks the expired bytes descriptor-relative,
 proves the open descriptor has zero links with unchanged content identity,
 directory-fsyncs the raw store, and only then appends and directory-fsyncs the
-terminal deletion record. Replaying cleanup is idempotent; the digest,
-retention history, and deletion record remain auditable after the bytes are
-gone. Registration and cleanup share an atomic private-root lock, so a newer
+terminal deletion record with the actual successful cleanup time. Replaying
+cleanup after durable completion is idempotent; a v3 intent whose exact bound
+quarantine and completion record are both absent is indeterminate and fails
+closed, and recreating exact bytes on a substitute inode does not unblock it. The
+digest, retention history, and deletion record remain auditable after the bytes
+are gone. Registration and cleanup share an atomic private-root lock, so a newer
 publication cannot extend a digest while cleanup is deleting it. Destructive
 cleanup derives its deletion time from current UTC and rejects `--as-of`;
 arbitrary logical timestamps are read-only verification inputs. The committed
@@ -151,4 +193,33 @@ files; offline committed-artifact validation remains platform-neutral.
 Append-only private writes directory-fsync after both final-name publication
 and temporary-name removal. Every governed raw file must have one hard link;
 cleanup fails closed if a crash artifact or alternate name still reaches the
-same inode.
+same inode. Retention, receipt, intent, and deletion-record directories are
+loaded through one identity-bound directory descriptor, with descriptor-relative
+entry opens and an unchanged before/after entry set; directory replacement or
+a mixed snapshot fails closed.
+Capability and treatment JSON parsing also fails closed on duplicate keys,
+non-finite values, invalid UTF-8, parser recursion, nesting beyond 64 levels, or
+more than 100,000 total nodes. Nesting and node limits are scanned before full
+object allocation and revalidated after parsing. Sanitized trees reject
+non-JSON containers and non-string object keys before recursive sensitive-field
+inspection.
+Source-capture materialization rejects non-bytes-like or greater-than-32-MiB
+input before parsing or hashing. A shared parent-directory advisory lock is
+acquired before any reserved `.capability-evidence-write-*` temporary pathname appears and is held through
+writer commit or recovery. Every temporary also holds an advisory lock until
+commit. Recovery obtains both locks and re-proves the
+directory-relative pathname and inode before removing an abandoned single-link
+pre-publication file. A linked temporary additionally must be the sole alternate
+name for the exact target and bytes; recovery syncs before and after unlink and
+re-proves the target is single-link. Public append-only directories use the same
+protocol, and a concurrent identical source capture accepts only the verified
+content-addressed winner after synchronizing the adopted target's parent
+directory. Unknown-attempt captures use the same append-only publication and
+exact concurrent-winner verification. Both materializers share the retention
+lock with cleanup, inspect deletion intents and completion records while holding
+it, and reject every tombstoned digest before append-only publication. Deleted
+evidence therefore cannot be recreated or raced back into the raw store.
+
+Sanitizer pseudonyms exist only at explicitly declared profile field paths and
+are generated as exact fixed values. A nested sensitive field is rejected even
+when its caller-supplied value starts with `fixture-`.

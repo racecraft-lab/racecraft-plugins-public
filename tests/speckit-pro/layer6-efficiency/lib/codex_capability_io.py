@@ -23,6 +23,124 @@ def _stable_file_content_identity(metadata):
     return metadata.st_dev, metadata.st_ino, metadata.st_size, metadata.st_mtime_ns, stat.S_IMODE(metadata.st_mode)
 
 
+def _raw_directory_state(metadata):
+    return (
+        *_stable_directory_identity(metadata), metadata.st_size,
+        metadata.st_mtime_ns, metadata.st_ctime_ns, metadata.st_nlink,
+    )
+
+
+def _bounded_directory_names(descriptor, *, limit=None, label):
+    limit = CAPABILITY_JSON_MAX_TOTAL_NODES if limit is None else limit
+    names = []
+    with os.scandir(descriptor) as entries:
+        for entry in entries:
+            if len(names) >= limit:
+                raise ValueError(f"{label} exceeds the maximum entry count")
+            names.append(entry.name)
+    return sorted(names)
+
+
+def _raw_evidence_tree_snapshot(raw):
+    directory_flags = (
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_DIRECTORY", 0)
+    )
+    file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+    snapshot = {}
+
+    def walk(descriptor, parts, depth):
+        if depth > CAPABILITY_JSON_MAX_NESTING_DEPTH:
+            raise ValueError("raw_evidence_root exceeds the maximum directory depth")
+        directory_before = os.fstat(descriptor)
+        if not stat.S_ISDIR(directory_before.st_mode) or stat.S_IMODE(directory_before.st_mode) != 0o700:
+            raise ValueError("raw evidence directories require 0700")
+        directory_state = _raw_directory_state(directory_before)
+        snapshot[parts] = ("directory", directory_state)
+        if len(snapshot) > CAPABILITY_JSON_MAX_TOTAL_NODES:
+            raise ValueError("raw_evidence_root exceeds the maximum entry count")
+        names = _bounded_directory_names(
+            descriptor, limit=CAPABILITY_JSON_MAX_TOTAL_NODES - len(snapshot),
+            label="raw_evidence_root",
+        )
+        for name in names:
+            if not name or Path(name).name != name:
+                raise ValueError("raw_evidence_root contains an invalid entry name")
+            before = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+            entry_parts = (*parts, name)
+            if stat.S_ISLNK(before.st_mode):
+                raise ValueError("raw_evidence_root cannot contain symlinks")
+            if stat.S_ISDIR(before.st_mode):
+                child = os.open(name, directory_flags, dir_fd=descriptor)
+                try:
+                    opened = os.fstat(child)
+                    if _raw_directory_state(opened) != _raw_directory_state(before):
+                        raise ValueError("raw evidence directory changed before it was opened")
+                    walk(child, entry_parts, depth + 1)
+                    current = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+                    if (
+                        _raw_directory_state(os.fstat(child)) != _raw_directory_state(opened)
+                        or _raw_directory_state(current) != _raw_directory_state(opened)
+                    ):
+                        raise ValueError("raw evidence directory changed during validation")
+                finally:
+                    os.close(child)
+            elif stat.S_ISREG(before.st_mode):
+                if stat.S_IMODE(before.st_mode) != 0o600:
+                    raise ValueError("raw evidence directories require 0700 and files require 0600")
+                if before.st_nlink != 1:
+                    raise ValueError("raw evidence files cannot have alternate hard links")
+                if before.st_size > PRIVATE_REFRESH_MAX_BYTES:
+                    raise ValueError("raw evidence file exceeds the bounded private-file size")
+                source = os.open(name, file_flags, dir_fd=descriptor)
+                try:
+                    opened = os.fstat(source)
+                    current = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+                    if (
+                        _stable_file_identity(opened) != _stable_file_identity(before)
+                        or _stable_file_identity(current) != _stable_file_identity(opened)
+                    ):
+                        raise ValueError("raw evidence file changed during validation")
+                    snapshot[entry_parts] = ("file", _stable_file_identity(opened))
+                    if len(snapshot) > CAPABILITY_JSON_MAX_TOTAL_NODES:
+                        raise ValueError("raw_evidence_root exceeds the maximum entry count")
+                finally:
+                    os.close(source)
+            else:
+                raise ValueError("raw_evidence_root may contain only regular files and directories")
+        if (
+            _bounded_directory_names(
+                descriptor, limit=len(names),
+                label="raw_evidence_root",
+            ) != names
+            or _raw_directory_state(os.fstat(descriptor)) != directory_state
+        ):
+            raise ValueError("raw evidence directory changed during validation")
+
+    root_before = os.stat(raw, follow_symlinks=False)
+    if not stat.S_ISDIR(root_before.st_mode):
+        raise ValueError("raw_evidence_root must be a directory")
+    descriptor = os.open(raw, directory_flags)
+    try:
+        if _raw_directory_state(os.fstat(descriptor)) != _raw_directory_state(root_before):
+            raise ValueError("raw_evidence_root changed before it was opened")
+        walk(descriptor, (), 0)
+        root_after = os.stat(raw, follow_symlinks=False)
+        if _raw_directory_state(root_after) != _raw_directory_state(os.fstat(descriptor)):
+            raise ValueError("raw_evidence_root changed during validation")
+    except OSError as error:
+        raise ValueError("raw_evidence_root changed during descriptor validation") from error
+    finally:
+        os.close(descriptor)
+    return snapshot
+
+
+def _validate_raw_evidence_tree(raw):
+    first = _raw_evidence_tree_snapshot(raw)
+    if _raw_evidence_tree_snapshot(raw) != first:
+        raise ValueError("raw_evidence_root changed between descriptor validation passes")
+
+
 def _read_bounded_regular_file(
     path, *, required_mode=None, allowed_root=None, expected_parent_identity=None,
     require_single_link=False,
@@ -38,10 +156,7 @@ def _read_bounded_regular_file(
         raise ValueError("bounded input requires descriptor-relative path validation")
     nofollow = getattr(os, "O_NOFOLLOW", 0)
     directory_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow | getattr(os, "O_DIRECTORY", 0)
-    file_flags = (
-        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
-        | getattr(os, "O_NONBLOCK", 0)
-    )
+    file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
     directory_descriptors, directory_identities = [], []
     descriptor = None
     try:
@@ -134,11 +249,99 @@ def _read_bounded_regular_file(
         for directory_descriptor in reversed(directory_descriptors): os.close(directory_descriptor)
 
 
-def digest_regular_file(path):
-    source = Path(os.path.abspath(path)); flags = (
+def _load_descriptor_bound_private_records(directory, label):
+    directory = Path(os.path.abspath(directory))
+    try:
+        metadata = os.stat(directory, follow_symlinks=False)
+    except FileNotFoundError:
+        return []
+    if not stat.S_ISDIR(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o700:
+        raise ValueError(f"{label} path must be a private directory")
+    directory_identity = _stable_directory_identity(metadata)
+    descriptor = os.open(
+        directory,
         os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
-        | getattr(os, "O_NONBLOCK", 0)
+        | getattr(os, "O_DIRECTORY", 0),
     )
+    file_descriptor = None
+    try:
+        if _stable_directory_identity(os.fstat(descriptor)) != directory_identity:
+            raise ValueError(f"{label} directory changed before it was opened")
+        names = _bounded_directory_names(
+            descriptor, limit=PRIVATE_RECORD_MAX_ENTRIES, label=label,
+        )
+        if any(Path(name).name != name or Path(name).suffix != ".json" for name in names):
+            raise ValueError(f"{label} directory contains an undeclared entry")
+        records = []
+        aggregate_bytes = 0
+        aggregate_nodes = [0]
+        for name in names:
+            current_directory = os.stat(directory, follow_symlinks=False)
+            if (
+                _stable_directory_identity(current_directory) != directory_identity
+                or _stable_directory_identity(os.fstat(descriptor)) != directory_identity
+            ):
+                raise ValueError(f"{label} directory changed while records were being loaded")
+            before = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+            if (
+                not stat.S_ISREG(before.st_mode)
+                or stat.S_IMODE(before.st_mode) != 0o600
+                or before.st_nlink != 1
+                or before.st_size > PRIVATE_REFRESH_MAX_BYTES
+            ):
+                raise ValueError(f"{label} must be a bounded single-link private regular file")
+            if aggregate_bytes + before.st_size > PRIVATE_RECORD_MAX_TOTAL_BYTES:
+                raise ValueError(f"{label} directory exceeds the maximum aggregate size")
+            file_descriptor = os.open(
+                name,
+                os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+                dir_fd=descriptor,
+            )
+            opened = os.fstat(file_descriptor)
+            if _stable_file_identity(opened) != _stable_file_identity(before):
+                raise ValueError(f"{label} pathname changed before it was read")
+            chunks, total = [], 0
+            while True:
+                chunk = os.read(file_descriptor, min(1024 * 1024, PRIVATE_REFRESH_MAX_BYTES + 1 - total))
+                if not chunk: break
+                chunks.append(chunk); total += len(chunk)
+                if total > PRIVATE_REFRESH_MAX_BYTES:
+                    raise ValueError(f"{label} exceeds the bounded size")
+            after = os.fstat(file_descriptor)
+            current = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+            if (
+                _stable_file_identity(after) != _stable_file_identity(opened)
+                or _stable_file_identity(current) != _stable_file_identity(after)
+                or total != after.st_size
+            ):
+                raise ValueError(f"{label} changed while it was being read")
+            os.close(file_descriptor); file_descriptor = None
+            raw = b"".join(chunks)
+            aggregate_bytes += total
+            if name != f"{digest(raw).removeprefix('sha256:')}.json":
+                raise ValueError(f"{label} must use its exact content digest as the filename")
+            record = _parse_json_bytes(raw, counter=aggregate_nodes)
+            if raw != canonical_bytes(record) + b"\n":
+                raise ValueError(f"{label} must use canonical JSON bytes")
+            records.append((digest(raw), record))
+        if _bounded_directory_names(
+            descriptor, limit=PRIVATE_RECORD_MAX_ENTRIES, label=label,
+        ) != names:
+            raise ValueError(f"{label} directory changed while records were being loaded")
+        current_directory = os.stat(directory, follow_symlinks=False)
+        if (
+            _stable_directory_identity(current_directory) != directory_identity
+            or _stable_directory_identity(os.fstat(descriptor)) != directory_identity
+        ):
+            raise ValueError(f"{label} directory changed while records were being loaded")
+        return records
+    finally:
+        if file_descriptor is not None: os.close(file_descriptor)
+        os.close(descriptor)
+
+
+def digest_regular_file(path):
+    source = Path(os.path.abspath(path)); flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
     try:
         pathname_before = os.stat(source, follow_symlinks=False)
         if not stat.S_ISREG(pathname_before.st_mode): raise ValueError("client executable must be a regular file that is not a symlink")

@@ -10,7 +10,6 @@ import copy
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import hashlib
-from html.parser import HTMLParser
 import json
 import os
 import re
@@ -36,15 +35,18 @@ PRIVATE_RECORD_MAX_TOTAL_BYTES = 32 * 1024 * 1024
 CAPABILITY_JSON_MAX_NESTING_DEPTH = 64
 CAPABILITY_JSON_MAX_TOTAL_NODES = 100_000
 RAW_EVIDENCE_RETENTION_DAYS = 30
-RAW_EVIDENCE_PENDING_DAYS = 30
+RAW_EVIDENCE_PENDING_DAYS = 1
 RETENTION_RECORDS_DIR = "retention-records"
 DELETION_RECORDS_DIR = "deletion-records"
+PUBLICATION_INTENTS_DIR = "publication-intents"
 PUBLICATION_RECEIPTS_DIR = "publication-receipts"
 DELETION_INTENTS_DIR = "deletion-intents"
 RETENTION_LOCK_FILE = ".retention-lock"
+PRIVATE_TEMPORARY_PREFIX = ".capability-evidence-write-"
 HAS_DESCRIPTOR_RELATIVE_IO = os.open in os.supports_dir_fd and os.stat in os.supports_dir_fd
 ERROR_TERMINALS = ("timeout", "output_cap_exceeded", "launch_error", "transport_error", "authentication_error", "rate_limited", "malformed_response", "explicit_rejection", "service_reroute", "ambiguous_error")
 _UNSET = object()
+_NORMALIZED_SOURCE_BODY_FORMAT = "normalized_plain_text"
 
 
 class _BlockingHardLinkRace(ValueError):
@@ -97,26 +99,6 @@ class _BoundDecisionSet(list):
     pass
 
 
-class _VisibleText(HTMLParser):
-    def __init__(self):
-        super().__init__(); self.parts, self.hidden_stack, self.invalid_hidden_markup = [], [], False
-
-    def handle_starttag(self, tag, attrs):
-        if tag in {"head", "script", "style", "noscript", "template", "svg"}:
-            self.hidden_stack.append(tag)
-
-    def handle_endtag(self, tag):
-        if tag in {"head", "script", "style", "noscript", "template", "svg"}:
-            if not self.hidden_stack or self.hidden_stack[-1] != tag:
-                self.invalid_hidden_markup = True
-            else:
-                self.hidden_stack.pop()
-
-    def handle_data(self, data):
-        if not self.hidden_stack and not self.invalid_hidden_markup:
-            self.parts.append(data)
-
-
 def canonical_bytes(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode()
 
@@ -126,21 +108,15 @@ def digest(value):
     return f"sha256:{hashlib.sha256(raw).hexdigest()}"
 
 
-def _visible_text(value):
-    parser = _VisibleText(); parser.feed(value)
-    if parser.rawdata:
-        raise ValueError("retrieved body contains malformed hidden markup")
-    parser.close()
-    if parser.invalid_hidden_markup or parser.hidden_stack:
-        raise ValueError("retrieved body contains malformed hidden markup")
-    return " ".join(" ".join(parser.parts).split())
-
-
-def _validated_body(body_b64, extracts, source_id):
+def _validated_body(body_b64, body_format, extracts, source_id):
     if body_b64 is None:
         if extracts:
             raise ValueError(f"{source_id} bounded extracts require a retrieved body")
+        if body_format is not None:
+            raise ValueError("absent retrieved body must not declare a body format")
         return None
+    if body_format != _NORMALIZED_SOURCE_BODY_FORMAT:
+        raise ValueError("retrieved body must declare normalized plain text")
     try:
         body_bytes = base64.b64decode(body_b64, validate=True)
         body_text = body_bytes.decode()
@@ -148,7 +124,9 @@ def _validated_body(body_b64, extracts, source_id):
         raise ValueError("retrieved body must be canonical UTF-8 base64")
     if base64.b64encode(body_bytes).decode() != body_b64:
         raise ValueError("retrieved body must be canonical UTF-8 base64")
-    collapsed = _visible_text(body_text)
+    if "<" in body_text or ">" in body_text:
+        raise ValueError("retrieved body must be normalized plain text without markup")
+    collapsed = " ".join(body_text.split())
     valid_extracts = isinstance(extracts, list) and extracts and all(
         set(extract) == {"text", "extract_sha256", "normalization"}
         and isinstance(extract["text"], str) and extract["text"]

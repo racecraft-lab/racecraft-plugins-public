@@ -106,9 +106,7 @@ def validate_surface_matrix(matrix):
     if set(matrix) != required or matrix.get("schema_version") != SCHEMA_VERSION: raise ValueError("surface matrix must use the closed v1 shape")
     observations = [validate_observation(dict(item)) for item in matrix["observations"]]
     surfaces = [item["surface"] for item in observations]
-    if len(observations) != 3 or set(surfaces) != set(SURFACES) or len(set(surfaces)) != 3: raise ValueError("matrix requires exactly one observation per surface")
-    by_surface = {item["surface"]: item for item in observations}; observations = [by_surface[surface] for surface in SURFACES]
-    matrix = {**matrix, "observations": observations}
+    if surfaces != list(SURFACES): raise ValueError("matrix observations must use canonical surface order")
     clients = {item["client_identity_id"] for item in observations}
     expected_client_identity = next(iter(clients)) if len(clients) == 1 else digest({"invalid": "client_identity"})
     if matrix["client_identity_id"] != expected_client_identity: raise ValueError("matrix client identity mismatch")
@@ -200,8 +198,11 @@ def _validate_canary_result_envelope(result, approvals=APPROVED_CANARY_EXECUTORS
     approvals = _validated_canary_approvals(approvals); approval = next((item for item in approvals if item["executor_contract_id"] == result["executor_contract_id"] and item["implementation_digest"] == result["implementation_digest"]), None)
     if approval is not None and approval["platform"] != result["platform"]:
         raise ValueError("canary executor platform does not match its repository approval")
-    success = approval and approval.get("implementation_digest") == result["implementation_digest"] and result["terminal_class"] == "success" and result["exit_code"] == 0 and result["sentinel_observed"] and result["process_tree_termination_state"] != "failed"
-    return {**result, "availability_disposition": "available_for_pinned_environment" if success else "unknown"}
+    # A caller-supplied envelope can prove internal consistency, not executor
+    # provenance. This slice has no trusted invocation or verifiable attestation
+    # mechanism, so even a structurally matching repository approval remains
+    # non-authoritative and cannot promote availability.
+    return {**result, "availability_disposition": "unknown"}
 
 
 def validate_canary_result(result, approvals=APPROVED_CANARY_EXECUTORS, *, evidence_bytes):

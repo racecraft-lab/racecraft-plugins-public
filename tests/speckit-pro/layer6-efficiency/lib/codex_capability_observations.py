@@ -99,18 +99,26 @@ def validate_work_item(work_item):
     return work_item
 
 
-def _safe_sanitized_value(value):
+def _safe_sanitized_value(value, pseudonym_fields=frozenset(), *, require_generated=False):
     if isinstance(value, dict):
         for key, nested in value.items():
+            if not isinstance(key, str):
+                raise ValueError("sanitized output contains a non-string JSON object key")
             lowered = str(key).lower()
             sensitive = any(part in lowered for part in _FORBIDDEN_KEY_PARTS)
-            if sensitive and not (isinstance(nested, str) and nested.startswith("fixture-")):
+            if key in pseudonym_fields:
+                if require_generated and nested != f"fixture-{key}":
+                    raise ValueError("sanitized pseudonym does not match its declared field")
+                continue
+            if sensitive:
                 raise ValueError("sanitized output contains a forbidden sensitive field")
             _safe_sanitized_value(nested)
     elif isinstance(value, list):
         for nested in value: _safe_sanitized_value(nested)
     elif isinstance(value, str) and (value.startswith(("/", "\\")) or "://" in value or re.match(r"^[A-Za-z]:[\\/]", value)):
         raise ValueError("sanitized output contains a path or remote locator")
+    elif value is not None and type(value) not in {str, int, float, bool}:
+        raise ValueError("sanitized output contains a non-JSON container type")
 
 
 def sanitize(record, profile):
@@ -118,11 +126,13 @@ def sanitize(record, profile):
         raise ValueError("sanitizer profile is unknown")
     allowlist, pseudonym_fields, strict = _SANITIZER_PROFILES[profile]
     if strict and set(record) - set(allowlist): raise ValueError("surface entry contains undeclared fields")
-    result = {}
-    for key in sorted(set(record) & set(allowlist)):
-        value = record[key]
-        result[key] = f"fixture-{key}" if key in pseudonym_fields else value
-    _safe_sanitized_value(result)
+    selected = {key: record[key] for key in sorted(set(record) & set(allowlist))}
+    _safe_sanitized_value(selected, pseudonym_fields)
+    result = {
+        key: f"fixture-{key}" if key in pseudonym_fields else value
+        for key, value in selected.items()
+    }
+    _safe_sanitized_value(result, pseudonym_fields, require_generated=True)
     return result
 
 
