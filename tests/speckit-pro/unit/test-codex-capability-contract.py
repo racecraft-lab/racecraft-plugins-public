@@ -1597,6 +1597,37 @@ class CapabilityContractTests(unittest.TestCase):
                 self.assertFalse(confined_output.exists())
             self.assertFalse((raw_root / capabilities.RETENTION_RECORDS_DIR).exists())
             self.assertFalse((raw_root / capabilities.PUBLICATION_RECEIPTS_DIR).exists())
+            oversized_output = Path(tmp) / "oversized-candidate-freeze.json"
+            freeze_payload = capabilities.canonical_bytes(freeze) + b"\n"
+            with mock.patch.object(
+                capability_freeze, "PRIVATE_REFRESH_MAX_BYTES", len(freeze_payload) - 1,
+            ), self.assertRaisesRegex(ValueError, "publication exceeds the bounded size"):
+                capabilities.publish_with_raw_evidence_retention(
+                    freeze, oversized_output, raw_root, ROOT, manifest=self.manifest,
+                )
+            self.assertFalse(oversized_output.exists())
+            self.assertFalse((raw_root / capabilities.RETENTION_RECORDS_DIR).exists())
+            self.assertFalse((raw_root / capabilities.PUBLICATION_INTENTS_DIR).exists())
+            self.assertFalse((raw_root / capabilities.PUBLICATION_RECEIPTS_DIR).exists())
+            output_parent_identity = capability_io._stable_directory_identity(
+                os.stat(Path(tmp), follow_symlinks=False),
+            )
+            output_parent_descriptor = capability_private._private_directory_descriptor(
+                Path(tmp), output_parent_identity,
+            )
+            try:
+                with mock.patch.object(
+                    capability_private, "PRIVATE_REFRESH_MAX_BYTES", len(freeze_payload) - 1,
+                ), self.assertRaisesRegex(ValueError, "private output exceeds the bounded size"):
+                    capability_private._write_private_bytes_at(
+                        output_parent_descriptor, Path(tmp), "oversized-direct.json",
+                        freeze_payload, append_only=True,
+                        expected_parent_identity=output_parent_identity,
+                    )
+            finally:
+                os.close(output_parent_descriptor)
+            self.assertFalse((Path(tmp) / "oversized-direct.json").exists())
+            self.assertFalse(any(Path(tmp).glob(f"{capabilities.PRIVATE_TEMPORARY_PREFIX}*")))
             leaf_race_parent = Path(tmp) / "leaf-race-output"
             leaf_race_parent.mkdir()
             leaf_race_output = leaf_race_parent / "candidate-freeze.json"

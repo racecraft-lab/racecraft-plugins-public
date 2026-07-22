@@ -40,6 +40,8 @@ def _write_private_bytes_at(
     parent_descriptor, parent_path, filename, payload, *, append_only,
     expected_parent_identity, directory_lock_held=False,
 ):
+    if len(payload) > PRIVATE_REFRESH_MAX_BYTES:
+        raise ValueError("private output exceeds the bounded size")
     temporary = None; descriptor = None; target_descriptor = None
     try:
         if not directory_lock_held:

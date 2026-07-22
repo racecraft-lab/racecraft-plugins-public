@@ -328,7 +328,6 @@ def _validate_retained_freeze_evidence(freeze, raw, repository_root, raw_descrip
     for result in freeze["canary_results"]:
         validate_canary_evidence(
             raw, repository_root, result, raw_descriptor=raw_descriptor, raw_identity=raw_identity)
-
 def publish_with_raw_evidence_retention(
     freeze, output, raw_evidence_root, repository_root, *, manifest,
     predecessor=None, expected_telemetry_profile_id=None, expected_treatment_contract_digest=None,
@@ -347,6 +346,7 @@ def publish_with_raw_evidence_retention(
         expected_predecessor_treatment_evidence_digest=expected_predecessor_treatment_evidence_digest,
     )
     payload = canonical_bytes(freeze) + b"\n"
+    if len(payload) > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("freeze publication exceeds the bounded size")
     with _bound_publication_output(output, raw, raw_identity) as (
         output, output_parent_descriptor, output_parent_identity,
     ):
