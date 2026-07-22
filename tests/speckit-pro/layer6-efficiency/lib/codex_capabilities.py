@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import hashlib
 from html.parser import HTMLParser
+from itertools import chain
 import json
 import os
 import re
@@ -94,7 +95,10 @@ class _VisibleText(HTMLParser):
     }
 
     def __init__(self):
-        super().__init__(); self.parts, self.hidden_stack, self.invalid_hidden_markup = [], [], False
+        super().__init__()
+        self.parts = []
+        self.hidden_stack = []
+        self.invalid_hidden_markup = False
 
     def handle_starttag(self, tag, attrs):
         attributes = {name.casefold(): (value or "") for name, value in attrs}
@@ -933,7 +937,7 @@ def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expect
     complete = all(item["completeness_state"] == "complete" for item in observations); collection_authoritative = all(item == "approved_live" for item in collection_authorities)
     for source in sources:
         key = (source.get("model"), source.get("effort")); values = {surface: indexed[surface].get(key) for surface in SURFACES}
-        observed = [value for value in values.values() if value is not None]; availability = {value["available"] for value in observed}; hidden = {value["hidden"] for value in observed}
+        observed = [value for value in values.values() if value is not None]; availability = {value["available"] for value in observed}
         picker_omission = values["interactive_picker"] is None and values["app_server"] is not None and values["cli"] is not None and values["app_server"]["hidden"] and values["cli"]["hidden"] and next(item for item in observations if item["surface"] == "interactive_picker")["visibility_policy"] == {"complete_enumeration": True}
         why = list(source.get("authority_reasons", [])) if not source.get("source_admitted") else []
         if reasons: disposition, surface_why = "unknown", ["matrix_invalid"]
@@ -1102,7 +1106,7 @@ def _validate_raw_evidence_root(raw_root, repository_root, *, allow_private_temp
     if raw == repo or repo in raw.parents or _git_worktree_ancestor(raw):
         raise ValueError("raw_evidence_root must resolve outside every Git worktree")
     if not raw.is_dir(): raise ValueError("raw_evidence_root must be a directory")
-    entries = (raw, *raw.rglob("*"))
+    entries = chain((raw,), raw.rglob("*"))
     regular_files = {}
     for path in entries:
         if path.is_symlink(): raise ValueError("raw_evidence_root cannot contain symlinks")
