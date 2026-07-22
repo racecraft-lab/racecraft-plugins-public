@@ -24,6 +24,7 @@ FIXTURE_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-repl
 MANIFEST_PATH = ROOT / "docs/ai/research/codex-agent-route-candidate-manifest.json"
 PUBLISHED_FREEZE_PATH = ROOT / "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json"
 CAPABILITY_EVIDENCE_PATH = ROOT / "docs/ai/research/codex-g56r-002-capability-evidence.md"
+TREATMENT_SCHEMA_PATH = ROOT / "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"
 
 spec = importlib.util.spec_from_file_location("g56r_002_codex_capabilities", MODULE_PATH)
 if spec is None or spec.loader is None:
@@ -109,6 +110,18 @@ class CapabilityContractTests(unittest.TestCase):
             capabilities.fixture_observation(surface, value, self.identity["client_identity_id"])
             for surface, value in case["surfaces"].items()
         ]
+
+    def test_native_telemetry_classifications_require_official_sources(self) -> None:
+        entry = load_json(TREATMENT_SCHEMA_PATH)["$defs"]["telemetryProfileEntry"]
+        native_source_rule = entry["allOf"][0]
+        self.assertEqual(
+            native_source_rule["if"]["properties"]["classification"]["enum"],
+            ["stable_native", "experimental_native"],
+        )
+        self.assertEqual(
+            native_source_rule["then"]["properties"]["official_source_ledger_id"],
+            {"type": "string", "pattern": "^OPENAI-DOC-[0-9]{3}$"},
+        )
 
     def test_published_evidence_digest_summary_matches_freeze(self) -> None:
         freeze = load_json(PUBLISHED_FREEZE_PATH)

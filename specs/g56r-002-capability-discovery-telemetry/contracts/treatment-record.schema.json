@@ -149,7 +149,27 @@
           "type": "array",
           "items": {"type": "string", "minLength": 1}
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "enum": ["stable_native", "experimental_native"]
+              }
+            },
+            "required": ["classification"]
+          },
+          "then": {
+            "properties": {
+              "official_source_ledger_id": {
+                "type": "string",
+                "pattern": "^OPENAI-DOC-[0-9]{3}$"
+              }
+            }
+          }
+        }
+      ]
     },
     "configuredRouteProof": {
       "type": "object",
