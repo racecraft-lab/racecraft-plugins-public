@@ -1523,6 +1523,31 @@ class CapabilityContractTests(unittest.TestCase):
                 self.assertFalse(confined_output.exists())
             self.assertFalse((raw_root / capabilities.RETENTION_RECORDS_DIR).exists())
             self.assertFalse((raw_root / capabilities.PUBLICATION_RECEIPTS_DIR).exists())
+            leaf_race_parent = Path(tmp) / "leaf-race-output"
+            leaf_race_parent.mkdir()
+            leaf_race_output = leaf_race_parent / "candidate-freeze.json"
+            original_output_lock = capability_publication_records._acquire_append_only_directory_lock
+            leaf_planted = False
+
+            def plant_leaf_before_output_lock(descriptor: int, *, wait: bool) -> None:
+                nonlocal leaf_planted
+                leaf_race_output.symlink_to(raw_root / "redirected-candidate-freeze.json")
+                leaf_planted = True
+                original_output_lock(descriptor, wait=wait)
+
+            with mock.patch.object(
+                capability_publication_records, "_acquire_append_only_directory_lock",
+                side_effect=plant_leaf_before_output_lock,
+            ), self.assertRaisesRegex(ValueError, "cannot be a symlink"):
+                capabilities.publish_with_raw_evidence_retention(
+                    freeze, leaf_race_output, raw_root, ROOT, manifest=self.manifest,
+                )
+            self.assertTrue(leaf_planted)
+            self.assertTrue(leaf_race_output.is_symlink())
+            self.assertFalse((raw_root / capabilities.RETENTION_RECORDS_DIR).exists())
+            self.assertFalse((raw_root / capabilities.PUBLICATION_INTENTS_DIR).exists())
+            self.assertFalse((raw_root / capabilities.PUBLICATION_RECEIPTS_DIR).exists())
+            leaf_race_output.unlink()
             hard_link_source = Path(tmp) / "hard-linked-source.json"
             hard_link_output = Path(tmp) / "hard-linked-output.json"
             hard_link_source.write_bytes(capabilities.canonical_bytes(freeze) + b"\n")

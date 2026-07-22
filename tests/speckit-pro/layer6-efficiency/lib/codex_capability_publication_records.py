@@ -107,7 +107,7 @@ def _bound_publication_output(path, raw, raw_identity):
             raise ValueError("publication output cannot be a symlink")
     except FileNotFoundError:
         pass
-    target = lexical.resolve(strict=False)
+    target = lexical.parent.resolve(strict=False) / lexical.name
     if lexical == raw or raw in lexical.parents or target == raw or raw in target.parents:
         raise ValueError("publication output must remain outside raw_evidence_root")
     directory_flags = (
@@ -125,6 +125,12 @@ def _bound_publication_output(path, raw, raw_identity):
         parent_identity = _stable_directory_identity(os.fstat(descriptor))
         _acquire_append_only_directory_lock(descriptor, wait=True)
         _assert_private_directory_current(target.parent, descriptor, parent_identity)
+        try:
+            leaf = os.stat(target.name, dir_fd=descriptor, follow_symlinks=False)
+        except FileNotFoundError:
+            leaf = None
+        if leaf is not None and stat.S_ISLNK(leaf.st_mode):
+            raise ValueError("publication output cannot be a symlink")
         yield target, descriptor, parent_identity
         os.fsync(descriptor)
         _assert_private_directory_current(target.parent, descriptor, parent_identity)
