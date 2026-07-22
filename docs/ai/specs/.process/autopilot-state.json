@@ -304,16 +304,16 @@
       "surface_matrix_id": "sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2",
       "marker_id": "us1",
       "reviewability": "size-only block with honored typed no-safe-boundary exception",
-      "checkpoint": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e",
-      "superseded_checkpoint": "f262695d0c1b519e73d93058a944ccdc377ad62f",
-      "completed_at": "2026-07-18T19:03:30Z"
+      "checkpoint": "fc23ea7798c0bca87cb78e065a56570fbc141642",
+      "superseded_checkpoint": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e",
+      "completed_at": "2026-07-22T00:43:42Z"
     }
   },
   "current_source_fingerprint": {
-    "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
-    "plan_declared_scope_sha": "sha256:1cb880c5182a68344bf364cc47160da8928c720448b424541261e1168b02ea81",
-    "tasks_sha": "sha256:4ab7bafd49ffaf63341f0f690e1e9fd3f0a1ccebea0f97febb6bf9fc82cd96eb",
-    "reviewability_sha": "sha256:05e653cbd39b0300d9b27df30cc2419f524e861fcada383abe49646454dbfeff",
+    "feature_spec_sha": "sha256:f05c4e7dd60a462194b7fd2cc84240a4f43ce973748e103b7114fa5594cb2d76",
+    "plan_declared_scope_sha": "sha256:dc8f51146c26cc239492a131404cee2a0c869eaf61e47353f3dc2246c7ef40ac",
+    "tasks_sha": "sha256:3c4870cc8c8373c623933e65eb2a9ce3c8491c26bdd5097a1854706ba2d8e08e",
+    "reviewability_sha": "sha256:b3e074fb9309c66dc2b55756ca1ae49e47b2ac5e21d967688c69d472ca25974a",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
   },
   "pr_marker_plan": {
@@ -322,10 +322,10 @@
     "feature_id": "G56R-002",
     "status": "checkpointing",
     "source_fingerprint": {
-      "feature_spec_sha": "sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56",
-      "plan_declared_scope_sha": "sha256:1cb880c5182a68344bf364cc47160da8928c720448b424541261e1168b02ea81",
-      "tasks_sha": "sha256:4ab7bafd49ffaf63341f0f690e1e9fd3f0a1ccebea0f97febb6bf9fc82cd96eb",
-      "reviewability_sha": "sha256:05e653cbd39b0300d9b27df30cc2419f524e861fcada383abe49646454dbfeff",
+      "feature_spec_sha": "sha256:f05c4e7dd60a462194b7fd2cc84240a4f43ce973748e103b7114fa5594cb2d76",
+      "plan_declared_scope_sha": "sha256:dc8f51146c26cc239492a131404cee2a0c869eaf61e47353f3dc2246c7ef40ac",
+      "tasks_sha": "sha256:3c4870cc8c8373c623933e65eb2a9ce3c8491c26bdd5097a1854706ba2d8e08e",
+      "reviewability_sha": "sha256:b3e074fb9309c66dc2b55756ca1ae49e47b2ac5e21d967688c69d472ca25974a",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2"
     },
     "markers": [
@@ -369,7 +369,7 @@
           "mode": "implementation",
           "scope": "us1",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/capability-freeze.json",
-          "head_sha": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e"
+          "head_sha": "fc23ea7798c0bca87cb78e065a56570fbc141642"
         },
         "hazards": ["source-authority", "private-evidence", "content-addressed-freeze"],
         "subdivision": {
@@ -383,8 +383,8 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json",
-          "commit_sha": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e",
-          "superseded_commit_sha": "f262695d0c1b519e73d93058a944ccdc377ad62f"
+          "commit_sha": "fc23ea7798c0bca87cb78e065a56570fbc141642",
+          "superseded_commit_sha": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e"
         },
         "emission_mapping": {
           "status": "pending",
@@ -396,7 +396,7 @@
             "severity": "warning",
             "message": "US1 exceeds 400 reviewable LOC and is retained only under the typed no-safe-boundary size exception.",
             "source": "capability-freeze-reviewability",
-            "details": {"marker_id": "us1", "actual_source_lines": 1844, "actual_nonblank_noncomment_lines": 1645}
+            "details": {"marker_id": "us1", "actual_source_lines": 2011, "actual_nonblank_noncomment_lines": 1805}
           }
         ]
       },

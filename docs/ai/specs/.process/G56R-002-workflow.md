@@ -886,10 +886,11 @@ For every task:
 - Included routes: 0; excluded routes: 23
 - Review: PASS after route-to-claim, retention lifecycle,
   publication-transaction, permission-boundary, schema-parity, concurrency,
-  destructive-clock, and hard-link durability remediation. Exact-head
-  RepoPrompt reviews returned `NO FINDINGS` for the core
-  (`untitled-chat-337E74`) and process state (`untitled-chat-55E370`).
-- Implementation checkpoint: `2b7096dacdaa7a6af62b3c12b36e83cf4515213e`
+  destructive-clock, hard-link durability, stable naming, crash-recovery,
+  orphan-expiration, source-visibility, and timestamp remediation. The exact
+  source checkpoint returned `NO FINDINGS` in RepoPrompt review
+  `review-pr-366-4E1C55`.
+- Implementation checkpoint: `fc23ea7798c0bca87cb78e065a56570fbc141642`
 
 ## PR Marker Plan Evidence
 
@@ -901,20 +902,20 @@ For every task:
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:bec915138a93274573c7d1869640f84393076bc72c3cad25d481c5bed3fd8f56` |
-| Plan-declared scope | `sha256:1cb880c5182a68344bf364cc47160da8928c720448b424541261e1168b02ea81` |
-| Tasks | `sha256:4ab7bafd49ffaf63341f0f690e1e9fd3f0a1ccebea0f97febb6bf9fc82cd96eb` |
-| Reviewability evidence | `sha256:05e653cbd39b0300d9b27df30cc2419f524e861fcada383abe49646454dbfeff` |
+| Feature spec | `sha256:f05c4e7dd60a462194b7fd2cc84240a4f43ce973748e103b7114fa5594cb2d76` |
+| Plan-declared scope | `sha256:dc8f51146c26cc239492a131404cee2a0c869eaf61e47353f3dc2246c7ef40ac` |
+| Tasks | `sha256:3c4870cc8c8373c623933e65eb2a9ce3c8491c26bdd5097a1854706ba2d8e08e` |
+| Reviewability evidence | `sha256:b3e074fb9309c66dc2b55756ca1ae49e47b2ac5e21d967688c69d472ca25974a` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
-| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
+| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `fc23ea7798c0bca87cb78e065a56570fbc141642` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Not estimated | Pending; clean US1 checkpoint satisfied | Treatment remains a separate module |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
-- Warning: `CAPABILITY_SIZE_BLOCK` / `MARKER_SIZE_WARNING`; US1 is 1,844 source
-  lines and 1,645 nonblank, non-comment lines against the 400-LOC boundary.
+- Warning: `CAPABILITY_SIZE_BLOCK` / `MARKER_SIZE_WARNING`; US1 is 2,011 source
+  lines and 1,805 nonblank, non-comment lines against the 400-LOC boundary.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
 - PR mappings: Pending.

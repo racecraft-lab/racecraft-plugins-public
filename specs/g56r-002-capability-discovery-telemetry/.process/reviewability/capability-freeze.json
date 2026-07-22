@@ -8,8 +8,8 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 1844,
-  "actual_nonblank_noncomment_lines": 1645,
+  "actual_source_lines": 2011,
+  "actual_nonblank_noncomment_lines": 1805,
   "production_modules": 1,
   "primary_surface": "harness/adapter",
   "correctness_checks": {
