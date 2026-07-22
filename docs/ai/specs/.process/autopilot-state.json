@@ -3,7 +3,7 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-21T21:53:30Z",
+  "updated_at": "2026-07-22T02:49:35Z",
   "active_step": "Phase 7: Implement - Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -397,18 +397,18 @@
       "independent_review_findings": [
         "a post-unlink hard-link race could republish the quarantined payload under a replacement inode while leaving the terminal recovery intent bound to the obsolete inode"
       ],
-      "baseline_commit": "bbffc774c815594edc64cf412a2b5f91127ef213",
+      "baseline_commit": "0e66466bb43ef2796664d9c63dde808744717f4c",
       "candidate_freeze_id": "sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c",
       "telemetry_profile_id": "sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979",
       "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
       "treatment_evidence_digest": "sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f",
       "marker_id": "us2",
       "reviewability": "aggregate size-only block at 5,508 source / 5,021 nonblank non-comment lines across 17 production modules; 16 capability modules are safely split with a 394-line maximum, the facade exports exactly the supported API, and only the treatment module retains a typed size-only exception",
-      "checkpoint": "94079dee507bc0d65ff4db0003c305aadcc3fe1a",
-      "superseded_checkpoint": "8135e4d3a52c765e828878e559d6a685b3ab42c8",
+      "checkpoint": "ea36384f20c9fdcd2360460c89394da428ead440",
+      "superseded_checkpoint": "94079dee507bc0d65ff4db0003c305aadcc3fe1a",
       "implementation_completed_at": "2026-07-20T03:06:58Z",
       "completed_at": "2026-07-20T03:50:24Z",
-      "review_updated_at": "2026-07-21T23:32:33Z"
+      "review_updated_at": "2026-07-22T02:49:35Z"
     }
   },
   "current_source_fingerprint": {
@@ -557,7 +557,7 @@
           "mode": "implementation",
           "scope": "us2",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
-          "head_sha": "94079dee507bc0d65ff4db0003c305aadcc3fe1a"
+          "head_sha": "ea36384f20c9fdcd2360460c89394da428ead440"
         },
         "hazards": ["six-id-join", "exact-treatment", "service-reroute"],
         "subdivision": {
@@ -572,8 +572,8 @@
         "implementation_checkpoint": {
           "status": "review_pending",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
-          "commit_sha": "94079dee507bc0d65ff4db0003c305aadcc3fe1a",
-          "superseded_commit_sha": "8135e4d3a52c765e828878e559d6a685b3ab42c8"
+          "commit_sha": "ea36384f20c9fdcd2360460c89394da428ead440",
+          "superseded_commit_sha": "94079dee507bc0d65ff4db0003c305aadcc3fe1a"
         },
         "emission_mapping": {"status": "pending", "packet_path": "specs/g56r-002-capability-discovery-telemetry/.process/pr-packets/us2.json"},
         "warnings": [
@@ -653,7 +653,7 @@
       }
     ],
     "created_at": "2026-07-17T04:50:02Z",
-    "updated_at": "2026-07-21T21:53:30Z"
+    "updated_at": "2026-07-22T02:49:35Z"
   },
   "layer_plan": {
     "status": "skipped",

@@ -894,7 +894,7 @@ For every task:
 
 ### Treatment Checkpoint Evidence
 
-- Implementation baseline: `bbffc774c815594edc64cf412a2b5f91127ef213`
+- Restacked implementation baseline: `0e66466bb43ef2796664d9c63dde808744717f4c`
 - Successor candidate freeze: `sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c`
 - Superseded candidate freeze: `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
 - Telemetry profile: `sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979`
@@ -1119,7 +1119,8 @@ For every task:
   suite is 58/58, the repository naming-layout guard is 9/9, privacy is 10/10,
   process coverage is 8/8, docs-reference is current, and the full suite is
   2824/2824. Checkpoint refresh, push, and exact-head review remain pending.
-- Implementation checkpoint: `94079dee507bc0d65ff4db0003c305aadcc3fe1a`
+- Implementation checkpoint: `ea36384f20c9fdcd2360460c89394da428ead440`
+- Superseded checkpoint: `94079dee507bc0d65ff4db0003c305aadcc3fe1a`
 
 ## PR Marker Plan Evidence
 
@@ -1140,7 +1141,7 @@ For every task:
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `94079dee507bc0d65ff4db0003c305aadcc3fe1a` | Exact-head re-audit required before restack |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `ea36384f20c9fdcd2360460c89394da428ead440` | Exact-head re-audit required before push |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
