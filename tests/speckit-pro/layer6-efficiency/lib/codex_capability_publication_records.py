@@ -97,14 +97,61 @@ def _register_raw_evidence_retention_locked(freeze, raw, raw_identity, repositor
     return sorted(record_digests)
 
 
-def _publication_target_matches(path, payload):
+@contextmanager
+def _bound_publication_output(path, raw, raw_identity):
+    if not HAS_DESCRIPTOR_RELATIVE_IO:
+        raise ValueError("append-only publication requires descriptor-relative filesystem operations")
+    lexical = Path(os.path.abspath(path)); raw = Path(raw)
+    try:
+        if stat.S_ISLNK(os.stat(lexical, follow_symlinks=False).st_mode):
+            raise ValueError("publication output cannot be a symlink")
+    except FileNotFoundError:
+        pass
+    target = lexical.resolve(strict=False)
+    if lexical == raw or raw in lexical.parents or target == raw or raw in target.parents:
+        raise ValueError("publication output must remain outside raw_evidence_root")
+    directory_flags = (
+        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_DIRECTORY", 0)
+    )
+    descriptor = os.open(target.anchor, directory_flags)
+    try:
+        for part in target.parent.parts[1:]:
+            child = os.open(part, directory_flags, dir_fd=descriptor)
+            os.close(descriptor); descriptor = child
+            metadata = os.fstat(descriptor)
+            if _stable_directory_identity(metadata)[:2] == raw_identity[:2]:
+                raise ValueError("publication output must remain outside raw_evidence_root")
+        parent_identity = _stable_directory_identity(os.fstat(descriptor))
+        _acquire_append_only_directory_lock(descriptor, wait=True)
+        _assert_private_directory_current(target.parent, descriptor, parent_identity)
+        yield target, descriptor, parent_identity
+        os.fsync(descriptor)
+        _assert_private_directory_current(target.parent, descriptor, parent_identity)
+    finally:
+        os.close(descriptor)
+
+
+def _publication_target_matches(
+    path, payload, *, parent_descriptor=None, parent_identity=None,
+    directory_lock_held=False,
+):
     target = Path(os.path.abspath(path))
     try:
-        os.stat(target, follow_symlinks=False)
+        if parent_descriptor is None:
+            os.stat(target, follow_symlinks=False)
+        else:
+            os.stat(target.name, dir_fd=parent_descriptor, follow_symlinks=False)
     except FileNotFoundError:
         return False
-    _recover_append_only_target(target, payload)
-    with _bound_publication_target(target, payload):
+    _recover_append_only_target(
+        target, payload, parent_identity, parent_descriptor=parent_descriptor,
+        directory_lock_held=directory_lock_held,
+    )
+    with _bound_publication_target(
+        target, payload, parent_descriptor=parent_descriptor,
+        parent_identity=parent_identity, directory_lock_held=directory_lock_held,
+    ):
         pass
     return True
 
@@ -138,20 +185,28 @@ def _validate_bound_publication_target(
 
 
 @contextmanager
-def _bound_publication_target(path, payload, *, receipt_commit=False):
+def _bound_publication_target(
+    path, payload, *, receipt_commit=False, parent_descriptor=None,
+    parent_identity=None, directory_lock_held=False,
+):
     target = Path(os.path.abspath(path)); parent = target.parent
-    parent_metadata = os.stat(parent, follow_symlinks=False)
-    if not stat.S_ISDIR(parent_metadata.st_mode):
-        raise ValueError("publication output parent must be a real directory")
-    parent_identity = _stable_directory_identity(parent_metadata)
-    parent_descriptor = _private_directory_descriptor(parent, parent_identity)
+    owns_parent_descriptor = parent_descriptor is None
+    if owns_parent_descriptor:
+        parent_metadata = os.stat(parent, follow_symlinks=False)
+        if not stat.S_ISDIR(parent_metadata.st_mode):
+            raise ValueError("publication output parent must be a real directory")
+        parent_identity = _stable_directory_identity(parent_metadata)
+        parent_descriptor = _private_directory_descriptor(parent, parent_identity)
+    elif parent_identity is None or not directory_lock_held:
+        raise ValueError("bound publication target requires its locked parent identity")
     target_descriptor = None
     mismatch_message = (
         "publication output changed while its receipt was committed"
         if receipt_commit else "publication output already exists with different bytes"
     )
     try:
-        _acquire_append_only_directory_lock(parent_descriptor, wait=True)
+        if owns_parent_descriptor:
+            _acquire_append_only_directory_lock(parent_descriptor, wait=True)
         _assert_private_directory_current(parent, parent_descriptor, parent_identity)
         try:
             target_descriptor = os.open(
@@ -183,7 +238,7 @@ def _bound_publication_target(path, payload, *, receipt_commit=False):
         _assert_private_directory_current(parent, parent_descriptor, parent_identity)
     finally:
         if target_descriptor is not None: os.close(target_descriptor)
-        os.close(parent_descriptor)
+        if owns_parent_descriptor: os.close(parent_descriptor)
 
 
 def _store_publication_record_locked(freeze, retention_record_digests, raw, raw_identity, repository_root, *, intent):

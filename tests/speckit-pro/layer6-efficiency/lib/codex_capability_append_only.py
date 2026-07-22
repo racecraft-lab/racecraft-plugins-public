@@ -50,26 +50,61 @@ def _read_open_descriptor(descriptor):
     return b"".join(chunks)
 
 
+def _read_append_only_target_at(parent_descriptor, name):
+    descriptor = os.open(
+        name, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+        dir_fd=parent_descriptor,
+    )
+    try:
+        before = os.fstat(descriptor)
+        current = os.stat(name, dir_fd=parent_descriptor, follow_symlinks=False)
+        if (
+            not stat.S_ISREG(before.st_mode)
+            or before.st_size > PRIVATE_REFRESH_MAX_BYTES
+            or _stable_file_identity(current) != _stable_file_identity(before)
+        ):
+            raise ValueError("append-only recovery target must be a stable bounded regular file")
+        payload = _read_open_descriptor(descriptor)
+        after = os.fstat(descriptor)
+        current = os.stat(name, dir_fd=parent_descriptor, follow_symlinks=False)
+        if _stable_file_identity(after) != _stable_file_identity(before) or _stable_file_identity(current) != _stable_file_identity(after):
+            raise ValueError("append-only recovery target changed while it was read")
+        return payload
+    finally:
+        os.close(descriptor)
+
+
 def _recover_append_only_target(
     path, payload, expected_parent_identity=None, *, directory_lock_held=False,
-    expected_temporary_name=None,
+    expected_temporary_name=None, parent_descriptor=None,
 ):
     if not HAS_DESCRIPTOR_RELATIVE_IO:
         raise ValueError("append-only recovery requires descriptor-relative filesystem operations")
     target = Path(os.path.abspath(path)); parent = target.parent
-    parent_metadata = os.stat(parent, follow_symlinks=False)
-    if not stat.S_ISDIR(parent_metadata.st_mode):
-        raise ValueError("append-only recovery parent must be a real directory")
-    parent_identity = _stable_directory_identity(parent_metadata)
-    if expected_parent_identity is not None and parent_identity != expected_parent_identity:
-        raise ValueError("append-only recovery parent changed after validation")
-    parent_descriptor = os.open(
-        parent, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
-        | getattr(os, "O_DIRECTORY", 0),
-    )
+    owns_parent_descriptor = parent_descriptor is None
+    if owns_parent_descriptor:
+        parent_metadata = os.stat(parent, follow_symlinks=False)
+        if not stat.S_ISDIR(parent_metadata.st_mode):
+            raise ValueError("append-only recovery parent must be a real directory")
+        parent_identity = _stable_directory_identity(parent_metadata)
+        if expected_parent_identity is not None and parent_identity != expected_parent_identity:
+            raise ValueError("append-only recovery parent changed after validation")
+        parent_descriptor = os.open(
+            parent, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_DIRECTORY", 0),
+        )
+    else:
+        if expected_parent_identity is None:
+            raise ValueError("bound append-only recovery requires its parent identity")
+        if not directory_lock_held:
+            raise ValueError("bound append-only recovery requires its directory lock")
+        parent_identity = expected_parent_identity
     target_descriptor = temporary_descriptor = None
     try:
-        if _stable_directory_identity(os.fstat(parent_descriptor)) != parent_identity:
+        if (
+            _stable_directory_identity(os.stat(parent, follow_symlinks=False)) != parent_identity
+            or _stable_directory_identity(os.fstat(parent_descriptor)) != parent_identity
+        ):
             raise ValueError("append-only recovery parent changed before it was opened")
         if not directory_lock_held:
             _acquire_append_only_directory_lock(parent_descriptor, wait=True)
@@ -171,18 +206,26 @@ def _recover_append_only_target(
     finally:
         if temporary_descriptor is not None: os.close(temporary_descriptor)
         if target_descriptor is not None: os.close(target_descriptor)
-        os.close(parent_descriptor)
+        if owns_parent_descriptor: os.close(parent_descriptor)
 
 
-def _recover_append_only_directory(directory, expected_identity, *, require_content_addressed):
-    descriptor = os.open(
-        directory, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
-        | getattr(os, "O_DIRECTORY", 0),
-    )
+def _recover_append_only_directory(
+    directory, expected_identity, *, require_content_addressed,
+    descriptor=None, directory_lock_held=False,
+):
+    owns_descriptor = descriptor is None
+    if not owns_descriptor and not directory_lock_held:
+        raise ValueError("bound append-only recovery requires its directory lock")
+    if owns_descriptor:
+        descriptor = os.open(
+            directory, os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
+            | getattr(os, "O_DIRECTORY", 0),
+        )
     try:
         if _stable_directory_identity(os.fstat(descriptor)) != expected_identity:
             raise ValueError("append-only recovery directory changed before it was opened")
-        _acquire_append_only_directory_lock(descriptor, wait=True)
+        if not directory_lock_held:
+            _acquire_append_only_directory_lock(descriptor, wait=True)
         if (
             _stable_directory_identity(os.stat(directory, follow_symlinks=False)) != expected_identity
             or _stable_directory_identity(os.fstat(descriptor)) != expected_identity
@@ -244,12 +287,12 @@ def _recover_append_only_directory(directory, expected_identity, *, require_cont
             if temporary.st_nlink != 2 or len(targets) != 1:
                 raise ValueError("append-only temporary link lacks one published target")
             target = Path(directory) / targets[0]
-            payload = _read_bounded_regular_file(target, allowed_root=directory, expected_parent_identity=expected_identity)
+            payload = _read_append_only_target_at(descriptor, target.name)
             if require_content_addressed and target.name != f"{digest(payload).removeprefix('sha256:')}.json":
                 raise ValueError("append-only recovery target is not content-addressed")
             _recover_append_only_target(
                 target, payload, expected_identity, directory_lock_held=True,
-                expected_temporary_name=temporary_name,
+                expected_temporary_name=temporary_name, parent_descriptor=descriptor,
             )
         if (
             any(
@@ -261,7 +304,7 @@ def _recover_append_only_directory(directory, expected_identity, *, require_cont
         ):
             raise ValueError("append-only recovery directory changed during recovery")
     finally:
-        os.close(descriptor)
+        if owns_descriptor: os.close(descriptor)
 
 
 def _recover_content_addressed_append_only_links(raw):

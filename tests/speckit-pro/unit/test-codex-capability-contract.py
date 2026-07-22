@@ -6,6 +6,8 @@ from __future__ import annotations
 import copy
 import base64
 from collections.abc import Mapping
+from contextlib import contextmanager
+import fcntl
 import importlib.util
 import itertools
 import json
@@ -1595,6 +1597,39 @@ class CapabilityContractTests(unittest.TestCase):
                 )
             self.assertEqual(validate_unknown_evidence.call_count, 3)
             self.assertEqual(len(publication["retention_record_digests"]), 4)
+            bound_output_parent = Path(tmp) / "bound-output-parent"
+            bound_output_parent.mkdir()
+            output_alias = Path(tmp) / "publication-output-alias"
+            output_alias.symlink_to(bound_output_parent, target_is_directory=True)
+            aliased_output = output_alias / "aliased-candidate-freeze.json"
+            canonical_aliased_output = bound_output_parent / aliased_output.name
+            original_retention_lock = capability_freeze._retention_lock
+            alias_swapped = lock_observed = False
+
+            @contextmanager
+            def swap_alias_before_retention(*args: object, **kwargs: object):
+                nonlocal alias_swapped, lock_observed
+                output_alias.unlink(); output_alias.symlink_to(raw_root, target_is_directory=True)
+                alias_swapped = True
+                lock_probe = os.open(bound_output_parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+                try:
+                    with self.assertRaises(BlockingIOError):
+                        fcntl.flock(lock_probe, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    lock_observed = True
+                finally:
+                    os.close(lock_probe)
+                with original_retention_lock(*args, **kwargs):
+                    yield
+
+            with mock.patch.object(
+                capability_freeze, "_retention_lock", side_effect=swap_alias_before_retention,
+            ):
+                self.assertEqual(capabilities.publish_with_raw_evidence_retention(
+                    freeze, aliased_output, raw_root, ROOT, manifest=self.manifest,
+                ), publication)
+            self.assertTrue(alias_swapped and lock_observed)
+            self.assertTrue(canonical_aliased_output.is_file())
+            self.assertFalse((raw_root / aliased_output.name).exists())
             raced_publication_path = Path(tmp) / "raced-candidate-freeze.json"
             original_store_receipt = capability_freeze._store_publication_receipt_locked
 
@@ -1630,16 +1665,24 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(len(list((raw_root / capabilities.RETENTION_RECORDS_DIR).iterdir())), 4)
             failed_publication_path = Path(tmp) / "failed-candidate-freeze.json"
             later_failed_publication_path = Path(tmp) / "later-failed-candidate-freeze.json"
-            failed_publication_paths = {failed_publication_path, later_failed_publication_path}
-            original_write = capability_private._write
-            def fail_publication(path: Path, value: object, **kwargs: object) -> None:
-                if Path(path) in failed_publication_paths:
+            failed_publication_paths = {
+                failed_publication_path.resolve(strict=False),
+                later_failed_publication_path.resolve(strict=False),
+            }
+            original_write_at = capability_freeze._write_private_bytes_at
+            def fail_publication(
+                parent_descriptor: int, parent_path: Path, filename: str,
+                payload: bytes, **kwargs: object,
+            ) -> None:
+                if Path(parent_path) / filename in failed_publication_paths:
                     raise OSError("simulated publication failure")
-                original_write(path, value, **kwargs)
+                original_write_at(parent_descriptor, parent_path, filename, payload, **kwargs)
             with mock.patch.object(
                 capability_publication_records, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
-            ), mock.patch.object(capability_freeze, "_write", side_effect=fail_publication):
+            ), mock.patch.object(
+                capability_freeze, "_write_private_bytes_at", side_effect=fail_publication,
+            ):
                 for failed_freeze, failed_path in (
                     (future_freeze, failed_publication_path),
                     (later_freeze, later_failed_publication_path),
@@ -2528,20 +2571,20 @@ class CapabilityContractTests(unittest.TestCase):
             raced_identity = capability_io._stable_directory_identity(
                 os.stat(raced, follow_symlinks=False),
             )
-            original_read = capability_append_only._read_bounded_regular_file
+            original_read = capability_append_only._read_append_only_target_at
             raced_once = False
 
-            def replace_after_bounded_read(path: Path, **kwargs: object) -> bytes:
+            def replace_after_bounded_read(parent_descriptor: int, name: str) -> bytes:
                 nonlocal raced_once
-                retained = original_read(path, **kwargs)
-                if Path(path) == raced_target and not raced_once:
+                retained = original_read(parent_descriptor, name)
+                if name == raced_target.name and not raced_once:
                     raced_once = True
                     raced_temporary.unlink()
                     raced_target.write_bytes(b"changed payload\n")
                 return retained
 
             with mock.patch.object(
-                capability_append_only, "_read_bounded_regular_file",
+                capability_append_only, "_read_append_only_target_at",
                 side_effect=replace_after_bounded_read,
             ), self.assertRaisesRegex(ValueError, "unexpected bytes"):
                 capability_append_only._recover_append_only_directory(

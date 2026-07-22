@@ -336,10 +336,6 @@ def publish_with_raw_evidence_retention(
     expected_predecessor_treatment_evidence_digest=None,
 ):
     raw, raw_identity = _validated_raw_evidence_root_binding(raw_evidence_root, repository_root)
-    output = Path(os.path.abspath(output))
-    resolved_output = output.resolve(strict=False)
-    if resolved_output == raw or raw in resolved_output.parents:
-        raise ValueError("publication output must remain outside raw_evidence_root")
     freeze = validate_freeze(
         freeze, manifest, predecessor=predecessor,
         expected_telemetry_profile_id=expected_telemetry_profile_id,
@@ -350,32 +346,52 @@ def publish_with_raw_evidence_retention(
         expected_predecessor_treatment_evidence_digest=expected_predecessor_treatment_evidence_digest,
     )
     payload = canonical_bytes(freeze) + b"\n"
-    with _retention_lock(raw, raw_identity):
-        validate_raw_evidence_root(raw, repository_root)
-        deleted_digests = {
-            _validate_deletion_record(record_digest, record)["raw_evidence_digest"]
-            for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")
-        }
-        if set(_freeze_raw_evidence_digests(freeze)) & deleted_digests:
-            raise ValueError("raw evidence cannot be registered after deletion has begun")
-        validate_source_capture_evidence(manifest, freeze["official_source_refreshes"], raw, repository_root)
-        _validate_retained_freeze_evidence(freeze, raw, repository_root)
-        already_published = _publication_target_matches(output, payload)
-        retention_record_digests = _register_raw_evidence_retention_locked(freeze, raw, raw_identity, repository_root)
-        intent_digest = _store_publication_intent_locked(
-            freeze, retention_record_digests, raw, raw_identity, repository_root,
+    with _bound_publication_output(output, raw, raw_identity) as (
+        output, output_parent_descriptor, output_parent_identity,
+    ):
+        _recover_append_only_directory(
+            output.parent, output_parent_identity, require_content_addressed=False,
+            descriptor=output_parent_descriptor, directory_lock_held=True,
         )
-        if not already_published:
-            _write(output, freeze, append_only=True)
-        with _bound_publication_target(output, payload, receipt_commit=True):
-            receipt_digest = _store_publication_receipt_locked(
+        with _retention_lock(raw, raw_identity):
+            validate_raw_evidence_root(raw, repository_root)
+            deleted_digests = {
+                _validate_deletion_record(record_digest, record)["raw_evidence_digest"]
+                for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")
+            }
+            if set(_freeze_raw_evidence_digests(freeze)) & deleted_digests:
+                raise ValueError("raw evidence cannot be registered after deletion has begun")
+            validate_source_capture_evidence(manifest, freeze["official_source_refreshes"], raw, repository_root)
+            _validate_retained_freeze_evidence(freeze, raw, repository_root)
+            already_published = _publication_target_matches(
+                output, payload, parent_descriptor=output_parent_descriptor,
+                parent_identity=output_parent_identity, directory_lock_held=True,
+            )
+            retention_record_digests = _register_raw_evidence_retention_locked(
+                freeze, raw, raw_identity, repository_root,
+            )
+            intent_digest = _store_publication_intent_locked(
                 freeze, retention_record_digests, raw, raw_identity, repository_root,
             )
-        validate_raw_evidence_root(raw, repository_root)
-        return {
-            "retention_record_digests": retention_record_digests,
-            "publication_intent_digest": intent_digest,
-            "publication_receipt_digest": receipt_digest,
-        }
+            if not already_published:
+                _write_private_bytes_at(
+                    output_parent_descriptor, output.parent, output.name, payload,
+                    append_only=True, expected_parent_identity=output_parent_identity,
+                    directory_lock_held=True,
+                )
+            with _bound_publication_target(
+                output, payload, receipt_commit=True,
+                parent_descriptor=output_parent_descriptor,
+                parent_identity=output_parent_identity, directory_lock_held=True,
+            ):
+                receipt_digest = _store_publication_receipt_locked(
+                    freeze, retention_record_digests, raw, raw_identity, repository_root,
+                )
+            validate_raw_evidence_root(raw, repository_root)
+            return {
+                "retention_record_digests": retention_record_digests,
+                "publication_intent_digest": intent_digest,
+                "publication_receipt_digest": receipt_digest,
+            }
 
 __all__ = [name for name in globals() if not name.startswith("__")]

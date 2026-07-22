@@ -36,10 +36,14 @@ def _fsync_directory(path):
         os.close(descriptor)
 
 
-def _write_private_bytes_at(parent_descriptor, parent_path, filename, payload, *, append_only, expected_parent_identity):
+def _write_private_bytes_at(
+    parent_descriptor, parent_path, filename, payload, *, append_only,
+    expected_parent_identity, directory_lock_held=False,
+):
     temporary = None; descriptor = None; target_descriptor = None
     try:
-        _acquire_append_only_directory_lock(parent_descriptor, wait=True)
+        if not directory_lock_held:
+            _acquire_append_only_directory_lock(parent_descriptor, wait=True)
         _assert_private_directory_current(parent_path, parent_descriptor, expected_parent_identity)
         for _ in range(64):
             candidate = f"{PRIVATE_TEMPORARY_PREFIX}{secrets.token_hex(16)}"
