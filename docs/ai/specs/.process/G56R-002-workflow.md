@@ -1127,9 +1127,19 @@ For every task:
   now use append-only publication with exact-byte concurrent-winner validation,
   and sanitizer pseudonyms are generated only at explicit profile field paths;
   nested caller-supplied `fixture-*` secrets are rejected. Focused capability
-  tests pass 58/58; broader gates and exact-head re-audit remain pending.
-- Implementation checkpoint: `3fd5197fb6482ff219eb084a713f370228e259b8`
-- Superseded checkpoint: `ea36384f20c9fdcd2360460c89394da428ead440`
+  tests pass 58/58. The subsequent exact-head re-audit produced the finding
+  below.
+- Exact-head capability re-audit `untitled-chat-1A17A6` found one P1 evidence
+  resurrection gap: source and unknown materializers could recreate a digest
+  after retention cleanup or race replacement-inode publication against it.
+  Remediation moves the stable public materializers behind the retention layer,
+  holds the retention lock through append-only publication, and treats every
+  deletion intent or completion record as a permanent digest tombstone.
+  Concurrent identical materializers wait and converge on the verified winner;
+  post-deletion calls fail without recreating bytes. Focused capability tests
+  pass 58/58; broader gates and exact-head re-audit remain pending.
+- Implementation checkpoint: `517fe2688107e11b3e54f2fd5c1aedb7198a16af`
+- Superseded checkpoint: `3fd5197fb6482ff219eb084a713f370228e259b8`
 
 ## PR Marker Plan Evidence
 
@@ -1150,7 +1160,7 @@ For every task:
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `3fd5197fb6482ff219eb084a713f370228e259b8` | Exact-head re-audit required before stack advancement |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `517fe2688107e11b3e54f2fd5c1aedb7198a16af` | Exact-head re-audit required before stack advancement |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level

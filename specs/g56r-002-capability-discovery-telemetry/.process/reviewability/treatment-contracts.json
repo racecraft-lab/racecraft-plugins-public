@@ -8,13 +8,13 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 5403,
-  "actual_nonblank_noncomment_lines": 4921,
+  "actual_source_lines": 5455,
+  "actual_nonblank_noncomment_lines": 4964,
   "production_modules": 17,
   "max_capability_module_source_lines": 394,
   "primary_surface": "harness/adapters",
   "module_measurements": {
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 117, "nonblank_noncomment_lines": 108},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 119, "nonblank_noncomment_lines": 110},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_append_only.py": {"source_lines": 267, "nonblank_noncomment_lines": 244},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {"source_lines": 139, "nonblank_noncomment_lines": 132},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {"source_lines": 279, "nonblank_noncomment_lines": 234},
@@ -22,12 +22,12 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {"source_lines": 244, "nonblank_noncomment_lines": 229},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {"source_lines": 216, "nonblank_noncomment_lines": 199},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 356, "nonblank_noncomment_lines": 313},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 379, "nonblank_noncomment_lines": 336},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 383, "nonblank_noncomment_lines": 338},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publication_records.py": {"source_lines": 138, "nonblank_noncomment_lines": 117},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {"source_lines": 15, "nonblank_noncomment_lines": 10},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 330, "nonblank_noncomment_lines": 320},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 369, "nonblank_noncomment_lines": 353},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_authority.py": {"source_lines": 75, "nonblank_noncomment_lines": 66},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 308, "nonblank_noncomment_lines": 280},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 315, "nonblank_noncomment_lines": 286},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_recovery.py": {"source_lines": 21, "nonblank_noncomment_lines": 12},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 213, "nonblank_noncomment_lines": 196},
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
@@ -142,13 +142,13 @@
     "source_capture_bytes_like_requirement": "pass",
     "unknown_capture_append_only_publication": "pass",
     "sanitizer_explicit_pseudonym_paths": "pass",
+    "retention_serialized_materialization": "pass",
+    "deletion_tombstone_rematerialization_rejection": "pass",
     "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
     "authored_script_spec_id_guard": "9/9 pass",
-    "independent_review_chat_id": "untitled-chat-22C5B0",
+    "independent_review_chat_id": "untitled-chat-1A17A6",
     "independent_review_findings": [
-      "post-unlink hard-link proof could be replaced by deletion of a republished substitute inode",
-      "unknown capture publication could overwrite a concurrent target",
-      "caller-supplied fixture-prefixed values could bypass nested sensitive-field rejection"
+      "source and unknown materializers could recreate a deleted digest or race replacement-inode publication against cleanup"
     ]
   },
   "exception": {
