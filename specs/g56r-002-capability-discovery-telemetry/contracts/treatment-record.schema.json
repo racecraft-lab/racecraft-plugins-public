@@ -45,9 +45,6 @@
       "type": "string",
       "pattern": "^sha256:[0-9a-f]{64}$"
     },
-    "nullableDigest": {
-      "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
-    },
     "observationValue": {
       "type": "object",
       "additionalProperties": false,
@@ -67,6 +64,21 @@
         "value": {},
         "evidence_ref": {"type": ["string", "null"]},
         "captured_at": {"type": ["string", "null"], "format": "date-time"}
+      },
+      "if": {
+        "properties": {
+          "observation_state": {"const": "observed_value"}
+        }
+      },
+      "then": {
+        "properties": {
+          "value": {"not": {"type": "null"}}
+        }
+      },
+      "else": {
+        "properties": {
+          "value": {"type": "null"}
+        }
       }
     },
     "telemetryProfileEntry": {
