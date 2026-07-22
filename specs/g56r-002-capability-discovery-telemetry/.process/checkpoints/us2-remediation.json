@@ -7,9 +7,9 @@
     "T016", "T017", "T018", "T019", "T020",
     "T021", "T022", "T023", "T024", "T025"
   ],
-  "implementation_checkpoint_sha": "d8b3aad44e78714cf8de7f7c1cf9545f28b70f7d",
+  "implementation_checkpoint_sha": "48b3d47e13c611973867ef0a7efe2d14a8fd98a8",
   "last_reviewed_head_sha": "d8b3aad44e78714cf8de7f7c1cf9545f28b70f7d",
-  "verification_evidence_sha": "sha256:1a04cf648da18bd1a885119663c5210d9bd8d960ced325648cfb5592f94113a3",
+  "verification_evidence_sha": "sha256:4569c082dfbd8429b1179da4e940d01e895b874de2ea17585f7b06b30299fe9b",
   "required_verification_gate_ids": [
     "focused_tests",
     "validator_tests",

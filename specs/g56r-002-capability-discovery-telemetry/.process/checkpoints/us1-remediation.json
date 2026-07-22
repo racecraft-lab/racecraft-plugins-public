@@ -8,9 +8,9 @@
     "T006", "T007", "T008", "T009", "T010",
     "T011", "T012", "T013", "T014", "T015"
   ],
-  "implementation_checkpoint_sha": "d8b3aad44e78714cf8de7f7c1cf9545f28b70f7d",
+  "implementation_checkpoint_sha": "48b3d47e13c611973867ef0a7efe2d14a8fd98a8",
   "last_reviewed_head_sha": "d8b3aad44e78714cf8de7f7c1cf9545f28b70f7d",
-  "verification_evidence_sha": "sha256:635d32c8ce58625ba3509f54fac9e497a72568335d2dd095b7264fbfd1b4f04d",
+  "verification_evidence_sha": "sha256:b3e643acb020a360bd0004eec4f9ba9758b0707dbb6398416486f96fde1a038e",
   "required_verification_gate_ids": [
     "focused_tests",
     "validator_tests",

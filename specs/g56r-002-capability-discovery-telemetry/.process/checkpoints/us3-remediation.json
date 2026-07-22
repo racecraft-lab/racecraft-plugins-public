@@ -7,9 +7,9 @@
     "T026", "T027", "T028", "T029", "T030", "T031", "T032",
     "T033", "T034", "T035", "T036", "T037", "T038", "T039"
   ],
-  "implementation_checkpoint_sha": "d8b3aad44e78714cf8de7f7c1cf9545f28b70f7d",
+  "implementation_checkpoint_sha": "48b3d47e13c611973867ef0a7efe2d14a8fd98a8",
   "last_reviewed_head_sha": "d8b3aad44e78714cf8de7f7c1cf9545f28b70f7d",
-  "verification_evidence_sha": "sha256:49a25aaaa7685d9ad40054cdf05c9a555b466865503a3298d75a5b2749b27237",
+  "verification_evidence_sha": "sha256:c1f33045e618e67620269dd4a008fe9c236bd66d0e734cc06195522a0e4d8d94",
   "required_verification_gate_ids": [
     "focused_tests",
     "validator_tests",
