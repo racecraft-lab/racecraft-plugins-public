@@ -194,8 +194,8 @@ Repository tests must pass with the network disabled and no raw evidence store.
   refresh copies and binds the exact aggregate body capture into that store.
   Publication stages content-addressed retention records, makes them governing
   with a durable intent before output, and appends a matching receipt only after
-  the exact freeze bytes exist. Records without an intent cannot extend
-  deletion. Deterministic
+  the exact freeze bytes exist. Records without an intent use a one-day orphan
+  deadline and cannot extend governing deletion. Deterministic
   verification fails on missing or overdue bytes, and cleanup
   appends and directory-fsyncs a content-addressed deletion record before
   removing the raw bytes and directory-fsyncing the raw root. Registration and

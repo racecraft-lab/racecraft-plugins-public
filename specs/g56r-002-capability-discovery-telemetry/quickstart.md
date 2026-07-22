@@ -256,8 +256,9 @@ transaction record under `publication-intents/` makes those records governing;
 after the exact freeze bytes exist, a matching immutable receipt is
 directory-fsynced under `publication-receipts/`. Re-running the same publication
 recovers either crash window; a different artifact at the output path fails
-before registration. Records without an intent remain pending and cannot extend
-deletion. Before the deadline, verify that every
+before registration. Records without an intent remain pending, expire under a
+one-day orphan-recovery deadline, and cannot extend governing deletion. Before
+the deadline, verify that every
 governing retained digest still has its exact bytes:
 
 ```sh
@@ -292,10 +293,10 @@ record history, governing deadline, and deletion time. Repeated cleanup is
 idempotent. Every raw file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal;
 cleanup fails closed if a power-loss artifact or any alternate hard link still
-reaches governed bytes. Registration and cleanup serialize through the atomic
-`.retention-lock` directory; another operation fails closed while it exists.
-After an interrupted operator process, inspect the private store before manually
-removing a stale lock. `--as-of` is accepted only for read-only verification;
+reaches governed bytes. Registration and cleanup serialize through an advisory
+lock on the durable `0600` `.retention-lock` file. A competing live operation
+fails closed, while an exited or crashed process releases its lock
+automatically. `--as-of` is accepted only for read-only verification;
 cleanup always uses current UTC. Do not delete committed sanitized fixtures or
 published freeze records; repository tests continue to pass without the raw
 store. Live private-store commands fail closed on Windows until the adapter can

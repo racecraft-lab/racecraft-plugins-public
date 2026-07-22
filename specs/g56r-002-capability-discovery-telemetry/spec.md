@@ -164,7 +164,8 @@
   actual publication operation. After retention records are staged, an
   immutable publication intent makes them governing before output begins; an
   immutable receipt proves the exact freeze bytes afterward. Records without
-  an intent cannot extend the deadline. Expired bytes are
+  an intent cannot extend a governing deadline and expire under a one-day
+  orphan-recovery deadline. Expired bytes are
   deleted while their digest and a deletion record remain. Live private-store
   operations fail closed on Windows until equivalent owner-only DACL validation
   exists. Repository tests never require raw-store access.

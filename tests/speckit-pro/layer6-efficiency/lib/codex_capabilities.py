@@ -31,11 +31,12 @@ CANONICAL_MANIFEST_SNAPSHOT_ID = "G56R-001-SNAPSHOT-2026-07-16-V3"
 CANONICAL_MANIFEST_DIGEST = "sha256:3dc5c6c7a117ac8d01728ffeff1a35cf38fb0d6e982bb029cf192a790d30cd64"
 PRIVATE_REFRESH_MAX_BYTES = 32 * 1024 * 1024
 RAW_EVIDENCE_RETENTION_DAYS = 30
+RAW_EVIDENCE_PENDING_DAYS = 1
 RETENTION_RECORDS_DIR = "retention-records"
 DELETION_RECORDS_DIR = "deletion-records"
 PUBLICATION_INTENTS_DIR = "publication-intents"
 PUBLICATION_RECEIPTS_DIR = "publication-receipts"
-RETENTION_LOCK_DIR = ".retention-lock"
+RETENTION_LOCK_FILE = ".retention-lock"
 ERROR_TERMINALS = ("timeout", "output_cap_exceeded", "launch_error", "transport_error", "authentication_error", "rate_limited", "malformed_response", "explicit_rejection", "service_reroute", "ambiguous_error")
 _UNSET = object()
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
@@ -101,8 +102,8 @@ class _VisibleText(HTMLParser):
             tag in self._ALWAYS_HIDDEN
             or "hidden" in attributes
             or attributes.get("aria-hidden", "").casefold() == "true"
-            or "display:none" in style.split(";")
-            or "visibility:hidden" in style.split(";")
+            or any(declaration.startswith("display:none") for declaration in style.split(";"))
+            or any(declaration.startswith("visibility:hidden") for declaration in style.split(";"))
         )
         if tag not in self._VOID_TAGS and (self.hidden_stack or hidden):
             self.hidden_stack.append(tag)
@@ -1154,6 +1155,7 @@ def materialize_source_capture(raw_root, repository_root, capture_bytes):
     if target.exists():
         _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
         if retained != capture_bytes: raise ValueError("content-addressed source capture bytes disagree")
+        _fsync_directory(raw)
     else:
         _write_private_bytes(target, capture_bytes, append_only=True)
     validate_raw_evidence_root(raw, repository_root)
@@ -1198,6 +1200,7 @@ def materialize_unknown_capture(raw_root, repository_root, surface, client_ident
     if target.exists():
         _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
         if retained != stored: raise ValueError("content-addressed unknown capture bytes disagree")
+        _fsync_directory(raw)
     else:
         _write(target, record, private=True)
     validate_raw_evidence_root(raw, repository_root)
@@ -1239,6 +1242,7 @@ def _private_record_directory(raw, name):
                 raise ValueError("raw evidence record path must be a private directory")
     if os.name != "nt":
         target.chmod(0o700)
+    _fsync_directory(raw)
     return target
 
 
@@ -1248,18 +1252,21 @@ def _store_private_record(directory, value, repository_root):
     if target.exists():
         _, retained = read_content_addressed_private_file(target, repository_root, "raw evidence record")
         if retained != payload: raise ValueError("content-addressed raw evidence record bytes disagree")
+        _fsync_directory(directory)
         return record_digest
     try:
         _write(target, value, private=True, append_only=True)
     except FileExistsError:
         _, retained = read_content_addressed_private_file(target, repository_root, "raw evidence record")
         if retained != payload: raise ValueError("content-addressed raw evidence record bytes disagree")
+        _fsync_directory(directory)
     return record_digest
 
 
 def _load_private_records(directory, repository_root, label):
     if not directory.exists(): return []
     if directory.is_symlink() or not directory.is_dir(): raise ValueError(f"{label} path must be a private directory")
+    _fsync_directory(directory.parent); _fsync_directory(directory)
     entries = sorted(directory.iterdir(), key=lambda path: path.name)
     if any(path.is_symlink() or not path.is_file() or path.suffix != ".json" for path in entries):
         raise ValueError(f"{label} directory contains an undeclared entry")
@@ -1344,18 +1351,41 @@ def _freeze_raw_evidence_digests(freeze):
 
 @contextmanager
 def _retention_lock(raw):
-    target = raw / RETENTION_LOCK_DIR
+    if os.name == "nt":
+        raise ValueError("raw evidence retention locking is not supported on Windows")
     try:
-        target.mkdir(mode=0o700)
-    except FileExistsError as error:
-        raise ValueError("raw evidence retention operation is already in progress") from error
-    if target.is_symlink() or not target.is_dir():
-        raise ValueError("raw evidence retention lock is invalid")
-    if os.name != "nt": target.chmod(0o700)
+        import fcntl
+    except ImportError as error:
+        raise ValueError("raw evidence retention requires advisory file locking") from error
+    target = raw / RETENTION_LOCK_FILE
+    descriptor = None
+    try:
+        descriptor = os.open(
+            target,
+            os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+            0o600,
+        )
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o600 or metadata.st_nlink != 1:
+            raise ValueError("raw evidence retention lock is invalid")
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            raise ValueError("raw evidence retention operation is already in progress") from error
+        os.fsync(descriptor); _fsync_directory(raw)
+    except OSError as error:
+        if descriptor is not None: os.close(descriptor)
+        raise ValueError("raw evidence retention lock is invalid") from error
+    except Exception:
+        if descriptor is not None: os.close(descriptor)
+        raise
     try:
         yield
     finally:
-        target.rmdir()
+        try:
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+        finally:
+            os.close(descriptor)
 
 
 def _register_raw_evidence_retention_locked(freeze, raw, repository_root):
@@ -1369,26 +1399,43 @@ def _register_raw_evidence_retention_locked(freeze, raw, repository_root):
     if set(evidence_digests) & deleted_digests:
         raise ValueError("raw evidence cannot be registered after deletion has begun")
     records = _private_record_directory(raw, RETENTION_RECORDS_DIR)
-    existing = {}
+    existing, existing_by_digest = {}, {}
     for record_digest, raw_record in _load_private_records(records, repository_root, "retention record"):
         record = _validate_retention_record(record_digest, raw_record)
         key = (record["candidate_freeze_id"], record["raw_evidence_digest"], record["published_at"])
         if key in existing:
             raise ValueError("freeze evidence has multiple retention registration records")
-        existing[key] = record_digest
-    registered_at = None
+        existing[key] = (record_digest, record); existing_by_digest[record_digest] = record
+    governing_record_digests = set()
+    for intent_digest, raw_intent in _load_private_records(
+        raw / PUBLICATION_INTENTS_DIR, repository_root, "publication intent",
+    ):
+        intent = _validate_publication_intent(intent_digest, raw_intent)
+        refs = set(intent["retention_record_digests"])
+        if not refs <= set(existing_by_digest):
+            raise ValueError("publication intent references a missing retention record")
+        for ref in refs:
+            retained = existing_by_digest[ref]
+            if retained["candidate_freeze_id"] != intent["candidate_freeze_id"] or retained["published_at"] != intent["published_at"]:
+                raise ValueError("publication intent does not bind its freeze retention records")
+        governing_record_digests.update(refs)
+    registered = _retention_now()
+    if registered.tzinfo is None or registered.utcoffset() != timedelta(0):
+        raise ValueError("retention registration clock must be UTC")
+    registered_at = _format_timestamp(registered)
     record_digests = []
     for evidence_digest in evidence_digests:
         evidence_path = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
         read_content_addressed_private_file(evidence_path, repository_root, "retained raw evidence")
         key = (freeze["candidate_freeze_id"], evidence_digest, freeze["published_at"])
         if key in existing:
-            record_digests.append(existing[key]); continue
-        if registered_at is None:
-            registered = _retention_now()
-            if registered.tzinfo is None or registered.utcoffset() != timedelta(0):
-                raise ValueError("retention registration clock must be UTC")
-            registered_at = _format_timestamp(registered)
+            record_digest, record = existing[key]
+            orphan_deadline = _parsed_timestamp(
+                record["registered_at"], "retention registration timestamp",
+            ) + timedelta(days=RAW_EVIDENCE_PENDING_DAYS)
+            if record_digest not in governing_record_digests and registered >= orphan_deadline:
+                raise ValueError("expired pending retention registration requires cleanup")
+            record_digests.append(record_digest); continue
         record = {
             "schema_version": "raw-evidence-retention.v1",
             "candidate_freeze_id": freeze["candidate_freeze_id"],
@@ -1398,6 +1445,7 @@ def _register_raw_evidence_retention_locked(freeze, raw, repository_root):
             "delete_after": _format_timestamp(registered + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS)),
         }
         record_digests.append(_store_private_record(records, record, repository_root))
+    _fsync_directory(raw)
     validate_raw_evidence_root(raw, repository_root)
     return sorted(record_digests)
 
@@ -1408,6 +1456,7 @@ def _publication_target_matches(path, payload):
         return False
     if _read_bounded_regular_file(target) != payload:
         raise ValueError("publication output already exists with different bytes")
+    _fsync_directory(target.parent)
     return True
 
 
@@ -1486,6 +1535,24 @@ def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=N
         return _reconcile_raw_evidence_retention_locked(raw, repository_root, effective_as_of, current, apply=apply)
 
 
+def _effective_retention_deadline(grouped, governing_record_digests, current):
+    governing_deadlines, orphan_deadlines = [], []
+    for record, record_digest in grouped:
+        registered = _parsed_timestamp(record["registered_at"], "retention registration timestamp")
+        if current < registered:
+            raise ValueError("retention as-of timestamp precedes the registration record")
+        deadline = _parsed_timestamp(record["delete_after"], "retention deletion deadline")
+        if record_digest in governing_record_digests:
+            governing_deadlines.append(deadline)
+        else:
+            orphan_deadlines.append(
+                min(deadline, registered + timedelta(days=RAW_EVIDENCE_PENDING_DAYS)),
+            )
+    if governing_deadlines:
+        return max(governing_deadlines)
+    return min(orphan_deadlines)
+
+
 def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, current, *, apply):
     all_retention_records = [(_validate_retention_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / RETENTION_RECORDS_DIR, repository_root, "retention record")]
     retention_by_digest = {record_digest: record for record, record_digest in all_retention_records}
@@ -1526,7 +1593,7 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
                 raise ValueError("publication receipt does not bind its freeze retention records")
         governing_record_digests.update(refs)
     pending_record_digests = sorted(set(retention_by_digest) - governing_record_digests)
-    retention_records = [(record, record_digest) for record, record_digest in all_retention_records if record_digest in governing_record_digests]
+    retention_records = all_retention_records
     deletion_records = [(_validate_deletion_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")]
     retention_by_evidence = {}
     for record, record_digest in retention_records:
@@ -1542,7 +1609,7 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
     for evidence_digest in sorted(retention_by_evidence):
         grouped = retention_by_evidence[evidence_digest]
         record_digests = sorted(record_digest for _, record_digest in grouped)
-        deadline = max(_parsed_timestamp(record["delete_after"], "retention deletion deadline") for record, _ in grouped)
+        deadline = _effective_retention_deadline(grouped, governing_record_digests, current)
         deadline_text = _format_timestamp(deadline); target = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
         deletion = deletion_by_evidence.get(evidence_digest)
         if deletion is not None:

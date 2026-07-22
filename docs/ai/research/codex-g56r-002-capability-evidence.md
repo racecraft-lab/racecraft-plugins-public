@@ -112,11 +112,14 @@ retrieved bodies. Each surface's `raw://sha256:...` reference is backed by a mod
 sanitized attempt record named by that exact digest, and collection re-reads
 the stored bytes before publishing the observation.
 Freeze and canary publication stage one content-addressed retention record per
-non-fixture digest. Each record binds the freeze ID, publication time, and exact
-30-day deletion deadline, but becomes governing only after the exact artifact
-bytes exist and a content-addressed publication receipt is directory-fsynced.
-An interrupted publication can be recovered idempotently; unreceipted records
-remain pending and cannot extend deletion. The deterministic
+non-fixture digest. Each record binds the freeze ID, declared publication time,
+trusted registration time, and exact 30-day deletion deadline. A durable
+content-addressed publication intent makes the complete record set governing
+before output begins; a matching receipt is directory-fsynced only after the
+exact artifact bytes exist. An interrupted publication can be recovered
+idempotently across either crash window. Records without an intent remain
+pending, use a one-day orphan deadline, and cannot extend governing deletion.
+The deterministic
 `retention` command verifies pre-deadline presence, fails closed on missing or
 overdue bytes, and in `cleanup` mode appends and directory-fsyncs the complete
 deletion record before removing the expired bytes, then directory-fsyncs the

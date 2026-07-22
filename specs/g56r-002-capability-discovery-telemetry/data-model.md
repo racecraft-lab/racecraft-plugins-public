@@ -252,8 +252,9 @@ A content-addressed publication intent binds the candidate freeze ID, exact
 artifact digest, declared publication time, and complete retention-record set
 before output begins, making those records governing during either crash
 window. A matching receipt is appended only after the output bytes exist.
-Records without an intent are reported as pending and do not participate in the
-effective deletion deadline. Each record's 30-day deadline derives from its
+Records without an intent are reported as pending, expire one day after trusted
+registration when no governing record exists, and cannot extend an existing
+governing deadline. Each governing record's 30-day deadline derives from its
 trusted registration timestamp rather than caller-supplied artifact time.
 
 ## Telemetry and Treatment Records

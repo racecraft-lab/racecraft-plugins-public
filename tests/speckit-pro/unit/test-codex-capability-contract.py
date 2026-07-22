@@ -440,7 +440,9 @@ class CapabilityContractTests(unittest.TestCase):
             '<div hidden>{extract}</div>',
             '<div aria-hidden="true">{extract}</div>',
             '<div style="display: none">{extract}</div>',
+            '<div style="display: none !important">{extract}</div>',
             '<div style="visibility:hidden">{extract}</div>',
+            '<div style="visibility: hidden !important">{extract}</div>',
         ):
             hidden_only = copy.deepcopy(captured)
             hidden_body = hidden_markup.format(
@@ -967,9 +969,27 @@ class CapabilityContractTests(unittest.TestCase):
                 ))
             captured = source_capture(self.manifest)
             capture_bytes = capabilities.canonical_bytes(captured) + b"\n"
-            source_capture_digest, source_capture_path = capabilities.materialize_source_capture(
-                raw_root, ROOT, capture_bytes,
-            )
+            source_capture_digest = capabilities.digest(capture_bytes)
+            source_capture_path = raw_root / f"{source_capture_digest.removeprefix('sha256:')}.json"
+            original_fsync_directory = capabilities._fsync_directory
+            failed_capture_fsync = False
+            def fail_first_capture_fsync(path: Path) -> None:
+                nonlocal failed_capture_fsync
+                if Path(path) == raw_root.resolve() and not failed_capture_fsync:
+                    failed_capture_fsync = True
+                    raise OSError("simulated source-capture directory fsync failure")
+                original_fsync_directory(path)
+            with mock.patch.object(capabilities, "_fsync_directory", side_effect=fail_first_capture_fsync):
+                with self.assertRaisesRegex(OSError, "source-capture directory fsync"):
+                    capabilities.materialize_source_capture(raw_root, ROOT, capture_bytes)
+            self.assertTrue(source_capture_path.is_file())
+            with mock.patch.object(
+                capabilities, "_fsync_directory", wraps=original_fsync_directory,
+            ) as capture_fsync:
+                source_capture_digest, source_capture_path = capabilities.materialize_source_capture(
+                    raw_root, ROOT, capture_bytes,
+                )
+            capture_fsync.assert_any_call(raw_root.resolve())
             refreshes = capabilities.normalize_source_refreshes(
                 self.manifest, captured, source_capture_digest=source_capture_digest,
             )
@@ -1008,11 +1028,22 @@ class CapabilityContractTests(unittest.TestCase):
                     )
             self.assertFalse(publication_path.exists())
             pending_before_recovery = capabilities.reconcile_raw_evidence_retention(
-                raw_root, ROOT, "2026-08-14T23:59:59Z",
+                raw_root, ROOT, "2026-07-16T23:59:59Z",
             )
-            self.assertEqual(pending_before_recovery["retained_evidence_digests"], [])
+            self.assertEqual(len(pending_before_recovery["retained_evidence_digests"]), 4)
             self.assertEqual(len(pending_before_recovery["pending_retention_record_digests"]), 4)
             self.assertEqual(pending_before_recovery["publication_intent_digests"], [])
+            with self.assertRaisesRegex(ValueError, "requires cleanup"):
+                capabilities.reconcile_raw_evidence_retention(
+                    raw_root, ROOT, "2026-07-17T00:00:00Z",
+                )
+            with mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-07-17T00:00:00Z", "test clock"),
+            ), self.assertRaisesRegex(ValueError, "expired pending retention"):
+                capabilities.publish_with_raw_evidence_retention(
+                    freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
+                )
             with mock.patch.object(
                 capabilities, "_store_publication_receipt_locked",
                 side_effect=OSError("simulated publication receipt failure"),
@@ -1029,9 +1060,13 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(intent_recovery["pending_retention_record_digests"], [])
             self.assertEqual(len(intent_recovery["publication_intent_digests"]), 1)
             self.assertEqual(intent_recovery["publication_receipt_digests"], [])
-            publication = capabilities.publish_with_raw_evidence_retention(
-                freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
-            )
+            with mock.patch.object(
+                capabilities, "_fsync_directory", wraps=original_fsync_directory,
+            ) as publication_fsync:
+                publication = capabilities.publish_with_raw_evidence_retention(
+                    freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
+                )
+            publication_fsync.assert_any_call(publication_path.parent)
             self.assertEqual(len(publication["retention_record_digests"]), 4)
             initial_retention_records = [
                 record
@@ -1104,6 +1139,11 @@ class CapabilityContractTests(unittest.TestCase):
                     )
                 with self.assertRaisesRegex(ValueError, "already in progress"):
                     capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-14T23:59:59Z")
+            retention_lock_path = raw_root / capabilities.RETENTION_LOCK_FILE
+            self.assertTrue(retention_lock_path.is_file())
+            self.assertEqual(stat.S_IMODE(retention_lock_path.stat().st_mode), 0o600)
+            with capabilities._retention_lock(raw_root):
+                pass
             retained_report = capabilities.reconcile_raw_evidence_retention(
                 raw_root, ROOT, "2026-08-15T00:00:00Z",
             )
@@ -1153,7 +1193,6 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities, "_retention_now",
                 return_value=capabilities._parsed_timestamp("2026-09-14T00:00:00Z", "test clock"),
             )
-            original_fsync_directory = capabilities._fsync_directory
             def fail_deletion_record_fsync(path: Path) -> None:
                 if Path(path).name == capabilities.DELETION_RECORDS_DIR:
                     raise OSError("simulated deletion-record directory fsync failure")
@@ -1171,6 +1210,7 @@ class CapabilityContractTests(unittest.TestCase):
             ), mock.patch.object(capabilities, "_fsync_directory", wraps=original_fsync_directory) as fsync_directory:
                 cleanup_report = capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
             fsync_directory.assert_any_call(raw_root.resolve())
+            fsync_directory.assert_any_call(raw_root.resolve() / capabilities.DELETION_RECORDS_DIR)
             self.assertEqual(cleanup_report["deleted_evidence_digests"], retained_report["retained_evidence_digests"])
             self.assertEqual(cleanup_report["retained_evidence_digests"], [])
             self.assertEqual(len(cleanup_report["deletion_record_digests"]), 4)
