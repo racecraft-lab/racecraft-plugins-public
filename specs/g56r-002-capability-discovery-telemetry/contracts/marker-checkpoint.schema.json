@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://racecraft.local/specs/g56r-002/marker-checkpoint.schema.json",
   "title": "G56R-002 Marker Checkpoint Evidence",
-  "description": "Immutable checkpoint-time evidence. Completed bytes are content-addressed from their checkpoint_evidence_commit_sha; later current-tree freshness is stored separately in autopilot-state.json.",
+  "description": "Immutable completed checkpoint-time evidence payload. It records implementation_checkpoint_sha; autopilot-state.json binds the committed payload bytes with checkpoint_evidence_sha at checkpoint_evidence_commit_sha and stores later current-tree freshness separately.",
   "type": "object",
   "required": [
     "schema_version",

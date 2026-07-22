@@ -248,10 +248,15 @@ whole-freeze identity. Any source, build, evidence, normalization, telemetry,
 or disposition change must produce a successor ID.
 
 Raw-evidence retention records are staged before append-only artifact output.
-They become governing only when a content-addressed publication receipt binds
-the candidate freeze ID, exact artifact digest, publication time, and complete
-retention-record set after the output bytes exist. Unreceipted records are
-reported as pending and do not participate in the effective deletion deadline.
+A durable content-addressed publication intent makes its complete record set
+governing by binding the candidate freeze ID, exact artifact digest, and
+publication time; the matching receipt proves the exact output bytes exist.
+Records not yet bound by an intent are reported as pending and participate in
+the effective deletion deadline only through a one-day cap from
+`registered_at`, rather than their normal 30-day deadline. At or after that cap,
+cleanup is required and the expired pending record cannot be promoted into a
+later publication. Deletion intent or completion state also prevents the raw
+digest from being materialized again.
 
 ## Telemetry and Treatment Records
 

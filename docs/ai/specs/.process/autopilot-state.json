@@ -86,7 +86,7 @@
     {"step": "Post: PR Packet/Body Generation", "status": "pending"},
     {"step": "Post: PR Body Generation", "status": "pending"},
     {"step": "Post: PR Creation", "status": "pending"},
-    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "in_progress"},
     {"step": "Post: Retrospective", "status": "pending"}
   ],
   "phase_results": {
@@ -388,7 +388,7 @@
       "treatment_fixture_digest": "sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788",
       "replay_digest": "sha256:c8a69de446be0ba98ec876ee37c715b008e21c97dcebc067866405a9d92d5eb4",
       "marker_id": "us3",
-      "reviewability": "aggregate size-only block at 5,773 source / 5,237 nonblank non-comment lines across 26 safely subdivided modules; maximum module size is 396 lines",
+      "reviewability": "aggregate size-only block at 7,052 source / 6,439 nonblank non-comment lines across 29 safely subdivided modules; maximum module size is 398 lines",
       "checkpoint": "aea7282a9b3c64c2d04928104e13b35defeaa0f3",
       "updated_at": "2026-07-21T14:27:21Z"
     },
@@ -463,7 +463,7 @@
           }
         ],
         "declared_tests": [
-          "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+          "python3 tests/speckit-pro/unit/test-codex-capability-contract.py",
           "python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py validate --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json",
           "python3 -m json.tool specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json"
         ],
@@ -584,7 +584,7 @@
           }
         ],
         "declared_tests": [
-          "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"
+          "python3 tests/speckit-pro/unit/test-codex-capability-contract.py"
         ],
         "reviewability": {
           "status": "block",
@@ -1129,8 +1129,9 @@
             "path": "tests/speckit-pro/unit/test-autopilot-phase-coverage.py"
           },
           {
-            "operation": "MODIFIED",
-            "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py"
+            "operation": "RENAMED",
+            "source_path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+            "path": "tests/speckit-pro/unit/test-codex-capability-contract.py"
           },
           {
             "operation": "MODIFIED",
@@ -1138,7 +1139,7 @@
           }
         ],
         "declared_tests": [
-          "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+          "python3 tests/speckit-pro/unit/test-codex-capability-contract.py",
           "python3 -u tests/speckit-pro/run-all.py --layer 1",
           "python3 -u tests/speckit-pro/run-all.py",
           "pnpm --dir docs-site reference:check"
@@ -1163,8 +1164,8 @@
               "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py",
               "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"
             ],
-            "module_count": 26,
-            "max_module_source_lines": 396
+            "module_count": 29,
+            "max_module_source_lines": 398
           }
         },
         "implementation_checkpoint": {
@@ -1194,7 +1195,7 @@
           ],
           "summary": "Sixteenth-review workflow-fingerprint remediation passes focused and full validation; exact review at 4842c331 returned NO FINDINGS and final metadata-head review is pending.",
           "validation": [
-            "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+            "python3 tests/speckit-pro/unit/test-codex-capability-contract.py",
             "python3 tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
             "python3 -u tests/speckit-pro/run-all.py: 2857/2857 pass",
             "release-readiness title and 107-file changed-file manifest gates: pass",
@@ -1222,10 +1223,10 @@
             "source": "synthetic-replay-reviewability",
             "details": {
               "marker_id": "us3",
-              "actual_source_lines": 5773,
-              "actual_nonblank_noncomment_lines": 5237,
-              "production_modules": 26,
-              "max_module_source_lines": 396
+              "actual_source_lines": 7052,
+              "actual_nonblank_noncomment_lines": 6439,
+              "production_modules": 29,
+              "max_module_source_lines": 398
             }
           }
         ]

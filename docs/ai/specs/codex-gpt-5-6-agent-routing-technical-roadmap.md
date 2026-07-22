@@ -46,9 +46,10 @@ G56R-011
 
 **Implementation boundary:** This sequence has no external prerequisite, but its
 internal dependencies still apply: the shared official-source evidence
-foundation merged via PR #362, G56R-001 merged via PR #360, and G56R-002 may
-now begin capability discovery and telemetry profiling under the preserved
-no-qualification boundary.
+foundation merged via PR #362, G56R-001 merged via PR #360, and G56R-002 is
+implemented through T039 under the preserved no-qualification boundary. Its
+final exact-head metadata review and repository checks remain before the spec
+can complete and unblock G56R-003.
 A route-agnostic Python `install-codex-agents` helper is active for safe static
 agent refreshes. G56R-006 later extends that baseline with capability-aware
 resolution, materialization, and atomic policy installation; it must not
@@ -215,7 +216,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
 | G56R-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | PR #360 merged; canonical evidence lives under `docs/ai/research/` |
-| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | In Progress | [.process/G56R-002-workflow.md](.process/G56R-002-workflow.md) | Planning and Analyze gates complete; begin implementation after G6.5 |
+| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | In Progress | [.process/G56R-002-workflow.md](.process/G56R-002-workflow.md) | Implementation complete through T039; finish exact-head metadata review and final checks |
 | G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by G56R-002 |
 | G56R-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by G56R-003 |
 | G56R-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by G56R-004 |

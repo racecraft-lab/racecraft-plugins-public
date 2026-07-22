@@ -146,6 +146,70 @@ def validate_surface_matrix(matrix):
     return matrix
 
 
+def validate_tuple_decisions(decisions, *, require_snapshot=False):
+    if any(item.get("decision") == "included" for item in decisions) and not isinstance(decisions, _BoundDecisionSet):
+        raise ValueError("included decisions require manifest-bound authority")
+    keys = {"candidate_route_id", "candidate_route_digest", "agent_contract_id", "named_agent", "agent_contract_digest", "source_ref", "source_sha256", "instruction_sha256", "role_instruction_sha256", "canonical_model_id", "canonical_effort", "official_source_bindings", "effort_surface_bindings", "runtime_capability_snapshot_id", "surface_matrix_id", "surface_evidence", "hidden_state", "normalization_map_id", "disagreement_digest", "source_admitted", "source_admission_reasons", "availability_disposition", "surface_disposition", "exact_treatment_readiness", "decision", "reasons"}
+    for item in decisions:
+        strings = (item.get("candidate_route_id"), item.get("agent_contract_id"), item.get("named_agent"), item.get("canonical_model_id"))
+        if set(item) != keys or not all(isinstance(value, str) and value and not any(mark in value for mark in ("/", "\\", "://", "@")) for value in strings):
+            raise ValueError("tuple decision must use the sanitized closed v1 shape")
+        if not isinstance(item["source_ref"], str) or not item["source_ref"] or item["source_ref"].startswith(("/", "\\")) or ".." in Path(item["source_ref"]).parts: raise ValueError("tuple source_ref must be repository relative")
+        for field in ("candidate_route_digest", "agent_contract_digest", "source_sha256", "instruction_sha256", "role_instruction_sha256", "surface_matrix_id", "normalization_map_id"):
+            _need_digest(item[field], field)
+        if item["instruction_sha256"] != item["role_instruction_sha256"]: raise ValueError("tuple instruction hashes disagree")
+        snapshot = item["runtime_capability_snapshot_id"]
+        if snapshot is not None: _need_digest(snapshot, "runtime_capability_snapshot_id")
+        if require_snapshot and snapshot is None: raise ValueError("tuple runtime snapshot binding is required")
+        if item["disagreement_digest"] is not None: _need_digest(item["disagreement_digest"], "disagreement_digest")
+        source_binding_keys = {"official_source_ledger_id", "source_refresh_digest"}
+        if any(set(row) != source_binding_keys or not _SOURCE_ID.fullmatch(str(row["official_source_ledger_id"])) or not _DIGEST.fullmatch(str(row["source_refresh_digest"])) for row in item["official_source_bindings"]): raise ValueError("tuple official-source binding is invalid")
+        effort_binding_keys = {"effort_surface_record_id", "effort_surface_record_digest", "official_source_ledger_id", "source_refresh_digest"}
+        if any(set(row) != effort_binding_keys or not isinstance(row["effort_surface_record_id"], str) or not row["effort_surface_record_id"] or not _SOURCE_ID.fullmatch(str(row["official_source_ledger_id"])) or not _DIGEST.fullmatch(str(row["effort_surface_record_digest"])) or not _DIGEST.fullmatch(str(row["source_refresh_digest"])) for row in item["effort_surface_bindings"]): raise ValueError("tuple effort-surface binding is invalid")
+        if set(item["surface_evidence"]) != set(SURFACES) or set(item["hidden_state"]) != set(SURFACES): raise ValueError("tuple surface evidence is incomplete")
+        evidence_keys = {"surface_observation_id", "completeness_state", "visibility_policy", "raw_evidence_digest", "raw_evidence_ref", "matching_entry"}
+        for surface, evidence in item["surface_evidence"].items():
+            if set(evidence) != evidence_keys or evidence["completeness_state"] not in {"complete", "partial", "unavailable", "unknown"}: raise ValueError("tuple surface evidence is invalid")
+            _need_digest(evidence["surface_observation_id"], "surface_observation_id"); _need_digest(evidence["raw_evidence_digest"], "raw_evidence_digest")
+            if evidence["raw_evidence_ref"] != f"raw://{evidence['raw_evidence_digest']}": raise ValueError("tuple surface evidence reference is invalid")
+            if evidence["matching_entry"] is not None: _clean_entry(evidence["matching_entry"])
+            expected_hidden = evidence["matching_entry"]["hidden"] if evidence["matching_entry"] is not None else None
+            if item["hidden_state"][surface] != expected_hidden: raise ValueError("tuple hidden state does not match surface evidence")
+        if item["canonical_effort"] is not None and not _token(item["canonical_effort"]): raise ValueError("tuple effort is invalid")
+        if not isinstance(item["source_admitted"], bool) or item["availability_disposition"] not in {"supported", "available_for_pinned_environment", "unknown"} or item["surface_disposition"] not in {"agreed", "disagreed", "unknown"} or item["exact_treatment_readiness"] not in {"pending", "not_ready_excluded"} or item["decision"] not in {"included", "excluded"} or not all(_token(value) for value in item["source_admission_reasons"] + item["reasons"]):
+            raise ValueError("tuple decision disposition is invalid")
+        if item["decision"] == "excluded" and not item["reasons"]:
+            raise ValueError("excluded tuple decision requires a reason")
+        if item["decision"] == "included" and (not item["source_admitted"] or item["surface_disposition"] != "agreed"): raise ValueError("included tuple lacks source and surface admission")
+    if len({item["candidate_route_id"] for item in decisions}) != len(decisions): raise ValueError("tuple decision candidate identities must be unique")
+    return decisions
+
+
+def build_runtime_snapshot(identity, refreshes, matrix, *, supersedes=None):
+    if supersedes is not None: _need_digest(supersedes, "supersedes_snapshot_id")
+    matrix = validate_surface_matrix(matrix)
+    if matrix["client_identity_id"] != identity["client_identity_id"]: raise ValueError("freeze client identity does not match the matrix")
+    repository = validate_repository_binding(matrix["observations"][0]["repository_binding"]); work_item = validate_work_item(matrix["work_item"])
+    entries = [entry for observation in matrix["observations"] for entry in observation["entries"]]
+    raw_digest = digest([item["raw_evidence_digest"] for item in matrix["observations"]])
+    started_at = min(
+        matrix["observations"],
+        key=lambda item: _parsed_timestamp(item["started_at"], "surface collection start"),
+    )["started_at"]
+    completed_at = max(
+        matrix["observations"],
+        key=lambda item: _parsed_timestamp(item["completed_at"], "surface collection completion"),
+    )["completed_at"]
+    payload = {"schema_version": SCHEMA_VERSION, "surface_matrix_id": matrix["surface_matrix_id"], "client_identity_id": identity["client_identity_id"],
+               "controlled_repository_snapshot": repository, "work_item": work_item,
+               "models": sorted({item["model"] for item in entries}), "efforts": sorted({item["effort"] for item in entries}),
+               "capabilities": sorted({value for item in entries for value in item.get("capabilities", [])}),
+               "collection_window": {"started_at": started_at, "completed_at": completed_at},
+               "raw_evidence_digest": raw_digest, "raw_evidence_ref": f"aggregate://{raw_digest}",
+               "source_refresh_set_digest": digest(refreshes), "supersedes_snapshot_id": supersedes}
+    return {"runtime_capability_snapshot_id": digest(payload), **payload}
+
+
 def _validated_canary_approvals(approvals):
     keys = {"executor_contract_id", "contract_version", "implementation_digest", "platform", "approval_evidence_digest"}; identities = []
     for item in approvals:

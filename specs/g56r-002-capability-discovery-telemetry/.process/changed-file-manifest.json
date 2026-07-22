@@ -740,8 +740,9 @@
       "marker_ids": ["us3"]
     },
     {
-      "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
-      "operation": "MODIFIED",
+      "source_path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+      "path": "tests/speckit-pro/unit/test-codex-capability-contract.py",
+      "operation": "RENAMED",
       "category": "test",
       "provenance": "authored",
       "marker_ids": ["us3"]

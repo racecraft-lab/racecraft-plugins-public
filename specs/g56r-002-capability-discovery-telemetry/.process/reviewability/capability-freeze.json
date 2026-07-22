@@ -36,7 +36,7 @@
   "evidence_commands": [
     "wc -l tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py",
     "awk 'NF && $0 !~ /^[[:space:]]*#/ {n++} END{print n}' tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py",
-    "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+    "python3 tests/speckit-pro/unit/test-codex-capability-contract.py",
     "python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py validate-freeze --manifest docs/ai/research/codex-agent-route-candidate-manifest.json --freeze docs/ai/research/codex-g56r-002-executable-candidate-freeze.json"
   ]
 }

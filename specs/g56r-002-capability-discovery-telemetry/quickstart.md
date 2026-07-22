@@ -145,9 +145,10 @@ validated predecessor cannot be overwritten. Approval comes only from the
 repository-owned executor-ID allowlist, which is intentionally empty in this
 slice; an arbitrary result file cannot self-approve, so this command exits
 nonzero before consuming an executor result. When `--freeze` is already
-treatment-bound, also pass both
-`--expected-telemetry-profile-id` and `--expected-treatment-contract-digest`
-from the separately validated treatment bundle; omitting either fails closed.
+treatment-bound, also pass
+`--expected-telemetry-profile-id`, `--expected-treatment-contract-digest`, and
+`--expected-treatment-evidence-digest` from the separately validated treatment
+bundle; omitting any binding fails closed.
 Default repository tests inject a deterministic
 allowlist and fake result and launch no process. Only a future separately
 reviewed admitted executor plus exit zero and the predeclared sentinel may
@@ -214,8 +215,9 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py validate-f
   --manifest docs/ai/research/codex-agent-route-candidate-manifest.json \
   --freeze docs/ai/research/codex-g56r-002-executable-candidate-freeze.json \
   --predecessor-freeze /tmp/g56r-002-capability-predecessor-freeze.json \
-  --expected-telemetry-profile-id sha256:37e1c1f1491637dd255c61a87c62120efc100ee146be9b75224771e172c58c56 \
-  --expected-treatment-contract-digest sha256:b390c3d3240fb20e405910f4710d220e875ea46748ced6400aecc6bb970a8289
+  --expected-telemetry-profile-id sha256:acb87238dea1f7a4f56c1ab4d6ddf0f2c5407b74d1aa8f9198cafddf4da6bdb6 \
+  --expected-treatment-contract-digest sha256:ed88fb1d5310385ba8bcaaa0badbb2bbba8819b5fb01775ebdb6f63bbeedf981 \
+  --expected-treatment-evidence-digest sha256:2c81b6665c892b4b91ca5c2578c73c70f6fb06e74aa1ff46d6b7652248959f45
 ```
 
 The predecessor path must be the trusted, canonical US1 artifact retained by
@@ -267,13 +269,17 @@ collection is never part of the default deterministic suite.
 ## Retention Cleanup
 
 Freeze and canary publication automatically add immutable content-addressed
-records under `raw_evidence_root/retention-records/`. Those records become
-governing only after the exact freeze bytes exist and an immutable receipt is
-directory-fsynced under `publication-receipts/`. Re-running the same publication
-recovers a crash between those steps; a different artifact at the output path
-fails before registration. Records left by failed publication remain reported
-as pending and cannot extend deletion. Before the deadline, verify that every
-governing retained digest still has its exact bytes:
+records under `raw_evidence_root/retention-records/`. A directory-fsynced
+publication intent binds the exact freeze ID, artifact digest, publication time,
+and retention-record set before output; the receipt completes that proof after
+the exact freeze bytes exist. Re-running the same publication recovers a crash
+between those steps; a different artifact at the output path fails before
+registration. Records left by a failure before the durable intent remain
+pending. Each pending record participates in the effective deadline only through
+the one-day cap from its `registered_at` time, rather than its normal 30-day
+deadline. At or after that cap, verification requires cleanup and publication
+rejects late promotion of the expired pending record. Before the effective
+deadline, verify that every retained digest still has its exact bytes:
 
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \

@@ -108,7 +108,7 @@
     "awk 'NF && $0 !~ /^[[:space:]]*#/ {n++} END{print n}' tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py",
     "wc -l tests/speckit-pro/layer6-efficiency/lib/codex_capabilit*.py",
     "awk 'NF && $0 !~ /^[[:space:]]*#/ {n++} END{print n}' tests/speckit-pro/layer6-efficiency/lib/codex_capabilit*.py",
-    "python3 tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+    "python3 tests/speckit-pro/unit/test-codex-capability-contract.py",
     "python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py validate --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
   ]
 }

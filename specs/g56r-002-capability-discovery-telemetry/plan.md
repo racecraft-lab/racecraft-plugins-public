@@ -68,8 +68,8 @@ two-monolith size exception. The current remediation preserves two public entry
 points while separating source refresh, observations, matrix/canary logic,
 private retention, freeze construction, JSON-schema validation, trace graphs,
 fixture replay, and successor construction into focused modules. The current
-implementation spans 24 modules and 5,168 source lines, but the largest module
-is 381 lines, below the 400-line per-module boundary. The aggregate size block
+implementation spans 29 modules and 7,052 source lines, but the largest module
+is 398 lines, below the 400-line per-module boundary. The aggregate size block
 is handled by the existing US1/US2/US3 marker and stacked-PR checkpoints; no
 current `no_safe_boundary` implementation exception remains. Historical
 checkpoint evidence retains the measurements that were true at those immutable
@@ -205,8 +205,10 @@ Repository tests must pass with the network disabled and no raw evidence store.
   directories and single-link `0600` files, and retain captures for 30 days after freeze
   publication. Source refresh copies and binds the exact aggregate body capture
   into that store. Publication stages content-addressed retention records and
-  makes them governing only by appending a receipt after the exact freeze bytes
-  exist; failed-publication records cannot extend deletion. Deterministic
+  makes them governing through a durable exact-artifact intent; a matching
+  receipt completes the proof after the exact freeze bytes exist. Records left
+  pending before intent contribute only their one-day capped deadline, and
+  expired pending records cannot be promoted without cleanup. Deterministic
   verification fails on missing or overdue bytes. Cleanup first persists a
   content-addressed deletion intent, then unlinks the raw bytes through the
   validated parent descriptor, proves zero links and the verified content

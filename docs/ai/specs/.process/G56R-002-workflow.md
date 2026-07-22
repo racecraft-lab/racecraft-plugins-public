@@ -894,10 +894,11 @@ For every task:
 ### Treatment Checkpoint Evidence
 
 - Implementation baseline: `bbffc774c815594edc64cf412a2b5f91127ef213`
-- Successor candidate freeze: `sha256:dcf75cea52244ba175324d83fb021f70f96c64e1e82d963451e91da5127c40d6`
+- Current published successor candidate freeze: `sha256:d4764d2e67218e21ca0920d33a90c472b26d311dd3cc25cfdd582db41ff72578`
 - Superseded candidate freeze: `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
-- Telemetry profile: `sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb`
-- Treatment contract: `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`
+- Telemetry profile: `sha256:acb87238dea1f7a4f56c1ab4d6ddf0f2c5407b74d1aa8f9198cafddf4da6bdb6`
+- Treatment contract: `sha256:ed88fb1d5310385ba8bcaaa0badbb2bbba8819b5fb01775ebdb6f63bbeedf981`
+- Treatment evidence: `sha256:2c81b6665c892b4b91ca5c2578c73c70f6fb06e74aa1ff46d6b7652248959f45`
 - Superseded marker checkpoint [us2]: `8a179bdbb6aef08849bbfc4ed07c547c26f8194a`
 - Reviewability: size-only `block` at 4,214 source / 3,843 nonblank,
   non-comment lines across the current two production modules
@@ -951,9 +952,9 @@ For every task:
   unapproved reroute, discovery-loss, and surface-disagreement classes.
 - Verification: 88/88 focused tests, 35/35 validator tests, 77/77 contract tests, and the 2857/2857
   full suite pass. Generated references and byte-identical replay remain current.
-- Reviewability: aggregate size-only `block` at 5,773 source / 5,237 nonblank,
-  non-comment lines across 26 safely subdivided modules; the largest module is
-  396 lines and the two public entry points retain their APIs.
+- Reviewability: aggregate size-only `block` at 7,052 source / 6,439 nonblank,
+  non-comment lines across 29 safely subdivided modules; the largest module is
+  398 lines and the two public entry points retain their APIs.
 - Review: `untitled-chat-B2AE31` confirmed the first remediation but reported
   seven deeper gaps: non-monotonic partial emission, generic marker ownership
   uniqueness, mutable completed evidence, stale exact-head metadata, v1
@@ -1152,7 +1153,7 @@ For every task:
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
   lines; the current US2 marker is 4,214 / 3,843 across its two modules against
   the 400-LOC boundary at its immutable checkpoint. The current US3 remediation
-  is 5,773 / 5,237 across 26 focused modules with a 396-line maximum.
+  is 7,052 / 6,439 across 29 focused modules with a 398-line maximum.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
 - PR mappings: Pending.
