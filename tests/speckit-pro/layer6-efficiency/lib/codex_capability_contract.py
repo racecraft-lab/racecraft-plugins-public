@@ -30,6 +30,8 @@ CANONICAL_MANIFEST_SCHEMA_VERSION = "2.0.0"
 CANONICAL_MANIFEST_SNAPSHOT_ID = "G56R-001-SNAPSHOT-2026-07-16-V3"
 CANONICAL_MANIFEST_DIGEST = "sha256:3dc5c6c7a117ac8d01728ffeff1a35cf38fb0d6e982bb029cf192a790d30cd64"
 PRIVATE_REFRESH_MAX_BYTES = 32 * 1024 * 1024
+PRIVATE_RECORD_MAX_ENTRIES = 10_000
+PRIVATE_RECORD_MAX_TOTAL_BYTES = 32 * 1024 * 1024
 CAPABILITY_JSON_MAX_NESTING_DEPTH = 64
 CAPABILITY_JSON_MAX_TOTAL_NODES = 100_000
 RAW_EVIDENCE_RETENTION_DAYS = 30
@@ -264,7 +266,7 @@ def _validate_json_lexical_bounds(text):
             raise ValueError("capability JSON exceeds the maximum node count")
 
 
-def _parse_json_bytes(raw):
+def _parse_json_bytes(raw, *, counter=None):
     try:
         text = raw.decode("utf-8", errors="strict")
         _validate_json_lexical_bounds(text)
@@ -275,7 +277,7 @@ def _parse_json_bytes(raw):
         )
     except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as error:
         raise ValueError("JSON input must be strict UTF-8 JSON") from error
-    _validate_capability_json_bounds(value)
+    _validate_capability_json_bounds(value, counter=counter)
     return value
 
 __all__ = [name for name in globals() if not name.startswith("__")]

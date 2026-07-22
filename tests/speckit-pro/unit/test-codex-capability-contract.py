@@ -1040,6 +1040,26 @@ class CapabilityContractTests(unittest.TestCase):
         unequal_matrix, _ = capabilities.evaluate_surface_matrix(unequal_clients, self.authority_tuples(agreed_case))
         self.assertEqual(unequal_matrix["invalidity_reasons"], ["unprovable_shared_client_identity"])
         self.assertEqual(capabilities.validate_surface_matrix(unequal_matrix), unequal_matrix)
+        unaliased_display = self.observations(agreed_case)
+        for index, observation in enumerate(unaliased_display):
+            observation["entries"][0]["model"] = "Model A Display"
+            observation["entries"][0]["available"] = index != 1
+            observation["surface_observation_id"] = capabilities.digest({
+                key: value for key, value in observation.items()
+                if key != "surface_observation_id"
+            })
+        display_matrix, display_decisions = capabilities.evaluate_surface_matrix(
+            unaliased_display, self.authority_tuples(agreed_case),
+        )
+        self.assertEqual(
+            display_matrix["invalidity_reasons"],
+            ["ambiguous_or_duplicate_normalization_key"],
+        )
+        self.assertEqual(display_matrix["disagreements"], [])
+        self.assertEqual(capabilities.validate_surface_matrix(display_matrix), display_matrix)
+        self.assertEqual(
+            {item["canonical_model_id"] for item in display_decisions}, {"model-a"},
+        )
         disagreement_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "surface_disagreement")
         disagreement_matrix, _ = capabilities.evaluate_surface_matrix(self.observations(disagreement_case), self.authority_tuples(disagreement_case))
         wrong_class = copy.deepcopy(disagreement_matrix)
@@ -2982,12 +3002,12 @@ class CapabilityContractTests(unittest.TestCase):
                 ROOT, records_identity,
             )
             moved_records = Path(tmp) / "moved-records"
-            original_listdir = capability_io.os.listdir
+            original_snapshot = capability_io._bounded_directory_names
             replaced = False
 
-            def replace_after_snapshot(descriptor: int) -> list[str]:
+            def replace_after_snapshot(descriptor: int, **kwargs: object) -> list[str]:
                 nonlocal replaced
-                names = original_listdir(descriptor)
+                names = original_snapshot(descriptor, **kwargs)
                 if not replaced:
                     records.rename(moved_records)
                     records.mkdir(mode=0o700)
@@ -2995,7 +3015,7 @@ class CapabilityContractTests(unittest.TestCase):
                 return names
 
             with mock.patch.object(
-                capability_io.os, "listdir", side_effect=replace_after_snapshot,
+                capability_io, "_bounded_directory_names", side_effect=replace_after_snapshot,
             ), self.assertRaisesRegex(ValueError, "directory changed"):
                 capability_retention_records._load_private_records(
                     records, ROOT, "retention record",
@@ -3008,9 +3028,9 @@ class CapabilityContractTests(unittest.TestCase):
             extra_path = records / f"{capabilities.digest(extra_bytes).removeprefix('sha256:')}.json"
             snapshots = 0
 
-            def add_after_snapshot(descriptor: int) -> list[str]:
+            def add_after_snapshot(descriptor: int, **kwargs: object) -> list[str]:
                 nonlocal snapshots
-                names = original_listdir(descriptor)
+                names = original_snapshot(descriptor, **kwargs)
                 snapshots += 1
                 if snapshots == 1:
                     extra_path.write_bytes(extra_bytes)
@@ -3018,8 +3038,39 @@ class CapabilityContractTests(unittest.TestCase):
                 return names
 
             with mock.patch.object(
-                capability_io.os, "listdir", side_effect=add_after_snapshot,
+                capability_io, "_bounded_directory_names", side_effect=add_after_snapshot,
             ), self.assertRaisesRegex(ValueError, "directory changed"):
+                capability_retention_records._load_private_records(
+                    records, ROOT, "retention record",
+                )
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_private_record_loader_enforces_aggregate_bounds(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            records = Path(tmp) / "records"
+            records.mkdir(mode=0o700)
+            for value in ("first", "second", "third"):
+                record = {"schema_version": "test-record.v1", "value": value}
+                raw = capabilities.canonical_bytes(record) + b"\n"
+                path = records / f"{capabilities.digest(raw).removeprefix('sha256:')}.json"
+                path.write_bytes(raw)
+                path.chmod(0o600)
+            with mock.patch.object(
+                capability_io, "PRIVATE_RECORD_MAX_ENTRIES", 2,
+            ), self.assertRaisesRegex(ValueError, "maximum entry count"):
+                capability_retention_records._load_private_records(
+                    records, ROOT, "retention record",
+                )
+            total_bytes = sum(path.stat().st_size for path in records.iterdir())
+            with mock.patch.object(
+                capability_io, "PRIVATE_RECORD_MAX_TOTAL_BYTES", total_bytes - 1,
+            ), self.assertRaisesRegex(ValueError, "maximum aggregate size"):
+                capability_retention_records._load_private_records(
+                    records, ROOT, "retention record",
+                )
+            with mock.patch.object(
+                capability_contract, "CAPABILITY_JSON_MAX_TOTAL_NODES", 6,
+            ), self.assertRaisesRegex(ValueError, "maximum node count"):
                 capability_retention_records._load_private_records(
                     records, ROOT, "retention record",
                 )
