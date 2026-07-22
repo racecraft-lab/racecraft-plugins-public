@@ -101,11 +101,11 @@ would still be limited to one 30-second, 64 KiB, zero-retry attempt per
 snapshot/model/effort and could prove only pinned-environment availability.
 
 The current successor binds telemetry profile
-`sha256:37e1c1f1491637dd255c61a87c62120efc100ee146be9b75224771e172c58c56`,
+`sha256:acb87238dea1f7a4f56c1ab4d6ddf0f2c5407b74d1aa8f9198cafddf4da6bdb6`,
 exact-treatment contract
-`sha256:b390c3d3240fb20e405910f4710d220e875ea46748ced6400aecc6bb970a8289`,
+`sha256:ed88fb1d5310385ba8bcaaa0badbb2bbba8819b5fb01775ebdb6f63bbeedf981`,
 and treatment evidence set
-`sha256:3f40e4a118086b554eaf2ede8c9786db906f72c66fac94d0665a68024d5cf9ad`.
+`sha256:2c81b6665c892b4b91ca5c2578c73c70f6fb06e74aa1ff46d6b7652248959f45`.
 Any later source, client, surface, normalization, telemetry, treatment-evidence,
 or tuple-decision change creates another successor ID.
 
