@@ -104,7 +104,7 @@ def _recover_append_only_target(
                 raise ValueError("append-only recovery target changed or has unexpected bytes")
             return True
 
-        if target_is_committed(verify_payload=False):
+        if target_is_committed(verify_payload=expected_temporary_name is not None):
             os.fsync(parent_descriptor)
             return False
         target_before = target_state()

@@ -336,6 +336,10 @@ def publish_with_raw_evidence_retention(
     expected_predecessor_treatment_evidence_digest=None,
 ):
     raw, raw_identity = _validated_raw_evidence_root_binding(raw_evidence_root, repository_root)
+    output = Path(os.path.abspath(output))
+    resolved_output = output.resolve(strict=False)
+    if resolved_output == raw or raw in resolved_output.parents:
+        raise ValueError("publication output must remain outside raw_evidence_root")
     freeze = validate_freeze(
         freeze, manifest, predecessor=predecessor,
         expected_telemetry_profile_id=expected_telemetry_profile_id,

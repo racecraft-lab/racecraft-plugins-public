@@ -1508,6 +1508,19 @@ class CapabilityContractTests(unittest.TestCase):
                 manifest=self.manifest, raw_evidence_root=raw_root, repository_root=ROOT,
             )
             self.assertEqual(capabilities.validate_freeze(freeze, self.manifest), freeze)
+            for confined_output in (
+                raw_root / "candidate-freeze.json",
+                raw_root / capabilities.PUBLICATION_RECEIPTS_DIR / "candidate-freeze.json",
+            ):
+                with self.subTest(confined_output=confined_output), self.assertRaisesRegex(
+                    ValueError, "outside raw_evidence_root",
+                ):
+                    capabilities.publish_with_raw_evidence_retention(
+                        freeze, confined_output, raw_root, ROOT, manifest=self.manifest,
+                    )
+                self.assertFalse(confined_output.exists())
+            self.assertFalse((raw_root / capabilities.RETENTION_RECORDS_DIR).exists())
+            self.assertFalse((raw_root / capabilities.PUBLICATION_RECEIPTS_DIR).exists())
             hard_link_source = Path(tmp) / "hard-linked-source.json"
             hard_link_output = Path(tmp) / "hard-linked-output.json"
             hard_link_source.write_bytes(capabilities.canonical_bytes(freeze) + b"\n")
@@ -2504,6 +2517,37 @@ class CapabilityContractTests(unittest.TestCase):
                 capability_append_only._recover_append_only_directory(
                     bounded, bounded_identity, require_content_addressed=False,
                 )
+
+            raced = root / "raced"
+            raced.mkdir()
+            original_payload = b"original payload\n"
+            raced_temporary = raced / f"{capabilities.PRIVATE_TEMPORARY_PREFIX}{'f' * 32}"
+            raced_target = raced / f"{capabilities.digest(original_payload).removeprefix('sha256:')}.json"
+            raced_temporary.write_bytes(original_payload); raced_temporary.chmod(0o600)
+            os.link(raced_temporary, raced_target)
+            raced_identity = capability_io._stable_directory_identity(
+                os.stat(raced, follow_symlinks=False),
+            )
+            original_read = capability_append_only._read_bounded_regular_file
+            raced_once = False
+
+            def replace_after_bounded_read(path: Path, **kwargs: object) -> bytes:
+                nonlocal raced_once
+                retained = original_read(path, **kwargs)
+                if Path(path) == raced_target and not raced_once:
+                    raced_once = True
+                    raced_temporary.unlink()
+                    raced_target.write_bytes(b"changed payload\n")
+                return retained
+
+            with mock.patch.object(
+                capability_append_only, "_read_bounded_regular_file",
+                side_effect=replace_after_bounded_read,
+            ), self.assertRaisesRegex(ValueError, "unexpected bytes"):
+                capability_append_only._recover_append_only_directory(
+                    raced, raced_identity, require_content_addressed=True,
+                )
+            self.assertTrue(raced_once)
 
     def test_json_inputs_executable_hashing_and_publication_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
