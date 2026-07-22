@@ -777,7 +777,7 @@ Focus on:
 | A-005 | MEDIUM (resolved) | Owning-ID collision checks were incomplete | Enumerated owner uniqueness, preserved repeated foreign keys, and added T018/T021 collision coverage |
 | A-006 | MEDIUM (resolved) | Spec-ID fixture directory violated the behavior-named fixture contract | Renamed the namespace to `capability-treatment-replay` everywhere |
 | A-007 | HIGH (resolved) | In-band `fixture_digest` made exact-byte hash-before-parse self-referential | Added an out-of-band digest manifest and manifest-first replay contract |
-| A-008 | HIGH (resolved) | Portable stdlib code could not unconditionally promise live process-tree control | Added a closed executor-result envelope, default-empty repository approval allowlist, and fail-closed missing/unapproved executor behavior |
+| A-008 | HIGH (resolved) | Portable stdlib code could not unconditionally promise live process-tree control | Added a closed executor-result envelope and default-empty repository approval allowlist; later exact-head review also closed caller-supplied provenance by preventing any envelope from promoting or entering a freeze until trusted invocation or verifiable attestation exists |
 | A-009 | MEDIUM (resolved) | Inherited `G56R-001-ESR-003` punctuation-only effort values could be misread as authority | T001/T007 now reject malformed or undocumented effort values without rewriting G56R-001 evidence |
 
 ### Consensus Resolution Log
@@ -1171,8 +1171,18 @@ For every task:
   naming-layout 9/9, treatment, privacy 10/10, process coverage 8/8,
   docs-reference, and full 2824/2824 gates pass; exact-head re-audit remains
   pending.
-- Implementation checkpoint: `88e95674fb3cfc4e1430646dff30bcb97151fbf5`
-- Superseded checkpoint: `0042f0e27395692283abf57da0678c6d99834cf9`
+- Exact-head capability decision/freeze re-audit `untitled-chat-D966E2` found
+  one HIGH provenance gap: matching allowlist identifiers and self-hashed
+  caller-supplied executor bytes could promote a canary result without proving
+  who produced it. Remediation at
+  `f4f0bc2a6e9776682c7fc663dd5e498a5069f274` makes standalone envelopes
+  structurally reviewable but always `unknown`, rejects every external result
+  in the CLI before reading it, and requires empty approval/result arrays in
+  runtime and schema until trusted invocation or verifiable attestation is
+  implemented. Focused 58/58, naming-layout 9/9, docs-reference, and full
+  2824/2824 gates pass; exact-head re-audit remains pending.
+- Implementation checkpoint: `f4f0bc2a6e9776682c7fc663dd5e498a5069f274`
+- Superseded checkpoint: `88e95674fb3cfc4e1430646dff30bcb97151fbf5`
 
 ## PR Marker Plan Evidence
 
@@ -1184,23 +1194,23 @@ For every task:
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:15ce1b592092ff9b2c33a695d4c59038dd5cd04440f48baaab36a06a079fc813` |
-| Plan-declared scope | `sha256:e1742dad17c996f85b6232eb72994a9a1be78b095d98a5fd64917e9df69af6db` |
-| Tasks | `sha256:ac1e7f5064bce6b3be08f9a57fb6f8e34d1c7346535c45f823af5fb577a87f44` |
-| Reviewability evidence | `sha256:494371a739245ec85a26b29d7fccb133c3c96fa582f01ea27e7a4d39824ecf3a` |
+| Feature spec | `sha256:69d9e6f320d0ffad1e4066d24ec380bba93d5837d2472346b707808fa142e914` |
+| Plan-declared scope | `sha256:ee76313a9bde89fe5f407489a8d8bf3ab986b4ce7783dfe800307c0e832426e7` |
+| Tasks | `sha256:459c95fd5c69a617488c62d8244e83da5abddf1e441975aa073cf3517c5c0bee` |
+| Reviewability evidence | `sha256:0dddcb8b2eef6b215b83d47d6795b33a832b0df500427ac7a32c8993dc57a977` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `88e95674fb3cfc4e1430646dff30bcb97151fbf5` | Exact-head re-audit required before stack advancement |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `f4f0bc2a6e9776682c7fc663dd5e498a5069f274` | Exact-head re-audit required before stack advancement |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines under its historical typed exception; the current US2 marker is 5,447 /
-  4,960 across 17 modules against the aggregate 400-LOC boundary. Capability
-  modules are safely split with a 394-line maximum; only the treatment module
+  lines under its historical typed exception; the current US2 marker is 5,407 /
+  4,916 across 17 modules against the aggregate 400-LOC boundary. Capability
+  modules are safely split with a 383-line maximum; only the treatment module
   retains a typed size-only exception.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.

@@ -8,19 +8,19 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 5447,
-  "actual_nonblank_noncomment_lines": 4960,
+  "actual_source_lines": 5407,
+  "actual_nonblank_noncomment_lines": 4916,
   "production_modules": 17,
-  "max_capability_module_source_lines": 394,
+  "max_capability_module_source_lines": 383,
   "primary_surface": "harness/adapters",
   "module_measurements": {
     "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {"source_lines": 119, "nonblank_noncomment_lines": 110},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_append_only.py": {"source_lines": 267, "nonblank_noncomment_lines": 244},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {"source_lines": 139, "nonblank_noncomment_lines": 132},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {"source_lines": 112, "nonblank_noncomment_lines": 105},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {"source_lines": 240, "nonblank_noncomment_lines": 203},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {"source_lines": 394, "nonblank_noncomment_lines": 363},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {"source_lines": 378, "nonblank_noncomment_lines": 347},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {"source_lines": 244, "nonblank_noncomment_lines": 229},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {"source_lines": 216, "nonblank_noncomment_lines": 199},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {"source_lines": 219, "nonblank_noncomment_lines": 198},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 356, "nonblank_noncomment_lines": 313},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 383, "nonblank_noncomment_lines": 338},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publication_records.py": {"source_lines": 138, "nonblank_noncomment_lines": 117},
@@ -134,6 +134,7 @@
     "normalized_plain_text_source_rejection": "pass",
     "exact_source_capture_digest_binding": "pass",
     "raw_capture_digest_revalidation": "pass",
+    "canary_provenance_fail_closed": "pass",
     "full_body_change_invalidation": "pass",
     "exact_legacy_predecessor_boundary": "pass",
     "capability_named_temporary_recovery": "pass",
@@ -151,16 +152,16 @@
     "deletion_tombstone_rematerialization_rejection": "pass",
     "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
     "authored_script_spec_id_guard": "9/9 pass",
-    "independent_review_chat_id": "untitled-chat-AF7C6A",
+    "independent_review_chat_id": "untitled-chat-D966E2",
     "independent_review_findings": [
-      "raw refresh validation did not recompute source_capture_digest from the retained 22-row capture"
+      "caller-supplied canary executor envelopes could promote availability without authenticated provenance"
     ]
   },
   "exception": {
     "kind": "typed_size_only",
     "status": "honored_for_checkpoint",
     "subdivision": "capability_safe_split_treatment_no_safe_boundary",
-    "rationale": "Capability source authority, observation, matrix, append-only recovery, private I/O, publication authority, retention recovery, freeze, contract, and CLI responsibilities are separated behind the stable codex_capabilities.py facade, which exports exactly the supported public API and no private trust primitives. Every capability module remains below 400 source lines, with a 394-line maximum. Field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
+    "rationale": "Capability source authority, observation, matrix, append-only recovery, private I/O, publication authority, retention recovery, freeze, contract, and CLI responsibilities are separated behind the stable codex_capabilities.py facade, which exports exactly the supported public API and no private trust primitives. Every capability module remains below 400 source lines, with a 383-line maximum. Field authority, owner joins, failure derivation, reroute qualification, and successor cross-binding remain the treatment module's integrity-coupled boundary.",
     "growth_limit": "Capability modules must remain below 400 source lines with no public API loss. Only finding-driven review remediation and the predeclared T026-T030 offline replay dispatch may extend treatment_trace_schema.py before final freeze."
   },
   "later_markers": [
