@@ -189,11 +189,13 @@ Repository tests must pass with the network disabled and no raw evidence store.
 ## Evidence and Data Boundaries
 
 - `raw_evidence_root` must resolve outside the repository, use `0700`
-  directories and single-link `0600` files, and retain captures for 30 days after freeze
-  publication. Source refresh copies and binds the exact aggregate body capture
-  into that store. Publication stages content-addressed retention records and
-  makes them governing only by appending a receipt after the exact freeze bytes
-  exist; failed-publication records cannot extend deletion. Deterministic
+  directories and single-link `0600` files, and retain captures for 30 days
+  after trusted registration at the actual publication operation. Source
+  refresh copies and binds the exact aggregate body capture into that store.
+  Publication stages content-addressed retention records, makes them governing
+  with a durable intent before output, and appends a matching receipt only after
+  the exact freeze bytes exist. Records without an intent cannot extend
+  deletion. Deterministic
   verification fails on missing or overdue bytes, and cleanup
   appends and directory-fsyncs a content-addressed deletion record before
   removing the raw bytes and directory-fsyncing the raw root. Registration and

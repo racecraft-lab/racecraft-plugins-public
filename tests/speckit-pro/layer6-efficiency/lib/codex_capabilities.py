@@ -33,6 +33,7 @@ PRIVATE_REFRESH_MAX_BYTES = 32 * 1024 * 1024
 RAW_EVIDENCE_RETENTION_DAYS = 30
 RETENTION_RECORDS_DIR = "retention-records"
 DELETION_RECORDS_DIR = "deletion-records"
+PUBLICATION_INTENTS_DIR = "publication-intents"
 PUBLICATION_RECEIPTS_DIR = "publication-receipts"
 RETENTION_LOCK_DIR = ".retention-lock"
 ERROR_TERMINALS = ("timeout", "output_cap_exceeded", "launch_error", "transport_error", "authentication_error", "rate_limited", "malformed_response", "explicit_rejection", "service_reroute", "ambiguous_error")
@@ -84,15 +85,30 @@ class _BoundDecisionSet(list):
 
 
 class _VisibleText(HTMLParser):
+    _ALWAYS_HIDDEN = {"head", "script", "style", "noscript", "template", "svg"}
+    _VOID_TAGS = {
+        "area", "base", "br", "col", "embed", "hr", "img", "input",
+        "link", "meta", "param", "source", "track", "wbr",
+    }
+
     def __init__(self):
         super().__init__(); self.parts, self.hidden_stack, self.invalid_hidden_markup = [], [], False
 
     def handle_starttag(self, tag, attrs):
-        if tag in {"head", "script", "style", "noscript", "template", "svg"}:
+        attributes = {name.casefold(): (value or "") for name, value in attrs}
+        style = "".join(attributes.get("style", "").casefold().split())
+        hidden = (
+            tag in self._ALWAYS_HIDDEN
+            or "hidden" in attributes
+            or attributes.get("aria-hidden", "").casefold() == "true"
+            or "display:none" in style.split(";")
+            or "visibility:hidden" in style.split(";")
+        )
+        if tag not in self._VOID_TAGS and (self.hidden_stack or hidden):
             self.hidden_stack.append(tag)
 
     def handle_endtag(self, tag):
-        if tag in {"head", "script", "style", "noscript", "template", "svg"}:
+        if self.hidden_stack:
             if not self.hidden_stack or self.hidden_stack[-1] != tag:
                 self.invalid_hidden_markup = True
             else:
@@ -958,8 +974,7 @@ def validate_surface_matrix(matrix):
     observations = [validate_observation(dict(item)) for item in matrix["observations"]]
     surfaces = [item["surface"] for item in observations]
     if len(observations) != 3 or set(surfaces) != set(SURFACES) or len(set(surfaces)) != 3: raise ValueError("matrix requires exactly one observation per surface")
-    by_surface = {item["surface"]: item for item in observations}; observations = [by_surface[surface] for surface in SURFACES]
-    matrix = {**matrix, "observations": observations}
+    if surfaces != list(SURFACES): raise ValueError("matrix observations must use canonical surface order")
     clients = {item["client_identity_id"] for item in observations}
     expected_client_identity = next(iter(clients)) if len(clients) == 1 else digest({"invalid": "client_identity"})
     if matrix["client_identity_id"] != expected_client_identity: raise ValueError("matrix client identity mismatch")
@@ -1258,14 +1273,15 @@ def _load_private_records(directory, repository_root, label):
 
 
 def _validate_retention_record(record_digest, record):
-    keys = {"schema_version", "candidate_freeze_id", "raw_evidence_digest", "published_at", "delete_after"}
+    keys = {"schema_version", "candidate_freeze_id", "raw_evidence_digest", "published_at", "registered_at", "delete_after"}
     if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-retention.v1":
         raise ValueError("raw evidence retention record must use the closed v1 shape")
     _need_digest(record_digest, "retention record digest"); _need_digest(record["candidate_freeze_id"], "candidate_freeze_id"); _need_digest(record["raw_evidence_digest"], "raw_evidence_digest")
-    published = _parsed_timestamp(record["published_at"], "retention publication timestamp")
+    _parsed_timestamp(record["published_at"], "retention publication timestamp")
+    registered = _parsed_timestamp(record["registered_at"], "retention registration timestamp")
     delete_after = _parsed_timestamp(record["delete_after"], "retention deletion deadline")
-    if delete_after != published + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS):
-        raise ValueError("raw evidence retention deadline must be exactly 30 days after publication")
+    if delete_after != registered + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS):
+        raise ValueError("raw evidence retention deadline must be exactly 30 days after registration")
     return record
 
 
@@ -1299,6 +1315,21 @@ def _validate_publication_receipt(record_digest, record):
     return record
 
 
+def _validate_publication_intent(record_digest, record):
+    keys = {"schema_version", "candidate_freeze_id", "published_artifact_digest", "published_at", "retention_record_digests"}
+    if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-publication-intent.v1":
+        raise ValueError("raw evidence publication intent must use the closed v1 shape")
+    _need_digest(record_digest, "publication intent digest")
+    _need_digest(record["candidate_freeze_id"], "candidate_freeze_id")
+    _need_digest(record["published_artifact_digest"], "published_artifact_digest")
+    _parsed_timestamp(record["published_at"], "publication intent timestamp")
+    refs = record["retention_record_digests"]
+    if not isinstance(refs, list) or not refs or refs != sorted(set(refs)):
+        raise ValueError("publication intent requires unique retention records")
+    for value in refs: _need_digest(value, "retention_record_digest")
+    return record
+
+
 def _freeze_raw_evidence_digests(freeze):
     observations = freeze["surface_matrix"]["observations"]
     digests = {
@@ -1328,7 +1359,7 @@ def _retention_lock(raw):
 
 
 def _register_raw_evidence_retention_locked(freeze, raw, repository_root):
-    published = _parsed_timestamp(freeze.get("published_at"), "freeze publication timestamp")
+    _parsed_timestamp(freeze.get("published_at"), "freeze publication timestamp")
     evidence_digests = _freeze_raw_evidence_digests(freeze)
     if not evidence_digests: return []
     deleted_digests = {
@@ -1338,16 +1369,33 @@ def _register_raw_evidence_retention_locked(freeze, raw, repository_root):
     if set(evidence_digests) & deleted_digests:
         raise ValueError("raw evidence cannot be registered after deletion has begun")
     records = _private_record_directory(raw, RETENTION_RECORDS_DIR)
+    existing = {}
+    for record_digest, raw_record in _load_private_records(records, repository_root, "retention record"):
+        record = _validate_retention_record(record_digest, raw_record)
+        key = (record["candidate_freeze_id"], record["raw_evidence_digest"], record["published_at"])
+        if key in existing:
+            raise ValueError("freeze evidence has multiple retention registration records")
+        existing[key] = record_digest
+    registered_at = None
     record_digests = []
     for evidence_digest in evidence_digests:
         evidence_path = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
         read_content_addressed_private_file(evidence_path, repository_root, "retained raw evidence")
+        key = (freeze["candidate_freeze_id"], evidence_digest, freeze["published_at"])
+        if key in existing:
+            record_digests.append(existing[key]); continue
+        if registered_at is None:
+            registered = _retention_now()
+            if registered.tzinfo is None or registered.utcoffset() != timedelta(0):
+                raise ValueError("retention registration clock must be UTC")
+            registered_at = _format_timestamp(registered)
         record = {
             "schema_version": "raw-evidence-retention.v1",
             "candidate_freeze_id": freeze["candidate_freeze_id"],
             "raw_evidence_digest": evidence_digest,
             "published_at": freeze["published_at"],
-            "delete_after": _format_timestamp(published + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS)),
+            "registered_at": registered_at,
+            "delete_after": _format_timestamp(registered + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS)),
         }
         record_digests.append(_store_private_record(records, record, repository_root))
     validate_raw_evidence_root(raw, repository_root)
@@ -1377,6 +1425,20 @@ def _store_publication_receipt_locked(freeze, retention_record_digests, raw, rep
     return receipt_digest
 
 
+def _store_publication_intent_locked(freeze, retention_record_digests, raw, repository_root):
+    intent = {
+        "schema_version": "raw-evidence-publication-intent.v1",
+        "candidate_freeze_id": freeze["candidate_freeze_id"],
+        "published_artifact_digest": digest(canonical_bytes(freeze) + b"\n"),
+        "published_at": freeze["published_at"],
+        "retention_record_digests": sorted(retention_record_digests),
+    }
+    directory = _private_record_directory(raw, PUBLICATION_INTENTS_DIR)
+    intent_digest = _store_private_record(directory, intent, repository_root)
+    _validate_publication_intent(intent_digest, intent)
+    return intent_digest
+
+
 def publish_with_raw_evidence_retention(freeze, output, raw_evidence_root, repository_root, *, manifest):
     raw = validate_raw_evidence_root(raw_evidence_root, repository_root)
     freeze = validate_freeze(freeze, manifest, _enforce_lineage=False)
@@ -1392,11 +1454,18 @@ def publish_with_raw_evidence_retention(freeze, output, raw_evidence_root, repos
         validate_source_capture_evidence(manifest, freeze["official_source_refreshes"], raw, repository_root)
         already_published = _publication_target_matches(output, payload)
         retention_record_digests = _register_raw_evidence_retention_locked(freeze, raw, repository_root)
+        intent_digest = _store_publication_intent_locked(freeze, retention_record_digests, raw, repository_root)
         if not already_published:
             _write(output, freeze, append_only=True)
+        if not _publication_target_matches(output, payload):
+            raise ValueError("publication output was not retained under its canonical bytes")
         receipt_digest = _store_publication_receipt_locked(freeze, retention_record_digests, raw, repository_root)
         validate_raw_evidence_root(raw, repository_root)
-        return {"retention_record_digests": retention_record_digests, "publication_receipt_digest": receipt_digest}
+        return {
+            "retention_record_digests": retention_record_digests,
+            "publication_intent_digest": intent_digest,
+            "publication_receipt_digest": receipt_digest,
+        }
 
 
 def _retention_now():
@@ -1420,12 +1489,34 @@ def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=N
 def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, current, *, apply):
     all_retention_records = [(_validate_retention_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / RETENTION_RECORDS_DIR, repository_root, "retention record")]
     retention_by_digest = {record_digest: record for record, record_digest in all_retention_records}
+    publication_intents = [(_validate_publication_intent(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / PUBLICATION_INTENTS_DIR, repository_root, "publication intent")]
     publication_receipts = [(_validate_publication_receipt(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / PUBLICATION_RECEIPTS_DIR, repository_root, "publication receipt")]
-    receipt_freeze_ids, governing_record_digests = set(), set()
+    intents_by_freeze, governing_record_digests = {}, set()
+    for intent, _ in publication_intents:
+        freeze_id = intent["candidate_freeze_id"]
+        if freeze_id in intents_by_freeze:
+            raise ValueError("candidate freeze has multiple publication intents")
+        intents_by_freeze[freeze_id] = intent
+        refs = set(intent["retention_record_digests"])
+        if not refs <= set(retention_by_digest):
+            raise ValueError("publication intent references a missing retention record")
+        for ref in refs:
+            retained = retention_by_digest[ref]
+            if retained["candidate_freeze_id"] != freeze_id or retained["published_at"] != intent["published_at"]:
+                raise ValueError("publication intent does not bind its freeze retention records")
+        governing_record_digests.update(refs)
+    receipt_freeze_ids = set()
     for receipt, _ in publication_receipts:
         if receipt["candidate_freeze_id"] in receipt_freeze_ids:
             raise ValueError("candidate freeze has multiple publication receipts")
         receipt_freeze_ids.add(receipt["candidate_freeze_id"])
+        intent = intents_by_freeze.get(receipt["candidate_freeze_id"])
+        if intent is None or {
+            key: value for key, value in intent.items() if key != "schema_version"
+        } != {
+            key: value for key, value in receipt.items() if key != "schema_version"
+        }:
+            raise ValueError("publication receipt lacks its exact durable intent")
         refs = set(receipt["retention_record_digests"])
         if not refs <= set(retention_by_digest):
             raise ValueError("publication receipt references a missing retention record")
@@ -1486,6 +1577,7 @@ def _reconcile_raw_evidence_retention_locked(raw, repository_root, as_of, curren
         "retained_evidence_digests": retained, "deleted_evidence_digests": deleted,
         "retention_record_digests": sorted(record_digest for _, record_digest in retention_records),
         "pending_retention_record_digests": pending_record_digests,
+        "publication_intent_digests": sorted(record_digest for _, record_digest in publication_intents),
         "publication_receipt_digests": sorted(record_digest for _, record_digest in publication_receipts),
         "deletion_record_digests": sorted(deletion_digests),
     }
@@ -1537,11 +1629,19 @@ def build_runtime_snapshot(identity, refreshes, matrix, *, supersedes=None):
     repository = validate_repository_binding(matrix["observations"][0]["repository_binding"]); work_item = validate_work_item(matrix["work_item"])
     entries = [entry for observation in matrix["observations"] for entry in observation["entries"]]
     raw_digest = digest([item["raw_evidence_digest"] for item in matrix["observations"]])
+    started_at = min(
+        matrix["observations"],
+        key=lambda item: _parsed_timestamp(item["started_at"], "surface collection start"),
+    )["started_at"]
+    completed_at = max(
+        matrix["observations"],
+        key=lambda item: _parsed_timestamp(item["completed_at"], "surface collection completion"),
+    )["completed_at"]
     payload = {"schema_version": SCHEMA_VERSION, "surface_matrix_id": matrix["surface_matrix_id"], "client_identity_id": identity["client_identity_id"],
                "controlled_repository_snapshot": repository, "work_item": work_item,
                "models": sorted({item["model"] for item in entries}), "efforts": sorted({item["effort"] for item in entries}),
                "capabilities": sorted({value for item in entries for value in item.get("capabilities", [])}),
-               "collection_window": {"started_at": min(item["started_at"] for item in matrix["observations"]), "completed_at": max(item["completed_at"] for item in matrix["observations"])},
+               "collection_window": {"started_at": started_at, "completed_at": completed_at},
                "raw_evidence_digest": raw_digest, "raw_evidence_ref": f"aggregate://{raw_digest}",
                "source_refresh_set_digest": digest(refreshes), "supersedes_snapshot_id": supersedes}
     return {"runtime_capability_snapshot_id": digest(payload), **payload}

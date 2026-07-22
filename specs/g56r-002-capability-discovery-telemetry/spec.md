@@ -160,10 +160,11 @@
 - **Q: Where and how long is raw evidence retained?** **A:** `raw_evidence_root`
   is a required content-addressed location outside the repository. Directories
   are operator-only mode `0700`; files are mode `0600` and have exactly one hard
-  link. Captures remain for
-  30 days after freeze publication. Retention records become governing only
-  after an immutable receipt proves publication of the exact freeze bytes;
-  failed-publication records cannot extend the deadline. Expired bytes are
+  link. Captures remain for 30 days after trusted retention registration at the
+  actual publication operation. After retention records are staged, an
+  immutable publication intent makes them governing before output begins; an
+  immutable receipt proves the exact freeze bytes afterward. Records without
+  an intent cannot extend the deadline. Expired bytes are
   deleted while their digest and a deletion record remain. Live private-store
   operations fail closed on Windows until equivalent owner-only DACL validation
   exists. Repository tests never require raw-store access.

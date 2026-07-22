@@ -436,6 +436,19 @@ class CapabilityContractTests(unittest.TestCase):
         script_only[0]["retrieved_body_b64"] = base64.b64encode(script_body).decode()
         with self.assertRaisesRegex(ValueError, "bounded extract"):
             capabilities.normalize_source_refreshes(self.manifest, script_only)
+        for hidden_markup in (
+            '<div hidden>{extract}</div>',
+            '<div aria-hidden="true">{extract}</div>',
+            '<div style="display: none">{extract}</div>',
+            '<div style="visibility:hidden">{extract}</div>',
+        ):
+            hidden_only = copy.deepcopy(captured)
+            hidden_body = hidden_markup.format(
+                extract=hidden_only[0]["bounded_extracts"][0]["text"],
+            ).encode()
+            hidden_only[0]["retrieved_body_b64"] = base64.b64encode(hidden_body).decode()
+            with self.subTest(hidden_markup=hidden_markup), self.assertRaisesRegex(ValueError, "bounded extract"):
+                capabilities.normalize_source_refreshes(self.manifest, hidden_only)
         malformed_hidden = copy.deepcopy(captured)
         hidden_body = f"<template></head>{malformed_hidden[0]['bounded_extracts'][0]['text']}</template>".encode()
         malformed_hidden[0]["retrieved_body_b64"] = base64.b64encode(hidden_body).decode()
@@ -482,6 +495,37 @@ class CapabilityContractTests(unittest.TestCase):
                     self.assertEqual(matrix["disagreements"][0]["disagreement_class"], "hidden_state")
         agreed_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "agreed")
         agreed_matrix, _ = capabilities.evaluate_surface_matrix(self.observations(agreed_case), self.authority_tuples(agreed_case))
+        reordered_matrix = copy.deepcopy(agreed_matrix)
+        reordered_matrix["observations"].reverse()
+        with self.assertRaisesRegex(ValueError, "canonical surface order"):
+            capabilities.validate_surface_matrix(reordered_matrix)
+        fractional_matrix = copy.deepcopy(agreed_matrix)
+        fractional_observation = fractional_matrix["observations"][0]
+        fractional_observation.update({
+            "started_at": "2026-07-16T00:00:00.5Z",
+            "completed_at": "2026-07-16T00:00:00.5Z",
+        })
+        fractional_observation["surface_observation_id"] = capabilities.digest({
+            key: value
+            for key, value in fractional_observation.items()
+            if key != "surface_observation_id"
+        })
+        fractional_matrix["aggregate_integrity_digest"] = capabilities.digest({
+            "observations": fractional_matrix["observations"],
+            "normalization_map_id": fractional_matrix["normalization_map_id"],
+        })
+        fractional_matrix["surface_matrix_id"] = capabilities.digest({
+            key: value
+            for key, value in fractional_matrix.items()
+            if key != "surface_matrix_id"
+        })
+        fractional_snapshot = capabilities.build_runtime_snapshot(
+            self.identity, [], fractional_matrix,
+        )
+        self.assertEqual(fractional_snapshot["collection_window"], {
+            "started_at": "2026-07-16T00:00:00Z",
+            "completed_at": "2026-07-16T00:00:00.5Z",
+        })
         for malformed_digest in (None, "", "not-a-digest"):
             with self.subTest(malformed_digest=malformed_digest), self.assertRaisesRegex(ValueError, "sha256 digest"):
                 capabilities.evaluate_surface_matrix(
@@ -948,7 +992,27 @@ class CapabilityContractTests(unittest.TestCase):
                 manifest=self.manifest, raw_evidence_root=raw_root, repository_root=ROOT,
             )
             self.assertEqual(capabilities.validate_freeze(freeze, self.manifest), freeze)
+            registration_clock = mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
+            )
+            registration_clock.start(); self.addCleanup(registration_clock.stop)
             publication_path = Path(tmp) / "candidate-freeze.json"
+            with mock.patch.object(
+                capabilities, "_store_publication_intent_locked",
+                side_effect=OSError("simulated publication intent failure"),
+            ):
+                with self.assertRaisesRegex(OSError, "intent failure"):
+                    capabilities.publish_with_raw_evidence_retention(
+                        freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
+                    )
+            self.assertFalse(publication_path.exists())
+            pending_before_recovery = capabilities.reconcile_raw_evidence_retention(
+                raw_root, ROOT, "2026-08-14T23:59:59Z",
+            )
+            self.assertEqual(pending_before_recovery["retained_evidence_digests"], [])
+            self.assertEqual(len(pending_before_recovery["pending_retention_record_digests"]), 4)
+            self.assertEqual(pending_before_recovery["publication_intent_digests"], [])
             with mock.patch.object(
                 capabilities, "_store_publication_receipt_locked",
                 side_effect=OSError("simulated publication receipt failure"),
@@ -958,15 +1022,29 @@ class CapabilityContractTests(unittest.TestCase):
                         freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
                     )
             self.assertTrue(publication_path.is_file())
-            pending_before_recovery = capabilities.reconcile_raw_evidence_retention(
+            intent_recovery = capabilities.reconcile_raw_evidence_retention(
                 raw_root, ROOT, "2026-08-14T23:59:59Z",
             )
-            self.assertEqual(pending_before_recovery["retained_evidence_digests"], [])
-            self.assertEqual(len(pending_before_recovery["pending_retention_record_digests"]), 4)
+            self.assertEqual(len(intent_recovery["retained_evidence_digests"]), 4)
+            self.assertEqual(intent_recovery["pending_retention_record_digests"], [])
+            self.assertEqual(len(intent_recovery["publication_intent_digests"]), 1)
+            self.assertEqual(intent_recovery["publication_receipt_digests"], [])
             publication = capabilities.publish_with_raw_evidence_retention(
                 freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
             )
             self.assertEqual(len(publication["retention_record_digests"]), 4)
+            initial_retention_records = [
+                record
+                for record_digest, record in capabilities._load_private_records(
+                    raw_root / capabilities.RETENTION_RECORDS_DIR, ROOT, "retention record",
+                )
+                if record_digest in publication["retention_record_digests"]
+            ]
+            self.assertTrue(all(
+                record["registered_at"] == "2026-07-16T00:00:00Z"
+                and record["delete_after"] == "2026-08-15T00:00:00Z"
+                for record in initial_retention_records
+            ))
             self.assertEqual(capabilities.publish_with_raw_evidence_retention(
                 freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
             ), publication)
@@ -985,11 +1063,40 @@ class CapabilityContractTests(unittest.TestCase):
                 if Path(path) == failed_publication_path:
                     raise OSError("simulated publication failure")
                 original_write(path, value, **kwargs)
-            with mock.patch.object(capabilities, "_write", side_effect=fail_publication):
+            successor_registration_clock = mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+            )
+            with successor_registration_clock, mock.patch.object(capabilities, "_write", side_effect=fail_publication):
                 with self.assertRaisesRegex(OSError, "publication failure"):
                     capabilities.publish_with_raw_evidence_retention(
                         future_freeze, failed_publication_path, raw_root, ROOT, manifest=self.manifest,
                     )
+            self.assertFalse(failed_publication_path.exists())
+            recovery_report = capabilities.reconcile_raw_evidence_retention(
+                raw_root, ROOT, "2026-08-15T00:00:00Z",
+            )
+            self.assertEqual(recovery_report["pending_retention_record_digests"], [])
+            self.assertEqual(len(recovery_report["retention_record_digests"]), 8)
+            self.assertEqual(len(recovery_report["publication_intent_digests"]), 2)
+            self.assertEqual(len(recovery_report["publication_receipt_digests"]), 1)
+            with successor_registration_clock:
+                recovered_publication = capabilities.publish_with_raw_evidence_retention(
+                    future_freeze, failed_publication_path, raw_root, ROOT, manifest=self.manifest,
+                )
+            self.assertTrue(failed_publication_path.is_file())
+            successor_retention_records = [
+                record
+                for record_digest, record in capabilities._load_private_records(
+                    raw_root / capabilities.RETENTION_RECORDS_DIR, ROOT, "retention record",
+                )
+                if record_digest in recovered_publication["retention_record_digests"]
+            ]
+            self.assertTrue(all(
+                record["registered_at"] == "2026-08-15T00:00:00Z"
+                and record["delete_after"] == "2026-09-14T00:00:00Z"
+                for record in successor_retention_records
+            ))
             with capabilities._retention_lock(raw_root):
                 with self.assertRaisesRegex(ValueError, "already in progress"):
                     capabilities.publish_with_raw_evidence_retention(
@@ -998,43 +1105,53 @@ class CapabilityContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "already in progress"):
                     capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-14T23:59:59Z")
             retained_report = capabilities.reconcile_raw_evidence_retention(
-                raw_root, ROOT, "2026-08-14T23:59:59Z",
+                raw_root, ROOT, "2026-08-15T00:00:00Z",
             )
             retention_output = raw_root / "retention-report.json"
             self.assertEqual(capabilities.main([
-                "retention", "--raw-evidence-root", str(raw_root), "--as-of", "2026-08-14T23:59:59Z",
+                "retention", "--raw-evidence-root", str(raw_root), "--as-of", "2026-08-15T00:00:00Z",
                 "--mode", "verify", "--output", str(retention_output),
             ]), 0)
             self.assertEqual(json.loads(retention_output.read_text()), retained_report)
             self.assertEqual(retained_report["retained_evidence_digests"], sorted(
                 [source_capture_digest, *(item["raw_evidence_digest"] for item in observations)]
             ))
-            self.assertEqual(retained_report["retention_record_digests"], publication["retention_record_digests"])
-            self.assertEqual(len(retained_report["pending_retention_record_digests"]), 4)
-            self.assertEqual(retained_report["publication_receipt_digests"], [publication["publication_receipt_digest"]])
+            self.assertEqual(retained_report["retention_record_digests"], sorted([
+                *publication["retention_record_digests"],
+                *recovered_publication["retention_record_digests"],
+            ]))
+            self.assertEqual(retained_report["pending_retention_record_digests"], [])
+            self.assertEqual(retained_report["publication_intent_digests"], sorted([
+                publication["publication_intent_digest"],
+                recovered_publication["publication_intent_digest"],
+            ]))
+            self.assertEqual(retained_report["publication_receipt_digests"], sorted([
+                publication["publication_receipt_digest"],
+                recovered_publication["publication_receipt_digest"],
+            ]))
             self.assertEqual(source_capture_path.read_bytes(), capture_bytes)
             missing_digest = source_capture_digest
             missing_path = raw_root / f"{missing_digest.removeprefix('sha256:')}.json"
             missing_bytes = missing_path.read_bytes(); missing_path.unlink()
             with self.assertRaisesRegex(ValueError, "regular non-symlink"):
-                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-14T23:59:59Z")
+                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-15T00:00:00Z")
             missing_path.write_bytes(missing_bytes); missing_path.chmod(0o600)
             with self.assertRaisesRegex(ValueError, "requires cleanup"):
-                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-15T00:00:00Z")
+                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-09-14T00:00:00Z")
             with self.assertRaisesRegex(ValueError, "current UTC"):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2099-01-01T00:00:00Z", apply=True)
             stale_hard_link = raw_root / ".g56r-002-power-loss"
             os.link(source_capture_path, stale_hard_link)
             with mock.patch.object(
                 capabilities, "_retention_now",
-                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+                return_value=capabilities._parsed_timestamp("2026-09-14T00:00:00Z", "test clock"),
             ):
                 with self.assertRaisesRegex(ValueError, "alternate hard links"):
                     capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
             stale_hard_link.unlink(); capabilities._fsync_directory(raw_root.resolve())
             cleanup_clock = mock.patch.object(
                 capabilities, "_retention_now",
-                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+                return_value=capabilities._parsed_timestamp("2026-09-14T00:00:00Z", "test clock"),
             )
             original_fsync_directory = capabilities._fsync_directory
             def fail_deletion_record_fsync(path: Path) -> None:
@@ -1050,7 +1167,7 @@ class CapabilityContractTests(unittest.TestCase):
             ))
             with mock.patch.object(
                 capabilities, "_retention_now",
-                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+                return_value=capabilities._parsed_timestamp("2026-09-14T00:00:00Z", "test clock"),
             ), mock.patch.object(capabilities, "_fsync_directory", wraps=original_fsync_directory) as fsync_directory:
                 cleanup_report = capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
             fsync_directory.assert_any_call(raw_root.resolve())
@@ -1059,29 +1176,30 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(len(cleanup_report["deletion_record_digests"]), 4)
             with mock.patch.object(
                 capabilities, "_retention_now",
-                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+                return_value=capabilities._parsed_timestamp("2026-09-14T00:00:00Z", "test clock"),
             ):
                 self.assertEqual(capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True), cleanup_report)
             cleanup_output = raw_root / "cleanup-report.json"
             with mock.patch.object(
                 capabilities, "_retention_now",
-                return_value=capabilities._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
+                return_value=capabilities._parsed_timestamp("2026-09-14T00:00:00Z", "test clock"),
             ):
                 self.assertEqual(capabilities.main([
                     "retention", "--raw-evidence-root", str(raw_root),
                     "--mode", "cleanup", "--output", str(cleanup_output),
                 ]), 0)
             self.assertEqual(json.loads(cleanup_output.read_text()), cleanup_report)
-            verified_deleted = capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-15T00:00:00Z")
+            verified_deleted = capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-09-14T00:00:00Z")
             self.assertEqual(verified_deleted["deleted_evidence_digests"], cleanup_report["deleted_evidence_digests"])
             with self.assertRaisesRegex(ValueError, "precedes the deletion"):
-                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-14T23:59:59Z")
+                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-09-13T23:59:59Z")
             with self.assertRaisesRegex(ValueError, "after deletion"):
                 capabilities.publish_with_raw_evidence_retention(
                     freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
                 )
             self.assertTrue(all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in (raw_root / capabilities.RETENTION_RECORDS_DIR).iterdir()))
             self.assertTrue(all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in (raw_root / capabilities.DELETION_RECORDS_DIR).iterdir()))
+            self.assertTrue(all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in (raw_root / capabilities.PUBLICATION_INTENTS_DIR).iterdir()))
             self.assertTrue(all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in (raw_root / capabilities.PUBLICATION_RECEIPTS_DIR).iterdir()))
             raw_file.chmod(0o644)
             with self.assertRaisesRegex(ValueError, "files require 0600"):

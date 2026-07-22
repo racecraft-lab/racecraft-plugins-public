@@ -250,12 +250,14 @@ collection is never part of the default deterministic suite.
 ## Retention Cleanup
 
 Freeze and canary publication automatically add immutable content-addressed
-records under `raw_evidence_root/retention-records/`. Those records become
-governing only after the exact freeze bytes exist and an immutable receipt is
+records under `raw_evidence_root/retention-records/`. A trusted registration
+clock establishes each 30-day deadline. Before output begins, an immutable
+transaction record under `publication-intents/` makes those records governing;
+after the exact freeze bytes exist, a matching immutable receipt is
 directory-fsynced under `publication-receipts/`. Re-running the same publication
-recovers a crash between those steps; a different artifact at the output path
-fails before registration. Records left by failed publication remain reported
-as pending and cannot extend deletion. Before the deadline, verify that every
+recovers either crash window; a different artifact at the output path fails
+before registration. Records without an intent remain pending and cannot extend
+deletion. Before the deadline, verify that every
 governing retained digest still has its exact bytes:
 
 ```sh
