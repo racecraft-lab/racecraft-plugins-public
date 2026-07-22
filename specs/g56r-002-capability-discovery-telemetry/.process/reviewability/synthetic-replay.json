@@ -5,9 +5,9 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "d8b3aad44e78714cf8de7f7c1cf9545f28b70f7d",
-  "head_scope": "current_remediation_source",
-  "current_restack_review_status": "RepoPrompt CE review chain through untitled-chat-3C1A9A reports NO P0/P1 FINDINGS; final metadata-head review pending",
+  "head_sha": "88624590b29ac20802d2242d71abb0d732fdcc6f",
+  "head_scope": "reviewed_implementation",
+  "current_restack_review_status": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at 88624590b29ac20802d2242d71abb0d732fdcc6f",
   "reason_class": "aggregate_size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
@@ -51,7 +51,7 @@
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass after restack",
     "full_suite": "2864/2864 pass after live-range remediation",
-    "independent_review": "RepoPrompt CE review chain through untitled-chat-3C1A9A reports NO P0/P1 FINDINGS; final metadata-head review pending"
+    "independent_review": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at 88624590b29ac20802d2242d71abb0d732fdcc6f"
   },
   "decomposition": {
     "status": "complete",

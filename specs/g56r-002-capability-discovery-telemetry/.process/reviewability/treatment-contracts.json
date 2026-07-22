@@ -5,6 +5,7 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T016-T025 treatment contracts and capability retention",
+  "head_sha": "88624590b29ac20802d2242d71abb0d732fdcc6f",
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
@@ -89,8 +90,8 @@
     "completion_probe_failure_restoration": "pass",
     "exact_public_facade_exports": "pass",
     "private_trust_primitives_hidden": "pass",
-    "independent_review": "pass",
-    "independent_review_chat_id": "audit-us2-remediation-F4E33F",
+    "independent_review": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at 88624590b29ac20802d2242d71abb0d732fdcc6f",
+    "independent_review_chat_id": "checkpoint-evidence-revi-B89AB7",
     "independent_review_findings": []
   },
   "exception": {
