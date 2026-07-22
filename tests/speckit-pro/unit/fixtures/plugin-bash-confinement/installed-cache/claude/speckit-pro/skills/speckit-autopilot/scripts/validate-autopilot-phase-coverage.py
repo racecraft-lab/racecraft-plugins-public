@@ -147,6 +147,10 @@ PHASE_RESULT_PROJECTION_FIELDS = frozenset({
     "tasks_total",
     "updated_at",
 })
+INDEPENDENT_REVIEW_GATE_IDS = frozenset({
+    "independent_critical_high_review",
+    "independent_p0_p1_review",
+})
 WORKFLOW_CHECKPOINT_CLAIM_RE = re.compile(
     r"(?m)^-\s+(?:Implementation checkpoint|Current remediation source head)\s+\[([a-z0-9][a-z0-9_-]*)\]:\s+`([0-9a-f]{40})`\s*$"
 )
@@ -155,6 +159,9 @@ WORKFLOW_SUPERSEDED_CHECKPOINT_CLAIM_RE = re.compile(
 )
 WORKFLOW_UNSCOPED_CHECKPOINT_CLAIM_RE = re.compile(
     r"(?m)^-\s+(?:Implementation checkpoint|Current remediation source head|Superseded marker checkpoint):\s+`[0-9a-f]{40}`\s*$"
+)
+WORKFLOW_PLAN_STATUS_RE = re.compile(
+    r"(?m)^-\s+Plan status:\s+`([a-z][a-z0-9_-]*)`\s*$"
 )
 WORKFLOW_FINGERPRINT_FIELDS = (
     ("Feature spec", "feature_spec_sha"),
@@ -433,6 +440,14 @@ def validate_workflow_checkpoint_bindings(
         errors.append("workflow must contain exactly one PR Marker Plan Evidence section")
     if section_count == 1:
         section = visible_text.split(section_token, 1)[1].split("\n## ", 1)[0]
+        if strict_contract:
+            expected_plan_status = marker_plan.get("status")
+            plan_statuses = WORKFLOW_PLAN_STATUS_RE.findall(section)
+            if plan_statuses != [expected_plan_status]:
+                errors.append(
+                    "workflow PR Marker Plan Evidence Plan status must exactly "
+                    "match pr_marker_plan.status"
+                )
         fingerprint_statuses = re.findall(
             r"(?m)^-\s+Fingerprint status:\s*([^\n]+?)\s*$", section,
         )
@@ -1309,6 +1324,54 @@ def _git_commit_is_ancestor_of_head(repo_root: Path, commit_sha: str) -> bool:
     return _git_commit_is_ancestor(repo_root, commit_sha, "HEAD")
 
 
+def _git_changed_paths(
+    repo_root: Path, base_sha: object, head_sha: object,
+) -> set[str] | None:
+    if (
+        not _git_commit_exists(repo_root, base_sha)
+        or not _git_commit_exists(repo_root, head_sha)
+    ):
+        return None
+    completed = subprocess.run(
+        [
+            "git", "-C", str(repo_root),
+            "-c", "diff.renames=true",
+            "-c", "diff.renameLimit=0",
+            "diff", "--no-ext-diff", "--find-renames=50%",
+            "--ignore-submodules=none", "--name-status", "-z",
+            f"{base_sha}..{head_sha}",
+        ],
+        capture_output=True,
+        env=_git_env(),
+        shell=False,
+        check=False,
+    )
+    if completed.returncode != 0:
+        return None
+    records = completed.stdout.split(b"\0")
+    paths: set[str] = set()
+    index = 0
+    try:
+        while index < len(records) and records[index]:
+            status = records[index].decode("ascii")
+            index += 1
+            if not status or index >= len(records):
+                return None
+            first_path = records[index].decode("utf-8")
+            index += 1
+            paths.add(first_path)
+            if status[0] in {"R", "C"}:
+                if index >= len(records) or not records[index]:
+                    return None
+                paths.add(records[index].decode("utf-8"))
+                index += 1
+            elif status[0] not in {"A", "D", "M", "T", "U", "X", "B"}:
+                return None
+    except (UnicodeDecodeError, IndexError):
+        return None
+    return paths
+
+
 def _git_path_introduction_commit(
     repo_root: Path, path: object, head_sha: object,
 ) -> str | None:
@@ -1749,6 +1812,12 @@ def validate_changed_file_manifest(
                     )
                     if isinstance(path, str)
                 }
+                reviewability = marker.get("reviewability")
+                if (
+                    isinstance(reviewability, dict)
+                    and isinstance(reviewability.get("evidence_path"), str)
+                ):
+                    carrier_paths.add(reviewability["evidence_path"])
                 corrections = checkpoint.get("corrections")
                 if isinstance(corrections, list):
                     carrier_paths.update(
@@ -2145,12 +2214,6 @@ def validate_projection_integrity(
                     if checkpoint.get("commit_sha") != checkpoint.get("head_sha"):
                         checkpoint_evidence_errors.append(
                             f"pr_marker_plan.markers[{index}].implementation_checkpoint commit/head mismatch"
-                        )
-                    reviewability = raw_marker.get("reviewability")
-                    reviewed_head = reviewability.get("head_sha") if isinstance(reviewability, dict) else None
-                    if reviewed_head != checkpoint.get("head_sha"):
-                        checkpoint_evidence_errors.append(
-                            f"pr_marker_plan.markers[{index}] checkpoint/reviewability head mismatch"
                         )
                     if repo_root:
                         committed_verification_bytes: bytes | None = None
@@ -3037,6 +3100,146 @@ def validate_projection_integrity(
                             checkpoint_evidence_errors.append(
                                 f"pr_marker_plan.markers[{index}] checkpoint/evidence implementation commit mismatch"
                             )
+                        review_gate_ids = sorted(
+                            set(required_gate_ids or ())
+                            & INDEPENDENT_REVIEW_GATE_IDS
+                        )
+                        if review_gate_ids:
+                            reviewed_head = evidence.get("last_reviewed_head_sha")
+                            reviewed_head_valid = (
+                                isinstance(reviewed_head, str)
+                                and re.fullmatch(r"[0-9a-f]{40}", reviewed_head)
+                                is not None
+                                and _git_commit_exists(repo_root, reviewed_head)
+                            )
+                            if not reviewed_head_valid:
+                                checkpoint_evidence_errors.append(
+                                    f"pr_marker_plan.markers[{index}] checkpoint evidence last_reviewed_head_sha is invalid"
+                                )
+                            else:
+                                if (
+                                    not _git_commit_exists(
+                                        repo_root, claimed_commit,
+                                    )
+                                    or not _git_commit_is_ancestor(
+                                        repo_root,
+                                        claimed_commit,
+                                        reviewed_head,
+                                    )
+                                ):
+                                    checkpoint_evidence_errors.append(
+                                        f"pr_marker_plan.markers[{index}] independent review does not cover the implementation checkpoint"
+                                    )
+                                authorized_head_valid = (
+                                    isinstance(expected_head_commit, str)
+                                    and re.fullmatch(
+                                        r"[0-9a-f]{40}", expected_head_commit,
+                                    )
+                                    is not None
+                                    and _git_commit_exists(
+                                        repo_root, expected_head_commit,
+                                    )
+                                    and _git_commit_is_ancestor(
+                                        repo_root,
+                                        reviewed_head,
+                                        expected_head_commit,
+                                    )
+                                )
+                                if not authorized_head_valid:
+                                    checkpoint_evidence_errors.append(
+                                        f"pr_marker_plan.markers[{index}] independent review head is not an ancestor of the authorized PR head"
+                                    )
+                                reviewability = raw_marker.get("reviewability")
+                                projected_reviewed_head = (
+                                    reviewability.get("head_sha")
+                                    if isinstance(reviewability, dict)
+                                    else None
+                                )
+                                if projected_reviewed_head != reviewed_head:
+                                    checkpoint_evidence_errors.append(
+                                        f"pr_marker_plan.markers[{index}] checkpoint/reviewability reviewed-head mismatch"
+                                    )
+                                reviewability_ref = (
+                                    reviewability.get("evidence_path")
+                                    if isinstance(reviewability, dict)
+                                    else None
+                                )
+                                if isinstance(reviewability_ref, str):
+                                    reviewability_evidence = _load_json_bytes(
+                                        _git_file_at_commit(
+                                            repo_root,
+                                            expected_head_commit,
+                                            reviewability_ref,
+                                        )
+                                    )
+                                    if (
+                                        not isinstance(
+                                            reviewability_evidence, dict,
+                                        )
+                                        or reviewability_evidence.get("head_sha")
+                                        != reviewed_head
+                                    ):
+                                        checkpoint_evidence_errors.append(
+                                            f"pr_marker_plan.markers[{index}] reviewability evidence does not bind the independent review head"
+                                        )
+                                for gate_id in review_gate_ids:
+                                    gate_result = (
+                                        verification.get(gate_id)
+                                        if isinstance(verification, dict)
+                                        else None
+                                    )
+                                    gate_evidence = (
+                                        gate_result.get("evidence")
+                                        if isinstance(gate_result, dict)
+                                        else None
+                                    )
+                                    if (
+                                        not isinstance(gate_evidence, str)
+                                        or reviewed_head not in gate_evidence
+                                    ):
+                                        checkpoint_evidence_errors.append(
+                                            f"pr_marker_plan.markers[{index}] independent review gate {gate_id!r} does not bind last_reviewed_head_sha"
+                                        )
+                                if authorized_head_valid:
+                                    changed_after_review = _git_changed_paths(
+                                        repo_root,
+                                        reviewed_head,
+                                        expected_head_commit,
+                                    )
+                                    try:
+                                        state_ref = (
+                                            state_path.resolve()
+                                            .relative_to(repo_root.resolve())
+                                            .as_posix()
+                                        )
+                                    except ValueError:
+                                        state_ref = None
+                                    review_carrier_paths = {
+                                        path
+                                        for path in (
+                                            state_ref,
+                                            state.get("workflow_file"),
+                                            state.get("changed_file_manifest"),
+                                            checkpoint.get("evidence_path"),
+                                            checkpoint.get(
+                                                "verification_evidence_path"
+                                            ),
+                                            reviewability_ref,
+                                        )
+                                        if isinstance(path, str)
+                                    }
+                                    if changed_after_review is None:
+                                        checkpoint_evidence_errors.append(
+                                            f"pr_marker_plan.markers[{index}] independent review delta is unavailable"
+                                        )
+                                    else:
+                                        for path in sorted(
+                                            changed_after_review
+                                            - review_carrier_paths
+                                        ):
+                                            checkpoint_evidence_errors.append(
+                                                f"pr_marker_plan.markers[{index}] unreviewed non-carrier path after independent review: {path}"
+                                            )
                     if repo_root:
                         if not _git_commit_exists(repo_root, claimed_commit):
                             checkpoint_evidence_errors.append(

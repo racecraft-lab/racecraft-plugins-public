@@ -1132,7 +1132,7 @@ For every task:
 - Authoritative state: top-level `pr_marker_plan` in
   `docs/ai/specs/.process/autopilot-state.json`
 - Fingerprint status: Current
-- Plan status: `checkpointing`
+- Plan status: `emission_ready`
 
 | Fingerprint input | SHA-256 |
 |---|---|

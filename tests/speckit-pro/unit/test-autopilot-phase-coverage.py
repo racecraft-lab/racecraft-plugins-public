@@ -445,6 +445,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             f"- Superseded marker checkpoint [us1]: `{wrong_superseded}`\n"
             f"- Implementation checkpoint: `{expected_commit}`\n\n"
             "## PR Marker Plan Evidence\n\n"
+            "- Plan status: `checkpointing`\n\n"
             "| Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |\n"
             "|---|---|---|---|---|---|\n"
             f"| 1 | `us1` | T001 | Pass | Complete at `{wrong_commit}` | None |\n"
@@ -470,6 +471,18 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             )
         _, corrected = self.run_validator(corrected_workflow, state)
         self.assertEqual(corrected["workflow_checkpoint_errors"], [])
+
+        mismatched_status_workflow = corrected_workflow.replace(
+            "- Plan status: `checkpointing`",
+            "- Plan status: `emission_ready`",
+        )
+        _, mismatched_status = self.run_validator(
+            mismatched_status_workflow, state,
+        )
+        self.assertIn(
+            "workflow PR Marker Plan Evidence Plan status must exactly match pr_marker_plan.status",
+            mismatched_status["workflow_checkpoint_errors"],
+        )
 
         missing_section_workflow = corrected_workflow.split(
             "## PR Marker Plan Evidence", 1,
@@ -1151,7 +1164,10 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "focused_tests": {"status": "pass", "evidence": "pass"},
                 "independent_critical_high_review": {
                     "status": "pass",
-                    "evidence": "independent review clean",
+                    "evidence": (
+                        "independent review clean at "
+                        f"{implementation_commit}"
+                    ),
                 },
             }
             verification_path.write_text(
@@ -1181,6 +1197,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "status": "complete",
                         "task_ids": ["T001", "T002"],
                         "implementation_checkpoint_sha": implementation_commit,
+                        "last_reviewed_head_sha": implementation_commit,
                         "verification": verification_results,
                         "verification_evidence_sha": verification_evidence_sha,
                         "required_verification_gate_ids": verification_gate_ids,
@@ -1378,6 +1395,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 ("Changed-file manifest", "changed_file_manifest_sha"),
             )
             fingerprint_table = (
+                "- Plan status: `emission_ready`\n"
                 "- Fingerprint status: Current\n\n"
                 "| Fingerprint input | SHA-256 |\n"
                 "|---|---|\n"
@@ -1658,10 +1676,20 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "focused_tests"
             ] = "pass"
             state["pr_marker_plan"]["status"] = "checkpointing"
+            workflow_path.write_text(
+                workflow_path.read_text(encoding="utf-8").replace(
+                    "- Plan status: `emission_ready`",
+                    "- Plan status: `checkpointing`",
+                ),
+                encoding="utf-8",
+            )
             evidence_path.write_text(json.dumps(pending_evidence), encoding="utf-8")
             state_path.write_text(json.dumps(state), encoding="utf-8")
             subprocess.run(
-                ["git", "-C", str(root), "add", str(evidence_path), "autopilot-state.json"],
+                [
+                    "git", "-C", str(root), "add", str(evidence_path),
+                    "autopilot-state.json", "workflow.md",
+                ],
                 check=True,
             )
             subprocess.run(
@@ -2028,9 +2056,19 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             checkpoint["checkpoint_evidence_sha"] = evidence_sha
             checkpoint["verification_evidence_sha"] = verification_evidence_sha
             state["pr_marker_plan"]["status"] = "emission_ready"
+            workflow_path.write_text(
+                workflow_path.read_text(encoding="utf-8").replace(
+                    "- Plan status: `checkpointing`",
+                    "- Plan status: `emission_ready`",
+                ),
+                encoding="utf-8",
+            )
             state_path.write_text(json.dumps(state), encoding="utf-8")
             subprocess.run(
-                ["git", "-C", str(root), "add", str(evidence_path), "autopilot-state.json"],
+                [
+                    "git", "-C", str(root), "add", str(evidence_path),
+                    "autopilot-state.json", "workflow.md",
+                ],
                 check=True,
             )
             subprocess.run(
@@ -2715,6 +2753,15 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             replacement_marker_sha = "sha256:" + hashlib.sha256(
                 b"- [x] T001 Marker task\n- [ ] T002 Changed folded task\n"
             ).hexdigest()
+            replacement_verification_results = json.loads(
+                json.dumps(verification_results)
+            )
+            replacement_verification_results[
+                "independent_critical_high_review"
+            ]["evidence"] = (
+                "independent review clean at "
+                f"{replacement_commit}"
+            )
             replacement_verification_path.write_text(
                 json.dumps(
                     {
@@ -2725,7 +2772,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "generated_at": "2026-07-20T00:00:00Z",
                         "verified_commit_sha": replacement_commit,
                         "required_gate_ids": verification_gate_ids,
-                        "results": verification_results,
+                        "results": replacement_verification_results,
                     }
                 ),
                 encoding="utf-8",
@@ -2743,7 +2790,8 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "status": "complete",
                         "task_ids": ["T001", "T002"],
                         "implementation_checkpoint_sha": replacement_commit,
-                        "verification": verification_results,
+                        "last_reviewed_head_sha": replacement_commit,
+                        "verification": replacement_verification_results,
                         "verification_evidence_sha": replacement_verification_sha,
                         "required_verification_gate_ids": verification_gate_ids,
                         "source_fingerprint_status": "current",
@@ -2866,6 +2914,41 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
+
+            reviewed_tracked_bytes = tracked_path.read_bytes()
+            tracked_path.write_text("unreviewed change\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(root), "add", str(tracked_path)], check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "unreviewed non-carrier change",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0] unreviewed non-carrier path after independent review: tracked.txt",
+                report["checkpoint_evidence_errors"],
+            )
+
+            tracked_path.write_bytes(reviewed_tracked_bytes)
+            subprocess.run(
+                ["git", "-C", str(root), "add", str(tracked_path)], check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "restore reviewed non-carrier content",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 0, report)
 
             checkpoint["superseded_evidence"]["implementation_checkpoint_sha"] = (
                 "f" * 40

@@ -449,12 +449,14 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
     def test_completed_marker_evidence_is_immutable_and_freshness_is_separate(self) -> None:
         schema = json.loads(MARKER_CHECKPOINT_SCHEMA_PATH.read_text(encoding="utf-8"))
         required = set(schema["required"])
+        complete_required = set(schema["allOf"][0]["then"]["required"])
         self.assertTrue(
             {
                 "implementation_checkpoint_sha",
                 "tasks_sha",
             }.issubset(required)
         )
+        self.assertIn("last_reviewed_head_sha", complete_required)
         self.assertNotIn("current_tasks_sha", required)
         self.assertIn("immutable", schema["description"].lower())
         mutable_fields = {
