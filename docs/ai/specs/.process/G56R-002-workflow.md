@@ -785,9 +785,10 @@ Focus on:
 - Primary Analyze executor: 3 HIGH and 2 MEDIUM contract findings confirmed.
 - Independent contract consensus: PASS on A-001 through A-005, with no
   G56R-003 qualification leakage after the destination-assessment boundary.
-- Independent repository consensus: PASS on A-006 through A-008; the digest
-  manifest adds one data file while the current implementation uses 13
-  production modules.
+- Independent repository consensus: PASS on A-006 through A-008; at analysis
+  time, the digest manifest added one data file while the planned
+  implementation used 13 production modules. The completed US2 implementation
+  now uses 18 production modules, measured below.
 - Independent source-manifest audit: 22 current source records, 0 active
   historical `OSL-*` rows, and malformed effort tokens explicitly quarantined.
 - Final remediation review: PASS after environment/qualification owner
@@ -1272,6 +1273,12 @@ For every task:
   `e1e34d005e16bf2e9115f01e709770aee006fb73` rejects oversized bytes before
   output recovery or mutation. Re-audit `untitled-chat-7F6589` returned
   `NO FINDINGS`. All five exact-head responsibility re-audits are clean.
+- Final metadata review `untitled-chat-1472D4` found one P1 and one P2: the
+  marker state did not map US2 to emitted PR #367 and an analysis-time
+  13-module estimate was worded as current. The state now distinguishes the
+  source feature branch from emitted slice branches, binds US1 to PR #366 and
+  US2 to PR #367 with their exact observed heads, records the US2 review head,
+  and labels the 13-module count as historical.
 - Implementation checkpoint: `e1e34d005e16bf2e9115f01e709770aee006fb73`
 - Superseded checkpoint: `e08eb7a9fb0201f99e1d926ccf80d322247d9871`
 
@@ -1305,7 +1312,8 @@ For every task:
   retains a typed size-only exception.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
-- PR mappings: Pending.
+- PR mappings: Partial; US1 maps to PR #366, US2 maps to PR #367, and US3
+  remains pending.
 
 ---
 
