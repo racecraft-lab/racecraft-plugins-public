@@ -8,8 +8,8 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 5817,
-  "actual_nonblank_noncomment_lines": 5304,
+  "actual_source_lines": 5823,
+  "actual_nonblank_noncomment_lines": 5310,
   "production_modules": 17,
   "max_capability_module_source_lines": 397,
   "primary_surface": "harness/adapters",
@@ -23,7 +23,7 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {"source_lines": 219, "nonblank_noncomment_lines": 198},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 360, "nonblank_noncomment_lines": 317},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {"source_lines": 388, "nonblank_noncomment_lines": 343},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publication_records.py": {"source_lines": 272, "nonblank_noncomment_lines": 245},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publication_records.py": {"source_lines": 278, "nonblank_noncomment_lines": 251},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {"source_lines": 15, "nonblank_noncomment_lines": 10},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {"source_lines": 369, "nonblank_noncomment_lines": 353},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_authority.py": {"source_lines": 75, "nonblank_noncomment_lines": 66},
@@ -151,6 +151,9 @@
     "descriptor_bound_output_component_walk": "pass",
     "output_parent_lock_lifetime": "pass",
     "intermediate_symlink_swap_confinement": "pass",
+    "publication_leaf_name_preservation": "pass",
+    "publication_leaf_symlink_race_rejection": "pass",
+    "pre_retention_leaf_revalidation": "pass",
     "descriptor_bound_append_only_temp_recovery": "pass",
     "abandoned_prelink_temp_recovery": "pass for private and public append-only directories",
     "active_temp_lock_protection": "pass",
@@ -164,9 +167,9 @@
     "deletion_tombstone_rematerialization_rejection": "pass",
     "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
     "authored_script_spec_id_guard": "9/9 pass",
-    "independent_review_chat_id": "untitled-chat-2B7305",
+    "independent_review_chat_id": "untitled-chat-C8F728",
     "independent_review_findings": [
-      "publication output containment was checked before mutation but not retained under a descriptor-bound component walk"
+      "publication output leaf resolution could follow a final-component symlink planted after the precheck"
     ]
   },
   "exception": {
