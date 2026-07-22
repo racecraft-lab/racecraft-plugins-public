@@ -396,5 +396,4 @@ def publish_with_raw_evidence_retention(
                 "publication_intent_digest": intent_digest,
                 "publication_receipt_digest": receipt_digest,
             }
-
 __all__ = [name for name in globals() if not name.startswith("__")]
