@@ -430,6 +430,10 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
         self.assertFalse(manifest_schema["additionalProperties"])
         self.assertEqual(manifest_schema["properties"]["schema_version"]["const"], "changed-file-manifest.v1")
         self.assertEqual(manifest_schema["properties"]["comparison_ref"]["const"], "HEAD")
+        self.assertEqual(
+            manifest_schema["$defs"]["file"]["properties"]["marker_ids"]["maxItems"],
+            1,
+        )
         rename_rule = manifest_schema["$defs"]["file"]["allOf"][0]
         self.assertEqual(rename_rule["if"]["properties"]["operation"]["const"], "RENAMED")
         self.assertEqual(rename_rule["then"]["required"], ["source_path"])

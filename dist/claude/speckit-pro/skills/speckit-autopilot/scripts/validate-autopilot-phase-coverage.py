@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import re
+import stat
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -79,6 +80,14 @@ ORDERED_STATE_CHECKPOINTS = (
 TASK_LINE_RE = re.compile(r"^- \[[ xX]\] (T[0-9]+)\b")
 UTC_TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 WINDOWS_ABSOLUTE_PATH_RE = re.compile(r"^[A-Za-z]:")
+MAX_REPO_FILE_BYTES = 32 * 1024 * 1024
+HAS_DESCRIPTOR_RELATIVE_IO = (
+    os.name != "nt"
+    and bool(getattr(os, "O_NOFOLLOW", 0))
+    and os.open in os.supports_dir_fd
+    and os.stat in os.supports_dir_fd
+    and os.stat in os.supports_follow_symlinks
+)
 SUPPORTED_MARKER_PLAN_VERSIONS = frozenset({"pr-marker-plan.v1", "pr-marker-plan.v2"})
 MARKER_PLAN_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "contracts" / "pr-marker-plan.schema.json"
 CHANGED_FILE_MANIFEST_SCHEMA_PATH = (
@@ -563,6 +572,295 @@ def _repo_file(repo_root: Path, raw_path: object) -> Path | None:
     return resolved
 
 
+def _stable_file_identity(metadata: os.stat_result) -> tuple[int, ...]:
+    return (
+        metadata.st_dev,
+        metadata.st_ino,
+        metadata.st_size,
+        metadata.st_mtime_ns,
+        metadata.st_ctime_ns,
+        stat.S_IFMT(metadata.st_mode),
+        stat.S_IMODE(metadata.st_mode),
+        metadata.st_nlink,
+    )
+
+
+def _stable_directory_identity(metadata: os.stat_result) -> tuple[int, ...]:
+    return (
+        metadata.st_dev,
+        metadata.st_ino,
+        stat.S_IFMT(metadata.st_mode),
+        stat.S_IMODE(metadata.st_mode),
+    )
+
+
+def _normalized_absolute_path(path: Path) -> str:
+    return os.path.normcase(os.path.abspath(path))
+
+
+def _windows_final_path_from_descriptor(descriptor: int) -> Path:
+    try:
+        import ctypes
+        import msvcrt
+        from ctypes import wintypes
+    except ImportError as exc:  # pragma: no cover - available on supported Windows Python
+        raise OSError("repository file handle inspection is unavailable") from exc
+    get_final_path = ctypes.WinDLL("kernel32", use_last_error=True).GetFinalPathNameByHandleW
+    get_final_path.argtypes = [
+        wintypes.HANDLE,
+        wintypes.LPWSTR,
+        wintypes.DWORD,
+        wintypes.DWORD,
+    ]
+    get_final_path.restype = wintypes.DWORD
+    handle = wintypes.HANDLE(msvcrt.get_osfhandle(descriptor))
+    required = get_final_path(handle, None, 0, 0)
+    if required == 0:
+        raise OSError("repository file handle could not be resolved")
+    buffer = ctypes.create_unicode_buffer(required + 1)
+    written = get_final_path(handle, buffer, len(buffer), 0)
+    if written == 0 or written >= len(buffer):
+        raise OSError("repository file handle could not be resolved")
+    value = buffer.value
+    if value.startswith("\\\\?\\UNC\\"):
+        value = "\\\\" + value[8:]
+    elif value.startswith("\\\\?\\"):
+        value = value[4:]
+    return Path(value)
+
+
+def _repo_path_snapshot(
+    source: Path,
+    root: Path,
+    relative: Path,
+) -> tuple[tuple[int, ...], list[tuple[int, ...]], os.stat_result, Path]:
+    canonical_root = root.resolve(strict=True)
+    canonical_source = source.resolve(strict=True)
+    if _normalized_absolute_path(canonical_root) != _normalized_absolute_path(root):
+        raise OSError("repository root must be a real directory")
+    if _normalized_absolute_path(canonical_source) != _normalized_absolute_path(source):
+        raise OSError("repository file path must not contain symlinks")
+    canonical_source.relative_to(canonical_root)
+    root_metadata = os.stat(root, follow_symlinks=False)
+    if not stat.S_ISDIR(root_metadata.st_mode):
+        raise OSError("repository root must be a real directory")
+    directory_identities: list[tuple[int, ...]] = []
+    current = root
+    for component in relative.parts[:-1]:
+        current /= component
+        metadata = os.stat(current, follow_symlinks=False)
+        if not stat.S_ISDIR(metadata.st_mode) or stat.S_ISLNK(metadata.st_mode):
+            raise OSError("repository path components must be real directories")
+        directory_identities.append(_stable_directory_identity(metadata))
+    pathname = os.stat(source, follow_symlinks=False)
+    if not stat.S_ISREG(pathname.st_mode) or stat.S_ISLNK(pathname.st_mode):
+        raise OSError("repository file must be a regular non-symlink file")
+    return (
+        _stable_directory_identity(root_metadata),
+        directory_identities,
+        pathname,
+        canonical_source,
+    )
+
+
+def _read_repo_file_by_handle(
+    source: Path,
+    root: Path,
+    relative: Path,
+    max_bytes: int,
+) -> bytes:
+    root_identity, directory_identities, pathname_before, canonical_source = (
+        _repo_path_snapshot(source, root, relative)
+    )
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_BINARY", 0)
+        | getattr(os, "O_NOINHERIT", 0)
+        | getattr(os, "O_NONBLOCK", 0)
+    )
+    descriptor = os.open(source, flags)
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode):
+            raise OSError("repository file must be regular")
+        if _stable_file_identity(pathname_before) != _stable_file_identity(before):
+            raise OSError("repository file changed before it was opened")
+        if os.name == "nt" and (
+            _normalized_absolute_path(_windows_final_path_from_descriptor(descriptor))
+            != _normalized_absolute_path(canonical_source)
+        ):
+            raise OSError("repository file handle escaped its approved path")
+        if before.st_size > max_bytes:
+            raise OSError("repository file exceeds the maximum size")
+        chunks: list[bytes] = []
+        total = 0
+        while True:
+            chunk = os.read(descriptor, min(1024 * 1024, max_bytes + 1 - total))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+            if total > max_bytes:
+                raise OSError("repository file exceeds the maximum size")
+        after = os.fstat(descriptor)
+        if _stable_file_identity(after) != _stable_file_identity(before) or total != after.st_size:
+            raise OSError("repository file changed while it was being read")
+        current_root, current_directories, current_pathname, current_canonical = (
+            _repo_path_snapshot(source, root, relative)
+        )
+        if (
+            current_root != root_identity
+            or current_directories != directory_identities
+            or _stable_file_identity(current_pathname) != _stable_file_identity(after)
+            or _normalized_absolute_path(current_canonical)
+            != _normalized_absolute_path(canonical_source)
+        ):
+            raise OSError("repository file path changed while it was being read")
+        return b"".join(chunks)
+    finally:
+        os.close(descriptor)
+
+
+def _read_repo_file_by_descriptor(
+    source: Path,
+    root: Path,
+    relative: Path,
+    max_bytes: int,
+) -> bytes:
+    nofollow = os.O_NOFOLLOW
+    directory_flags = (
+        os.O_RDONLY
+        | getattr(os, "O_CLOEXEC", 0)
+        | nofollow
+        | getattr(os, "O_DIRECTORY", 0)
+    )
+    file_flags = (
+        os.O_RDONLY
+        | getattr(os, "O_CLOEXEC", 0)
+        | nofollow
+        | getattr(os, "O_NONBLOCK", 0)
+    )
+    directory_descriptors: list[int] = []
+    directory_identities: list[tuple[int, ...]] = []
+    descriptor: int | None = None
+    try:
+        root_before = os.stat(root, follow_symlinks=False)
+        if not stat.S_ISDIR(root_before.st_mode):
+            raise OSError("repository root must be a real directory")
+        root_descriptor = os.open(root, directory_flags)
+        directory_descriptors.append(root_descriptor)
+        root_open = os.fstat(root_descriptor)
+        if _stable_directory_identity(root_before) != _stable_directory_identity(root_open):
+            raise OSError("repository root changed before it was opened")
+        directory_identities.append(_stable_directory_identity(root_open))
+        parent_descriptor = root_descriptor
+        for component in relative.parts[:-1]:
+            component_before = os.stat(
+                component,
+                dir_fd=parent_descriptor,
+                follow_symlinks=False,
+            )
+            if not stat.S_ISDIR(component_before.st_mode):
+                raise OSError("repository path components must be real directories")
+            child_descriptor = os.open(
+                component,
+                directory_flags,
+                dir_fd=parent_descriptor,
+            )
+            child_open = os.fstat(child_descriptor)
+            if _stable_directory_identity(component_before) != _stable_directory_identity(child_open):
+                os.close(child_descriptor)
+                raise OSError("repository directory changed before it was opened")
+            directory_descriptors.append(child_descriptor)
+            directory_identities.append(_stable_directory_identity(child_open))
+            parent_descriptor = child_descriptor
+        filename = relative.parts[-1]
+        pathname_before = os.stat(
+            filename,
+            dir_fd=parent_descriptor,
+            follow_symlinks=False,
+        )
+        if not stat.S_ISREG(pathname_before.st_mode):
+            raise OSError("repository file must be a regular non-symlink file")
+        descriptor = os.open(filename, file_flags, dir_fd=parent_descriptor)
+        before = os.fstat(descriptor)
+        if (
+            not stat.S_ISREG(before.st_mode)
+            or _stable_file_identity(pathname_before) != _stable_file_identity(before)
+        ):
+            raise OSError("repository file changed before it was opened")
+        if before.st_size > max_bytes:
+            raise OSError("repository file exceeds the maximum size")
+        chunks: list[bytes] = []
+        total = 0
+        while True:
+            chunk = os.read(descriptor, min(1024 * 1024, max_bytes + 1 - total))
+            if not chunk:
+                break
+            chunks.append(chunk)
+            total += len(chunk)
+            if total > max_bytes:
+                raise OSError("repository file exceeds the maximum size")
+        after = os.fstat(descriptor)
+        current = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
+        if (
+            _stable_file_identity(after) != _stable_file_identity(before)
+            or _stable_file_identity(current) != _stable_file_identity(after)
+            or total != after.st_size
+        ):
+            raise OSError("repository file changed while it was being read")
+        verifier_descriptors: list[int] = []
+        try:
+            root_current = os.stat(root, follow_symlinks=False)
+            verifier = os.open(root, directory_flags)
+            verifier_descriptors.append(verifier)
+            if (
+                _stable_directory_identity(root_current) != directory_identities[0]
+                or _stable_directory_identity(os.fstat(verifier)) != directory_identities[0]
+            ):
+                raise OSError("repository root changed while it was being read")
+            for component, expected_identity in zip(
+                relative.parts[:-1],
+                directory_identities[1:],
+            ):
+                next_descriptor = os.open(component, directory_flags, dir_fd=verifier)
+                verifier_descriptors.append(next_descriptor)
+                if _stable_directory_identity(os.fstat(next_descriptor)) != expected_identity:
+                    raise OSError("repository directory changed while it was being read")
+                verifier = next_descriptor
+            current_path = os.stat(filename, dir_fd=verifier, follow_symlinks=False)
+            if _stable_file_identity(current_path) != _stable_file_identity(after):
+                raise OSError("repository file path changed while it was being read")
+        finally:
+            for verifier_descriptor in reversed(verifier_descriptors):
+                os.close(verifier_descriptor)
+        return b"".join(chunks)
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+        for directory_descriptor in reversed(directory_descriptors):
+            os.close(directory_descriptor)
+
+
+def _read_repo_bytes(
+    repo_root: Path,
+    raw_path: object,
+    *,
+    max_bytes: int = MAX_REPO_FILE_BYTES,
+) -> bytes | None:
+    if not _is_normalized_repo_path(raw_path):
+        return None
+    root = Path(os.path.abspath(repo_root))
+    relative = Path(*PurePosixPath(str(raw_path)).parts)
+    source = root / relative
+    try:
+        if HAS_DESCRIPTOR_RELATIVE_IO:
+            return _read_repo_file_by_descriptor(source, root, relative, max_bytes)
+        return _read_repo_file_by_handle(source, root, relative, max_bytes)
+    except (OSError, RuntimeError, ValueError):
+        return None
+
+
 def _sha256_bytes(value: bytes) -> str:
     return f"sha256:{hashlib.sha256(value).hexdigest()}"
 
@@ -731,6 +1029,9 @@ def _json_schema_errors(
         minimum_items = schema.get("minItems")
         if isinstance(minimum_items, int) and len(value) < minimum_items:
             errors.append(f"{path} has too few items")
+        maximum_items = schema.get("maxItems")
+        if isinstance(maximum_items, int) and len(value) > maximum_items:
+            errors.append(f"{path} has too many items")
         if schema.get("uniqueItems") is True:
             try:
                 serialized = [
@@ -807,10 +1108,6 @@ def _marker_tasks_sha_text(tasks_text: str, task_ids: set[str]) -> str | None:
     if found != task_ids:
         return None
     return _sha256_bytes(("\n".join(selected) + "\n").encode("utf-8"))
-
-
-def _marker_tasks_sha(tasks_path: Path, task_ids: set[str]) -> str | None:
-    return _marker_tasks_sha_text(read_text(tasks_path), task_ids)
 
 
 def _git_env() -> dict[str, str]:
@@ -1057,14 +1354,6 @@ def _git_tree_entries(repo_root: Path, commit_sha: object) -> dict[str, str] | N
     return entries
 
 
-def _load_json_object(path: Path) -> dict[str, Any] | None:
-    try:
-        value = _strict_json_loads(read_text(path))
-    except (ValidationError, json.JSONDecodeError, RecursionError, ValueError):
-        return None
-    return value if isinstance(value, dict) else None
-
-
 def _load_json_bytes(value: bytes | None) -> dict[str, Any] | None:
     if value is None:
         return None
@@ -1154,8 +1443,8 @@ def validate_changed_file_manifest(
         return {"changed_file_manifest_errors": ["changed-file manifest reference is invalid"]}
     if repo_root is None:
         return {"changed_file_manifest_errors": ["repository root is unavailable"]}
-    manifest_path = _repo_file(repo_root, manifest_ref)
-    manifest = _load_json_object(manifest_path) if manifest_path and manifest_path.is_file() else None
+    worktree_manifest_bytes = _read_repo_bytes(repo_root, manifest_ref)
+    manifest = _load_json_bytes(worktree_manifest_bytes)
     if manifest is None:
         return {"changed_file_manifest_errors": ["changed-file manifest is missing or invalid"]}
     if strict_contract:
@@ -1164,10 +1453,6 @@ def validate_changed_file_manifest(
             if isinstance(authority_head, str)
             else None
         )
-        try:
-            worktree_manifest_bytes = manifest_path.read_bytes() if manifest_path else None
-        except OSError:
-            worktree_manifest_bytes = None
         if committed_manifest_bytes is None:
             authority_errors.append(
                 "changed-file manifest is absent from the authorized PR head"
@@ -1338,7 +1623,9 @@ def validate_changed_file_manifest(
             f"declared changed-file manifest does not match {base_commit}..{comparison_commit}"
         )
 
-    expected_manifest_sha = _sha256_bytes(manifest_path.read_bytes())
+    if worktree_manifest_bytes is None:
+        return {"changed_file_manifest_errors": ["changed-file manifest is missing or invalid"]}
+    expected_manifest_sha = _sha256_bytes(worktree_manifest_bytes)
     current_fingerprint = state.get("current_source_fingerprint")
     plan_fingerprint = marker_plan.get("source_fingerprint") if isinstance(marker_plan, dict) else None
     for label, fingerprint in (
@@ -1505,8 +1792,25 @@ def validate_projection_integrity(
     marker_plan_status_errors: list[str] = []
     repo_root = _repository_root(state_path)
     feature_dir = state.get("feature_dir")
-    tasks_path = _repo_file(repo_root, f"{feature_dir}/tasks.md") if repo_root and isinstance(feature_dir, str) else None
-    current_tasks_sha = _sha256_bytes(tasks_path.read_bytes()) if tasks_path and tasks_path.is_file() else None
+    tasks_ref = f"{feature_dir}/tasks.md" if isinstance(feature_dir, str) else None
+    current_tasks_bytes = (
+        _read_repo_bytes(repo_root, tasks_ref)
+        if repo_root is not None and tasks_ref is not None
+        else None
+    )
+    try:
+        current_tasks_text = (
+            current_tasks_bytes.decode("utf-8")
+            if current_tasks_bytes is not None
+            else None
+        )
+    except UnicodeDecodeError:
+        current_tasks_text = None
+    current_tasks_sha = (
+        _sha256_bytes(current_tasks_bytes)
+        if current_tasks_bytes is not None
+        else None
+    )
     strict_contract = (
         isinstance(marker_plan, dict)
         and marker_plan.get("schema_version") == "pr-marker-plan.v2"
@@ -1549,20 +1853,12 @@ def validate_projection_integrity(
             committed_schema_bytes = _git_file_at_commit(
                 repo_root, expected_head_commit, checkpoint_schema_ref,
             )
-            checkpoint_schema_path = _repo_file(repo_root, checkpoint_schema_ref)
+            worktree_schema_bytes = _read_repo_bytes(repo_root, checkpoint_schema_ref)
             if committed_schema_bytes is None:
                 checkpoint_evidence_errors.append(
                     "checkpoint evidence schema is absent from the authorized PR head"
                 )
             else:
-                try:
-                    worktree_schema_bytes = (
-                        checkpoint_schema_path.read_bytes()
-                        if checkpoint_schema_path and checkpoint_schema_path.is_file()
-                        else None
-                    )
-                except OSError:
-                    worktree_schema_bytes = None
                 if worktree_schema_bytes != committed_schema_bytes:
                     checkpoint_file_errors.append(
                         "checkpoint evidence schema differs from the authorized PR head"
@@ -1643,6 +1939,16 @@ def validate_projection_integrity(
                 )
             else:
                 seen_review_orders.add(review_order)
+            if (
+                isinstance(review_order, int)
+                and not isinstance(review_order, bool)
+                and review_order >= 1
+                and review_order != index + 1
+            ):
+                marker_plan_status_errors.append(
+                    f"pr_marker_plan.markers[{index}].review_order must equal its "
+                    f"contiguous marker array position {index + 1}"
+                )
 
             source_boundary = raw_marker.get("source_boundary")
             story_id = source_boundary.get("story_id") if isinstance(source_boundary, dict) else None
@@ -1836,18 +2142,24 @@ def validate_projection_integrity(
                             checkpoint_evidence_errors.append(
                                 f"pr_marker_plan.markers[{index}] implementation commit is not an ancestor of evidence commit"
                             )
-                        for required in ("evidence_path", "verification_evidence_path"):
-                            target = _repo_file(repo_root, checkpoint.get(required))
-                            if target is None or not target.is_file():
+                        evidence_ref = checkpoint.get("evidence_path")
+                        verification_ref = checkpoint.get("verification_evidence_path")
+                        worktree_evidence_bytes = _read_repo_bytes(
+                            repo_root,
+                            evidence_ref,
+                        )
+                        worktree_verification_bytes = _read_repo_bytes(
+                            repo_root,
+                            verification_ref,
+                        )
+                        for required, worktree_bytes in (
+                            ("evidence_path", worktree_evidence_bytes),
+                            ("verification_evidence_path", worktree_verification_bytes),
+                        ):
+                            if worktree_bytes is None:
                                 checkpoint_file_errors.append(
                                     f"pr_marker_plan.markers[{index}].implementation_checkpoint.{required}"
                                 )
-                        evidence_target = _repo_file(repo_root, checkpoint.get("evidence_path"))
-                        evidence_ref = checkpoint.get("evidence_path")
-                        verification_target = _repo_file(
-                            repo_root, checkpoint.get("verification_evidence_path")
-                        )
-                        verification_ref = checkpoint.get("verification_evidence_path")
                         if evidence_ref == verification_ref:
                             checkpoint_evidence_errors.append(
                                 f"pr_marker_plan.markers[{index}] checkpoint and verification evidence paths must differ"
@@ -1871,7 +2183,7 @@ def validate_projection_integrity(
                                 checkpoint_file_errors.append(
                                     f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_sha"
                                 )
-                            if evidence_target is None or not evidence_target.is_file() or evidence_target.read_bytes() != committed_evidence_bytes:
+                            if worktree_evidence_bytes != committed_evidence_bytes:
                                 checkpoint_file_errors.append(
                                     f"pr_marker_plan.markers[{index}].implementation_checkpoint immutable evidence differs from checkpoint commit"
                                 )
@@ -1894,11 +2206,7 @@ def validate_projection_integrity(
                                 checkpoint_file_errors.append(
                                     f"pr_marker_plan.markers[{index}].implementation_checkpoint.verification_evidence_sha"
                                 )
-                            if (
-                                verification_target is None
-                                or not verification_target.is_file()
-                                or verification_target.read_bytes() != committed_verification_bytes
-                            ):
+                            if worktree_verification_bytes != committed_verification_bytes:
                                 checkpoint_file_errors.append(
                                     f"pr_marker_plan.markers[{index}].implementation_checkpoint immutable verification evidence differs from checkpoint commit"
                                 )
@@ -1955,7 +2263,7 @@ def validate_projection_integrity(
                         if isinstance(evidence_ref, str)
                         else None
                     )
-                    evidence_target = _repo_file(repo_root, evidence_ref)
+                    worktree_pending_evidence = _read_repo_bytes(repo_root, evidence_ref)
                     if committed_pending_evidence is None:
                         checkpoint_file_errors.append(
                             f"pr_marker_plan.markers[{index}].implementation_checkpoint.checkpoint_evidence_commit_sha"
@@ -1971,11 +2279,7 @@ def validate_projection_integrity(
                             checkpoint_file_errors.append(
                                 f"pr_marker_plan.markers[{index}] pending checkpoint evidence differs from checkpoint commit"
                             )
-                        if (
-                            evidence_target is None
-                            or not evidence_target.is_file()
-                            or evidence_target.read_bytes() != committed_pending_evidence
-                        ):
+                        if worktree_pending_evidence != committed_pending_evidence:
                             checkpoint_file_errors.append(
                                 f"pr_marker_plan.markers[{index}] pending checkpoint evidence worktree differs from checkpoint commit"
                             )
@@ -1989,7 +2293,10 @@ def validate_projection_integrity(
                         if isinstance(verification_ref, str)
                         else None
                     )
-                    verification_target = _repo_file(repo_root, verification_ref)
+                    worktree_pending_verification = _read_repo_bytes(
+                        repo_root,
+                        verification_ref,
+                    )
                     if committed_pending_verification is None:
                         checkpoint_file_errors.append(
                             f"pr_marker_plan.markers[{index}].implementation_checkpoint verification evidence is absent from checkpoint commit"
@@ -2005,11 +2312,7 @@ def validate_projection_integrity(
                             checkpoint_file_errors.append(
                                 f"pr_marker_plan.markers[{index}] pending verification evidence differs from checkpoint commit"
                             )
-                        if (
-                            verification_target is None
-                            or not verification_target.is_file()
-                            or verification_target.read_bytes() != committed_pending_verification
-                        ):
+                        if worktree_pending_verification != committed_pending_verification:
                             checkpoint_file_errors.append(
                                 f"pr_marker_plan.markers[{index}] pending verification evidence worktree differs from checkpoint commit"
                             )
@@ -2025,12 +2328,7 @@ def validate_projection_integrity(
                             f"pr_marker_plan.markers[{index}] checkpoint evidence is absent from the authorized PR head"
                         )
                     else:
-                        evidence_path = _repo_file(repo_root, evidence_ref)
-                        if (
-                            evidence_path is None
-                            or not evidence_path.is_file()
-                            or evidence_path.read_bytes() != authorized_evidence_bytes
-                        ):
+                        if _read_repo_bytes(repo_root, evidence_ref) != authorized_evidence_bytes:
                             checkpoint_file_errors.append(
                                 f"pr_marker_plan.markers[{index}] checkpoint evidence differs from the authorized PR head"
                             )
@@ -2051,8 +2349,11 @@ def validate_projection_integrity(
                     else immutable_evidence_bytes
                 )
                 if checkpoint_status != "complete" and not strict_contract:
-                    evidence_path = _repo_file(repo_root, evidence_ref) if repo_root else None
-                    evidence = _load_json_object(evidence_path) if evidence_path and evidence_path.is_file() else None
+                    evidence = _load_json_bytes(
+                        _read_repo_bytes(repo_root, evidence_ref)
+                        if repo_root is not None
+                        else None
+                    )
                 if (
                     strict_contract
                     and repo_root is not None
@@ -2215,8 +2516,9 @@ def validate_projection_integrity(
                                     if isinstance(correction_path, str)
                                     else None
                                 )
-                                correction_target = _repo_file(
-                                    repo_root, correction_path,
+                                worktree_correction = _read_repo_bytes(
+                                    repo_root,
+                                    correction_path,
                                 )
                                 if committed_correction is None:
                                     checkpoint_file_errors.append(
@@ -2236,12 +2538,7 @@ def validate_projection_integrity(
                                             f"{prefix} differs from the authorized PR head"
                                         )
                                         correction_valid = False
-                                    if (
-                                        correction_target is None
-                                        or not correction_target.is_file()
-                                        or correction_target.read_bytes()
-                                        != committed_correction
-                                    ):
+                                    if worktree_correction != committed_correction:
                                         checkpoint_file_errors.append(
                                             f"{prefix} worktree bytes differ from its correction commit"
                                         )
@@ -2514,7 +2811,12 @@ def validate_projection_integrity(
                             checkpoint_evidence_errors.append(
                                 f"pr_marker_plan.markers[{index}].implementation_checkpoint.commit_sha is not an ancestor of HEAD"
                             )
-                if strict_contract and evidence is not None and tasks_path and current_tasks_sha:
+                if (
+                    strict_contract
+                    and evidence is not None
+                    and current_tasks_text is not None
+                    and current_tasks_sha
+                ):
                     primary_task_values = _string_list(raw_marker.get("task_ids"))
                     folded_task_values = _string_list(raw_marker.get("folded_polish_task_ids"))
                     marker_task_values = (
@@ -2527,7 +2829,7 @@ def validate_projection_integrity(
                     freshness = checkpoint.get("freshness") if checkpoint_status == "complete" else evidence
                     freshness = freshness if isinstance(freshness, dict) else {}
                     expected_current_marker_sha = (
-                        _marker_tasks_sha(tasks_path, marker_task_ids)
+                        _marker_tasks_sha_text(current_tasks_text, marker_task_ids)
                         if marker_task_values is not None
                         else None
                     )
@@ -2669,6 +2971,9 @@ def validate_projection_integrity(
             "invalid": ("MARKER_PLAN_INVALID", {"error"}),
         }
         if strict_contract and plan_status in diagnostic_warnings:
+            marker_plan_status_errors.append(
+                f"pr_marker_plan.status {plan_status} is a correctness stop"
+            )
             code, severities = diagnostic_warnings[plan_status]
             warnings = marker_plan.get("warnings")
             if not isinstance(warnings, list) or not any(

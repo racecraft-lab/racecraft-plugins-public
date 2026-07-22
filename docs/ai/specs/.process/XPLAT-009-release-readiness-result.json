@@ -425,11 +425,11 @@
               "transform": "claude_guard_strip"
             },
             {
-              "byte_count": 2438,
+              "byte_count": 2463,
               "kind": "skill",
               "path": "skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
               "required": true,
-              "sha256": "bd0e7286dda14a53ae7feeb47f67641c09489d00bde7501b05833be96efcefb2",
+              "sha256": "db33fbe875559fc83fd66ba676e253baa96c30dea68bd499c80ed80eedd670c9",
               "source_path": "speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
               "transform": "none"
             },
@@ -686,11 +686,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 136940,
+              "byte_count": 148633,
               "kind": "skill",
               "path": "skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "required": true,
-              "sha256": "3dbadccc4c91d9811c2b4386864ef817c69987fa64a72d99ceed8d8b0d1d8760",
+              "sha256": "e2d078f7a90aeb65d92d9cae5ae33f48c2ec89b9f3d8c30c3755c198875efdd8",
               "source_path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "transform": "none"
             },
@@ -1300,11 +1300,11 @@
               "transform": "claude_guard_strip"
             },
             {
-              "byte_count": 2438,
+              "byte_count": 2463,
               "kind": "skill",
               "path": "skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
               "required": true,
-              "sha256": "bd0e7286dda14a53ae7feeb47f67641c09489d00bde7501b05833be96efcefb2",
+              "sha256": "db33fbe875559fc83fd66ba676e253baa96c30dea68bd499c80ed80eedd670c9",
               "source_path": "speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
               "transform": "none"
             },
@@ -1561,11 +1561,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 136940,
+              "byte_count": 148633,
               "kind": "skill",
               "path": "skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "required": true,
-              "sha256": "3dbadccc4c91d9811c2b4386864ef817c69987fa64a72d99ceed8d8b0d1d8760",
+              "sha256": "e2d078f7a90aeb65d92d9cae5ae33f48c2ec89b9f3d8c30c3755c198875efdd8",
               "source_path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "transform": "none"
             },
@@ -1976,7 +1976,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "bcb076ee3c62fb646d82a186e0aad4f91aa56a6046f7aaffd5d33536d7be0b4b",
+          "file_tree_hash": "a9311f3d24ea4dbfe18aab6189abe8d662e128e8b1972290b4723ba55f3ee015",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2223,11 +2223,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 2438,
+              "byte_count": 2463,
               "kind": "skill",
               "path": "skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
               "required": true,
-              "sha256": "bd0e7286dda14a53ae7feeb47f67641c09489d00bde7501b05833be96efcefb2",
+              "sha256": "db33fbe875559fc83fd66ba676e253baa96c30dea68bd499c80ed80eedd670c9",
               "source_path": "speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
               "transform": "none"
             },
@@ -2538,11 +2538,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 136940,
+              "byte_count": 148633,
               "kind": "skill",
               "path": "skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "required": true,
-              "sha256": "3dbadccc4c91d9811c2b4386864ef817c69987fa64a72d99ceed8d8b0d1d8760",
+              "sha256": "e2d078f7a90aeb65d92d9cae5ae33f48c2ec89b9f3d8c30c3755c198875efdd8",
               "source_path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "transform": "none"
             },
@@ -3251,11 +3251,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 2438,
+              "byte_count": 2463,
               "kind": "skill",
               "path": "skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
               "required": true,
-              "sha256": "bd0e7286dda14a53ae7feeb47f67641c09489d00bde7501b05833be96efcefb2",
+              "sha256": "db33fbe875559fc83fd66ba676e253baa96c30dea68bd499c80ed80eedd670c9",
               "source_path": "speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
               "transform": "none"
             },
@@ -3566,11 +3566,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 136940,
+              "byte_count": 148633,
               "kind": "skill",
               "path": "skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "required": true,
-              "sha256": "3dbadccc4c91d9811c2b4386864ef817c69987fa64a72d99ceed8d8b0d1d8760",
+              "sha256": "e2d078f7a90aeb65d92d9cae5ae33f48c2ec89b9f3d8c30c3755c198875efdd8",
               "source_path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
               "transform": "none"
             },
@@ -4044,7 +4044,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "a875812f6ee7e15ed099dfe4060139d2246a5ec4c5c143b1fa2f523ee4c07eb1",
+          "file_tree_hash": "35492a3f1811cf08e0f6b29337fd11f2aec6addd2b11068c04ad810517a44cc3",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

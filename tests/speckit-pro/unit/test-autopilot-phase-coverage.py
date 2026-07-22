@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -11,6 +12,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -33,6 +35,22 @@ REPORT_SCHEMA = (
     / "contracts"
     / "autopilot-phase-coverage-report.schema.json"
 )
+
+
+def load_validator_module() -> object:
+    spec = importlib.util.spec_from_file_location(
+        "speckit_autopilot_phase_coverage_validator",
+        VALIDATOR,
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("could not load autopilot phase coverage validator")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+VALIDATOR_MODULE = load_validator_module()
 
 POST_STEPS = [
     "Post: Doctor Extension Check",
@@ -308,6 +326,73 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertEqual(report["status"], "pass")
         self.assertEqual(report["missing_state_post_items"], [])
+
+    def test_repo_reader_accepts_regular_files_and_rejects_symlinks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "repo"
+            root.mkdir()
+            source = root / "safe.json"
+            source.write_bytes(b'{"safe":true}')
+            self.assertEqual(
+                VALIDATOR_MODULE._read_repo_bytes(root, "safe.json"),
+                b'{"safe":true}',
+            )
+            outside = Path(tmp) / "outside.json"
+            outside.write_bytes(b'{"outside":true}')
+            link = root / "link.json"
+            try:
+                link.symlink_to(outside)
+            except OSError as exc:
+                self.skipTest(f"symlinks unavailable: {exc}")
+            self.assertIsNone(
+                VALIDATOR_MODULE._read_repo_bytes(root, "link.json")
+            )
+
+    @unittest.skipUnless(
+        getattr(VALIDATOR_MODULE, "HAS_DESCRIPTOR_RELATIVE_IO", False),
+        "requires descriptor-relative no-follow reads",
+    )
+    def test_repo_reader_rejects_directory_swap_during_open(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            directory = root / "evidence"
+            directory.mkdir()
+            source = directory / "record.json"
+            source.write_bytes(b'{"original":true}')
+            moved_directory = root / "evidence-original"
+            original_open = VALIDATOR_MODULE.os.open
+            swapped = False
+
+            def replace_directory(
+                path: object,
+                flags: int,
+                *args: object,
+                **kwargs: object,
+            ) -> int:
+                nonlocal swapped
+                if (
+                    path == "record.json"
+                    and kwargs.get("dir_fd") is not None
+                    and not swapped
+                ):
+                    swapped = True
+                    directory.rename(moved_directory)
+                    directory.mkdir()
+                    (directory / "record.json").write_bytes(b'{"replacement":true}')
+                return original_open(path, flags, *args, **kwargs)
+
+            with mock.patch.object(
+                VALIDATOR_MODULE.os,
+                "open",
+                side_effect=replace_directory,
+            ):
+                self.assertIsNone(
+                    VALIDATOR_MODULE._read_repo_bytes(
+                        root,
+                        "evidence/record.json",
+                    )
+                )
+            self.assertTrue(swapped)
 
     def test_hidden_full_workflow_does_not_satisfy_visible_contract(self) -> None:
         complete_workflow = workflow_text()
@@ -670,8 +755,13 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "details": {},
                     },
                 ]
-                _exit_code, report = self.run_validator(workflow_text(), state)
-                self.assertEqual(report["marker_plan_status_errors"], [])
+                exit_code, report = self.run_validator(workflow_text(), state)
+                self.assertEqual(exit_code, 1)
+                self.assertEqual(report["status"], "fail")
+                self.assertEqual(
+                    report["marker_plan_status_errors"],
+                    [f"pr_marker_plan.status {plan_status} is a correctness stop"],
+                )
 
     def test_stale_and_invalid_plans_preserve_terminal_emission_mappings(self) -> None:
         cases = (
@@ -703,8 +793,12 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         }],
                     }
                 )
-                _exit_code, report = self.run_validator(workflow_text(), state)
-                self.assertEqual(report["marker_plan_status_errors"], [])
+                exit_code, report = self.run_validator(workflow_text(), state)
+                self.assertEqual(exit_code, 1)
+                self.assertEqual(
+                    report["marker_plan_status_errors"],
+                    [f"pr_marker_plan.status {plan_status} is a correctness stop"],
+                )
                 self.assertEqual(report["emission_mapping_errors"], [])
 
     def test_emitting_plan_supports_partial_monotonic_emission(self) -> None:
@@ -736,6 +830,49 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         _exit_code, report = self.run_validator(workflow_text(), state)
         self.assertEqual(report["marker_plan_status_errors"], [])
         self.assertEqual(report["emission_mapping_errors"], [])
+
+    def test_marker_contract_rejects_gapped_and_reordered_review_orders(self) -> None:
+        state = self.projected_state(
+            plan_status="in_progress",
+            phase_status="in_progress",
+            checkpoint={"status": "pending"},
+        )
+        first = state["pr_marker_plan"]["markers"][0]
+        second = json.loads(json.dumps(first))
+        second.update(
+            {
+                "id": "us2",
+                "review_order": 2,
+                "source_boundary": {
+                    "section": "User Story 2",
+                    "story_id": 2,
+                    "start_task_id": "T002",
+                    "end_task_id": "T002",
+                },
+                "task_ids": ["T002"],
+            }
+        )
+        state["pr_marker_plan"]["markers"] = [first, second]
+        for review_orders, expected in (
+            (
+                (1, 3),
+                "pr_marker_plan.markers[1].review_order must equal its contiguous marker array position 2",
+            ),
+            (
+                (2, 1),
+                "pr_marker_plan.markers[0].review_order must equal its contiguous marker array position 1",
+            ),
+        ):
+            with self.subTest(review_orders=review_orders):
+                candidate = json.loads(json.dumps(state))
+                for marker, review_order in zip(
+                    candidate["pr_marker_plan"]["markers"],
+                    review_orders,
+                ):
+                    marker["review_order"] = review_order
+                exit_code, report = self.run_validator(workflow_text(), candidate)
+                self.assertEqual(exit_code, 1)
+                self.assertIn(expected, report["marker_plan_status_errors"])
 
     def test_marker_contract_rejects_duplicate_identity_task_and_file_ownership(self) -> None:
         state = self.projected_state(
@@ -2477,7 +2614,8 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
-                f"files[{tracked_manifest_index}].marker_ids must contain exactly one marker owner",
+                "changed-file manifest schema: "
+                f"changed_file_manifest.files[{tracked_manifest_index}].marker_ids has too many items",
                 report["changed_file_manifest_errors"],
             )
 
