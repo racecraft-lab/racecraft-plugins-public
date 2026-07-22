@@ -133,7 +133,9 @@ stop condition.
   inferring browser visibility or text-node boundaries.
 - `codex_capability_sources.py` owns current source refresh, claim-scoped
   invalidation, exact capture-digest binding, and admission without modifying
-  historical `OSL-*` rows. Every body-identity change invalidates all bindings.
+  historical `OSL-*` rows. It recomputes the source-ID-sorted aggregate identity
+  during normalization and raw validation. Every body-identity change
+  invalidates all bindings.
 - `codex_capability_observations.py` owns identity-bound surface collection,
   normalization, hidden visibility, and disagreement records.
 - `codex_capability_matrix.py` owns candidate-matrix construction and the

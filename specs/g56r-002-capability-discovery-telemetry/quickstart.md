@@ -47,8 +47,9 @@ time, status, invalidated claim IDs, base64-encoded retrieved UTF-8 body,
 `retrieved_body_format: normalized_plain_text`, and content-addressed bounded
 extracts for every source. Raw HTML and angle-bracket markup are rejected; the
 adapter never infers browser visibility or text-node separators. A supplied
-capture digest must match the exact canonical capture bytes, and every changed
-body must invalidate all bindings for that source. Then run the adapter's
+capture digest must match the exact source-ID-sorted canonical capture bytes;
+raw validation recomputes the same identity. Every changed body must invalidate
+all bindings for that source. Then run the adapter's
 offline normalization and authority check:
 
 `CAPTURE_SHA256` is the lowercase SHA-256 of the complete capture file bytes.

@@ -645,6 +645,8 @@ class CapabilityContractTests(unittest.TestCase):
                 self.manifest, captured, source_capture_digest=capabilities.digest(b"unrelated capture"),
             )
         refreshes = capabilities.normalize_source_refreshes(self.manifest, captured)
+        reordered_refreshes = capabilities.normalize_source_refreshes(self.manifest, list(reversed(captured)))
+        self.assertEqual(reordered_refreshes, refreshes)
         result = capabilities.validate_source_refreshes(self.manifest, refreshes)
         self.assertEqual(result["count"], 22)
         expected_invalidations = sorted({
@@ -683,6 +685,21 @@ class CapabilityContractTests(unittest.TestCase):
         })
         with self.assertRaisesRegex(ValueError, "body change must invalidate every bound claim"):
             capabilities.validate_published_source_refreshes(self.manifest, legacy_refreshes)
+        stale_capture_binding = copy.deepcopy(refreshes)
+        altered = stale_capture_binding[1]
+        altered_body = base64.b64decode(altered["retrieved_body_b64"]) + b" Additional contradiction."
+        altered["retrieved_body_b64"] = base64.b64encode(altered_body).decode()
+        altered["body_digest"] = capabilities.digest(altered_body)
+        altered["status"] = "changed"
+        altered["invalidated_claim_ids"] = copy.deepcopy(altered["claim_bindings"])
+        altered["retrieval_evidence_digest"] = capabilities.digest({
+            "canonical_url": altered["canonical_url"],
+            "retrieved_at": altered["retrieved_at"],
+            "body_digest": altered["body_digest"],
+            "bounded_extracts": altered["bounded_extracts"],
+        })
+        with self.assertRaisesRegex(ValueError, "do not bind their canonical raw capture"):
+            capabilities.validate_source_refreshes(self.manifest, stale_capture_binding)
         with tempfile.TemporaryDirectory() as tmp:
             private_root = Path(tmp); private_root.chmod(0o700)
             raw_root = private_root / "raw"; raw_root.mkdir(mode=0o700)

@@ -64,7 +64,8 @@ closed `retrieved_body_format: normalized_plain_text` declaration so the
 adapter can recheck the body and extracts without browser semantics. Raw HTML
 or angle-bracket markup is rejected. The published `OfficialSourceRefresh`
 strips both private fields but retains the shared aggregate capture digest,
-which must equal the exact canonical aggregate capture bytes. Extract
+which must equal the exact source-ID-sorted canonical aggregate capture bytes.
+Normalization and raw refresh validation both recompute that digest. Extract
 normalization is the closed
 `unicode_text_whitespace_collapsed_utf8` contract. Multi-claim sources use the
 reviewed extract-to-claim dependency registry for metadata-only extract changes;

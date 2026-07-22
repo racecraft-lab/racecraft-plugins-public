@@ -61,7 +61,9 @@ The aggregate capture is stored as the exact-byte content-addressed object
 `sha256:26b4bc034cac55e149b1b0b5c7648531be2f84d46385160f3c6c30ac582df70a`;
 the refresh command rejects a filename that does not match those bytes, copies
 that exact object into `raw_evidence_root`, and binds its digest into every
-sanitized source-refresh row in the freeze.
+sanitized source-refresh row in the freeze. Both normalization and later raw
+revalidation reconstruct the 22 rows in canonical source-ID order and require
+that recomputed identity, so a stale shared digest cannot survive a row change.
 
 The pinned identity records `codex-cli 0.144.4` and an executable SHA-256 rather
 than an absolute executable path. The three surface collections emitted

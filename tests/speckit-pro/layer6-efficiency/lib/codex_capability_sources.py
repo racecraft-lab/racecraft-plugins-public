@@ -7,6 +7,11 @@ from codex_capability_io import *
 
 # Exact identity of the published predecessor set; any byte change loses this compatibility boundary.
 _LEGACY_SOURCE_REFRESH_SET_DIGEST = "sha256:6f382a11b06df40e03719d713fae09c8d88a9ddb9586b735a48f039ac8505ea9"
+_SOURCE_CAPTURE_KEYS = frozenset({
+    "official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at",
+    "status", "invalidated_claim_ids", "retrieved_body_b64", "retrieved_body_format",
+    "bounded_extracts",
+})
 
 def _extract_claim_dependencies(source):
     bindings = set(source["claim_bindings"])
@@ -106,23 +111,30 @@ def _changed_extract_claims(source, extracts):
     return claims or bindings
 
 
+def _source_capture_digest(rows):
+    captured = [
+        {key: row[key] for key in _SOURCE_CAPTURE_KEYS}
+        for row in rows
+    ]
+    captured.sort(key=lambda row: row["official_source_ledger_id"])
+    return digest(canonical_bytes(captured) + b"\n")
+
+
 def normalize_source_refreshes(manifest, captured, *, source_capture_digest=None, allow_synthetic_manifest=False):
     validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest)
-    actual_capture_digest = digest(canonical_bytes(captured) + b"\n")
-    if source_capture_digest is not None and source_capture_digest != actual_capture_digest:
-        raise ValueError("source_capture_digest does not match captured bytes")
-    source_capture_digest = actual_capture_digest
-    _need_digest(source_capture_digest, "source_capture_digest")
     sources = {row["official_source_ledger_id"]: row for row in manifest["official_source_ledger"]}
     actual = [row.get("official_source_ledger_id") for row in captured]
-    if len(captured) != 22 or set(actual) != set(sources) or len(set(actual)) != 22:
+    if len(captured) != 22 or set(actual) != set(sources) or len(set(actual)) != 22 or any(set(row) != _SOURCE_CAPTURE_KEYS for row in captured):
         raise ValueError("source refresh must cover the 22 unique current records")
+    actual_capture_digest = _source_capture_digest(captured)
+    if source_capture_digest is not None and source_capture_digest != actual_capture_digest:
+        raise ValueError("source_capture_digest does not match captured bytes in canonical source-ID order")
+    source_capture_digest = actual_capture_digest
     statuses = {"confirmed_current", "changed", "redirected", "inaccessible", "withdrawn", "conflicting"}
-    measured = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "status", "invalidated_claim_ids", "retrieved_body_b64", "retrieved_body_format", "bounded_extracts"}
     normalized = []
     for item in captured:
         source, status = sources[item["official_source_ledger_id"]], item.get("status")
-        if set(item) != measured or item.get("requested_url") != source.get("requested_url") or not _openai_url(item.get("canonical_url")):
+        if item.get("requested_url") != source.get("requested_url") or not _openai_url(item.get("canonical_url")):
             raise ValueError("captured refresh identity or URL does not match current authority")
         if status not in statuses or not _utc_timestamp(item.get("retrieved_at")):
             raise ValueError("source refresh status or timestamp is invalid")
@@ -221,6 +233,12 @@ def validate_source_refreshes(manifest, refreshes, *, allow_synthetic_manifest=F
         if item["body_digest"] is None and body_bytes is not None or item["body_digest"] is not None and (body_bytes is None or item["body_digest"] != digest(body_bytes)):
             raise ValueError("source body digest does not match captured evidence")
     sanitized = [{key: item[key] for key in item if key not in {"retrieved_body_b64", "retrieved_body_format"}} for item in refreshes]
-    return validate_published_source_refreshes(manifest, sanitized, allow_synthetic_manifest=allow_synthetic_manifest)
+    validation = validate_published_source_refreshes(
+        manifest, sanitized, allow_synthetic_manifest=allow_synthetic_manifest,
+    )
+    capture_digests = {item["source_capture_digest"] for item in refreshes}
+    if len(capture_digests) != 1 or capture_digests.pop() != _source_capture_digest(refreshes):
+        raise ValueError("source refreshes do not bind their canonical raw capture")
+    return validation
 
 __all__ = [name for name in globals() if not name.startswith("__")]

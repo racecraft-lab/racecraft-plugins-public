@@ -163,6 +163,11 @@
   angle-bracket markup are rejected. The adapter collapses only whitespace that
   already exists in those plain-text bytes and never infers browser rendering,
   CSS visibility, intrinsic element state, or text-node separators.
+- **Q: What exactly does the aggregate source-capture digest identify?**
+  **A:** The 22 closed capture rows are sorted by source ID and encoded as
+  canonical JSON plus one trailing newline. Normalization and raw revalidation
+  both recompute that identity; a stored or caller-supplied digest is never
+  accepted on syntax or cross-row agreement alone.
 - **Q: Where and how long is raw evidence retained?** **A:** `raw_evidence_root`
   is a required content-addressed location outside the repository. Directories
   are operator-only mode `0700`; files are mode `0600` and have exactly one hard
