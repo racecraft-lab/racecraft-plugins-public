@@ -24,7 +24,7 @@ from test_result import run_counted  # noqa: E402
 
 
 SPEC_ID_NAME = re.compile(
-    r"[a-z][a-z0-9]*-\d{3}[a-z]?",
+    r"(?:[a-z][a-z0-9]*-\d{3}[a-z]?|[a-z][a-z0-9]*\d[a-z0-9]*_\d{3}[a-z]?)",
     re.IGNORECASE,
 )
 PURPOSE_NAMED_ROOTS = (
@@ -187,11 +187,19 @@ class UnitLayoutTests(unittest.TestCase):
         for path, mode in excluded:
             self.assertFalse(_is_repository_authored_script(path, mode), path)
 
-    def test_spec_id_pattern_rejects_compound_script_names(self) -> None:
+    def test_spec_id_pattern_detects_compound_script_names(self) -> None:
         for name in (
             "g56r-002.test.py",
             "check.g56r-002.mjs",
             "checkg56r-002helper.ts",
+        ):
+            self.assertIsNotNone(SPEC_ID_NAME.search(Path(name).stem), name)
+
+    def test_spec_id_pattern_detects_underscore_separators(self) -> None:
+        for name in (
+            "g56r_002.test.py",
+            "check.g56r_002.mjs",
+            "checkg56r_002helper.ts",
         ):
             self.assertIsNotNone(SPEC_ID_NAME.search(Path(name).stem), name)
 
