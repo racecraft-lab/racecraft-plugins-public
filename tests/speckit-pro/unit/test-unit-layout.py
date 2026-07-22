@@ -58,6 +58,56 @@ LEGACY_LAYOUT_PATHS = (
     "test-layer8-runner",
     "test-check-toolchain-pr10-baseline.txt",
 )
+SCRIPT_SUFFIXES = frozenset(
+    {
+        ".bash",
+        ".bat",
+        ".cjs",
+        ".cmd",
+        ".cts",
+        ".fish",
+        ".js",
+        ".jsx",
+        ".lua",
+        ".mjs",
+        ".mts",
+        ".php",
+        ".pl",
+        ".ps1",
+        ".psm1",
+        ".py",
+        ".pyw",
+        ".r",
+        ".rb",
+        ".sh",
+        ".tcl",
+        ".ts",
+        ".tsx",
+        ".zsh",
+    }
+)
+SCRIPT_DIRECTORY_NAMES = frozenset({"bin", "hooks", "scripts"})
+GENERATED_SCRIPT_PREFIXES = (
+    "dist/",
+    "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/",
+)
+NON_AUTHORED_DIRECTORY_NAMES = frozenset(
+    {"node_modules", "third_party", "vendor", "vendored"}
+)
+
+
+def _is_repository_authored_script(path: str, mode: str) -> bool:
+    relative = Path(path)
+    normalized = relative.as_posix()
+    if any(normalized.startswith(prefix) for prefix in GENERATED_SCRIPT_PREFIXES):
+        return False
+    if any(part in NON_AUTHORED_DIRECTORY_NAMES for part in relative.parts):
+        return False
+    return (
+        mode == "100755"
+        or relative.suffix.lower() in SCRIPT_SUFFIXES
+        or any(part in SCRIPT_DIRECTORY_NAMES for part in relative.parts[:-1])
+    )
 
 
 class UnitLayoutTests(unittest.TestCase):
@@ -113,20 +163,49 @@ class UnitLayoutTests(unittest.TestCase):
                         violations.append(f"{path.relative_to(TEST_ROOT)}::{node.name}")
         self.assertEqual(violations, [])
 
-    def test_authored_script_files_are_behavior_named(self) -> None:
+    def test_script_name_guard_covers_repository_authored_locations(self) -> None:
+        covered = (
+            ("scripts/test-g56r-002-capability-telemetry.py", "100644"),
+            ("docs-site/scripts/g56r-002-reference.mjs", "100644"),
+            (".specify/extensions/git/scripts/bash/g56r-002-commit.sh", "100644"),
+            (".claude/hooks/g56r-002-guard.py", "100644"),
+            ("bin/g56r-002-check", "100755"),
+        )
+        excluded = (
+            ("dist/codex/g56r-002-generated.py", "100644"),
+            (
+                "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/"
+                "installed-cache/codex/g56r-002-generated.py",
+                "100644",
+            ),
+            ("vendor/g56r-002-upstream.sh", "100644"),
+        )
+        for path, mode in covered:
+            self.assertTrue(_is_repository_authored_script(path, mode), path)
+        for path, mode in excluded:
+            self.assertFalse(_is_repository_authored_script(path, mode), path)
+
+    def test_tracked_authored_script_files_are_behavior_named(self) -> None:
+        completed = subprocess.run(
+            ["git", "ls-files", "--stage", "-z"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
         violations: list[str] = []
-        for root in (REPO_ROOT / "speckit-pro", TEST_ROOT):
-            for path in root.rglob("*"):
-                relative = path.relative_to(root)
-                if (
-                    not path.is_file()
-                    or path.suffix not in {".py", ".sh"}
-                    or "fixtures" in relative.parts
-                ):
-                    continue
-                if SPEC_ID_NAME.search(path.stem):
-                    violations.append(str(path.relative_to(REPO_ROOT)))
-        self.assertEqual(violations, [])
+        for record in completed.stdout.split("\0"):
+            if not record:
+                continue
+            metadata, relative = record.split("\t", 1)
+            mode = metadata.split(" ", 1)[0]
+            if not _is_repository_authored_script(relative, mode):
+                continue
+            if SPEC_ID_NAME.search(Path(relative).stem):
+                violations.append(relative)
+        self.assertEqual(violations, [], completed.stdout + completed.stderr)
 
     def test_tracked_paths_have_no_legacy_layout_names(self) -> None:
         completed = subprocess.run(
