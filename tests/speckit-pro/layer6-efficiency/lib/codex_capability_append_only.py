@@ -50,7 +50,10 @@ def _read_open_descriptor(descriptor):
     return b"".join(chunks)
 
 
-def _recover_append_only_target(path, payload, expected_parent_identity=None, *, directory_lock_held=False):
+def _recover_append_only_target(
+    path, payload, expected_parent_identity=None, *, directory_lock_held=False,
+    expected_temporary_name=None,
+):
     if not HAS_DESCRIPTOR_RELATIVE_IO:
         raise ValueError("append-only recovery requires descriptor-relative filesystem operations")
     target = Path(os.path.abspath(path)); parent = target.parent
@@ -108,14 +111,21 @@ def _recover_append_only_target(path, payload, expected_parent_identity=None, *,
         if target_before.st_nlink != 2:
             raise ValueError("append-only target retains unrecognized alternate hard links")
         candidates = []
-        for name in os.listdir(parent_descriptor):
-            if _APPEND_ONLY_TEMPORARY_NAME.fullmatch(name):
-                try:
-                    metadata = os.stat(name, dir_fd=parent_descriptor, follow_symlinks=False)
-                except FileNotFoundError:
-                    continue
-                if (metadata.st_dev, metadata.st_ino) == (target_before.st_dev, target_before.st_ino):
-                    candidates.append(name)
+        candidate_names = (
+            [expected_temporary_name] if expected_temporary_name is not None
+            else _bounded_directory_names(parent_descriptor, label="append-only recovery directory")
+        )
+        for name in candidate_names:
+            if not isinstance(name, str) or not _APPEND_ONLY_TEMPORARY_NAME.fullmatch(name):
+                if expected_temporary_name is not None:
+                    raise ValueError("append-only recovery temporary name is invalid")
+                continue
+            try:
+                metadata = os.stat(name, dir_fd=parent_descriptor, follow_symlinks=False)
+            except FileNotFoundError:
+                continue
+            if (metadata.st_dev, metadata.st_ino) == (target_before.st_dev, target_before.st_ino):
+                candidates.append(name)
         if len(candidates) != 1:
             if target_is_committed(verify_payload=True):
                 return False
@@ -178,7 +188,7 @@ def _recover_append_only_directory(directory, expected_identity, *, require_cont
             or _stable_directory_identity(os.fstat(descriptor)) != expected_identity
         ):
             raise ValueError("append-only recovery directory changed while locking")
-        for temporary_name in os.listdir(descriptor):
+        for temporary_name in _bounded_directory_names(descriptor, label="append-only recovery directory"):
             if not _APPEND_ONLY_TEMPORARY_NAME.fullmatch(temporary_name):
                 continue
             try:
@@ -213,21 +223,24 @@ def _recover_append_only_directory(directory, expected_identity, *, require_cont
                 os.fsync(descriptor)
             finally:
                 os.close(temporary_descriptor)
-        names = os.listdir(descriptor)
+        names = _bounded_directory_names(descriptor, label="append-only recovery directory")
+        entries_by_inode = {}
+        metadata_by_name = {}
+        for name in names:
+            try:
+                metadata = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
+            except FileNotFoundError as error:
+                raise ValueError("append-only recovery directory changed during recovery") from error
+            metadata_by_name[name] = metadata
+            entries_by_inode.setdefault((metadata.st_dev, metadata.st_ino), []).append(name)
         for temporary_name in names:
             if not _APPEND_ONLY_TEMPORARY_NAME.fullmatch(temporary_name):
                 continue
-            try:
-                temporary = os.stat(temporary_name, dir_fd=descriptor, follow_symlinks=False)
-            except FileNotFoundError:
-                continue
-            targets = []
-            for name in names:
-                if name == temporary_name or _APPEND_ONLY_TEMPORARY_NAME.fullmatch(name):
-                    continue
-                candidate = os.stat(name, dir_fd=descriptor, follow_symlinks=False)
-                if (candidate.st_dev, candidate.st_ino) == (temporary.st_dev, temporary.st_ino):
-                    targets.append(name)
+            temporary = metadata_by_name[temporary_name]
+            targets = [
+                name for name in entries_by_inode[(temporary.st_dev, temporary.st_ino)]
+                if name != temporary_name and not _APPEND_ONLY_TEMPORARY_NAME.fullmatch(name)
+            ]
             if temporary.st_nlink != 2 or len(targets) != 1:
                 raise ValueError("append-only temporary link lacks one published target")
             target = Path(directory) / targets[0]
@@ -236,9 +249,13 @@ def _recover_append_only_directory(directory, expected_identity, *, require_cont
                 raise ValueError("append-only recovery target is not content-addressed")
             _recover_append_only_target(
                 target, payload, expected_identity, directory_lock_held=True,
+                expected_temporary_name=temporary_name,
             )
         if (
-            any(_APPEND_ONLY_TEMPORARY_NAME.fullmatch(name) for name in os.listdir(descriptor))
+            any(
+                _APPEND_ONLY_TEMPORARY_NAME.fullmatch(name)
+                for name in _bounded_directory_names(descriptor, label="append-only recovery directory")
+            )
             or _stable_directory_identity(os.stat(directory, follow_symlinks=False)) != expected_identity
             or _stable_directory_identity(os.fstat(descriptor)) != expected_identity
         ):

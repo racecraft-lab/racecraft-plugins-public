@@ -1582,6 +1582,23 @@ class CapabilityContractTests(unittest.TestCase):
                 )
             self.assertEqual(validate_unknown_evidence.call_count, 3)
             self.assertEqual(len(publication["retention_record_digests"]), 4)
+            raced_publication_path = Path(tmp) / "raced-candidate-freeze.json"
+            original_store_receipt = capability_freeze._store_publication_receipt_locked
+
+            def replace_output_during_receipt(*args: object, **kwargs: object) -> str:
+                receipt_digest = original_store_receipt(*args, **kwargs)
+                raced_publication_path.unlink()
+                raced_publication_path.write_bytes(b'{"substituted":true}\n')
+                return receipt_digest
+
+            with mock.patch.object(
+                capability_freeze, "_store_publication_receipt_locked",
+                side_effect=replace_output_during_receipt,
+            ), self.assertRaisesRegex(ValueError, "changed while its receipt was committed"):
+                capabilities.publish_with_raw_evidence_retention(
+                    freeze, raced_publication_path, raw_root, ROOT, manifest=self.manifest,
+                )
+            self.assertEqual(raced_publication_path.read_bytes(), b'{"substituted":true}\n')
             self.assertEqual(capabilities.publish_with_raw_evidence_retention(
                 freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
             ), publication)
@@ -2449,6 +2466,44 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(target.read_bytes(), payload)
             self.assertEqual(target.stat().st_nlink, 1)
             self.assertFalse(any(raw.glob(f"{capabilities.PRIVATE_TEMPORARY_PREFIX}*")))
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_append_only_recovery_uses_bounded_linear_directory_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for index in range(24):
+                payload = f"payload-{index}\n".encode()
+                temporary = root / f"{capabilities.PRIVATE_TEMPORARY_PREFIX}{index:032x}"
+                target = root / f"published-{index}.json"
+                temporary.write_bytes(payload); temporary.chmod(0o600)
+                os.link(temporary, target)
+            root_identity = capability_io._stable_directory_identity(
+                os.stat(root, follow_symlinks=False),
+            )
+            with mock.patch.object(
+                capability_append_only, "_bounded_directory_names",
+                wraps=capability_append_only._bounded_directory_names,
+            ) as bounded_snapshots:
+                capability_append_only._recover_append_only_directory(
+                    root, root_identity, require_content_addressed=False,
+                )
+            self.assertEqual(bounded_snapshots.call_count, 3)
+            self.assertFalse(any(root.glob(f"{capabilities.PRIVATE_TEMPORARY_PREFIX}*")))
+            self.assertTrue(all((root / f"published-{index}.json").stat().st_nlink == 1 for index in range(24)))
+
+            bounded = root / "bounded"
+            bounded.mkdir()
+            for index in range(3):
+                (bounded / f"entry-{index}").write_bytes(b"entry\n")
+            bounded_identity = capability_io._stable_directory_identity(
+                os.stat(bounded, follow_symlinks=False),
+            )
+            with mock.patch.object(
+                capability_io, "CAPABILITY_JSON_MAX_TOTAL_NODES", 2,
+            ), self.assertRaisesRegex(ValueError, "maximum entry count"):
+                capability_append_only._recover_append_only_directory(
+                    bounded, bounded_identity, require_content_addressed=False,
+                )
 
     def test_json_inputs_executable_hashing_and_publication_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

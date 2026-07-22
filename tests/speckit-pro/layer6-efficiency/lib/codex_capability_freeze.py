@@ -363,11 +363,10 @@ def publish_with_raw_evidence_retention(
         )
         if not already_published:
             _write(output, freeze, append_only=True)
-        if not _publication_target_matches(output, payload):
-            raise ValueError("publication output was not retained under its canonical bytes")
-        receipt_digest = _store_publication_receipt_locked(
-            freeze, retention_record_digests, raw, raw_identity, repository_root,
-        )
+        with _bound_publication_target(output, payload, receipt_commit=True):
+            receipt_digest = _store_publication_receipt_locked(
+                freeze, retention_record_digests, raw, raw_identity, repository_root,
+            )
         validate_raw_evidence_root(raw, repository_root)
         return {
             "retention_record_digests": retention_record_digests,

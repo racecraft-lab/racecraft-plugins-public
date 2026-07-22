@@ -27,6 +27,17 @@ def _raw_directory_state(metadata):
     )
 
 
+def _bounded_directory_names(descriptor, *, limit=None, label):
+    limit = CAPABILITY_JSON_MAX_TOTAL_NODES if limit is None else limit
+    names = []
+    with os.scandir(descriptor) as entries:
+        for entry in entries:
+            if len(names) >= limit:
+                raise ValueError(f"{label} exceeds the maximum entry count")
+            names.append(entry.name)
+    return sorted(names)
+
+
 def _raw_evidence_tree_snapshot(raw):
     directory_flags = (
         os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
@@ -45,7 +56,10 @@ def _raw_evidence_tree_snapshot(raw):
         snapshot[parts] = ("directory", directory_state)
         if len(snapshot) > CAPABILITY_JSON_MAX_TOTAL_NODES:
             raise ValueError("raw_evidence_root exceeds the maximum entry count")
-        names = sorted(os.listdir(descriptor))
+        names = _bounded_directory_names(
+            descriptor, limit=CAPABILITY_JSON_MAX_TOTAL_NODES - len(snapshot),
+            label="raw_evidence_root",
+        )
         for name in names:
             if not name or Path(name).name != name:
                 raise ValueError("raw_evidence_root contains an invalid entry name")
@@ -91,7 +105,13 @@ def _raw_evidence_tree_snapshot(raw):
                     os.close(source)
             else:
                 raise ValueError("raw_evidence_root may contain only regular files and directories")
-        if sorted(os.listdir(descriptor)) != names or _raw_directory_state(os.fstat(descriptor)) != directory_state:
+        if (
+            _bounded_directory_names(
+                descriptor, limit=len(names),
+                label="raw_evidence_root",
+            ) != names
+            or _raw_directory_state(os.fstat(descriptor)) != directory_state
+        ):
             raise ValueError("raw evidence directory changed during validation")
 
     root_before = os.stat(raw, follow_symlinks=False)

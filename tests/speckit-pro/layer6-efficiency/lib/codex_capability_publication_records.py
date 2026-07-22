@@ -98,13 +98,92 @@ def _register_raw_evidence_retention_locked(freeze, raw, raw_identity, repositor
 
 
 def _publication_target_matches(path, payload):
-    target = Path(path)
-    if not target.exists():
+    target = Path(os.path.abspath(path))
+    try:
+        os.stat(target, follow_symlinks=False)
+    except FileNotFoundError:
         return False
     _recover_append_only_target(target, payload)
-    if _read_bounded_regular_file(target, require_single_link=True) != payload:
-        raise ValueError("publication output already exists with different bytes")
+    with _bound_publication_target(target, payload):
+        pass
     return True
+
+
+def _validate_bound_publication_target(
+    parent_descriptor, target_name, target_descriptor, payload, bound_identity=None,
+    *, mismatch_message,
+):
+    opened_before = os.fstat(target_descriptor)
+    current_before = os.stat(target_name, dir_fd=parent_descriptor, follow_symlinks=False)
+    if (
+        not stat.S_ISREG(opened_before.st_mode)
+        or opened_before.st_nlink != 1
+        or _stable_file_identity(current_before) != _stable_file_identity(opened_before)
+    ):
+        if bound_identity is not None:
+            raise ValueError(mismatch_message)
+        raise ValueError("publication output is not a stable single-link regular file")
+    retained = _read_open_descriptor(target_descriptor)
+    opened_after = os.fstat(target_descriptor)
+    current_after = os.stat(target_name, dir_fd=parent_descriptor, follow_symlinks=False)
+    identity = _stable_file_identity(opened_after)
+    if (
+        retained != payload
+        or identity != _stable_file_identity(opened_before)
+        or _stable_file_identity(current_after) != identity
+        or (bound_identity is not None and identity != bound_identity)
+    ):
+        raise ValueError(mismatch_message)
+    return identity
+
+
+@contextmanager
+def _bound_publication_target(path, payload, *, receipt_commit=False):
+    target = Path(os.path.abspath(path)); parent = target.parent
+    parent_metadata = os.stat(parent, follow_symlinks=False)
+    if not stat.S_ISDIR(parent_metadata.st_mode):
+        raise ValueError("publication output parent must be a real directory")
+    parent_identity = _stable_directory_identity(parent_metadata)
+    parent_descriptor = _private_directory_descriptor(parent, parent_identity)
+    target_descriptor = None
+    mismatch_message = (
+        "publication output changed while its receipt was committed"
+        if receipt_commit else "publication output already exists with different bytes"
+    )
+    try:
+        _acquire_append_only_directory_lock(parent_descriptor, wait=True)
+        _assert_private_directory_current(parent, parent_descriptor, parent_identity)
+        try:
+            target_descriptor = os.open(
+                target.name,
+                os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+                dir_fd=parent_descriptor,
+            )
+        except FileNotFoundError as error:
+            raise ValueError(mismatch_message) from error
+        try:
+            bound_identity = _validate_bound_publication_target(
+                parent_descriptor, target.name, target_descriptor, payload,
+                mismatch_message=mismatch_message,
+            )
+        except FileNotFoundError as error:
+            raise ValueError(mismatch_message) from error
+        os.fsync(parent_descriptor)
+        yield
+        try:
+            final_identity = _validate_bound_publication_target(
+                parent_descriptor, target.name, target_descriptor, payload, bound_identity,
+                mismatch_message=mismatch_message,
+            )
+        except FileNotFoundError as error:
+            raise ValueError(mismatch_message) from error
+        if final_identity != bound_identity:
+            raise ValueError(mismatch_message)
+        os.fsync(parent_descriptor)
+        _assert_private_directory_current(parent, parent_descriptor, parent_identity)
+    finally:
+        if target_descriptor is not None: os.close(target_descriptor)
+        os.close(parent_descriptor)
 
 
 def _store_publication_record_locked(freeze, retention_record_digests, raw, raw_identity, repository_root, *, intent):
