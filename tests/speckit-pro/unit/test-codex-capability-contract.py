@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import base64
+from collections.abc import Mapping
 from contextlib import contextmanager
 import fcntl
 import importlib
@@ -3520,12 +3521,6 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertTrue(callable(facade.replay_fixture))
         self.assertFalse(any(name.startswith("_g56r_treatment_runtime_") for name in sys.modules))
 
-    def observations(self, case: dict) -> list[dict]:
-        return [
-            capabilities.fixture_observation(surface, value, self.identity["client_identity_id"])
-            for surface, value in case["surfaces"].items()
-        ]
-
     def test_treatment_observation_schema_binds_every_field_to_its_value_shape(self) -> None:
         schema = load_json(
             ROOT
@@ -5222,6 +5217,172 @@ class TreatmentContractTests(unittest.TestCase):
             treatment.build_treatment_successor(
                 tampered, self.bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
             )
+
+    def test_successor_rejects_missing_or_mutated_treatment_evidence(self) -> None:
+        published = load_json(PUBLISHED_FREEZE_PATH)
+        prior = copy.deepcopy(published)
+        prior["candidate_freeze_id"] = (
+            "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
+        )
+        prior["telemetry_profile_id"] = (
+            "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
+        )
+        prior.pop("treatment_contract_digest", None)
+        prior.pop("treatment_evidence_digest", None)
+        prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
+        prior["supersedes_candidate_freeze_id"] = None
+        successor_bundle, successor_evidence = bind_trusted_treatment_evidence(
+            self.rebound(copy.deepcopy(self.bundle))
+        )
+
+        with self.assertRaisesRegex(ValueError, "trusted evidence bytes"):
+            treatment.build_treatment_successor(
+                prior,
+                successor_bundle,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+            )
+
+        observation_ref = next(
+            key for key in successor_evidence if key.startswith("fixture://")
+        )
+        noncanonical_observation = dict(successor_evidence)
+        noncanonical_observation[observation_ref] += b" "
+        with self.assertRaisesRegex(ValueError, "canonical JSON bytes"):
+            treatment.build_treatment_successor(
+                prior,
+                successor_bundle,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=noncanonical_observation,
+            )
+
+        proof_digest = successor_bundle["treatment_traces"][0][
+            "configured_route_proof"
+        ]["consumption_evidence_digest"]
+        mutated_proof = dict(successor_evidence)
+        mutated_proof[proof_digest] += b" "
+        with self.assertRaisesRegex(ValueError, "digest does not match"):
+            treatment.build_treatment_successor(
+                prior,
+                successor_bundle,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=mutated_proof,
+            )
+
+        source_digest = successor_bundle["fixture_provenance"]["raw_evidence_digest"]
+        mutated_source = dict(successor_evidence)
+        mutated_source[source_digest] += b" "
+        with self.assertRaisesRegex(ValueError, "digest does not match"):
+            treatment.build_treatment_successor(
+                prior,
+                successor_bundle,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=mutated_source,
+            )
+
+    def test_successor_rejects_treatment_evidence_after_publication(self) -> None:
+        published = load_json(PUBLISHED_FREEZE_PATH)
+        prior = copy.deepcopy(published)
+        prior["candidate_freeze_id"] = (
+            "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
+        )
+        prior["telemetry_profile_id"] = (
+            "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
+        )
+        prior.pop("treatment_contract_digest", None)
+        prior.pop("treatment_evidence_digest", None)
+        prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
+        prior["supersedes_candidate_freeze_id"] = None
+
+        future_route = copy.deepcopy(self.bundle)
+        future_route["route_resolutions"][0]["resolved_at"] = "2026-07-19T04:01:00Z"
+        next(
+            item
+            for item in future_route["treatment_traces"][0]["observations"]
+            if item["field_path"] == "route.resolved_at"
+        )["value"] = "2026-07-19T04:01:00Z"
+        future_route, future_route_evidence = bind_trusted_treatment_evidence(
+            self.rebound(rebind_treatment_owners(future_route))
+        )
+        with self.assertRaisesRegex(
+            ValueError, "publication timestamp precedes treatment evidence"
+        ):
+            treatment.build_treatment_successor(
+                prior,
+                future_route,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=future_route_evidence,
+            )
+
+        future_observation = copy.deepcopy(self.bundle)
+        next(
+            item
+            for item in future_observation["treatment_traces"][0]["observations"]
+            if item["captured_at"] is not None
+        )["captured_at"] = "2026-07-19T04:01:00Z"
+        future_observation, future_observation_evidence = bind_trusted_treatment_evidence(
+            self.rebound(future_observation)
+        )
+        with self.assertRaisesRegex(
+            ValueError, "publication timestamp precedes treatment evidence"
+        ):
+            treatment.build_treatment_successor(
+                prior,
+                future_observation,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=future_observation_evidence,
+            )
+
+    def test_successor_snapshots_mutating_treatment_evidence_once(self) -> None:
+        published = load_json(PUBLISHED_FREEZE_PATH)
+        prior = copy.deepcopy(published)
+        prior["candidate_freeze_id"] = (
+            "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
+        )
+        prior["telemetry_profile_id"] = (
+            "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
+        )
+        prior.pop("treatment_contract_digest", None)
+        prior.pop("treatment_evidence_digest", None)
+        prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
+        prior["supersedes_candidate_freeze_id"] = None
+        successor_bundle, successor_evidence = bind_trusted_treatment_evidence(
+            self.rebound(copy.deepcopy(self.bundle))
+        )
+
+        class SwitchingEvidence(Mapping[str, bytes]):
+            def __init__(self, values: dict[str, bytes], target: str) -> None:
+                self.values = values
+                self.target = target
+                self.reads: dict[str, int] = {}
+
+            def __getitem__(self, key: str) -> bytes:
+                self.reads[key] = self.reads.get(key, 0) + 1
+                value = self.values[key]
+                if key == self.target and self.reads[key] > 1:
+                    return value + b" "
+                return value
+
+            def __iter__(self):
+                return iter(self.values)
+
+            def __len__(self) -> int:
+                return len(self.values)
+
+        switching_evidence = SwitchingEvidence(
+            successor_evidence,
+            successor_bundle["fixture_provenance"]["raw_evidence_digest"],
+        )
+        successor = treatment.build_treatment_successor(
+            prior,
+            successor_bundle,
+            published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+            trusted_treatment_evidence=switching_evidence,
+        )
+        self.assertEqual(successor, published)
+        self.assertEqual(
+            switching_evidence.reads,
+            {key: 1 for key in successor_evidence},
+        )
 
     def test_successor_normalizes_malformed_predecessor_errors(self) -> None:
         bundle = self.rebound(copy.deepcopy(self.bundle))
