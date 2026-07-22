@@ -37,6 +37,7 @@ DELETION_RECORDS_DIR = "deletion-records"
 PUBLICATION_INTENTS_DIR = "publication-intents"
 PUBLICATION_RECEIPTS_DIR = "publication-receipts"
 RETENTION_LOCK_FILE = ".retention-lock"
+PRIVATE_TEMPORARY_PREFIX = ".capability-evidence-write-"
 ERROR_TERMINALS = ("timeout", "output_cap_exceeded", "launch_error", "transport_error", "authentication_error", "rate_limited", "malformed_response", "explicit_rejection", "service_reroute", "ambiguous_error")
 _UNSET = object()
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
@@ -1087,6 +1088,12 @@ def validate_canary_results(results, approvals=APPROVED_CANARY_EXECUTORS):
 
 
 def validate_raw_evidence_root(raw_root, repository_root):
+    return _validate_raw_evidence_root(
+        raw_root, repository_root, allow_private_temporaries=False,
+    )
+
+
+def _validate_raw_evidence_root(raw_root, repository_root, *, allow_private_temporaries):
     if os.name == "nt":
         raise ValueError("operator-only raw evidence permissions are not supported on Windows")
     lexical, repo = Path(os.path.abspath(raw_root)), Path(repository_root).resolve()
@@ -1095,15 +1102,39 @@ def validate_raw_evidence_root(raw_root, repository_root):
     if raw == repo or repo in raw.parents or _git_worktree_ancestor(raw):
         raise ValueError("raw_evidence_root must resolve outside every Git worktree")
     if not raw.is_dir(): raise ValueError("raw_evidence_root must be a directory")
-    for path in (raw, *raw.rglob("*")):
+    entries = (raw, *raw.rglob("*"))
+    regular_files = {}
+    for path in entries:
         if path.is_symlink(): raise ValueError("raw_evidence_root cannot contain symlinks")
+        temporary = path != raw and path.name.startswith(PRIVATE_TEMPORARY_PREFIX)
+        if temporary and not allow_private_temporaries:
+            raise ValueError("raw evidence root contains an orphan private temporary file; cleanup is required")
         if os.name != "nt":
-            mode = stat.S_IMODE(path.stat().st_mode)
+            metadata = path.stat()
+            mode = stat.S_IMODE(metadata.st_mode)
             if path.is_dir() and mode != 0o700 or path.is_file() and mode != 0o600:
                 raise ValueError("raw evidence directories require 0700 and files require 0600")
-            if path.is_file() and path.stat().st_nlink != 1:
-                raise ValueError("raw evidence files cannot have alternate hard links")
+            if path.is_file():
+                regular_files[path] = metadata
+            elif temporary:
+                raise ValueError("raw evidence temporary paths must be regular files")
         if not path.is_dir() and not path.is_file(): raise ValueError("raw_evidence_root may contain only regular files and directories")
+    identities = {}
+    for path, metadata in regular_files.items():
+        identities.setdefault((metadata.st_dev, metadata.st_ino), []).append(path)
+    for path, metadata in regular_files.items():
+        if metadata.st_nlink == 1:
+            continue
+        linked_paths = identities[(metadata.st_dev, metadata.st_ino)]
+        temporary_paths = [item for item in linked_paths if item.name.startswith(PRIVATE_TEMPORARY_PREFIX)]
+        recoverable_link_window = (
+            allow_private_temporaries
+            and len(temporary_paths) == 1
+            and len(linked_paths) == 2
+            and metadata.st_nlink == len(linked_paths)
+        )
+        if not recoverable_link_window:
+            raise ValueError("raw evidence files cannot have alternate hard links")
     return raw
 
 
@@ -1150,19 +1181,21 @@ def materialize_source_capture(raw_root, repository_root, capture_bytes):
     if not isinstance(captured, list):
         raise ValueError("captured refresh must be a JSON list")
     raw = validate_raw_evidence_root(raw_root, repository_root)
-    capture_digest = digest(capture_bytes)
-    target = raw / f"{capture_digest.removeprefix('sha256:')}.json"
-    if target.exists():
+    with _retention_lock(raw):
+        validate_raw_evidence_root(raw, repository_root)
+        capture_digest = digest(capture_bytes)
+        target = raw / f"{capture_digest.removeprefix('sha256:')}.json"
+        if target.exists():
+            _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
+            if retained != capture_bytes: raise ValueError("content-addressed source capture bytes disagree")
+            _fsync_directory(raw)
+        else:
+            _write_private_bytes(target, capture_bytes, append_only=True)
+        validate_raw_evidence_root(raw, repository_root)
         _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
-        if retained != capture_bytes: raise ValueError("content-addressed source capture bytes disagree")
-        _fsync_directory(raw)
-    else:
-        _write_private_bytes(target, capture_bytes, append_only=True)
-    validate_raw_evidence_root(raw, repository_root)
-    _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
-    if retained != capture_bytes:
-        raise ValueError("source capture was not retained under its content identity")
-    return capture_digest, target
+        if retained != capture_bytes:
+            raise ValueError("source capture was not retained under its content identity")
+        return capture_digest, target
 
 
 def validate_source_capture_evidence(manifest, refreshes, raw_root, repository_root):
@@ -1194,20 +1227,22 @@ def validate_canary_evidence(raw_root, repository_root, result):
 
 def materialize_unknown_capture(raw_root, repository_root, surface, client_identity_id, repository_binding, work_item, captured_at):
     raw = validate_raw_evidence_root(raw_root, repository_root)
-    record = _unknown_capture_record(surface, client_identity_id, repository_binding, work_item, captured_at)
-    stored = canonical_bytes(record) + b"\n"; evidence = digest(stored)
-    target = raw / f"{evidence.removeprefix('sha256:')}.json"
-    if target.exists():
+    with _retention_lock(raw):
+        validate_raw_evidence_root(raw, repository_root)
+        record = _unknown_capture_record(surface, client_identity_id, repository_binding, work_item, captured_at)
+        stored = canonical_bytes(record) + b"\n"; evidence = digest(stored)
+        target = raw / f"{evidence.removeprefix('sha256:')}.json"
+        if target.exists():
+            _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
+            if retained != stored: raise ValueError("content-addressed unknown capture bytes disagree")
+            _fsync_directory(raw)
+        else:
+            _write(target, record, private=True, append_only=True)
+        validate_raw_evidence_root(raw, repository_root)
         _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
-        if retained != stored: raise ValueError("content-addressed unknown capture bytes disagree")
-        _fsync_directory(raw)
-    else:
-        _write(target, record, private=True)
-    validate_raw_evidence_root(raw, repository_root)
-    _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
-    if retained != stored or digest(retained) != evidence:
-        raise ValueError("unknown capture was not retained under its content identity")
-    return evidence, target
+        if retained != stored or digest(retained) != evidence:
+            raise ValueError("unknown capture was not retained under its content identity")
+        return evidence, target
 
 
 def validate_unknown_observation_evidence(observation, raw_root, repository_root):
@@ -1522,7 +1557,9 @@ def _retention_now():
 
 
 def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=None, *, apply=False):
-    raw = validate_raw_evidence_root(raw_evidence_root, repository_root)
+    raw = _validate_raw_evidence_root(
+        raw_evidence_root, repository_root, allow_private_temporaries=True,
+    )
     if apply:
         if as_of is not None: raise ValueError("cleanup derives its deletion time from current UTC")
         current = _retention_now()
@@ -1531,8 +1568,25 @@ def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=N
     else:
         current = _parsed_timestamp(as_of, "retention as-of timestamp"); effective_as_of = as_of
     with _retention_lock(raw):
-        validate_raw_evidence_root(raw, repository_root)
+        _validate_raw_evidence_root(raw, repository_root, allow_private_temporaries=True)
+        _reconcile_private_temporaries_locked(raw, repository_root, apply=apply)
         return _reconcile_raw_evidence_retention_locked(raw, repository_root, effective_as_of, current, apply=apply)
+
+
+def _reconcile_private_temporaries_locked(raw, repository_root, *, apply):
+    temporary_paths = sorted(
+        path for path in raw.rglob("*")
+        if path.is_file() and path.name.startswith(PRIVATE_TEMPORARY_PREFIX)
+    )
+    if temporary_paths and not apply:
+        raise ValueError("orphan private temporary files require retention cleanup")
+    parents = set()
+    for path in temporary_paths:
+        parents.add(path.parent)
+        path.unlink()
+    for parent in sorted(parents):
+        _fsync_directory(parent)
+    validate_raw_evidence_root(raw, repository_root)
 
 
 def _effective_retention_deadline(grouped, governing_record_digests, current):
@@ -1904,7 +1958,7 @@ def _write_private_bytes(path, payload, *, append_only=False):
         raise ValueError("operator-only private-file permissions are not supported on Windows")
     if len(payload) > PRIVATE_REFRESH_MAX_BYTES: raise ValueError("private output exceeds the bounded size")
     parent = Path(path).parent
-    descriptor, temporary = tempfile.mkstemp(prefix=".g56r-002-", dir=parent)
+    descriptor, temporary = tempfile.mkstemp(prefix=PRIVATE_TEMPORARY_PREFIX, dir=parent)
     try:
         if os.name != "nt":
             os.fchmod(descriptor, 0o600)

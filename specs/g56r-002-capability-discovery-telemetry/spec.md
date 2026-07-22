@@ -165,7 +165,10 @@
   immutable publication intent makes them governing before output begins; an
   immutable receipt proves the exact freeze bytes afterward. Records without
   an intent cannot extend a governing deadline and expire under a one-day
-  orphan-recovery deadline. Expired bytes are
+  orphan-recovery deadline. Reserved private temporary names fail normal raw
+  store validation; cleanup removes them under the same lock, including the
+  recoverable one-temporary/one-final-link crash window, and fsyncs the parent
+  before continuing. Other alternate hard links remain invalid. Expired bytes are
   deleted while their digest and a deletion record remain. Live private-store
   operations fail closed on Windows until equivalent owner-only DACL validation
   exists. Repository tests never require raw-store access.

@@ -256,6 +256,11 @@ Records without an intent are reported as pending, expire one day after trusted
 registration when no governing record exists, and cannot extend an existing
 governing deadline. Each governing record's 30-day deadline derives from its
 trusted registration timestamp rather than caller-supplied artifact time.
+Reserved private temporary files are not evidence records. Their presence
+blocks normal store validation and read-only verification. Cleanup removes them
+while holding the retention lock, fsyncs each affected parent, and permits a
+single temporary/final hard-link pair only as the recoverable post-link crash
+window; any external or additional hard link remains invalid.
 
 ## Telemetry and Treatment Records
 

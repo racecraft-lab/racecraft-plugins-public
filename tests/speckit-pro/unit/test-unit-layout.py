@@ -24,7 +24,7 @@ from test_result import run_counted  # noqa: E402
 
 
 SPEC_ID_NAME = re.compile(
-    r"(?:^|[-_])[a-z][a-z0-9]*-\d{3}[a-z]?(?=$|[-_])",
+    r"[a-z][a-z0-9]*-\d{3}[a-z]?",
     re.IGNORECASE,
 )
 PURPOSE_NAMED_ROOTS = (
@@ -120,6 +120,8 @@ class UnitLayoutTests(unittest.TestCase):
         for root in PURPOSE_NAMED_ROOTS:
             for path in root.rglob("*"):
                 relative = path.relative_to(root)
+                if "__pycache__" in relative.parts:
+                    continue
                 for part in relative.parts:
                     if part == "specs":
                         break
@@ -184,6 +186,14 @@ class UnitLayoutTests(unittest.TestCase):
             self.assertTrue(_is_repository_authored_script(path, mode), path)
         for path, mode in excluded:
             self.assertFalse(_is_repository_authored_script(path, mode), path)
+
+    def test_spec_id_pattern_rejects_compound_script_names(self) -> None:
+        for name in (
+            "g56r-002.test.py",
+            "check.g56r-002.mjs",
+            "checkg56r-002helper.ts",
+        ):
+            self.assertIsNotNone(SPEC_ID_NAME.search(Path(name).stem), name)
 
     def test_tracked_authored_script_files_are_behavior_named(self) -> None:
         completed = subprocess.run(

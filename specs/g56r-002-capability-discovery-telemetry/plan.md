@@ -58,8 +58,8 @@ increments cease to be independently testable.
 not a size claim. The binding human estimate remains 297 reviewable LOC; the
 400-LOC split trigger remains enforced.
 
-**Implementation checkpoint**: The capability adapter is 2,011 source lines
-and 1,805 nonblank, non-comment lines after independent-review integrity
+**Implementation checkpoint**: The capability adapter is 2,065 source lines
+and 1,855 nonblank, non-comment lines after independent-review integrity
 remediation, so the 400-LOC trigger is active.
 Capability work T001-T015 remains one review marker under a typed size-only
 exception because source refresh, surface authority, tuple decisions, and the
@@ -201,7 +201,10 @@ Repository tests must pass with the network disabled and no raw evidence store.
   removing the raw bytes and directory-fsyncing the raw root. Registration and
   cleanup share an atomic private-root lock, and destructive cleanup derives its
   timestamp from current UTC. Append-only writes directory-fsync both final-name
-  publication and temporary-name removal; any alternate hard link blocks cleanup.
+  publication and temporary-name removal. Normal operations reject reserved
+  private temporary names; locked cleanup removes orphan temporaries, recovers
+  the one-temporary/one-final-link crash window, and rejects all other alternate
+  hard links.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
   bound to exact bytes by the adjacent out-of-band digest manifest.

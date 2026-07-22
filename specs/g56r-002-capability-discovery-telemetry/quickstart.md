@@ -292,8 +292,11 @@ the raw store before reporting success. The record retains the raw digest, compl
 record history, governing deadline, and deletion time. Repeated cleanup is
 idempotent. Every raw file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal;
-cleanup fails closed if a power-loss artifact or any alternate hard link still
-reaches governed bytes. Registration and cleanup serialize through an advisory
+normal commands and read-only verification reject reserved private temporary
+names. Locked cleanup removes orphan temporaries, fsyncs their parent
+directories, and recovers only the one-temporary/one-final-link power-loss
+window; any external or additional hard link still fails closed. Registration
+and cleanup serialize through an advisory
 lock on the durable `0600` `.retention-lock` file. A competing live operation
 fails closed, while an exited or crashed process releases its lock
 automatically. `--as-of` is accepted only for read-only verification;

@@ -215,7 +215,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
 | G56R-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | PR #360 merged; canonical evidence lives under `docs/ai/research/` |
-| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | In Progress | [.process/G56R-002-workflow.md](.process/G56R-002-workflow.md) | Planning and Analyze gates complete; begin implementation after G6.5 |
+| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | In Progress | [.process/G56R-002-workflow.md](.process/G56R-002-workflow.md) | US1 capability checkpoint complete; T016-T025 treatment contracts are next |
 | G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by G56R-002 |
 | G56R-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by G56R-003 |
 | G56R-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by G56R-004 |

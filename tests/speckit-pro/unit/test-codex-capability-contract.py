@@ -921,6 +921,57 @@ class CapabilityContractTests(unittest.TestCase):
                 "--raw-evidence-root", "unused", "--output", "unused",
             ])
 
+    def test_orphan_private_temporaries_require_locked_cleanup(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_root = Path(tmp) / "raw"
+            raw_root.mkdir(mode=0o700)
+            temporary = raw_root / f"{capabilities.PRIVATE_TEMPORARY_PREFIX}orphan"
+            temporary.write_bytes(b"incomplete raw bytes")
+            temporary.chmod(0o600)
+
+            with self.assertRaisesRegex(ValueError, "orphan private temporary"):
+                capabilities.validate_raw_evidence_root(raw_root, ROOT)
+            self.assertEqual(
+                capabilities._validate_raw_evidence_root(
+                    raw_root, ROOT, allow_private_temporaries=True,
+                ),
+                raw_root.resolve(),
+            )
+            with self.assertRaisesRegex(ValueError, "require retention cleanup"):
+                capabilities.reconcile_raw_evidence_retention(
+                    raw_root, ROOT, "2026-07-16T00:00:00Z",
+                )
+            with mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
+            ):
+                report = capabilities.reconcile_raw_evidence_retention(
+                    raw_root, ROOT, apply=True,
+                )
+            self.assertEqual(report["mode"], "cleanup")
+            self.assertFalse(temporary.exists())
+            self.assertEqual(capabilities.validate_raw_evidence_root(raw_root, ROOT), raw_root.resolve())
+
+            payload = b"complete content-addressed raw bytes\n"
+            target = raw_root / f"{capabilities.digest(payload).removeprefix('sha256:')}.json"
+            target.write_bytes(payload)
+            target.chmod(0o600)
+            linked_temporary = raw_root / f"{capabilities.PRIVATE_TEMPORARY_PREFIX}linked"
+            os.link(target, linked_temporary)
+            self.assertEqual(target.stat().st_nlink, 2)
+            capabilities._validate_raw_evidence_root(
+                raw_root, ROOT, allow_private_temporaries=True,
+            )
+            with mock.patch.object(
+                capabilities, "_retention_now",
+                return_value=capabilities._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
+            ):
+                capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, apply=True)
+            self.assertFalse(linked_temporary.exists())
+            self.assertEqual(target.read_bytes(), payload)
+            self.assertEqual(target.stat().st_nlink, 1)
+            capabilities.validate_raw_evidence_root(raw_root, ROOT)
+
     def test_raw_root_and_sanitizer_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             raw_root = Path(tmp) / "raw"
@@ -975,7 +1026,11 @@ class CapabilityContractTests(unittest.TestCase):
             failed_capture_fsync = False
             def fail_first_capture_fsync(path: Path) -> None:
                 nonlocal failed_capture_fsync
-                if Path(path) == raw_root.resolve() and not failed_capture_fsync:
+                if (
+                    Path(path) == raw_root.resolve()
+                    and source_capture_path.exists()
+                    and not failed_capture_fsync
+                ):
                     failed_capture_fsync = True
                     raise OSError("simulated source-capture directory fsync failure")
                 original_fsync_directory(path)
