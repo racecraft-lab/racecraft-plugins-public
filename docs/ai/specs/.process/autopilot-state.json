@@ -5,7 +5,7 @@
   "changed_file_manifest": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json",
   "changed_file_manifest_base_commit": "48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-22T16:23:21Z",
+  "updated_at": "2026-07-22T16:38:01Z",
   "active_step": "Post: Review Remediation",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -302,11 +302,11 @@
       "validator_tests": "39/39 checkpoint-validator tests pass",
       "reviewability_contract": "77/77 reviewability-contract tests pass",
       "full_suite": "2864/2864 repository tests pass",
-      "independent_p0_p1_review": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at 88624590b29ac20802d2242d71abb0d732fdcc6f",
+      "independent_p0_p1_review": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at c699b94f34c378bd4a8f3780e8570abaeb23489d",
       "marker_id": "us1",
       "reviewability": "size-only block with honored typed no-safe-boundary exception",
-      "checkpoint": "88624590b29ac20802d2242d71abb0d732fdcc6f",
-      "completed_at": "2026-07-22T16:23:21Z"
+      "checkpoint": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+      "completed_at": "2026-07-22T16:38:01Z"
     },
     "Phase 7: Implement - Treatment Contracts": {
       "status": "completed",
@@ -316,11 +316,11 @@
       "validator_tests": "39/39 checkpoint-validator tests pass",
       "reviewability_contract": "77/77 reviewability-contract tests pass",
       "full_suite": "2864/2864 repository tests pass",
-      "independent_p0_p1_review": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at 88624590b29ac20802d2242d71abb0d732fdcc6f",
+      "independent_p0_p1_review": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at c699b94f34c378bd4a8f3780e8570abaeb23489d",
       "marker_id": "us2",
       "reviewability": "aggregate size-only block at 4,409 source / 3,996 nonblank non-comment lines across 13 production modules; 12 capability modules are safely split with a 363-line maximum, the facade exports exactly the supported API, and only the treatment module retains a typed size-only exception",
-      "checkpoint": "88624590b29ac20802d2242d71abb0d732fdcc6f",
-      "completed_at": "2026-07-22T16:23:21Z"
+      "checkpoint": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+      "completed_at": "2026-07-22T16:38:01Z"
     },
     "Phase 7: Implement - Synthetic Replay": {
       "status": "completed",
@@ -330,12 +330,12 @@
       "validator_tests": "39/39 checkpoint-validator tests pass",
       "reviewability_contract": "77/77 reviewability-contract tests pass",
       "full_suite": "2864/2864 repository tests pass",
-      "independent_p0_p1_review": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at 88624590b29ac20802d2242d71abb0d732fdcc6f",
-      "implementation_commit": "88624590b29ac20802d2242d71abb0d732fdcc6f",
+      "independent_p0_p1_review": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at c699b94f34c378bd4a8f3780e8570abaeb23489d",
+      "implementation_commit": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
       "marker_id": "us3",
       "reviewability": "aggregate size-only block at 7,052 source / 6,439 nonblank non-comment lines across 29 safely subdivided modules; maximum module size is 398 lines",
-      "checkpoint": "88624590b29ac20802d2242d71abb0d732fdcc6f",
-      "updated_at": "2026-07-22T16:23:21Z"
+      "checkpoint": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+      "updated_at": "2026-07-22T16:38:01Z"
     },
     "Phase 7: Implement - Integration and Polish": {
       "status": "completed",
@@ -348,15 +348,15 @@
       "validator_tests": "39/39 checkpoint-validator tests pass",
       "reviewability_contract": "77/77 reviewability-contract tests pass",
       "full_suite": "2864/2864 repository tests pass",
-      "independent_p0_p1_review": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at 88624590b29ac20802d2242d71abb0d732fdcc6f",
-      "updated_at": "2026-07-22T16:23:21Z"
+      "independent_p0_p1_review": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at c699b94f34c378bd4a8f3780e8570abaeb23489d",
+      "updated_at": "2026-07-22T16:38:01Z"
     }
   },
   "current_source_fingerprint": {
     "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
     "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
     "tasks_sha": "sha256:7bd80934ed9521709209774e0233bdf492b9a233fb6bd19d890511c9155245d8",
-    "reviewability_sha": "sha256:b92fe79e428ea76a2dc8790b3dd3d6bc5daf0fb8dbff20ad854ed954b6bc0ad9",
+    "reviewability_sha": "sha256:de611bb4664e86b9009dc29377a79ceba51f4a3cf3a6913ba8f6f912acd7754c",
     "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
     "changed_file_manifest_sha": "sha256:9e4c7ce14d10e05acca4a40460cd5724d60e5bd7e53f5f4ea37e94c8775e2eed"
   },
@@ -369,7 +369,7 @@
       "feature_spec_sha": "sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046",
       "plan_declared_scope_sha": "sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f",
       "tasks_sha": "sha256:7bd80934ed9521709209774e0233bdf492b9a233fb6bd19d890511c9155245d8",
-      "reviewability_sha": "sha256:b92fe79e428ea76a2dc8790b3dd3d6bc5daf0fb8dbff20ad854ed954b6bc0ad9",
+      "reviewability_sha": "sha256:de611bb4664e86b9009dc29377a79ceba51f4a3cf3a6913ba8f6f912acd7754c",
       "hazard_route_sha": "sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2",
       "changed_file_manifest_sha": "sha256:9e4c7ce14d10e05acca4a40460cd5724d60e5bd7e53f5f4ea37e94c8775e2eed"
     },
@@ -421,7 +421,7 @@
           "mode": "implementation",
           "scope": "us1",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/capability-freeze.json",
-          "head_sha": "88624590b29ac20802d2242d71abb0d732fdcc6f"
+          "head_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d"
         },
         "hazards": ["source-authority", "private-evidence", "content-addressed-freeze"],
         "subdivision": {
@@ -435,13 +435,13 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1-remediation.json",
-          "checkpoint_evidence_sha": "sha256:1911827475889428da41d15c0057a0f56e321daab61b4f9dbb2eecadb02d15eb",
-          "checkpoint_evidence_commit_sha": "5ccb679d6d08a285c37290cf1c362effb57e23ec",
+          "checkpoint_evidence_sha": "sha256:1340b385a396f63a029bf9e98cc40d52b401d335a3b2e332d93378e7093c00f5",
+          "checkpoint_evidence_commit_sha": "4abd2519f716ba9eb5edcc107ed71ab93c7c1c07",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us1-remediation.json",
-          "verification_evidence_sha": "sha256:7a6c5da9079394c1469ff34a3c91fd0caefb837c78324a0dc0234265c158138a",
-          "commit_sha": "88624590b29ac20802d2242d71abb0d732fdcc6f",
-          "head_sha": "88624590b29ac20802d2242d71abb0d732fdcc6f",
-          "completed_at": "2026-07-22T16:23:21Z",
+          "verification_evidence_sha": "sha256:285d0813dfa5981645ea62d5f68d8367708b295d25e50929065bd8e20255be1e",
+          "commit_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+          "head_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+          "completed_at": "2026-07-22T16:38:01Z",
           "completed_task_ids": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014", "T015"],
           "required_verification_gate_ids": [
             "focused_tests",
@@ -456,7 +456,7 @@
             "39/39 checkpoint-validator tests pass",
             "77/77 reviewability-contract tests pass",
             "2864/2864 repository tests pass",
-            "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at 88624590b29ac20802d2242d71abb0d732fdcc6f"
+            "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at c699b94f34c378bd4a8f3780e8570abaeb23489d"
           ],
           "freshness": {
             "source_fingerprint_status": "current_marker_scope",
@@ -465,7 +465,7 @@
             "current_tasks_sha": "sha256:7bd80934ed9521709209774e0233bdf492b9a233fb6bd19d890511c9155245d8",
             "checkpoint_marker_tasks_sha": "sha256:5f7338debb3901207b6bfd3328e5fe97c8583b6b6be63fadb4db4ef821f1fdaf",
             "current_marker_tasks_sha": "sha256:5f7338debb3901207b6bfd3328e5fe97c8583b6b6be63fadb4db4ef821f1fdaf",
-            "validated_at": "2026-07-22T16:23:21Z"
+            "validated_at": "2026-07-22T16:38:01Z"
           },
           "superseded_evidence": {
             "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json",
@@ -556,7 +556,7 @@
           "mode": "implementation",
           "scope": "us2",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
-          "head_sha": "88624590b29ac20802d2242d71abb0d732fdcc6f"
+          "head_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d"
         },
         "hazards": [
           "six-id-join",
@@ -579,13 +579,13 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2-remediation.json",
-          "checkpoint_evidence_sha": "sha256:0acb5c3219a9f5558e409491dc2d019495f32a0977a6ae632bdfd9d3e8cb4b55",
-          "checkpoint_evidence_commit_sha": "5ccb679d6d08a285c37290cf1c362effb57e23ec",
+          "checkpoint_evidence_sha": "sha256:dca3f6f24d9ecdc6e096dce2a142179491718aa3ce24ac7d1376e717fb24a1f0",
+          "checkpoint_evidence_commit_sha": "4abd2519f716ba9eb5edcc107ed71ab93c7c1c07",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us2-remediation.json",
-          "verification_evidence_sha": "sha256:f7e39279634cfd91aa4606f97d40c79ae297c8a0ec14191012d47ec597600c2c",
-          "commit_sha": "88624590b29ac20802d2242d71abb0d732fdcc6f",
-          "head_sha": "88624590b29ac20802d2242d71abb0d732fdcc6f",
-          "completed_at": "2026-07-22T16:23:21Z",
+          "verification_evidence_sha": "sha256:ee695072a45931e47f3e251ac5ffe8add85f22f4808037ecadb4c921433ecb0e",
+          "commit_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+          "head_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+          "completed_at": "2026-07-22T16:38:01Z",
           "completed_task_ids": [
             "T016",
             "T017",
@@ -611,7 +611,7 @@
             "39/39 checkpoint-validator tests pass",
             "77/77 reviewability-contract tests pass",
             "2864/2864 repository tests pass",
-            "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at 88624590b29ac20802d2242d71abb0d732fdcc6f"
+            "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at c699b94f34c378bd4a8f3780e8570abaeb23489d"
           ],
           "freshness": {
             "source_fingerprint_contract": "marker-task-lines.v2",
@@ -620,7 +620,7 @@
             "current_tasks_sha": "sha256:7bd80934ed9521709209774e0233bdf492b9a233fb6bd19d890511c9155245d8",
             "checkpoint_marker_tasks_sha": "sha256:ca7f0a880f62e886a052b9277a672376acd8490c21bb588f53758e3317ebdc3e",
             "current_marker_tasks_sha": "sha256:ca7f0a880f62e886a052b9277a672376acd8490c21bb588f53758e3317ebdc3e",
-            "validated_at": "2026-07-22T16:23:21Z"
+            "validated_at": "2026-07-22T16:38:01Z"
           },
           "superseded_evidence": {
             "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
@@ -1173,7 +1173,7 @@
           "mode": "implementation",
           "scope": "us3",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
-          "head_sha": "88624590b29ac20802d2242d71abb0d732fdcc6f"
+          "head_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d"
         },
         "hazards": [
           "fixture-provenance",
@@ -1195,13 +1195,13 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3-remediation.json",
-          "checkpoint_evidence_sha": "sha256:7c42a0fa97022f131fa2d857a0b34cc844f9d4291cf69419a9e645b2a5bf4bef",
-          "checkpoint_evidence_commit_sha": "5ccb679d6d08a285c37290cf1c362effb57e23ec",
+          "checkpoint_evidence_sha": "sha256:ebba29cbd438bf5f935363b374c4cdd0f5019da32cc05eb447482098c07eb11d",
+          "checkpoint_evidence_commit_sha": "4abd2519f716ba9eb5edcc107ed71ab93c7c1c07",
           "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us3-remediation.json",
-          "verification_evidence_sha": "sha256:810f09a5c41c89dc4074b73405246a652f32a194bf081b155ece6ad45e234caf",
-          "commit_sha": "88624590b29ac20802d2242d71abb0d732fdcc6f",
-          "head_sha": "88624590b29ac20802d2242d71abb0d732fdcc6f",
-          "completed_at": "2026-07-22T16:23:21Z",
+          "verification_evidence_sha": "sha256:03cd039e0be167e6ee09316ae5eac71f0f2c0a3259a1db47309e1a100306ebac",
+          "commit_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+          "head_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+          "completed_at": "2026-07-22T16:38:01Z",
           "completed_task_ids": [
             "T026",
             "T027",
@@ -1231,7 +1231,7 @@
             "39/39 checkpoint-validator tests pass",
             "77/77 reviewability-contract tests pass",
             "2864/2864 repository tests pass",
-            "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at 88624590b29ac20802d2242d71abb0d732fdcc6f"
+            "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at c699b94f34c378bd4a8f3780e8570abaeb23489d"
           ],
           "freshness": {
             "source_fingerprint_contract": "marker-task-lines.v2",
@@ -1240,7 +1240,7 @@
             "current_tasks_sha": "sha256:7bd80934ed9521709209774e0233bdf492b9a233fb6bd19d890511c9155245d8",
             "checkpoint_marker_tasks_sha": "sha256:57f8e646a74e343f5325b677987ae93fabb25bea3da92f266c6f59077c40c31c",
             "current_marker_tasks_sha": "sha256:57f8e646a74e343f5325b677987ae93fabb25bea3da92f266c6f59077c40c31c",
-            "validated_at": "2026-07-22T16:23:21Z"
+            "validated_at": "2026-07-22T16:38:01Z"
           }
         },
         "emission_mapping": {
