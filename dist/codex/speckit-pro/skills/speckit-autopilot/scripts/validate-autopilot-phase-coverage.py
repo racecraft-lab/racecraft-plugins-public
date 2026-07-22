@@ -3164,7 +3164,105 @@ def validate_projection_integrity(
                                     if isinstance(reviewability, dict)
                                     else None
                                 )
-                                if isinstance(reviewability_ref, str):
+                                feature_process_prefix = (
+                                    f"{feature_dir}/.process/"
+                                    if _is_normalized_repo_path(feature_dir)
+                                    else None
+                                )
+                                role_bindings = {
+                                    "workflow_file": state.get("workflow_file"),
+                                    "changed_file_manifest": state.get(
+                                        "changed_file_manifest"
+                                    ),
+                                    "checkpoint_evidence": checkpoint.get(
+                                        "evidence_path"
+                                    ),
+                                    "verification_evidence": checkpoint.get(
+                                        "verification_evidence_path"
+                                    ),
+                                    "reviewability_evidence": reviewability_ref,
+                                }
+                                role_namespace_checks = {
+                                    "workflow_file": (
+                                        _is_normalized_repo_path(
+                                            role_bindings["workflow_file"]
+                                        )
+                                        and role_bindings["workflow_file"].endswith(
+                                            "workflow.md"
+                                        )
+                                    ),
+                                    "changed_file_manifest": (
+                                        _is_normalized_repo_path(
+                                            role_bindings[
+                                                "changed_file_manifest"
+                                            ]
+                                        )
+                                        and role_bindings[
+                                            "changed_file_manifest"
+                                        ].endswith(
+                                            "changed-file-manifest.json"
+                                        )
+                                    ),
+                                    "checkpoint_evidence": (
+                                        feature_process_prefix is not None
+                                        and _is_normalized_repo_path(
+                                            role_bindings[
+                                                "checkpoint_evidence"
+                                            ]
+                                        )
+                                        and role_bindings[
+                                            "checkpoint_evidence"
+                                        ].startswith(
+                                            feature_process_prefix
+                                            + "checkpoints/"
+                                        )
+                                        and role_bindings[
+                                            "checkpoint_evidence"
+                                        ].endswith(".json")
+                                    ),
+                                    "verification_evidence": (
+                                        feature_process_prefix is not None
+                                        and _is_normalized_repo_path(
+                                            role_bindings[
+                                                "verification_evidence"
+                                            ]
+                                        )
+                                        and role_bindings[
+                                            "verification_evidence"
+                                        ].startswith(
+                                            feature_process_prefix
+                                            + "verification/"
+                                        )
+                                        and role_bindings[
+                                            "verification_evidence"
+                                        ].endswith(".json")
+                                    ),
+                                    "reviewability_evidence": (
+                                        feature_process_prefix is not None
+                                        and _is_normalized_repo_path(
+                                            role_bindings[
+                                                "reviewability_evidence"
+                                            ]
+                                        )
+                                        and role_bindings[
+                                            "reviewability_evidence"
+                                        ].startswith(
+                                            feature_process_prefix
+                                            + "reviewability/"
+                                        )
+                                        and role_bindings[
+                                            "reviewability_evidence"
+                                        ].endswith(".json")
+                                    ),
+                                }
+                                checkpoint_evidence_errors.extend(
+                                    f"pr_marker_plan.markers[{index}] independent review carrier role {role!r} is missing or outside its metadata namespace"
+                                    for role, passed in role_namespace_checks.items()
+                                    if not passed
+                                )
+                                if role_namespace_checks[
+                                    "reviewability_evidence"
+                                ]:
                                     reviewability_evidence = _load_json_bytes(
                                         _git_file_at_commit(
                                             repo_root,
@@ -3176,6 +3274,18 @@ def validate_projection_integrity(
                                         not isinstance(
                                             reviewability_evidence, dict,
                                         )
+                                        or reviewability_evidence.get(
+                                            "schema_version"
+                                        )
+                                        != "reviewability-evidence.v1"
+                                        or reviewability_evidence.get(
+                                            "feature_id"
+                                        )
+                                        != expected_feature_id
+                                        or reviewability_evidence.get(
+                                            "marker_id"
+                                        )
+                                        != marker_id
                                         or reviewability_evidence.get("head_sha")
                                         != reviewed_head
                                     ):
@@ -3214,20 +3324,118 @@ def validate_projection_integrity(
                                         )
                                     except ValueError:
                                         state_ref = None
-                                    review_carrier_paths = {
-                                        path
-                                        for path in (
+                                    reviewed_state = _load_json_bytes(
+                                        _git_file_at_commit(
+                                            repo_root,
+                                            reviewed_head,
                                             state_ref,
-                                            state.get("workflow_file"),
-                                            state.get("changed_file_manifest"),
-                                            checkpoint.get("evidence_path"),
-                                            checkpoint.get(
-                                                "verification_evidence_path"
-                                            ),
-                                            reviewability_ref,
                                         )
-                                        if isinstance(path, str)
-                                    }
+                                        if isinstance(state_ref, str)
+                                        else None
+                                    )
+                                    reviewed_roles: dict[str, object] = {}
+                                    if isinstance(reviewed_state, dict):
+                                        reviewed_feature_dir = reviewed_state.get(
+                                            "feature_dir"
+                                        )
+                                        if (
+                                            isinstance(
+                                                reviewed_feature_dir, str,
+                                            )
+                                            and reviewed_feature_dir
+                                            != feature_dir
+                                        ):
+                                            checkpoint_evidence_errors.append(
+                                                f"pr_marker_plan.markers[{index}] feature_dir changed after independent review"
+                                            )
+                                        reviewed_roles.update(
+                                            {
+                                                "workflow_file": reviewed_state.get(
+                                                    "workflow_file"
+                                                ),
+                                                "changed_file_manifest": reviewed_state.get(
+                                                    "changed_file_manifest"
+                                                ),
+                                            }
+                                        )
+                                        reviewed_plan = reviewed_state.get(
+                                            "pr_marker_plan"
+                                        )
+                                        reviewed_markers = (
+                                            reviewed_plan.get("markers")
+                                            if isinstance(
+                                                reviewed_plan, dict,
+                                            )
+                                            else None
+                                        )
+                                        reviewed_marker = next(
+                                            (
+                                                candidate
+                                                for candidate in (
+                                                    reviewed_markers or []
+                                                )
+                                                if isinstance(candidate, dict)
+                                                and candidate.get("id")
+                                                == marker_id
+                                            ),
+                                            None,
+                                        )
+                                        if isinstance(reviewed_marker, dict):
+                                            reviewed_checkpoint = (
+                                                reviewed_marker.get(
+                                                    "implementation_checkpoint"
+                                                )
+                                            )
+                                            reviewed_reviewability = (
+                                                reviewed_marker.get(
+                                                    "reviewability"
+                                                )
+                                            )
+                                            if isinstance(
+                                                reviewed_checkpoint, dict,
+                                            ):
+                                                reviewed_roles.update(
+                                                    {
+                                                        "checkpoint_evidence": reviewed_checkpoint.get(
+                                                            "evidence_path"
+                                                        ),
+                                                        "verification_evidence": reviewed_checkpoint.get(
+                                                            "verification_evidence_path"
+                                                        ),
+                                                    }
+                                                )
+                                            if isinstance(
+                                                reviewed_reviewability, dict,
+                                            ):
+                                                reviewed_roles[
+                                                    "reviewability_evidence"
+                                                ] = reviewed_reviewability.get(
+                                                    "evidence_path"
+                                                )
+                                    review_carrier_paths = {
+                                        state_ref
+                                    } if isinstance(state_ref, str) else set()
+                                    for role, current_path in role_bindings.items():
+                                        reviewed_path = reviewed_roles.get(role)
+                                        if (
+                                            isinstance(reviewed_path, str)
+                                            and reviewed_path != current_path
+                                        ):
+                                            checkpoint_evidence_errors.append(
+                                                f"pr_marker_plan.markers[{index}] independent review carrier role {role!r} changed after review"
+                                            )
+                                        carrier_path = (
+                                            reviewed_path
+                                            if isinstance(reviewed_path, str)
+                                            else current_path
+                                        )
+                                        if (
+                                            role_namespace_checks.get(role)
+                                            and isinstance(carrier_path, str)
+                                        ):
+                                            review_carrier_paths.add(
+                                                carrier_path
+                                            )
                                     if changed_after_review is None:
                                         checkpoint_evidence_errors.append(
                                             f"pr_marker_plan.markers[{index}] independent review delta is unavailable"

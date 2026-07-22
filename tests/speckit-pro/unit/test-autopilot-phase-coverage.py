@@ -995,6 +995,10 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             )
             evidence_path = root / "specs/spec-example/.process/checkpoints/us1.json"
             verification_path = root / "specs/spec-example/.process/verification/us1.json"
+            reviewability_path = (
+                root
+                / "specs/spec-example/.process/reviewability/us1.json"
+            )
             workflow_path.write_text(workflow_text(), encoding="utf-8")
             alternate_workflow_path.write_text(workflow_text(), encoding="utf-8")
             state = state_json()
@@ -1157,6 +1161,18 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             ).hexdigest()
             evidence_path.parent.mkdir(parents=True)
             verification_path.parent.mkdir(parents=True)
+            reviewability_path.parent.mkdir(parents=True)
+            reviewability_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "reviewability-evidence.v1",
+                        "feature_id": "SPEC-EXAMPLE",
+                        "marker_id": "us1",
+                        "head_sha": implementation_commit,
+                    }
+                ),
+                encoding="utf-8",
+            )
             verification_gate_ids = [
                 "focused_tests", "independent_critical_high_review",
             ]
@@ -1220,6 +1236,10 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     "path": "specs/spec-example/.process/verification/us1.json",
                     "operation": "NEW",
                 },
+                {
+                    "path": "specs/spec-example/.process/reviewability/us1.json",
+                    "operation": "NEW",
+                },
                 {"path": "tracked.txt", "operation": "MODIFIED"},
                 {
                     "source_path": "rename-source.txt",
@@ -1257,6 +1277,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                             "status": "pass",
                             "mode": "implementation",
                             "scope": "us1",
+                            "evidence_path": "specs/spec-example/.process/reviewability/us1.json",
                             "head_sha": implementation_commit,
                         },
                         "hazards": [],
@@ -1328,6 +1349,13 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     },
                     {
                         "path": "specs/spec-example/.process/verification/us1.json",
+                        "operation": "NEW",
+                        "category": "process",
+                        "provenance": "authored",
+                        "marker_ids": ["us1"],
+                    },
+                    {
+                        "path": "specs/spec-example/.process/reviewability/us1.json",
                         "operation": "NEW",
                         "category": "process",
                         "provenance": "authored",
@@ -1427,6 +1455,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     "changed-file-manifest.json",
                     "specs/spec-example/.process/checkpoints/us1.json",
                     "specs/spec-example/.process/verification/us1.json",
+                    "specs/spec-example/.process/reviewability/us1.json",
                 ],
                 check=True,
             )
@@ -2762,6 +2791,17 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                 "independent review clean at "
                 f"{replacement_commit}"
             )
+            reviewability_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "reviewability-evidence.v1",
+                        "feature_id": "SPEC-EXAMPLE",
+                        "marker_id": "us1",
+                        "head_sha": replacement_commit,
+                    }
+                ),
+                encoding="utf-8",
+            )
             replacement_verification_path.write_text(
                 json.dumps(
                     {
@@ -2881,6 +2921,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     "workflow.md", "changed-file-manifest.json",
                     str(replacement_evidence_path),
                     str(replacement_verification_path),
+                    str(reviewability_path),
                 ],
                 check=True,
             )
@@ -2889,6 +2930,89 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                     "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
                     "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
                     "commit", "-qm", "record replacement checkpoint evidence",
+                ],
+                check=True,
+            )
+            replacement_evidence_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            replacement_review_head = replacement_evidence_commit
+            replacement_verification_results[
+                "independent_critical_high_review"
+            ]["evidence"] = (
+                "independent review clean at "
+                f"{replacement_review_head}"
+            )
+            replacement_verification_record = json.loads(
+                replacement_verification_path.read_text(encoding="utf-8")
+            )
+            replacement_verification_record[
+                "results"
+            ] = replacement_verification_results
+            replacement_verification_path.write_text(
+                json.dumps(replacement_verification_record),
+                encoding="utf-8",
+            )
+            replacement_verification_sha = (
+                "sha256:"
+                + hashlib.sha256(
+                    replacement_verification_path.read_bytes()
+                ).hexdigest()
+            )
+            replacement_evidence_record = json.loads(
+                replacement_evidence_path.read_text(encoding="utf-8")
+            )
+            replacement_evidence_record[
+                "last_reviewed_head_sha"
+            ] = replacement_review_head
+            replacement_evidence_record[
+                "verification"
+            ] = replacement_verification_results
+            replacement_evidence_record[
+                "verification_evidence_sha"
+            ] = replacement_verification_sha
+            replacement_evidence_path.write_text(
+                json.dumps(replacement_evidence_record),
+                encoding="utf-8",
+            )
+            replacement_evidence_sha = (
+                "sha256:"
+                + hashlib.sha256(
+                    replacement_evidence_path.read_bytes()
+                ).hexdigest()
+            )
+            reviewability_record = json.loads(
+                reviewability_path.read_text(encoding="utf-8")
+            )
+            reviewability_record["head_sha"] = replacement_review_head
+            reviewability_path.write_text(
+                json.dumps(reviewability_record),
+                encoding="utf-8",
+            )
+            state["pr_marker_plan"]["markers"][0]["reviewability"][
+                "head_sha"
+            ] = replacement_review_head
+            checkpoint["checkpoint_evidence_sha"] = replacement_evidence_sha
+            checkpoint[
+                "verification_evidence_sha"
+            ] = replacement_verification_sha
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "add",
+                    str(replacement_evidence_path),
+                    str(replacement_verification_path),
+                    str(reviewability_path),
+                ],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "record independent review authority",
                 ],
                 check=True,
             )
@@ -2914,6 +3038,74 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
+
+            marker_reviewability = state["pr_marker_plan"]["markers"][0][
+                "reviewability"
+            ]
+            reviewed_evidence_path = marker_reviewability.pop(
+                "evidence_path"
+            )
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(root), "add", "autopilot-state.json"],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "omit independent review evidence role",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0] independent review carrier role 'reviewability_evidence' is missing or outside its metadata namespace",
+                report["checkpoint_evidence_errors"],
+            )
+
+            marker_reviewability["evidence_path"] = "tracked.txt"
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(root), "add", "autopilot-state.json"],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "rebind independent review evidence role",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0] independent review carrier role 'reviewability_evidence' is missing or outside its metadata namespace",
+                report["checkpoint_evidence_errors"],
+            )
+            self.assertIn(
+                "pr_marker_plan.markers[0] independent review carrier role 'reviewability_evidence' changed after review",
+                report["checkpoint_evidence_errors"],
+            )
+
+            marker_reviewability["evidence_path"] = reviewed_evidence_path
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(root), "add", "autopilot-state.json"],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "restore independent review evidence role",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 0, report)
 
             reviewed_tracked_bytes = tracked_path.read_bytes()
             tracked_path.write_text("unreviewed change\n", encoding="utf-8")
