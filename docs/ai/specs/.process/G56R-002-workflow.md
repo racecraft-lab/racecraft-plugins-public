@@ -874,7 +874,7 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Review pending | 10 | Lower-slice restack is reconciled; 58/58 focused, 9/9 naming-layout, treatment, privacy 10/10, process 8/8, docs-reference, and 2824/2824 full-suite gates pass; exact-head review awaits the merged checkpoint |
+| 2 - Treatment contracts | Review pending | 10 | Lower-slice restack is reconciled; 59/59 focused, 9/9 naming-layout, treatment, privacy 10/10, process 8/8, docs-reference, and 2824/2824 full-suite gates pass; exact-head review awaits the merged checkpoint |
 | 3 - Synthetic replay | In Progress | 0 | T026-T030 exist on the next marker branch; restack and exact-head review follow US2 approval |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -1192,8 +1192,18 @@ For every task:
   node/depth ceilings before both capability and treatment parsing. Focused
   58/58, naming-layout 9/9, privacy 10/10, docs-reference, and full 2824/2824
   gates pass; exact-head re-audit remains pending.
-- Implementation checkpoint: `9b10eee411b45a2f23b6edc418b2235752bbc081`
-- Superseded checkpoint: `f4f0bc2a6e9776682c7fc663dd5e498a5069f274`
+- Exact-head append-only publication review `untitled-chat-B4832D` found two
+  MEDIUM gaps: recovery enumerated before enforcing entry bounds and rescanned
+  every entry for each temporary link, while publication receipts were not
+  held under a stable output-directory and target-inode binding. Remediation at
+  `57411f1f275728d757549226fcf10d003938b35b` uses bounded incremental
+  descriptor enumeration with a single inode index, and holds the output
+  directory lock plus target descriptor through receipt persistence with
+  before/after pathname, inode, link-count, and byte revalidation. Focused
+  59/59, naming-layout 9/9, privacy 10/10, docs-reference, and full 2824/2824
+  gates pass; exact-head re-audit remains pending.
+- Implementation checkpoint: `57411f1f275728d757549226fcf10d003938b35b`
+- Superseded checkpoint: `9b10eee411b45a2f23b6edc418b2235752bbc081`
 
 ## PR Marker Plan Evidence
 
@@ -1208,19 +1218,19 @@ For every task:
 | Feature spec | `sha256:708dfaabb460b6efd976a27d159af9145844b5a288f2d9455118bc77ac57b882` |
 | Plan-declared scope | `sha256:b84b5f492ea37f9389e2b6ec1cf123193634b3a374f0a2b09cabe6a66423269d` |
 | Tasks | `sha256:2f1377aa9852e56285dba0d0960017e196598e060a1cce1b24ea9695d70763d2` |
-| Reviewability evidence | `sha256:0faa29bfd86a38fc2b58f5a126e4650cf3e204d8148ae54272c205a67fa67916` |
+| Reviewability evidence | `sha256:ea20d66ad012120262e52796c030da261da3e2d7a131f3a24b74f1c9693304e0` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `9b10eee411b45a2f23b6edc418b2235752bbc081` | Exact-head re-audit required before stack advancement |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `57411f1f275728d757549226fcf10d003938b35b` | Exact-head re-audit required before stack advancement |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines under its historical typed exception; the current US2 marker is 5,580 /
-  5,077 across 17 modules against the aggregate 400-LOC boundary. Capability
+  lines under its historical typed exception; the current US2 marker is 5,695 /
+  5,186 across 17 modules against the aggregate 400-LOC boundary. Capability
   modules are safely split with a 384-line maximum; only the treatment module
   retains a typed size-only exception.
 - Final `marker_split`: Pending.
