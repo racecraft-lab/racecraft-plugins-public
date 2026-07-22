@@ -1840,6 +1840,28 @@ def validate_projection_integrity(
     else:
         marker_plan_status_errors.extend(_marker_plan_shape_errors(marker_plan))
 
+    plan_status = marker_plan.get("status") if isinstance(marker_plan, dict) else None
+    diagnostic_warnings = {
+        "stale": ("MARKER_PLAN_STALE", {"warning", "error"}),
+        "invalid": ("MARKER_PLAN_INVALID", {"error"}),
+    }
+    if plan_status in diagnostic_warnings:
+        marker_plan_status_errors.append(
+            f"pr_marker_plan.status {plan_status} is a correctness stop"
+        )
+        if strict_contract:
+            code, severities = diagnostic_warnings[plan_status]
+            warnings = marker_plan.get("warnings")
+            if not isinstance(warnings, list) or not any(
+                isinstance(warning, dict)
+                and warning.get("code") == code
+                and warning.get("severity") in severities
+                for warning in warnings
+            ):
+                marker_plan_status_errors.append(
+                    f"pr_marker_plan.status {plan_status} requires diagnostic warning {code}"
+                )
+
     checkpoint_evidence_schema: dict[str, Any] | None = None
     if strict_contract and repo_root:
         if not _is_normalized_repo_path(feature_dir):
@@ -2940,7 +2962,6 @@ def validate_projection_integrity(
             "stale": ({"pending", "complete"}, {"pending", "marker_split", "emitted", "hazard_collapsed"}),
             "invalid": ({"pending", "complete"}, {"pending", "marker_split", "emitted", "hazard_collapsed"}),
         }
-        plan_status = marker_plan.get("status")
         if strict_contract and plan_status in status_constraints:
             allowed_checkpoints, allowed_emissions = status_constraints[plan_status]
             for index, raw_marker in enumerate(markers):
@@ -2966,27 +2987,6 @@ def validate_projection_integrity(
                     marker_plan_status_errors.append(
                         "pr_marker_plan.status emitting requires both emitted and unfinished marker mappings"
                     )
-        diagnostic_warnings = {
-            "stale": ("MARKER_PLAN_STALE", {"warning", "error"}),
-            "invalid": ("MARKER_PLAN_INVALID", {"error"}),
-        }
-        if plan_status in diagnostic_warnings:
-            marker_plan_status_errors.append(
-                f"pr_marker_plan.status {plan_status} is a correctness stop"
-            )
-            if strict_contract:
-                code, severities = diagnostic_warnings[plan_status]
-                warnings = marker_plan.get("warnings")
-                if not isinstance(warnings, list) or not any(
-                    isinstance(warning, dict)
-                    and warning.get("code") == code
-                    and warning.get("severity") in severities
-                    for warning in warnings
-                ):
-                    marker_plan_status_errors.append(
-                        f"pr_marker_plan.status {plan_status} requires diagnostic warning {code}"
-                    )
-
     return {
         "completed_phase_pending_fields": completed_phase_pending_fields,
         "projection_status_errors": projection_status_errors,

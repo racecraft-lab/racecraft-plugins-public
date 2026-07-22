@@ -640,37 +640,49 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             ("stale", "MARKER_PLAN_STALE", "warning"),
             ("invalid", "MARKER_PLAN_INVALID", "error"),
         ):
-            with self.subTest(plan_status=plan_status):
-                state = self.projected_state(
-                    plan_status="completed",
-                    phase_status="completed",
-                    checkpoint={
-                        "status": "complete",
-                        "evidence_path": "legacy-checkpoint.json",
-                    },
-                )
-                state["pr_marker_plan"].update(
-                    {
-                        "schema_version": "pr-marker-plan.v1",
-                        "status": plan_status,
-                        "warnings": [
-                            {
-                                "code": warning_code,
-                                "severity": severity,
-                                "message": "Legacy plan is not executable.",
-                                "source": "unit-test",
-                                "details": {},
-                            }
-                        ],
-                    }
-                )
-                exit_code, report = self.run_validator(workflow_text(), state)
-                self.assertEqual(exit_code, 1)
-                self.assertEqual(report["status"], "fail")
-                self.assertEqual(
-                    report["marker_plan_status_errors"],
-                    [f"pr_marker_plan.status {plan_status} is a correctness stop"],
-                )
+            state = self.projected_state(
+                plan_status="completed",
+                phase_status="completed",
+                checkpoint={
+                    "status": "complete",
+                    "evidence_path": "legacy-checkpoint.json",
+                },
+            )
+            state["pr_marker_plan"].update(
+                {
+                    "schema_version": "pr-marker-plan.v1",
+                    "status": plan_status,
+                    "warnings": [
+                        {
+                            "code": warning_code,
+                            "severity": severity,
+                            "message": "Legacy plan is not executable.",
+                            "source": "unit-test",
+                            "details": {},
+                        }
+                    ],
+                }
+            )
+            for marker_shape in ("valid", "missing", "malformed"):
+                with self.subTest(
+                    plan_status=plan_status,
+                    marker_shape=marker_shape,
+                ):
+                    candidate = json.loads(json.dumps(state))
+                    if marker_shape == "missing":
+                        candidate["pr_marker_plan"].pop("markers")
+                    elif marker_shape == "malformed":
+                        candidate["pr_marker_plan"]["markers"] = {}
+                    exit_code, report = self.run_validator(
+                        workflow_text(),
+                        candidate,
+                    )
+                    self.assertEqual(exit_code, 1)
+                    self.assertEqual(report["status"], "fail")
+                    self.assertEqual(
+                        report["marker_plan_status_errors"],
+                        [f"pr_marker_plan.status {plan_status} is a correctness stop"],
+                    )
 
     def test_complete_checkpoint_binds_task_coverage_and_reviewed_head(self) -> None:
         checkpoint = self.complete_checkpoint(commit_sha="b" * 40)
