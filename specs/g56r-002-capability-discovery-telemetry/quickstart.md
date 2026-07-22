@@ -128,10 +128,9 @@ recreated.
 Raw captures remain outside Git. The adapter may emit only deny-by-default
 sanitized, schema-allowlisted output for review.
 
-## 5. Use the Canary Only When Discovery Is Unavailable
+## 5. Canary Is Fail-Closed in This Slice
 
-The canary command is permitted only for a source-admitted tuple whose
-documented discovery is unavailable:
+The command shape is reserved for a future trusted executor implementation:
 
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py canary \
@@ -144,26 +143,19 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py canary \
   --output /tmp/g56r-002-canary-successor-freeze.json
 ```
 
-The adapter accepts only a result from an approved injected executor contract
-for a live launch. That executor must enforce the 30-second wall timeout, 64 KiB
-combined output cap, process-tree termination, and zero retries; the result
-uses the closed v1 envelope and records its contract/implementation/result
-digests, approved platform, and enforcement acknowledgements. A successful
-result is appended atomically to a content-addressed successor freeze; the
-validated predecessor cannot be overwritten. Approval comes only from the
-repository-owned executor-ID allowlist, which is intentionally empty in this
-slice; an arbitrary result file cannot self-approve, so this command exits
-nonzero before consuming an executor result. When `--freeze` is already
-treatment-bound, also pass `--expected-telemetry-profile-id`,
-`--expected-treatment-contract-digest`, and
-`--expected-treatment-evidence-digest` from the separately validated treatment
-bundle and retained evidence set; omitting any binding fails closed.
-Default repository tests inject a deterministic
-allowlist and fake result and launch no process. Only a future separately
-reviewed admitted executor plus exit zero and the predeclared sentinel may
-record pinned-environment availability. Every other terminal class is unknown
-and excludes the tuple. To retry an independently proven transient condition,
-create a successor snapshot first.
+This slice always exits nonzero before reading `--executor-result`. A matching
+contract ID, implementation digest, and repository allowlist entry do not prove
+who produced caller-supplied bytes, so standalone envelope validation always
+derives `unknown`, and published freezes require empty executor-approval and
+canary-result arrays. Default repository tests launch no process and prove that
+a structurally matching fake approval cannot promote availability. A future
+separately reviewed implementation must invoke the approved executor directly
+or verify an attestation over the complete result envelope before it may append
+a canary successor. That executor must enforce the 30-second wall timeout, 64
+KiB combined output cap, process-tree termination, and zero retries. Exit zero
+plus the predeclared sentinel may then prove only pinned-environment
+availability. To retry an independently proven transient condition, create a
+successor snapshot first.
 
 Before publication, the adapter resolves `evidence_digest` to
 `RAW_EVIDENCE_ROOT/<sha256>.json`, verifies the private content-addressed file,

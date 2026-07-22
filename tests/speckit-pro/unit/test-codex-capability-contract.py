@@ -423,7 +423,7 @@ def canary_envelope() -> tuple[dict, dict]:
         "contract_version": "1.0.0", "platform": "macos", "timeout_enforced": True, "output_cap_enforced": True,
         "process_tree_termination_state": "not_needed", "retry_count": 0, "exit_code": 0,
         "sentinel_observed": True, "terminal_class": "success",
-        "availability_disposition": "available_for_pinned_environment", "evidence_digest": "",
+        "availability_disposition": "unknown", "evidence_digest": "",
     }
     result["evidence_digest"] = capabilities.digest(canary_evidence_bytes(result))
     result["executor_result_digest"] = capabilities.digest({key: value for key, value in result.items() if key not in {"executor_result_digest", "availability_disposition"}})
@@ -490,6 +490,8 @@ class CapabilityContractTests(unittest.TestCase):
     def test_schema_negative_constraints_match_runtime(self) -> None:
         schema = load_json(ROOT / "specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json")
         self.assertEqual(schema["properties"]["tuple_decisions"]["minItems"], 1)
+        self.assertEqual(schema["properties"]["approved_canary_executors"]["maxItems"], 0)
+        self.assertEqual(schema["properties"]["canary_results"]["maxItems"], 0)
         self.assertEqual(
             schema["dependentRequired"],
             {
@@ -1171,6 +1173,10 @@ class CapabilityContractTests(unittest.TestCase):
         self_approved_freeze["candidate_freeze_id"] = capabilities.digest(capability_freeze._freeze_identity_payload(self_approved_freeze))
         with self.assertRaisesRegex(ValueError, "repository-owned allowlist"):
             capabilities.validate_freeze(self_approved_freeze, self.manifest)
+        with mock.patch.object(capability_freeze, "APPROVED_CANARY_EXECUTORS", (approval,)), self.assertRaisesRegex(
+            ValueError, "published canary provenance is unavailable"
+        ):
+            capabilities.validate_freeze(self_approved_freeze, self.manifest)
 
     def test_freeze_cli_round_trips_alias_authority(self) -> None:
         alias_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "one_to_one_alias")
@@ -1241,8 +1247,15 @@ class CapabilityContractTests(unittest.TestCase):
         evidence_bytes = canary_evidence_bytes(result)
         denied = capabilities.validate_canary_result(result, evidence_bytes=evidence_bytes)
         self.assertEqual(denied["availability_disposition"], "unknown")
-        allowed = capabilities.validate_canary_result(result, [approval], evidence_bytes=evidence_bytes)
-        self.assertEqual(allowed["availability_disposition"], "available_for_pinned_environment")
+        structurally_approved = capabilities.validate_canary_result(result, [approval], evidence_bytes=evidence_bytes)
+        self.assertEqual(structurally_approved["availability_disposition"], "unknown")
+        forged_available = {**result, "availability_disposition": "available_for_pinned_environment"}
+        self.assertEqual(
+            capabilities.validate_canary_result(
+                forged_available, [approval], evidence_bytes=evidence_bytes,
+            )["availability_disposition"],
+            "unknown",
+        )
         with self.assertRaisesRegex(ValueError, "requires its content-addressed"):
             capabilities.validate_canary_result(result, [approval], evidence_bytes=None)
         with self.assertRaisesRegex(ValueError, "do not match evidence_digest"):
@@ -1256,7 +1269,7 @@ class CapabilityContractTests(unittest.TestCase):
         capability_freeze._validate_same_snapshot_canary_history(canary_predecessor, retained_history, True)
         with self.assertRaisesRegex(ValueError, "cannot drop or rewrite"):
             capability_freeze._validate_same_snapshot_canary_history(canary_predecessor, [], True)
-        rewritten = copy.deepcopy(result); rewritten["availability_disposition"] = "unknown"
+        rewritten = copy.deepcopy(result); rewritten["availability_disposition"] = "available_for_pinned_environment"
         with self.assertRaisesRegex(ValueError, "cannot drop or rewrite"):
             capability_freeze._validate_same_snapshot_canary_history(canary_predecessor, [rewritten], True)
         self.assertEqual(capability_freeze._successor_canary_results(canary_predecessor, False), [])
@@ -1319,13 +1332,6 @@ class CapabilityContractTests(unittest.TestCase):
             raw_root.mkdir(mode=0o700)
             with self.assertRaisesRegex(ValueError, "regular non-symlink file"):
                 capabilities.validate_canary_evidence(raw_root, ROOT, result)
-            with mock.patch.object(capability_freeze, "APPROVED_CANARY_EXECUTORS", (approval,)), mock.patch.object(
-                capability_freeze, "_validate_freeze_payload", side_effect=lambda freeze, manifest, **kwargs: freeze,
-            ), self.assertRaisesRegex(ValueError, "regular non-symlink file"):
-                capabilities.build_canary_successor(
-                    predecessor, result, self.manifest, "2026-07-16T00:00:01Z",
-                    raw_evidence_root=raw_root, repository_root=ROOT,
-                )
             evidence_path = raw_root / f"{result['evidence_digest'].removeprefix('sha256:')}.json"
             evidence_path.write_bytes(evidence_bytes); evidence_path.chmod(0o600)
             self.assertEqual(capabilities.validate_canary_evidence(raw_root, ROOT, result), evidence_bytes)
@@ -1345,20 +1351,18 @@ class CapabilityContractTests(unittest.TestCase):
                 }, raw_root, ROOT)
             with mock.patch.object(capability_freeze, "APPROVED_CANARY_EXECUTORS", (approval,)), mock.patch.object(
                 capability_freeze, "_validate_freeze_payload", side_effect=lambda freeze, manifest, **kwargs: freeze,
-            ):
-                successor = capabilities.build_canary_successor(
+            ), self.assertRaisesRegex(ValueError, "trusted canary invocation and attestation"):
+                capabilities.build_canary_successor(
                     predecessor, result, self.manifest, "2026-07-16T00:00:01Z",
                     raw_evidence_root=raw_root, repository_root=ROOT,
                 )
-            self.assertEqual(successor["canary_results"], [result])
-            self.assertEqual(successor["supersedes_candidate_freeze_id"], predecessor["candidate_freeze_id"])
             evidence_path.write_bytes(b"{}\n")
             with self.assertRaisesRegex(ValueError, "content digest as the filename"):
                 capabilities.validate_canary_evidence(raw_root, ROOT, result)
             with self.assertRaisesRegex(ValueError, "outside every Git worktree"):
                 capabilities.validate_canary_evidence(ROOT, ROOT, result)
         self.assertEqual(capabilities.APPROVED_CANARY_EXECUTORS, ())
-        with self.assertRaisesRegex(ValueError, "no repository-approved canary executor"):
+        with self.assertRaisesRegex(ValueError, "trusted canary invocation and attestation"):
             capabilities.main([
                 "canary", "--manifest", "unused", "--freeze", "unused", "--model", "model-a",
                 "--effort", "high", "--executor-result", "unused",

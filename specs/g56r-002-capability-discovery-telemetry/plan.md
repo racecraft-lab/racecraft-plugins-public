@@ -8,8 +8,9 @@
 
 Add two stable Python 3.11 standard-library entry points and focused capability
 modules to the existing Layer 6 harness. The capability entry point normalizes
-pinned Codex surface evidence, applies claim-scoped source admission, enforces
-the bounded canary contract, and emits a content-addressed candidate freeze.
+pinned Codex surface evidence, applies claim-scoped source admission, validates
+the bounded canary envelope without trusting caller-supplied provenance, and
+emits a content-addressed candidate freeze with canary state disabled.
 The treatment entry point validates telemetry profiles, route-resolution and
 exact-treatment records, and deterministic synthetic replay. One sanitized
 research handoff and two compact replay fixtures prove the contracts without
@@ -36,8 +37,8 @@ workflows run on POSIX and fail closed on Windows pending equivalent DACL checks
 
 **Project Type**: Repository-owned test harness and evidence contract
 
-**Performance Goals**: Deterministic fixture replay in under one second; live
-canary hard-bounded to 30 seconds and 64 KiB combined output
+**Performance Goals**: Deterministic fixture replay in under one second; any
+future trusted live canary hard-bounded to 30 seconds and 64 KiB combined output
 
 **Constraints**: No third-party packages, Bash, `jq`, raw live responses in Git,
 retries within a snapshot, inferred platform facts, qualification, scoring,
@@ -138,10 +139,11 @@ stop condition.
   invalidates all bindings.
 - `codex_capability_observations.py` owns identity-bound surface collection,
   normalization, hidden visibility, and disagreement records.
-- `codex_capability_matrix.py` owns candidate-matrix construction and the
-  injected, approved `CanaryExecutor` contract, including the 30-second,
-  64 KiB, zero-retry, process-tree-termination bounds and default-empty
-  executor-ID allowlist.
+- `codex_capability_matrix.py` owns candidate-matrix construction and the closed
+  canary envelope, including the 30-second, 64 KiB, zero-retry,
+  process-tree-termination bounds and default-empty executor-ID allowlist. This
+  slice cannot authenticate external result provenance, so it never promotes
+  or publishes a canary result.
 - `codex_capability_io.py` owns strict JSON and descriptor-relative reads;
   `codex_capability_append_only.py` owns temporary locking and crash recovery;
   `codex_capability_private.py` owns private retained-byte writes and locking.

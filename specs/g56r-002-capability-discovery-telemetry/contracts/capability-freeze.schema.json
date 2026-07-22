@@ -72,11 +72,13 @@
     },
     "approved_canary_executors": {
       "type": "array",
+      "maxItems": 0,
       "uniqueItems": true,
       "items": {"$ref": "#/$defs/canaryExecutorApproval"}
     },
     "canary_results": {
       "type": "array",
+      "maxItems": 0,
       "items": {"$ref": "#/$defs/canaryResult"},
       "default": []
     },

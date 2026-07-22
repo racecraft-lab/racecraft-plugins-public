@@ -205,15 +205,17 @@ Timeout and output-cap terminal records must report process-tree cleanup as
 `completed` or `failed`; `not_needed` is invalid once either bound is crossed.
 
 The module owns a versioned, default-empty allowlist of approved executor
-contract IDs. An executor becomes trusted only through a separately reviewed
-repository change that binds its implementation and approval-evidence digests;
-an executor result cannot self-approve. The repository adapter consumes the
-closed result envelope and fails closed as `unknown` when the ID is absent from
-the allowlist, any enforcement acknowledgement is missing, or process-tree
-termination failed. Its default path never launches a process. A transient
-exception creates a successor snapshot and a new key. Canary results never
-establish support, effort support, eligibility, quality, preference, or
-qualification.
+contract IDs. Matching an ID, implementation digest, or approval-evidence
+digest does not authenticate caller-supplied result bytes. This slice therefore
+does not admit any executor or canary result into a published freeze: the CLI
+rejects external results before reading them, standalone envelope validation
+always derives `unknown`, and the runtime and JSON schema require both canary
+arrays to remain empty. A future separately reviewed implementation must invoke
+the approved executor directly or verify a signature or equivalent attestation
+over the complete result envelope before availability can be promoted. Its
+default path never launches a process. A transient exception creates a
+successor snapshot and a new key. Canary results never establish support,
+effort support, eligibility, quality, preference, or qualification.
 
 ### `ExecutableCandidateTuple`
 

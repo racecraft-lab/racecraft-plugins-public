@@ -195,8 +195,11 @@ def _validate_canary_result_envelope(result, approvals=APPROVED_CANARY_EXECUTORS
     approvals = _validated_canary_approvals(approvals); approval = next((item for item in approvals if item["executor_contract_id"] == result["executor_contract_id"] and item["implementation_digest"] == result["implementation_digest"]), None)
     if approval is not None and approval["platform"] != result["platform"]:
         raise ValueError("canary executor platform does not match its repository approval")
-    success = approval and approval.get("implementation_digest") == result["implementation_digest"] and result["terminal_class"] == "success" and result["exit_code"] == 0 and result["sentinel_observed"] and result["process_tree_termination_state"] != "failed"
-    return {**result, "availability_disposition": "available_for_pinned_environment" if success else "unknown"}
+    # A caller-supplied envelope can prove internal consistency, not executor
+    # provenance. This slice has no trusted invocation or verifiable attestation
+    # mechanism, so even a structurally matching repository approval remains
+    # non-authoritative and cannot promote availability.
+    return {**result, "availability_disposition": "unknown"}
 
 
 def validate_canary_result(result, approvals=APPROVED_CANARY_EXECUTORS, *, evidence_bytes):

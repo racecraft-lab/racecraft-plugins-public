@@ -94,9 +94,11 @@ normalization, and the same runtime snapshot ID.
 
 The repository-owned canary-executor allowlist is empty. No canary ran and an
 external result or freeze-carried approval cannot self-approve. The CLI exits
-before consuming a result while that allowlist is empty. A separately reviewed executor would still
-be limited to one 30-second, 64 KiB, zero-retry attempt per snapshot/model/effort
-and could prove only pinned-environment availability.
+before consuming every caller-supplied result, standalone envelope validation
+always derives `unknown`, and both published canary arrays must remain empty.
+A separately reviewed trusted invocation or verifiable attestation mechanism
+would still be limited to one 30-second, 64 KiB, zero-retry attempt per
+snapshot/model/effort and could prove only pinned-environment availability.
 
 The current successor binds telemetry profile
 `sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979`,

@@ -134,18 +134,21 @@
   per `(runtime_capability_snapshot_id, canonical_model_id, canonical_effort)`
   with a 30-second wall-clock timeout and 64 KiB combined-output cap. Crossing
   either bound requires the approved executor to kill its process tree. The
-  repository adapter validates an injected `CanaryExecutor` contract and fails
-  closed as `unknown` when no approved platform executor is supplied; default
-  tests never launch a process. Approval comes only from a versioned,
-  repository-owned allowlist that is empty in this slice; an external result
-  cannot self-approve. The closed result envelope binds the executor and result
-  digests, contract version, timeout/output-cap acknowledgements,
-  process-tree-termination state, and zero retry count. There is no retry within
-  a snapshot. An independently proven transient condition requires a successor
-  snapshot. Only an exit-zero response matching
-  the predeclared sentinel can record pinned-environment availability, and it
-  still cannot establish support, effort support, eligibility, quality, or
-  preference.
+  repository adapter validates the closed result-envelope shape but does not
+  treat caller-supplied bytes or matching allowlist identifiers as proof of
+  executor provenance. This slice has no trusted executor invocation or
+  verifiable attestation mechanism, so its repository-owned allowlist remains
+  empty, the CLI rejects every external result before reading it, and every
+  structurally valid standalone envelope remains `unknown`. Default tests never
+  launch a process. A future separately reviewed implementation MUST invoke a
+  repository-approved executor directly or verify an attestation over the
+  complete result envelope before exit zero plus the predeclared sentinel may
+  record pinned-environment availability. The closed envelope still binds the
+  executor and result digests, contract version, timeout/output-cap
+  acknowledgements, process-tree-termination state, and zero retry count. There
+  is no retry within a snapshot. An independently proven transient condition
+  requires a successor snapshot. Canary evidence still cannot establish
+  support, effort support, eligibility, quality, or preference.
 - **Q: What terminal error taxonomy is required?** **A:** Use `timeout`,
   `output_cap_exceeded`, `launch_error`, `transport_error`,
   `authentication_error`, `rate_limited`, `malformed_response`,

@@ -40,37 +40,10 @@ def main(argv=None):
         captured_at = now(); raw_digest, _ = materialize_unknown_capture(args.raw_evidence_root, repo, args.surface, identity["client_identity_id"], binding, work_item, captured_at)
         _write(args.output, unknown_observation(args.surface, identity["client_identity_id"], binding, work_item, raw_evidence_digest=raw_digest, captured_at=captured_at)); return 0
     if args.command == "canary":
-        if not APPROVED_CANARY_EXECUTORS:
-            raise ValueError("no repository-approved canary executor is available in this slice")
-        binding_arguments = (
-            args.expected_telemetry_profile_id,
-            args.expected_treatment_contract_digest,
-            args.expected_treatment_evidence_digest,
+        raise ValueError(
+            "trusted canary invocation and attestation are unavailable in this slice; "
+            "caller-supplied executor results cannot establish provenance"
         )
-        if any(value is None for value in binding_arguments) and any(value is not None for value in binding_arguments):
-            raise ValueError("treatment-aware canary requires all three expected binding arguments")
-        validate_raw_evidence_root(args.raw_evidence_root, repo); _, result_bytes = read_private_external_file(args.executor_result, repo, "canary executor result"); result = _parse_json_bytes(result_bytes)
-        manifest = _read(args.manifest); predecessor = _read(args.freeze, require_canonical=True)
-        if (result.get("snapshot_id"), result.get("canonical_model_id"), result.get("canonical_effort")) != (predecessor.get("runtime_capability_snapshot_id"), args.model, args.effort):
-            raise ValueError("canary result does not match the requested tuple")
-        successor = build_canary_successor(
-            predecessor, result, manifest, args.published_at or now(),
-            raw_evidence_root=args.raw_evidence_root, repository_root=repo,
-            expected_telemetry_profile_id=args.expected_telemetry_profile_id,
-            expected_treatment_contract_digest=args.expected_treatment_contract_digest,
-            expected_treatment_evidence_digest=args.expected_treatment_evidence_digest,
-        )
-        publish_with_raw_evidence_retention(
-            successor, args.output, args.raw_evidence_root, repo, manifest=manifest,
-            predecessor=predecessor,
-            expected_telemetry_profile_id=args.expected_telemetry_profile_id,
-            expected_treatment_contract_digest=args.expected_treatment_contract_digest,
-            expected_treatment_evidence_digest=args.expected_treatment_evidence_digest,
-            expected_predecessor_telemetry_profile_id=args.expected_telemetry_profile_id,
-            expected_predecessor_treatment_contract_digest=args.expected_treatment_contract_digest,
-            expected_predecessor_treatment_evidence_digest=args.expected_treatment_evidence_digest,
-        )
-        return int(successor["canary_results"][-1]["availability_disposition"] == "unknown")
     if args.command == "validate-freeze":
         predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
         binding_arguments = (

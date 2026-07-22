@@ -272,8 +272,8 @@ def _validate_freeze_payload(
     canonical_approvals = list(_validated_canary_approvals(APPROVED_CANARY_EXECUTORS))
     if freeze["approved_canary_executors"] != canonical_approvals:
         raise ValueError("published canary approvals do not match the repository-owned allowlist")
-    if not canonical_approvals and freeze["canary_results"]:
-        raise ValueError("published canary results require a repository-approved executor")
+    if canonical_approvals or freeze["canary_results"]:
+        raise ValueError("published canary provenance is unavailable in this slice")
     validated_canaries = validate_canary_results(freeze["canary_results"], APPROVED_CANARY_EXECUTORS)
     if validated_canaries != freeze["canary_results"]: raise ValueError("published canary dispositions are not validated")
     _validate_same_snapshot_canary_history(predecessor, validated_canaries, unchanged_snapshot)
@@ -314,25 +314,9 @@ def build_canary_successor(
         expected_treatment_evidence_digest=expected_treatment_evidence_digest,
         require_predecessor=False,
     )
-    evidence_bytes = validate_canary_evidence(raw_evidence_root, repository_root, result)
-    validated = validate_canary_result(result, APPROVED_CANARY_EXECUTORS, evidence_bytes=evidence_bytes)
-    _validate_canary_tuple_binding(predecessor["tuple_decisions"], validated, predecessor["runtime_capability_snapshot_id"], predecessor["surface_matrix"]["observations"])
-    results = validate_canary_results([*predecessor["canary_results"], validated], APPROVED_CANARY_EXECUTORS)
-    successor = copy.deepcopy(predecessor)
-    successor.update({
-        "canary_results": results,
-        "published_at": published_at,
-        "supersedes_candidate_freeze_id": predecessor["candidate_freeze_id"],
-    })
-    successor["candidate_freeze_id"] = digest(_freeze_identity_payload(successor))
-    return validate_freeze(
-        successor, manifest, predecessor=predecessor,
-        expected_telemetry_profile_id=expected_telemetry_profile_id,
-        expected_treatment_contract_digest=expected_treatment_contract_digest,
-        expected_treatment_evidence_digest=expected_treatment_evidence_digest,
-        expected_predecessor_telemetry_profile_id=expected_telemetry_profile_id,
-        expected_predecessor_treatment_contract_digest=expected_treatment_contract_digest,
-        expected_predecessor_treatment_evidence_digest=expected_treatment_evidence_digest,
+    raise ValueError(
+        "trusted canary invocation and attestation are unavailable in this slice; "
+        "caller-supplied executor results cannot establish provenance"
     )
 
 
