@@ -4730,6 +4730,33 @@ class TreatmentContractTests(unittest.TestCase):
             second_successor["supersedes_candidate_freeze_id"],
             successor["candidate_freeze_id"],
         )
+        third_successor = treatment.build_treatment_successor(
+            second_successor,
+            successor_bundle,
+            published_at="2026-07-20T04:01:00Z",
+            trusted_treatment_evidence=successor_evidence,
+            prior_freeze_predecessor=successor,
+            expected_prior_telemetry_profile_id=second_successor["telemetry_profile_id"],
+            expected_prior_treatment_contract_digest=second_successor[
+                "treatment_contract_digest"
+            ],
+            expected_prior_treatment_evidence_digest=second_successor[
+                "treatment_evidence_digest"
+            ],
+            expected_prior_predecessor_telemetry_profile_id=successor[
+                "telemetry_profile_id"
+            ],
+            expected_prior_predecessor_treatment_contract_digest=successor[
+                "treatment_contract_digest"
+            ],
+            expected_prior_predecessor_treatment_evidence_digest=successor[
+                "treatment_evidence_digest"
+            ],
+        )
+        self.assertEqual(
+            third_successor["supersedes_candidate_freeze_id"],
+            second_successor["candidate_freeze_id"],
+        )
 
     def test_successor_normalizes_malformed_predecessor_errors(self) -> None:
         bundle = self.rebound(copy.deepcopy(self.bundle))

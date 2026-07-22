@@ -1809,6 +1809,9 @@ def build_treatment_successor(
     expected_prior_telemetry_profile_id: str | None = None,
     expected_prior_treatment_contract_digest: str | None = None,
     expected_prior_treatment_evidence_digest: str | None = None,
+    expected_prior_predecessor_telemetry_profile_id: str | None = None,
+    expected_prior_predecessor_treatment_contract_digest: str | None = None,
+    expected_prior_predecessor_treatment_evidence_digest: str | None = None,
 ) -> dict:
     manifest = _read_manifest_snapshot(manifest_path)
     validated = _validate_treatment_bundle(
@@ -1825,6 +1828,15 @@ def build_treatment_successor(
             expected_telemetry_profile_id=expected_prior_telemetry_profile_id,
             expected_treatment_contract_digest=expected_prior_treatment_contract_digest,
             expected_treatment_evidence_digest=expected_prior_treatment_evidence_digest,
+            expected_predecessor_telemetry_profile_id=(
+                expected_prior_predecessor_telemetry_profile_id
+            ),
+            expected_predecessor_treatment_contract_digest=(
+                expected_prior_predecessor_treatment_contract_digest
+            ),
+            expected_predecessor_treatment_evidence_digest=(
+                expected_prior_predecessor_treatment_evidence_digest
+            ),
         )
     except (AttributeError, KeyError, TypeError, ValueError) as exc:
         raise ValueError(f"prior freeze identity or semantics are invalid: {exc}") from exc
