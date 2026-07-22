@@ -1329,6 +1329,54 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(capabilities.digest(retained.read_bytes()), evidence)
             self.assertEqual(retained.name, f"{evidence.removeprefix('sha256:')}.json")
             self.assertEqual(stat.S_IMODE(retained.stat().st_mode), 0o600)
+            concurrent_record = capability_private._unknown_capture_record(
+                "app_server", self.identity["client_identity_id"], repository, work_item,
+                "2026-07-16T00:00:01Z",
+            )
+            concurrent_bytes = capabilities.canonical_bytes(concurrent_record) + b"\n"
+            concurrent_target = raw_root / (
+                f"{capabilities.digest(concurrent_bytes).removeprefix('sha256:')}.json"
+            )
+            def publish_concurrent_unknown(
+                path: Path, payload: bytes, **kwargs: object,
+            ) -> None:
+                self.assertTrue(kwargs.get("append_only"))
+                Path(path).write_bytes(payload); Path(path).chmod(0o600)
+                raise FileExistsError("simulated concurrent unknown capture")
+            with mock.patch.object(
+                capability_private, "_write_private_bytes",
+                side_effect=publish_concurrent_unknown,
+            ):
+                concurrent_evidence, concurrent_retained = capabilities.materialize_unknown_capture(
+                    raw_root, ROOT, "app_server", self.identity["client_identity_id"],
+                    repository, work_item, "2026-07-16T00:00:01Z",
+                )
+            self.assertEqual(concurrent_retained.resolve(), concurrent_target.resolve())
+            self.assertEqual(concurrent_retained.read_bytes(), concurrent_bytes)
+            self.assertEqual(concurrent_evidence, capabilities.digest(concurrent_bytes))
+            conflict_record = capability_private._unknown_capture_record(
+                "interactive_picker", self.identity["client_identity_id"], repository, work_item,
+                "2026-07-16T00:00:02Z",
+            )
+            conflict_bytes = capabilities.canonical_bytes(conflict_record) + b"\n"
+            conflict_target = raw_root / (
+                f"{capabilities.digest(conflict_bytes).removeprefix('sha256:')}.json"
+            )
+            def publish_conflicting_unknown(
+                path: Path, payload: bytes, **kwargs: object,
+            ) -> None:
+                self.assertTrue(kwargs.get("append_only")); self.assertEqual(payload, conflict_bytes)
+                Path(path).write_bytes(b"{}\n"); Path(path).chmod(0o600)
+                raise FileExistsError("simulated conflicting unknown capture")
+            with mock.patch.object(
+                capability_private, "_write_private_bytes",
+                side_effect=publish_conflicting_unknown,
+            ), self.assertRaisesRegex(ValueError, "content digest|concurrent unknown capture"):
+                capabilities.materialize_unknown_capture(
+                    raw_root, ROOT, "interactive_picker", self.identity["client_identity_id"],
+                    repository, work_item, "2026-07-16T00:00:02Z",
+                )
+            self.assertEqual(conflict_target.read_bytes(), b"{}\n")
             observation = capabilities.unknown_observation(
                 "cli", self.identity["client_identity_id"], repository, work_item,
                 raw_evidence_digest=evidence,
@@ -1575,153 +1623,37 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities.reconcile_raw_evidence_retention(race_root, ROOT, apply=True)
             self.assertIsNotNone(raced_filename)
             restored_race_target = race_root / str(raced_filename)
-            self.assertEqual(restored_race_target.read_bytes(), capture_bytes)
+            self.assertFalse(restored_race_target.exists())
             self.assertEqual(race_link.read_bytes(), capture_bytes)
             race_intents = [
                 (json.loads(path.read_text()), f"sha256:{path.stem}")
                 for path in (race_root / capabilities.DELETION_INTENTS_DIR).iterdir()
             ]
-            transition_intent, transition_digest = next(
-                item for item in race_intents
-                if item[0].get("recovery_proof") == "verified-quarantine-transition-v1"
+            self.assertEqual(len(race_intents), 2)
+            transition_intent = next(
+                record for record, _ in race_intents
+                if record.get("recovery_proof") == "verified-quarantine-transition-v1"
             )
-            republished_intent, republished_digest = next(
-                item for item in race_intents
-                if item[0].get("recovery_proof") == "verified-payload-republication-v1"
-            )
-            self.assertEqual(
-                republished_intent["predecessor_deletion_intent_digest"], transition_digest,
-            )
-            self.assertEqual(
-                republished_intent["quarantine_filename"], transition_intent["quarantine_filename"],
-            )
-            self.assertEqual(
-                republished_intent["target_file_identity"],
-                capability_retention._deletion_intent_file_identity(restored_race_target.stat()),
-            )
-            self.assertEqual(
-                capability_retention_records._terminal_deletion_intents(race_intents)[
-                    republished_intent["raw_evidence_digest"]
-                ][1],
-                republished_digest,
-            )
+            self.assertFalse(any(
+                record.get("recovery_proof") == "verified-payload-republication-v1"
+                for record, _ in race_intents
+            ))
             deletion_directory = race_root / capabilities.DELETION_RECORDS_DIR
             self.assertFalse(deletion_directory.exists() and any(deletion_directory.iterdir()))
             race_link.unlink()
             with mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
-            ):
-                resumed_race_cleanup = capabilities.reconcile_raw_evidence_retention(
-                    race_root, ROOT, apply=True,
-                )
-            self.assertEqual(
-                resumed_race_cleanup["deleted_evidence_digests"],
-                retained_report["retained_evidence_digests"],
-            )
-            self.assertFalse(restored_race_target.exists())
-            race_completion = next(
-                json.loads(path.read_text())
-                for path in deletion_directory.iterdir()
-                if json.loads(path.read_text())["raw_evidence_digest"]
-                == republished_intent["raw_evidence_digest"]
-            )
-            self.assertEqual(race_completion["deletion_intent_digest"], republished_digest)
-
-            republish_failure_root = Path(tmp) / "republish-journal-failure-root"
-            shutil.copytree(raw_root, republish_failure_root)
-            republish_failure_link = Path(tmp) / "republish-journal-failure-link.json"
-            republish_failure_filename = None
-            def link_before_republish_failure_unlink(
-                filename: str, parent_descriptor: int,
-            ) -> None:
-                nonlocal republish_failure_filename
-                republish_failure_filename = filename
-                os.link(republish_failure_root / filename, republish_failure_link)
-                original_unlink_descriptor_relative(filename, parent_descriptor)
-            with mock.patch.object(
-                capability_retention, "_retention_now",
-                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), mock.patch.object(
-                capability_retention, "_unlink_descriptor_relative",
-                side_effect=link_before_republish_failure_unlink,
-            ), mock.patch.object(
-                capability_retention, "_store_republished_recovery_intent",
-                side_effect=ValueError("simulated republished recovery intent failure"),
-            ), self.assertRaisesRegex(ValueError, "republished recovery intent failure"):
-                capabilities.reconcile_raw_evidence_retention(
-                    republish_failure_root, ROOT, apply=True,
-                )
-            self.assertIsNotNone(republish_failure_filename)
-            republish_failure_target = republish_failure_root / str(republish_failure_filename)
-            self.assertEqual(republish_failure_target.read_bytes(), capture_bytes)
-            self.assertEqual(
-                sorted(
-                    json.loads(path.read_text())["schema_version"]
-                    for path in (
-                        republish_failure_root / capabilities.DELETION_INTENTS_DIR
-                    ).iterdir()
-                ),
-                ["raw-evidence-deletion-intent.v2", "raw-evidence-deletion-intent.v3"],
-            )
-            republish_failure_link.unlink()
+            ), self.assertRaisesRegex(ValueError, "missing without durable completion proof"):
+                capabilities.reconcile_raw_evidence_retention(race_root, ROOT, apply=True)
+            restored_race_target.write_bytes(capture_bytes); restored_race_target.chmod(0o600)
+            self.assertEqual(restored_race_target.name, transition_intent["quarantine_filename"])
             with mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
-            ):
-                resumed_republish_failure = capabilities.reconcile_raw_evidence_retention(
-                    republish_failure_root, ROOT, apply=True,
-                )
-            self.assertEqual(
-                resumed_republish_failure["deleted_evidence_digests"],
-                retained_report["retained_evidence_digests"],
-            )
-            self.assertFalse(republish_failure_target.exists())
-            mutation_root = Path(tmp) / "post-digest-mutation-root"
-            shutil.copytree(raw_root, mutation_root)
-            mutated_filename = None
-            def mutate_after_digest_before_unlink(filename: str, parent_descriptor: int) -> None:
-                nonlocal mutated_filename
-                mutated_filename = filename
-                mutated = mutation_root / filename; mutated.write_bytes(b"mutated-after-digest\n"); mutated.chmod(0o600)
-                original_unlink_descriptor_relative(filename, parent_descriptor)
-            with mock.patch.object(
-                capability_retention, "_retention_now",
-                return_value=capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock"),
-            ), mock.patch.object(
-                capability_retention, "_unlink_descriptor_relative", side_effect=mutate_after_digest_before_unlink,
-            ), self.assertRaisesRegex(ValueError, "changed while it was being unlinked|verified content identity"):
-                capabilities.reconcile_raw_evidence_retention(mutation_root, ROOT, apply=True)
-            self.assertIsNotNone(mutated_filename)
-            restored_mutation_target = mutation_root / str(mutated_filename)
-            mutated_intent = next(
-                json.loads(path.read_text())
-                for path in (mutation_root / capabilities.DELETION_INTENTS_DIR).iterdir()
-                if json.loads(path.read_text()).get("recovery_proof")
-                == "verified-payload-republication-v1"
-            )
-            self.assertEqual(
-                capabilities.digest(restored_mutation_target.read_bytes()),
-                mutated_intent["raw_evidence_digest"],
-            )
-            self.assertEqual(
-                capability_retention._deletion_intent_file_identity(
-                    restored_mutation_target.stat(),
-                ),
-                mutated_intent["target_file_identity"],
-            )
-            with mock.patch.object(
-                capability_retention, "_retention_now",
-                return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
-            ):
-                resumed_mutation_cleanup = capabilities.reconcile_raw_evidence_retention(
-                    mutation_root, ROOT, apply=True,
-                )
-            self.assertEqual(
-                resumed_mutation_cleanup["deleted_evidence_digests"],
-                retained_report["retained_evidence_digests"],
-            )
-            self.assertFalse(restored_mutation_target.exists())
+            ), self.assertRaisesRegex(ValueError, "target identity changed before retry"):
+                capabilities.reconcile_raw_evidence_retention(race_root, ROOT, apply=True)
+            self.assertFalse(deletion_directory.exists() and any(deletion_directory.iterdir()))
             write_failure_root = Path(tmp) / "deletion-record-write-failure-root"
             shutil.copytree(raw_root, write_failure_root)
             cleanup_clock = mock.patch.object(
@@ -2213,6 +2145,11 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertNotIn("fixture-sensitive", first["account"])
         with self.assertRaisesRegex(ValueError, "forbidden sensitive field"):
             capabilities.sanitize({"status": {"authorization": "secret"}}, "surface_status")
+        with self.assertRaisesRegex(ValueError, "forbidden sensitive field"):
+            capabilities.sanitize(
+                {"surface": "cli", "status": {"authorization": "fixture-real-secret"}},
+                "surface_status",
+            )
         secret = {"state": "complete", "entries": [{"model": "model-a", "effort": "high", "available": True, "hidden": False, "credentials": {"token": "secret"}}]}
         with self.assertRaisesRegex(ValueError, "undeclared"):
             capabilities.fixture_observation("cli", secret, self.identity["client_identity_id"])

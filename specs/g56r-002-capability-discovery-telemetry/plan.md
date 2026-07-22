@@ -253,13 +253,11 @@ Repository tests must pass with the network disabled and no raw evidence store.
   Cleanup then proves zero remaining links and the retained-byte digest,
   directory-fsyncs the raw root, and appends the terminal deletion-completion
   record with the actual successful cleanup time. A retry can resume the
-  identity-bound quarantine from v2 or v3. When a detected post-unlink race
-  republishes descriptor-verified bytes under the quarantine name, an
-  append-only v3 successor binds the replacement inode before retry. If that
-  successor write is interrupted, recovery accepts only the exact bounded,
-  mode-`0600`, single-link governed payload and appends the missing successor.
-  Other identity changes or unlink without durable completion proof remain
-  indeterminate and fail closed. Registration and
+  identity-bound quarantine from v2 or v3. After any unlink attempt, recovery
+  never republishes bytes or accepts a replacement inode. A post-unlink
+  hard-link race, any quarantine identity change, or unlink without durable
+  completion proof remains indeterminate and fail-closed without a path to a
+  completion record. Registration and
   cleanup share an atomic
   private-root lock, and destructive cleanup derives its timestamp from current
   UTC. Append-only writes directory-fsync both final-name publication and
@@ -269,8 +267,10 @@ Repository tests must pass with the network disabled and no raw evidence store.
   temporary also holds an advisory lock until commit. Recovery then re-proves its directory-relative
   pathname and inode: an abandoned single-link pre-publication file is removed,
   while a linked file additionally requires the sole exact target and matching
-  bytes. Public append-only directories use the same recovery; any unrecognized
-  alternate hard link blocks cleanup.
+  bytes. Source and unknown-attempt captures both publish append-only and accept
+  a concurrent winner only after exact-byte verification. Public append-only
+  directories use the same recovery; any unrecognized alternate hard link
+  blocks cleanup.
   Record loaders bind one private directory descriptor for enumeration and
   entry opens, require an unchanged before/after entry set, and reject directory
   replacement or mixed snapshots.
@@ -283,7 +283,9 @@ Repository tests must pass with the network disabled and no raw evidence store.
   single-link winner after synchronizing its parent directory.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
-  bound to exact bytes by the adjacent out-of-band digest manifest.
+  bound to exact bytes by the adjacent out-of-band digest manifest. Pseudonyms
+  are generated only for explicit profile field paths; caller-supplied
+  `fixture-*` strings never bypass nested sensitive-field rejection.
 - Official-document refresh outcomes remain per `OPENAI-DOC-*` record. A changed
   source invalidates only bound claims/routes; the G56R-001 historical record is
   not rewritten as current evidence.

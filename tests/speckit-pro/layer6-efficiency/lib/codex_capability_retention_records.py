@@ -163,10 +163,7 @@ def _validate_deletion_intent(record_digest, record):
         raise ValueError("raw evidence deletion intent precedes its retention deadline")
     if version == "raw-evidence-deletion-intent.v3":
         _need_digest(record["predecessor_deletion_intent_digest"], "predecessor_deletion_intent_digest")
-        if record["recovery_proof"] not in {
-            "verified-quarantine-transition-v1",
-            "verified-payload-republication-v1",
-        }:
+        if record["recovery_proof"] != "verified-quarantine-transition-v1":
             raise ValueError("raw evidence recovery intent requires a supported recovery proof")
     return record
 

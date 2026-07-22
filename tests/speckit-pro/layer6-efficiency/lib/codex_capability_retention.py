@@ -34,31 +34,6 @@ def _delete_single_link_private_file(
     file_flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
     parent_descriptor = descriptor = deletion_directory_descriptor = None
     verified_payload = None; deletion_proved = False; quarantine_durable = False
-
-    def preserve_verified_payload_before_proof():
-        if verified_payload is None: return
-        if _descriptor_entry_exists(parent_descriptor, filename):
-            current, opened = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False), os.fstat(descriptor)
-            if (
-                not stat.S_ISREG(current.st_mode)
-                or current.st_nlink != 1
-                or _stable_file_content_identity(current) != _stable_file_content_identity(opened)
-                or _stable_file_content_identity(opened) != _stable_file_content_identity(before)
-            ):
-                raise ValueError("expired raw evidence changed before deletion recovery")
-            return
-        _write_private_bytes_at(
-            parent_descriptor, raw, filename, verified_payload, append_only=True,
-            expected_parent_identity=expected_raw_identity,
-        )
-        if staged_record is not None:
-            restored = _verified_republished_quarantine_metadata(
-                raw / filename, raw, expected_digest, expected_raw_identity,
-            )
-            _store_republished_recovery_intent(
-                raw, expected_raw_identity, repository_root, staged_record,
-                staged_digest, restored, deletion_record["deleted_at"],
-            )
     try:
         deletion_directory_descriptor = _private_directory_descriptor(
             deletion_directory, deletion_directory_identity,
@@ -152,21 +127,14 @@ def _delete_single_link_private_file(
         )
         return stored_digest, staged_record, staged_digest
     except _BlockingHardLinkRace:
-        preserve_verified_payload_before_proof()
         raise
     except OSError as error:
         if verified_payload is not None:
-            if not deletion_proved and not quarantine_durable:
-                preserve_verified_payload_before_proof()
             if quarantine_durable:
                 _assert_private_directory_current(raw, parent_descriptor, expected_raw_identity)
             if deletion_proved:
                 raise
         raise ValueError("expired raw evidence could not be deleted safely") from error
-    except ValueError:
-        if verified_payload is not None and not deletion_proved:
-            preserve_verified_payload_before_proof()
-        raise
     finally:
         if descriptor is not None: os.close(descriptor)
         if parent_descriptor is not None: os.close(parent_descriptor)
@@ -256,21 +224,9 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
                         or _deletion_intent_file_identity(quarantine_metadata)
                         != intent_record["target_file_identity"]
                     ):
-                        try:
-                            quarantine_metadata = _verified_republished_quarantine_metadata(
-                                quarantine, raw, evidence_digest, raw_identity,
-                            )
-                        except ValueError as error:
-                            raise ValueError(
-                                "staged raw evidence target identity changed before retry"
-                            ) from error
-                        intent_record, intent_digest = _store_republished_recovery_intent(
-                            raw, raw_identity, repository_root, intent_record,
-                            intent[1], quarantine_metadata, as_of,
+                        raise ValueError(
+                            "staged raw evidence target identity changed before retry"
                         )
-                        intent = (intent_record, intent_digest)
-                        deletion_intents.append(intent)
-                        intent_by_evidence[evidence_digest] = intent
                     deletion_record = {
                         "schema_version": "raw-evidence-deletion.v2",
                         "completion_proof": "post-unlink-nlink-zero-rehashed-v1",

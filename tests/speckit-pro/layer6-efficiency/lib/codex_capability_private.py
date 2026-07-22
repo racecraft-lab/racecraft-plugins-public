@@ -339,11 +339,22 @@ def materialize_unknown_capture(raw_root, repository_root, surface, client_ident
     stored = canonical_bytes(record) + b"\n"; evidence = digest(stored)
     target = raw / f"{evidence.removeprefix('sha256:')}.json"
     if target.exists():
-        _fsync_directory(raw)
+        _recover_append_only_target(target, stored, raw_identity)
         _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
         if retained != stored: raise ValueError("content-addressed unknown capture bytes disagree")
     else:
-        _write(target, record, private=True, expected_parent_identity=raw_identity)
+        try:
+            _write_private_bytes(
+                target, stored, append_only=True,
+                expected_parent_identity=raw_identity,
+            )
+        except FileExistsError:
+            _recover_append_only_target(target, stored, raw_identity)
+            _, retained = read_content_addressed_private_file(
+                target, repository_root, "unknown capture",
+            )
+            if retained != stored:
+                raise ValueError("concurrent unknown capture bytes disagree")
     validate_raw_evidence_root(raw, repository_root)
     _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
     if retained != stored or digest(retained) != evidence:

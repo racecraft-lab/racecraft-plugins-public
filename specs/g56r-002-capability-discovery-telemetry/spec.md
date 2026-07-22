@@ -155,8 +155,9 @@
 - **Q: What is the redaction contract?** **A:** A deny-by-default sanitizer
   removes credentials, headers, cookies, prompt or user content, account
   identifiers, hostnames, absolute paths, and repository remotes. Required
-  joins use deterministic fixture-local pseudonyms. Only schema-allowlisted
-  fields may enter a committed fixture.
+  joins use deterministic fixture-local pseudonyms generated only at explicitly
+  declared schema field paths; caller-supplied `fixture-*` values never create a
+  trust exception. Only schema-allowlisted fields may enter a committed fixture.
 - **Q: Where and how long is raw evidence retained?** **A:** `raw_evidence_root`
   is a required content-addressed location outside the repository. Directories
   are operator-only mode `0700`; files are mode `0600` and have exactly one hard
@@ -173,10 +174,11 @@
   pre-publication file is discarded,
   while a linked file additionally requires exact descriptor-bound target,
   inode, and byte proof. Concurrent identical source captures accept the
-  verified single-link winner. If a detected post-unlink race requires the
-  verified quarantine payload to be republished, a linear successor intent
-  binds the replacement inode before retry; a missing successor can be
-  reconstructed only from the exact bounded, single-link private bytes.
+  verified single-link winner. Unknown-attempt captures use the same append-only
+  publication and exact-byte concurrent-winner verification. If the original
+  open deletion descriptor retains any link after unlink, cleanup never
+  republishes the payload or rebinds a substitute inode; the durable intent
+  remains fail-closed for manual investigation and cannot produce completion.
   Expired bytes are deleted while their digest and a deletion record remain. Live private-store
   operations fail closed on Windows until equivalent owner-only DACL validation
   exists. Repository tests never require raw-store access.

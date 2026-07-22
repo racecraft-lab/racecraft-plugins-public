@@ -104,8 +104,10 @@ Neither registered method can authorize inclusion: fixture enumeration is
 synthetic and unknown observation is non-authoritative. The live collection
 allowlist is empty in this slice. A live unknown observation's
 `raw://sha256:<digest>` reference maps to `<raw_evidence_root>/<digest>.json`;
-the collector writes that sanitized attempt record with mode `0600` and
-verifies the exact stored bytes before publishing the observation.
+the collector publishes that sanitized attempt record append-only with mode
+`0600`, recovers interrupted publication under the shared directory lock, and
+accepts a concurrent content-addressed winner only after exact-byte
+verification before publishing the observation.
 
 ### `SurfaceMatrix`
 
@@ -288,15 +290,13 @@ quarantined inode. After unlink, cleanup proves zero links and unchanged bytes,
 synchronizes the raw root, and publishes only the completion record with the
 actual successful cleanup time. A v3 intent with neither its quarantine nor a
 durable completion record is indeterminate and remains fail-closed; absence
-alone never certifies deletion. If a post-unlink hard-link race or verified
-content mutation requires the descriptor-verified payload to be republished
-under the same quarantine name, cleanup appends a linear v3 successor with the
-`verified-payload-republication-v1` proof and replacement inode identity before
-retry. A crash between republication and that successor may be recovered only
-when the bounded mode-`0600`, single-link bytes still match the governed digest;
-the recovered successor preserves the prior authority and quarantine name.
-Reappeared targets and missing, forked, or disconnected intent chains likewise
-remain fail-closed.
+alone never certifies deletion. If the original open descriptor retains an
+alternate link after unlink, cleanup records no completion and never
+republishes the verified payload. Removing the external link does not make the
+state recoverable: a missing quarantine remains blocked, and an exact-byte file
+recreated under the quarantine name is still rejected because its inode is not
+the v3-bound identity. Reappeared targets and missing, forked, or disconnected
+intent chains likewise remain fail-closed for manual investigation.
 Every retention, receipt, intent, and deletion-record directory is loaded
 through one identity-bound directory descriptor. Entry names and identities
 are verified descriptor-relative, and the entry set must match before and
@@ -317,9 +317,9 @@ temporary additionally must be the sole alternate name for one matching target;
 private targets must match their content address and exact bytes. Recovery
 directory-syncs before and after removal and proves the target is single-link;
 public append-only directories follow the same protocol, and any unrecognized
-alternate link still fails closed. An identical concurrent source-capture
-writer verifies and accepts the single-link winner only after synchronizing its
-parent directory.
+alternate link still fails closed. Identical concurrent source-capture and
+unknown-attempt writers verify and accept the single-link winner only after
+synchronizing its parent directory.
 
 ## Telemetry and Treatment Records
 
@@ -465,7 +465,10 @@ the exact raw bytes. Keeping that digest out of the hashed file avoids a
 self-referential value and lets replay verify bytes before parsing.
 Sanitization removes credentials, headers, cookies, prompt/user content,
 account IDs, hostnames, absolute paths, and repository remotes, replacing
-necessary joins with deterministic fixture-local pseudonyms.
+necessary joins with deterministic fixture-local pseudonyms only at explicitly
+declared profile field paths. Nested sensitive fields are rejected regardless
+of a caller-supplied `fixture-*` value; generated pseudonyms must equal the
+profile's exact fixed value.
 
 Replay acceptance requires:
 

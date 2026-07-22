@@ -110,13 +110,11 @@ Raw-evidence cleanup begins with an identity-bound v2 deletion intent. It
 renames that inode to a deterministic quarantine name, synchronizes the raw
 root, and journals a v3 successor binding the quarantine name and identity
 before unlink. A failure before v3 can resume from the v2-bound quarantine; a
-failure after v3 normally resumes the exact v3-bound quarantine. A detected
-post-unlink race that republishes descriptor-verified bytes appends a linear v3
-successor binding the replacement inode under the same quarantine name. If
-that successor write is interrupted, recovery accepts only the exact bounded,
-mode-`0600`, single-link governed payload before appending it. Other identity
-changes, unlink without durable completion proof, forked chains, and
-unrecoverable hard-link races remain fail-closed.
+failure after v3 resumes only the exact v3-bound quarantine. Once unlink begins,
+cleanup never republishes descriptor-verified bytes or rebinds a replacement
+inode. A post-unlink alternate link, any identity change, unlink without durable
+completion proof, and forked chains remain fail-closed for manual investigation
+and cannot produce a completion record.
 
 The published-freeze validator rechecks the pinned manifest digest, all 22
 sanitized source-refresh rows, matrix integrity and canonical observation
@@ -164,10 +162,9 @@ deletion-intent record. It then unlinks the expired bytes descriptor-relative,
 proves the open descriptor has zero links with unchanged content identity,
 directory-fsyncs the raw store, and only then appends and directory-fsyncs the
 terminal deletion record with the actual successful cleanup time. Replaying
-cleanup after durable completion is idempotent; verified quarantine
-republication is bound by an append-only v3 successor before retry, while a v3
-intent whose quarantine and completion record are both absent is indeterminate
-and fails closed. The
+cleanup after durable completion is idempotent; a v3 intent whose exact bound
+quarantine and completion record are both absent is indeterminate and fails
+closed, and recreating exact bytes on a substitute inode does not unblock it. The
 digest, retention history, and deletion record remain auditable after the bytes
 are gone. Registration and cleanup share an atomic private-root lock, so a newer
 publication cannot extend a digest while cleanup is deleting it. Destructive
@@ -200,4 +197,9 @@ name for the exact target and bytes; recovery syncs before and after unlink and
 re-proves the target is single-link. Public append-only directories use the same
 protocol, and a concurrent identical source capture accepts only the verified
 content-addressed winner after synchronizing the adopted target's parent
-directory.
+directory. Unknown-attempt captures use the same append-only publication and
+exact concurrent-winner verification.
+
+Sanitizer pseudonyms exist only at explicitly declared profile field paths and
+are generated as exact fixed values. A nested sensitive field is rejected even
+when its caller-supplied value starts with `fixture-`.

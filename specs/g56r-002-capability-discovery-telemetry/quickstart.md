@@ -113,7 +113,8 @@ binds the typed work item into each observation. All three observations must
 share those bindings. The `unknown-observation-v1` method is explicitly
 non-authoritative and does not infer entries from another surface.
 For each attempt, the collector writes one sanitized unknown-attempt record to
-`raw_evidence_root/<sha256>.json`, verifies its exact bytes, and uses the same
+`raw_evidence_root/<sha256>.json` through the append-only private-file protocol,
+verifies an interrupted or concurrent winner's exact bytes, and uses the same
 digest in the observation's `raw://sha256:...` reference.
 
 Raw captures remain outside Git. The adapter may emit only deny-by-default
@@ -333,13 +334,11 @@ the raw store, and appends the immutable v2 completion proof under
 `deletion-records/`. The proof retains the raw digest, complete retention record
 history, governing deadline, actual successful cleanup time, proof method, and
 v3 authority. If v3 persistence fails, a retry resumes the exact quarantined
-inode from v2. If a detected post-unlink race republishes the descriptor-verified
-payload, a linear v3 successor using `verified-payload-republication-v1` binds
-the replacement inode under the same quarantine name before retry. A crash
-between republication and successor persistence can be recovered only from the
-exact bounded, mode-`0600`, single-link governed bytes. Other identity changes,
+inode from v2. After unlink begins, cleanup never republishes the payload or
+accepts a substitute inode. A post-unlink alternate link, any identity change,
 unlink without a durable completion record, and missing, forked, or disconnected
-intent chains remain fail-closed. Repeated cleanup after durable completion is idempotent. Every raw
+intent chains remain fail-closed for manual investigation and cannot produce a
+completion record. Repeated cleanup after durable completion is idempotent. Every raw
 file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal.
 A shared parent-directory advisory lock is acquired before a reserved
@@ -355,8 +354,7 @@ verified content-addressed, single-link winner after parent-directory sync;
 cleanup fails closed if a power-loss artifact or any alternate hard link still
 reaches governed bytes. Before quarantine, a retry requires the exact canonical
 v2 identity; afterward it requires the exact terminal v3-bound quarantine
-identity or the separately verified republication successor until verified
-unlink. Registration and
+identity until verified unlink. Registration and
 cleanup serialize through the persistent
 mode-`0600` `.retention-lock` advisory-lock file. A process crash releases the
 kernel lock automatically, while another live operation fails closed. Do not
