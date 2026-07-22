@@ -7,7 +7,6 @@ import copy
 import base64
 from collections.abc import Mapping
 from contextlib import contextmanager
-import fcntl
 import importlib
 import importlib.machinery
 import importlib.util
@@ -27,6 +26,11 @@ import unittest
 from pathlib import Path
 from unittest import mock
 from uuid import uuid4
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - exercised by Windows CI
+    fcntl = None
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -135,9 +139,7 @@ capability_observations = CAPABILITY_INTERNALS["codex_capability_observations"]
 capability_private = CAPABILITY_INTERNALS["codex_capability_private"]
 capability_publish_io = CAPABILITY_INTERNALS["codex_capability_publish_io"]
 capability_publication_records = CAPABILITY_INTERNALS["codex_capability_publication_records"]
-capability_capture_retention = CAPABILITY_INTERNALS["codex_capability_retention"]
 capability_retention = CAPABILITY_INTERNALS["codex_capability_retention"]
-capability_retention_lock = CAPABILITY_INTERNALS["codex_capability_retention_records"]
 capability_retention_records = CAPABILITY_INTERNALS["codex_capability_retention_records"]
 
 
@@ -475,17 +477,6 @@ def single_treatment_case(bundle: dict, case_id: str) -> dict:
         "treatment_disposition": trace["treatment_disposition"],
     }]
     return isolated
-
-
-def declare_treatment_claim(bundle: dict, disposition: str, reasons: list[str]) -> dict:
-    trace = bundle["treatment_traces"][0]
-    trace["treatment_disposition"] = disposition
-    trace["disposition_reasons"] = reasons
-    bundle["fixture_provenance"]["expected_dispositions"] = [{
-        "execution_trace_id": trace["objective_binding"]["execution_trace_id"],
-        "treatment_disposition": disposition,
-    }]
-    return bundle
 
 
 def make_treatment_reroute_case(bundle: dict, authority: str) -> dict:
@@ -1588,6 +1579,10 @@ class CapabilityContractTests(unittest.TestCase):
                 "--raw-evidence-root", "unused", "--output", "unused",
             ])
 
+    @unittest.skipUnless(
+        capabilities.HAS_DESCRIPTOR_RELATIVE_IO and fcntl is not None,
+        "POSIX descriptor-relative I/O required",
+    )
     def test_raw_root_and_sanitizer_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             raw_root = Path(tmp) / "raw"
@@ -3557,30 +3552,6 @@ class CapabilityContractTests(unittest.TestCase):
                         schema,
                         "observation",
                     )
-
-    def authority_tuples(self, case: dict) -> list[dict]:
-        tuples = copy.deepcopy(case["source_tuples"])
-        for item in tuples:
-            instruction = capabilities.digest(b"fixture-instruction")
-            item.update({
-                "candidate_route_digest": capabilities.digest({"route": item["candidate_route_id"]}),
-                "source_ref": "fixtures/fixture-agent.toml",
-                "source_sha256": capabilities.digest(b"fixture-agent-source"),
-                "instruction_sha256": instruction,
-                "role_instruction_sha256": instruction,
-                "agent_contract_digest": capabilities.digest(b"fixture-contract"),
-                "official_source_bindings": [{
-                    "official_source_ledger_id": "OPENAI-DOC-001",
-                    "source_refresh_digest": capabilities.digest(b"fixture-source-refresh"),
-                }],
-                "effort_surface_bindings": [{
-                    "effort_surface_record_id": "FIXTURE-ESR-001",
-                    "effort_surface_record_digest": capabilities.digest(b"fixture-effort-record"),
-                    "official_source_ledger_id": "OPENAI-DOC-001",
-                    "source_refresh_digest": capabilities.digest(b"fixture-source-refresh"),
-                }],
-            })
-        return capability_contract._AuthorityTupleSet(tuples)
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_oversized_publication_is_rejected_before_output_mutation(self) -> None:
