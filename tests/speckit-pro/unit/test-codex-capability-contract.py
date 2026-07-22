@@ -4910,25 +4910,26 @@ class TreatmentContractTests(unittest.TestCase):
                         self.assertTrue(failures)
                         self.assertIsInstance(failures[0], ValueError)
 
-            race_directory = root / "race"; race_directory.mkdir()
-            race_source = race_directory / "source.json"; race_source.write_text("{}", encoding="utf-8")
-            moved_directory = root / "race-original"
             original_open = treatment_io.os.open
-            swapped = False
+            if treatment_io.HAS_DESCRIPTOR_RELATIVE_IO:
+                race_directory = root / "race"; race_directory.mkdir()
+                race_source = race_directory / "source.json"; race_source.write_text("{}", encoding="utf-8")
+                moved_directory = root / "race-original"
+                swapped = False
 
-            def replace_directory(path: object, flags: int, *args: object, **kwargs: object) -> int:
-                nonlocal swapped
-                if path == "source.json" and kwargs.get("dir_fd") is not None and not swapped:
-                    swapped = True
-                    race_directory.rename(moved_directory)
-                    race_directory.mkdir()
-                    (race_directory / "source.json").write_text('{"outside":"replacement"}', encoding="utf-8")
-                return original_open(path, flags, *args, **kwargs)
+                def replace_directory(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                    nonlocal swapped
+                    if path == "source.json" and kwargs.get("dir_fd") is not None and not swapped:
+                        swapped = True
+                        race_directory.rename(moved_directory)
+                        race_directory.mkdir()
+                        (race_directory / "source.json").write_text('{"outside":"replacement"}', encoding="utf-8")
+                    return original_open(path, flags, *args, **kwargs)
 
-            with mock.patch.object(treatment_io.os, "open", side_effect=replace_directory), self.assertRaisesRegex(
-                ValueError, "directory changed while it was being read"
-            ):
-                treatment_io._read_bounded_regular_file(race_source, allowed_root=root)
+                with mock.patch.object(treatment_io.os, "open", side_effect=replace_directory), self.assertRaisesRegex(
+                    ValueError, "directory changed while it was being read"
+                ):
+                    treatment_io._read_bounded_regular_file(race_source, allowed_root=root)
             fallback_source = root / "fallback-race.json"
             fallback_source.write_text("{}", encoding="utf-8")
             fallback_original = root / "fallback-original.json"
