@@ -1,0 +1,30 @@
+{
+  "schema_version": "marker-checkpoint.v1",
+  "feature_id": "G56R-002",
+  "marker_id": "us2",
+  "status": "complete",
+  "task_ids": [
+    "T016", "T017", "T018", "T019", "T020",
+    "T021", "T022", "T023", "T024", "T025"
+  ],
+  "implementation_checkpoint_sha": "d8b3aad44e78714cf8de7f7c1cf9545f28b70f7d",
+  "last_reviewed_head_sha": "d8b3aad44e78714cf8de7f7c1cf9545f28b70f7d",
+  "verification_evidence_sha": "sha256:1a04cf648da18bd1a885119663c5210d9bd8d960ced325648cfb5592f94113a3",
+  "required_verification_gate_ids": [
+    "focused_tests",
+    "validator_tests",
+    "reviewability_contract",
+    "full_suite",
+    "independent_p0_p1_review"
+  ],
+  "verification": {
+    "focused_tests": {"status": "pass", "evidence": "95/95 capability-contract tests pass"},
+    "validator_tests": {"status": "pass", "evidence": "39/39 checkpoint-validator tests pass"},
+    "reviewability_contract": {"status": "pass", "evidence": "77/77 reviewability-contract tests pass"},
+    "full_suite": {"status": "pass", "evidence": "2864/2864 repository tests pass"},
+    "independent_p0_p1_review": {"status": "pass", "evidence": "RepoPrompt CE review chain through untitled-chat-3C1A9A reports NO P0/P1 FINDINGS"}
+  },
+  "source_fingerprint_status": "current",
+  "tasks_sha": "sha256:7bd80934ed9521709209774e0233bdf492b9a233fb6bd19d890511c9155245d8",
+  "completed_at": "2026-07-22T15:06:58Z"
+}

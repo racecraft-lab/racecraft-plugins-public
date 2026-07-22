@@ -1,0 +1,30 @@
+{
+  "schema_version": "marker-checkpoint.v1",
+  "feature_id": "G56R-002",
+  "marker_id": "us3",
+  "status": "complete",
+  "task_ids": [
+    "T026", "T027", "T028", "T029", "T030", "T031", "T032",
+    "T033", "T034", "T035", "T036", "T037", "T038", "T039"
+  ],
+  "implementation_checkpoint_sha": "d8b3aad44e78714cf8de7f7c1cf9545f28b70f7d",
+  "last_reviewed_head_sha": "d8b3aad44e78714cf8de7f7c1cf9545f28b70f7d",
+  "verification_evidence_sha": "sha256:49a25aaaa7685d9ad40054cdf05c9a555b466865503a3298d75a5b2749b27237",
+  "required_verification_gate_ids": [
+    "focused_tests",
+    "validator_tests",
+    "reviewability_contract",
+    "full_suite",
+    "independent_p0_p1_review"
+  ],
+  "verification": {
+    "focused_tests": {"status": "pass", "evidence": "95/95 capability-contract tests pass"},
+    "validator_tests": {"status": "pass", "evidence": "39/39 checkpoint-validator tests pass"},
+    "reviewability_contract": {"status": "pass", "evidence": "77/77 reviewability-contract tests pass"},
+    "full_suite": {"status": "pass", "evidence": "2864/2864 repository tests pass"},
+    "independent_p0_p1_review": {"status": "pass", "evidence": "RepoPrompt CE review chain through untitled-chat-3C1A9A reports NO P0/P1 FINDINGS"}
+  },
+  "source_fingerprint_status": "current",
+  "tasks_sha": "sha256:7bd80934ed9521709209774e0233bdf492b9a233fb6bd19d890511c9155245d8",
+  "completed_at": "2026-07-22T15:06:58Z"
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "verification-report.v1",
+  "feature_id": "G56R-002",
+  "marker_id": "us1",
+  "status": "pass",
+  "generated_at": "2026-07-22T15:06:58Z",
+  "verified_commit_sha": "d8b3aad44e78714cf8de7f7c1cf9545f28b70f7d",
+  "required_gate_ids": [
+    "focused_tests",
+    "validator_tests",
+    "reviewability_contract",
+    "full_suite",
+    "independent_p0_p1_review"
+  ],
+  "results": {
+    "focused_tests": {"status": "pass", "evidence": "95/95 capability-contract tests pass"},
+    "validator_tests": {"status": "pass", "evidence": "39/39 checkpoint-validator tests pass"},
+    "reviewability_contract": {"status": "pass", "evidence": "77/77 reviewability-contract tests pass"},
+    "full_suite": {"status": "pass", "evidence": "2864/2864 repository tests pass"},
+    "independent_p0_p1_review": {"status": "pass", "evidence": "RepoPrompt CE review chain through untitled-chat-3C1A9A reports NO P0/P1 FINDINGS"}
+  }
+}

@@ -5,9 +5,9 @@
   "status": "block",
   "mode": "implementation",
   "scope": "T026-T030 deterministic synthetic replay",
-  "head_sha": "aea7282a9b3c64c2d04928104e13b35defeaa0f3",
+  "head_sha": "d8b3aad44e78714cf8de7f7c1cf9545f28b70f7d",
   "head_scope": "current_remediation_source",
-  "current_restack_review_status": "untitled-chat-9B00BE exact re-review at 4842c331 returned NO FINDINGS; final metadata-head review pending",
+  "current_restack_review_status": "RepoPrompt CE review chain through untitled-chat-3C1A9A reports NO P0/P1 FINDINGS; final metadata-head review pending",
   "reason_class": "aggregate_size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
@@ -21,7 +21,7 @@
   },
   "primary_surface": "harness/adapter",
   "correctness_checks": {
-    "focused_tests": "88/88 pass; validator 35/35 pass; contract parity 77/77 pass after live-range remediation",
+    "focused_tests": "95/95 pass; validator 39/39 pass; contract parity 77/77 pass after live-range remediation",
     "two_pass_byte_equality": "pass",
     "raw_fixture_digest_validation": "pass",
     "canonical_fixture_serialization": "pass",
@@ -50,8 +50,8 @@
     "workflow_fingerprint_binding": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass after restack",
-    "full_suite": "2857/2857 pass after live-range remediation",
-    "independent_review": "untitled-chat-9B00BE exact re-review at 4842c331 returned NO FINDINGS; final metadata-head review pending"
+    "full_suite": "2864/2864 pass after live-range remediation",
+    "independent_review": "RepoPrompt CE review chain through untitled-chat-3C1A9A reports NO P0/P1 FINDINGS; final metadata-head review pending"
   },
   "decomposition": {
     "status": "complete",
