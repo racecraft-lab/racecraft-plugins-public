@@ -65,7 +65,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | 39 TDD-first tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Nine findings remediated; G6 passed |
 | Confidence Gate | G6.5 | Complete | Advisory score 0.99 passed the 0.90 threshold |
-| Implement | `$speckit-implement` | In Progress | T001-T015 reviewer remediation is complete locally; independent repeat review is pending and later markers are blocked |
+| Implement | `$speckit-implement` | In Progress | T001-T015 is complete at a clean independent-review checkpoint; T016-T025 is the next unblocked increment |
 | Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -903,8 +903,8 @@ For every task:
 | Fingerprint input | SHA-256 |
 |---|---|
 | Feature spec | `sha256:f05c4e7dd60a462194b7fd2cc84240a4f43ce973748e103b7114fa5594cb2d76` |
-| Plan-declared scope | `sha256:dc8f51146c26cc239492a131404cee2a0c869eaf61e47353f3dc2246c7ef40ac` |
-| Tasks | `sha256:3c4870cc8c8373c623933e65eb2a9ce3c8491c26bdd5097a1854706ba2d8e08e` |
+| Plan-declared scope | `sha256:d9f279b38b5677688addd7638ac32cf314da9e6f093b87953e684dee25491f36` |
+| Tasks | `sha256:3d21537fab77780c4f751b1699b2dfe4fa62fa09f72abd23ddb3ebf98d5459f4` |
 | Reviewability evidence | `sha256:b3e074fb9309c66dc2b55756ca1ae49e47b2ac5e21d967688c69d472ca25974a` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
