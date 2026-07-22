@@ -5,7 +5,7 @@
   "branch": "g56r-002-capability-discovery-telemetry",
   "branch_role": "source_feature_branch",
   "active_emitted_pr_branch": "g56r-002-slices/02-us2",
-  "updated_at": "2026-07-22T09:00:58Z",
+  "updated_at": "2026-07-22T09:04:19Z",
   "active_step": "Phase 7: Implement - Synthetic Replay",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -581,6 +581,7 @@
           {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py"},
           {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_authority.py"},
           {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py"},
+          {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_recovery.py"},
           {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py"},
           {"operation": "NEW", "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"},
           {"operation": "NEW", "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"},
@@ -715,7 +716,7 @@
       }
     ],
     "created_at": "2026-07-17T04:50:02Z",
-    "updated_at": "2026-07-22T09:00:58Z"
+    "updated_at": "2026-07-22T09:04:19Z"
   },
   "layer_plan": {
     "status": "skipped",

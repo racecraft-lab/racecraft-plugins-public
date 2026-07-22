@@ -1279,6 +1279,10 @@ For every task:
   source feature branch from emitted slice branches, binds US1 to PR #366 and
   US2 to PR #367 with their exact observed heads, records the US2 review head,
   and labels the 13-module count as historical.
+- Metadata re-audit `untitled-chat-C60832` found one P1: the US2 declared-file
+  manifest omitted the measured production module
+  `codex_capability_retention_recovery.py`. The marker now declares that
+  stable-purpose module as `NEW`, matching the exact base diff.
 - Implementation checkpoint: `e1e34d005e16bf2e9115f01e709770aee006fb73`
 - Superseded checkpoint: `e08eb7a9fb0201f99e1d926ccf80d322247d9871`
 
