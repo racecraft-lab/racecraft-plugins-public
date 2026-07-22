@@ -17,7 +17,7 @@
     "fixture_provenance"
   ],
   "properties": {
-    "schema_version": {"const": "1.0.0"},
+    "schema_version": {"const": "2.0.0"},
     "treatment_contract_digest": {"$ref": "#/$defs/digest"},
     "telemetry_profile_id": {"$ref": "#/$defs/digest"},
     "telemetry_profile": {
@@ -1403,7 +1403,7 @@
         "replay_count"
       ],
       "properties": {
-        "schema_version": {"const": "1.0.0"},
+        "schema_version": {"const": "2.0.0"},
         "sanitizer_version": {"type": "string", "minLength": 1},
         "raw_evidence_digest": {"$ref": "#/$defs/digest"},
         "expected_dispositions": {

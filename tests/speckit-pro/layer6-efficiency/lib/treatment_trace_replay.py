@@ -61,7 +61,7 @@ def _validate_replay_effort_authority(trace: dict) -> None:
     if digest(REPLAY_RUNTIME_EFFORT_AUTHORITY) != REPLAY_RUNTIME_EFFORT_AUTHORITY_ID:
         raise ValueError("synthetic replay effort authority identity is invalid")
     actual = {
-        "schema_version": SCHEMA_VERSION,
+        "schema_version": REPLAY_RUNTIME_EFFORT_AUTHORITY["schema_version"],
         "authority_kind": "synthetic_replay_configuration",
         "runtime_capability_snapshot_id": trace["objective_binding"]["runtime_capability_snapshot_id"],
         "candidate_route_id": trace["objective_binding"]["candidate_route_id"],
@@ -238,6 +238,8 @@ def replay_fixture(fixture_path: Path, digest_manifest_path: Path, *, repeat: in
         })
     if digest(raw_fixtures[CAPABILITY_FIXTURE_PATH]) != CAPABILITY_FIXTURE_BASELINE_DIGEST:
         raise ValueError("capability replay fixture changed outside its immutable baseline")
+    if digest(raw_fixtures[TREATMENT_FIXTURE_PATH]) != TREATMENT_FIXTURE_BASELINE_DIGEST:
+        raise ValueError("treatment replay fixture changed outside its immutable baseline")
     serialized = [canonical_fixture_bytes(item) for item in pass_outputs]
     if serialized[0] != serialized[1]:
         raise ValueError("two-pass replay output is not byte-identical")

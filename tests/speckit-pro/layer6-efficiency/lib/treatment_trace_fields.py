@@ -230,6 +230,7 @@ def _reroute_disposition(
     expected_source_model = trace["requested_model"]
     current_route_id = trace["assigned_route_id"]
     visited_route_ids = {current_route_id}
+    visited_models = {expected_source_model}
     final_route = None
     for event in events:
         if event["fromModel"] != expected_source_model: return "hard_fail", ["reroute_source_model_mismatch"]
@@ -241,7 +242,7 @@ def _reroute_disposition(
         if (
             destination_route_id == current_route_id
             or destination_route_id in visited_route_ids
-            or event["toModel"] == expected_source_model
+            or event["toModel"] in visited_models
         ):
             return "hard_fail", ["reroute_self_target"]
         canonical = canonical_routes.get(destination_route_id)
@@ -265,6 +266,7 @@ def _reroute_disposition(
         expected_source_model = event["toModel"]
         current_route_id = destination_route_id
         visited_route_ids.add(destination_route_id)
+        visited_models.add(event["toModel"])
         final_route = canonical
     if trace["supported_effective_model"] != events[-1]["toModel"]:
         return "hard_fail", ["reroute_effective_destination_mismatch"]

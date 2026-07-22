@@ -3653,6 +3653,23 @@ class TreatmentContractTests(unittest.TestCase):
         )
         self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "hard_fail", message)
 
+    def test_treatment_contract_uses_breaking_schema_version(self) -> None:
+        schema = load_json(
+            ROOT
+            / "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"
+        )
+        self.assertEqual(treatment.SCHEMA_VERSION, "2.0.0")
+        self.assertEqual(schema["properties"]["schema_version"]["const"], "2.0.0")
+        self.assertEqual(
+            schema["$defs"]["fixtureProvenance"]["properties"]["schema_version"]["const"],
+            "2.0.0",
+        )
+        legacy = copy.deepcopy(self.bundle)
+        legacy["schema_version"] = "1.0.0"
+        legacy["fixture_provenance"]["schema_version"] = "1.0.0"
+        with self.assertRaises(ValueError):
+            treatment.validate_treatment_bundle(legacy)
+
     def test_telemetry_inventory_and_null_semantics(self) -> None:
         validated = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
         self.assertEqual(set(treatment.CLASSIFICATIONS), {
@@ -4533,6 +4550,39 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertIn(
             "reroute_self_target",
             result["treatment_traces"][0]["disposition_reasons"],
+        )
+
+        model_cycle = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
+        trace = model_cycle["treatment_traces"][0]
+        alternate_route_id = "G56R-001-CR-PHASE-EXECUTOR-SOL-ALTERNATE"
+        second_owner = model_cycle["qualification_evidence_registry"][1]
+        second_owner["destination_candidate_route_id"] = alternate_route_id
+        second_owner["qualification_evidence_id"] = treatment.content_id(
+            second_owner, "qualification_evidence_id"
+        )
+        second_assessment = trace["reroute_destination_assessments"][1]
+        second_assessment["destination_candidate_route_id"] = alternate_route_id
+        second_assessment["prequalification_evidence_id"] = second_owner[
+            "qualification_evidence_id"
+        ]
+        qualification = {
+            item["qualification_evidence_id"]: item
+            for item in model_cycle["qualification_evidence_registry"]
+        }
+        routes = treatment_authority._canonical_routes(load_json(MANIFEST_PATH))
+        routes[alternate_route_id] = copy.deepcopy(
+            routes["G56R-001-CR-PHASE-EXECUTOR-SOL"]
+        )
+        disposition, reasons = treatment_fields._reroute_disposition(
+            trace,
+            trace["service_reroute_events"],
+            trace["reroute_destination_assessments"],
+            qualification,
+            trusted_external_qualification(model_cycle),
+            routes,
+        )
+        self.assertEqual(
+            (disposition, reasons), ("hard_fail", ["reroute_self_target"])
         )
 
         broken = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
@@ -5831,6 +5881,30 @@ class TreatmentReplayTests(unittest.TestCase):
                 self.assertEqual(completed.returncode, 2)
                 self.assertIn("maximum nesting depth", completed.stderr)
                 self.assertNotIn("RecursionError", completed.stderr)
+
+    def test_replay_rejects_resealed_treatment_provenance(self) -> None:
+        mutations = (
+            ("raw_evidence_digest", "sha256:" + "0" * 64),
+            ("sanitizer_version", "forged-sanitizer"),
+        )
+        for field, value in mutations:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                bundle = json.loads(fixture.read_bytes())
+                bundle["fixture_provenance"][field] = value
+                self.write_and_reseal(
+                    repository_root,
+                    TREATMENT_FIXTURE_PATH,
+                    bundle,
+                )
+                with self.assertRaisesRegex(ValueError, "immutable baseline"):
+                    treatment.replay_fixture(
+                        fixture,
+                        manifest_path,
+                        repeat=2,
+                        repository_root=repository_root,
+                    )
 
     def test_replay_requires_declared_manifest_authority(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

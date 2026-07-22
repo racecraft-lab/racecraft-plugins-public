@@ -47,7 +47,7 @@ def _unique_json(raw: bytes, label: str) -> object:
 
 def _manifest_entries(value: object) -> list[dict[str, str]]:
     manifest = _closed(value, {"schema_version", "fixtures"}, "fixture digest manifest")
-    if manifest["schema_version"] != SCHEMA_VERSION:
+    if manifest["schema_version"] != _REPLAY_DIGEST_MANIFEST_VERSION:
         raise ValueError("fixture digest manifest schema version is unsupported")
     if not isinstance(manifest["fixtures"], list) or len(manifest["fixtures"]) != 2:
         raise ValueError("fixture digest manifest must contain exactly two entries")
@@ -131,7 +131,10 @@ def _validate_capability_fixture(value: object) -> tuple[dict[str, dict], str]:
         "schema_version", "sanitizer_version", "raw_evidence_digest",
         "source_refresh_cases", "client_identity", "surface_cases",
     }, "capability replay fixture")
-    if fixture["schema_version"] != SCHEMA_VERSION or fixture["sanitizer_version"] != SCHEMA_VERSION:
+    if (
+        fixture["schema_version"] != _CAPABILITY_FIXTURE_SCHEMA_VERSION
+        or fixture["sanitizer_version"] != _SANITIZER_VERSION
+    ):
         raise ValueError("capability replay fixture version is unsupported")
     _digest(fixture["raw_evidence_digest"], "capability fixture raw evidence digest")
     if not isinstance(fixture["source_refresh_cases"], list):

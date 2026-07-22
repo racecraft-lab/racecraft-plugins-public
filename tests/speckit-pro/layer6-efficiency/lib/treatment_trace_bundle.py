@@ -350,7 +350,7 @@ def _validate_treatment_bundle(
     environment_clients = {item["client_identity_id"] for item in owners["controlled_environments"].values()}
     trace_clients = {item["client_identity_id"] for item in traces}
     if profile_clients != environment_clients or profile_clients != trace_clients:
-        raise ValueError("schema v1 telemetry profile client must own every environment and trace")
+        raise ValueError("telemetry profile client must own every environment and trace")
     validated = [_validate_trace(
         item, profile, owners["controlled_environments"], owners["experiment_policy_registry"], owners["route_resolutions"],
         owners["qualification_evidence_registry"], trusted, canonical_routes,

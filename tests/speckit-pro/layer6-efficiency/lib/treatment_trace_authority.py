@@ -36,8 +36,12 @@ IS_WINDOWS = os.name == "nt"
 CAPABILITY_FIXTURE_PATH = "tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json"
 CAPABILITY_FIXTURE_BASELINE_DIGEST = "sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a"
 TREATMENT_FIXTURE_PATH = "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
+TREATMENT_FIXTURE_BASELINE_DIGEST = "sha256:92195ad99922ea95fdd05e773526d71e28f2d4405a886269f7a1d19ed2d2de3c"
 REPLAY_DIGEST_MANIFEST_PATH = "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json"
 REPLAY_FIXTURE_PATHS = (CAPABILITY_FIXTURE_PATH, TREATMENT_FIXTURE_PATH)
+_CAPABILITY_FIXTURE_SCHEMA_VERSION = "1.0.0"
+_REPLAY_DIGEST_MANIFEST_VERSION = "1.0.0"
+_SANITIZER_VERSION = "1.0.0"
 REPLAY_CASES = (
     ("TRACE-SUCCESS", "success", "unknown", ("effective_treatment_unknown",), None, "sha256:0c5f2e407d0caea2a0139a0fdac97882eb45ee8dab6db2aad5736d216e2732d9"),
     ("TRACE-EXPLICIT-NULL", "explicit_null", "unknown", ("effective_treatment_unknown",), None, "sha256:1dd3f74c9de86b5e1cae10614f1919d307aa75c0dcd6426ca04229e98b691df2"),
@@ -81,7 +85,7 @@ REPLAY_RUNTIME_EFFORT_AUTHORITY = {
 }
 REPLAY_RUNTIME_EFFORT_AUTHORITY_ID = "sha256:2f629183baad7dd544e7200eb9bab1490ac253f85a3bb91e73670298180fe20c"
 
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "2.0.0"
 SURFACES = ("app_server", "cli", "interactive_picker")
 CLASSIFICATIONS = (
     "stable_native", "experimental_native", "derived_from_controlled_configuration",
