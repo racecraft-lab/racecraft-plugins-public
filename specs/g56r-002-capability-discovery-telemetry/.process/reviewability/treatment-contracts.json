@@ -8,8 +8,8 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 5695,
-  "actual_nonblank_noncomment_lines": 5186,
+  "actual_source_lines": 5699,
+  "actual_nonblank_noncomment_lines": 5190,
   "production_modules": 17,
   "max_capability_module_source_lines": 384,
   "primary_surface": "harness/adapters",
@@ -18,7 +18,7 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_append_only.py": {"source_lines": 284, "nonblank_noncomment_lines": 261},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {"source_lines": 112, "nonblank_noncomment_lines": 105},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {"source_lines": 281, "nonblank_noncomment_lines": 242},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {"source_lines": 377, "nonblank_noncomment_lines": 346},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {"source_lines": 381, "nonblank_noncomment_lines": 350},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {"source_lines": 362, "nonblank_noncomment_lines": 337},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {"source_lines": 219, "nonblank_noncomment_lines": 198},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {"source_lines": 360, "nonblank_noncomment_lines": 317},
@@ -146,6 +146,8 @@
     "bounded_append_only_recovery_enumeration": "pass",
     "linear_append_only_recovery_inode_index": "pass",
     "publication_receipt_target_binding": "pass",
+    "single_link_recovery_payload_revalidation": "pass",
+    "raw_root_publication_output_exclusion": "pass",
     "descriptor_bound_append_only_temp_recovery": "pass",
     "abandoned_prelink_temp_recovery": "pass for private and public append-only directories",
     "active_temp_lock_protection": "pass",
@@ -159,10 +161,10 @@
     "deletion_tombstone_rematerialization_rejection": "pass",
     "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
     "authored_script_spec_id_guard": "9/9 pass",
-    "independent_review_chat_id": "untitled-chat-B4832D",
+    "independent_review_chat_id": "untitled-chat-0A2885",
     "independent_review_findings": [
-      "append-only recovery enumerated before enforcing entry bounds and rescanned every entry for each temporary link",
-      "publication receipt persistence was not bound to a locked output directory and stable target inode"
+      "single-link recovery could accept changed target bytes after the expected temporary disappeared",
+      "publishing inside the raw-evidence tree could self-conflict on the receipt-directory lock"
     ]
   },
   "exception": {

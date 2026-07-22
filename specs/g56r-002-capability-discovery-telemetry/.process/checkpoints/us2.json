@@ -8,8 +8,8 @@
     "T021", "T022", "T023", "T024", "T025"
   ],
   "implementation_baseline_sha": "0e66466bb43ef2796664d9c63dde808744717f4c",
-  "implementation_checkpoint_sha": "57411f1f275728d757549226fcf10d003938b35b",
-  "superseded_checkpoint_sha": "9b10eee411b45a2f23b6edc418b2235752bbc081",
+  "implementation_checkpoint_sha": "fd9a557a01cf1a85409266e18ab339383b8f9b44",
+  "superseded_checkpoint_sha": "57411f1f275728d757549226fcf10d003938b35b",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "candidate_freeze_id": "sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c",
   "treatment_evidence_digest": "sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f",
@@ -17,8 +17,8 @@
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
   "reviewability_measurements": {
     "production_modules": 17,
-    "source_lines": 5695,
-    "nonblank_noncomment_lines": 5186,
+    "source_lines": 5699,
+    "nonblank_noncomment_lines": 5190,
     "max_capability_module_source_lines": 384,
     "modules": {
       "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
@@ -38,8 +38,8 @@
         "nonblank_noncomment_lines": 242
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {
-        "source_lines": 377,
-        "nonblank_noncomment_lines": 346
+        "source_lines": 381,
+        "nonblank_noncomment_lines": 350
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {
         "source_lines": 362,
@@ -199,6 +199,8 @@
     "bounded_append_only_recovery_enumeration": "pass",
     "linear_append_only_recovery_inode_index": "pass",
     "publication_receipt_target_binding": "pass",
+    "single_link_recovery_payload_revalidation": "pass",
+    "raw_root_publication_output_exclusion": "pass",
     "descriptor_bound_append_only_temp_recovery": "pass",
     "abandoned_prelink_temp_recovery": "pass for private and public append-only directories",
     "active_temp_lock_protection": "pass",
@@ -212,15 +214,15 @@
     "deletion_tombstone_rematerialization_rejection": "pass",
     "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
     "authored_script_spec_id_guard": "9/9 pass",
-    "independent_review_chat_id": "untitled-chat-B4832D",
+    "independent_review_chat_id": "untitled-chat-0A2885",
     "independent_review_findings": [
-      "append-only recovery enumerated before enforcing entry bounds and rescanned every entry for each temporary link",
-      "publication receipt persistence was not bound to a locked output directory and stable target inode"
+      "single-link recovery could accept changed target bytes after the expected temporary disappeared",
+      "publishing inside the raw-evidence tree could self-conflict on the receipt-directory lock"
     ]
   },
   "source_fingerprint_status": "current",
   "tasks_sha": "sha256:2f1377aa9852e56285dba0d0960017e196598e060a1cce1b24ea9695d70763d2",
   "implementation_completed_at": "2026-07-20T03:06:58Z",
-  "review_updated_at": "2026-07-22T06:23:17Z",
+  "review_updated_at": "2026-07-22T06:41:55Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }
