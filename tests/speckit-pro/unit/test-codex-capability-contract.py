@@ -4485,7 +4485,62 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertEqual(treatment.FAILURE_DISPOSITIONS["effective_treatment_unknown"], "unknown")
         self.assertTrue(all(value in {"unknown", "hard_fail"} for value in treatment.FAILURE_DISPOSITIONS.values()))
 
-    def test_multi_hop_reroutes_reject_cycles_and_no_op_hops(self) -> None:
+    def test_multi_hop_reroutes_accept_acyclic_and_reject_cycles_and_no_op_hops(self) -> None:
+        acyclic = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
+        trace = acyclic["treatment_traces"][0]
+        second_owner = acyclic["qualification_evidence_registry"][1]
+        third_route_id = "G56R-001-CR-PHASE-EXECUTOR-THIRD-FIXTURE"
+        third_model = "gpt-5.6-terra"
+        second_owner["destination_candidate_route_id"] = third_route_id
+        second_owner["qualification_evidence_id"] = treatment.content_id(
+            second_owner, "qualification_evidence_id"
+        )
+        second_assessment = trace["reroute_destination_assessments"][1]
+        second_assessment["destination_candidate_route_id"] = third_route_id
+        second_assessment["prequalification_evidence_id"] = second_owner[
+            "qualification_evidence_id"
+        ]
+        second_event = trace["service_reroute_events"][1]
+        second_event["toModel"] = third_model
+        second_event["event_id"] = treatment.content_id(second_event, "event_id")
+        second_assessment["event_id"] = second_event["event_id"]
+        trace["supported_effective_model"] = third_model
+        next(
+            item for item in trace["observations"]
+            if item["field_path"] == "reroute.events"
+        )["value"] = copy.deepcopy(trace["service_reroute_events"])
+        next(
+            item for item in trace["observations"]
+            if item["field_path"] == "assignment.supported_effective_model"
+        )["value"] = third_model
+        declare_treatment_result(
+            acyclic,
+            [],
+            "non_scorable_rerouted",
+            ["service_reroute_requested_route_non_scorable"],
+        )
+        manifest = load_json(MANIFEST_PATH)
+        third_route = copy.deepcopy(next(
+            item for item in manifest["candidate_routes"]
+            if item["candidate_route_id"] == "G56R-001-CR-PHASE-EXECUTOR-SOL"
+        ))
+        third_route["candidate_route_id"] = third_route_id
+        third_route["model_selector"].update({
+            "requested_value": third_model,
+            "expected_resolved_model_id": third_model,
+        })
+        manifest["candidate_routes"].append(third_route)
+        validated = treatment_bundle._validate_treatment_bundle(
+            self.rebound(acyclic),
+            schema_path=treatment.SCHEMA_PATH,
+            manifest=manifest,
+            trusted_qualification_evidence=trusted_external_qualification(acyclic),
+        )
+        self.assertEqual(
+            validated["treatment_traces"][0]["treatment_disposition"],
+            "non_scorable_rerouted",
+        )
+
         cycle = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
         trusted = trusted_external_qualification(cycle)
         result = treatment.validate_treatment_bundle(
