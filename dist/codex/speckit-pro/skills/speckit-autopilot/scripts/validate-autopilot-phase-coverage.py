@@ -2970,21 +2970,22 @@ def validate_projection_integrity(
             "stale": ("MARKER_PLAN_STALE", {"warning", "error"}),
             "invalid": ("MARKER_PLAN_INVALID", {"error"}),
         }
-        if strict_contract and plan_status in diagnostic_warnings:
+        if plan_status in diagnostic_warnings:
             marker_plan_status_errors.append(
                 f"pr_marker_plan.status {plan_status} is a correctness stop"
             )
-            code, severities = diagnostic_warnings[plan_status]
-            warnings = marker_plan.get("warnings")
-            if not isinstance(warnings, list) or not any(
-                isinstance(warning, dict)
-                and warning.get("code") == code
-                and warning.get("severity") in severities
-                for warning in warnings
-            ):
-                marker_plan_status_errors.append(
-                    f"pr_marker_plan.status {plan_status} requires diagnostic warning {code}"
-                )
+            if strict_contract:
+                code, severities = diagnostic_warnings[plan_status]
+                warnings = marker_plan.get("warnings")
+                if not isinstance(warnings, list) or not any(
+                    isinstance(warning, dict)
+                    and warning.get("code") == code
+                    and warning.get("severity") in severities
+                    for warning in warnings
+                ):
+                    marker_plan_status_errors.append(
+                        f"pr_marker_plan.status {plan_status} requires diagnostic warning {code}"
+                    )
 
     return {
         "completed_phase_pending_fields": completed_phase_pending_fields,
