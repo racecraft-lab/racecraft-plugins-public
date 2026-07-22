@@ -8,8 +8,8 @@
   "reason_class": "size_only",
   "threshold_reviewable_loc": 400,
   "planned_reviewable_loc": 297,
-  "actual_source_lines": 5429,
-  "actual_nonblank_noncomment_lines": 4944,
+  "actual_source_lines": 5447,
+  "actual_nonblank_noncomment_lines": 4960,
   "production_modules": 17,
   "max_capability_module_source_lines": 394,
   "primary_surface": "harness/adapters",
@@ -29,7 +29,7 @@
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_authority.py": {"source_lines": 75, "nonblank_noncomment_lines": 66},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {"source_lines": 315, "nonblank_noncomment_lines": 286},
     "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_recovery.py": {"source_lines": 21, "nonblank_noncomment_lines": 12},
-    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 226, "nonblank_noncomment_lines": 207},
+    "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {"source_lines": 244, "nonblank_noncomment_lines": 223},
     "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
       "source_lines": 1912,
       "nonblank_noncomment_lines": 1762
@@ -133,6 +133,7 @@
     "hidden_html_extract_rejection": "pass",
     "normalized_plain_text_source_rejection": "pass",
     "exact_source_capture_digest_binding": "pass",
+    "raw_capture_digest_revalidation": "pass",
     "full_body_change_invalidation": "pass",
     "exact_legacy_predecessor_boundary": "pass",
     "capability_named_temporary_recovery": "pass",
@@ -150,12 +151,9 @@
     "deletion_tombstone_rematerialization_rejection": "pass",
     "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
     "authored_script_spec_id_guard": "9/9 pass",
-    "independent_review_chat_id": "untitled-chat-A0BD9D",
+    "independent_review_chat_id": "untitled-chat-AF7C6A",
     "independent_review_findings": [
-      "caller-supplied source_capture_digest was not verified against captured bytes",
-      "HTML intrinsic hidden states could satisfy bounded extracts",
-      "HTML text-node joining could fabricate whitespace absent from rendered text",
-      "changed bodies could retain old extracts and avoid invalidating bound claims"
+      "raw refresh validation did not recompute source_capture_digest from the retained 22-row capture"
     ]
   },
   "exception": {

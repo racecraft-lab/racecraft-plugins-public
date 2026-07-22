@@ -1161,8 +1161,18 @@ For every task:
   naming-layout 9/9, treatment, privacy 10/10, process coverage 8/8,
   docs-reference, and full 2824/2824 gates pass; exact-head re-audit remains
   pending.
-- Implementation checkpoint: `0042f0e27395692283abf57da0678c6d99834cf9`
-- Superseded checkpoint: `7068c98ec662d69988d3ac132f24074207e66f50`
+- Exact-head source-contract re-audit `untitled-chat-AF7C6A` found one P1
+  residual binding gap: raw refresh validation accepted a stale shared capture
+  digest after otherwise coherent row mutation. Remediation at
+  `88e95674fb3cfc4e1430646dff30bcb97151fbf5` defines one source-ID-sorted
+  canonical 22-row identity and recomputes it during normalization and raw
+  validation. Reordered input converges on the same identity; a coherently
+  altered body with its old capture digest fails. Focused 58/58,
+  naming-layout 9/9, treatment, privacy 10/10, process coverage 8/8,
+  docs-reference, and full 2824/2824 gates pass; exact-head re-audit remains
+  pending.
+- Implementation checkpoint: `88e95674fb3cfc4e1430646dff30bcb97151fbf5`
+- Superseded checkpoint: `0042f0e27395692283abf57da0678c6d99834cf9`
 
 ## PR Marker Plan Evidence
 
@@ -1174,22 +1184,22 @@ For every task:
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:644b75a31e166ff06c9e28311fe01efe35d25836f15890e07ffb6b8436b278a9` |
-| Plan-declared scope | `sha256:cde2fce3537938d8b9baf572cfb8ce4544be7568e5157a5142deb3f2e0619ae8` |
-| Tasks | `sha256:8e48c3fa626b10fa8db85efef80beab23073471de89b4062474c13581186878d` |
-| Reviewability evidence | `sha256:21a9b5976a035a9fef6ffacc30cd84611db272ccae8109ea621310bad9c05833` |
+| Feature spec | `sha256:15ce1b592092ff9b2c33a695d4c59038dd5cd04440f48baaab36a06a079fc813` |
+| Plan-declared scope | `sha256:e1742dad17c996f85b6232eb72994a9a1be78b095d98a5fd64917e9df69af6db` |
+| Tasks | `sha256:ac1e7f5064bce6b3be08f9a57fb6f8e34d1c7346535c45f823af5fb577a87f44` |
+| Reviewability evidence | `sha256:494371a739245ec85a26b29d7fccb133c3c96fa582f01ea27e7a4d39824ecf3a` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `0042f0e27395692283abf57da0678c6d99834cf9` | Exact-head re-audit required before stack advancement |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `88e95674fb3cfc4e1430646dff30bcb97151fbf5` | Exact-head re-audit required before stack advancement |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines under its historical typed exception; the current US2 marker is 5,429 /
-  4,944 across 17 modules against the aggregate 400-LOC boundary. Capability
+  lines under its historical typed exception; the current US2 marker is 5,447 /
+  4,960 across 17 modules against the aggregate 400-LOC boundary. Capability
   modules are safely split with a 394-line maximum; only the treatment module
   retains a typed size-only exception.
 - Final `marker_split`: Pending.

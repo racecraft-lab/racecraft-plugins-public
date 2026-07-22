@@ -8,8 +8,8 @@
     "T021", "T022", "T023", "T024", "T025"
   ],
   "implementation_baseline_sha": "0e66466bb43ef2796664d9c63dde808744717f4c",
-  "implementation_checkpoint_sha": "0042f0e27395692283abf57da0678c6d99834cf9",
-  "superseded_checkpoint_sha": "7068c98ec662d69988d3ac132f24074207e66f50",
+  "implementation_checkpoint_sha": "88e95674fb3cfc4e1430646dff30bcb97151fbf5",
+  "superseded_checkpoint_sha": "0042f0e27395692283abf57da0678c6d99834cf9",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "candidate_freeze_id": "sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c",
   "treatment_evidence_digest": "sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f",
@@ -17,8 +17,8 @@
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
   "reviewability_measurements": {
     "production_modules": 17,
-    "source_lines": 5429,
-    "nonblank_noncomment_lines": 4944,
+    "source_lines": 5447,
+    "nonblank_noncomment_lines": 4960,
     "max_capability_module_source_lines": 394,
     "modules": {
       "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
@@ -82,8 +82,8 @@
         "nonblank_noncomment_lines": 12
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {
-        "source_lines": 226,
-        "nonblank_noncomment_lines": 207
+        "source_lines": 244,
+        "nonblank_noncomment_lines": 223
       },
       "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
         "source_lines": 1912,
@@ -186,6 +186,7 @@
     "hidden_html_extract_rejection": "pass",
     "normalized_plain_text_source_rejection": "pass",
     "exact_source_capture_digest_binding": "pass",
+    "raw_capture_digest_revalidation": "pass",
     "full_body_change_invalidation": "pass",
     "exact_legacy_predecessor_boundary": "pass",
     "capability_named_temporary_recovery": "pass",
@@ -203,17 +204,14 @@
     "deletion_tombstone_rematerialization_rejection": "pass",
     "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
     "authored_script_spec_id_guard": "9/9 pass",
-    "independent_review_chat_id": "untitled-chat-A0BD9D",
+    "independent_review_chat_id": "untitled-chat-AF7C6A",
     "independent_review_findings": [
-      "caller-supplied source_capture_digest was not verified against captured bytes",
-      "HTML intrinsic hidden states could satisfy bounded extracts",
-      "HTML text-node joining could fabricate whitespace absent from rendered text",
-      "changed bodies could retain old extracts and avoid invalidating bound claims"
+      "raw refresh validation did not recompute source_capture_digest from the retained 22-row capture"
     ]
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:8e48c3fa626b10fa8db85efef80beab23073471de89b4062474c13581186878d",
+  "tasks_sha": "sha256:ac1e7f5064bce6b3be08f9a57fb6f8e34d1c7346535c45f823af5fb577a87f44",
   "implementation_completed_at": "2026-07-20T03:06:58Z",
-  "review_updated_at": "2026-07-22T04:38:17Z",
+  "review_updated_at": "2026-07-22T04:55:50Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }
