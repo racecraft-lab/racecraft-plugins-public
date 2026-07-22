@@ -1812,6 +1812,35 @@ def validate_changed_file_manifest(
                     )
                     if isinstance(path, str)
                 }
+                for carrier_marker in markers:
+                    if not isinstance(carrier_marker, dict):
+                        continue
+                    carrier_checkpoint = carrier_marker.get(
+                        "implementation_checkpoint"
+                    )
+                    carrier_reviewability = carrier_marker.get(
+                        "reviewability"
+                    )
+                    if isinstance(carrier_checkpoint, dict):
+                        carrier_paths.update(
+                            path
+                            for path in (
+                                carrier_checkpoint.get("evidence_path"),
+                                carrier_checkpoint.get(
+                                    "verification_evidence_path"
+                                ),
+                            )
+                            if isinstance(path, str)
+                        )
+                    if (
+                        isinstance(carrier_reviewability, dict)
+                        and isinstance(
+                            carrier_reviewability.get("evidence_path"), str,
+                        )
+                    ):
+                        carrier_paths.add(
+                            carrier_reviewability["evidence_path"]
+                        )
                 reviewability = marker.get("reviewability")
                 if (
                     isinstance(reviewability, dict)
@@ -3436,6 +3465,90 @@ def validate_projection_integrity(
                                             review_carrier_paths.add(
                                                 carrier_path
                                             )
+                                    if feature_process_prefix is not None:
+                                        global_carrier_roles = (
+                                            (
+                                                "checkpoint",
+                                                feature_process_prefix
+                                                + "checkpoints/",
+                                            ),
+                                            (
+                                                "verification",
+                                                feature_process_prefix
+                                                + "verification/",
+                                            ),
+                                            (
+                                                "reviewability",
+                                                feature_process_prefix
+                                                + "reviewability/",
+                                            ),
+                                        )
+                                        for carrier_marker in markers or []:
+                                            if not isinstance(
+                                                carrier_marker, dict,
+                                            ):
+                                                continue
+                                            carrier_checkpoint = (
+                                                carrier_marker.get(
+                                                    "implementation_checkpoint"
+                                                )
+                                            )
+                                            carrier_reviewability = (
+                                                carrier_marker.get(
+                                                    "reviewability"
+                                                )
+                                            )
+                                            candidates = {
+                                                "checkpoint": (
+                                                    carrier_checkpoint.get(
+                                                        "evidence_path"
+                                                    )
+                                                    if isinstance(
+                                                        carrier_checkpoint,
+                                                        dict,
+                                                    )
+                                                    else None
+                                                ),
+                                                "verification": (
+                                                    carrier_checkpoint.get(
+                                                        "verification_evidence_path"
+                                                    )
+                                                    if isinstance(
+                                                        carrier_checkpoint,
+                                                        dict,
+                                                    )
+                                                    else None
+                                                ),
+                                                "reviewability": (
+                                                    carrier_reviewability.get(
+                                                        "evidence_path"
+                                                    )
+                                                    if isinstance(
+                                                        carrier_reviewability,
+                                                        dict,
+                                                    )
+                                                    else None
+                                                ),
+                                            }
+                                            for (
+                                                role,
+                                                namespace,
+                                            ) in global_carrier_roles:
+                                                candidate = candidates[role]
+                                                if (
+                                                    _is_normalized_repo_path(
+                                                        candidate
+                                                    )
+                                                    and candidate.startswith(
+                                                        namespace
+                                                    )
+                                                    and candidate.endswith(
+                                                        ".json"
+                                                    )
+                                                ):
+                                                    review_carrier_paths.add(
+                                                        candidate
+                                                    )
                                     if changed_after_review is None:
                                         checkpoint_evidence_errors.append(
                                             f"pr_marker_plan.markers[{index}] independent review delta is unavailable"

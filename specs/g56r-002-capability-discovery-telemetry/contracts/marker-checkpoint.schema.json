@@ -116,7 +116,6 @@
       "then": {
         "required": [
           "completed_at",
-          "last_reviewed_head_sha",
           "verification_evidence_sha",
           "required_verification_gate_ids"
         ],
