@@ -115,7 +115,10 @@ non-authoritative and does not infer entries from another surface.
 For each attempt, the collector writes one sanitized unknown-attempt record to
 `raw_evidence_root/<sha256>.json` through the append-only private-file protocol,
 verifies an interrupted or concurrent winner's exact bytes, and uses the same
-digest in the observation's `raw://sha256:...` reference.
+digest in the observation's `raw://sha256:...` reference. Source and unknown
+materialization holds the retention lock through deletion-tombstone inspection
+and publication; a digest already named by a deletion intent or record is never
+recreated.
 
 Raw captures remain outside Git. The adapter may emit only deny-by-default
 sanitized, schema-allowlisted output for review.

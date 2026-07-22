@@ -107,7 +107,10 @@ allowlist is empty in this slice. A live unknown observation's
 the collector publishes that sanitized attempt record append-only with mode
 `0600`, recovers interrupted publication under the shared directory lock, and
 accepts a concurrent content-addressed winner only after exact-byte
-verification before publishing the observation.
+verification before publishing the observation. Source and unknown capture
+materialization shares the retention lock with registration and cleanup; a
+digest present in any deletion intent or completion record is permanently
+tombstoned and cannot be materialized again.
 
 ### `SurfaceMatrix`
 
@@ -319,7 +322,9 @@ directory-syncs before and after removal and proves the target is single-link;
 public append-only directories follow the same protocol, and any unrecognized
 alternate link still fails closed. Identical concurrent source-capture and
 unknown-attempt writers verify and accept the single-link winner only after
-synchronizing its parent directory.
+synchronizing its parent directory. Both materializers hold the retention lock
+through tombstone inspection and append-only publication, so cleanup cannot
+race replacement-inode creation and deleted digests cannot be resurrected.
 
 ## Telemetry and Treatment Records
 

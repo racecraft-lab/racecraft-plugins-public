@@ -268,7 +268,10 @@ Repository tests must pass with the network disabled and no raw evidence store.
   pathname and inode: an abandoned single-link pre-publication file is removed,
   while a linked file additionally requires the sole exact target and matching
   bytes. Source and unknown-attempt captures both publish append-only and accept
-  a concurrent winner only after exact-byte verification. Public append-only
+  a concurrent winner only after exact-byte verification. Their materializers
+  share the retention lock with cleanup and reject every digest named by a
+  deletion intent or completion record, preventing post-deletion resurrection.
+  Public append-only
   directories use the same recovery; any unrecognized alternate hard link
   blocks cleanup.
   Record loaders bind one private directory descriptor for enumeration and

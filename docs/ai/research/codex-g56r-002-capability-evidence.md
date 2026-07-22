@@ -198,7 +198,10 @@ re-proves the target is single-link. Public append-only directories use the same
 protocol, and a concurrent identical source capture accepts only the verified
 content-addressed winner after synchronizing the adopted target's parent
 directory. Unknown-attempt captures use the same append-only publication and
-exact concurrent-winner verification.
+exact concurrent-winner verification. Both materializers share the retention
+lock with cleanup, inspect deletion intents and completion records while holding
+it, and reject every tombstoned digest before append-only publication. Deleted
+evidence therefore cannot be recreated or raced back into the raw store.
 
 Sanitizer pseudonyms exist only at explicitly declared profile field paths and
 are generated as exact fixed values. A nested sensitive field is rejected even

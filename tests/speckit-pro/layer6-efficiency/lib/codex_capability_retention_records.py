@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import time
+
 from codex_capability_private import *
 
 def _retention_now():
@@ -261,7 +263,7 @@ def _freeze_raw_evidence_digests(freeze):
 
 
 @contextmanager
-def _retention_lock(raw, expected_raw_identity):
+def _retention_lock(raw, expected_raw_identity, *, wait=False):
     if not HAS_DESCRIPTOR_RELATIVE_IO:
         raise ValueError("raw evidence retention requires descriptor-relative locking")
     try:
@@ -283,10 +285,15 @@ def _retention_lock(raw, expected_raw_identity):
         metadata = os.fstat(lock_descriptor)
         if not stat.S_ISREG(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o600 or metadata.st_nlink != 1:
             raise ValueError("raw evidence retention lock is invalid")
-        try:
-            fcntl.flock(lock_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as error:
-            raise ValueError("raw evidence retention operation is already in progress") from error
+        deadline = time.monotonic() + 5.0
+        while True:
+            try:
+                fcntl.flock(lock_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError as error:
+                if not wait or time.monotonic() >= deadline:
+                    raise ValueError("raw evidence retention operation is already in progress") from error
+                time.sleep(0.01)
         os.fsync(lock_descriptor)
         os.fsync(raw_descriptor)
         _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)

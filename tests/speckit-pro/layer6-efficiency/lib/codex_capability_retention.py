@@ -6,6 +6,45 @@ from __future__ import annotations
 from codex_capability_retention_authority import *
 
 
+def _reject_deleted_evidence_digest(raw, repository_root, evidence_digest):
+    tombstone_sources = (
+        (DELETION_INTENTS_DIR, "deletion intent", _validate_deletion_intent),
+        (DELETION_RECORDS_DIR, "deletion record", _validate_deletion_record),
+    )
+    for directory_name, label, validator in tombstone_sources:
+        for record_digest, record in _load_private_records(
+            raw / directory_name, repository_root, label,
+        ):
+            if validator(record_digest, record)["raw_evidence_digest"] == evidence_digest:
+                raise ValueError("deleted raw evidence cannot be materialized again")
+
+
+def materialize_source_capture(raw_root, repository_root, capture_bytes):
+    capture_bytes = _bounded_source_capture_bytes(capture_bytes)
+    raw, raw_identity = _validated_raw_evidence_root_binding(raw_root, repository_root)
+    evidence_digest = digest(capture_bytes)
+    with _retention_lock(raw, raw_identity, wait=True):
+        _reject_deleted_evidence_digest(raw, repository_root, evidence_digest)
+        return _materialize_source_capture_unlocked(raw, repository_root, capture_bytes)
+
+
+def materialize_unknown_capture(
+    raw_root, repository_root, surface, client_identity_id, repository_binding,
+    work_item, captured_at,
+):
+    record = _unknown_capture_record(
+        surface, client_identity_id, repository_binding, work_item, captured_at,
+    )
+    evidence_digest = digest(canonical_bytes(record) + b"\n")
+    raw, raw_identity = _validated_raw_evidence_root_binding(raw_root, repository_root)
+    with _retention_lock(raw, raw_identity, wait=True):
+        _reject_deleted_evidence_digest(raw, repository_root, evidence_digest)
+        return _materialize_unknown_capture_unlocked(
+            raw, repository_root, surface, client_identity_id, repository_binding,
+            work_item, captured_at,
+        )
+
+
 def _delete_single_link_private_file(
     target, raw, expected_digest, expected_raw_identity, *,
     expected_target_identity, deletion_record, deletion_directory,

@@ -2062,6 +2062,15 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(cleanup_report["deleted_evidence_digests"], retained_report["retained_evidence_digests"])
             self.assertEqual(cleanup_report["retained_evidence_digests"], [])
             self.assertEqual(len(cleanup_report["deletion_record_digests"]), 4)
+            with self.assertRaisesRegex(ValueError, "cannot be materialized again"):
+                capabilities.materialize_source_capture(raw_root, ROOT, capture_bytes)
+            with self.assertRaisesRegex(ValueError, "cannot be materialized again"):
+                capabilities.materialize_unknown_capture(
+                    raw_root, ROOT, "cli", self.identity["client_identity_id"],
+                    repository, work_item, "2026-07-16T00:00:00Z",
+                )
+            self.assertFalse((raw_root / f"{source_capture_digest.removeprefix('sha256:')}.json").exists())
+            self.assertFalse((raw_root / f"{evidence.removeprefix('sha256:')}.json").exists())
             with mock.patch.object(
                 capability_retention, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test clock"),
@@ -2241,13 +2250,7 @@ class CapabilityContractTests(unittest.TestCase):
             raw_root = Path(tmp) / "raw"
             raw_root.mkdir(mode=0o700)
             capture_bytes = b"[]\n"
-            original_write = capability_private._write_private_bytes
-            writers_ready = threading.Barrier(2)
             results, errors = [], []
-
-            def synchronized_write(path: Path, payload: bytes, **kwargs: object) -> None:
-                writers_ready.wait(timeout=5)
-                original_write(path, payload, **kwargs)
 
             def materialize() -> None:
                 try:
@@ -2256,11 +2259,8 @@ class CapabilityContractTests(unittest.TestCase):
                     errors.append(error)
 
             threads = [threading.Thread(target=materialize) for _ in range(2)]
-            with mock.patch.object(
-                capability_private, "_write_private_bytes", side_effect=synchronized_write,
-            ):
-                for thread in threads: thread.start()
-                for thread in threads: thread.join(timeout=10)
+            for thread in threads: thread.start()
+            for thread in threads: thread.join(timeout=10)
             self.assertFalse(any(thread.is_alive() for thread in threads))
             self.assertEqual(errors, [])
             self.assertEqual(len(results), 2)

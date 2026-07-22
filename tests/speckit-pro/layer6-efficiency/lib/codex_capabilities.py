@@ -65,8 +65,6 @@ from codex_capability_observations import (
     validate_work_item,
 )
 from codex_capability_private import (
-    materialize_source_capture,
-    materialize_unknown_capture,
     read_content_addressed_private_file,
     read_private_external_file,
     validate_canary_evidence,
@@ -76,7 +74,11 @@ from codex_capability_private import (
     validate_source_capture_evidence,
     validate_unknown_observation_evidence,
 )
-from codex_capability_retention import reconcile_raw_evidence_retention
+from codex_capability_retention import (
+    materialize_source_capture,
+    materialize_unknown_capture,
+    reconcile_raw_evidence_retention,
+)
 from codex_capability_sources import (
     normalize_source_refreshes,
     validate_manifest,

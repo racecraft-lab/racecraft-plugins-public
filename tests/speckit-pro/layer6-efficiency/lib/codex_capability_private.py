@@ -270,14 +270,18 @@ def read_content_addressed_private_file(path, repository_root, label):
     return resolved, raw
 
 
-def materialize_source_capture(raw_root, repository_root, capture_bytes):
+def _bounded_source_capture_bytes(capture_bytes):
     try:
         capture_size = memoryview(capture_bytes).nbytes
     except TypeError as error:
         raise ValueError("source capture must be bytes-like") from error
     if capture_size > PRIVATE_REFRESH_MAX_BYTES:
         raise ValueError("source capture exceeds the bounded private-file size")
-    capture_bytes = bytes(capture_bytes)
+    return bytes(capture_bytes)
+
+
+def _materialize_source_capture_unlocked(raw_root, repository_root, capture_bytes):
+    capture_bytes = _bounded_source_capture_bytes(capture_bytes)
     captured = _parse_json_bytes(capture_bytes)
     if not isinstance(captured, list):
         raise ValueError("captured refresh must be a JSON list")
@@ -333,7 +337,7 @@ def validate_canary_evidence(raw_root, repository_root, result):
     return evidence_bytes
 
 
-def materialize_unknown_capture(raw_root, repository_root, surface, client_identity_id, repository_binding, work_item, captured_at):
+def _materialize_unknown_capture_unlocked(raw_root, repository_root, surface, client_identity_id, repository_binding, work_item, captured_at):
     raw, raw_identity = _validated_raw_evidence_root_binding(raw_root, repository_root)
     record = _unknown_capture_record(surface, client_identity_id, repository_binding, work_item, captured_at)
     stored = canonical_bytes(record) + b"\n"; evidence = digest(stored)

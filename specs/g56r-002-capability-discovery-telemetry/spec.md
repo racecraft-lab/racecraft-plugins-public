@@ -175,7 +175,10 @@
   while a linked file additionally requires exact descriptor-bound target,
   inode, and byte proof. Concurrent identical source captures accept the
   verified single-link winner. Unknown-attempt captures use the same append-only
-  publication and exact-byte concurrent-winner verification. If the original
+  publication and exact-byte concurrent-winner verification. Source and unknown
+  materialization serialize with retention cleanup; any deletion intent or
+  completion record permanently tombstones its evidence digest and blocks
+  rematerialization. If the original
   open deletion descriptor retains any link after unlink, cleanup never
   republishes the payload or rebinds a substitute inode; the durable intent
   remains fail-closed for manual investigation and cannot produce completion.
