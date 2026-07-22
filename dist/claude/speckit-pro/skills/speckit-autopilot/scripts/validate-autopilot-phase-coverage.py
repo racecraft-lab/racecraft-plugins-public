@@ -2399,6 +2399,13 @@ def validate_projection_integrity(
                             )
                         )
                     superseded_evidence = checkpoint.get("superseded_evidence")
+                    if (
+                        superseded_evidence is not None
+                        and checkpoint.get("corrections") is not None
+                    ):
+                        checkpoint_evidence_errors.append(
+                            f"pr_marker_plan.markers[{index}].implementation_checkpoint must not declare both corrections and superseded_evidence"
+                        )
                     correction_authority = (
                         superseded_evidence
                         if isinstance(superseded_evidence, dict)
@@ -2451,6 +2458,9 @@ def validate_projection_integrity(
                             superseded_sha = superseded_evidence.get(
                                 "checkpoint_evidence_sha"
                             )
+                            superseded_implementation = superseded_evidence.get(
+                                "implementation_checkpoint_sha"
+                            )
                             committed_superseded = (
                                 _git_file_at_commit(
                                     repo_root, superseded_commit, superseded_path,
@@ -2484,6 +2494,23 @@ def validate_projection_integrity(
                             ):
                                 checkpoint_evidence_errors.append(
                                     f"{prefix}.checkpoint_evidence_commit_sha is not an ancestor of the authorized PR head"
+                                )
+                            if not _git_commit_exists(
+                                repo_root, superseded_implementation,
+                            ):
+                                checkpoint_evidence_errors.append(
+                                    f"{prefix}.implementation_checkpoint_sha is not an existing commit"
+                                )
+                            elif (
+                                isinstance(superseded_commit, str)
+                                and not _git_commit_is_ancestor(
+                                    repo_root,
+                                    superseded_implementation,
+                                    superseded_commit,
+                                )
+                            ):
+                                checkpoint_evidence_errors.append(
+                                    f"{prefix}.implementation_checkpoint_sha is not an ancestor of its evidence commit"
                                 )
                             current_evidence_commit = checkpoint.get(
                                 "checkpoint_evidence_commit_sha"
@@ -2525,6 +2552,31 @@ def validate_projection_integrity(
                                     )
                                 else:
                                     correction_projection_evidence = parsed_superseded
+                                    if checkpoint_evidence_schema is not None:
+                                        superseded_schema_errors = _json_schema_errors(
+                                            parsed_superseded,
+                                            checkpoint_evidence_schema,
+                                            checkpoint_evidence_schema,
+                                            "superseded_checkpoint_evidence",
+                                        )
+                                        checkpoint_evidence_errors.extend(
+                                            f"{prefix} schema: {error}"
+                                            for error in superseded_schema_errors
+                                        )
+                                    if (
+                                        parsed_superseded.get("feature_id")
+                                        != marker_plan.get("feature_id")
+                                        or parsed_superseded.get("marker_id")
+                                        != marker_id
+                                        or parsed_superseded.get("status") != "complete"
+                                        or parsed_superseded.get(
+                                            "implementation_checkpoint_sha"
+                                        )
+                                        != superseded_implementation
+                                    ):
+                                        checkpoint_evidence_errors.append(
+                                            f"{prefix} identity does not match marker state"
+                                        )
                     if checkpoint_status == "complete" and corrections is not None:
                         if (
                             not isinstance(corrections, list)
@@ -2741,6 +2793,21 @@ def validate_projection_integrity(
                                 previous_sha = correction_sha
                             if superseded_evidence is None:
                                 projection_evidence = correction_projection_evidence
+                            elif (
+                                isinstance(previous_commit, str)
+                                and isinstance(
+                                    checkpoint.get("checkpoint_evidence_commit_sha"),
+                                    str,
+                                )
+                                and not _git_commit_is_ancestor(
+                                    repo_root,
+                                    previous_commit,
+                                    checkpoint["checkpoint_evidence_commit_sha"],
+                                )
+                            ):
+                                checkpoint_evidence_errors.append(
+                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint.superseded_evidence correction chain does not precede the current checkpoint evidence"
+                                )
                     if evidence.get("status") != checkpoint_status:
                         checkpoint_evidence_errors.append(
                             f"pr_marker_plan.markers[{index}] checkpoint evidence status does not match checkpoint status"

@@ -2783,6 +2783,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
                         "checkpoint_evidence_commit_sha": evidence_commit,
                         "checkpoint_evidence_sha": evidence_sha,
+                        "implementation_checkpoint_sha": implementation_commit,
                         "corrections": [],
                     },
                 }
@@ -2865,6 +2866,103 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 0, report)
             self.assertEqual(report["checkpoint_source_fingerprint_errors"], [])
+
+            checkpoint["superseded_evidence"]["implementation_checkpoint_sha"] = (
+                "f" * 40
+            )
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0].implementation_checkpoint.superseded_evidence identity does not match marker state",
+                report["checkpoint_evidence_errors"],
+            )
+            checkpoint["superseded_evidence"]["implementation_checkpoint_sha"] = (
+                implementation_commit
+            )
+
+            checkpoint["corrections"] = []
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0].implementation_checkpoint must not declare both corrections and superseded_evidence",
+                report["checkpoint_evidence_errors"],
+            )
+            checkpoint.pop("corrections")
+
+            correction_path = (
+                root
+                / "specs/spec-example/.process/checkpoint-corrections/us1-001.json"
+            )
+            correction_path.parent.mkdir(parents=True, exist_ok=True)
+            correction_path.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "marker-checkpoint-correction.v1",
+                        "feature_id": "SPEC-EXAMPLE",
+                        "marker_id": "us1",
+                        "sequence": 1,
+                        "supersedes_evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
+                        "supersedes_evidence_commit_sha": evidence_commit,
+                        "supersedes_evidence_sha": evidence_sha,
+                        "remove_evidence_owners": [
+                            "verification_details.focused_tests"
+                        ],
+                        "reason": "Exercise correction chronology.",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            subprocess.run(
+                ["git", "-C", str(root), "add", str(correction_path)], check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "late historical correction",
+                ],
+                check=True,
+            )
+            correction_commit = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.strip()
+            correction_sha = (
+                "sha256:" + hashlib.sha256(correction_path.read_bytes()).hexdigest()
+            )
+            checkpoint["superseded_evidence"]["corrections"] = [
+                {
+                    "sequence": 1,
+                    "evidence_path": "specs/spec-example/.process/checkpoint-corrections/us1-001.json",
+                    "checkpoint_evidence_commit_sha": correction_commit,
+                    "checkpoint_evidence_sha": correction_sha,
+                    "supersedes_evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
+                    "supersedes_evidence_commit_sha": evidence_commit,
+                    "supersedes_evidence_sha": evidence_sha,
+                }
+            ]
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            subprocess.run(
+                ["git", "-C", str(root), "add", "autopilot-state.json"], check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "declare late historical correction",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0].implementation_checkpoint.superseded_evidence correction chain does not precede the current checkpoint evidence",
+                report["checkpoint_evidence_errors"],
+            )
 
     def test_v2_marker_plan_requires_changed_file_manifest_reference(self) -> None:
         state = self.projected_state(

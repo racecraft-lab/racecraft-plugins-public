@@ -1041,6 +1041,12 @@
         "freshness": {
           "$ref": "#/$defs/checkpoint_freshness"
         }
+      },
+      "not": {
+        "required": [
+          "corrections",
+          "superseded_evidence"
+        ]
       }
     },
     "checkpoint_correction": {
@@ -1091,6 +1097,7 @@
         "evidence_path",
         "checkpoint_evidence_commit_sha",
         "checkpoint_evidence_sha",
+        "implementation_checkpoint_sha",
         "corrections"
       ],
       "properties": {
@@ -1104,6 +1111,10 @@
         "checkpoint_evidence_sha": {
           "type": "string",
           "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "implementation_checkpoint_sha": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
         },
         "corrections": {
           "type": "array",
