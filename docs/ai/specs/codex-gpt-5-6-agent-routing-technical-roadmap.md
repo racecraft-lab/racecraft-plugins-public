@@ -371,7 +371,7 @@ Budget result: re-estimate at scaffold; synthetic traces precede live use
 
 - [proposed] `tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py`
 - [proposed] `tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py`
-- [proposed] `tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py`
+- [proposed] `tests/speckit-pro/unit/test-codex-capability-contract.py`
 
 ---
 

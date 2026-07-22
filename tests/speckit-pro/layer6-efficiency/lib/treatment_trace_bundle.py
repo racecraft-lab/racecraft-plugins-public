@@ -12,9 +12,7 @@ def _effective_effort_route(
 ) -> dict | None:
     if not events:
         return supported_route
-    if len(events) != 1:
-        return None
-    matches = [item for item in assessments if item["event_id"] == events[0]["event_id"]]
+    matches = [item for item in assessments if item["event_id"] == events[-1]["event_id"]]
     if len(matches) != 1:
         return None
     return canonical_routes.get(matches[0]["destination_candidate_route_id"])
@@ -134,7 +132,7 @@ def _validate_trace(trace: object, profile: list[dict], environments: dict[str, 
     ):
         derived_codes.append("effort_mismatch")
     if row["supported_effective_model"] is not None and (
-        events and (len(events) != 1 or events[0]["toModel"] != row["supported_effective_model"])
+        events and events[-1]["toModel"] != row["supported_effective_model"]
         or not events and supported_route is None
     ):
         derived_codes.append("model_mismatch")

@@ -295,6 +295,8 @@ def publish_with_raw_evidence_retention(
         expected_predecessor_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
     )
     payload = canonical_bytes(freeze) + b"\n"
+    if len(payload) > PRIVATE_REFRESH_MAX_BYTES:
+        raise ValueError("freeze publication exceeds the bounded size")
     with _retention_lock(raw, raw_identity):
         validate_raw_evidence_root(raw, repository_root)
         deleted_digests = {

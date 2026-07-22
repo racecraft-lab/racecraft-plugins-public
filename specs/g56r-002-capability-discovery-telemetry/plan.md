@@ -271,7 +271,7 @@ tests/speckit-pro/layer6-efficiency/lib/
 └── treatment_trace_successor.py           # successor lineage validation
 
 tests/speckit-pro/unit/
-├── test-g56r-002-capability-telemetry.py
+├── test-codex-capability-contract.py
 └── fixtures/capability-treatment-replay/
     ├── capability-matrix.json
     ├── treatment-replay.json

@@ -225,19 +225,22 @@ def _reroute_disposition(
     association = (trace["surface"], trace["context"]["threadId"], trace["context"]["turnId"])
     if any((event["surface"], event["threadId"], event["turnId"]) != association for event in events):
         return "hard_fail", ["reroute_association_mismatch"]
-    if len({(event["surface"], event["threadId"], event["turnId"]) for event in events}) != len(events):
-        return "hard_fail", ["ambiguous_reroute_association"]
     by_event: dict[str, list[dict]] = {}
     for assessment in assessments: by_event.setdefault(assessment["event_id"], []).append(assessment)
-    for event in events:
-        if event["fromModel"] != trace["requested_model"]: return "hard_fail", ["reroute_source_model_mismatch"]
+    expected_source_model = trace["requested_model"]
+    final_route = None
+    for index, event in enumerate(events):
+        if event["fromModel"] != expected_source_model: return "hard_fail", ["reroute_source_model_mismatch"]
         matches = by_event.get(event["event_id"], [])
         if len(matches) != 1: return "hard_fail", ["reroute_destination_missing" if not matches else "reroute_destination_ambiguous"]
         item = matches[0]; evidence = qualification.get(item["prequalification_evidence_id"])
         if item["assessment"] != "prequalified_same_agent" or evidence is None: return "hard_fail", ["reroute_destination_unapproved"]
         if (
-            item["destination_candidate_route_id"] == trace["assigned_route_id"]
-            or event["toModel"] == trace["requested_model"]
+            index == 0
+            and (
+                item["destination_candidate_route_id"] == trace["assigned_route_id"]
+                or event["toModel"] == trace["requested_model"]
+            )
         ):
             return "hard_fail", ["reroute_self_target"]
         canonical = canonical_routes.get(item["destination_candidate_route_id"])
@@ -258,13 +261,16 @@ def _reroute_disposition(
             admitted = trusted.get(evidence["qualification_evidence_id"])
             if admitted is None or canonical_bytes(admitted) != canonical_bytes(evidence):
                 return "hard_fail", ["reroute_destination_untrusted"]
-        if trace["supported_effective_model"] != event["toModel"]:
-            return "hard_fail", ["reroute_effective_destination_mismatch"]
-        if trace["supported_effective_effort"] is not None and (
-            canonical["effort"] is None
-            or trace["supported_effective_effort"] != canonical["effort"]
-        ):
-            return "hard_fail", ["reroute_effective_destination_mismatch"]
+        expected_source_model = event["toModel"]
+        final_route = canonical
+    if trace["supported_effective_model"] != events[-1]["toModel"]:
+        return "hard_fail", ["reroute_effective_destination_mismatch"]
+    if trace["supported_effective_effort"] is not None and (
+        final_route is None
+        or final_route["effort"] is None
+        or trace["supported_effective_effort"] != final_route["effort"]
+    ):
+        return "hard_fail", ["reroute_effective_destination_mismatch"]
     if set(by_event) != {event["event_id"] for event in events}: return "hard_fail", ["orphan_reroute_destination_assessment"]
     return "non_scorable_rerouted", ["service_reroute_requested_route_non_scorable"]
 

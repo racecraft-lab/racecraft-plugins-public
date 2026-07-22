@@ -8,6 +8,16 @@ if __package__:
 else:
     from codex_capability_retention_lock import *
 
+
+def _bounded_directory_names(descriptor, *, limit, label):
+    names = []
+    with os.scandir(descriptor) as entries:
+        for entry in entries:
+            if len(names) >= limit:
+                raise ValueError(f"{label} exceeds the maximum entry count")
+            names.append(entry.name)
+    return sorted(names)
+
 def _retention_now():
     return datetime.now(timezone.utc)
 
@@ -96,8 +106,12 @@ def _load_private_records(directory, repository_root, label):
         )
         if _stable_directory_identity(os.fstat(directory_descriptor)) != directory_identity:
             raise ValueError(f"{label} directory changed before enumeration")
-        names = sorted(os.listdir(directory_descriptor))
+        names = _bounded_directory_names(
+            directory_descriptor, limit=PRIVATE_RECORD_MAX_ENTRIES, label=label,
+        )
         records = []
+        aggregate_bytes = 0
+        aggregate_nodes = [0]
         for name in names:
             if Path(name).name != name or Path(name).suffix != ".json":
                 raise ValueError(f"{label} directory contains an undeclared entry")
@@ -109,6 +123,8 @@ def _load_private_records(directory, repository_root, label):
                 or entry.st_size > PRIVATE_REFRESH_MAX_BYTES
             ):
                 raise ValueError(f"{label} directory contains an undeclared entry")
+            if aggregate_bytes + entry.st_size > PRIVATE_RECORD_MAX_TOTAL_BYTES:
+                raise ValueError(f"{label} directory exceeds the maximum aggregate size")
             descriptor = os.open(name, file_flags, dir_fd=directory_descriptor)
             try:
                 before = os.fstat(descriptor)
@@ -138,14 +154,17 @@ def _load_private_records(directory, repository_root, label):
             finally:
                 os.close(descriptor)
             raw_bytes = b"".join(chunks)
+            aggregate_bytes += total
             record_digest = digest(raw_bytes)
             if name != f"{record_digest.removeprefix('sha256:')}.json":
                 raise ValueError(f"{label} must use its exact content digest as the filename")
-            record = _parse_json_bytes(raw_bytes)
+            record = _parse_json_bytes(raw_bytes, counter=aggregate_nodes)
             if raw_bytes != canonical_bytes(record) + b"\n":
                 raise ValueError(f"{label} must use canonical JSON bytes")
             records.append((record_digest, record))
-        if sorted(os.listdir(directory_descriptor)) != names:
+        if _bounded_directory_names(
+            directory_descriptor, limit=PRIVATE_RECORD_MAX_ENTRIES, label=label,
+        ) != names:
             raise ValueError(f"{label} directory changed during enumeration")
         _assert_private_directory_current(target, directory_descriptor, directory_identity)
         _assert_private_directory_current(raw, raw_descriptor, raw_identity)

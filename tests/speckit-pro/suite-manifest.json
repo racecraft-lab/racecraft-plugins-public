@@ -66,7 +66,7 @@
         { "path": "tests/speckit-pro/unit/test-autopilot-phase-coverage.py", "label": "test-autopilot-phase-coverage", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-structural-validator-regressions.py", "label": "test-structural-validator-regressions", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-unit-layout.py", "label": "test-unit-layout", "baseline": null },
-        { "path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py", "label": "test-g56r-002-capability-telemetry", "baseline": null },
+        { "path": "tests/speckit-pro/unit/test-codex-capability-contract.py", "label": "test-codex-capability-contract", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-check-toolchain.py", "label": "test-check-toolchain", "baseline": "tests/speckit-pro/parity/bash-to-python/test-check-toolchain-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-post-implementation-reference.py", "label": "test-post-implementation-reference", "baseline": "tests/speckit-pro/parity/bash-to-python/test-post-implementation-reference-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py", "label": "test-reviewability-marker-guidance", "baseline": "tests/speckit-pro/parity/bash-to-python/test-reviewability-marker-guidance-baseline.txt" },

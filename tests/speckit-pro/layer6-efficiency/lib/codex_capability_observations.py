@@ -341,7 +341,10 @@ def _surface_index_and_invalidity(observations, normalization_map, normalization
                 reasons.append("ambiguous_or_duplicate_normalization_key")
                 continue
             key = (alias["canonical_model_id"] if alias is not None else raw["model"], raw["effort"])
-            if not all(_token(value) for value in key) or key in entries:
+            if not all(_token(value) for value in key):
+                reasons.append("ambiguous_or_duplicate_normalization_key")
+                continue
+            if key in entries:
                 reasons.append("ambiguous_or_duplicate_normalization_key")
             entries[key] = raw
         indexed[observation["surface"]] = entries

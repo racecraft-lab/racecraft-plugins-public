@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused deterministic tests for the G56R-002 capability contract."""
+"""Focused deterministic tests for the Codex capability contract."""
 
 from __future__ import annotations
 
@@ -278,11 +278,15 @@ def make_two_trace_graph_bundle(source: dict) -> dict:
     return rebind_treatment_owners(bundle)
 
 
-def qualification_owner(authority_kind: str) -> dict:
+def qualification_owner(
+    authority_kind: str,
+    *,
+    destination_candidate_route_id: str = "G56R-001-CR-PHASE-EXECUTOR-GPT55",
+) -> dict:
     owner = {
         "authority_kind": authority_kind,
         "owner_spec_id": "G56R-003" if authority_kind == "owned_external" else "G56R-002",
-        "destination_candidate_route_id": "G56R-001-CR-PHASE-EXECUTOR-GPT55",
+        "destination_candidate_route_id": destination_candidate_route_id,
         "destination_agent_contract_id": "G56R-001-AC-PHASE-EXECUTOR",
         "destination_named_agent": "phase-executor",
         "qualification_status": "prequalified",
@@ -293,8 +297,11 @@ def qualification_owner(authority_kind: str) -> dict:
 
 
 def trusted_external_qualification(bundle: dict) -> dict[str, dict]:
-    owner = next(item for item in bundle["qualification_evidence_registry"] if item["authority_kind"] == "owned_external")
-    return {owner["qualification_evidence_id"]: copy.deepcopy(owner)}
+    return {
+        owner["qualification_evidence_id"]: copy.deepcopy(owner)
+        for owner in bundle["qualification_evidence_registry"]
+        if owner["authority_kind"] == "owned_external"
+    }
 
 
 def declare_treatment_result(
@@ -351,7 +358,7 @@ def declare_reroute_result(bundle: dict, trusted: dict[str, dict] | None = None)
     if trace["supported_effective_effort"] is not None:
         directly_derived.append("effort_mismatch")
     if trace["supported_effective_model"] is not None and (
-        len(events) != 1 or events[0]["toModel"] != trace["supported_effective_model"]
+        not events or events[-1]["toModel"] != trace["supported_effective_model"]
     ):
         directly_derived.append("model_mismatch")
     if events and trace["supported_effective_model"] is None:
@@ -458,6 +465,49 @@ def make_treatment_reroute_case(bundle: dict, authority: str) -> dict:
         "treatment_disposition": disposition,
     }]
     return declare_reroute_result(bundle)
+
+
+def make_two_hop_treatment_reroute_case(bundle: dict) -> dict:
+    bundle = make_treatment_reroute_case(bundle, "owned_external")
+    trace = bundle["treatment_traces"][0]
+    second_owner = qualification_owner(
+        "owned_external",
+        destination_candidate_route_id="G56R-001-CR-PHASE-EXECUTOR-SOL",
+    )
+    bundle["qualification_evidence_registry"].append(second_owner)
+    first_event = trace["service_reroute_events"][0]
+    second_event = {
+        "surface": trace["surface"],
+        "threadId": trace["context"]["threadId"],
+        "turnId": trace["context"]["turnId"],
+        "fromModel": first_event["toModel"],
+        "toModel": trace["requested_model"],
+        "reason": "fixture_second_service_reroute",
+        "evidence_digest": treatment.digest(b"fixture-second-reroute-evidence"),
+    }
+    second_event["event_id"] = treatment.content_id(second_event, "event_id")
+    trace["service_reroute_events"].append(second_event)
+    trace["reroute_destination_assessments"].append({
+        "event_id": second_event["event_id"],
+        "destination_candidate_route_id": second_owner["destination_candidate_route_id"],
+        "destination_agent_contract_id": second_owner["destination_agent_contract_id"],
+        "destination_named_agent": second_owner["destination_named_agent"],
+        "assessment": "prequalified_same_agent",
+        "prequalification_evidence_id": second_owner["qualification_evidence_id"],
+    })
+    trace["supported_effective_model"] = second_event["toModel"]
+    next(
+        item for item in trace["observations"] if item["field_path"] == "reroute.events"
+    )["value"] = copy.deepcopy(trace["service_reroute_events"])
+    next(
+        item for item in trace["observations"]
+        if item["field_path"] == "assignment.supported_effective_model"
+    )["value"] = second_event["toModel"]
+    bundle["fixture_provenance"]["expected_dispositions"] = [{
+        "execution_trace_id": trace["objective_binding"]["execution_trace_id"],
+        "treatment_disposition": "non_scorable_rerouted",
+    }]
+    return declare_reroute_result(bundle, trusted_external_qualification(bundle))
 
 
 def source_capture(manifest: dict, retrieved_at: str = "2026-07-16T00:00:00Z") -> list[dict]:
@@ -1076,6 +1126,26 @@ class CapabilityContractTests(unittest.TestCase):
         unequal_matrix, _ = capabilities.evaluate_surface_matrix(unequal_clients, self.authority_tuples(agreed_case))
         self.assertEqual(unequal_matrix["invalidity_reasons"], ["unprovable_shared_client_identity"])
         self.assertEqual(capabilities.validate_surface_matrix(unequal_matrix), unequal_matrix)
+        unaliased_display = self.observations(agreed_case)
+        for index, observation in enumerate(unaliased_display):
+            observation["entries"][0]["model"] = "Model A Display"
+            observation["entries"][0]["available"] = index != 1
+            observation["surface_observation_id"] = capabilities.digest({
+                key: value for key, value in observation.items()
+                if key != "surface_observation_id"
+            })
+        display_matrix, display_decisions = capabilities.evaluate_surface_matrix(
+            unaliased_display, self.authority_tuples(agreed_case),
+        )
+        self.assertEqual(
+            display_matrix["invalidity_reasons"],
+            ["ambiguous_or_duplicate_normalization_key"],
+        )
+        self.assertEqual(display_matrix["disagreements"], [])
+        self.assertEqual(capabilities.validate_surface_matrix(display_matrix), display_matrix)
+        self.assertEqual(
+            {item["canonical_model_id"] for item in display_decisions}, {"model-a"},
+        )
         disagreement_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "surface_disagreement")
         disagreement_matrix, _ = capabilities.evaluate_surface_matrix(self.observations(disagreement_case), self.authority_tuples(disagreement_case))
         wrong_class = copy.deepcopy(disagreement_matrix)
@@ -2093,6 +2163,45 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(list(moved_parent.iterdir()), [])
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_oversized_publication_is_rejected_before_output_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            raw_root = root / "raw"
+            raw_root.mkdir(mode=0o700)
+            freeze = {"fixture": "bounded-publication"}
+            payload = capabilities.canonical_bytes(freeze) + b"\n"
+            output = root / "candidate-freeze.json"
+            with mock.patch.object(
+                capability_freeze, "validate_freeze", return_value=freeze,
+            ), mock.patch.object(
+                capability_freeze, "PRIVATE_REFRESH_MAX_BYTES", len(payload) - 1,
+            ), self.assertRaisesRegex(ValueError, "publication exceeds the bounded size"):
+                capabilities.publish_with_raw_evidence_retention(
+                    freeze, output, raw_root, ROOT, manifest=self.manifest,
+                )
+            self.assertFalse(output.exists())
+            self.assertEqual(list(raw_root.iterdir()), [])
+
+            parent_identity = capability_io._stable_directory_identity(
+                os.stat(root, follow_symlinks=False),
+            )
+            parent_descriptor = capability_private._private_directory_descriptor(
+                root, parent_identity,
+            )
+            before = {path.name for path in root.iterdir()}
+            try:
+                with mock.patch.object(
+                    capability_private, "PRIVATE_REFRESH_MAX_BYTES", len(payload) - 1,
+                ), self.assertRaisesRegex(ValueError, "private output exceeds the bounded size"):
+                    capability_private._write_private_bytes_at(
+                        parent_descriptor, root, "oversized-direct.json", payload,
+                        append_only=True, expected_parent_identity=parent_identity,
+                    )
+            finally:
+                os.close(parent_descriptor)
+            self.assertEqual({path.name for path in root.iterdir()}, before)
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_public_output_rejects_symlinks_and_survives_substitution_races(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -2587,6 +2696,41 @@ class CapabilityContractTests(unittest.TestCase):
                 )
             self.assertTrue(swapped)
             self.assertEqual(list(moved.iterdir()), [])
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_private_record_loader_enforces_aggregate_bounds(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_root = Path(tmp) / "raw"
+            raw_root.mkdir(mode=0o700)
+            records = raw_root / "records"
+            records.mkdir(mode=0o700)
+            for value in ("first", "second", "third"):
+                record = {"schema_version": "test-record.v1", "value": value}
+                raw = capabilities.canonical_bytes(record) + b"\n"
+                path = records / f"{capabilities.digest(raw).removeprefix('sha256:')}.json"
+                path.write_bytes(raw)
+                path.chmod(0o600)
+            with mock.patch.object(
+                capability_retention_records, "PRIVATE_RECORD_MAX_ENTRIES", 2,
+            ), self.assertRaisesRegex(ValueError, "maximum entry count"):
+                capability_retention_records._load_private_records(
+                    records, ROOT, "retention record",
+                )
+            total_bytes = sum(path.stat().st_size for path in records.iterdir())
+            with mock.patch.object(
+                capability_retention_records,
+                "PRIVATE_RECORD_MAX_TOTAL_BYTES",
+                total_bytes - 1,
+            ), self.assertRaisesRegex(ValueError, "maximum aggregate size"):
+                capability_retention_records._load_private_records(
+                    records, ROOT, "retention record",
+                )
+            with mock.patch.object(
+                capability_contract, "CAPABILITY_JSON_MAX_TOTAL_NODES", 6,
+            ), self.assertRaisesRegex(ValueError, "maximum node count"):
+                capability_retention_records._load_private_records(
+                    records, ROOT, "retention record",
+                )
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_deletion_recovery_refuses_replaced_raw_root(self) -> None:
@@ -3544,6 +3688,37 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertEqual(treatment.FAILURE_DISPOSITIONS["effective_treatment_unknown"], "unknown")
         self.assertTrue(all(value in {"unknown", "hard_fail"} for value in treatment.FAILURE_DISPOSITIONS.values()))
 
+    def test_multi_hop_reroutes_form_one_trusted_ordered_chain(self) -> None:
+        chained = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
+        trusted = trusted_external_qualification(chained)
+        result = treatment.validate_treatment_bundle(
+            self.rebound(chained), trusted_qualification_evidence=trusted,
+        )
+        self.assertEqual(
+            result["treatment_traces"][0]["treatment_disposition"],
+            "non_scorable_rerouted",
+        )
+
+        broken = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
+        trace = broken["treatment_traces"][0]
+        second_event = trace["service_reroute_events"][1]
+        second_event["fromModel"] = trace["requested_model"]
+        second_event["event_id"] = treatment.content_id(second_event, "event_id")
+        trace["reroute_destination_assessments"][1]["event_id"] = second_event["event_id"]
+        next(
+            item for item in trace["observations"] if item["field_path"] == "reroute.events"
+        )["value"] = copy.deepcopy(trace["service_reroute_events"])
+        declare_reroute_result(broken, trusted_external_qualification(broken))
+        self.assert_reroute_hard_failed(
+            broken, trusted=trusted_external_qualification(broken),
+        )
+
+        duplicate = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        duplicate["treatment_traces"][0]["service_reroute_events"].append(
+            copy.deepcopy(duplicate["treatment_traces"][0]["service_reroute_events"][0])
+        )
+        self.assert_bundle_invalid(duplicate)
+
     def test_reroute_association_and_external_qualification_are_exact(self) -> None:
         association_mutations = [
             ("event", "surface", "cli"),
@@ -4114,6 +4289,38 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertEqual(successor["telemetry_profile_id"], self.bundle["telemetry_profile_id"])
         self.assertEqual(successor["treatment_contract_digest"], self.bundle["treatment_contract_digest"])
         self.assertEqual(successor["published_at"], TREATMENT_SUCCESSOR_PUBLISHED_AT)
+        second_successor = treatment.build_treatment_successor(
+            successor,
+            self.bundle,
+            published_at="2026-07-20T04:00:00Z",
+            prior_freeze_predecessor=prior,
+            expected_prior_telemetry_profile_id=successor["telemetry_profile_id"],
+            expected_prior_treatment_contract_digest=successor[
+                "treatment_contract_digest"
+            ],
+        )
+        third_successor = treatment.build_treatment_successor(
+            second_successor,
+            self.bundle,
+            published_at="2026-07-20T04:01:00Z",
+            prior_freeze_predecessor=successor,
+            expected_prior_telemetry_profile_id=second_successor[
+                "telemetry_profile_id"
+            ],
+            expected_prior_treatment_contract_digest=second_successor[
+                "treatment_contract_digest"
+            ],
+            expected_prior_predecessor_telemetry_profile_id=successor[
+                "telemetry_profile_id"
+            ],
+            expected_prior_predecessor_treatment_contract_digest=successor[
+                "treatment_contract_digest"
+            ],
+        )
+        self.assertEqual(
+            third_successor["supersedes_candidate_freeze_id"],
+            second_successor["candidate_freeze_id"],
+        )
         rerouted = self.rebound(make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external"))
         trusted = trusted_external_qualification(rerouted)
         declare_reroute_result(rerouted, trusted)

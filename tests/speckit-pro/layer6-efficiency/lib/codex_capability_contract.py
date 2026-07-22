@@ -31,6 +31,10 @@ CANONICAL_MANIFEST_SCHEMA_VERSION = "2.0.0"
 CANONICAL_MANIFEST_SNAPSHOT_ID = "G56R-001-SNAPSHOT-2026-07-16-V3"
 CANONICAL_MANIFEST_DIGEST = "sha256:3dc5c6c7a117ac8d01728ffeff1a35cf38fb0d6e982bb029cf192a790d30cd64"
 PRIVATE_REFRESH_MAX_BYTES = 32 * 1024 * 1024
+PRIVATE_RECORD_MAX_ENTRIES = 10_000
+PRIVATE_RECORD_MAX_TOTAL_BYTES = 32 * 1024 * 1024
+CAPABILITY_JSON_MAX_NESTING_DEPTH = 64
+CAPABILITY_JSON_MAX_TOTAL_NODES = 100_000
 RAW_EVIDENCE_RETENTION_DAYS = 30
 RAW_EVIDENCE_PENDING_DAYS = 30
 RETENTION_RECORDS_DIR = "retention-records"
@@ -228,14 +232,74 @@ def _reject_json_constant(value):
     raise ValueError(f"non-JSON numeric constant: {value}")
 
 
-def _parse_json_bytes(raw):
+def _validate_capability_json_bounds(value, *, depth=0, counter=None):
+    if counter is None:
+        counter = [0]
+    counter[0] += 1
+    if counter[0] > CAPABILITY_JSON_MAX_TOTAL_NODES:
+        raise ValueError("capability JSON exceeds the maximum node count")
+    if depth > CAPABILITY_JSON_MAX_NESTING_DEPTH:
+        raise ValueError("capability JSON exceeds the maximum nesting depth")
+    if isinstance(value, dict):
+        for key, item in value.items():
+            _validate_capability_json_bounds(key, depth=depth + 1, counter=counter)
+            _validate_capability_json_bounds(item, depth=depth + 1, counter=counter)
+    elif isinstance(value, list):
+        for item in value:
+            _validate_capability_json_bounds(item, depth=depth + 1, counter=counter)
+
+
+def _validate_json_lexical_bounds(text):
+    nodes = depth = index = 0
+    while index < len(text):
+        character = text[index]
+        if character in " \t\r\n,:]}":
+            if character in "]}":
+                depth = max(0, depth - 1)
+            index += 1
+            continue
+        if character == '"':
+            nodes += 1; index += 1
+            while index < len(text):
+                if text[index] == "\\":
+                    index += 2
+                elif text[index] == '"':
+                    index += 1
+                    break
+                else:
+                    index += 1
+        elif character in "[{":
+            nodes += 1; depth += 1; index += 1
+            if depth > CAPABILITY_JSON_MAX_NESTING_DEPTH:
+                raise ValueError("capability JSON exceeds the maximum nesting depth")
+        elif character in "-0123456789":
+            nodes += 1; index += 1
+            while index < len(text) and text[index] not in " \t\r\n,]}":
+                index += 1
+        elif text.startswith("true", index):
+            nodes += 1; index += 4
+        elif text.startswith("false", index):
+            nodes += 1; index += 5
+        elif text.startswith("null", index):
+            nodes += 1; index += 4
+        else:
+            index += 1
+        if nodes > CAPABILITY_JSON_MAX_TOTAL_NODES:
+            raise ValueError("capability JSON exceeds the maximum node count")
+
+
+def _parse_json_bytes(raw, *, counter=None):
     try:
-        return json.loads(
-            raw.decode("utf-8", errors="strict"),
+        text = raw.decode("utf-8", errors="strict")
+        _validate_json_lexical_bounds(text)
+        value = json.loads(
+            text,
             object_pairs_hook=_unique_object,
             parse_constant=_reject_json_constant,
         )
-    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as error:
         raise ValueError("JSON input must be strict UTF-8 JSON") from error
+    _validate_capability_json_bounds(value, counter=counter)
+    return value
 
 __all__ = [name for name in globals() if not name.startswith("__")]

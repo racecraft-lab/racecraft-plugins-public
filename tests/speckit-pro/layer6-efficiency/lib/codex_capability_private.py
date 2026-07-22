@@ -42,6 +42,8 @@ def _write_private_bytes_at(
     parent_descriptor, parent_path, filename, payload, *, append_only,
     expected_parent_identity, private=True,
 ):
+    if len(payload) > PRIVATE_REFRESH_MAX_BYTES:
+        raise ValueError("private output exceeds the bounded size")
     temporary = None; descriptor = None
     try:
         for _ in range(64):
