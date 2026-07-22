@@ -271,14 +271,16 @@ collection is never part of the default deterministic suite.
 ## Retention Cleanup
 
 Freeze and canary publication automatically add immutable content-addressed
-records under `raw_evidence_root/retention-records/`. Those records become
-governing only after the exact freeze bytes exist and an immutable receipt is
-directory-fsynced under `publication-receipts/`. Re-running the same publication
-recovers a crash between those steps; a different artifact at the output path
-fails before registration. Records left by failed publication remain reported
-as non-governing pending claims. Each protects its evidence only until the
-earlier of its declared deadline or 30 days after registration; cleanup uses
-the latest governing or individually capped pending deadline. Before registration, publication
+records under `raw_evidence_root/retention-records/`. Each deadline is exactly
+30 days after trusted registration. A durable record under
+`publication-intents/` makes the exact set governing before output begins; the
+matching `publication-receipts/` record is appended only after exact freeze-byte
+verification and proves completion. Re-running the same publication recovers a
+crash between those steps; a different artifact at the output path fails before
+registration. Records left before intent remain non-governing pending claims,
+protect evidence for at most one day after registration, and cannot be promoted
+after expiry without cleanup. Cleanup uses the latest governing or individually
+capped pending deadline. Before registration, publication
 semantically revalidates the source capture, every non-fixture observation, and
 every canary result against the retained private bytes. It publishes and
 re-reads the exact canonical output as a single-link target through one
@@ -340,15 +342,16 @@ unlink without a durable completion record, and missing, forked, or disconnected
 intent chains remain fail-closed. Repeated cleanup after durable completion is idempotent. Every raw
 file must have exactly one hard link. Append-only writes
 directory-fsync after both final-name publication and temporary-name removal.
-A shared parent-directory advisory lock is acquired before a reserved temporary
-pathname appears and held through writer commit or recovery; every temporary
+A shared parent-directory advisory lock is acquired before a reserved
+`.capability-evidence-write-*` temporary pathname appears and held through
+writer commit or recovery; every temporary
 also holds its own advisory lock until commit. After a crash, the next operation
 holds both locks and re-proves the temporary's directory-relative
 pathname and inode before discarding a single-link pre-publication file. If both
 names survive, recovery additionally proves the temporary is the sole alternate
 link to the exact target and re-syncs the directory. Public append-only outputs
 use the same protocol, and identical source-capture writers accept only a
-verified content-addressed, single-link winner;
+verified content-addressed, single-link winner after parent-directory sync;
 cleanup fails closed if a power-loss artifact or any alternate hard link still
 reaches governed bytes. Before quarantine, a retry requires the exact canonical
 v2 identity; afterward it requires the exact terminal v3-bound quarantine

@@ -139,9 +139,12 @@ retrieved bodies. Each surface's `raw://sha256:...` reference is backed by a mod
 sanitized attempt record named by that exact digest, and collection re-reads
 the stored bytes before publishing the observation.
 Freeze and canary publication stage one content-addressed retention record per
-non-fixture digest. Each record binds the freeze ID, publication time, and exact
-30-day deletion deadline, but becomes governing only after the exact artifact
-bytes exist and a content-addressed publication receipt is directory-fsynced.
+non-fixture digest. Each record binds the freeze ID, declared publication time,
+trusted registration time, and exact deletion deadline 30 days after that
+registration. A content-addressed publication intent binds the complete record
+set and exact artifact digest before public output begins, making those records
+governing; the matching receipt is appended only after the exact output bytes
+exist and is completion proof for that durable intent.
 Before registration, publication semantically revalidates the source capture,
 every non-fixture observation, and every canary result against the retained
 private bytes. The public append-only target is created, inode-checked, and
@@ -149,10 +152,12 @@ re-read through one identity-bound parent descriptor as a single-link file; the
 exact canonical bytes are checked again before the receipt is written. An
 existing matching output is recoverable only when it satisfies the same
 single-link invariant.
-An interrupted publication can be recovered idempotently; unreceipted records
-remain non-governing pending claims, but each protects evidence until the
-earlier of its declared deadline or 30 days after registration. The effective
-deadline is the latest governing or individually capped pending deadline. The deterministic
+An interrupted publication can be recovered idempotently. Records left before
+an intent remain non-governing pending claims and protect evidence for at most
+one day after trusted registration; an expired pending set cannot later be
+promoted without cleanup. Records named by a durable intent remain governing
+even if output or receipt persistence is interrupted. The effective deadline is
+the latest governing or individually capped pending deadline. The deterministic
 `retention` command verifies pre-deadline presence, fails closed on missing or
 overdue bytes, and in `cleanup` mode first appends and directory-fsyncs a
 deletion-intent record. It then unlinks the expired bytes descriptor-relative,
@@ -186,7 +191,7 @@ invalid UTF-8, parser recursion, nesting beyond 64 levels, or more than 100,000
 total nodes.
 Source-capture materialization rejects non-bytes-like or greater-than-32-MiB
 input before parsing or hashing. A shared parent-directory advisory lock is
-acquired before any reserved temporary pathname appears and is held through
+acquired before any reserved `.capability-evidence-write-*` temporary pathname appears and is held through
 writer commit or recovery. Every temporary also holds an advisory lock until
 commit. Recovery obtains both locks and re-proves the
 directory-relative pathname and inode before removing an abandoned single-link
@@ -194,4 +199,5 @@ pre-publication file. A linked temporary additionally must be the sole alternate
 name for the exact target and bytes; recovery syncs before and after unlink and
 re-proves the target is single-link. Public append-only directories use the same
 protocol, and a concurrent identical source capture accepts only the verified
-content-addressed winner.
+content-addressed winner after synchronizing the adopted target's parent
+directory.

@@ -85,8 +85,10 @@ in `docs/ai/specs/.process/autopilot-state.json`.
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py
+- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_publication_records.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py
+- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_authority.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py
@@ -138,9 +140,10 @@ stop condition.
 - `codex_capability_io.py` owns strict JSON and descriptor-relative reads;
   `codex_capability_append_only.py` owns temporary locking and crash recovery;
   `codex_capability_private.py` owns private retained-byte writes and locking.
-- `codex_capability_retention_records.py` owns append-only intent, receipt, and
-  completion records; `codex_capability_retention.py` owns verification and
-  destructive cleanup.
+- `codex_capability_retention_records.py` owns deletion and retention records;
+  `codex_capability_publication_records.py` owns registration plus publication
+  intent/receipt records; `codex_capability_retention_authority.py` resolves
+  governing deadlines; `codex_capability_retention.py` owns destructive cleanup.
 - `codex_capability_freeze.py` owns sanitized freeze construction and
   publication; `codex_capability_publish_io.py` owns exact-byte publication
   read-back.
@@ -230,17 +233,18 @@ Repository tests must pass with the network disabled and no raw evidence store.
 ## Evidence and Data Boundaries
 
 - `raw_evidence_root` must resolve outside the repository, use `0700`
-  directories and single-link `0600` files, and retain captures for 30 days after freeze
-  publication. Source refresh copies and binds the exact aggregate body capture
+  directories and single-link `0600` files, and retain captures for 30 days after trusted
+  registration. Source refresh copies and binds the exact aggregate body capture
   into that store. Before registration, publication semantically revalidates
   the source capture, each non-fixture observation, and every canary result
   against the retained bytes. It publishes and re-reads the exact canonical
   freeze bytes as a single-link target through one identity-bound parent
   descriptor; recovered existing outputs must satisfy the same invariant. It
-  then makes staged
-  content-addressed retention records governing only by appending a receipt;
-  pending records remain non-governing but protect evidence until their
-  individually capped deadline, at most 30 days after registration. Deletion
+  then appends a content-addressed publication intent before output, making the
+  exact staged retention-record set governing; a matching receipt after exact
+  output-byte verification proves completion. Records left before intent remain
+  non-governing, protect evidence for at most one day after trusted registration,
+  and cannot be promoted after expiry without cleanup. Deletion
   uses the latest governing or capped pending deadline. Deterministic
   verification fails on missing or overdue bytes. Cleanup first appends and
   directory-fsyncs a content-addressed deletion-intent record, then performs a
@@ -260,7 +264,7 @@ Repository tests must pass with the network disabled and no raw evidence store.
   private-root lock, and destructive cleanup derives its timestamp from current
   UTC. Append-only writes directory-fsync both final-name publication and
   temporary-name removal. Writers acquire a shared parent-directory advisory
-  lock before creating a reserved temporary and hold it through commit; recovery
+  lock before creating a reserved `.capability-evidence-write-*` temporary and hold it through commit; recovery
   holds the same lock while scanning or removing names. Every reserved
   temporary also holds an advisory lock until commit. Recovery then re-proves its directory-relative
   pathname and inode: an abandoned single-link pre-publication file is removed,
@@ -276,7 +280,7 @@ Repository tests must pass with the network disabled and no raw evidence store.
 - Source-capture callers must provide bytes-like input no larger than 32 MiB;
   the bound is enforced before JSON parsing or digest calculation, and a losing
   concurrent identical writer accepts only the verified content-addressed,
-  single-link winner.
+  single-link winner after synchronizing its parent directory.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
   bound to exact bytes by the adjacent out-of-band digest manifest.
@@ -317,8 +321,10 @@ tests/speckit-pro/layer6-efficiency/lib/
 ├── codex_capability_matrix.py             # matrix and canary decisions
 ├── codex_capability_observations.py       # observation normalization
 ├── codex_capability_private.py            # private retained-byte writes
+├── codex_capability_publication_records.py # retention registration/publication records
 ├── codex_capability_publish_io.py         # publication read-back
 ├── codex_capability_retention.py          # cleanup and retention lifecycle
+├── codex_capability_retention_authority.py # publication authority/deadlines
 ├── codex_capability_retention_records.py  # append-only retention records
 ├── codex_capability_sources.py            # source refresh/admission
 └── treatment_trace_schema.py

@@ -7,7 +7,9 @@ import time
 
 from codex_capability_io import *
 
-_APPEND_ONLY_TEMPORARY_NAME = re.compile(r"\.g56r-002-[0-9a-f]{32}")
+_APPEND_ONLY_TEMPORARY_NAME = re.compile(
+    rf"{re.escape(PRIVATE_TEMPORARY_PREFIX)}[0-9a-f]{{32}}",
+)
 _APPEND_ONLY_LOCK_WAIT_SECONDS = 5.0
 
 
@@ -100,6 +102,7 @@ def _recover_append_only_target(path, payload, expected_parent_identity=None, *,
             return True
 
         if target_is_committed(verify_payload=False):
+            os.fsync(parent_descriptor)
             return False
         target_before = target_state()
         if target_before.st_nlink != 2:
@@ -248,7 +251,8 @@ def _recover_content_addressed_append_only_links(raw):
     directories = [Path(raw)]
     directories.extend(
         Path(raw) / name for name in (
-            RETENTION_RECORDS_DIR, PUBLICATION_RECEIPTS_DIR, DELETION_INTENTS_DIR, DELETION_RECORDS_DIR,
+            RETENTION_RECORDS_DIR, PUBLICATION_INTENTS_DIR, PUBLICATION_RECEIPTS_DIR,
+            DELETION_INTENTS_DIR, DELETION_RECORDS_DIR,
         ) if (Path(raw) / name).exists()
     )
     for directory in directories:

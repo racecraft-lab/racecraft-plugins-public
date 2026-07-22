@@ -874,7 +874,7 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Review pending | 10 | 58/58 focused tests, 7/7 naming-layout checks, standalone validation, privacy, docs-reference, and 2822/2822 full-suite checks pass after the latest exact-head finding was remediated; exact-head re-audit pending |
+| 2 - Treatment contracts | Review pending | 10 | Lower-slice restack is reconciled; 58/58 focused, 9/9 naming-layout, treatment, privacy 10/10, process 8/8, docs-reference, and 2824/2824 full-suite gates pass; exact-head review awaits the merged checkpoint |
 | 3 - Synthetic replay | In Progress | 0 | T026-T030 exist on the next marker branch; restack and exact-head review follow US2 approval |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -1109,6 +1109,16 @@ For every task:
   suite was also renamed to the durable capability-based
   `test-codex-capability-contract.py` path, with a repository guard rejecting
   SPEC-ID-coupled authored script names.
+- Lower-slice restack reconciliation preserves the decomposed US2 treatment and
+  deletion-recovery architecture while adding canonical surface order, parsed
+  timestamp extrema, hidden HTML exclusion, trusted-registration retention
+  deadlines, one-day pending expiry with late-promotion rejection, durable
+  publication intent before output, exact receipt completion, parent-directory
+  sync on content-addressed adoption, and the stable
+  `.capability-evidence-write-*` temporary namespace. The focused capability
+  suite is 58/58, the repository naming-layout guard is 9/9, privacy is 10/10,
+  process coverage is 8/8, docs-reference is current, and the full suite is
+  2824/2824. Checkpoint refresh, push, and exact-head review remain pending.
 - Implementation checkpoint: `94079dee507bc0d65ff4db0003c305aadcc3fe1a`
 
 ## PR Marker Plan Evidence
@@ -1121,10 +1131,10 @@ For every task:
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:d64aa879528e142d2309e1773daee35c012780a570d39e8f0181497a915359b4` |
-| Plan-declared scope | `sha256:3b656645db994b32342fd2eb5b65b4e5547d94b58401adc5539c4ff46981996e` |
-| Tasks | `sha256:d942423bba615c031ec56068aa407fe208d0f78400c9d60b9cfd9bf6d76b906e` |
-| Reviewability evidence | `sha256:b0ec5eb30348f8c6b9b31c9773f0a3cfa294db67535725ccbf173da9621a3515` |
+| Feature spec | `sha256:8cd1a3e5b67e74f02254067e367b0d2295e1ae9036dd8baf73952e55d2d4dfe0` |
+| Plan-declared scope | `sha256:072d8cc026744524c262fc4a610d378f60ac0065532788407af336da2cc6acdf` |
+| Tasks | `sha256:2b76f86c38b63087a36ff5de3f7c694c53d99a88178275165652b11fde6157a6` |
+| Reviewability evidence | `sha256:d1927ad04f46fd6747d9f8394d8ebfc74ce822170386675766aea59bfbf5168a` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
@@ -1135,9 +1145,9 @@ For every task:
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines under its historical typed exception; the current US2 marker is 5,366 /
-  4,901 across 15 modules against the aggregate 400-LOC boundary. Capability
-  modules are safely split with a 398-line maximum; only the treatment module
+  lines under its historical typed exception; the current US2 marker is 5,508 /
+  5,021 across 17 modules against the aggregate 400-LOC boundary. Capability
+  modules are safely split with a 394-line maximum; only the treatment module
   retains a typed size-only exception.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.

@@ -42,7 +42,7 @@ def _write_private_bytes_at(parent_descriptor, parent_path, filename, payload, *
         _acquire_append_only_directory_lock(parent_descriptor, wait=True)
         _assert_private_directory_current(parent_path, parent_descriptor, expected_parent_identity)
         for _ in range(64):
-            candidate = f".g56r-002-{secrets.token_hex(16)}"
+            candidate = f"{PRIVATE_TEMPORARY_PREFIX}{secrets.token_hex(16)}"
             try:
                 descriptor = os.open(
                     candidate,
@@ -285,6 +285,7 @@ def materialize_source_capture(raw_root, repository_root, capture_bytes):
     capture_digest = digest(capture_bytes)
     target = raw / f"{capture_digest.removeprefix('sha256:')}.json"
     if target.exists():
+        _recover_append_only_target(target, capture_bytes, raw_identity)
         _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
         if retained != capture_bytes: raise ValueError("content-addressed source capture bytes disagree")
     else:
@@ -338,6 +339,7 @@ def materialize_unknown_capture(raw_root, repository_root, surface, client_ident
     stored = canonical_bytes(record) + b"\n"; evidence = digest(stored)
     target = raw / f"{evidence.removeprefix('sha256:')}.json"
     if target.exists():
+        _fsync_directory(raw)
         _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
         if retained != stored: raise ValueError("content-addressed unknown capture bytes disagree")
     else:

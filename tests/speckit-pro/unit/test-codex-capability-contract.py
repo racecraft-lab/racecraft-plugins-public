@@ -61,7 +61,8 @@ EXPECTED_CAPABILITY_PUBLIC_API = frozenset({
     "CANONICAL_MANIFEST_DIGEST", "CANONICAL_MANIFEST_SCHEMA_VERSION",
     "CANONICAL_MANIFEST_SNAPSHOT_ID", "DELETION_INTENTS_DIR", "DELETION_RECORDS_DIR",
     "ERROR_TERMINALS", "EXTRACT_NORMALIZATION", "HAS_DESCRIPTOR_RELATIVE_IO",
-    "PENDING_TELEMETRY_PROFILE_ID", "PRIVATE_REFRESH_MAX_BYTES", "PUBLICATION_RECEIPTS_DIR",
+    "PENDING_TELEMETRY_PROFILE_ID", "PRIVATE_REFRESH_MAX_BYTES", "PRIVATE_TEMPORARY_PREFIX",
+    "PUBLICATION_INTENTS_DIR", "PUBLICATION_RECEIPTS_DIR",
     "RAW_EVIDENCE_PENDING_DAYS", "RAW_EVIDENCE_RETENTION_DAYS", "RETENTION_LOCK_FILE",
     "RETENTION_RECORDS_DIR", "SCHEMA_VERSION", "SURFACES", "build_canary_successor",
     "build_client_identity", "build_freeze", "build_repository_binding",
@@ -93,6 +94,7 @@ capability_io = sys.modules["codex_capability_io"]
 capability_observations = sys.modules["codex_capability_observations"]
 capability_private = sys.modules["codex_capability_private"]
 capability_publish_io = sys.modules["codex_capability_publish_io"]
+capability_publication_records = sys.modules["codex_capability_publication_records"]
 capability_retention = sys.modules["codex_capability_retention"]
 capability_retention_records = sys.modules["codex_capability_retention_records"]
 
@@ -455,7 +457,7 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertNotIn("_delete_single_link_private_file", vars(capabilities))
         self.assertTrue(callable(capabilities.main))
         implementation_modules = [MODULE_PATH, *sorted(MODULE_PATH.parent.glob("codex_capability_*.py"))]
-        self.assertEqual(len(implementation_modules), 14)
+        self.assertEqual(len(implementation_modules), 16)
         for path in implementation_modules:
             with self.subTest(path=path.name):
                 self.assertLessEqual(len(path.read_text(encoding="utf-8").splitlines()), 400)
@@ -800,6 +802,21 @@ class CapabilityContractTests(unittest.TestCase):
         script_only[0]["retrieved_body_b64"] = base64.b64encode(script_body).decode()
         with self.assertRaisesRegex(ValueError, "bounded extract"):
             capabilities.normalize_source_refreshes(self.manifest, script_only)
+        for hidden_markup in (
+            '<div hidden>{extract}</div>',
+            '<div aria-hidden="true">{extract}</div>',
+            '<div style="display: none">{extract}</div>',
+            '<div style="display: none !important">{extract}</div>',
+            '<div style="visibility:hidden">{extract}</div>',
+            '<div style="visibility: hidden !important">{extract}</div>',
+        ):
+            hidden_only = copy.deepcopy(captured)
+            hidden_body = hidden_markup.format(
+                extract=hidden_only[0]["bounded_extracts"][0]["text"],
+            ).encode()
+            hidden_only[0]["retrieved_body_b64"] = base64.b64encode(hidden_body).decode()
+            with self.subTest(hidden_markup=hidden_markup), self.assertRaisesRegex(ValueError, "bounded extract"):
+                capabilities.normalize_source_refreshes(self.manifest, hidden_only)
         malformed_hidden = copy.deepcopy(captured)
         hidden_body = f"<template></head>{malformed_hidden[0]['bounded_extracts'][0]['text']}</template>".encode()
         malformed_hidden[0]["retrieved_body_b64"] = base64.b64encode(hidden_body).decode()
@@ -846,6 +863,37 @@ class CapabilityContractTests(unittest.TestCase):
                     self.assertEqual(matrix["disagreements"][0]["disagreement_class"], "hidden_state")
         agreed_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "agreed")
         agreed_matrix, _ = capabilities.evaluate_surface_matrix(self.observations(agreed_case), self.authority_tuples(agreed_case))
+        reordered_matrix = copy.deepcopy(agreed_matrix)
+        reordered_matrix["observations"].reverse()
+        with self.assertRaisesRegex(ValueError, "canonical surface order"):
+            capabilities.validate_surface_matrix(reordered_matrix)
+        fractional_matrix = copy.deepcopy(agreed_matrix)
+        fractional_observation = fractional_matrix["observations"][0]
+        fractional_observation.update({
+            "started_at": "2026-07-16T00:00:00.5Z",
+            "completed_at": "2026-07-16T00:00:00.5Z",
+        })
+        fractional_observation["surface_observation_id"] = capabilities.digest({
+            key: value
+            for key, value in fractional_observation.items()
+            if key != "surface_observation_id"
+        })
+        fractional_matrix["aggregate_integrity_digest"] = capabilities.digest({
+            "observations": fractional_matrix["observations"],
+            "normalization_map_id": fractional_matrix["normalization_map_id"],
+        })
+        fractional_matrix["surface_matrix_id"] = capabilities.digest({
+            key: value
+            for key, value in fractional_matrix.items()
+            if key != "surface_matrix_id"
+        })
+        fractional_snapshot = capabilities.build_runtime_snapshot(
+            self.identity, [], fractional_matrix,
+        )
+        self.assertEqual(fractional_snapshot["collection_window"], {
+            "started_at": "2026-07-16T00:00:00Z",
+            "completed_at": "2026-07-16T00:00:00.5Z",
+        })
         for malformed_digest in (None, "", "not-a-digest"):
             with self.subTest(malformed_digest=malformed_digest), self.assertRaisesRegex(ValueError, "sha256 digest"):
                 capabilities.evaluate_surface_matrix(
@@ -1314,6 +1362,14 @@ class CapabilityContractTests(unittest.TestCase):
             source_capture_digest, source_capture_path = capabilities.materialize_source_capture(
                 raw_root, ROOT, capture_bytes,
             )
+            with mock.patch.object(
+                capability_private.os, "fsync", wraps=capability_private.os.fsync,
+            ) as source_capture_fsync:
+                self.assertEqual(
+                    capabilities.materialize_source_capture(raw_root, ROOT, capture_bytes),
+                    (source_capture_digest, source_capture_path),
+                )
+            self.assertGreaterEqual(source_capture_fsync.call_count, 1)
             refreshes = capabilities.normalize_source_refreshes(
                 self.manifest, captured, source_capture_digest=source_capture_digest,
             )
@@ -1349,8 +1405,36 @@ class CapabilityContractTests(unittest.TestCase):
             store_receipt.assert_not_called()
             hard_link_output.unlink(); hard_link_source.unlink()
             publication_path = Path(tmp) / "candidate-freeze.json"
+            registration_clock = mock.patch.object(
+                capability_publication_records, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
+            )
+            with registration_clock, mock.patch.object(
+                capability_freeze, "_store_publication_intent_locked",
+                side_effect=OSError("simulated publication intent failure"),
+            ), self.assertRaisesRegex(OSError, "intent failure"):
+                capabilities.publish_with_raw_evidence_retention(
+                    freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
+                )
+            self.assertFalse(publication_path.exists())
+            pending_without_intent = capabilities.reconcile_raw_evidence_retention(
+                raw_root, ROOT, "2026-07-16T23:59:59Z",
+            )
+            self.assertEqual(len(pending_without_intent["pending_retention_record_digests"]), 4)
+            self.assertEqual(pending_without_intent["publication_intent_digests"], [])
+            with self.assertRaisesRegex(ValueError, "requires cleanup"):
+                capabilities.reconcile_raw_evidence_retention(
+                    raw_root, ROOT, "2026-07-17T00:00:00Z",
+                )
             with mock.patch.object(
-                capability_retention_records, "_retention_now",
+                capability_publication_records, "_retention_now",
+                return_value=capability_contract._parsed_timestamp("2026-07-17T00:00:00Z", "test clock"),
+            ), self.assertRaisesRegex(ValueError, "expired pending retention"):
+                capabilities.publish_with_raw_evidence_retention(
+                    freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
+                )
+            with mock.patch.object(
+                capability_publication_records, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
             ), mock.patch.object(
                 capability_freeze, "_store_publication_receipt_locked",
@@ -1368,9 +1452,10 @@ class CapabilityContractTests(unittest.TestCase):
                 [source_capture_digest, *(item["raw_evidence_digest"] for item in observations)]
             )
             self.assertEqual(pending_before_recovery["retained_evidence_digests"], expected_retained)
-            self.assertEqual(len(pending_before_recovery["pending_retention_record_digests"]), 4)
+            self.assertEqual(pending_before_recovery["pending_retention_record_digests"], [])
+            self.assertEqual(len(pending_before_recovery["publication_intent_digests"]), 1)
             with mock.patch.object(
-                capability_retention_records, "_retention_now",
+                capability_publication_records, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
             ), mock.patch.object(
                 capability_freeze, "validate_unknown_observation_evidence",
@@ -1406,7 +1491,7 @@ class CapabilityContractTests(unittest.TestCase):
                     raise OSError("simulated publication failure")
                 original_write(path, value, **kwargs)
             with mock.patch.object(
-                capability_retention_records, "_retention_now",
+                capability_publication_records, "_retention_now",
                 return_value=capability_contract._parsed_timestamp("2026-07-16T00:00:00Z", "test clock"),
             ), mock.patch.object(capability_freeze, "_write", side_effect=fail_publication):
                 for failed_freeze, failed_path in (
@@ -1421,8 +1506,9 @@ class CapabilityContractTests(unittest.TestCase):
                 raw_root, ROOT, "2026-08-14T23:59:59Z",
             )
             self.assertEqual(pending_after_registration["retained_evidence_digests"], expected_retained)
-            self.assertEqual(len(pending_after_registration["pending_retention_record_digests"]), 8)
+            self.assertEqual(pending_after_registration["pending_retention_record_digests"], [])
             self.assertEqual(len(pending_after_registration["retention_record_digests"]), 12)
+            self.assertEqual(len(pending_after_registration["publication_intent_digests"]), 3)
             raw_identity = capability_io._stable_directory_identity(
                 os.stat(raw_root, follow_symlinks=False),
             )
@@ -1448,7 +1534,8 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(retained_report["retained_evidence_digests"], expected_retained)
             self.assertTrue(set(publication["retention_record_digests"]) <= set(retained_report["retention_record_digests"]))
             self.assertEqual(len(retained_report["retention_record_digests"]), 12)
-            self.assertEqual(len(retained_report["pending_retention_record_digests"]), 8)
+            self.assertEqual(retained_report["pending_retention_record_digests"], [])
+            self.assertEqual(len(retained_report["publication_intent_digests"]), 3)
             self.assertEqual(retained_report["publication_receipt_digests"], [publication["publication_receipt_digest"]])
             self.assertEqual(source_capture_path.read_bytes(), capture_bytes)
             missing_digest = source_capture_digest
@@ -1461,7 +1548,7 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2026-08-15T00:00:00Z")
             with self.assertRaisesRegex(ValueError, "current UTC"):
                 capabilities.reconcile_raw_evidence_retention(raw_root, ROOT, "2099-01-01T00:00:00Z", apply=True)
-            stale_hard_link = raw_root / ".g56r-002-power-loss"
+            stale_hard_link = raw_root / ".capability-evidence-stale-link"
             os.link(source_capture_path, stale_hard_link)
             with mock.patch.object(
                 capability_retention, "_retention_now",
@@ -1654,7 +1741,7 @@ class CapabilityContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(OSError, "deletion-record write"):
                     capabilities.reconcile_raw_evidence_retention(write_failure_root, ROOT, apply=True)
             self.assertFalse(any(
-                path.name.startswith(".g56r-002-") for path in write_failure_root.iterdir()
+                path.name.startswith(capabilities.PRIVATE_TEMPORARY_PREFIX) for path in write_failure_root.iterdir()
             ))
             write_failure_intents = [
                 (json.loads(path.read_text()), f"sha256:{path.stem}")
@@ -1718,7 +1805,7 @@ class CapabilityContractTests(unittest.TestCase):
                 f"{staged_after_crash['raw_evidence_digest'].removeprefix('sha256:')}.json"
             )).exists())
             self.assertFalse(any(
-                path.name.startswith(".g56r-002-") for path in interrupted_recovery_root.iterdir()
+                path.name.startswith(capabilities.PRIVATE_TEMPORARY_PREFIX) for path in interrupted_recovery_root.iterdir()
             ))
             with mock.patch.object(
                 capability_retention, "_retention_now",
@@ -1747,7 +1834,7 @@ class CapabilityContractTests(unittest.TestCase):
                 capabilities.reconcile_raw_evidence_retention(hard_link_crash_root, ROOT, apply=True)
             self.assertEqual(hard_link_after_crash.read_bytes(), capture_bytes)
             self.assertFalse(any(
-                path.name.startswith(".g56r-002-") for path in hard_link_crash_root.iterdir()
+                path.name.startswith(capabilities.PRIVATE_TEMPORARY_PREFIX) for path in hard_link_crash_root.iterdir()
             ))
             with mock.patch.object(
                 capability_retention, "_retention_now",
@@ -2162,11 +2249,11 @@ class CapabilityContractTests(unittest.TestCase):
     def test_retention_deadline_includes_every_bounded_pending_claim(self) -> None:
         grouped = [
             ({"registered_at": "2026-07-01T00:00:00Z", "delete_after": "2026-08-15T00:00:00Z"}, "governing"),
-            ({"registered_at": "2026-07-17T00:00:00Z", "delete_after": "2026-09-01T00:00:00Z"}, "pending-earlier"),
-            ({"registered_at": "2026-07-18T00:00:00Z", "delete_after": "2026-10-01T00:00:00Z"}, "pending-later"),
+            ({"registered_at": "2026-08-14T00:00:00Z", "delete_after": "2026-09-01T00:00:00Z"}, "pending-earlier"),
+            ({"registered_at": "2026-08-15T00:00:00Z", "delete_after": "2026-10-01T00:00:00Z"}, "pending-later"),
         ]
         current = capability_contract._parsed_timestamp("2026-08-15T00:00:00Z", "test clock")
-        expected = capability_contract._parsed_timestamp("2026-08-17T00:00:00Z", "test deadline")
+        expected = capability_contract._parsed_timestamp("2026-08-16T00:00:00Z", "test deadline")
         self.assertEqual(
             capability_retention._effective_retention_deadline(grouped, {"governing"}, current),
             expected,
@@ -2245,7 +2332,7 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(capture_digest, capabilities.digest(capture_bytes))
             self.assertEqual(target.read_bytes(), capture_bytes)
             self.assertEqual(target.stat().st_nlink, 1)
-            self.assertFalse(any(raw_root.glob(".g56r-002-*")))
+            self.assertFalse(any(raw_root.glob(f"{capabilities.PRIVATE_TEMPORARY_PREFIX}*")))
 
     def test_append_only_directory_lock_precedes_temporary_visibility(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2298,14 +2385,14 @@ class CapabilityContractTests(unittest.TestCase):
                 self.assertTrue(temporary_visible.wait(timeout=5))
                 recovery.start()
                 self.assertTrue(recovery_waiting.wait(timeout=5))
-                self.assertTrue(any(raw.glob(".g56r-002-*")))
+                self.assertTrue(any(raw.glob(f"{capabilities.PRIVATE_TEMPORARY_PREFIX}*")))
                 release_writer.set()
                 writer.join(timeout=10); recovery.join(timeout=10)
             self.assertFalse(writer.is_alive() or recovery.is_alive())
             self.assertEqual(errors, [])
             self.assertEqual(target.read_bytes(), payload)
             self.assertEqual(target.stat().st_nlink, 1)
-            self.assertFalse(any(raw.glob(".g56r-002-*")))
+            self.assertFalse(any(raw.glob(f"{capabilities.PRIVATE_TEMPORARY_PREFIX}*")))
 
     def test_json_inputs_executable_hashing_and_publication_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2346,17 +2433,17 @@ class CapabilityContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "not canonical"):
                 capability_publish_io._read(noncanonical, require_canonical=True)
             canonical = root / "canonical.json"
-            public_abandoned = root / f".g56r-002-{'0' * 32}"
+            public_abandoned = root / f"{capabilities.PRIVATE_TEMPORARY_PREFIX}{'0' * 32}"
             public_abandoned.write_bytes(b"abandoned pre-link publication"); public_abandoned.chmod(0o600)
             original_fsync = capability_private.os.fsync
             with mock.patch.object(capability_private.os, "fsync", wraps=original_fsync) as fsync:
                 capability_private._write(canonical, {"b": 1, "a": 2}, append_only=True)
             self.assertGreaterEqual(fsync.call_count, 3)
             self.assertFalse(public_abandoned.exists())
-            self.assertFalse(any(root.glob(".g56r-002-*")))
+            self.assertFalse(any(root.glob(f"{capabilities.PRIVATE_TEMPORARY_PREFIX}*")))
             self.assertEqual(capability_publish_io._read(canonical, require_canonical=True), {"a": 2, "b": 1})
             crash_payload = capabilities.canonical_bytes({"recovered": True}) + b"\n"
-            crash_temporary = root / f".g56r-002-{'a' * 32}"
+            crash_temporary = root / f"{capabilities.PRIVATE_TEMPORARY_PREFIX}{'a' * 32}"
             crash_target = root / "crash-recovered.json"
             crash_temporary.write_bytes(crash_payload); crash_temporary.chmod(0o600)
             os.link(crash_temporary, crash_target); capability_private._fsync_directory(root)
@@ -2367,12 +2454,12 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(crash_target.read_bytes(), crash_payload)
             private_recovery_root = root / "raw-recovery"
             private_recovery_root.mkdir(mode=0o700)
-            private_abandoned = private_recovery_root / f".g56r-002-{'1' * 32}"
+            private_abandoned = private_recovery_root / f"{capabilities.PRIVATE_TEMPORARY_PREFIX}{'1' * 32}"
             private_abandoned.write_bytes(b"abandoned pre-link capture"); private_abandoned.chmod(0o600)
             capability_private._fsync_directory(private_recovery_root)
             capabilities.validate_raw_evidence_root(private_recovery_root, ROOT)
             self.assertFalse(private_abandoned.exists())
-            active_temporary = private_recovery_root / f".g56r-002-{'2' * 32}"
+            active_temporary = private_recovery_root / f"{capabilities.PRIVATE_TEMPORARY_PREFIX}{'2' * 32}"
             active_temporary.write_bytes(b"active pre-link capture"); active_temporary.chmod(0o600)
             active_descriptor = os.open(active_temporary, os.O_RDONLY)
             try:
@@ -2387,7 +2474,7 @@ class CapabilityContractTests(unittest.TestCase):
             capabilities.validate_raw_evidence_root(private_recovery_root, ROOT)
             self.assertFalse(active_temporary.exists())
             private_payload = b'[{"capture":"recovered"}]\n'
-            private_temporary = private_recovery_root / f".g56r-002-{'b' * 32}"
+            private_temporary = private_recovery_root / f"{capabilities.PRIVATE_TEMPORARY_PREFIX}{'b' * 32}"
             private_target = private_recovery_root / f"{capabilities.digest(private_payload).removeprefix('sha256:')}.json"
             private_temporary.write_bytes(private_payload); private_temporary.chmod(0o600)
             os.link(private_temporary, private_target); capability_private._fsync_directory(private_recovery_root)
@@ -2743,7 +2830,7 @@ class CapabilityContractTests(unittest.TestCase):
                 )
             self.assertFalse(target.exists())
             self.assertFalse(any(
-                path.name.startswith(".g56r-002-") for path in raw_root.iterdir()
+                path.name.startswith(capabilities.PRIVATE_TEMPORARY_PREFIX) for path in raw_root.iterdir()
             ))
 
 

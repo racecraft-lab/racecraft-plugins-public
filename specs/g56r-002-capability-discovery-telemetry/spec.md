@@ -160,14 +160,15 @@
 - **Q: Where and how long is raw evidence retained?** **A:** `raw_evidence_root`
   is a required content-addressed location outside the repository. Directories
   are operator-only mode `0700`; files are mode `0600` and have exactly one hard
-  link. Captures remain for
-  30 days after freeze publication. Retention records become governing only
-  after an immutable receipt proves publication of the exact freeze bytes.
-  Unreceipted claims remain non-governing but protect evidence only until the
-  earlier of their declared deadline or 30 days after registration; deletion
-  uses the latest governing or individually capped pending deadline. A
+  link. Captures remain for 30 days after trusted retention registration. An
+  immutable publication intent makes its exact record set governing before
+  output begins, and a matching receipt proves completion only after the exact
+  freeze bytes exist. Claims left before intent remain non-governing, expire
+  one day after trusted registration, and cannot be promoted after expiry;
+  deletion uses the latest governing or individually capped pending deadline. A
   shared parent-directory advisory lock is acquired before any reserved
-  temporary pathname appears and is held through writer commit or recovery.
+  `.capability-evidence-write-*` temporary pathname appears and is held through
+  writer commit or recovery.
   The temporary lock then proves no writer remains: a single-link
   pre-publication file is discarded,
   while a linked file additionally requires exact descriptor-bound target,

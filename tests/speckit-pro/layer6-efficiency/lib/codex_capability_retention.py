@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from codex_capability_retention_recovery import *
+from codex_capability_retention_authority import *
 
 
 def _delete_single_link_private_file(
@@ -189,38 +189,13 @@ def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=N
         )
 
 
-def _effective_retention_deadline(grouped, governing_record_digests, current):
-    deadlines = []
-    for record, record_digest in grouped:
-        registered = _parsed_timestamp(record["registered_at"], "retention registration timestamp")
-        if current < registered:
-            raise ValueError("retention as-of timestamp precedes the registration record")
-        deadline = _parsed_timestamp(record["delete_after"], "retention deletion deadline")
-        if record_digest not in governing_record_digests:
-            deadline = min(deadline, registered + timedelta(days=RAW_EVIDENCE_PENDING_DAYS))
-        deadlines.append(deadline)
-    return max(deadlines)
-
-
 def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root, as_of, current, *, apply):
-    all_retention_records = [(_validate_retention_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / RETENTION_RECORDS_DIR, repository_root, "retention record")]
-    retention_by_digest = {record_digest: record for record, record_digest in all_retention_records}
-    publication_receipts = [(_validate_publication_receipt(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / PUBLICATION_RECEIPTS_DIR, repository_root, "publication receipt")]
-    receipt_freeze_ids, governing_record_digests = set(), set()
-    for receipt, _ in publication_receipts:
-        if receipt["candidate_freeze_id"] in receipt_freeze_ids:
-            raise ValueError("candidate freeze has multiple publication receipts")
-        receipt_freeze_ids.add(receipt["candidate_freeze_id"])
-        refs = set(receipt["retention_record_digests"])
-        if not refs <= set(retention_by_digest):
-            raise ValueError("publication receipt references a missing retention record")
-        for ref in refs:
-            retained = retention_by_digest[ref]
-            if retained["candidate_freeze_id"] != receipt["candidate_freeze_id"] or retained["published_at"] != receipt["published_at"]:
-                raise ValueError("publication receipt does not bind its freeze retention records")
-        governing_record_digests.update(refs)
-    pending_record_digests = sorted(set(retention_by_digest) - governing_record_digests)
-    retention_records = all_retention_records
+    retention_records, publication_intents, publication_receipts, governing_record_digests = (
+        _load_publication_authority(raw, repository_root)
+    )
+    pending_record_digests = sorted(
+        {record_digest for _, record_digest in retention_records} - governing_record_digests,
+    )
     deletion_intents = [(_validate_deletion_intent(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / DELETION_INTENTS_DIR, repository_root, "deletion intent")]
     deletion_records = [(_validate_deletion_record(record_digest, record), record_digest) for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")]
     retention_by_evidence = {}
@@ -390,6 +365,7 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
         "retained_evidence_digests": retained, "deleted_evidence_digests": deleted,
         "retention_record_digests": sorted(record_digest for _, record_digest in retention_records),
         "pending_retention_record_digests": pending_record_digests,
+        "publication_intent_digests": sorted(record_digest for _, record_digest in publication_intents),
         "publication_receipt_digests": sorted(record_digest for _, record_digest in publication_receipts),
         "deletion_intent_digests": sorted(record_digest for _, record_digest in deletion_intents),
         "deletion_record_digests": sorted(deletion_digests),

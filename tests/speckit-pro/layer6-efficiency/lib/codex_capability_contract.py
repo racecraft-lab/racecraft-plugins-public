@@ -34,12 +34,14 @@ PRIVATE_REFRESH_MAX_BYTES = 32 * 1024 * 1024
 CAPABILITY_JSON_MAX_NESTING_DEPTH = 64
 CAPABILITY_JSON_MAX_TOTAL_NODES = 100_000
 RAW_EVIDENCE_RETENTION_DAYS = 30
-RAW_EVIDENCE_PENDING_DAYS = 30
+RAW_EVIDENCE_PENDING_DAYS = 1
 RETENTION_RECORDS_DIR = "retention-records"
 DELETION_RECORDS_DIR = "deletion-records"
+PUBLICATION_INTENTS_DIR = "publication-intents"
 PUBLICATION_RECEIPTS_DIR = "publication-receipts"
 DELETION_INTENTS_DIR = "deletion-intents"
 RETENTION_LOCK_FILE = ".retention-lock"
+PRIVATE_TEMPORARY_PREFIX = ".capability-evidence-write-"
 HAS_DESCRIPTOR_RELATIVE_IO = os.open in os.supports_dir_fd and os.stat in os.supports_dir_fd
 ERROR_TERMINALS = ("timeout", "output_cap_exceeded", "launch_error", "transport_error", "authentication_error", "rate_limited", "malformed_response", "explicit_rejection", "service_reroute", "ambiguous_error")
 _UNSET = object()
@@ -96,16 +98,31 @@ class _BoundDecisionSet(list):
 
 
 class _VisibleText(HTMLParser):
+    _ALWAYS_HIDDEN = {"head", "script", "style", "noscript", "template", "svg"}
+    _VOID_TAGS = {
+        "area", "base", "br", "col", "embed", "hr", "img", "input",
+        "link", "meta", "param", "source", "track", "wbr",
+    }
+
     def __init__(self):
         super().__init__(); self.parts, self.hidden_stack, self.invalid_hidden_markup = [], [], False
 
     def handle_starttag(self, tag, attrs):
-        if tag in {"head", "script", "style", "noscript", "template", "svg"}:
+        attributes = {name.casefold(): (value or "") for name, value in attrs}
+        style = "".join(attributes.get("style", "").casefold().split())
+        hidden = (
+            tag in self._ALWAYS_HIDDEN
+            or "hidden" in attributes
+            or attributes.get("aria-hidden", "").casefold() == "true"
+            or any(declaration.startswith("display:none") for declaration in style.split(";"))
+            or any(declaration.startswith("visibility:hidden") for declaration in style.split(";"))
+        )
+        if tag not in self._VOID_TAGS and (self.hidden_stack or hidden):
             self.hidden_stack.append(tag)
 
     def handle_endtag(self, tag):
-        if tag in {"head", "script", "style", "noscript", "template", "svg"}:
-            if not self.hidden_stack or self.hidden_stack[-1] != tag:
+        if self.hidden_stack:
+            if self.hidden_stack[-1] != tag:
                 self.invalid_hidden_markup = True
             else:
                 self.hidden_stack.pop()

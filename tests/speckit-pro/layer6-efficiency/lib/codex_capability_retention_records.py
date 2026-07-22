@@ -70,11 +70,11 @@ def _validate_retention_record(record_digest, record):
     if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-retention.v1":
         raise ValueError("raw evidence retention record must use the closed v1 shape")
     _need_digest(record_digest, "retention record digest"); _need_digest(record["candidate_freeze_id"], "candidate_freeze_id"); _need_digest(record["raw_evidence_digest"], "raw_evidence_digest")
-    published = _parsed_timestamp(record["published_at"], "retention publication timestamp")
-    _parsed_timestamp(record["registered_at"], "retention registration timestamp")
+    _parsed_timestamp(record["published_at"], "retention publication timestamp")
+    registered = _parsed_timestamp(record["registered_at"], "retention registration timestamp")
     delete_after = _parsed_timestamp(record["delete_after"], "retention deletion deadline")
-    if delete_after != published + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS):
-        raise ValueError("raw evidence retention deadline must be exactly 30 days after publication")
+    if delete_after != registered + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS):
+        raise ValueError("raw evidence retention deadline must be exactly 30 days after registration")
     return record
 
 def _validate_deletion_record(record_digest, record):
@@ -251,21 +251,6 @@ def _store_staged_recovery_completion(raw, raw_identity, repository_root, staged
     directory, directory_identity = _private_record_directory(raw, DELETION_RECORDS_DIR, raw_identity)
     return completion, _store_private_record(directory, completion, repository_root, directory_identity)
 
-def _validate_publication_receipt(record_digest, record):
-    keys = {"schema_version", "candidate_freeze_id", "published_artifact_digest", "published_at", "retention_record_digests"}
-    if not isinstance(record, dict) or set(record) != keys or record["schema_version"] != "raw-evidence-publication.v1":
-        raise ValueError("raw evidence publication receipt must use the closed v1 shape")
-    _need_digest(record_digest, "publication receipt digest")
-    _need_digest(record["candidate_freeze_id"], "candidate_freeze_id")
-    _need_digest(record["published_artifact_digest"], "published_artifact_digest")
-    _parsed_timestamp(record["published_at"], "publication receipt timestamp")
-    refs = record["retention_record_digests"]
-    if not isinstance(refs, list) or not refs or refs != sorted(set(refs)):
-        raise ValueError("publication receipt requires unique retention records")
-    for value in refs: _need_digest(value, "retention_record_digest")
-    return record
-
-
 def _freeze_raw_evidence_digests(freeze):
     observations = freeze["surface_matrix"]["observations"]
     digests = {
@@ -322,76 +307,5 @@ def _retention_lock(raw, expected_raw_identity):
         finally:
             os.close(raw_descriptor)
 
-
-def _register_raw_evidence_retention_locked(freeze, raw, raw_identity, repository_root):
-    published = _parsed_timestamp(freeze.get("published_at"), "freeze publication timestamp")
-    evidence_digests = _freeze_raw_evidence_digests(freeze)
-    if not evidence_digests: return []
-    deletion_started_digests = {
-        _validate_deletion_record(record_digest, record)["raw_evidence_digest"]
-        for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")
-    }
-    deletion_started_digests.update(
-        _validate_deletion_intent(record_digest, record)["raw_evidence_digest"]
-        for record_digest, record in _load_private_records(raw / DELETION_INTENTS_DIR, repository_root, "deletion intent")
-    )
-    if set(evidence_digests) & deletion_started_digests:
-        raise ValueError("raw evidence cannot be registered after deletion has begun")
-    records, records_identity = _private_record_directory(raw, RETENTION_RECORDS_DIR, raw_identity)
-    existing = {}
-    for record_digest, raw_record in _load_private_records(records, repository_root, "retention record"):
-        record = _validate_retention_record(record_digest, raw_record)
-        key = (record["candidate_freeze_id"], record["raw_evidence_digest"], record["published_at"])
-        if key in existing:
-            raise ValueError("freeze evidence has multiple retention registration records")
-        existing[key] = record_digest
-    registered_at = None
-    record_digests = []
-    for evidence_digest in evidence_digests:
-        evidence_path = raw / f"{evidence_digest.removeprefix('sha256:')}.json"
-        read_content_addressed_private_file(evidence_path, repository_root, "retained raw evidence")
-        key = (freeze["candidate_freeze_id"], evidence_digest, freeze["published_at"])
-        if key in existing:
-            record_digests.append(existing[key]); continue
-        if registered_at is None:
-            registered = _retention_now()
-            if registered.tzinfo is None or registered.utcoffset() != timedelta(0):
-                raise ValueError("retention registration clock must be UTC")
-            registered_at = _format_timestamp(registered)
-        record = {
-            "schema_version": "raw-evidence-retention.v1",
-            "candidate_freeze_id": freeze["candidate_freeze_id"],
-            "raw_evidence_digest": evidence_digest,
-            "published_at": freeze["published_at"],
-            "registered_at": registered_at,
-            "delete_after": _format_timestamp(published + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS)),
-        }
-        record_digests.append(_store_private_record(records, record, repository_root, records_identity))
-    validate_raw_evidence_root(raw, repository_root)
-    return sorted(record_digests)
-
-
-def _publication_target_matches(path, payload):
-    target = Path(path)
-    if not target.exists():
-        return False
-    _recover_append_only_target(target, payload)
-    if _read_bounded_regular_file(target, require_single_link=True) != payload:
-        raise ValueError("publication output already exists with different bytes")
-    return True
-
-
-def _store_publication_receipt_locked(freeze, retention_record_digests, raw, raw_identity, repository_root):
-    receipt = {
-        "schema_version": "raw-evidence-publication.v1",
-        "candidate_freeze_id": freeze["candidate_freeze_id"],
-        "published_artifact_digest": digest(canonical_bytes(freeze) + b"\n"),
-        "published_at": freeze["published_at"],
-        "retention_record_digests": sorted(retention_record_digests),
-    }
-    directory, directory_identity = _private_record_directory(raw, PUBLICATION_RECEIPTS_DIR, raw_identity)
-    receipt_digest = _store_private_record(directory, receipt, repository_root, directory_identity)
-    _validate_publication_receipt(receipt_digest, receipt)
-    return receipt_digest
 
 __all__ = [name for name in globals() if not name.startswith("__")]

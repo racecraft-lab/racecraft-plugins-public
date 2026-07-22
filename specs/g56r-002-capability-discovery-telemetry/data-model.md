@@ -257,6 +257,8 @@ is allowed; publication before any route resolution or non-null observation
 capture is rejected.
 
 Raw-evidence retention records are staged before append-only artifact output.
+Their deletion deadline is exactly 30 days after the trusted registration time;
+the caller-supplied publication time cannot lengthen retention.
 Before registration, publication semantically revalidates the source capture,
 every non-fixture observation, and every canary result against the retained
 private bytes; content-address identity alone is insufficient. The public
@@ -264,12 +266,14 @@ append-only output is created and verified through one identity-bound parent
 descriptor, and its exact canonical bytes are re-read as a single-link target
 before any receipt is issued. Recovery accepts an existing matching output only
 when it satisfies that same single-link invariant.
-They become governing only when a content-addressed publication receipt binds
-the candidate freeze ID, exact artifact digest, publication time, and complete
-retention-record set after the output bytes exist. Unreceipted records are
-reported as pending and never become governing authority. Each pending claim
-nevertheless protects reachable evidence until the earlier of its declared
-deadline or 30 days after registration. The effective deletion deadline is the
+A content-addressed publication intent binds the candidate freeze ID, exact
+artifact digest, publication time, and complete retention-record set before
+output begins; those records are governing once that intent is durable. A
+matching receipt is appended after the output bytes exist and proves completion
+of the exact intent. Records left before intent are reported as pending and
+never become governing authority. Each pending claim nevertheless protects
+reachable evidence for at most one day after trusted registration, and an
+expired pending claim cannot later be promoted without cleanup. The effective deletion deadline is the
 latest governing or individually capped pending deadline, so an expired older
 receipt cannot delete evidence still covered by a newer bounded pending claim.
 Deletion intents bind the original private file identity. An interrupted
@@ -304,7 +308,8 @@ fail-closed validation errors.
 Source-capture materialization rejects non-bytes-like or greater-than-32-MiB
 input before parsing, hashing, root validation, or allocation of the decoded
 JSON value. A shared parent-directory advisory lock is acquired before any
-`.g56r-002-*` pathname appears and held through writer commit or recovery.
+`.capability-evidence-write-*` pathname appears and held through writer commit
+or recovery.
 Every temporary additionally holds an advisory lock until commit. Recovery
 acquires both locks and re-proves the descriptor-bound pathname and
 inode before removing an abandoned single-link pre-publication file. A linked
@@ -313,7 +318,8 @@ private targets must match their content address and exact bytes. Recovery
 directory-syncs before and after removal and proves the target is single-link;
 public append-only directories follow the same protocol, and any unrecognized
 alternate link still fails closed. An identical concurrent source-capture
-writer verifies and accepts the single-link winner.
+writer verifies and accepts the single-link winner only after synchronizing its
+parent directory.
 
 ## Telemetry and Treatment Records
 

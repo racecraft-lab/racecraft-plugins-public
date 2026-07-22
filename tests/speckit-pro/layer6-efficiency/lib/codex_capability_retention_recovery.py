@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from codex_capability_retention_records import *
+from codex_capability_publication_records import *
 
 
 def _unlink_descriptor_relative(filename, parent_descriptor):

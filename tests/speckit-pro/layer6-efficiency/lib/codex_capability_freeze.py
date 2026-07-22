@@ -51,11 +51,19 @@ def build_runtime_snapshot(identity, refreshes, matrix, *, supersedes=None):
     repository = validate_repository_binding(matrix["observations"][0]["repository_binding"]); work_item = validate_work_item(matrix["work_item"])
     entries = [entry for observation in matrix["observations"] for entry in observation["entries"]]
     raw_digest = digest([item["raw_evidence_digest"] for item in matrix["observations"]])
+    started_at = min(
+        matrix["observations"],
+        key=lambda item: _parsed_timestamp(item["started_at"], "surface collection start"),
+    )["started_at"]
+    completed_at = max(
+        matrix["observations"],
+        key=lambda item: _parsed_timestamp(item["completed_at"], "surface collection completion"),
+    )["completed_at"]
     payload = {"schema_version": SCHEMA_VERSION, "surface_matrix_id": matrix["surface_matrix_id"], "client_identity_id": identity["client_identity_id"],
                "controlled_repository_snapshot": repository, "work_item": work_item,
                "models": sorted({item["model"] for item in entries}), "efforts": sorted({item["effort"] for item in entries}),
                "capabilities": sorted({value for item in entries for value in item.get("capabilities", [])}),
-               "collection_window": {"started_at": min(item["started_at"] for item in matrix["observations"]), "completed_at": max(item["completed_at"] for item in matrix["observations"])},
+               "collection_window": {"started_at": started_at, "completed_at": completed_at},
                "raw_evidence_digest": raw_digest, "raw_evidence_ref": f"aggregate://{raw_digest}",
                "source_refresh_set_digest": digest(refreshes), "supersedes_snapshot_id": supersedes}
     return {"runtime_capability_snapshot_id": digest(payload), **payload}
@@ -366,6 +374,9 @@ def publish_with_raw_evidence_retention(
         _validate_retained_freeze_evidence(freeze, raw, repository_root)
         already_published = _publication_target_matches(output, payload)
         retention_record_digests = _register_raw_evidence_retention_locked(freeze, raw, raw_identity, repository_root)
+        intent_digest = _store_publication_intent_locked(
+            freeze, retention_record_digests, raw, raw_identity, repository_root,
+        )
         if not already_published:
             _write(output, freeze, append_only=True)
         if not _publication_target_matches(output, payload):
@@ -374,6 +385,10 @@ def publish_with_raw_evidence_retention(
             freeze, retention_record_digests, raw, raw_identity, repository_root,
         )
         validate_raw_evidence_root(raw, repository_root)
-        return {"retention_record_digests": retention_record_digests, "publication_receipt_digest": receipt_digest}
+        return {
+            "retention_record_digests": retention_record_digests,
+            "publication_intent_digest": intent_digest,
+            "publication_receipt_digest": receipt_digest,
+        }
 
 __all__ = [name for name in globals() if not name.startswith("__")]

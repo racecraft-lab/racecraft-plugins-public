@@ -66,6 +66,8 @@ own failure patterns.
 
 - Do not hand-edit generated payloads, installed-cache proofs, generated
   reference pages, or vendored upstream content.
+- Name repository-authored scripts for durable behavior or capability; never
+  couple a script filename to a temporary spec ID.
 - Keep repository-owned tooling on Python 3.11+ standard library unless an
   existing local toolchain already owns the surface.
 - Do not add active repository Bash or `jq` dependencies outside existing
