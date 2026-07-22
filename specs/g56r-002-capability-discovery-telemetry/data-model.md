@@ -56,18 +56,21 @@ join or disposition is evaluated.
 | `invalidated_claim_ids` | array | Subset of bindings invalidated by this outcome |
 | `prior_record_digest` | digest | Binds the G56R-001 input without rewriting it |
 
-Invariant: an adverse refresh invalidates only bound current claims/routes.
+Invariant: an adverse refresh invalidates only bound current claims/routes, and
+any body-digest change invalidates every binding for that source.
 Historical `OSL-*` evidence is never copied into this record as current. The
-private normalized refresh additionally retains `retrieved_body_b64` so the
-adapter can recheck the body and visible-text extracts. Without a browser
-renderer, accepted HTML must have visibility fully decidable from intrinsic
-markup: explicit hidden states are excluded, while stylesheets, class/id
-selectors, and all inline CSS are rejected as unresolved. The published
-`OfficialSourceRefresh` strips that field but retains the shared aggregate
-capture digest. Extract normalization is the closed
+private normalized refresh additionally retains `retrieved_body_b64` and the
+closed `retrieved_body_format: normalized_plain_text` declaration so the
+adapter can recheck the body and extracts without browser semantics. Raw HTML
+or angle-bracket markup is rejected. The published `OfficialSourceRefresh`
+strips both private fields but retains the shared aggregate capture digest,
+which must equal the exact canonical aggregate capture bytes. Extract
+normalization is the closed
 `unicode_text_whitespace_collapsed_utf8` contract. Multi-claim sources use the
-reviewed extract-to-claim dependency registry, and every materially changed
-extract must invalidate all claims mapped to that extract.
+reviewed extract-to-claim dependency registry for metadata-only extract changes;
+a body change always invalidates every claim bound to the source. The exact
+already-published predecessor refresh-set digest is accepted only as an
+immutable legacy validation boundary; any byte change loses that exception.
 
 ### `ClientIdentity`
 

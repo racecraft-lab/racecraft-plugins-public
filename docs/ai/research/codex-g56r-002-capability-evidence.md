@@ -44,17 +44,19 @@ committed freeze; raw source bodies do not.
 
 The operator-local capture supplied measured URLs, strict RFC3339 UTC
 timestamps, outcomes, claim-scoped invalidations, bounded extracts, and the
-actual retrieved UTF-8 bodies. The adapter computed every body and extract
-digest itself, reduced HTML to visible text, required each extract to occur in
-that body, and reconstructed facts, bindings, and prior-record identity from
-the current manifest. The raw-body capture and normalized refresh remain
+actual retrieved UTF-8 bodies. The successor adapter requires those bodies to
+declare normalized plain text, rejects raw markup, computes every body and
+extract digest itself, requires each extract to occur in that body, and
+reconstructs facts, bindings, and prior-record identity from the current
+manifest. The raw-body capture and normalized refresh remain
 outside Git in an operator-only directory with mode `0700` and files with mode
 `0600`. The normalized refresh keeps the retrieved body bytes long enough for
 freeze-time revalidation; the published freeze strips them.
-HTML visibility must be decidable from intrinsic markup: explicit hidden states
-are excluded, while stylesheets, class/id selectors, and all inline CSS
-make the capture fail closed instead of letting potentially concealed text
-support a claim. The adapter does not interpret individual CSS declarations.
+The adapter never interprets HTML, CSS visibility, intrinsic element state, or
+text-node boundaries. Every new body-identity change invalidates all claims
+bound to that source. The historical published refresh set remains accepted
+only under its exact aggregate digest so predecessor validation stays possible;
+any altered row loses that compatibility exception.
 The aggregate capture is stored as the exact-byte content-addressed object
 `sha256:26b4bc034cac55e149b1b0b5c7648531be2f84d46385160f3c6c30ac582df70a`;
 the refresh command rejects a filename that does not match those bytes, copies

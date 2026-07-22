@@ -5,6 +5,9 @@ from __future__ import annotations
 
 from codex_capability_io import *
 
+# Exact identity of the published predecessor set; any byte change loses this compatibility boundary.
+_LEGACY_SOURCE_REFRESH_SET_DIGEST = "sha256:6f382a11b06df40e03719d713fae09c8d88a9ddb9586b735a48f039ac8505ea9"
+
 def _extract_claim_dependencies(source):
     bindings = set(source["claim_bindings"])
     if len(bindings) == 1:
@@ -105,15 +108,17 @@ def _changed_extract_claims(source, extracts):
 
 def normalize_source_refreshes(manifest, captured, *, source_capture_digest=None, allow_synthetic_manifest=False):
     validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest)
-    if source_capture_digest is None:
-        source_capture_digest = digest(canonical_bytes(captured) + b"\n")
+    actual_capture_digest = digest(canonical_bytes(captured) + b"\n")
+    if source_capture_digest is not None and source_capture_digest != actual_capture_digest:
+        raise ValueError("source_capture_digest does not match captured bytes")
+    source_capture_digest = actual_capture_digest
     _need_digest(source_capture_digest, "source_capture_digest")
     sources = {row["official_source_ledger_id"]: row for row in manifest["official_source_ledger"]}
     actual = [row.get("official_source_ledger_id") for row in captured]
     if len(captured) != 22 or set(actual) != set(sources) or len(set(actual)) != 22:
         raise ValueError("source refresh must cover the 22 unique current records")
     statuses = {"confirmed_current", "changed", "redirected", "inaccessible", "withdrawn", "conflicting"}
-    measured = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "status", "invalidated_claim_ids", "retrieved_body_b64", "bounded_extracts"}
+    measured = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "status", "invalidated_claim_ids", "retrieved_body_b64", "retrieved_body_format", "bounded_extracts"}
     normalized = []
     for item in captured:
         source, status = sources[item["official_source_ledger_id"]], item.get("status")
@@ -129,9 +134,12 @@ def normalize_source_refreshes(manifest, captured, *, source_capture_digest=None
             raise ValueError("canonical URL change must invalidate every bound claim")
         if status in {"inaccessible", "withdrawn", "conflicting"} and set(invalid) != set(bindings):
             raise ValueError("adverse source outcome must invalidate every bound claim")
-        body_bytes = _validated_body(item["retrieved_body_b64"], item["bounded_extracts"], item["official_source_ledger_id"])
+        body_bytes = _validated_body(item["retrieved_body_b64"], item["retrieved_body_format"], item["bounded_extracts"], item["official_source_ledger_id"])
         body, extracts = (digest(body_bytes), list(item["bounded_extracts"])) if body_bytes is not None else (None, [])
         if body is not None:
+            prior_body = f"sha256:{source['body_sha256']}"
+            if body != prior_body and set(invalid) != set(bindings):
+                raise ValueError("source body change must invalidate every bound claim")
             redirect_with_change = status == "redirected" and source["requested_url"] != item["canonical_url"]
             changed_claims = _changed_extract_claims(source, extracts)
             if changed_claims and (status != "changed" and not redirect_with_change or not changed_claims <= set(invalid)):
@@ -148,6 +156,7 @@ def normalize_source_refreshes(manifest, captured, *, source_capture_digest=None
             "requested_url": source["requested_url"], "canonical_url": item["canonical_url"],
             "retrieved_at": item["retrieved_at"], "body_digest": body, "status": status,
             "retrieved_body_b64": item["retrieved_body_b64"],
+            "retrieved_body_format": item["retrieved_body_format"],
             "source_capture_digest": source_capture_digest,
             "bounded_extracts": extracts, "retrieval_evidence_digest": digest(evidence),
             "documented_facts": list(source.get("exact_documented_facts", [])),
@@ -163,6 +172,7 @@ def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_
         raise ValueError("source refresh must cover the 22 unique current records")
     keys = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "body_digest", "status", "source_capture_digest", "bounded_extracts", "retrieval_evidence_digest", "documented_facts", "claim_bindings", "invalidated_claim_ids", "prior_record_digest"}
     statuses = {"confirmed_current", "changed", "redirected", "inaccessible", "withdrawn", "conflicting"}
+    exact_legacy_set = digest(refreshes) == _LEGACY_SOURCE_REFRESH_SET_DIGEST
     for item in refreshes:
         source = sources[item["official_source_ledger_id"]]; bindings = source["claim_bindings"]
         if set(item) != keys or item["requested_url"] != source["requested_url"] or not _openai_url(item["canonical_url"]) or not _utc_timestamp(item["retrieved_at"]):
@@ -182,6 +192,9 @@ def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_
                 raise ValueError("published bounded extract identity is invalid")
         if item["status"] in {"confirmed_current", "changed", "redirected"} and (item["body_digest"] is None or not item["bounded_extracts"]):
             raise ValueError("source refresh lacks bounded extract evidence")
+        prior_body = f"sha256:{source['body_sha256']}"
+        if item["body_digest"] is not None and item["body_digest"] != prior_body and set(invalid) != set(bindings) and not exact_legacy_set:
+            raise ValueError("source body change must invalidate every bound claim")
         redirect_with_change = item["status"] == "redirected" and source["requested_url"] != item["canonical_url"]
         changed_claims = _changed_extract_claims(source, item["bounded_extracts"])
         if item["status"] in {"confirmed_current", "changed", "redirected"} and changed_claims and (item["status"] != "changed" and not redirect_with_change or not changed_claims <= set(item["invalidated_claim_ids"])):
@@ -201,13 +214,13 @@ def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_
 
 
 def validate_source_refreshes(manifest, refreshes, *, allow_synthetic_manifest=False):
-    raw_keys = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "body_digest", "status", "retrieved_body_b64", "source_capture_digest", "bounded_extracts", "retrieval_evidence_digest", "documented_facts", "claim_bindings", "invalidated_claim_ids", "prior_record_digest"}
+    raw_keys = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "body_digest", "status", "retrieved_body_b64", "retrieved_body_format", "source_capture_digest", "bounded_extracts", "retrieval_evidence_digest", "documented_facts", "claim_bindings", "invalidated_claim_ids", "prior_record_digest"}
     for item in refreshes:
         if set(item) != raw_keys: raise ValueError("source refresh must retain the closed raw evidence binding")
-        body_bytes = _validated_body(item["retrieved_body_b64"], item["bounded_extracts"], item.get("official_source_ledger_id"))
+        body_bytes = _validated_body(item["retrieved_body_b64"], item["retrieved_body_format"], item["bounded_extracts"], item.get("official_source_ledger_id"))
         if item["body_digest"] is None and body_bytes is not None or item["body_digest"] is not None and (body_bytes is None or item["body_digest"] != digest(body_bytes)):
             raise ValueError("source body digest does not match captured evidence")
-    sanitized = [{key: item[key] for key in item if key != "retrieved_body_b64"} for item in refreshes]
+    sanitized = [{key: item[key] for key in item if key not in {"retrieved_body_b64", "retrieved_body_format"}} for item in refreshes]
     return validate_published_source_refreshes(manifest, sanitized, allow_synthetic_manifest=allow_synthetic_manifest)
 
 __all__ = [name for name in globals() if not name.startswith("__")]

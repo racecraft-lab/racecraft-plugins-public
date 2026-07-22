@@ -393,8 +393,9 @@ def source_capture(manifest: dict, retrieved_at: str = "2026-07-16T00:00:00Z") -
             "canonical_url": source["canonical_url"],
             "retrieved_at": retrieved_at,
             "status": "redirected" if redirected else "confirmed_current" if current == prior else "changed",
-            "invalidated_claim_ids": [],
+            "invalidated_claim_ids": copy.deepcopy(source["claim_bindings"]) if redirected or current != prior else [],
             "retrieved_body_b64": base64.b64encode(body.encode()).decode(),
+            "retrieved_body_format": "normalized_plain_text",
             "bounded_extracts": copy.deepcopy(source["bounded_extracts"]),
         })
     return captured
@@ -583,7 +584,7 @@ class CapabilityContractTests(unittest.TestCase):
         adverse_capture = source_capture(adverse_effort)
         captured_source = next(item for item in adverse_capture if item["official_source_ledger_id"] == effort_record["official_source_ledger_id"])
         source_authority = next(item for item in adverse_effort["official_source_ledger"] if item["official_source_ledger_id"] == effort_record["official_source_ledger_id"])
-        captured_source.update({"status": "inaccessible", "retrieved_body_b64": None, "bounded_extracts": [], "invalidated_claim_ids": source_authority["claim_bindings"]})
+        captured_source.update({"status": "inaccessible", "retrieved_body_b64": None, "retrieved_body_format": None, "bounded_extracts": [], "invalidated_claim_ids": source_authority["claim_bindings"]})
         adverse_refreshes = capabilities.normalize_source_refreshes(adverse_effort, adverse_capture, allow_synthetic_manifest=True)
         adverse_tuple = capabilities.candidate_tuples_from_manifest(adverse_effort, adverse_refreshes, allow_synthetic_manifest=True)[0]
         self.assertFalse(adverse_tuple["source_admitted"])
@@ -611,6 +612,9 @@ class CapabilityContractTests(unittest.TestCase):
                 )
                 for source_id in route["official_source_ledger_ids"]
             }
+        for source in scoped_manifest["official_source_ledger"]:
+            scoped_body = "\n".join(item["text"] for item in source["bounded_extracts"]).encode()
+            source["body_sha256"] = capabilities.digest(scoped_body).removeprefix("sha256:")
         scoped_capture = source_capture(scoped_manifest)
         scoped_row = next(item for item in scoped_capture if item["official_source_ledger_id"] == scoped_source["official_source_ledger_id"])
         scoped_row["invalidated_claim_ids"] = [generic_claim]
@@ -636,14 +640,49 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertEqual(capabilities.canonical_bytes({"b": 1, "a": 2}), b'{"a":2,"b":1}')
         self.assertFalse(hasattr(capabilities, "refreshes_from_manifest"))
         captured = source_capture(self.manifest)
+        with self.assertRaisesRegex(ValueError, "does not match captured bytes"):
+            capabilities.normalize_source_refreshes(
+                self.manifest, captured, source_capture_digest=capabilities.digest(b"unrelated capture"),
+            )
         refreshes = capabilities.normalize_source_refreshes(self.manifest, captured)
         result = capabilities.validate_source_refreshes(self.manifest, refreshes)
         self.assertEqual(result["count"], 22)
-        self.assertEqual(result["invalidated_claim_ids"], [])
+        expected_invalidations = sorted({
+            claim
+            for source, capture in zip(self.manifest["official_source_ledger"], captured)
+            if capture["status"] != "confirmed_current"
+            for claim in source["claim_bindings"]
+        })
+        self.assertEqual(result["invalidated_claim_ids"], expected_invalidations)
         self.assertTrue(all(item["bounded_extracts"] for item in refreshes))
         self.assertTrue(all(item["retrieval_evidence_digest"].startswith("sha256:") for item in refreshes))
         self.assertEqual(len({item["source_capture_digest"] for item in refreshes}), 1)
         self.assertTrue(all("retrieved_body_b64" in item for item in refreshes))
+        wrong_format = copy.deepcopy(captured); wrong_format[0]["retrieved_body_format"] = "html"
+        with self.assertRaisesRegex(ValueError, "declare normalized plain text"):
+            capabilities.normalize_source_refreshes(self.manifest, wrong_format)
+        legacy_refreshes = copy.deepcopy(load_json(PUBLISHED_FREEZE_PATH)["official_source_refreshes"])
+        self.assertEqual(
+            capabilities.validate_published_source_refreshes(self.manifest, legacy_refreshes)["count"], 22,
+        )
+        sources_by_id = {
+            source["official_source_ledger_id"]: source
+            for source in self.manifest["official_source_ledger"]
+        }
+        changed_legacy = next(
+            item for item in legacy_refreshes
+            if item["body_digest"] != f"sha256:{sources_by_id[item['official_source_ledger_id']]['body_sha256']}"
+            and not item["invalidated_claim_ids"]
+        )
+        changed_legacy["retrieved_at"] = "2026-07-16T00:00:01Z"
+        changed_legacy["retrieval_evidence_digest"] = capabilities.digest({
+            "canonical_url": changed_legacy["canonical_url"],
+            "retrieved_at": changed_legacy["retrieved_at"],
+            "body_digest": changed_legacy["body_digest"],
+            "bounded_extracts": changed_legacy["bounded_extracts"],
+        })
+        with self.assertRaisesRegex(ValueError, "body change must invalidate every bound claim"):
+            capabilities.validate_published_source_refreshes(self.manifest, legacy_refreshes)
         with tempfile.TemporaryDirectory() as tmp:
             private_root = Path(tmp); private_root.chmod(0o700)
             raw_root = private_root / "raw"; raw_root.mkdir(mode=0o700)
@@ -683,7 +722,7 @@ class CapabilityContractTests(unittest.TestCase):
         insecure = copy.deepcopy(captured); insecure[0]["canonical_url"] = "http://openai.com/unrelated"
         with self.assertRaisesRegex(ValueError, "identity or URL"):
             capabilities.normalize_source_refreshes(self.manifest, insecure)
-        approved_redirect = copy.deepcopy(captured); approved_redirect[0].update({"canonical_url": "https://platform.openai.com/docs/moved-source", "status": "redirected"})
+        approved_redirect = copy.deepcopy(captured); approved_redirect[0].update({"canonical_url": "https://platform.openai.com/docs/moved-source", "status": "redirected", "invalidated_claim_ids": []})
         with self.assertRaisesRegex(ValueError, "canonical URL change"):
             capabilities.normalize_source_refreshes(self.manifest, approved_redirect)
         approved_redirect[0]["invalidated_claim_ids"] = self.manifest["official_source_ledger"][0]["claim_bindings"]
@@ -712,6 +751,7 @@ class CapabilityContractTests(unittest.TestCase):
         canonical_drift[0].update({
             "canonical_url": self.manifest["official_source_ledger"][0]["requested_url"],
             "status": "changed",
+            "invalidated_claim_ids": [],
         })
         with self.assertRaisesRegex(ValueError, "canonical URL change"):
             capabilities.normalize_source_refreshes(self.manifest, canonical_drift)
@@ -720,7 +760,7 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertEqual(drifted_refreshes[0]["status"], "changed")
         self.assertEqual(
             capabilities.validate_source_refreshes(self.manifest, drifted_refreshes)["invalidated_claim_ids"],
-            self.manifest["official_source_ledger"][0]["claim_bindings"],
+            sorted(set(expected_invalidations) | set(self.manifest["official_source_ledger"][0]["claim_bindings"])),
         )
         prefix_attack = copy.deepcopy(captured); prefix_attack[0]["canonical_url"] = "https://platform.openai.com/docs-evil"
         with self.assertRaisesRegex(ValueError, "identity or URL"):
@@ -766,8 +806,9 @@ class CapabilityContractTests(unittest.TestCase):
         })
         wrong_claim = copy.deepcopy(partial_change)
         wrong_claim[-1]["invalidated_claim_ids"] = ["G56R-V3-PROMPT_GUIDANCE"]
-        with self.assertRaisesRegex(ValueError, "dependent claims"):
+        with self.assertRaisesRegex(ValueError, "body change must invalidate every bound claim"):
             capabilities.normalize_source_refreshes(self.manifest, wrong_claim)
+        changed_source["invalidated_claim_ids"] = self.manifest["official_source_ledger"][-1]["claim_bindings"]
         partial_refreshes = capabilities.normalize_source_refreshes(self.manifest, partial_change)
         self.assertEqual(partial_refreshes[-1]["invalidated_claim_ids"], changed_source["invalidated_claim_ids"])
         unknown_normalization = copy.deepcopy(captured)
@@ -794,26 +835,16 @@ class CapabilityContractTests(unittest.TestCase):
         inconsistent_status[changed_index]["status"] = "confirmed_current"
         with self.assertRaisesRegex(ValueError, "inconsistent with captured evidence"):
             capabilities.validate_source_refreshes(self.manifest, inconsistent_status)
-        missing_body = copy.deepcopy(refreshes); missing_body[0]["retrieved_body_b64"] = None; missing_body[0]["body_digest"] = None
+        missing_body = copy.deepcopy(refreshes); missing_body[0]["retrieved_body_b64"] = None; missing_body[0]["retrieved_body_format"] = None; missing_body[0]["body_digest"] = None
         with self.assertRaisesRegex(ValueError, "require a retrieved body"):
             capabilities.validate_source_refreshes(self.manifest, missing_body)
-        script_only = copy.deepcopy(captured)
-        script_body = f"<html><script>{script_only[0]['bounded_extracts'][0]['text']}</script></html>".encode()
-        script_only[0]["retrieved_body_b64"] = base64.b64encode(script_body).decode()
-        with self.assertRaisesRegex(ValueError, "bounded extract"):
-            capabilities.normalize_source_refreshes(self.manifest, script_only)
-        for hidden_markup in (
-            '<div hidden>{extract}</div>',
-            '<div aria-hidden="true">{extract}</div>',
-        ):
-            hidden_only = copy.deepcopy(captured)
-            hidden_body = hidden_markup.format(
-                extract=hidden_only[0]["bounded_extracts"][0]["text"],
-            ).encode()
-            hidden_only[0]["retrieved_body_b64"] = base64.b64encode(hidden_body).decode()
-            with self.subTest(hidden_markup=hidden_markup), self.assertRaisesRegex(ValueError, "bounded extract"):
-                capabilities.normalize_source_refreshes(self.manifest, hidden_only)
-        for unresolved_markup in (
+        for raw_markup in (
+            '<html><script>{extract}</script></html>',
+            '<dialog>{extract}</dialog>',
+            '<dialog open>{extract}</dialog>',
+            '<details><summary>Summary</summary>{extract}</details>',
+            '<datalist>{extract}</datalist>',
+            '<span>approved</span><span>claim</span>',
             '<style>.concealed {{ display: none }}</style><div class="concealed">{extract}</div>',
             '<link rel="stylesheet" href="styles.css"><div>{extract}</div>',
             '<div class="unresolved">{extract}</div>',
@@ -822,27 +853,28 @@ class CapabilityContractTests(unittest.TestCase):
             '<div style="display:none">{extract}</div>',
             '<div style="visibility:hidden">{extract}</div>',
             '<div style="opacity:0">{extract}</div>',
+            '<template></head>{extract}</template>',
+            '<script {extract}',
+            '<!-- {extract}',
         ):
-            unresolved = copy.deepcopy(captured)
-            unresolved_body = unresolved_markup.format(
-                extract=unresolved[0]["bounded_extracts"][0]["text"],
+            raw_html = copy.deepcopy(captured)
+            raw_body = raw_markup.format(
+                extract=raw_html[0]["bounded_extracts"][0]["text"],
             ).encode()
-            unresolved[0]["retrieved_body_b64"] = base64.b64encode(unresolved_body).decode()
-            with self.subTest(unresolved_markup=unresolved_markup), self.assertRaisesRegex(
-                ValueError, "visibility cannot be resolved safely",
+            raw_html[0]["retrieved_body_b64"] = base64.b64encode(raw_body).decode()
+            with self.subTest(raw_markup=raw_markup), self.assertRaisesRegex(
+                ValueError, "normalized plain text without markup",
             ):
-                capabilities.normalize_source_refreshes(self.manifest, unresolved)
-        malformed_hidden = copy.deepcopy(captured)
-        hidden_body = f"<template></head>{malformed_hidden[0]['bounded_extracts'][0]['text']}</template>".encode()
-        malformed_hidden[0]["retrieved_body_b64"] = base64.b64encode(hidden_body).decode()
-        with self.assertRaisesRegex(ValueError, "malformed hidden markup"):
-            capabilities.normalize_source_refreshes(self.manifest, malformed_hidden)
-        for opening in ("<script ", "<template ", "<!-- "):
-            incomplete_hidden = copy.deepcopy(captured)
-            incomplete_body = f"{opening}{incomplete_hidden[0]['bounded_extracts'][0]['text']}".encode()
-            incomplete_hidden[0]["retrieved_body_b64"] = base64.b64encode(incomplete_body).decode()
-            with self.subTest(opening=opening), self.assertRaisesRegex(ValueError, "malformed hidden markup"):
-                capabilities.normalize_source_refreshes(self.manifest, incomplete_hidden)
+                capabilities.normalize_source_refreshes(self.manifest, raw_html)
+        contradictory = copy.deepcopy(captured)
+        prior_body = base64.b64decode(contradictory[0]["retrieved_body_b64"]).decode()
+        contradictory[0].update({
+            "retrieved_body_b64": base64.b64encode(f"Deprecated and contradicted. {prior_body}".encode()).decode(),
+            "status": "changed",
+            "invalidated_claim_ids": [],
+        })
+        with self.assertRaisesRegex(ValueError, "body change must invalidate every bound claim"):
+            capabilities.normalize_source_refreshes(self.manifest, contradictory)
 
     def test_surface_cases_preserve_dispositions(self) -> None:
         for case in self.fixture["surface_cases"]:
@@ -1622,11 +1654,12 @@ class CapabilityContractTests(unittest.TestCase):
             stale_hard_link.unlink(); capability_private._fsync_directory(raw_root.resolve())
             race_root = Path(tmp) / "hard-link-race-root"
             shutil.copytree(raw_root, race_root)
-            race_link = Path(tmp) / "retained-race-link.json"; raced_filename = None
+            race_link = Path(tmp) / "retained-race-link.json"; raced_filename = raced_bytes = None
             original_unlink_descriptor_relative = capability_retention._unlink_descriptor_relative
             def create_external_link_before_unlink(filename: str, parent_descriptor: int) -> None:
-                nonlocal raced_filename
+                nonlocal raced_filename, raced_bytes
                 raced_filename = filename
+                raced_bytes = (race_root / filename).read_bytes()
                 os.link(race_root / filename, race_link)
                 original_unlink_descriptor_relative(filename, parent_descriptor)
             with mock.patch.object(
@@ -1639,7 +1672,7 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertIsNotNone(raced_filename)
             restored_race_target = race_root / str(raced_filename)
             self.assertFalse(restored_race_target.exists())
-            self.assertEqual(race_link.read_bytes(), capture_bytes)
+            self.assertEqual(race_link.read_bytes(), raced_bytes)
             race_intents = [
                 (json.loads(path.read_text()), f"sha256:{path.stem}")
                 for path in (race_root / capabilities.DELETION_INTENTS_DIR).iterdir()
@@ -1765,9 +1798,12 @@ class CapabilityContractTests(unittest.TestCase):
             hard_link_crash_root = Path(tmp) / "post-unlink-hard-link-crash-root"
             shutil.copytree(raw_root, hard_link_crash_root)
             hard_link_after_crash = Path(tmp) / "post-unlink-hard-link.json"
+            hard_link_crash_bytes = None
             class SimulatedPostUnlinkTermination(BaseException):
                 pass
             def hard_link_then_unlink_then_terminate(filename: str, parent_descriptor: int) -> None:
+                nonlocal hard_link_crash_bytes
+                hard_link_crash_bytes = (hard_link_crash_root / filename).read_bytes()
                 os.link(hard_link_crash_root / filename, hard_link_after_crash)
                 original_unlink_descriptor_relative(filename, parent_descriptor)
                 raise SimulatedPostUnlinkTermination
@@ -1779,7 +1815,7 @@ class CapabilityContractTests(unittest.TestCase):
                 side_effect=hard_link_then_unlink_then_terminate,
             ), self.assertRaises(SimulatedPostUnlinkTermination):
                 capabilities.reconcile_raw_evidence_retention(hard_link_crash_root, ROOT, apply=True)
-            self.assertEqual(hard_link_after_crash.read_bytes(), capture_bytes)
+            self.assertEqual(hard_link_after_crash.read_bytes(), hard_link_crash_bytes)
             self.assertFalse(any(
                 path.name.startswith(capabilities.PRIVATE_TEMPORARY_PREFIX) for path in hard_link_crash_root.iterdir()
             ))

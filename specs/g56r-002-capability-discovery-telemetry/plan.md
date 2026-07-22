@@ -129,10 +129,11 @@ stop condition.
   re-exported. `codex_capability_cli.py` owns command dispatch.
 - `codex_capability_contract.py` owns closed identifiers, bounds, canonical
   JSON/SHA-256, source-ledger validation, executable contract checks, and
-  fail-closed visible-text extraction that rejects unresolved stylesheet,
-  class/id, or inline-CSS visibility.
+  normalized-plain-text source validation that rejects raw markup instead of
+  inferring browser visibility or text-node boundaries.
 - `codex_capability_sources.py` owns current source refresh, claim-scoped
-  invalidation, and admission without modifying historical `OSL-*` rows.
+  invalidation, exact capture-digest binding, and admission without modifying
+  historical `OSL-*` rows. Every body-identity change invalidates all bindings.
 - `codex_capability_observations.py` owns identity-bound surface collection,
   normalization, hidden visibility, and disagreement records.
 - `codex_capability_matrix.py` owns candidate-matrix construction and the
@@ -292,8 +293,8 @@ Repository tests must pass with the network disabled and no raw evidence store.
   are generated only for explicit profile field paths; caller-supplied
   `fixture-*` strings never bypass nested sensitive-field rejection.
 - Official-document refresh outcomes remain per `OPENAI-DOC-*` record. A changed
-  source invalidates only bound claims/routes; the G56R-001 historical record is
-  not rewritten as current evidence.
+  body invalidates every claim/route bound to that source; the G56R-001
+  historical record is not rewritten as current evidence.
 - A published freeze is append-only. Any source, build, evidence,
   normalization, or disposition change creates a successor freeze ID, and every
   treatment-bound publication or successor API requires externally supplied

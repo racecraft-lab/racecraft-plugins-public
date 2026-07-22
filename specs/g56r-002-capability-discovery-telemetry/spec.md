@@ -159,11 +159,10 @@
   declared schema field paths; caller-supplied `fixture-*` values never create a
   trust exception. Only schema-allowlisted fields may enter a committed fixture.
 - **Q: How is source-body visibility established without a browser renderer?**
-  **A:** Bounded extracts may use normalized plain text or HTML whose visibility
-  is fully decidable from intrinsic markup. Explicit hidden attributes are
-  excluded. Stylesheets, class/id selectors, and all inline CSS are unresolved
-  and make the capture fail closed; the adapter never interprets selected CSS
-  declarations as a substitute for a rendering engine.
+  **A:** Every captured body must declare `normalized_plain_text`; raw HTML and
+  angle-bracket markup are rejected. The adapter collapses only whitespace that
+  already exists in those plain-text bytes and never infers browser rendering,
+  CSS visibility, intrinsic element state, or text-node separators.
 - **Q: Where and how long is raw evidence retained?** **A:** `raw_evidence_root`
   is a required content-addressed location outside the repository. Directories
   are operator-only mode `0700`; files are mode `0600` and have exactly one hard
@@ -227,7 +226,8 @@ records tuple-local exclusion reasons for every other tuple.
 
 1. **Given** all 22 current `OPENAI-DOC-*` records and a pinned client identity,
    **When** the steward refreshes the ledger, **Then** every current record has
-   a revalidation outcome and any change invalidates only its bound claims
+   a revalidation outcome and any body-identity change invalidates every claim
+   bound to that source
    without consuming or rewriting historical `OSL-*` rows.
 2. **Given** a source-admitted model and surface observations from the same
    pinned build, **When** app-server, CLI, and picker evidence agree on an
@@ -348,8 +348,8 @@ validate every fixture hash.
 - **[FR-001] Current source authority**: Before candidate freeze, the feature
   MUST revalidate all 22 current `OPENAI-DOC-*` manifest records against the
   current canonical allowlist and record a per-record outcome. Missing,
-  conflicting, inaccessible, withdrawn, or materially changed documentation
-  MUST invalidate only the dependent current claims and routes. Historical
+  conflicting, inaccessible, withdrawn, or body-changed documentation MUST
+  invalidate every current claim and route bound to that source. Historical
   `OSL-*` evidence MUST remain historical and MUST NOT be consumed or rewritten
   as the active ledger. The direct GPT-5.6 prompting guide MUST be bound only to
   API-surface prompt treatment and MUST NOT support Codex agent-field,
