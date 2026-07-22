@@ -220,7 +220,6 @@ def build_probe_matrix(manifest: dict[str, Any] | None = None) -> ProbeMatrix:
     if manifest is None:
         manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     routes = manifest["candidate_routes"]
-    order: list[str] = []
     groups: dict[str, dict[str, Any]] = {}
     for route in routes:
         model = route["model_selector"]["requested_value"]
@@ -228,18 +227,19 @@ def build_probe_matrix(manifest: dict[str, Any] | None = None) -> ProbeMatrix:
         tuple_id = derive_tuple_id(model, effort)
         group = groups.get(tuple_id)
         if group is None:
+            # dict insertion order is first-appearance order, so no parallel
+            # order list is needed to preserve it.
             groups[tuple_id] = {"model": model, "effort": effort, "count": 1}
-            order.append(tuple_id)
         else:
             group["count"] += 1
     specs = tuple(
         TupleSpec(
             tuple_id=tuple_id,
-            model=groups[tuple_id]["model"],
-            effort_requested=groups[tuple_id]["effort"],
-            route_count=groups[tuple_id]["count"],
+            model=group["model"],
+            effort_requested=group["effort"],
+            route_count=group["count"],
         )
-        for tuple_id in order
+        for tuple_id, group in groups.items()
     )
     return ProbeMatrix(tuples=specs, total_routes=len(routes))
 
@@ -764,8 +764,7 @@ def primary_model_id(payload: dict[str, Any] | None) -> str | None:
         return None
     usage = payload.get("modelUsage")
     if isinstance(usage, dict):
-        for key in usage:
-            return key
+        return next(iter(usage), None)
     return None
 
 
