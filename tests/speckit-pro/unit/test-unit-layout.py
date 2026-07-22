@@ -24,8 +24,16 @@ from test_result import run_counted  # noqa: E402
 
 
 SPEC_ID_NAME = re.compile(
-    r"(?:[a-z][a-z0-9]*-\d{3}[a-z]?|[a-z][a-z0-9]*\d[a-z0-9]*_\d{3}[a-z]?)",
+    r"[a-z][a-z0-9]*[-_]\d{3}[a-z]?",
     re.IGNORECASE,
+)
+CANONICAL_SPEC_ID_NAME = re.compile(
+    r"\b(?P<family>[a-z][a-z0-9]*)-\d{3}[a-z]?\b",
+    re.IGNORECASE,
+)
+SPEC_ID_PREFIX_NAME = re.compile(
+    r"^\*\*Spec ID prefix:\*\*\s*`?(?P<family>[a-z][a-z0-9]*)-###",
+    re.IGNORECASE | re.MULTILINE,
 )
 PURPOSE_NAMED_ROOTS = (
     FIXTURE_ROOT,
@@ -110,6 +118,36 @@ def _is_repository_authored_script(path: str, mode: str) -> bool:
     )
 
 
+def _repository_spec_families() -> frozenset[str]:
+    families: set[str] = set()
+    roadmap_root = REPO_ROOT / "docs" / "ai" / "specs"
+    for path in roadmap_root.glob("*.md"):
+        content = path.read_text(encoding="utf-8")
+        families.update(
+            match.group("family").casefold()
+            for match in SPEC_ID_PREFIX_NAME.finditer(content)
+        )
+        families.update(
+            match.group("family").casefold()
+            for match in CANONICAL_SPEC_ID_NAME.finditer(path.as_posix())
+        )
+    for path in (REPO_ROOT / "specs").iterdir():
+        if path.is_dir():
+            families.update(
+                match.group("family").casefold()
+                for match in CANONICAL_SPEC_ID_NAME.finditer(path.as_posix())
+            )
+    return frozenset(families)
+
+
+def _contains_repository_spec_id(value: str, families: frozenset[str]) -> bool:
+    normalized = value.casefold()
+    return any(
+        re.search(rf"{re.escape(family)}[-_]\d{{3}}[a-z]?", normalized)
+        for family in families
+    )
+
+
 class UnitLayoutTests(unittest.TestCase):
     def test_unit_directory_replaces_the_opaque_layer_name(self) -> None:
         self.assertTrue(UNIT_ROOT.is_dir())
@@ -157,11 +195,12 @@ class UnitLayoutTests(unittest.TestCase):
 
     def test_unit_test_method_names_are_behavior_named(self) -> None:
         violations: list[str] = []
+        spec_families = _repository_spec_families()
         for path in sorted(UNIT_ROOT.glob("test-*.py")):
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
-                    if SPEC_ID_NAME.search(node.name):
+                    if _contains_repository_spec_id(node.name, spec_families):
                         violations.append(f"{path.relative_to(TEST_ROOT)}::{node.name}")
         self.assertEqual(violations, [])
 
@@ -198,6 +237,7 @@ class UnitLayoutTests(unittest.TestCase):
     def test_spec_id_pattern_detects_underscore_separators(self) -> None:
         for name in (
             "g56r_002.test.py",
+            "xplat_010.test.py",
             "check.g56r_002.mjs",
             "checkg56r_002helper.ts",
         ):
