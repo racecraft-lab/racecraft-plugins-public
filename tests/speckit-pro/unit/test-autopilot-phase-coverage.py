@@ -2906,9 +2906,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
                         "supersedes_evidence_path": "specs/spec-example/.process/checkpoints/us1.json",
                         "supersedes_evidence_commit_sha": evidence_commit,
                         "supersedes_evidence_sha": evidence_sha,
-                        "remove_evidence_owners": [
-                            "verification_details.focused_tests"
-                        ],
+                        "remove_evidence_owners": [1],
                         "reason": "Exercise correction chronology.",
                     }
                 ),
@@ -2960,7 +2958,56 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
             exit_code, report = self.run_validator_paths(workflow_path, state_path)
             self.assertEqual(exit_code, 1)
             self.assertIn(
-                "pr_marker_plan.markers[0].implementation_checkpoint.superseded_evidence correction chain does not precede the current checkpoint evidence",
+                "pr_marker_plan.markers[0].implementation_checkpoint.superseded_evidence correction chain does not strictly precede the current checkpoint evidence",
+                report["checkpoint_evidence_errors"],
+            )
+
+            checkpoint["superseded_evidence"]["corrections"][0][
+                "checkpoint_evidence_commit_sha"
+            ] = evidence_commit
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0].implementation_checkpoint.corrections[0] does not strictly descend from the superseded evidence commit",
+                report["checkpoint_evidence_errors"],
+            )
+
+            checkpoint["superseded_evidence"]["corrections"][0][
+                "checkpoint_evidence_commit_sha"
+            ] = replacement_evidence_commit
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0].implementation_checkpoint.superseded_evidence correction chain does not strictly precede the current checkpoint evidence",
+                report["checkpoint_evidence_errors"],
+            )
+
+            checkpoint["superseded_evidence"]["corrections"][0][
+                "checkpoint_evidence_commit_sha"
+            ] = correction_commit
+            state_path.write_text(json.dumps(state), encoding="utf-8")
+            checkpoint_schema_path.write_text("{", encoding="utf-8")
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "add", "autopilot-state.json",
+                    str(checkpoint_schema_path),
+                ],
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git", "-C", str(root), "-c", "user.name=SpecKit Tests",
+                    "-c", "user.email=git@github.com", "-c", "commit.gpgsign=false",
+                    "commit", "-qm", "malformed correction schema authority",
+                ],
+                check=True,
+            )
+            exit_code, report = self.run_validator_paths(workflow_path, state_path)
+            self.assertEqual(exit_code, 1)
+            self.assertIn(
+                "pr_marker_plan.markers[0].implementation_checkpoint.corrections[0] schema authority is unavailable",
                 report["checkpoint_evidence_errors"],
             )
 

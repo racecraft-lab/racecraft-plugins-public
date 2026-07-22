@@ -1296,6 +1296,15 @@ def _git_commit_is_ancestor(repo_root: Path, ancestor_sha: str, descendant_sha: 
     return completed.returncode == 0
 
 
+def _git_commit_is_strict_ancestor(
+    repo_root: Path, ancestor_sha: str, descendant_sha: str,
+) -> bool:
+    return (
+        ancestor_sha != descendant_sha
+        and _git_commit_is_ancestor(repo_root, ancestor_sha, descendant_sha)
+    )
+
+
 def _git_commit_is_ancestor_of_head(repo_root: Path, commit_sha: str) -> bool:
     return _git_commit_is_ancestor(repo_root, commit_sha, "HEAD")
 
@@ -2519,7 +2528,7 @@ def validate_projection_integrity(
                                 isinstance(current_evidence_commit, str)
                                 and isinstance(superseded_commit, str)
                                 and _git_commit_exists(repo_root, current_evidence_commit)
-                                and not _git_commit_is_ancestor(
+                                and not _git_commit_is_strict_ancestor(
                                     repo_root, superseded_commit, current_evidence_commit,
                                 )
                             ):
@@ -2645,7 +2654,10 @@ def validate_projection_integrity(
                                     correction_valid = False
                                 else:
                                     correction_paths.add(correction_path)
-                                if not _git_commit_exists(repo_root, correction_commit):
+                                correction_commit_exists = _git_commit_exists(
+                                    repo_root, correction_commit,
+                                )
+                                if not correction_commit_exists:
                                     checkpoint_evidence_errors.append(
                                         f"{prefix}.checkpoint_evidence_commit_sha is not an existing commit"
                                     )
@@ -2658,7 +2670,7 @@ def validate_projection_integrity(
                                         f"{prefix}.checkpoint_evidence_commit_sha is not the immutable path-introduction commit"
                                     )
                                     correction_valid = False
-                                elif not (
+                                if correction_commit_exists and not (
                                     isinstance(expected_head_commit, str)
                                     and _git_commit_is_ancestor(
                                         repo_root, correction_commit, expected_head_commit,
@@ -2668,14 +2680,16 @@ def validate_projection_integrity(
                                         f"{prefix}.checkpoint_evidence_commit_sha is not an ancestor of the authorized PR head"
                                     )
                                     correction_valid = False
-                                elif (
+                                if (
+                                    correction_commit_exists
+                                    and
                                     isinstance(previous_commit, str)
-                                    and not _git_commit_is_ancestor(
+                                    and not _git_commit_is_strict_ancestor(
                                         repo_root, previous_commit, correction_commit,
                                     )
                                 ):
                                     checkpoint_evidence_errors.append(
-                                        f"{prefix} does not descend from the superseded evidence commit"
+                                        f"{prefix} does not strictly descend from the superseded evidence commit"
                                     )
                                     correction_valid = False
                                 committed_correction = (
@@ -2727,7 +2741,12 @@ def validate_projection_integrity(
                                         f"{prefix} evidence must be a JSON object"
                                     )
                                     correction_valid = False
-                                elif checkpoint_evidence_schema is not None:
+                                elif checkpoint_evidence_schema is None:
+                                    checkpoint_evidence_errors.append(
+                                        f"{prefix} schema authority is unavailable"
+                                    )
+                                    correction_valid = False
+                                else:
                                     correction_schema_errors = _json_schema_errors(
                                         correction_record,
                                         correction_schema,
@@ -2773,8 +2792,31 @@ def validate_projection_integrity(
                                     removals = correction_record.get(
                                         "remove_evidence_owners"
                                     )
-                                    for removal in removals or []:
-                                        container_name, field_name = removal.split(".", 1)
+                                    if not isinstance(removals, list):
+                                        checkpoint_evidence_errors.append(
+                                            f"{prefix}.remove_evidence_owners must be an array"
+                                        )
+                                        correction_valid = False
+                                        removals = []
+                                    for removal in removals:
+                                        if (
+                                            not isinstance(removal, str)
+                                            or "." not in removal
+                                        ):
+                                            checkpoint_evidence_errors.append(
+                                                f"{prefix} has an invalid evidence owner removal {removal!r}"
+                                            )
+                                            correction_valid = False
+                                            break
+                                        container_name, separator, field_name = (
+                                            removal.partition(".")
+                                        )
+                                        if not separator or not container_name or not field_name:
+                                            checkpoint_evidence_errors.append(
+                                                f"{prefix} has an invalid evidence owner removal {removal!r}"
+                                            )
+                                            correction_valid = False
+                                            break
                                         container = correction_projection_evidence.get(
                                             container_name
                                         )
@@ -2799,14 +2841,14 @@ def validate_projection_integrity(
                                     checkpoint.get("checkpoint_evidence_commit_sha"),
                                     str,
                                 )
-                                and not _git_commit_is_ancestor(
+                                and not _git_commit_is_strict_ancestor(
                                     repo_root,
                                     previous_commit,
                                     checkpoint["checkpoint_evidence_commit_sha"],
                                 )
                             ):
                                 checkpoint_evidence_errors.append(
-                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint.superseded_evidence correction chain does not precede the current checkpoint evidence"
+                                    f"pr_marker_plan.markers[{index}].implementation_checkpoint.superseded_evidence correction chain does not strictly precede the current checkpoint evidence"
                                 )
                     if evidence.get("status") != checkpoint_status:
                         checkpoint_evidence_errors.append(
