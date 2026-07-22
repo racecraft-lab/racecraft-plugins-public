@@ -2,14 +2,14 @@
   "schema_version": "marker-checkpoint.v1",
   "feature_id": "G56R-002",
   "marker_id": "us2",
-  "status": "review_pending",
+  "status": "complete",
   "task_ids": [
     "T016", "T017", "T018", "T019", "T020",
     "T021", "T022", "T023", "T024", "T025"
   ],
   "implementation_baseline_sha": "0e66466bb43ef2796664d9c63dde808744717f4c",
-  "implementation_checkpoint_sha": "e08eb7a9fb0201f99e1d926ccf80d322247d9871",
-  "superseded_checkpoint_sha": "102fe80f9d986484099503d9371bda7aeeec7d91",
+  "implementation_checkpoint_sha": "e1e34d005e16bf2e9115f01e709770aee006fb73",
+  "superseded_checkpoint_sha": "e08eb7a9fb0201f99e1d926ccf80d322247d9871",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "candidate_freeze_id": "sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c",
   "treatment_evidence_digest": "sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f",
@@ -17,8 +17,8 @@
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
   "reviewability_measurements": {
     "production_modules": 18,
-    "source_lines": 5910,
-    "nonblank_noncomment_lines": 5387,
+    "source_lines": 5938,
+    "nonblank_noncomment_lines": 5416,
     "max_capability_module_source_lines": 399,
     "modules": {
       "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
@@ -38,28 +38,28 @@
         "nonblank_noncomment_lines": 105
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {
-        "source_lines": 281,
-        "nonblank_noncomment_lines": 242
+        "source_lines": 283,
+        "nonblank_noncomment_lines": 244
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {
         "source_lines": 399,
-        "nonblank_noncomment_lines": 370
+        "nonblank_noncomment_lines": 371
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {
-        "source_lines": 362,
-        "nonblank_noncomment_lines": 337
+        "source_lines": 371,
+        "nonblank_noncomment_lines": 346
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {
         "source_lines": 219,
         "nonblank_noncomment_lines": 198
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {
-        "source_lines": 360,
-        "nonblank_noncomment_lines": 317
+        "source_lines": 363,
+        "nonblank_noncomment_lines": 320
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {
-        "source_lines": 290,
-        "nonblank_noncomment_lines": 256
+        "source_lines": 292,
+        "nonblank_noncomment_lines": 258
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publication_records.py": {
         "source_lines": 282,
@@ -90,13 +90,13 @@
         "nonblank_noncomment_lines": 223
       },
       "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
-        "source_lines": 1941,
-        "nonblank_noncomment_lines": 1789
+        "source_lines": 1953,
+        "nonblank_noncomment_lines": 1801
       }
     }
   },
   "verification": {
-    "focused_tests": "60/60 pass",
+    "focused_tests": "62/62 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
@@ -156,7 +156,7 @@
     "pre_journal_failure_restoration": "pass",
     "exact_public_facade_exports": "pass",
     "private_trust_primitives_hidden": "pass",
-    "independent_critical_high_review": "pending_reaudit",
+    "independent_critical_high_review": "pass",
     "identity_bound_deletion_intent_resume": "pass",
     "pre_unlink_error_identity_preservation": "pass",
     "public_append_only_temp_unlink_durability": "pass",
@@ -215,6 +215,11 @@
     "replacement_retention_marker_lock_exclusion": "pass",
     "bound_raw_append_only_recovery": "pass",
     "deletion_completion_intent_chronology": "pass",
+    "multi_hop_treatment_reroutes": "pass",
+    "transitive_successor_lineage_authority": "pass",
+    "matrix_canonical_token_self_validation": "pass",
+    "aggregate_private_record_bounds": "pass",
+    "oversized_publication_preflight_rejection": "pass",
     "descriptor_bound_append_only_temp_recovery": "pass",
     "abandoned_prelink_temp_recovery": "pass for private and public append-only directories",
     "active_temp_lock_protection": "pass",
@@ -228,15 +233,21 @@
     "deletion_tombstone_rematerialization_rejection": "pass",
     "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
     "authored_script_spec_id_guard": "9/9 pass",
-    "independent_review_chat_id": "untitled-chat-D9D31E",
-    "independent_review_findings": [
-      "retention locking used a replaceable child lock-file inode instead of the identity-bound raw directory",
-      "deletion completion chronology was not checked against its governing terminal intent"
-    ]
+    "independent_review": "NO FINDINGS across exact-head responsibility reviews",
+    "independent_review_chat_id": "untitled-chat-7F6589",
+    "independent_review_clean_chats": [
+      "untitled-chat-ECCC7F",
+      "untitled-chat-FD3F79",
+      "untitled-chat-28A265",
+      "untitled-chat-CD89EF",
+      "untitled-chat-7F6589"
+    ],
+    "independent_review_findings": []
   },
   "source_fingerprint_status": "current",
   "tasks_sha": "sha256:2f1377aa9852e56285dba0d0960017e196598e060a1cce1b24ea9695d70763d2",
   "implementation_completed_at": "2026-07-20T03:06:58Z",
-  "review_updated_at": "2026-07-22T07:52:36Z",
+  "completed_at": "2026-07-22T08:48:32Z",
+  "review_updated_at": "2026-07-22T08:48:32Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }

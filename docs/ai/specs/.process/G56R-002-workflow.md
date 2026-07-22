@@ -874,7 +874,7 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Review pending | 10 | Lower-slice restack is reconciled; 60/60 focused, 9/9 naming-layout, treatment, privacy 10/10, process 8/8, docs-reference, and 2824/2824 full-suite gates pass; exact-head review awaits the merged checkpoint |
+| 2 - Treatment contracts | Complete | 10 | Lower-slice restack is reconciled; 62/62 focused, 9/9 naming-layout, treatment, privacy 10/10, process 8/8, docs-reference, and 2824/2824 full-suite gates pass; exact-head responsibility reviews report no findings |
 | 3 - Synthetic replay | In Progress | 0 | T026-T030 exist on the next marker branch; restack and exact-head review follow US2 approval |
 | Polish and validation | Pending | 0 | Not started |
 
@@ -901,13 +901,13 @@ For every task:
 - Treatment contract: `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`
 - Treatment evidence set: `sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f`
 - Superseded marker checkpoint: `ce64616342ab977fc5bbaa675b8b9ca7ed192108`
-- Reviewability: aggregate size-only `block` at 4,809 source / 4,386
-  nonblank, non-comment lines across 13 production modules. The stable
-  capability facade and 11 focused internal modules total 2,901 / 2,628 with
-  a 395-line maximum; capability code no longer uses a `no_safe_boundary`
-  exception. `treatment_trace_schema.py` remains 1,885 / 1,737 under its
+- Reviewability: aggregate size-only `block` at 5,938 source / 5,416
+  nonblank, non-comment lines across 18 production modules. The stable
+  capability facade and 16 focused internal modules total 3,985 / 3,615 with
+  a 399-line maximum; capability code no longer uses a `no_safe_boundary`
+  exception. `treatment_trace_schema.py` remains 1,953 / 1,801 under its
   treatment-only typed exception, with only T026-T030 replay growth reserved.
-- Review: PENDING after direct canonical validation of the actual
+- Review: PASS after direct canonical validation of the actual
   successor, external treatment-binding and predecessor-lineage authority,
   bounded non-extending recovery of pending retention records, crash-released
   advisory locking with unconditional failure-path release, durable post-unlink
@@ -1249,8 +1249,31 @@ For every task:
   reversed-chronology tests pass. Focused 60/60, naming-layout 9/9, privacy
   10/10, docs-reference, and full 2824/2824 gates pass; exact-head re-audit
   remains pending.
-- Implementation checkpoint: `e08eb7a9fb0201f99e1d926ccf80d322247d9871`
-- Superseded checkpoint: `102fe80f9d986484099503d9371bda7aeeec7d91`
+- Exact-head treatment-core review `untitled-chat-13CD92` found one P0: the
+  validator admitted only a single reroute hop. Remediation at
+  `4881830c224d921f20dc5ecfc1cb23bd95ed69f2` validates an ordered same-trace
+  reroute chain, independently qualifies every hop, and binds only the final
+  hop as effective. Re-audit `untitled-chat-FD3F79` returned `NO FINDINGS`.
+- Exact-head trace-lineage review `untitled-chat-EEA85A` found one P1: a third
+  treatment-bound successor could not forward the predecessor-of-predecessor
+  authority. Remediation at `73755c9d945f047107e341d59180f37600c828d8`
+  forwards the prior telemetry profile, treatment contract, and evidence
+  digests explicitly. Re-audit `untitled-chat-28A265` returned `NO FINDINGS`.
+- Exact-head capability-acquisition review `untitled-chat-E10887` found two
+  P1 issues: non-token display labels could make the matrix reject its own
+  canonical output, and private record loading lacked aggregate resource
+  bounds. Remediation at `cb4fbd3aff2de9e37d41b06eaac7be75a9517024`
+  excludes invalid display labels from canonical tuples and bounds directory
+  entries, aggregate bytes, and cumulative JSON nodes. Re-audit
+  `untitled-chat-CD89EF` returned `NO FINDINGS`.
+- Exact-head publication/retention review `untitled-chat-64503E` found one P1:
+  an oversized canonical publication could be persisted before its bounded
+  verification failed, leaving output without a receipt. Remediation at
+  `e1e34d005e16bf2e9115f01e709770aee006fb73` rejects oversized bytes before
+  output recovery or mutation. Re-audit `untitled-chat-7F6589` returned
+  `NO FINDINGS`. All five exact-head responsibility re-audits are clean.
+- Implementation checkpoint: `e1e34d005e16bf2e9115f01e709770aee006fb73`
+- Superseded checkpoint: `e08eb7a9fb0201f99e1d926ccf80d322247d9871`
 
 ## PR Marker Plan Evidence
 
@@ -1265,19 +1288,19 @@ For every task:
 | Feature spec | `sha256:708dfaabb460b6efd976a27d159af9145844b5a288f2d9455118bc77ac57b882` |
 | Plan-declared scope | `sha256:b84b5f492ea37f9389e2b6ec1cf123193634b3a374f0a2b09cabe6a66423269d` |
 | Tasks | `sha256:2f1377aa9852e56285dba0d0960017e196598e060a1cce1b24ea9695d70763d2` |
-| Reviewability evidence | `sha256:5830a2394acb710dd3a581840f8f5ece9661ee71aae1151d16b586bed60f3ddb` |
+| Reviewability evidence | `sha256:e4172e46cf5c6d29c4d5ed8854e0e85c52f375c81736a08a5e2be2b5beb31bc1` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
 | 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Review pending at `e08eb7a9fb0201f99e1d926ccf80d322247d9871` | Exact-head re-audit required before stack advancement |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Complete at `e1e34d005e16bf2e9115f01e709770aee006fb73` | No feature growth after checkpoint |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines under its historical typed exception; the current US2 marker is 5,910 /
-  5,387 across 18 modules against the aggregate 400-LOC boundary. Capability
+  lines under its historical typed exception; the current US2 marker is 5,938 /
+  5,416 across 18 modules against the aggregate 400-LOC boundary. Capability
   modules are safely split with a 399-line maximum; only the treatment module
   retains a typed size-only exception.
 - Final `marker_split`: Pending.
