@@ -190,7 +190,10 @@ def _write(path, value, *, private=False, append_only=False, expected_parent_ide
     Path(path).write_bytes(payload)
 
 
-def validate_raw_evidence_root(raw_root, repository_root):
+def validate_raw_evidence_root(
+    raw_root, repository_root, *, raw_descriptor=None,
+    raw_directory_lock_held=False, expected_raw_identity=None,
+):
     if os.name == "nt":
         raise ValueError("operator-only raw evidence permissions are not supported on Windows")
     lexical, repo = Path(os.path.abspath(raw_root)), Path(repository_root).resolve()
@@ -198,8 +201,17 @@ def validate_raw_evidence_root(raw_root, repository_root):
     raw = lexical.resolve(strict=True)
     if raw == repo or repo in raw.parents or _git_worktree_ancestor(raw):
         raise ValueError("raw_evidence_root must resolve outside every Git worktree")
-    _recover_content_addressed_append_only_links(raw)
+    if raw_descriptor is not None:
+        if not raw_directory_lock_held or expected_raw_identity is None:
+            raise ValueError("bound raw evidence validation requires its directory lock and identity")
+        _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
+    _recover_content_addressed_append_only_links(
+        raw, raw_descriptor=raw_descriptor,
+        raw_directory_lock_held=raw_directory_lock_held,
+    )
     _validate_raw_evidence_tree(raw)
+    if raw_descriptor is not None:
+        _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
     return raw
 
 
@@ -274,115 +286,5 @@ def read_content_addressed_private_file(path, repository_root, label):
         raise ValueError(f"{label} must use its exact content digest as the filename")
     return resolved, raw
 
-
-def _bounded_source_capture_bytes(capture_bytes):
-    try:
-        capture_size = memoryview(capture_bytes).nbytes
-    except TypeError as error:
-        raise ValueError("source capture must be bytes-like") from error
-    if capture_size > PRIVATE_REFRESH_MAX_BYTES:
-        raise ValueError("source capture exceeds the bounded private-file size")
-    return bytes(capture_bytes)
-
-
-def _materialize_source_capture_unlocked(raw_root, repository_root, capture_bytes):
-    capture_bytes = _bounded_source_capture_bytes(capture_bytes)
-    captured = _parse_json_bytes(capture_bytes)
-    if not isinstance(captured, list):
-        raise ValueError("captured refresh must be a JSON list")
-    raw, raw_identity = _validated_raw_evidence_root_binding(raw_root, repository_root)
-    capture_digest = digest(capture_bytes)
-    target = raw / f"{capture_digest.removeprefix('sha256:')}.json"
-    if target.exists():
-        _recover_append_only_target(target, capture_bytes, raw_identity)
-        _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
-        if retained != capture_bytes: raise ValueError("content-addressed source capture bytes disagree")
-    else:
-        try:
-            _write_private_bytes(
-                target, capture_bytes, append_only=True,
-                expected_parent_identity=raw_identity,
-            )
-        except FileExistsError:
-            _recover_append_only_target(target, capture_bytes, raw_identity)
-            _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
-            if retained != capture_bytes:
-                raise ValueError("concurrent source capture bytes disagree")
-    validate_raw_evidence_root(raw, repository_root)
-    _, retained = read_content_addressed_private_file(target, repository_root, "source capture")
-    if retained != capture_bytes:
-        raise ValueError("source capture was not retained under its content identity")
-    return capture_digest, target
-
-
-def validate_source_capture_evidence(manifest, refreshes, raw_root, repository_root):
-    capture_digests = {item.get("source_capture_digest") for item in refreshes}
-    if len(capture_digests) != 1:
-        raise ValueError("source refreshes must bind one complete raw source capture")
-    capture_digest = capture_digests.pop(); _need_digest(capture_digest, "source_capture_digest")
-    raw = validate_raw_evidence_root(raw_root, repository_root)
-    target = raw / f"{capture_digest.removeprefix('sha256:')}.json"
-    _, capture_bytes = read_content_addressed_private_file(target, repository_root, "source capture")
-    expected = normalize_source_refreshes(
-        manifest, _parse_json_bytes(capture_bytes), source_capture_digest=capture_digest,
-    )
-    if refreshes and "retrieved_body_b64" not in refreshes[0]:
-        expected = validate_source_refreshes(manifest, expected)["sanitized_refreshes"]
-    if canonical_bytes(expected) != canonical_bytes(refreshes):
-        raise ValueError("normalized source refresh does not match its retained raw capture")
-    return capture_digest
-
-
-def validate_canary_evidence(raw_root, repository_root, result):
-    _need_digest(result.get("evidence_digest"), "evidence_digest")
-    raw = validate_raw_evidence_root(raw_root, repository_root)
-    target = raw / f"{result['evidence_digest'].removeprefix('sha256:')}.json"
-    _, evidence_bytes = read_content_addressed_private_file(target, repository_root, "canary evidence")
-    validate_canary_result(result, evidence_bytes=evidence_bytes)
-    return evidence_bytes
-
-
-def _materialize_unknown_capture_unlocked(raw_root, repository_root, surface, client_identity_id, repository_binding, work_item, captured_at):
-    raw, raw_identity = _validated_raw_evidence_root_binding(raw_root, repository_root)
-    record = _unknown_capture_record(surface, client_identity_id, repository_binding, work_item, captured_at)
-    stored = canonical_bytes(record) + b"\n"; evidence = digest(stored)
-    target = raw / f"{evidence.removeprefix('sha256:')}.json"
-    if target.exists():
-        _recover_append_only_target(target, stored, raw_identity)
-        _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
-        if retained != stored: raise ValueError("content-addressed unknown capture bytes disagree")
-    else:
-        try:
-            _write_private_bytes(
-                target, stored, append_only=True,
-                expected_parent_identity=raw_identity,
-            )
-        except FileExistsError:
-            _recover_append_only_target(target, stored, raw_identity)
-            _, retained = read_content_addressed_private_file(
-                target, repository_root, "unknown capture",
-            )
-            if retained != stored:
-                raise ValueError("concurrent unknown capture bytes disagree")
-    validate_raw_evidence_root(raw, repository_root)
-    _, retained = read_content_addressed_private_file(target, repository_root, "unknown capture")
-    if retained != stored or digest(retained) != evidence:
-        raise ValueError("unknown capture was not retained under its content identity")
-    return evidence, target
-
-
-def validate_unknown_observation_evidence(observation, raw_root, repository_root):
-    observation = validate_observation(dict(observation))
-    if observation["collection_method_id"] != "unknown-observation-v1":
-        return
-    raw = validate_raw_evidence_root(raw_root, repository_root)
-    target = raw / f"{observation['raw_evidence_digest'].removeprefix('sha256:')}.json"
-    _, retained = read_content_addressed_private_file(target, repository_root, "unknown observation evidence")
-    expected = canonical_bytes(_unknown_capture_record(
-        observation["surface"], observation["client_identity_id"], observation["repository_binding"],
-        observation["work_item"], observation["started_at"],
-    )) + b"\n"
-    if retained != expected:
-        raise ValueError("unknown observation evidence bytes do not match the deterministic attempt record")
 
 __all__ = [name for name in globals() if not name.startswith("__")]

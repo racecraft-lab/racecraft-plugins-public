@@ -31,7 +31,9 @@ def _validate_publication_intent(record_digest, record):
     return _validate_publication_record(record_digest, record, intent=True)
 
 
-def _register_raw_evidence_retention_locked(freeze, raw, raw_identity, repository_root):
+def _register_raw_evidence_retention_locked(
+    freeze, raw, raw_identity, repository_root, *, raw_descriptor,
+):
     _parsed_timestamp(freeze.get("published_at"), "freeze publication timestamp")
     evidence_digests = _freeze_raw_evidence_digests(freeze)
     if not evidence_digests: return []
@@ -93,7 +95,9 @@ def _register_raw_evidence_retention_locked(freeze, raw, raw_identity, repositor
             "delete_after": _format_timestamp(registered + timedelta(days=RAW_EVIDENCE_RETENTION_DAYS)),
         }
         record_digests.append(_store_private_record(records, record, repository_root, records_identity))
-    validate_raw_evidence_root(raw, repository_root)
+    validate_raw_evidence_root(
+        raw, repository_root, **_raw_lock_kwargs(raw_descriptor, raw_identity),
+    )
     return sorted(record_digests)
 
 

@@ -23,9 +23,12 @@ def materialize_source_capture(raw_root, repository_root, capture_bytes):
     capture_bytes = _bounded_source_capture_bytes(capture_bytes)
     raw, raw_identity = _validated_raw_evidence_root_binding(raw_root, repository_root)
     evidence_digest = digest(capture_bytes)
-    with _retention_lock(raw, raw_identity, wait=True):
+    with _retention_lock(raw, raw_identity, wait=True) as raw_descriptor:
         _reject_deleted_evidence_digest(raw, repository_root, evidence_digest)
-        return _materialize_source_capture_unlocked(raw, repository_root, capture_bytes)
+        return _materialize_source_capture_unlocked(
+            raw, repository_root, capture_bytes,
+            raw_descriptor=raw_descriptor, raw_identity=raw_identity,
+        )
 
 
 def materialize_unknown_capture(
@@ -37,11 +40,11 @@ def materialize_unknown_capture(
     )
     evidence_digest = digest(canonical_bytes(record) + b"\n")
     raw, raw_identity = _validated_raw_evidence_root_binding(raw_root, repository_root)
-    with _retention_lock(raw, raw_identity, wait=True):
+    with _retention_lock(raw, raw_identity, wait=True) as raw_descriptor:
         _reject_deleted_evidence_digest(raw, repository_root, evidence_digest)
         return _materialize_unknown_capture_unlocked(
             raw, repository_root, surface, client_identity_id, repository_binding,
-            work_item, captured_at,
+            work_item, captured_at, raw_descriptor=raw_descriptor, raw_identity=raw_identity,
         )
 
 
@@ -189,14 +192,19 @@ def reconcile_raw_evidence_retention(raw_evidence_root, repository_root, as_of=N
         effective_as_of = _format_timestamp(current)
     else:
         current = _parsed_timestamp(as_of, "retention as-of timestamp"); effective_as_of = as_of
-    with _retention_lock(raw, raw_identity):
-        validate_raw_evidence_root(raw, repository_root)
+    with _retention_lock(raw, raw_identity) as raw_descriptor:
+        validate_raw_evidence_root(
+            raw, repository_root, **_raw_lock_kwargs(raw_descriptor, raw_identity),
+        )
         return _reconcile_raw_evidence_retention_locked(
-            raw, raw_identity, repository_root, effective_as_of, current, apply=apply,
+            raw, raw_identity, repository_root, effective_as_of, current,
+            apply=apply, raw_descriptor=raw_descriptor,
         )
 
 
-def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root, as_of, current, *, apply):
+def _reconcile_raw_evidence_retention_locked(
+    raw, raw_identity, repository_root, as_of, current, *, apply, raw_descriptor,
+):
     retention_records, publication_intents, publication_receipts, governing_record_digests = (
         _load_publication_authority(raw, repository_root)
     )
@@ -220,6 +228,8 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
         intent, intent_digest = intent_by_evidence[evidence_digest]
         if record["deletion_intent_digest"] != intent_digest or record["retention_record_digests"] != intent["retention_record_digests"] or record["delete_after"] != intent["delete_after"]:
             raise ValueError("raw evidence deletion record does not bind its deletion intent")
+        if _parsed_timestamp(record["deleted_at"], "deletion timestamp") < _parsed_timestamp(intent["deletion_started_at"], "deletion intent timestamp"):
+            raise ValueError("raw evidence deletion record predates its deletion intent")
     retained, deleted, deletion_digests = [], [], []
     for evidence_digest in sorted(retention_by_evidence):
         grouped = retention_by_evidence[evidence_digest]
@@ -354,7 +364,9 @@ def _reconcile_raw_evidence_retention_locked(raw, raw_identity, repository_root,
         deletion_intents.append((staged_record, staged_digest))
         intent_by_evidence[evidence_digest] = (staged_record, staged_digest)
         deleted.append(evidence_digest); deletion_digests.append(record_digest)
-    validate_raw_evidence_root(raw, repository_root)
+    validate_raw_evidence_root(
+        raw, repository_root, **_raw_lock_kwargs(raw_descriptor, raw_identity),
+    )
     return {
         "schema_version": "raw-evidence-retention-report.v1", "mode": "cleanup" if apply else "verify", "as_of": as_of,
         "retained_evidence_digests": retained, "deleted_evidence_digests": deleted,

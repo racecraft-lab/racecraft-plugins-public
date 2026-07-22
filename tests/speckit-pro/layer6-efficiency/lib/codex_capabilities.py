@@ -64,7 +64,7 @@ from codex_capability_observations import (
     validate_repository_binding,
     validate_work_item,
 )
-from codex_capability_private import (
+from codex_capability_capture import (
     read_content_addressed_private_file,
     read_private_external_file,
     validate_canary_evidence,

@@ -320,13 +320,14 @@ def build_canary_successor(
     )
 
 
-def _validate_retained_freeze_evidence(freeze, raw, repository_root):
+def _validate_retained_freeze_evidence(freeze, raw, repository_root, raw_descriptor=None, raw_identity=None):
     for observation in freeze["surface_matrix"]["observations"]:
         if observation["collection_method_id"] != "fixture-enumeration-v1":
-            validate_unknown_observation_evidence(observation, raw, repository_root)
+            validate_unknown_observation_evidence(
+                observation, raw, repository_root, raw_descriptor=raw_descriptor, raw_identity=raw_identity)
     for result in freeze["canary_results"]:
-        validate_canary_evidence(raw, repository_root, result)
-
+        validate_canary_evidence(
+            raw, repository_root, result, raw_descriptor=raw_descriptor, raw_identity=raw_identity)
 
 def publish_with_raw_evidence_retention(
     freeze, output, raw_evidence_root, repository_root, *, manifest,
@@ -353,22 +354,24 @@ def publish_with_raw_evidence_retention(
             output.parent, output_parent_identity, require_content_addressed=False,
             descriptor=output_parent_descriptor, directory_lock_held=True,
         )
-        with _retention_lock(raw, raw_identity):
-            validate_raw_evidence_root(raw, repository_root)
+        with _retention_lock(raw, raw_identity) as raw_descriptor:
+            validate_raw_evidence_root(raw, repository_root, **_raw_lock_kwargs(raw_descriptor, raw_identity))
             deleted_digests = {
                 _validate_deletion_record(record_digest, record)["raw_evidence_digest"]
                 for record_digest, record in _load_private_records(raw / DELETION_RECORDS_DIR, repository_root, "deletion record")
             }
             if set(_freeze_raw_evidence_digests(freeze)) & deleted_digests:
                 raise ValueError("raw evidence cannot be registered after deletion has begun")
-            validate_source_capture_evidence(manifest, freeze["official_source_refreshes"], raw, repository_root)
-            _validate_retained_freeze_evidence(freeze, raw, repository_root)
+            validate_source_capture_evidence(
+                manifest, freeze["official_source_refreshes"], raw, repository_root,
+                raw_descriptor=raw_descriptor, raw_identity=raw_identity)
+            _validate_retained_freeze_evidence(freeze, raw, repository_root, raw_descriptor, raw_identity)
             already_published = _publication_target_matches(
                 output, payload, parent_descriptor=output_parent_descriptor,
                 parent_identity=output_parent_identity, directory_lock_held=True,
             )
             retention_record_digests = _register_raw_evidence_retention_locked(
-                freeze, raw, raw_identity, repository_root,
+                freeze, raw, raw_identity, repository_root, raw_descriptor=raw_descriptor,
             )
             intent_digest = _store_publication_intent_locked(
                 freeze, retention_record_digests, raw, raw_identity, repository_root,
@@ -387,7 +390,7 @@ def publish_with_raw_evidence_retention(
                 receipt_digest = _store_publication_receipt_locked(
                     freeze, retention_record_digests, raw, raw_identity, repository_root,
                 )
-            validate_raw_evidence_root(raw, repository_root)
+            validate_raw_evidence_root(raw, repository_root, **_raw_lock_kwargs(raw_descriptor, raw_identity))
             return {
                 "retention_record_digests": retention_record_digests,
                 "publication_intent_digest": intent_digest,

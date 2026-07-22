@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import time
 
-from codex_capability_private import *
+from codex_capability_capture import *
 
 def _retention_now():
     return datetime.now(timezone.utc)
@@ -271,10 +271,10 @@ def _retention_lock(raw, expected_raw_identity, *, wait=False):
     except ImportError as error:
         raise ValueError("raw evidence retention requires advisory file locking") from error
     raw_descriptor = _private_directory_descriptor(raw, expected_raw_identity)
-    lock_descriptor = None
+    marker_descriptor = None; locked = False
     try:
         try:
-            lock_descriptor = os.open(
+            marker_descriptor = os.open(
                 RETENTION_LOCK_FILE,
                 os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
                 0o600,
@@ -282,33 +282,32 @@ def _retention_lock(raw, expected_raw_identity, *, wait=False):
             )
         except OSError as error:
             raise ValueError("raw evidence retention lock is invalid") from error
-        metadata = os.fstat(lock_descriptor)
+        metadata = os.fstat(marker_descriptor)
         if not stat.S_ISREG(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o600 or metadata.st_nlink != 1:
             raise ValueError("raw evidence retention lock is invalid")
+        os.fsync(marker_descriptor); os.close(marker_descriptor); marker_descriptor = None
         deadline = time.monotonic() + 5.0
         while True:
             try:
-                fcntl.flock(lock_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(raw_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                locked = True
                 break
             except BlockingIOError as error:
                 if not wait or time.monotonic() >= deadline:
                     raise ValueError("raw evidence retention operation is already in progress") from error
                 time.sleep(0.01)
-        os.fsync(lock_descriptor)
         os.fsync(raw_descriptor)
         _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
-        yield
+        yield raw_descriptor
     finally:
-        try:
-            if lock_descriptor is not None:
-                try:
-                    _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
-                finally:
-                    try:
-                        fcntl.flock(lock_descriptor, fcntl.LOCK_UN)
-                    finally:
-                        os.close(lock_descriptor)
-        finally:
+        if marker_descriptor is not None: os.close(marker_descriptor)
+        if locked:
+            try:
+                _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
+            finally:
+                try: fcntl.flock(raw_descriptor, fcntl.LOCK_UN)
+                finally: os.close(raw_descriptor)
+        else:
             os.close(raw_descriptor)
 
 

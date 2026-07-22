@@ -307,7 +307,11 @@ def _recover_append_only_directory(
         if owns_descriptor: os.close(descriptor)
 
 
-def _recover_content_addressed_append_only_links(raw):
+def _recover_content_addressed_append_only_links(
+    raw, *, raw_descriptor=None, raw_directory_lock_held=False,
+):
+    if raw_descriptor is not None and not raw_directory_lock_held:
+        raise ValueError("bound raw evidence recovery requires its directory lock")
     directories = [Path(raw)]
     directories.extend(
         Path(raw) / name for name in (
@@ -319,8 +323,11 @@ def _recover_content_addressed_append_only_links(raw):
         metadata = os.stat(directory, follow_symlinks=False)
         if not stat.S_ISDIR(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o700:
             raise ValueError("append-only recovery requires a private directory")
+        bound_raw = raw_descriptor is not None and directory == Path(raw)
         _recover_append_only_directory(
             directory, _stable_directory_identity(metadata), require_content_addressed=True,
+            descriptor=raw_descriptor if bound_raw else None,
+            directory_lock_held=bound_raw and raw_directory_lock_held,
         )
 
 

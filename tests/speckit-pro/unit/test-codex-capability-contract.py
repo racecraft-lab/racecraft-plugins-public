@@ -91,6 +91,7 @@ spec.loader.exec_module(capabilities)
 
 capability_contract = sys.modules["codex_capability_contract"]
 capability_append_only = sys.modules["codex_capability_append_only"]
+capability_capture = sys.modules["codex_capability_capture"]
 capability_freeze = sys.modules["codex_capability_freeze"]
 capability_io = sys.modules["codex_capability_io"]
 capability_observations = sys.modules["codex_capability_observations"]
@@ -460,7 +461,7 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertNotIn("_delete_single_link_private_file", vars(capabilities))
         self.assertTrue(callable(capabilities.main))
         implementation_modules = [MODULE_PATH, *sorted(MODULE_PATH.parent.glob("codex_capability_*.py"))]
-        self.assertEqual(len(implementation_modules), 16)
+        self.assertEqual(len(implementation_modules), 17)
         for path in implementation_modules:
             with self.subTest(path=path.name):
                 self.assertLessEqual(len(path.read_text(encoding="utf-8").splitlines()), 400)
@@ -1381,10 +1382,10 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(stat.S_IMODE(raw_root.stat().st_mode), 0o700)
             capabilities.validate_raw_evidence_root(raw_root, ROOT)
             with mock.patch.object(
-                capability_private, "PRIVATE_REFRESH_MAX_BYTES", 4,
+                capability_capture, "PRIVATE_REFRESH_MAX_BYTES", 4,
             ), mock.patch.object(
-                capability_private, "_parse_json_bytes",
-                wraps=capability_private._parse_json_bytes,
+                capability_capture, "_parse_json_bytes",
+                wraps=capability_capture._parse_json_bytes,
             ) as parse_capture, self.assertRaisesRegex(ValueError, "bounded private-file size"):
                 capabilities.materialize_source_capture(raw_root, ROOT, b'["oversized"]')
             parse_capture.assert_not_called()
@@ -1408,13 +1409,14 @@ class CapabilityContractTests(unittest.TestCase):
                 f"{capabilities.digest(concurrent_bytes).removeprefix('sha256:')}.json"
             )
             def publish_concurrent_unknown(
-                path: Path, payload: bytes, **kwargs: object,
+                _descriptor: int, parent: Path, filename: str, payload: bytes, **kwargs: object,
             ) -> None:
-                self.assertTrue(kwargs.get("append_only"))
-                Path(path).write_bytes(payload); Path(path).chmod(0o600)
+                self.assertTrue(kwargs.get("append_only")); self.assertTrue(kwargs.get("directory_lock_held"))
+                path = parent / filename
+                path.write_bytes(payload); path.chmod(0o600)
                 raise FileExistsError("simulated concurrent unknown capture")
             with mock.patch.object(
-                capability_private, "_write_private_bytes",
+                capability_capture, "_write_private_bytes_at",
                 side_effect=publish_concurrent_unknown,
             ):
                 concurrent_evidence, concurrent_retained = capabilities.materialize_unknown_capture(
@@ -1433,15 +1435,17 @@ class CapabilityContractTests(unittest.TestCase):
                 f"{capabilities.digest(conflict_bytes).removeprefix('sha256:')}.json"
             )
             def publish_conflicting_unknown(
-                path: Path, payload: bytes, **kwargs: object,
+                _descriptor: int, parent: Path, filename: str, payload: bytes, **kwargs: object,
             ) -> None:
-                self.assertTrue(kwargs.get("append_only")); self.assertEqual(payload, conflict_bytes)
-                Path(path).write_bytes(b"{}\n"); Path(path).chmod(0o600)
+                self.assertTrue(kwargs.get("append_only")); self.assertTrue(kwargs.get("directory_lock_held"))
+                self.assertEqual(payload, conflict_bytes)
+                path = parent / filename
+                path.write_bytes(b"{}\n"); path.chmod(0o600)
                 raise FileExistsError("simulated conflicting unknown capture")
             with mock.patch.object(
-                capability_private, "_write_private_bytes",
+                capability_capture, "_write_private_bytes_at",
                 side_effect=publish_conflicting_unknown,
-            ), self.assertRaisesRegex(ValueError, "content digest|concurrent unknown capture"):
+            ), self.assertRaisesRegex(ValueError, "content digest|content-addressed unknown capture"):
                 capabilities.materialize_unknown_capture(
                     raw_root, ROOT, "interactive_picker", self.identity["client_identity_id"],
                     repository, work_item, "2026-07-16T00:00:02Z",
@@ -1643,8 +1647,8 @@ class CapabilityContractTests(unittest.TestCase):
                     lock_observed = True
                 finally:
                     os.close(lock_probe)
-                with original_retention_lock(*args, **kwargs):
-                    yield
+                with original_retention_lock(*args, **kwargs) as raw_descriptor:
+                    yield raw_descriptor
 
             with mock.patch.object(
                 capability_freeze, "_retention_lock", side_effect=swap_alias_before_retention,
@@ -2900,6 +2904,17 @@ class CapabilityContractTests(unittest.TestCase):
                     pass
             with capability_retention_records._retention_lock(raw_root, raw_identity):
                 pass
+            marker = raw_root / capabilities.RETENTION_LOCK_FILE
+            replaced_marker = raw_root / ".replaced-retention-lock"
+            with capability_retention_records._retention_lock(raw_root, raw_identity):
+                marker.rename(replaced_marker)
+                marker.write_bytes(b"")
+                marker.chmod(0o600)
+                with self.assertRaisesRegex(ValueError, "already in progress"):
+                    with capability_retention_records._retention_lock(raw_root, raw_identity):
+                        pass
+            self.assertTrue(marker.is_file())
+            self.assertTrue(replaced_marker.is_file())
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_private_record_loader_rejects_directory_races(self) -> None:
@@ -3063,6 +3078,64 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertFalse(any(
                 path.name.startswith(capabilities.PRIVATE_TEMPORARY_PREFIX) for path in raw_root.iterdir()
             ))
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_deletion_completion_cannot_predate_terminal_intent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_root = Path(tmp) / "raw"
+            raw_root.mkdir(mode=0o700)
+            evidence_digest = capabilities.digest(b"private evidence\n")
+            retention_digest = capabilities.digest(b"retention record")
+            retention_record = {
+                "schema_version": "raw-evidence-retention.v1",
+                "candidate_freeze_id": capabilities.digest(b"freeze"),
+                "raw_evidence_digest": evidence_digest,
+                "published_at": "2026-07-16T00:00:00Z",
+                "registered_at": "2026-07-16T00:00:00Z",
+                "delete_after": "2026-08-15T00:00:00Z",
+            }
+            intent = {
+                "schema_version": "raw-evidence-deletion-intent.v2",
+                "raw_evidence_digest": evidence_digest,
+                "retention_record_digests": [retention_digest],
+                "delete_after": "2026-08-15T00:00:00Z",
+                "deletion_started_at": "2026-08-16T00:00:00Z",
+                "target_file_identity": {
+                    "device": 1, "inode": 1, "size": 17, "mtime_ns": 1, "mode": 0o600,
+                },
+            }
+            intent_digest = capabilities.digest(capabilities.canonical_bytes(intent) + b"\n")
+            completion = {
+                "schema_version": "raw-evidence-deletion.v2",
+                "completion_proof": "post-unlink-nlink-zero-rehashed-v1",
+                "raw_evidence_digest": evidence_digest,
+                "retention_record_digests": [retention_digest],
+                "deletion_intent_digest": intent_digest,
+                "delete_after": "2026-08-15T00:00:00Z",
+                "deleted_at": "2026-08-15T00:00:00Z",
+            }
+            completion_digest = capabilities.digest(
+                capabilities.canonical_bytes(completion) + b"\n",
+            )
+
+            def load_records(_directory: Path, _repository: Path, label: str) -> list[tuple[str, dict]]:
+                if label == "deletion intent": return [(intent_digest, intent)]
+                if label == "deletion record": return [(completion_digest, completion)]
+                raise AssertionError(f"unexpected record label: {label}")
+
+            current = capability_contract._parsed_timestamp(
+                "2026-08-17T00:00:00Z", "test clock",
+            )
+            with mock.patch.object(
+                capability_retention, "_load_publication_authority",
+                return_value=([(retention_record, retention_digest)], [], [], {retention_digest}),
+            ), mock.patch.object(
+                capability_retention, "_load_private_records", side_effect=load_records,
+            ), self.assertRaisesRegex(ValueError, "predates its deletion intent"):
+                capability_retention._reconcile_raw_evidence_retention_locked(
+                    raw_root, capability_io._stable_directory_identity(raw_root.stat()), ROOT,
+                    "2026-08-17T00:00:00Z", current, apply=False, raw_descriptor=None,
+                )
 
 
 class TreatmentContractTests(unittest.TestCase):
