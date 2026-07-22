@@ -825,6 +825,7 @@ class CapabilityContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "claim bindings"):
             capabilities.validate_manifest(empty_bindings, allow_synthetic_manifest=True)
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_canonical_json_refreshes_and_identity(self) -> None:
         self.assertEqual(capabilities.canonical_bytes({"b": 1, "a": 2}), b'{"a":2,"b":1}')
         self.assertFalse(hasattr(capabilities, "refreshes_from_manifest"))
@@ -1388,6 +1389,7 @@ class CapabilityContractTests(unittest.TestCase):
         ):
             capabilities.validate_freeze(self_approved_freeze, self.manifest)
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_freeze_cli_round_trips_alias_authority(self) -> None:
         alias_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "one_to_one_alias")
         observations = self.observations(alias_case)
@@ -1452,6 +1454,7 @@ class CapabilityContractTests(unittest.TestCase):
                 "--freeze", str(freeze_path),
             ]), 0)
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_canary_is_injected_bounded_and_default_denied(self) -> None:
         approval, result = canary_envelope()
         evidence_bytes = canary_evidence_bytes(result)
@@ -2708,6 +2711,7 @@ class CapabilityContractTests(unittest.TestCase):
                     capabilities.repository_binding_from_checkout(repository)
             self.assertEqual(run.call_args_list[2].args[0][-1], f"{resolved}^{{tree}}")
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_source_capture_accepts_an_identical_concurrent_winner(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             raw_root = Path(tmp) / "raw"
@@ -2734,6 +2738,7 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(target.stat().st_nlink, 1)
             self.assertFalse(any(raw_root.glob(f"{capabilities.PRIVATE_TEMPORARY_PREFIX}*")))
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_append_only_directory_lock_precedes_temporary_visibility(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             raw_root = Path(tmp) / "raw"
@@ -2863,6 +2868,7 @@ class CapabilityContractTests(unittest.TestCase):
                 )
             self.assertTrue(raced_once)
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_json_inputs_executable_hashing_and_publication_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -4828,22 +4834,23 @@ class TreatmentContractTests(unittest.TestCase):
                 treatment_io, "_windows_final_path_from_descriptor", return_value=root.parent / "escaped.json",
             ), self.assertRaisesRegex(ValueError, "Windows handle escaped"):
                 treatment_io._read_bounded_regular_file(source, allowed_root=root)
-            symlink = root / "symlink.json"; symlink.symlink_to(source)
-            with self.assertRaisesRegex(ValueError, "regular non-symlink"):
-                treatment_io._read_bounded_regular_file(symlink, allowed_root=root)
-            with mock.patch.object(
-                treatment_io, "HAS_DESCRIPTOR_RELATIVE_IO", False,
-            ), self.assertRaisesRegex(ValueError, "non-symlink"):
-                treatment_io._read_bounded_regular_file(symlink, allowed_root=root)
-            real_directory = root / "real"; real_directory.mkdir()
-            nested_source = real_directory / "nested.json"; nested_source.write_text("{}", encoding="utf-8")
-            linked_directory = root / "linked"; linked_directory.symlink_to(real_directory, target_is_directory=True)
-            with self.assertRaisesRegex(ValueError, "regular non-symlink|real directories"):
-                treatment_io._read_bounded_regular_file(linked_directory / "nested.json", allowed_root=root)
-            hardlink = root / "hardlink.json"; os.link(source, hardlink)
-            with self.assertRaisesRegex(ValueError, "single-link"):
-                treatment_io._read_bounded_regular_file(source, allowed_root=root)
-            hardlink.unlink()
+            if not treatment.IS_WINDOWS:
+                symlink = root / "symlink.json"; symlink.symlink_to(source)
+                with self.assertRaisesRegex(ValueError, "regular non-symlink"):
+                    treatment_io._read_bounded_regular_file(symlink, allowed_root=root)
+                with mock.patch.object(
+                    treatment_io, "HAS_DESCRIPTOR_RELATIVE_IO", False,
+                ), self.assertRaisesRegex(ValueError, "non-symlink"):
+                    treatment_io._read_bounded_regular_file(symlink, allowed_root=root)
+                real_directory = root / "real"; real_directory.mkdir()
+                nested_source = real_directory / "nested.json"; nested_source.write_text("{}", encoding="utf-8")
+                linked_directory = root / "linked"; linked_directory.symlink_to(real_directory, target_is_directory=True)
+                with self.assertRaisesRegex(ValueError, "regular non-symlink|real directories"):
+                    treatment_io._read_bounded_regular_file(linked_directory / "nested.json", allowed_root=root)
+                hardlink = root / "hardlink.json"; os.link(source, hardlink)
+                with self.assertRaisesRegex(ValueError, "single-link"):
+                    treatment_io._read_bounded_regular_file(source, allowed_root=root)
+                hardlink.unlink()
             oversized = root / "oversized.json"; oversized.write_bytes(b"12345")
             with self.assertRaisesRegex(ValueError, "maximum size"):
                 treatment_io._read_bounded_regular_file(oversized, allowed_root=root, max_bytes=4)
@@ -4946,7 +4953,7 @@ class TreatmentContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "approved root"):
                 treatment_io._read_bounded_regular_file(external)
             completed = subprocess.run(
-                ["python3", str(TREATMENT_MODULE_PATH), "validate", "--fixture", str(external)],
+                [sys.executable, str(TREATMENT_MODULE_PATH), "validate", "--fixture", str(external)],
                 cwd=ROOT, text=True, capture_output=True, check=False,
             )
             self.assertEqual(completed.returncode, 2)
@@ -4963,7 +4970,7 @@ class TreatmentContractTests(unittest.TestCase):
                 with self.subTest(name=name):
                     source = root / name; source.write_text(payload, encoding="utf-8")
                     completed = subprocess.run(
-                        ["python3", str(TREATMENT_MODULE_PATH), "validate", "--fixture", str(source)],
+                        [sys.executable, str(TREATMENT_MODULE_PATH), "validate", "--fixture", str(source)],
                         cwd=ROOT, text=True, capture_output=True, check=False,
                     )
                     self.assertEqual(completed.returncode, 2)
@@ -5112,6 +5119,7 @@ class TreatmentContractTests(unittest.TestCase):
             with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
                 treatment.validate_treatment_bundle(self.rebound(bundle))
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_treatment_bound_freeze_apis_require_external_authority(self) -> None:
         manifest = load_json(MANIFEST_PATH)
         published = load_json(PUBLISHED_FREEZE_PATH)
@@ -5951,16 +5959,17 @@ class TreatmentReplayTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "maximum size"):
                 treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
 
-        with tempfile.TemporaryDirectory() as temporary:
-            repository_root = Path(temporary)
-            fixture, manifest_path = self.copy_replay_tree(repository_root)
-            capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
-            link_target = repository_root / "capability-copy.json"
-            shutil.copyfile(capability_path, link_target)
-            capability_path.unlink()
-            capability_path.symlink_to(link_target)
-            with self.assertRaisesRegex(ValueError, "regular non-symlink"):
-                treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+        if not treatment.IS_WINDOWS:
+            with tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                link_target = repository_root / "capability-copy.json"
+                shutil.copyfile(capability_path, link_target)
+                capability_path.unlink()
+                capability_path.symlink_to(link_target)
+                with self.assertRaisesRegex(ValueError, "regular non-symlink"):
+                    treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
 
         if hasattr(os, "mkfifo"):
             with tempfile.TemporaryDirectory() as temporary:
