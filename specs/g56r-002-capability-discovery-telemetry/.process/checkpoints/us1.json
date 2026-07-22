@@ -9,18 +9,20 @@
     "T011", "T012", "T013", "T014", "T015"
   ],
   "clean_collection_baseline_sha": "ab272f05937bd08a50e40710b3f1ad3b0dc8452b",
-  "implementation_checkpoint_sha": "fc23ea7798c0bca87cb78e065a56570fbc141642",
-  "superseded_checkpoint_sha": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e",
+  "implementation_checkpoint_sha": "bfe2644350ef2697870732c1332c1750772411bc",
+  "superseded_checkpoint_sha": "fc23ea7798c0bca87cb78e065a56570fbc141642",
   "candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
   "verification": {
-    "focused_tests": "11/11 pass",
+    "focused_tests": "capability 11/11 pass; repository naming 8/8 pass",
     "published_freeze_validation": "pass",
     "json_schema_instance_validation": "pass",
     "deterministic_replay": "pass",
-    "independent_critical_high_review": "pass"
+    "independent_critical_high_review": "pass",
+    "repository_naming_review": "NO FINDINGS (review-pr-366-CA10E5)",
+    "full_suite": "2823/2823 pass"
   },
   "source_fingerprint_status": "current",
   "tasks_sha": "sha256:3d21537fab77780c4f751b1699b2dfe4fa62fa09f72abd23ddb3ebf98d5459f4",
-  "completed_at": "2026-07-22T00:43:42Z",
+  "completed_at": "2026-07-22T01:37:59Z",
   "review_iteration_started_at": "2026-07-18T17:18:23Z"
 }

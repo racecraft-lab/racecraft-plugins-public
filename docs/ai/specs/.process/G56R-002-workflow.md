@@ -872,7 +872,7 @@ For every task:
 
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
-| 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
+| 1 - Capability freeze | Complete | 15 | Capability 11/11 and repository naming 8/8, published validator, schema validation, deterministic replay, full suite pass, and clean independent reviews |
 | 2 - Treatment contracts | Pending | 0 | T016-T025 are the next ordered increment after the clean US1 checkpoint |
 | 3 - Synthetic replay | Pending | 0 | Not started |
 | Polish and validation | Pending | 0 | Not started |
@@ -889,8 +889,8 @@ For every task:
   destructive-clock, hard-link durability, stable naming, crash-recovery,
   orphan-expiration, source-visibility, and timestamp remediation. The exact
   source checkpoint returned `NO FINDINGS` in RepoPrompt review
-  `review-pr-366-4E1C55`.
-- Implementation checkpoint: `fc23ea7798c0bca87cb78e065a56570fbc141642`
+  `review-pr-366-CA10E5`.
+- Implementation checkpoint: `bfe2644350ef2697870732c1332c1750772411bc`
 
 ## PR Marker Plan Evidence
 
@@ -910,7 +910,7 @@ For every task:
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
-| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `fc23ea7798c0bca87cb78e065a56570fbc141642` | No feature growth after checkpoint |
+| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `bfe2644350ef2697870732c1332c1750772411bc` | No feature growth after checkpoint |
 | 2 | `us2` | T016-T025 | Not estimated | Pending; clean US1 checkpoint satisfied | Treatment remains a separate module |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 

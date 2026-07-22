@@ -3,7 +3,7 @@
   "spec_id": "G56R-002",
   "feature_dir": "specs/g56r-002-capability-discovery-telemetry",
   "branch": "g56r-002-capability-discovery-telemetry",
-  "updated_at": "2026-07-22T01:10:07Z",
+  "updated_at": "2026-07-22T01:37:59Z",
   "active_step": "Phase 7: Implement - Treatment Contracts (T016-T025)",
   "confidence_gate_mode": "advisory",
   "subagent_slots": 3,
@@ -296,7 +296,7 @@
       "status": "completed",
       "tasks_completed": 15,
       "tasks_total": 15,
-      "focused_tests": "11/11 pass",
+      "focused_tests": "capability 11/11 pass; repository naming 8/8 pass",
       "independent_review": "pass",
       "baseline_commit": "ab272f05937bd08a50e40710b3f1ad3b0dc8452b",
       "candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
@@ -304,9 +304,9 @@
       "surface_matrix_id": "sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2",
       "marker_id": "us1",
       "reviewability": "size-only block with honored typed no-safe-boundary exception",
-      "checkpoint": "fc23ea7798c0bca87cb78e065a56570fbc141642",
-      "superseded_checkpoint": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e",
-      "completed_at": "2026-07-22T00:43:42Z"
+      "checkpoint": "bfe2644350ef2697870732c1332c1750772411bc",
+      "superseded_checkpoint": "fc23ea7798c0bca87cb78e065a56570fbc141642",
+      "completed_at": "2026-07-22T01:37:59Z"
     }
   },
   "current_source_fingerprint": {
@@ -369,7 +369,7 @@
           "mode": "implementation",
           "scope": "us1",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/capability-freeze.json",
-          "head_sha": "fc23ea7798c0bca87cb78e065a56570fbc141642"
+          "head_sha": "bfe2644350ef2697870732c1332c1750772411bc"
         },
         "hazards": ["source-authority", "private-evidence", "content-addressed-freeze"],
         "subdivision": {
@@ -383,8 +383,8 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json",
-          "commit_sha": "fc23ea7798c0bca87cb78e065a56570fbc141642",
-          "superseded_commit_sha": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e"
+          "commit_sha": "bfe2644350ef2697870732c1332c1750772411bc",
+          "superseded_commit_sha": "fc23ea7798c0bca87cb78e065a56570fbc141642"
         },
         "emission_mapping": {
           "status": "pending",
@@ -484,7 +484,7 @@
       }
     ],
     "created_at": "2026-07-17T04:50:02Z",
-    "updated_at": "2026-07-22T01:10:07Z"
+    "updated_at": "2026-07-22T01:37:59Z"
   },
   "layer_plan": {
     "status": "skipped",
