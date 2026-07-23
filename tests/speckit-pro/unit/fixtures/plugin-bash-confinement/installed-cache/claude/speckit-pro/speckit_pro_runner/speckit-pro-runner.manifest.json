@@ -72,7 +72,7 @@
         "value": "speckit_pro_runner/gates/release.py",
         "display": "speckit_pro_runner/gates/release.py"
       },
-      "sha256": "ca6f950be9d4d40666fc44c7c5e93301bba934d76b048ff3cf0aa504dbdb7674"
+      "sha256": "c46346be79e7b118e82eee84cf100a3c55c6d414d87d57885eebda1ef93ee024"
     },
     {
       "path": {
@@ -96,7 +96,7 @@
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
-      "sha256": "6de7ec92e16cb01715f481c8e625e628b671ad139addba81012ca130835bee96"
+      "sha256": "b8c856b23597f4e78dbde66487c1b308edc1e1e1172a695565915105a79700de"
     },
     {
       "path": {
@@ -137,6 +137,14 @@
         "display": "speckit_pro_runner/helpers/registry.py"
       },
       "sha256": "f3449e44e7cad1b48bf7de1e3efa2891f5ab92459385e30c339f836a1afce93b"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/merge_utils.py",
+        "display": "speckit_pro_runner/merge_utils.py"
+      },
+      "sha256": "a4a0a7ba1ac82c30e4f2bf54181b661a738ae524cfc98c490210dce15300c6ed"
     },
     {
       "path": {
