@@ -3,10 +3,22 @@
 
 from __future__ import annotations
 
+from contextlib import ExitStack as _ExitStack, contextmanager as _contextmanager
+
 if __package__:
     from .treatment_trace_authority import *
 else:
     from treatment_trace_authority import *
+
+
+@_contextmanager
+def _open_descriptor(path, flags, *, dir_fd=None):
+    descriptor = os.open(path, flags, dir_fd=dir_fd)
+    try:
+        yield descriptor
+    finally:
+        os.close(descriptor)
+
 
 def canonical_bytes(value: object) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode("utf-8")
@@ -153,52 +165,39 @@ def _read_bounded_regular_file(path: Path, *, allowed_root: Path = ROOT,
         os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | nofollow
         | getattr(os, "O_NONBLOCK", 0)
     )
-    directory_descriptors: list[int] = []
     directory_identities: list[tuple[int, ...]] = []
-    descriptor: int | None = None
-    try:
-        root_before = os.stat(root, follow_symlinks=False)
-        if not stat.S_ISDIR(root_before.st_mode):
-            raise ValueError("bounded input approved root must be a real directory")
-        root_descriptor = os.open(root, directory_flags)
-        directory_descriptors.append(root_descriptor)
-        root_open = os.fstat(root_descriptor)
-        if _stable_directory_identity(root_before) != _stable_directory_identity(root_open):
-            raise ValueError("bounded input approved root changed before it was opened")
-        directory_identities.append(_stable_directory_identity(root_open))
-        parent_descriptor = root_descriptor
-        for component in relative.parts[:-1]:
-            component_before = os.stat(component, dir_fd=parent_descriptor, follow_symlinks=False)
-            if not stat.S_ISDIR(component_before.st_mode):
-                raise ValueError("bounded input path components must be real directories")
-            child_descriptor = os.open(component, directory_flags, dir_fd=parent_descriptor)
-            child_open = os.fstat(child_descriptor)
-            if _stable_directory_identity(component_before) != _stable_directory_identity(child_open):
-                os.close(child_descriptor)
-                raise ValueError("bounded input directory changed before it was opened")
-            directory_descriptors.append(child_descriptor)
-            directory_identities.append(_stable_directory_identity(child_open))
-            parent_descriptor = child_descriptor
-        filename = relative.parts[-1]
-        pathname_before = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
-        if not stat.S_ISREG(pathname_before.st_mode) or pathname_before.st_nlink != 1:
-            raise ValueError("bounded input must be a single-link regular non-symlink file")
-        descriptor = os.open(filename, file_flags, dir_fd=parent_descriptor)
-    except OSError as exc:
-        if descriptor is not None:
-            os.close(descriptor)
-        for directory_descriptor in reversed(directory_descriptors):
-            os.close(directory_descriptor)
-        raise ValueError("bounded input must be a readable regular non-symlink file") from exc
-    except ValueError:
-        if descriptor is not None:
-            os.close(descriptor)
-        for directory_descriptor in reversed(directory_descriptors):
-            os.close(directory_descriptor)
-        raise
-    try:
-        if descriptor is None:
-            raise ValueError("bounded input could not be opened safely")
+    with _ExitStack() as descriptors:
+        try:
+            root_before = os.stat(root, follow_symlinks=False)
+            if not stat.S_ISDIR(root_before.st_mode):
+                raise ValueError("bounded input approved root must be a real directory")
+            root_descriptor = descriptors.enter_context(_open_descriptor(root, directory_flags))
+            root_open = os.fstat(root_descriptor)
+            if _stable_directory_identity(root_before) != _stable_directory_identity(root_open):
+                raise ValueError("bounded input approved root changed before it was opened")
+            directory_identities.append(_stable_directory_identity(root_open))
+            parent_descriptor = root_descriptor
+            for component in relative.parts[:-1]:
+                component_before = os.stat(component, dir_fd=parent_descriptor, follow_symlinks=False)
+                if not stat.S_ISDIR(component_before.st_mode):
+                    raise ValueError("bounded input path components must be real directories")
+                child_descriptor = descriptors.enter_context(
+                    _open_descriptor(component, directory_flags, dir_fd=parent_descriptor)
+                )
+                child_open = os.fstat(child_descriptor)
+                if _stable_directory_identity(component_before) != _stable_directory_identity(child_open):
+                    raise ValueError("bounded input directory changed before it was opened")
+                directory_identities.append(_stable_directory_identity(child_open))
+                parent_descriptor = child_descriptor
+            filename = relative.parts[-1]
+            pathname_before = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
+            if not stat.S_ISREG(pathname_before.st_mode) or pathname_before.st_nlink != 1:
+                raise ValueError("bounded input must be a single-link regular non-symlink file")
+            descriptor = descriptors.enter_context(
+                _open_descriptor(filename, file_flags, dir_fd=parent_descriptor)
+            )
+        except OSError as exc:
+            raise ValueError("bounded input must be a readable regular non-symlink file") from exc
         before = os.fstat(descriptor)
         if not stat.S_ISREG(before.st_mode) or before.st_nlink != 1:
             raise ValueError("bounded input must be a single-link regular file")
@@ -218,33 +217,25 @@ def _read_bounded_regular_file(path: Path, *, allowed_root: Path = ROOT,
         current = os.stat(filename, dir_fd=parent_descriptor, follow_symlinks=False)
         if _stable_file_identity(current) != _stable_file_identity(after):
             raise ValueError("bounded input pathname changed while it was being read")
-        verifier_descriptors: list[int] = []
         try:
             root_current = os.stat(root, follow_symlinks=False)
-            verifier = os.open(root, directory_flags)
-            verifier_descriptors.append(verifier)
-            if _stable_directory_identity(root_current) != directory_identities[0] or _stable_directory_identity(os.fstat(verifier)) != directory_identities[0]:
+            root_verifier = descriptors.enter_context(_open_descriptor(root, directory_flags))
+            if _stable_directory_identity(root_current) != directory_identities[0] or _stable_directory_identity(os.fstat(root_verifier)) != directory_identities[0]:
                 raise ValueError("bounded input approved root changed while it was being read")
+            parent_verifier = root_verifier
             for component, expected_identity in zip(relative.parts[:-1], directory_identities[1:]):
-                next_descriptor = os.open(component, directory_flags, dir_fd=verifier)
-                verifier_descriptors.append(next_descriptor)
-                if _stable_directory_identity(os.fstat(next_descriptor)) != expected_identity:
+                child_verifier = descriptors.enter_context(
+                    _open_descriptor(component, directory_flags, dir_fd=parent_verifier)
+                )
+                if _stable_directory_identity(os.fstat(child_verifier)) != expected_identity:
                     raise ValueError("bounded input directory changed while it was being read")
-                verifier = next_descriptor
-            current_path = os.stat(filename, dir_fd=verifier, follow_symlinks=False)
+                parent_verifier = child_verifier
+            current_path = os.stat(filename, dir_fd=parent_verifier, follow_symlinks=False)
             if _stable_file_identity(current_path) != _stable_file_identity(after):
                 raise ValueError("bounded input path changed while it was being read")
         except OSError as exc:
             raise ValueError("bounded input path changed while it was being read") from exc
-        finally:
-            for verifier_descriptor in reversed(verifier_descriptors):
-                os.close(verifier_descriptor)
         return b"".join(chunks)
-    finally:
-        if descriptor is not None:
-            os.close(descriptor)
-        for directory_descriptor in reversed(directory_descriptors):
-            os.close(directory_descriptor)
 
 
 def _unique_object(pairs: list[tuple[str, object]]) -> dict:
