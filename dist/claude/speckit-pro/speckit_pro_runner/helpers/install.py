@@ -8,7 +8,6 @@ import json
 import os
 import platform as platform_module
 import re
-import shutil
 import stat
 import subprocess
 import sys
@@ -18,6 +17,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from ..envelope import diagnostic, response
+from ..path_utils import resolves_to_current_python
 from .mutation import empty_mutation, operation_record, resolve_candidate_path, run_mutation_helper, validate_target_path
 from .read_only import find_repo_root, is_relative_to, repo_relative
 
@@ -1194,17 +1194,6 @@ def run_python_runner_subprocess(
         cwd=cwd,
         check=False,
     )
-
-
-def resolves_to_current_python(executable: str) -> bool:
-    if executable == sys.executable:
-        return True
-    resolved = shutil.which(executable)
-    candidate = Path(resolved) if resolved is not None else Path(executable)
-    try:
-        return candidate.samefile(sys.executable)
-    except OSError:
-        return candidate.resolve(strict=False) == Path(sys.executable).resolve(strict=False)
 
 
 def malformed_runner_response(completed: subprocess.CompletedProcess[str], parsed_type: str) -> dict[str, Any]:

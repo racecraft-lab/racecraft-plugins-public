@@ -23,6 +23,7 @@ from . import (
     SOURCE_CONTEXT,
 )
 from .envelope import diagnostic, response
+from .path_utils import resolves_to_current_python
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
 MANIFEST_NAME = "speckit-pro-runner.manifest.json"
@@ -488,17 +489,6 @@ def fixture_python_argv(argv: list[str]) -> list[str] | None:
         sys.executable,
         *(sys.executable if arg == "__PYTHON__" else arg for arg in argv[1:]),
     ]
-
-
-def resolves_to_current_python(executable: str) -> bool:
-    if executable == sys.executable:
-        return True
-    resolved = shutil.which(executable)
-    candidate = Path(resolved) if resolved is not None else Path(executable)
-    try:
-        return candidate.samefile(sys.executable)
-    except OSError:
-        return candidate.resolve(strict=False) == Path(sys.executable).resolve(strict=False)
 
 
 def invalid_subprocess_result(
