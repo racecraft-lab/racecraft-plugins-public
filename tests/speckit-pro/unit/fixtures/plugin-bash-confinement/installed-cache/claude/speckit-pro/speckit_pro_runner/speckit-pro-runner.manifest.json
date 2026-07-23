@@ -53,10 +53,18 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/gates/gate_response.py",
+        "display": "speckit_pro_runner/gates/gate_response.py"
+      },
+      "sha256": "9544640a2eca56e9e236efe6e0230c5346c0d466cb25545ad7affc519769026a"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/gates/payloads.py",
         "display": "speckit_pro_runner/gates/payloads.py"
       },
-      "sha256": "e5046afde5967e287f15af9edae78b6b384decab9ac64b177c9089be159e426b"
+      "sha256": "6cd4a8f9b6763be76f405214ba5c92a70158d1906e0eafe257655bbfa152a382"
     },
     {
       "path": {
@@ -72,7 +80,7 @@
         "value": "speckit_pro_runner/gates/release.py",
         "display": "speckit_pro_runner/gates/release.py"
       },
-      "sha256": "ca6f950be9d4d40666fc44c7c5e93301bba934d76b048ff3cf0aa504dbdb7674"
+      "sha256": "ca1ce1bcbc37918e88996d49306f19c1bec1345ead9a2c5b944a6a2c243a9f88"
     },
     {
       "path": {
