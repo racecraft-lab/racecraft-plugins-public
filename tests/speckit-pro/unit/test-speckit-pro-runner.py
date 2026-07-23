@@ -574,6 +574,9 @@ class RunnerFoundationTests(unittest.TestCase):
         # governed planning evidence, not shipped payload or runtime claims.
         allowed_agent_route_research_exact = {
             "docs/ai/research/agent-route-candidate-manifest.schema.json",
+            "docs/ai/research/claude-trace-contract.schema.json",
+            "docs/ai/research/claude-runtime-capability-snapshot.json",
+            "docs/ai/research/claude-telemetry-capability-profile.json",
             "docs/ai/research/claude-agent-route-candidates.md",
             "docs/ai/research/claude-agent-route-candidate-manifest.json",
             "docs/ai/research/codex-agent-route-candidates.md",
