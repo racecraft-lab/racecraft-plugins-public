@@ -517,6 +517,75 @@ class CapabilityContractTests(unittest.TestCase):
             with self.subTest(path=path.name):
                 self.assertLessEqual(len(path.read_text(encoding="utf-8").splitlines()), 400)
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_bounded_regular_file_closes_all_descriptors(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            nested = root / "nested"
+            nested.mkdir()
+            source = nested / "input.json"
+            source.write_bytes(b"{}\n")
+            real_open = capability_io.os.open
+            real_close = capability_io.os.close
+            opened: list[int] = []
+            closed: list[int] = []
+
+            def tracking_open(*args: object, **kwargs: object) -> int:
+                descriptor = real_open(*args, **kwargs)
+                opened.append(descriptor)
+                return descriptor
+
+            def tracking_close(descriptor: int) -> None:
+                closed.append(descriptor)
+                real_close(descriptor)
+
+            with unittest.mock.patch.object(
+                capability_io.os, "open", side_effect=tracking_open,
+            ), unittest.mock.patch.object(
+                capability_io.os, "close", side_effect=tracking_close,
+            ):
+                self.assertEqual(
+                    capability_io._read_bounded_regular_file(source, allowed_root=root),
+                    b"{}\n",
+                )
+            self.assertEqual(len(opened), 5)
+            self.assertEqual(closed, list(reversed(opened)))
+
+            opened.clear()
+            closed.clear()
+            with unittest.mock.patch.object(
+                capability_io.os, "open", side_effect=tracking_open,
+            ), unittest.mock.patch.object(
+                capability_io.os, "close", side_effect=tracking_close,
+            ), unittest.mock.patch.object(
+                capability_io.os, "fstat", side_effect=OSError("fixture failure"),
+            ), self.assertRaisesRegex(ValueError, "readable regular"):
+                capability_io._read_bounded_regular_file(source, allowed_root=root)
+            self.assertEqual(closed, list(reversed(opened)))
+
+            opened.clear()
+            closed.clear()
+            stable_identity = capability_io._stable_directory_identity
+            identity_calls = 0
+
+            def changed_root_identity(metadata: os.stat_result) -> tuple[int, ...]:
+                nonlocal identity_calls
+                identity_calls += 1
+                identity = stable_identity(metadata)
+                if identity_calls == 2:
+                    return (identity[0] + 1, *identity[1:])
+                return identity
+
+            with unittest.mock.patch.object(
+                capability_io.os, "open", side_effect=tracking_open,
+            ), unittest.mock.patch.object(
+                capability_io.os, "close", side_effect=tracking_close,
+            ), unittest.mock.patch.object(
+                capability_io, "_stable_directory_identity", side_effect=changed_root_identity,
+            ), self.assertRaisesRegex(ValueError, "approved root changed before"):
+                capability_io._read_bounded_regular_file(source, allowed_root=root)
+            self.assertEqual(closed, list(reversed(opened)))
+
     def observations(self, case: dict) -> list[dict]:
         return [
             capabilities.fixture_observation(surface, value, self.identity["client_identity_id"])
