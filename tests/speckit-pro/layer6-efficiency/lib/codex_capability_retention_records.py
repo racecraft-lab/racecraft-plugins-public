@@ -285,11 +285,11 @@ def _retention_lock(raw, expected_raw_identity, *, wait=False):
         metadata = os.fstat(marker_descriptor)
         if not stat.S_ISREG(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o600 or metadata.st_nlink != 1:
             raise ValueError("raw evidence retention lock is invalid")
-        os.fsync(marker_descriptor); os.close(marker_descriptor); marker_descriptor = None
+        os.fsync(marker_descriptor)
         deadline = time.monotonic() + 5.0
         while True:
             try:
-                fcntl.flock(raw_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(marker_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 locked = True
                 break
             except BlockingIOError as error:
@@ -300,14 +300,16 @@ def _retention_lock(raw, expected_raw_identity, *, wait=False):
         _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
         yield raw_descriptor
     finally:
-        if marker_descriptor is not None: os.close(marker_descriptor)
         if locked:
             try:
                 _assert_private_directory_current(raw, raw_descriptor, expected_raw_identity)
             finally:
-                try: fcntl.flock(raw_descriptor, fcntl.LOCK_UN)
-                finally: os.close(raw_descriptor)
+                try: fcntl.flock(marker_descriptor, fcntl.LOCK_UN)
+                finally:
+                    os.close(marker_descriptor)
+                    os.close(raw_descriptor)
         else:
+            if marker_descriptor is not None: os.close(marker_descriptor)
             os.close(raw_descriptor)
 
 
