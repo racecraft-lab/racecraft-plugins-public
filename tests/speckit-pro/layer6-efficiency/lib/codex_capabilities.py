@@ -129,6 +129,19 @@ def canonical_bytes(value):
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode()
 
 
+def publication_bytes(value):
+    return (
+        json.dumps(
+            value,
+            sort_keys=True,
+            indent=2,
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+        + "\n"
+    ).encode()
+
+
 def digest(value):
     raw = value if isinstance(value, bytes) else canonical_bytes(value)
     return f"sha256:{hashlib.sha256(raw).hexdigest()}"
@@ -1512,7 +1525,7 @@ def _store_publication_receipt_locked(freeze, retention_record_digests, raw, rep
     receipt = {
         "schema_version": "raw-evidence-publication.v1",
         "candidate_freeze_id": freeze["candidate_freeze_id"],
-        "published_artifact_digest": digest(canonical_bytes(freeze) + b"\n"),
+        "published_artifact_digest": digest(publication_bytes(freeze)),
         "published_at": freeze["published_at"],
         "retention_record_digests": sorted(retention_record_digests),
     }
@@ -1526,7 +1539,7 @@ def _store_publication_intent_locked(freeze, retention_record_digests, raw, repo
     intent = {
         "schema_version": "raw-evidence-publication-intent.v1",
         "candidate_freeze_id": freeze["candidate_freeze_id"],
-        "published_artifact_digest": digest(canonical_bytes(freeze) + b"\n"),
+        "published_artifact_digest": digest(publication_bytes(freeze)),
         "published_at": freeze["published_at"],
         "retention_record_digests": sorted(retention_record_digests),
     }
@@ -1539,7 +1552,7 @@ def _store_publication_intent_locked(freeze, retention_record_digests, raw, repo
 def publish_with_raw_evidence_retention(freeze, output, raw_evidence_root, repository_root, *, manifest):
     raw = validate_raw_evidence_root(raw_evidence_root, repository_root)
     freeze = validate_freeze(freeze, manifest, _enforce_lineage=False)
-    payload = canonical_bytes(freeze) + b"\n"
+    payload = publication_bytes(freeze)
     with _retention_lock(raw):
         validate_raw_evidence_root(raw, repository_root)
         deleted_digests = {
@@ -1553,9 +1566,9 @@ def publish_with_raw_evidence_retention(freeze, output, raw_evidence_root, repos
         retention_record_digests = _register_raw_evidence_retention_locked(freeze, raw, repository_root)
         intent_digest = _store_publication_intent_locked(freeze, retention_record_digests, raw, repository_root)
         if not already_published:
-            _write(output, freeze, append_only=True)
+            _write(output, freeze, append_only=True, pretty=True)
         if not _publication_target_matches(output, payload):
-            raise ValueError("publication output was not retained under its canonical bytes")
+            raise ValueError("publication output was not retained under its deterministic bytes")
         receipt_digest = _store_publication_receipt_locked(freeze, retention_record_digests, raw, repository_root)
         validate_raw_evidence_root(raw, repository_root)
         return {
@@ -1955,6 +1968,14 @@ def _read(path, *, require_canonical=False):
     return value
 
 
+def _read_publication(path):
+    raw = _read_bounded_regular_file(path)
+    value = _parse_json_bytes(raw)
+    if raw != publication_bytes(value):
+        raise ValueError("published JSON artifact is not deterministically pretty-printed")
+    return value
+
+
 def _fsync_directory(path):
     if os.name == "nt":
         return
@@ -1993,8 +2014,8 @@ def _write_private_bytes(path, payload, *, append_only=False):
         raise
 
 
-def _write(path, value, *, private=False, append_only=False):
-    payload = canonical_bytes(value) + b"\n"
+def _write(path, value, *, private=False, append_only=False, pretty=False):
+    payload = publication_bytes(value) if pretty else canonical_bytes(value) + b"\n"
     if private:
         _write_private_bytes(path, payload, append_only=append_only)
         return
@@ -2045,15 +2066,15 @@ def main(argv=None):
         if not APPROVED_CANARY_EXECUTORS:
             raise ValueError("no repository-approved canary executor is available in this slice")
         validate_raw_evidence_root(args.raw_evidence_root, repo); _, result_bytes = read_private_external_file(args.executor_result, repo, "canary executor result"); result = _parse_json_bytes(result_bytes)
-        manifest = _read(args.manifest); predecessor = _read(args.freeze, require_canonical=True)
+        manifest = _read(args.manifest); predecessor = _read_publication(args.freeze)
         if (result.get("snapshot_id"), result.get("canonical_model_id"), result.get("canonical_effort")) != (predecessor.get("runtime_capability_snapshot_id"), args.model, args.effort):
             raise ValueError("canary result does not match the requested tuple")
         successor = build_canary_successor(predecessor, result, manifest, args.published_at or now(), raw_evidence_root=args.raw_evidence_root, repository_root=repo)
         publish_with_raw_evidence_retention(successor, args.output, args.raw_evidence_root, repo, manifest=manifest)
         return int(successor["canary_results"][-1]["availability_disposition"] == "unknown")
     if args.command == "validate-freeze":
-        predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
-        validate_freeze(_read(args.freeze, require_canonical=True), _read(args.manifest), predecessor=predecessor); return 0
+        predecessor = _read_publication(args.predecessor_freeze) if args.predecessor_freeze else None
+        validate_freeze(_read_publication(args.freeze), _read(args.manifest), predecessor=predecessor); return 0
     if args.command == "retention":
         if args.mode == "verify" and args.as_of is None: raise ValueError("retention verification requires --as-of")
         if args.mode == "cleanup" and args.as_of is not None: raise ValueError("retention cleanup uses current UTC and does not accept --as-of")
@@ -2065,7 +2086,7 @@ def main(argv=None):
     tuples = candidate_tuples_from_manifest(manifest, refreshes)
     aliases = _read(args.aliases) if args.aliases else {}
     matrix, decisions = evaluate_surface_matrix([_read(args.app_server), _read(args.cli), _read(args.interactive_picker)], tuples, aliases=aliases)
-    predecessor = _read(args.predecessor_freeze, require_canonical=True) if args.predecessor_freeze else None
+    predecessor = _read_publication(args.predecessor_freeze) if args.predecessor_freeze else None
     result = build_freeze(
         identity, refreshes, matrix, decisions, args.published_at or now(), manifest=manifest, predecessor=predecessor,
         raw_evidence_root=args.raw_evidence_root, repository_root=repo,

@@ -281,6 +281,10 @@ class CapabilityContractTests(unittest.TestCase):
 
     def test_canonical_json_refreshes_and_identity(self) -> None:
         self.assertEqual(capabilities.canonical_bytes({"b": 1, "a": 2}), b'{"a":2,"b":1}')
+        self.assertEqual(
+            capabilities.publication_bytes({"b": 1, "a": 2}),
+            b'{\n  "a": 2,\n  "b": 1\n}\n',
+        )
         self.assertFalse(hasattr(capabilities, "refreshes_from_manifest"))
         captured = source_capture(self.manifest)
         refreshes = capabilities.normalize_source_refreshes(self.manifest, captured)
@@ -1121,6 +1125,9 @@ class CapabilityContractTests(unittest.TestCase):
                         freeze, publication_path, raw_root, ROOT, manifest=self.manifest,
                     )
             self.assertTrue(publication_path.is_file())
+            self.assertEqual(publication_path.read_bytes(), capabilities.publication_bytes(freeze))
+            self.assertGreater(len(publication_path.read_text(encoding="utf-8").splitlines()), 1)
+            self.assertEqual(capabilities._read_publication(publication_path), freeze)
             intent_recovery = capabilities.reconcile_raw_evidence_retention(
                 raw_root, ROOT, "2026-08-14T23:59:59Z",
             )
@@ -1445,6 +1452,16 @@ class CapabilityContractTests(unittest.TestCase):
             canonical = root / "canonical.json"
             capabilities._write(canonical, {"b": 1, "a": 2}, append_only=True)
             self.assertEqual(capabilities._read(canonical, require_canonical=True), {"a": 2, "b": 1})
+            publication = root / "publication.json"
+            capabilities._write(
+                publication,
+                {"b": 1, "a": 2},
+                append_only=True,
+                pretty=True,
+            )
+            self.assertEqual(capabilities._read_publication(publication), {"a": 2, "b": 1})
+            with self.assertRaisesRegex(ValueError, "not deterministically pretty-printed"):
+                capabilities._read_publication(canonical)
             replacement = root / "replacement.json"
             replacement.write_bytes(b'{}\n')
             with unittest.mock.patch.object(capabilities.os, "stat", return_value=replacement.stat()):
