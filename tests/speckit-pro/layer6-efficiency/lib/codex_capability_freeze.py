@@ -307,7 +307,7 @@ def build_canary_successor(
     expected_telemetry_profile_id=None, expected_treatment_contract_digest=None,
     expected_treatment_evidence_digest=None,
 ):
-    predecessor = _validate_freeze_payload(
+    _validate_freeze_payload(
         predecessor, manifest,
         expected_telemetry_profile_id=expected_telemetry_profile_id,
         expected_treatment_contract_digest=expected_treatment_contract_digest,
