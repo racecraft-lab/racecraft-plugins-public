@@ -53,8 +53,8 @@ def validate_manifest(manifest, *, allow_synthetic_manifest=False):
     ids = [row.get("official_source_ledger_id") for row in sources]
     if len(sources) != 22 or len(set(ids)) != 22 or any(not _SOURCE_ID.fullmatch(str(item)) for item in ids):
         raise ValueError("manifest must contain exactly 22 unique current OPENAI-DOC records")
-    if any(not isinstance(row.get("claim_bindings"), list) or not row["claim_bindings"] or len(row["claim_bindings"]) != len(set(row["claim_bindings"])) or not all(isinstance(item, str) and _CLAIM_ID.fullmatch(item) for item in row["claim_bindings"]) or not _openai_url(row.get("requested_url")) or not _openai_url(row.get("canonical_url")) for row in sources):
-        raise ValueError("every current source requires claim bindings and approved URLs")
+    if any(not isinstance(row.get("claim_bindings"), list) or not row["claim_bindings"] or len(row["claim_bindings"]) != len(set(row["claim_bindings"])) or not all(isinstance(item, str) and _CLAIM_ID.fullmatch(item) for item in row["claim_bindings"]) or not isinstance(row.get("exact_documented_facts"), list) or not all(isinstance(item, str) for item in row["exact_documented_facts"]) or not _openai_url(row.get("requested_url")) or not _openai_url(row.get("canonical_url")) for row in sources):
+        raise ValueError("every current source requires claim bindings, documented facts, and approved URLs")
     for row in sources:
         extracts = row.get("bounded_extracts", [])
         if not isinstance(extracts, list) or not extracts or any(not isinstance(item, dict) or set(item) != {"text", "extract_sha256", "normalization"} or not isinstance(item["text"], str) or not item["text"] or item["normalization"] != EXTRACT_NORMALIZATION or not _HEX_SHA256.fullmatch(str(item["extract_sha256"])) or hashlib.sha256(item["text"].encode()).hexdigest() != item["extract_sha256"] for item in extracts):

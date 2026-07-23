@@ -772,6 +772,24 @@ class CapabilityContractTests(unittest.TestCase):
         empty_bindings["official_source_ledger"][1]["claim_bindings"] = []
         with self.assertRaisesRegex(ValueError, "claim bindings"):
             capabilities.validate_manifest(empty_bindings, allow_synthetic_manifest=True)
+        malformed_documented_facts = (
+            ("missing", None),
+            ("non-list", "documented fact"),
+            ("non-string-item", [None]),
+        )
+        for label, documented_facts in malformed_documented_facts:
+            with self.subTest(label=label):
+                malformed_manifest = copy.deepcopy(self.manifest)
+                source = malformed_manifest["official_source_ledger"][0]
+                if documented_facts is None:
+                    source.pop("exact_documented_facts")
+                else:
+                    source["exact_documented_facts"] = documented_facts
+                with self.assertRaisesRegex(ValueError, "documented facts"):
+                    capabilities.validate_manifest(
+                        malformed_manifest,
+                        allow_synthetic_manifest=True,
+                    )
         malformed_extracts = (
             ("non-object", None),
             (
