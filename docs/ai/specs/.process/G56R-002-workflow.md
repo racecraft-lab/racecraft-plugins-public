@@ -65,7 +65,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | 39 TDD-first tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Nine findings remediated; G6 passed |
 | Confidence Gate | G6.5 | Complete | Advisory score 0.99 passed the 0.90 threshold |
-| Implement | `$speckit-implement` | In Progress | T016-T025 completed at the clean US2 checkpoint; T026-T030 synthetic replay is in progress |
+| Implement | `$speckit-implement` | In Progress | T001-T039 are implemented; the restacked US3 implementation/evidence head returned `NO FINDINGS`, with final metadata-head review pending |
 | Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -777,7 +777,7 @@ Focus on:
 | A-005 | MEDIUM (resolved) | Owning-ID collision checks were incomplete | Enumerated owner uniqueness, preserved repeated foreign keys, and added T018/T021 collision coverage |
 | A-006 | MEDIUM (resolved) | Spec-ID fixture directory violated the behavior-named fixture contract | Renamed the namespace to `capability-treatment-replay` everywhere |
 | A-007 | HIGH (resolved) | In-band `fixture_digest` made exact-byte hash-before-parse self-referential | Added an out-of-band digest manifest and manifest-first replay contract |
-| A-008 | HIGH (resolved) | Portable stdlib code could not unconditionally promise live process-tree control | Added a closed executor-result envelope and default-empty repository approval allowlist; later exact-head review also closed caller-supplied provenance by preventing any envelope from promoting or entering a freeze until trusted invocation or verifiable attestation exists |
+| A-008 | HIGH (resolved) | Portable stdlib code could not unconditionally promise live process-tree control | Added a closed executor-result envelope, default-empty repository approval allowlist, and fail-closed missing/unapproved executor behavior |
 | A-009 | MEDIUM (resolved) | Inherited `G56R-001-ESR-003` punctuation-only effort values could be misread as authority | T001/T007 now reject malformed or undocumented effort values without rewriting G56R-001 evidence |
 
 ### Consensus Resolution Log
@@ -785,10 +785,8 @@ Focus on:
 - Primary Analyze executor: 3 HIGH and 2 MEDIUM contract findings confirmed.
 - Independent contract consensus: PASS on A-001 through A-005, with no
   G56R-003 qualification leakage after the destination-assessment boundary.
-- Independent repository consensus: PASS on A-006 through A-008; at analysis
-  time, the digest manifest added one data file while the planned
-  implementation used 13 production modules. The completed US2 implementation
-  now uses 18 production modules, measured below.
+- Independent repository consensus: PASS on A-006 through A-008; the digest
+  manifest adds one data file while retaining two production modules.
 - Independent source-manifest audit: 22 current source records, 0 active
   historical `OSL-*` rows, and malformed effort tokens explicitly quarantined.
 - Final remediation review: PASS after environment/qualification owner
@@ -875,9 +873,9 @@ For every task:
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
-| 2 - Treatment contracts | Complete | 10 | Lower-slice restack is reconciled; 62/62 focused, 9/9 naming-layout, treatment, privacy 10/10, process 8/8, docs-reference, and 2824/2824 full-suite gates pass; exact-head responsibility reviews report no findings |
-| 3 - Synthetic replay | In Progress | 0 | T026-T030 exist on the next marker branch; restack and exact-head review follow US2 approval |
-| Polish and validation | Pending | 0 | Not started |
+| 2 - Treatment contracts | Complete | 10 | 51/51 focused tests, 2821/2821 full suite, Windows-safe offline replay, and exact-head independent review returned `NO FINDINGS` |
+| 3 - Synthetic replay | Complete | 5 | Finding-driven remediation passes 95/95 capability tests, 39/39 validator tests, 77/77 reviewability-contract tests, and the 2864/2864 full suite; `checkpoint-evidence-revi-B89AB7` reports no P0/P1 findings at `c699b94f34c378bd4a8f3780e8570abaeb23489d` |
+| Polish and validation | Complete | 9 | T031-T039 remain implemented; reference and generated artifacts are current; the 124/124 manifest and live release-title gates pass |
 
 ### Capability Checkpoint Evidence
 
@@ -891,23 +889,22 @@ For every task:
   destructive-clock, and hard-link durability remediation. Exact-head
   RepoPrompt reviews returned `NO FINDINGS` for the core
   (`untitled-chat-337E74`) and process state (`untitled-chat-55E370`).
-- Implementation checkpoint: `2b7096dacdaa7a6af62b3c12b36e83cf4515213e`
+- Implementation checkpoint [us1]: `c699b94f34c378bd4a8f3780e8570abaeb23489d`
 
 ### Treatment Checkpoint Evidence
 
-- Restacked implementation baseline: `0e66466bb43ef2796664d9c63dde808744717f4c`
-- Successor candidate freeze: `sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c`
+- Implementation baseline: `bbffc774c815594edc64cf412a2b5f91127ef213`
+- Current published successor candidate freeze: `sha256:d4764d2e67218e21ca0920d33a90c472b26d311dd3cc25cfdd582db41ff72578`
 - Superseded candidate freeze: `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
-- Telemetry profile: `sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979`
-- Treatment contract: `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`
-- Treatment evidence set: `sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f`
-- Superseded marker checkpoint: `ce64616342ab977fc5bbaa675b8b9ca7ed192108`
-- Reviewability: aggregate size-only `block` at 5,938 source / 5,416
-  nonblank, non-comment lines across 18 production modules. The stable
-  capability facade and 16 focused internal modules total 3,985 / 3,615 with
-  a 399-line maximum; capability code no longer uses a `no_safe_boundary`
-  exception. `treatment_trace_schema.py` remains 1,953 / 1,801 under its
-  treatment-only typed exception, with only T026-T030 replay growth reserved.
+- Telemetry profile: `sha256:acb87238dea1f7a4f56c1ab4d6ddf0f2c5407b74d1aa8f9198cafddf4da6bdb6`
+- Treatment contract: `sha256:ed88fb1d5310385ba8bcaaa0badbb2bbba8819b5fb01775ebdb6f63bbeedf981`
+- Treatment evidence: `sha256:2c81b6665c892b4b91ca5c2578c73c70f6fb06e74aa1ff46d6b7652248959f45`
+- Superseded marker checkpoint [us2]: `8a179bdbb6aef08849bbfc4ed07c547c26f8194a`
+- Reviewability: size-only `block` at 4,214 source / 3,843 nonblank,
+  non-comment lines across the current two production modules
+  (`codex_capabilities.py`: 2,470 / 2,243; `treatment_trace_schema.py`:
+  1,744 / 1,600); typed `no_safe_boundary` exception honored for the
+  checkpoint with only T026-T030 replay growth reserved.
 - Review: PASS after direct canonical validation of the actual
   successor, external treatment-binding and predecessor-lineage authority,
   bounded non-extending recovery of pending retention records, crash-released
@@ -926,404 +923,240 @@ For every task:
   single-client profile authority, content-addressed six-ID ownership,
   reciprocal acyclic trace-graph validation, externally trusted successor
   reroutes, detailed reroute reasons, and normalized malformed-predecessor
-  errors. The prior exact-head RepoPrompt review returned `NO FINDINGS`
-  (`windows-telemetry-review-D88461`). A later current-head re-audit
-  (`untitled-chat-869257`) reported two P1 findings: stale retention-order prose
-  and an unjustified capability `no_safe_boundary` claim. This remediation
-  corrects the deletion-intent/completion sequence and safely splits capability
-  trust and failure responsibilities behind the stable facade. A follow-up
-  exact-head audit
-  (`review-us2-remediation-1AE3C9`) reported three further findings: a durability
-  probe could bypass restoration, wildcard exports leaked internal trust
-  primitives, and the checkpoint was labeled complete while review remained
-  open. The remediation restored raw bytes when the completion probe was
-  untrusted, constrained the facade to its exact supported API, and marked US2
-  review-pending for the
-  next audit.
-  The exact-head re-audit returned `NO FINDINGS`
-  (`audit-us2-remediation-F4E33F`).
-  A later exact-range re-audit (`review-exact-treatments-9ED44E`) found three
-  remaining boundaries: a post-unlink hard-link race could remove the canonical
-  raw-evidence path, treatment publication did not cryptographically bind its
-  retained observation, route-proof, and source evidence, and a non-initial
-  treatment freeze could not provide predecessor lineage authority. Remediation
-  at `cc04e5460bbc2050c803875a5193f525a47f381c` restores verified canonical
-  bytes while preserving a fail-closed deletion intent, validates exact trusted
-  evidence bytes for every treatment owner, and accepts explicitly bound
-  predecessor authority. Focused 53/53, docs-reference, standalone treatment,
-  privacy 10/10, and full 2821/2821 gates pass; exact-head re-audit is pending.
-  The next exact-head re-audit (`review-us2-remediation-5AD0BD`) found two P1
-  gaps and one stale P2 claim: the successor identity did not retain the exact
-  treatment evidence-set digest, the public freeze validator exposed a lineage
-  bypass, and checkpoint evidence still named a 363-line capability maximum.
-  Remediation at `6afcf8c9e4a5a482be03bb300d4d39e2f5d499f8` binds the exact owner-to-content
-  digest set into every treatment-aware freeze and candidate ID, moves
-  payload-only recursive validation behind a private helper, and synchronizes
-  the measured 373-line maximum. Exact-head re-audit remains pending.
-  The next exact-head review (`re-review-pr-367-747B1B`) found two P1 gaps and
-  one stale P2 claim: a durable deletion intent could not resume a provably
-  pre-unlink cleanup, arbitrary treatment evidence mappings were read more than
-  once, and `plan.md` retained old implementation measurements. Remediation at
-  `ed1e442cc2507c72ef46702a36dee79bdee08135` binds the intent to the private
-  target identity and safely resumes only that exact file, snapshots treatment
-  evidence once before validation and hashing, and synchronizes plan, tasks,
-  checkpoint, and reviewability measurements. Focused 53/53, standalone
-  treatment, docs-reference, and full 2821/2821 gates pass; exact-head re-audit
-  remains pending.
-  The next exact-head review (`pr-367-rereview-B3E562`) found one P1 and one P2:
-  an unlink error before removal rewrote the intent-bound inode and blocked a
-  later retry, while public append-only publication did not directory-fsync
-  temporary-name removal. Remediation at
-  `92ccbbaefd290a64fd70f2a28487b67cd5ff9d29` preserves and validates the
-  existing inode when unlink has not occurred, restores bytes only after the
-  entry is absent, and synchronizes the public temporary-link removal. Focused
-  53/53, standalone treatment, docs-reference, and full 2821/2821 gates pass;
-  exact-head re-audit remains pending.
-  The next exact-head review (`pr-367-rereview-5B3AA1`) found one remaining P1:
-  verified bytes restored after completion-record persistence failed received a
-  new inode that no durable intent authorized, permanently blocking supported
-  cleanup. Remediation at `c76e3fd6654e9a57a417a35aed829437954e53b4`
-  appends an immutable recovery-intent successor only after post-unlink proof,
-  binds the predecessor, exact replacement identity, and restoration proof,
-  rejects missing, forked, disconnected, or cyclic chains, and resumes from the
-  unique terminal intent. Hard-link races and unverified mutations remain
-  fail-closed. Focused 53/53, standalone treatment, docs-reference, and full
-  2821/2821 gates pass; exact-head re-audit remains pending.
-  The next exact-head review (`pr-367-rereview-6DC2A3`) found one P1 crash
-  window and one stale P2 narrative: restored bytes became durable before their
-  recovery successor, and capability evidence still called treatment pending.
-  Remediation at `a47b00e2257c165236a9f8796d93ca32c0362bf0` journals a
-  post-unlink v3 stage before any replacement, binds restored bytes in v4, and
-  lets cleanup finalize both missing-stage and restored-stage interruptions.
-  The research evidence now names the current treatment-bound successor and
-  v2/v3/v4 deletion-recovery behavior. Focused 53/53, standalone treatment, and
-  docs-reference and full 2821/2821 gates pass; exact-head re-audit remains
+  errors. The exact-head RepoPrompt review returned `NO FINDINGS`
+  (`windows-telemetry-review-D88461`).
+- Implementation checkpoint [us2]: `c699b94f34c378bd4a8f3780e8570abaeb23489d`
+
+### Synthetic Replay Checkpoint Evidence
+
+> The evidence below records the historical pre-restack checkpoint. The current
+> US3 implementation/evidence head passed the exact live-head independent-review
+> gate. Final metadata synchronization remains review-pending. The refreshed
+> full-suite, manifest, and release-readiness gates pass.
+
+- Historical reviewed remediation source head: `096605e6a4987c0f580c525bc377a68c438a9a22`
+- Historical exact reviewed PR head: `3d7bd9eff79a1889830c74b6bcd22ae8945098c0`
+- Prior reviewed findings head: `cbce9e631d2ae3db0c0e104cbfb356d53de1587e`
+- Prior remediation source head: `688b3054d2734b4825361b3c18977ed1e3ada4da`
+- Current exact-range findings head: `ff0c4d57f630dcc4058e1d4180ef24aaabae277c`
+- Prior remediation source head: `3608f0dbeaca34be5585375f87e7f3ebc5feba6b`
+- Current verification-authority findings head: `61014105efd7c99e04e6a40008c85e9d718a4db7`
+- Initial whole-range findings head: `41643ee0b93eab88758c655bdbcb23cd05fe6473`
+- Latest exact-head findings head: `a0e4e62c6a173a4d51dc6fb070d16d95aa443c9c`
+- Current remediation source head [us3]: `c699b94f34c378bd4a8f3780e8570abaeb23489d`
+- Latest clean exact reviewed head: `4842c33172bef31634180c7e9585e412f0786059`
+- Capability fixture: `sha256:4c4b2bc56d6ad3251beaab64126ece7012502b0230ce7c474a8cb231d7166b1a`.
+- Treatment fixture: `sha256:935c2b104cb1036ef5befb8a36c2fd47c71845b4b5a7d901c26827ca9a2b3788`.
+- Replay output: `sha256:c8a69de446be0ba98ec876ee37c715b008e21c97dcebc067866405a9d92d5eb4` with byte-identical two-pass verification.
+- Cases: eight exact success, null, unavailable, misdelivery, approved reroute,
+  unapproved reroute, discovery-loss, and surface-disagreement classes.
+- Verification: 95/95 focused tests, 39/39 validator tests, 77/77 contract tests, and the 2864/2864
+  full suite pass. Generated references and byte-identical replay remain current.
+- Reviewability: aggregate size-only `block` at 7,052 source / 6,439 nonblank,
+  non-comment lines across 29 safely subdivided modules; the largest module is
+  398 lines and the two public entry points retain their APIs.
+- Review: `untitled-chat-B2AE31` confirmed the first remediation but reported
+  seven deeper gaps: non-monotonic partial emission, generic marker ownership
+  uniqueness, mutable completed evidence, stale exact-head metadata, v1
+  compatibility, unsafe path/timestamp inputs, and incomplete module
+  documentation. Re-review `untitled-chat-3AC330` confirmed those seven fixes
+  and reported one remaining v1 compatibility gap: top-level timestamps still
+  inherited v2-only strict UTC validation. The current remediation moves that
+  strictness into the v2 conditional. Exact-head re-review
+  `untitled-chat-A24ABC` returned `NO FINDINGS`.
+- The current restacked review `review-us3-replay-20A28F` reported four P1
+  boundary gaps: private treatment API leakage, cross-checkout dependency
+  reuse, an optional v2 changed-file manifest, and checkpoint commits not
+  bound to immutable evidence. All four are remediated at
+  `688b3054d2734b4825361b3c18977ed1e3ada4da`; exact-head re-review is pending.
+- Re-review `exact-range-review-905F43` reported four further P1 boundaries:
+  same-path stale or shadowed capability imports, unsupported marker-plan
+  versions, an unbound manifest base, and folded tasks omitted from checkpoint
+  freshness. All four are remediated at
+  `3608f0dbeaca34be5585375f87e7f3ebc5feba6b`; exact-head re-review is pending.
+- The next review turn in `exact-range-review-905F43` confirmed those four fixes
+  and reported three lifecycle gaps: incomplete v2 marker shapes, complete plans
+  accepting pending checkpoint evidence, and unverified evidence-commit history.
+  All three are remediated at `1430eb0f6414064900044cd153b8adfb7ba5917c`.
+  The next exact live-range review through `61014105efd7c99e04e6a40008c85e9d718a4db7`
+  reported four remaining gaps: incomplete nested v2 schema enforcement, mutable
+  verification reports, failed verification values qualifying as complete, and
+  transient canonical module exposure during private capability loading. All four
+  are remediated in source.
+- Focused follow-up reviews for the schema (`untitled-chat-A46475`), authority
+  and model binding (`untitled-chat-B6D973`), bundle and successor validation
+  (`untitled-chat-1632BA`), and replay/I/O boundaries
+  (`untitled-chat-73BE33`) each returned `NO FINDINGS` through
+  `bb665837ba72851402ed10f2af21808554585983`. Those focused reviews remain
+  clean; whole-range review continued below.
+- The first exact live-range review `live-range-review-9FBA02` at
+  `41643ee0b93eab88758c655bdbcb23cd05fe6473` reported three P1 gaps: duplicate
+  JSON keys could downgrade strict marker-plan authority, capability file-to-FIFO
+  swaps could block before descriptor validation, and nested Phase 7 evidence
+  retained stale replay provenance. All three are remediated at
+  `4c938205ccf396e0a6c99c9dc830f64e2764fd50`. The next exact-head turn at
+  `3e4b13b7437d6774deeb3ef180b5196eae523b01` confirmed those fixes and reported
+  three further P1 boundaries: package-mode imports could reuse same-path stale
+  dependencies, deletion or completion-record FIFO swaps could block cleanup,
+  and a private retention-record directory could be swapped to an external
+  symlink. All three are remediated at
+  `fb038346894260d1b3ceeaa6cd1966e4435bdb5a`. The next exact-head review at
+  `91a66e043ddc1d21d9d2ffbb1b77bbf223e677c1` reported two P1 gaps and one P2:
+  pending checkpoint evidence still trusted mutable worktree bytes, folded
+  integration and polish claims escaped marker checkpoint cross-validation,
+  and non-finite JSON constants could crash the validator. All three are
+  remediated at `043f2d2e2dae5612ba162dffa6876c7b35a95888`; exact live-head
+  re-review at `c28b2c69a30c1bdc14cfdf36bfd46a504f98b5b5` found one further P1:
+  the phase-facing `independent_review` claim did not bind to checkpoint gate
+  `independent_critical_high_review`. The explicit compatibility alias and a
+  completed-phase fabricated-pass regression are remediated at
+  `ed31f222ed47650075732b81c7d6075a59351bba`; exact live-head re-review is
+  pending. The next exact-head review at
+  `ab879cd4658a4aebc09fd55428da1b94b2e97180` reported one further P1: raw
+  captures created before publication were not registered for cleanup and
+  could be rematerialized after unlink. Shared-lock pending registration,
+  descriptor-bound orphan inventory, deletion-state rejection, and abandoned
+  and post-unlink race regressions are remediated at
+  `0810750235ffc934dde411ee2a7a5470943e2461`. Exact live-head re-review at
+  `60054601dc7364aae5dfb29299b5c4f15e45653a` found one further P1: the legacy
+  private materializer aliases remained reachable and bypassed retention
+  enforcement. Both aliases now delegate to the retention authority, with
+  post-deletion source and unknown-capture regressions, at
+  `06c94413387849b9373cb0223889f698ca6c7f65`. Exact live-head re-review at
+  `4a5491cf64ea7e77cc39ea5a3b6c1b29a3e11597` found one further P1: the
+  workflow claimed a superseded US2 checkpoint and the validator did not
+  compare workflow checkpoint claims with authoritative marker state. The
+  workflow is synchronized to `42cdf743346c880c1b7e8cb172e842a82ab6f343`,
+  and semantic claim/table validation with a drift regression is implemented at
+  `cd4b8d48bf4494d5906c5c9dc7796ee2c19516f6`. Exact live-head re-review at
+  `a7cbcb6081b12129c617995b8fe585550de547ec` found two further P1 boundaries:
+  the workflow retained a conflicting US2 superseded checkpoint, and same-user
+  lock-file replacement could create two retention critical sections. The
+  superseded claim now binds `8a179bdbb6aef08849bbfc4ed07c547c26f8194a`,
+  the validator cross-checks superseded claims, and retention uses a directory
+  descriptor lock plus lock-path identity checks with a concurrent cleanup and
+  materialization regression at
+  `7f846a02254c6337eb207fee7dba6a06cd485a00`. Exact live-head re-review at
+  `9ddc51c820d8f1e4763f3c6adad1751ca9f500dc` found two further P1 boundaries:
+  workflow checkpoint claims were only globally, not marker-specifically,
+  matched, and replacing the raw-root pathname could let a replacement root
+  acquire a different directory lock. Claims now name and bind their exact
+  marker, unscoped claims fail, and a focused retention-lock module serializes
+  on the stable parent inode before the raw root with a concurrent raw-root
+  replacement regression at
+  `a324f4e95bfddb7b37e4612879d5b57c9d2af412`; exact live-head re-review is
   pending.
-  The exact-head review (`pr-367-rereview-A6C704`) then found one P0 and one P1:
-  terminal v3 could record deletion while a restoration temporary or external
-  hard link still retained governed bytes, and the US2 checkpoint contradicted
-  its pending independent review. Remediation at
-  `c3052ff151563d9b146de347b392e79f688cd3eb` removes post-proof restoration,
-  journals v3 immediately after the durable unlink, retries only completion
-  publication while the canonical target remains absent, and keeps US2
-  review-pending. Focused 53/53, standalone treatment, docs-reference, and full
-  2821/2821 gates pass; exact-head re-audit remains pending.
-  The exact-head review (`pr-367-re-review-40F2F7`) then found one P1 and one P2:
-  failure before v3 publication left v2 with a missing canonical target and no
-  supported retry, while `tasks.md` retained stale reviewability measurements.
-  Remediation at `ce64616342ab977fc5bbaa675b8b9ca7ed192108` durably renames
-  the v2-bound inode into deterministic quarantine, binds that name and identity
-  in v3 before unlink, resumes from either pre- or post-persistence v3 failure,
-  and synchronizes the task measurements. Focused 53/53, standalone treatment,
-  docs-reference, and full 2821/2821 gates pass; exact-head re-audit remains
+- Exact live-head re-review at
+  `8c84eb4222863b0d399cdf4ea0cadcf865e1076e` found three further P1 boundaries:
+  exact-head validation trusted mutable workflow bytes, pending phase evidence
+  failed open when direct or verification authority keys were absent, and public
+  capability outputs followed symlinks. Workflow and checkpoint schemas now load
+  from the authorized head and require byte-equal worktree copies, every projected
+  phase claim requires a matching checkpoint evidence owner, and public outputs use
+  descriptor-relative no-follow temporary creation with parent identity checks and
+  atomic replacement. Dirty-workflow, missing-authority, pre-existing-symlink,
+  file-to-symlink, and parent-replacement regressions pass at
+  `19b748ae3f108d68a05ceb282968c76b4debe340`; exact live-head re-review is pending.
+- Exact live-head re-review at
+  `eeebd7380b798bb8b6ea1dd4ba20ce284155a9d7` found two further P1 boundaries:
+  the supplied workflow was not bound to `state.workflow_file`, and v2 workflows
+  could omit the marker-evidence section and current checkpoint claims. Exact-head
+  validation now requires the normalized state path to equal the supplied
+  repository-relative workflow, and v2 projection requires one marker-evidence
+  section, one current checkpoint claim, and one row per marker. Alternate-workflow,
+  missing-section, and missing-claim regressions pass at
+  `6d546a5013cee11cca936c491e82de85e4eb8ead`; exact live-head re-review is pending.
+- Exact live-head re-review at
+  `2b4063417808b2b98ef94309d1ab41629d71bfaf` found three further P1 boundaries:
+  pending markers could omit evidence and commit authority, exact-head validation
+  trusted mutable copies of three canonical schemas, and workflow claims inside
+  comments or fenced code could satisfy mandatory projection. Pending checkpoint
+  authority is now required, all canonical schemas load from and byte-match the
+  authorized head, and only visible Markdown supplies workflow evidence. Missing-
+  authority, dirty-schema, fenced-section, and commented-claim regressions pass at
+  `17fe36df500b31552a7dcfe62da6285684839886`; exact live-head re-review is pending.
+- Exact live-head re-review at
+  `2496446d8ba53f7edd9399db2c221acb84fa0768` found two further P1 boundaries:
+  general workflow requirements still trusted raw Markdown, including unclosed
+  comments, and the shared checkpoint definition made v2 pending authority fields
+  mandatory for v1 schema consumers. Every workflow requirement now uses one
+  visible-Markdown projection that treats unclosed comments as hidden through EOF,
+  while pending evidence and commit fields live only in the v2 conditional. Full-
+  workflow fence/comment and every-mirror legacy-v1 regressions pass at
+  `22507c2667d7698fd65e1ce74dff8e97317a42eb`; exact live-head re-review is pending.
+- Exact live-head re-review at
+  `a0e4e62c6a173a4d51dc6fb070d16d95aa443c9c` found three further P1 boundaries:
+  indented code could satisfy workflow requirements, pending checkpoint commits
+  were not bound to evidence and authorized-head ancestry, and evidence owners
+  could shadow one another across top-level and verification containers. The
+  visible projection now excludes four-space and tab-indented code, every v2
+  checkpoint commit must match its evidence and exist in the authorized history,
+  and phase claims require one unique owner across all permitted locations.
+  Indented-workflow, mismatched/nonexistent/unrelated-commit, top-level-shadow,
+  and cross-container duplicate-owner regressions pass at
+  `a048c80875465eafd9187b848f4b3b3139cf326b`; exact live-head re-review is pending.
+- Exact live-head re-review at
+  `723e488225453937b8a8d72185af9f53c9774ba8` found four further evidence
+  boundaries: pending evidence commits and digests were unauthenticated,
+  completed evidence could be rewritten and rebound, raw HTML blocks could hide
+  workflow authority, and Python primitive equality accepted booleans as
+  integers. Pending authority now binds both evidence files to an existing
+  authorized commit and exact digests; completed US1/US2 records are restored to
+  their `a6284ae644634fde09a5109827068cf8de2d8b15` bytes and use discoverable,
+  append-only correction records; all CommonMark raw-HTML block forms are hidden
+  from workflow checks; and phase projection uses JSON-type-preserving equality.
+  Authority, correction-chain, raw-HTML, and boolean-versus-integer regressions
+  pass at `b43333f0268c442696f8bd48ce4f8f225da56a6a`; exact live-head re-review is
   pending.
-  The next exact-head review (`pr-367-rereview-112186`) found two P1 gaps: a
-  resumed quarantine could publish v3 without first directory-syncing and
-  revalidating the rename, and both authorized `proven` disposition paths were
-  unreachable. Remediation at `e041319053e1a650d92953869a9ecec5c15f8879`
-  synchronizes and revalidates every quarantine retry before v3, makes complete
-  observed reroute capture authoritative for configured proof, and accepts an
-  observed supported route bound to canonical non-null model/effort as effective
-  evidence without claiming undocumented effort telemetry. Focused 54/54,
-  standalone treatment, docs-reference, and full 2821/2821 gates pass;
-  exact-head re-audit remains pending.
-  The next exact-head review (`review-treatment-contrac-F02243`) found one P0
-  and one P1: a v3 retry could falsely certify deletion after an interrupted
-  unlink while an external hard link retained the evidence, and the resulting
-  completion record backdated `deleted_at` to the original attempt. Remediation
-  at `aef759559688ecf53ef74de0fbbfd000b1de6871` now resumes v3 only while the
-  exact bound quarantine exists, treats a missing quarantine without durable
-  completion proof as indeterminate, and records the actual successful retry
-  time. Focused 54/54, standalone treatment, docs-reference, and full 2821/2821
-  gates pass; exact-head re-audit remains pending.
-  The next exact-head review (`review-retention-remedia-D1A187`) found one P0
-  and one P1: a `proven` trace could target a tuple the authoritative prior
-  freeze marked excluded, and successor publication could predate its route or
-  observation evidence. Remediation at
-  `7ddf5763681f9862c642664dcac8146cab51e4d9` now requires every published
-  `proven` trace to map to an included, source-admitted,
-  availability-supported, surface-agreed prior tuple and orders publication at
-  or after every bound route resolution and non-null observation capture.
-  Focused 54/54, standalone treatment, docs-reference, and full 2821/2821 gates
-  pass; exact-head re-audit remains pending.
-  The next exact-head review (`capability-remediation-r-9F1346`) found one P0
-  and two P1 gaps: retained unknown-observation and canary bytes were not
-  semantically revalidated before receipt, public append-only publication was
-  pathname-based, and private record loads could mix directory snapshots.
-  Remediation at `9d9ceea3b7aa1abd641afb46660d1deb838fa25c`
-  now semantically validates all retained evidence before registration,
-  descriptor-binds and re-reads exact public output bytes before receipt, and
-  loads every private record set through one unchanged identity-bound directory
-  snapshot. Focused 55/55, standalone treatment, docs-reference, and full
-  2821/2821 gates pass; exact-head re-audit remains pending.
-  The next exact-head review (`pr-367-review-6D565E`) found two P1 gaps: an
-  existing matching hard-linked publication output could bypass the single-link
-  receipt invariant, and deeply nested capability JSON could escape the
-  fail-closed validation contract without explicit depth and node limits.
-  Remediation at `2d1ea3ec1932421740c655d92239a45e81f0a2e7`
-  requires every recovered publication output to be single-link before receipt
-  and bounds all capability JSON to 64 nesting levels and 100,000 total nodes
-  while normalizing parser recursion to `ValueError`. Focused 55/55, standalone
-  treatment, docs-reference, and full 2821/2821 gates pass; exact-head re-audit
-  remains pending.
-  The next exact-head review (`pr-367-review-D20B53`) found one P0 and two P1
-  gaps: an older governing receipt could hide a newer bounded pending claim,
-  durable append-only linking could strand an unrecoverable temporary after a
-  crash, and exported source-capture materialization parsed before checking its
-  byte bound. Remediation at
-  `22aad882c836cf9d2d8a86bde34df154d5caede2` computes the latest deadline
-  across governing and individually capped pending claims, descriptor-recovers
-  only the exact single temporary/target inode pair, and enforces bytes-like
-  32-MiB source-capture input before parsing or hashing. Focused 56/56,
-  standalone treatment, docs-reference, and full 2821/2821 gates pass;
-  exact-head re-audit remains pending.
-  The exact-head review (`review-pr-367-C52F62`) then found one P1 and one P2:
-  a crash before final-name linking could strand a single-link temporary and
-  wedge the evidence root, while concurrent identical source-capture writers
-  could propagate `FileExistsError`. Remediation at
-  `3c439b154669175226ec2ffed3f26731dcae373f` gives every reserved temporary an
-  advisory lock, removes abandoned pre-link files only after lock and
-  descriptor-relative identity proof, applies the same protocol to public
-  append-only directories, and accepts only a verified content-addressed winner.
-  Focused 57/57, standalone treatment, privacy 10/10, docs-reference, and full
-  2821/2821 checks pass; the exact-head re-audit remains pending.
-  The next exact-head review (`untitled-chat-5795B4`) found one P1 scheduler
-  window: recovery could lock and unlink a visible temporary after creation but
-  before the writer acquired its per-file lock. Remediation at
-  `8135e4d3a52c765e828878e559d6a685b3ab42c8` acquires a shared descriptor-bound
-  parent-directory lock before temporary creation and holds it through writer
-  commit or recovery, while retaining the per-file lock as a second proof. The
-  regression pauses the writer in that exact window and proves recovery waits
-  without deleting the live file. Focused 58/58, standalone treatment, privacy
-  10/10, docs-reference, and full 2821/2821 checks pass; exact-head re-audit is
-  pending.
-  The next exact-head review (`untitled-chat-13CBB8`) found one P1 recovery gap:
-  a post-unlink hard-link race could republish verified quarantine bytes under
-  a replacement inode while leaving the terminal v3 intent bound to the old
-  inode, permanently blocking supported retry. Remediation at
-  `94079dee507bc0d65ff4db0003c305aadcc3fe1a` appends a linear v3 successor with
-  `verified-payload-republication-v1`, descriptor-verifies a crash-restored
-  replacement before reconstructing a missing successor, and covers both the
-  direct and interrupted-journal paths. The focused 58/58, naming-layout 7/7,
-  standalone treatment, privacy 10/10, generated-reference, and full 2822/2822
-  checks pass; the exact-head re-audit is pending. The focused
-  suite was also renamed to the durable capability-based
-  `test-codex-capability-contract.py` path, with a repository guard rejecting
-  SPEC-ID-coupled authored script names.
-- Lower-slice restack reconciliation preserves the decomposed US2 treatment and
-  deletion-recovery architecture while adding canonical surface order, parsed
-  timestamp extrema, hidden HTML exclusion, trusted-registration retention
-  deadlines, one-day pending expiry with late-promotion rejection, durable
-  publication intent before output, exact receipt completion, parent-directory
-  sync on content-addressed adoption, and the stable
-  `.capability-evidence-write-*` temporary namespace. The focused capability
-  suite is 58/58, the repository naming-layout guard is 9/9, privacy is 10/10,
-  process coverage is 8/8, docs-reference is current, and the full suite is
-  2824/2824. The subsequent exact-head review produced the findings below.
-- Exact restacked-head capability review `untitled-chat-22C5B0` found one P0
-  post-unlink hard-link proof gap and two P1 append-only/sanitizer gaps.
-  Remediation removes payload republication and replacement-inode recovery after
-  unlink, so a retained alternate link or recreated quarantine remains
-  permanently fail-closed without completion proof. Unknown-attempt captures
-  now use append-only publication with exact-byte concurrent-winner validation,
-  and sanitizer pseudonyms are generated only at explicit profile field paths;
-  nested caller-supplied `fixture-*` secrets are rejected. Focused capability
-  tests pass 58/58. The subsequent exact-head re-audit produced the finding
-  below.
-- Exact-head capability re-audit `untitled-chat-1A17A6` found one P1 evidence
-  resurrection gap: source and unknown materializers could recreate a digest
-  after retention cleanup or race replacement-inode publication against it.
-  Remediation moves the stable public materializers behind the retention layer,
-  holds the retention lock through append-only publication, and treats every
-  deletion intent or completion record as a permanent digest tombstone.
-  Concurrent identical materializers wait and converge on the verified winner;
-  post-deletion calls fail without recreating bytes. Focused capability tests
-  pass 58/58; broader gates and exact-head re-audit remain pending.
-- Exact-head capability re-audit `untitled-chat-66FFF4` found one P2 source
-  visibility gap: selected inline CSS properties were interpreted while
-  stylesheet- or class-hidden unchanged extracts could still support a current
-  claim without invalidation. Remediation at
-  `7068c98ec662d69988d3ac132f24074207e66f50` makes CSS visibility entirely
-  fail-closed: stylesheets, class/id selectors, and every inline style are
-  rejected rather than partially interpreted. Intrinsic hidden attributes
-  remain excluded from visible text. Focused 58/58, naming-layout 9/9,
-  treatment, privacy 10/10, process coverage 8/8, docs-reference, and full
-  2824/2824 gates pass; exact-head re-audit remains pending.
-- Exact-head source-contract review `untitled-chat-A0BD9D` found four source
-  integrity gaps: unverified caller-supplied aggregate capture digests,
-  incomplete intrinsic HTML visibility handling, fabricated whitespace between
-  HTML text nodes, and body changes that retained old extracts without full
-  invalidation. Remediation at
-  `0042f0e27395692283abf57da0678c6d99834cf9` binds the aggregate digest to
-  exact canonical capture bytes, requires normalized plain-text bodies and
-  rejects raw markup, preserves only actual body whitespace, and invalidates
-  every binding on a new body identity. The already-published predecessor set
-  is accepted only under its exact immutable aggregate digest. Focused 58/58,
-  naming-layout 9/9, treatment, privacy 10/10, process coverage 8/8,
-  docs-reference, and full 2824/2824 gates pass; exact-head re-audit remains
-  pending.
-- Exact-head source-contract re-audit `untitled-chat-AF7C6A` found one P1
-  residual binding gap: raw refresh validation accepted a stale shared capture
-  digest after otherwise coherent row mutation. Remediation at
-  `88e95674fb3cfc4e1430646dff30bcb97151fbf5` defines one source-ID-sorted
-  canonical 22-row identity and recomputes it during normalization and raw
-  validation. Reordered input converges on the same identity; a coherently
-  altered body with its old capture digest fails. Focused 58/58,
-  naming-layout 9/9, treatment, privacy 10/10, process coverage 8/8,
-  docs-reference, and full 2824/2824 gates pass; exact-head re-audit remains
-  pending.
-- Exact-head capability decision/freeze re-audit `untitled-chat-D966E2` found
-  one HIGH provenance gap: matching allowlist identifiers and self-hashed
-  caller-supplied executor bytes could promote a canary result without proving
-  who produced it. Remediation at
-  `f4f0bc2a6e9776682c7fc663dd5e498a5069f274` makes standalone envelopes
-  structurally reviewable but always `unknown`, rejects every external result
-  in the CLI before reading it, and requires empty approval/result arrays in
-  runtime and schema until trusted invocation or verifiable attestation is
-  implemented. Focused 58/58, naming-layout 9/9, docs-reference, and full
-  2824/2824 gates pass; exact-head re-audit remains pending.
-- Exact-head private descriptor review `untitled-chat-2F5041` found two HIGH
-  and two MEDIUM gaps: validation-only private files lacked stable single-link
-  descriptor checks, nested raw-root traversal was path-raceable, tuples could
-  bypass recursive sanitizer checks, and JSON node ceilings applied only after
-  full allocation. Remediation at
-  `9b10eee411b45a2f23b6edc418b2235752bbc081` validates private inputs through
-  stable parent-relative descriptors, compares two no-follow post-recovery raw
-  tree snapshots, rejects non-JSON containers and keys, and enforces lexical
-  node/depth ceilings before both capability and treatment parsing. Focused
-  58/58, naming-layout 9/9, privacy 10/10, docs-reference, and full 2824/2824
-  gates pass; exact-head re-audit remains pending.
-- Exact-head append-only publication review `untitled-chat-B4832D` found two
-  MEDIUM gaps: recovery enumerated before enforcing entry bounds and rescanned
-  every entry for each temporary link, while publication receipts were not
-  held under a stable output-directory and target-inode binding. Remediation at
-  `57411f1f275728d757549226fcf10d003938b35b` uses bounded incremental
-  descriptor enumeration with a single inode index, and holds the output
-  directory lock plus target descriptor through receipt persistence with
-  before/after pathname, inode, link-count, and byte revalidation. Focused
-  59/59, naming-layout 9/9, privacy 10/10, docs-reference, and full 2824/2824
-  gates pass; exact-head re-audit remains pending.
-- Exact-head publication re-audit `untitled-chat-0A2885` found two P1 race and
-  lock-placement gaps: a disappearing expected temporary could leave a
-  changed single-link target accepted without byte revalidation, and an output
-  inside the raw-evidence tree could self-conflict on the receipt-directory
-  lock. Remediation at `fd9a557a01cf1a85409266e18ab339383b8f9b44`
-  verifies the expected payload on the single-link recovery fast path and
-  rejects resolved output destinations anywhere inside the validated raw root
-  before retention mutation. Focused 59/59, naming-layout 9/9, privacy 10/10,
-  docs-reference, and full 2824/2824 gates pass; exact-head re-audit remains
-  pending.
-- Exact-head publication re-audit `untitled-chat-2B7305` found one remaining P1:
-  the static output-containment check was not held under a descriptor-bound
-  component walk, permitting an intermediate-symlink race. Remediation at
-  `6a52a365a09ab705cc33333460478fa4bff78b62` canonicalizes the destination,
-  opens every output-parent component with descriptor-relative `O_NOFOLLOW`,
-  rejects the raw-root inode at every level, and retains one parent descriptor
-  plus directory lock across recovery, retention, publication, and receipt
-  verification. An adversarial alias swap proves the operation cannot be
-  redirected into raw evidence. Focused 59/59, naming-layout 9/9, privacy
-  10/10, docs-reference, and full 2824/2824 gates pass; exact-head re-audit
-  remains pending.
-- Exact-head publication re-audit `untitled-chat-C8F728` found one P0: the
-  output leaf was checked without following symlinks and then the full missing
-  destination was resolved, permitting a final-component symlink planted in
-  that interval to redirect publication. Remediation at
-  `102fe80f9d986484099503d9371bda7aeeec7d91` resolves and binds only the
-  parent, preserves the caller's leaf name, and rechecks the leaf without
-  following symlinks through the locked parent descriptor before retention.
-  Every later leaf operation remains descriptor-relative with `O_NOFOLLOW`.
-  An adversarial lock-boundary regression proves a planted leaf symlink fails
-  before retention, intent, or receipt artifacts are created. Focused 59/59,
-  naming-layout 9/9, privacy 10/10, docs-reference, and full 2824/2824 gates
-  pass; exact-head re-audit remains pending.
-- Exact-head retention/deletion re-audit `untitled-chat-D9D31E` found one P0
-  and one P1: locking a replaceable `.retention-lock` child inode could split
-  cooperating retention operations, and a durable deletion completion could
-  predate its governing terminal intent. Remediation at
-  `e08eb7a9fb0201f99e1d926ccf80d322247d9871` makes the identity-bound raw
-  directory descriptor the retention lock, treats the child file only as a
-  private marker, and threads the held descriptor through raw append-only
-  recovery and capture materialization. Reconciliation now rejects completion
-  chronology earlier than the terminal intent. Capture-specific work moved to
-  the stable-purpose `codex_capability_capture.py` boundary; all 17 capability
-  modules remain below 400 lines. Adversarial marker-replacement and
-  reversed-chronology tests pass. Focused 60/60, naming-layout 9/9, privacy
-  10/10, docs-reference, and full 2824/2824 gates pass; exact-head re-audit
-  remains pending.
-- Exact-head treatment-core review `untitled-chat-13CD92` found one P0: the
-  validator admitted only a single reroute hop. Remediation at
-  `4881830c224d921f20dc5ecfc1cb23bd95ed69f2` validates an ordered same-trace
-  reroute chain, independently qualifies every hop, and binds only the final
-  hop as effective. Re-audit `untitled-chat-FD3F79` returned `NO FINDINGS`.
-- Exact-head trace-lineage review `untitled-chat-EEA85A` found one P1: a third
-  treatment-bound successor could not forward the predecessor-of-predecessor
-  authority. Remediation at `73755c9d945f047107e341d59180f37600c828d8`
-  forwards the prior telemetry profile, treatment contract, and evidence
-  digests explicitly. Re-audit `untitled-chat-28A265` returned `NO FINDINGS`.
-- Exact-head capability-acquisition review `untitled-chat-E10887` found two
-  P1 issues: non-token display labels could make the matrix reject its own
-  canonical output, and private record loading lacked aggregate resource
-  bounds. Remediation at `cb4fbd3aff2de9e37d41b06eaac7be75a9517024`
-  excludes invalid display labels from canonical tuples and bounds directory
-  entries, aggregate bytes, and cumulative JSON nodes. Re-audit
-  `untitled-chat-CD89EF` returned `NO FINDINGS`.
-- Exact-head publication/retention review `untitled-chat-64503E` found one P1:
-  an oversized canonical publication could be persisted before its bounded
-  verification failed, leaving output without a receipt. Remediation at
-  `e1e34d005e16bf2e9115f01e709770aee006fb73` rejects oversized bytes before
-  output recovery or mutation. Re-audit `untitled-chat-7F6589` returned
-  `NO FINDINGS`. All five exact-head responsibility re-audits are clean.
-- Final metadata review `untitled-chat-1472D4` found one P1 and one P2: the
-  marker state did not map US2 to emitted PR #367 and an analysis-time
-  13-module estimate was worded as current. The state now distinguishes the
-  source feature branch from emitted slice branches, binds US1 to PR #366 and
-  US2 to PR #367, and labels the 13-module count as historical. US1 retains its
-  historical exact head; US2 uses a symbolic live-PR-head binding so the
-  containing metadata commit does not make a self-referential SHA claim.
-- Metadata re-audit `untitled-chat-C60832` found one P1: the US2 declared-file
-  manifest omitted the measured production module
-  `codex_capability_retention_recovery.py`. The marker now declares that
-  stable-purpose module as `NEW`, matching the exact base diff.
-- Exact-head provenance re-audit `untitled-chat-7F2EB3` found that persisted
-  US2 head snapshots became stale whenever their remediation was committed.
-  The reviewer accepted the finite representation: the repository records PR,
-  base, branch, and `symbolic_pr_head`; external review attestations record the
-  resolved head, reviewer identity, timestamp, and verdict.
-- Implementation checkpoint: `e1e34d005e16bf2e9115f01e709770aee006fb73`
-- Superseded checkpoint: `e08eb7a9fb0201f99e1d926ccf80d322247d9871`
+- Exact live-head re-review `untitled-chat-9B00BE` at
+  `cf962cc5480c6e84a10c1889bc34cfc475dc1128` found one further P1 boundary:
+  the visible workflow claimed Current fingerprints while retaining stale
+  reviewability-evidence and changed-file-manifest digests. The workflow now
+  mirrors all six authoritative marker-plan fingerprints, and the strict
+  validator rejects any Current claim whose visible rows do not exactly match
+  `pr_marker_plan.source_fingerprint`. The digest-drift regression and the full
+  2857/2857 suite pass at
+  `aea7282a9b3c64c2d04928104e13b35defeaa0f3`. Exact live-head re-review at
+  `4842c33172bef31634180c7e9585e412f0786059` returned `NO FINDINGS`; the final
+  metadata-only binding head remains to be reviewed.
+- Evidence finalization after the source head is metadata-only; it does not
+  change implementation or verification inputs.
+- Folded polish: T031-T039 are complete. The current reviewability and title
+  gates pass. Historical 78-file base-to-head manifest gates passed before
+  restack; the current 107/107 manifest passes exact current-head validation.
 
 ## PR Marker Plan Evidence
 
-- Schema version: `pr-marker-plan.v1`
+- Schema version: `pr-marker-plan.v2` for strict evidence; legacy
+  `pr-marker-plan.v1` remains readable without the new v2-only fields.
 - Authoritative state: top-level `pr_marker_plan` in
   `docs/ai/specs/.process/autopilot-state.json`
 - Fingerprint status: Current
-- Plan status: `checkpointing`
+- Plan status: `emission_ready`
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:708dfaabb460b6efd976a27d159af9145844b5a288f2d9455118bc77ac57b882` |
-| Plan-declared scope | `sha256:b84b5f492ea37f9389e2b6ec1cf123193634b3a374f0a2b09cabe6a66423269d` |
-| Tasks | `sha256:2f1377aa9852e56285dba0d0960017e196598e060a1cce1b24ea9695d70763d2` |
-| Reviewability evidence | `sha256:e4172e46cf5c6d29c4d5ed8854e0e85c52f375c81736a08a5e2be2b5beb31bc1` |
+| Feature spec | `sha256:ee5e6e7efafecd1064407398806558991c09f5e9bea58a1ac6ab60342bd82046` |
+| Plan-declared scope | `sha256:892c9c8c87f21233cd06323a2303913e698aad9ac8546014a11462fa8e34756f` |
+| Tasks | `sha256:7bd80934ed9521709209774e0233bdf492b9a233fb6bd19d890511c9155245d8` |
+| Reviewability evidence | `sha256:de611bb4664e86b9009dc29377a79ceba51f4a3cf3a6913ba8f6f912acd7754c` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
+| Changed-file manifest | `sha256:9e4c7ce14d10e05acca4a40460cd5724d60e5bd7e53f5f4ea37e94c8775e2eed` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
-| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Complete at `e1e34d005e16bf2e9115f01e709770aee006fb73` | No feature growth after checkpoint |
-| 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
+| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `c699b94f34c378bd4a8f3780e8570abaeb23489d` | Historical checkpoint evidence remains append-only |
+| 2 | `us2` | T016-T025 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `c699b94f34c378bd4a8f3780e8570abaeb23489d` | Historical checkpoint evidence remains append-only |
+| 3 | `us3` | T026-T030; T031-T039 folded | Aggregate size-only `block`; current safe subdivision keeps every module below 400 lines | Complete at `c699b94f34c378bd4a8f3780e8570abaeb23489d`; `checkpoint-evidence-revi-B89AB7` reports no P0/P1 findings at the reviewed implementation head | No correctness or safety exception remains |
 
 - Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
   size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
-  lines under its historical typed exception; the current US2 marker is 5,938 /
-  5,416 across 18 modules against the aggregate 400-LOC boundary. Capability
-  modules are safely split with a 399-line maximum; only the treatment module
-  retains a typed size-only exception.
+  lines; the current US2 marker is 4,214 / 3,843 across its two modules against
+  the 400-LOC boundary at its immutable checkpoint. The current US3 remediation
+  is 7,052 / 6,439 across 29 focused modules with a 398-line maximum.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
-- PR mappings: Partial; US1 maps to PR #366, US2 maps to PR #367, and US3
-  remains pending.
+- PR mappings: Pending.
 
 ---
 

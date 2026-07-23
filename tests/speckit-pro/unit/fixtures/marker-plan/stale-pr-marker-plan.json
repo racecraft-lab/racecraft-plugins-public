@@ -4,11 +4,12 @@
   "feature_id": "prsg-013-reviewability-markers",
   "status": "stale",
   "source_fingerprint": {
-    "feature_spec_sha": "old-spec-sha",
-    "plan_declared_scope_sha": "scope-sha",
-    "tasks_sha": "tasks-sha",
-    "reviewability_sha": "reviewability-sha",
-    "hazard_route_sha": "hazard-sha"
+    "feature_spec_sha": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "plan_declared_scope_sha": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "tasks_sha": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "reviewability_sha": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "hazard_route_sha": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "changed_file_manifest_sha": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
   },
   "markers": [
     {
@@ -37,7 +38,8 @@
       "reviewability": {
         "status": "warn",
         "mode": "marker",
-        "scope": "foundation"
+        "scope": "foundation",
+        "head_sha": "ffffffffffffffffffffffffffffffffffffffff"
       },
       "hazards": [],
       "subdivision": {
@@ -46,15 +48,32 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/foundation-checkpoint.md"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/foundation-checkpoint.md",
+        "checkpoint_evidence_sha": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "verification_evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/foundation-reviewability.json",
+        "commit_sha": "ffffffffffffffffffffffffffffffffffffffff",
+        "head_sha": "ffffffffffffffffffffffffffffffffffffffff",
+        "completed_at": "2026-07-19T00:00:00Z",
+        "completed_task_ids": ["T004"],
+        "summary": "Completed the foundation marker before its PR plan became stale.",
+        "validation": ["foundation marker verification passed"]
       },
       "emission_mapping": {
-        "status": "marker_split"
+        "status": "pending",
+        "packet_path": "specs/prsg-013-reviewability-markers/.process/emission/foundation/packet.json"
       },
       "warnings": []
     }
   ],
-  "warnings": [],
+  "warnings": [
+    {
+      "code": "MARKER_PLAN_STALE",
+      "severity": "error",
+      "message": "Marker plan is stale and cannot emit PR mappings.",
+      "source": "marker-plan",
+      "details": {}
+    }
+  ],
   "created_at": "2026-06-10T00:00:00Z",
   "updated_at": "2026-06-10T00:00:00Z"
 }

@@ -3,71 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_retention import *
-
-def validate_tuple_decisions(decisions, *, require_snapshot=False):
-    if any(item.get("decision") == "included" for item in decisions) and not isinstance(decisions, _BoundDecisionSet):
-        raise ValueError("included decisions require manifest-bound authority")
-    keys = {"candidate_route_id", "candidate_route_digest", "agent_contract_id", "named_agent", "agent_contract_digest", "source_ref", "source_sha256", "instruction_sha256", "role_instruction_sha256", "canonical_model_id", "canonical_effort", "official_source_bindings", "effort_surface_bindings", "runtime_capability_snapshot_id", "surface_matrix_id", "surface_evidence", "hidden_state", "normalization_map_id", "disagreement_digest", "source_admitted", "source_admission_reasons", "availability_disposition", "surface_disposition", "exact_treatment_readiness", "decision", "reasons"}
-    for item in decisions:
-        strings = (item.get("candidate_route_id"), item.get("agent_contract_id"), item.get("named_agent"), item.get("canonical_model_id"))
-        if set(item) != keys or not all(isinstance(value, str) and value and not any(mark in value for mark in ("/", "\\", "://", "@")) for value in strings):
-            raise ValueError("tuple decision must use the sanitized closed v1 shape")
-        if not isinstance(item["source_ref"], str) or not item["source_ref"] or item["source_ref"].startswith(("/", "\\")) or ".." in Path(item["source_ref"]).parts: raise ValueError("tuple source_ref must be repository relative")
-        for field in ("candidate_route_digest", "agent_contract_digest", "source_sha256", "instruction_sha256", "role_instruction_sha256", "surface_matrix_id", "normalization_map_id"):
-            _need_digest(item[field], field)
-        if item["instruction_sha256"] != item["role_instruction_sha256"]: raise ValueError("tuple instruction hashes disagree")
-        snapshot = item["runtime_capability_snapshot_id"]
-        if snapshot is not None: _need_digest(snapshot, "runtime_capability_snapshot_id")
-        if require_snapshot and snapshot is None: raise ValueError("tuple runtime snapshot binding is required")
-        if item["disagreement_digest"] is not None: _need_digest(item["disagreement_digest"], "disagreement_digest")
-        source_binding_keys = {"official_source_ledger_id", "source_refresh_digest"}
-        if any(set(row) != source_binding_keys or not _SOURCE_ID.fullmatch(str(row["official_source_ledger_id"])) or not _DIGEST.fullmatch(str(row["source_refresh_digest"])) for row in item["official_source_bindings"]): raise ValueError("tuple official-source binding is invalid")
-        effort_binding_keys = {"effort_surface_record_id", "effort_surface_record_digest", "official_source_ledger_id", "source_refresh_digest"}
-        if any(set(row) != effort_binding_keys or not isinstance(row["effort_surface_record_id"], str) or not row["effort_surface_record_id"] or not _SOURCE_ID.fullmatch(str(row["official_source_ledger_id"])) or not _DIGEST.fullmatch(str(row["effort_surface_record_digest"])) or not _DIGEST.fullmatch(str(row["source_refresh_digest"])) for row in item["effort_surface_bindings"]): raise ValueError("tuple effort-surface binding is invalid")
-        if set(item["surface_evidence"]) != set(SURFACES) or set(item["hidden_state"]) != set(SURFACES): raise ValueError("tuple surface evidence is incomplete")
-        evidence_keys = {"surface_observation_id", "completeness_state", "visibility_policy", "raw_evidence_digest", "raw_evidence_ref", "matching_entry"}
-        for surface, evidence in item["surface_evidence"].items():
-            if set(evidence) != evidence_keys or evidence["completeness_state"] not in {"complete", "partial", "unavailable", "unknown"}: raise ValueError("tuple surface evidence is invalid")
-            _need_digest(evidence["surface_observation_id"], "surface_observation_id"); _need_digest(evidence["raw_evidence_digest"], "raw_evidence_digest")
-            if evidence["raw_evidence_ref"] != f"raw://{evidence['raw_evidence_digest']}": raise ValueError("tuple surface evidence reference is invalid")
-            if evidence["matching_entry"] is not None: _clean_entry(evidence["matching_entry"])
-            expected_hidden = evidence["matching_entry"]["hidden"] if evidence["matching_entry"] is not None else None
-            if item["hidden_state"][surface] != expected_hidden: raise ValueError("tuple hidden state does not match surface evidence")
-        if item["canonical_effort"] is not None and not _token(item["canonical_effort"]): raise ValueError("tuple effort is invalid")
-        if not isinstance(item["source_admitted"], bool) or item["availability_disposition"] not in {"supported", "available_for_pinned_environment", "unknown"} or item["surface_disposition"] not in {"agreed", "disagreed", "unknown"} or item["exact_treatment_readiness"] not in {"pending", "not_ready_excluded"} or item["decision"] not in {"included", "excluded"} or not all(_token(value) for value in item["source_admission_reasons"] + item["reasons"]):
-            raise ValueError("tuple decision disposition is invalid")
-        if item["decision"] == "excluded" and not item["reasons"]:
-            raise ValueError("excluded tuple decision requires a reason")
-        if item["decision"] == "included" and (not item["source_admitted"] or item["surface_disposition"] != "agreed"): raise ValueError("included tuple lacks source and surface admission")
-    if len({item["candidate_route_id"] for item in decisions}) != len(decisions): raise ValueError("tuple decision candidate identities must be unique")
-    return decisions
-
-
-def build_runtime_snapshot(identity, refreshes, matrix, *, supersedes=None):
-    if supersedes is not None: _need_digest(supersedes, "supersedes_snapshot_id")
-    matrix = validate_surface_matrix(matrix)
-    if matrix["client_identity_id"] != identity["client_identity_id"]: raise ValueError("freeze client identity does not match the matrix")
-    repository = validate_repository_binding(matrix["observations"][0]["repository_binding"]); work_item = validate_work_item(matrix["work_item"])
-    entries = [entry for observation in matrix["observations"] for entry in observation["entries"]]
-    raw_digest = digest([item["raw_evidence_digest"] for item in matrix["observations"]])
-    started_at = min(
-        matrix["observations"],
-        key=lambda item: _parsed_timestamp(item["started_at"], "surface collection start"),
-    )["started_at"]
-    completed_at = max(
-        matrix["observations"],
-        key=lambda item: _parsed_timestamp(item["completed_at"], "surface collection completion"),
-    )["completed_at"]
-    payload = {"schema_version": SCHEMA_VERSION, "surface_matrix_id": matrix["surface_matrix_id"], "client_identity_id": identity["client_identity_id"],
-               "controlled_repository_snapshot": repository, "work_item": work_item,
-               "models": sorted({item["model"] for item in entries}), "efforts": sorted({item["effort"] for item in entries}),
-               "capabilities": sorted({value for item in entries for value in item.get("capabilities", [])}),
-               "collection_window": {"started_at": started_at, "completed_at": completed_at},
-               "raw_evidence_digest": raw_digest, "raw_evidence_ref": f"aggregate://{raw_digest}",
-               "source_refresh_set_digest": digest(refreshes), "supersedes_snapshot_id": supersedes}
-    return {"runtime_capability_snapshot_id": digest(payload), **payload}
-
+if __package__:
+    from .codex_capability_retention import *
+else:
+    from codex_capability_retention import *
 
 def _freeze_identity_payload(freeze):
     return {key: freeze[key] for key in freeze if key != "candidate_freeze_id"}
@@ -99,6 +38,7 @@ def _validate_same_snapshot_canary_history(predecessor, results, unchanged_snaps
 
 def build_freeze(
     identity, refreshes, matrix, decisions, published_at, *, manifest, predecessor=None,
+    predecessor_lineage=None, expected_predecessor_lineage_bindings=None,
     raw_evidence_root=None, repository_root=None,
     expected_predecessor_telemetry_profile_id=None,
     expected_predecessor_treatment_contract_digest=None,
@@ -113,12 +53,12 @@ def build_freeze(
         for observation in matrix["observations"]:
             validate_unknown_observation_evidence(observation, raw_evidence_root, repository_root)
     if predecessor is not None:
-        predecessor = _validate_freeze_payload(
-            predecessor, manifest,
+        predecessor = _validate_predecessor_chain(
+            predecessor, manifest, predecessor_lineage=predecessor_lineage,
+            expected_predecessor_lineage_bindings=expected_predecessor_lineage_bindings,
             expected_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
             expected_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
             expected_treatment_evidence_digest=expected_predecessor_treatment_evidence_digest,
-            require_predecessor=False,
         )
     if len(refreshes) != 22 or len({item.get("official_source_ledger_id") for item in refreshes}) != 22:
         raise ValueError("freeze requires all 22 source refreshes")
@@ -155,6 +95,8 @@ def build_freeze(
     result["candidate_freeze_id"] = digest(_freeze_identity_payload(result))
     return validate_freeze(
         result, manifest, predecessor=predecessor,
+        predecessor_lineage=predecessor_lineage,
+        expected_predecessor_lineage_bindings=expected_predecessor_lineage_bindings,
         expected_predecessor_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
         expected_predecessor_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
         expected_predecessor_treatment_evidence_digest=expected_predecessor_treatment_evidence_digest,
@@ -179,12 +121,69 @@ def _validate_canary_tuple_binding(decisions, result, snapshot_id, observations)
     return admitted
 
 
+_LINEAGE_BINDING_KEYS = {
+    "telemetry_profile_id", "treatment_contract_digest", "treatment_evidence_digest",
+}
+
+
+def _lineage_binding_values(binding):
+    if binding is None:
+        return None, None, None
+    if not isinstance(binding, dict) or set(binding) != _LINEAGE_BINDING_KEYS:
+        raise ValueError("predecessor lineage binding must use the closed treatment shape")
+    return (
+        binding["telemetry_profile_id"],
+        binding["treatment_contract_digest"],
+        binding["treatment_evidence_digest"],
+    )
+
+
+def _validate_predecessor_chain(
+    predecessor, manifest, *, predecessor_lineage=None,
+    expected_predecessor_lineage_bindings=None,
+    expected_telemetry_profile_id=None, expected_treatment_contract_digest=None,
+    expected_treatment_evidence_digest=None,
+):
+    lineage = [] if predecessor_lineage is None else predecessor_lineage
+    bindings = (
+        [None] * len(lineage)
+        if expected_predecessor_lineage_bindings is None
+        else expected_predecessor_lineage_bindings
+    )
+    if not isinstance(lineage, list) or not isinstance(bindings, list):
+        raise ValueError("predecessor lineage and bindings must be arrays")
+    if len(lineage) != len(bindings):
+        raise ValueError("predecessor lineage bindings must cover the complete chain")
+    if predecessor is None:
+        if lineage:
+            raise ValueError("predecessor lineage requires an immediate predecessor")
+        return None
+    validated = None
+    identities = []
+    for record, binding in zip(lineage, bindings):
+        expected_profile, expected_contract, expected_evidence = _lineage_binding_values(binding)
+        validated = _validate_freeze_payload(
+            record, manifest, predecessor=validated,
+            expected_telemetry_profile_id=expected_profile,
+            expected_treatment_contract_digest=expected_contract,
+            expected_treatment_evidence_digest=expected_evidence,
+        )
+        identities.append(validated["candidate_freeze_id"])
+    validated = _validate_freeze_payload(
+        predecessor, manifest, predecessor=validated,
+        expected_telemetry_profile_id=expected_telemetry_profile_id,
+        expected_treatment_contract_digest=expected_treatment_contract_digest,
+        expected_treatment_evidence_digest=expected_treatment_evidence_digest,
+    )
+    identities.append(validated["candidate_freeze_id"])
+    if len(identities) != len(set(identities)):
+        raise ValueError("predecessor lineage cannot contain a cycle or duplicate identity")
+    return validated
+
+
 def _validate_freeze_payload(
     freeze, manifest, *, predecessor=None, expected_telemetry_profile_id=None,
     expected_treatment_contract_digest=None, expected_treatment_evidence_digest=None,
-    expected_predecessor_telemetry_profile_id=None,
-    expected_predecessor_treatment_contract_digest=None,
-    expected_predecessor_treatment_evidence_digest=None, require_predecessor=True,
 ):
     keys = {"schema_version", "candidate_freeze_id", "source_manifest_binding", "client_identity", "client_identity_id", "official_source_refreshes", "source_refresh_set_digest", "surface_matrix", "surface_matrix_id", "runtime_capability_snapshot", "runtime_capability_snapshot_id", "telemetry_profile_id", "current_ledger_digest", "surface_matrix_digest", "tuple_decision_digest", "included_candidate_route_ids", "excluded_candidates", "tuple_decisions", "approved_canary_executors", "canary_results", "published_at", "supersedes_candidate_freeze_id"}
     actual_keys = set(freeze) if isinstance(freeze, dict) else set()
@@ -196,20 +195,12 @@ def _validate_freeze_payload(
     expected_keys = keys | (treatment_fields if treatment_bound else set())
     if not isinstance(freeze, dict) or actual_keys != expected_keys or freeze.get("schema_version") != SCHEMA_VERSION: raise ValueError("freeze must use the closed v1 shape")
     validate_manifest(manifest); identity = build_client_identity(freeze["client_identity"])
-    if predecessor is not None:
-        predecessor = _validate_freeze_payload(
-            predecessor, manifest,
-            expected_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
-            expected_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
-            expected_treatment_evidence_digest=expected_predecessor_treatment_evidence_digest,
-            require_predecessor=False,
-        )
     supersedes = freeze["supersedes_candidate_freeze_id"]
     if supersedes is None and predecessor is not None:
         raise ValueError("initial freeze cannot declare a predecessor")
     if supersedes is not None:
         _need_digest(supersedes, "supersedes_candidate_freeze_id")
-        if require_predecessor and predecessor is None:
+        if predecessor is None:
             raise ValueError("successor freeze requires its validated predecessor")
         if predecessor is not None and supersedes != predecessor["candidate_freeze_id"]:
             raise ValueError("successor freeze predecessor identity is invalid")
@@ -286,33 +277,38 @@ def _validate_freeze_payload(
 def validate_freeze(
     freeze, manifest, *, predecessor=None, expected_telemetry_profile_id=None,
     expected_treatment_contract_digest=None, expected_treatment_evidence_digest=None,
+    predecessor_lineage=None, expected_predecessor_lineage_bindings=None,
     expected_predecessor_telemetry_profile_id=None,
     expected_predecessor_treatment_contract_digest=None,
     expected_predecessor_treatment_evidence_digest=None,
 ):
+    predecessor = _validate_predecessor_chain(
+        predecessor, manifest, predecessor_lineage=predecessor_lineage,
+        expected_predecessor_lineage_bindings=expected_predecessor_lineage_bindings,
+        expected_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
+        expected_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
+        expected_treatment_evidence_digest=expected_predecessor_treatment_evidence_digest,
+    )
     return _validate_freeze_payload(
         freeze, manifest, predecessor=predecessor,
         expected_telemetry_profile_id=expected_telemetry_profile_id,
         expected_treatment_contract_digest=expected_treatment_contract_digest,
         expected_treatment_evidence_digest=expected_treatment_evidence_digest,
-        expected_predecessor_telemetry_profile_id=expected_predecessor_telemetry_profile_id,
-        expected_predecessor_treatment_contract_digest=expected_predecessor_treatment_contract_digest,
-        expected_predecessor_treatment_evidence_digest=expected_predecessor_treatment_evidence_digest,
-        require_predecessor=True,
     )
 
 
 def build_canary_successor(
     predecessor, result, manifest, published_at, *, raw_evidence_root, repository_root,
     expected_telemetry_profile_id=None, expected_treatment_contract_digest=None,
-    expected_treatment_evidence_digest=None,
+    expected_treatment_evidence_digest=None, predecessor_lineage=None,
+    expected_predecessor_lineage_bindings=None,
 ):
-    _validate_freeze_payload(
-        predecessor, manifest,
+    _validate_predecessor_chain(
+        predecessor, manifest, predecessor_lineage=predecessor_lineage,
+        expected_predecessor_lineage_bindings=expected_predecessor_lineage_bindings,
         expected_telemetry_profile_id=expected_telemetry_profile_id,
         expected_treatment_contract_digest=expected_treatment_contract_digest,
         expected_treatment_evidence_digest=expected_treatment_evidence_digest,
-        require_predecessor=False,
     )
     raise ValueError(
         "trusted canary invocation and attestation are unavailable in this slice; "
@@ -333,11 +329,14 @@ def publish_with_raw_evidence_retention(
     predecessor=None, expected_telemetry_profile_id=None, expected_treatment_contract_digest=None,
     expected_treatment_evidence_digest=None, expected_predecessor_telemetry_profile_id=None,
     expected_predecessor_treatment_contract_digest=None,
-    expected_predecessor_treatment_evidence_digest=None,
+    expected_predecessor_treatment_evidence_digest=None, predecessor_lineage=None,
+    expected_predecessor_lineage_bindings=None,
 ):
     raw, raw_identity = _validated_raw_evidence_root_binding(raw_evidence_root, repository_root)
     freeze = validate_freeze(
         freeze, manifest, predecessor=predecessor,
+        predecessor_lineage=predecessor_lineage,
+        expected_predecessor_lineage_bindings=expected_predecessor_lineage_bindings,
         expected_telemetry_profile_id=expected_telemetry_profile_id,
         expected_treatment_contract_digest=expected_treatment_contract_digest,
         expected_treatment_evidence_digest=expected_treatment_evidence_digest,

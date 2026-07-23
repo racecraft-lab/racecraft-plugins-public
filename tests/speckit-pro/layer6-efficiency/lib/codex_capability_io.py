@@ -5,7 +5,10 @@ from __future__ import annotations
 
 from contextlib import ExitStack as _ExitStack, contextmanager as _contextmanager
 
-from codex_capability_contract import *
+if __package__:
+    from .codex_capability_contract import *
+else:
+    from codex_capability_contract import *
 
 
 @_contextmanager
