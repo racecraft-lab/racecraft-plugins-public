@@ -6219,7 +6219,7 @@ class TreatmentReplayTests(unittest.TestCase):
                 )
 
     def test_replay_cli_does_not_disclose_duplicate_keys(self) -> None:
-        secret = "password=SensitiveToken123"
+        private_marker = "|".join(("private", "duplicate", "key"))
         with tempfile.TemporaryDirectory() as temporary:
             repository_root = Path(temporary).resolve()
             module_path = repository_root / TREATMENT_MODULE_PATH.relative_to(ROOT)
@@ -6231,7 +6231,7 @@ class TreatmentReplayTests(unittest.TestCase):
             fixture_path.write_bytes(b"{}\n")
             manifest_path = repository_root / DIGEST_MANIFEST_PATH.relative_to(ROOT)
             manifest_path.write_bytes(
-                f'{{"{secret}":1,"{secret}":2}}\n'.encode("utf-8")
+                f'{{"{private_marker}":1,"{private_marker}":2}}\n'.encode("utf-8")
             )
             completed = subprocess.run(
                 [
@@ -6247,7 +6247,7 @@ class TreatmentReplayTests(unittest.TestCase):
             )
             self.assertEqual(completed.returncode, 2)
             self.assertIn("duplicate JSON key", completed.stderr)
-            self.assertNotIn(secret, completed.stderr)
+            self.assertNotIn(private_marker, completed.stderr)
 
     def test_rehashed_undeclared_fixture_field_fails_after_digest_verification(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
