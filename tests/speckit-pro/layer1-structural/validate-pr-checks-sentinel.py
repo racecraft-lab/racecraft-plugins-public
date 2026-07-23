@@ -250,6 +250,11 @@ class ValidatePrChecksSentinel(unittest.TestCase):
                 CHECKOUT_PIN_RE.search(content) is not None and "fetch-depth: 0" in content,
                 "expected validate-pr-title to checkout repository history before inspecting changed files",
             )
+            self.assertIn(
+                "fetch-depth: 0",
+                _job_block(content, "test"),
+                "expected history-sensitive plugin tests to checkout repository history",
+            )
 
         # Remaining substring/absence checks, in frozen baseline order.
         for source, kind, name, needles in CONTENT_CHECKS:
@@ -425,6 +430,7 @@ jobs:
             self.assertNotRegex(block, SETUP_PYTHON_PIN_RE)
             self.assertNotIn("apt-get", block)
             self.assertIn("id: checkout", block)
+            self.assertIn("fetch-depth: 0", block)
             self.assertIn("persist-credentials: false", block)
             self.assertIn("if: steps.checkout.outcome == 'success'", block)
             self.assertIn("PREFLIGHT_OPERATION: linux-gates", block)
@@ -446,6 +452,7 @@ jobs:
             self.assertNotRegex(block, SETUP_PYTHON_PIN_RE)
             self.assertNotIn("apt-get", block)
             self.assertIn("id: checkout", block)
+            self.assertIn("fetch-depth: 0", block)
             self.assertIn("persist-credentials: false", block)
             self.assertIn("if: steps.checkout.outcome == 'success'", block)
             self.assertIn("PREFLIGHT_OPERATION: linux-gates", block)
