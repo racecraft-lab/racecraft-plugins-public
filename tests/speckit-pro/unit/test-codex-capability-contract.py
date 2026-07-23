@@ -686,6 +686,15 @@ class CapabilityContractTests(unittest.TestCase):
         return capability_contract._AuthorityTupleSet(tuples)
 
     def test_current_manifest_and_effort_authority_are_strict(self) -> None:
+        with self.assertRaisesRegex(ValueError, "manifest must be an object"):
+            capabilities.validate_manifest([])
+        malformed_snapshot = copy.deepcopy(self.manifest)
+        malformed_snapshot["snapshot"] = []
+        with self.assertRaisesRegex(ValueError, "manifest snapshot must be an object"):
+            capabilities.validate_manifest(
+                malformed_snapshot,
+                allow_synthetic_manifest=True,
+            )
         result = capabilities.validate_manifest(self.manifest)
         self.assertEqual(result["current_source_count"], 22)
         self.assertEqual(result["historical_active_count"], 0)
@@ -815,6 +824,12 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertEqual(capabilities.canonical_bytes({"b": 1, "a": 2}), b'{"a":2,"b":1}')
         self.assertFalse(hasattr(capabilities, "refreshes_from_manifest"))
         captured = source_capture(self.manifest)
+        with self.assertRaisesRegex(ValueError, "source refresh capture must be a list"):
+            capabilities.normalize_source_refreshes(self.manifest, {})
+        malformed_capture = copy.deepcopy(captured)
+        malformed_capture[0] = []
+        with self.assertRaisesRegex(ValueError, "captured source refresh must be an object"):
+            capabilities.normalize_source_refreshes(self.manifest, malformed_capture)
         with self.assertRaisesRegex(ValueError, "does not match captured bytes"):
             capabilities.normalize_source_refreshes(
                 self.manifest, captured, source_capture_digest=capabilities.digest(b"unrelated capture"),

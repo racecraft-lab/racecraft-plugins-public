@@ -44,7 +44,11 @@ def _route_claim_dependencies(route, sources_by_id):
 
 
 def validate_manifest(manifest, *, allow_synthetic_manifest=False):
+    if not isinstance(manifest, dict):
+        raise ValueError("manifest must be an object")
     snapshot = manifest.get("snapshot", {})
+    if not isinstance(snapshot, dict):
+        raise ValueError("manifest snapshot must be an object")
     if manifest.get("schema_version") != CANONICAL_MANIFEST_SCHEMA_VERSION or snapshot.get("snapshot_id") != CANONICAL_MANIFEST_SNAPSHOT_ID:
         raise ValueError("manifest schema or snapshot identity is not the canonical G56R-001 v3 authority")
     if not allow_synthetic_manifest and digest(manifest) != CANONICAL_MANIFEST_DIGEST:
@@ -122,6 +126,10 @@ def _source_capture_digest(rows):
 
 def normalize_source_refreshes(manifest, captured, *, source_capture_digest=None, allow_synthetic_manifest=False):
     validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest)
+    if not isinstance(captured, list):
+        raise ValueError("source refresh capture must be a list")
+    if any(not isinstance(row, dict) for row in captured):
+        raise ValueError("every captured source refresh must be an object")
     sources = {row["official_source_ledger_id"]: row for row in manifest["official_source_ledger"]}
     actual = [row.get("official_source_ledger_id") for row in captured]
     if len(captured) != 22 or set(actual) != set(sources) or len(set(actual)) != 22 or any(set(row) != _SOURCE_CAPTURE_KEYS for row in captured):
