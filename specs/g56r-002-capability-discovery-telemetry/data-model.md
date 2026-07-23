@@ -56,15 +56,22 @@ join or disposition is evaluated.
 | `invalidated_claim_ids` | array | Subset of bindings invalidated by this outcome |
 | `prior_record_digest` | digest | Binds the G56R-001 input without rewriting it |
 
-Invariant: an adverse refresh invalidates only bound current claims/routes.
+Invariant: an adverse refresh invalidates only bound current claims/routes, and
+any body-digest change invalidates every binding for that source.
 Historical `OSL-*` evidence is never copied into this record as current. The
-private normalized refresh additionally retains `retrieved_body_b64` so the
-adapter can recheck the body and visible-text extracts. The published
-`OfficialSourceRefresh` strips that field but retains the shared aggregate
-capture digest. Extract normalization is the closed
+private normalized refresh additionally retains `retrieved_body_b64` and the
+closed `retrieved_body_format: normalized_plain_text` declaration so the
+adapter can recheck the body and extracts without browser semantics. Raw HTML
+or angle-bracket markup is rejected. The published `OfficialSourceRefresh`
+strips both private fields but retains the shared aggregate capture digest,
+which must equal the exact source-ID-sorted canonical aggregate capture bytes.
+Normalization and raw refresh validation both recompute that digest. Extract
+normalization is the closed
 `unicode_text_whitespace_collapsed_utf8` contract. Multi-claim sources use the
-reviewed extract-to-claim dependency registry, and every materially changed
-extract must invalidate all claims mapped to that extract.
+reviewed extract-to-claim dependency registry for metadata-only extract changes;
+a body change always invalidates every claim bound to the source. The exact
+already-published predecessor refresh-set digest is accepted only as an
+immutable legacy validation boundary; any byte change loses that exception.
 
 ### `ClientIdentity`
 
@@ -104,8 +111,13 @@ Neither registered method can authorize inclusion: fixture enumeration is
 synthetic and unknown observation is non-authoritative. The live collection
 allowlist is empty in this slice. A live unknown observation's
 `raw://sha256:<digest>` reference maps to `<raw_evidence_root>/<digest>.json`;
-the collector writes that sanitized attempt record with mode `0600` and
-verifies the exact stored bytes before publishing the observation.
+the collector publishes that sanitized attempt record append-only with mode
+`0600`, recovers interrupted publication under the shared directory lock, and
+accepts a concurrent content-addressed winner only after exact-byte
+verification before publishing the observation. Source and unknown capture
+materialization shares the retention lock with registration and cleanup; a
+digest present in any deletion intent or completion record is permanently
+tombstoned and cannot be materialized again.
 
 ### `SurfaceMatrix`
 
@@ -193,15 +205,17 @@ Timeout and output-cap terminal records must report process-tree cleanup as
 `completed` or `failed`; `not_needed` is invalid once either bound is crossed.
 
 The module owns a versioned, default-empty allowlist of approved executor
-contract IDs. An executor becomes trusted only through a separately reviewed
-repository change that binds its implementation and approval-evidence digests;
-an executor result cannot self-approve. The repository adapter consumes the
-closed result envelope and fails closed as `unknown` when the ID is absent from
-the allowlist, any enforcement acknowledgement is missing, or process-tree
-termination failed. Its default path never launches a process. A transient
-exception creates a successor snapshot and a new key. Canary results never
-establish support, effort support, eligibility, quality, preference, or
-qualification.
+contract IDs. Matching an ID, implementation digest, or approval-evidence
+digest does not authenticate caller-supplied result bytes. This slice therefore
+does not admit any executor or canary result into a published freeze: the CLI
+rejects external results before reading them, standalone envelope validation
+always derives `unknown`, and the runtime and JSON schema require both canary
+arrays to remain empty. A future separately reviewed implementation must invoke
+the approved executor directly or verify a signature or equivalent attestation
+over the complete result envelope before availability can be promoted. Its
+default path never launches a process. A transient exception creates a
+successor snapshot and a new key. Canary results never establish support,
+effort support, eligibility, quality, preference, or qualification.
 
 ### `ExecutableCandidateTuple`
 
@@ -235,32 +249,101 @@ only narrow this set.
 | `runtime_capability_snapshot` | object | Embedded rebuilt runtime snapshot |
 | `runtime_capability_snapshot_id` | digest | Required |
 | `telemetry_profile_id` | digest | Slice 1 must equal the named pending-treatment placeholder authority; a later slice replaces this only through its validated telemetry artifact contract |
+| `treatment_contract_digest` | digest | Treatment-aware successors bind the exact canonical treatment schema bytes |
+| `treatment_evidence_digest` | digest | Treatment-aware successors bind the exact owner-to-content-digest set for retained observation, configured-route, and sanitized source evidence |
 | `included_candidate_route_ids` | array | May be empty; never inferred |
 | `excluded_candidates` | array | Every excluded tuple and its explicit reasons |
 | `approved_canary_executors` / `canary_results` | arrays | Closed approval and replay-safe result records; both empty in the first freeze |
-| `published_at` | timestamp | Required |
+| `published_at` | timestamp | Required; treatment successors cannot predate any bound route resolution or non-null observation capture |
 | `supersedes_candidate_freeze_id` | string or null | Successor only; prior freeze is immutable |
 
 `candidate_freeze_id` hashes the complete published object except that ID
 itself. Validation rebuilds the manifest binding, source refresh, matrix,
-runtime snapshot, tuple decisions, derived candidate lists, canary state, and
-whole-freeze identity. Any source, build, evidence, normalization, telemetry,
+runtime snapshot, tuple decisions, derived candidate lists, canary state,
+treatment evidence set, and whole-freeze identity. Any source, build, evidence, normalization, telemetry,
 or disposition change must produce a successor ID.
 
+A treatment-bound successor may retain `unknown`, failed, or non-scorable traces
+for excluded tuples, but it may publish `proven` only when the assigned prior
+tuple is included, source-admitted, availability-supported, surface-agreed, and
+pending exact-treatment evaluation. Publication at the latest evidence timestamp
+is allowed; publication before any route resolution or non-null observation
+capture is rejected.
+
 Raw-evidence retention records are staged before append-only artifact output.
+Their deletion deadline is exactly 30 days after the trusted registration time;
+the caller-supplied publication time cannot lengthen retention.
+Before registration, publication semantically revalidates the source capture,
+every non-fixture observation, and every canary result against the retained
+private bytes; content-address identity alone is insufficient. The public
+append-only output is created and verified through one identity-bound parent
+descriptor, and its exact canonical bytes are re-read as a single-link target
+before any receipt is issued. Recovery accepts an existing matching output only
+when it satisfies that same single-link invariant.
 A content-addressed publication intent binds the candidate freeze ID, exact
-artifact digest, declared publication time, and complete retention-record set
-before output begins, making those records governing during either crash
-window. A matching receipt is appended only after the output bytes exist.
-Records without an intent are reported as pending, expire one day after trusted
-registration when no governing record exists, and cannot extend an existing
-governing deadline. Each governing record's 30-day deadline derives from its
-trusted registration timestamp rather than caller-supplied artifact time.
-Reserved private temporary files are not evidence records. Their presence
-blocks normal store validation and read-only verification. Cleanup removes them
-while holding the retention lock, fsyncs each affected parent, and permits a
-single temporary/final hard-link pair only as the recoverable post-link crash
-window; any external or additional hard link remains invalid.
+artifact digest, publication time, and complete retention-record set before
+output begins; those records are governing once that intent is durable. A
+matching receipt is appended after the output bytes exist and proves completion
+of the exact intent. Records left before intent are reported as pending and
+never become governing authority. Each pending claim nevertheless protects
+reachable evidence for at most one day after trusted registration, and an
+expired pending claim cannot later be promoted without cleanup. The effective deletion deadline is the
+latest governing or individually capped pending deadline, so an expired older
+receipt cannot delete evidence still covered by a newer bounded pending claim.
+
+Raw-root and private-input validation is descriptor-relative and no-follow.
+After crash-link recovery, the adapter walks every nested directory and file
+twice, binding entry type, inode identity, permissions, link count, size, and
+directory membership; a changed snapshot fails closed. Validation-only private
+files are opened and rechecked through their parent descriptor and must be
+single-link `0600` regular files. Capability and treatment JSON enforce lexical
+nesting and node ceilings before full parsing, then repeat bounds validation on
+the parsed graph. Sanitized trees admit only JSON-native containers, string
+object keys, and scalar values before recursive sensitive-field checks.
+Deletion intents bind the original private file identity. An interrupted
+cleanup resumes only while that exact canonical file remains reachable; a
+missing or arbitrarily identity-changed target cannot prove pre-unlink
+interruption and remains fail-closed without a completion record. Cleanup first
+renames the exact v2-bound inode to a deterministic quarantine name and
+directory-synchronizes that transition. It then appends an immutable v3
+successor that binds the quarantine name and identity before unlinking it. A
+retry from either v2 or v3 can therefore resume from the same verified
+quarantined inode. After unlink, cleanup proves zero links and unchanged bytes,
+synchronizes the raw root, and publishes only the completion record with the
+actual successful cleanup time. A v3 intent with neither its quarantine nor a
+durable completion record is indeterminate and remains fail-closed; absence
+alone never certifies deletion. If the original open descriptor retains an
+alternate link after unlink, cleanup records no completion and never
+republishes the verified payload. Removing the external link does not make the
+state recoverable: a missing quarantine remains blocked, and an exact-byte file
+recreated under the quarantine name is still rejected because its inode is not
+the v3-bound identity. Reappeared targets and missing, forked, or disconnected
+intent chains likewise remain fail-closed for manual investigation.
+Every retention, receipt, intent, and deletion-record directory is loaded
+through one identity-bound directory descriptor. Entry names and identities
+are verified descriptor-relative, and the entry set must match before and
+after the load; directory replacement or a mixed snapshot fails closed.
+All capability JSON inputs use strict UTF-8 parsing with duplicate-key and
+non-finite-number rejection, a maximum nesting depth of 64, and at most 100,000
+total nodes. Parser recursion and resource-bound failures surface as
+fail-closed validation errors.
+Source-capture materialization rejects non-bytes-like or greater-than-32-MiB
+input before parsing, hashing, root validation, or allocation of the decoded
+JSON value. A shared parent-directory advisory lock is acquired before any
+`.capability-evidence-write-*` pathname appears and held through writer commit
+or recovery.
+Every temporary additionally holds an advisory lock until commit. Recovery
+acquires both locks and re-proves the descriptor-bound pathname and
+inode before removing an abandoned single-link pre-publication file. A linked
+temporary additionally must be the sole alternate name for one matching target;
+private targets must match their content address and exact bytes. Recovery
+directory-syncs before and after removal and proves the target is single-link;
+public append-only directories follow the same protocol, and any unrecognized
+alternate link still fails closed. Identical concurrent source-capture and
+unknown-attempt writers verify and accept the single-link winner only after
+synchronizing its parent directory. Both materializers hold the retention lock
+through tombstone inspection and append-only publication, so cleanup cannot
+race replacement-inode creation and deleted digests cannot be resurrected.
 
 ## Telemetry and Treatment Records
 
@@ -287,6 +370,12 @@ Required fields: classification (`stable_native`, `experimental_native`,
 predicate, completeness rule, permitted claims, prohibited claims, and
 observation-state rules. An omitted key is `undocumented`; classifications do
 not inherit across surfaces.
+
+For app-server traces, `reroute.events` is a `stable_native`,
+`complete_capture` field. A configured-route proof is authoritative only when
+the trace retains an observed event list, including an evidence-backed empty
+list when no reroute occurred; the proof's completeness boolean cannot establish
+that fact by itself.
 
 ### `ConfiguredRouteProof`
 
@@ -381,6 +470,10 @@ Rules:
 
 - Exact treatment is proven only by supported observed effective treatment or
   approved configured-route proof plus complete reroute monitoring.
+- Supported effective treatment may be proven by an observed
+  `route.supported_effective_route_id` that binds a canonical route with a
+  non-null model and effort. It does not populate or claim the undocumented
+  `assignment.supported_effective_effort` field.
 - Every service reroute makes the requested route non-scorable.
 - Runtime UAT may continue only for an identifiable, prequalified destination
   for the same named agent. Unapproved, unknown, unidentifiable, different-agent,
@@ -396,7 +489,10 @@ the exact raw bytes. Keeping that digest out of the hashed file avoids a
 self-referential value and lets replay verify bytes before parsing.
 Sanitization removes credentials, headers, cookies, prompt/user content,
 account IDs, hostnames, absolute paths, and repository remotes, replacing
-necessary joins with deterministic fixture-local pseudonyms.
+necessary joins with deterministic fixture-local pseudonyms only at explicitly
+declared profile field paths. Nested sensitive fields are rejected regardless
+of a caller-supplied `fixture-*` value; generated pseudonyms must equal the
+profile's exact fixed value.
 
 Replay acceptance requires:
 

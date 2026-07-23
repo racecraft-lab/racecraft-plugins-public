@@ -65,7 +65,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | 39 TDD-first tasks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Nine findings remediated; G6 passed |
 | Confidence Gate | G6.5 | Complete | Advisory score 0.99 passed the 0.90 threshold |
-| Implement | `$speckit-implement` | In Progress | T001-T015 is complete at a clean independent-review checkpoint; T016-T025 is the next unblocked increment |
+| Implement | `$speckit-implement` | In Progress | T016-T025 completed at the clean US2 checkpoint; T026-T030 synthetic replay is in progress |
 | Post | Post-Implementation | Pending | Complete verification, reviewability, PR, remediation, and retrospective work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -777,7 +777,7 @@ Focus on:
 | A-005 | MEDIUM (resolved) | Owning-ID collision checks were incomplete | Enumerated owner uniqueness, preserved repeated foreign keys, and added T018/T021 collision coverage |
 | A-006 | MEDIUM (resolved) | Spec-ID fixture directory violated the behavior-named fixture contract | Renamed the namespace to `capability-treatment-replay` everywhere |
 | A-007 | HIGH (resolved) | In-band `fixture_digest` made exact-byte hash-before-parse self-referential | Added an out-of-band digest manifest and manifest-first replay contract |
-| A-008 | HIGH (resolved) | Portable stdlib code could not unconditionally promise live process-tree control | Added a closed executor-result envelope, default-empty repository approval allowlist, and fail-closed missing/unapproved executor behavior |
+| A-008 | HIGH (resolved) | Portable stdlib code could not unconditionally promise live process-tree control | Added a closed executor-result envelope and default-empty repository approval allowlist; later exact-head review also closed caller-supplied provenance by preventing any envelope from promoting or entering a freeze until trusted invocation or verifiable attestation exists |
 | A-009 | MEDIUM (resolved) | Inherited `G56R-001-ESR-003` punctuation-only effort values could be misread as authority | T001/T007 now reject malformed or undocumented effort values without rewriting G56R-001 evidence |
 
 ### Consensus Resolution Log
@@ -785,8 +785,10 @@ Focus on:
 - Primary Analyze executor: 3 HIGH and 2 MEDIUM contract findings confirmed.
 - Independent contract consensus: PASS on A-001 through A-005, with no
   G56R-003 qualification leakage after the destination-assessment boundary.
-- Independent repository consensus: PASS on A-006 through A-008; the digest
-  manifest adds one data file while retaining two production modules.
+- Independent repository consensus: PASS on A-006 through A-008; at analysis
+  time, the digest manifest added one data file while the planned
+  implementation used 13 production modules. The completed US2 implementation
+  now uses 18 production modules, measured below.
 - Independent source-manifest audit: 22 current source records, 0 active
   historical `OSL-*` rows, and malformed effort tokens explicitly quarantined.
 - Final remediation review: PASS after environment/qualification owner
@@ -872,9 +874,9 @@ For every task:
 
 | Increment | Tasks | Completed | Notes |
 |---|---|---|---|
-| 1 - Capability freeze | Complete | 15 | Capability 12/12 and repository naming 9/9, published validator, schema validation, deterministic replay, full suite pass, and clean independent reviews |
-| 2 - Treatment contracts | Pending | 0 | T016-T025 are the next ordered increment after the clean US1 checkpoint |
-| 3 - Synthetic replay | Pending | 0 | Not started |
+| 1 - Capability freeze | Complete | 15 | 11/11 focused tests, published validator, schema validation, deterministic replay, full suite pass, and clean independent core/process reviews |
+| 2 - Treatment contracts | Complete | 10 | Lower-slice restack is reconciled; 62/62 focused, 9/9 naming-layout, treatment, privacy 10/10, process 8/8, docs-reference, and 2824/2824 full-suite gates pass; exact-head responsibility reviews report no findings |
+| 3 - Synthetic replay | In Progress | 0 | T026-T030 exist on the next marker branch; restack and exact-head review follow US2 approval |
 | Polish and validation | Pending | 0 | Not started |
 
 ### Capability Checkpoint Evidence
@@ -886,11 +888,409 @@ For every task:
 - Included routes: 0; excluded routes: 23
 - Review: PASS after route-to-claim, retention lifecycle,
   publication-transaction, permission-boundary, schema-parity, concurrency,
-  destructive-clock, hard-link durability, stable naming, crash-recovery,
-  orphan-expiration, source-visibility, and timestamp remediation. The exact
-  source checkpoint returned `NO FINDINGS` in RepoPrompt review
-  `pr-366-final-review-FF02D5`.
-- Implementation checkpoint: `97a75f5d125cccd6af28914d18df058da4f280dc`
+  destructive-clock, and hard-link durability remediation. Exact-head
+  RepoPrompt reviews returned `NO FINDINGS` for the core
+  (`untitled-chat-337E74`) and process state (`untitled-chat-55E370`).
+- Implementation checkpoint: `2b7096dacdaa7a6af62b3c12b36e83cf4515213e`
+
+### Treatment Checkpoint Evidence
+
+- Restacked implementation baseline: `0e66466bb43ef2796664d9c63dde808744717f4c`
+- Successor candidate freeze: `sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c`
+- Superseded candidate freeze: `sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03`
+- Telemetry profile: `sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979`
+- Treatment contract: `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`
+- Treatment evidence set: `sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f`
+- Superseded marker checkpoint: `ce64616342ab977fc5bbaa675b8b9ca7ed192108`
+- Reviewability: aggregate size-only `block` at 5,938 source / 5,416
+  nonblank, non-comment lines across 18 production modules. The stable
+  capability facade and 16 focused internal modules total 3,985 / 3,615 with
+  a 399-line maximum; capability code no longer uses a `no_safe_boundary`
+  exception. `treatment_trace_schema.py` remains 1,953 / 1,801 under its
+  treatment-only typed exception, with only T026-T030 replay growth reserved.
+- Review: PASS after direct canonical validation of the actual
+  successor, external treatment-binding and predecessor-lineage authority,
+  bounded non-extending recovery of pending retention records, crash-released
+  advisory locking with unconditional failure-path release, durable post-unlink
+  completion proof without contradictory byte restoration, executable
+  schema/runtime parity, descriptor-relative private inputs, Windows
+  handle-bound offline replay, post-unlink hard-link and digest proof, blocking
+  hard-link race preservation, exact declared
+  treatment-result validation, single-snapshot schema, canonical manifest authority,
+  manifest-bound preferred, attempted, assigned, and supported effective routes,
+  same-agent route ownership, resolver-supported effective-route semantics,
+  descriptor-relative private writes and deletion recovery,
+  discovery-to-treatment reconciliation, bounded private dictionary keys,
+  field-specific identifier and hostname/IP privacy, parent configuration owner joins,
+  sanitized CLI handling, and US2-only CLI documentation,
+  single-client profile authority, content-addressed six-ID ownership,
+  reciprocal acyclic trace-graph validation, externally trusted successor
+  reroutes, detailed reroute reasons, and normalized malformed-predecessor
+  errors. The prior exact-head RepoPrompt review returned `NO FINDINGS`
+  (`windows-telemetry-review-D88461`). A later current-head re-audit
+  (`untitled-chat-869257`) reported two P1 findings: stale retention-order prose
+  and an unjustified capability `no_safe_boundary` claim. This remediation
+  corrects the deletion-intent/completion sequence and safely splits capability
+  trust and failure responsibilities behind the stable facade. A follow-up
+  exact-head audit
+  (`review-us2-remediation-1AE3C9`) reported three further findings: a durability
+  probe could bypass restoration, wildcard exports leaked internal trust
+  primitives, and the checkpoint was labeled complete while review remained
+  open. The remediation restored raw bytes when the completion probe was
+  untrusted, constrained the facade to its exact supported API, and marked US2
+  review-pending for the
+  next audit.
+  The exact-head re-audit returned `NO FINDINGS`
+  (`audit-us2-remediation-F4E33F`).
+  A later exact-range re-audit (`review-exact-treatments-9ED44E`) found three
+  remaining boundaries: a post-unlink hard-link race could remove the canonical
+  raw-evidence path, treatment publication did not cryptographically bind its
+  retained observation, route-proof, and source evidence, and a non-initial
+  treatment freeze could not provide predecessor lineage authority. Remediation
+  at `cc04e5460bbc2050c803875a5193f525a47f381c` restores verified canonical
+  bytes while preserving a fail-closed deletion intent, validates exact trusted
+  evidence bytes for every treatment owner, and accepts explicitly bound
+  predecessor authority. Focused 53/53, docs-reference, standalone treatment,
+  privacy 10/10, and full 2821/2821 gates pass; exact-head re-audit is pending.
+  The next exact-head re-audit (`review-us2-remediation-5AD0BD`) found two P1
+  gaps and one stale P2 claim: the successor identity did not retain the exact
+  treatment evidence-set digest, the public freeze validator exposed a lineage
+  bypass, and checkpoint evidence still named a 363-line capability maximum.
+  Remediation at `6afcf8c9e4a5a482be03bb300d4d39e2f5d499f8` binds the exact owner-to-content
+  digest set into every treatment-aware freeze and candidate ID, moves
+  payload-only recursive validation behind a private helper, and synchronizes
+  the measured 373-line maximum. Exact-head re-audit remains pending.
+  The next exact-head review (`re-review-pr-367-747B1B`) found two P1 gaps and
+  one stale P2 claim: a durable deletion intent could not resume a provably
+  pre-unlink cleanup, arbitrary treatment evidence mappings were read more than
+  once, and `plan.md` retained old implementation measurements. Remediation at
+  `ed1e442cc2507c72ef46702a36dee79bdee08135` binds the intent to the private
+  target identity and safely resumes only that exact file, snapshots treatment
+  evidence once before validation and hashing, and synchronizes plan, tasks,
+  checkpoint, and reviewability measurements. Focused 53/53, standalone
+  treatment, docs-reference, and full 2821/2821 gates pass; exact-head re-audit
+  remains pending.
+  The next exact-head review (`pr-367-rereview-B3E562`) found one P1 and one P2:
+  an unlink error before removal rewrote the intent-bound inode and blocked a
+  later retry, while public append-only publication did not directory-fsync
+  temporary-name removal. Remediation at
+  `92ccbbaefd290a64fd70f2a28487b67cd5ff9d29` preserves and validates the
+  existing inode when unlink has not occurred, restores bytes only after the
+  entry is absent, and synchronizes the public temporary-link removal. Focused
+  53/53, standalone treatment, docs-reference, and full 2821/2821 gates pass;
+  exact-head re-audit remains pending.
+  The next exact-head review (`pr-367-rereview-5B3AA1`) found one remaining P1:
+  verified bytes restored after completion-record persistence failed received a
+  new inode that no durable intent authorized, permanently blocking supported
+  cleanup. Remediation at `c76e3fd6654e9a57a417a35aed829437954e53b4`
+  appends an immutable recovery-intent successor only after post-unlink proof,
+  binds the predecessor, exact replacement identity, and restoration proof,
+  rejects missing, forked, disconnected, or cyclic chains, and resumes from the
+  unique terminal intent. Hard-link races and unverified mutations remain
+  fail-closed. Focused 53/53, standalone treatment, docs-reference, and full
+  2821/2821 gates pass; exact-head re-audit remains pending.
+  The next exact-head review (`pr-367-rereview-6DC2A3`) found one P1 crash
+  window and one stale P2 narrative: restored bytes became durable before their
+  recovery successor, and capability evidence still called treatment pending.
+  Remediation at `a47b00e2257c165236a9f8796d93ca32c0362bf0` journals a
+  post-unlink v3 stage before any replacement, binds restored bytes in v4, and
+  lets cleanup finalize both missing-stage and restored-stage interruptions.
+  The research evidence now names the current treatment-bound successor and
+  v2/v3/v4 deletion-recovery behavior. Focused 53/53, standalone treatment, and
+  docs-reference and full 2821/2821 gates pass; exact-head re-audit remains
+  pending.
+  The exact-head review (`pr-367-rereview-A6C704`) then found one P0 and one P1:
+  terminal v3 could record deletion while a restoration temporary or external
+  hard link still retained governed bytes, and the US2 checkpoint contradicted
+  its pending independent review. Remediation at
+  `c3052ff151563d9b146de347b392e79f688cd3eb` removes post-proof restoration,
+  journals v3 immediately after the durable unlink, retries only completion
+  publication while the canonical target remains absent, and keeps US2
+  review-pending. Focused 53/53, standalone treatment, docs-reference, and full
+  2821/2821 gates pass; exact-head re-audit remains pending.
+  The exact-head review (`pr-367-re-review-40F2F7`) then found one P1 and one P2:
+  failure before v3 publication left v2 with a missing canonical target and no
+  supported retry, while `tasks.md` retained stale reviewability measurements.
+  Remediation at `ce64616342ab977fc5bbaa675b8b9ca7ed192108` durably renames
+  the v2-bound inode into deterministic quarantine, binds that name and identity
+  in v3 before unlink, resumes from either pre- or post-persistence v3 failure,
+  and synchronizes the task measurements. Focused 53/53, standalone treatment,
+  docs-reference, and full 2821/2821 gates pass; exact-head re-audit remains
+  pending.
+  The next exact-head review (`pr-367-rereview-112186`) found two P1 gaps: a
+  resumed quarantine could publish v3 without first directory-syncing and
+  revalidating the rename, and both authorized `proven` disposition paths were
+  unreachable. Remediation at `e041319053e1a650d92953869a9ecec5c15f8879`
+  synchronizes and revalidates every quarantine retry before v3, makes complete
+  observed reroute capture authoritative for configured proof, and accepts an
+  observed supported route bound to canonical non-null model/effort as effective
+  evidence without claiming undocumented effort telemetry. Focused 54/54,
+  standalone treatment, docs-reference, and full 2821/2821 gates pass;
+  exact-head re-audit remains pending.
+  The next exact-head review (`review-treatment-contrac-F02243`) found one P0
+  and one P1: a v3 retry could falsely certify deletion after an interrupted
+  unlink while an external hard link retained the evidence, and the resulting
+  completion record backdated `deleted_at` to the original attempt. Remediation
+  at `aef759559688ecf53ef74de0fbbfd000b1de6871` now resumes v3 only while the
+  exact bound quarantine exists, treats a missing quarantine without durable
+  completion proof as indeterminate, and records the actual successful retry
+  time. Focused 54/54, standalone treatment, docs-reference, and full 2821/2821
+  gates pass; exact-head re-audit remains pending.
+  The next exact-head review (`review-retention-remedia-D1A187`) found one P0
+  and one P1: a `proven` trace could target a tuple the authoritative prior
+  freeze marked excluded, and successor publication could predate its route or
+  observation evidence. Remediation at
+  `7ddf5763681f9862c642664dcac8146cab51e4d9` now requires every published
+  `proven` trace to map to an included, source-admitted,
+  availability-supported, surface-agreed prior tuple and orders publication at
+  or after every bound route resolution and non-null observation capture.
+  Focused 54/54, standalone treatment, docs-reference, and full 2821/2821 gates
+  pass; exact-head re-audit remains pending.
+  The next exact-head review (`capability-remediation-r-9F1346`) found one P0
+  and two P1 gaps: retained unknown-observation and canary bytes were not
+  semantically revalidated before receipt, public append-only publication was
+  pathname-based, and private record loads could mix directory snapshots.
+  Remediation at `9d9ceea3b7aa1abd641afb46660d1deb838fa25c`
+  now semantically validates all retained evidence before registration,
+  descriptor-binds and re-reads exact public output bytes before receipt, and
+  loads every private record set through one unchanged identity-bound directory
+  snapshot. Focused 55/55, standalone treatment, docs-reference, and full
+  2821/2821 gates pass; exact-head re-audit remains pending.
+  The next exact-head review (`pr-367-review-6D565E`) found two P1 gaps: an
+  existing matching hard-linked publication output could bypass the single-link
+  receipt invariant, and deeply nested capability JSON could escape the
+  fail-closed validation contract without explicit depth and node limits.
+  Remediation at `2d1ea3ec1932421740c655d92239a45e81f0a2e7`
+  requires every recovered publication output to be single-link before receipt
+  and bounds all capability JSON to 64 nesting levels and 100,000 total nodes
+  while normalizing parser recursion to `ValueError`. Focused 55/55, standalone
+  treatment, docs-reference, and full 2821/2821 gates pass; exact-head re-audit
+  remains pending.
+  The next exact-head review (`pr-367-review-D20B53`) found one P0 and two P1
+  gaps: an older governing receipt could hide a newer bounded pending claim,
+  durable append-only linking could strand an unrecoverable temporary after a
+  crash, and exported source-capture materialization parsed before checking its
+  byte bound. Remediation at
+  `22aad882c836cf9d2d8a86bde34df154d5caede2` computes the latest deadline
+  across governing and individually capped pending claims, descriptor-recovers
+  only the exact single temporary/target inode pair, and enforces bytes-like
+  32-MiB source-capture input before parsing or hashing. Focused 56/56,
+  standalone treatment, docs-reference, and full 2821/2821 gates pass;
+  exact-head re-audit remains pending.
+  The exact-head review (`review-pr-367-C52F62`) then found one P1 and one P2:
+  a crash before final-name linking could strand a single-link temporary and
+  wedge the evidence root, while concurrent identical source-capture writers
+  could propagate `FileExistsError`. Remediation at
+  `3c439b154669175226ec2ffed3f26731dcae373f` gives every reserved temporary an
+  advisory lock, removes abandoned pre-link files only after lock and
+  descriptor-relative identity proof, applies the same protocol to public
+  append-only directories, and accepts only a verified content-addressed winner.
+  Focused 57/57, standalone treatment, privacy 10/10, docs-reference, and full
+  2821/2821 checks pass; the exact-head re-audit remains pending.
+  The next exact-head review (`untitled-chat-5795B4`) found one P1 scheduler
+  window: recovery could lock and unlink a visible temporary after creation but
+  before the writer acquired its per-file lock. Remediation at
+  `8135e4d3a52c765e828878e559d6a685b3ab42c8` acquires a shared descriptor-bound
+  parent-directory lock before temporary creation and holds it through writer
+  commit or recovery, while retaining the per-file lock as a second proof. The
+  regression pauses the writer in that exact window and proves recovery waits
+  without deleting the live file. Focused 58/58, standalone treatment, privacy
+  10/10, docs-reference, and full 2821/2821 checks pass; exact-head re-audit is
+  pending.
+  The next exact-head review (`untitled-chat-13CBB8`) found one P1 recovery gap:
+  a post-unlink hard-link race could republish verified quarantine bytes under
+  a replacement inode while leaving the terminal v3 intent bound to the old
+  inode, permanently blocking supported retry. Remediation at
+  `94079dee507bc0d65ff4db0003c305aadcc3fe1a` appends a linear v3 successor with
+  `verified-payload-republication-v1`, descriptor-verifies a crash-restored
+  replacement before reconstructing a missing successor, and covers both the
+  direct and interrupted-journal paths. The focused 58/58, naming-layout 7/7,
+  standalone treatment, privacy 10/10, generated-reference, and full 2822/2822
+  checks pass; the exact-head re-audit is pending. The focused
+  suite was also renamed to the durable capability-based
+  `test-codex-capability-contract.py` path, with a repository guard rejecting
+  SPEC-ID-coupled authored script names.
+- Lower-slice restack reconciliation preserves the decomposed US2 treatment and
+  deletion-recovery architecture while adding canonical surface order, parsed
+  timestamp extrema, hidden HTML exclusion, trusted-registration retention
+  deadlines, one-day pending expiry with late-promotion rejection, durable
+  publication intent before output, exact receipt completion, parent-directory
+  sync on content-addressed adoption, and the stable
+  `.capability-evidence-write-*` temporary namespace. The focused capability
+  suite is 58/58, the repository naming-layout guard is 9/9, privacy is 10/10,
+  process coverage is 8/8, docs-reference is current, and the full suite is
+  2824/2824. The subsequent exact-head review produced the findings below.
+- Exact restacked-head capability review `untitled-chat-22C5B0` found one P0
+  post-unlink hard-link proof gap and two P1 append-only/sanitizer gaps.
+  Remediation removes payload republication and replacement-inode recovery after
+  unlink, so a retained alternate link or recreated quarantine remains
+  permanently fail-closed without completion proof. Unknown-attempt captures
+  now use append-only publication with exact-byte concurrent-winner validation,
+  and sanitizer pseudonyms are generated only at explicit profile field paths;
+  nested caller-supplied `fixture-*` secrets are rejected. Focused capability
+  tests pass 58/58. The subsequent exact-head re-audit produced the finding
+  below.
+- Exact-head capability re-audit `untitled-chat-1A17A6` found one P1 evidence
+  resurrection gap: source and unknown materializers could recreate a digest
+  after retention cleanup or race replacement-inode publication against it.
+  Remediation moves the stable public materializers behind the retention layer,
+  holds the retention lock through append-only publication, and treats every
+  deletion intent or completion record as a permanent digest tombstone.
+  Concurrent identical materializers wait and converge on the verified winner;
+  post-deletion calls fail without recreating bytes. Focused capability tests
+  pass 58/58; broader gates and exact-head re-audit remain pending.
+- Exact-head capability re-audit `untitled-chat-66FFF4` found one P2 source
+  visibility gap: selected inline CSS properties were interpreted while
+  stylesheet- or class-hidden unchanged extracts could still support a current
+  claim without invalidation. Remediation at
+  `7068c98ec662d69988d3ac132f24074207e66f50` makes CSS visibility entirely
+  fail-closed: stylesheets, class/id selectors, and every inline style are
+  rejected rather than partially interpreted. Intrinsic hidden attributes
+  remain excluded from visible text. Focused 58/58, naming-layout 9/9,
+  treatment, privacy 10/10, process coverage 8/8, docs-reference, and full
+  2824/2824 gates pass; exact-head re-audit remains pending.
+- Exact-head source-contract review `untitled-chat-A0BD9D` found four source
+  integrity gaps: unverified caller-supplied aggregate capture digests,
+  incomplete intrinsic HTML visibility handling, fabricated whitespace between
+  HTML text nodes, and body changes that retained old extracts without full
+  invalidation. Remediation at
+  `0042f0e27395692283abf57da0678c6d99834cf9` binds the aggregate digest to
+  exact canonical capture bytes, requires normalized plain-text bodies and
+  rejects raw markup, preserves only actual body whitespace, and invalidates
+  every binding on a new body identity. The already-published predecessor set
+  is accepted only under its exact immutable aggregate digest. Focused 58/58,
+  naming-layout 9/9, treatment, privacy 10/10, process coverage 8/8,
+  docs-reference, and full 2824/2824 gates pass; exact-head re-audit remains
+  pending.
+- Exact-head source-contract re-audit `untitled-chat-AF7C6A` found one P1
+  residual binding gap: raw refresh validation accepted a stale shared capture
+  digest after otherwise coherent row mutation. Remediation at
+  `88e95674fb3cfc4e1430646dff30bcb97151fbf5` defines one source-ID-sorted
+  canonical 22-row identity and recomputes it during normalization and raw
+  validation. Reordered input converges on the same identity; a coherently
+  altered body with its old capture digest fails. Focused 58/58,
+  naming-layout 9/9, treatment, privacy 10/10, process coverage 8/8,
+  docs-reference, and full 2824/2824 gates pass; exact-head re-audit remains
+  pending.
+- Exact-head capability decision/freeze re-audit `untitled-chat-D966E2` found
+  one HIGH provenance gap: matching allowlist identifiers and self-hashed
+  caller-supplied executor bytes could promote a canary result without proving
+  who produced it. Remediation at
+  `f4f0bc2a6e9776682c7fc663dd5e498a5069f274` makes standalone envelopes
+  structurally reviewable but always `unknown`, rejects every external result
+  in the CLI before reading it, and requires empty approval/result arrays in
+  runtime and schema until trusted invocation or verifiable attestation is
+  implemented. Focused 58/58, naming-layout 9/9, docs-reference, and full
+  2824/2824 gates pass; exact-head re-audit remains pending.
+- Exact-head private descriptor review `untitled-chat-2F5041` found two HIGH
+  and two MEDIUM gaps: validation-only private files lacked stable single-link
+  descriptor checks, nested raw-root traversal was path-raceable, tuples could
+  bypass recursive sanitizer checks, and JSON node ceilings applied only after
+  full allocation. Remediation at
+  `9b10eee411b45a2f23b6edc418b2235752bbc081` validates private inputs through
+  stable parent-relative descriptors, compares two no-follow post-recovery raw
+  tree snapshots, rejects non-JSON containers and keys, and enforces lexical
+  node/depth ceilings before both capability and treatment parsing. Focused
+  58/58, naming-layout 9/9, privacy 10/10, docs-reference, and full 2824/2824
+  gates pass; exact-head re-audit remains pending.
+- Exact-head append-only publication review `untitled-chat-B4832D` found two
+  MEDIUM gaps: recovery enumerated before enforcing entry bounds and rescanned
+  every entry for each temporary link, while publication receipts were not
+  held under a stable output-directory and target-inode binding. Remediation at
+  `57411f1f275728d757549226fcf10d003938b35b` uses bounded incremental
+  descriptor enumeration with a single inode index, and holds the output
+  directory lock plus target descriptor through receipt persistence with
+  before/after pathname, inode, link-count, and byte revalidation. Focused
+  59/59, naming-layout 9/9, privacy 10/10, docs-reference, and full 2824/2824
+  gates pass; exact-head re-audit remains pending.
+- Exact-head publication re-audit `untitled-chat-0A2885` found two P1 race and
+  lock-placement gaps: a disappearing expected temporary could leave a
+  changed single-link target accepted without byte revalidation, and an output
+  inside the raw-evidence tree could self-conflict on the receipt-directory
+  lock. Remediation at `fd9a557a01cf1a85409266e18ab339383b8f9b44`
+  verifies the expected payload on the single-link recovery fast path and
+  rejects resolved output destinations anywhere inside the validated raw root
+  before retention mutation. Focused 59/59, naming-layout 9/9, privacy 10/10,
+  docs-reference, and full 2824/2824 gates pass; exact-head re-audit remains
+  pending.
+- Exact-head publication re-audit `untitled-chat-2B7305` found one remaining P1:
+  the static output-containment check was not held under a descriptor-bound
+  component walk, permitting an intermediate-symlink race. Remediation at
+  `6a52a365a09ab705cc33333460478fa4bff78b62` canonicalizes the destination,
+  opens every output-parent component with descriptor-relative `O_NOFOLLOW`,
+  rejects the raw-root inode at every level, and retains one parent descriptor
+  plus directory lock across recovery, retention, publication, and receipt
+  verification. An adversarial alias swap proves the operation cannot be
+  redirected into raw evidence. Focused 59/59, naming-layout 9/9, privacy
+  10/10, docs-reference, and full 2824/2824 gates pass; exact-head re-audit
+  remains pending.
+- Exact-head publication re-audit `untitled-chat-C8F728` found one P0: the
+  output leaf was checked without following symlinks and then the full missing
+  destination was resolved, permitting a final-component symlink planted in
+  that interval to redirect publication. Remediation at
+  `102fe80f9d986484099503d9371bda7aeeec7d91` resolves and binds only the
+  parent, preserves the caller's leaf name, and rechecks the leaf without
+  following symlinks through the locked parent descriptor before retention.
+  Every later leaf operation remains descriptor-relative with `O_NOFOLLOW`.
+  An adversarial lock-boundary regression proves a planted leaf symlink fails
+  before retention, intent, or receipt artifacts are created. Focused 59/59,
+  naming-layout 9/9, privacy 10/10, docs-reference, and full 2824/2824 gates
+  pass; exact-head re-audit remains pending.
+- Exact-head retention/deletion re-audit `untitled-chat-D9D31E` found one P0
+  and one P1: locking a replaceable `.retention-lock` child inode could split
+  cooperating retention operations, and a durable deletion completion could
+  predate its governing terminal intent. Remediation at
+  `e08eb7a9fb0201f99e1d926ccf80d322247d9871` makes the identity-bound raw
+  directory descriptor the retention lock, treats the child file only as a
+  private marker, and threads the held descriptor through raw append-only
+  recovery and capture materialization. Reconciliation now rejects completion
+  chronology earlier than the terminal intent. Capture-specific work moved to
+  the stable-purpose `codex_capability_capture.py` boundary; all 17 capability
+  modules remain below 400 lines. Adversarial marker-replacement and
+  reversed-chronology tests pass. Focused 60/60, naming-layout 9/9, privacy
+  10/10, docs-reference, and full 2824/2824 gates pass; exact-head re-audit
+  remains pending.
+- Exact-head treatment-core review `untitled-chat-13CD92` found one P0: the
+  validator admitted only a single reroute hop. Remediation at
+  `4881830c224d921f20dc5ecfc1cb23bd95ed69f2` validates an ordered same-trace
+  reroute chain, independently qualifies every hop, and binds only the final
+  hop as effective. Re-audit `untitled-chat-FD3F79` returned `NO FINDINGS`.
+- Exact-head trace-lineage review `untitled-chat-EEA85A` found one P1: a third
+  treatment-bound successor could not forward the predecessor-of-predecessor
+  authority. Remediation at `73755c9d945f047107e341d59180f37600c828d8`
+  forwards the prior telemetry profile, treatment contract, and evidence
+  digests explicitly. Re-audit `untitled-chat-28A265` returned `NO FINDINGS`.
+- Exact-head capability-acquisition review `untitled-chat-E10887` found two
+  P1 issues: non-token display labels could make the matrix reject its own
+  canonical output, and private record loading lacked aggregate resource
+  bounds. Remediation at `cb4fbd3aff2de9e37d41b06eaac7be75a9517024`
+  excludes invalid display labels from canonical tuples and bounds directory
+  entries, aggregate bytes, and cumulative JSON nodes. Re-audit
+  `untitled-chat-CD89EF` returned `NO FINDINGS`.
+- Exact-head publication/retention review `untitled-chat-64503E` found one P1:
+  an oversized canonical publication could be persisted before its bounded
+  verification failed, leaving output without a receipt. Remediation at
+  `e1e34d005e16bf2e9115f01e709770aee006fb73` rejects oversized bytes before
+  output recovery or mutation. Re-audit `untitled-chat-7F6589` returned
+  `NO FINDINGS`. All five exact-head responsibility re-audits are clean.
+- Final metadata review `untitled-chat-1472D4` found one P1 and one P2: the
+  marker state did not map US2 to emitted PR #367 and an analysis-time
+  13-module estimate was worded as current. The state now distinguishes the
+  source feature branch from emitted slice branches, binds US1 to PR #366 and
+  US2 to PR #367, and labels the 13-module count as historical. US1 retains its
+  historical exact head; US2 uses a symbolic live-PR-head binding so the
+  containing metadata commit does not make a self-referential SHA claim.
+- Metadata re-audit `untitled-chat-C60832` found one P1: the US2 declared-file
+  manifest omitted the measured production module
+  `codex_capability_retention_recovery.py`. The marker now declares that
+  stable-purpose module as `NEW`, matching the exact base diff.
+- Exact-head provenance re-audit `untitled-chat-7F2EB3` found that persisted
+  US2 head snapshots became stale whenever their remediation was committed.
+  The reviewer accepted the finite representation: the repository records PR,
+  base, branch, and `symbolic_pr_head`; external review attestations record the
+  resolved head, reviewer identity, timestamp, and verdict.
+- Implementation checkpoint: `e1e34d005e16bf2e9115f01e709770aee006fb73`
+- Superseded checkpoint: `e08eb7a9fb0201f99e1d926ccf80d322247d9871`
 
 ## PR Marker Plan Evidence
 
@@ -902,23 +1302,28 @@ For every task:
 
 | Fingerprint input | SHA-256 |
 |---|---|
-| Feature spec | `sha256:f05c4e7dd60a462194b7fd2cc84240a4f43ce973748e103b7114fa5594cb2d76` |
-| Plan-declared scope | `sha256:2265105a2648b215c200a7c3fe6e3220d68c651754cce26e753b9ec07cdea63c` |
-| Tasks | `sha256:965f0e05a656a8ac84bcbb6371c01f6c817ab0c0fb9861e0e26070218b548af6` |
-| Reviewability evidence | `sha256:7f4f777344925004d3346a02de1d2997d99e6bd6b1303b91209e3d9d3ef905dd` |
+| Feature spec | `sha256:708dfaabb460b6efd976a27d159af9145844b5a288f2d9455118bc77ac57b882` |
+| Plan-declared scope | `sha256:b84b5f492ea37f9389e2b6ec1cf123193634b3a374f0a2b09cabe6a66423269d` |
+| Tasks | `sha256:2f1377aa9852e56285dba0d0960017e196598e060a1cce1b24ea9695d70763d2` |
+| Reviewability evidence | `sha256:e4172e46cf5c6d29c4d5ed8854e0e85c52f375c81736a08a5e2be2b5beb31bc1` |
 | Hazard route | `sha256:ed87694636ff706326d71ee50c6f3635045445b70129bf4e1120e54dc42a42c2` |
 
 | Review order | Marker | Tasks | Reviewability | Checkpoint | Warning |
 |---|---|---|---|---|---|
-| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `97a75f5d125cccd6af28914d18df058da4f280dc` | No feature growth after checkpoint |
-| 2 | `us2` | T016-T025 | Not estimated | Pending; clean US1 checkpoint satisfied | Treatment remains a separate module |
+| 1 | `us1` | T001-T015 | Size-only `block`; honored typed `no_safe_boundary` exception | Complete at `2b7096dacdaa7a6af62b3c12b36e83cf4515213e` | No feature growth after checkpoint |
+| 2 | `us2` | T016-T025 | Aggregate size-only `block`; capability safely subdivided, treatment-only typed exception retained | Complete at `e1e34d005e16bf2e9115f01e709770aee006fb73` | No feature growth after checkpoint |
 | 3 | `us3` | T026-T030; T031-T039 folded | Not estimated | Pending | Replay and polish remain ordered after treatment |
 
-- Warning: `CAPABILITY_SIZE_BLOCK` / `MARKER_SIZE_WARNING`; US1 is 2,065 source
-  lines and 1,855 nonblank, non-comment lines against the 400-LOC boundary.
+- Warnings: `CAPABILITY_SIZE_BLOCK`, `TREATMENT_SIZE_BLOCK`, and marker-level
+  size warnings. The historical US1 checkpoint is 1,844 / 1,645 source/nonblank
+  lines under its historical typed exception; the current US2 marker is 5,938 /
+  5,416 across 18 modules against the aggregate 400-LOC boundary. Capability
+  modules are safely split with a 399-line maximum; only the treatment module
+  retains a typed size-only exception.
 - Final `marker_split`: Pending.
 - Packet validation: Pending.
-- PR mappings: Pending.
+- PR mappings: Partial; US1 maps to PR #366, US2 maps to PR #367, and US3
+  remains pending.
 
 ---
 

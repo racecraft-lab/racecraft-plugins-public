@@ -45,8 +45,13 @@ This step requires no network, Codex client, or raw evidence store.
 
 Capture the 22 current official pages outside the repository first. The capture
 JSON must contain the exact requested/canonical locator, RFC3339 UTC retrieval
-time, status, invalidated claim IDs, base64-encoded retrieved UTF-8 body, and
-content-addressed bounded extracts for every source. Then run the adapter's
+time, status, invalidated claim IDs, base64-encoded retrieved UTF-8 body,
+`retrieved_body_format: normalized_plain_text`, and content-addressed bounded
+extracts for every source. Raw HTML and angle-bracket markup are rejected; the
+adapter never infers browser visibility or text-node separators. A supplied
+capture digest must match the exact source-ID-sorted canonical capture bytes;
+raw validation recomputes the same identity. Every changed body must invalidate
+all bindings for that source. Then run the adapter's
 offline normalization and authority check:
 
 `CAPTURE_SHA256` is the lowercase SHA-256 of the complete capture file bytes.
@@ -115,16 +120,19 @@ binds the typed work item into each observation. All three observations must
 share those bindings. The `unknown-observation-v1` method is explicitly
 non-authoritative and does not infer entries from another surface.
 For each attempt, the collector writes one sanitized unknown-attempt record to
-`raw_evidence_root/<sha256>.json`, verifies its exact bytes, and uses the same
-digest in the observation's `raw://sha256:...` reference.
+`raw_evidence_root/<sha256>.json` through the append-only private-file protocol,
+verifies an interrupted or concurrent winner's exact bytes, and uses the same
+digest in the observation's `raw://sha256:...` reference. Source and unknown
+materialization holds the retention lock through deletion-tombstone inspection
+and publication; a digest already named by a deletion intent or record is never
+recreated.
 
 Raw captures remain outside Git. The adapter may emit only deny-by-default
 sanitized, schema-allowlisted output for review.
 
-## 5. Use the Canary Only When Discovery Is Unavailable
+## 5. Canary Is Fail-Closed in This Slice
 
-The canary command is permitted only for a source-admitted tuple whose
-documented discovery is unavailable:
+The command shape is reserved for a future trusted executor implementation:
 
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py canary \
@@ -137,21 +145,19 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py canary \
   --output /tmp/g56r-002-canary-successor-freeze.json
 ```
 
-The adapter accepts only a result from an approved injected executor contract
-for a live launch. That executor must enforce the 30-second wall timeout, 64 KiB
-combined output cap, process-tree termination, and zero retries; the result
-uses the closed v1 envelope and records its contract/implementation/result
-digests, approved platform, and enforcement acknowledgements. A successful
-result is appended atomically to a content-addressed successor freeze; the
-validated predecessor cannot be overwritten. Approval comes only from the
-repository-owned executor-ID allowlist, which is intentionally empty in this
-slice; an arbitrary result file cannot self-approve, so this command exits
-nonzero before consuming an executor result. Default repository tests inject a deterministic
-allowlist and fake result and launch no process. Only a future separately
-reviewed admitted executor plus exit zero and the predeclared sentinel may
-record pinned-environment availability. Every other terminal class is unknown
-and excludes the tuple. To retry an independently proven transient condition,
-create a successor snapshot first.
+This slice always exits nonzero before reading `--executor-result`. A matching
+contract ID, implementation digest, and repository allowlist entry do not prove
+who produced caller-supplied bytes, so standalone envelope validation always
+derives `unknown`, and published freezes require empty executor-approval and
+canary-result arrays. Default repository tests launch no process and prove that
+a structurally matching fake approval cannot promote availability. A future
+separately reviewed implementation must invoke the approved executor directly
+or verify an attestation over the complete result envelope before it may append
+a canary successor. That executor must enforce the 30-second wall timeout, 64
+KiB combined output cap, process-tree termination, and zero retries. Exit zero
+plus the predeclared sentinel may then prove only pinned-environment
+availability. To retry an independently proven transient condition, create a
+successor snapshot first.
 
 Before publication, the adapter resolves `evidence_digest` to
 `RAW_EVIDENCE_ROOT/<sha256>.json`, verifies the private content-addressed file,
@@ -195,6 +201,10 @@ and verifies its exact deterministic bytes before creating the tracked freeze.
 
 Review that:
 
+- strict UTF-8 JSON nesting/node limits are enforced before full parsing;
+- raw-root and standalone private-file validation are descriptor-bound,
+  no-follow, single-link, and stable across replacement attempts;
+- sanitized nested values use only JSON-native containers and string keys;
 - joins use canonical model ID and effort token;
 - raw labels and disagreements are preserved;
 - runtime evidence never admits a model or effort;
@@ -210,35 +220,46 @@ Revalidate the complete published artifact after generation:
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py validate-freeze \
   --manifest docs/ai/research/codex-agent-route-candidate-manifest.json \
-  --freeze docs/ai/research/codex-g56r-002-executable-candidate-freeze.json
+  --freeze docs/ai/research/codex-g56r-002-executable-candidate-freeze.json \
+  --predecessor-freeze /tmp/g56r-002-capability-predecessor-freeze.json \
+  --expected-telemetry-profile-id sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979 \
+  --expected-treatment-contract-digest sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199 \
+  --expected-treatment-evidence-digest sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f
 ```
 
-This rebuilds the manifest binding, sanitized source refresh, surface matrix,
-runtime snapshot, tuple decisions, derived candidate lists, canary records, and
-the whole-freeze content identity.
+The predecessor path must be the trusted, canonical US1 artifact retained by
+the operator. The three expected treatment IDs come from the separately validated
+treatment bundle, never from the successor artifact itself. This rebuilds the
+manifest binding, sanitized source refresh, surface matrix, runtime snapshot,
+tuple decisions, derived candidate lists, canary records, lineage, treatment
+contract and exact evidence-set bindings, and the whole-freeze content identity.
 
 Any later evidence change creates a successor freeze rather than editing the
 published ID in place.
 
-## 7. Validate Treatment and Replay Twice (US2/US3)
-
-Skip this step in the US1-only slice. Run it only after
-`treatment_trace_schema.py`, `treatment-replay.json`, and
-`fixture-digests.json` are present in the checkout from the later US2/US3
-slices.
+## 7. Validate the Treatment Bundle
 
 ```sh
-python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py replay \
-  --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json \
-  --digest-manifest tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json \
-  --repeat 2
+python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py validate \
+  --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json
 ```
 
-The validator checks hashes before parsing, the closed telemetry inventory,
-six-ID joins, typed null states, configured-route proof, resource/lifecycle
-fields, and separate resolver/service-reroute records. It must produce identical
-normalized output, dispositions, and digests on both passes without network or
-raw-store access.
+The US2 validator checks the closed telemetry inventory, six-ID joins, typed
+null states, configured-route proof, resource/lifecycle fields, and separate
+resolver/service-reroute records. Its positive fixtures prove both authorized
+success paths: configured proof with complete observed reroute capture, and an
+observed supported route bound to a canonical non-null model/effort tuple. This
+does not authorize publication for an excluded capability tuple: a successor
+can publish `proven` only for a prior-freeze tuple that is included,
+source-admitted, availability-supported, and surface-agreed. Its `published_at`
+must be no earlier than every bound route-resolution and non-null observation
+timestamp. The offline repository command is supported
+on macOS, Linux, and Windows: it uses descriptor-relative traversal where
+available and verifies the final Windows file handle against the approved
+repository path. Operator-only raw-evidence commands remain POSIX-only. The
+digest-manifest replay command and its
+two-pass normalized-output comparison are T026-T030 work and remain unavailable
+until the US3 replay increment is implemented.
 
 ## 8. Repository Verification
 
@@ -257,16 +278,31 @@ collection is never part of the default deterministic suite.
 ## Retention Cleanup
 
 Freeze and canary publication automatically add immutable content-addressed
-records under `raw_evidence_root/retention-records/`. A trusted registration
-clock establishes each 30-day deadline. Before output begins, an immutable
-transaction record under `publication-intents/` makes those records governing;
-after the exact freeze bytes exist, a matching immutable receipt is
-directory-fsynced under `publication-receipts/`. Re-running the same publication
-recovers either crash window; a different artifact at the output path fails
-before registration. Records without an intent remain pending, expire under a
-one-day orphan-recovery deadline, and cannot extend governing deletion. Before
-the deadline, verify that every
+records under `raw_evidence_root/retention-records/`. Each deadline is exactly
+30 days after trusted registration. A durable record under
+`publication-intents/` makes the exact set governing before output begins; the
+matching `publication-receipts/` record is appended only after exact freeze-byte
+verification and proves completion. Re-running the same publication recovers a
+crash between those steps; a different artifact at the output path fails before
+registration. Records left before intent remain non-governing pending claims,
+protect evidence for at most one day after registration, and cannot be promoted
+after expiry without cleanup. Cleanup uses the latest governing or individually
+capped pending deadline. Before registration, publication
+semantically revalidates the source capture, every non-fixture observation, and
+every canary result against the retained private bytes. It publishes and
+re-reads the exact canonical output as a single-link target through one
+identity-bound parent descriptor before issuing a receipt. Recovery rejects an
+existing matching output if any alternate hard link remains. Private record directories are likewise
+enumerated and opened through one identity-bound descriptor; directory
+replacement, entry substitution, or a changed before/after entry set fails
+closed. Before the deadline, verify that every
 governing retained digest still has its exact bytes:
+
+Every capability JSON input is strict UTF-8 JSON with unique object keys and
+finite numbers. Inputs deeper than 64 levels or larger than 100,000 total nodes
+fail closed, including parser recursion failures.
+Source-capture materialization accepts only bytes-like input no larger than
+32 MiB and enforces that bound before parsing or hashing.
 
 ```sh
 python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \
@@ -293,20 +329,44 @@ python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention 
   --output /absolute/path/outside/repository/g56r-002-raw/retention-report.json
 ```
 
-Cleanup appends and directory-fsyncs an immutable record under
-`deletion-records/` before removing the expired raw bytes, then directory-fsyncs
-the raw store before reporting success. The record retains the raw digest, complete retention
-record history, governing deadline, and deletion time. Repeated cleanup is
-idempotent. Every raw file must have exactly one hard link. Append-only writes
-directory-fsync after both final-name publication and temporary-name removal;
-normal commands and read-only verification reject reserved private temporary
-names. Locked cleanup removes orphan temporaries, fsyncs their parent
-directories, and recovers only the one-temporary/one-final-link power-loss
-window; any external or additional hard link still fails closed. Registration
-and cleanup serialize through an advisory
-lock on the durable `0600` `.retention-lock` file. A competing live operation
-fails closed, while an exited or crashed process releases its lock
-automatically. `--as-of` is accepted only for read-only verification;
+Cleanup first appends and directory-fsyncs an immutable v2 intent under
+`deletion-intents/`, binding the original private file identity. It then
+renames that exact inode to a deterministic quarantine name and
+directory-fsyncs the raw store. An immutable v3 successor binds the initial
+intent, quarantine name, and quarantine identity before unlink. Cleanup then
+unlinks the quarantined bytes, proves through the still-open descriptor that
+the link count is zero and the content digest is unchanged, directory-fsyncs
+the raw store, and appends the immutable v2 completion proof under
+`deletion-records/`. The proof retains the raw digest, complete retention record
+history, governing deadline, actual successful cleanup time, proof method, and
+v3 authority. If v3 persistence fails, a retry resumes the exact quarantined
+inode from v2. After unlink begins, cleanup never republishes the payload or
+accepts a substitute inode. A post-unlink alternate link, any identity change,
+unlink without a durable completion record, and missing, forked, or disconnected
+intent chains remain fail-closed for manual investigation and cannot produce a
+completion record. Repeated cleanup after durable completion is idempotent. Every raw
+file must have exactly one hard link. Append-only writes
+directory-fsync after both final-name publication and temporary-name removal.
+A shared parent-directory advisory lock is acquired before a reserved
+`.capability-evidence-write-*` temporary pathname appears and held through
+writer commit or recovery; every temporary
+also holds its own advisory lock until commit. After a crash, the next operation
+holds both locks and re-proves the temporary's directory-relative
+pathname and inode before discarding a single-link pre-publication file. If both
+names survive, recovery additionally proves the temporary is the sole alternate
+link to the exact target and re-syncs the directory. Public append-only outputs
+use the same protocol, and identical source-capture writers accept only a
+verified content-addressed, single-link winner after parent-directory sync;
+cleanup fails closed if a power-loss artifact or any alternate hard link still
+reaches governed bytes. Before quarantine, a retry requires the exact canonical
+v2 identity; afterward it requires the exact terminal v3-bound quarantine
+identity until verified unlink. Registration and
+cleanup serialize through the persistent
+mode-`0600` `.retention-lock` advisory-lock file. A process crash releases the
+kernel lock automatically, while another live operation fails closed. Do not
+remove the lock file: unlinking it during an active operation can defeat
+serialization by allowing a second lock inode. `--as-of` is accepted only for
+read-only verification;
 cleanup always uses current UTC. Do not delete committed sanitized fixtures or
 published freeze records; repository tests continue to pass without the raw
 store. Live private-store commands fail closed on Windows until the adapter can
