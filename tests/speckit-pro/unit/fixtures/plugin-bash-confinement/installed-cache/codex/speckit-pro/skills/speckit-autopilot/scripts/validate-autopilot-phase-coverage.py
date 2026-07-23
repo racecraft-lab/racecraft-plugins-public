@@ -204,11 +204,22 @@ def _strict_json_loads(value: str | bytes) -> Any:
     def reject_non_finite_constant(constant: str) -> None:
         raise ValueError(f"non-finite JSON number is not allowed: {constant}")
 
-    return json.loads(
+    parsed = json.loads(
         value,
         object_pairs_hook=reject_duplicate_keys,
         parse_constant=reject_non_finite_constant,
     )
+    pending: list[tuple[Any, int]] = [(parsed, 0)]
+    while pending:
+        item, depth = pending.pop()
+        if not isinstance(item, (dict, list)):
+            continue
+        nested_depth = depth + 1
+        if nested_depth > 256:
+            raise ValueError("JSON nesting exceeds maximum depth of 256")
+        children = item.values() if isinstance(item, dict) else item
+        pending.extend((child, nested_depth) for child in children)
+    return parsed
 
 
 def load_state(path: Path) -> dict[str, Any]:
