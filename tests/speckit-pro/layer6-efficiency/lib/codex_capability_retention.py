@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_retention_authority import *
+if __package__:
+    from .codex_capability_retention_authority import *
+else:
+    from codex_capability_retention_authority import *
 
 
 def _reject_deleted_evidence_digest(raw, repository_root, evidence_digest):

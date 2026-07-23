@@ -5,11 +5,12 @@
     "feature_id": "canonical",
     "status": "planned",
     "source_fingerprint": {
-      "feature_spec_sha": "stale-feature-spec",
-      "plan_declared_scope_sha": "stale-plan",
-      "tasks_sha": "stale-tasks",
-      "reviewability_sha": "stale-reviewability",
-      "hazard_route_sha": "stale-hazard"
+      "feature_spec_sha": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "plan_declared_scope_sha": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "tasks_sha": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "reviewability_sha": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+      "hazard_route_sha": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "changed_file_manifest_sha": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
     },
     "markers": [],
     "warnings": []

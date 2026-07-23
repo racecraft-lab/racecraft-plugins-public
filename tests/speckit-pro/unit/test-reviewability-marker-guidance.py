@@ -3,8 +3,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+import runpy
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -44,6 +47,25 @@ MARKER_PLAN_SCHEMA_PATHS = (
     / "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
     REPO_ROOT
     / "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+)
+CHANGED_FILE_MANIFEST_SCHEMA_PATHS = tuple(
+    path.with_name("changed-file-manifest.schema.json") for path in MARKER_PLAN_SCHEMA_PATHS
+)
+VERIFICATION_REPORT_SCHEMA_PATHS = tuple(
+    path.with_name("verification-report.schema.json") for path in MARKER_PLAN_SCHEMA_PATHS
+)
+MARKER_CHECKPOINT_SCHEMA_PATH = (
+    REPO_ROOT
+    / "specs/g56r-002-capability-discovery-telemetry/contracts/marker-checkpoint.schema.json"
+)
+MARKER_CHECKPOINT_PATHS = tuple(
+    REPO_ROOT
+    / f"specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us{index}.json"
+    for index in range(1, 4)
+)
+COMPLETED_MARKER_EVIDENCE_PATH = (
+    REPO_ROOT
+    / "tests/speckit-pro/unit/fixtures/final-reviewability-backstop/completed-marker-evidence.json"
 )
 
 
@@ -226,6 +248,307 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
                 self.assertIn(marker_kind, marker_kinds)
         with self.subTest(invalid_marker_kind="maintenance"):
             self.assertNotIn("maintenance", marker_kinds)
+
+    def test_every_marker_plan_schema_accepts_legacy_v1_pending_checkpoint(self) -> None:
+        schema_errors = runpy.run_path(
+            str(
+                REPO_ROOT
+                / "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py"
+            )
+        )["_json_schema_errors"]
+        legacy_plan = {
+            "schema_version": "pr-marker-plan.v1",
+            "kind": "pr_marker_plan",
+            "feature_id": "LEGACY-001",
+            "status": "planned",
+            "source_fingerprint": {
+                "feature_spec_sha": "legacy-spec",
+                "plan_declared_scope_sha": "legacy-plan",
+                "tasks_sha": "legacy-tasks",
+                "reviewability_sha": "legacy-reviewability",
+                "hazard_route_sha": "legacy-hazards",
+            },
+            "markers": [
+                {
+                    "id": "us1",
+                    "review_order": 1,
+                    "kind": "user_story",
+                    "parent_marker_id": None,
+                    "source_boundary": {
+                        "section": "User Story 1",
+                        "story_id": 1,
+                        "start_task_id": "T001",
+                        "end_task_id": "T001",
+                    },
+                    "task_ids": ["T001"],
+                    "folded_polish_task_ids": [],
+                    "folded_polish_target_reason": "",
+                    "declared_files": [],
+                    "declared_tests": [],
+                    "reviewability": {
+                        "status": "not_estimated",
+                        "mode": "implementation",
+                        "scope": "us1",
+                    },
+                    "hazards": [],
+                    "subdivision": {"status": "none", "details": {}},
+                    "implementation_checkpoint": {"status": "pending"},
+                    "emission_mapping": {"status": "pending"},
+                    "warnings": [],
+                }
+            ],
+            "warnings": [],
+        }
+        for schema_path in MARKER_PLAN_SCHEMA_PATHS:
+            with self.subTest(schema_path=schema_path.relative_to(REPO_ROOT)):
+                schema = json.loads(schema_path.read_text(encoding="utf-8"))
+                self.assertEqual(
+                    schema_errors(legacy_plan, schema, schema, "pr_marker_plan"),
+                    [],
+                )
+
+    def test_pr_marker_plan_schema_binds_completion_and_emission_evidence(self) -> None:
+        schema = json.loads(MARKER_PLAN_SCHEMA_PATHS[0].read_text(encoding="utf-8"))
+        checkpoint = schema["$defs"]["checkpoint"]
+        emission = schema["$defs"]["emission_mapping"]
+        strict = schema["allOf"][0]["then"]["properties"]
+        strict_source = strict["source_fingerprint"]
+        strict_marker = strict["markers"]["items"]
+        strict_checkpoint = strict_marker["properties"]["implementation_checkpoint"]
+        strict_emission = strict_marker["properties"]["emission_mapping"]
+
+        self.assertEqual(
+            schema["properties"]["schema_version"]["enum"],
+            ["pr-marker-plan.v1", "pr-marker-plan.v2"],
+        )
+        self.assertNotIn("changed_file_manifest_sha", schema["$defs"]["source_fingerprint"]["required"])
+        self.assertIn("changed_file_manifest_sha", strict_source["required"])
+        self.assertEqual(schema["properties"]["created_at"], {"type": "string"})
+        self.assertEqual(schema["properties"]["updated_at"], {"type": "string"})
+        self.assertEqual(strict["created_at"], {"$ref": "#/$defs/utc_timestamp"})
+        self.assertEqual(strict["updated_at"], {"$ref": "#/$defs/utc_timestamp"})
+        self.assertTrue(checkpoint["additionalProperties"])
+        self.assertTrue(emission["additionalProperties"])
+        self.assertEqual(checkpoint["required"], ["status"])
+        self.assertEqual(
+            strict_checkpoint["allOf"][0]["then"]["required"],
+            [
+                "evidence_path",
+                "checkpoint_evidence_sha",
+                "checkpoint_evidence_commit_sha",
+                "verification_evidence_path",
+                "verification_evidence_sha",
+                "commit_sha",
+                "head_sha",
+                "completed_at",
+                "completed_task_ids",
+                "required_verification_gate_ids",
+                "summary",
+                "validation",
+                "freshness",
+            ],
+        )
+        self.assertEqual(
+            strict_checkpoint["allOf"][1]["then"]["required"],
+            ["evidence_path", "commit_sha"],
+        )
+        self.assertEqual(
+            strict_marker["allOf"][0]["then"]["properties"]["implementation_checkpoint"]["properties"]["status"],
+            {"const": "complete"},
+        )
+        self.assertEqual(
+            strict_marker["allOf"][1]["then"]["properties"]["reviewability"]["required"],
+            ["head_sha"],
+        )
+        status_rules = {
+            branch["if"]["properties"]["status"]["const"]: branch["then"]["properties"]["markers"]["items"]
+            ["properties"]
+            for branch in schema["allOf"]
+            if "status" in branch["if"]["properties"]
+        }
+        self.assertEqual(
+            set(status_rules),
+            {"planned", "checkpointing", "emission_ready", "emitting", "emitted", "collapsed", "stale", "invalid"},
+        )
+        self.assertEqual(status_rules["planned"]["implementation_checkpoint"]["properties"]["status"], {"const": "pending"})
+        self.assertEqual(status_rules["planned"]["emission_mapping"]["properties"]["status"], {"const": "pending"})
+        self.assertEqual(status_rules["checkpointing"]["emission_mapping"]["properties"]["status"], {"const": "pending"})
+        self.assertEqual(status_rules["emission_ready"]["implementation_checkpoint"]["properties"]["status"], {"const": "complete"})
+        self.assertEqual(
+            status_rules["emission_ready"]["emission_mapping"]["properties"]["status"],
+            {"enum": ["pending", "marker_split"]},
+        )
+        self.assertEqual(
+            status_rules["emitting"]["emission_mapping"]["properties"]["status"],
+            {"enum": ["pending", "marker_split", "emitted"]},
+        )
+        self.assertEqual(status_rules["emitted"]["emission_mapping"]["properties"]["status"], {"const": "emitted"})
+        self.assertEqual(
+            status_rules["collapsed"]["emission_mapping"]["properties"]["status"],
+            {"const": "hazard_collapsed"},
+        )
+        terminal_preserving_statuses = {"enum": ["pending", "marker_split", "emitted", "hazard_collapsed"]}
+        self.assertEqual(status_rules["stale"]["emission_mapping"]["properties"]["status"], terminal_preserving_statuses)
+        self.assertEqual(status_rules["invalid"]["emission_mapping"]["properties"]["status"], terminal_preserving_statuses)
+        lifecycle_branches = {
+            branch["if"]["properties"]["status"]["const"]: branch["then"]
+            for branch in schema["allOf"]
+            if "status" in branch["if"]["properties"]
+        }
+        self.assertEqual(
+            lifecycle_branches["stale"]["properties"]["warnings"]["contains"]["properties"]["code"],
+            {"const": "MARKER_PLAN_STALE"},
+        )
+        self.assertEqual(
+            lifecycle_branches["invalid"]["properties"]["warnings"]["contains"]["properties"]["code"],
+            {"const": "MARKER_PLAN_INVALID"},
+        )
+        self.assertEqual(
+            strict_checkpoint["properties"]["checkpoint_evidence_sha"]["pattern"],
+            r"^sha256:[0-9a-f]{64}$",
+        )
+        for field_schema in strict_source["properties"].values():
+            self.assertEqual(field_schema["pattern"], r"^sha256:[0-9a-f]{64}$")
+        self.assertEqual(
+            strict_marker["properties"]["reviewability"]["properties"]["head_sha"]["pattern"],
+            r"^[0-9a-f]{40}$",
+        )
+        self.assertIn("without traversal", schema["$defs"]["repo_path"]["description"])
+        self.assertEqual(schema["$defs"]["utc_timestamp"]["pattern"], r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+        self.assertEqual(
+            strict_emission["allOf"][0]["then"]["required"],
+            ["packet_path"],
+        )
+        self.assertEqual(
+            strict_emission["allOf"][1]["then"]["required"],
+            ["packet_path", "pr_number", "pr_url"],
+        )
+
+    def test_manifest_and_verification_schemas_are_closed_and_mirrored(self) -> None:
+        manifest_bodies = [path.read_bytes() for path in CHANGED_FILE_MANIFEST_SCHEMA_PATHS]
+        verification_bodies = [path.read_bytes() for path in VERIFICATION_REPORT_SCHEMA_PATHS]
+        self.assertTrue(all(body == manifest_bodies[0] for body in manifest_bodies[1:]))
+        self.assertTrue(all(body == verification_bodies[0] for body in verification_bodies[1:]))
+
+        manifest_schema = json.loads(manifest_bodies[0])
+        self.assertFalse(manifest_schema["additionalProperties"])
+        self.assertEqual(manifest_schema["properties"]["schema_version"]["const"], "changed-file-manifest.v1")
+        self.assertEqual(manifest_schema["properties"]["comparison_ref"]["const"], "HEAD")
+        self.assertEqual(
+            manifest_schema["$defs"]["file"]["properties"]["marker_ids"]["maxItems"],
+            1,
+        )
+        rename_rule = manifest_schema["$defs"]["file"]["allOf"][0]
+        self.assertEqual(rename_rule["if"]["properties"]["operation"]["const"], "RENAMED")
+        self.assertEqual(rename_rule["then"]["required"], ["source_path"])
+
+        verification_schema = json.loads(verification_bodies[0])
+        self.assertFalse(verification_schema["additionalProperties"])
+        self.assertEqual(verification_schema["properties"]["status"]["const"], "pass")
+        self.assertEqual(
+            verification_schema["$defs"]["passing_result"]["properties"]["status"]["const"],
+            "pass",
+        )
+
+    def test_completed_marker_evidence_is_immutable_and_freshness_is_separate(self) -> None:
+        schema = json.loads(MARKER_CHECKPOINT_SCHEMA_PATH.read_text(encoding="utf-8"))
+        required = set(schema["required"])
+        self.assertTrue(
+            {
+                "implementation_checkpoint_sha",
+                "tasks_sha",
+            }.issubset(required)
+        )
+        self.assertIn("last_reviewed_head_sha", schema["properties"])
+        self.assertNotIn("current_tasks_sha", required)
+        self.assertIn("immutable", schema["description"].lower())
+        mutable_fields = {
+            "source_fingerprint_contract",
+            "tasks_sha_scope",
+            "current_tasks_sha",
+            "checkpoint_marker_tasks_sha",
+            "current_marker_tasks_sha",
+            "updated_at",
+        }
+        for path in MARKER_CHECKPOINT_PATHS[:2]:
+            checkpoint = json.loads(path.read_text(encoding="utf-8"))
+            self.assertTrue(required.issubset(checkpoint))
+            self.assertEqual(checkpoint["status"], "complete")
+            self.assertEqual(checkpoint["source_fingerprint_status"], "current")
+            self.assertFalse(mutable_fields & set(checkpoint))
+
+        completed_evidence = json.loads(
+            COMPLETED_MARKER_EVIDENCE_PATH.read_text(encoding="utf-8")
+        )
+        for marker in completed_evidence["markers"]:
+            implementation_checkpoint = marker["implementation_checkpoint"]
+            self.assertRegex(implementation_checkpoint["checkpoint_evidence_commit_sha"], r"^[0-9a-f]{40}$")
+            freshness = implementation_checkpoint["freshness"]
+            self.assertEqual(freshness["source_fingerprint_contract"], "marker-task-lines.v2")
+            self.assertEqual(
+                freshness["checkpoint_marker_tasks_sha"],
+                freshness["current_marker_tasks_sha"],
+            )
+
+    def test_completed_marker_corrections_are_append_only_and_chained(self) -> None:
+        completed_evidence = json.loads(
+            COMPLETED_MARKER_EVIDENCE_PATH.read_text(encoding="utf-8")
+        )
+        for marker in completed_evidence["markers"]:
+            checkpoint = marker["implementation_checkpoint"]
+            self.assertNotIn("corrections", checkpoint)
+            superseded_evidence = checkpoint["superseded_evidence"]
+            corrections = superseded_evidence["corrections"]
+            self.assertEqual(len(corrections), 1)
+            correction = corrections[0]
+            self.assertEqual(correction["sequence"], 1)
+            self.assertEqual(
+                (
+                    correction["supersedes_evidence_path"],
+                    correction["supersedes_evidence_commit_sha"],
+                    correction["supersedes_evidence_sha"],
+                ),
+                (
+                    superseded_evidence["evidence_path"],
+                    superseded_evidence["checkpoint_evidence_commit_sha"],
+                    superseded_evidence["checkpoint_evidence_sha"],
+                ),
+            )
+            correction_path = REPO_ROOT / correction["evidence_path"]
+            correction_bytes = correction_path.read_bytes()
+            self.assertEqual(
+                correction["checkpoint_evidence_sha"],
+                "sha256:" + hashlib.sha256(correction_bytes).hexdigest(),
+            )
+            correction_record = json.loads(correction_bytes)
+            self.assertEqual(correction_record["sequence"], correction["sequence"])
+            self.assertEqual(correction_record["marker_id"], marker["id"])
+            self.assertEqual(
+                (
+                    correction_record["supersedes_evidence_path"],
+                    correction_record["supersedes_evidence_commit_sha"],
+                    correction_record["supersedes_evidence_sha"],
+                ),
+                (
+                    correction["supersedes_evidence_path"],
+                    correction["supersedes_evidence_commit_sha"],
+                    correction["supersedes_evidence_sha"],
+                ),
+            )
+            introduction_commits = subprocess.run(
+                [
+                    "git", "-C", str(REPO_ROOT), "log", "--diff-filter=A",
+                    "--format=%H", "--reverse", "HEAD", "--",
+                    correction["evidence_path"],
+                ],
+                text=True,
+                capture_output=True,
+                check=True,
+            ).stdout.splitlines()
+            self.assertTrue(introduction_commits)
+            self.assertEqual(
+                introduction_commits[0], correction["checkpoint_evidence_commit_sha"]
+            )
 
 
 def build_suite() -> unittest.TestSuite:

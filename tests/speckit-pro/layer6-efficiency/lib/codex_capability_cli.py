@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_publish_io import *
+if __package__:
+    from .codex_capability_publish_io import *
+else:
+    from codex_capability_publish_io import *
 
 def main(argv=None):
     parser = argparse.ArgumentParser()

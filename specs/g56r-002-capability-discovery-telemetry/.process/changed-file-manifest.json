@@ -1,0 +1,877 @@
+{
+  "schema_version": "changed-file-manifest.v1",
+  "feature_id": "G56R-002",
+  "base_commit": "48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec",
+  "comparison_ref": "HEAD",
+  "files": [
+    {
+      "path": "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
+      "operation": "NEW",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json",
+      "operation": "NEW",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
+      "operation": "NEW",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json",
+      "operation": "NEW",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "docs-site/src/content/docs/reference/tests.md",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "docs/ai/research/codex-g56r-002-capability-evidence.md",
+      "operation": "MODIFIED",
+      "category": "research",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json",
+      "operation": "MODIFIED",
+      "category": "research",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "docs/ai/specs/.process/G56R-002-workflow.md",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "docs/ai/specs/.process/PRSG-013-pr-marker-plan.json",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "docs/ai/specs/.process/autopilot-state.json",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+      "operation": "MODIFIED",
+      "category": "plugin_source",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+      "operation": "MODIFIED",
+      "category": "plugin_source",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
+      "operation": "MODIFIED",
+      "category": "plugin_source",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
+      "operation": "NEW",
+      "category": "plugin_source",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+      "operation": "MODIFIED",
+      "category": "plugin_source",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json",
+      "operation": "NEW",
+      "category": "plugin_source",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+      "operation": "MODIFIED",
+      "category": "plugin_source",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoint-corrections/us1-001.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us1"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoint-corrections/us2-001.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us2"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us1"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us2"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/synthetic-replay.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us1.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us1"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us2.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us2"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/SPEC-MOC.md",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/contracts/marker-checkpoint.schema.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/plan.md",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/quickstart.md",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/tasks.md",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_authority.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_bundle.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_capability.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_cli.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_fields.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_fixture.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_io.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_json_schema.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_model.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_replay.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_successor.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/suite-manifest.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json",
+      "operation": "NEW",
+      "category": "test",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/current-source-fingerprint.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/fingerprint-mismatch-marker-plan.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/placeholder-pr-marker-plan.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/reviewer-ready-pr-marker-plan.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/stale-marker-plan.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/stale-pr-marker-plan.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/stale-state/state.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/valid-autopilot-state.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/valid-marker-plan.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/marker-plan/valid-pr-marker-plan.json",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
+      "operation": "NEW",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json",
+      "operation": "NEW",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/changed-file-manifest.schema.json",
+      "operation": "NEW",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/contracts/verification-report.schema.json",
+      "operation": "NEW",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+      "operation": "MODIFIED",
+      "category": "generated_artifact",
+      "provenance": "generated",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/test-autopilot-phase-coverage.py",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "source_path": "tests/speckit-pro/unit/test-g56r-002-capability-telemetry.py",
+      "path": "tests/speckit-pro/unit/test-codex-capability-contract.py",
+      "operation": "RENAMED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "AGENTS.md",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1-remediation.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us1"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2-remediation.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us2"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us3-remediation.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/capability-freeze.json",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/reviewability/treatment-contracts.json",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us1-remediation.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us1"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us2-remediation.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us2"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us3-remediation.json",
+      "operation": "NEW",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "specs/g56r-002-capability-discovery-telemetry/data-model.md",
+      "operation": "MODIFIED",
+      "category": "process",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_append_only.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_capture.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py",
+      "operation": "MODIFIED",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publication_records.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_authority.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_recovery.py",
+      "operation": "NEW",
+      "category": "implementation",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    },
+    {
+      "path": "tests/speckit-pro/unit/test-unit-layout.py",
+      "operation": "MODIFIED",
+      "category": "test",
+      "provenance": "authored",
+      "marker_ids": ["us3"]
+    }
+  ]
+}

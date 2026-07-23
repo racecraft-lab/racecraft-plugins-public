@@ -6,12 +6,11 @@
 
 ## Summary
 
-Add two stable Python 3.11 standard-library entry points and focused capability
+Add two Python 3.11 standard-library public entry points and focused internal
 modules to the existing Layer 6 harness. The capability entry point normalizes
-pinned Codex surface evidence, applies claim-scoped source admission, validates
-the bounded canary envelope without trusting caller-supplied provenance, and
-emits a content-addressed candidate freeze with canary state disabled.
-The treatment entry point validates telemetry profiles, route-resolution and
+pinned Codex surface evidence, applies claim-scoped source
+admission, enforces the bounded canary contract, and emits a content-addressed
+candidate freeze. The treatment entry point validates telemetry profiles, route-resolution and
 exact-treatment records, and deterministic synthetic replay. One sanitized
 research handoff and two compact replay fixtures prove the contracts without
 committing raw live responses or performing qualification.
@@ -37,20 +36,22 @@ workflows run on POSIX and fail closed on Windows pending equivalent DACL checks
 
 **Project Type**: Repository-owned test harness and evidence contract
 
-**Performance Goals**: Deterministic fixture replay in under one second; any
-future trusted live canary hard-bounded to 30 seconds and 64 KiB combined output
+**Performance Goals**: Deterministic fixture replay in under one second; live
+canary hard-bounded to 30 seconds and 64 KiB combined output
 
 **Constraints**: No third-party packages, Bash, `jq`, raw live responses in Git,
 retries within a snapshot, inferred platform facts, qualification, scoring,
-installer changes, agent changes, payload regeneration, or fallback ordering
+installer changes, agent changes, unrelated payload changes, or fallback ordering.
+Finding-driven shared schema or validator hardening must regenerate its existing
+payload and installed-cache proof copies from source.
 
 **Scale/Scope**: Twelve named-agent contracts, the G56R-001 source-bound route
 set, one pinned client identity, three observation surfaces, and the eight
 required replay classes
 
 **Reviewability Budget**: Primary surface `harness/adapter`; secondary surface
-`schema/data contract`; target 265 reviewable LOC, initially approximately 2
-production modules and 10 implementation files. The scaffold estimate is 297 LOC. Stay one
+`schema/data contract`; target 265 reviewable LOC, approximately 2 public
+entry points and 10 implementation files. The scaffold estimate is 297 LOC. Stay one
 slice unless the authoritative plan estimate exceeds 400 LOC or the three
 increments cease to be independently testable.
 
@@ -58,49 +59,33 @@ increments cease to be independently testable.
 2 modified files. The helper does not classify Python modules below
 `tests/speckit-pro/` as production, so its zero is a path-classification limit,
 not a size claim. The binding human estimate remains 297 reviewable LOC; the
-400-LOC split trigger remains enforced.
+400-LOC split trigger remains enforced. The exact current base-to-head path set
+is governed separately by the changed-file manifest below because independent
+review remediation expanded process, schema, and generated-proof surfaces.
 
-**Implementation checkpoint**: The capability adapter is safely subdivided
-behind the stable `codex_capabilities.py` facade into 12 focused modules totaling
-2,914 source lines and 2,641 nonblank, non-comment lines; the largest is 399
-source lines. The treatment validator remains 1,884 source lines and 1,736
-nonblank, non-comment lines, so the current 13-module US2 marker totals 4,798
-source lines and 4,377 nonblank, non-comment lines and the aggregate 400-LOC
-trigger remains active. Capability work T001-T015 no longer relies on a
-`no_safe_boundary` exception: source, observation, matrix, private I/O,
-retention, freeze, contract, and CLI responsibilities have independent module
-boundaries while preserving the public facade. Treatment work T016-T025 remains
-a separate module and marker under its treatment-only typed size exception,
-while replay plus polish
-T026-T039 remains a third marker. The authoritative marker state is persisted
-in `docs/ai/specs/.process/autopilot-state.json`.
+**Implementation checkpoint**: Independent review rejected the original
+two-monolith size exception. The current remediation preserves two public entry
+points while separating source refresh, observations, matrix/canary logic,
+private retention, freeze construction, JSON-schema validation, trace graphs,
+fixture replay, and successor construction into focused modules. The current
+implementation spans 29 modules and 7,052 source lines, but the largest module
+is 398 lines, below the 400-line per-module boundary. The aggregate size block
+is handled by the existing US1/US2/US3 marker and stacked-PR checkpoints; no
+current `no_safe_boundary` implementation exception remains. Historical
+checkpoint evidence retains the measurements that were true at those immutable
+heads. The authoritative current marker state is persisted in
+`docs/ai/specs/.process/autopilot-state.json`.
 
 ## Declared File Operations
 
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_append_only.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_publication_records.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_authority.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py
-- NEW tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py
-- NEW tests/speckit-pro/unit/test-codex-capability-contract.py
-- NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json
-- NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json
-- NEW tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json
-- MODIFIED tests/speckit-pro/suite-manifest.json
-- MODIFIED docs-site/src/content/docs/reference/tests.md
-- NEW docs/ai/research/codex-g56r-002-executable-candidate-freeze.json
-- NEW docs/ai/research/codex-g56r-002-capability-evidence.md
+The authoritative operation set is
+`specs/g56r-002-capability-discovery-telemetry/.process/changed-file-manifest.json`.
+It classifies every path from base
+`48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec` through the current `HEAD` by
+operation, marker ownership, process/generated category, and provenance. The
+manifest includes itself and this plan. T039 must compare the manifest exactly
+to `git diff --name-status 48d72a5dfe1dd971bef6ddcdcd7a67752c9975ec..HEAD`;
+an omitted, extra, or differently classified operation keeps T039 incomplete.
 
 ## Constitution Check
 
@@ -108,59 +93,44 @@ in `docs/ai/specs/.process/autopilot-state.json`.
 
 | Principle | Decision | Evidence |
 |---|---|---|
-| Library-first and CLI contracts | Pass | A stable capability facade and 12 focused capability modules own collection, normalization, retention, and publication; the treatment validator remains a separate importable module; no new framework |
+| Library-first and CLI contracts | Pass | Two stable public entry points delegate to focused collection, normalization, retention, schema, and replay modules; no new framework |
 | Test-first development | Pass | Each increment starts with focused failing fixtures and unit assertions before implementation |
 | Integration testing | Pass | Offline replay covers surface joins, treatment, reroutes, hashes, and failure dispositions |
 | Observability | Pass | Every desired field has a profile entry with source, completeness, claim, typed state, and evidence |
 | Simplicity and YAGNI | Pass | Reuse Layer 6 and the shared G56R taxonomy; no cross-vendor prober or installer seam |
 | Source authority | Pass | Only current canonical OpenAI documentation admits platform claims; runtime data can only narrow |
-| Reviewability | Capability split; treatment-only typed size exception | Every capability module is below 400 source lines; the aggregate marker remains over budget because the independently owned treatment validator retains its scoped size exception |
+| Reviewability | Pass after safe subdivision | Aggregate size remains marker-split, while every current implementation module is below 400 source lines |
 
-No correctness or safety exception is requested. Capability modules must remain
-below 400 source lines and preserve the stable public API. Growth outside the
-predeclared treatment-only exception or coupling between later markers is a new
-stop condition.
+No correctness, safety, or current size exception is requested. Growth that
+pushes any focused module to 400 lines, recreates mixed responsibilities, or
+couples independently reviewed markers is a new stop condition.
 
 ## Architecture and Ownership
 
-### Capability facade and focused modules
+### Capability entry point and focused modules
 
-- `codex_capabilities.py` preserves the stable public import and CLI boundary
-  through an exact supported-name export list; private trust primitives are not
-  re-exported. `codex_capability_cli.py` owns command dispatch.
-- `codex_capability_contract.py` owns closed identifiers, bounds, canonical
-  JSON/SHA-256, source-ledger validation, executable contract checks, and
-  normalized-plain-text source validation that rejects raw markup instead of
-  inferring browser visibility or text-node boundaries.
-- `codex_capability_sources.py` owns current source refresh, claim-scoped
-  invalidation, exact capture-digest binding, and admission without modifying
-  historical `OSL-*` rows. It recomputes the source-ID-sorted aggregate identity
-  during normalization and raw validation. Every body-identity change
-  invalidates all bindings.
-- `codex_capability_observations.py` owns identity-bound surface collection,
-  normalization, hidden visibility, and disagreement records.
-- `codex_capability_matrix.py` owns candidate-matrix construction and the closed
-  canary envelope, including the 30-second, 64 KiB, zero-retry,
-  process-tree-termination bounds and default-empty executor-ID allowlist. This
-  slice cannot authenticate external result provenance, so it never promotes
-  or publishes a canary result.
-- `codex_capability_io.py` owns strict JSON and descriptor-relative reads;
-  `codex_capability_append_only.py` owns temporary locking and crash recovery;
-  `codex_capability_private.py` owns private retained-byte writes and locking.
-- `codex_capability_retention_records.py` owns deletion and retention records;
-  `codex_capability_publication_records.py` owns registration plus publication
-  intent/receipt records; `codex_capability_retention_authority.py` resolves
-  governing deadlines; `codex_capability_retention.py` owns destructive cleanup.
-- `codex_capability_freeze.py` owns sanitized freeze construction and
-  publication; `codex_capability_publish_io.py` owns exact-byte publication
-  read-back.
+- `codex_capabilities.py` preserves the public import and CLI boundary through an
+  exact supported export set; private trust primitives remain available only
+  from their owning focused modules.
+- Contract, source, observation, and matrix modules validate `client_identity_id`, surface collection metadata, canonical
+  model/effort normalization, hidden visibility, and disagreement records.
+- Private-I/O and retention modules revalidate current source-record digests, carry claim-scoped invalidations,
+  never modify historical `OSL-*` rows.
+- Freeze and canary modules validate one injected, approved `CanaryExecutor` result per
+  `(snapshot, model, effort)`, including the 30-second, 64 KiB, zero-retry,
+  process-tree-termination contract and closed result envelope. A
+  repository-owned, versioned, default-empty executor-ID allowlist is the trust
+  anchor; fail closed without a separately reviewed admitted executor.
+- Publication modules sanitize allowlisted evidence, emit canonical JSON/SHA-256, and build the
+  append-only candidate freeze.
 
-### `treatment_trace_schema.py`
+### Treatment entry point and focused modules
 
-- Validate single-client telemetry-profile ownership, complete keys, and
+- `treatment_trace_schema.py` preserves the public validation/replay CLI boundary.
+- Authority, model, and field modules validate single-client telemetry-profile ownership, complete keys, and
   classification/claim semantics; absent surface bindings never authorize
   top-level treatment claims.
-- Validate the content-addressed six-ID objective join, reciprocal acyclic trace
+- Bundle modules validate the content-addressed six-ID objective join, reciprocal acyclic trace
   graphs, controlled-environment consistency,
   configured-route proof, typed observation-state rules, structured treatment
   failures, owning-ID uniqueness, route resolution, exact treatment,
@@ -170,22 +140,14 @@ stop condition.
   Controlled environments and qualification evidence live in explicit owner
   registries; synthetic qualification records exercise replay but never
   authorize live continuation.
-- Keep both exact-treatment success paths executable: configured proof requires
-  evidence-backed complete reroute capture, while effective evidence requires
-  an observed supported route that binds a canonical non-null model/effort
-  tuple without populating undocumented effective-effort telemetry.
-- Publish a `proven` trace only when its prior-freeze tuple is included,
-  source-admitted, availability-supported, and surface-agreed. Successor
-  publication must not predate any bound route resolution or non-null
-  observation capture.
-- Replay committed fixtures twice offline and reject hash drift, undeclared
+- Fixture and replay modules replay committed fixtures twice offline and reject hash drift, undeclared
   fields, raw-store dependencies, inferred values, or nondeterminism.
 
 ### Orchestration seam
 
-Do not modify `run-efficiency-benchmarks.py`. Each module exposes importable
-pure functions plus a narrow `main(argv)` for operator collection or offline
-validation. The focused unit test loads the underscore-named modules directly,
+Do not modify `run-efficiency-benchmarks.py`. Each public entry point exposes
+the existing importable functions plus a narrow `main(argv)` for operator
+collection or offline validation. The focused unit test loads the entry points directly,
 matching the existing Layer 6 library pattern. This keeps qualification and the
 current benchmark runner out of G56R-002.
 
@@ -240,68 +202,27 @@ Repository tests must pass with the network disabled and no raw evidence store.
 ## Evidence and Data Boundaries
 
 - `raw_evidence_root` must resolve outside the repository, use `0700`
-  directories and single-link `0600` files, and retain captures for 30 days after trusted
-  registration. Source refresh copies and binds the exact aggregate body capture
-  into that store. Nested entries are traversed no-follow through directory
-  descriptors and must produce two identical stable post-recovery snapshots;
-  validation-only private files use the same single-link descriptor contract.
-  Before registration, publication semantically revalidates
-  the source capture, each non-fixture observation, and every canary result
-  against the retained bytes. It publishes and re-reads the exact canonical
-  freeze bytes as a single-link target through one identity-bound parent
-  descriptor; recovered existing outputs must satisfy the same invariant. It
-  then appends a content-addressed publication intent before output, making the
-  exact staged retention-record set governing; a matching receipt after exact
-  output-byte verification proves completion. Records left before intent remain
-  non-governing, protect evidence for at most one day after trusted registration,
-  and cannot be promoted after expiry without cleanup. Deletion
-  uses the latest governing or capped pending deadline. Deterministic
-  verification fails on missing or overdue bytes. Cleanup first appends and
-  directory-fsyncs a content-addressed deletion-intent record, then performs a
-  descriptor-relative rename to a deterministic quarantine name, fsyncs the raw
-  root, and appends a v3 successor binding that exact inode before unlink.
-  Cleanup then proves zero remaining links and the retained-byte digest,
-  directory-fsyncs the raw root, and appends the terminal deletion-completion
-  record with the actual successful cleanup time. A retry can resume the
-  identity-bound quarantine from v2 or v3. After any unlink attempt, recovery
-  never republishes bytes or accepts a replacement inode. A post-unlink
-  hard-link race, any quarantine identity change, or unlink without durable
-  completion proof remains indeterminate and fail-closed without a path to a
-  completion record. Registration and
-  cleanup share an atomic
+  directories and single-link `0600` files, and retain captures for 30 days after freeze
+  publication. Source refresh copies and binds the exact aggregate body capture
+  into that store. Publication stages content-addressed retention records and
+  makes them governing through a durable exact-artifact intent; a matching
+  receipt completes the proof after the exact freeze bytes exist. Records left
+  pending before intent contribute only their one-day capped deadline, and
+  expired pending records cannot be promoted without cleanup. Deterministic
+  verification fails on missing or overdue bytes. Cleanup first persists a
+  content-addressed deletion intent, then unlinks the raw bytes through the
+  validated parent descriptor, proves zero links and the verified content
+  identity, directory-fsyncs the raw root, and only then persists the terminal
+  deletion completion record. Registration and cleanup share an atomic
   private-root lock, and destructive cleanup derives its timestamp from current
   UTC. Append-only writes directory-fsync both final-name publication and
-  temporary-name removal. Writers acquire a shared parent-directory advisory
-  lock before creating a reserved `.capability-evidence-write-*` temporary and hold it through commit; recovery
-  holds the same lock while scanning or removing names. Every reserved
-  temporary also holds an advisory lock until commit. Recovery then re-proves its directory-relative
-  pathname and inode: an abandoned single-link pre-publication file is removed,
-  while a linked file additionally requires the sole exact target and matching
-  bytes. Source and unknown-attempt captures both publish append-only and accept
-  a concurrent winner only after exact-byte verification. Their materializers
-  share the retention lock with cleanup and reject every digest named by a
-  deletion intent or completion record, preventing post-deletion resurrection.
-  Public append-only
-  directories use the same recovery; any unrecognized alternate hard link
-  blocks cleanup.
-  Record loaders bind one private directory descriptor for enumeration and
-  entry opens, require an unchanged before/after entry set, and reject directory
-  replacement or mixed snapshots.
-- Capability JSON parsing is strict UTF-8, rejects duplicate keys and non-finite
-  values, limits nesting to 64 and total nodes to 100,000, and normalizes parser
-  recursion to a fail-closed validation error.
-- Source-capture callers must provide bytes-like input no larger than 32 MiB;
-  the bound is enforced before JSON parsing or digest calculation, and a losing
-  concurrent identical writer accepts only the verified content-addressed,
-  single-link winner after synchronizing its parent directory.
+  temporary-name removal; any alternate hard link blocks cleanup.
 - Committed fixtures are deny-by-default sanitized, schema-allowlisted,
   canonical UTF-8 JSON with sorted keys and compact separators, and SHA-256
-  bound to exact bytes by the adjacent out-of-band digest manifest. Pseudonyms
-  are generated only for explicit profile field paths; caller-supplied
-  `fixture-*` strings never bypass nested sensitive-field rejection.
+  bound to exact bytes by the adjacent out-of-band digest manifest.
 - Official-document refresh outcomes remain per `OPENAI-DOC-*` record. A changed
-  body invalidates every claim/route bound to that source; the G56R-001
-  historical record is not rewritten as current evidence.
+  source invalidates only bound claims/routes; the G56R-001 historical record is
+  not rewritten as current evidence.
 - A published freeze is append-only. Any source, build, evidence,
   normalization, or disposition change creates a successor freeze ID, and every
   treatment-bound publication or successor API requires externally supplied
@@ -327,22 +248,29 @@ specs/g56r-002-capability-discovery-telemetry/
 
 ```text
 tests/speckit-pro/layer6-efficiency/lib/
-├── codex_capabilities.py                  # stable capability facade
+├── codex_capabilities.py                  # public capability import/CLI boundary
 ├── codex_capability_cli.py                # command dispatch
-├── codex_capability_append_only.py        # temporary locking and recovery
 ├── codex_capability_contract.py           # bounds and contract validation
 ├── codex_capability_freeze.py             # freeze construction/publication
 ├── codex_capability_io.py                 # strict JSON and descriptor I/O
 ├── codex_capability_matrix.py             # matrix and canary decisions
 ├── codex_capability_observations.py       # observation normalization
 ├── codex_capability_private.py            # private retained-byte writes
-├── codex_capability_publication_records.py # retention registration/publication records
 ├── codex_capability_publish_io.py         # publication read-back
 ├── codex_capability_retention.py          # cleanup and retention lifecycle
-├── codex_capability_retention_authority.py # publication authority/deadlines
 ├── codex_capability_retention_records.py  # append-only retention records
 ├── codex_capability_sources.py            # source refresh/admission
-└── treatment_trace_schema.py
+├── treatment_trace_schema.py              # public treatment import/CLI boundary
+├── treatment_trace_authority.py           # authority and owner joins
+├── treatment_trace_bundle.py              # bundle validation
+├── treatment_trace_cli.py                 # command dispatch
+├── treatment_trace_fields.py              # closed field inventory
+├── treatment_trace_fixture.py             # fixture validation
+├── treatment_trace_io.py                  # retained-file and path I/O
+├── treatment_trace_json_schema.py         # executable schema parity
+├── treatment_trace_model.py               # neutral record validation
+├── treatment_trace_replay.py              # deterministic replay
+└── treatment_trace_successor.py           # successor lineage validation
 
 tests/speckit-pro/unit/
 ├── test-codex-capability-contract.py
@@ -356,18 +284,17 @@ docs/ai/research/
 └── codex-g56r-002-capability-evidence.md
 ```
 
-**Structure Decision**: Keep vendor-specific collection behind a stable facade
-and focused single-responsibility sibling modules, with neutral evidence
-validation in the adjacent treatment entry point. Keep deterministic tests in
-the default unit layer, live collection out of CI, and the sanitized handoff
-beside the G56R-001 research artifacts.
+**Structure Decision**: Keep vendor-specific collection and neutral evidence
+validation behind two adjacent Layer 6 public entry points, with focused
+single-responsibility sibling modules below 400 lines. Keep deterministic tests in the
+default unit layer, live collection out of CI, and the sanitized handoff beside
+the G56R-001 research artifacts.
 
 ## PR Review Packet Source
 
-The final packet must summarize the stable entry-point and focused-module
-contract, why runtime evidence only narrows the official ledger, non-goals,
-review order (schemas → fixtures → adapter → trace validator → handoff),
-file/LOC budget, FR/SC traceability,
+The final packet must summarize the two-entry-point and focused-module contract, why runtime evidence
+only narrows the official ledger, non-goals, review order (schemas → fixtures →
+adapter → trace validator → handoff), file/LOC budget, FR/SC traceability,
 focused/full verification, any unknown tuples or unobserved surfaces, raw-store
 retention, and rollback by removing the new modules/fixtures/handoff and suite
 registration. There is no feature flag and no shipped runtime change.

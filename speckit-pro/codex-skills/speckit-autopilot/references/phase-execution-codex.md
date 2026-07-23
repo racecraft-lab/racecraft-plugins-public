@@ -444,3 +444,9 @@ Then run the deterministic guard against the workflow/state pair:
 ```text
 python3 "runner helper validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json"
 ```
+
+For `pr-marker-plan.v2` state with a changed-file manifest, append
+`--expected-base-commit <live-baseRefOid> --expected-head-commit <live-headRefOid>`
+using OIDs fetched from live PR metadata immediately before the run. Do not
+reuse values declared by the workflow, state, or manifest as external PR
+authority.
