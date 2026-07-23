@@ -63,6 +63,10 @@ MARKER_CHECKPOINT_PATHS = tuple(
     / f"specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us{index}.json"
     for index in range(1, 4)
 )
+COMPLETED_MARKER_EVIDENCE_PATH = (
+    REPO_ROOT
+    / "tests/speckit-pro/unit/fixtures/final-reviewability-backstop/completed-marker-evidence.json"
+)
 
 
 CHECKS = (
@@ -473,10 +477,10 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
             self.assertEqual(checkpoint["source_fingerprint_status"], "current")
             self.assertFalse(mutable_fields & set(checkpoint))
 
-        state = json.loads(
-            (REPO_ROOT / "docs/ai/specs/.process/autopilot-state.json").read_text(encoding="utf-8")
+        completed_evidence = json.loads(
+            COMPLETED_MARKER_EVIDENCE_PATH.read_text(encoding="utf-8")
         )
-        for marker in state["pr_marker_plan"]["markers"][:2]:
+        for marker in completed_evidence["markers"]:
             implementation_checkpoint = marker["implementation_checkpoint"]
             self.assertRegex(implementation_checkpoint["checkpoint_evidence_commit_sha"], r"^[0-9a-f]{40}$")
             freshness = implementation_checkpoint["freshness"]
@@ -487,12 +491,10 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
             )
 
     def test_completed_marker_corrections_are_append_only_and_chained(self) -> None:
-        state = json.loads(
-            (REPO_ROOT / "docs/ai/specs/.process/autopilot-state.json").read_text(
-                encoding="utf-8"
-            )
+        completed_evidence = json.loads(
+            COMPLETED_MARKER_EVIDENCE_PATH.read_text(encoding="utf-8")
         )
-        for marker in state["pr_marker_plan"]["markers"][:2]:
+        for marker in completed_evidence["markers"]:
             checkpoint = marker["implementation_checkpoint"]
             self.assertNotIn("corrections", checkpoint)
             superseded_evidence = checkpoint["superseded_evidence"]
