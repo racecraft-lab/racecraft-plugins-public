@@ -1,0 +1,1097 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-002/treatment-record.schema.json",
+  "title": "G56R-002 Telemetry, Route Resolution, and Exact-Treatment Replay",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "treatment_contract_digest",
+    "telemetry_profile_id",
+    "telemetry_profile",
+    "controlled_environments",
+    "experiment_policy_registry",
+    "qualification_evidence_registry",
+    "route_resolutions",
+    "treatment_traces",
+    "fixture_provenance"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "treatment_contract_digest": {"$ref": "#/$defs/digest"},
+    "telemetry_profile_id": {"$ref": "#/$defs/digest"},
+    "telemetry_profile": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/telemetryProfileEntry"}
+    },
+    "controlled_environments": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/controlledEnvironmentBinding"}
+    },
+    "experiment_policy_registry": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/experimentPolicy"}
+    },
+    "qualification_evidence_registry": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/qualificationEvidenceReference"}
+    },
+    "route_resolutions": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/routeResolution"}
+    },
+    "treatment_traces": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/treatmentTrace"}
+    },
+    "fixture_provenance": {"$ref": "#/$defs/fixtureProvenance"}
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "sanitizedIdentifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:+-]{0,127}$"
+    },
+    "specId": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]*-[0-9]{3}$"
+    },
+    "sanitizedEvidenceRef": {
+      "type": "string",
+      "pattern": "^fixture://[a-z0-9][a-z0-9._-]*(?:/[a-z0-9][a-z0-9._-]*)*$"
+    },
+    "nullableSanitizedEvidenceRef": {
+      "oneOf": [{"$ref": "#/$defs/sanitizedEvidenceRef"}, {"type": "null"}]
+    },
+    "nullableDigest": {
+      "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+    },
+    "nullableNonNegativeInteger": {
+      "oneOf": [
+        {"type": "integer", "minimum": 0},
+        {"type": "null"}
+      ]
+    },
+    "nullableNonEmptyString": {
+      "oneOf": [
+        {"type": "string", "minLength": 1},
+        {"type": "null"}
+      ]
+    },
+    "surface": {
+      "enum": ["app_server", "cli", "interactive_picker"]
+    },
+    "workItemKind": {
+      "enum": ["task", "fixture", "objective"]
+    },
+    "telemetryFieldPath": {
+      "enum": [
+        "discovery.models",
+        "discovery.efforts",
+        "discovery.capabilities",
+        "assignment.named_agent",
+        "assignment.model",
+        "assignment.effort",
+        "assignment.candidate_route_id",
+        "assignment.agent_contract_id",
+        "assignment.instruction_hash",
+        "assignment.configuration_hash",
+        "route.preferred_route_id",
+        "route.attempted_route_ids",
+        "route.assigned_route_id",
+        "route.supported_effective_route_id",
+        "route.fallback_index",
+        "route.fallback_reason",
+        "route.runtime_capability_snapshot_id",
+        "route.resolved_at",
+        "reroute.events",
+        "treatment.sandbox",
+        "treatment.approvals",
+        "treatment.mutation_class",
+        "treatment.expected_skills_mcp_tools",
+        "treatment.loaded_skills_mcp_tools",
+        "treatment.parent_configuration",
+        "treatment.controlled_overrides",
+        "treatment.delivery_canary",
+        "assignment.supported_effective_model",
+        "assignment.supported_effective_effort",
+        "treatment.failures",
+        "parent.context",
+        "parent.graph",
+        "resources.raw_token_vector",
+        "resources.request_turn_count",
+        "resources.wall_time_ms",
+        "lifecycle.retries",
+        "lifecycle.compaction",
+        "lifecycle.validation",
+        "lifecycle.cancellation",
+        "lifecycle.failed_abandoned_work",
+        "terminal.state",
+        "terminal.outcome",
+        "terminal.acceptance"
+      ]
+    },
+    "profileEntryKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["client_identity_id", "surface", "field_path"],
+      "properties": {
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "surface": {"$ref": "#/$defs/surface"},
+        "field_path": {"$ref": "#/$defs/telemetryFieldPath"}
+      }
+    },
+    "stringSet": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "sandbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "network_access", "writable_roots_digest"],
+      "properties": {
+        "mode": {
+          "enum": ["read_only", "workspace_write", "danger_full_access"]
+        },
+        "network_access": {"type": "boolean"},
+        "writable_roots_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "approvals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["policy", "granted_action_ids"],
+      "properties": {
+        "policy": {
+          "enum": ["never", "on_request", "on_failure", "untrusted"]
+        },
+        "granted_action_ids": {"$ref": "#/$defs/stringSet"}
+      }
+    },
+    "skillsMcpTools": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skills", "mcp_servers", "tools"],
+      "properties": {
+        "skills": {"$ref": "#/$defs/stringSet"},
+        "mcp_servers": {"$ref": "#/$defs/stringSet"},
+        "tools": {"$ref": "#/$defs/stringSet"}
+      }
+    },
+    "parentConfiguration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["parent_execution_trace_id", "configuration_hash"],
+      "properties": {
+        "parent_execution_trace_id": {"$ref": "#/$defs/nullableDigest"},
+        "configuration_hash": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "controlledOverrides": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "effort", "configuration_hash"],
+      "properties": {
+        "model": {"type": "string", "minLength": 1},
+        "effort": {"type": "string", "minLength": 1},
+        "configuration_hash": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "deliveryCanary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence_digest"],
+      "properties": {
+        "status": {
+          "enum": ["passed", "failed", "not_run"]
+        },
+        "evidence_digest": {"$ref": "#/$defs/nullableDigest"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "not_run"}}},
+          "then": {"properties": {"evidence_digest": {"type": "null"}}},
+          "else": {"properties": {"evidence_digest": {"$ref": "#/$defs/digest"}}}
+        }
+      ]
+    },
+    "traceContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["threadId", "turnId"],
+      "properties": {
+        "threadId": {"type": "string", "minLength": 1},
+        "turnId": {"type": "string", "minLength": 1}
+      }
+    },
+    "parentChildGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "root_execution_trace_id",
+        "parent_execution_trace_id",
+        "child_execution_trace_ids"
+      ],
+      "properties": {
+        "root_execution_trace_id": {"$ref": "#/$defs/digest"},
+        "parent_execution_trace_id": {"$ref": "#/$defs/nullableDigest"},
+        "child_execution_trace_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/digest"}
+        }
+      }
+    },
+    "rawTokenVector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_tokens",
+        "output_tokens",
+        "cached_input_tokens",
+        "reasoning_output_tokens"
+      ],
+      "properties": {
+        "input_tokens": {"$ref": "#/$defs/nullableNonNegativeInteger"},
+        "output_tokens": {"$ref": "#/$defs/nullableNonNegativeInteger"},
+        "cached_input_tokens": {"$ref": "#/$defs/nullableNonNegativeInteger"},
+        "reasoning_output_tokens": {"$ref": "#/$defs/nullableNonNegativeInteger"}
+      }
+    },
+    "requestTurnCount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requests", "turns"],
+      "properties": {
+        "requests": {"$ref": "#/$defs/nullableNonNegativeInteger"},
+        "turns": {"$ref": "#/$defs/nullableNonNegativeInteger"}
+      }
+    },
+    "compaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["occurred", "count"],
+      "properties": {
+        "occurred": {"type": "boolean"},
+        "count": {"type": "integer", "minimum": 0}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"occurred": {"const": false}}},
+          "then": {"properties": {"count": {"const": 0}}},
+          "else": {"properties": {"count": {"minimum": 1}}}
+        }
+      ]
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence_digest"],
+      "properties": {
+        "status": {"enum": ["completed", "failed", "not_run"]},
+        "evidence_digest": {"$ref": "#/$defs/nullableDigest"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "not_run"}}},
+          "then": {"properties": {"evidence_digest": {"type": "null"}}},
+          "else": {"properties": {"evidence_digest": {"$ref": "#/$defs/digest"}}}
+        }
+      ]
+    },
+    "cancellation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "reason"],
+      "properties": {
+        "state": {"enum": ["not_requested", "requested", "completed"]},
+        "reason": {
+          "oneOf": [
+            {"enum": ["user_requested", "timeout", "superseded", "policy_denied"]},
+            {"type": "null"}
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"state": {"const": "not_requested"}}},
+          "then": {"properties": {"reason": {"type": "null"}}},
+          "else": {"properties": {"reason": {"enum": ["user_requested", "timeout", "superseded", "policy_denied"]}}}
+        }
+      ]
+    },
+    "failedAbandonedWork": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["failed_count", "abandoned_count"],
+      "properties": {
+        "failed_count": {"type": "integer", "minimum": 0},
+        "abandoned_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "terminalOutcome": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "evidence_digest"],
+      "properties": {
+        "status": {"enum": ["completed", "failed", "cancelled", "abandoned"]},
+        "evidence_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "observationPayload": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "boolean"},
+        {"type": "integer"},
+        {"type": "string"},
+        {"$ref": "#/$defs/stringSet"},
+        {"$ref": "#/$defs/sandbox"},
+        {"$ref": "#/$defs/approvals"},
+        {"$ref": "#/$defs/skillsMcpTools"},
+        {"$ref": "#/$defs/parentConfiguration"},
+        {"$ref": "#/$defs/controlledOverrides"},
+        {"$ref": "#/$defs/deliveryCanary"},
+        {"$ref": "#/$defs/traceContext"},
+        {"$ref": "#/$defs/parentChildGraph"},
+        {"$ref": "#/$defs/rawTokenVector"},
+        {"$ref": "#/$defs/requestTurnCount"},
+        {"$ref": "#/$defs/compaction"},
+        {"$ref": "#/$defs/validation"},
+        {"$ref": "#/$defs/cancellation"},
+        {"$ref": "#/$defs/failedAbandonedWork"},
+        {"$ref": "#/$defs/terminalOutcome"},
+        {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/serviceRerouteEvent"}
+        },
+        {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/treatmentFailure"}
+        }
+      ]
+    },
+    "observationValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field_path", "observation_state", "value", "evidence_ref", "captured_at"],
+      "properties": {
+        "field_path": {"$ref": "#/$defs/telemetryFieldPath"},
+        "observation_state": {
+          "enum": [
+            "observed_value",
+            "explicit_null",
+            "missing",
+            "unavailable",
+            "not_applicable",
+            "undocumented"
+          ]
+        },
+        "value": {"$ref": "#/$defs/observationPayload"},
+        "evidence_ref": {"$ref": "#/$defs/nullableSanitizedEvidenceRef"},
+        "captured_at": {
+          "oneOf": [
+            {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?Z$"},
+            {"type": "null"}
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"observation_state": {"enum": ["observed_value", "explicit_null"]}}},
+          "then": {
+            "properties": {
+              "evidence_ref": {"$ref": "#/$defs/sanitizedEvidenceRef"},
+              "captured_at": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?Z$"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"observation_state": {"const": "observed_value"}}},
+          "then": {"properties": {"value": {"not": {"type": "null"}}}}
+        },
+        {
+          "if": {
+            "properties": {
+              "observation_state": {
+                "enum": [
+                  "explicit_null",
+                  "missing",
+                  "unavailable",
+                  "not_applicable",
+                  "undocumented"
+                ]
+              }
+            }
+          },
+          "then": {"properties": {"value": {"type": "null"}}}
+        },
+        {
+          "if": {"properties": {"observation_state": {"const": "undocumented"}}},
+          "then": {
+            "properties": {
+              "evidence_ref": {"type": "null"},
+              "captured_at": {"type": "null"}
+            }
+          }
+        }
+      ]
+    },
+    "telemetryProfileEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "client_identity_id",
+        "surface",
+        "field_path",
+        "classification",
+        "official_source_ledger_id",
+        "condition",
+        "completeness_rule",
+        "observation_state_rules",
+        "permitted_claims",
+        "prohibited_claims"
+      ],
+      "properties": {
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "surface": {"$ref": "#/$defs/surface"},
+        "field_path": {"$ref": "#/$defs/telemetryFieldPath"},
+        "classification": {
+          "enum": [
+            "stable_native",
+            "experimental_native",
+            "derived_from_controlled_configuration",
+            "conditional",
+            "unavailable",
+            "not_applicable",
+            "undocumented"
+          ]
+        },
+        "official_source_ledger_id": {
+          "oneOf": [
+            {"type": "string", "pattern": "^OPENAI-DOC-[0-9]{3}$"},
+            {"type": "null"}
+          ]
+        },
+        "condition": {"$ref": "#/$defs/nullableNonEmptyString"},
+        "completeness_rule": {
+          "enum": [
+            "complete_capture",
+            "pinned_build_observation_only",
+            "consumed_configuration_only",
+            "condition_bound",
+            "known_unavailable",
+            "false_applicability",
+            "no_authority"
+          ]
+        },
+        "observation_state_rules": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["allowed_states", "value_rule", "evidence_rule"],
+          "properties": {
+            "allowed_states": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "observed_value",
+                  "explicit_null",
+                  "missing",
+                  "unavailable",
+                  "not_applicable",
+                  "undocumented"
+                ]
+              }
+            },
+            "value_rule": {"enum": ["typed_when_observed", "null_only"]},
+            "evidence_rule": {"enum": ["required_when_present", "optional"]}
+          }
+        },
+        "permitted_claims": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "prohibited_claims": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"classification": {"const": "undocumented"}}},
+          "then": {
+            "properties": {
+              "official_source_ledger_id": {"type": "null"},
+              "condition": {"type": "null"}
+            }
+          },
+          "else": {
+            "properties": {
+              "official_source_ledger_id": {
+                "type": "string",
+                "pattern": "^OPENAI-DOC-[0-9]{3}$"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classification": {"enum": ["conditional", "not_applicable"]}
+            }
+          },
+          "then": {"properties": {"condition": {"type": "string", "minLength": 1}}},
+          "else": {"properties": {"condition": {"type": "null"}}}
+        }
+      ]
+    },
+    "configuredRouteProof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proof_id",
+        "profile_entry_key",
+        "named_agent",
+        "model",
+        "effort",
+        "candidate_route_id",
+        "agent_contract_id",
+        "instruction_hash",
+        "configuration_hash",
+        "client_identity_id",
+        "controlled_overrides",
+        "launch_id",
+        "consumption_evidence_digest",
+        "reroute_monitoring_complete"
+      ],
+      "properties": {
+        "proof_id": {"$ref": "#/$defs/digest"},
+        "profile_entry_key": {"$ref": "#/$defs/profileEntryKey"},
+        "named_agent": {"type": "string", "minLength": 1},
+        "model": {"type": "string", "minLength": 1},
+        "effort": {"type": "string", "minLength": 1},
+        "candidate_route_id": {"type": "string", "minLength": 1},
+        "agent_contract_id": {"type": "string", "minLength": 1},
+        "instruction_hash": {"$ref": "#/$defs/digest"},
+        "configuration_hash": {"$ref": "#/$defs/digest"},
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "controlled_overrides": {"$ref": "#/$defs/controlledOverrides"},
+        "launch_id": {"type": "string", "minLength": 1},
+        "consumption_evidence_digest": {"$ref": "#/$defs/digest"},
+        "reroute_monitoring_complete": {"type": "boolean"}
+      }
+    },
+    "routeResolution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "route_resolution_id",
+        "preferred_route_id",
+        "attempted_route_ids",
+        "assigned_route_id",
+        "supported_effective_route_id",
+        "fallback_index",
+        "fallback_reason",
+        "runtime_capability_snapshot_id",
+        "resolved_at"
+      ],
+      "properties": {
+        "route_resolution_id": {"$ref": "#/$defs/digest"},
+        "preferred_route_id": {"type": "string", "minLength": 1},
+        "attempted_route_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "assigned_route_id": {"type": "string", "minLength": 1},
+        "supported_effective_route_id": {"$ref": "#/$defs/nullableNonEmptyString"},
+        "fallback_index": {"type": "integer", "minimum": 0},
+        "fallback_reason": {
+          "oneOf": [
+            {"enum": ["preferred_unavailable", "capability_mismatch", "policy_fallback"]},
+            {"type": "null"}
+          ]
+        },
+        "runtime_capability_snapshot_id": {"$ref": "#/$defs/digest"},
+        "resolved_at": {"type": "string", "format": "date-time", "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])T(?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9](?:\\.[0-9]+)?Z$"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"fallback_index": {"const": 0}}},
+          "then": {"properties": {"fallback_reason": {"type": "null"}}},
+          "else": {
+            "properties": {
+              "fallback_index": {"minimum": 1},
+              "fallback_reason": {"enum": ["preferred_unavailable", "capability_mismatch", "policy_fallback"]}
+            }
+          }
+        }
+      ]
+    },
+    "serviceRerouteEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "surface", "threadId", "turnId", "fromModel", "toModel", "reason", "evidence_digest"],
+      "properties": {
+        "event_id": {"$ref": "#/$defs/digest"},
+        "surface": {"$ref": "#/$defs/surface"},
+        "threadId": {"type": "string", "minLength": 1},
+        "turnId": {"type": "string", "minLength": 1},
+        "fromModel": {"type": "string", "minLength": 1},
+        "toModel": {"type": "string", "minLength": 1},
+        "reason": {
+          "enum": [
+            "service_capacity",
+            "service_policy",
+            "service_availability",
+            "fixture_service_reroute",
+            "fixture_second_service_reroute"
+          ]
+        },
+        "evidence_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "rerouteDestinationAssessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_id",
+        "destination_candidate_route_id",
+        "destination_agent_contract_id",
+        "destination_named_agent",
+        "assessment",
+        "prequalification_evidence_id"
+      ],
+      "properties": {
+        "event_id": {"$ref": "#/$defs/digest"},
+        "destination_candidate_route_id": {"$ref": "#/$defs/nullableNonEmptyString"},
+        "destination_agent_contract_id": {"$ref": "#/$defs/nullableNonEmptyString"},
+        "destination_named_agent": {"$ref": "#/$defs/nullableNonEmptyString"},
+        "assessment": {
+          "enum": [
+            "prequalified_same_agent",
+            "not_prequalified",
+            "unknown",
+            "ambiguous",
+            "different_agent"
+          ]
+        },
+        "prequalification_evidence_id": {
+          "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+        }
+      }
+    },
+    "experimentPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "experiment_policy_id",
+        "owner_spec_id",
+        "candidate_route_id",
+        "work_item_kind",
+        "work_item_id",
+        "mutation_class"
+      ],
+      "properties": {
+        "experiment_policy_id": {"$ref": "#/$defs/digest"},
+        "owner_spec_id": {"const": "G56R-002"},
+        "candidate_route_id": {"type": "string", "minLength": 1},
+        "work_item_kind": {"$ref": "#/$defs/workItemKind"},
+        "work_item_id": {"type": "string", "minLength": 1},
+        "mutation_class": {"type": "string", "minLength": 1}
+      }
+    },
+    "qualificationEvidenceReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "qualification_evidence_id",
+        "authority_kind",
+        "owner_spec_id",
+        "destination_candidate_route_id",
+        "destination_agent_contract_id",
+        "destination_named_agent",
+        "qualification_status",
+        "evidence_digest"
+      ],
+      "properties": {
+        "qualification_evidence_id": {"$ref": "#/$defs/digest"},
+        "authority_kind": {"enum": ["synthetic_fixture", "owned_external"]},
+        "owner_spec_id": {"$ref": "#/$defs/specId"},
+        "destination_candidate_route_id": {"$ref": "#/$defs/sanitizedIdentifier"},
+        "destination_agent_contract_id": {"$ref": "#/$defs/sanitizedIdentifier"},
+        "destination_named_agent": {"$ref": "#/$defs/sanitizedIdentifier"},
+        "qualification_status": {"const": "prequalified"},
+        "evidence_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "controlledEnvironmentBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "controlled_environment_id",
+        "client_identity_id",
+        "surface",
+        "runtime_capability_snapshot_id",
+        "repository_revision",
+        "repository_tree_digest",
+        "candidate_route_id",
+        "work_item_kind",
+        "work_item_id"
+      ],
+      "properties": {
+        "controlled_environment_id": {"$ref": "#/$defs/digest"},
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "surface": {"$ref": "#/$defs/surface"},
+        "runtime_capability_snapshot_id": {"$ref": "#/$defs/digest"},
+        "repository_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "repository_tree_digest": {"$ref": "#/$defs/digest"},
+        "candidate_route_id": {"type": "string", "minLength": 1},
+        "work_item_kind": {"$ref": "#/$defs/workItemKind"},
+        "work_item_id": {"type": "string", "minLength": 1}
+      }
+    },
+    "treatmentFailure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "failure_code",
+        "affected_field",
+        "expected_evidence_ref",
+        "observed_evidence_ref",
+        "resulting_disposition"
+      ],
+      "properties": {
+        "failure_code": {
+          "enum": [
+            "agent_mismatch",
+            "model_mismatch",
+            "effort_mismatch",
+            "configuration_mismatch",
+            "sandbox_approvals_mismatch",
+            "mutation_class_mismatch",
+            "skills_mcp_tools_mismatch",
+            "parent_configuration_mismatch",
+            "client_or_override_mismatch",
+            "delivery_canary_failure",
+            "effective_treatment_unknown",
+            "reroute_unapproved",
+            "reroute_unidentifiable",
+            "reroute_ambiguous",
+            "reroute_different_agent"
+          ]
+        },
+        "affected_field": {"const": "treatment.evidence"},
+        "expected_evidence_ref": {"type": "null"},
+        "observed_evidence_ref": {"type": "null"},
+        "resulting_disposition": {
+          "enum": ["unknown", "hard_fail"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "failure_code": {"enum": ["delivery_canary_failure", "effective_treatment_unknown"]}
+            }
+          },
+          "then": {"properties": {"resulting_disposition": {"const": "unknown"}}},
+          "else": {"properties": {"resulting_disposition": {"const": "hard_fail"}}}
+        }
+      ]
+    },
+    "objectiveBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_route_id",
+        "agent_contract_id",
+        "runtime_capability_snapshot_id",
+        "route_resolution_id",
+        "experiment_policy_id",
+        "execution_trace_id"
+      ],
+      "properties": {
+        "candidate_route_id": {"type": "string", "minLength": 1},
+        "agent_contract_id": {"type": "string", "minLength": 1},
+        "runtime_capability_snapshot_id": {"$ref": "#/$defs/digest"},
+        "route_resolution_id": {"$ref": "#/$defs/digest"},
+        "experiment_policy_id": {"$ref": "#/$defs/digest"},
+        "execution_trace_id": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "treatmentTrace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "objective_binding",
+        "controlled_environment_id",
+        "client_identity_id",
+        "surface",
+        "repository_revision",
+        "repository_tree_digest",
+        "work_item_kind",
+        "work_item_id",
+        "named_agent",
+        "assigned_route_id",
+        "requested_model",
+        "requested_effort",
+        "supported_effective_model",
+        "supported_effective_effort",
+        "configured_route_proof",
+        "service_reroute_events",
+        "reroute_destination_assessments",
+        "instruction_hash",
+        "configuration_hash",
+        "sandbox",
+        "approvals",
+        "mutation_class",
+        "expected_skills_mcp_tools",
+        "loaded_skills_mcp_tools",
+        "parent_configuration",
+        "controlled_overrides",
+        "delivery_canary",
+        "treatment_failures",
+        "context",
+        "parent_child_graph",
+        "raw_token_vector",
+        "request_turn_count",
+        "wall_time_ms",
+        "retries",
+        "compaction",
+        "validation",
+        "cancellation",
+        "failed_abandoned_work",
+        "terminal_state",
+        "outcome",
+        "acceptance",
+        "observations",
+        "treatment_disposition",
+        "disposition_reasons"
+      ],
+      "properties": {
+        "objective_binding": {"$ref": "#/$defs/objectiveBinding"},
+        "controlled_environment_id": {"$ref": "#/$defs/digest"},
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "surface": {"$ref": "#/$defs/surface"},
+        "repository_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "repository_tree_digest": {"$ref": "#/$defs/digest"},
+        "work_item_kind": {"$ref": "#/$defs/workItemKind"},
+        "work_item_id": {"type": "string", "minLength": 1},
+        "named_agent": {"type": "string", "minLength": 1},
+        "assigned_route_id": {"type": "string", "minLength": 1},
+        "requested_model": {"type": "string", "minLength": 1},
+        "requested_effort": {"type": "string", "minLength": 1},
+        "supported_effective_model": {"$ref": "#/$defs/nullableNonEmptyString"},
+        "supported_effective_effort": {"$ref": "#/$defs/nullableNonEmptyString"},
+        "configured_route_proof": {
+          "oneOf": [{"$ref": "#/$defs/configuredRouteProof"}, {"type": "null"}]
+        },
+        "service_reroute_events": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/serviceRerouteEvent"}
+        },
+        "reroute_destination_assessments": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/rerouteDestinationAssessment"}
+        },
+        "instruction_hash": {"$ref": "#/$defs/digest"},
+        "configuration_hash": {"$ref": "#/$defs/digest"},
+        "sandbox": {"$ref": "#/$defs/sandbox"},
+        "approvals": {"$ref": "#/$defs/approvals"},
+        "mutation_class": {"type": "string", "minLength": 1},
+        "expected_skills_mcp_tools": {"$ref": "#/$defs/skillsMcpTools"},
+        "loaded_skills_mcp_tools": {"$ref": "#/$defs/skillsMcpTools"},
+        "parent_configuration": {"$ref": "#/$defs/parentConfiguration"},
+        "controlled_overrides": {"$ref": "#/$defs/controlledOverrides"},
+        "delivery_canary": {"$ref": "#/$defs/deliveryCanary"},
+        "treatment_failures": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/treatmentFailure"}
+        },
+        "context": {"$ref": "#/$defs/traceContext"},
+        "parent_child_graph": {"$ref": "#/$defs/parentChildGraph"},
+        "raw_token_vector": {"$ref": "#/$defs/rawTokenVector"},
+        "request_turn_count": {"$ref": "#/$defs/requestTurnCount"},
+        "wall_time_ms": {
+          "oneOf": [
+            {"type": "integer", "minimum": 0},
+            {"type": "null"}
+          ]
+        },
+        "retries": {
+          "oneOf": [
+            {"type": "integer", "minimum": 0},
+            {"type": "null"}
+          ]
+        },
+        "compaction": {"$ref": "#/$defs/compaction"},
+        "validation": {"$ref": "#/$defs/validation"},
+        "cancellation": {"$ref": "#/$defs/cancellation"},
+        "failed_abandoned_work": {"$ref": "#/$defs/failedAbandonedWork"},
+        "terminal_state": {
+          "enum": ["completed", "failed", "cancelled", "abandoned"]
+        },
+        "outcome": {"$ref": "#/$defs/terminalOutcome"},
+        "acceptance": {"type": "null"},
+        "observations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/observationValue"}
+        },
+        "treatment_disposition": {
+          "enum": ["proven", "unknown", "non_scorable_rerouted", "hard_fail"]
+        },
+        "disposition_reasons": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "agent_mismatch",
+              "model_mismatch",
+              "effort_mismatch",
+              "configuration_mismatch",
+              "sandbox_approvals_mismatch",
+              "mutation_class_mismatch",
+              "skills_mcp_tools_mismatch",
+              "parent_configuration_mismatch",
+              "client_or_override_mismatch",
+              "delivery_canary_failure",
+              "effective_treatment_unknown",
+              "reroute_unapproved",
+              "reroute_unidentifiable",
+              "reroute_ambiguous",
+              "reroute_different_agent",
+              "configured_route_proof_and_complete_reroute_monitoring",
+              "profile_supported_effective_treatment",
+              "effective_treatment_or_reroute_evidence_missing",
+              "service_reroute_requested_route_non_scorable",
+              "reroute_association_mismatch",
+              "ambiguous_reroute_association",
+              "reroute_destination_missing",
+              "reroute_destination_ambiguous",
+              "reroute_destination_unapproved",
+              "reroute_destination_mismatch",
+              "reroute_destination_unidentifiable",
+              "reroute_destination_manifest_mismatch",
+              "reroute_destination_different_agent",
+              "reroute_destination_model_mismatch",
+              "reroute_destination_non_authoritative",
+              "reroute_destination_untrusted",
+              "reroute_effective_destination_mismatch",
+              "reroute_source_model_mismatch",
+              "orphan_reroute_destination_assessment"
+            ]
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"terminal_state": {"const": "completed"}}},
+          "then": {
+            "properties": {
+              "outcome": {"properties": {"status": {"const": "completed"}}},
+              "cancellation": {"properties": {"state": {"const": "not_requested"}}},
+              "failed_abandoned_work": {
+                "properties": {"failed_count": {"const": 0}, "abandoned_count": {"const": 0}}
+              }
+            }
+          }
+        },
+        {
+          "if": {"properties": {"terminal_state": {"const": "failed"}}},
+          "then": {
+            "properties": {
+              "outcome": {"properties": {"status": {"const": "failed"}}},
+              "cancellation": {"properties": {"state": {"const": "not_requested"}}},
+              "failed_abandoned_work": {"properties": {"failed_count": {"minimum": 1}}}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"terminal_state": {"const": "abandoned"}}},
+          "then": {
+            "properties": {
+              "outcome": {"properties": {"status": {"const": "abandoned"}}},
+              "cancellation": {"properties": {"state": {"const": "not_requested"}}},
+              "failed_abandoned_work": {"properties": {"abandoned_count": {"minimum": 1}}}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"terminal_state": {"const": "cancelled"}}},
+          "then": {
+            "properties": {
+              "outcome": {"properties": {"status": {"const": "cancelled"}}},
+              "cancellation": {"properties": {"state": {"const": "completed"}}}
+            }
+          }
+        }
+      ]
+    },
+    "expectedDisposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution_trace_id", "treatment_disposition"],
+      "properties": {
+        "execution_trace_id": {"$ref": "#/$defs/digest"},
+        "treatment_disposition": {
+          "enum": ["proven", "unknown", "non_scorable_rerouted", "hard_fail"]
+        }
+      }
+    },
+    "fixtureProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "sanitizer_version",
+        "raw_evidence_digest",
+        "expected_dispositions",
+        "network_required",
+        "raw_store_required",
+        "replay_count"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "sanitizer_version": {"type": "string", "minLength": 1},
+        "raw_evidence_digest": {"$ref": "#/$defs/digest"},
+        "expected_dispositions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/expectedDisposition"}
+        },
+        "network_required": {"const": false},
+        "raw_store_required": {"const": false},
+        "replay_count": {"const": 2}
+      }
+    }
+  }
+}

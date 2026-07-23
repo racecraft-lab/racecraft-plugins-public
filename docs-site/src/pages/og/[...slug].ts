@@ -53,7 +53,6 @@ const pages: Record<string, CardPage> = Object.fromEntries(
 );
 
 export const { getStaticPaths, GET } = await OGImageRoute({
-  param: 'slug',
   pages,
   getImageOptions: (_path, page: CardPage) => ({
     title: page.title,

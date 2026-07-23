@@ -1,0 +1,740 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-002/capability-freeze.schema.json",
+  "title": "G56R-002 Executable Candidate Freeze",
+  "type": "object",
+  "additionalProperties": false,
+  "dependentRequired": {
+    "treatment_contract_digest": ["treatment_evidence_digest"],
+    "treatment_evidence_digest": ["treatment_contract_digest"]
+  },
+  "required": [
+    "schema_version",
+    "candidate_freeze_id",
+    "source_manifest_binding",
+    "client_identity",
+    "client_identity_id",
+    "official_source_refreshes",
+    "source_refresh_set_digest",
+    "surface_matrix",
+    "surface_matrix_id",
+    "runtime_capability_snapshot",
+    "runtime_capability_snapshot_id",
+    "telemetry_profile_id",
+    "current_ledger_digest",
+    "surface_matrix_digest",
+    "tuple_decision_digest",
+    "included_candidate_route_ids",
+    "excluded_candidates",
+    "tuple_decisions",
+    "approved_canary_executors",
+    "canary_results",
+    "published_at",
+    "supersedes_candidate_freeze_id"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "candidate_freeze_id": {"$ref": "#/$defs/digest"},
+    "source_manifest_binding": {"$ref": "#/$defs/sourceManifestBinding"},
+    "client_identity": {"$ref": "#/$defs/clientIdentity"},
+    "client_identity_id": {"$ref": "#/$defs/digest"},
+    "official_source_refreshes": {
+      "type": "array",
+      "minItems": 22,
+      "maxItems": 22,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/sourceRefresh"}
+    },
+    "source_refresh_set_digest": {"$ref": "#/$defs/digest"},
+    "surface_matrix": {"$ref": "#/$defs/surfaceMatrix"},
+    "surface_matrix_id": {"$ref": "#/$defs/digest"},
+    "runtime_capability_snapshot": {"$ref": "#/$defs/runtimeCapabilitySnapshot"},
+    "runtime_capability_snapshot_id": {"$ref": "#/$defs/digest"},
+    "telemetry_profile_id": {"$ref": "#/$defs/digest"},
+    "treatment_contract_digest": {"$ref": "#/$defs/digest"},
+    "treatment_evidence_digest": {"$ref": "#/$defs/digest"},
+    "current_ledger_digest": {"$ref": "#/$defs/digest"},
+    "surface_matrix_digest": {"$ref": "#/$defs/digest"},
+    "tuple_decision_digest": {"$ref": "#/$defs/digest"},
+    "included_candidate_route_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "excluded_candidates": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/excludedCandidate"}
+    },
+    "tuple_decisions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/tupleDecision"}
+    },
+    "approved_canary_executors": {
+      "type": "array",
+      "maxItems": 0,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/canaryExecutorApproval"}
+    },
+    "canary_results": {
+      "type": "array",
+      "maxItems": 0,
+      "items": {"$ref": "#/$defs/canaryResult"},
+      "default": []
+    },
+    "published_at": {"type": "string", "format": "date-time"},
+    "supersedes_candidate_freeze_id": {
+      "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "repositoryBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository_binding_id",
+        "revision",
+        "tree_object",
+        "tree_digest",
+        "evidence_ref"
+      ],
+      "properties": {
+        "repository_binding_id": {"$ref": "#/$defs/digest"},
+        "revision": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+        "tree_object": {"type": "string", "pattern": "^[0-9a-f]{40,64}$"},
+        "tree_digest": {"$ref": "#/$defs/digest"},
+        "evidence_ref": {
+          "type": "string",
+          "pattern": "^git-object://[0-9a-f]{40,64}/[0-9a-f]{40,64}$"
+        }
+      }
+    },
+    "workItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {"enum": ["task", "fixture", "objective"]},
+        "id": {"type": "string", "minLength": 1}
+      }
+    },
+    "sourceManifestBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "snapshot_id", "manifest_digest"],
+      "properties": {
+        "schema_version": {"type": "string", "minLength": 1},
+        "snapshot_id": {"type": "string", "minLength": 1},
+        "manifest_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "excludedCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_route_id", "reasons"],
+      "properties": {
+        "candidate_route_id": {"type": "string", "minLength": 1},
+        "reasons": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "clientIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "client_identity_id",
+        "reported_version",
+        "build_identifier_kind",
+        "build_identifier",
+        "distribution"
+      ],
+      "properties": {
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "reported_version": {"type": "string", "minLength": 1},
+        "build_identifier_kind": {
+          "enum": ["vendor_build_id", "executable_sha256", "package_sha256"]
+        },
+        "build_identifier": {"type": "string", "minLength": 1},
+        "distribution": {"type": "string", "minLength": 1}
+      }
+    },
+    "sourceRefresh": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "official_source_ledger_id",
+        "requested_url",
+        "canonical_url",
+        "retrieved_at",
+        "body_digest",
+        "status",
+        "source_capture_digest",
+        "bounded_extracts",
+        "retrieval_evidence_digest",
+        "documented_facts",
+        "claim_bindings",
+        "invalidated_claim_ids",
+        "prior_record_digest"
+      ],
+      "properties": {
+        "official_source_ledger_id": {
+          "type": "string",
+          "pattern": "^OPENAI-DOC-[0-9]{3}$"
+        },
+        "requested_url": {"type": "string", "format": "uri"},
+        "canonical_url": {"type": "string", "format": "uri"},
+        "retrieved_at": {"type": "string", "format": "date-time"},
+        "body_digest": {
+          "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+        },
+        "status": {
+          "enum": [
+            "confirmed_current",
+            "changed",
+            "redirected",
+            "inaccessible",
+            "withdrawn",
+            "conflicting"
+          ]
+        },
+        "source_capture_digest": {"$ref": "#/$defs/digest"},
+        "bounded_extracts": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/boundedExtract"}
+        },
+        "retrieval_evidence_digest": {"$ref": "#/$defs/digest"},
+        "documented_facts": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "claim_bindings": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "invalidated_claim_ids": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "prior_record_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "boundedExtract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "extract_sha256", "normalization"],
+      "properties": {
+        "text": {"type": "string", "minLength": 1},
+        "extract_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "normalization": {"type": "string", "minLength": 1}
+      }
+    },
+    "surfaceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "effort", "available", "hidden"],
+      "properties": {
+        "model": {"type": "string", "minLength": 1},
+        "effort": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "available": {"type": "boolean"},
+        "hidden": {"type": "boolean"},
+        "machine_id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]*$"
+        },
+        "raw_label": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9 ._-]{0,127}$"
+        },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]*$"
+          }
+        }
+      }
+    },
+    "visibilityPolicy": {
+      "oneOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["complete_enumeration"],
+          "properties": {
+            "complete_enumeration": {"type": "boolean"}
+          }
+        }
+      ]
+    },
+    "tupleKey": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "effort"],
+      "properties": {
+        "model": {"type": "string", "minLength": 1},
+        "effort": {
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "surfaceValues": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app_server", "cli", "interactive_picker"],
+      "properties": {
+        "app_server": {
+          "oneOf": [{"$ref": "#/$defs/surfaceEntry"}, {"type": "null"}]
+        },
+        "cli": {
+          "oneOf": [{"$ref": "#/$defs/surfaceEntry"}, {"type": "null"}]
+        },
+        "interactive_picker": {
+          "oneOf": [{"$ref": "#/$defs/surfaceEntry"}, {"type": "null"}]
+        }
+      }
+    },
+    "surfaceEvidenceRefs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app_server", "cli", "interactive_picker"],
+      "properties": {
+        "app_server": {
+          "type": "string",
+          "pattern": "^raw://sha256:[0-9a-f]{64}$"
+        },
+        "cli": {
+          "type": "string",
+          "pattern": "^raw://sha256:[0-9a-f]{64}$"
+        },
+        "interactive_picker": {
+          "type": "string",
+          "pattern": "^raw://sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "disagreement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "canonical_tuple",
+        "surface_values",
+        "evidence_refs",
+        "proposed_normalized_key",
+        "disagreement_class",
+        "tuple_disposition"
+      ],
+      "properties": {
+        "canonical_tuple": {"$ref": "#/$defs/tupleKey"},
+        "surface_values": {"$ref": "#/$defs/surfaceValues"},
+        "evidence_refs": {"$ref": "#/$defs/surfaceEvidenceRefs"},
+        "proposed_normalized_key": {"$ref": "#/$defs/tupleKey"},
+        "disagreement_class": {"enum": ["availability", "hidden_state"]},
+        "tuple_disposition": {"const": "excluded"}
+      }
+    },
+    "surfaceObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_observation_id",
+        "client_identity_id",
+        "repository_binding",
+        "work_item",
+        "surface",
+        "collection_method_id",
+        "method_inputs_digest",
+        "started_at",
+        "completed_at",
+        "completeness_state",
+        "visibility_policy",
+        "entries",
+        "raw_evidence_digest",
+        "raw_evidence_ref",
+        "sanitized_evidence_digest"
+      ],
+      "properties": {
+        "surface_observation_id": {"$ref": "#/$defs/digest"},
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "repository_binding": {"$ref": "#/$defs/repositoryBinding"},
+        "work_item": {"$ref": "#/$defs/workItem"},
+        "surface": {"enum": ["app_server", "cli", "interactive_picker"]},
+        "collection_method_id": {
+          "enum": ["fixture-enumeration-v1", "unknown-observation-v1"]
+        },
+        "method_inputs_digest": {"$ref": "#/$defs/digest"},
+        "started_at": {"type": "string", "format": "date-time"},
+        "completed_at": {"type": "string", "format": "date-time"},
+        "completeness_state": {
+          "enum": ["complete", "partial", "unavailable", "unknown"]
+        },
+        "visibility_policy": {"$ref": "#/$defs/visibilityPolicy"},
+        "entries": {"type": "array", "items": {"$ref": "#/$defs/surfaceEntry"}},
+        "raw_evidence_digest": {"$ref": "#/$defs/digest"},
+        "raw_evidence_ref": {
+          "type": "string",
+          "pattern": "^raw://sha256:[0-9a-f]{64}$"
+        },
+        "sanitized_evidence_digest": {
+          "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+        }
+      }
+    },
+    "surfaceMatrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface_matrix_id",
+        "schema_version",
+        "client_identity_id",
+        "repository_binding_id",
+        "work_item",
+        "observations",
+        "normalization_map",
+        "normalization_map_id",
+        "disagreements",
+        "aggregate_integrity_digest",
+        "validity",
+        "invalidity_reasons"
+      ],
+      "properties": {
+        "surface_matrix_id": {"$ref": "#/$defs/digest"},
+        "schema_version": {"const": "1.0.0"},
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "repository_binding_id": {"$ref": "#/$defs/digest"},
+        "work_item": {"$ref": "#/$defs/workItem"},
+        "observations": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {"$ref": "#/$defs/surfaceObservation"},
+          "allOf": [
+            {"contains": {"type": "object", "properties": {"surface": {"const": "app_server"}}, "required": ["surface"]}, "minContains": 1, "maxContains": 1},
+            {"contains": {"type": "object", "properties": {"surface": {"const": "cli"}}, "required": ["surface"]}, "minContains": 1, "maxContains": 1},
+            {"contains": {"type": "object", "properties": {"surface": {"const": "interactive_picker"}}, "required": ["surface"]}, "minContains": 1, "maxContains": 1}
+          ]
+        },
+        "normalization_map": {
+          "type": "object",
+          "additionalProperties": {"$ref": "#/$defs/normalizationAlias"}
+        },
+        "normalization_map_id": {"$ref": "#/$defs/digest"},
+        "disagreements": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/disagreement"}
+        },
+        "aggregate_integrity_digest": {"$ref": "#/$defs/digest"},
+        "validity": {"enum": ["valid", "invalid"]},
+        "invalidity_reasons": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "missing_or_unsupported_version",
+              "unprovable_shared_client_identity",
+              "aggregate_hash_mismatch",
+              "ambiguous_or_duplicate_normalization_key"
+            ]
+          }
+        }
+      }
+    },
+    "normalizationAlias": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical_model_id", "authority_kind", "authority_surface", "client_identity_id", "authority_evidence_ref"],
+      "properties": {
+        "canonical_model_id": {"type": "string", "minLength": 1},
+        "authority_kind": {"const": "machine_readable_identifier"},
+        "authority_surface": {"enum": ["app_server", "cli", "interactive_picker"]},
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "authority_evidence_ref": {"type": "string", "pattern": "^raw://sha256:[0-9a-f]{64}$"}
+      }
+    },
+    "tupleDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {"properties": {"decision": {"const": "excluded"}}, "required": ["decision"]},
+          "then": {"properties": {"reasons": {"minItems": 1}}}
+        }
+      ],
+      "required": [
+        "candidate_route_id",
+        "candidate_route_digest",
+        "agent_contract_id",
+        "named_agent",
+        "agent_contract_digest",
+        "source_ref",
+        "source_sha256",
+        "instruction_sha256",
+        "role_instruction_sha256",
+        "canonical_model_id",
+        "canonical_effort",
+        "official_source_bindings",
+        "effort_surface_bindings",
+        "runtime_capability_snapshot_id",
+        "surface_matrix_id",
+        "surface_evidence",
+        "hidden_state",
+        "normalization_map_id",
+        "disagreement_digest",
+        "source_admitted",
+        "source_admission_reasons",
+        "availability_disposition",
+        "surface_disposition",
+        "exact_treatment_readiness",
+        "decision",
+        "reasons"
+      ],
+      "properties": {
+        "candidate_route_id": {"type": "string", "minLength": 1},
+        "candidate_route_digest": {"$ref": "#/$defs/digest"},
+        "agent_contract_id": {"type": "string", "minLength": 1},
+        "named_agent": {"type": "string", "minLength": 1},
+        "agent_contract_digest": {"$ref": "#/$defs/digest"},
+        "source_ref": {"type": "string", "minLength": 1},
+        "source_sha256": {"$ref": "#/$defs/digest"},
+        "instruction_sha256": {"$ref": "#/$defs/digest"},
+        "role_instruction_sha256": {"$ref": "#/$defs/digest"},
+        "canonical_model_id": {"type": "string", "minLength": 1},
+        "canonical_effort": {
+          "oneOf": [
+            {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+            {"type": "null"}
+          ]
+        },
+        "official_source_bindings": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/officialSourceBinding"}
+        },
+        "effort_surface_bindings": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/effortSurfaceBinding"}
+        },
+        "runtime_capability_snapshot_id": {"$ref": "#/$defs/digest"},
+        "surface_matrix_id": {"$ref": "#/$defs/digest"},
+        "surface_evidence": {"$ref": "#/$defs/surfaceEvidence"},
+        "hidden_state": {"$ref": "#/$defs/hiddenState"},
+        "normalization_map_id": {"$ref": "#/$defs/digest"},
+        "disagreement_digest": {
+          "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+        },
+        "source_admitted": {"type": "boolean"},
+        "source_admission_reasons": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "availability_disposition": {
+          "enum": ["supported", "available_for_pinned_environment", "unknown"]
+        },
+        "surface_disposition": {"enum": ["agreed", "disagreed", "unknown"]},
+        "exact_treatment_readiness": {"enum": ["pending", "not_ready_excluded"]},
+        "decision": {"enum": ["included", "excluded"]},
+        "reasons": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "officialSourceBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["official_source_ledger_id", "source_refresh_digest"],
+      "properties": {
+        "official_source_ledger_id": {"type": "string", "pattern": "^OPENAI-DOC-[0-9]{3}$"},
+        "source_refresh_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "effortSurfaceBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["effort_surface_record_id", "effort_surface_record_digest", "official_source_ledger_id", "source_refresh_digest"],
+      "properties": {
+        "effort_surface_record_id": {"type": "string", "minLength": 1},
+        "effort_surface_record_digest": {"$ref": "#/$defs/digest"},
+        "official_source_ledger_id": {"type": "string", "pattern": "^OPENAI-DOC-[0-9]{3}$"},
+        "source_refresh_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "surfaceEvidenceEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surface_observation_id", "completeness_state", "visibility_policy", "raw_evidence_digest", "raw_evidence_ref", "matching_entry"],
+      "properties": {
+        "surface_observation_id": {"$ref": "#/$defs/digest"},
+        "completeness_state": {"enum": ["complete", "partial", "unavailable", "unknown"]},
+        "visibility_policy": {"$ref": "#/$defs/visibilityPolicy"},
+        "raw_evidence_digest": {"$ref": "#/$defs/digest"},
+        "raw_evidence_ref": {"type": "string", "pattern": "^raw://sha256:[0-9a-f]{64}$"},
+        "matching_entry": {
+          "oneOf": [{"$ref": "#/$defs/surfaceEntry"}, {"type": "null"}]
+        }
+      }
+    },
+    "surfaceEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app_server", "cli", "interactive_picker"],
+      "properties": {
+        "app_server": {"$ref": "#/$defs/surfaceEvidenceEntry"},
+        "cli": {"$ref": "#/$defs/surfaceEvidenceEntry"},
+        "interactive_picker": {"$ref": "#/$defs/surfaceEvidenceEntry"}
+      }
+    },
+    "hiddenState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["app_server", "cli", "interactive_picker"],
+      "properties": {
+        "app_server": {"type": ["boolean", "null"]},
+        "cli": {"type": ["boolean", "null"]},
+        "interactive_picker": {"type": ["boolean", "null"]}
+      }
+    },
+    "runtimeCapabilitySnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_capability_snapshot_id",
+        "schema_version",
+        "surface_matrix_id",
+        "client_identity_id",
+        "controlled_repository_snapshot",
+        "work_item",
+        "models",
+        "efforts",
+        "capabilities",
+        "collection_window",
+        "raw_evidence_digest",
+        "raw_evidence_ref",
+        "source_refresh_set_digest",
+        "supersedes_snapshot_id"
+      ],
+      "properties": {
+        "runtime_capability_snapshot_id": {"$ref": "#/$defs/digest"},
+        "schema_version": {"const": "1.0.0"},
+        "surface_matrix_id": {"$ref": "#/$defs/digest"},
+        "client_identity_id": {"$ref": "#/$defs/digest"},
+        "controlled_repository_snapshot": {"$ref": "#/$defs/repositoryBinding"},
+        "work_item": {"$ref": "#/$defs/workItem"},
+        "models": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "efforts": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "capabilities": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "collection_window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["started_at", "completed_at"],
+          "properties": {
+            "started_at": {"type": "string", "format": "date-time"},
+            "completed_at": {"type": "string", "format": "date-time"}
+          }
+        },
+        "raw_evidence_digest": {"$ref": "#/$defs/digest"},
+        "raw_evidence_ref": {
+          "type": "string",
+          "pattern": "^aggregate://sha256:[0-9a-f]{64}$"
+        },
+        "source_refresh_set_digest": {"$ref": "#/$defs/digest"},
+        "supersedes_snapshot_id": {
+          "oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]
+        }
+      }
+    },
+    "canaryExecutorApproval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "executor_contract_id",
+        "contract_version",
+        "implementation_digest",
+        "platform",
+        "approval_evidence_digest"
+      ],
+      "properties": {
+        "executor_contract_id": {"$ref": "#/$defs/digest"},
+        "contract_version": {"const": "1.0.0"},
+        "implementation_digest": {"$ref": "#/$defs/digest"},
+        "platform": {"enum": ["macos", "linux", "windows"]},
+        "approval_evidence_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "canaryResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_id",
+        "canonical_model_id",
+        "canonical_effort",
+        "attempt_index",
+        "timeout_seconds",
+        "combined_output_cap_bytes",
+        "executor_contract_id",
+        "implementation_digest",
+        "executor_result_digest",
+        "contract_version",
+        "platform",
+        "timeout_enforced",
+        "output_cap_enforced",
+        "process_tree_termination_state",
+        "retry_count",
+        "exit_code",
+        "sentinel_observed",
+        "terminal_class",
+        "availability_disposition",
+        "evidence_digest"
+      ],
+      "properties": {
+        "snapshot_id": {"$ref": "#/$defs/digest"},
+        "canonical_model_id": {"type": "string", "minLength": 1},
+        "canonical_effort": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$"},
+        "attempt_index": {"const": 1},
+        "timeout_seconds": {"const": 30},
+        "combined_output_cap_bytes": {"const": 65536},
+        "executor_contract_id": {"$ref": "#/$defs/digest"},
+        "implementation_digest": {"$ref": "#/$defs/digest"},
+        "executor_result_digest": {"$ref": "#/$defs/digest"},
+        "contract_version": {"const": "1.0.0"},
+        "platform": {"enum": ["macos", "linux", "windows"]},
+        "timeout_enforced": {"const": true},
+        "output_cap_enforced": {"const": true},
+        "process_tree_termination_state": {
+          "enum": ["not_needed", "completed", "failed"]
+        },
+        "retry_count": {"const": 0},
+        "exit_code": {"type": ["integer", "null"]},
+        "sentinel_observed": {"type": "boolean"},
+        "terminal_class": {
+          "enum": [
+            "success",
+            "timeout",
+            "output_cap_exceeded",
+            "launch_error",
+            "transport_error",
+            "authentication_error",
+            "rate_limited",
+            "malformed_response",
+            "explicit_rejection",
+            "service_reroute",
+            "ambiguous_error"
+          ]
+        },
+        "availability_disposition": {
+          "enum": ["available_for_pinned_environment", "unknown"]
+        },
+        "evidence_digest": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}

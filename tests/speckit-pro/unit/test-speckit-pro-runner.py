@@ -581,6 +581,8 @@ class RunnerFoundationTests(unittest.TestCase):
             "docs/ai/research/claude-agent-route-candidate-manifest.json",
             "docs/ai/research/codex-agent-route-candidates.md",
             "docs/ai/research/codex-agent-route-candidate-manifest.json",
+            "docs/ai/research/codex-g56r-002-capability-evidence.md",
+            "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json",
         }
         for path in changed:
             if (

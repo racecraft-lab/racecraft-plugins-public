@@ -1,0 +1,509 @@
+# Data Model: G56R-002 Capability and Exact-Treatment Contracts
+
+## Conventions
+
+- IDs are non-empty stable strings and are immutable once published.
+- Timestamps are UTC RFC 3339 strings.
+- Digests are lowercase `sha256:<64 hex characters>` values over canonical
+  UTF-8 JSON unless a field states that it hashes external bytes.
+- Canonical JSON uses sorted keys, compact separators, UTF-8, and one terminal
+  newline only when the stored artifact contract requires it.
+- A typed `value` is distinct from `observation_state`. The string `unknown` is
+  never substituted for a missing value.
+- Every record carries `schema_version`; successor records reference the prior
+  immutable ID instead of editing it.
+
+## Relationship Map
+
+| Record | Required parents | Required children or consumers |
+|---|---|---|
+| `OfficialSourceRefresh` | G56R-001 current `OPENAI-DOC-*` record | `ExecutableCandidateTuple`, `CandidateFreeze` |
+| `ClientIdentity` | Pinned client/package bytes | `SurfaceObservation`, `TelemetryProfileEntry`, `TreatmentTrace` |
+| `SurfaceMatrix` | One `ClientIdentity`, three surface observations | `RuntimeCapabilitySnapshot`, `Disagreement`, `CandidateFreeze` |
+| `RuntimeCapabilitySnapshot` | Matrix and raw-evidence digest/reference | `ExecutableCandidateTuple`, `RouteResolution`, objective join |
+| `CandidateFreeze` | Current-ledger digest, matrix digest, all tuple decisions | G56R-003 handoff |
+| `TelemetryProfile` | Client identity and surface-keyed field entries | `ConfiguredRouteProof`, `TreatmentTrace` |
+| `RouteResolution` | Candidate route and capability snapshot | `TreatmentTrace`, objective join |
+| `TreatmentTrace` | Six-ID objective join and telemetry profile | Synthetic replay and G56R-003 handoff |
+
+## Owning-ID Uniqueness
+
+Every owning collection rejects duplicate identity keys even when the duplicate
+objects differ: source-refresh ledger ID; surface-observation ID and
+`(client_identity_id, surface)` key; tuple-decision candidate-route/model/effort
+key; telemetry `(client_identity_id, surface, field_path)` key;
+route-resolution ID; controlled-environment binding ID; reroute event ID;
+execution-trace ID; and fixture path in the digest manifest. Repeated foreign
+key references to one valid owner remain allowed. A collision fails before any
+join or disposition is evaluated.
+
+## Source and Surface Records
+
+### `OfficialSourceRefresh`
+
+| Field | Type | Rule |
+|---|---|---|
+| `official_source_ledger_id` | string | One of exactly 22 current `OPENAI-DOC-*` records; never `OSL-*` |
+| `requested_url` / `canonical_url` | string | Canonical URL must remain in the approved OpenAI domain allowlist |
+| `retrieved_at` | timestamp | Required per refresh |
+| `body_digest` | digest or null | Null only when retrieval did not yield a body |
+| `status` | enum | `confirmed_current`, `changed`, `redirected`, `inaccessible`, `withdrawn`, or `conflicting` |
+| `source_capture_digest` | digest | Resolves the exact aggregate raw capture containing all 22 retrieved source bodies |
+| `bounded_extracts` | array | Exact visible-text extracts with SHA-256 and normalization contract |
+| `retrieval_evidence_digest` | digest | Binds canonical URL, retrieval time, body digest, and bounded extracts |
+| `documented_facts` | array | Bounded field-level claims supported by the refreshed source |
+| `claim_bindings` | array | Current claim/route IDs affected by this record |
+| `invalidated_claim_ids` | array | Subset of bindings invalidated by this outcome |
+| `prior_record_digest` | digest | Binds the G56R-001 input without rewriting it |
+
+Invariant: an adverse refresh invalidates only bound current claims/routes, and
+any body-digest change invalidates every binding for that source.
+Historical `OSL-*` evidence is never copied into this record as current. The
+private normalized refresh additionally retains `retrieved_body_b64` and the
+closed `retrieved_body_format: normalized_plain_text` declaration so the
+adapter can recheck the body and extracts without browser semantics. Raw HTML
+or angle-bracket markup is rejected. The published `OfficialSourceRefresh`
+strips both private fields but retains the shared aggregate capture digest,
+which must equal the exact source-ID-sorted canonical aggregate capture bytes.
+Normalization and raw refresh validation both recompute that digest. Extract
+normalization is the closed
+`unicode_text_whitespace_collapsed_utf8` contract. Multi-claim sources use the
+reviewed extract-to-claim dependency registry for metadata-only extract changes;
+a body change always invalidates every claim bound to the source. The exact
+already-published predecessor refresh-set digest is accepted only as an
+immutable legacy validation boundary; any byte change loses that exception.
+
+### `ClientIdentity`
+
+| Field | Type | Rule |
+|---|---|---|
+| `client_identity_id` | digest | Digest of the canonical identity payload |
+| `reported_version` | string | Required exact client version |
+| `build_identifier_kind` | enum | `vendor_build_id`, `executable_sha256`, or `package_sha256` |
+| `build_identifier` | string | Immutable build ID or digest |
+| `distribution` | string | Recorded provenance, not a platform claim |
+
+All surface observations in one matrix must reference the same ID.
+
+### `SurfaceObservation`
+
+| Field | Type | Rule |
+|---|---|---|
+| `surface_observation_id` | digest | Content identity of the closed observation payload |
+| `client_identity_id` | digest | Must match the matrix |
+| `repository_binding` | object | Closed revision/tree object, tree digest, and `git-object://` evidence binding derived from the active checkout |
+| `work_item` | object | Typed `task`, `fixture`, or `objective` ID supplied at collection |
+| `surface` | enum | `app_server`, `cli`, or `interactive_picker` |
+| `collection_method_id` | enum | Closed registry: `fixture-enumeration-v1` or `unknown-observation-v1` in this slice |
+| `method_inputs_digest` | digest | Fixed inputs/configuration |
+| `started_at` / `completed_at` | timestamp | Ordered collection window |
+| `completeness_state` | enum | `complete`, `partial`, `unavailable`, or `unknown` |
+| `visibility_policy` | object or null | Required for picker completeness/hidden omission claims |
+| `entries` | array | Raw label, machine ID when exposed, efforts, capabilities, hidden state, and typed fields |
+| `raw_evidence_digest` | digest | Digest of the raw capture bytes |
+| `raw_evidence_ref` | string | Content-addressed external reference outside Git |
+| `sanitized_evidence_digest` | digest or null | Present when a fixture is committed |
+
+App-server observations record initialization, `model/list(includeHidden:
+true)`, and provider-capability method outcomes separately. CLI/picker partial or
+irreproducible collection is unknown; missing values are not inferred.
+Neither registered method can authorize inclusion: fixture enumeration is
+synthetic and unknown observation is non-authoritative. The live collection
+allowlist is empty in this slice. A live unknown observation's
+`raw://sha256:<digest>` reference maps to `<raw_evidence_root>/<digest>.json`;
+the collector publishes that sanitized attempt record append-only with mode
+`0600`, recovers interrupted publication under the shared directory lock, and
+accepts a concurrent content-addressed winner only after exact-byte
+verification before publishing the observation. Source and unknown capture
+materialization shares the retention lock with registration and cleanup; a
+digest present in any deletion intent or completion record is permanently
+tombstoned and cannot be materialized again.
+
+### `SurfaceMatrix`
+
+| Field | Type | Rule |
+|---|---|---|
+| `surface_matrix_id` | digest | Content digest of the aggregate |
+| `schema_version` | string | Required and supported |
+| `client_identity_id` | digest | Shared by all observations |
+| `repository_binding_id` | digest | Shared by all three observation repository bindings |
+| `work_item` | object | Shared typed work-item binding |
+| `observations` | array | Exactly one observation for each required surface in canonical surface order |
+| `normalization_map` | object | Pinned-build aliases backed by an exact raw-label/machine-ID entry on the named authority surface |
+| `normalization_map_id` | digest | Content digest of the one-to-one alias map |
+| `disagreements` | array | Lossless conflict records |
+| `aggregate_integrity_digest` | digest | Covers all canonical observation objects and the normalization-map ID |
+| `validity` | enum | `valid` or `invalid` |
+| `invalidity_reasons` | array | Closed aggregate-level reasons |
+
+Aggregate invalidity is limited to missing/unsupported matrix version,
+unprovable shared client identity, failed aggregate hash, or ambiguous/duplicate
+normalization keys that prevent tuple attribution. Other gaps are tuple-local.
+
+An `unknown-observation-v1` observation binds both evidence digests to the
+canonical bytes of its deterministic collection-attempt record. Initial freeze
+publication must resolve that content-addressed record in the private raw store
+and verify the exact retained bytes; later published-artifact validation remains
+independent of the raw-store retention window.
+
+### `Disagreement`
+
+Required fields: canonical tuple key (or null when key attribution failed), all
+surface raw values and evidence references, proposed normalized key,
+`disagreement_class`, and tuple disposition. It never contains a winning value.
+
+## Capability and Freeze Records
+
+### `RuntimeCapabilitySnapshot`
+
+| Field | Type | Rule |
+|---|---|---|
+| `runtime_capability_snapshot_id` | digest | Stable content-addressed ID |
+| `surface_matrix_id` | digest | Required parent |
+| `client_identity_id` | digest | Must match matrix |
+| `controlled_repository_snapshot` | object | Exact repository-binding ID, revision, tree object/digest, and content-addressed evidence reference derived from the observations |
+| `work_item` | object | Exact shared typed work-item binding derived from the observations |
+| `models` / `efforts` / `capabilities` | arrays | Surface-keyed observations, never candidate authority |
+| `collection_window` | object | Start/end timestamps |
+| `raw_evidence_digest` / `raw_evidence_ref` | digest/string | External raw capture binding |
+| `source_refresh_set_digest` | digest | Binds all 22 current refresh outcomes |
+| `supersedes_snapshot_id` | string or null | Append-only successor chain |
+
+### `CanaryResult`
+
+| Field | Type | Rule |
+|---|---|---|
+| `snapshot_id` | digest | Runtime snapshot parent |
+| `canonical_model_id` / `canonical_effort` | strings | Together with snapshot ID, the one-attempt canary key |
+| `attempt_index` | integer | Must be exactly `1` |
+| `timeout_seconds` | integer | Must equal `30` |
+| `combined_output_cap_bytes` | integer | Must equal `65536` |
+| `executor_contract_id` | digest | Approved platform executor contract that enforced output and process-tree bounds |
+| `implementation_digest` | digest | Must equal the matching approval record's implementation digest |
+| `executor_result_digest` | digest | Exact closed external result-envelope binding, excluding only this digest and the derived availability disposition |
+| `contract_version` | string | Must equal `1.0.0` |
+| `platform` | enum | Must equal the matching repository-approved executor platform |
+| `timeout_enforced` / `output_cap_enforced` | booleans | Both must be true |
+| `process_tree_termination_state` | enum | `not_needed`, `completed`, or `failed`; failed remains unknown |
+| `retry_count` | integer | Must equal `0` |
+| `exit_code` | integer or null | Raw process result |
+| `sentinel_observed` | boolean | True only for the predeclared bounded response |
+| `terminal_class` | enum | `success`, `timeout`, `output_cap_exceeded`, `launch_error`, `transport_error`, `authentication_error`, `rate_limited`, `malformed_response`, `explicit_rejection`, `service_reroute`, or `ambiguous_error` |
+| `availability_disposition` | enum | `available_for_pinned_environment` only for success; otherwise `unknown` |
+| `evidence_digest` | digest | Exact-byte binding to a canonical, schema-closed redacted evidence object stored as `<sha256>.json` under the validated private raw-evidence root before successor publication |
+
+The redacted evidence object contains only `schema_version`, `snapshot_id`,
+`canonical_model_id`, `canonical_effort`, `terminal_class`, `exit_code`, and
+`sentinel_observed`. Its exact canonical bytes, including the trailing newline,
+must hash to `evidence_digest`; missing, mismatched, noncanonical, or additional
+fields block successor publication.
+The successor builder itself resolves and validates that retained object; a
+caller cannot publish from detached bytes. Same-snapshot successors preserve
+prior canary results as an immutable prefix so the one-attempt key cannot be
+reopened by an unrelated freeze refresh.
+Timeout and output-cap terminal records must report process-tree cleanup as
+`completed` or `failed`; `not_needed` is invalid once either bound is crossed.
+
+The module owns a versioned, default-empty allowlist of approved executor
+contract IDs. Matching an ID, implementation digest, or approval-evidence
+digest does not authenticate caller-supplied result bytes. This slice therefore
+does not admit any executor or canary result into a published freeze: the CLI
+rejects external results before reading them, standalone envelope validation
+always derives `unknown`, and the runtime and JSON schema require both canary
+arrays to remain empty. A future separately reviewed implementation must invoke
+the approved executor directly or verify a signature or equivalent attestation
+over the complete result envelope before availability can be promoted. Its
+default path never launches a process. A transient exception creates a
+successor snapshot and a new key. Canary results never establish support,
+effort support, eligibility, quality, preference, or qualification.
+
+### `ExecutableCandidateTuple`
+
+Required fields: `candidate_route_id`, `agent_contract_id`, canonical named
+agent/model/effort, official-source and effort-surface bindings, instruction and
+contract hashes, `runtime_capability_snapshot_id`, per-surface evidence,
+availability disposition, source-admission decision, hidden state,
+normalization/disagreement reference, exact-treatment readiness, and one
+`included` or tuple-local `excluded` decision with reasons.
+
+Inclusion requires current source admission, supported effort authority,
+supported pinned-environment availability, required-surface agreement under the
+hidden visibility rule, and no invalidated bound claim. Runtime discovery may
+only narrow this set.
+
+### `CandidateFreeze`
+
+| Field | Type | Rule |
+|---|---|---|
+| `candidate_freeze_id` | digest | Hash of the complete published payload except this field |
+| `schema_version` | string | Required |
+| `source_manifest_binding` | object | Canonical G56R-001 manifest schema, snapshot ID, and whole-manifest digest |
+| `client_identity` | object | Embedded closed pinned-build identity |
+| `client_identity_id` | digest | Required |
+| `official_source_refreshes` | array | All 22 sanitized, body-free published refresh outcomes |
+| `source_refresh_set_digest` / `current_ledger_digest` | digests | Equal digest over all 22 refresh outcomes |
+| `surface_matrix` | object | Embedded validated matrix |
+| `surface_matrix_id` / `surface_matrix_digest` | digests | Both equal the embedded matrix ID |
+| `tuple_decision_digest` | digest | Complete ordered included/excluded set |
+| `tuple_decisions` | array | Complete manifest-backed decision records with runtime snapshot binding |
+| `runtime_capability_snapshot` | object | Embedded rebuilt runtime snapshot |
+| `runtime_capability_snapshot_id` | digest | Required |
+| `telemetry_profile_id` | digest | Slice 1 must equal the named pending-treatment placeholder authority; a later slice replaces this only through its validated telemetry artifact contract |
+| `treatment_contract_digest` | digest | Treatment-aware successors bind the exact canonical treatment schema bytes |
+| `treatment_evidence_digest` | digest | Treatment-aware successors bind the exact owner-to-content-digest set for retained observation, configured-route, and sanitized source evidence |
+| `included_candidate_route_ids` | array | May be empty; never inferred |
+| `excluded_candidates` | array | Every excluded tuple and its explicit reasons |
+| `approved_canary_executors` / `canary_results` | arrays | Closed approval and replay-safe result records; both empty in the first freeze |
+| `published_at` | timestamp | Required; treatment successors cannot predate any bound route resolution or non-null observation capture |
+| `supersedes_candidate_freeze_id` | string or null | Successor only; prior freeze is immutable |
+
+`candidate_freeze_id` hashes the complete published object except that ID
+itself. Validation rebuilds the manifest binding, source refresh, matrix,
+runtime snapshot, tuple decisions, derived candidate lists, canary state,
+treatment evidence set, and whole-freeze identity. Any source, build, evidence, normalization, telemetry,
+or disposition change must produce a successor ID.
+
+A treatment-bound successor may retain `unknown`, failed, or non-scorable traces
+for excluded tuples, but it may publish `proven` only when the assigned prior
+tuple is included, source-admitted, availability-supported, surface-agreed, and
+pending exact-treatment evaluation. Publication at the latest evidence timestamp
+is allowed; publication before any route resolution or non-null observation
+capture is rejected.
+
+Raw-evidence retention records are staged before append-only artifact output.
+Their deletion deadline is exactly 30 days after the trusted registration time;
+the caller-supplied publication time cannot lengthen retention.
+Before registration, publication semantically revalidates the source capture,
+every non-fixture observation, and every canary result against the retained
+private bytes; content-address identity alone is insufficient. The public
+append-only output is created and verified through one identity-bound parent
+descriptor, and its exact canonical bytes are re-read as a single-link target
+before any receipt is issued. Recovery accepts an existing matching output only
+when it satisfies that same single-link invariant.
+A content-addressed publication intent binds the candidate freeze ID, exact
+artifact digest, publication time, and complete retention-record set before
+output begins; those records are governing once that intent is durable. A
+matching receipt is appended after the output bytes exist and proves completion
+of the exact intent. Records left before intent are reported as pending and
+never become governing authority. Each pending claim nevertheless protects
+reachable evidence for at most one day after trusted registration, and an
+expired pending claim cannot later be promoted without cleanup. The effective deletion deadline is the
+latest governing or individually capped pending deadline, so an expired older
+receipt cannot delete evidence still covered by a newer bounded pending claim.
+
+Raw-root and private-input validation is descriptor-relative and no-follow.
+After crash-link recovery, the adapter walks every nested directory and file
+twice, binding entry type, inode identity, permissions, link count, size, and
+directory membership; a changed snapshot fails closed. Validation-only private
+files are opened and rechecked through their parent descriptor and must be
+single-link `0600` regular files. Capability and treatment JSON enforce lexical
+nesting and node ceilings before full parsing, then repeat bounds validation on
+the parsed graph. Sanitized trees admit only JSON-native containers, string
+object keys, and scalar values before recursive sensitive-field checks.
+Deletion intents bind the original private file identity. An interrupted
+cleanup resumes only while that exact canonical file remains reachable; a
+missing or arbitrarily identity-changed target cannot prove pre-unlink
+interruption and remains fail-closed without a completion record. Cleanup first
+renames the exact v2-bound inode to a deterministic quarantine name and
+directory-synchronizes that transition. It then appends an immutable v3
+successor that binds the quarantine name and identity before unlinking it. A
+retry from either v2 or v3 can therefore resume from the same verified
+quarantined inode. After unlink, cleanup proves zero links and unchanged bytes,
+synchronizes the raw root, and publishes only the completion record with the
+actual successful cleanup time. A v3 intent with neither its quarantine nor a
+durable completion record is indeterminate and remains fail-closed; absence
+alone never certifies deletion. If the original open descriptor retains an
+alternate link after unlink, cleanup records no completion and never
+republishes the verified payload. Removing the external link does not make the
+state recoverable: a missing quarantine remains blocked, and an exact-byte file
+recreated under the quarantine name is still rejected because its inode is not
+the v3-bound identity. Reappeared targets and missing, forked, or disconnected
+intent chains likewise remain fail-closed for manual investigation.
+Every retention, receipt, intent, and deletion-record directory is loaded
+through one identity-bound directory descriptor. Entry names and identities
+are verified descriptor-relative, and the entry set must match before and
+after the load; directory replacement or a mixed snapshot fails closed.
+All capability JSON inputs use strict UTF-8 parsing with duplicate-key and
+non-finite-number rejection, a maximum nesting depth of 64, and at most 100,000
+total nodes. Parser recursion and resource-bound failures surface as
+fail-closed validation errors.
+Source-capture materialization rejects non-bytes-like or greater-than-32-MiB
+input before parsing, hashing, root validation, or allocation of the decoded
+JSON value. A shared parent-directory advisory lock is acquired before any
+`.capability-evidence-write-*` pathname appears and held through writer commit
+or recovery.
+Every temporary additionally holds an advisory lock until commit. Recovery
+acquires both locks and re-proves the descriptor-bound pathname and
+inode before removing an abandoned single-link pre-publication file. A linked
+temporary additionally must be the sole alternate name for one matching target;
+private targets must match their content address and exact bytes. Recovery
+directory-syncs before and after removal and proves the target is single-link;
+public append-only directories follow the same protocol, and any unrecognized
+alternate link still fails closed. Identical concurrent source-capture and
+unknown-attempt writers verify and accept the single-link winner only after
+synchronizing its parent directory. Both materializers hold the retention lock
+through tombstone inspection and append-only publication, so cleanup cannot
+race replacement-inode creation and deleted digests cannot be resurrected.
+
+## Telemetry and Treatment Records
+
+### `ObservationValue`
+
+| Field | Type | Rule |
+|---|---|---|
+| `field_path` | string | Closed inventory path |
+| `observation_state` | enum | `observed_value`, `explicit_null`, `missing`, `unavailable`, `not_applicable`, or `undocumented` |
+| `value` | typed value or null | Non-null only for `observed_value` unless the documented field itself returns null, which uses `explicit_null` |
+| `evidence_ref` | string or null | Required when evidence exists |
+| `captured_at` | timestamp or null | Required for an observation |
+
+No state may be coerced to zero, false, a configured value, or the string
+`unknown`. Unknown is a resulting knowledge/treatment disposition.
+
+### `TelemetryProfileEntry`
+
+Key: `(client_identity_id, surface, field_path)`.
+
+Required fields: classification (`stable_native`, `experimental_native`,
+`derived_from_controlled_configuration`, `conditional`, `unavailable`,
+`not_applicable`, or `undocumented`), official source ID or null, documented
+predicate, completeness rule, permitted claims, prohibited claims, and
+observation-state rules. An omitted key is `undocumented`; classifications do
+not inherit across surfaces.
+
+For app-server traces, `reroute.events` is a `stable_native`,
+`complete_capture` field. A configured-route proof is authoritative only when
+the trace retains an observed event list, including an evidence-backed empty
+list when no reroute occurred; the proof's completeness boolean cannot establish
+that fact by itself.
+
+### `ConfiguredRouteProof`
+
+Required fields: proof ID/digest, telemetry-profile approval entry, named agent,
+explicit model and effort, candidate route and agent-contract IDs, instruction
+and materialized-configuration hashes, client identity, controlled overrides,
+launch ID, consumption evidence, and complete-reroute-monitoring binding. It
+proves requested/assigned intent only.
+
+### `ObjectiveBinding`
+
+Every assigned objective requires all six non-null IDs:
+
+1. `candidate_route_id`
+2. `agent_contract_id`
+3. `runtime_capability_snapshot_id`
+4. `route_resolution_id`
+5. `experiment_policy_id`
+6. `execution_trace_id`
+
+Later aggregate IDs remain explicit null until their owning specs create them.
+
+### `ControlledEnvironmentBinding`
+
+Required fields: content-addressed binding ID, pinned client identity and
+surface, runtime-capability snapshot ID, repository revision and tree digest,
+candidate route ID, work-item kind (`task`, `fixture`, or `objective`), and
+work-item ID. Every treatment bundle carries a unique
+`controlled_environments` owner registry, and each trace references one owner
+by ID. The client, snapshot, and candidate route MUST equal the corresponding
+treatment and objective fields. A missing owner, duplicate owner, mismatch, or
+orphan hard-fails validation; no environment value is inferred from another
+record.
+
+### `RouteResolution`
+
+Required fields: `route_resolution_id`, preferred route, ordered attempted
+routes, resolver-selected assigned route, supported effective route or typed
+unknown, fallback index/reason, capability snapshot, and timestamp. Resolver
+fallback occurs before assignment. G56R-002 validates the record shape but does
+not define fallback ordering or resolver policy.
+
+### `ServiceRerouteEvent`
+
+Required documented fields: `threadId`, `turnId`, `fromModel`, `toModel`, and
+`reason`, plus event ID, pinned surface, and event evidence. It joins to a trace
+by `(surface, threadId, turnId)`. It proves no effort or named-agent identity
+and never overwrites resolver fields. Ambiguous/conflicting joins hard-fail.
+
+### `RerouteDestinationAssessment`
+
+Required fields: source event ID, destination candidate-route ID, destination
+agent-contract ID, destination named agent, assessment, and nullable
+prequalification-evidence ID. The raw service event remains unchanged. The
+treatment bundle includes a read-only `qualification_evidence_registry` whose
+owners bind evidence ID, authority kind, owning spec, destination route,
+agent-contract, named agent, status, and digest. Synthetic fixture authority
+exercises replay only and can never authorize live continuation. Runtime UAT is
+allowed only for a matching `owned_external` record created by its owning later
+spec. G56R-002 validates and consumes the slot but never creates or asserts real
+qualification evidence. Missing, mismatched, unknown, ambiguous, or
+different-agent assessments hard-fail treatment.
+
+### `TreatmentFailure`
+
+Required fields: closed failure code, affected contract field, expected and
+observed evidence references (nullable when unavailable), and resulting
+treatment disposition. The collection is required even when empty. Free-form
+disposition reasons may add context but never replace structured failures.
+
+### `TreatmentTrace`
+
+The trace contains:
+
+- objective six-ID binding;
+- controlled-environment binding and equality with the objective/snapshot;
+- named agent, assigned/requested route, supported effective evidence, and
+  separate raw service-reroute events and destination assessments;
+- instruction/configuration hashes, sandbox, approvals, mutation class,
+  expected/loaded skills, MCP, and tools;
+- parent configuration, pinned client, controlled overrides, delivery canary,
+  context, and parent-child graph;
+- complete raw token vector when exposed, request/turn count, wall time,
+  retries, compaction, validation, cancellation, failed/abandoned work,
+  terminal state, outcome, and acceptance;
+- one `ObservationValue` per closed telemetry-profile field;
+- structured treatment failures for every expected-versus-observed mismatch;
+- `treatment_disposition`: `proven`, `unknown`, `non_scorable_rerouted`, or
+  `hard_fail` with reasons.
+
+Rules:
+
+- Exact treatment is proven only by supported observed effective treatment or
+  approved configured-route proof plus complete reroute monitoring.
+- Supported effective treatment may be proven by an observed
+  `route.supported_effective_route_id` that binds a canonical route with a
+  non-null model and effort. It does not populate or claim the undocumented
+  `assignment.supported_effective_effort` field.
+- Every service reroute makes the requested route non-scorable.
+- Runtime UAT may continue only for an identifiable, prequalified destination
+  for the same named agent. Unapproved, unknown, unidentifiable, different-agent,
+  or ambiguous reroutes hard-fail.
+- Missing evidence is unknown and excludes only the affected tuple/run.
+
+## Fixture Provenance and Replay
+
+Each committed fixture records `schema_version`, `sanitizer_version`,
+`raw_evidence_digest`, and expected disposition. The adjacent behavior-named
+`fixture-digests.json` maps each repo-relative fixture path to its SHA-256 over
+the exact raw bytes. Keeping that digest out of the hashed file avoids a
+self-referential value and lets replay verify bytes before parsing.
+Sanitization removes credentials, headers, cookies, prompt/user content,
+account IDs, hostnames, absolute paths, and repository remotes, replacing
+necessary joins with deterministic fixture-local pseudonyms only at explicitly
+declared profile field paths. Nested sensitive fields are rejected regardless
+of a caller-supplied `fixture-*` value; generated pseudonyms must equal the
+profile's exact fixed value.
+
+Replay acceptance requires:
+
+1. load the out-of-band digest entry, verify raw fixture bytes, and only then
+   parse the fixture;
+2. reject undeclared fields and any raw-store or network dependency;
+3. cover success, explicit null, unavailable, misdelivery, approved reroute,
+   unapproved/unidentifiable reroute, discovery unavailable, and surface
+   disagreement;
+4. run the complete set twice; and
+5. require byte-identical normalized outputs, dispositions, and digests.
+
+Any mismatch fails acceptance. Replay never turns canary evidence into support,
+eligibility, scoring, or qualification.

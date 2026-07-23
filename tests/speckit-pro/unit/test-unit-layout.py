@@ -8,6 +8,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -23,7 +24,18 @@ if str(LIB_DIR) not in sys.path:
 from test_result import run_counted  # noqa: E402
 
 
-SPEC_ID_NAME = re.compile(r"(?:^|[-_])(?:doc|prsg|spec|tacd|xplat)-\d", re.IGNORECASE)
+SPEC_ID_NAME = re.compile(
+    r"[a-z][a-z0-9]*[-_]\d{3}[a-z]?",
+    re.IGNORECASE,
+)
+CANONICAL_SPEC_ID_NAME = re.compile(
+    r"\b(?P<family>[a-z][a-z0-9]*)-\d{3}[a-z]?\b",
+    re.IGNORECASE,
+)
+SPEC_ID_PREFIX_NAME = re.compile(
+    r"^\*\*Spec ID prefix:\*\*\s*`?(?P<family>[a-z][a-z0-9]*)-###",
+    re.IGNORECASE | re.MULTILINE,
+)
 PURPOSE_NAMED_ROOTS = (
     FIXTURE_ROOT,
     TEST_ROOT / "parity",
@@ -55,6 +67,86 @@ LEGACY_LAYOUT_PATHS = (
     "test-layer8-runner",
     "test-check-toolchain-pr10-baseline.txt",
 )
+SCRIPT_SUFFIXES = frozenset(
+    {
+        ".bash",
+        ".bat",
+        ".cjs",
+        ".cmd",
+        ".cts",
+        ".fish",
+        ".js",
+        ".jsx",
+        ".lua",
+        ".mjs",
+        ".mts",
+        ".php",
+        ".pl",
+        ".ps1",
+        ".psm1",
+        ".py",
+        ".pyw",
+        ".r",
+        ".rb",
+        ".sh",
+        ".tcl",
+        ".ts",
+        ".tsx",
+        ".zsh",
+    }
+)
+SCRIPT_DIRECTORY_NAMES = frozenset({"bin", "hooks", "scripts"})
+GENERATED_SCRIPT_PREFIXES = (
+    "dist/",
+    "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/",
+)
+NON_AUTHORED_DIRECTORY_NAMES = frozenset(
+    {"node_modules", "third_party", "vendor", "vendored"}
+)
+
+
+def _is_repository_authored_script(path: str, mode: str) -> bool:
+    relative = Path(path)
+    normalized = relative.as_posix()
+    if any(normalized.startswith(prefix) for prefix in GENERATED_SCRIPT_PREFIXES):
+        return False
+    if any(part in NON_AUTHORED_DIRECTORY_NAMES for part in relative.parts):
+        return False
+    return (
+        mode == "100755"
+        or relative.suffix.lower() in SCRIPT_SUFFIXES
+        or any(part in SCRIPT_DIRECTORY_NAMES for part in relative.parts[:-1])
+    )
+
+
+def _repository_spec_families(repo_root: Path = REPO_ROOT) -> frozenset[str]:
+    families: set[str] = set()
+    roadmap_root = repo_root / "docs" / "ai" / "specs"
+    for path in roadmap_root.rglob("*.md"):
+        content = path.read_text(encoding="utf-8")
+        families.update(
+            match.group("family").casefold()
+            for match in SPEC_ID_PREFIX_NAME.finditer(content)
+        )
+        families.update(
+            match.group("family").casefold()
+            for match in CANONICAL_SPEC_ID_NAME.finditer(path.as_posix())
+        )
+    for path in (repo_root / "specs").iterdir():
+        if path.is_dir():
+            families.update(
+                match.group("family").casefold()
+                for match in CANONICAL_SPEC_ID_NAME.finditer(path.as_posix())
+            )
+    return frozenset(families)
+
+
+def _contains_repository_spec_id(value: str, families: frozenset[str]) -> bool:
+    normalized = value.casefold()
+    return any(
+        re.search(rf"{re.escape(family)}[-_]\d{{3}}[a-z]?", normalized)
+        for family in families
+    )
 
 
 class UnitLayoutTests(unittest.TestCase):
@@ -67,6 +159,8 @@ class UnitLayoutTests(unittest.TestCase):
         for root in PURPOSE_NAMED_ROOTS:
             for path in root.rglob("*"):
                 relative = path.relative_to(root)
+                if "__pycache__" in relative.parts:
+                    continue
                 for part in relative.parts:
                     if part == "specs":
                         break
@@ -102,13 +196,102 @@ class UnitLayoutTests(unittest.TestCase):
 
     def test_unit_test_method_names_are_behavior_named(self) -> None:
         violations: list[str] = []
+        spec_families = _repository_spec_families()
         for path in sorted(UNIT_ROOT.glob("test-*.py")):
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
-                    if SPEC_ID_NAME.search(node.name):
+                    if _contains_repository_spec_id(node.name, spec_families):
                         violations.append(f"{path.relative_to(TEST_ROOT)}::{node.name}")
         self.assertEqual(violations, [])
+
+    def test_repository_spec_families_include_process_declarations(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            process_root = repo_root / "docs" / "ai" / "specs" / ".process"
+            process_root.mkdir(parents=True)
+            (repo_root / "specs").mkdir()
+            (process_root / "PRSG-002-workflow.md").write_text("", encoding="utf-8")
+            (process_root / "DOC-014-workflow.md").write_text("", encoding="utf-8")
+
+            families = _repository_spec_families(repo_root)
+
+        self.assertTrue(_contains_repository_spec_id("test_prsg_002_guard", families))
+        self.assertTrue(_contains_repository_spec_id("test_doc_014_guard", families))
+
+    def test_repository_spec_id_detection_is_restricted_to_declared_families(
+        self,
+    ) -> None:
+        families = frozenset({"g56r"})
+
+        self.assertTrue(
+            _contains_repository_spec_id("test-g56r-002-capability.py", families)
+        )
+        self.assertFalse(
+            _contains_repository_spec_id("test-pr-366-capability.py", families)
+        )
+
+    def test_script_name_guard_covers_repository_authored_locations(self) -> None:
+        covered = (
+            ("scripts/test-g56r-002-capability-telemetry.py", "100644"),
+            ("docs-site/scripts/g56r-002-reference.mjs", "100644"),
+            (".specify/extensions/git/scripts/bash/g56r-002-commit.sh", "100644"),
+            (".claude/hooks/g56r-002-guard.py", "100644"),
+            ("bin/g56r-002-check", "100755"),
+        )
+        excluded = (
+            ("dist/codex/g56r-002-generated.py", "100644"),
+            (
+                "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/"
+                "installed-cache/codex/g56r-002-generated.py",
+                "100644",
+            ),
+            ("vendor/g56r-002-upstream.sh", "100644"),
+        )
+        for path, mode in covered:
+            self.assertTrue(_is_repository_authored_script(path, mode), path)
+        for path, mode in excluded:
+            self.assertFalse(_is_repository_authored_script(path, mode), path)
+
+    def test_spec_id_pattern_detects_compound_script_names(self) -> None:
+        for name in (
+            "g56r-002.test.py",
+            "check.g56r-002.mjs",
+            "checkg56r-002helper.ts",
+        ):
+            self.assertIsNotNone(SPEC_ID_NAME.search(Path(name).stem), name)
+
+    def test_spec_id_pattern_detects_underscore_separators(self) -> None:
+        for name in (
+            "g56r_002.test.py",
+            "xplat_010.test.py",
+            "check.g56r_002.mjs",
+            "checkg56r_002helper.ts",
+        ):
+            self.assertIsNotNone(SPEC_ID_NAME.search(Path(name).stem), name)
+
+    def test_tracked_authored_script_files_are_behavior_named(self) -> None:
+        completed = subprocess.run(
+            ["git", "ls-files", "--stage", "-z"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        violations: list[str] = []
+        spec_families = _repository_spec_families()
+        for record in completed.stdout.split("\0"):
+            if not record:
+                continue
+            metadata, relative = record.split("\t", 1)
+            mode = metadata.split(" ", 1)[0]
+            if not _is_repository_authored_script(relative, mode):
+                continue
+            if _contains_repository_spec_id(Path(relative).stem, spec_families):
+                violations.append(relative)
+        self.assertEqual(violations, [], completed.stdout + completed.stderr)
 
     def test_tracked_paths_have_no_legacy_layout_names(self) -> None:
         completed = subprocess.run(

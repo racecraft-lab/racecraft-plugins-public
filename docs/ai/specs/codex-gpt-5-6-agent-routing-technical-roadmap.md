@@ -16,7 +16,8 @@ is prepared for `$speckit-scaffold-spec G56R-NNN`.
 **Spec ID prefix:** `G56R-###`
 **Proposed branch:** `codex/agent-routing-fallback`
 **Status:** Active; G56R-001 is complete and archived after PR #360 merged on
-the shared official-source evidence foundation from PR #362; G56R-002 is ready
+the shared official-source evidence foundation from PR #362;
+[G56R-002](.process/G56R-002-workflow.md) is in progress
 
 **Legacy identifier note:** `G56R` and the existing filenames are retained for
 traceability. They do not limit the candidate catalog to GPT-5.6.
@@ -45,9 +46,9 @@ G56R-011
 
 **Implementation boundary:** This sequence has no external prerequisite, but its
 internal dependencies still apply: the shared official-source evidence
-foundation merged via PR #362, G56R-001 merged via PR #360, and G56R-002 may
-now begin capability discovery and telemetry profiling under the preserved
-no-qualification boundary.
+foundation merged via PR #362 and G56R-001 merged via PR #360. G56R-002 US1
+capability discovery and US2 telemetry/treatment contracts are implemented;
+US2 exact-head review remains pending before T026-T039 replay integration.
 A route-agnostic Python `install-codex-agents` helper is active for safe static
 agent refreshes. G56R-006 later extends that baseline with capability-aware
 resolution, materialization, and atomic policy installation; it must not
@@ -214,7 +215,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
 | G56R-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | PR #360 merged; canonical evidence lives under `docs/ai/research/` |
-| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Ready | - | Ready after G56R-001; refresh source invalidation checks at scaffold |
+| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | In Progress | [.process/G56R-002-workflow.md](.process/G56R-002-workflow.md) | US1 complete; US2 implemented and exact-head review pending; T026-T039 replay integration is next |
 | G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by G56R-002 |
 | G56R-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by G56R-003 |
 | G56R-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by G56R-004 |
@@ -370,7 +371,7 @@ Budget result: re-estimate at scaffold; synthetic traces precede live use
 
 - [proposed] `tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py`
 - [proposed] `tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py`
-- [proposed] `tests/speckit-pro/unit/test_efficiency_codex_telemetry.py`
+- [proposed] `tests/speckit-pro/unit/test-codex-capability-contract.py`
 
 ---
 
