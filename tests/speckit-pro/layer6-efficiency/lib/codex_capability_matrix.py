@@ -12,6 +12,10 @@ def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expect
         aliases = {}
     if not isinstance(aliases, dict):
         raise ValueError("aliases must be a mapping")
+    if not isinstance(observations, list):
+        raise ValueError("matrix observations must be a list")
+    if any(not isinstance(item, dict) for item in observations):
+        raise ValueError("every matrix observation must be an object")
     observations = [validate_observation(dict(item)) for item in observations]
     surfaces = [item["surface"] for item in observations]
     if len(observations) != 3 or set(surfaces) != set(SURFACES) or len(set(surfaces)) != 3:
@@ -104,7 +108,11 @@ def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expect
 
 def validate_surface_matrix(matrix):
     required = {"surface_matrix_id", "schema_version", "client_identity_id", "repository_binding_id", "work_item", "observations", "normalization_map", "normalization_map_id", "disagreements", "aggregate_integrity_digest", "validity", "invalidity_reasons"}
-    if set(matrix) != required or matrix.get("schema_version") != SCHEMA_VERSION: raise ValueError("surface matrix must use the closed v1 shape")
+    if not isinstance(matrix, dict) or set(matrix) != required or matrix.get("schema_version") != SCHEMA_VERSION: raise ValueError("surface matrix must use the closed v1 shape")
+    if not isinstance(matrix["observations"], list):
+        raise ValueError("matrix observations must be a list")
+    if any(not isinstance(item, dict) for item in matrix["observations"]):
+        raise ValueError("every matrix observation must be an object")
     observations = [validate_observation(dict(item)) for item in matrix["observations"]]
     surfaces = [item["surface"] for item in observations]
     if surfaces != list(SURFACES): raise ValueError("matrix observations must use canonical surface order")

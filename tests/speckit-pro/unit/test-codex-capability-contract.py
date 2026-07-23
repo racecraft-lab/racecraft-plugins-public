@@ -1153,6 +1153,23 @@ class CapabilityContractTests(unittest.TestCase):
                     self.assertEqual(matrix["disagreements"][0]["disagreement_class"], "hidden_state")
         agreed_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "agreed")
         agreed_matrix, _ = capabilities.evaluate_surface_matrix(self.observations(agreed_case), self.authority_tuples(agreed_case))
+        with self.assertRaisesRegex(ValueError, "matrix observations must be a list"):
+            capabilities.evaluate_surface_matrix(
+                {}, self.authority_tuples(agreed_case),
+            )
+        with self.assertRaisesRegex(ValueError, "matrix observation must be an object"):
+            capabilities.evaluate_surface_matrix(
+                [[("surface", "cli")]], self.authority_tuples(agreed_case),
+            )
+        with self.assertRaisesRegex(ValueError, "surface matrix must use the closed v1 shape"):
+            capabilities.validate_surface_matrix([])
+        malformed_matrix_observations = copy.deepcopy(agreed_matrix)
+        malformed_matrix_observations["observations"] = {}
+        with self.assertRaisesRegex(ValueError, "matrix observations must be a list"):
+            capabilities.validate_surface_matrix(malformed_matrix_observations)
+        malformed_matrix_observations["observations"] = [[("surface", "cli")]]
+        with self.assertRaisesRegex(ValueError, "matrix observation must be an object"):
+            capabilities.validate_surface_matrix(malformed_matrix_observations)
         with self.assertRaisesRegex(ValueError, "aliases must be a mapping"):
             capabilities.evaluate_surface_matrix(
                 self.observations(agreed_case), self.authority_tuples(agreed_case),
