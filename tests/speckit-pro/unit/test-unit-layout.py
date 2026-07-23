@@ -8,6 +8,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -118,10 +119,10 @@ def _is_repository_authored_script(path: str, mode: str) -> bool:
     )
 
 
-def _repository_spec_families() -> frozenset[str]:
+def _repository_spec_families(repo_root: Path = REPO_ROOT) -> frozenset[str]:
     families: set[str] = set()
-    roadmap_root = REPO_ROOT / "docs" / "ai" / "specs"
-    for path in roadmap_root.glob("*.md"):
+    roadmap_root = repo_root / "docs" / "ai" / "specs"
+    for path in roadmap_root.rglob("*.md"):
         content = path.read_text(encoding="utf-8")
         families.update(
             match.group("family").casefold()
@@ -131,7 +132,7 @@ def _repository_spec_families() -> frozenset[str]:
             match.group("family").casefold()
             for match in CANONICAL_SPEC_ID_NAME.finditer(path.as_posix())
         )
-    for path in (REPO_ROOT / "specs").iterdir():
+    for path in (repo_root / "specs").iterdir():
         if path.is_dir():
             families.update(
                 match.group("family").casefold()
@@ -203,6 +204,20 @@ class UnitLayoutTests(unittest.TestCase):
                     if _contains_repository_spec_id(node.name, spec_families):
                         violations.append(f"{path.relative_to(TEST_ROOT)}::{node.name}")
         self.assertEqual(violations, [])
+
+    def test_repository_spec_families_include_process_declarations(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo_root = Path(directory)
+            process_root = repo_root / "docs" / "ai" / "specs" / ".process"
+            process_root.mkdir(parents=True)
+            (repo_root / "specs").mkdir()
+            (process_root / "PRSG-002-workflow.md").write_text("", encoding="utf-8")
+            (process_root / "DOC-014-workflow.md").write_text("", encoding="utf-8")
+
+            families = _repository_spec_families(repo_root)
+
+        self.assertTrue(_contains_repository_spec_id("test_prsg_002_guard", families))
+        self.assertTrue(_contains_repository_spec_id("test_doc_014_guard", families))
 
     def test_script_name_guard_covers_repository_authored_locations(self) -> None:
         covered = (
