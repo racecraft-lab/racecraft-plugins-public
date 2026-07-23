@@ -26,6 +26,7 @@ def _private_record_directory(raw, name, expected_raw_identity):
             os.mkdir(name, mode=0o700, dir_fd=raw_descriptor)
             os.fsync(raw_descriptor)
         except FileExistsError:
+            # A pre-existing directory is acceptable because it is verified below.
             pass
         metadata = os.stat(name, dir_fd=raw_descriptor, follow_symlinks=False)
         if not stat.S_ISDIR(metadata.st_mode) or stat.S_IMODE(metadata.st_mode) != 0o700:
