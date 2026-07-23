@@ -161,7 +161,7 @@ def normalize_source_refreshes(manifest, captured, *, source_capture_digest=None
         if body is not None and status in {"confirmed_current", "changed", "redirected"}:
             prior_body = f"sha256:{source['body_sha256']}"
             expected_status = "redirected" if source["requested_url"] != item["canonical_url"] else "changed" if canonical_changed else "confirmed_current" if body == prior_body else "changed"
-            if status != expected_status: raise ValueError("source refresh status or timestamp is invalid")
+            if status != expected_status: raise ValueError("source refresh status is inconsistent with captured evidence")
         evidence = {"canonical_url": item["canonical_url"], "retrieved_at": item["retrieved_at"], "body_digest": body, "bounded_extracts": extracts}
         normalized.append({
             "official_source_ledger_id": item["official_source_ledger_id"],
