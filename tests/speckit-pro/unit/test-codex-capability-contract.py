@@ -703,6 +703,26 @@ class CapabilityContractTests(unittest.TestCase):
         empty_bindings["official_source_ledger"][1]["claim_bindings"] = []
         with self.assertRaisesRegex(ValueError, "claim bindings"):
             capabilities.validate_manifest(empty_bindings, allow_synthetic_manifest=True)
+        malformed_extracts = (
+            ("non-object", None),
+            (
+                "non-string-text",
+                {
+                    "text": [],
+                    "extract_sha256": "0" * 64,
+                    "normalization": capabilities.EXTRACT_NORMALIZATION,
+                },
+            ),
+        )
+        for label, malformed_extract in malformed_extracts:
+            with self.subTest(label=label):
+                malformed_manifest = copy.deepcopy(self.manifest)
+                malformed_manifest["official_source_ledger"][0]["bounded_extracts"] = [malformed_extract]
+                with self.assertRaisesRegex(ValueError, "bounded extracts"):
+                    capabilities.validate_manifest(
+                        malformed_manifest,
+                        allow_synthetic_manifest=True,
+                    )
 
     def test_canonical_json_refreshes_and_identity(self) -> None:
         self.assertEqual(capabilities.canonical_bytes({"b": 1, "a": 2}), b'{"a":2,"b":1}')

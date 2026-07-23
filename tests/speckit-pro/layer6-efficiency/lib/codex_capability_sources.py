@@ -57,7 +57,7 @@ def validate_manifest(manifest, *, allow_synthetic_manifest=False):
         raise ValueError("every current source requires claim bindings and approved URLs")
     for row in sources:
         extracts = row.get("bounded_extracts", [])
-        if not extracts or any(set(item) != {"text", "extract_sha256", "normalization"} or not item["text"] or item["normalization"] != EXTRACT_NORMALIZATION or not _HEX_SHA256.fullmatch(str(item["extract_sha256"])) or hashlib.sha256(item["text"].encode()).hexdigest() != item["extract_sha256"] for item in extracts):
+        if not isinstance(extracts, list) or not extracts or any(not isinstance(item, dict) or set(item) != {"text", "extract_sha256", "normalization"} or not isinstance(item["text"], str) or not item["text"] or item["normalization"] != EXTRACT_NORMALIZATION or not _HEX_SHA256.fullmatch(str(item["extract_sha256"])) or hashlib.sha256(item["text"].encode()).hexdigest() != item["extract_sha256"] for item in extracts):
             raise ValueError("every current source requires valid bounded extracts")
         bindings = set(row["claim_bindings"])
         if len(bindings) > 1:
