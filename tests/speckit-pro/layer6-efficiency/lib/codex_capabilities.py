@@ -638,8 +638,16 @@ def _safe_sanitized_value(value):
                 raise ValueError("sanitized output contains a forbidden sensitive field")
             _safe_sanitized_value(nested)
     elif isinstance(value, list):
-        for nested in value: _safe_sanitized_value(nested)
-    elif isinstance(value, str) and (value.startswith(("/", "\\")) or "://" in value or re.match(r"^[A-Za-z]:[\\/]", value)):
+        for nested in value:
+            _safe_sanitized_value(nested)
+    elif (
+        isinstance(value, str)
+        and (
+            value.startswith(("/", "\\"))
+            or "://" in value
+            or re.match(r"^[A-Za-z]:[\\/]", value)
+        )
+    ):
         raise ValueError("sanitized output contains a path or remote locator")
 
 
@@ -647,7 +655,8 @@ def sanitize(record, profile):
     if profile not in _SANITIZER_PROFILES or not isinstance(record, dict):
         raise ValueError("sanitizer profile is unknown")
     allowlist, pseudonym_fields, strict = _SANITIZER_PROFILES[profile]
-    if strict and set(record) - set(allowlist): raise ValueError("surface entry contains undeclared fields")
+    if strict and set(record) - set(allowlist):
+        raise ValueError("surface entry contains undeclared fields")
     result = {}
     for key in sorted(set(record) & set(allowlist)):
         value = record[key]
