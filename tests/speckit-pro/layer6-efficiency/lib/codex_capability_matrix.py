@@ -8,7 +8,11 @@ from codex_capability_observations import *
 def evaluate_surface_matrix(observations, source_tuples, *, aliases=None, expected_integrity_digest=_UNSET):
     if any(row.get("source_admitted") for row in source_tuples) and not isinstance(source_tuples, _AuthorityTupleSet):
         raise ValueError("source admission requires a manifest-bound tuple set")
-    aliases = aliases or {}; observations = [validate_observation(dict(item)) for item in observations]
+    if aliases is None:
+        aliases = {}
+    if not isinstance(aliases, dict):
+        raise ValueError("aliases must be a mapping")
+    observations = [validate_observation(dict(item)) for item in observations]
     surfaces = [item["surface"] for item in observations]
     if len(observations) != 3 or set(surfaces) != set(SURFACES) or len(set(surfaces)) != 3:
         raise ValueError("matrix requires exactly one observation per surface")

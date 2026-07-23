@@ -1102,6 +1102,11 @@ class CapabilityContractTests(unittest.TestCase):
                     self.assertEqual(matrix["disagreements"][0]["disagreement_class"], "hidden_state")
         agreed_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "agreed")
         agreed_matrix, _ = capabilities.evaluate_surface_matrix(self.observations(agreed_case), self.authority_tuples(agreed_case))
+        with self.assertRaisesRegex(ValueError, "aliases must be a mapping"):
+            capabilities.evaluate_surface_matrix(
+                self.observations(agreed_case), self.authority_tuples(agreed_case),
+                aliases=["not-a-mapping"],
+            )
         reordered_matrix = copy.deepcopy(agreed_matrix)
         reordered_matrix["observations"].reverse()
         with self.assertRaisesRegex(ValueError, "canonical surface order"):
