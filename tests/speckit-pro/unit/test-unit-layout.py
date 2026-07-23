@@ -219,6 +219,18 @@ class UnitLayoutTests(unittest.TestCase):
         self.assertTrue(_contains_repository_spec_id("test_prsg_002_guard", families))
         self.assertTrue(_contains_repository_spec_id("test_doc_014_guard", families))
 
+    def test_repository_spec_id_detection_is_restricted_to_declared_families(
+        self,
+    ) -> None:
+        families = frozenset({"g56r"})
+
+        self.assertTrue(
+            _contains_repository_spec_id("test-g56r-002-capability.py", families)
+        )
+        self.assertFalse(
+            _contains_repository_spec_id("test-pr-366-capability.py", families)
+        )
+
     def test_script_name_guard_covers_repository_authored_locations(self) -> None:
         covered = (
             ("scripts/test-g56r-002-capability-telemetry.py", "100644"),
@@ -269,6 +281,7 @@ class UnitLayoutTests(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 0, completed.stderr)
         violations: list[str] = []
+        spec_families = _repository_spec_families()
         for record in completed.stdout.split("\0"):
             if not record:
                 continue
@@ -276,7 +289,7 @@ class UnitLayoutTests(unittest.TestCase):
             mode = metadata.split(" ", 1)[0]
             if not _is_repository_authored_script(relative, mode):
                 continue
-            if SPEC_ID_NAME.search(Path(relative).stem):
+            if _contains_repository_spec_id(Path(relative).stem, spec_families):
                 violations.append(relative)
         self.assertEqual(violations, [], completed.stdout + completed.stderr)
 
