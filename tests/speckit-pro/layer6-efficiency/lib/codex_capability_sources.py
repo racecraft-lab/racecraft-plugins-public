@@ -68,8 +68,27 @@ def validate_manifest(manifest, *, allow_synthetic_manifest=False):
             dependencies = _extract_claim_dependencies(row)
             if set(dependencies) != {item["extract_sha256"] for item in extracts} or set().union(*dependencies.values()) != bindings or any(not claims or not claims <= bindings for claims in dependencies.values()):
                 raise ValueError("multi-claim source requires complete extract-to-claim dependencies")
-    contracts = manifest.get("agent_contracts", []); contract_ids = [row.get("agent_contract_id") for row in contracts]
-    routes = manifest.get("candidate_routes", []); route_ids = [row.get("candidate_route_id") for row in routes]
+    contracts = manifest.get("agent_contracts", [])
+    routes = manifest.get("candidate_routes", [])
+    if (
+        not isinstance(contracts, list)
+        or not isinstance(routes, list)
+        or any(
+            not isinstance(row, dict)
+            or not isinstance(row.get("agent_contract_id"), str)
+            or not row["agent_contract_id"]
+            for row in contracts
+        )
+        or any(
+            not isinstance(row, dict)
+            or not isinstance(row.get("candidate_route_id"), str)
+            or not row["candidate_route_id"]
+            for row in routes
+        )
+    ):
+        raise ValueError("agent contracts and candidate routes require string identities")
+    contract_ids = [row["agent_contract_id"] for row in contracts]
+    route_ids = [row["candidate_route_id"] for row in routes]
     invalid_contract_hash = any(not _HEX_SHA256.fullmatch(str(row.get("source_sha256"))) or not _HEX_SHA256.fullmatch(str(row.get("instruction_sha256"))) for row in contracts)
     if len(contracts) != 12 or len(routes) != 23 or len(contract_ids) != len(set(contract_ids)) or len(route_ids) != len(set(route_ids)) or invalid_contract_hash or any(row.get("agent_contract_id") not in set(contract_ids) for row in routes):
         raise ValueError("candidate routes require unique agent-contract owners")
@@ -188,6 +207,10 @@ def normalize_source_refreshes(manifest, captured, *, source_capture_digest=None
 
 def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_manifest=False):
     validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest); sources = {row["official_source_ledger_id"]: row for row in manifest["official_source_ledger"]}
+    if not isinstance(refreshes, list):
+        raise ValueError("published source refreshes must be a list")
+    if any(not isinstance(row, dict) for row in refreshes):
+        raise ValueError("every published source refresh must be an object")
     if len(refreshes) != 22 or [row.get("official_source_ledger_id") for row in refreshes] != sorted(sources):
         raise ValueError("source refresh must cover the 22 unique current records")
     keys = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "body_digest", "status", "source_capture_digest", "bounded_extracts", "retrieval_evidence_digest", "documented_facts", "claim_bindings", "invalidated_claim_ids", "prior_record_digest"}

@@ -819,6 +819,27 @@ class CapabilityContractTests(unittest.TestCase):
                         malformed_manifest,
                         allow_synthetic_manifest=True,
                     )
+        for collection, identity_field in (
+            ("agent_contracts", "agent_contract_id"),
+            ("candidate_routes", "candidate_route_id"),
+        ):
+            for label, identity in (("missing", None), ("non-string", 1)):
+                with self.subTest(
+                    collection=collection,
+                    identity_field=identity_field,
+                    label=label,
+                ):
+                    malformed_manifest = copy.deepcopy(self.manifest)
+                    row = malformed_manifest[collection][0]
+                    if identity is None:
+                        row.pop(identity_field)
+                    else:
+                        row[identity_field] = identity
+                    with self.assertRaisesRegex(ValueError, "string identities"):
+                        capabilities.validate_manifest(
+                            malformed_manifest,
+                            allow_synthetic_manifest=True,
+                        )
 
     def test_canonical_json_refreshes_and_identity(self) -> None:
         self.assertEqual(capabilities.canonical_bytes({"b": 1, "a": 2}), b'{"a":2,"b":1}')
@@ -857,6 +878,15 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertEqual(
             capabilities.validate_published_source_refreshes(self.manifest, legacy_refreshes)["count"], 22,
         )
+        with self.assertRaisesRegex(ValueError, "published source refreshes must be a list"):
+            capabilities.validate_published_source_refreshes(self.manifest, {})
+        malformed_published_refreshes = copy.deepcopy(legacy_refreshes)
+        malformed_published_refreshes[0] = []
+        with self.assertRaisesRegex(ValueError, "published source refresh must be an object"):
+            capabilities.validate_published_source_refreshes(
+                self.manifest,
+                malformed_published_refreshes,
+            )
         sources_by_id = {
             source["official_source_ledger_id"]: source
             for source in self.manifest["official_source_ledger"]
