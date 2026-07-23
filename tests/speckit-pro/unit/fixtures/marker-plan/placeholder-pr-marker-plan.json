@@ -4,11 +4,12 @@
   "feature_id": "prsg-013-reviewability-markers",
   "status": "emission_ready",
   "source_fingerprint": {
-    "feature_spec_sha": "spec-sha",
-    "plan_declared_scope_sha": "scope-sha",
-    "tasks_sha": "tasks-sha",
-    "reviewability_sha": "reviewability-sha",
-    "hazard_route_sha": "hazard-sha"
+    "feature_spec_sha": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "plan_declared_scope_sha": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "tasks_sha": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "reviewability_sha": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "hazard_route_sha": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "changed_file_manifest_sha": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
   },
   "markers": [
     {
@@ -46,7 +47,8 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/foundation-checkpoint.md"
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/foundation-checkpoint.md",
+        "checkpoint_evidence_sha": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
       },
       "emission_mapping": {
         "status": "marker_split"

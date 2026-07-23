@@ -649,6 +649,12 @@ coverage guard and STOP on nonzero exit:
 python3 "runner helper validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json"
 ```
 
+When `pr-marker-plan.v2` declares a changed-file manifest, append
+`--expected-base-commit <live-baseRefOid> --expected-head-commit <live-headRefOid>`.
+Fetch both OIDs from live PR metadata immediately before every validation;
+never source either authority from the workflow, state, or manifest itself.
+Missing, stale, or mismatched external PR authority is blocking.
+
 **CRITICAL — Consensus items are MANDATORY:**
 
 Every Clarify session, every Checklist domain, and the Analyze

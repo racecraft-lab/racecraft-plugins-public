@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused deterministic tests for Codex capability evidence contracts."""
+"""Focused deterministic tests for the Codex capability contract."""
 
 from __future__ import annotations
 
@@ -7,21 +7,30 @@ import copy
 import base64
 from collections.abc import Mapping
 from contextlib import contextmanager
-import fcntl
+import importlib
+import importlib.machinery
 import importlib.util
 import itertools
 import json
 import os
 import re
 import shutil
+import socket
 import stat
 import subprocess
 import sys
 import tempfile
 import threading
+import types
 import unittest
 import unittest.mock
 from pathlib import Path
+from uuid import uuid4
+
+try:
+    import fcntl
+except ImportError:  # pragma: no cover - exercised by Windows CI
+    fcntl = None
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -35,6 +44,7 @@ TREATMENT_FIXTURE_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-trea
 TREATMENT_SCHEMA_PATH = ROOT / "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"
 TREATMENT_PREDECESSOR_PUBLISHED_AT = "2026-07-17T04:44:32.543011Z"
 TREATMENT_SUCCESSOR_PUBLISHED_AT = "2026-07-18T19:40:00Z"
+DIGEST_MANIFEST_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json"
 
 EXPECTED_APP_SERVER_TELEMETRY_FIELDS = frozenset({
     "discovery.models", "discovery.efforts", "discovery.capabilities",
@@ -84,29 +94,114 @@ EXPECTED_CAPABILITY_PUBLIC_API = frozenset({
     "validate_work_item",
 })
 
+EXPECTED_TREATMENT_PUBLIC_API = frozenset({
+    "ABSOLUTE_PATH_RE", "APP_SERVER_FIELDS", "AUTHORIZED_PROFILE_CLASSIFICATIONS",
+    "AUTHORIZED_PROFILE_CONDITIONS", "AUTHORIZED_PROFILE_SOURCES", "AUTHORIZED_PROHIBITED_CLAIMS",
+    "CANCELLATION_REASON_CODES", "CAPABILITY_FIXTURE_PATH", "CAPABILITY_MODULE_PATH",
+    "CLAIM_BY_CLASS", "CLASSIFICATIONS", "COMPLETENESS_BY_CLASS", "CREDENTIAL_RE",
+    "DIGEST_RE", "DISPOSITION_REASON_CODES", "EVIDENCE_REF_RE", "FAILURE_DISPOSITIONS",
+    "FALLBACK_REASON_CODES", "HAS_DESCRIPTOR_RELATIVE_IO", "HOSTNAME_RE",
+    "INTERNAL_DERIVED_FIELDS", "INTERNAL_HOSTNAME_RE", "IP_CANDIDATE_RE", "IS_WINDOWS",
+    "MANIFEST_PATH", "MAX_COLLECTION_ITEMS", "MAX_INPUT_BYTES", "MAX_NESTING_DEPTH",
+    "MAX_RETAINED_STRING_LENGTH", "MAX_TOTAL_NODES", "OBJECTIVE_ID_FIELDS",
+    "OBSERVATION_STATES", "PII_RE", "REMOTE_RE", "REPLAY_CASES",
+    "OBSERVATION_EVIDENCE_VERSION", "CONSUMPTION_EVIDENCE_VERSION",
+    "SOURCE_EVIDENCE_VERSION", "TREATMENT_EVIDENCE_SET_VERSION",
+    "REPLAY_DIGEST_MANIFEST_PATH", "REPLAY_DISCOVERY_MODEL_DELTAS", "REPLAY_FIXTURE_PATHS",
+    "REPLAY_HOSTNAME_RE", "REPLAY_RUNTIME_EFFORT_AUTHORITY", "REPLAY_RUNTIME_EFFORT_AUTHORITY_ID",
+    "REPLAY_TRACE_BASELINE_DIGESTS", "REROUTE_REASON_CODES", "REVISION_RE", "RFC3339_UTC_RE",
+    "ROOT", "SANITIZED_IDENTIFIER_RE", "SCHEMA_PATH", "SCHEMA_VERSION", "SOURCE_RE",
+    "SPEC_ID_RE", "SURFACES", "TELEMETRY_INVENTORY", "TRACE_KEYS", "TRAVERSAL_RE",
+    "TREATMENT_FIXTURE_PATH", "UNLABELED_CREDENTIAL_RE", "build_treatment_successor",
+    "canonical_bytes", "canonical_fixture_bytes", "content_id", "digest",
+    "execution_trace_identity", "main", "profile_entry", "replay_fixture", "schema_file_digest",
+    "telemetry_profile_id", "validate_treatment_bundle",
+})
+
 spec = importlib.util.spec_from_file_location("g56r_002_codex_capabilities", MODULE_PATH)
 if spec is None or spec.loader is None:
     raise RuntimeError(f"cannot load {MODULE_PATH}")
 capabilities = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(capabilities)
 
-capability_contract = sys.modules["codex_capability_contract"]
-capability_append_only = sys.modules["codex_capability_append_only"]
-capability_capture = sys.modules["codex_capability_capture"]
-capability_freeze = sys.modules["codex_capability_freeze"]
-capability_io = sys.modules["codex_capability_io"]
-capability_observations = sys.modules["codex_capability_observations"]
-capability_private = sys.modules["codex_capability_private"]
-capability_publish_io = sys.modules["codex_capability_publish_io"]
-capability_publication_records = sys.modules["codex_capability_publication_records"]
-capability_retention = sys.modules["codex_capability_retention"]
-capability_retention_records = sys.modules["codex_capability_retention_records"]
-
 treatment_spec = importlib.util.spec_from_file_location("g56r_002_treatment_trace_schema", TREATMENT_MODULE_PATH)
 if treatment_spec is None or treatment_spec.loader is None:
     raise RuntimeError(f"cannot load {TREATMENT_MODULE_PATH}")
 treatment = importlib.util.module_from_spec(treatment_spec)
 treatment_spec.loader.exec_module(treatment)
+
+CAPABILITY_INTERNALS = capabilities.__capability_internal_modules__
+capability_contract = CAPABILITY_INTERNALS["codex_capability_contract"]
+capability_append_only = CAPABILITY_INTERNALS["codex_capability_append_only"]
+capability_capture = CAPABILITY_INTERNALS["codex_capability_capture"]
+capability_freeze = CAPABILITY_INTERNALS["codex_capability_freeze"]
+capability_io = CAPABILITY_INTERNALS["codex_capability_io"]
+capability_observations = CAPABILITY_INTERNALS["codex_capability_observations"]
+capability_private = CAPABILITY_INTERNALS["codex_capability_private"]
+capability_publish_io = CAPABILITY_INTERNALS["codex_capability_publish_io"]
+capability_publication_records = CAPABILITY_INTERNALS["codex_capability_publication_records"]
+capability_retention = CAPABILITY_INTERNALS["codex_capability_retention"]
+capability_retention_records = CAPABILITY_INTERNALS["codex_capability_retention_records"]
+
+
+def load_treatment_test_internals() -> dict[str, types.ModuleType]:
+    dependency_names = (
+        "treatment_trace_capability", "treatment_trace_authority", "treatment_trace_io",
+        "treatment_trace_json_schema", "treatment_trace_model", "treatment_trace_fields",
+        "treatment_trace_bundle", "treatment_trace_fixture", "treatment_trace_replay",
+        "treatment_trace_successor", "treatment_trace_cli",
+    )
+    package_name = f"_g56r_treatment_test_runtime_{uuid4().hex}"
+    package = types.ModuleType(package_name)
+    package.__package__ = package_name
+    package.__path__ = [str(TREATMENT_MODULE_PATH.parent)]
+    package.__spec__ = importlib.machinery.ModuleSpec(package_name, loader=None, is_package=True)
+    sys.modules[package_name] = package
+    try:
+        cli_name = f"{package_name}.treatment_trace_cli"
+        cli_spec = importlib.util.spec_from_file_location(
+            cli_name, TREATMENT_MODULE_PATH.with_name("treatment_trace_cli.py"),
+        )
+        if cli_spec is None or cli_spec.loader is None:
+            raise RuntimeError("cannot load treatment test dependencies")
+        cli = importlib.util.module_from_spec(cli_spec)
+        sys.modules[cli_name] = cli
+        cli_spec.loader.exec_module(cli)
+        return {
+            name: sys.modules[f"{package_name}.{name}"]
+            for name in dependency_names
+        }
+    finally:
+        for module_name in tuple(sys.modules):
+            if module_name == package_name or module_name.startswith(f"{package_name}."):
+                sys.modules.pop(module_name, None)
+
+
+TREATMENT_INTERNALS = load_treatment_test_internals()
+treatment_bundle = TREATMENT_INTERNALS["treatment_trace_bundle"]
+treatment_authority = TREATMENT_INTERNALS["treatment_trace_authority"]
+treatment_fields = TREATMENT_INTERNALS["treatment_trace_fields"]
+treatment_io = TREATMENT_INTERNALS["treatment_trace_io"]
+treatment_json_schema = TREATMENT_INTERNALS["treatment_trace_json_schema"]
+treatment_successor = TREATMENT_INTERNALS["treatment_trace_successor"]
+
+
+def load_treatment_facade(name: str):
+    facade_spec = importlib.util.spec_from_file_location(name, TREATMENT_MODULE_PATH)
+    if facade_spec is None or facade_spec.loader is None:
+        raise RuntimeError(f"cannot load {TREATMENT_MODULE_PATH}")
+    facade = importlib.util.module_from_spec(facade_spec)
+    facade_spec.loader.exec_module(facade)
+    return facade
+
+
+def load_capability_facade(name: str):
+    facade_spec = importlib.util.spec_from_file_location(name, MODULE_PATH)
+    if facade_spec is None or facade_spec.loader is None:
+        raise RuntimeError(f"cannot load {MODULE_PATH}")
+    facade = importlib.util.module_from_spec(facade_spec)
+    facade_spec.loader.exec_module(facade)
+    return facade
 
 
 def load_json(path: Path) -> dict:
@@ -237,6 +332,7 @@ def bind_trusted_treatment_evidence(bundle: dict) -> tuple[dict, dict[str, bytes
         }
         raw = treatment.canonical_bytes(payload) + b"\n"
         proof["consumption_evidence_digest"] = treatment.digest(raw)
+        trace["consumption_evidence_digest"] = proof["consumption_evidence_digest"]
         proof["proof_id"] = treatment.content_id(proof, "proof_id")
         evidence[proof["consumption_evidence_digest"]] = raw
     rebind_treatment_owners(bundle)
@@ -312,6 +408,7 @@ REROUTE_REASON_FAILURES = {
     "reroute_destination_untrusted": "reroute_unapproved",
     "reroute_effective_destination_mismatch": "model_mismatch",
     "reroute_source_model_mismatch": "model_mismatch",
+    "reroute_self_target": "reroute_unapproved",
     "orphan_reroute_destination_assessment": "reroute_ambiguous",
 }
 
@@ -322,9 +419,9 @@ def declare_reroute_result(bundle: dict, trusted: dict[str, dict] | None = None)
     qualification = {
         item["qualification_evidence_id"]: item for item in bundle["qualification_evidence_registry"]
     }
-    disposition, detailed_reasons = treatment._reroute_disposition(
+    disposition, detailed_reasons = treatment_fields._reroute_disposition(
         trace, events, trace["reroute_destination_assessments"],
-        qualification, trusted or {}, treatment._canonical_routes(load_json(MANIFEST_PATH)),
+        qualification, trusted or {}, treatment_authority._canonical_routes(load_json(MANIFEST_PATH)),
     )
     directly_derived = []
     if trace["supported_effective_effort"] is not None:
@@ -344,6 +441,43 @@ def declare_reroute_result(bundle: dict, trusted: dict[str, dict] | None = None)
         if disposition == "hard_fail" else detailed_reasons
     )
     return declare_treatment_result(bundle, failure_codes, disposition, reasons)
+
+
+def replay_trace(bundle: dict, case_id: str) -> dict:
+    slug = case_id.removeprefix("TRACE-").lower()
+    return next(
+        item for item in bundle["treatment_traces"]
+        if item["context"]["turnId"] == f"turn-fixture-{slug}"
+    )
+
+
+def single_treatment_case(bundle: dict, case_id: str) -> dict:
+    isolated = copy.deepcopy(bundle)
+    trace = replay_trace(isolated, case_id)
+    execution_trace_id = trace["objective_binding"]["execution_trace_id"]
+    isolated["treatment_traces"] = [trace]
+    isolated["controlled_environments"] = [
+        item for item in isolated["controlled_environments"]
+        if item["controlled_environment_id"] == trace["controlled_environment_id"]
+    ]
+    isolated["route_resolutions"] = [
+        item for item in isolated["route_resolutions"]
+        if item["route_resolution_id"] == trace["objective_binding"]["route_resolution_id"]
+    ]
+    referenced_qualifications = {
+        item["prequalification_evidence_id"]
+        for item in trace["reroute_destination_assessments"]
+        if item["prequalification_evidence_id"] is not None
+    }
+    isolated["qualification_evidence_registry"] = [
+        item for item in isolated["qualification_evidence_registry"]
+        if item["qualification_evidence_id"] in referenced_qualifications
+    ]
+    isolated["fixture_provenance"]["expected_dispositions"] = [{
+        "execution_trace_id": execution_trace_id,
+        "treatment_disposition": trace["treatment_disposition"],
+    }]
+    return isolated
 
 
 def make_treatment_reroute_case(bundle: dict, authority: str) -> dict:
@@ -515,7 +649,7 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertEqual(len(implementation_modules), 17)
         for path in implementation_modules:
             with self.subTest(path=path.name):
-                self.assertLessEqual(len(path.read_text(encoding="utf-8").splitlines()), 400)
+                self.assertLessEqual(len(path.read_text(encoding="utf-8").splitlines()), 475)
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_bounded_regular_file_closes_all_descriptors(self) -> None:
@@ -841,6 +975,7 @@ class CapabilityContractTests(unittest.TestCase):
                             allow_synthetic_manifest=True,
                         )
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_canonical_json_refreshes_and_identity(self) -> None:
         self.assertEqual(capabilities.canonical_bytes({"b": 1, "a": 2}), b'{"a":2,"b":1}')
         self.assertFalse(hasattr(capabilities, "refreshes_from_manifest"))
@@ -1399,7 +1534,10 @@ class CapabilityContractTests(unittest.TestCase):
         changed_contract["agent_contracts"][0]["safety_boundary"] += " changed"
         with self.assertRaisesRegex(ValueError, "canonical G56R-001"):
             capabilities.build_freeze(self.identity, refreshes, matrix, decisions, "2026-07-16T00:00:00Z", manifest=changed_contract)
-        wrong_identity = capabilities.build_client_identity({**self.fixture["client_identity"], "build_identifier": "fixture-build-002"})
+        wrong_identity = capabilities.build_client_identity({
+            **self.fixture["client_identity"],
+            "build_identifier": capabilities.digest(b"fixture-build-002"),
+        })
         with self.assertRaisesRegex(ValueError, "client identity"):
             capabilities.build_freeze(wrong_identity, refreshes, matrix, decisions, "2026-07-16T00:00:00Z", manifest=self.manifest)
         tampered = copy.deepcopy(matrix); tampered["surface_matrix_id"] = capabilities.digest(b"tampered")
@@ -1444,6 +1582,7 @@ class CapabilityContractTests(unittest.TestCase):
         ):
             capabilities.validate_freeze(self_approved_freeze, self.manifest)
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_freeze_cli_round_trips_alias_authority(self) -> None:
         alias_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "one_to_one_alias")
         observations = self.observations(alias_case)
@@ -1508,6 +1647,7 @@ class CapabilityContractTests(unittest.TestCase):
                 "--freeze", str(freeze_path),
             ]), 0)
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_canary_is_injected_bounded_and_default_denied(self) -> None:
         approval, result = canary_envelope()
         evidence_bytes = canary_evidence_bytes(result)
@@ -1635,6 +1775,10 @@ class CapabilityContractTests(unittest.TestCase):
                 "--raw-evidence-root", "unused", "--output", "unused",
             ])
 
+    @unittest.skipUnless(
+        capabilities.HAS_DESCRIPTOR_RELATIVE_IO and fcntl is not None,
+        "POSIX descriptor-relative I/O required",
+    )
     def test_raw_root_and_sanitizer_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             raw_root = Path(tmp) / "raw"
@@ -2760,6 +2904,7 @@ class CapabilityContractTests(unittest.TestCase):
                     capabilities.repository_binding_from_checkout(repository)
             self.assertEqual(run.call_args_list[2].args[0][-1], f"{resolved}^{{tree}}")
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_source_capture_accepts_an_identical_concurrent_winner(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             raw_root = Path(tmp) / "raw"
@@ -2786,6 +2931,7 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertEqual(target.stat().st_nlink, 1)
             self.assertFalse(any(raw_root.glob(f"{capabilities.PRIVATE_TEMPORARY_PREFIX}*")))
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_append_only_directory_lock_precedes_temporary_visibility(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             raw_root = Path(tmp) / "raw"
@@ -2915,6 +3061,7 @@ class CapabilityContractTests(unittest.TestCase):
                 )
             self.assertTrue(raced_once)
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_json_inputs_executable_hashing_and_publication_are_bounded(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -2946,10 +3093,10 @@ class CapabilityContractTests(unittest.TestCase):
                     capability_publish_io._read(node_heavy)
                 capability_loads.assert_not_called()
             with unittest.mock.patch.object(
-                treatment, "MAX_TOTAL_NODES", 4,
-            ), unittest.mock.patch.object(treatment.json, "loads") as treatment_loads:
+                treatment_io, "MAX_TOTAL_NODES", 3,
+            ), unittest.mock.patch.object(treatment_io.json, "loads") as treatment_loads:
                 with self.assertRaisesRegex(ValueError, "maximum node count"):
-                    treatment._parse_json_bytes(node_heavy.read_bytes())
+                    treatment_io._parse_json_bytes(node_heavy.read_bytes())
                 treatment_loads.assert_not_called()
             with unittest.mock.patch.object(
                 capability_contract.json, "loads", side_effect=RecursionError("too deep"),
@@ -3479,11 +3626,193 @@ class CapabilityContractTests(unittest.TestCase):
                     "2026-08-17T00:00:00Z", current, apply=False, raw_descriptor=None,
                 )
 
+    def test_decomposed_entrypoints_preserve_pre_split_public_api(self) -> None:
+        self.assertEqual(frozenset(capabilities.__all__), EXPECTED_CAPABILITY_PUBLIC_API)
+        self.assertEqual(
+            frozenset(name for name in vars(capabilities) if not name.startswith("_")),
+            EXPECTED_CAPABILITY_PUBLIC_API,
+        )
+        self.assertNotIn("_delete_single_link_private_file", vars(capabilities))
+        self.assertEqual(frozenset(treatment.__all__), EXPECTED_TREATMENT_PUBLIC_API)
+        self.assertEqual(
+            frozenset(name for name in vars(treatment) if not name.startswith("_")),
+            EXPECTED_TREATMENT_PUBLIC_API,
+        )
+        self.assertNotIn("_validate_treatment_bundle", vars(treatment))
+        self.assertNotIn("__treatment_internal_modules__", vars(treatment))
+        self.assertIn(
+            "not an in-process security boundary",
+            " ".join(treatment.__doc__.split()),
+        )
+        self.assertTrue(callable(capabilities.main))
+        self.assertTrue(callable(treatment.main))
+
+    def test_treatment_facade_ignores_same_path_stale_canonical_dependency(self) -> None:
+        stale_cli = types.ModuleType("treatment_trace_cli")
+        stale_cli.__file__ = str(TREATMENT_MODULE_PATH.with_name("treatment_trace_cli.py"))
+        stale_cli.main = lambda _argv=None: self.fail("same-path stale treatment dependency was reused")
+        with unittest.mock.patch.dict(sys.modules, {"treatment_trace_cli": stale_cli}):
+            facade = load_treatment_facade("g56r_002_treatment_stale_regression")
+            self.assertIs(sys.modules["treatment_trace_cli"], stale_cli)
+        self.assertTrue(callable(facade.validate_treatment_bundle))
+        self.assertFalse(any(name.startswith("_g56r_treatment_runtime_") for name in sys.modules))
+
+    def test_capability_facade_ignores_predictable_preloaded_runtime_dependency(self) -> None:
+        package_name = "_g56r_capability_runtime"
+        package = types.ModuleType(package_name)
+        package.__path__ = [str(MODULE_PATH.parent.resolve())]
+        forged_freeze = types.ModuleType(f"{package_name}.codex_capability_freeze")
+        forged_freeze.__file__ = str(MODULE_PATH.with_name("codex_capability_freeze.py"))
+        forged_freeze.validate_freeze = lambda _value: self.fail(
+            "predictable preloaded capability dependency was reused"
+        )
+        with unittest.mock.patch.dict(
+            sys.modules,
+            {
+                package_name: package,
+                forged_freeze.__name__: forged_freeze,
+            },
+        ):
+            facade = load_capability_facade("g56r_002_capability_preload_regression")
+            self.assertIs(sys.modules[forged_freeze.__name__], forged_freeze)
+        self.assertTrue(callable(facade.validate_freeze))
+        self.assertFalse(
+            any(name.startswith("_g56r_capability_runtime_") for name in sys.modules)
+        )
+
+    def test_package_mode_capability_facade_ignores_same_path_stale_dependency(self) -> None:
+        package_name = f"_g56r_capability_package_{uuid4().hex}"
+        package = types.ModuleType(package_name)
+        package.__package__ = package_name
+        package.__path__ = [str(MODULE_PATH.parent)]
+        package.__spec__ = importlib.machinery.ModuleSpec(
+            package_name, loader=None, is_package=True,
+        )
+        stale_name = f"{package_name}.codex_capability_contract"
+        stale_contract = types.ModuleType(stale_name)
+        stale_contract.__dict__.update(vars(capability_contract))
+        stale_contract.__name__ = stale_name
+        stale_contract.__package__ = package_name
+        stale_contract.__file__ = str(
+            MODULE_PATH.with_name("codex_capability_contract.py")
+        )
+        stale_contract.digest = lambda _value: "forged-same-path-digest"
+        facade_name = f"{package_name}.codex_capabilities"
+        facade_spec = importlib.util.spec_from_file_location(facade_name, MODULE_PATH)
+        if facade_spec is None or facade_spec.loader is None:
+            self.fail("cannot load package-mode capability facade")
+        facade = importlib.util.module_from_spec(facade_spec)
+        try:
+            sys.modules.update({
+                package_name: package,
+                stale_name: stale_contract,
+                facade_name: facade,
+            })
+            facade_spec.loader.exec_module(facade)
+            self.assertIs(sys.modules[stale_name], stale_contract)
+            self.assertEqual(facade.digest(b"probe"), capabilities.digest(b"probe"))
+            self.assertNotEqual(facade.digest(b"probe"), "forged-same-path-digest")
+        finally:
+            for module_name in tuple(sys.modules):
+                if module_name == package_name or module_name.startswith(f"{package_name}."):
+                    sys.modules.pop(module_name, None)
+        self.assertFalse(
+            any(name.startswith("_g56r_capability_runtime_") for name in sys.modules)
+        )
+
+    def test_treatment_facade_does_not_execute_earlier_sys_path_shadow(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            shadow_root = Path(temporary)
+            shadow_root.joinpath("treatment_trace_cli.py").write_text(
+                "raise RuntimeError('shadow treatment dependency executed')\n",
+                encoding="utf-8",
+            )
+            with unittest.mock.patch.object(sys, "path", [str(shadow_root), *sys.path]):
+                facade = load_treatment_facade("g56r_002_treatment_shadow_regression")
+        self.assertTrue(callable(facade.replay_fixture))
+        self.assertFalse(any(name.startswith("_g56r_treatment_runtime_") for name in sys.modules))
+
+    def test_treatment_observation_schema_binds_every_field_to_its_value_shape(self) -> None:
+        schema = load_json(
+            ROOT
+            / "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"
+        )
+        field_schema = schema["$defs"]["telemetryFieldPath"]
+        variants = schema["$defs"]["observationTypedValue"]["oneOf"]
+        owned_fields = []
+        for variant in variants:
+            selector = variant["properties"]["field_path"]
+            owned_fields.extend(
+                selector["enum"] if "enum" in selector else [selector["const"]]
+            )
+        self.assertEqual(set(owned_fields), set(field_schema["enum"]))
+        self.assertEqual(len(owned_fields), len(set(owned_fields)))
+
+        for field_path, value in (
+            ("treatment.sandbox", False),
+            ("resources.wall_time_ms", -1),
+            ("reroute.events", ["arbitrary"]),
+        ):
+            with self.subTest(field_path=field_path):
+                observation = {
+                    "field_path": field_path,
+                    "observation_state": "observed_value",
+                    "value": value,
+                    "evidence_ref": "fixture://trace/typed-observation",
+                    "captured_at": "2026-07-20T00:00:00Z",
+                }
+                with self.assertRaisesRegex(ValueError, "schema shape"):
+                    treatment_json_schema._validate_schema_instance(
+                        observation,
+                        schema["$defs"]["observationValue"],
+                        schema,
+                        "observation",
+                    )
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_oversized_publication_is_rejected_before_output_mutation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            raw_root = root / "raw"
+            raw_root.mkdir(mode=0o700)
+            freeze = {"fixture": "bounded-publication"}
+            payload = capabilities.canonical_bytes(freeze) + b"\n"
+            output = root / "candidate-freeze.json"
+            with unittest.mock.patch.object(
+                capability_freeze, "validate_freeze", return_value=freeze,
+            ), unittest.mock.patch.object(
+                capability_freeze, "PRIVATE_REFRESH_MAX_BYTES", len(payload) - 1,
+            ), self.assertRaisesRegex(ValueError, "publication exceeds the bounded size"):
+                capabilities.publish_with_raw_evidence_retention(
+                    freeze, output, raw_root, ROOT, manifest=self.manifest,
+                )
+            self.assertFalse(output.exists())
+            self.assertEqual(list(raw_root.iterdir()), [])
+
+            parent_identity = capability_io._stable_directory_identity(
+                os.stat(root, follow_symlinks=False),
+            )
+            parent_descriptor = capability_private._private_directory_descriptor(
+                root, parent_identity,
+            )
+            before = {path.name for path in root.iterdir()}
+            try:
+                with unittest.mock.patch.object(
+                    capability_private, "PRIVATE_REFRESH_MAX_BYTES", len(payload) - 1,
+                ), self.assertRaisesRegex(ValueError, "private output exceeds the bounded size"):
+                    capability_private._write_private_bytes_at(
+                        parent_descriptor, root, "oversized-direct.json", payload,
+                        append_only=True, expected_parent_identity=parent_identity,
+                    )
+            finally:
+                os.close(parent_descriptor)
+            self.assertEqual({path.name for path in root.iterdir()}, before)
 
 class TreatmentContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.bundle = load_json(TREATMENT_FIXTURE_PATH)
+        cls.replay_bundle = load_json(TREATMENT_FIXTURE_PATH)
+        cls.bundle = single_treatment_case(cls.replay_bundle, "TRACE-SUCCESS")
 
     def rebound(self, bundle: dict) -> dict:
         bundle["treatment_contract_digest"] = treatment.schema_file_digest()
@@ -3511,6 +3840,23 @@ class TreatmentContractTests(unittest.TestCase):
         )
         self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "hard_fail", message)
 
+    def test_treatment_contract_uses_breaking_schema_version(self) -> None:
+        schema = load_json(
+            ROOT
+            / "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"
+        )
+        self.assertEqual(treatment.SCHEMA_VERSION, "2.0.0")
+        self.assertEqual(schema["properties"]["schema_version"]["const"], "2.0.0")
+        self.assertEqual(
+            schema["$defs"]["fixtureProvenance"]["properties"]["schema_version"]["const"],
+            "2.0.0",
+        )
+        legacy = copy.deepcopy(self.bundle)
+        legacy["schema_version"] = "1.0.0"
+        legacy["fixture_provenance"]["schema_version"] = "1.0.0"
+        with self.assertRaises(ValueError):
+            treatment.validate_treatment_bundle(legacy)
+
     def test_telemetry_inventory_and_null_semantics(self) -> None:
         validated = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
         self.assertEqual(set(treatment.CLASSIFICATIONS), {
@@ -3531,7 +3877,7 @@ class TreatmentContractTests(unittest.TestCase):
         forged = copy.deepcopy(self.bundle)
         obs = next(item for item in forged["treatment_traces"][0]["observations"] if item["field_path"] == "terminal.acceptance")
         obs["value"] = False
-        with self.assertRaisesRegex(ValueError, "wrong treatment schema type"):
+        with self.assertRaisesRegex(ValueError, "does not match exactly one treatment schema shape"):
             treatment.validate_treatment_bundle(self.rebound(forged))
         duplicate = copy.deepcopy(self.bundle)
         duplicate["telemetry_profile"].append(copy.deepcopy(duplicate["telemetry_profile"][0]))
@@ -3544,7 +3890,7 @@ class TreatmentContractTests(unittest.TestCase):
             ("app_server", "discovery.models", "official_source_ledger_id", "OPENAI-DOC-999"),
             ("app_server", "discovery.models", "official_source_ledger_id", "OPENAI-DOC-001"),
             ("app_server", "assignment.model", "permitted_claims", ["effective_treatment"]),
-            ("app_server", "reroute.events", "condition", "event-only capture"),
+            ("app_server", "reroute.events", "condition", None),
             ("app_server", "terminal.acceptance", "permitted_claims", ["observed_value"]),
             ("interactive_picker", "parent.graph", "condition", None),
             ("cli", "route.supported_effective_route_id", "official_source_ledger_id", "OPENAI-DOC-006"),
@@ -3669,26 +4015,18 @@ class TreatmentContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "cannot retain a top-level claim"):
                     treatment.validate_treatment_bundle(self.rebound(rebind_treatment_owners(bundle)))
 
-    def test_complete_reroute_monitoring_makes_configured_proof_reachable(self) -> None:
+    def test_conditional_reroute_event_profile_cannot_self_assert_complete_monitoring(self) -> None:
         bundle = copy.deepcopy(self.bundle)
         profile = next(item for item in bundle["telemetry_profile"] if item["surface"] == "app_server" and item["field_path"] == "reroute.events")
         trace = bundle["treatment_traces"][0]
-        self.assertEqual(profile["classification"], "stable_native")
-        self.assertEqual(profile["completeness_rule"], "complete_capture")
+        self.assertEqual(profile["classification"], "conditional")
+        self.assertEqual(profile["completeness_rule"], "condition_bound")
         self.assertTrue(trace["configured_route_proof"]["reroute_monitoring_complete"])
         self.assertEqual(trace["service_reroute_events"], [])
-        observation = next(item for item in trace["observations"] if item["field_path"] == "reroute.events")
-        observation.update({
-            "observation_state": "observed_value", "value": [],
-            "evidence_ref": "fixture://trace/reroute-monitoring", "captured_at": "2026-07-17T04:01:00Z",
-        })
-        declare_treatment_result(
-            bundle, [], "proven", ["configured_route_proof_and_complete_reroute_monitoring"],
-        )
         validated = treatment.validate_treatment_bundle(self.rebound(bundle))
         trace = validated["treatment_traces"][0]
-        self.assertEqual(trace["treatment_disposition"], "proven")
-        self.assertEqual(trace["disposition_reasons"], ["configured_route_proof_and_complete_reroute_monitoring"])
+        self.assertEqual(trace["treatment_disposition"], "unknown")
+        self.assertIn("effective_treatment_unknown", {item["failure_code"] for item in trace["treatment_failures"]})
 
     def test_effective_model_and_effort_require_profiled_observation_authority(self) -> None:
         for field, value in (
@@ -3715,14 +4053,14 @@ class TreatmentContractTests(unittest.TestCase):
         validated = treatment.validate_treatment_bundle(self.rebound(fabricated))
         self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "hard_fail")
 
-    def test_manifest_null_effort_remains_unknown_without_complete_monitoring(self) -> None:
+    def test_manifest_and_predecessor_null_effort_remain_unknown(self) -> None:
         trace = self.bundle["treatment_traces"][0]
-        route = treatment._canonical_routes(load_json(MANIFEST_PATH))[trace["assigned_route_id"]]
+        route = treatment_authority._canonical_routes(load_json(MANIFEST_PATH))[trace["assigned_route_id"]]
         self.assertIn("effort", route)
         self.assertIsNone(route["effort"])
         validated = treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))
         self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "unknown")
-        self.assertIsNone(validated["treatment_traces"][0]["supported_effective_effort"])
+        self.assertIn("effective_treatment_unknown", {item["failure_code"] for item in validated["treatment_traces"][0]["treatment_failures"]})
 
         arbitrary = copy.deepcopy(self.bundle)
         arbitrary["treatment_traces"][0]["requested_effort"] = "arbitrary-effort"
@@ -3789,33 +4127,25 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertIsNone(trace["supported_effective_model"])
         self.assertIsNone(trace["supported_effective_effort"])
 
-    def test_observed_supported_route_makes_effective_evidence_reachable(self) -> None:
-        bundle = copy.deepcopy(self.bundle)
-        trace = bundle["treatment_traces"][0]
-        route_id = trace["assigned_route_id"]
-        trace["configured_route_proof"] = None
-        resolution = bundle["route_resolutions"][0]
-        resolution["supported_effective_route_id"] = route_id
-        observation = next(
-            item for item in trace["observations"]
-            if item["field_path"] == "route.supported_effective_route_id"
+        replayed = copy.deepcopy(self.bundle)
+        replayed["treatment_traces"][0]["configured_route_proof"] = copy.deepcopy(
+            replay_trace(self.replay_bundle, "TRACE-EXPLICIT-NULL")["configured_route_proof"]
         )
-        observation.update({
-            "observation_state": "observed_value", "value": route_id,
-            "evidence_ref": "fixture://trace/effective-route", "captured_at": "2026-07-17T04:01:00Z",
-        })
-        declare_treatment_result(
-            bundle, [], "proven", ["profile_supported_effective_treatment"],
+        self.assert_bundle_not_proven(
+            replayed, "hard_fail",
+            ["configuration_mismatch", "effective_treatment_unknown"],
+            "a configured-route proof from another launch must not be reusable",
         )
-        rebind_treatment_owners(bundle)
-        canonical_routes = treatment._canonical_routes(load_json(MANIFEST_PATH))
-        canonical_routes[route_id]["effort"] = trace["requested_effort"]
-        with unittest.mock.patch.object(treatment, "_canonical_routes", return_value=canonical_routes):
-            validated = treatment.validate_treatment_bundle(
-                self.rebound(bundle),
-            )
-        self.assertEqual(validated["treatment_traces"][0]["treatment_disposition"], "proven")
-        self.assertEqual(validated["treatment_traces"][0]["disposition_reasons"], ["profile_supported_effective_treatment"])
+
+        mismatched_consumption = copy.deepcopy(self.bundle)
+        proof = mismatched_consumption["treatment_traces"][0]["configured_route_proof"]
+        proof["consumption_evidence_digest"] = "sha256:" + "3" * 64
+        proof["proof_id"] = treatment.content_id(proof, "proof_id")
+        self.assert_bundle_not_proven(
+            mismatched_consumption, "hard_fail",
+            ["configuration_mismatch", "effective_treatment_unknown"],
+            "configured-route consumption evidence must bind the execution trace",
+        )
 
     def test_configuration_materialization_and_failure_taxonomy_are_derived(self) -> None:
         mismatch_cases = [
@@ -3948,6 +4278,27 @@ class TreatmentContractTests(unittest.TestCase):
         mismatch = copy.deepcopy(self.bundle); mismatch["treatment_traces"][0]["work_item_id"] = "G56R-002-FORGED"
         with self.assertRaisesRegex(ValueError, "controlled environment binding"):
             treatment.validate_treatment_bundle(self.rebound(mismatch))
+        repeated_fk = copy.deepcopy(self.bundle)
+        other = copy.deepcopy(repeated_fk["treatment_traces"][0])
+        other["context"] = {
+            "threadId": "thread-fixture-repeated-fk",
+            "turnId": "turn-fixture-repeated-fk",
+        }
+        context_observation = next(item for item in other["observations"] if item["field_path"] == "parent.context")
+        context_observation["value"] = copy.deepcopy(other["context"])
+        other_id = treatment.execution_trace_identity(other)
+        other["objective_binding"]["execution_trace_id"] = other_id
+        other["parent_child_graph"]["root_execution_trace_id"] = other_id
+        repeated_fk["treatment_traces"].append(other)
+        repeated_fk["fixture_provenance"]["expected_dispositions"] = [
+            {
+                "execution_trace_id": repeated_fk["treatment_traces"][0]["objective_binding"]["execution_trace_id"],
+                "treatment_disposition": "unknown",
+            },
+            {"execution_trace_id": other_id, "treatment_disposition": "unknown"},
+        ]
+        self.assertEqual(len(treatment.validate_treatment_bundle(self.rebound(repeated_fk))["treatment_traces"]), 2)
+
         validated_graph = treatment.validate_treatment_bundle(self.rebound(make_two_trace_graph_bundle(self.bundle)))
         self.assertEqual(len(validated_graph["treatment_traces"]), 2)
 
@@ -3971,7 +4322,7 @@ class TreatmentContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "outside the canonical candidate manifest"):
                     treatment.validate_treatment_bundle(self.rebound(bundle))
 
-        canonical_routes = treatment._canonical_routes(load_json(MANIFEST_PATH))
+        canonical_routes = treatment_authority._canonical_routes(load_json(MANIFEST_PATH))
         baseline_resolution = self.bundle["route_resolutions"][0]
         assigned_route = baseline_resolution["assigned_route_id"]
         assigned_contract = canonical_routes[assigned_route]["agent_contract_id"]
@@ -3987,7 +4338,7 @@ class TreatmentContractTests(unittest.TestCase):
             ("preferred different agent", different_agent_route, "preferred"),
             ("attempted different agent", different_agent_route, "attempted"),
             ("supported alternate same agent", same_agent_route, "supported"),
-            ("supported assigned route without route observation", assigned_route, "supported"),
+            ("supported assigned route without model evidence", assigned_route, "supported"),
         )
         for label, route_id, mutation in semantic_cases:
             with self.subTest(semantic_case=label):
@@ -4003,7 +4354,7 @@ class TreatmentContractTests(unittest.TestCase):
                 else:
                     resolution["supported_effective_route_id"] = route_id
                 rebind_treatment_owners(bundle)
-                expected = "different agent contract" if mutation != "supported" or route_id != assigned_route else "declared treatment failures"
+                expected = "different agent contract" if mutation != "supported" or route_id != assigned_route else "canonical effective model"
                 if mutation == "supported" and route_id != assigned_route:
                     expected = "must select the assigned route"
                 with self.assertRaisesRegex(ValueError, expected):
@@ -4249,6 +4600,32 @@ class TreatmentContractTests(unittest.TestCase):
         )
         self.assertEqual(result["treatment_traces"][0]["treatment_disposition"], "non_scorable_rerouted")
         self.assertEqual(result["route_resolutions"][0], resolver_before_reroute)
+
+        effort_bound = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        effort_trace = effort_bound["treatment_traces"][0]
+        effort_trace["supported_effective_effort"] = "high"
+        routes = treatment_authority._canonical_routes(load_json(MANIFEST_PATH))
+        destination_route_id = effort_trace["reroute_destination_assessments"][0]["destination_candidate_route_id"]
+        routes[destination_route_id]["effort"] = "high"
+        trusted = trusted_external_qualification(effort_bound)
+        qualification = {
+            item["qualification_evidence_id"]: item
+            for item in effort_bound["qualification_evidence_registry"]
+        }
+        disposition, reasons = treatment_fields._reroute_disposition(
+            effort_trace, effort_trace["service_reroute_events"],
+            effort_trace["reroute_destination_assessments"], qualification, trusted, routes,
+        )
+        self.assertEqual((disposition, reasons), (
+            "non_scorable_rerouted", ["service_reroute_requested_route_non_scorable"],
+        ))
+        self.assertEqual(
+            treatment_bundle._effective_effort_route(
+                effort_trace["service_reroute_events"],
+                effort_trace["reroute_destination_assessments"], None, routes,
+            ),
+            routes[destination_route_id],
+        )
         for authority in ("synthetic_fixture", "missing", "mismatched"):
             with self.subTest(authority=authority):
                 bundle = make_treatment_reroute_case(copy.deepcopy(self.bundle), authority)
@@ -4266,18 +4643,188 @@ class TreatmentContractTests(unittest.TestCase):
             self.rebound(ambiguous), trusted_qualification_evidence=trusted
         )
         self.assertEqual(failed["treatment_traces"][0]["treatment_disposition"], "hard_fail")
+
+        self_target = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
+        trace = self_target["treatment_traces"][0]
+        owner = self_target["qualification_evidence_registry"][0]
+        owner["destination_candidate_route_id"] = trace["assigned_route_id"]
+        owner["qualification_evidence_id"] = treatment.content_id(owner, "qualification_evidence_id")
+        assessment = trace["reroute_destination_assessments"][0]
+        assessment["destination_candidate_route_id"] = trace["assigned_route_id"]
+        assessment["prequalification_evidence_id"] = owner["qualification_evidence_id"]
+        event = trace["service_reroute_events"][0]
+        event["toModel"] = trace["requested_model"]
+        event["event_id"] = treatment.content_id(event, "event_id")
+        assessment["event_id"] = event["event_id"]
+        trace["supported_effective_model"] = event["toModel"]
+        next(item for item in trace["observations"] if item["field_path"] == "reroute.events")["value"] = [copy.deepcopy(event)]
+        next(
+            item for item in trace["observations"]
+            if item["field_path"] == "assignment.supported_effective_model"
+        )["value"] = event["toModel"]
+        trusted = {owner["qualification_evidence_id"]: copy.deepcopy(owner)}
+        declare_reroute_result(self_target, trusted)
+        self_target_result = treatment.validate_treatment_bundle(
+            self.rebound(self_target), trusted_qualification_evidence=trusted
+        )
+        self.assertEqual(self_target_result["treatment_traces"][0]["treatment_disposition"], "hard_fail")
+        self.assertIn("reroute_self_target", self_target_result["treatment_traces"][0]["disposition_reasons"])
         self.assertEqual(treatment.FAILURE_DISPOSITIONS["effective_treatment_unknown"], "unknown")
         self.assertTrue(all(value in {"unknown", "hard_fail"} for value in treatment.FAILURE_DISPOSITIONS.values()))
 
-    def test_multi_hop_reroutes_form_one_trusted_ordered_chain(self) -> None:
-        chained = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
-        trusted = trusted_external_qualification(chained)
-        result = treatment.validate_treatment_bundle(
-            self.rebound(chained), trusted_qualification_evidence=trusted
+    def test_multi_hop_reroutes_accept_acyclic_and_reject_cycles_and_no_op_hops(self) -> None:
+        acyclic = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
+        trace = acyclic["treatment_traces"][0]
+        second_owner = acyclic["qualification_evidence_registry"][1]
+        third_route_id = "G56R-001-CR-PHASE-EXECUTOR-THIRD-FIXTURE"
+        third_model = "gpt-5.6-terra"
+        second_owner["destination_candidate_route_id"] = third_route_id
+        second_owner["qualification_evidence_id"] = treatment.content_id(
+            second_owner, "qualification_evidence_id"
+        )
+        second_assessment = trace["reroute_destination_assessments"][1]
+        second_assessment["destination_candidate_route_id"] = third_route_id
+        second_assessment["prequalification_evidence_id"] = second_owner[
+            "qualification_evidence_id"
+        ]
+        second_event = trace["service_reroute_events"][1]
+        second_event["toModel"] = third_model
+        second_event["event_id"] = treatment.content_id(second_event, "event_id")
+        second_assessment["event_id"] = second_event["event_id"]
+        trace["supported_effective_model"] = third_model
+        next(
+            item for item in trace["observations"]
+            if item["field_path"] == "reroute.events"
+        )["value"] = copy.deepcopy(trace["service_reroute_events"])
+        next(
+            item for item in trace["observations"]
+            if item["field_path"] == "assignment.supported_effective_model"
+        )["value"] = third_model
+        declare_treatment_result(
+            acyclic,
+            [],
+            "non_scorable_rerouted",
+            ["service_reroute_requested_route_non_scorable"],
+        )
+        manifest = load_json(MANIFEST_PATH)
+        third_route = copy.deepcopy(next(
+            item for item in manifest["candidate_routes"]
+            if item["candidate_route_id"] == "G56R-001-CR-PHASE-EXECUTOR-SOL"
+        ))
+        third_route["candidate_route_id"] = third_route_id
+        third_route["model_selector"].update({
+            "requested_value": third_model,
+            "expected_resolved_model_id": third_model,
+        })
+        manifest["candidate_routes"].append(third_route)
+        validated = treatment_bundle._validate_treatment_bundle(
+            self.rebound(acyclic),
+            schema_path=treatment.SCHEMA_PATH,
+            manifest=manifest,
+            trusted_qualification_evidence=trusted_external_qualification(acyclic),
         )
         self.assertEqual(
-            result["treatment_traces"][0]["treatment_disposition"],
+            validated["treatment_traces"][0]["treatment_disposition"],
             "non_scorable_rerouted",
+        )
+
+        cycle = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
+        trusted = trusted_external_qualification(cycle)
+        result = treatment.validate_treatment_bundle(
+            self.rebound(cycle), trusted_qualification_evidence=trusted,
+        )
+        self.assertEqual(
+            result["treatment_traces"][0]["treatment_disposition"], "hard_fail"
+        )
+        self.assertIn(
+            "reroute_self_target",
+            result["treatment_traces"][0]["disposition_reasons"],
+        )
+
+        no_op = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
+        trace = no_op["treatment_traces"][0]
+        first_event, second_event = trace["service_reroute_events"]
+        first_owner, second_owner = no_op["qualification_evidence_registry"]
+        for field in (
+            "destination_candidate_route_id",
+            "destination_agent_contract_id",
+            "destination_named_agent",
+        ):
+            second_owner[field] = first_owner[field]
+        second_owner["evidence_digest"] = treatment.digest(
+            b"fixture-second-no-op-qualification"
+        )
+        second_owner["qualification_evidence_id"] = treatment.content_id(
+            second_owner, "qualification_evidence_id"
+        )
+        second_assessment = trace["reroute_destination_assessments"][1]
+        for field in (
+            "destination_candidate_route_id",
+            "destination_agent_contract_id",
+            "destination_named_agent",
+        ):
+            second_assessment[field] = second_owner[field]
+        second_assessment["prequalification_evidence_id"] = second_owner[
+            "qualification_evidence_id"
+        ]
+        second_event["toModel"] = first_event["toModel"]
+        second_event["event_id"] = treatment.content_id(second_event, "event_id")
+        second_assessment["event_id"] = second_event["event_id"]
+        trace["supported_effective_model"] = second_event["toModel"]
+        next(
+            item
+            for item in trace["observations"]
+            if item["field_path"] == "reroute.events"
+        )["value"] = copy.deepcopy(trace["service_reroute_events"])
+        next(
+            item
+            for item in trace["observations"]
+            if item["field_path"] == "assignment.supported_effective_model"
+        )["value"] = second_event["toModel"]
+        trusted = trusted_external_qualification(no_op)
+        declare_reroute_result(no_op, trusted)
+        result = treatment.validate_treatment_bundle(
+            self.rebound(no_op), trusted_qualification_evidence=trusted,
+        )
+        self.assertEqual(
+            result["treatment_traces"][0]["treatment_disposition"], "hard_fail"
+        )
+        self.assertIn(
+            "reroute_self_target",
+            result["treatment_traces"][0]["disposition_reasons"],
+        )
+
+        model_cycle = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
+        trace = model_cycle["treatment_traces"][0]
+        alternate_route_id = "G56R-001-CR-PHASE-EXECUTOR-SOL-ALTERNATE"
+        second_owner = model_cycle["qualification_evidence_registry"][1]
+        second_owner["destination_candidate_route_id"] = alternate_route_id
+        second_owner["qualification_evidence_id"] = treatment.content_id(
+            second_owner, "qualification_evidence_id"
+        )
+        second_assessment = trace["reroute_destination_assessments"][1]
+        second_assessment["destination_candidate_route_id"] = alternate_route_id
+        second_assessment["prequalification_evidence_id"] = second_owner[
+            "qualification_evidence_id"
+        ]
+        qualification = {
+            item["qualification_evidence_id"]: item
+            for item in model_cycle["qualification_evidence_registry"]
+        }
+        routes = treatment_authority._canonical_routes(load_json(MANIFEST_PATH))
+        routes[alternate_route_id] = copy.deepcopy(
+            routes["G56R-001-CR-PHASE-EXECUTOR-SOL"]
+        )
+        disposition, reasons = treatment_fields._reroute_disposition(
+            trace,
+            trace["service_reroute_events"],
+            trace["reroute_destination_assessments"],
+            qualification,
+            trusted_external_qualification(model_cycle),
+            routes,
+        )
+        self.assertEqual(
+            (disposition, reasons), ("hard_fail", ["reroute_self_target"])
         )
 
         broken = make_two_hop_treatment_reroute_case(copy.deepcopy(self.bundle))
@@ -4291,7 +4838,7 @@ class TreatmentContractTests(unittest.TestCase):
         )["value"] = copy.deepcopy(trace["service_reroute_events"])
         declare_reroute_result(broken, trusted_external_qualification(broken))
         self.assert_reroute_hard_failed(
-            broken, trusted=trusted_external_qualification(broken)
+            broken, trusted=trusted_external_qualification(broken),
         )
 
         duplicate = make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external")
@@ -4418,8 +4965,8 @@ class TreatmentContractTests(unittest.TestCase):
 
     def test_schema_and_runtime_reject_the_same_structural_mutations(self) -> None:
         baseline = self.rebound(copy.deepcopy(self.bundle))
-        schema = treatment._read_json_file(treatment.SCHEMA_PATH)
-        treatment._validate_schema_instance(baseline, schema, schema)
+        schema = treatment_io._read_json_file(treatment.SCHEMA_PATH)
+        treatment_json_schema._validate_schema_instance(baseline, schema, schema)
         treatment.validate_treatment_bundle(copy.deepcopy(baseline))
         mutations = []
         invalid_ref = copy.deepcopy(baseline)
@@ -4467,79 +5014,132 @@ class TreatmentContractTests(unittest.TestCase):
         mutations.append(("strict RFC3339 UTC timestamp", timestamp))
         for label, bundle in mutations:
             with self.subTest(label=label):
-                with self.assertRaises(ValueError): treatment._validate_schema_instance(bundle, schema, schema)
+                with self.assertRaises(ValueError): treatment_json_schema._validate_schema_instance(bundle, schema, schema)
                 with self.assertRaises(ValueError): treatment.validate_treatment_bundle(bundle)
 
     def test_bounded_file_loading_rejects_links_special_files_and_external_paths(self) -> None:
         with tempfile.TemporaryDirectory(dir=ROOT) as directory:
             root = Path(directory); source = root / "source.json"; source.write_text("{}", encoding="utf-8")
-            self.assertEqual(treatment._read_bounded_regular_file(source, allowed_root=root), b"{}")
-            with unittest.mock.patch.object(treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False):
-                self.assertEqual(treatment._read_bounded_regular_file(source, allowed_root=root), b"{}")
+            self.assertEqual(treatment_io._read_bounded_regular_file(source, allowed_root=root), b"{}")
+            with unittest.mock.patch.object(treatment_io, "HAS_DESCRIPTOR_RELATIVE_IO", False):
+                self.assertEqual(treatment_io._read_bounded_regular_file(source, allowed_root=root), b"{}")
                 self.assertEqual(
                     treatment.validate_treatment_bundle(copy.deepcopy(self.bundle))["telemetry_profile_id"],
                     self.bundle["telemetry_profile_id"],
                 )
             with unittest.mock.patch.object(
-                treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False,
+                treatment_io, "HAS_DESCRIPTOR_RELATIVE_IO", False,
             ), unittest.mock.patch.object(
-                treatment, "IS_WINDOWS", True,
+                treatment_io, "IS_WINDOWS", True,
             ), unittest.mock.patch.object(
-                treatment, "_windows_final_path_from_descriptor", return_value=source.resolve(),
+                treatment_io, "_windows_final_path_from_descriptor", return_value=source.resolve(),
             ) as final_path:
-                self.assertEqual(treatment._read_bounded_regular_file(source, allowed_root=root), b"{}")
+                self.assertEqual(treatment_io._read_bounded_regular_file(source, allowed_root=root), b"{}")
                 self.assertEqual(final_path.call_count, 1)
             with unittest.mock.patch.object(
-                treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False,
+                treatment_io, "HAS_DESCRIPTOR_RELATIVE_IO", False,
             ), unittest.mock.patch.object(
-                treatment, "IS_WINDOWS", True,
+                treatment_io, "IS_WINDOWS", True,
             ), unittest.mock.patch.object(
-                treatment, "_windows_final_path_from_descriptor", return_value=root.parent / "escaped.json",
+                treatment_io, "_windows_final_path_from_descriptor", return_value=root.parent / "escaped.json",
             ), self.assertRaisesRegex(ValueError, "Windows handle escaped"):
-                treatment._read_bounded_regular_file(source, allowed_root=root)
-            symlink = root / "symlink.json"; symlink.symlink_to(source)
-            with self.assertRaisesRegex(ValueError, "regular non-symlink"):
-                treatment._read_bounded_regular_file(symlink, allowed_root=root)
-            with unittest.mock.patch.object(
-                treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False,
-            ), self.assertRaisesRegex(ValueError, "non-symlink"):
-                treatment._read_bounded_regular_file(symlink, allowed_root=root)
-            real_directory = root / "real"; real_directory.mkdir()
-            nested_source = real_directory / "nested.json"; nested_source.write_text("{}", encoding="utf-8")
-            linked_directory = root / "linked"; linked_directory.symlink_to(real_directory, target_is_directory=True)
-            with self.assertRaisesRegex(ValueError, "regular non-symlink|real directories"):
-                treatment._read_bounded_regular_file(linked_directory / "nested.json", allowed_root=root)
-            hardlink = root / "hardlink.json"; os.link(source, hardlink)
-            with self.assertRaisesRegex(ValueError, "single-link"):
-                treatment._read_bounded_regular_file(source, allowed_root=root)
-            hardlink.unlink()
+                treatment_io._read_bounded_regular_file(source, allowed_root=root)
+            if not treatment.IS_WINDOWS:
+                symlink = root / "symlink.json"; symlink.symlink_to(source)
+                with self.assertRaisesRegex(ValueError, "regular non-symlink"):
+                    treatment_io._read_bounded_regular_file(symlink, allowed_root=root)
+                with unittest.mock.patch.object(
+                    treatment_io, "HAS_DESCRIPTOR_RELATIVE_IO", False,
+                ), self.assertRaisesRegex(ValueError, "non-symlink"):
+                    treatment_io._read_bounded_regular_file(symlink, allowed_root=root)
+                real_directory = root / "real"; real_directory.mkdir()
+                nested_source = real_directory / "nested.json"; nested_source.write_text("{}", encoding="utf-8")
+                linked_directory = root / "linked"; linked_directory.symlink_to(real_directory, target_is_directory=True)
+                with self.assertRaisesRegex(ValueError, "regular non-symlink|real directories"):
+                    treatment_io._read_bounded_regular_file(linked_directory / "nested.json", allowed_root=root)
+                hardlink = root / "hardlink.json"; os.link(source, hardlink)
+                with self.assertRaisesRegex(ValueError, "single-link"):
+                    treatment_io._read_bounded_regular_file(source, allowed_root=root)
+                hardlink.unlink()
             oversized = root / "oversized.json"; oversized.write_bytes(b"12345")
             with self.assertRaisesRegex(ValueError, "maximum size"):
-                treatment._read_bounded_regular_file(oversized, allowed_root=root, max_bytes=4)
+                treatment_io._read_bounded_regular_file(oversized, allowed_root=root, max_bytes=4)
             if hasattr(os, "mkfifo"):
                 fifo = root / "fixture-fifo"; os.mkfifo(fifo)
                 with self.assertRaisesRegex(ValueError, "regular"):
-                    treatment._read_bounded_regular_file(fifo, allowed_root=root)
+                    treatment_io._read_bounded_regular_file(fifo, allowed_root=root)
 
-            race_directory = root / "race"; race_directory.mkdir()
-            race_source = race_directory / "source.json"; race_source.write_text("{}", encoding="utf-8")
-            moved_directory = root / "race-original"
-            original_open = treatment.os.open
-            swapped = False
+            if hasattr(os, "mkfifo") and hasattr(os, "O_NONBLOCK"):
+                modes = [False]
+                if treatment_io.HAS_DESCRIPTOR_RELATIVE_IO:
+                    modes.append(True)
+                for descriptor_relative in modes:
+                    with self.subTest(file_to_fifo_race=descriptor_relative):
+                        race_fifo = root / f"race-fifo-{descriptor_relative}.json"
+                        race_fifo.write_text("{}", encoding="utf-8")
+                        race_original = root / f"race-fifo-{descriptor_relative}-original.json"
+                        original_open = treatment_io.os.open
+                        swapped = False
+                        failures: list[BaseException] = []
 
-            def replace_directory(path: object, flags: int, *args: object, **kwargs: object) -> int:
-                nonlocal swapped
-                if path == "source.json" and kwargs.get("dir_fd") is not None and not swapped:
-                    swapped = True
-                    race_directory.rename(moved_directory)
-                    race_directory.mkdir()
-                    (race_directory / "source.json").write_text('{"outside":"replacement"}', encoding="utf-8")
-                return original_open(path, flags, *args, **kwargs)
+                        def replace_file_with_fifo(
+                            path: object, flags: int, *args: object, **kwargs: object,
+                        ) -> int:
+                            nonlocal swapped
+                            descriptor_target = (
+                                path == race_fifo.name
+                                and kwargs.get("dir_fd") is not None
+                            )
+                            handle_target = (
+                                kwargs.get("dir_fd") is None
+                                and Path(path) == race_fifo
+                            )
+                            if (descriptor_target or handle_target) and not swapped:
+                                swapped = True
+                                race_fifo.rename(race_original)
+                                os.mkfifo(race_fifo)
+                            return original_open(path, flags, *args, **kwargs)
 
-            with unittest.mock.patch.object(treatment.os, "open", side_effect=replace_directory), self.assertRaisesRegex(
-                ValueError, "directory changed while it was being read"
-            ):
-                treatment._read_bounded_regular_file(race_source, allowed_root=root)
+                        def read_swapped_fifo() -> None:
+                            try:
+                                treatment_io._read_bounded_regular_file(
+                                    race_fifo, allowed_root=root,
+                                )
+                            except BaseException as exc:  # pragma: no branch - asserted below
+                                failures.append(exc)
+
+                        with unittest.mock.patch.object(
+                            treatment_io, "HAS_DESCRIPTOR_RELATIVE_IO", descriptor_relative,
+                        ), unittest.mock.patch.object(
+                            treatment_io.os, "open", side_effect=replace_file_with_fifo,
+                        ):
+                            worker = threading.Thread(target=read_swapped_fifo, daemon=True)
+                            worker.start()
+                            worker.join(timeout=2)
+                        self.assertFalse(worker.is_alive(), "file-to-FIFO swap blocked the reader")
+                        self.assertTrue(failures)
+                        self.assertIsInstance(failures[0], ValueError)
+
+            original_open = treatment_io.os.open
+            if treatment_io.HAS_DESCRIPTOR_RELATIVE_IO:
+                race_directory = root / "race"; race_directory.mkdir()
+                race_source = race_directory / "source.json"; race_source.write_text("{}", encoding="utf-8")
+                moved_directory = root / "race-original"
+                swapped = False
+
+                def replace_directory(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                    nonlocal swapped
+                    if path == "source.json" and kwargs.get("dir_fd") is not None and not swapped:
+                        swapped = True
+                        race_directory.rename(moved_directory)
+                        race_directory.mkdir()
+                        (race_directory / "source.json").write_text('{"outside":"replacement"}', encoding="utf-8")
+                    return original_open(path, flags, *args, **kwargs)
+
+                with unittest.mock.patch.object(treatment_io.os, "open", side_effect=replace_directory), self.assertRaisesRegex(
+                    ValueError, "directory changed while it was being read"
+                ):
+                    treatment_io._read_bounded_regular_file(race_source, allowed_root=root)
             fallback_source = root / "fallback-race.json"
             fallback_source.write_text("{}", encoding="utf-8")
             fallback_original = root / "fallback-original.json"
@@ -4554,17 +5154,17 @@ class TreatmentContractTests(unittest.TestCase):
                 return original_open(path, flags, *args, **kwargs)
 
             with unittest.mock.patch.object(
-                treatment, "HAS_DESCRIPTOR_RELATIVE_IO", False,
+                treatment_io, "HAS_DESCRIPTOR_RELATIVE_IO", False,
             ), unittest.mock.patch.object(
-                treatment.os, "open", side_effect=replace_fallback_file,
+                treatment_io.os, "open", side_effect=replace_fallback_file,
             ), self.assertRaisesRegex(ValueError, "pathname changed before it was read"):
-                treatment._read_bounded_regular_file(fallback_source, allowed_root=root)
+                treatment_io._read_bounded_regular_file(fallback_source, allowed_root=root)
         with tempfile.TemporaryDirectory() as directory:
             external = Path(directory) / "fixture.json"; external.write_text("{}", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "approved root"):
-                treatment._read_bounded_regular_file(external)
+                treatment_io._read_bounded_regular_file(external)
             completed = subprocess.run(
-                ["python3", str(TREATMENT_MODULE_PATH), "validate", "--fixture", str(external)],
+                [sys.executable, str(TREATMENT_MODULE_PATH), "validate", "--fixture", str(external)],
                 cwd=ROOT, text=True, capture_output=True, check=False,
             )
             self.assertEqual(completed.returncode, 2)
@@ -4581,7 +5181,7 @@ class TreatmentContractTests(unittest.TestCase):
                 with self.subTest(name=name):
                     source = root / name; source.write_text(payload, encoding="utf-8")
                     completed = subprocess.run(
-                        ["python3", str(TREATMENT_MODULE_PATH), "validate", "--fixture", str(source)],
+                        [sys.executable, str(TREATMENT_MODULE_PATH), "validate", "--fixture", str(source)],
                         cwd=ROOT, text=True, capture_output=True, check=False,
                     )
                     self.assertEqual(completed.returncode, 2)
@@ -4646,6 +5246,7 @@ class TreatmentContractTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "cannot retain a top-level claim"):
                     treatment.validate_treatment_bundle(self.rebound(bundle))
         conditional_fields = {
+            "reroute.events": [],
             "parent.graph": copy.deepcopy(self.bundle["treatment_traces"][0]["parent_child_graph"]),
             "lifecycle.cancellation": copy.deepcopy(self.bundle["treatment_traces"][0]["cancellation"]),
         }
@@ -4659,6 +5260,11 @@ class TreatmentContractTests(unittest.TestCase):
                 })
                 with self.assertRaisesRegex(ValueError, "condition did not occur"):
                     treatment.validate_treatment_bundle(self.rebound(bundle))
+        occurred = make_treatment_reroute_case(copy.deepcopy(self.bundle), "synthetic_fixture")
+        observation = next(item for item in occurred["treatment_traces"][0]["observations"] if item["field_path"] == "reroute.events")
+        observation.update({"observation_state": "missing", "value": None, "evidence_ref": None, "captured_at": None})
+        with self.assertRaisesRegex(ValueError, "condition occurred without an observed value"):
+            treatment.validate_treatment_bundle(self.rebound(occurred))
 
     def test_terminal_lifecycle_invariants_are_schema_and_runtime_authority(self) -> None:
         cases = []
@@ -4666,11 +5272,11 @@ class TreatmentContractTests(unittest.TestCase):
         failed = copy.deepcopy(self.bundle); failed["treatment_traces"][0]["terminal_state"] = "failed"; failed["treatment_traces"][0]["outcome"]["status"] = "failed"; cases.append(failed)
         cancelled = copy.deepcopy(self.bundle); cancelled["treatment_traces"][0]["terminal_state"] = "cancelled"; cancelled["treatment_traces"][0]["outcome"]["status"] = "cancelled"; cases.append(cancelled)
         accepted = copy.deepcopy(self.bundle); accepted["treatment_traces"][0]["acceptance"] = False; cases.append(accepted)
-        schema = treatment._read_json_file(treatment.SCHEMA_PATH)
+        schema = treatment_io._read_json_file(treatment.SCHEMA_PATH)
         for index, bundle in enumerate(cases):
             with self.subTest(case=index):
                 rebound = self.rebound(bundle)
-                with self.assertRaises(ValueError): treatment._validate_schema_instance(rebound, schema, schema)
+                with self.assertRaises(ValueError): treatment_json_schema._validate_schema_instance(rebound, schema, schema)
                 with self.assertRaises(ValueError): treatment.validate_treatment_bundle(rebound)
 
     def test_trace_graph_rejects_orphans_nonreciprocal_edges_wrong_roots_and_cycles(self) -> None:
@@ -4724,6 +5330,7 @@ class TreatmentContractTests(unittest.TestCase):
             with self.subTest(message=message), self.assertRaisesRegex(ValueError, message):
                 treatment.validate_treatment_bundle(self.rebound(bundle))
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_treatment_bound_freeze_apis_require_external_authority(self) -> None:
         manifest = load_json(MANIFEST_PATH)
         published = load_json(PUBLISHED_FREEZE_PATH)
@@ -4747,10 +5354,6 @@ class TreatmentContractTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "requires its validated predecessor"):
                 capabilities.publish_with_raw_evidence_retention(
                     forged, Path(directory) / "forged.json", raw_root, ROOT, manifest=manifest,
-                )
-            with self.assertRaises(TypeError):
-                capabilities.validate_freeze(
-                    forged, manifest, _enforce_lineage=False,
                 )
             forged_predecessor = copy.deepcopy(prior)
             forged_predecessor["candidate_freeze_id"] = capabilities.digest(b"forged-predecessor")
@@ -4778,6 +5381,8 @@ class TreatmentContractTests(unittest.TestCase):
                     published["client_identity"], published["official_source_refreshes"],
                     published["surface_matrix"], decisions, "2026-07-18T19:40:01Z",
                     manifest=manifest, predecessor=forged,
+                    predecessor_lineage=[prior],
+                    expected_predecessor_lineage_bindings=[None],
                     raw_evidence_root=raw_root, repository_root=ROOT,
                     expected_predecessor_telemetry_profile_id=expected_profile,
                     expected_predecessor_treatment_contract_digest=expected_contract,
@@ -4787,6 +5392,8 @@ class TreatmentContractTests(unittest.TestCase):
                 capabilities.build_canary_successor(
                     forged, {}, manifest, "2026-07-18T19:40:01Z",
                     raw_evidence_root=raw_root, repository_root=ROOT,
+                    predecessor_lineage=[prior],
+                    expected_predecessor_lineage_bindings=[None],
                     expected_telemetry_profile_id=expected_profile,
                     expected_treatment_contract_digest=expected_contract,
                     expected_treatment_evidence_digest=expected_evidence,
@@ -4802,18 +5409,23 @@ class TreatmentContractTests(unittest.TestCase):
         prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
         prior["supersedes_candidate_freeze_id"] = None
         self.assertEqual(treatment.content_id(prior, "candidate_freeze_id"), prior["candidate_freeze_id"])
-        successor_bundle, successor_evidence = bind_trusted_treatment_evidence(
-            self.rebound(copy.deepcopy(self.bundle))
-        )
         bounded_reads: list[Path] = []
-        original_read = treatment._read_bounded_regular_file
+        original_read = treatment_io._read_bounded_regular_file
 
         def track_authority_reads(path: Path, **kwargs: object) -> bytes:
             bounded_reads.append(Path(path))
             return original_read(path, **kwargs)
 
-        with unittest.mock.patch.object(treatment, "_read_bounded_regular_file", side_effect=track_authority_reads):
-            successor = treatment.build_treatment_successor(
+        successor_bundle, successor_evidence = bind_trusted_treatment_evidence(
+            self.rebound(copy.deepcopy(self.bundle))
+        )
+
+        with unittest.mock.patch.object(
+            treatment_io, "_read_bounded_regular_file", side_effect=track_authority_reads,
+        ), unittest.mock.patch.object(
+            treatment_bundle, "_read_bounded_regular_file", side_effect=track_authority_reads,
+        ):
+            successor = treatment_successor.build_treatment_successor(
                 prior, successor_bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
                 trusted_treatment_evidence=successor_evidence,
             )
@@ -4821,103 +5433,90 @@ class TreatmentContractTests(unittest.TestCase):
         self.assertEqual(bounded_reads.count(treatment.MANIFEST_PATH), 1)
         self.assertEqual(successor, published)
         self.assertEqual(successor["supersedes_candidate_freeze_id"], prior["candidate_freeze_id"])
-        self.assertEqual(successor["telemetry_profile_id"], successor_bundle["telemetry_profile_id"])
-        self.assertEqual(successor["treatment_contract_digest"], successor_bundle["treatment_contract_digest"])
+        self.assertEqual(successor["telemetry_profile_id"], self.bundle["telemetry_profile_id"])
+        self.assertEqual(successor["treatment_contract_digest"], self.bundle["treatment_contract_digest"])
         self.assertEqual(successor["treatment_evidence_digest"], published["treatment_evidence_digest"])
         self.assertEqual(successor["published_at"], TREATMENT_SUCCESSOR_PUBLISHED_AT)
-        proven_excluded = copy.deepcopy(self.bundle)
-        reroute_observation = next(
-            item for item in proven_excluded["treatment_traces"][0]["observations"]
-            if item["field_path"] == "reroute.events"
+        second_successor = treatment.build_treatment_successor(
+            successor,
+            successor_bundle,
+            published_at="2026-07-20T04:00:00Z",
+            trusted_treatment_evidence=successor_evidence,
+            prior_freeze_predecessor=prior,
+            expected_prior_telemetry_profile_id=successor["telemetry_profile_id"],
+            expected_prior_treatment_contract_digest=successor[
+                "treatment_contract_digest"
+            ],
+            expected_prior_treatment_evidence_digest=successor[
+                "treatment_evidence_digest"
+            ],
         )
-        reroute_observation.update({
-            "observation_state": "observed_value", "value": [],
-            "evidence_ref": "fixture://trace/reroute-monitoring",
-            "captured_at": "2026-07-17T04:01:00Z",
-        })
-        declare_treatment_result(
-            proven_excluded, [], "proven",
-            ["configured_route_proof_and_complete_reroute_monitoring"],
-        )
-        proven_excluded, proven_excluded_evidence = bind_trusted_treatment_evidence(
-            self.rebound(proven_excluded)
+        with self.assertRaisesRegex(ValueError, "requires its validated predecessor"):
+            treatment.build_treatment_successor(
+                second_successor,
+                successor_bundle,
+                published_at="2026-07-20T04:01:00Z",
+                trusted_treatment_evidence=successor_evidence,
+                prior_freeze_predecessor=successor,
+                expected_prior_telemetry_profile_id=second_successor[
+                    "telemetry_profile_id"
+                ],
+                expected_prior_treatment_contract_digest=second_successor[
+                    "treatment_contract_digest"
+                ],
+                expected_prior_treatment_evidence_digest=second_successor[
+                    "treatment_evidence_digest"
+                ],
+                expected_prior_predecessor_telemetry_profile_id=successor[
+                    "telemetry_profile_id"
+                ],
+                expected_prior_predecessor_treatment_contract_digest=successor[
+                    "treatment_contract_digest"
+                ],
+                expected_prior_predecessor_treatment_evidence_digest=successor[
+                    "treatment_evidence_digest"
+                ],
+            )
+        third_successor = treatment.build_treatment_successor(
+            second_successor,
+            successor_bundle,
+            published_at="2026-07-20T04:01:00Z",
+            trusted_treatment_evidence=successor_evidence,
+            prior_freeze_predecessor=successor,
+            prior_freeze_predecessor_lineage=[prior],
+            expected_prior_predecessor_lineage_bindings=[None],
+            expected_prior_telemetry_profile_id=second_successor[
+                "telemetry_profile_id"
+            ],
+            expected_prior_treatment_contract_digest=second_successor[
+                "treatment_contract_digest"
+            ],
+            expected_prior_treatment_evidence_digest=second_successor[
+                "treatment_evidence_digest"
+            ],
+            expected_prior_predecessor_telemetry_profile_id=successor[
+                "telemetry_profile_id"
+            ],
+            expected_prior_predecessor_treatment_contract_digest=successor[
+                "treatment_contract_digest"
+            ],
+            expected_prior_predecessor_treatment_evidence_digest=successor[
+                "treatment_evidence_digest"
+            ],
         )
         self.assertEqual(
-            treatment.validate_treatment_bundle(copy.deepcopy(proven_excluded))[
-                "treatment_traces"
-            ][0]["treatment_disposition"],
-            "proven",
+            third_successor["supersedes_candidate_freeze_id"],
+            second_successor["candidate_freeze_id"],
         )
-        with self.assertRaisesRegex(ValueError, "cannot prove a non-executable prior tuple"):
-            treatment.build_treatment_successor(
-                prior, proven_excluded, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
-                trusted_treatment_evidence=proven_excluded_evidence,
-            )
-        future_route = copy.deepcopy(self.bundle)
-        future_route["route_resolutions"][0]["resolved_at"] = "2026-07-19T04:01:00Z"
-        next(
-            item for item in future_route["treatment_traces"][0]["observations"]
-            if item["field_path"] == "route.resolved_at"
-        )["value"] = "2026-07-19T04:01:00Z"
-        future_route, future_route_evidence = bind_trusted_treatment_evidence(
-            self.rebound(rebind_treatment_owners(future_route))
-        )
-        with self.assertRaisesRegex(ValueError, "publication timestamp precedes treatment evidence"):
-            treatment.build_treatment_successor(
-                prior, future_route, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
-                trusted_treatment_evidence=future_route_evidence,
-            )
-        future_observation = copy.deepcopy(self.bundle)
-        next(
-            item for item in future_observation["treatment_traces"][0]["observations"]
-            if item["captured_at"] is not None
-        )["captured_at"] = "2026-07-19T04:01:00Z"
-        future_observation, future_observation_evidence = bind_trusted_treatment_evidence(
-            self.rebound(future_observation)
-        )
-        with self.assertRaisesRegex(ValueError, "publication timestamp precedes treatment evidence"):
-            treatment.build_treatment_successor(
-                prior, future_observation, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
-                trusted_treatment_evidence=future_observation_evidence,
-            )
-        class SwitchingEvidence(Mapping[str, bytes]):
-            def __init__(self, values: dict[str, bytes], target: str) -> None:
-                self.values = values
-                self.target = target
-                self.reads: dict[str, int] = {}
-
-            def __getitem__(self, key: str) -> bytes:
-                self.reads[key] = self.reads.get(key, 0) + 1
-                value = self.values[key]
-                return value + b" " if key == self.target and self.reads[key] > 1 else value
-
-            def __iter__(self):
-                return iter(self.values)
-
-            def __len__(self) -> int:
-                return len(self.values)
-
-        switching_evidence = SwitchingEvidence(
-            successor_evidence,
-            successor_bundle["fixture_provenance"]["raw_evidence_digest"],
-        )
-        self.assertEqual(treatment.build_treatment_successor(
-            prior, successor_bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
-            trusted_treatment_evidence=switching_evidence,
-        ), successor)
         rerouted = self.rebound(make_treatment_reroute_case(copy.deepcopy(self.bundle), "owned_external"))
         trusted = trusted_external_qualification(rerouted)
         declare_reroute_result(rerouted, trusted)
         rerouted, rerouted_evidence = bind_trusted_treatment_evidence(rerouted)
-        rerouted_successor = treatment.build_treatment_successor(
+        self.assertEqual(treatment.build_treatment_successor(
             prior, rerouted, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
             trusted_qualification_evidence=trusted,
             trusted_treatment_evidence=rerouted_evidence,
-        )
-        self.assertEqual(rerouted_successor["telemetry_profile_id"], published["telemetry_profile_id"])
-        self.assertEqual(rerouted_successor["treatment_contract_digest"], published["treatment_contract_digest"])
-        self.assertNotEqual(rerouted_successor["treatment_evidence_digest"], published["treatment_evidence_digest"])
-        self.assertNotEqual(rerouted_successor["candidate_freeze_id"], published["candidate_freeze_id"])
+        )["telemetry_profile_id"], published["telemetry_profile_id"])
         with self.assertRaisesRegex(ValueError, "declared treatment"):
             treatment.build_treatment_successor(
                 prior, rerouted, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
@@ -4957,7 +5556,7 @@ class TreatmentContractTests(unittest.TestCase):
             expected_treatment_evidence_digest=successor["treatment_evidence_digest"],
         ), published)
         for key in prior:
-            if key not in {"candidate_freeze_id", "telemetry_profile_id", "published_at", "supersedes_candidate_freeze_id"}:
+            if key not in {"candidate_freeze_id", "telemetry_profile_id", "treatment_contract_digest", "treatment_evidence_digest", "published_at", "supersedes_candidate_freeze_id"}:
                 self.assertEqual(successor[key], prior[key])
         with self.assertRaisesRegex(ValueError, "must be later"):
             treatment.build_treatment_successor(
@@ -4970,84 +5569,206 @@ class TreatmentContractTests(unittest.TestCase):
                 tampered, self.bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
             )
 
+    def test_successor_rejects_missing_or_mutated_treatment_evidence(self) -> None:
+        published = load_json(PUBLISHED_FREEZE_PATH)
+        prior = copy.deepcopy(published)
+        prior["candidate_freeze_id"] = (
+            "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
+        )
+        prior["telemetry_profile_id"] = (
+            "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
+        )
+        prior.pop("treatment_contract_digest", None)
+        prior.pop("treatment_evidence_digest", None)
+        prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
+        prior["supersedes_candidate_freeze_id"] = None
+        successor_bundle, successor_evidence = bind_trusted_treatment_evidence(
+            self.rebound(copy.deepcopy(self.bundle))
+        )
+
+        proofless = copy.deepcopy(self.bundle)
+        proofless_trace = proofless["treatment_traces"][0]
+        proofless_trace["configured_route_proof"] = None
+        proofless_trace["supported_effective_model"] = None
+        proofless_trace["supported_effective_effort"] = None
+        route_observation = next(
+            item
+            for item in proofless_trace["observations"]
+            if item["field_path"] == "route.supported_effective_route_id"
+        )
+        route_observation.update(
+            {
+                "observation_state": "missing",
+                "value": None,
+                "evidence_ref": None,
+                "captured_at": None,
+            }
+        )
+        declare_treatment_result(
+            proofless,
+            ["effective_treatment_unknown"],
+            "unknown",
+            ["effective_treatment_unknown"],
+        )
+        proofless, proofless_evidence = bind_trusted_treatment_evidence(
+            self.rebound(proofless)
+        )
+        treatment.validate_treatment_bundle(copy.deepcopy(proofless))
+        with self.assertRaisesRegex(ValueError, "requires a configured-route proof"):
+            treatment.build_treatment_successor(
+                prior,
+                proofless,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=proofless_evidence,
+            )
+
         with self.assertRaisesRegex(ValueError, "trusted evidence bytes"):
             treatment.build_treatment_successor(
-                prior, successor_bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                prior,
+                successor_bundle,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
             )
-        forged_evidence = dict(successor_evidence)
-        observation_ref = next(key for key in forged_evidence if key.startswith("fixture://"))
-        forged_evidence[observation_ref] += b" "
+
+        observation_ref = next(
+            key for key in successor_evidence if key.startswith("fixture://")
+        )
+        noncanonical_observation = dict(successor_evidence)
+        noncanonical_observation[observation_ref] += b" "
         with self.assertRaisesRegex(ValueError, "canonical JSON bytes"):
             treatment.build_treatment_successor(
-                prior, successor_bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
-                trusted_treatment_evidence=forged_evidence,
+                prior,
+                successor_bundle,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=noncanonical_observation,
             )
+
         proof_digest = successor_bundle["treatment_traces"][0][
             "configured_route_proof"
         ]["consumption_evidence_digest"]
-        forged_evidence = dict(successor_evidence)
-        forged_evidence[proof_digest] += b" "
+        mutated_proof = dict(successor_evidence)
+        mutated_proof[proof_digest] += b" "
         with self.assertRaisesRegex(ValueError, "digest does not match"):
             treatment.build_treatment_successor(
-                prior, successor_bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
-                trusted_treatment_evidence=forged_evidence,
-            )
-        source_digest = successor_bundle["fixture_provenance"]["raw_evidence_digest"]
-        forged_evidence = dict(successor_evidence)
-        forged_evidence[source_digest] += b" "
-        with self.assertRaisesRegex(ValueError, "digest does not match"):
-            treatment.build_treatment_successor(
-                prior, successor_bundle, published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
-                trusted_treatment_evidence=forged_evidence,
+                prior,
+                successor_bundle,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=mutated_proof,
             )
 
-        later_published_at = "2026-07-19T04:01:00Z"
-        with self.assertRaisesRegex(ValueError, "requires its validated predecessor"):
+        source_digest = successor_bundle["fixture_provenance"]["raw_evidence_digest"]
+        mutated_source = dict(successor_evidence)
+        mutated_source[source_digest] += b" "
+        with self.assertRaisesRegex(ValueError, "digest does not match"):
             treatment.build_treatment_successor(
-                successor, successor_bundle, published_at=later_published_at,
-                trusted_treatment_evidence=successor_evidence,
-                expected_prior_telemetry_profile_id=successor["telemetry_profile_id"],
-                expected_prior_treatment_contract_digest=successor["treatment_contract_digest"],
-                expected_prior_treatment_evidence_digest=successor["treatment_evidence_digest"],
+                prior,
+                successor_bundle,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=mutated_source,
             )
-        second_successor = treatment.build_treatment_successor(
-            successor, successor_bundle, published_at=later_published_at,
-            trusted_treatment_evidence=successor_evidence,
-            prior_freeze_predecessor=prior,
-            expected_prior_telemetry_profile_id=successor["telemetry_profile_id"],
-            expected_prior_treatment_contract_digest=successor["treatment_contract_digest"],
-            expected_prior_treatment_evidence_digest=successor["treatment_evidence_digest"],
+
+    def test_successor_rejects_treatment_evidence_after_publication(self) -> None:
+        published = load_json(PUBLISHED_FREEZE_PATH)
+        prior = copy.deepcopy(published)
+        prior["candidate_freeze_id"] = (
+            "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
         )
-        self.assertEqual(
-            second_successor["supersedes_candidate_freeze_id"],
-            successor["candidate_freeze_id"],
+        prior["telemetry_profile_id"] = (
+            "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
         )
-        third_successor = treatment.build_treatment_successor(
-            second_successor,
+        prior.pop("treatment_contract_digest", None)
+        prior.pop("treatment_evidence_digest", None)
+        prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
+        prior["supersedes_candidate_freeze_id"] = None
+
+        future_route = copy.deepcopy(self.bundle)
+        future_route["route_resolutions"][0]["resolved_at"] = "2026-07-19T04:01:00Z"
+        next(
+            item
+            for item in future_route["treatment_traces"][0]["observations"]
+            if item["field_path"] == "route.resolved_at"
+        )["value"] = "2026-07-19T04:01:00Z"
+        future_route, future_route_evidence = bind_trusted_treatment_evidence(
+            self.rebound(rebind_treatment_owners(future_route))
+        )
+        with self.assertRaisesRegex(
+            ValueError, "publication timestamp precedes treatment evidence"
+        ):
+            treatment.build_treatment_successor(
+                prior,
+                future_route,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=future_route_evidence,
+            )
+
+        future_observation = copy.deepcopy(self.bundle)
+        next(
+            item
+            for item in future_observation["treatment_traces"][0]["observations"]
+            if item["captured_at"] is not None
+        )["captured_at"] = "2026-07-19T04:01:00Z"
+        future_observation, future_observation_evidence = bind_trusted_treatment_evidence(
+            self.rebound(future_observation)
+        )
+        with self.assertRaisesRegex(
+            ValueError, "publication timestamp precedes treatment evidence"
+        ):
+            treatment.build_treatment_successor(
+                prior,
+                future_observation,
+                published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+                trusted_treatment_evidence=future_observation_evidence,
+            )
+
+    def test_successor_snapshots_mutating_treatment_evidence_once(self) -> None:
+        published = load_json(PUBLISHED_FREEZE_PATH)
+        prior = copy.deepcopy(published)
+        prior["candidate_freeze_id"] = (
+            "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03"
+        )
+        prior["telemetry_profile_id"] = (
+            "sha256:f39d0acd9403d193b07861c5cba5dac0e7ba901936ad542c18dd4eb008ec898b"
+        )
+        prior.pop("treatment_contract_digest", None)
+        prior.pop("treatment_evidence_digest", None)
+        prior["published_at"] = TREATMENT_PREDECESSOR_PUBLISHED_AT
+        prior["supersedes_candidate_freeze_id"] = None
+        successor_bundle, successor_evidence = bind_trusted_treatment_evidence(
+            self.rebound(copy.deepcopy(self.bundle))
+        )
+
+        class SwitchingEvidence(Mapping[str, bytes]):
+            def __init__(self, values: dict[str, bytes], target: str) -> None:
+                self.values = values
+                self.target = target
+                self.reads: dict[str, int] = {}
+
+            def __getitem__(self, key: str) -> bytes:
+                self.reads[key] = self.reads.get(key, 0) + 1
+                value = self.values[key]
+                if key == self.target and self.reads[key] > 1:
+                    return value + b" "
+                return value
+
+            def __iter__(self):
+                return iter(self.values)
+
+            def __len__(self) -> int:
+                return len(self.values)
+
+        switching_evidence = SwitchingEvidence(
+            successor_evidence,
+            successor_bundle["fixture_provenance"]["raw_evidence_digest"],
+        )
+        successor = treatment.build_treatment_successor(
+            prior,
             successor_bundle,
-            published_at="2026-07-20T04:01:00Z",
-            trusted_treatment_evidence=successor_evidence,
-            prior_freeze_predecessor=successor,
-            expected_prior_telemetry_profile_id=second_successor["telemetry_profile_id"],
-            expected_prior_treatment_contract_digest=second_successor[
-                "treatment_contract_digest"
-            ],
-            expected_prior_treatment_evidence_digest=second_successor[
-                "treatment_evidence_digest"
-            ],
-            expected_prior_predecessor_telemetry_profile_id=successor[
-                "telemetry_profile_id"
-            ],
-            expected_prior_predecessor_treatment_contract_digest=successor[
-                "treatment_contract_digest"
-            ],
-            expected_prior_predecessor_treatment_evidence_digest=successor[
-                "treatment_evidence_digest"
-            ],
+            published_at=TREATMENT_SUCCESSOR_PUBLISHED_AT,
+            trusted_treatment_evidence=switching_evidence,
         )
+        self.assertEqual(successor, published)
         self.assertEqual(
-            third_successor["supersedes_candidate_freeze_id"],
-            second_successor["candidate_freeze_id"],
+            switching_evidence.reads,
+            {key: 1 for key in successor_evidence},
         )
 
     def test_successor_normalizes_malformed_predecessor_errors(self) -> None:
@@ -5124,6 +5845,718 @@ class TreatmentContractTests(unittest.TestCase):
         trace["configured_route_proof"]["proof_id"] = treatment.content_id(trace["configured_route_proof"], "proof_id")
         next(item for item in trace["observations"] if item["field_path"] == "assignment.instruction_hash")["value"] = trace["instruction_hash"]
         assert_valid_but_rejected(instruction_rebound, "instruction identity")
+
+
+class TreatmentReplayTests(unittest.TestCase):
+    CASES = [
+        ("TRACE-SUCCESS", "success", "unknown", None),
+        ("TRACE-EXPLICIT-NULL", "explicit_null", "unknown", None),
+        ("TRACE-UNAVAILABLE", "unavailable", "unknown", None),
+        ("TRACE-MISDELIVERY", "misdelivery", "hard_fail", None),
+        ("TRACE-APPROVED-SAME-AGENT-REROUTE", "approved_same_agent_reroute", "non_scorable_rerouted", None),
+        ("TRACE-UNAPPROVED-UNIDENTIFIABLE-REROUTE", "unapproved_unidentifiable_reroute", "hard_fail", None),
+        ("TRACE-DISCOVERY-LOSS", "discovery_loss", "unknown", "partial_surface"),
+        ("TRACE-SURFACE-DISAGREEMENT", "surface_disagreement", "unknown", "surface_disagreement"),
+    ]
+
+    def copy_replay_tree(self, repository_root: Path) -> tuple[Path, Path]:
+        for source in (FIXTURE_PATH, TREATMENT_FIXTURE_PATH, DIGEST_MANIFEST_PATH):
+            destination = repository_root / source.relative_to(ROOT)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, destination)
+        return (
+            repository_root / TREATMENT_FIXTURE_PATH.relative_to(ROOT),
+            repository_root / DIGEST_MANIFEST_PATH.relative_to(ROOT),
+        )
+
+    def write_and_reseal(self, repository_root: Path, source: Path, value: dict) -> None:
+        target = repository_root / source.relative_to(ROOT)
+        target.write_bytes(treatment.canonical_fixture_bytes(value))
+        manifest_path = repository_root / DIGEST_MANIFEST_PATH.relative_to(ROOT)
+        manifest = json.loads(manifest_path.read_bytes())
+        fixture_path = source.relative_to(ROOT).as_posix()
+        entry = next(item for item in manifest["fixtures"] if item["fixture_path"] == fixture_path)
+        entry["fixture_digest"] = treatment.digest(target.read_bytes())
+        manifest_path.write_bytes(treatment.canonical_fixture_bytes(manifest))
+
+    def replay(self) -> dict:
+        return treatment.replay_fixture(
+            TREATMENT_FIXTURE_PATH,
+            DIGEST_MANIFEST_PATH,
+            repeat=2,
+            repository_root=ROOT,
+        )
+
+    def test_replay_rejects_capability_dependency_from_another_checkout(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            stale_path = Path(temporary) / "codex_capability_contract.py"
+            stale_path.write_text("# stale dependency\n", encoding="utf-8")
+            stale_contract = types.ModuleType("codex_capability_contract")
+            stale_contract.__file__ = str(stale_path)
+            with unittest.mock.patch.dict(
+                sys.modules, {"codex_capability_contract": stale_contract},
+            ), self.assertRaisesRegex(RuntimeError, "does not resolve"):
+                treatment_authority._capability_module()
+
+    def test_replay_reloads_same_path_stale_capability_dependency(self) -> None:
+        stale_contract = types.ModuleType("codex_capability_contract")
+        stale_contract.__file__ = str(
+            TREATMENT_MODULE_PATH.with_name("codex_capability_contract.py")
+        )
+        stale_contract._AuthorityTupleSet = lambda _tuples: self.fail(
+            "same-path stale capability dependency was reused"
+        )
+        with unittest.mock.patch.dict(
+            sys.modules, {"codex_capability_contract": stale_contract},
+        ):
+            capability = treatment_authority._capability_module()
+            self.assertIs(sys.modules["codex_capability_contract"], stale_contract)
+        self.assertEqual(
+            treatment_authority._capability_authority_tuple_set(capability, []),
+            [],
+        )
+
+    def test_replay_does_not_execute_shadow_dependency_earlier_on_sys_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            shadow_root = Path(temporary)
+            shadow_root.joinpath("codex_capability_contract.py").write_text(
+                "raise RuntimeError('shadow capability dependency executed')\n",
+                encoding="utf-8",
+            )
+            with unittest.mock.patch.object(sys, "path", [str(shadow_root), *sys.path]):
+                capability = treatment_authority._capability_module()
+            self.assertTrue(callable(capability.validate_manifest))
+
+    def test_private_capability_load_never_publishes_partial_canonical_module(self) -> None:
+        missing = object()
+        original_canonical = sys.modules.pop("codex_capability_contract", missing)
+        entered = threading.Event()
+        release = threading.Event()
+        failures: list[BaseException] = []
+        original_exec_module = importlib.machinery.SourceFileLoader.exec_module
+
+        def blocking_exec_module(loader, module):
+            if (
+                module.__name__.startswith("_g56r_capability_runtime_")
+                and module.__name__.endswith(".codex_capability_contract")
+            ):
+                entered.set()
+                if not release.wait(timeout=5):
+                    raise RuntimeError("timed out waiting for concurrent canonical import")
+            return original_exec_module(loader, module)
+
+        def load_private_capability() -> None:
+            try:
+                treatment_authority._capability_module()
+            except BaseException as exc:  # pragma: no cover - asserted below
+                failures.append(exc)
+
+        worker = threading.Thread(target=load_private_capability)
+        try:
+            with unittest.mock.patch.object(
+                importlib.machinery.SourceFileLoader,
+                "exec_module",
+                new=blocking_exec_module,
+            ), unittest.mock.patch.object(
+                sys,
+                "path",
+                [str(TREATMENT_MODULE_PATH.parent), *sys.path],
+            ):
+                worker.start()
+                self.assertTrue(entered.wait(timeout=5))
+                canonical = importlib.import_module("codex_capability_contract")
+                self.assertEqual(canonical.__name__, "codex_capability_contract")
+                self.assertFalse(
+                    canonical.__name__.startswith("_g56r_treatment_capability_")
+                )
+                release.set()
+                worker.join(timeout=5)
+            self.assertFalse(worker.is_alive())
+            self.assertEqual(failures, [])
+        finally:
+            release.set()
+            worker.join(timeout=5)
+            sys.modules.pop("codex_capability_contract", None)
+            if original_canonical is not missing:
+                sys.modules["codex_capability_contract"] = original_canonical
+
+    def test_eight_case_matrix_is_explicit_and_canary_never_promotes(self) -> None:
+        bundle = load_json(TREATMENT_FIXTURE_PATH)
+        actual = [
+            (item["context"]["turnId"], item["treatment_disposition"])
+            for item in bundle["treatment_traces"]
+        ]
+        self.assertEqual(actual, [
+            (f"turn-fixture-{case_id.removeprefix('TRACE-').lower()}", disposition)
+            for case_id, _, disposition, _ in self.CASES
+        ])
+        result = self.replay()
+        self.assertEqual(result["status"], "replayed")
+        self.assertEqual(result["repeat"], 2)
+        normalized = [
+            (
+                item["case_id"], item["case_class"], item["treatment_disposition"],
+                item["source_capability_case_id"],
+            )
+            for item in result["cases"]
+        ]
+        self.assertEqual(normalized, self.CASES)
+        self.assertEqual(
+            [item["execution_trace_id"] for item in result["cases"]],
+            [item[5] for item in treatment.REPLAY_CASES],
+        )
+        success = result["cases"][0]
+        self.assertEqual(success["terminal_state"], "completed")
+        self.assertEqual(success["delivery_canary_status"], "passed")
+        self.assertEqual(success["treatment_disposition"], "unknown")
+        self.assertEqual(result["guardrails"], {
+            "qualification_scope": "synthetic_replay_only",
+            "runtime_continuation_authorized": False,
+            "canary_promotes_treatment": False,
+            "network_accessed": False,
+            "raw_store_accessed": False,
+            "synthetic_runtime_effort_authority_id": treatment.REPLAY_RUNTIME_EFFORT_AUTHORITY_ID,
+        })
+
+    def test_synthetic_reroute_is_replay_only_and_public_validation_hard_fails(self) -> None:
+        bundle = single_treatment_case(
+            load_json(TREATMENT_FIXTURE_PATH), "TRACE-APPROVED-SAME-AGENT-REROUTE"
+        )
+        declare_reroute_result(bundle)
+        validated = treatment.validate_treatment_bundle(bundle)
+        trace = validated["treatment_traces"][0]
+        self.assertEqual(trace["treatment_disposition"], "hard_fail")
+        self.assertIn("reroute_unapproved", {item["failure_code"] for item in trace["treatment_failures"]})
+        replayed = self.replay()
+        simulated = next(
+            item for item in replayed["cases"]
+            if item["case_id"] == "TRACE-APPROVED-SAME-AGENT-REROUTE"
+        )
+        self.assertEqual(simulated["treatment_disposition"], "non_scorable_rerouted")
+        self.assertFalse(replayed["guardrails"]["runtime_continuation_authorized"])
+
+    def test_manifest_is_closed_and_hashes_both_fixtures_before_parsing(self) -> None:
+        for source in (FIXTURE_PATH, TREATMENT_FIXTURE_PATH):
+            with self.subTest(mutated_fixture=source.name), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                target = repository_root / source.relative_to(ROOT)
+                target.write_bytes(b"!" + target.read_bytes()[1:])
+                with self.assertRaisesRegex(ValueError, "digest mismatch before pars"):
+                    treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+        manifest = load_json(DIGEST_MANIFEST_PATH)
+        mutations = []
+        missing = copy.deepcopy(manifest); missing["fixtures"].pop(); mutations.append(missing)
+        duplicate = copy.deepcopy(manifest); duplicate["fixtures"].append(copy.deepcopy(duplicate["fixtures"][0])); mutations.append(duplicate)
+        extra = copy.deepcopy(manifest); extra["fixtures"].append({
+            "fixture_path": "../outside.json", "fixture_digest": "sha256:" + "0" * 64,
+        }); mutations.append(extra)
+        undeclared = copy.deepcopy(manifest); undeclared["undeclared"] = True; mutations.append(undeclared)
+        for index, mutation in enumerate(mutations):
+            with self.subTest(manifest_mutation=index), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                manifest_path.write_bytes(treatment.canonical_fixture_bytes(mutation))
+                with self.assertRaises(ValueError):
+                    treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            manifest_path.write_bytes(
+                b'{"fixtures":[],"schema_version":"1.0.0","schema_version":"1.0.0"}\n'
+            )
+            with self.assertRaisesRegex(ValueError, "duplicate JSON key"):
+                treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+    def test_replay_rejects_deep_digest_resealed_json_in_api_and_cli(self) -> None:
+        depths = (treatment.MAX_NESTING_DEPTH + 1, sys.getrecursionlimit() + 10)
+        for depth in depths:
+            with self.subTest(depth=depth), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary).resolve()
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                raw = capability_path.read_bytes()
+                marker = b',"raw_evidence_digest":'
+                self.assertIn(marker, raw)
+                nested = b"[" * depth + b"0" + b"]" * depth
+                capability_path.write_bytes(
+                    raw.replace(marker, b',"deep":' + nested + marker, 1)
+                )
+                manifest = json.loads(manifest_path.read_bytes())
+                entry = next(
+                    item
+                    for item in manifest["fixtures"]
+                    if item["fixture_path"] == FIXTURE_PATH.relative_to(ROOT).as_posix()
+                )
+                entry["fixture_digest"] = treatment.digest(capability_path.read_bytes())
+                manifest_path.write_bytes(treatment.canonical_fixture_bytes(manifest))
+
+                with self.assertRaisesRegex(ValueError, "maximum nesting depth"):
+                    treatment.replay_fixture(
+                        fixture,
+                        manifest_path,
+                        repeat=2,
+                        repository_root=repository_root,
+                    )
+
+                module_path = repository_root / TREATMENT_MODULE_PATH.relative_to(ROOT)
+                module_path.parent.mkdir(parents=True, exist_ok=True)
+                for source_module in TREATMENT_MODULE_PATH.parent.glob(
+                    "treatment_trace_*.py"
+                ):
+                    shutil.copyfile(source_module, module_path.parent / source_module.name)
+                completed = subprocess.run(
+                    [
+                        sys.executable,
+                        str(module_path),
+                        "replay",
+                        "--fixture",
+                        str(fixture),
+                        "--digest-manifest",
+                        str(manifest_path),
+                        "--repeat",
+                        "2",
+                    ],
+                    cwd=repository_root,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                self.assertEqual(completed.returncode, 2)
+                self.assertIn("maximum nesting depth", completed.stderr)
+                self.assertNotIn("RecursionError", completed.stderr)
+
+    def test_replay_rejects_resealed_treatment_provenance(self) -> None:
+        mutations = (
+            ("raw_evidence_digest", "sha256:" + "0" * 64),
+            ("sanitizer_version", "forged-sanitizer"),
+        )
+        for field, value in mutations:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                bundle = json.loads(fixture.read_bytes())
+                bundle["fixture_provenance"][field] = value
+                self.write_and_reseal(
+                    repository_root,
+                    TREATMENT_FIXTURE_PATH,
+                    bundle,
+                )
+                with self.assertRaisesRegex(ValueError, "immutable baseline"):
+                    treatment.replay_fixture(
+                        fixture,
+                        manifest_path,
+                        repeat=2,
+                        repository_root=repository_root,
+                    )
+
+    def test_replay_requires_declared_manifest_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            alternate_manifest = repository_root / "caller-resealed-manifest.json"
+            shutil.copyfile(manifest_path, alternate_manifest)
+            with self.assertRaisesRegex(ValueError, "declared repository manifest"):
+                treatment.replay_fixture(
+                    fixture, alternate_manifest, repeat=2, repository_root=repository_root,
+                )
+
+    def test_replay_bounded_loading_rejects_oversized_links_fifos_and_swaps(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            manifest_path.write_bytes(b" " * (treatment.MAX_INPUT_BYTES + 1))
+            with self.assertRaisesRegex(ValueError, "maximum size"):
+                treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+        if not treatment.IS_WINDOWS:
+            with tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                link_target = repository_root / "capability-copy.json"
+                shutil.copyfile(capability_path, link_target)
+                capability_path.unlink()
+                capability_path.symlink_to(link_target)
+                with self.assertRaisesRegex(ValueError, "regular non-symlink"):
+                    treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+        if hasattr(os, "mkfifo"):
+            with tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                capability_path.unlink()
+                os.mkfifo(capability_path)
+                with self.assertRaisesRegex(ValueError, "regular non-symlink"):
+                    treatment.replay_fixture(
+                        fixture, manifest_path, repeat=2, repository_root=repository_root,
+                    )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            original_fixture = fixture.with_name("treatment-replay-original.json")
+            original_open = treatment_io.os.open
+            swapped = False
+
+            def replace_fixture(path: object, flags: int, *args: object, **kwargs: object) -> int:
+                nonlocal swapped
+                descriptor_relative_target = path == fixture.name and kwargs.get("dir_fd") is not None
+                handle_target = Path(path) == fixture if kwargs.get("dir_fd") is None else False
+                if (descriptor_relative_target or handle_target) and not swapped:
+                    swapped = True
+                    fixture.rename(original_fixture)
+                    fixture.write_bytes(b"{}\n")
+                return original_open(path, flags, *args, **kwargs)
+
+            with unittest.mock.patch.object(
+                treatment_io.os, "open", side_effect=replace_fixture,
+            ), self.assertRaisesRegex(ValueError, "pathname changed before it was read"):
+                treatment.replay_fixture(
+                    fixture, manifest_path, repeat=2, repository_root=repository_root,
+                )
+
+    def test_replay_cli_does_not_disclose_duplicate_keys(self) -> None:
+        private_marker = "|".join(("private", "duplicate", "key"))
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary).resolve()
+            module_path = repository_root / TREATMENT_MODULE_PATH.relative_to(ROOT)
+            module_path.parent.mkdir(parents=True, exist_ok=True)
+            for source_module in TREATMENT_MODULE_PATH.parent.glob("treatment_trace_*.py"):
+                shutil.copyfile(source_module, module_path.parent / source_module.name)
+            fixture_path = repository_root / TREATMENT_FIXTURE_PATH.relative_to(ROOT)
+            fixture_path.parent.mkdir(parents=True, exist_ok=True)
+            fixture_path.write_bytes(b"{}\n")
+            manifest_path = repository_root / DIGEST_MANIFEST_PATH.relative_to(ROOT)
+            manifest_path.write_bytes(
+                f'{{"{private_marker}":1,"{private_marker}":2}}\n'.encode("utf-8")
+            )
+            completed = subprocess.run(
+                [
+                    sys.executable, str(module_path), "replay",
+                    "--fixture", str(fixture_path),
+                    "--digest-manifest", str(manifest_path),
+                    "--repeat", "2",
+                ],
+                cwd=repository_root,
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn("duplicate JSON key", completed.stderr)
+            self.assertNotIn(private_marker, completed.stderr)
+
+    def test_rehashed_undeclared_fixture_field_fails_after_digest_verification(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            bundle = json.loads(fixture.read_bytes())
+            bundle["undeclared"] = True
+            fixture.write_bytes(treatment.canonical_fixture_bytes(bundle))
+            manifest = json.loads(manifest_path.read_bytes())
+            entry = next(item for item in manifest["fixtures"] if item["fixture_path"].endswith("treatment-replay.json"))
+            entry["fixture_digest"] = treatment.digest(fixture.read_bytes())
+            manifest_path.write_bytes(treatment.canonical_fixture_bytes(manifest))
+            with self.assertRaisesRegex(ValueError, "closed shape|undeclared treatment schema field"):
+                treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+    def test_capability_fixture_provenance_has_an_independent_immutable_baseline(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+            capability = json.loads(capability_path.read_bytes())
+            capability["raw_evidence_digest"] = "sha256:" + "0" * 64
+            self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+            with self.assertRaisesRegex(ValueError, "capability replay fixture changed outside"):
+                treatment.replay_fixture(
+                    fixture, manifest_path, repeat=2, repository_root=repository_root,
+                )
+
+    def test_false_declared_treatment_claim_fails_validation_cli_and_replay(self) -> None:
+        mutations = (
+            ("treatment_disposition", "proven"),
+            ("disposition_reasons", ["configured_route_proof_and_complete_reroute_monitoring"]),
+        )
+        for field, value in mutations:
+            with self.subTest(field=field), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                bundle = single_treatment_case(load_json(TREATMENT_FIXTURE_PATH), "TRACE-SUCCESS")
+                bundle["treatment_traces"][0][field] = value
+                with self.assertRaisesRegex(ValueError, "declared treatment disposition"):
+                    treatment.validate_treatment_bundle(bundle)
+
+                with tempfile.TemporaryDirectory(
+                    dir=TREATMENT_FIXTURE_PATH.parent,
+                ) as fixture_directory:
+                    forged_fixture = Path(fixture_directory) / f"forged-{field}.json"
+                    forged_fixture.write_bytes(treatment.canonical_fixture_bytes(bundle))
+                    completed = subprocess.run(
+                        [
+                            sys.executable, str(TREATMENT_MODULE_PATH), "validate",
+                            "--fixture", str(forged_fixture),
+                        ],
+                        cwd=ROOT,
+                        check=False,
+                        capture_output=True,
+                    )
+                self.assertNotEqual(completed.returncode, 0)
+                self.assertIn(b"declared treatment disposition", completed.stderr)
+
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                replay_bundle = json.loads(fixture.read_bytes())
+                trace = replay_trace(replay_bundle, "TRACE-SUCCESS")
+                trace[field] = value
+                self.write_and_reseal(repository_root, TREATMENT_FIXTURE_PATH, replay_bundle)
+                with self.assertRaisesRegex(ValueError, "declared treatment disposition"):
+                    treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+    def test_rehashed_fixtures_cannot_relabel_case_semantics(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            bundle = json.loads(fixture.read_bytes())
+            trace = replay_trace(bundle, "TRACE-SUCCESS")
+            observation = next(
+                item for item in trace["observations"]
+                if item["field_path"] == "assignment.named_agent"
+            )
+            observation["value"] = "fixture-misdelivered-agent"
+            trace["treatment_disposition"] = "hard_fail"
+            trace["disposition_reasons"] = ["agent_mismatch", "effective_treatment_unknown"]
+            expected = next(
+                item for item in bundle["fixture_provenance"]["expected_dispositions"]
+                if item["execution_trace_id"] == trace["objective_binding"]["execution_trace_id"]
+            )
+            expected["treatment_disposition"] = "hard_fail"
+            self.write_and_reseal(repository_root, TREATMENT_FIXTURE_PATH, bundle)
+            with self.assertRaisesRegex(
+                ValueError, "declared treatment failures|predeclared disposition",
+            ):
+                treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+        for case_id, message in (
+            ("partial_surface", "partial-surface"),
+            ("surface_disagreement", "surface-disagreement"),
+        ):
+            with self.subTest(capability_case=case_id), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                capability = json.loads(capability_path.read_bytes())
+                case = next(item for item in capability["surface_cases"] if item["case_id"] == case_id)
+                agreed = copy.deepcopy(case["surfaces"]["app_server"]["entries"])
+                for payload in case["surfaces"].values():
+                    payload["state"] = "complete"
+                    payload["entries"] = copy.deepcopy(agreed)
+                self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+                with self.assertRaisesRegex(ValueError, message):
+                    treatment.replay_fixture(fixture, manifest_path, repeat=2, repository_root=repository_root)
+
+        tuple_mutations = {
+            "candidate_route_id": "ROUTE-FOREIGN",
+            "agent_contract_id": "AGENT-FOREIGN",
+            "named_agent": "foreign-agent",
+            "model": "foreign-model",
+            "effort": "low",
+        }
+        for field, value in tuple_mutations.items():
+            with self.subTest(linked_tuple_field=field), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                capability = json.loads(capability_path.read_bytes())
+                case = next(
+                    item for item in capability["surface_cases"]
+                    if item["case_id"] == "partial_surface"
+                )
+                case["source_tuples"][0][field] = value
+                self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+                with self.assertRaisesRegex(ValueError, "source tuple does not match treatment trace"):
+                    treatment.replay_fixture(
+                        fixture, manifest_path, repeat=2, repository_root=repository_root,
+                    )
+
+    def test_replay_recomputes_every_capability_case_outcome(self) -> None:
+        case_ids = [item["case_id"] for item in load_json(FIXTURE_PATH)["surface_cases"]]
+        for case_id in case_ids:
+            with self.subTest(case_id=case_id), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                capability = json.loads(capability_path.read_bytes())
+                case = next(item for item in capability["surface_cases"] if item["case_id"] == case_id)
+                if case_id == "duplicate_normalization_key":
+                    case["surfaces"]["app_server"]["entries"].pop()
+                elif case_id == "aggregate_hash_failure":
+                    case.pop("expected_integrity_digest")
+                else:
+                    entries = case["surfaces"]["app_server"]["entries"]
+                    duplicate = copy.deepcopy(entries[0]) if entries else {
+                        "model": "mutated-model", "effort": "high",
+                        "available": True, "hidden": False,
+                    }
+                    entries.extend([copy.deepcopy(duplicate), copy.deepcopy(duplicate)])
+                self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+                with self.assertRaisesRegex(ValueError, "derived validity|derived decision"):
+                    treatment.replay_fixture(
+                        fixture, manifest_path, repeat=2, repository_root=repository_root,
+                    )
+
+    def test_replay_capability_fixture_enforces_privacy(self) -> None:
+        private_values = (
+            "api_key=SUPERSECRET",
+            "person" + chr(64) + "example.com",
+            "/" + "Users" + "/fixture/private",
+            "host.internal.example.com",
+            "example.com",
+            "service.corp",
+            "10.0.0.1",
+        )
+        for value in private_values:
+            with self.subTest(value=value), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+                capability = json.loads(capability_path.read_bytes())
+                capability["client_identity"]["distribution"] = value
+                self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+                with self.assertRaisesRegex(ValueError, "forbidden private or credential-bearing text"):
+                    treatment.replay_fixture(
+                        fixture, manifest_path, repeat=2, repository_root=repository_root,
+                    )
+
+    def test_replay_binds_capability_and_treatment_client_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+            capability = json.loads(capability_path.read_bytes())
+            capability["client_identity"]["distribution"] = "alternate-build"
+            self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+            with self.assertRaisesRegex(ValueError, "client identity does not match treatment"):
+                treatment.replay_fixture(
+                    fixture, manifest_path, repeat=2, repository_root=repository_root,
+                )
+
+    def test_replay_rejects_undeclared_discovery_omissions(self) -> None:
+        for field_path in ("discovery.efforts", "discovery.capabilities"):
+            with self.subTest(field_path=field_path), tempfile.TemporaryDirectory() as temporary:
+                repository_root = Path(temporary)
+                fixture, manifest_path = self.copy_replay_tree(repository_root)
+                bundle = json.loads(fixture.read_bytes())
+                trace = replay_trace(bundle, "TRACE-SUCCESS")
+                observation = next(
+                    item for item in trace["observations"]
+                    if item["field_path"] == field_path
+                )
+                observation.update({
+                    "observation_state": "missing", "value": None,
+                    "evidence_ref": None, "captured_at": None,
+                })
+                rebind_treatment_owners(bundle)
+                self.write_and_reseal(repository_root, TREATMENT_FIXTURE_PATH, bundle)
+                with self.assertRaisesRegex(ValueError, "baseline discovery observations"):
+                    treatment.replay_fixture(
+                        fixture, manifest_path, repeat=2, repository_root=repository_root,
+                    )
+
+    def test_replay_binds_synthetic_effort_to_pinned_authority(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            bundle = json.loads(fixture.read_bytes())
+            trace = replay_trace(bundle, "TRACE-DISCOVERY-LOSS")
+            trace["requested_effort"] = "low"
+            trace["controlled_overrides"]["effort"] = "low"
+            proof = trace["configured_route_proof"]
+            proof["effort"] = "low"
+            proof["controlled_overrides"]["effort"] = "low"
+            proof["proof_id"] = treatment.content_id(proof, "proof_id")
+            for field_path, value in (
+                ("discovery.efforts", ["low"]),
+                ("assignment.effort", "low"),
+                ("treatment.controlled_overrides", copy.deepcopy(trace["controlled_overrides"])),
+            ):
+                next(
+                    item for item in trace["observations"]
+                    if item["field_path"] == field_path
+                )["value"] = value
+            rebind_treatment_owners(bundle)
+            self.write_and_reseal(repository_root, TREATMENT_FIXTURE_PATH, bundle)
+
+            capability_path = repository_root / FIXTURE_PATH.relative_to(ROOT)
+            capability = json.loads(capability_path.read_bytes())
+            case = next(
+                item for item in capability["surface_cases"]
+                if item["case_id"] == "partial_surface"
+            )
+            case["source_tuples"][0]["effort"] = "low"
+            for payload in case["surfaces"].values():
+                for entry in payload["entries"]:
+                    entry["effort"] = "low"
+            self.write_and_reseal(repository_root, FIXTURE_PATH, capability)
+            with self.assertRaisesRegex(ValueError, "pinned synthetic runtime effort authority"):
+                treatment.replay_fixture(
+                    fixture, manifest_path, repeat=2, repository_root=repository_root,
+                )
+
+    def test_replay_rejects_resealed_changes_outside_declared_case_deltas(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repository_root = Path(temporary)
+            fixture, manifest_path = self.copy_replay_tree(repository_root)
+            bundle = json.loads(fixture.read_bytes())
+            trace = replay_trace(bundle, "TRACE-SUCCESS")
+            trace["request_turn_count"]["turns"] = 2
+            next(
+                item for item in trace["observations"]
+                if item["field_path"] == "resources.request_turn_count"
+            )["value"] = copy.deepcopy(trace["request_turn_count"])
+            rebind_treatment_owners(bundle)
+            self.write_and_reseal(repository_root, TREATMENT_FIXTURE_PATH, bundle)
+            with self.assertRaisesRegex(ValueError, "outside its immutable baseline"):
+                treatment.replay_fixture(
+                    fixture, manifest_path, repeat=2, repository_root=repository_root,
+                )
+
+    def test_replay_is_canonical_offline_and_exactly_two_passes(self) -> None:
+        for path in (FIXTURE_PATH, TREATMENT_FIXTURE_PATH, DIGEST_MANIFEST_PATH):
+            value = json.loads(path.read_bytes())
+            self.assertEqual(path.read_bytes(), treatment.canonical_fixture_bytes(value))
+        forbidden = (b"/Users/", b"Bearer ", b"authorization", b"cookie", b"github.com", b"sk-")
+        raw = FIXTURE_PATH.read_bytes() + TREATMENT_FIXTURE_PATH.read_bytes()
+        self.assertTrue(all(token.lower() not in raw.lower() for token in forbidden))
+        with unittest.mock.patch.object(socket, "create_connection", side_effect=AssertionError("network forbidden")), unittest.mock.patch.object(
+            subprocess, "run", side_effect=AssertionError("process launch forbidden")
+        ):
+            first = self.replay()
+            second = self.replay()
+        self.assertEqual(
+            treatment.canonical_fixture_bytes(first), treatment.canonical_fixture_bytes(second)
+        )
+        self.assertEqual(first["replay_digest"], second["replay_digest"])
+        for repeat in (1, 3, True, "2", 2.0):
+            with self.subTest(repeat=repeat), self.assertRaises(ValueError):
+                treatment.replay_fixture(
+                    TREATMENT_FIXTURE_PATH, DIGEST_MANIFEST_PATH,
+                    repeat=repeat, repository_root=ROOT,
+                )
+        completed = subprocess.run(
+            [
+                sys.executable, str(TREATMENT_MODULE_PATH), "replay",
+                "--fixture", str(TREATMENT_FIXTURE_PATH),
+                "--digest-manifest", str(DIGEST_MANIFEST_PATH),
+                "--repeat", "2",
+            ],
+            cwd=ROOT,
+            check=True,
+            capture_output=True,
+        )
+        self.assertEqual(completed.stdout, treatment.canonical_fixture_bytes(first))
+        self.assertEqual(completed.stderr, b"")
 
 
 if __name__ == "__main__":

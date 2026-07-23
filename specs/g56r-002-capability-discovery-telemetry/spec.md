@@ -134,21 +134,18 @@
   per `(runtime_capability_snapshot_id, canonical_model_id, canonical_effort)`
   with a 30-second wall-clock timeout and 64 KiB combined-output cap. Crossing
   either bound requires the approved executor to kill its process tree. The
-  repository adapter validates the closed result-envelope shape but does not
-  treat caller-supplied bytes or matching allowlist identifiers as proof of
-  executor provenance. This slice has no trusted executor invocation or
-  verifiable attestation mechanism, so its repository-owned allowlist remains
-  empty, the CLI rejects every external result before reading it, and every
-  structurally valid standalone envelope remains `unknown`. Default tests never
-  launch a process. A future separately reviewed implementation MUST invoke a
-  repository-approved executor directly or verify an attestation over the
-  complete result envelope before exit zero plus the predeclared sentinel may
-  record pinned-environment availability. The closed envelope still binds the
-  executor and result digests, contract version, timeout/output-cap
-  acknowledgements, process-tree-termination state, and zero retry count. There
-  is no retry within a snapshot. An independently proven transient condition
-  requires a successor snapshot. Canary evidence still cannot establish
-  support, effort support, eligibility, quality, or preference.
+  repository adapter validates an injected `CanaryExecutor` contract and fails
+  closed as `unknown` when no approved platform executor is supplied; default
+  tests never launch a process. Approval comes only from a versioned,
+  repository-owned allowlist that is empty in this slice; an external result
+  cannot self-approve. The closed result envelope binds the executor and result
+  digests, contract version, timeout/output-cap acknowledgements,
+  process-tree-termination state, and zero retry count. There is no retry within
+  a snapshot. An independently proven transient condition requires a successor
+  snapshot. Only an exit-zero response matching
+  the predeclared sentinel can record pinned-environment availability, and it
+  still cannot establish support, effort support, eligibility, quality, or
+  preference.
 - **Q: What terminal error taxonomy is required?** **A:** Use `timeout`,
   `output_cap_exceeded`, `launch_error`, `transport_error`,
   `authentication_error`, `rate_limited`, `malformed_response`,
@@ -158,58 +155,20 @@
 - **Q: What is the redaction contract?** **A:** A deny-by-default sanitizer
   removes credentials, headers, cookies, prompt or user content, account
   identifiers, non-allowlisted or private hostnames, absolute paths, and
-  repository remotes. Required joins use deterministic fixture-local pseudonyms
-  generated only at explicitly declared schema field paths; caller-supplied
-  `fixture-*` values never create a trust exception. Schema-allowlisted
-  canonical OpenAI documentation URLs may remain only in authority-evidence
-  fields; only schema-allowlisted fields may enter a committed fixture.
-  Nested values must use JSON-native dictionaries, lists, and scalar types;
-  alternate serializable containers and non-string object keys are rejected
-  before recursive sensitive-field inspection.
-- **Q: How is source-body visibility established without a browser renderer?**
-  **A:** Every captured body must declare `normalized_plain_text`; raw HTML and
-  angle-bracket markup are rejected. The adapter collapses only whitespace that
-  already exists in those plain-text bytes and never infers browser rendering,
-  CSS visibility, intrinsic element state, or text-node separators.
-- **Q: What exactly does the aggregate source-capture digest identify?**
-  **A:** The 22 closed capture rows are sorted by source ID and encoded as
-  canonical JSON plus one trailing newline. Normalization and raw revalidation
-  both recompute that identity; a stored or caller-supplied digest is never
-  accepted on syntax or cross-row agreement alone.
+  repository remotes. Required joins use deterministic fixture-local
+  pseudonyms. Schema-allowlisted canonical OpenAI documentation URLs may remain
+  only in authority-evidence fields; only schema-allowlisted fields may enter a
+  committed fixture.
 - **Q: Where and how long is raw evidence retained?** **A:** `raw_evidence_root`
   is a required content-addressed location outside the repository. Directories
   are operator-only mode `0700`; files are mode `0600` and have exactly one hard
-  link. Validation walks every nested entry through no-follow directory
-  descriptors, compares two stable snapshots after crash recovery, and applies
-  the same stable single-link descriptor check to standalone private inputs.
-  Captures remain for 30 days after trusted retention registration. An
-  immutable publication intent makes its exact record set governing before
-  output begins, and a matching receipt proves completion only after the exact
-  freeze bytes exist. Claims left before intent remain non-governing, expire
-  one day after trusted registration, and cannot be promoted after expiry;
-  deletion uses the latest governing or individually capped pending deadline. A
-  shared parent-directory advisory lock is acquired before any reserved
-  `.capability-evidence-write-*` temporary pathname appears and is held through
-  writer commit or recovery.
-  The temporary lock then proves no writer remains: a single-link
-  pre-publication file is discarded,
-  while a linked file additionally requires exact descriptor-bound target,
-  inode, and byte proof. Concurrent identical source captures accept the
-  verified single-link winner. Unknown-attempt captures use the same append-only
-  publication and exact-byte concurrent-winner verification. Source and unknown
-  materialization serialize with retention cleanup; any deletion intent or
-  completion record permanently tombstones its evidence digest and blocks
-  rematerialization. If the original
-  open deletion descriptor retains any link after unlink, cleanup never
-  republishes the payload or rebinds a substitute inode; the durable intent
-  remains fail-closed for manual investigation and cannot produce completion.
-  Expired bytes are deleted while their digest and a deletion record remain. Live private-store
+  link. Captures remain for
+  30 days after freeze publication. Retention records become governing only
+  after an immutable receipt proves publication of the exact freeze bytes;
+  failed-publication records cannot extend the deadline. Expired bytes are
+  deleted while their digest and a deletion record remain. Live private-store
   operations fail closed on Windows until equivalent owner-only DACL validation
   exists. Repository tests never require raw-store access.
-- **Q: When are JSON resource bounds enforced?** **A:** Both capability and
-  treatment adapters scan strict UTF-8 JSON lexically for the 64-level nesting
-  and 100,000-node ceilings before `json.loads()` can allocate the object graph,
-  then repeat semantic bounds validation on the parsed value.
 - **Q: How are deterministic fixtures derived and hashed?** **A:** Sanitize
   first, keep only schema-allowlisted fields, replace unstable values with fixed
   tokens, serialize canonical UTF-8 JSON with sorted keys and no insignificant
@@ -246,8 +205,7 @@ records tuple-local exclusion reasons for every other tuple.
 
 1. **Given** all 22 current `OPENAI-DOC-*` records and a pinned client identity,
    **When** the steward refreshes the ledger, **Then** every current record has
-   a revalidation outcome and any body-identity change invalidates every claim
-   bound to that source
+   a revalidation outcome and any change invalidates only its bound claims
    without consuming or rewriting historical `OSL-*` rows.
 2. **Given** a source-admitted model and surface observations from the same
    pinned build, **When** app-server, CLI, and picker evidence agree on an
@@ -368,8 +326,8 @@ validate every fixture hash.
 - **[FR-001] Current source authority**: Before candidate freeze, the feature
   MUST revalidate all 22 current `OPENAI-DOC-*` manifest records against the
   current canonical allowlist and record a per-record outcome. Missing,
-  conflicting, inaccessible, withdrawn, or body-changed documentation MUST
-  invalidate every current claim and route bound to that source. Historical
+  conflicting, inaccessible, withdrawn, or materially changed documentation
+  MUST invalidate only the dependent current claims and routes. Historical
   `OSL-*` evidence MUST remain historical and MUST NOT be consumed or rewritten
   as the active ledger. The direct GPT-5.6 prompting guide MUST be bound only to
   API-surface prompt treatment and MUST NOT support Codex agent-field,
@@ -422,9 +380,7 @@ validate every fixture hash.
   missing value MUST NOT be fabricated. Exact treatment MUST require observed
   effective treatment or an approved configured-route proof meeting the
   clarified consumption-evidence contract and permitted by the profile plus
-  complete reroute monitoring. Before publication, the successor freeze MUST
-  bind a content-addressed digest of the exact retained observation,
-  configured-route, and sanitized source evidence owner set; configured intent alone MUST NOT prove an
+  complete reroute monitoring; configured intent alone MUST NOT prove an
   undocumented effective value, and missing proof MUST produce the `unknown`
   disposition without replacing the typed value or observation state.
 - **[FR-006] Joined route-resolution and execution-trace contract**: Every

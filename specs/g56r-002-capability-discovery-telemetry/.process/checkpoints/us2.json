@@ -7,96 +7,90 @@
     "T016", "T017", "T018", "T019", "T020",
     "T021", "T022", "T023", "T024", "T025"
   ],
-  "implementation_baseline_sha": "0e66466bb43ef2796664d9c63dde808744717f4c",
-  "implementation_checkpoint_sha": "e1e34d005e16bf2e9115f01e709770aee006fb73",
-  "superseded_checkpoint_sha": "e08eb7a9fb0201f99e1d926ccf80d322247d9871",
+  "implementation_baseline_sha": "bbffc774c815594edc64cf412a2b5f91127ef213",
+  "implementation_checkpoint_sha": "42cdf743346c880c1b7e8cb172e842a82ab6f343",
+  "superseded_checkpoint_sha": "8a179bdbb6aef08849bbfc4ed07c547c26f8194a",
   "prior_candidate_freeze_id": "sha256:403051de7d5e0a0a358cd372533ef93da2a25609e8d01ab73cb529e820aaaf03",
-  "candidate_freeze_id": "sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c",
-  "treatment_evidence_digest": "sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f",
-  "telemetry_profile_id": "sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979",
+  "candidate_freeze_id": "sha256:dcf75cea52244ba175324d83fb021f70f96c64e1e82d963451e91da5127c40d6",
+  "telemetry_profile_id": "sha256:b80014352bd2ba7d71c2c4b36e04635233c24526c17737adf9b60c15f5e92ceb",
   "treatment_contract_digest": "sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199",
   "reviewability_measurements": {
-    "production_modules": 18,
-    "source_lines": 5938,
-    "nonblank_noncomment_lines": 5416,
-    "max_capability_module_source_lines": 399,
+    "production_modules": 13,
+    "source_lines": 4409,
+    "nonblank_noncomment_lines": 3996,
+    "max_capability_module_source_lines": 363,
     "modules": {
       "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py": {
-        "source_lines": 119,
-        "nonblank_noncomment_lines": 110
-      },
-      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_append_only.py": {
-        "source_lines": 334,
-        "nonblank_noncomment_lines": 309
-      },
-      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_capture.py": {
-        "source_lines": 161,
-        "nonblank_noncomment_lines": 138
+        "source_lines": 114,
+        "nonblank_noncomment_lines": 105
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_cli.py": {
         "source_lines": 112,
         "nonblank_noncomment_lines": 105
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py": {
-        "source_lines": 283,
-        "nonblank_noncomment_lines": 244
+        "source_lines": 241,
+        "nonblank_noncomment_lines": 199
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_freeze.py": {
-        "source_lines": 399,
-        "nonblank_noncomment_lines": 371
+        "source_lines": 314,
+        "nonblank_noncomment_lines": 287
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_io.py": {
-        "source_lines": 371,
-        "nonblank_noncomment_lines": 346
+        "source_lines": 162,
+        "nonblank_noncomment_lines": 149
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_matrix.py": {
-        "source_lines": 219,
-        "nonblank_noncomment_lines": 198
+        "source_lines": 218,
+        "nonblank_noncomment_lines": 201
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_observations.py": {
-        "source_lines": 363,
-        "nonblank_noncomment_lines": 320
+        "source_lines": 350,
+        "nonblank_noncomment_lines": 307
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_private.py": {
-        "source_lines": 292,
-        "nonblank_noncomment_lines": 258
-      },
-      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publication_records.py": {
-        "source_lines": 282,
-        "nonblank_noncomment_lines": 255
+        "source_lines": 294,
+        "nonblank_noncomment_lines": 253
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_publish_io.py": {
         "source_lines": 15,
         "nonblank_noncomment_lines": 10
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention.py": {
-        "source_lines": 381,
-        "nonblank_noncomment_lines": 365
-      },
-      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_authority.py": {
-        "source_lines": 75,
-        "nonblank_noncomment_lines": 66
+        "source_lines": 363,
+        "nonblank_noncomment_lines": 346
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_records.py": {
-        "source_lines": 314,
-        "nonblank_noncomment_lines": 285
-      },
-      "tests/speckit-pro/layer6-efficiency/lib/codex_capability_retention_recovery.py": {
-        "source_lines": 21,
-        "nonblank_noncomment_lines": 12
+        "source_lines": 269,
+        "nonblank_noncomment_lines": 238
       },
       "tests/speckit-pro/layer6-efficiency/lib/codex_capability_sources.py": {
-        "source_lines": 244,
-        "nonblank_noncomment_lines": 223
+        "source_lines": 213,
+        "nonblank_noncomment_lines": 196
       },
       "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py": {
-        "source_lines": 1953,
-        "nonblank_noncomment_lines": 1801
+        "source_lines": 1744,
+        "nonblank_noncomment_lines": 1600
       }
     }
   },
+    "verification_evidence_sha": "sha256:b6fd429c7a4cc96dfbceebfd80a83f406aba3959316129c2d334d7b0ffc0e1e9",
+  "required_verification_gate_ids": [
+    "focused_tests",
+    "privacy_scan",
+    "docs_reference_check",
+    "full_suite",
+    "independent_critical_high_review"
+  ],
   "verification": {
-    "focused_tests": "62/62 pass",
+    "focused_tests": {"status": "pass", "evidence": "53/53 pass"},
+    "privacy_scan": {"status": "pass", "evidence": "10/10 pass"},
+    "docs_reference_check": {"status": "pass", "evidence": "pass"},
+    "full_suite": {"status": "pass", "evidence": "2821/2821 pass"},
+    "independent_critical_high_review": {"status": "pass", "evidence": "pass"}
+  },
+  "verification_details": {
+    "focused_tests": "53/53 pass",
     "published_successor_validation": "actual artifact passes canonical treatment-aware validation",
     "json_schema_instance_validation": "pass with runtime parity corpus",
     "bounded_file_and_cli_isolation": "pass",
@@ -118,7 +112,6 @@
     "post_unlink_hard_link_proof": "pass",
     "post_unlink_digest_revalidation": "pass",
     "blocking_hard_link_race_state": "pass",
-    "blocking_hard_link_race_no_republication": "pass",
     "exact_declared_treatment_results": "pass",
     "single_schema_snapshot": "pass",
     "single_manifest_authority_snapshot": "pass",
@@ -143,111 +136,22 @@
     "us2_cli_documentation": "pass",
     "module_cli_validation": "pass",
     "malformed_predecessor_error_normalization": "pass",
-    "trusted_treatment_evidence_binding": "pass",
-    "published_treatment_evidence_set_binding": "pass",
-    "single_snapshot_treatment_evidence_mapping": "pass",
-    "non_initial_successor_lineage": "pass",
-    "public_lineage_validator_no_bypass": "pass",
     "privacy_scan": "10/10 pass",
     "docs_reference_check": "pass",
-    "full_suite": "2824/2824 pass",
+    "full_suite": "2821/2821 pass",
     "capability_public_api_preserved": "pass",
-    "capability_safe_module_boundaries": "pass; 17 capability modules, maximum 399 source lines",
-    "pre_journal_failure_restoration": "pass",
+    "capability_safe_module_boundaries": "pass; 12 capability modules, maximum 363 source lines",
+    "completion_probe_failure_restoration": "pass",
     "exact_public_facade_exports": "pass",
     "private_trust_primitives_hidden": "pass",
     "independent_critical_high_review": "pass",
-    "identity_bound_deletion_intent_resume": "pass",
-    "pre_unlink_error_identity_preservation": "pass",
-    "public_append_only_temp_unlink_durability": "pass",
-    "post_unlink_substitute_inode_rejection": "pass",
-    "recovery_intent_chain_integrity": "pass",
-    "post_persistence_retry_completion": "pass",
-    "retry_quarantine_directory_sync": "pass",
-    "configured_proof_reachable": "pass",
-    "effective_evidence_reachable": "pass",
-    "identity_bound_quarantine_before_unlink": "pass",
-    "pre_persistence_quarantine_resume": "pass",
-    "post_persistence_quarantine_resume": "pass",
-    "interrupted_completion_without_proof_fail_closed": "pass",
-    "post_unlink_without_completion_fail_closed": "pass",
-    "post_unlink_hard_link_crash_fail_closed": "pass",
-    "retry_completion_actual_time": "pass",
-    "proven_tuple_executable_authority": "pass",
-    "treatment_evidence_publication_order": "pass",
-    "current_treatment_evidence_narrative": "pass",
-    "semantic_retained_evidence_before_receipt": "pass",
-    "descriptor_bound_public_append_only_publication": "pass",
-    "descriptor_bound_record_directory_snapshot": "pass",
-    "existing_publication_single_link_enforcement": "pass",
-    "capability_json_resource_bounds": "pass",
-    "capability_json_recursion_normalization": "pass",
-    "bounded_pending_claim_deadline": "pass",
-    "durable_publication_intent_before_output": "pass",
-    "trusted_registration_retention_deadline": "pass",
-    "one_day_pending_expiry_and_late_promotion_rejection": "pass",
-    "canonical_surface_order_and_parsed_timestamp_extrema": "pass",
-    "hidden_html_extract_rejection": "pass",
-    "normalized_plain_text_source_rejection": "pass",
-    "exact_source_capture_digest_binding": "pass",
-    "raw_capture_digest_revalidation": "pass",
-    "canary_provenance_fail_closed": "pass",
-    "private_validation_single_link_descriptor_binding": "pass",
-    "raw_tree_descriptor_snapshot_stability": "pass",
-    "sanitizer_json_native_container_rejection": "pass",
-    "preparse_json_resource_bounds": "pass",
-    "full_body_change_invalidation": "pass",
-    "exact_legacy_predecessor_boundary": "pass",
-    "capability_named_temporary_recovery": "pass",
-    "content_addressed_adoption_parent_sync": "pass",
-    "bounded_append_only_recovery_enumeration": "pass",
-    "linear_append_only_recovery_inode_index": "pass",
-    "publication_receipt_target_binding": "pass",
-    "single_link_recovery_payload_revalidation": "pass",
-    "raw_root_publication_output_exclusion": "pass",
-    "descriptor_bound_output_component_walk": "pass",
-    "output_parent_lock_lifetime": "pass",
-    "intermediate_symlink_swap_confinement": "pass",
-    "publication_leaf_name_preservation": "pass",
-    "publication_leaf_symlink_race_rejection": "pass",
-    "pre_retention_leaf_revalidation": "pass",
-    "raw_directory_retention_lock_binding": "pass",
-    "replacement_retention_marker_lock_exclusion": "pass",
-    "bound_raw_append_only_recovery": "pass",
-    "deletion_completion_intent_chronology": "pass",
-    "multi_hop_treatment_reroutes": "pass",
-    "transitive_successor_lineage_authority": "pass",
-    "matrix_canonical_token_self_validation": "pass",
-    "aggregate_private_record_bounds": "pass",
-    "oversized_publication_preflight_rejection": "pass",
-    "descriptor_bound_append_only_temp_recovery": "pass",
-    "abandoned_prelink_temp_recovery": "pass for private and public append-only directories",
-    "active_temp_lock_protection": "pass",
-    "directory_lock_before_temp_visibility": "pass",
-    "concurrent_identical_source_capture": "pass",
-    "source_capture_preparse_size_bound": "pass",
-    "source_capture_bytes_like_requirement": "pass",
-    "unknown_capture_append_only_publication": "pass",
-    "sanitizer_explicit_pseudonym_paths": "pass",
-    "retention_serialized_materialization": "pass",
-    "deletion_tombstone_rematerialization_rejection": "pass",
-    "purpose_named_capability_test": "pass; test-codex-capability-contract.py",
-    "authored_script_spec_id_guard": "9/9 pass",
-    "independent_review": "NO FINDINGS across exact-head responsibility reviews",
-    "independent_review_chat_id": "untitled-chat-7F6589",
-    "independent_review_clean_chats": [
-      "untitled-chat-ECCC7F",
-      "untitled-chat-FD3F79",
-      "untitled-chat-28A265",
-      "untitled-chat-CD89EF",
-      "untitled-chat-7F6589"
-    ],
+    "independent_review_chat_id": "audit-us2-remediation-F4E33F",
     "independent_review_findings": []
   },
   "source_fingerprint_status": "current",
-  "tasks_sha": "sha256:2f1377aa9852e56285dba0d0960017e196598e060a1cce1b24ea9695d70763d2",
+  "tasks_sha": "sha256:b5d612ef42a570443ee397da0bda8fa604fea586efd2b58c2197c51a49066446",
   "implementation_completed_at": "2026-07-20T03:06:58Z",
-  "completed_at": "2026-07-22T08:48:32Z",
-  "review_updated_at": "2026-07-22T08:48:32Z",
+  "completed_at": "2026-07-20T03:50:24Z",
+  "review_updated_at": "2026-07-20T03:50:24Z",
   "review_iteration_started_at": "2026-07-18T20:59:20Z"
 }
