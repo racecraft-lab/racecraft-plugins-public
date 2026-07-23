@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from ..envelope import diagnostic, response
+from ..path_utils import find_repo_root, is_relative_to
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
 DEFAULT_TIMEOUT_SECONDS = 300
@@ -693,22 +694,6 @@ def resolve_repo_root(inputs: dict[str, Any]) -> Path | dict[str, Any]:
             remediation_actions=["Set repo_root to the repository root.", "Retry the request."],
         )
     return resolved
-
-
-def find_repo_root(start: Path) -> Path | None:
-    candidates = [start, *start.parents] if start.is_dir() else [start.parent, *start.parent.parents]
-    for candidate in candidates:
-        if (candidate / "speckit-pro" / "speckit_pro_runner").is_dir() and (candidate / "tests" / "speckit-pro").is_dir():
-            return candidate.resolve(strict=False)
-    return None
-
-
-def is_relative_to(path: Path, root: Path) -> bool:
-    try:
-        path.relative_to(root)
-        return True
-    except ValueError:
-        return False
 
 
 def rel(path: Path, repo_root: Path) -> str:

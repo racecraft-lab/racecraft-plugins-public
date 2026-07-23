@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from ..envelope import diagnostic, response
+from ..path_utils import find_repo_root, is_relative_to
 
 PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
 DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/runner-gates/active-path-guard-cases.json"
@@ -5853,14 +5854,6 @@ def resolve_repo_root(inputs: dict[str, Any]) -> Path | dict[str, Any]:
     return found
 
 
-def find_repo_root(start: Path) -> Path | None:
-    candidates = [start, *start.parents] if start.is_dir() else [start.parent, *start.parent.parents]
-    for candidate in candidates:
-        if (candidate / "speckit-pro" / "speckit_pro_runner").is_dir() and (candidate / "tests" / "speckit-pro").is_dir():
-            return candidate.resolve(strict=False)
-    return None
-
-
 def resolve_path(raw: str, root: Path) -> Path:
     path = Path(raw.replace("\\", "/"))
     return path if path.is_absolute() else root / path
@@ -5935,14 +5928,6 @@ def has_prohibited_script_shebang_content(content: str) -> bool:
     except IndexError:
         return False
     return bool(re.search(r"^#!.*\b(?:bash|sh|zsh|powershell|pwsh)\b", first_line, re.IGNORECASE))
-
-
-def is_relative_to(path: Path, root: Path) -> bool:
-    try:
-        path.relative_to(root)
-        return True
-    except ValueError:
-        return False
 
 
 def is_diagnostic(value: Any) -> bool:
