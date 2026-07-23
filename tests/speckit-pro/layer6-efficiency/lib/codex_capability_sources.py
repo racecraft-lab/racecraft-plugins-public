@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_io import *
+if __package__:
+    from .codex_capability_io import *
+else:
+    from codex_capability_io import *
 
 # Exact identity of the published predecessor set; any byte change loses this compatibility boundary.
 _LEGACY_SOURCE_REFRESH_SET_DIGEST = "sha256:6f382a11b06df40e03719d713fae09c8d88a9ddb9586b735a48f039ac8505ea9"

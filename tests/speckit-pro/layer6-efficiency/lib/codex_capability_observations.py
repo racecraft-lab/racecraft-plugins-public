@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_sources import *
+if __package__:
+    from .codex_capability_sources import *
+else:
+    from codex_capability_sources import *
 
 def build_client_identity(payload):
     keys = ("reported_version", "build_identifier_kind", "build_identifier", "distribution")

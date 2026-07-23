@@ -1,0 +1,30 @@
+{
+  "schema_version": "marker-checkpoint.v1",
+  "feature_id": "G56R-002",
+  "marker_id": "us2",
+  "status": "complete",
+  "task_ids": [
+    "T016", "T017", "T018", "T019", "T020",
+    "T021", "T022", "T023", "T024", "T025"
+  ],
+  "implementation_checkpoint_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+  "last_reviewed_head_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+  "verification_evidence_sha": "sha256:ee695072a45931e47f3e251ac5ffe8add85f22f4808037ecadb4c921433ecb0e",
+  "required_verification_gate_ids": [
+    "focused_tests",
+    "validator_tests",
+    "reviewability_contract",
+    "full_suite",
+    "independent_p0_p1_review"
+  ],
+  "verification": {
+    "focused_tests": {"status": "pass", "evidence": "95/95 capability-contract tests pass"},
+    "validator_tests": {"status": "pass", "evidence": "39/39 checkpoint-validator tests pass"},
+    "reviewability_contract": {"status": "pass", "evidence": "77/77 reviewability-contract tests pass"},
+    "full_suite": {"status": "pass", "evidence": "2864/2864 repository tests pass"},
+    "independent_p0_p1_review": {"status": "pass", "evidence": "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at c699b94f34c378bd4a8f3780e8570abaeb23489d"}
+  },
+  "source_fingerprint_status": "current",
+  "tasks_sha": "sha256:7bd80934ed9521709209774e0233bdf492b9a233fb6bd19d890511c9155245d8",
+  "completed_at": "2026-07-22T16:38:01Z"
+}

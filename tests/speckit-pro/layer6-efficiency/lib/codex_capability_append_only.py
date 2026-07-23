@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import time
 
-from codex_capability_io import *
+if __package__:
+    from .codex_capability_io import *
+else:
+    from codex_capability_io import *
 
 _APPEND_ONLY_TEMPORARY_NAME = re.compile(
     rf"{re.escape(PRIVATE_TEMPORARY_PREFIX)}[0-9a-f]{{32}}",

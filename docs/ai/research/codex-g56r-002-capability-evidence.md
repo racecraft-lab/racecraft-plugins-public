@@ -5,10 +5,10 @@
 The current append-only treatment successor preserves a valid capability freeze
 with zero eligible tuples:
 
-- Candidate freeze: `sha256:087cd717bd4daf9e41f064b86e70335e011c2ba33c5a7b4d3d95a2962f22629c`
-- Telemetry profile: `sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979`
-- Treatment contract: `sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`
-- Treatment evidence set: `sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f`
+- Candidate freeze: `sha256:d4764d2e67218e21ca0920d33a90c472b26d311dd3cc25cfdd582db41ff72578`
+- Telemetry profile: `sha256:acb87238dea1f7a4f56c1ab4d6ddf0f2c5407b74d1aa8f9198cafddf4da6bdb6`
+- Treatment contract: `sha256:ed88fb1d5310385ba8bcaaa0badbb2bbba8819b5fb01775ebdb6f63bbeedf981`
+- Treatment evidence set: `sha256:2c81b6665c892b4b91ca5c2578c73c70f6fb06e74aa1ff46d6b7652248959f45`
 - Published at: `2026-07-18T19:40:00Z`
 - Runtime snapshot: `sha256:450a655fabafb765b19bfc9ff3cbefe4b075d6c40fdbc5fd9dbc8ce8c4cfc3fe`
 - Surface matrix: `sha256:99739c0895250de0eb0cf1a0215fd2e5168213081d41f6b2f828c274528c32b2`
@@ -101,11 +101,11 @@ would still be limited to one 30-second, 64 KiB, zero-retry attempt per
 snapshot/model/effort and could prove only pinned-environment availability.
 
 The current successor binds telemetry profile
-`sha256:9be2156764d858a2358a778414e4f978325e69686f11359ad1a7b168463a8979`,
+`sha256:acb87238dea1f7a4f56c1ab4d6ddf0f2c5407b74d1aa8f9198cafddf4da6bdb6`,
 exact-treatment contract
-`sha256:8c2f9e182d4a97f0934f7f79ab260a09777cfde362f7e8d3bf9a7884101a5199`,
+`sha256:ed88fb1d5310385ba8bcaaa0badbb2bbba8819b5fb01775ebdb6f63bbeedf981`,
 and treatment evidence set
-`sha256:e9c1b23f4b09b594f17d23f7632cab25eb1f73f8b63c1e91da0544507c73ce1f`.
+`sha256:2c81b6665c892b4b91ca5c2578c73c70f6fb06e74aa1ff46d6b7652248959f45`.
 Any later source, client, surface, normalization, telemetry, treatment-evidence,
 or tuple-decision change creates another successor ID.
 

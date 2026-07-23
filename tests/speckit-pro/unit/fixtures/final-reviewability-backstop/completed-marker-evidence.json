@@ -1,0 +1,146 @@
+{
+  "schema_version": "completed-marker-evidence.v1",
+  "markers": [
+    {
+      "id": "us1",
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1-remediation.json",
+        "checkpoint_evidence_sha": "sha256:1340b385a396f63a029bf9e98cc40d52b401d335a3b2e332d93378e7093c00f5",
+        "checkpoint_evidence_commit_sha": "4abd2519f716ba9eb5edcc107ed71ab93c7c1c07",
+        "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us1-remediation.json",
+        "verification_evidence_sha": "sha256:285d0813dfa5981645ea62d5f68d8367708b295d25e50929065bd8e20255be1e",
+        "commit_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+        "head_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+        "completed_at": "2026-07-22T16:38:01Z",
+        "completed_task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005",
+          "T006",
+          "T007",
+          "T008",
+          "T009",
+          "T010",
+          "T011",
+          "T012",
+          "T013",
+          "T014",
+          "T015"
+        ],
+        "required_verification_gate_ids": [
+          "focused_tests",
+          "validator_tests",
+          "reviewability_contract",
+          "full_suite",
+          "independent_p0_p1_review"
+        ],
+        "summary": "Capability freeze and finding-driven checkpoint remediation completed with no remaining P0/P1 findings.",
+        "validation": [
+          "95/95 capability-contract tests pass",
+          "39/39 checkpoint-validator tests pass",
+          "77/77 reviewability-contract tests pass",
+          "2864/2864 repository tests pass",
+          "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at c699b94f34c378bd4a8f3780e8570abaeb23489d"
+        ],
+        "freshness": {
+          "source_fingerprint_status": "current_marker_scope",
+          "source_fingerprint_contract": "marker-task-lines.v2",
+          "tasks_sha_scope": "checkpoint_time_whole_file",
+          "current_tasks_sha": "sha256:7bd80934ed9521709209774e0233bdf492b9a233fb6bd19d890511c9155245d8",
+          "checkpoint_marker_tasks_sha": "sha256:5f7338debb3901207b6bfd3328e5fe97c8583b6b6be63fadb4db4ef821f1fdaf",
+          "current_marker_tasks_sha": "sha256:5f7338debb3901207b6bfd3328e5fe97c8583b6b6be63fadb4db4ef821f1fdaf",
+          "validated_at": "2026-07-22T16:38:01Z"
+        },
+        "superseded_evidence": {
+          "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json",
+          "checkpoint_evidence_commit_sha": "a6284ae644634fde09a5109827068cf8de2d8b15",
+          "checkpoint_evidence_sha": "sha256:fa8176750e772842b44289ac7f8b922f53c8c471515af569f9fc17e257026f28",
+          "implementation_checkpoint_sha": "2b7096dacdaa7a6af62b3c12b36e83cf4515213e",
+          "corrections": [
+            {
+              "sequence": 1,
+              "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoint-corrections/us1-001.json",
+              "checkpoint_evidence_commit_sha": "b43333f0268c442696f8bd48ce4f8f225da56a6a",
+              "checkpoint_evidence_sha": "sha256:1d77fe58b53c0dac38e375dbd6fe7c8eb87ff9ffc694aa032069b2c918ad20c8",
+              "supersedes_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json",
+              "supersedes_evidence_commit_sha": "a6284ae644634fde09a5109827068cf8de2d8b15",
+              "supersedes_evidence_sha": "sha256:fa8176750e772842b44289ac7f8b922f53c8c471515af569f9fc17e257026f28"
+            }
+          ]
+        },
+        "superseded_commit_sha": "f262695d0c1b519e73d93058a944ccdc377ad62f"
+      }
+    },
+    {
+      "id": "us2",
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2-remediation.json",
+        "checkpoint_evidence_sha": "sha256:dca3f6f24d9ecdc6e096dce2a142179491718aa3ce24ac7d1376e717fb24a1f0",
+        "checkpoint_evidence_commit_sha": "4abd2519f716ba9eb5edcc107ed71ab93c7c1c07",
+        "verification_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/verification/us2-remediation.json",
+        "verification_evidence_sha": "sha256:ee695072a45931e47f3e251ac5ffe8add85f22f4808037ecadb4c921433ecb0e",
+        "commit_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+        "head_sha": "c699b94f34c378bd4a8f3780e8570abaeb23489d",
+        "completed_at": "2026-07-22T16:38:01Z",
+        "completed_task_ids": [
+          "T016",
+          "T017",
+          "T018",
+          "T019",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T025"
+        ],
+        "required_verification_gate_ids": [
+          "focused_tests",
+          "validator_tests",
+          "reviewability_contract",
+          "full_suite",
+          "independent_p0_p1_review"
+        ],
+        "summary": "Treatment contracts and finding-driven checkpoint remediation completed with no remaining P0/P1 findings.",
+        "validation": [
+          "95/95 capability-contract tests pass",
+          "39/39 checkpoint-validator tests pass",
+          "77/77 reviewability-contract tests pass",
+          "2864/2864 repository tests pass",
+          "RepoPrompt CE checkpoint-evidence-revi-B89AB7 reports NO P0/P1 FINDINGS at c699b94f34c378bd4a8f3780e8570abaeb23489d"
+        ],
+        "freshness": {
+          "source_fingerprint_contract": "marker-task-lines.v2",
+          "source_fingerprint_status": "current_marker_scope",
+          "tasks_sha_scope": "checkpoint_time_whole_file",
+          "current_tasks_sha": "sha256:7bd80934ed9521709209774e0233bdf492b9a233fb6bd19d890511c9155245d8",
+          "checkpoint_marker_tasks_sha": "sha256:ca7f0a880f62e886a052b9277a672376acd8490c21bb588f53758e3317ebdc3e",
+          "current_marker_tasks_sha": "sha256:ca7f0a880f62e886a052b9277a672376acd8490c21bb588f53758e3317ebdc3e",
+          "validated_at": "2026-07-22T16:38:01Z"
+        },
+        "superseded_evidence": {
+          "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
+          "checkpoint_evidence_commit_sha": "a6284ae644634fde09a5109827068cf8de2d8b15",
+          "checkpoint_evidence_sha": "sha256:1e4bacd24d874fef65028c4a3070ad06feea37b8d73cdd76d1c6d2256ad32151",
+          "implementation_checkpoint_sha": "42cdf743346c880c1b7e8cb172e842a82ab6f343",
+          "corrections": [
+            {
+              "sequence": 1,
+              "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoint-corrections/us2-001.json",
+              "checkpoint_evidence_commit_sha": "b43333f0268c442696f8bd48ce4f8f225da56a6a",
+              "checkpoint_evidence_sha": "sha256:d6e7c2eba35d177be8b307016b23481ed315b4ed972d530da003ea7d36931d5a",
+              "supersedes_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
+              "supersedes_evidence_commit_sha": "a6284ae644634fde09a5109827068cf8de2d8b15",
+              "supersedes_evidence_sha": "sha256:1e4bacd24d874fef65028c4a3070ad06feea37b8d73cdd76d1c6d2256ad32151"
+            }
+          ]
+        },
+        "superseded_commit_sha": "8a179bdbb6aef08849bbfc4ed07c547c26f8194a"
+      }
+    }
+  ]
+}
