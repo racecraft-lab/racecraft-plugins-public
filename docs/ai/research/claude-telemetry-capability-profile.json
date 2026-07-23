@@ -21,7 +21,7 @@
     {
       "field": "usage.cache_read_input_tokens",
       "classification": "stable_native",
-      "observed_value": "15234",
+      "observed_value": "0",
       "label": "observation",
       "source_ref": null
     },
@@ -35,14 +35,14 @@
     {
       "field": "usage.cache_creation.ephemeral_1h_input_tokens",
       "classification": "stable_native",
-      "observed_value": "28385",
+      "observed_value": "42908",
       "label": "observation",
       "source_ref": null
     },
     {
       "field": "usage.cache_creation_input_tokens",
       "classification": "stable_native",
-      "observed_value": "28385",
+      "observed_value": "42908",
       "label": "observation",
       "source_ref": null
     },
@@ -56,7 +56,7 @@
     {
       "field": "duration_ms",
       "classification": "stable_native",
-      "observed_value": "3245",
+      "observed_value": "3867",
       "label": "observation",
       "source_ref": null
     },
@@ -84,14 +84,14 @@
     {
       "field": "modelUsage.<model>.cacheReadInputTokens",
       "classification": "stable_native",
-      "observed_value": "15234",
+      "observed_value": "0",
       "label": "observation",
       "source_ref": null
     },
     {
       "field": "modelUsage.<model>.cacheCreationInputTokens",
       "classification": "stable_native",
-      "observed_value": "28385",
+      "observed_value": "42908",
       "label": "observation",
       "source_ref": null
     },
@@ -105,14 +105,14 @@
     {
       "field": "total_cost_usd",
       "classification": "derived",
-      "observed_value": "0.291577",
+      "observed_value": "0.42919",
       "label": "observation",
       "source_ref": null
     },
     {
       "field": "modelUsage.<model>.costUSD",
       "classification": "derived",
-      "observed_value": "0.291577",
+      "observed_value": "0.42919",
       "label": "observation",
       "source_ref": null
     },
