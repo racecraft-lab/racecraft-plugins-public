@@ -91,6 +91,7 @@
         { "path": "tests/speckit-pro/unit/test-compose-release-notes.py", "label": "test-compose-release-notes", "baseline": "tests/speckit-pro/parity/bash-to-python/test-compose-release-notes-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-speckit-pro-runner.py", "label": "test-speckit-pro-runner", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-agent-route-research-parity.py", "label": "test-agent-route-research-parity", "baseline": null },
+        { "path": "tests/speckit-pro/unit/test-efficiency-claude-telemetry.py", "label": "test-efficiency-claude-telemetry", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py", "label": "test-speckit-pro-read-only-helpers", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-estimate-spec-size.py", "label": "test-estimate-spec-size", "baseline": "tests/speckit-pro/parity/bash-to-python/test-estimate-spec-size-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py", "label": "test-speckit-pro-mutation-helpers", "baseline": null },

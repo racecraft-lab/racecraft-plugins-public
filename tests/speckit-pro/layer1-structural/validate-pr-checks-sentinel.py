@@ -51,8 +51,13 @@ WORKFLOWS_DIR = REPO_ROOT / ".github" / "workflows"
 
 CHECKOUT_PIN_RE = re.compile(r"uses: actions/checkout@[0-9a-f]{40}")
 UPLOAD_ARTIFACT_PIN = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a"
-SETUP_PYTHON_PIN = "actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1"
-SETUP_PYTHON_VERSION_COMMENT = "# v6.3.0"
+# Version-agnostic pins (mirrors CHECKOUT_PIN_RE): assert setup-python stays
+# SHA-pinned with a version comment without freezing a specific SHA, so a
+# dependabot bump does not break this structural gate.
+SETUP_PYTHON_PIN_RE = re.compile(r"actions/setup-python@[0-9a-f]{40}")
+SETUP_PYTHON_COMMENTED_PIN_RE = re.compile(
+    r"uses: actions/setup-python@[0-9a-f]{40} # v\d+\.\d+\.\d+"
+)
 HOSTED_PYTHON_VERSION = 'HOSTED_PYTHON_VERSION: "3.13.14"'
 CONTAINER_IMAGE_PIN = (
     "python:3.11.15-bookworm@sha256:"
@@ -417,7 +422,7 @@ jobs:
             self.assertIn("runs-on: ubuntu-24.04", block)
             self.assertIn("4d216ad3beb5b697c4049071c82fc375acb8abad", content)
             self.assertIn("the job userland is Debian", content)
-            self.assertNotIn(SETUP_PYTHON_PIN, block)
+            self.assertNotRegex(block, SETUP_PYTHON_PIN_RE)
             self.assertNotIn("apt-get", block)
             self.assertIn("id: checkout", block)
             self.assertIn("persist-credentials: false", block)
@@ -438,7 +443,7 @@ jobs:
             self.assertIn("runs-on: ubuntu-24.04-arm", block)
             self.assertIn("container:", block)
             self.assertIn(f"image: {CONTAINER_IMAGE_PIN}", block)
-            self.assertNotIn(SETUP_PYTHON_PIN, block)
+            self.assertNotRegex(block, SETUP_PYTHON_PIN_RE)
             self.assertNotIn("apt-get", block)
             self.assertIn("id: checkout", block)
             self.assertIn("persist-credentials: false", block)
@@ -517,7 +522,7 @@ jobs:
             self.assertIn("XPLAT_WINDOWS_X64_ENABLED", block)
             self.assertIn("XPLAT_WINDOWS_ARM64_ENABLED", block)
             self.assertNotIn("XPLAT_WINDOWS_ARM64_AVAILABLE", block)
-            self.assertIn(SETUP_PYTHON_PIN, block)
+            self.assertRegex(block, SETUP_PYTHON_PIN_RE)
             self.assertIn("persist-credentials: false", block)
             self.assertIn("PREFLIGHT_OPERATION: windows-availability", block)
             self.assertIn("shell: python", block)
@@ -547,7 +552,7 @@ jobs:
             self.assertIn("continue-on-error: true", block)
             self.assertIn("needs.windows-availability.outputs.x64_enabled == 'true'", block)
             self.assertIn("runs-on: windows-2025", block)
-            self.assertIn(SETUP_PYTHON_PIN, block)
+            self.assertRegex(block, SETUP_PYTHON_PIN_RE)
             self.assertIn("python-version: ${{ env.HOSTED_PYTHON_VERSION }}", block)
             self.assertIn("id: checkout", block)
             self.assertIn("persist-credentials: false", block)
@@ -563,7 +568,7 @@ jobs:
             self.assertIn("continue-on-error: true", block)
             self.assertIn("needs.windows-availability.outputs.arm64_enabled == 'true'", block)
             self.assertIn("runs-on: windows-11-arm", block)
-            self.assertIn(SETUP_PYTHON_PIN, block)
+            self.assertRegex(block, SETUP_PYTHON_PIN_RE)
             self.assertIn("python-version: ${{ env.HOSTED_PYTHON_VERSION }}", block)
             self.assertIn("id: checkout", block)
             self.assertIn("persist-credentials: false", block)
@@ -602,7 +607,7 @@ jobs:
             ):
                 self.assertIn(expected, helper_content)
             self.assertIn(HOSTED_PYTHON_VERSION, content)
-            self.assertIn(SETUP_PYTHON_PIN, content)
+            self.assertRegex(content, SETUP_PYTHON_PIN_RE)
             self.assertIn("3.13.14-27320626148", content)
             self.assertIn('PIPX_VERSION: "1.15.0"', content)
             self.assertIn(SPEC_KIT_VERSION_PIN, content)
@@ -610,7 +615,7 @@ jobs:
             self.assertNotIn("spec-kit.git@v0.8.13", content)
             for job_id in ("windows-x64-smoke", "windows-arm64-smoke"):
                 block = _job_block(content, job_id)
-                self.assertIn(SETUP_PYTHON_PIN, block)
+                self.assertRegex(block, SETUP_PYTHON_PIN_RE)
                 self.assertNotIn("PREFLIGHT_INTERPRETER_CANDIDATE", block)
                 self.assertIn("PREFLIGHT_OPERATION: windows-smoke", block)
                 self.assertIn(CONTAINER_DISPATCH, block)
@@ -678,8 +683,8 @@ jobs:
         with self.subTest(msg="evidence uploads cannot mask or flip role verdicts"):
             upload_count = sum(EXPECTED_UPLOAD_COUNTS.values())
             self.assertEqual(upload_count, content.count(f"uses: {UPLOAD_ARTIFACT_PIN}"))
-            self.assertEqual(6, content.count(f"uses: {SETUP_PYTHON_PIN}"))
-            self.assertEqual(6, content.count(SETUP_PYTHON_VERSION_COMMENT))
+            self.assertEqual(6, len(SETUP_PYTHON_PIN_RE.findall(content)))
+            self.assertEqual(6, len(SETUP_PYTHON_COMMENTED_PIN_RE.findall(content)))
             self.assertEqual(2, content.count(f"image: {CONTAINER_IMAGE_PIN}"))
             action_refs = re.findall(r"(?m)^\s+uses: ([^\s]+)", content)
             self.assertTrue(action_refs)

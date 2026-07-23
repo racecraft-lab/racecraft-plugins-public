@@ -14,6 +14,7 @@ from typing import Any
 
 from .. import RUNNER_VERSION
 from ..envelope import diagnostic, response
+from ..path_utils import find_repo_root, is_relative_to
 
 PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
 FIXTURE_BOUNDARY = Path("tests") / "speckit-pro" / "unit" / "fixtures" / "runner-gates"
@@ -943,14 +944,6 @@ def base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
     }
 
 
-def find_repo_root(start: Path) -> Path | None:
-    candidates = [start, *start.parents] if start.is_dir() else [start.parent, *start.parent.parents]
-    for candidate in candidates:
-        if (candidate / "speckit-pro" / "speckit_pro_runner").is_dir() and (candidate / "tests" / "speckit-pro").is_dir():
-            return candidate.resolve(strict=False)
-    return None
-
-
 def resolve_path(raw: str, repo_root: Path) -> Path:
     value = normalize_path_text(raw)
     path = Path(value)
@@ -971,14 +964,6 @@ def normalize_posix_path(raw: str) -> str:
 
 def repo_relative(path: Path, repo_root: Path) -> str:
     return path.resolve(strict=False).relative_to(repo_root.resolve(strict=False)).as_posix()
-
-
-def is_relative_to(path: Path, root: Path) -> bool:
-    try:
-        path.relative_to(root)
-        return True
-    except ValueError:
-        return False
 
 
 def sha256_text(text: str) -> str:
