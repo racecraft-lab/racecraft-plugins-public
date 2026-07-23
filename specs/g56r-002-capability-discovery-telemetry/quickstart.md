@@ -1,0 +1,313 @@
+# Quickstart: Safe Capability Collection and Offline Replay
+
+## Safety Boundary
+
+Use this workflow only for a pinned local Codex build and candidates already
+admitted by the current G56R-001 official-source ledger. Collection is
+non-scored. It cannot establish platform support, effort support, eligibility,
+quality, preference, ranking, or qualification.
+
+Before collection:
+
+1. Use a clean worktree at the intended repository revision.
+2. Choose an absolute `raw_evidence_root` outside every Git worktree.
+3. Restrict that root to the collecting operator (`0700` directories and
+   `0600` files).
+4. Confirm the resolved Codex executable/package and reported version belong to
+   the same build used for app-server, CLI, and picker observations.
+5. Do not paste raw responses, credentials, account identifiers, user prompts,
+   paths, non-allowlisted or private hostnames, or repository remotes into
+   tracked files. Canonical OpenAI documentation URLs are permitted only in
+   schema-allowlisted authority-evidence fields.
+
+Create separate private input and raw-evidence directories before running the
+commands below. Their immediate parent directories must be mode `0700`; every
+existing private input file must be a regular non-symlink file with mode `0600`.
+
+```sh
+mkdir -p /absolute/path/outside/repository/g56r-002-private
+mkdir -p /absolute/path/outside/repository/g56r-002-raw
+chmod 0700 /absolute/path/outside/repository/g56r-002-private
+chmod 0700 /absolute/path/outside/repository/g56r-002-raw
+# After writing the captured refresh, name it by the SHA-256 of its exact bytes:
+chmod 0600 /absolute/path/outside/repository/g56r-002-private/CAPTURE_SHA256.json
+```
+
+## 1. Run the Focused Offline Tests
+
+```sh
+python3 tests/speckit-pro/unit/test-codex-capability-contract.py
+```
+
+This step requires no network, Codex client, or raw evidence store.
+
+## 2. Revalidate the Current Ledger
+
+Capture the 22 current official pages outside the repository first. The capture
+JSON must contain the exact requested/canonical locator, RFC3339 UTC retrieval
+time, status, invalidated claim IDs, base64-encoded retrieved UTF-8 body, and
+content-addressed bounded extracts for every source. Then run the adapter's
+offline normalization and authority check:
+
+`CAPTURE_SHA256` is the lowercase SHA-256 of the complete capture file bytes.
+The adapter rejects a filename that does not match those bytes.
+
+```sh
+python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py refresh-sources \
+  --manifest docs/ai/research/codex-agent-route-candidate-manifest.json \
+  --captured-refresh /absolute/path/outside/repository/g56r-002-private/CAPTURE_SHA256.json \
+  --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
+  --output /absolute/path/outside/repository/g56r-002-private/source-refresh.json
+```
+
+Review every outcome. A changed, inaccessible, withdrawn, redirected, or
+conflicting source invalidates only its bound current claims/routes. Stop if the
+output consumes historical `OSL-*` rows or cites a non-OpenAI canonical domain.
+The command copies the exact aggregate capture into `raw_evidence_root`; the
+normalized refresh remains private because it retains the base64-encoded
+retrieved bodies needed to recheck every body and bounded-extract digest. Freeze
+publication strips those body bytes, commits the capture digest in every
+validated sanitized refresh row, and fails if the referenced raw object is
+missing or disagrees with the normalized rows.
+
+## 3. Pin the Client Identity
+
+```sh
+python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py identify-client \
+  --reported-version REPORTED_VERSION \
+  --executable /absolute/path/to/codex \
+  --distribution DISTRIBUTION_ID \
+  --output /tmp/g56r-002-client-identity.json
+```
+
+The output must contain the reported version and either an immutable vendor
+build ID or the SHA-256 of the resolved executable/package. Reuse the resulting
+`client_identity_id` for all three surfaces; do not join mismatched builds.
+Use `--build-id VENDOR_BUILD_ID` instead of `--executable` when the vendor
+provides an immutable build ID.
+
+## 4. Collect the Three Surfaces
+
+App-server collection uses documented initialization, `model/list` with hidden
+entries included, and documented provider-capability reads. CLI and picker use
+complete non-mutating selector enumeration from a clean pinned-client session.
+
+```sh
+python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py collect \
+  --surface app_server \
+  --client-identity /tmp/g56r-002-client-identity.json \
+  --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
+  --work-item-kind task \
+  --work-item-id G56R-002-T013 \
+  --output /tmp/g56r-002-app-server-sanitized.json
+```
+
+Repeat with `--surface cli` and `--surface interactive_picker`. The picker
+method may consume an operator-recorded complete enumeration, but it must record
+its visibility rules and evidence digest. If any collection is partial or
+irreproducible, record `unknown`; never fill a missing value from another
+surface.
+
+This slice has no repository-approved live collector, so the command records a
+content-addressed `unknown` observation after validating the external raw-store
+boundary. It derives the active checkout's immutable revision/tree binding and
+binds the typed work item into each observation. All three observations must
+share those bindings. The `unknown-observation-v1` method is explicitly
+non-authoritative and does not infer entries from another surface.
+For each attempt, the collector writes one sanitized unknown-attempt record to
+`raw_evidence_root/<sha256>.json`, verifies its exact bytes, and uses the same
+digest in the observation's `raw://sha256:...` reference.
+
+Raw captures remain outside Git. The adapter may emit only deny-by-default
+sanitized, schema-allowlisted output for review.
+
+## 5. Use the Canary Only When Discovery Is Unavailable
+
+The canary command is permitted only for a source-admitted tuple whose
+documented discovery is unavailable:
+
+```sh
+python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py canary \
+  --manifest docs/ai/research/codex-agent-route-candidate-manifest.json \
+  --freeze /tmp/g56r-002-candidate-freeze.json \
+  --model CANONICAL_MODEL_ID \
+  --effort CANONICAL_EFFORT \
+  --executor-result /absolute/path/outside/repository/g56r-002-private/canary-executor-result.json \
+  --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
+  --output /tmp/g56r-002-canary-successor-freeze.json
+```
+
+The adapter accepts only a result from an approved injected executor contract
+for a live launch. That executor must enforce the 30-second wall timeout, 64 KiB
+combined output cap, process-tree termination, and zero retries; the result
+uses the closed v1 envelope and records its contract/implementation/result
+digests, approved platform, and enforcement acknowledgements. A successful
+result is appended atomically to a content-addressed successor freeze; the
+validated predecessor cannot be overwritten. Approval comes only from the
+repository-owned executor-ID allowlist, which is intentionally empty in this
+slice; an arbitrary result file cannot self-approve, so this command exits
+nonzero before consuming an executor result. Default repository tests inject a deterministic
+allowlist and fake result and launch no process. Only a future separately
+reviewed admitted executor plus exit zero and the predeclared sentinel may
+record pinned-environment availability. Every other terminal class is unknown
+and excludes the tuple. To retry an independently proven transient condition,
+create a successor snapshot first.
+
+Before publication, the adapter resolves `evidence_digest` to
+`RAW_EVIDENCE_ROOT/<sha256>.json`, verifies the private content-addressed file,
+and requires its canonical closed redacted schema to match the result envelope.
+An incomplete fixture observation alone does not authorize a canary: the
+adapter derives documented-discovery unavailability only from an
+`unknown-observation-v1` collection outcome in the validated matrix. Shared
+candidate routes with the same model/effort use one canary key and retain their
+independent source-admission decisions.
+Private and content-addressed inputs are opened once without following a final
+symlink, bounded from the opened descriptor, and checked for descriptor or
+pathname replacement before their exact retained bytes are parsed or hashed.
+
+## 6. Build and Review the Freeze
+
+```sh
+python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py freeze \
+  --manifest docs/ai/research/codex-agent-route-candidate-manifest.json \
+  --source-refresh /absolute/path/outside/repository/g56r-002-private/source-refresh.json \
+  --client-identity /tmp/g56r-002-client-identity.json \
+  --app-server /tmp/g56r-002-app-server-sanitized.json \
+  --cli /tmp/g56r-002-cli-sanitized.json \
+  --interactive-picker /tmp/g56r-002-picker-sanitized.json \
+  --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
+  --published-at RFC3339_UTC_PUBLICATION_TIME \
+  --output docs/ai/research/codex-g56r-002-executable-candidate-freeze.json
+```
+
+When a pinned-build surface exposes both a raw label and the exact canonical
+machine ID, pass an optional `--aliases /path/to/aliases.json`. Each map entry
+must name the raw label and bind `canonical_model_id`,
+`authority_kind: machine_readable_identifier`, and the observing
+`authority_surface`. The adapter rejects aliases without one exact matching
+entry on that same pinned surface.
+
+The freeze command accepts no free-form repository or work-item value. It
+rebuilds those values from the three observations and rejects a mismatch.
+When the matrix contains an `unknown-observation-v1` result, initial publication
+also resolves every content-addressed attempt record under `raw_evidence_root`
+and verifies its exact deterministic bytes before creating the tracked freeze.
+
+Review that:
+
+- joins use canonical model ID and effort token;
+- raw labels and disagreements are preserved;
+- runtime evidence never admits a model or effort;
+- hidden entries require independent current-ledger admission;
+- ordinary gaps exclude only the affected tuple;
+- fixture and unknown collection methods remain non-authoritative;
+- the freeze ID covers the complete published payload except the ID itself;
+  and
+- no raw or machine-sensitive value entered the tracked artifact.
+
+Revalidate the complete published artifact after generation:
+
+```sh
+python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py validate-freeze \
+  --manifest docs/ai/research/codex-agent-route-candidate-manifest.json \
+  --freeze docs/ai/research/codex-g56r-002-executable-candidate-freeze.json
+```
+
+This rebuilds the manifest binding, sanitized source refresh, surface matrix,
+runtime snapshot, tuple decisions, derived candidate lists, canary records, and
+the whole-freeze content identity.
+
+Any later evidence change creates a successor freeze rather than editing the
+published ID in place.
+
+## 7. Validate Treatment and Replay Twice (US2/US3)
+
+Skip this step in the US1-only slice. Run it only after
+`treatment_trace_schema.py`, `treatment-replay.json`, and
+`fixture-digests.json` are present in the checkout from the later US2/US3
+slices.
+
+```sh
+python3 tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py replay \
+  --fixture tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json \
+  --digest-manifest tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json \
+  --repeat 2
+```
+
+The validator checks hashes before parsing, the closed telemetry inventory,
+six-ID joins, typed null states, configured-route proof, resource/lifecycle
+fields, and separate resolver/service-reroute records. It must produce identical
+normalized output, dispositions, and digests on both passes without network or
+raw-store access.
+
+## 8. Repository Verification
+
+```sh
+python3 tests/speckit-pro/unit/test-codex-capability-contract.py
+python3 -u tests/speckit-pro/run-all.py --layer 1
+pnpm --dir docs-site reference:generate
+pnpm --dir docs-site reference:check
+python3 -u tests/speckit-pro/run-all.py
+git diff --check
+```
+
+The generated reference page must be regenerated, not hand-edited. Live
+collection is never part of the default deterministic suite.
+
+## Retention Cleanup
+
+Freeze and canary publication automatically add immutable content-addressed
+records under `raw_evidence_root/retention-records/`. A trusted registration
+clock establishes each 30-day deadline. Before output begins, an immutable
+transaction record under `publication-intents/` makes those records governing;
+after the exact freeze bytes exist, a matching immutable receipt is
+directory-fsynced under `publication-receipts/`. Re-running the same publication
+recovers either crash window; a different artifact at the output path fails
+before registration. Records without an intent remain pending, expire under a
+one-day orphan-recovery deadline, and cannot extend governing deletion. Before
+the deadline, verify that every
+governing retained digest still has its exact bytes:
+
+```sh
+python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \
+  --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
+  --as-of 2026-08-16T04:44:32.543010Z \
+  --mode verify \
+  --output /absolute/path/outside/repository/g56r-002-raw/retention-report.json
+```
+
+At or after the latest 30-day deadline, apply cleanup using the adapter's
+current UTC clock and then verify that state. The example deadline below is
+derived from the committed freeze's `2026-07-17T04:44:32.543011Z`
+`published_at`; a successor freeze can extend it.
+
+```sh
+python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \
+  --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
+  --mode cleanup \
+  --output /absolute/path/outside/repository/g56r-002-raw/cleanup-report.json
+python3 tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py retention \
+  --raw-evidence-root /absolute/path/outside/repository/g56r-002-raw \
+  --as-of 2026-08-16T04:44:32.543011Z \
+  --mode verify \
+  --output /absolute/path/outside/repository/g56r-002-raw/retention-report.json
+```
+
+Cleanup appends and directory-fsyncs an immutable record under
+`deletion-records/` before removing the expired raw bytes, then directory-fsyncs
+the raw store before reporting success. The record retains the raw digest, complete retention
+record history, governing deadline, and deletion time. Repeated cleanup is
+idempotent. Every raw file must have exactly one hard link. Append-only writes
+directory-fsync after both final-name publication and temporary-name removal;
+normal commands and read-only verification reject reserved private temporary
+names. Locked cleanup removes orphan temporaries, fsyncs their parent
+directories, and recovers only the one-temporary/one-final-link power-loss
+window; any external or additional hard link still fails closed. Registration
+and cleanup serialize through an advisory
+lock on the durable `0600` `.retention-lock` file. A competing live operation
+fails closed, while an exited or crashed process releases its lock
+automatically. `--as-of` is accepted only for read-only verification;
+cleanup always uses current UTC. Do not delete committed sanitized fixtures or
+published freeze records; repository tests continue to pass without the raw
+store. Live private-store commands fail closed on Windows until the adapter can
+verify an owner-only DACL equivalent to POSIX `0700`/`0600`.
