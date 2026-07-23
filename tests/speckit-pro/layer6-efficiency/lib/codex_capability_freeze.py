@@ -303,7 +303,7 @@ def build_canary_successor(
     expected_treatment_evidence_digest=None, predecessor_lineage=None,
     expected_predecessor_lineage_bindings=None,
 ):
-    predecessor = _validate_predecessor_chain(
+    _validate_predecessor_chain(
         predecessor, manifest, predecessor_lineage=predecessor_lineage,
         expected_predecessor_lineage_bindings=expected_predecessor_lineage_bindings,
         expected_telemetry_profile_id=expected_telemetry_profile_id,

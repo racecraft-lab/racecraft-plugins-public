@@ -47,7 +47,11 @@ def _route_claim_dependencies(route, sources_by_id):
 
 
 def validate_manifest(manifest, *, allow_synthetic_manifest=False):
+    if not isinstance(manifest, dict):
+        raise ValueError("manifest must be an object")
     snapshot = manifest.get("snapshot", {})
+    if not isinstance(snapshot, dict):
+        raise ValueError("manifest snapshot must be an object")
     if manifest.get("schema_version") != CANONICAL_MANIFEST_SCHEMA_VERSION or snapshot.get("snapshot_id") != CANONICAL_MANIFEST_SNAPSHOT_ID:
         raise ValueError("manifest schema or snapshot identity is not the canonical G56R-001 v3 authority")
     if not allow_synthetic_manifest and digest(manifest) != CANONICAL_MANIFEST_DIGEST:
@@ -56,19 +60,38 @@ def validate_manifest(manifest, *, allow_synthetic_manifest=False):
     ids = [row.get("official_source_ledger_id") for row in sources]
     if len(sources) != 22 or len(set(ids)) != 22 or any(not _SOURCE_ID.fullmatch(str(item)) for item in ids):
         raise ValueError("manifest must contain exactly 22 unique current OPENAI-DOC records")
-    if any(not isinstance(row.get("claim_bindings"), list) or not row["claim_bindings"] or len(row["claim_bindings"]) != len(set(row["claim_bindings"])) or not all(isinstance(item, str) and _CLAIM_ID.fullmatch(item) for item in row["claim_bindings"]) or not _openai_url(row.get("requested_url")) or not _openai_url(row.get("canonical_url")) for row in sources):
-        raise ValueError("every current source requires claim bindings and approved URLs")
+    if any(not isinstance(row.get("claim_bindings"), list) or not row["claim_bindings"] or len(row["claim_bindings"]) != len(set(row["claim_bindings"])) or not all(isinstance(item, str) and _CLAIM_ID.fullmatch(item) for item in row["claim_bindings"]) or not isinstance(row.get("exact_documented_facts"), list) or not all(isinstance(item, str) for item in row["exact_documented_facts"]) or not _openai_url(row.get("requested_url")) or not _openai_url(row.get("canonical_url")) for row in sources):
+        raise ValueError("every current source requires claim bindings, documented facts, and approved URLs")
     for row in sources:
         extracts = row.get("bounded_extracts", [])
-        if not extracts or any(set(item) != {"text", "extract_sha256", "normalization"} or not item["text"] or item["normalization"] != EXTRACT_NORMALIZATION or not _HEX_SHA256.fullmatch(str(item["extract_sha256"])) or hashlib.sha256(item["text"].encode()).hexdigest() != item["extract_sha256"] for item in extracts):
+        if not isinstance(extracts, list) or not extracts or any(not isinstance(item, dict) or set(item) != {"text", "extract_sha256", "normalization"} or not isinstance(item["text"], str) or not item["text"] or item["normalization"] != EXTRACT_NORMALIZATION or not _HEX_SHA256.fullmatch(str(item["extract_sha256"])) or hashlib.sha256(item["text"].encode()).hexdigest() != item["extract_sha256"] for item in extracts):
             raise ValueError("every current source requires valid bounded extracts")
         bindings = set(row["claim_bindings"])
         if len(bindings) > 1:
             dependencies = _extract_claim_dependencies(row)
             if set(dependencies) != {item["extract_sha256"] for item in extracts} or set().union(*dependencies.values()) != bindings or any(not claims or not claims <= bindings for claims in dependencies.values()):
                 raise ValueError("multi-claim source requires complete extract-to-claim dependencies")
-    contracts = manifest.get("agent_contracts", []); contract_ids = [row.get("agent_contract_id") for row in contracts]
-    routes = manifest.get("candidate_routes", []); route_ids = [row.get("candidate_route_id") for row in routes]
+    contracts = manifest.get("agent_contracts", [])
+    routes = manifest.get("candidate_routes", [])
+    if (
+        not isinstance(contracts, list)
+        or not isinstance(routes, list)
+        or any(
+            not isinstance(row, dict)
+            or not isinstance(row.get("agent_contract_id"), str)
+            or not row["agent_contract_id"]
+            for row in contracts
+        )
+        or any(
+            not isinstance(row, dict)
+            or not isinstance(row.get("candidate_route_id"), str)
+            or not row["candidate_route_id"]
+            for row in routes
+        )
+    ):
+        raise ValueError("agent contracts and candidate routes require string identities")
+    contract_ids = [row["agent_contract_id"] for row in contracts]
+    route_ids = [row["candidate_route_id"] for row in routes]
     invalid_contract_hash = any(not _HEX_SHA256.fullmatch(str(row.get("source_sha256"))) or not _HEX_SHA256.fullmatch(str(row.get("instruction_sha256"))) for row in contracts)
     if len(contracts) != 12 or len(routes) != 23 or len(contract_ids) != len(set(contract_ids)) or len(route_ids) != len(set(route_ids)) or invalid_contract_hash or any(row.get("agent_contract_id") not in set(contract_ids) for row in routes):
         raise ValueError("candidate routes require unique agent-contract owners")
@@ -125,6 +148,10 @@ def _source_capture_digest(rows):
 
 def normalize_source_refreshes(manifest, captured, *, source_capture_digest=None, allow_synthetic_manifest=False):
     validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest)
+    if not isinstance(captured, list):
+        raise ValueError("source refresh capture must be a list")
+    if any(not isinstance(row, dict) for row in captured):
+        raise ValueError("every captured source refresh must be an object")
     sources = {row["official_source_ledger_id"]: row for row in manifest["official_source_ledger"]}
     actual = [row.get("official_source_ledger_id") for row in captured]
     if len(captured) != 22 or set(actual) != set(sources) or len(set(actual)) != 22 or any(set(row) != _SOURCE_CAPTURE_KEYS for row in captured):
@@ -164,7 +191,7 @@ def normalize_source_refreshes(manifest, captured, *, source_capture_digest=None
         if body is not None and status in {"confirmed_current", "changed", "redirected"}:
             prior_body = f"sha256:{source['body_sha256']}"
             expected_status = "redirected" if source["requested_url"] != item["canonical_url"] else "changed" if canonical_changed else "confirmed_current" if body == prior_body else "changed"
-            if status != expected_status: raise ValueError("source refresh status or timestamp is invalid")
+            if status != expected_status: raise ValueError("source refresh status is inconsistent with captured evidence")
         evidence = {"canonical_url": item["canonical_url"], "retrieved_at": item["retrieved_at"], "body_digest": body, "bounded_extracts": extracts}
         normalized.append({
             "official_source_ledger_id": item["official_source_ledger_id"],
@@ -183,6 +210,10 @@ def normalize_source_refreshes(manifest, captured, *, source_capture_digest=None
 
 def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_manifest=False):
     validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest); sources = {row["official_source_ledger_id"]: row for row in manifest["official_source_ledger"]}
+    if not isinstance(refreshes, list):
+        raise ValueError("published source refreshes must be a list")
+    if any(not isinstance(row, dict) for row in refreshes):
+        raise ValueError("every published source refresh must be an object")
     if len(refreshes) != 22 or [row.get("official_source_ledger_id") for row in refreshes] != sorted(sources):
         raise ValueError("source refresh must cover the 22 unique current records")
     keys = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "body_digest", "status", "source_capture_digest", "bounded_extracts", "retrieval_evidence_digest", "documented_facts", "claim_bindings", "invalidated_claim_ids", "prior_record_digest"}
@@ -229,6 +260,10 @@ def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_
 
 
 def validate_source_refreshes(manifest, refreshes, *, allow_synthetic_manifest=False):
+    if not isinstance(refreshes, list):
+        raise ValueError("source refreshes must be a list")
+    if any(not isinstance(item, dict) for item in refreshes):
+        raise ValueError("every source refresh must be an object")
     raw_keys = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "body_digest", "status", "retrieved_body_b64", "retrieved_body_format", "source_capture_digest", "bounded_extracts", "retrieval_evidence_digest", "documented_facts", "claim_bindings", "invalidated_claim_ids", "prior_record_digest"}
     for item in refreshes:
         if set(item) != raw_keys: raise ValueError("source refresh must retain the closed raw evidence binding")

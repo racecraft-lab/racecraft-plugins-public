@@ -651,6 +651,75 @@ class CapabilityContractTests(unittest.TestCase):
             with self.subTest(path=path.name):
                 self.assertLessEqual(len(path.read_text(encoding="utf-8").splitlines()), 475)
 
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_bounded_regular_file_closes_all_descriptors(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            nested = root / "nested"
+            nested.mkdir()
+            source = nested / "input.json"
+            source.write_bytes(b"{}\n")
+            real_open = capability_io.os.open
+            real_close = capability_io.os.close
+            opened: list[int] = []
+            closed: list[int] = []
+
+            def tracking_open(*args: object, **kwargs: object) -> int:
+                descriptor = real_open(*args, **kwargs)
+                opened.append(descriptor)
+                return descriptor
+
+            def tracking_close(descriptor: int) -> None:
+                closed.append(descriptor)
+                real_close(descriptor)
+
+            with unittest.mock.patch.object(
+                capability_io.os, "open", side_effect=tracking_open,
+            ), unittest.mock.patch.object(
+                capability_io.os, "close", side_effect=tracking_close,
+            ):
+                self.assertEqual(
+                    capability_io._read_bounded_regular_file(source, allowed_root=root),
+                    b"{}\n",
+                )
+            self.assertEqual(len(opened), 5)
+            self.assertEqual(closed, list(reversed(opened)))
+
+            opened.clear()
+            closed.clear()
+            with unittest.mock.patch.object(
+                capability_io.os, "open", side_effect=tracking_open,
+            ), unittest.mock.patch.object(
+                capability_io.os, "close", side_effect=tracking_close,
+            ), unittest.mock.patch.object(
+                capability_io.os, "fstat", side_effect=OSError("fixture failure"),
+            ), self.assertRaisesRegex(ValueError, "readable regular"):
+                capability_io._read_bounded_regular_file(source, allowed_root=root)
+            self.assertEqual(closed, list(reversed(opened)))
+
+            opened.clear()
+            closed.clear()
+            stable_identity = capability_io._stable_directory_identity
+            identity_calls = 0
+
+            def changed_root_identity(metadata: os.stat_result) -> tuple[int, ...]:
+                nonlocal identity_calls
+                identity_calls += 1
+                identity = stable_identity(metadata)
+                if identity_calls == 2:
+                    return (identity[0] + 1, *identity[1:])
+                return identity
+
+            with unittest.mock.patch.object(
+                capability_io.os, "open", side_effect=tracking_open,
+            ), unittest.mock.patch.object(
+                capability_io.os, "close", side_effect=tracking_close,
+            ), unittest.mock.patch.object(
+                capability_io, "_stable_directory_identity", side_effect=changed_root_identity,
+            ), self.assertRaisesRegex(ValueError, "approved root changed before"):
+                capability_io._read_bounded_regular_file(source, allowed_root=root)
+            self.assertEqual(closed, list(reversed(opened)))
+
     def observations(self, case: dict) -> list[dict]:
         return [
             capabilities.fixture_observation(surface, value, self.identity["client_identity_id"])
@@ -751,6 +820,15 @@ class CapabilityContractTests(unittest.TestCase):
         return capability_contract._AuthorityTupleSet(tuples)
 
     def test_current_manifest_and_effort_authority_are_strict(self) -> None:
+        with self.assertRaisesRegex(ValueError, "manifest must be an object"):
+            capabilities.validate_manifest([])
+        malformed_snapshot = copy.deepcopy(self.manifest)
+        malformed_snapshot["snapshot"] = []
+        with self.assertRaisesRegex(ValueError, "manifest snapshot must be an object"):
+            capabilities.validate_manifest(
+                malformed_snapshot,
+                allow_synthetic_manifest=True,
+            )
         result = capabilities.validate_manifest(self.manifest)
         self.assertEqual(result["current_source_count"], 22)
         self.assertEqual(result["historical_active_count"], 0)
@@ -837,12 +915,77 @@ class CapabilityContractTests(unittest.TestCase):
         empty_bindings["official_source_ledger"][1]["claim_bindings"] = []
         with self.assertRaisesRegex(ValueError, "claim bindings"):
             capabilities.validate_manifest(empty_bindings, allow_synthetic_manifest=True)
+        malformed_documented_facts = (
+            ("missing", None),
+            ("non-list", "documented fact"),
+            ("non-string-item", [None]),
+        )
+        for label, documented_facts in malformed_documented_facts:
+            with self.subTest(label=label):
+                malformed_manifest = copy.deepcopy(self.manifest)
+                source = malformed_manifest["official_source_ledger"][0]
+                if documented_facts is None:
+                    source.pop("exact_documented_facts")
+                else:
+                    source["exact_documented_facts"] = documented_facts
+                with self.assertRaisesRegex(ValueError, "documented facts"):
+                    capabilities.validate_manifest(
+                        malformed_manifest,
+                        allow_synthetic_manifest=True,
+                    )
+        malformed_extracts = (
+            ("non-object", None),
+            (
+                "non-string-text",
+                {
+                    "text": [],
+                    "extract_sha256": "0" * 64,
+                    "normalization": capabilities.EXTRACT_NORMALIZATION,
+                },
+            ),
+        )
+        for label, malformed_extract in malformed_extracts:
+            with self.subTest(label=label):
+                malformed_manifest = copy.deepcopy(self.manifest)
+                malformed_manifest["official_source_ledger"][0]["bounded_extracts"] = [malformed_extract]
+                with self.assertRaisesRegex(ValueError, "bounded extracts"):
+                    capabilities.validate_manifest(
+                        malformed_manifest,
+                        allow_synthetic_manifest=True,
+                    )
+        for collection, identity_field in (
+            ("agent_contracts", "agent_contract_id"),
+            ("candidate_routes", "candidate_route_id"),
+        ):
+            for label, identity in (("missing", None), ("non-string", 1)):
+                with self.subTest(
+                    collection=collection,
+                    identity_field=identity_field,
+                    label=label,
+                ):
+                    malformed_manifest = copy.deepcopy(self.manifest)
+                    row = malformed_manifest[collection][0]
+                    if identity is None:
+                        row.pop(identity_field)
+                    else:
+                        row[identity_field] = identity
+                    with self.assertRaisesRegex(ValueError, "string identities"):
+                        capabilities.validate_manifest(
+                            malformed_manifest,
+                            allow_synthetic_manifest=True,
+                        )
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_canonical_json_refreshes_and_identity(self) -> None:
         self.assertEqual(capabilities.canonical_bytes({"b": 1, "a": 2}), b'{"a":2,"b":1}')
         self.assertFalse(hasattr(capabilities, "refreshes_from_manifest"))
         captured = source_capture(self.manifest)
+        with self.assertRaisesRegex(ValueError, "source refresh capture must be a list"):
+            capabilities.normalize_source_refreshes(self.manifest, {})
+        malformed_capture = copy.deepcopy(captured)
+        malformed_capture[0] = []
+        with self.assertRaisesRegex(ValueError, "captured source refresh must be an object"):
+            capabilities.normalize_source_refreshes(self.manifest, malformed_capture)
         with self.assertRaisesRegex(ValueError, "does not match captured bytes"):
             capabilities.normalize_source_refreshes(
                 self.manifest, captured, source_capture_digest=capabilities.digest(b"unrelated capture"),
@@ -852,6 +995,12 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertEqual(reordered_refreshes, refreshes)
         result = capabilities.validate_source_refreshes(self.manifest, refreshes)
         self.assertEqual(result["count"], 22)
+        with self.assertRaisesRegex(ValueError, "source refreshes must be a list"):
+            capabilities.validate_source_refreshes(self.manifest, None)
+        malformed_refreshes = copy.deepcopy(refreshes)
+        malformed_refreshes[0] = None
+        with self.assertRaisesRegex(ValueError, "every source refresh must be an object"):
+            capabilities.validate_source_refreshes(self.manifest, malformed_refreshes)
         expected_invalidations = sorted({
             claim
             for source, capture in zip(self.manifest["official_source_ledger"], captured)
@@ -870,6 +1019,15 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertEqual(
             capabilities.validate_published_source_refreshes(self.manifest, legacy_refreshes)["count"], 22,
         )
+        with self.assertRaisesRegex(ValueError, "published source refreshes must be a list"):
+            capabilities.validate_published_source_refreshes(self.manifest, {})
+        malformed_published_refreshes = copy.deepcopy(legacy_refreshes)
+        malformed_published_refreshes[0] = []
+        with self.assertRaisesRegex(ValueError, "published source refresh must be an object"):
+            capabilities.validate_published_source_refreshes(
+                self.manifest,
+                malformed_published_refreshes,
+            )
         sources_by_id = {
             source["official_source_ledger_id"]: source
             for source in self.manifest["official_source_ledger"]
@@ -1130,6 +1288,28 @@ class CapabilityContractTests(unittest.TestCase):
                     self.assertEqual(matrix["disagreements"][0]["disagreement_class"], "hidden_state")
         agreed_case = next(item for item in self.fixture["surface_cases"] if item["case_id"] == "agreed")
         agreed_matrix, _ = capabilities.evaluate_surface_matrix(self.observations(agreed_case), self.authority_tuples(agreed_case))
+        with self.assertRaisesRegex(ValueError, "matrix observations must be a list"):
+            capabilities.evaluate_surface_matrix(
+                {}, self.authority_tuples(agreed_case),
+            )
+        with self.assertRaisesRegex(ValueError, "matrix observation must be an object"):
+            capabilities.evaluate_surface_matrix(
+                [[("surface", "cli")]], self.authority_tuples(agreed_case),
+            )
+        with self.assertRaisesRegex(ValueError, "surface matrix must use the closed v1 shape"):
+            capabilities.validate_surface_matrix([])
+        malformed_matrix_observations = copy.deepcopy(agreed_matrix)
+        malformed_matrix_observations["observations"] = {}
+        with self.assertRaisesRegex(ValueError, "matrix observations must be a list"):
+            capabilities.validate_surface_matrix(malformed_matrix_observations)
+        malformed_matrix_observations["observations"] = [[("surface", "cli")]]
+        with self.assertRaisesRegex(ValueError, "matrix observation must be an object"):
+            capabilities.validate_surface_matrix(malformed_matrix_observations)
+        with self.assertRaisesRegex(ValueError, "aliases must be a mapping"):
+            capabilities.evaluate_surface_matrix(
+                self.observations(agreed_case), self.authority_tuples(agreed_case),
+                aliases=["not-a-mapping"],
+            )
         reordered_matrix = copy.deepcopy(agreed_matrix)
         reordered_matrix["observations"].reverse()
         with self.assertRaisesRegex(ValueError, "canonical surface order"):
@@ -3165,17 +3345,34 @@ class CapabilityContractTests(unittest.TestCase):
                     pass
             with capability_retention_records._retention_lock(raw_root, raw_identity):
                 pass
-            marker = raw_root / capabilities.RETENTION_LOCK_FILE
-            replaced_marker = raw_root / ".replaced-retention-lock"
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_retention_lock_uses_lock_file_as_serialization_anchor(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_root = Path(tmp) / "raw"
+            raw_root.mkdir(mode=0o700)
+            raw_identity = capability_io._stable_directory_identity(
+                os.stat(raw_root, follow_symlinks=False),
+            )
             with capability_retention_records._retention_lock(raw_root, raw_identity):
-                marker.rename(replaced_marker)
-                marker.write_bytes(b"")
-                marker.chmod(0o600)
-                with self.assertRaisesRegex(ValueError, "already in progress"):
-                    with capability_retention_records._retention_lock(raw_root, raw_identity):
-                        pass
-            self.assertTrue(marker.is_file())
-            self.assertTrue(replaced_marker.is_file())
+                marker_descriptor = os.open(
+                    raw_root / capabilities.RETENTION_LOCK_FILE,
+                    os.O_RDWR | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+                )
+                try:
+                    with self.assertRaises(BlockingIOError):
+                        fcntl.flock(marker_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                finally:
+                    os.close(marker_descriptor)
+            marker_descriptor = os.open(
+                raw_root / capabilities.RETENTION_LOCK_FILE,
+                os.O_RDWR | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
+            )
+            try:
+                fcntl.flock(marker_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(marker_descriptor, fcntl.LOCK_UN)
+            finally:
+                os.close(marker_descriptor)
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_private_record_loader_rejects_directory_races(self) -> None:

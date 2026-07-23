@@ -113,6 +113,7 @@ def _bound_publication_output(path, raw, raw_identity):
         if stat.S_ISLNK(os.stat(lexical, follow_symlinks=False).st_mode):
             raise ValueError("publication output cannot be a symlink")
     except FileNotFoundError:
+        # A new publication output has no path, so there is no symlink to reject yet.
         pass
     target = lexical.parent.resolve(strict=False) / lexical.name
     if lexical == raw or raw in lexical.parents or target == raw or raw in target.parents:

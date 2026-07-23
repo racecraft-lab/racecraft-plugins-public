@@ -265,7 +265,6 @@ def unknown_observation(surface, client_identity_id, repository_binding, work_it
 
 def _candidate_tuples(manifest, validation, *, allow_synthetic_manifest=False):
     authority = validate_manifest(manifest, allow_synthetic_manifest=allow_synthetic_manifest)
-    refreshes = validation["sanitized_refreshes"]
     sources = {row["official_source_ledger_id"]: row for row in manifest["official_source_ledger"]}; current_ids = set(sources)
     contracts = {row["agent_contract_id"]: row for row in manifest.get("agent_contracts", [])}; effort_records = {row["effort_surface_record_id"]: row for row in manifest["effort_surface_records"]}
     refresh_by_source = {row["official_source_ledger_id"]: row for row in validation["sanitized_refreshes"]}
