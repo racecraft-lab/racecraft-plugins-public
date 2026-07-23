@@ -257,6 +257,10 @@ def validate_published_source_refreshes(manifest, refreshes, *, allow_synthetic_
 
 
 def validate_source_refreshes(manifest, refreshes, *, allow_synthetic_manifest=False):
+    if not isinstance(refreshes, list):
+        raise ValueError("source refreshes must be a list")
+    if any(not isinstance(item, dict) for item in refreshes):
+        raise ValueError("every source refresh must be an object")
     raw_keys = {"official_source_ledger_id", "requested_url", "canonical_url", "retrieved_at", "body_digest", "status", "retrieved_body_b64", "retrieved_body_format", "source_capture_digest", "bounded_extracts", "retrieval_evidence_digest", "documented_facts", "claim_bindings", "invalidated_claim_ids", "prior_record_digest"}
     for item in refreshes:
         if set(item) != raw_keys: raise ValueError("source refresh must retain the closed raw evidence binding")

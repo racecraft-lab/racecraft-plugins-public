@@ -860,6 +860,12 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertEqual(reordered_refreshes, refreshes)
         result = capabilities.validate_source_refreshes(self.manifest, refreshes)
         self.assertEqual(result["count"], 22)
+        with self.assertRaisesRegex(ValueError, "source refreshes must be a list"):
+            capabilities.validate_source_refreshes(self.manifest, None)
+        malformed_refreshes = copy.deepcopy(refreshes)
+        malformed_refreshes[0] = None
+        with self.assertRaisesRegex(ValueError, "every source refresh must be an object"):
+            capabilities.validate_source_refreshes(self.manifest, malformed_refreshes)
         expected_invalidations = sorted({
             claim
             for source, capture in zip(self.manifest["official_source_ledger"], captured)
