@@ -27,6 +27,8 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from structural_helpers import body as _body  # noqa: E402
+from structural_helpers import frontmatter as _frontmatter  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 AGENTS_DIR = PLUGIN_ROOT / "agents"
@@ -45,38 +47,6 @@ AGENTS = (
 
 NAME_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9-]{2,49}$")
 MODEL_RE = re.compile(r"^(opus|sonnet|haiku|inherit)$")
-
-
-def _frontmatter(lines: list[str]) -> str:
-    """Lines between the first and second ``---`` fence (exclusive)."""
-    out: list[str] = []
-    fences = 0
-    for line in lines:
-        if line == "---":
-            fences += 1
-            if fences == 1:
-                continue
-            if fences == 2:
-                break
-        elif fences == 1:
-            out.append(line)
-    return "\n".join(out)
-
-
-def _body(lines: list[str]) -> str:
-    """Everything after the second ``---`` fence."""
-    out: list[str] = []
-    fences = 0
-    found = False
-    for line in lines:
-        if line == "---":
-            fences += 1
-            if fences == 2:
-                found = True
-                continue
-        if found:
-            out.append(line)
-    return "\n".join(out)
 
 
 def _field(frontmatter: str, key: str) -> str:

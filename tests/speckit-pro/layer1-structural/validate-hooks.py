@@ -24,20 +24,10 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from structural_helpers import field_exists as _field_exists  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 HOOKS_FILE = PLUGIN_ROOT / "hooks" / "hooks.json"
-
-
-def _field_exists(data: object, dotted: str) -> bool:
-    """Mirror assert_json_field_exists: walk ``a.b.c`` keys without raising."""
-    current = data
-    try:
-        for key in dotted.split("."):
-            current = current[key]
-    except (KeyError, TypeError, IndexError):
-        return False
-    return True
 
 
 class ValidateHooks(unittest.TestCase):

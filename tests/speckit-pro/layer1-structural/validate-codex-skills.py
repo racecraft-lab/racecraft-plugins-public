@@ -26,6 +26,8 @@ if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
+from structural_helpers import body as _body  # noqa: E402
+from structural_helpers import frontmatter as _frontmatter  # noqa: E402
 from test_result import run_counted  # noqa: E402
 from speckit_pro_runner.helpers.registry import MUTATION_HELPERS  # noqa: E402
 
@@ -63,36 +65,6 @@ ALLOW_IMPLICIT_RE = re.compile(r"^[ \t]*allow_implicit_invocation:[ \t]*(true|fa
 
 def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8") if path.is_file() else ""
-
-
-def _frontmatter(lines: list[str]) -> str:
-    out: list[str] = []
-    fences = 0
-    for line in lines:
-        if line == "---":
-            fences += 1
-            if fences == 1:
-                continue
-            if fences == 2:
-                break
-        elif fences == 1:
-            out.append(line)
-    return "\n".join(out)
-
-
-def _body(lines: list[str]) -> str:
-    out: list[str] = []
-    fences = 0
-    found = False
-    for line in lines:
-        if line == "---":
-            fences += 1
-            if fences == 2:
-                found = True
-                continue
-        if found:
-            out.append(line)
-    return "\n".join(out)
 
 
 def _allow_implicit_values(yaml_content: str) -> list[str]:
