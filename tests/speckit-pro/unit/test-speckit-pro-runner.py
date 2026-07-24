@@ -12,11 +12,13 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 RUNNER_DIR = PLUGIN_ROOT / "speckit_pro_runner"
+RELEASE_PLEASE_BRANCH_PREFIX = "release-please--branches--"
 sys.path.insert(0, str(PLUGIN_ROOT))
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
 RUNBOOK_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "platform-runbook-fixtures.md"
@@ -129,6 +131,21 @@ def changed_status_against_review_base() -> dict[str, str]:
         }
 
     raise AssertionError(f"Unable to diff changed path statuses against review base: {'; '.join(errors)}")
+
+
+def is_release_please_review() -> bool:
+    head_ref = os.environ.get("GITHUB_HEAD_REF", "").strip()
+    if not head_ref:
+        completed = subprocess.run(
+            ["git", "branch", "--show-current"],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if completed.returncode == 0:
+            head_ref = completed.stdout.strip()
+    return head_ref.startswith(RELEASE_PLEASE_BRANCH_PREFIX)
 
 
 def base_request(operation: str = "runtime-info", inputs: dict[str, object] | None = None) -> dict[str, object]:
@@ -463,12 +480,30 @@ class RunnerFoundationTests(unittest.TestCase):
     def test_no_cutover_or_public_claim_surfaces_changed(self) -> None:
         changed = changed_paths_against_review_base()
         status_by_path = changed_status_against_review_base()
+        release_please_review = is_release_please_review()
         forbidden_exact = {
             "speckit-pro/.claude-plugin/plugin.json",
             "speckit-pro/.codex-plugin/plugin.json",
         }
-        for path in changed:
-            self.assertNotIn(path, forbidden_exact)
+        if release_please_review:
+            for path in forbidden_exact & set(changed):
+                completed = subprocess.run(
+                    ["git", "show", f"origin/main:{path}"],
+                    cwd=REPO_ROOT,
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                baseline = json.loads(completed.stdout)
+                current = json.loads((REPO_ROOT / path).read_text(encoding="utf-8"))
+                baseline_version = baseline.pop("version")
+                current_version = current.pop("version")
+                self.assertNotEqual(current_version, baseline_version, path)
+                self.assertEqual(current, baseline, path)
+        else:
+            for path in changed:
+                self.assertNotIn(path, forbidden_exact)
         forbidden_prefixes = (
             "dist/",
             "speckit-pro/skills/",
@@ -500,6 +535,13 @@ class RunnerFoundationTests(unittest.TestCase):
             "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
             "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
         }
+        if release_please_review:
+            allowed_exact.update(
+                {
+                    *forbidden_exact,
+                    "docs-site/src/content/docs/reference/manifests.md",
+                }
+            )
         allowed_xplat008_exact = {
             "docs-site/src/content/docs/contribute-and-release.md",
             "docs-site/src/content/docs/first-run.md",
@@ -623,6 +665,15 @@ class RunnerFoundationTests(unittest.TestCase):
                     or path.startswith("docs/roadmap-"),
                     path,
                 )
+
+    def test_release_please_review_detection_from_environment(self) -> None:
+        with mock.patch.dict(
+            os.environ,
+            {"GITHUB_HEAD_REF": "release-please--branches--main--components--speckit-pro"},
+        ):
+            self.assertTrue(is_release_please_review())
+        with mock.patch.dict(os.environ, {"GITHUB_HEAD_REF": "feature/not-a-release"}):
+            self.assertFalse(is_release_please_review())
 
 
 if __name__ == "__main__":
