@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
-from codex_capability_retention_recovery import *
+if __package__:
+    from .codex_capability_retention_recovery import *
+else:
+    from codex_capability_retention_recovery import *
 
 
 def _effective_retention_deadline(grouped, governing_record_digests, current):

@@ -4,11 +4,12 @@
   "feature_id": "prsg-013-reviewability-markers",
   "status": "emission_ready",
   "source_fingerprint": {
-    "feature_spec_sha": "8629d25719a70151e41e445a148bb37903fc766ef1433b9410c93eb139a3bae4",
-    "plan_declared_scope_sha": "98d68e68e51f14b8d5b78cd5c99f82ff26eaebdbd2410acdd4a3a8845afefd35",
-    "tasks_sha": "0e6ad0831c3824c156a784469e4d966867424dbfa4676c8bec0ccfa04f3ae6cd",
-    "reviewability_sha": "fa42c1fce8681232113dc108d91eb2e1cf5536b8fca895421fdd52dd4e05fcaa",
-    "hazard_route_sha": "d5501ebfc29e3f67f6df2e4f36615efe1784a6d353ebd151a90d111a55a2ce91"
+    "feature_spec_sha": "sha256:8629d25719a70151e41e445a148bb37903fc766ef1433b9410c93eb139a3bae4",
+    "plan_declared_scope_sha": "sha256:98d68e68e51f14b8d5b78cd5c99f82ff26eaebdbd2410acdd4a3a8845afefd35",
+    "tasks_sha": "sha256:0e6ad0831c3824c156a784469e4d966867424dbfa4676c8bec0ccfa04f3ae6cd",
+    "reviewability_sha": "sha256:fa42c1fce8681232113dc108d91eb2e1cf5536b8fca895421fdd52dd4e05fcaa",
+    "hazard_route_sha": "sha256:d5501ebfc29e3f67f6df2e4f36615efe1784a6d353ebd151a90d111a55a2ce91",
+    "changed_file_manifest_sha": "sha256:9999999999999999999999999999999999999999999999999999999999999999"
   },
   "markers": [
     {
@@ -64,10 +65,11 @@
       ],
       "declared_tests": [],
       "reviewability": {
-        "status": "block",
-        "mode": "tasks",
-        "scope": "foundation",
-        "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+      "status": "block",
+      "mode": "tasks",
+      "scope": "foundation",
+      "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json",
+      "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930"
       },
       "hazards": [
         "change-shape:modify-heavy"
@@ -79,6 +81,10 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "checkpoint_evidence_sha": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+        "verification_evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "commit_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
+        "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
         "completed_at": "2026-06-12T04:17:51Z",
         "completed_task_ids": [
           "T001",
@@ -146,10 +152,11 @@
         "tests/speckit-pro/unit/test-plan-layers.sh"
       ],
       "reviewability": {
-        "status": "block",
-        "mode": "tasks",
-        "scope": "us1",
-        "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+      "status": "block",
+      "mode": "tasks",
+      "scope": "us1",
+      "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json",
+      "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930"
       },
       "hazards": [
         "change-shape:modify-heavy"
@@ -161,6 +168,9 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "verification_evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "commit_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
+        "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
         "completed_at": "2026-06-12T04:17:51Z",
         "completed_task_ids": [
           "T007",
@@ -228,10 +238,11 @@
         "tests/speckit-pro/unit/test-plan-layers.sh"
       ],
       "reviewability": {
-        "status": "block",
-        "mode": "tasks",
-        "scope": "us2",
-        "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+      "status": "block",
+      "mode": "tasks",
+      "scope": "us2",
+      "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json",
+      "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930"
       },
       "hazards": [
         "change-shape:modify-heavy"
@@ -243,6 +254,9 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "verification_evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "commit_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
+        "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
         "completed_at": "2026-06-12T04:17:51Z",
         "completed_task_ids": [
           "T016",
@@ -360,10 +374,11 @@
         "tests/speckit-pro/run-all.sh"
       ],
       "reviewability": {
-        "status": "block",
-        "mode": "tasks",
-        "scope": "us3",
-        "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+      "status": "block",
+      "mode": "tasks",
+      "scope": "us3",
+      "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json",
+      "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930"
       },
       "hazards": [
         "change-shape:modify-heavy"
@@ -375,6 +390,9 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "verification_evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "commit_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
+        "head_sha": "6af4e714077c8ebc9fa71466bee2461bc8652930",
         "completed_at": "2026-06-12T04:17:51Z",
         "completed_task_ids": [
           "T027",

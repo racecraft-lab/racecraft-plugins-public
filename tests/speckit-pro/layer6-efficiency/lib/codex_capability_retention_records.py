@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import time
 
-from codex_capability_capture import *
+if __package__:
+    from .codex_capability_capture import *
+else:
+    from codex_capability_capture import *
 
 def _retention_now():
     return datetime.now(timezone.utc)
