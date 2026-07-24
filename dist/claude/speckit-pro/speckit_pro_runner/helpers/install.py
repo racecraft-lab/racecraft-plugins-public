@@ -16,7 +16,7 @@ import tomllib
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from ..envelope import diagnostic, response
+from ..envelope import diagnostic, is_diagnostic, response
 from ..merge_utils import deep_merge
 from ..path_utils import resolves_to_current_python
 from .mutation import empty_mutation, operation_record, resolve_candidate_path, run_mutation_helper, validate_target_path
@@ -1470,7 +1470,3 @@ def doctor_report(install_root: Path, inventory: dict[str, Any], repo_root: Path
 
 def sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def is_diagnostic(value: Any) -> bool:
-    return isinstance(value, dict) and value.get("source") == "runner" and "code" in value

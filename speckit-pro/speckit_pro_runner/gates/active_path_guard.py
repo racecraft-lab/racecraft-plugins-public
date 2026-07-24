@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..envelope import diagnostic, response
+from ..envelope import diagnostic, is_diagnostic, response
 from ..path_utils import find_repo_root, is_relative_to
 
 PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
@@ -5928,7 +5928,3 @@ def has_prohibited_script_shebang_content(content: str) -> bool:
     except IndexError:
         return False
     return bool(re.search(r"^#!.*\b(?:bash|sh|zsh|powershell|pwsh)\b", first_line, re.IGNORECASE))
-
-
-def is_diagnostic(value: Any) -> bool:
-    return isinstance(value, dict) and value.get("source") == "runner" and "code" in value

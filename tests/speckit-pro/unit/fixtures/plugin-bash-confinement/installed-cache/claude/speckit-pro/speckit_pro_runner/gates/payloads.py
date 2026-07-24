@@ -13,7 +13,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .. import RUNNER_VERSION
-from ..envelope import diagnostic, response
+from ..envelope import diagnostic, is_diagnostic, response
 from ..path_utils import find_repo_root, is_relative_to
 from .gate_response import gate_base_data
 
@@ -959,7 +959,3 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: fh.read(65536), b""):
             digest.update(chunk)
     return digest.hexdigest()
-
-
-def is_diagnostic(value: Any) -> bool:
-    return isinstance(value, dict) and value.get("source") == "runner" and "code" in value

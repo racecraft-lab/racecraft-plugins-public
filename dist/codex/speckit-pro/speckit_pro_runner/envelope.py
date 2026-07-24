@@ -66,6 +66,10 @@ def diagnostic(
     return diag
 
 
+def is_diagnostic(value: Any) -> bool:
+    return isinstance(value, dict) and value.get("source") == "runner" and "code" in value
+
+
 def response(
     status: str,
     *,

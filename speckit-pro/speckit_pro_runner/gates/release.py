@@ -11,7 +11,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from ..envelope import diagnostic, response
+from ..envelope import diagnostic, is_diagnostic, response
 from ..merge_utils import deep_merge
 from ..path_utils import find_repo_root, is_relative_to
 from .gate_response import gate_base_data
@@ -1586,7 +1586,3 @@ def xplat008_base_data(entry: Any, operation: str, status: str) -> dict[str, Any
 def resolve_path(raw: str, repo_root: Path) -> Path:
     path = Path(raw.replace("\\", "/"))
     return path if path.is_absolute() else repo_root / path
-
-
-def is_diagnostic(value: Any) -> bool:
-    return isinstance(value, dict) and value.get("source") == "runner" and "code" in value
