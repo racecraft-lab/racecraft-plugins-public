@@ -198,10 +198,7 @@ def _write(path, value, *, private=False, append_only=False, expected_parent_ide
     Path(path).write_bytes(payload)
 
 
-def validate_raw_evidence_root(
-    raw_root, repository_root, *, raw_descriptor=None,
-    raw_directory_lock_held=False, expected_raw_identity=None,
-):
+def _raw_evidence_root_path(raw_root, repository_root):
     if os.name == "nt":
         raise ValueError("operator-only raw evidence permissions are not supported on Windows")
     lexical, repo = Path(os.path.abspath(raw_root)), Path(repository_root).resolve()
@@ -209,6 +206,14 @@ def validate_raw_evidence_root(
     raw = lexical.resolve(strict=True)
     if raw == repo or repo in raw.parents or _git_worktree_ancestor(raw):
         raise ValueError("raw_evidence_root must resolve outside every Git worktree")
+    return raw
+
+
+def validate_raw_evidence_root(
+    raw_root, repository_root, *, raw_descriptor=None,
+    raw_directory_lock_held=False, expected_raw_identity=None,
+):
+    raw = _raw_evidence_root_path(raw_root, repository_root)
     if raw_descriptor is not None:
         if not raw_directory_lock_held or expected_raw_identity is None:
             raise ValueError("bound raw evidence validation requires its directory lock and identity")
@@ -224,12 +229,19 @@ def validate_raw_evidence_root(
 
 
 def _validated_raw_evidence_root_binding(raw_root, repository_root):
-    raw = validate_raw_evidence_root(raw_root, repository_root)
+    raw = _raw_evidence_root_path(raw_root, repository_root)
     metadata = os.stat(raw, follow_symlinks=False)
     identity = _stable_directory_identity(metadata)
     descriptor = _private_directory_descriptor(raw, identity)
     try:
-        validate_raw_evidence_root(raw, repository_root)
+        _acquire_append_only_directory_lock(descriptor, wait=True)
+        validate_raw_evidence_root(
+            raw,
+            repository_root,
+            raw_descriptor=descriptor,
+            raw_directory_lock_held=True,
+            expected_raw_identity=identity,
+        )
         _assert_private_directory_current(raw, descriptor, identity)
     finally:
         os.close(descriptor)

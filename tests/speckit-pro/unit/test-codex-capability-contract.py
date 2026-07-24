@@ -2934,6 +2934,52 @@ class CapabilityContractTests(unittest.TestCase):
             self.assertFalse(any(raw_root.glob(f"{capabilities.PRIVATE_TEMPORARY_PREFIX}*")))
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
+    def test_raw_binding_holds_directory_lock_through_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            raw_root = Path(tmp) / "raw"
+            raw_root.mkdir(mode=0o700)
+            entered = threading.Event()
+            release = threading.Event()
+            errors: list[Exception] = []
+            original_validate_tree = capability_private._validate_raw_evidence_tree
+
+            def block_validation(raw: Path) -> None:
+                entered.set()
+                if not release.wait(timeout=5):
+                    raise RuntimeError("test did not release raw evidence validation")
+                original_validate_tree(raw)
+
+            def bind() -> None:
+                try:
+                    capability_private._validated_raw_evidence_root_binding(raw_root, ROOT)
+                except Exception as error:
+                    errors.append(error)
+
+            worker = threading.Thread(target=bind)
+            with unittest.mock.patch.object(
+                capability_private,
+                "_validate_raw_evidence_tree",
+                side_effect=block_validation,
+            ):
+                worker.start()
+                try:
+                    self.assertTrue(entered.wait(timeout=5))
+                    descriptor = os.open(
+                        raw_root,
+                        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_DIRECTORY", 0),
+                    )
+                    try:
+                        with self.assertRaises(BlockingIOError):
+                            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    finally:
+                        os.close(descriptor)
+                finally:
+                    release.set()
+                    worker.join(timeout=5)
+            self.assertFalse(worker.is_alive())
+            self.assertEqual(errors, [])
+
+    @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
     def test_append_only_directory_lock_precedes_temporary_visibility(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             raw_root = Path(tmp) / "raw"
@@ -3357,23 +3403,37 @@ class CapabilityContractTests(unittest.TestCase):
                 os.stat(raw_root, follow_symlinks=False),
             )
             with capability_retention_records._retention_lock(raw_root, raw_identity):
+                raw_descriptor = os.open(
+                    raw_root,
+                    os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_DIRECTORY", 0),
+                )
                 marker_descriptor = os.open(
                     raw_root / capabilities.RETENTION_LOCK_FILE,
                     os.O_RDWR | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
                 )
                 try:
                     with self.assertRaises(BlockingIOError):
+                        fcntl.flock(raw_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    with self.assertRaises(BlockingIOError):
                         fcntl.flock(marker_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 finally:
+                    os.close(raw_descriptor)
                     os.close(marker_descriptor)
+            raw_descriptor = os.open(
+                raw_root,
+                os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_DIRECTORY", 0),
+            )
             marker_descriptor = os.open(
                 raw_root / capabilities.RETENTION_LOCK_FILE,
                 os.O_RDWR | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0),
             )
             try:
+                fcntl.flock(raw_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(raw_descriptor, fcntl.LOCK_UN)
                 fcntl.flock(marker_descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 fcntl.flock(marker_descriptor, fcntl.LOCK_UN)
             finally:
+                os.close(raw_descriptor)
                 os.close(marker_descriptor)
 
     @unittest.skipUnless(capabilities.HAS_DESCRIPTOR_RELATIVE_IO, "descriptor-relative I/O required")
