@@ -22,12 +22,27 @@ from __future__ import annotations
 import os
 import platform
 import re
+from pathlib import Path
 
 # The single frozen parse filter (Clarifications Session 1, S1-Q4).
 VERBOSE_LINE = re.compile(r"^\s*(.+?)\s\.\.\.\s(PASS|FAIL)$")
 
 class BaselineError(Exception):
     """Raised on a malformed capture (empty/stale name, missing script, root env)."""
+
+
+def baseline_inventory(path: Path) -> list[str]:
+    names: list[str] = []
+    total: int | None = None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("TOTAL: "):
+            total = int(line.removeprefix("TOTAL: "))
+            continue
+        _ordinal, name = line.split(" ", 1)
+        names.append(name)
+    if total != len(names):
+        raise AssertionError(f"baseline TOTAL {total} does not match {len(names)} names")
+    return names
 
 
 def parse_verbose_lines(text: str) -> list[tuple[str, str]]:
