@@ -2940,7 +2940,7 @@ class CapabilityContractTests(unittest.TestCase):
             raw_root.mkdir(mode=0o700)
             entered = threading.Event()
             release = threading.Event()
-            errors: list[BaseException] = []
+            errors: list[Exception] = []
             original_validate_tree = capability_private._validate_raw_evidence_tree
 
             def block_validation(raw: Path) -> None:
@@ -2952,7 +2952,7 @@ class CapabilityContractTests(unittest.TestCase):
             def bind() -> None:
                 try:
                     capability_private._validated_raw_evidence_root_binding(raw_root, ROOT)
-                except BaseException as error:
+                except Exception as error:
                     errors.append(error)
 
             worker = threading.Thread(target=bind)
@@ -2962,16 +2962,18 @@ class CapabilityContractTests(unittest.TestCase):
                 side_effect=block_validation,
             ):
                 worker.start()
-                self.assertTrue(entered.wait(timeout=5))
-                descriptor = os.open(
-                    raw_root,
-                    os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_DIRECTORY", 0),
-                )
                 try:
-                    with self.assertRaises(BlockingIOError):
-                        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    self.assertTrue(entered.wait(timeout=5))
+                    descriptor = os.open(
+                        raw_root,
+                        os.O_RDONLY | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_DIRECTORY", 0),
+                    )
+                    try:
+                        with self.assertRaises(BlockingIOError):
+                            fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    finally:
+                        os.close(descriptor)
                 finally:
-                    os.close(descriptor)
                     release.set()
                     worker.join(timeout=5)
             self.assertFalse(worker.is_alive())
