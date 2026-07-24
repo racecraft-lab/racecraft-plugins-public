@@ -28,6 +28,7 @@ SHARED_LIB = TESTS_ROOT / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
+from capture_baseline import baseline_inventory  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 
@@ -252,20 +253,6 @@ def fake_claude_run(argv: list[str], **kwargs: object) -> subprocess.CompletedPr
     (cwd / "drift-exact.txt").write_text(drift_exact, encoding="utf-8")
     (cwd / "drift-number.txt").write_text(drift_number, encoding="utf-8")
     return subprocess.CompletedProcess(argv, 0)
-
-
-def baseline_inventory(path: Path) -> list[str]:
-    names: list[str] = []
-    total: int | None = None
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("TOTAL: "):
-            total = int(line.removeprefix("TOTAL: "))
-            continue
-        _ordinal, name = line.split(" ", 1)
-        names.append(name)
-    if total != len(names):
-        raise AssertionError(f"baseline TOTAL {total} does not match {len(names)} names")
-    return names
 
 
 def subprocess_run_calls(tree: ast.AST) -> list[ast.Call]:

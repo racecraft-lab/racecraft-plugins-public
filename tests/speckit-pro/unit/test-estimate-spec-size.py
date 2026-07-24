@@ -31,6 +31,7 @@ SHARED_LIB = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(SHARED_LIB) not in sys.path:
     sys.path.insert(0, str(SHARED_LIB))
 
+from capture_baseline import baseline_inventory  # noqa: E402
 from test_result import CountingTestResult, run_counted  # noqa: E402
 
 # Maps the deleted script's value-taking flags onto the runner's structured
@@ -117,20 +118,6 @@ def golden_pairs() -> list[tuple[str, dict[str, object], dict]]:
         expected = json.loads((FIXTURE_DIR / f"{name}.json").read_text(encoding="utf-8"))
         pairs.append((name, inputs, expected))
     return pairs
-
-
-def baseline_inventory(path: Path) -> list[str]:
-    names: list[str] = []
-    total: int | None = None
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("TOTAL: "):
-            total = int(line.removeprefix("TOTAL: "))
-            continue
-        _ordinal, name = line.split(" ", 1)
-        names.append(name)
-    if total != len(names):
-        raise AssertionError(f"baseline TOTAL {total} does not match {len(names)} names")
-    return names
 
 
 CURRENT_INVENTORY = [

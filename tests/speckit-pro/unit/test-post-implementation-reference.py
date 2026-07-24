@@ -38,21 +38,8 @@ BASELINE = (
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from capture_baseline import baseline_inventory  # noqa: E402
 from test_result import run_counted  # noqa: E402
-
-
-def baseline_inventory(path: Path) -> list[str]:
-    names: list[str] = []
-    total: int | None = None
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("TOTAL: "):
-            total = int(line.removeprefix("TOTAL: "))
-        else:
-            _ordinal, name = line.split(" ", 1)
-            names.append(name)
-    if total != len(names):
-        raise AssertionError(f"baseline TOTAL {total} does not match {len(names)} names")
-    return names
 
 
 class PostImplementationReferenceTests(unittest.TestCase):
