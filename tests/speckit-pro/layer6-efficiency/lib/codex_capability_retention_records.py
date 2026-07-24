@@ -277,6 +277,7 @@ def _retention_lock(raw, expected_raw_identity, *, wait=False):
     raw_descriptor = _private_directory_descriptor(raw, expected_raw_identity)
     marker_descriptor = None; locked = False
     try:
+        _acquire_append_only_directory_lock(raw_descriptor, wait=wait)
         try:
             marker_descriptor = os.open(
                 RETENTION_LOCK_FILE,
