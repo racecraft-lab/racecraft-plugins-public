@@ -70,12 +70,13 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 
 | Phase | Command | Status | Notes |
 |---|---|---|---|
-| Specify | `$speckit-specify` | Pending | Define the qualification platform and evidence boundaries |
+| Specify | `$speckit-specify` | Complete | 26 testable requirements, 4 user stories, 14 success criteria; G1 passed with zero clarification markers |
 | Clarify | `$speckit-clarify` | Pending | Resolve contract-level details without reopening accepted Grill Me decisions |
 | Plan | `$speckit-plan` | Pending | Design three ordered review slices and re-run reviewability |
 | Checklist | `$speckit-checklist` | Pending | Run four risk-focused requirement checklists |
 | Tasks | `$speckit-tasks` | Pending | Produce TDD-first tasks grouped by the three accepted slices |
 | Analyze | `$speckit-analyze` | Pending | Reconcile roadmap, design concept, spec, plan, and tasks |
+| Confidence Gate | G6.5 | Pending | Evaluate the Analyze consensus confidence emit before implementation |
 | Implement | `$speckit-implement` | Pending | Execute red-green-refactor and release-artifact regeneration |
 | Post | Post-Implementation | Pending | Run full verification, review, PR, and handoff work |
 
@@ -91,6 +92,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | G4 | After Checklist | Every true gap is remediated or explicitly recorded as out of scope |
 | G5 | After Tasks | Every requirement maps to ordered TDD tasks and each slice has independent verification |
 | G6 | After Analyze | No critical or high inconsistency, evidence leak, authority drift, or roadmap-boundary conflict remains |
+| G6.5 | Before Implement | Record and evaluate pre-implementation confidence in the preflight-resolved advisory mode |
 | G7 | After Each Implementation Slice | Focused tests, replay, diff hygiene, reviewability, and applicable generated-artifact checks pass |
 
 ---
@@ -175,6 +177,7 @@ platform claim.
 | Split decision | Accepted | One spec, three ordered review slices |
 | Preset resolution | Pass | Spec, plan, and tasks templates resolve to `speckit-pro-reviewability v1.0.0` |
 | Legacy relocation | Not applicable | G56R namespaces are suppressed by the static Tier-2 relocation rule |
+| After-Specify Doctor | Warn | Templates, Python runner, constitution, and feature spec passed; `.specify/init-options.json` names Claude while `.claude/commands/` is absent in this Codex worktree |
 
 The size estimate is advisory and likely overstates fixture-heavy work. The
 plan-phase reviewability gate is authoritative. Planning must preserve the
@@ -192,7 +195,9 @@ is proven.
 | KISS, Simplicity, YAGNI | Reuse G56R-002 contracts, add one score-bundle family, one materializer, and thin adapters | Plan complexity review and Analyze |
 | Generated Artifact Integrity | Refresh runner trust metadata, payloads, and proof fixtures after shipped runner changes | `refresh-release-artifacts.py` and final `--check` |
 
-**Constitution Check:** Must be recorded before G1 and rechecked at G3.
+**Constitution Check:** Verified after Specify; G1 artifacts preserve the
+declared plugin, runtime, TDD, commit, simplicity, and generated-artifact
+boundaries. Recheck at G3.
 
 ---
 
@@ -384,17 +389,17 @@ semantic quality, or route qualification.
 
 ### Specify Results
 
-| Metric | Expected Result |
+| Metric | Result |
 |---|---|
-| Functional requirements | All success criteria above become uniquely identified, testable requirements |
-| User stories | Four independently testable capability stories |
-| Acceptance criteria | AC-2.1, AC-2.6 through AC-2.16, AC-2.20, plus G56R-003 shares of AC-2.19 and AC-2.21; consume AC-2.2 through AC-2.5 upstream and exclude AC-2.17 and AC-2.18 |
-| Unresolved markers | Zero before G1 |
+| Functional requirements | 26 uniquely identified, testable requirements |
+| User stories | 4 independently testable capability stories with 14 acceptance scenarios |
+| Acceptance criteria | 14 measurable success criteria preserve the required PRD ownership and upstream/downstream boundaries |
+| Unresolved markers | 0; G1 passed |
 
 ### Files Generated
 
-- [ ] `specs/g56r-003-evaluation-runner-scoring/spec.md`
-- [ ] `specs/g56r-003-evaluation-runner-scoring/checklists/requirements.md`
+- [x] `specs/g56r-003-evaluation-runner-scoring/spec.md`
+- [x] `specs/g56r-003-evaluation-runner-scoring/checklists/requirements.md`
 
 ### Traceability Markers
 
@@ -854,6 +859,21 @@ Analyze.
 
 ---
 
+## Phase 6.5: Confidence Gate
+
+**When to run:** After Analyze and its mandatory consensus item, before any
+implementation task. Resolve the mode once during preflight and use the latest
+workflow confidence emit.
+
+| Field | Value |
+|---|---|
+| Mode | Advisory |
+| Threshold | 0.90 |
+| Status | Pending |
+| Bounded remediation | Pending |
+
+---
+
 ## Phase 7: Implement
 
 **When to run:** After tasks and Analyze pass.
@@ -915,6 +935,23 @@ For every task:
 ---
 
 ## Post-Implementation Checklist
+
+| Post Item | Status |
+|---|---|
+| Post: Doctor Extension Check | Pending |
+| Post: Verify Implementation | Pending |
+| Post: Verify Tasks Phantom Check | Pending |
+| Post: Code Review | Pending |
+| Post: Integration Suite | Pending |
+| Post: Reviewability Diff Gate | Pending |
+| Post: Self-Review | Pending |
+| Post: UAT Runbook Generation | Pending |
+| Post: Final Reviewability Backstop | Pending |
+| Post: PR Packet/Body Generation | Pending |
+| Post: PR Body Generation | Pending |
+| Post: PR Creation | Pending |
+| Post: Review Remediation | Pending |
+| Post: Retrospective | Pending |
 
 - [ ] All tasks are complete and trace to requirements.
 - [ ] Every slice has red-green-refactor evidence.

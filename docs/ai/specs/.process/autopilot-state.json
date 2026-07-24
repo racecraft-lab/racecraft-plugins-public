@@ -1,43 +1,240 @@
 {
-  "workflow_file": "docs/ai/specs/.process/CAR-002-workflow.md",
-  "spec_id": "CAR-002",
-  "feature_dir": "specs/car-002-capability-probing-telemetry",
-  "updated_at": "2026-07-24T12:34:46Z",
-  "active_step": "Archived: post-merge cleanup applied for CAR-002 and G56R-002",
-  "status": "completed_archived",
-  "prior_run_note": "Detailed implementation and review state remains in the preserved CAR-002 and G56R-002 workflow files and git history.",
+  "workflow_file": "docs/ai/specs/.process/G56R-003-workflow.md",
+  "spec_id": "G56R-003",
+  "feature_dir": "specs/g56r-003-evaluation-runner-scoring",
+  "updated_at": "2026-07-24T23:30:09Z",
+  "active_step": "Phase 2: Clarify - Successor Freeze and Invalidation",
+  "status": "in_progress",
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
     "consensus_mode": "moderate",
     "gate_failure": "stop"
   },
+  "runtime": {
+    "parent_model": "gpt-5.6-sol",
+    "parent_reasoning_effort": "xhigh",
+    "python": "3.11.0",
+    "runner_version": "0.1.0",
+    "implementation_agent": "implement-executor",
+    "subagent_slots": 3
+  },
   "archive_sweep": {
-    "status": "applied",
-    "cleanup_branch": "codex/archive-merged-specs-20260724",
-    "archived_specs": [
-      {
-        "spec_id": "CAR-002",
-        "pull_requests": [
-          369
-        ],
-        "report": ".specify/memory/archive-reports/2026-07-24-car-002-post-merge-hygiene.md"
-      },
-      {
-        "spec_id": "G56R-002",
-        "pull_requests": [
-          366,
-          367,
-          368
-        ],
-        "report": ".specify/memory/archive-reports/2026-07-24-g56r-002-post-merge-hygiene.md"
-      }
-    ]
+    "status": "no_candidates",
+    "execution_path": "extension_contract",
+    "invocation_available": true,
+    "prerequisite_available": true,
+    "prerequisite_mode": "codex_native_worktree_binding",
+    "archive_extension_installed": true,
+    "cleanup_mode": "apply_eligibility",
+    "eligible_previous_specs": [],
+    "excluded_current_spec": "specs/g56r-003-evaluation-runner-scoring",
+    "safeToApplyCleanup": false
+  },
+  "prerequisites": {
+    "all_pass": true,
+    "branch_from_git": "g56r-003-evaluation-runner-scoring",
+    "branch_from_runner": "",
+    "branch_runner_discrepancy": "Runner reported an empty branch on the linked worktree; direct git branch and upstream checks passed.",
+    "upstream": "origin/g56r-003-evaluation-runner-scoring",
+    "head": "8a54df37f784bb1cf961263a566706f17017f71b",
+    "specify_cli": "0.11.8",
+    "agent_install": "no_op",
+    "preset": "speckit-pro-reviewability v1.0.0",
+    "hooks": "18 hook events configured"
   },
   "project_commands": {
-    "spec_index_write": "generate-spec-index-write",
-    "spec_index_check": "generate-spec-index-check",
-    "structural_suite": "python3 tests/speckit-pro/run-all.py --layer 1",
-    "full_suite": "python3 tests/speckit-pro/run-all.py"
-  }
+    "BUILD": "N/A",
+    "TYPECHECK": "N/A",
+    "LINT": "N/A",
+    "LINT_FIX": "N/A",
+    "UNIT_TEST": "N/A",
+    "INTEGRATION_TEST": "N/A",
+    "SINGLE_FILE_TEST": "N/A",
+    "SINGLE_FILE_INTEGRATION": "N/A",
+    "FULL_VERIFY": "N/A"
+  },
+  "capability_paths": {
+    "codebase_and_spec_context": "repo-local files plus rg and git",
+    "library_documentation": "Context7 when a library or SDK contract is needed",
+    "openai_product_documentation": "official OpenAI documentation capability",
+    "web_and_domain_research": "primary-source web research",
+    "source_extraction": "direct page extraction or repository reads",
+    "repo_local_helpers": "speckit_pro_runner"
+  },
+  "phase_results": {
+    "specify": {
+      "status": "completed",
+      "gate": "G1",
+      "gate_status": "passed",
+      "functional_requirements": 26,
+      "user_stories": 4,
+      "acceptance_scenarios": 14,
+      "success_criteria": 14,
+      "needs_clarification_markers": 0,
+      "files": [
+        "specs/g56r-003-evaluation-runner-scoring/spec.md",
+        "specs/g56r-003-evaluation-runner-scoring/checklists/requirements.md"
+      ],
+      "doctor_hook": "warning: Claude integration configured without .claude/commands in the Codex worktree"
+    }
+  },
+  "plan": [
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Successor Freeze and Invalidation",
+      "status": "in_progress"
+    },
+    {
+      "step": "Phase 2: Clarify - Successor Freeze and Invalidation Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Materialization, Delivery, and Trace Joins",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Materialization, Delivery, and Trace Joins Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Corpus and Blinded Scoring",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Corpus and Blinded Scoring Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Partitions, Statistics, and Campaign Controls",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Partitions, Statistics, and Campaign Controls Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - LLM Integration",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - LLM Integration Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Data Integrity",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Data Integrity Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Performance",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Performance Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Pending task decomposition",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Final Reviewability Backstop",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Packet/Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "pending"
+    }
+  ]
 }
