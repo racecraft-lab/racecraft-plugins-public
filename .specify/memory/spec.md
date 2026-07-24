@@ -2193,3 +2193,25 @@ foundation PR #362. Canonical evidence remains under `docs/ai/research/`, and
 process evidence remains under `docs/ai/specs/.process/G56R-001-*`. Recovery
 commands are in
 `.specify/memory/archive-reports/2026-07-16-g56r-001-post-merge-hygiene.md`.
+
+## Revision 2026-07-24 - CAR-002 and G56R-002 Capability Evidence Archived
+
+### Shipped Behavior Preserved
+
+- CAR-002 shipped the bounded Claude runtime capability snapshot, telemetry
+  profile, exact-treatment trace schema, four synthetic record classes, and
+  deterministic offline validation through merged PR #369.
+- G56R-002 shipped the official-source capability freeze, exact-treatment and
+  telemetry contracts, sanitized deterministic replay, retained-evidence
+  controls, and downstream handoff through merged PRs #366-#368.
+- Both lanes preserve the rule that capability and treatment evidence do not
+  qualify preferred routes, order fallbacks, or change installed defaults.
+- CAR-003 and G56R-003 are ready because their direct evidence dependencies now
+  live in canonical research, test-contract, fixture, and validator paths.
+
+### Cleanup Note
+
+The active CAR-002 and G56R-002 folders were removed after merge provenance was
+confirmed. Historical workflow and design evidence remains under
+`docs/ai/specs/.process/`. Detailed provenance, canonical artifact locations,
+and recovery commands live in the dated CAR-002 and G56R-002 archive reports.

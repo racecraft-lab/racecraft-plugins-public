@@ -17,7 +17,8 @@ is prepared for `$speckit-scaffold-spec G56R-NNN`.
 **Proposed branch:** `codex/agent-routing-fallback`
 **Status:** Active; G56R-001 is complete and archived after PR #360 merged on
 the shared official-source evidence foundation from PR #362;
-[G56R-002](.process/G56R-002-workflow.md) is in progress
+[G56R-002](.process/G56R-002-workflow.md) is complete and archived after
+PRs #366-#368; G56R-003 is ready
 
 **Legacy identifier note:** `G56R` and the existing filenames are retained for
 traceability. They do not limit the candidate catalog to GPT-5.6.
@@ -46,10 +47,10 @@ G56R-011
 
 **Implementation boundary:** This sequence has no external prerequisite, but its
 internal dependencies still apply: the shared official-source evidence
-foundation merged via PR #362, G56R-001 merged via PR #360, and G56R-002 is
-implemented through T039 under the preserved no-qualification boundary. Its
-final exact-head metadata review and repository checks remain before the spec
-can complete and unblock G56R-003.
+foundation merged via PR #362, G56R-001 merged via PR #360, and G56R-002
+completed through PRs #366-#368 under the preserved no-qualification boundary.
+G56R-003 is ready to consume the canonical capability freeze, treatment
+contracts, replay fixtures, and evidence report.
 A route-agnostic Python `install-codex-agents` helper is active for safe static
 agent refreshes. G56R-006 later extends that baseline with capability-aware
 resolution, materialization, and atomic policy installation; it must not
@@ -216,8 +217,8 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
 | G56R-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | PR #360 merged; canonical evidence lives under `docs/ai/research/` |
-| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | In Progress | [.process/G56R-002-workflow.md](.process/G56R-002-workflow.md) | Implementation complete through T039; finish exact-head metadata review and final checks |
-| G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Pending | - | Blocked by G56R-002 |
+| G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Complete / Archived | [.process/G56R-002-workflow.md](.process/G56R-002-workflow.md) | PRs #366-#368 merged; canonical evidence, contracts, replay fixtures, and validators live outside `specs/**` |
+| G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Ready | - | G56R-002 dependency satisfied by PRs #366-#368 |
 | G56R-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by G56R-003 |
 | G56R-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by G56R-004 |
 | G56R-006 | Capability-aware Resolver, Materializer, Installer, and Strict Override | Pending | - | Blocked by G56R-005 |

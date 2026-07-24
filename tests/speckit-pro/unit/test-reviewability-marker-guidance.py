@@ -56,11 +56,11 @@ VERIFICATION_REPORT_SCHEMA_PATHS = tuple(
 )
 MARKER_CHECKPOINT_SCHEMA_PATH = (
     REPO_ROOT
-    / "specs/g56r-002-capability-discovery-telemetry/contracts/marker-checkpoint.schema.json"
+    / "tests/speckit-pro/layer6-efficiency/contracts/marker-checkpoint.schema.json"
 )
 MARKER_CHECKPOINT_PATHS = tuple(
     REPO_ROOT
-    / f"specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us{index}.json"
+    / f"tests/speckit-pro/unit/fixtures/final-reviewability-backstop/checkpoints/us{index}.json"
     for index in range(1, 4)
 )
 COMPLETED_MARKER_EVIDENCE_PATH = (
@@ -514,8 +514,20 @@ class ReviewabilityMarkerGuidanceTests(unittest.TestCase):
                     superseded_evidence["checkpoint_evidence_sha"],
                 ),
             )
-            correction_path = REPO_ROOT / correction["evidence_path"]
-            correction_bytes = correction_path.read_bytes()
+            correction_bytes = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(REPO_ROOT),
+                    "show",
+                    (
+                        f"{correction['checkpoint_evidence_commit_sha']}:"
+                        f"{correction['evidence_path']}"
+                    ),
+                ],
+                capture_output=True,
+                check=True,
+            ).stdout
             self.assertEqual(
                 correction["checkpoint_evidence_sha"],
                 "sha256:" + hashlib.sha256(correction_bytes).hexdigest(),
