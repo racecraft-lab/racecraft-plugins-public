@@ -12,7 +12,9 @@ from types import SimpleNamespace
 from typing import Any
 
 from ..envelope import diagnostic, response
+from ..merge_utils import deep_merge
 from ..path_utils import find_repo_root, is_relative_to
+from .gate_response import gate_base_data
 
 PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
 DEFAULT_CASE_FILE = "tests/speckit-pro/unit/fixtures/runner-gates/release-readiness-cases.json"
@@ -1566,34 +1568,8 @@ def github_changed_files(repo_root: Path, context: dict[str, Any]) -> list[str] 
     return [line for line in completed.stdout.splitlines() if line]
 
 
-def deep_merge(target: dict[str, Any], overrides: dict[str, Any]) -> None:
-    for key, value in overrides.items():
-        if isinstance(value, dict) and isinstance(target.get(key), dict):
-            deep_merge(target[key], value)
-        else:
-            target[key] = copy.deepcopy(value)
-
-
 def base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
-    gate_status = "pass"
-    if status in {"expected_failure", "subprocess_failure"}:
-        gate_status = "fail"
-    elif status == "missing_prerequisite":
-        gate_status = "skipped"
-    elif status == "input_error":
-        gate_status = "input_error"
-    return {
-        "gate": {
-            "gate_id": entry.helper_id,
-            "operation": operation,
-            "gate_status": gate_status,
-            "promoted": status != "input_error",
-            "blocking": status != "ok",
-            "comparison_ids": [f"us2-{operation}"],
-            "promotion_record": PROMOTION_RECORD,
-        },
-        "artifacts": [{"path": PROMOTION_RECORD, "kind": "fixture"}],
-    }
+    return gate_base_data(entry, operation, status, PROMOTION_RECORD)
 
 
 def xplat008_base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
