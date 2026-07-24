@@ -63,7 +63,7 @@
             {
               "sequence": 1,
               "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoint-corrections/us1-001.json",
-              "checkpoint_evidence_commit_sha": "b43333f0268c442696f8bd48ce4f8f225da56a6a",
+              "checkpoint_evidence_commit_sha": "06d54487fd3b507333f96e571223805c1956998b",
               "checkpoint_evidence_sha": "sha256:1d77fe58b53c0dac38e375dbd6fe7c8eb87ff9ffc694aa032069b2c918ad20c8",
               "supersedes_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us1.json",
               "supersedes_evidence_commit_sha": "a6284ae644634fde09a5109827068cf8de2d8b15",
@@ -131,7 +131,7 @@
             {
               "sequence": 1,
               "evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoint-corrections/us2-001.json",
-              "checkpoint_evidence_commit_sha": "b43333f0268c442696f8bd48ce4f8f225da56a6a",
+              "checkpoint_evidence_commit_sha": "06d54487fd3b507333f96e571223805c1956998b",
               "checkpoint_evidence_sha": "sha256:d6e7c2eba35d177be8b307016b23481ed315b4ed972d530da003ea7d36931d5a",
               "supersedes_evidence_path": "specs/g56r-002-capability-discovery-telemetry/.process/checkpoints/us2.json",
               "supersedes_evidence_commit_sha": "a6284ae644634fde09a5109827068cf8de2d8b15",
