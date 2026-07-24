@@ -1647,3 +1647,25 @@ The active G56R-001 directory was removed after PR #360 merged on top of PR
 process files remain canonical. G56R-002 is ready for capability discovery and
 telemetry profiling under the preserved no-qualification boundary; exact
 recovery is recorded in the G56R-001 archive report.
+
+## Revision 2026-07-24 - CAR-002 and G56R-002 Post-Merge Architecture
+
+### Technical Approach Preserved
+
+- CAR-002 keeps durable capability evidence under `docs/ai/research/`, its
+  adapters under `tests/speckit-pro/layer6-efficiency/lib/`, and deterministic
+  fixtures and validation under `tests/speckit-pro/unit/`.
+- G56R-002 keeps durable capability evidence under `docs/ai/research/`, focused
+  capability and treatment modules under `tests/speckit-pro/layer6-efficiency/`,
+  contract schemas under `tests/speckit-pro/layer6-efficiency/contracts/`, and
+  replay/checkpoint fixtures under `tests/speckit-pro/unit/fixtures/`.
+- Completed-marker provenance continues to name its historical spec paths and
+  is validated from the recorded git commits, so live tests no longer depend on
+  an active completed spec directory.
+
+### Testing and Cleanup
+
+The cleanup migrates only live test-owned contracts and fixtures, removes the
+two merged active spec folders, regenerates SpecKit indexes, validates project
+state JSON, and runs focused plus repository structural checks. CAR-003 and
+G56R-003 may now scaffold against the canonical shipped evidence.

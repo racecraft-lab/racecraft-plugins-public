@@ -23,7 +23,7 @@ else:
 
 
 ROOT = Path(__file__).resolve().parents[4]
-SCHEMA_PATH = ROOT / "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"
+SCHEMA_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/contracts/treatment-record.schema.json"
 MANIFEST_PATH = ROOT / "docs/ai/research/codex-agent-route-candidate-manifest.json"
 MAX_INPUT_BYTES = 8 * 1024 * 1024
 MAX_NESTING_DEPTH = 64

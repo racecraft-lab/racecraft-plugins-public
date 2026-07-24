@@ -1862,6 +1862,40 @@ deleted. Exact PR titles, merged-at timestamps, merge commits, and head branches
 are recorded in
 `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`.
 
+## 2026-07-24 - CAR-002 and G56R-002 Post-Merge Archive Cleanup
+
+### CAR-002
+
+- PR: https://github.com/racecraft-lab/racecraft-plugins-public/pull/369
+- Title: `feat(car-002): capture Claude runtime capability probe evidence and trace contracts`
+- Merged at: `2026-07-23T02:11:51Z`
+- Merge commit: `4eea291ab71f47f03ab14da6af19e94381c2af2f`
+- Source: `specs/car-002-capability-probing-telemetry`
+- Canonical artifacts: `docs/ai/research/claude-runtime-capability-snapshot.json`,
+  `docs/ai/research/claude-telemetry-capability-profile.json`,
+  `docs/ai/research/claude-trace-contract.schema.json`, and the corresponding
+  Layer 6 adapter plus deterministic unit fixtures.
+
+### G56R-002
+
+- PRs: https://github.com/racecraft-lab/racecraft-plugins-public/pull/366,
+  https://github.com/racecraft-lab/racecraft-plugins-public/pull/367, and
+  https://github.com/racecraft-lab/racecraft-plugins-public/pull/368
+- Merge commits: `8d11815eceefe25683f966241de722592f86d58e`,
+  `470faccb6eea814ad23d49602178a52490d1ccc7`, and
+  `06d54487fd3b507333f96e571223805c1956998b`
+- Source: `specs/g56r-002-capability-discovery-telemetry`
+- Canonical artifacts: `docs/ai/research/codex-g56r-002-capability-evidence.md`,
+  `docs/ai/research/codex-g56r-002-executable-candidate-freeze.json`, focused
+  Layer 6 capability/treatment modules and contracts, and deterministic replay
+  and completed-marker fixtures.
+
+Detailed recovery and verification evidence:
+
+- `.specify/memory/archive-reports/2026-07-24-car-002-post-merge-hygiene.md`
+- `.specify/memory/archive-reports/2026-07-24-g56r-002-post-merge-hygiene.md`
+
+
 ---
 
 ## 2026-07-16 - HRNS-001 and G56R-001 Post-Merge Archive Sweep

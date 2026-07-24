@@ -41,7 +41,7 @@ PUBLISHED_FREEZE_PATH = ROOT / "docs/ai/research/codex-g56r-002-executable-candi
 CAPABILITY_EVIDENCE_PATH = ROOT / "docs/ai/research/codex-g56r-002-capability-evidence.md"
 TREATMENT_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"
 TREATMENT_FIXTURE_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
-TREATMENT_SCHEMA_PATH = ROOT / "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"
+TREATMENT_SCHEMA_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/contracts/treatment-record.schema.json"
 TREATMENT_PREDECESSOR_PUBLISHED_AT = "2026-07-17T04:44:32.543011Z"
 TREATMENT_SUCCESSOR_PUBLISHED_AT = "2026-07-18T19:40:00Z"
 DIGEST_MANIFEST_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-replay/fixture-digests.json"
@@ -757,7 +757,9 @@ class CapabilityContractTests(unittest.TestCase):
         self.assertEqual({key: summary.get(key) for key in expected}, expected)
 
     def test_schema_negative_constraints_match_runtime(self) -> None:
-        schema = load_json(ROOT / "specs/g56r-002-capability-discovery-telemetry/contracts/capability-freeze.schema.json")
+        schema = load_json(
+            ROOT / "tests/speckit-pro/layer6-efficiency/contracts/capability-freeze.schema.json"
+        )
         self.assertEqual(schema["properties"]["tuple_decisions"]["minItems"], 1)
         self.assertEqual(schema["properties"]["approved_canary_executors"]["maxItems"], 0)
         self.assertEqual(schema["properties"]["canary_results"]["maxItems"], 0)
@@ -3735,7 +3737,7 @@ class CapabilityContractTests(unittest.TestCase):
     def test_treatment_observation_schema_binds_every_field_to_its_value_shape(self) -> None:
         schema = load_json(
             ROOT
-            / "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"
+            / "tests/speckit-pro/layer6-efficiency/contracts/treatment-record.schema.json"
         )
         field_schema = schema["$defs"]["telemetryFieldPath"]
         variants = schema["$defs"]["observationTypedValue"]["oneOf"]
@@ -3843,7 +3845,7 @@ class TreatmentContractTests(unittest.TestCase):
     def test_treatment_contract_uses_breaking_schema_version(self) -> None:
         schema = load_json(
             ROOT
-            / "specs/g56r-002-capability-discovery-telemetry/contracts/treatment-record.schema.json"
+            / "tests/speckit-pro/layer6-efficiency/contracts/treatment-record.schema.json"
         )
         self.assertEqual(treatment.SCHEMA_VERSION, "2.0.0")
         self.assertEqual(schema["properties"]["schema_version"]["const"], "2.0.0")
