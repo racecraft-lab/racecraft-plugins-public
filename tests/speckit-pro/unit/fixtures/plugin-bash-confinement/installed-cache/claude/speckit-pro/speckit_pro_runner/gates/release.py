@@ -12,6 +12,7 @@ from types import SimpleNamespace
 from typing import Any
 
 from ..envelope import diagnostic, response
+from ..merge_utils import deep_merge
 from ..path_utils import find_repo_root, is_relative_to
 from .gate_response import gate_base_data
 
@@ -1565,14 +1566,6 @@ def github_changed_files(repo_root: Path, context: dict[str, Any]) -> list[str] 
             remediation_actions=["Use actions/checkout with fetch-depth: 0.", f"Ensure origin/{base_ref} is available."],
         )
     return [line for line in completed.stdout.splitlines() if line]
-
-
-def deep_merge(target: dict[str, Any], overrides: dict[str, Any]) -> None:
-    for key, value in overrides.items():
-        if isinstance(value, dict) and isinstance(target.get(key), dict):
-            deep_merge(target[key], value)
-        else:
-            target[key] = copy.deepcopy(value)
 
 
 def base_data(entry: Any, operation: str, status: str) -> dict[str, Any]:
