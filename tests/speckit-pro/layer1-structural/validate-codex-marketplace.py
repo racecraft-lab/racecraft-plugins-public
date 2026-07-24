@@ -25,32 +25,11 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from structural_helpers import field_exists as _field_exists  # noqa: E402
+from structural_helpers import nested as _nested  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 MARKETPLACE_JSON = REPO_ROOT / ".agents" / "plugins" / "marketplace.json"
-
-
-def _field_exists(data: object, dotted: str) -> bool:
-    """Mirror assert_json_field_exists: walk ``a.b.c`` keys without raising."""
-    current = data
-    try:
-        for key in dotted.split("."):
-            current = current[key]
-    except (KeyError, TypeError, IndexError):
-        return False
-    return True
-
-
-def _nested(data: object, *keys: object) -> object:
-    """Return ``data[k0][k1]...`` or ``None`` if any hop is missing (mirrors the
-    bash inline ``python3 -c`` extractors, which print empty and fail on error)."""
-    current = data
-    try:
-        for key in keys:
-            current = current[key]  # type: ignore[index]
-    except (KeyError, TypeError, IndexError):
-        return None
-    return current
 
 
 class ValidateCodexMarketplace(unittest.TestCase):
