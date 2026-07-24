@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.20.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.19.3...speckit-pro-v2.20.0) (2026-07-24)
+
+
+### Features
+
+* **g56r-002:** Add deterministic treatment replay ([#368](https://github.com/racecraft-lab/racecraft-plugins-public/issues/368)) ([06d5448](https://github.com/racecraft-lab/racecraft-plugins-public/commit/06d54487fd3b507333f96e571223805c1956998b))
+
 ## [2.19.3](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.19.2...speckit-pro-v2.19.3) (2026-07-16)
 
 
