@@ -17,6 +17,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from ..envelope import diagnostic, response
+from ..merge_utils import deep_merge
 from ..path_utils import resolves_to_current_python
 from .mutation import empty_mutation, operation_record, resolve_candidate_path, run_mutation_helper, validate_target_path
 from .read_only import find_repo_root, is_relative_to, repo_relative
@@ -1469,14 +1470,6 @@ def doctor_report(install_root: Path, inventory: dict[str, Any], repo_root: Path
 
 def sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def deep_merge(target: dict[str, Any], overrides: dict[str, Any]) -> None:
-    for key, value in overrides.items():
-        if isinstance(value, dict) and isinstance(target.get(key), dict):
-            deep_merge(target[key], value)
-        else:
-            target[key] = copy.deepcopy(value)
 
 
 def is_diagnostic(value: Any) -> bool:
