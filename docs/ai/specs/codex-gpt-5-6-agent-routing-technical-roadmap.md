@@ -18,7 +18,7 @@ is prepared for `$speckit-scaffold-spec G56R-NNN`.
 **Status:** Active; G56R-001 is complete and archived after PR #360 merged on
 the shared official-source evidence foundation from PR #362;
 [G56R-002](.process/G56R-002-workflow.md) is complete and archived after
-PRs #366-#368; G56R-003 is ready
+PRs #366-#368; [G56R-003](.process/G56R-003-workflow.md) is in progress
 
 **Legacy identifier note:** `G56R` and the existing filenames are retained for
 traceability. They do not limit the candidate catalog to GPT-5.6.
@@ -49,8 +49,9 @@ G56R-011
 internal dependencies still apply: the shared official-source evidence
 foundation merged via PR #362, G56R-001 merged via PR #360, and G56R-002
 completed through PRs #366-#368 under the preserved no-qualification boundary.
-G56R-003 is ready to consume the canonical capability freeze, treatment
-contracts, replay fixtures, and evidence report.
+G56R-003 is in progress and consumes the canonical capability evidence,
+treatment contracts, replay fixtures, and evidence report while preserving the
+archived zero-eligible freeze and producing its additive successor.
 A route-agnostic Python `install-codex-agents` helper is active for safe static
 agent refreshes. G56R-006 later extends that baseline with capability-aware
 resolution, materialization, and atomic policy installation; it must not
@@ -218,7 +219,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 |---|---|---|---|---|
 | G56R-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | PR #360 merged; canonical evidence lives under `docs/ai/research/` |
 | G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Complete / Archived | [.process/G56R-002-workflow.md](.process/G56R-002-workflow.md) | PRs #366-#368 merged; canonical evidence, contracts, replay fixtures, and validators live outside `specs/**` |
-| G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Ready | - | G56R-002 dependency satisfied by PRs #366-#368 |
+| G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | In Progress | [.process/G56R-003-workflow.md](.process/G56R-003-workflow.md) | Run `$speckit-autopilot docs/ai/specs/.process/G56R-003-workflow.md` from the dedicated worktree |
 | G56R-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by G56R-003 |
 | G56R-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by G56R-004 |
 | G56R-006 | Capability-aware Resolver, Materializer, Installer, and Strict Override | Pending | - | Blocked by G56R-005 |
@@ -381,8 +382,10 @@ Budget result: re-estimate at scaffold; synthetic traces precede live use
 
 **Priority:** P1 | **Depends On:** G56R-002 | **Enables:** G56R-004
 
-**Goal:** Qualify preferred and fallback candidates reproducibly without
-consuming final integrated-confirmation data.
+**Goal:** Build and validate the reusable qualification platform and freeze its
+analysis plan without consuming outcome-bearing cohort or final integrated-
+confirmation data. G56R-007 through G56R-010 own the per-agent campaigns and
+preferred/fallback route policies.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
 Projected reviewable LOC: 500 | Suggested slices: 2 | Status: warn |
@@ -406,43 +409,47 @@ fixture/scorer/statistical work
 
 **Required Work Package B - Fixtures, scoring, and statistics:**
 
-- Expand from three current role fixtures to a governed twelve-role corpus. Use
-  blinded adjudication for candidate quality failure, treatment-delivery
-  failure, invalid fixture, invalid scorer, and infrastructure failure. A
-  fixture/scorer change versions it and invalidates affected results.
+- Expand from three current role fixtures to one governed twelve-role corpus:
+  eleven required core roles plus `autopilot-fast-helper`. Use blinded
+  adjudication for candidate quality failure, treatment-delivery failure,
+  invalid fixture, invalid scorer, and infrastructure failure. A fixture/scorer
+  change versions it and invalidates affected results.
 - Create disjoint screening, selection, cohort-lock, and untouched integrated-
-  confirmation partitions. G56R-003 reserves but never consumes the final
-  partition.
+  confirmation partitions in addition to a calibration-only partition.
+  G56R-003 consumes calibration only; G56R-007 through G56R-010 own the
+  outcome-bearing partitions.
 - Freeze `experiment_policy_id` before outcome-bearing evaluation. It defines
   corpus versions, workload strata, long-horizon assignment from pretreatment
   task properties, acceptance checker, semantic floors, safety gates,
   superiority/non-inferiority margins, alpha, power, multiplicity, task-level
   clustering, repeat rules, racing, attrition, campaign/workflow budgets,
   terminal policy, and `inconclusive => no qualification`.
-- Before screening, bind the immutable production comparator to repository
-  revision, plugin version, per-agent route/configuration IDs, client version,
-  tool/configuration contract, corpus snapshot, instruction hashes, and the
-  frozen analysis plan. It remains the sole baseline for candidate and final
-  integrated comparisons.
+- Implement and replay-validate the comparator binding that cohort specs apply
+  before screening: repository revision, plugin version, per-agent
+  route/configuration IDs, client version, tool/configuration contract, corpus
+  snapshot, instruction hashes, and the frozen analysis plan. It remains the
+  sole baseline for candidate and final integrated comparisons.
 - Compare route resource behavior using raw input/cached-input/output tokens,
   duration, retries, compactions, acceptance, and terminal state.
-- Use A1 capability/treatment screening at each model's documented default, A2
-  within-model effort boundary search, A3 frozen passing-pair comparison, Stage
-  B prompt interaction, and Stage C cohort locks. Prompts stay frozen through
-  A1/A2/A3; only shortlisted pairs enter Stage B. After selecting the final
-  instruction hash, requalify every committed preferred and fallback route
-  under that same hash before Stage C.
-- In Stage B, start every ablation from the unchanged baseline, vary one
-  predeclared instruction/example/tool-description/context group at a time, and
-  rerun the same representative evaluations. Record baseline and candidate
-  instruction hashes, changed group IDs, normalized instruction bytes,
-  available token estimate, and contradiction-review result. Permit removal of
-  repeated or behavior-neutral process scaffolding only when the variant keeps
-  the complete role contract: outcome, success and stop conditions, safety,
-  business, grounding, permissions, mutation, contextual tool routing, output
-  shape, and validation. Outcome-first wording may replace discretionary
-  narration but not required SDD phases, dependency rules, approvals, or
-  verification.
+- Implement and replay-validate orchestration for A1 capability/treatment
+  screening at each model's documented default, A2 within-model effort boundary
+  search, A3 frozen passing-pair comparison, Stage B prompt interaction, and
+  Stage C cohort locks. G56R-003's only live pilot uses calibration data and
+  cannot qualify a route; G56R-007 through G56R-010 execute outcome-bearing
+  A1/A2/A3/B/C campaigns. The orchestration keeps prompts frozen through
+  A1/A2/A3, admits only shortlisted pairs to Stage B, and requires cohort specs
+  to requalify every committed preferred and fallback route under the selected
+  instruction hash before Stage C.
+- Implement Stage B so every ablation starts from the unchanged baseline,
+  varies one predeclared instruction/example/tool-description/context group at
+  a time, and records baseline and candidate instruction hashes, changed group
+  IDs, normalized instruction bytes, available token estimate, and
+  contradiction-review result. Permit removal of repeated or behavior-neutral
+  process scaffolding only when the variant keeps the complete role contract:
+  outcome, success and stop conditions, safety, business, grounding,
+  permissions, mutation, contextual tool routing, output shape, and validation.
+  Outcome-first wording may replace discretionary narration but not required
+  SDD phases, dependency rules, approvals, or verification.
 - Freeze all non-candidate parent routes, agent routes, prompts, tools, context,
   repository snapshot, validators, retries, and acceptance behavior for per-
   agent attribution. Unpinned/adaptive experiments are policy-level controls.
@@ -453,6 +460,8 @@ fixture/scorer/statistical work
 
 **Out of Scope:**
 
+- Outcome-bearing A1/A2/A3, Stage B, or Stage C per-agent campaigns owned by
+  G56R-007 through G56R-010.
 - Final route-policy creation, installed defaults, final aggregate identities,
   or release confirmation.
 
