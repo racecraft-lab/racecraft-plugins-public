@@ -33,9 +33,12 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import math
+import re
 import sys
 import unittest
 from pathlib import Path
+from statistics import NormalDist
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -53,6 +56,11 @@ try:  # T071…T075 deliverable — absent until the decision module is implemen
 except ImportError:  # pragma: no cover - exercised only before the module lands
     claude_analysis_decision = None  # type: ignore[assignment]
 
+try:  # Budget authority lives with the experiment policy, not with the ladder.
+    import claude_experiment_policy  # type: ignore[import-not-found]  # noqa: E402
+except ImportError:  # pragma: no cover - exercised only before the module lands
+    claude_experiment_policy = None  # type: ignore[assignment]
+
 
 CONTRACT_ROOT = REPO_ROOT / "specs" / "car-003-evaluation-runner-scoring" / "contracts"
 PLAN_SCHEMA_PATH = CONTRACT_ROOT / "analysis-plan.schema.json"
@@ -61,6 +69,13 @@ ADDITIVE_SCHEMA_PATH = CONTRACT_ROOT / "car-003-additive-records.schema.json"
 REPLAY_FIXTURE_PATH = (
     TEST_ROOT / "layer6-efficiency" / "fixtures" / "car-003-calibration-replay.json"
 )
+RESEARCH_ROOT = REPO_ROOT / "docs" / "ai" / "research"
+CALIBRATION_PILOT_PATH = RESEARCH_ROOT / "claude-car-003-calibration-pilot.json"
+FROZEN_PLAN_PATH = RESEARCH_ROOT / "claude-car-003-analysis-plan.json"
+
+# SC-012: the cohort specs whose outcomes the plan must pre-date.
+COHORT_SPECS = ("CAR-007", "CAR-008", "CAR-009", "CAR-010")
+COHORT_ARTIFACT_PATTERN = re.compile(r"car-0(0[789]|10)(?![0-9])", re.IGNORECASE)
 
 # FR-017, FR-018: the ladder, in the only order it may run.
 LADDER_GATES = (
@@ -1187,6 +1202,343 @@ class DecisionBundleWriteGuardTests(unittest.TestCase):
                     decision_bundle(self.module, partition=calibration_partition(**{key: "opus"}))
 
 
+def schema_findings(instance: object, node: object, defs: dict, path: str = "") -> list[str]:
+    """Standard-library validation against the closed analysis-plan contract.
+
+    The keyword set is exactly the one the contract uses. Same fail-closed idiom
+    as the CAR-002 trace validator, kept local because that module is bound to a
+    different shipped contract.
+    """
+    found: list[str] = []
+    if not isinstance(node, dict):
+        return found
+    if "$ref" in node:
+        ref = str(node["$ref"])
+        name = ref.rsplit("/", 1)[-1]
+        if name not in defs:
+            return [f"{path or '<root>'}: unknown $def {name!r}"]
+        return schema_findings(instance, defs[name], defs, path)
+    where = path or "<root>"
+    if "const" in node:
+        return [] if instance == node["const"] else [f"{where}: expected {node['const']!r}"]
+    if "enum" in node:
+        return [] if instance in node["enum"] else [f"{where}: {instance!r} not in enum"]
+    declared = node.get("type")
+    if declared is not None:
+        matched = {
+            "object": isinstance(instance, dict),
+            "array": isinstance(instance, list),
+            "string": isinstance(instance, str),
+            "boolean": isinstance(instance, bool),
+            "integer": isinstance(instance, int) and not isinstance(instance, bool),
+            "number": isinstance(instance, (int, float)) and not isinstance(instance, bool),
+            "null": instance is None,
+        }.get(str(declared))
+        if matched is not True:
+            return [f"{where}: expected type {declared!r}, got {type(instance).__name__}"]
+    if isinstance(instance, str):
+        minimum_length = node.get("minLength")
+        if minimum_length is not None and len(instance) < int(minimum_length):
+            found.append(f"{where}: shorter than minLength {minimum_length}")
+        pattern = node.get("pattern")
+        if pattern is not None and not re.fullmatch(str(pattern), instance):
+            found.append(f"{where}: {instance!r} does not match {pattern}")
+        if node.get("format") == "date-time" and not instance.endswith("Z"):
+            found.append(f"{where}: {instance!r} is not a Z-suffixed UTC instant")
+    elif isinstance(instance, bool):
+        pass
+    elif isinstance(instance, (int, float)):
+        for keyword, ok in (
+            ("minimum", lambda bound: instance >= bound),
+            ("maximum", lambda bound: instance <= bound),
+            ("exclusiveMinimum", lambda bound: instance > bound),
+            ("exclusiveMaximum", lambda bound: instance < bound),
+        ):
+            bound = node.get(keyword)
+            if bound is not None and not ok(bound):
+                found.append(f"{where}: {instance!r} violates {keyword} {bound}")
+    elif isinstance(instance, list):
+        for keyword, ok in (
+            ("minItems", lambda bound: len(instance) >= bound),
+            ("maxItems", lambda bound: len(instance) <= bound),
+        ):
+            bound = node.get(keyword)
+            if bound is not None and not ok(bound):
+                found.append(f"{where}: {len(instance)} items violates {keyword} {bound}")
+        if node.get("uniqueItems") and len(instance) != len({canonical_json(x) for x in instance}):
+            found.append(f"{where}: items are not unique")
+        items = node.get("items")
+        if items is not None:
+            for index, element in enumerate(instance):
+                found.extend(schema_findings(element, items, defs, f"{where}[{index}]"))
+    elif isinstance(instance, dict):
+        properties = node.get("properties", {})
+        minimum_properties = node.get("minProperties")
+        if minimum_properties is not None and len(instance) < int(minimum_properties):
+            found.append(f"{where}: fewer than minProperties {minimum_properties}")
+        missing = sorted(set(node.get("required", ())) - set(instance))
+        if missing:
+            found.append(f"{where}: missing required keys {missing}")
+        extra_schema = node.get("additionalProperties")
+        if extra_schema is False:
+            unexpected = sorted(set(instance) - set(properties))
+            if unexpected:
+                found.append(f"{where}: unexpected keys {unexpected}")
+        names = node.get("propertyNames")
+        if isinstance(names, dict) and "enum" in names:
+            outside = sorted(set(instance) - set(names["enum"]))
+            if outside:
+                found.append(f"{where}: keys outside the closed key space {outside}")
+        for key, value in instance.items():
+            child = f"{where}.{key}" if path else str(key)
+            if key in properties:
+                found.extend(schema_findings(value, properties[key], defs, child))
+            elif isinstance(extra_schema, dict):
+                found.extend(schema_findings(value, extra_schema, defs, child))
+    return found
+
+
+def pre_cohort_absence_record(pilot: dict) -> dict[str, object]:
+    """The SC-012 attestation the frozen plan digests.
+
+    Reproducible from committed evidence alone: the cohort specs checked, the
+    empty observation, and the calibration run's own identity and repository
+    state. Nothing here is authored by hand, so the digest cannot be back-fitted.
+    """
+    return {
+        "record_kind": "pre_cohort_outcome_absence",
+        "schema_version": "1.0.0",
+        "checked_cohort_specs": list(COHORT_SPECS),
+        "outcome_bearing_cohort_artifacts": [],
+        "qualification_eligible_partitions_consumed": [],
+        "calibration_pilot_id": pilot["pilot_id"],
+        "calibration_pilot_digest": pilot["pilot_digest"],
+        "repository_revision": pilot["repository_revision"],
+        "repository_tree_digest": pilot["repository_tree_digest"],
+    }
+
+
+def required_pairs(
+    *, sd: float, margin: float, alpha: float, power: float, clusters: int, icc: float
+) -> tuple[int, int]:
+    """Paired non-inferiority pairs, before and after cluster inflation.
+
+    The clustered size is the fixed point of ``n = n0 * (1 + (n/R - 1) * icc)``,
+    which is why the attainable effective sample size is capped at ``R / icc``
+    however many pairs are run.
+    """
+    z = NormalDist().inv_cdf(1 - alpha) + NormalDist().inv_cdf(power)
+    unclustered = z * z * sd * sd / (margin * margin)
+    denominator = 1 - unclustered * icc / clusters
+    if denominator <= 0:
+        raise AssertionError("no achievable sample size reaches the declared power")
+    return math.ceil(unclustered), math.ceil(unclustered * (1 - icc) / denominator)
+
+
+class FrozenAnalysisPlanTests(unittest.TestCase):
+    """The authored, frozen numeric plan (FR-023, FR-038, FR-050, FR-053…FR-055).
+
+    Unlike the synthetic replay plan, this one is authoritative: its margins,
+    sample sizes, guardrails, and budget govern every qualification-eligible
+    campaign. Each number is checked against the calibration evidence it claims
+    to come from, and every input the pilot could not measure has to say so.
+    """
+
+    def setUp(self) -> None:
+        self.assertTrue(FROZEN_PLAN_PATH.is_file(), f"{FROZEN_PLAN_PATH.name} is not authored")
+        self.plan = load_json(FROZEN_PLAN_PATH)
+        self.pilot = load_json(CALIBRATION_PILOT_PATH)
+        self.assumptions = self.plan["non_inferiority"]["sample_size_assumptions"]
+
+    def test_the_frozen_plan_validates_against_its_published_contract(self) -> None:
+        schema = load_json(PLAN_SCHEMA_PATH)
+        findings = schema_findings(self.plan, schema, schema.get("$defs", {}))
+        self.assertEqual(findings, [], findings)
+        self.assertEqual(self.plan["status"], "frozen")
+
+    def test_the_frozen_plan_is_sealed_against_its_own_digest(self) -> None:
+        for record, field in (
+            (self.plan, "analysis_plan_digest"),
+            (self.plan["workload_manifest"], "manifest_digest"),
+            (self.plan["cache_policy"], "policy_digest"),
+        ):
+            with self.subTest(field=field):
+                sealed = {key: value for key, value in record.items() if key != field}
+                self.assertEqual(record[field], digest_over(sealed))
+
+    def test_the_plan_binds_the_calibration_protocol_it_was_derived_from(self) -> None:
+        protocol = self.pilot["calibration_protocol"]
+        self.assertEqual(
+            self.plan["calibration_binding"],
+            {"id": protocol["calibration_protocol_id"], "digest": protocol["protocol_digest"]},
+        )
+        # FR-037: the protocol carries none of the numbers the plan freezes, which
+        # is the whole reason a calibration pair binds it instead of the plan.
+        for carried in ("carries_margins", "carries_sample_sizes", "carries_terminal_thresholds"):
+            self.assertFalse(protocol[carried], carried)
+
+    def test_every_sample_size_derives_from_a_measured_paired_difference(self) -> None:
+        measured = self.pilot["variance_estimates"]["paired_within_task_difference"]
+        non_inferiority = self.plan["non_inferiority"]
+        for endpoint, declared in self.assumptions["endpoints"].items():
+            with self.subTest(endpoint=endpoint):
+                estimate = measured[declared["pilot_estimate_field"]]
+                self.assertEqual(declared["paired_difference_sd"], estimate["sd"])
+                self.assertEqual(declared["paired_difference_pairs"], estimate["n"])
+                unclustered, clustered = required_pairs(
+                    sd=estimate["sd"],
+                    margin=non_inferiority["margins"][endpoint],
+                    alpha=non_inferiority["alpha"],
+                    power=non_inferiority["power"],
+                    clusters=self.assumptions["cluster_count"],
+                    icc=self.assumptions["assumed_intracluster_correlation"],
+                )
+                self.assertEqual(declared["n_unclustered_pairs"], unclustered)
+                self.assertEqual(declared["n_pairs"], clustered)
+                self.assertEqual(non_inferiority["sample_sizes"][endpoint], clustered)
+
+    def test_the_cluster_count_is_the_corpus_role_count_not_an_estimate(self) -> None:
+        corpus = load_json(
+            TEST_ROOT / "layer6-efficiency" / "fixtures" / "car-003-role-corpus.json"
+        )
+        self.assertEqual(self.plan["non_inferiority"]["cluster_unit"], "role")
+        self.assertEqual(self.assumptions["cluster_count"], len(corpus["roles"]))
+
+    def test_the_per_stratum_task_floor_supports_the_percentile_it_claims(self) -> None:
+        manifest = self.plan["workload_manifest"]
+        confidence = manifest["guardrail_method"]["confidence_method"]["confidence_level"]
+        # A distribution-free upper bound on the p95 from the largest order
+        # statistic reaches its nominal level only once 1 - 0.95**n >= confidence.
+        floor = math.ceil(math.log(1 - confidence) / math.log(0.95))
+        self.assertGreater(1 - 0.95**floor, confidence)
+        self.assertLessEqual(1 - 0.95 ** (floor - 1), confidence)
+        for stratum in manifest["strata"]:
+            with self.subTest(stratum=stratum["stratum_id"]):
+                self.assertGreaterEqual(stratum["stratum_minimum_unique_tasks"], floor)
+                self.assertGreaterEqual(stratum["stratum_sample_size"], floor)
+                self.assertFalse(stratum["membership_rule"]["derived_from_realized_outcomes"])
+
+    def test_the_declared_error_control_returns_no_findings(self) -> None:
+        module = claude_analysis_decision
+        self.assertIsNotNone(module, "claude_analysis_decision is not importable")
+        manifest = self.plan["workload_manifest"]
+        non_inferiority = self.plan["non_inferiority"]
+        self.assertEqual(
+            module.guardrail_findings(
+                manifest["guardrail_method"],
+                non_inferiority_margins=non_inferiority["margins"],
+            ),
+            (),
+        )
+        self.assertEqual(
+            module.multiplicity_findings(non_inferiority["multiplicity_declaration"]), ()
+        )
+        self.assertEqual(module.interim_look_findings(self.plan["racing_policy"]), ())
+        self.assertEqual(
+            module.interim_look_findings(self.plan["futility_policy"], futility=True), ()
+        )
+
+    def test_the_campaign_budget_is_authoritative_over_the_calibration_budget(self) -> None:
+        policy = claude_experiment_policy
+        self.assertIsNotNone(policy, "claude_experiment_policy is not importable")
+        plan_budget = self.plan["campaign_budget"]
+        pilot_budget = self.pilot["experiment_policy"]["budget"]
+        self.assertFalse(self.pilot["experiment_policy"]["partition"]["qualification_eligible"])
+        tighter = policy.budget_verdict(
+            policy_budget=pilot_budget, plan_budget=plan_budget, qualification_eligible=False
+        )
+        self.assertTrue(tighter.ok, tighter.findings)
+        # The same budget on a qualification-eligible partition must be equal, not
+        # merely tighter: a campaign that may spend less is a different estimand.
+        unequal = policy.budget_verdict(
+            policy_budget=pilot_budget, plan_budget=plan_budget, qualification_eligible=True
+        )
+        self.assertFalse(unequal.ok)
+        self.assertEqual(unequal.failure_plane, "partition")
+        equal = policy.budget_verdict(
+            policy_budget=plan_budget, plan_budget=plan_budget, qualification_eligible=True
+        )
+        self.assertTrue(equal.ok, equal.findings)
+
+    def test_the_decision_vector_carries_no_weighting_and_no_scalar_score(self) -> None:
+        module = claude_analysis_decision
+        self.assertIsNotNone(module, "claude_analysis_decision is not importable")
+        pareto = self.plan["pareto_policy"]
+        self.assertEqual(tuple(sorted(pareto["dimensions"])), PARETO_DIMENSIONS)
+        self.assertTrue(pareto["weights_prohibited"])
+        self.assertEqual(pareto["mixed_or_tied_result"], "inconclusive")
+        self.assertFalse(pareto["reasoning_tokens_decision_bearing"])
+        self.assertEqual(module.final_output_findings(self.plan), ())
+        # Two weighting-shaped keys are permitted and no others: a stratum's share
+        # of the pooled summary, which sets no dimension against another, and the
+        # flag that prohibits weighting outright. No scalar score, composite score,
+        # ranking, or price coefficient appears anywhere in the frozen plan.
+        permitted = {
+            f"workload_manifest.strata[{index}].weight"
+            for index, _ in enumerate(self.plan["workload_manifest"]["strata"])
+        } | {"pareto_policy.weights_prohibited"}
+        flagged = {
+            finding.split(" ", 1)[0] for finding in module.weighting_findings(self.plan)
+        }
+        self.assertEqual(flagged, permitted)
+
+    def test_the_reasoning_token_exclusion_states_its_measured_cost(self) -> None:
+        candidate = self.pilot["variance_estimates"]["per_arm"]["candidate"]
+        limitation = self.plan["pareto_policy"]["reasoning_tokens_limitation"]
+        self.assertIn(str(round(candidate["reasoning_output_tokens"]["mean"], 1)), limitation)
+        self.assertIn(str(round(candidate["reasoning_output_tokens"]["sd"], 1)), limitation)
+
+    def test_the_plan_froze_after_calibration_and_before_any_cohort_outcome(self) -> None:
+        self.assertGreater(self.plan["frozen_at"], self.pilot["completed_at_utc"])
+        observed = sorted(
+            str(path.relative_to(REPO_ROOT))
+            for root in (REPO_ROOT / "specs", RESEARCH_ROOT)
+            for path in root.rglob("*")
+            if path.is_file() and COHORT_ARTIFACT_PATTERN.search(path.name)
+        )
+        self.assertEqual(observed, [], observed)
+        self.assertTrue(self.pilot["partition_consumption_proof"]["non_calibration_none_consumed"])
+        self.assertEqual(
+            self.plan["pre_cohort_outcome_absence_digest"],
+            digest_over(pre_cohort_absence_record(self.pilot)),
+        )
+
+    def test_every_input_the_pilot_could_not_measure_is_labelled_an_assumption(self) -> None:
+        stated = self.assumptions["assumptions_not_measured"]
+        self.assertTrue(stated, "the plan claims every input was measured")
+        for name, entry in stated.items():
+            with self.subTest(assumption=name):
+                self.assertIn("value", entry)
+                self.assertTrue(entry["basis"].strip())
+                self.assertFalse(entry["measured_by_the_calibration_pilot"])
+        # The two limitations the pilot itself stated must survive into the plan.
+        for marker in ("rubric", "attrition"):
+            self.assertTrue(
+                any(marker in key for key in stated),
+                f"no assumption carries the pilot's {marker} limitation",
+            )
+
+    def test_the_frozen_size_is_reported_against_its_own_variance_uncertainty(self) -> None:
+        sensitivity = self.assumptions["sensitivity"]
+        estimate = self.pilot["variance_estimates"]["paired_within_task_difference"]
+        pairs = estimate["semantic_score"]["n"]
+        self.assertEqual(sensitivity["variance_estimate_degrees_of_freedom"], pairs - 1)
+        # With twelve role clusters the effective sample size is capped at R/icc
+        # however many pairs run, so a larger correlation is not merely costlier.
+        clusters = self.assumptions["cluster_count"]
+        for reported in sensitivity["intracluster_correlation_sensitivity"]:
+            with self.subTest(icc=reported["intracluster_correlation"]):
+                icc = reported["intracluster_correlation"]
+                self.assertEqual(
+                    reported["max_attainable_effective_pairs"], clusters / icc
+                )
+                self.assertEqual(
+                    reported["feasible"],
+                    clusters / icc
+                    > self.assumptions["endpoints"]["semantic_score"]["n_unclustered_pairs"],
+                )
+
+
 TEST_CASES = (
     OrderedLadderTests,
     ParetoDominanceTests,
@@ -1195,6 +1547,7 @@ TEST_CASES = (
     GuardrailAndErrorControlTests,
     DecisionBundleWriteGuardTests,
     ReplayAndNonPoolingTests,
+    FrozenAnalysisPlanTests,
 )
 
 
