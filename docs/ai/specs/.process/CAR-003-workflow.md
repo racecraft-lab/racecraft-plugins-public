@@ -97,8 +97,8 @@ not rewritten.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Specify | `/speckit-specify` | ✅ Complete | G1 PASS — 43 FR, 4 US, SC-001…019, 0 markers; Pareto + auth amendment verified |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | 4 sessions, resolution after each |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -137,7 +137,27 @@ Each phase requires **human review and approval** before proceeding:
 | V. Conventional Commits | Scoped commits, e.g. `feat(car-003): ...` / `test(speckit-pro): ...` / `chore(car-003): ...` | `git log` review |
 | VI. KISS, Simplicity & YAGNI | One materializer implementation, not two (Q4); only the record fields the ACs require; no speculative schema surface | Review against design concept Q4, Q6, Q9 |
 
-**Constitution Check:** ⏳ (mark before proceeding to G1)
+**Constitution Check:** ✅ PASS — baseline recorded 2026-07-24 before Phase 1.
+`python3 tests/speckit-pro/run-all.py` → **3251/3251 passed** (L1 1428, L4 1637,
+L5 186; toolchain preflight ok, gate not counted), exit 0, zero failures. This is
+the green starting point; any later suite failure is attributable to CAR-003
+changes.
+
+### Autopilot Pre-flight Evidence (Step -1 / Step 0)
+
+| Item | Result |
+|------|--------|
+| `check-prerequisites` | `all_pass: true` with the workflow file supplied. `is_worktree: true`; `branch: ""` and `on_feature_branch: false` are the known non-numeric-branch limitation, not a failure |
+| Branch handling | `.specify/feature.json` created → `{"feature_directory":"specs/car-003-evaluation-runner-scoring"}`. Gitignored (`.gitignore:11`), so it never reaches the diff. Matches the committed G56R-003 precedent. Branch NOT renamed and the numeric regex NOT faked |
+| `before_specify` hook | Mandatory `git.feature` hook neutralized for dispatch — already on the feature branch; creating a second one would be wrong |
+| `detect-commands` | stack `unknown`; BUILD/TYPECHECK/LINT do not exist. UNIT_TEST = FULL_VERIFY = `python3 tests/speckit-pro/run-all.py` |
+| `detect-presets` | `speckit-pro-reviewability` v1.0.0; spec/plan/tasks templates resolve as top layer; 18 hook events |
+| `resolve-confidence-mode` | `advisory` → `CONFIDENCE_GATE_MODE=advisory` for G6.5 |
+| `PROJECT_IMPLEMENTATION_AGENT` | fallback `speckit-pro:phase-executor` (the two project agents are auditors, not implementers) |
+| `AGENT_TEAMS_AVAILABLE` | `false` — no `TeamCreate` surface. Parallel runs use batched background subagents in one message |
+| Archive Sweep | Ran discovery-only, current target excluded. **0 candidates, 0 mutations.** `origin/main:specs` holds only `.gitkeep`; all prior specs already archived with provenance (`f07bcb0f`, `f93bef1a`). No cleanup applied — it would have broken the three-slice reviewability budget |
+| Shared-runner merge risk | Branch is level with `origin/main` (0 behind). **Neither `main` nor `g56r-003-evaluation-runner-scoring` has yet modified `tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py`** (still 495 lines). G56R-003 is only through Checklist, so the conflict is latent — CAR-003 can land its demotion edit first. Re-check before slice 1 |
+| Orchestrator effort | Run executed at `xhigh` (ultracode), below the skill's mandated `max`. Operator reaffirmed after the gate was raised; recorded as a deliberate deviation |
 
 ### Scaffold Preflight
 
@@ -364,17 +384,41 @@ analysis.
 
 ### Specify Results
 
-<!-- Fill in after running the command -->
+Completed 2026-07-24. **G1: PASS** (`validate-gate` → `pass: true`, `markers: 0`,
+"spec.md exists with 0 markers").
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | 43 (FR-001 … FR-043) |
+| User Stories | 4 — US1 P1 successor freeze, US2 P1 exact treatment, US3 P2 corpus scoring, US4 P3 analysis plan |
+| Acceptance Criteria | SC-001 … SC-019 carried from the Success Criteria Summary |
+| `[NEEDS CLARIFICATION]` markers | 0 |
+
+**Parity verification against G56R-003 (orchestrator-verified, not self-reported):**
+
+| Item | Result |
+|------|--------|
+| Selection rule | ✅ FR-018 floors → task-paired cluster-adjusted non-inferiority → raw-vector Pareto dominance. FR-019 "MUST return no qualification for a failed gate, tie, mixed dominance, incomplete evidence, or statistical uncertainty and MUST NOT force a weighted ranking." Price data diagnostic-only, never a selection coefficient or scalar weight |
+| Decision-bundle shape | ✅ "carries no per-category weights, price coefficients, or scalar score field" — mirrors G56R `analysis-decision.schema.json` rather than inventing a Claude-only schema |
+| Auth amendment | ✅ FR-042 — subscription auth is the supported scored path; API-key auth MUST NOT be required on any supported path; auth mode recorded per run; no plan/billing claim; explicitly flagged as a dated AC-2.19 amendment so Analyze does not read it as drift |
+| Score-eligibility predicate | ✅ FR-030 |
+| Closed taxonomies | ✅ FR-029 tuple exclusions; publication authority recorded separately; treatment/telemetry/fixture/scorer/adjudication in their own bundles |
+| Deny-by-default allowlist | ✅ FR-027 / FR-028, fail-closed publication |
+| Three ordered slices, WP-A intact | ✅ FR-025 |
+| FR count | 43 vs G56R's 38 — the delta is CAR-specific surface (SC-017 CAP-Q6 closure, SC-018 full effort ladder, FR-042 auth amendment), not divergent logic |
+
+**Privacy scan:** clean — no `/Users` or `/home` absolute paths, no session UUIDs,
+no unresolved `{{TOKEN}}` placeholders.
+
+⚠️ **Carry into Plan:** the spec's projected **total files is 18–26**. The upper
+bound touches the reviewability gate's 25-total-file block threshold. The
+three-slice split already absorbs this, but the Plan phase must re-derive the
+real figure rather than trusting the range.
 
 ### Files Generated
 
-- [ ] `specs/car-003-evaluation-runner-scoring/spec.md`
+- [x] `specs/car-003-evaluation-runner-scoring/spec.md` (43 FRs, 4 US, SC-001…SC-019)
+- [x] `specs/car-003-evaluation-runner-scoring/checklists/requirements.md` — standard `/speckit-specify` spec-quality artifact (G56R-003 carries the same file); not a Phase 4 domain checklist
 
 ### SpecKit Traceability Markers
 
