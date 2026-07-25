@@ -1,0 +1,41 @@
+{
+  "body_file": "specs/car-003-evaluation-runner-scoring/.process/pr-packets/car-003-slice-1/body.md",
+  "error_class": "none",
+  "exit_code": 0,
+  "failures": [],
+  "mode": "single",
+  "packet_id": "car-003-slice-1",
+  "pr_blocked": false,
+  "remediation_evidence": [],
+  "rule_outcomes": [
+    {
+      "evidence": "no failures",
+      "rule": "packet.validation",
+      "status": "passed"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "source_fingerprints": {
+    "body": {
+      "algorithm": "sha256",
+      "path": "specs/car-003-evaluation-runner-scoring/.process/pr-packets/car-003-slice-1/body.md",
+      "sha256": "89c5f88819ad2a6b3b47f9130f944d57dab6242e998117a23c3ff23251f60b18",
+      "size_bytes": 8128
+    },
+    "packet": {
+      "algorithm": "sha256",
+      "path": "specs/car-003-evaluation-runner-scoring/.process/pr-packets/car-003-slice-1.json",
+      "sha256": "a793bd5df78a7574598b6bedf3254c7bde04e7c246d53864432b9227679ee2ff",
+      "size_bytes": 10986
+    }
+  },
+  "status": "passed",
+  "stderr_line": "",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "car-003-evaluation-runner-scoring"
+  },
+  "timestamp": "2026-07-25T10:06:32Z",
+  "title_value": "feat(car-003): Add the evaluation platform that turns capability evidence into qualification evidence",
+  "validation_result_path": "specs/car-003-evaluation-runner-scoring/.process/pr-packets/car-003-slice-1/validation.json"
+}
