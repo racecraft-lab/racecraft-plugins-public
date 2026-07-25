@@ -6,9 +6,43 @@
   "oneOf": [
     {"$ref": "#/$defs/mandatoryObservationManifest"},
     {"$ref": "#/$defs/aliasRepointAttribution"},
-    {"$ref": "#/$defs/cacheDiagnosticRecord"}
+    {"$ref": "#/$defs/cacheDiagnosticRecord"},
+    {"$ref": "#/$defs/scorerIdentityAttestation"}
   ],
   "$defs": {
+    "scorerIdentityAttestation": {
+      "description": "FR-047. Records the OBSERVED identity of each scorer and adjudicator at ballot time, alongside the family declared in the frozen experiment policy. Static family exclusion is declared at freeze time and therefore cannot see a post-freeze platform re-point of the scorer itself: a scorer frozen as out-family could be silently re-pointed into a candidate's family, restoring the self-preference bias the exclusion exists to prevent. This is CAR-003-additive rather than a score-bundle field because score-bundle is a parity mirror of the twin's contract and must not gain a unilateral member.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_kind", "attestation_id", "attestation_digest", "score_bundle_binding", "ballot_attestations", "recorded_at"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_kind": {"const": "scorer_identity_attestation"},
+        "attestation_id": {"type": "string", "minLength": 1},
+        "attestation_digest": {"$ref": "#/$defs/digest"},
+        "score_bundle_binding": {"$ref": "#/$defs/binding"},
+        "ballot_attestations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ballot_role", "declared_family", "observed_model_id", "observed_family", "family_exclusion_holds"],
+            "properties": {
+              "ballot_role": {"enum": ["scorer_a", "scorer_b", "adjudicator"]},
+              "declared_family": {"type": "string", "minLength": 1},
+              "observed_model_id": {"type": ["string", "null"], "minLength": 1},
+              "observed_family": {"type": ["string", "null"], "minLength": 1},
+              "family_exclusion_holds": {
+                "description": "False when the observed family collides with any candidate family in the scored comparison, or when the observed identity is unavailable. A false value MUST block acceptance of the score bundle rather than being recorded and ignored.",
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "recorded_at": {"type": "string", "format": "date-time"}
+      }
+    },
     "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "binding": {
       "type": "object",

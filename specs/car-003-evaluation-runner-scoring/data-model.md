@@ -172,6 +172,35 @@ no identity divergence                     ──► no_divergence
   If that path cannot be built, `validated_by` records `unvalidated_in_band`
   rather than claiming tested coverage (FR-046).
 
+## Entity: Environment Contract
+
+**Authority**: Frozen CAR-002 `routeResolution` and `runtimeCapabilitySnapshot`
+fields, pinned and bound before execution. No new fields are introduced.
+
+**Pinned values** (FR-051):
+
+| Pinned | Frozen field | Value |
+|---|---|---|
+| Fast mode | `fast_mode_state` | `off` for every scored attempt |
+| Client | `client_version` | inside the permitted pinned range |
+| Parent session | `parent_session_configuration` | pinned model and effort |
+| Overrides | `env_override_proof` | all eight members, `claude_code_subagent_model_unset=true` |
+| Auth | `authentication_mode` | matches the pinned mode, reached through the snapshot binding |
+
+**Invariants**:
+
+- Recording is not constraining. Each value is compared against the bound
+  contract; divergence blocks outcome scoring and records
+  `failure_plane=treatment` with the existing closed
+  `treatment_infrastructure_failure` code. No new failure-code member is coined.
+- Pinning the parent session is load-bearing, not bookkeeping: a subagent that
+  declares no model inherits the parent's, and a plugin-shipped agent inherits
+  the parent's permission mode, so an unpinned parent changes the treatment.
+- Freezing fast mode off is distinct from FR-005's exclusion of fast mode as an
+  ordinary candidate effort — that governs admission, this governs what runs.
+- The eight-member override enumeration is reused from the frozen contract, never
+  re-coined; a single completeness boolean names no closed surface.
+
 ## Entity: Canonical Materialization
 
 **Authority**: CAR-003 (shipped in `speckit-pro/speckit_pro_runner/materializer.py`).

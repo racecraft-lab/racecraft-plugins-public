@@ -108,6 +108,7 @@
         "route_resolution_binding",
         "materialization_binding",
         "experiment_policy_binding",
+        "environment_contract",
         "assigned_order",
         "pre_execution_timestamp",
         "superseded"
@@ -140,6 +141,50 @@
         "route_resolution_binding": {"$ref": "#/$defs/binding"},
         "materialization_binding": {"$ref": "#/$defs/binding"},
         "experiment_policy_binding": {"$ref": "#/$defs/binding"},
+        "environment_contract": {
+          "description": "FR-051: the environment pinned before execution. Every value reuses a field the frozen CAR-002 routeResolution or runtimeCapabilitySnapshot already carries; none is re-coined here. The run's observed environment is compared against this record, and divergence blocks outcome scoring with failure_plane=treatment and the existing closed treatment_infrastructure_failure code.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fast_mode_state",
+            "client_version_range",
+            "parent_session_model",
+            "parent_session_effort",
+            "env_override_proof_complete",
+            "claude_code_subagent_model_unset",
+            "authentication_mode"
+          ],
+          "properties": {
+            "fast_mode_state": {
+              "description": "FR-051: frozen off for every scored attempt. Distinct from FR-005, which governs admission rather than what is running.",
+              "const": "off"
+            },
+            "client_version_range": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["min", "max"],
+              "properties": {
+                "min": {"type": "string", "minLength": 1},
+                "max": {"type": "string", "minLength": 1}
+              }
+            },
+            "parent_session_model": {
+              "description": "FR-051: pinned because a subagent declaring no model inherits the parent session's.",
+              "type": "string",
+              "minLength": 1
+            },
+            "parent_session_effort": {"enum": ["low", "medium", "high", "xhigh", "max"]},
+            "env_override_proof_complete": {
+              "description": "FR-039: true only when all eight members of the frozen unsetProof record are present. A single completeness boolean names no closed override surface, so this asserts the enumeration was satisfied rather than substituting for it.",
+              "const": true
+            },
+            "claude_code_subagent_model_unset": {"const": true},
+            "authentication_mode": {
+              "description": "FR-042: the expected mode, compared against the run's observed mode reached through the snapshot binding. Subscription is the supported scored path; no supported path requires an API key.",
+              "enum": ["subscription", "api_key"]
+            }
+          }
+        },
         "analysis_plan_binding": {"$ref": "#/$defs/binding"},
         "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
         "assigned_order": {"type": "integer", "minimum": 0},

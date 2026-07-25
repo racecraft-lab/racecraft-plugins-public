@@ -311,7 +311,7 @@ and review slices, because a single PR would cross the block thresholds.
 **Slice 1 — Successor freeze and materialized treatment trace.** Roadmap Work
 Package A, kept intact.
 
-- Requirements: FR-001 … FR-010, FR-027 … FR-032, FR-039 … FR-046.
+- Requirements: FR-001 … FR-010, FR-027 … FR-032, FR-039 … FR-046, FR-051.
 - Files: `materializer.py`; `claude_successor_freeze.py`;
   `claude_treatment_runner.py`; `run-efficiency-benchmarks.py`; the alias-repoint
   replay fixture; the mandatory-observation manifest; the published successor
@@ -379,7 +379,7 @@ needs records the twin does not publish.
 | `experiment-policy` | Mirror. Adds the FR-047 static family exclusion and the FR-022 cache ceilings by TTL class. |
 | `analysis-plan` | Mirror. Pareto dimensions identical. Multiplicity expanded to the three families FR-050 requires. |
 | `analysis-decision` | Mirror. Adds `decision_reasons`, `reported_limitations`, and a schema guard making `qualified` unreachable from a calibration partition. |
-| `experiment-assignment` | **CAR-003-additive.** The twin publishes no assignment schema. Carries the partition registry entry, the calibration protocol, and the comparison-set assignment, with the FR-037 calibration substitution enforced by schema. |
+| `experiment-assignment` | **CAR-003-additive.** The twin publishes no assignment schema. Carries the partition registry entry, the calibration protocol, and the comparison-set assignment, with the FR-037 calibration substitution enforced by schema. Also carries the FR-051 environment contract, whose values all reuse frozen CAR-002 route-resolution and snapshot fields. Because the twin publishes no assignment schema, this addition creates no mirror divergence. |
 | `car-003-additive-records` | **CAR-003-additive.** Carries the mandatory-observation manifest, the alias-repoint attribution, and the cache diagnostic — three records that frozen closed enums and closed objects cannot hold. |
 
 **Repo-level shared contracts are not touched.** `capability-freeze.schema.json`,
@@ -420,6 +420,18 @@ payload boundary clean (SC-019).
 - Alias-re-point attribution is bounded by its enumerated cause set. Documented
   serving-infrastructure changes can alter behavior without changing model
   identity, so the enumeration cannot certify its own completeness.
+- Equivalence between the two FR-008 proof branches is bounded to the frontmatter
+  keys the plugin loader honors. A plugin-shipped agent silently ignores `hooks`,
+  `mcpServers`, and `permissionMode` and inherits the parent session's permission
+  mode, while the identical bytes in project or user agent scope honor all three,
+  and a content hash is blind to that by construction. The materialization branch
+  is therefore usable only for definitions declaring none of the three, and the
+  loader scope is recorded rather than assumed.
+- Effort admission is bounded by what configuration acceptance can establish. The
+  admitting surface proves the pinned client did not reject an effort value, not
+  that the effort took effect, and no independent effort-effect observation
+  exists. The ladder is a claim about accepted configuration, not realized
+  reasoning behavior.
 - **Open cross-platform coordination item — the experiment-policy binding
   cycle.** FR-037 resolves the calibration circular dependency at the comparison-pair
   level, and this plan's `experiment-assignment` schema enforces it. One edge away,
