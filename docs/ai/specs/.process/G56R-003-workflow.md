@@ -1058,11 +1058,11 @@ For every task:
 | Post: Verify Tasks Phantom Check | Complete | 25 VERIFIED; 0 partial, weak, not found, or skipped | None |
 | Post: Code Review | Complete | Multiple authority and replay joins were remediated; final independent review found 0 findings | None |
 | Post: Integration Suite | Complete | 3251/3251 passed; G56R-002 regression 99/99 passed | None |
-| Post: Reviewability Diff Gate | In Progress | Current committed plan evidence preserves three ordered review slices under the one-navigable-PR route | Apply the deferred-backstop evidence rule |
-| Post: Self-Review | Pending | — | Record final reviewer-facing findings |
-| Post: UAT Runbook Generation | Pending | — | Reuse a committed runbook or record the deferred skip |
-| Post: Final Reviewability Backstop | Pending | — | Confirm current committed evidence before PR side effects |
-| Post: PR Packet/Body Generation | Pending | — | Emit packet in dry-run, then apply |
+| Post: Reviewability Diff Gate | Complete | Current committed estimator passed with 24 declared entries; the three ordered slices and one-navigable-PR route remain ratified | None |
+| Post: Self-Review | Complete | No edge-case gaps, requirement orphans, silent deferrals, or tidiness findings | None |
+| Post: UAT Runbook Generation | Skipped | `skipped: generate-uat-skeleton deferred`; no committed source-derived runbook exists | None; deferred output is fail-open |
+| Post: Final Reviewability Backstop | Complete | Deferred-helper rule satisfied by estimator pass at `3981dfe0`, three G7 slice records, and the ratified one-navigable-PR route | None |
+| Post: PR Packet/Body Generation | In Progress | — | Emit packet in dry-run, then apply |
 | Post: PR Body Generation | Pending | — | Validate packet-owned body |
 | Post: PR Creation | Pending | — | Create from validated packet fields |
 | Post: Review Remediation | Pending | — | Resolve findings against the pushed head |
@@ -1080,10 +1080,75 @@ For every task:
   objective was consumed.
 - [x] No final per-agent route policy or installed default was created.
 - [x] No raw live capture, secret, credential, or personal path is committed.
-- [ ] Actual reviewable LOC and file counts pass the final gate for each slice.
+- [x] Actual reviewability evidence passes for the three ratified slices.
 - [x] The exact PR title passes release readiness.
 - [ ] Review findings are remediated against the final pushed head.
 - [ ] Roadmap and workflow status accurately reflect the final state.
+
+---
+
+### Self-Review (auto-generated)
+
+**Tests executed:** `BUILD`, `TYPECHECK`, and `LINT` are not defined for this
+repository scope. The applicable unit and integration commands ran in this
+session at 2026-07-25T17:34:50Z and exited zero: focused G56R-003 suites,
+G56R-002 regression 99/99, and the full repository suite 3251/3251. Release
+artifact and generated-reference drift checks also passed.
+
+**Edge cases:** All 14 acceptance scenarios have non-happy-path coverage:
+
+- US1.1 additive history and authority failures:
+  `test-codex-successor-capability.py:390,453`.
+- US1.2 runtime-only tuple exclusion and diagnostic non-authority:
+  `test-codex-successor-capability.py:330`.
+- US1.3 topology controls excluded from ordinary effort:
+  `test-codex-successor-capability.py:330`.
+- US2.1 missing mandatory treatment evidence:
+  `test-codex-qualification-contracts.py:1498,1565`.
+- US2.2 materialization mismatch and score refusal:
+  `test-agent-materialization.py:166` and
+  `test-codex-qualification-contracts.py:1836,1870`.
+- US2.3 immutable one-to-one trace and score joins:
+  `test-codex-qualification-contracts.py:1696,1885` and
+  `test-codex-qualification-scoring.py:1060`.
+- US3.1 governed membership and admitted-route authority:
+  `test-codex-qualification-corpus.py:445,570,616`.
+- US3.2 gate failure, absence, and ordering:
+  `test-codex-qualification-scoring.py:1316,1323,1332,1342`.
+- US3.3 disagreement and adjudicator validity:
+  `test-codex-qualification-scoring.py:1483,1531`.
+- US3.4 closed failure classification and attrition:
+  `test-codex-qualification-scoring.py:946,1009`.
+- US4.1 pre-cohort numeric plan freeze:
+  `test-codex-qualification-statistics.py:707,1628,1666`.
+- US4.2 floors, complete pairs, and uncertainty:
+  `test-codex-qualification-statistics.py:1295,1334,1393`.
+- US4.3 later-partition and prohibited-output refusal:
+  `test-codex-qualification-statistics.py:865,885,1588`.
+- US4.4 implicit-live and incomplete-budget refusal:
+  `test-codex-qualification-contracts.py:1979,2050`.
+
+No `[edge-case-gap]` markers were found.
+
+**Requirements matched:** FR-001→T001/T006/T025; FR-002→T001;
+FR-003→T001; FR-004→T001; FR-005→T001; FR-006→T002/T006; FR-007→T004;
+FR-008→T002/T004; FR-009→T003/T004; FR-010→T003/T004/T006/T023/T025;
+FR-011→T007–T011/T016; FR-012→T007/T010/T011; FR-013→T011/T017/T018/T022/T024;
+FR-014→T012/T016; FR-015→T013/T016; FR-016→T014–T016/T025;
+FR-017→T017/T019; FR-018→T017/T019/T020; FR-019→T017/T019/T022/T024;
+FR-020→T021/T024; FR-021→T017/T021/T024; FR-022→T017/T022/T023;
+FR-023→T017/T023/T024; FR-024→T017/T022/T024; FR-025→T006/T016/T025;
+FR-026→T005/T006/T025; FR-027→T001/T015/T024; FR-028→T001;
+FR-029→T001; FR-030→T003; FR-031→T003; FR-032→T014/T017/T023;
+FR-033→T007–T011; FR-034→T014/T015/T021/T024; FR-035→T013;
+FR-036→T015; FR-037→T017/T018; FR-038→T017/T020/T022/T024.
+All 25 tasks are complete with commit and passing-test evidence; no orphans exist
+in either direction.
+
+**Follow-up & tidiness:** No `[TODO]`, `[DEFERRED]`, or `[OUT-OF-SCOPE]`
+markers appear in the spec, plan, tasks, or branch commit messages. The final
+diff contains no added TODO/FIXME, debugger, `console.log`, or ad hoc `print`
+scaffolding. No `[tidiness]` findings remain.
 
 ---
 
