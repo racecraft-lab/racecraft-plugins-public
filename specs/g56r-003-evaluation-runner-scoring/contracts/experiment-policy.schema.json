@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-003/experiment-policy.schema.json",
+  "title": "G56R-003 Experiment Policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "experiment_policy_id",
+    "policy_digest",
+    "partition",
+    "candidate_freeze_binding",
+    "corpus_binding",
+    "analysis_plan_binding",
+    "assignment_policy",
+    "terminal_policy",
+    "rerun_policy",
+    "budget",
+    "execution_mode"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "experiment_policy_id": {"type": "string", "minLength": 1},
+    "policy_digest": {"$ref": "#/$defs/digest"},
+    "partition": {"$ref": "#/$defs/partition"},
+    "candidate_freeze_binding": {"$ref": "#/$defs/binding"},
+    "corpus_binding": {"$ref": "#/$defs/binding"},
+    "analysis_plan_binding": {"$ref": "#/$defs/binding"},
+    "assignment_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pair_before_execution", "order_rule"],
+      "properties": {
+        "pair_before_execution": {"const": true},
+        "order_rule": {"enum": ["balanced", "seeded_random"]}
+      }
+    },
+    "terminal_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_failures_remain_in_estimand", "candidate_failure_acceptance"],
+      "properties": {
+        "candidate_failures_remain_in_estimand": {"const": true},
+        "candidate_failure_acceptance": {"const": 0}
+      }
+    },
+    "rerun_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eligible_failure", "scope", "cap"],
+      "properties": {
+        "eligible_failure": {"const": "independently_preclassified_transient_harness_failure"},
+        "scope": {"const": "complete_pair"},
+        "cap": {"type": "integer", "minimum": 0}
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_attempts", "max_duration_seconds", "max_input_tokens", "max_output_tokens"],
+      "properties": {
+        "max_attempts": {"type": "integer", "minimum": 1},
+        "max_duration_seconds": {"type": "integer", "minimum": 1},
+        "max_input_tokens": {"type": "integer", "minimum": 1},
+        "max_output_tokens": {"type": "integer", "minimum": 1}
+      }
+    },
+    "execution_mode": {"enum": ["deterministic_replay", "explicit_local_live"]}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "partition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["partition_id", "partition_type", "qualification_eligible"],
+      "properties": {
+        "partition_id": {"type": "string", "minLength": 1},
+        "partition_type": {"enum": ["calibration", "screening", "selection", "cohort_lock", "integrated_confirmation"]},
+        "qualification_eligible": {"type": "boolean"}
+      }
+    }
+  }
+}

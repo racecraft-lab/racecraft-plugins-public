@@ -72,8 +72,8 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | 26 testable requirements, 4 user stories, 14 success criteria; G1 passed with zero clarification markers |
 | Clarify | `$speckit-clarify` | Complete | Four sessions resolved authority, treatment, scoring, partition, statistical, and evidence contracts; G2 passed with zero markers |
-| Plan | `$speckit-plan` | Pending | Design three ordered review slices and re-run reviewability |
-| Checklist | `$speckit-checklist` | Pending | Run four risk-focused requirement checklists |
+| Plan | `$speckit-plan` | Complete | Three ordered slices, five contract families, explicit ownership and generated boundaries; G3 passed |
+| Checklist | `$speckit-checklist` | In Progress | LLM integration checklist is the active domain |
 | Tasks | `$speckit-tasks` | Pending | Produce TDD-first tasks grouped by the three accepted slices |
 | Analyze | `$speckit-analyze` | Pending | Reconcile roadmap, design concept, spec, plan, and tasks |
 | Confidence Gate | G6.5 | Pending | Evaluate the Analyze consensus confidence emit before implementation |
@@ -589,26 +589,33 @@ $speckit-plan
 
 | Artifact | Required Content |
 |---|---|
-| `plan.md` | Three slices, ownership, constitution, generated artifacts, and reviewability |
-| `research.md` | Current source bindings, alternatives, calibration, and statistics |
-| `data-model.md` | Immutable ID graph and state transitions |
-| `contracts/` | Snapshot, corpus, score, policy, and decision contracts |
-| `quickstart.md` | Replay, calibration, retention, regeneration, and verification |
+| `plan.md` | Complete — three slices, shipped materializer ownership, constitution, generated artifacts, and reviewability |
+| `research.md` | Complete — twelve decisions covering authority, reuse, calibration, inference, and CI/live boundaries |
+| `data-model.md` | Complete — append-only ID graph, state transitions, joins, invalidation, and evidence allowlist |
+| `contracts/` | Complete — successor freeze, experiment policy, corpus, score/adjudication, and analysis/decision schemas |
+| `quickstart.md` | Complete — replay, explicit calibration, retention, analysis freeze, regeneration, and verification |
 
 ### Planning Reviewability Inputs
 
 Record explicit post-plan values so the reviewability parser does not infer
 them from prose:
 
-- Reviewable LOC: pending plan estimate
-- Production Files: pending plan estimate
-- Total Files: pending plan estimate
+- Reviewable LOC: 760 for the largest individual slice
+- Production Files: 5 for the largest individual slice
+- Total Files: 15 for the largest individual slice
 - Primary Surface: harness/adapter
 - Accepted decomposition: three ordered review slices
 
-**G3 Gate:** Stop for re-slicing if the authoritative gate blocks any planned
-slice or if generated release artifacts are incorrectly counted as authored
-production design.
+The authoritative `estimate-reviewable-loc` helper returned `pass` with 23
+declared file operations. Its current production-file taxonomy reported zero
+because these Python sources live below repository-specific nested roots, so
+the explicit per-slice estimates above remain the conservative planning
+boundary.
+
+**G3 Gate:** Passed — zero unresolved plan markers. No slice exceeds the
+explicit 800-LOC block boundary, generated release artifacts are excluded from
+authored design counts, and G56R-006 reuses
+`speckit_pro_runner.agent_materialization.materialize_agent_policy`.
 
 ---
 

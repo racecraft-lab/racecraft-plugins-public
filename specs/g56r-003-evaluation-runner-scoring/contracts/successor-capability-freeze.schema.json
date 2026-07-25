@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-003/successor-capability-freeze.schema.json",
+  "title": "G56R-003 Successor Capability Freeze",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "candidate_freeze_id",
+    "freeze_digest",
+    "historical_freeze_binding",
+    "source_ledger_binding",
+    "runtime_snapshot_binding",
+    "normalization_map_digest",
+    "admitted_tuples",
+    "excluded_tuples",
+    "authority_failures",
+    "published_at",
+    "invalidation_triggers"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "candidate_freeze_id": {"$ref": "#/$defs/digest"},
+    "freeze_digest": {"$ref": "#/$defs/digest"},
+    "historical_freeze_binding": {"$ref": "#/$defs/binding"},
+    "source_ledger_binding": {"$ref": "#/$defs/binding"},
+    "runtime_snapshot_binding": {"$ref": "#/$defs/binding"},
+    "normalization_map_digest": {"$ref": "#/$defs/digest"},
+    "admitted_tuples": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/tuple"}
+    },
+    "excluded_tuples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["model", "effort", "reason"],
+        "properties": {
+          "model": {"type": "string", "minLength": 1},
+          "effort": {"type": "string", "minLength": 1},
+          "reason": {
+            "enum": [
+              "source_not_admitted",
+              "effort_not_source_admitted",
+              "effort_source_not_admitted",
+              "canonical_effort_unknown",
+              "surface_evidence_incomplete",
+              "surface_disagreement",
+              "hidden_state_disagreement",
+              "availability_not_proven",
+              "topology_control_not_candidate_effort"
+            ]
+          }
+        }
+      }
+    },
+    "authority_failures": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "empty_intersection",
+          "malformed_source",
+          "malformed_catalog",
+          "stale_collection",
+          "untrusted_collection",
+          "sanitization_failed",
+          "retention_failed",
+          "identity_mismatch",
+          "digest_mismatch",
+          "historical_mutation"
+        ]
+      }
+    },
+    "published_at": {"type": "string", "format": "date-time"},
+    "invalidation_triggers": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "tuple": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidate_route_id", "model", "effort", "source_evidence_digest", "runtime_evidence_digest"],
+      "properties": {
+        "candidate_route_id": {"type": "string", "minLength": 1},
+        "model": {"type": "string", "minLength": 1},
+        "effort": {"enum": ["none", "minimal", "low", "medium", "high", "xhigh"]},
+        "source_evidence_digest": {"$ref": "#/$defs/digest"},
+        "runtime_evidence_digest": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}
