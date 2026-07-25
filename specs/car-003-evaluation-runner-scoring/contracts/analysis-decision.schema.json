@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/car-003/analysis-decision.schema.json",
+  "title": "CAR-003 Analysis Output and Decision Bundle",
+  "description": "Logical mirror of the G56R-003 spec-scoped analysis-decision contract. Adds the FR-049 reasoning-token report that must accompany every qualification claim and the FR-048 blinding-residual report. Carries no per-category weights, price coefficients, or scalar score field.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision_bundle_id",
+    "decision_bundle_digest",
+    "partition",
+    "comparison_set_binding",
+    "assignment_bindings",
+    "score_bundle_bindings",
+    "analysis_plan_binding",
+    "analysis_output",
+    "ordered_gate_results",
+    "decision",
+    "decision_reasons",
+    "reported_limitations",
+    "evidence_refs"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "decision_bundle_id": {"type": "string", "minLength": 1},
+    "decision_bundle_digest": {"$ref": "#/$defs/digest"},
+    "partition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["partition_id", "partition_type", "qualification_eligible"],
+      "properties": {
+        "partition_id": {"type": "string", "minLength": 1},
+        "partition_type": {"enum": ["calibration", "screening", "selection", "cohort_lock", "integrated_confirmation"]},
+        "qualification_eligible": {"type": "boolean"}
+      }
+    },
+    "comparison_set_binding": {"$ref": "#/$defs/binding"},
+    "assignment_bindings": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/binding"}},
+    "score_bundle_bindings": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/binding"}},
+    "analysis_plan_binding": {"$ref": "#/$defs/binding"},
+    "analysis_output": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["analysis_output_id", "analysis_output_digest", "complete", "floor_result", "non_inferiority_result", "pareto_result"],
+      "properties": {
+        "analysis_output_id": {"type": "string", "minLength": 1},
+        "analysis_output_digest": {"$ref": "#/$defs/digest"},
+        "complete": {"type": "boolean"},
+        "floor_result": {"enum": ["pass", "fail", "uncertain"]},
+        "non_inferiority_result": {"enum": ["pass", "fail", "uncertain", "not_evaluated"]},
+        "pareto_result": {"enum": ["candidate_dominates", "comparator_dominates", "tie", "mixed", "uncertain", "not_evaluated"]}
+      }
+    },
+    "ordered_gate_results": {
+      "description": "FR-017 and FR-018: floors, then non-inferiority, then Pareto. A gate that was not reached records not_evaluated rather than being omitted.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["gate", "result"],
+        "properties": {
+          "gate": {"enum": ["bindings", "partition", "treatment", "deterministic", "provenance", "completeness", "floors", "non_inferiority", "pareto"]},
+          "result": {"enum": ["pass", "fail", "uncertain", "not_evaluated"]}
+        }
+      }
+    },
+    "decision": {"enum": ["qualified", "no_qualification", "inconclusive", "calibration_complete", "invalid"]},
+    "decision_reasons": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "none",
+          "gate_failed",
+          "floors_failed",
+          "non_inferiority_failed",
+          "pareto_tie",
+          "pareto_mixed",
+          "evidence_incomplete",
+          "statistical_uncertainty",
+          "partition_not_eligible",
+          "rerun_cap_exhausted",
+          "attrition_cap_exceeded",
+          "unclassifiable_attrition",
+          "trace_reference_integrity_failure",
+          "budget_exhausted",
+          "calibration_only"
+        ]
+      }
+    },
+    "reported_limitations": {
+      "description": "FR-048 and FR-049: every qualification claim reports the reasoning-token totals alongside the dominance result and reports blinding as bounded rather than complete.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reasoning_output_tokens_total", "reasoning_tokens_excluded_from_dominance", "blinding_bounded", "provenance_inference_count"],
+      "properties": {
+        "reasoning_output_tokens_total": {"type": ["integer", "null"], "minimum": 0},
+        "reasoning_tokens_excluded_from_dominance": {"const": true},
+        "blinding_bounded": {"const": true},
+        "provenance_inference_count": {"type": "integer", "minimum": 0}
+      }
+    },
+    "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}
+  },
+  "allOf": [
+    {
+      "description": "FR-024: CAR-003 never creates final preferred or fallback route policies. A qualified decision is only reachable from a qualification-eligible partition, and calibration is never qualification-eligible.",
+      "if": {"properties": {"decision": {"const": "qualified"}}, "required": ["decision"]},
+      "then": {"properties": {"partition": {"properties": {"qualification_eligible": {"const": true}}}}}
+    }
+  ],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}

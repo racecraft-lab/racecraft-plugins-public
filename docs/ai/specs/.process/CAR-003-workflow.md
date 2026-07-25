@@ -98,8 +98,8 @@ not rewritten.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 PASS — 43 FR, 4 US, SC-001…019, 0 markers; Pareto + auth amendment verified |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | 4 sessions, resolution after each |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Clarify | `/speckit-clarify` | ✅ Complete | G2 PASS — 4 sessions, 6 consensus rounds, 1 Round-2 escalation; spec 43 → 50 FRs, 0 markers |
+| Plan | `/speckit-plan` | 🔄 In Progress | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -585,13 +585,70 @@ away.
 
 ### Plan Results
 
+Completed 2026-07-24. **G3: PASS** (`plan.md exists with 0 unresolved markers`).
+
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales |
-| `data-model.md` | ⏳ | Entities and types |
-| `contracts/` | ⏳ | Schemas for successor freeze, score bundle, experiment policy, scorer contracts |
-| `quickstart.md` | ⏳ | Operator runbook for a budgeted local campaign |
+| `plan.md` | ✅ | 450 lines |
+| `research.md` | ✅ | 393 lines |
+| `data-model.md` | ✅ | 540 lines |
+| `contracts/` | ✅ | 8 schemas — 6 parity mirrors (`successor-capability-freeze`, `role-corpus`, `score-bundle`, `experiment-policy`, `analysis-plan`, `analysis-decision`) + 2 CAR-additive (`experiment-assignment`, `car-003-additive-records`) |
+| `quickstart.md` | ✅ | 307 lines, operator runbook |
+
+### Re-derived reviewability (FR-025) — actual figures, not ranges
+
+| Metric | Roadmap | Spec projection | **Actual** |
+|--------|---------|-----------------|------------|
+| Production files | 0 | 6–10 | **1** — only `speckit-pro/speckit_pro_runner/materializer.py` ships; everything else is repository-only harness, which constitution principle I keeps outside the install-facing directory. 11 further shipped-payload paths change but are all machine-generated |
+| Total authored files | — | 18–26 | **23** (20 new, 3 modified) |
+| Reviewable LOC | — | 1,800–2,400 | **1,858** — slices 735 / 533 / 590 |
+
+Authoritative gate re-run: `status: warn`, `pass: true`, **zero blockers**, exit 0
+(`reviewable_loc 735`, `production_files 1`, `total_files 23`, `primary_surface_count 1`).
+The 25-total-file block threshold is **not** approached whole-feature; the worst
+slice leaves 2 files of margin.
+
+⚠️ **`estimate-reviewable-loc` reports a false negative — do not read it as "trivial change".**
+It returns `status: pass` with `projected: 0` and `production: 0` against 35
+declared file operations (22 new, 13 modified). Its production-file heuristic is
+path-prefix and JS-extension based and matches no Python in this repo, so the
+zero is a tool limitation, not a measurement. The authoritative figure is the
+1,858 LOC above. Recorded here so a reviewer does not mistake the advisory
+`pass` for evidence the change is small.
+
+### Slice mapping
+
+| Slice | Files | Requirements |
+|-------|-------|--------------|
+| S1 — WP-A, kept intact | 11 | FR-001…010, 027…032, 039…046 |
+| S2 — corpus and blinded scoring | 7 | FR-011…016, 033…036, 047, 048 |
+| S3 — policy, statistics, pilot | 7 | FR-013 registry, 017…024, 037, 038, 049, 050 |
+
+### Parity verification (mechanical, against the twin)
+
+`score_disposition` (4), `failure_plane` (11), `failure_code` (35),
+`invalidation_reason` (9), and `role_id` (12) are all **set-equal**;
+`resource_vector` and the Pareto dimensions are **byte-identical**. Shared
+repo-level contracts confirmed untouched.
+
+Four documented divergences, all platform **values** rather than logic: the
+effort ladder (`low`…`max`); `alias_repoint_unresolved` replacing
+`hidden_state_disagreement` (each names a failure mode real only on its own
+platform); `mutation_contract` replacing `sandbox` (the shared treatment-record
+carries both as distinct fields); and `experiment-assignment`, which has no twin
+because the twin publishes no assignment schema — here it enforces FR-037's
+calibration-protocol substitution at the schema level.
+
+### Orchestrator decision on the flagged additive fields
+
+Plan added `reasoning_token_report` and `blinding_residual` to the score bundle
+and `provenance_inferred` to each ballot — fields FR-048 and FR-049 mandate but
+the twin has no counterpart for. **Accepted as CAR-additive.** The
+parity-critical invariant is the set of decision-bearing Pareto dimensions,
+which is verified identical; reporting-only fields cannot change a qualification
+verdict, so they introduce no logical divergence. `blinding_residual` and
+`provenance_inferred` in particular have no shared home — FR-048 requires them
+and nothing else carries them. Re-confirm at Analyze.
 
 ---
 
