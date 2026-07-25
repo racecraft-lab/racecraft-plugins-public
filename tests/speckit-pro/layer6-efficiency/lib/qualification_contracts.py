@@ -15,8 +15,16 @@ else:
 
 
 QUALIFICATION_SCHEMA_VERSION = "1.0.0"
+COMPARISON_ASSIGNMENT_SCHEMA_VERSION = "comparison-assignment.v1"
 QUALIFICATION_OWNER_SPEC_ID = "G56R-003"
 TREATMENT_OWNER_SPEC_ID = "G56R-002"
+PARTITION_TYPES = frozenset({
+    "calibration",
+    "screening",
+    "selection",
+    "cohort_lock",
+    "integrated_confirmation",
+})
 MATERIALIZATION_FIELDS = frozenset({
     "materialization_id",
     "owner_spec_id",
@@ -63,6 +71,104 @@ SUCCESSOR_FREEZE_BINDING_FIELDS = frozenset({
     "included_candidate_route_id",
     "tuple_decision_digest",
 })
+BINDING_FIELDS = frozenset({"id", "digest"})
+BINDING_AUTHORITY_FIELDS = frozenset({
+    "partition_binding",
+    "candidate_freeze_binding",
+    "runtime_snapshot_binding",
+    "corpus_binding",
+    "workload_manifest_binding",
+    "experiment_policy_binding",
+    "analysis_plan_binding",
+    "role_binding",
+    "fixture_binding",
+    "objective_binding",
+    "task_binding",
+    "fixture_partition_binding",
+    "candidate_route_binding",
+    "candidate_agent_contract_binding",
+    "candidate_materialization_binding",
+    "candidate_route_resolution_binding",
+    "candidate_instruction_digest",
+    "candidate_configuration_digest",
+    "comparator_route_binding",
+    "comparator_agent_contract_binding",
+    "comparator_materialization_binding",
+    "comparator_route_resolution_binding",
+    "comparator_instruction_digest",
+    "comparator_configuration_digest",
+})
+COMPARISON_ASSIGNMENT_BUNDLE_FIELDS = frozenset({
+    "schema_version",
+    "owner_spec_id",
+    "partition_registry",
+    "binding_authorities",
+    "experiment_policy",
+    "analysis_plan",
+    "executed_pair_snapshots",
+    "refresh_invalidations",
+})
+PARTITION_BINDING_FIELDS = frozenset({
+    "partition_id",
+    "partition_type",
+    "partition_digest",
+    "qualification_eligible",
+})
+ROUTE_ASSIGNMENT_FIELDS = frozenset({
+    "assignment_id",
+    "route_binding",
+    "agent_contract_binding",
+    "materialization_binding",
+    "route_resolution_binding",
+})
+INSTRUCTION_BINDING_FIELDS = frozenset({
+    "candidate_instruction_digest",
+    "comparator_instruction_digest",
+    "candidate_configuration_digest",
+    "comparator_configuration_digest",
+})
+CAPABILITY_BINDING_FIELDS = frozenset({
+    "runtime_snapshot_binding",
+    "candidate_freeze_binding",
+})
+COMPARISON_SET_FIELDS = frozenset({
+    "comparison_set_id",
+    "comparison_set_digest",
+    "partition_binding",
+    "assignment_pairs",
+})
+ASSIGNMENT_PAIR_FIELDS = frozenset({
+    "assignment_pair_id",
+    "assignment_pair_digest",
+    "binding_state",
+    "pre_execution_frozen_at",
+    "role_binding",
+    "fixture_binding",
+    "objective_binding",
+    "task_binding",
+    "candidate_assignment",
+    "comparator_assignment",
+    "instruction_binding",
+    "capability_binding",
+    "experiment_policy_binding",
+    "analysis_plan_binding",
+    "assigned_order",
+    "invalidation_policy",
+})
+REFRESH_INVALIDATION_FIELDS = frozenset({
+    "invalidation_id",
+    "target_binding",
+    "replacement_binding",
+    "reason",
+    "detected_at",
+})
+EXECUTED_PAIR_SNAPSHOT_FIELDS = frozenset({
+    "assignment_pair_id",
+    "assignment_pair_digest",
+    "candidate_assignment_id",
+    "comparator_assignment_id",
+    "executed_at",
+})
 QUALIFICATION_BUNDLE_FIELDS = frozenset({
     "schema_version",
     "owner_spec_id",
@@ -72,6 +178,412 @@ QUALIFICATION_BUNDLE_FIELDS = frozenset({
     "qualification_traces",
 })
 OPTIONAL_QUALIFICATION_BUNDLE_FIELDS = frozenset({"successor_freeze_binding"})
+
+
+def _validate_binding(value: object, label: str) -> dict:
+    row = _closed(value, set(BINDING_FIELDS), label)
+    _text(row["id"], f"{label} ID")
+    _digest(row["digest"], f"{label} digest")
+    return row
+
+
+def _validate_partition_binding(value: object, label: str, *, require_calibration: bool = True) -> dict:
+    row = _closed(value, set(PARTITION_BINDING_FIELDS), label)
+    _text(row["partition_id"], f"{label} partition ID")
+    partition_type = row["partition_type"]
+    if partition_type not in PARTITION_TYPES:
+        raise ValueError(f"{label} partition type is outside the closed inventory")
+    _digest(row["partition_digest"], f"{label} partition digest")
+    if not isinstance(row["qualification_eligible"], bool):
+        raise ValueError(f"{label} qualification eligibility must be boolean")
+    if require_calibration and (
+        partition_type != "calibration" or row["qualification_eligible"] is not False
+    ):
+        raise ValueError("G56R-003 comparison assignments may only use calibration partitions")
+    return row
+
+
+def _expected_object_binding(value: Mapping[str, object], id_field: str, digest_field: str, label: str) -> dict:
+    return {
+        "id": _digest(value.get(id_field), f"{label} ID"),
+        "digest": _digest(value.get(digest_field), f"{label} digest"),
+    }
+
+
+def _require_equal(left: object, right: object, label: str) -> None:
+    if left != right:
+        raise ValueError(f"{label} does not match its immutable authority")
+
+
+def _validated_refresh_invalidations(value: object) -> list[dict]:
+    if not isinstance(value, list):
+        raise ValueError("refresh invalidations must be an array")
+    rows: list[dict] = []
+    seen: set[str] = set()
+    for raw in value:
+        row = _closed(raw, set(REFRESH_INVALIDATION_FIELDS), "refresh invalidation")
+        _digest(row["invalidation_id"], "refresh invalidation ID")
+        row["target_binding"] = _validate_binding(row["target_binding"], "refresh invalidation target")
+        row["replacement_binding"] = _validate_binding(row["replacement_binding"], "refresh invalidation replacement")
+        if row["target_binding"] == row["replacement_binding"]:
+            raise ValueError("refresh invalidation replacement must differ from target")
+        if row["reason"] not in {
+            "capability_refresh",
+            "runtime_snapshot_refresh",
+            "route_refresh",
+            "materialization_refresh",
+            "route_resolution_refresh",
+            "policy_refresh",
+            "plan_refresh",
+            "partition_refresh",
+        }:
+            raise ValueError("refresh invalidation reason is outside the closed inventory")
+        _timestamp(row["detected_at"], "refresh invalidation timestamp")
+        if row["invalidation_id"] != content_id(row, "invalidation_id"):
+            raise ValueError("refresh invalidation ID is not content addressed")
+        if row["invalidation_id"] in seen:
+            raise ValueError("duplicate refresh invalidation ID")
+        seen.add(row["invalidation_id"])
+        rows.append(row)
+    return rows
+
+
+def _binding_is_current_or_invalidated(
+    frozen: dict,
+    current: dict,
+    invalidations: list[dict],
+    label: str,
+) -> None:
+    if frozen == current:
+        return
+    if any(
+        item["target_binding"] == frozen and item["replacement_binding"] == current
+        for item in invalidations
+    ):
+        return
+    raise ValueError(f"{label} is stale without an additive invalidation")
+
+
+def _validate_binding_authorities(value: object, registry_partition: dict) -> dict:
+    row = _closed(value, set(BINDING_AUTHORITY_FIELDS), "comparison assignment binding authorities")
+    row["partition_binding"] = _validate_partition_binding(
+        row["partition_binding"], "authority partition binding",
+    )
+    row["fixture_partition_binding"] = _validate_partition_binding(
+        row["fixture_partition_binding"], "fixture authority partition binding",
+    )
+    _require_equal(row["partition_binding"], registry_partition, "authority partition binding")
+    _require_equal(row["fixture_partition_binding"], registry_partition, "fixture partition binding")
+    for field in (
+        "candidate_freeze_binding",
+        "runtime_snapshot_binding",
+        "corpus_binding",
+        "workload_manifest_binding",
+        "experiment_policy_binding",
+        "analysis_plan_binding",
+        "role_binding",
+        "fixture_binding",
+        "objective_binding",
+        "task_binding",
+        "candidate_route_binding",
+        "candidate_agent_contract_binding",
+        "candidate_materialization_binding",
+        "candidate_route_resolution_binding",
+        "comparator_route_binding",
+        "comparator_agent_contract_binding",
+        "comparator_materialization_binding",
+        "comparator_route_resolution_binding",
+    ):
+        row[field] = _validate_binding(row[field], f"authority {field}")
+    for field in (
+        "candidate_instruction_digest",
+        "candidate_configuration_digest",
+        "comparator_instruction_digest",
+        "comparator_configuration_digest",
+    ):
+        _digest(row[field], f"authority {field}")
+    return row
+
+
+def _validate_route_assignment(value: object, authorities: dict, prefix: str) -> dict:
+    row = _closed(value, set(ROUTE_ASSIGNMENT_FIELDS), f"{prefix} assignment")
+    _digest(row["assignment_id"], f"{prefix} assignment ID")
+    for field in (
+        "route_binding",
+        "agent_contract_binding",
+        "materialization_binding",
+        "route_resolution_binding",
+    ):
+        row[field] = _validate_binding(row[field], f"{prefix} {field}")
+    expected = {
+        "route_binding": authorities[f"{prefix}_route_binding"],
+        "agent_contract_binding": authorities[f"{prefix}_agent_contract_binding"],
+        "materialization_binding": authorities[f"{prefix}_materialization_binding"],
+        "route_resolution_binding": authorities[f"{prefix}_route_resolution_binding"],
+    }
+    for field, expected_value in expected.items():
+        _require_equal(row[field], expected_value, f"{prefix} {field}")
+    if row["assignment_id"] != content_id(row, "assignment_id"):
+        raise ValueError(f"{prefix} assignment ID is not content addressed")
+    return row
+
+
+def _validate_assignment_pair(
+    value: object,
+    authorities: dict,
+    invalidations: list[dict],
+    policy_binding: dict,
+    plan_binding: dict,
+) -> dict:
+    row = _closed(value, set(ASSIGNMENT_PAIR_FIELDS), "comparison assignment pair")
+    _digest(row["assignment_pair_id"], "comparison assignment pair ID")
+    _digest(row["assignment_pair_digest"], "comparison assignment pair digest")
+    if row["binding_state"] != "pre_execution_frozen":
+        raise ValueError("comparison assignment pair must be frozen before execution")
+    _timestamp(row["pre_execution_frozen_at"], "comparison assignment freeze timestamp")
+    for field in ("role_binding", "fixture_binding", "objective_binding", "task_binding"):
+        row[field] = _validate_binding(row[field], f"comparison {field}")
+        _require_equal(row[field], authorities[field], f"comparison {field}")
+    row["candidate_assignment"] = _validate_route_assignment(
+        row["candidate_assignment"], authorities, "candidate",
+    )
+    row["comparator_assignment"] = _validate_route_assignment(
+        row["comparator_assignment"], authorities, "comparator",
+    )
+    row["instruction_binding"] = _closed(
+        row["instruction_binding"], set(INSTRUCTION_BINDING_FIELDS), "comparison instruction binding",
+    )
+    for field in INSTRUCTION_BINDING_FIELDS:
+        _digest(row["instruction_binding"][field], f"comparison {field}")
+        _require_equal(
+            row["instruction_binding"][field],
+            authorities[field],
+            f"comparison {field}",
+        )
+    capability = _closed(
+        row["capability_binding"], set(CAPABILITY_BINDING_FIELDS), "comparison capability binding",
+    )
+    capability["runtime_snapshot_binding"] = _validate_binding(
+        capability["runtime_snapshot_binding"], "comparison runtime snapshot binding",
+    )
+    capability["candidate_freeze_binding"] = _validate_binding(
+        capability["candidate_freeze_binding"], "comparison candidate freeze binding",
+    )
+    _binding_is_current_or_invalidated(
+        capability["runtime_snapshot_binding"],
+        authorities["runtime_snapshot_binding"],
+        invalidations,
+        "runtime snapshot binding",
+    )
+    _binding_is_current_or_invalidated(
+        capability["candidate_freeze_binding"],
+        authorities["candidate_freeze_binding"],
+        invalidations,
+        "candidate freeze binding",
+    )
+    row["capability_binding"] = capability
+    row["experiment_policy_binding"] = _validate_binding(
+        row["experiment_policy_binding"], "comparison experiment policy binding",
+    )
+    row["analysis_plan_binding"] = _validate_binding(
+        row["analysis_plan_binding"], "comparison analysis plan binding",
+    )
+    _require_equal(row["experiment_policy_binding"], policy_binding, "comparison policy binding")
+    _require_equal(row["analysis_plan_binding"], plan_binding, "comparison plan binding")
+    if row["assigned_order"] != ["candidate", "comparator"]:
+        raise ValueError("comparison assigned order must be frozen candidate/comparator")
+    if row["invalidation_policy"] != "additive_only":
+        raise ValueError("comparison invalidation policy must be additive only")
+    if row["assignment_pair_digest"] != content_id(row, "assignment_pair_digest"):
+        raise ValueError("comparison assignment pair digest is not content addressed")
+    return row
+
+
+def _validate_comparison_sets(
+    value: object,
+    registry_partition: dict,
+    authorities: dict,
+    invalidations: list[dict],
+    policy_binding: dict,
+    plan_binding: dict,
+) -> list[dict]:
+    if not isinstance(value, list) or not value:
+        raise ValueError("comparison sets must be a non-empty array")
+    rows: list[dict] = []
+    seen: set[str] = set()
+    for raw in value:
+        row = _closed(raw, set(COMPARISON_SET_FIELDS), "comparison set")
+        _digest(row["comparison_set_id"], "comparison set ID")
+        _digest(row["comparison_set_digest"], "comparison set digest")
+        row["partition_binding"] = _validate_partition_binding(
+            row["partition_binding"], "comparison set partition binding",
+        )
+        _require_equal(row["partition_binding"], registry_partition, "comparison set partition binding")
+        row["assignment_pairs"] = [
+            _validate_assignment_pair(item, authorities, invalidations, policy_binding, plan_binding)
+            for item in row["assignment_pairs"]
+        ]
+        if row["comparison_set_digest"] != content_id(row, "comparison_set_digest"):
+            raise ValueError("comparison set digest is not content addressed")
+        if row["comparison_set_id"] in seen:
+            raise ValueError("duplicate comparison set ID")
+        seen.add(row["comparison_set_id"])
+        rows.append(row)
+    return rows
+
+
+def _validate_analysis_plan_for_assignment(value: object, authorities: dict, registry_partition: dict) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError("analysis plan must be an object")
+    if value.get("schema_version") != "analysis-plan.v1" or value.get("status") != "frozen":
+        raise ValueError("analysis plan must be frozen before assignment validation")
+    plan_binding = _expected_object_binding(
+        value, "analysis_plan_id", "analysis_plan_digest", "analysis plan",
+    )
+    _require_equal(plan_binding, authorities["analysis_plan_binding"], "analysis plan binding")
+    partition = _validate_partition_binding(
+        value.get("calibration_partition_binding"), "analysis plan calibration partition",
+    )
+    _require_equal(partition, registry_partition, "analysis plan partition binding")
+    return value
+
+
+def _validate_executed_pair_snapshots(value: object, pairs: Mapping[str, dict]) -> list[dict]:
+    if not isinstance(value, list):
+        raise ValueError("executed pair snapshots must be an array")
+    rows: list[dict] = []
+    seen: set[str] = set()
+    for raw in value:
+        row = _closed(raw, set(EXECUTED_PAIR_SNAPSHOT_FIELDS), "executed pair snapshot")
+        pair_id = _digest(row["assignment_pair_id"], "executed pair snapshot pair ID")
+        _digest(row["assignment_pair_digest"], "executed pair snapshot pair digest")
+        _digest(row["candidate_assignment_id"], "executed candidate assignment ID")
+        _digest(row["comparator_assignment_id"], "executed comparator assignment ID")
+        _timestamp(row["executed_at"], "executed pair snapshot timestamp")
+        if pair_id not in pairs:
+            raise ValueError("executed pair snapshot references an unknown pair")
+        pair = pairs[pair_id]
+        if (
+            row["assignment_pair_digest"] != pair["assignment_pair_digest"]
+            or row["candidate_assignment_id"] != pair["candidate_assignment"]["assignment_id"]
+            or row["comparator_assignment_id"] != pair["comparator_assignment"]["assignment_id"]
+        ):
+            raise ValueError("executed assignment pair cannot be rebound after execution")
+        if pair_id in seen:
+            raise ValueError("duplicate executed pair snapshot")
+        seen.add(pair_id)
+        rows.append(row)
+    return rows
+
+
+def _validate_experiment_policy_for_assignment(
+    value: object,
+    analysis_plan: dict,
+    registry_partition: dict,
+    authorities: dict,
+    invalidations: list[dict],
+) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError("experiment policy must be an object")
+    if value.get("schema_version") != "experiment-policy.v1":
+        raise ValueError("experiment policy schema version is unsupported")
+    policy_binding = _expected_object_binding(
+        value, "experiment_policy_id", "policy_digest", "experiment policy",
+    )
+    _require_equal(policy_binding, authorities["experiment_policy_binding"], "experiment policy binding")
+    plan_binding = _expected_object_binding(
+        analysis_plan, "analysis_plan_id", "analysis_plan_digest", "analysis plan",
+    )
+    _require_equal(plan_binding, authorities["analysis_plan_binding"], "policy analysis plan authority")
+    partition = _validate_partition_binding(
+        value.get("partition_binding"), "experiment policy partition binding",
+    )
+    _require_equal(partition, registry_partition, "experiment policy partition binding")
+    candidate_freeze = _validate_binding(
+        value.get("candidate_freeze_binding"), "experiment policy candidate freeze binding",
+    )
+    _binding_is_current_or_invalidated(
+        candidate_freeze, authorities["candidate_freeze_binding"], invalidations,
+        "experiment policy candidate freeze binding",
+    )
+    for field in ("corpus_binding", "workload_manifest_binding"):
+        _require_equal(
+            _validate_binding(value.get(field), f"experiment policy {field}"),
+            authorities[field],
+            f"experiment policy {field}",
+        )
+    _require_equal(
+        _validate_binding(value.get("analysis_plan_binding"), "experiment policy analysis plan binding"),
+        plan_binding,
+        "experiment policy analysis plan binding",
+    )
+    policy = _closed(
+        value.get("comparison_policy"),
+        {
+            "pair_before_execution",
+            "comparison_set_generation",
+            "order_rule",
+            "randomization_seed_digest",
+            "rebinding_policy",
+        },
+        "comparison policy",
+    )
+    if (
+        policy["pair_before_execution"] is not True
+        or policy["comparison_set_generation"] != "paired_by_role_fixture_task"
+        or policy["rebinding_policy"] != "additive_invalidation_only"
+    ):
+        raise ValueError("comparison policy does not freeze pairs before execution")
+    if policy["order_rule"] not in {"seeded_balanced", "seeded_random"}:
+        raise ValueError("comparison order rule is invalid")
+    _digest(policy["randomization_seed_digest"], "comparison randomization seed digest")
+    value["comparison_sets"] = _validate_comparison_sets(
+        value.get("comparison_sets"), registry_partition, authorities, invalidations,
+        policy_binding, plan_binding,
+    )
+    return value
+
+
+def validate_comparison_assignment_bundle(bundle: object) -> dict:
+    """Validate immutable comparison assignments and calibration partition isolation."""
+    _validate_resource_bounds(bundle)
+    _validate_retained_strings(bundle, "comparison assignment bundle")
+    value = copy.deepcopy(bundle)
+    row = _closed(value, set(COMPARISON_ASSIGNMENT_BUNDLE_FIELDS), "comparison assignment bundle")
+    if row["schema_version"] != COMPARISON_ASSIGNMENT_SCHEMA_VERSION:
+        raise ValueError("comparison assignment schema version is unsupported")
+    if row["owner_spec_id"] != QUALIFICATION_OWNER_SPEC_ID:
+        raise ValueError("comparison assignment owner is invalid")
+    if not isinstance(row["partition_registry"], list) or len(row["partition_registry"]) != 1:
+        raise ValueError("comparison assignment must bind exactly one partition registry entry")
+    registry_partition = _validate_partition_binding(
+        row["partition_registry"][0], "partition registry entry",
+    )
+    invalidations = _validated_refresh_invalidations(row["refresh_invalidations"])
+    authorities = _validate_binding_authorities(row["binding_authorities"], registry_partition)
+    row["analysis_plan"] = _validate_analysis_plan_for_assignment(
+        row["analysis_plan"], authorities, registry_partition,
+    )
+    row["experiment_policy"] = _validate_experiment_policy_for_assignment(
+        row["experiment_policy"], row["analysis_plan"], registry_partition, authorities, invalidations,
+    )
+    pairs = {
+        pair["assignment_pair_id"]: pair
+        for comparison_set in row["experiment_policy"]["comparison_sets"]
+        for pair in comparison_set["assignment_pairs"]
+    }
+    if len(pairs) != sum(
+        len(comparison_set["assignment_pairs"])
+        for comparison_set in row["experiment_policy"]["comparison_sets"]
+    ):
+        raise ValueError("duplicate comparison assignment pair ID")
+    row["executed_pair_snapshots"] = _validate_executed_pair_snapshots(
+        row["executed_pair_snapshots"], pairs,
+    )
+    row["binding_authorities"] = authorities
+    row["refresh_invalidations"] = invalidations
+    row["partition_registry"] = [registry_partition]
+    return row
 
 
 def _validate_qualification_observations(value: object) -> dict[str, dict]:
@@ -427,13 +939,17 @@ def validate_qualification_bundle(
 
 
 __all__ = [
+    "BINDING_AUTHORITY_FIELDS",
+    "COMPARISON_ASSIGNMENT_SCHEMA_VERSION",
     "DELIVERY_STATUSES",
     "MANDATORY_OBSERVATION_FIELDS",
     "MATERIALIZATION_FIELDS",
     "NULL_ONLY_OBSERVATION_FIELDS",
+    "PARTITION_TYPES",
     "QUALIFICATION_OBSERVATION_FIELDS",
     "QUALIFICATION_OWNER_SPEC_ID",
     "QUALIFICATION_SCHEMA_VERSION",
     "TREATMENT_OWNER_SPEC_ID",
+    "validate_comparison_assignment_bundle",
     "validate_qualification_bundle",
 ]

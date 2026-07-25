@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-003-workflow.md",
   "spec_id": "G56R-003",
   "feature_dir": "specs/g56r-003-evaluation-runner-scoring",
-  "updated_at": "2026-07-25T14:17:09Z",
-  "active_step": "Phase 7: Implement - Slice 3 Experiment Statistics and Calibration (T017-T025)",
+  "updated_at": "2026-07-25T16:16:55Z",
+  "active_step": "Post: Doctor Extension Check",
   "status": "in_progress",
   "settings": {
     "auto_commit": "per-phase",
@@ -276,9 +276,9 @@
       "rerun_completed_at": "2026-07-25T02:10:07Z"
     },
     "implementation": {
-      "status": "in_progress",
+      "status": "completed",
       "active_slice": 3,
-      "active_task": "T017",
+      "active_task": null,
       "completed_tasks": [
         "T001",
         "T002",
@@ -295,7 +295,16 @@
         "T013",
         "T014",
         "T015",
-        "T016"
+        "T016",
+        "T017",
+        "T018",
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023",
+        "T024",
+        "T025"
       ],
       "task_evidence": {
         "T001": {
@@ -408,7 +417,84 @@
           "generated_reference": "pnpm --dir docs-site reference:check passed after canonical regeneration",
           "gate": "G7",
           "gate_status": "passed"
+        },
+        "T017": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Four contract tests produced six failing assertions because all three repository schemas were missing.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-contracts.py: 19 tests passed",
+          "contract": "Self-contained closed schemas freeze calibration partition, immutable pair assignments, complete budgets, workload/cache/tail controls, quality-first statistical order, attrition/rerun rules, and ordered non-qualifying calibration decisions"
+        },
+        "T018": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Five comparison-assignment tests plus API export coverage produced twenty-one errors and one failure before validator implementation.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-contracts.py: 24 tests passed",
+          "contract": "Complete pre-execution ID/digest joins bind one non-eligible calibration partition; refreshes require additive invalidations, post-execution rebinding is rejected, and cross-partition reuse fails closed"
+        },
+        "T019": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Six focused statistics tests produced twelve assertion failures before the statistics module existed.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-statistics.py: 6 tests passed",
+          "contract": "Deterministic decisions short-circuit from pairing to absolute floors to paired cluster-adjusted non-inferiority to unweighted raw Pareto; missing pairs, uncertainty, ties, and mixed dominance cannot qualify"
+        },
+        "T020": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Four workload and cache tests produced ten failures and one error before implementation.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-statistics.py: 10 tests passed",
+          "contract": "A frozen workload/cache gate precedes floors, validates closed strata, target weights, long-horizon flags, minimum tasks, unknown handling, per-stratum per-arm p95 tails, immutable cache binding, isolation, and no treatment-order leakage"
+        },
+        "T021": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Four terminal, attrition, and rerun tests produced four failures and five errors before implementation.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-statistics.py: 14 tests passed",
+          "contract": "Candidate terminals remain assigned with acceptance zero; unclassifiable attrition blocks completeness; only independently preclassified transient harness failures may trigger capped complete-pair reruns, with one-arm and complete-case paths prohibited"
+        },
+        "T022": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Three budget, partition, and terminal decision tests produced seventeen failures and ten errors before implementation.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-statistics.py: 17 tests passed",
+          "contract": "All seven campaign budget dimensions fail closed when missing or exceeded; G56R-003 accepts only non-eligible calibration partitions, emits only calibration_complete/inconclusive/invalid, and cannot create final policy, default, aggregate, or release outputs"
+        },
+        "T023": {
+          "status": "completed",
+          "execution": "RED tests from implement-executor attempt plus parent recovery after two executor stalls before GREEN",
+          "red": "Qualification contracts produced one failure and four errors; statistics/replay produced two failures and one error before the replay and CLI paths existed.",
+          "focused_green": "Qualification contracts 27 tests passed; qualification statistics/replay 20 tests passed.",
+          "contract": "Content-addressed offline replay recomputes decisions and rejects drift; calibration requires explicit confirmed local execution, pinned client/snapshot, complete budgets and scorer/rubric/adjudicator/workload/cache bindings, an operator-only raw root, and no network or live repository writes; analysis-plan freeze is canonical and pre-cohort only."
+        },
+        "T024": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Six new methods and one expanded statistics test produced eleven failures and one error before boundary hardening.",
+          "focused_green": "Qualification statistics/replay 26 tests passed; qualification contracts 27 tests passed.",
+          "contract": "Analysis-plan freeze requires closed versioned metadata, independent review, pre-cohort absence, complete numeric policies and budgets; final route policy, integrated confirmation, live-default CI, committed raw evidence, one-arm retry, post-hoc thresholds, trace mutation, duplicate materializers, cache leakage, unknown attrition, unrestricted failure codes, and missing budgets fail closed; run_codex_role_eval.py remains absent."
+        },
+        "T025": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "The full sanitized source-lineage replay produced one real closed-shape validation failure before source_lineage became an optional governed request field.",
+          "focused_green": "All G56R-003 focused tests passed 107/107; G56R-002 capability regression passed 99/99.",
+          "full_suite": "PYTHONDONTWRITEBYTECODE=1 python3 -u tests/speckit-pro/run-all.py passed 3251/3251.",
+          "suite_registration": "test-codex-qualification-statistics.py is registered exactly once in suite-manifest.json.",
+          "docs": "pnpm --dir docs-site reference:check and validate passed after canonical reference generation.",
+          "release_title": "feat(g56r-003): add evaluation runner scoring passed live release-readiness validation.",
+          "generated_check": "The source check passed before docs reference regeneration; the parent recorded the regenerated tests.md checkpoint dependency for the immediate Slice 3 commit and post-commit check."
         }
+      },
+      "gate": "G7",
+      "gate_status": "passed",
+      "gate_evidence": {
+        "helper_id": "validate-gate",
+        "mode": "read_only",
+        "writes_state": false,
+        "tasks_done": 25,
+        "tasks_total": 25,
+        "markers": 0
       }
     }
   },
@@ -532,11 +618,11 @@
     },
     {
       "step": "Phase 7: Implement - Slice 3 Experiment Statistics and Calibration (T017-T025)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Verify Implementation",

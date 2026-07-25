@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.machinery
 import importlib.util
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -24,11 +26,41 @@ QUALIFICATION_RUNNER_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/run-code
 SUCCESSOR_TEST_PATH = ROOT / "tests/speckit-pro/unit/test-codex-successor-capability.py"
 TREATMENT_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"
 TREATMENT_FIXTURE_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
+CONTRACT_DIR = ROOT / "tests/speckit-pro/layer6-efficiency/contracts"
+EXPERIMENT_POLICY_SCHEMA_PATH = CONTRACT_DIR / "experiment-policy.schema.json"
+ANALYSIS_PLAN_SCHEMA_PATH = CONTRACT_DIR / "analysis-plan.schema.json"
+ANALYSIS_DECISION_SCHEMA_PATH = CONTRACT_DIR / "analysis-decision.schema.json"
+CONTRACT_SCHEMA_PATHS = (
+    EXPERIMENT_POLICY_SCHEMA_PATH,
+    ANALYSIS_PLAN_SCHEMA_PATH,
+    ANALYSIS_DECISION_SCHEMA_PATH,
+)
 MANIFEST_PATH = ROOT / "docs/ai/research/codex-agent-route-candidate-manifest.json"
 PLUGIN_ROOT = ROOT / "speckit-pro"
 MATERIALIZER_MODULE_PATH = PLUGIN_ROOT / "speckit_pro_runner/agent_materialization.py"
 PHASE_AGENT_SOURCE = PLUGIN_ROOT / "codex-agents/phase-executor.toml"
 PHASE_AGENT_RELATIVE_PATH = "speckit-pro/codex-agents/phase-executor.toml"
+DECISION_GATE_ORDER = [
+    "bindings",
+    "partition",
+    "treatment",
+    "deterministic",
+    "provenance",
+    "completeness",
+    "floors",
+    "non_inferiority",
+    "pareto",
+]
+PARETO_DIMENSIONS = [
+    "raw_input_tokens",
+    "cached_input_tokens",
+    "output_tokens",
+    "duration_ms",
+    "retries",
+    "compactions",
+    "acceptance",
+    "terminal_state",
+]
 
 
 def load_treatment_runtime() -> dict[str, types.ModuleType]:
@@ -143,6 +175,166 @@ treatment_fields = TREATMENT_INTERNALS["treatment_trace_fields"]
 
 def load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def schema_digest(label: str) -> str:
+    return "sha256:" + hashlib.sha256(label.encode("utf-8")).hexdigest()
+
+
+def schema_binding(label: str) -> dict:
+    return {"id": label, "digest": schema_digest(label)}
+
+
+def object_binding(object_id: str, object_digest: str) -> dict:
+    return {"id": object_id, "digest": object_digest}
+
+
+def partition_binding(partition_type: str = "calibration", *, eligible: bool = False) -> dict:
+    return {
+        "partition_id": f"{partition_type}-partition",
+        "partition_type": partition_type,
+        "partition_digest": schema_digest(f"{partition_type}-partition"),
+        "qualification_eligible": eligible,
+    }
+
+
+def _schema_bytes(value: object) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
+
+
+def _schema_type_matches(value: object, expected: str) -> bool:
+    return {
+        "null": value is None,
+        "boolean": isinstance(value, bool),
+        "integer": isinstance(value, int) and not isinstance(value, bool),
+        "number": isinstance(value, (int, float)) and not isinstance(value, bool),
+        "string": isinstance(value, str),
+        "array": isinstance(value, list),
+        "object": isinstance(value, dict),
+    }.get(expected, False)
+
+
+def _resolve_contract_ref(root: dict, reference: str) -> object:
+    if not reference.startswith("#/"):
+        raise AssertionError(f"contract schema must use only local refs: {reference}")
+    current: object = root
+    for token in reference[2:].split("/"):
+        token = token.replace("~1", "/").replace("~0", "~")
+        if not isinstance(current, dict) or token not in current:
+            raise AssertionError(f"contract schema contains unresolved ref: {reference}")
+        current = current[token]
+    return current
+
+
+def _contract_schema_matches(value: object, schema: object, root: dict, path: str) -> bool:
+    try:
+        validate_contract_schema_instance(value, schema, root, path)
+    except AssertionError:
+        return False
+    return True
+
+
+def validate_contract_schema_instance(value: object, schema: object, root: dict, path: str = "$") -> None:
+    if schema is True:
+        return
+    if schema is False or not isinstance(schema, dict):
+        raise AssertionError(f"{path} is rejected by the contract schema")
+    if "$ref" in schema:
+        validate_contract_schema_instance(value, _resolve_contract_ref(root, schema["$ref"]), root, path)
+    for branch in schema.get("allOf", []):
+        validate_contract_schema_instance(value, branch, root, path)
+    if "anyOf" in schema and not any(_contract_schema_matches(value, branch, root, path) for branch in schema["anyOf"]):
+        raise AssertionError(f"{path} does not match any allowed contract shape")
+    if "oneOf" in schema and sum(_contract_schema_matches(value, branch, root, path) for branch in schema["oneOf"]) != 1:
+        raise AssertionError(f"{path} does not match exactly one contract shape")
+    if "not" in schema and _contract_schema_matches(value, schema["not"], root, path):
+        raise AssertionError(f"{path} matches a prohibited contract shape")
+    if "if" in schema:
+        branch = schema.get("then") if _contract_schema_matches(value, schema["if"], root, path) else schema.get("else")
+        if branch is not None:
+            validate_contract_schema_instance(value, branch, root, path)
+    if "const" in schema and _schema_bytes(value) != _schema_bytes(schema["const"]):
+        raise AssertionError(f"{path} does not match its contract constant")
+    if "enum" in schema and not any(_schema_bytes(value) == _schema_bytes(item) for item in schema["enum"]):
+        raise AssertionError(f"{path} is outside its contract enum")
+    if "type" in schema:
+        expected = schema["type"] if isinstance(schema["type"], list) else [schema["type"]]
+        if not any(_schema_type_matches(value, item) for item in expected):
+            raise AssertionError(f"{path} has the wrong contract type")
+    if isinstance(value, str):
+        if len(value) < schema.get("minLength", 0):
+            raise AssertionError(f"{path} is shorter than allowed")
+        if "pattern" in schema and re.search(schema["pattern"], value) is None:
+            raise AssertionError(f"{path} does not match its contract pattern")
+        if schema.get("format") == "date-time" and re.fullmatch(
+            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", value,
+        ) is None:
+            raise AssertionError(f"{path} must be an RFC3339 UTC timestamp")
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if "minimum" in schema and value < schema["minimum"]:
+            raise AssertionError(f"{path} is below its minimum")
+        if "maximum" in schema and value > schema["maximum"]:
+            raise AssertionError(f"{path} is above its maximum")
+        if "exclusiveMinimum" in schema and value <= schema["exclusiveMinimum"]:
+            raise AssertionError(f"{path} is not above its exclusive minimum")
+        if "exclusiveMaximum" in schema and value >= schema["exclusiveMaximum"]:
+            raise AssertionError(f"{path} is not below its exclusive maximum")
+    if isinstance(value, list):
+        if len(value) < schema.get("minItems", 0):
+            raise AssertionError(f"{path} has too few items")
+        if "maxItems" in schema and len(value) > schema["maxItems"]:
+            raise AssertionError(f"{path} has too many items")
+        if schema.get("uniqueItems") and len({_schema_bytes(item) for item in value}) != len(value):
+            raise AssertionError(f"{path} must contain unique items")
+        prefix_items = schema.get("prefixItems", [])
+        if prefix_items:
+            for index, item_schema in enumerate(prefix_items[:len(value)]):
+                validate_contract_schema_instance(value[index], item_schema, root, f"{path}[{index}]")
+            if schema.get("items") is False and len(value) > len(prefix_items):
+                raise AssertionError(f"{path} has unexpected trailing items")
+            if isinstance(schema.get("items"), dict):
+                for index, item in enumerate(value[len(prefix_items):], start=len(prefix_items)):
+                    validate_contract_schema_instance(item, schema["items"], root, f"{path}[{index}]")
+        elif isinstance(schema.get("items"), dict):
+            for index, item in enumerate(value):
+                validate_contract_schema_instance(item, schema["items"], root, f"{path}[{index}]")
+    if isinstance(value, dict):
+        if len(value) < schema.get("minProperties", 0):
+            raise AssertionError(f"{path} has too few properties")
+        if "maxProperties" in schema and len(value) > schema["maxProperties"]:
+            raise AssertionError(f"{path} has too many properties")
+        missing = set(schema.get("required", [])) - set(value)
+        if missing:
+            raise AssertionError(f"{path} is missing required contract fields: {sorted(missing)}")
+        properties = schema.get("properties", {})
+        for index, (key, item) in enumerate(value.items()):
+            if key in properties:
+                validate_contract_schema_instance(item, properties[key], root, f"{path}.{key}")
+            elif schema.get("additionalProperties") is False:
+                raise AssertionError(f"{path} contains an undeclared contract field: {key}")
+            elif isinstance(schema.get("additionalProperties"), dict):
+                validate_contract_schema_instance(item, schema["additionalProperties"], root, f"{path}.<field:{index}>")
+
+
+def walk_schema_nodes(value: object):
+    if isinstance(value, dict):
+        yield value
+        for item in value.values():
+            yield from walk_schema_nodes(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from walk_schema_nodes(item)
+
+
+def iter_schema_refs(value: object):
+    if isinstance(value, dict):
+        if "$ref" in value:
+            yield value["$ref"]
+        for item in value.values():
+            yield from iter_schema_refs(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from iter_schema_refs(item)
 
 
 def replay_trace(bundle: dict, case_id: str) -> dict:
@@ -520,6 +712,661 @@ def qualification_bundle(treatment_bundle: dict, *, score_eligible: bool = True,
     return set_assignment_ids(wrapper)
 
 
+def route_assignment(label: str) -> dict:
+    assignment = {
+        "assignment_id": schema_digest(f"{label}-assignment"),
+        "route_binding": schema_binding(f"{label}-route"),
+        "agent_contract_binding": schema_binding(f"{label}-agent-contract"),
+        "materialization_binding": schema_binding(f"{label}-materialization"),
+        "route_resolution_binding": schema_binding(f"{label}-route-resolution"),
+    }
+    assignment["assignment_id"] = content_id(assignment, "assignment_id")
+    return assignment
+
+
+def refresh_comparison_pair_digests(policy: dict) -> dict:
+    for comparison_set in policy["comparison_sets"]:
+        for pair in comparison_set["assignment_pairs"]:
+            pair["candidate_assignment"]["assignment_id"] = content_id(
+                pair["candidate_assignment"], "assignment_id",
+            )
+            pair["comparator_assignment"]["assignment_id"] = content_id(
+                pair["comparator_assignment"], "assignment_id",
+            )
+            pair["assignment_pair_digest"] = content_id(pair, "assignment_pair_digest")
+        comparison_set["comparison_set_digest"] = content_id(comparison_set, "comparison_set_digest")
+    return policy
+
+
+def experiment_policy_binding(policy: dict) -> dict:
+    return object_binding(policy["experiment_policy_id"], policy["policy_digest"])
+
+
+def analysis_plan_binding(plan: dict) -> dict:
+    return object_binding(plan["analysis_plan_id"], plan["analysis_plan_digest"])
+
+
+def full_budget() -> dict:
+    return {
+        "max_attempts": 24,
+        "max_wall_clock_seconds": 3600,
+        "max_raw_input_tokens": 200000,
+        "max_cached_input_tokens": 50000,
+        "max_output_tokens": 60000,
+        "max_candidates": 4,
+        "max_confirmation_entries": 0,
+    }
+
+
+def calibration_candidate_freeze_fixture() -> dict:
+    return {
+        "schema_version": "successor-capability-freeze.v1",
+        "candidate_freeze_id": "candidate-freeze",
+        "freeze_digest": schema_digest("candidate-freeze"),
+        "pinned_client_binding": schema_binding("codex-0.145.0"),
+        "runtime_snapshot_binding": schema_binding("runtime-snapshot"),
+    }
+
+
+def calibration_corpus_fixture() -> dict:
+    return {
+        "schema_version": "role-corpus.v1",
+        "corpus_id": "corpus",
+        "corpus_digest": schema_digest("corpus"),
+    }
+
+
+def calibration_cli_policy_fixture() -> dict:
+    policy = experiment_policy_fixture()
+    freeze = calibration_candidate_freeze_fixture()
+    corpus = calibration_corpus_fixture()
+    policy["candidate_freeze_binding"] = object_binding(
+        freeze["candidate_freeze_id"],
+        freeze["freeze_digest"],
+    )
+    policy["corpus_binding"] = object_binding(corpus["corpus_id"], corpus["corpus_digest"])
+    policy["pinned_client_binding"] = copy.deepcopy(freeze["pinned_client_binding"])
+    policy["runtime_snapshot_binding"] = copy.deepcopy(freeze["runtime_snapshot_binding"])
+    policy["scorer_bindings"] = [
+        schema_binding("opaque-scorer-a"),
+        schema_binding("opaque-scorer-b"),
+    ]
+    policy["rubric_binding"] = schema_binding("g56r-003-semantic-rubric")
+    policy["adjudicator_binding"] = schema_binding("opaque-adjudicator-c")
+    policy["cache_policy_binding"] = {
+        "id": "cache-isolation-v1",
+        "digest": schema_digest("cache-policy"),
+    }
+    policy["budget"] = full_budget()
+    return policy
+
+
+def experiment_policy_fixture() -> dict:
+    partition = partition_binding()
+    analysis_plan_id = schema_digest("analysis-plan")
+    analysis_plan_digest = schema_digest("analysis-plan-digest")
+    policy = {
+        "schema_version": "experiment-policy.v1",
+        "experiment_policy_id": schema_digest("experiment-policy"),
+        "experiment_policy_version": "2026-07-24.calibration",
+        "policy_digest": schema_digest("experiment-policy-digest"),
+        "partition_binding": partition,
+        "candidate_freeze_binding": schema_binding("candidate-freeze"),
+        "corpus_binding": schema_binding("corpus"),
+        "analysis_plan_binding": object_binding(analysis_plan_id, analysis_plan_digest),
+        "workload_manifest_binding": schema_binding("workload-manifest"),
+        "comparison_policy": {
+            "pair_before_execution": True,
+            "comparison_set_generation": "paired_by_role_fixture_task",
+            "order_rule": "seeded_balanced",
+            "randomization_seed_digest": schema_digest("experiment-seed"),
+            "rebinding_policy": "additive_invalidation_only",
+        },
+        "comparison_sets": [{
+            "comparison_set_id": schema_digest("comparison-set"),
+            "comparison_set_digest": schema_digest("comparison-set-digest"),
+            "partition_binding": partition,
+            "assignment_pairs": [{
+                "assignment_pair_id": schema_digest("assignment-pair"),
+                "assignment_pair_digest": schema_digest("assignment-pair-digest"),
+                "binding_state": "pre_execution_frozen",
+                "pre_execution_frozen_at": "2026-07-24T12:00:00Z",
+                "role_binding": schema_binding("phase-executor-role"),
+                "fixture_binding": schema_binding("phase-executor-fixture"),
+                "objective_binding": schema_binding("calibration-objective"),
+                "task_binding": schema_binding("calibration-task"),
+                "candidate_assignment": route_assignment("candidate"),
+                "comparator_assignment": route_assignment("comparator"),
+                "instruction_binding": {
+                    "candidate_instruction_digest": schema_digest("candidate-instructions"),
+                    "comparator_instruction_digest": schema_digest("comparator-instructions"),
+                    "candidate_configuration_digest": schema_digest("candidate-config"),
+                    "comparator_configuration_digest": schema_digest("comparator-config"),
+                },
+                "capability_binding": {
+                    "runtime_snapshot_binding": schema_binding("runtime-snapshot"),
+                    "candidate_freeze_binding": schema_binding("candidate-freeze"),
+                },
+                "experiment_policy_binding": object_binding(
+                    schema_digest("experiment-policy"),
+                    schema_digest("experiment-policy-digest"),
+                ),
+                "analysis_plan_binding": object_binding(analysis_plan_id, analysis_plan_digest),
+                "assigned_order": ["candidate", "comparator"],
+                "invalidation_policy": "additive_only",
+            }],
+        }],
+        "terminal_policy": {
+            "candidate_failures_remain_in_estimand": True,
+            "candidate_failure_acceptance": 0,
+            "unknown_attrition_result": "evidence_boundary_failure",
+        },
+        "rerun_policy": {
+            "eligible_failure": "independently_preclassified_transient_harness_failure",
+            "scope": "complete_pair",
+            "cap": 1,
+            "one_arm_rerun_prohibited": True,
+            "complete_case_filtering": False,
+        },
+        "budget": full_budget(),
+        "execution_mode": {
+            "default_ci": "deterministic_replay",
+            "live_mode": "explicit_local_live",
+            "local_only": True,
+            "pinned_client_required": True,
+        },
+    }
+    return refresh_comparison_pair_digests(policy)
+
+
+def analysis_plan_fixture() -> dict:
+    return {
+        "schema_version": "analysis-plan.v1",
+        "analysis_plan_id": schema_digest("analysis-plan"),
+        "analysis_plan_version": "2026-07-24.calibration",
+        "analysis_plan_digest": schema_digest("analysis-plan-digest"),
+        "status": "frozen",
+        "calibration_partition_binding": partition_binding(),
+        "calibration_evidence_bindings": [schema_binding("calibration-evidence")],
+        "freeze_provenance": {
+            "frozen_at": "2026-07-24T13:00:00Z",
+            "frozen_after_calibration": True,
+            "cohort_outcome_observed": False,
+            "pre_cohort_outcome_absence_digest": schema_digest("pre-cohort-absence"),
+            "independent_review_binding": schema_binding("analysis-review"),
+        },
+        "workload_manifest": {
+            "manifest_id": "workload-manifest-v1",
+            "manifest_digest": schema_digest("workload-manifest"),
+            "minimum_unique_tasks": 12,
+            "unknown_stratum_policy": "inconclusive",
+            "strata": [{
+                "stratum_id": "implementation-small",
+                "target_weight": 1.0,
+                "long_horizon": False,
+                "p95_guardrails": {
+                    "raw_input_tokens_max": 8000,
+                    "cached_input_tokens_max": 2000,
+                    "output_tokens_max": 4000,
+                    "duration_ms_max": 600000,
+                },
+            }],
+        },
+        "cache_policy": {
+            "policy_id": "cache-isolation-v1",
+            "policy_digest": schema_digest("cache-policy"),
+            "pair_isolation": True,
+            "order_leakage_prohibited": True,
+            "cache_state": "isolated_by_pair",
+        },
+        "quality_floors": {
+            "evaluation_order": 1,
+            "semantic": {"metric": "semantic_acceptance_rate", "minimum": 0.85},
+            "reliability": {"metric": "non_candidate_failure_free_rate", "minimum": 0.95},
+        },
+        "non_inferiority": {
+            "evaluation_order": 2,
+            "endpoints": ["semantic_score", "reliability_score"],
+            "margins": {"semantic_score": -0.02, "reliability_score": -0.01},
+            "confidence_level": 0.95,
+            "alpha": 0.05,
+            "power": 0.8,
+            "sample_sizes": {"per_role_minimum": 12},
+            "sample_size_assumptions": {
+                "variance_source_binding": schema_binding("calibration-variance"),
+                "expected_missingness_rate": 0.05,
+            },
+            "cluster_unit": "role",
+            "cluster_adjustment": "cluster_robust",
+            "multiplicity_adjustment": "holm",
+        },
+        "pareto_policy": {
+            "evaluation_order": 3,
+            "dimensions": PARETO_DIMENSIONS,
+            "directions": {
+                "raw_input_tokens": "lower",
+                "cached_input_tokens": "lower",
+                "output_tokens": "lower",
+                "duration_ms": "lower",
+                "retries": "lower",
+                "compactions": "lower",
+                "acceptance": "higher",
+                "terminal_state": "not_worse",
+            },
+            "weights_prohibited": True,
+            "mixed_or_tied_result": "inconclusive",
+        },
+        "estimand_policy": {
+            "assigned_attempt": True,
+            "candidate_terminal_acceptance_zero": True,
+            "candidate_terminal_states": [
+                "failed",
+                "timed_out",
+                "cancelled",
+                "budget_exhausted",
+                "abandoned",
+            ],
+            "complete_case_filtering": False,
+        },
+        "attrition_policy": {
+            "cap": 0.1,
+            "unclassifiable_attrition": "evidence_boundary_failure",
+            "unclassifiable_result": "inconclusive",
+            "complete_case_filtering": False,
+        },
+        "rerun_policy": {
+            "eligible_failure": "independently_preclassified_transient_harness_failure",
+            "scope": "complete_pair",
+            "cap": 1,
+            "one_arm_rerun_prohibited": True,
+        },
+        "campaign_budget": full_budget(),
+        "racing_policy": {"enabled": False, "terminal_rule": "disabled"},
+        "futility_policy": {"enabled": False, "terminal_rule": "disabled"},
+        "terminal_policy": {
+            "incomplete_result": "inconclusive",
+            "uncertain_result": "inconclusive",
+            "no_forced_ranking": True,
+        },
+    }
+
+
+def comparison_assignment_authorities(policy: dict, plan: dict) -> dict:
+    pair = policy["comparison_sets"][0]["assignment_pairs"][0]
+    return {
+        "partition_binding": copy.deepcopy(policy["partition_binding"]),
+        "candidate_freeze_binding": copy.deepcopy(policy["candidate_freeze_binding"]),
+        "runtime_snapshot_binding": copy.deepcopy(pair["capability_binding"]["runtime_snapshot_binding"]),
+        "corpus_binding": copy.deepcopy(policy["corpus_binding"]),
+        "workload_manifest_binding": copy.deepcopy(policy["workload_manifest_binding"]),
+        "experiment_policy_binding": experiment_policy_binding(policy),
+        "analysis_plan_binding": analysis_plan_binding(plan),
+        "role_binding": copy.deepcopy(pair["role_binding"]),
+        "fixture_binding": copy.deepcopy(pair["fixture_binding"]),
+        "objective_binding": copy.deepcopy(pair["objective_binding"]),
+        "task_binding": copy.deepcopy(pair["task_binding"]),
+        "fixture_partition_binding": copy.deepcopy(policy["partition_binding"]),
+        "candidate_route_binding": copy.deepcopy(pair["candidate_assignment"]["route_binding"]),
+        "candidate_agent_contract_binding": copy.deepcopy(pair["candidate_assignment"]["agent_contract_binding"]),
+        "candidate_materialization_binding": copy.deepcopy(pair["candidate_assignment"]["materialization_binding"]),
+        "candidate_route_resolution_binding": copy.deepcopy(pair["candidate_assignment"]["route_resolution_binding"]),
+        "candidate_instruction_digest": pair["instruction_binding"]["candidate_instruction_digest"],
+        "candidate_configuration_digest": pair["instruction_binding"]["candidate_configuration_digest"],
+        "comparator_route_binding": copy.deepcopy(pair["comparator_assignment"]["route_binding"]),
+        "comparator_agent_contract_binding": copy.deepcopy(pair["comparator_assignment"]["agent_contract_binding"]),
+        "comparator_materialization_binding": copy.deepcopy(pair["comparator_assignment"]["materialization_binding"]),
+        "comparator_route_resolution_binding": copy.deepcopy(pair["comparator_assignment"]["route_resolution_binding"]),
+        "comparator_instruction_digest": pair["instruction_binding"]["comparator_instruction_digest"],
+        "comparator_configuration_digest": pair["instruction_binding"]["comparator_configuration_digest"],
+    }
+
+
+def executed_pair_snapshot(policy: dict) -> dict:
+    pair = policy["comparison_sets"][0]["assignment_pairs"][0]
+    return {
+        "assignment_pair_id": pair["assignment_pair_id"],
+        "assignment_pair_digest": pair["assignment_pair_digest"],
+        "candidate_assignment_id": pair["candidate_assignment"]["assignment_id"],
+        "comparator_assignment_id": pair["comparator_assignment"]["assignment_id"],
+        "executed_at": "2026-07-24T14:00:00Z",
+    }
+
+
+def comparison_assignment_bundle_fixture() -> dict:
+    policy = experiment_policy_fixture()
+    plan = analysis_plan_fixture()
+    return {
+        "schema_version": "comparison-assignment.v1",
+        "owner_spec_id": "G56R-003",
+        "partition_registry": [copy.deepcopy(policy["partition_binding"])],
+        "binding_authorities": comparison_assignment_authorities(policy, plan),
+        "experiment_policy": policy,
+        "analysis_plan": plan,
+        "executed_pair_snapshots": [executed_pair_snapshot(policy)],
+        "refresh_invalidations": [],
+    }
+
+
+def comparison_refresh_invalidation(old_binding: dict, new_binding: dict) -> dict:
+    row = {
+        "invalidation_id": "sha256:" + "0" * 64,
+        "target_binding": copy.deepcopy(old_binding),
+        "replacement_binding": copy.deepcopy(new_binding),
+        "reason": "capability_refresh",
+        "detected_at": "2026-07-24T15:00:00Z",
+    }
+    row["invalidation_id"] = content_id(row, "invalidation_id")
+    return row
+
+
+def ordered_gate_results(failed_gate: str | None = None) -> list[dict]:
+    rows: list[dict] = []
+    failed = False
+    for index, gate in enumerate(DECISION_GATE_ORDER, start=1):
+        if failed:
+            result = "not_evaluated"
+        elif gate == failed_gate:
+            result = "fail"
+            failed = True
+        else:
+            result = "pass"
+        rows.append({"sequence": index, "gate": gate, "result": result})
+    return rows
+
+
+def decision_bundle_fixture(
+    *,
+    decision: str = "calibration_complete",
+    complete: bool = True,
+    floor_result: str = "pass",
+    non_inferiority_result: str = "pass",
+    pareto_result: str = "candidate_dominates",
+    failed_gate: str | None = None,
+) -> dict:
+    return {
+        "schema_version": "analysis-decision.v1",
+        "decision_bundle_id": schema_digest(f"decision-{decision}"),
+        "decision_bundle_version": "2026-07-24.calibration",
+        "decision_bundle_digest": schema_digest(f"decision-{decision}-digest"),
+        "partition_binding": partition_binding(),
+        "comparison_set_binding": schema_binding("comparison-set"),
+        "assignment_bindings": [schema_binding("candidate-assignment"), schema_binding("comparator-assignment")],
+        "score_bundle_bindings": [schema_binding("candidate-score"), schema_binding("comparator-score")],
+        "analysis_plan_binding": schema_binding("analysis-plan"),
+        "analysis_output": {
+            "analysis_output_id": schema_digest(f"analysis-output-{decision}"),
+            "analysis_output_digest": schema_digest(f"analysis-output-{decision}-digest"),
+            "complete": complete,
+            "floor_result": floor_result,
+            "non_inferiority_result": non_inferiority_result,
+            "pareto_result": pareto_result,
+            "terminal_analysis_disposition": decision,
+        },
+        "ordered_gate_results": ordered_gate_results(failed_gate),
+        "decision": decision,
+        "qualification_policy_output": {
+            "preferred_route_policy_created": False,
+            "fallback_route_policy_created": False,
+            "installed_default_changed": False,
+        },
+        "evidence_refs": [schema_digest(f"decision-evidence-{decision}")],
+    }
+
+
+class ExperimentAnalysisContractSchemaTests(unittest.TestCase):
+    maxDiff = None
+
+    def schema_for(self, path: Path) -> dict:
+        self.assertTrue(path.exists(), f"{path.relative_to(ROOT)} must exist")
+        schema = load_json(path)
+        self.assertIsInstance(schema, dict)
+        return schema
+
+    def assert_accepts(self, schema: dict, value: dict) -> None:
+        validate_contract_schema_instance(value, schema, schema)
+
+    def assert_rejects(self, schema: dict, value: dict, message: str) -> None:
+        with self.assertRaises(AssertionError, msg=message):
+            validate_contract_schema_instance(value, schema, schema)
+
+    def assert_shared_id_digest_defs(self, schema: dict) -> None:
+        self.assertEqual(
+            schema["$defs"]["digest"],
+            {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        )
+        self.assertEqual(schema["$defs"]["binding"]["required"], ["id", "digest"])
+        self.assertFalse(schema["$defs"]["binding"]["additionalProperties"])
+        self.assertEqual(schema["$defs"]["binding"]["properties"]["digest"], {"$ref": "#/$defs/digest"})
+
+    def test_contract_schemas_are_self_contained_closed_and_share_id_digest_defs(self) -> None:
+        for path in CONTRACT_SCHEMA_PATHS:
+            with self.subTest(schema=path.name):
+                schema = self.schema_for(path)
+                self.assertEqual(schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
+                self.assertEqual(schema["type"], "object")
+                self.assertFalse(schema["additionalProperties"])
+                self.assert_shared_id_digest_defs(schema)
+                for reference in iter_schema_refs(schema):
+                    self.assertTrue(reference.startswith("#/"), reference)
+                for node in walk_schema_nodes(schema):
+                    if node.get("type") == "object" or "properties" in node:
+                        self.assertIn("additionalProperties", node)
+                        self.assertFalse(node["additionalProperties"], node.get("title", node))
+
+    def test_experiment_policy_schema_closes_partition_pair_budget_and_rerun_contracts(self) -> None:
+        schema = self.schema_for(EXPERIMENT_POLICY_SCHEMA_PATH)
+        valid = experiment_policy_fixture()
+        self.assert_accepts(schema, valid)
+
+        unknown_partition = copy.deepcopy(valid)
+        unknown_partition["partition_binding"]["partition_type"] = "exploration"
+        self.assert_rejects(schema, unknown_partition, "partition types must be closed")
+
+        calibration_eligible = copy.deepcopy(valid)
+        calibration_eligible["partition_binding"]["qualification_eligible"] = True
+        self.assert_rejects(schema, calibration_eligible, "calibration cannot qualify")
+
+        missing_budget = copy.deepcopy(valid)
+        del missing_budget["budget"]["max_confirmation_entries"]
+        self.assert_rejects(schema, missing_budget, "live policy budget must be complete")
+
+        one_arm_rerun = copy.deepcopy(valid)
+        one_arm_rerun["rerun_policy"]["scope"] = "single_arm"
+        self.assert_rejects(schema, one_arm_rerun, "reruns must be complete-pair only")
+
+        mutable_pair = copy.deepcopy(valid)
+        del mutable_pair["comparison_sets"][0]["assignment_pairs"][0]["candidate_assignment"]["route_resolution_binding"]
+        self.assert_rejects(schema, mutable_pair, "candidate assignment must bind route resolution before execution")
+
+    def test_analysis_plan_schema_freezes_workload_cache_statistics_attrition_and_budget(self) -> None:
+        schema = self.schema_for(ANALYSIS_PLAN_SCHEMA_PATH)
+        valid = analysis_plan_fixture()
+        self.assert_accepts(schema, valid)
+
+        missing_p95_cache = copy.deepcopy(valid)
+        del missing_p95_cache["workload_manifest"]["strata"][0]["p95_guardrails"]["cached_input_tokens_max"]
+        self.assert_rejects(schema, missing_p95_cache, "workload strata must bind p95 cache guardrails")
+
+        cache_leak = copy.deepcopy(valid)
+        cache_leak["cache_policy"]["pair_isolation"] = False
+        self.assert_rejects(schema, cache_leak, "cache state must be isolated by pair")
+
+        pareto_before_non_inferiority = copy.deepcopy(valid)
+        pareto_before_non_inferiority["pareto_policy"]["evaluation_order"] = 2
+        self.assert_rejects(schema, pareto_before_non_inferiority, "Pareto cannot run before non-inferiority")
+
+        complete_case = copy.deepcopy(valid)
+        complete_case["attrition_policy"]["complete_case_filtering"] = True
+        self.assert_rejects(schema, complete_case, "attrition cannot use complete-case filtering")
+
+        post_cohort_freeze = copy.deepcopy(valid)
+        post_cohort_freeze["freeze_provenance"]["cohort_outcome_observed"] = True
+        self.assert_rejects(schema, post_cohort_freeze, "analysis plan must freeze before later cohort outcomes")
+
+    def test_decision_schema_enforces_ordered_terminal_cases_and_no_calibration_qualification(self) -> None:
+        schema = self.schema_for(ANALYSIS_DECISION_SCHEMA_PATH)
+        cases = [
+            decision_bundle_fixture(),
+            decision_bundle_fixture(
+                decision="no_qualification",
+                floor_result="fail",
+                non_inferiority_result="not_evaluated",
+                pareto_result="not_evaluated",
+                failed_gate="floors",
+            ),
+            decision_bundle_fixture(
+                decision="no_qualification",
+                non_inferiority_result="fail",
+                pareto_result="not_evaluated",
+                failed_gate="non_inferiority",
+            ),
+            decision_bundle_fixture(
+                decision="inconclusive",
+                pareto_result="mixed",
+                failed_gate=None,
+            ),
+            decision_bundle_fixture(
+                decision="inconclusive",
+                complete=False,
+                floor_result="not_evaluated",
+                non_inferiority_result="not_evaluated",
+                pareto_result="not_evaluated",
+                failed_gate="completeness",
+            ),
+        ]
+        for case in cases:
+            with self.subTest(decision=case["decision"], output=case["analysis_output"]):
+                self.assert_accepts(schema, case)
+
+        qualified_calibration = decision_bundle_fixture(decision="qualified")
+        qualified_calibration["analysis_output"]["terminal_analysis_disposition"] = "qualified"
+        self.assert_rejects(schema, qualified_calibration, "calibration partition cannot emit qualified")
+
+        wrong_order = decision_bundle_fixture()
+        wrong_order["ordered_gate_results"][6]["gate"] = "pareto"
+        self.assert_rejects(schema, wrong_order, "decision gates must be in frozen order")
+
+        pareto_without_ni = decision_bundle_fixture(
+            non_inferiority_result="not_evaluated",
+            pareto_result="candidate_dominates",
+        )
+        self.assert_rejects(schema, pareto_without_ni, "Pareto cannot be evaluated before NI passes")
+
+
+class ComparisonAssignmentValidatorTests(unittest.TestCase):
+    maxDiff = None
+
+    def setUp(self) -> None:
+        self.qualification = load_qualification_module()
+
+    def validate_assignment_bundle(self, bundle: dict) -> dict:
+        return self.qualification.validate_comparison_assignment_bundle(bundle)
+
+    def assert_invalid_assignment(self, bundle: dict, message: str = "") -> None:
+        with self.assertRaises(ValueError, msg=message):
+            self.validate_assignment_bundle(bundle)
+
+    def recompute_policy_digests(self, bundle: dict) -> dict:
+        bundle["experiment_policy"] = refresh_comparison_pair_digests(bundle["experiment_policy"])
+        return bundle
+
+    def test_comparison_assignment_validator_accepts_complete_pre_execution_join_graph(self) -> None:
+        bundle = comparison_assignment_bundle_fixture()
+
+        first = self.validate_assignment_bundle(copy.deepcopy(bundle))
+        second = self.validate_assignment_bundle(copy.deepcopy(first))
+
+        self.assertEqual(treatment.canonical_bytes(first), treatment.canonical_bytes(second))
+        pair = first["experiment_policy"]["comparison_sets"][0]["assignment_pairs"][0]
+        self.assertEqual(pair["binding_state"], "pre_execution_frozen")
+        self.assertEqual(pair["capability_binding"]["candidate_freeze_binding"], first["binding_authorities"]["candidate_freeze_binding"])
+        self.assertEqual(pair["capability_binding"]["runtime_snapshot_binding"], first["binding_authorities"]["runtime_snapshot_binding"])
+        self.assertEqual(pair["experiment_policy_binding"], experiment_policy_binding(first["experiment_policy"]))
+        self.assertEqual(pair["analysis_plan_binding"], analysis_plan_binding(first["analysis_plan"]))
+        self.assertEqual(first["executed_pair_snapshots"][0]["assignment_pair_digest"], pair["assignment_pair_digest"])
+
+    def test_comparison_assignment_validator_rejects_each_required_pre_execution_join_mismatch(self) -> None:
+        cases = [
+            ("route", ("candidate_assignment", "route_binding", "digest"), schema_digest("wrong-candidate-route")),
+            ("agent_contract", ("candidate_assignment", "agent_contract_binding", "digest"), schema_digest("wrong-agent-contract")),
+            ("materialization", ("candidate_assignment", "materialization_binding", "digest"), schema_digest("wrong-materialization")),
+            ("route_resolution", ("candidate_assignment", "route_resolution_binding", "digest"), schema_digest("wrong-route-resolution")),
+            ("comparator_route", ("comparator_assignment", "route_binding", "digest"), schema_digest("wrong-comparator-route")),
+            ("role", ("role_binding", "digest"), schema_digest("wrong-role")),
+            ("fixture", ("fixture_binding", "digest"), schema_digest("wrong-fixture")),
+            ("task", ("task_binding", "digest"), schema_digest("wrong-task")),
+            ("instruction_hash", ("instruction_binding", "candidate_instruction_digest"), schema_digest("wrong-instruction")),
+            ("configuration_hash", ("instruction_binding", "comparator_configuration_digest"), schema_digest("wrong-configuration")),
+            ("snapshot", ("capability_binding", "runtime_snapshot_binding", "digest"), schema_digest("wrong-snapshot")),
+            ("freeze", ("capability_binding", "candidate_freeze_binding", "digest"), schema_digest("wrong-freeze")),
+            ("policy", ("experiment_policy_binding", "digest"), schema_digest("wrong-policy")),
+            ("plan", ("analysis_plan_binding", "digest"), schema_digest("wrong-plan")),
+        ]
+        for label, path, value in cases:
+            with self.subTest(join=label):
+                bundle = comparison_assignment_bundle_fixture()
+                target = bundle["experiment_policy"]["comparison_sets"][0]["assignment_pairs"][0]
+                for key in path[:-1]:
+                    target = target[key]
+                target[path[-1]] = value
+                self.recompute_policy_digests(bundle)
+                self.assert_invalid_assignment(bundle, f"{label} join must fail closed")
+
+    def test_partition_joins_and_cross_partition_reuse_fail_closed(self) -> None:
+        cases = [
+            ("comparison_set_partition", ("experiment_policy", "comparison_sets", 0, "partition_binding"), partition_binding("screening", eligible=True)),
+            ("policy_partition", ("experiment_policy", "partition_binding"), partition_binding("selection", eligible=True)),
+            ("analysis_plan_partition", ("analysis_plan", "calibration_partition_binding"), partition_binding("cohort_lock", eligible=True)),
+            ("fixture_partition_reuse", ("binding_authorities", "fixture_partition_binding"), partition_binding("screening", eligible=True)),
+        ]
+        for label, path, value in cases:
+            with self.subTest(partition=label):
+                bundle = comparison_assignment_bundle_fixture()
+                target = bundle
+                for key in path[:-1]:
+                    target = target[key]
+                target[path[-1]] = value
+                if path[0] == "experiment_policy":
+                    self.recompute_policy_digests(bundle)
+                self.assert_invalid_assignment(bundle, f"{label} must not cross partition boundaries")
+
+    def test_refreshes_create_additive_invalidations_without_rebinding_frozen_pair(self) -> None:
+        bundle = comparison_assignment_bundle_fixture()
+        original_freeze = copy.deepcopy(bundle["binding_authorities"]["candidate_freeze_binding"])
+        refreshed_freeze = schema_binding("candidate-freeze-refresh")
+
+        missing_invalidation = copy.deepcopy(bundle)
+        missing_invalidation["binding_authorities"]["candidate_freeze_binding"] = refreshed_freeze
+        self.assert_invalid_assignment(
+            missing_invalidation,
+            "refreshed authority must create an additive invalidation record",
+        )
+
+        recorded = copy.deepcopy(bundle)
+        recorded["binding_authorities"]["candidate_freeze_binding"] = refreshed_freeze
+        recorded["refresh_invalidations"] = [
+            comparison_refresh_invalidation(original_freeze, refreshed_freeze),
+        ]
+        validated = self.validate_assignment_bundle(recorded)
+        pair = validated["experiment_policy"]["comparison_sets"][0]["assignment_pairs"][0]
+        self.assertEqual(pair["capability_binding"]["candidate_freeze_binding"], original_freeze)
+        self.assertEqual(validated["binding_authorities"]["candidate_freeze_binding"], refreshed_freeze)
+
+    def test_post_execution_rebinding_is_rejected_even_when_authority_is_current(self) -> None:
+        bundle = comparison_assignment_bundle_fixture()
+        original_route = copy.deepcopy(bundle["binding_authorities"]["candidate_route_binding"])
+        new_route = schema_binding("candidate-route-refresh")
+        pair = bundle["experiment_policy"]["comparison_sets"][0]["assignment_pairs"][0]
+        pair["candidate_assignment"]["route_binding"] = copy.deepcopy(new_route)
+        bundle["binding_authorities"]["candidate_route_binding"] = copy.deepcopy(new_route)
+        bundle["refresh_invalidations"] = [
+            comparison_refresh_invalidation(original_route, new_route),
+        ]
+        self.recompute_policy_digests(bundle)
+
+        self.assert_invalid_assignment(bundle, "executed assignment pairs cannot be rebound")
+
+
 class QualificationContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -540,11 +1387,12 @@ class QualificationContractTests(unittest.TestCase):
 
     def test_public_api_loads_from_assigned_module(self) -> None:
         expected_api = {
+            "BINDING_AUTHORITY_FIELDS", "COMPARISON_ASSIGNMENT_SCHEMA_VERSION",
             "DELIVERY_STATUSES", "MANDATORY_OBSERVATION_FIELDS",
             "MATERIALIZATION_FIELDS", "NULL_ONLY_OBSERVATION_FIELDS",
-            "QUALIFICATION_OBSERVATION_FIELDS", "QUALIFICATION_OWNER_SPEC_ID",
+            "PARTITION_TYPES", "QUALIFICATION_OBSERVATION_FIELDS", "QUALIFICATION_OWNER_SPEC_ID",
             "QUALIFICATION_SCHEMA_VERSION", "TREATMENT_OWNER_SPEC_ID",
-            "validate_qualification_bundle",
+            "validate_comparison_assignment_bundle", "validate_qualification_bundle",
         }
         self.assertTrue(QUALIFICATION_MODULE_PATH.exists())
         self.assertTrue(callable(self.qualification.validate_qualification_bundle))
@@ -901,6 +1749,189 @@ class QualificationContractTests(unittest.TestCase):
         self.assertEqual(payload["status"], "blocked")
         self.assertEqual(payload["reason"], "score_before_treatment_refused")
         self.assertIn("validated exact treatment", payload["message"])
+
+    def test_cli_calibrate_refuses_implicit_live_and_accepts_confirmed_pinned_local_setup(self) -> None:
+        self.assertTrue(QUALIFICATION_RUNNER_PATH.exists())
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            partition_path = root / "partition.json"
+            freeze_path = root / "freeze.json"
+            policy_path = root / "policy.json"
+            corpus_path = root / "corpus.json"
+            budget_path = root / "budget.json"
+            raw_root = root / "operator-raw"
+            raw_root.mkdir()
+            partition = partition_binding()
+            freeze = calibration_candidate_freeze_fixture()
+            corpus = calibration_corpus_fixture()
+            policy = calibration_cli_policy_fixture()
+            budget = full_budget()
+            for path, value in (
+                (partition_path, partition),
+                (freeze_path, freeze),
+                (policy_path, policy),
+                (corpus_path, corpus),
+                (budget_path, budget),
+            ):
+                write_canonical_json(path, value)
+
+            no_confirmation = run_qualification_cli(
+                "calibrate",
+                "--partition", str(partition_path),
+                "--candidate-freeze", str(freeze_path),
+                "--experiment-policy", str(policy_path),
+                "--corpus", str(corpus_path),
+                "--budget", str(budget_path),
+                "--raw-evidence-root", str(raw_root),
+            )
+
+            self.assertEqual(no_confirmation.returncode, 2)
+            refused = json.loads(no_confirmation.stdout)
+            self.assertEqual(no_confirmation.stdout, canonical_json(refused))
+            self.assertEqual(refused["status"], "blocked")
+            self.assertEqual(refused["reason"], "explicit_live_confirmation_required")
+
+            confirmed = run_qualification_cli(
+                "calibrate",
+                "--partition", str(partition_path),
+                "--candidate-freeze", str(freeze_path),
+                "--experiment-policy", str(policy_path),
+                "--corpus", str(corpus_path),
+                "--budget", str(budget_path),
+                "--raw-evidence-root", str(raw_root),
+                "--confirm-explicit-local-live",
+            )
+
+        self.assertEqual(confirmed.returncode, 0, confirmed.stderr)
+        payload = json.loads(confirmed.stdout)
+        self.assertEqual(confirmed.stdout, canonical_json(payload))
+        self.assertEqual(payload["status"], "calibration_ready")
+        self.assertEqual(payload["command"], "calibrate")
+        self.assertEqual(payload["execution_mode"], "explicit_local_live")
+        self.assertFalse(payload["network_access"])
+        self.assertEqual(payload["live_writes"], [])
+        self.assertEqual(payload["partition_binding"], partition)
+        self.assertEqual(payload["pinned_client_binding"], freeze["pinned_client_binding"])
+        self.assertEqual(payload["runtime_snapshot_binding"], freeze["runtime_snapshot_binding"])
+        self.assertEqual(payload["budget"], budget)
+        self.assertEqual(payload["scorer_bindings"], policy["scorer_bindings"])
+        self.assertEqual(payload["rubric_binding"], policy["rubric_binding"])
+        self.assertEqual(payload["adjudicator_binding"], policy["adjudicator_binding"])
+        self.assertEqual(payload["workload_manifest_binding"], policy["workload_manifest_binding"])
+        self.assertEqual(payload["cache_policy_binding"], policy["cache_policy_binding"])
+
+    def test_cli_calibrate_rejects_later_partitions_missing_budgets_and_repo_raw_root(self) -> None:
+        cases = [
+            ("later_partition", {"partition": partition_binding("selection", eligible=True)}, "calibration_partition_required"),
+            ("missing_budget", {"drop_budget_field": "max_output_tokens"}, "campaign_budget_incomplete"),
+            ("repo_raw_root", {"raw_root": ROOT}, "operator_only_raw_root_required"),
+        ]
+        for label, override, reason in cases:
+            with self.subTest(case=label):
+                with tempfile.TemporaryDirectory() as temporary:
+                    root = Path(temporary)
+                    partition_path = root / "partition.json"
+                    freeze_path = root / "freeze.json"
+                    policy_path = root / "policy.json"
+                    corpus_path = root / "corpus.json"
+                    budget_path = root / "budget.json"
+                    raw_root = Path(override.get("raw_root", root / "operator-raw"))
+                    if raw_root != ROOT:
+                        raw_root.mkdir()
+                    partition = copy.deepcopy(override.get("partition", partition_binding()))
+                    freeze = calibration_candidate_freeze_fixture()
+                    corpus = calibration_corpus_fixture()
+                    policy = calibration_cli_policy_fixture()
+                    budget = full_budget()
+                    if "drop_budget_field" in override:
+                        del budget[override["drop_budget_field"]]
+                    for path, value in (
+                        (partition_path, partition),
+                        (freeze_path, freeze),
+                        (policy_path, policy),
+                        (corpus_path, corpus),
+                        (budget_path, budget),
+                    ):
+                        write_canonical_json(path, value)
+
+                    completed = run_qualification_cli(
+                        "calibrate",
+                        "--partition", str(partition_path),
+                        "--candidate-freeze", str(freeze_path),
+                        "--experiment-policy", str(policy_path),
+                        "--corpus", str(corpus_path),
+                        "--budget", str(budget_path),
+                        "--raw-evidence-root", str(raw_root),
+                        "--confirm-explicit-local-live",
+                    )
+
+                self.assertEqual(completed.returncode, 2)
+                payload = json.loads(completed.stdout)
+                self.assertEqual(payload["status"], "error")
+                self.assertEqual(payload["reason"], reason)
+
+    def test_cli_freeze_analysis_plan_writes_canonical_frozen_plan_before_cohort_outcomes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            report_path = root / "calibration-report.json"
+            draft_path = root / "analysis-plan-draft.json"
+            output_path = root / "analysis-plan.json"
+            report = {
+                "schema_version": "calibration-report.v1",
+                "calibration_partition_binding": partition_binding(),
+                "calibration_evidence_bindings": [schema_binding("calibration-evidence")],
+                "freeze_provenance": {
+                    "frozen_at": "2026-07-24T16:00:00Z",
+                    "frozen_after_calibration": True,
+                    "cohort_outcome_observed": False,
+                    "pre_cohort_outcome_absence_digest": schema_digest("pre-cohort-absence"),
+                    "independent_review_binding": schema_binding("analysis-review"),
+                },
+            }
+            draft = analysis_plan_fixture()
+            draft["status"] = "draft_from_calibration"
+            write_canonical_json(report_path, report)
+            write_canonical_json(draft_path, draft)
+
+            completed = run_qualification_cli(
+                "freeze-analysis-plan",
+                "--calibration-report", str(report_path),
+                "--draft-plan", str(draft_path),
+                "--output", str(output_path),
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            payload = json.loads(completed.stdout)
+            frozen = load_json(output_path)
+            self.assertEqual(output_path.read_text(encoding="utf-8"), canonical_json(frozen))
+            self.assertEqual(payload, frozen)
+            self.assertEqual(frozen["status"], "frozen")
+            self.assertEqual(frozen["calibration_partition_binding"], report["calibration_partition_binding"])
+            self.assertEqual(frozen["calibration_evidence_bindings"], report["calibration_evidence_bindings"])
+            self.assertEqual(frozen["freeze_provenance"], report["freeze_provenance"])
+            expected_digest = treatment.digest({
+                key: value for key, value in frozen.items()
+                if key not in {"analysis_plan_id", "analysis_plan_digest"}
+            })
+            self.assertEqual(frozen["analysis_plan_digest"], expected_digest)
+            self.assertEqual(frozen["analysis_plan_id"], content_id(frozen, "analysis_plan_id"))
+            self.assertNotEqual(frozen["analysis_plan_digest"], draft["analysis_plan_digest"])
+            self.assertNotEqual(frozen["analysis_plan_id"], draft["analysis_plan_id"])
+
+            report["freeze_provenance"]["cohort_outcome_observed"] = True
+            write_canonical_json(report_path, report)
+            refused = run_qualification_cli(
+                "freeze-analysis-plan",
+                "--calibration-report", str(report_path),
+                "--draft-plan", str(draft_path),
+                "--output", str(output_path),
+            )
+
+        self.assertEqual(refused.returncode, 2)
+        refusal = json.loads(refused.stdout)
+        self.assertEqual(refusal["status"], "error")
+        self.assertEqual(refusal["reason"], "cohort_outcome_observed")
 
 
 if __name__ == "__main__":

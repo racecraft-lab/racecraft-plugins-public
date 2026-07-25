@@ -58,11 +58,15 @@ EXPECTED_PUBLIC_API = frozenset(
 )
 EXPECTED_REPLAY_PUBLIC_API = frozenset(
     {
+        "ANALYSIS_REPLAY_SCHEMA_VERSION",
         "REPLAY_BUNDLE_SCHEMA_VERSION",
         "SCORE_REPLAY_SUMMARY_SCHEMA_VERSION",
+        "build_analysis_replay_bundle",
         "build_score_replay_bundle",
+        "replay_analysis_decision",
         "replay_score_bundle",
         "summarize_score_replays",
+        "validate_analysis_replay_bundle",
         "validate_score_replay_bundle",
     }
 )

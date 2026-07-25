@@ -30,6 +30,9 @@ from speckit_pro_runner.agent_materialization import (  # noqa: E402
 )
 from codex_successor_capability import publish_successor_freeze  # noqa: E402
 from qualification_contracts import validate_qualification_bundle  # noqa: E402
+from qualification_replay import build_analysis_replay_bundle  # noqa: E402
+from qualification_scoring import content_id, digest  # noqa: E402
+from qualification_statistics import _validate_plan as validate_analysis_plan  # noqa: E402
 
 
 QUALIFICATION_ENTRY_POINT = "tests/speckit-pro/layer6-efficiency/run-codex-qualification.py"
@@ -43,6 +46,14 @@ class QualificationCliError(ValueError):
 
 class ScoreBlocked(QualificationCliError):
     """Raised when a score action is attempted before exact treatment exists."""
+
+
+class QualificationBoundaryError(QualificationCliError):
+    """Raised with a stable reason code for a fail-closed CLI boundary."""
+
+    def __init__(self, reason: str, message: str):
+        super().__init__(message)
+        self.reason = reason
 
 
 def canonical_json(value: Any) -> str:
@@ -245,6 +256,294 @@ def score_command(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
     }
 
 
+_CAMPAIGN_BUDGET_FIELDS = frozenset({
+    "max_attempts",
+    "max_wall_clock_seconds",
+    "max_raw_input_tokens",
+    "max_cached_input_tokens",
+    "max_output_tokens",
+    "max_candidates",
+    "max_confirmation_entries",
+})
+
+
+def _require_object(value: Any, label: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise QualificationBoundaryError(
+            f"{label.replace(' ', '_')}_invalid",
+            f"{label} must be a JSON object",
+        )
+    return value
+
+
+def _binding(value_id: Any, value_digest: Any, label: str) -> dict[str, str]:
+    if not isinstance(value_id, str) or not value_id:
+        raise QualificationBoundaryError(
+            f"{label.replace(' ', '_')}_invalid",
+            f"{label} ID must be a non-empty string",
+        )
+    if not isinstance(value_digest, str) or not value_digest.startswith("sha256:"):
+        raise QualificationBoundaryError(
+            f"{label.replace(' ', '_')}_invalid",
+            f"{label} digest must be a sha256 binding",
+        )
+    return {"id": value_id, "digest": value_digest}
+
+
+def _require_binding(value: Any, label: str) -> dict[str, str]:
+    row = _require_object(value, label)
+    if set(row) != {"id", "digest"}:
+        raise QualificationBoundaryError(
+            f"{label.replace(' ', '_')}_invalid",
+            f"{label} must use the closed ID/digest shape",
+        )
+    return _binding(row["id"], row["digest"], label)
+
+
+def _require_calibration_partition(value: Any) -> dict[str, Any]:
+    partition = _require_object(value, "partition")
+    if (
+        partition.get("partition_type") != "calibration"
+        or partition.get("qualification_eligible") is not False
+    ):
+        raise QualificationBoundaryError(
+            "calibration_partition_required",
+            "only the qualification-ineligible calibration partition may run",
+        )
+    for field in ("partition_id", "partition_digest"):
+        if not isinstance(partition.get(field), str) or not partition[field]:
+            raise QualificationBoundaryError(
+                "calibration_partition_required",
+                f"calibration partition is missing {field}",
+            )
+    return copy.deepcopy(partition)
+
+
+def _require_campaign_budget(value: Any) -> dict[str, int]:
+    budget = _require_object(value, "campaign budget")
+    if set(budget) != _CAMPAIGN_BUDGET_FIELDS:
+        raise QualificationBoundaryError(
+            "campaign_budget_incomplete",
+            "campaign budget must declare all seven ceilings",
+        )
+    for field, item in budget.items():
+        if isinstance(item, bool) or not isinstance(item, int) or item < 0:
+            raise QualificationBoundaryError(
+                "campaign_budget_invalid",
+                f"campaign budget field {field} must be a non-negative integer",
+            )
+    return copy.deepcopy(budget)
+
+
+def _require_policy_bindings(
+    policy: dict[str, Any],
+    freeze: dict[str, Any],
+    corpus: dict[str, Any],
+    partition: dict[str, Any],
+    budget: dict[str, int],
+) -> dict[str, Any]:
+    expected_freeze = _binding(
+        freeze.get("candidate_freeze_id"),
+        freeze.get("freeze_digest"),
+        "candidate freeze",
+    )
+    expected_corpus = _binding(
+        corpus.get("corpus_id"),
+        corpus.get("corpus_digest"),
+        "corpus",
+    )
+    if policy.get("partition_binding") != partition:
+        raise QualificationBoundaryError(
+            "partition_binding_mismatch",
+            "experiment policy partition binding does not match",
+        )
+    if policy.get("candidate_freeze_binding") != expected_freeze:
+        raise QualificationBoundaryError(
+            "candidate_freeze_binding_mismatch",
+            "experiment policy candidate freeze binding does not match",
+        )
+    if policy.get("corpus_binding") != expected_corpus:
+        raise QualificationBoundaryError(
+            "corpus_binding_mismatch",
+            "experiment policy corpus binding does not match",
+        )
+    if policy.get("budget") != budget:
+        raise QualificationBoundaryError(
+            "campaign_budget_binding_mismatch",
+            "experiment policy budget does not match the requested campaign budget",
+        )
+    pinned_client = _require_binding(
+        freeze.get("pinned_client_binding"),
+        "pinned client binding",
+    )
+    runtime_snapshot = _require_binding(
+        freeze.get("runtime_snapshot_binding"),
+        "runtime snapshot binding",
+    )
+    if policy.get("pinned_client_binding") != pinned_client:
+        raise QualificationBoundaryError(
+            "pinned_client_binding_mismatch",
+            "experiment policy pinned client binding does not match",
+        )
+    if policy.get("runtime_snapshot_binding") != runtime_snapshot:
+        raise QualificationBoundaryError(
+            "runtime_snapshot_binding_mismatch",
+            "experiment policy runtime snapshot binding does not match",
+        )
+    scorers = policy.get("scorer_bindings")
+    if not isinstance(scorers, list) or len(scorers) != 2:
+        raise QualificationBoundaryError(
+            "scorer_bindings_invalid",
+            "experiment policy requires exactly two scorer bindings",
+        )
+    validated_scorers = [_require_binding(item, "scorer binding") for item in scorers]
+    if len({item["id"] for item in validated_scorers}) != 2:
+        raise QualificationBoundaryError(
+            "scorer_bindings_invalid",
+            "experiment policy scorer bindings must be distinct",
+        )
+    return {
+        "pinned_client_binding": pinned_client,
+        "runtime_snapshot_binding": runtime_snapshot,
+        "scorer_bindings": validated_scorers,
+        "rubric_binding": _require_binding(policy.get("rubric_binding"), "rubric binding"),
+        "adjudicator_binding": _require_binding(
+            policy.get("adjudicator_binding"),
+            "adjudicator binding",
+        ),
+        "workload_manifest_binding": _require_binding(
+            policy.get("workload_manifest_binding"),
+            "workload manifest binding",
+        ),
+        "cache_policy_binding": _require_binding(
+            policy.get("cache_policy_binding"),
+            "cache policy binding",
+        ),
+    }
+
+
+def calibrate_command(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
+    if not args.confirm_explicit_local_live:
+        return 2, {
+            "command": "calibrate",
+            "message": "calibration requires explicit confirmation of local live execution",
+            "reason": "explicit_live_confirmation_required",
+            "status": "blocked",
+        }
+    partition = _require_calibration_partition(
+        read_json_file(args.partition, "partition")
+    )
+    freeze = _require_object(
+        read_json_file(args.candidate_freeze, "candidate freeze"),
+        "candidate freeze",
+    )
+    policy = _require_object(
+        read_json_file(args.experiment_policy, "experiment policy"),
+        "experiment policy",
+    )
+    corpus = _require_object(read_json_file(args.corpus, "corpus"), "corpus")
+    budget = _require_campaign_budget(read_json_file(args.budget, "campaign budget"))
+    raw_root = args.raw_evidence_root.resolve()
+    try:
+        raw_root.relative_to(REPO_ROOT.resolve())
+    except ValueError:
+        pass
+    else:
+        raise QualificationBoundaryError(
+            "operator_only_raw_root_required",
+            "raw calibration evidence must remain outside the live repository",
+        )
+    if not raw_root.is_dir():
+        raise QualificationBoundaryError(
+            "operator_only_raw_root_required",
+            "operator-only raw evidence root must be an existing directory",
+        )
+    bindings = _require_policy_bindings(
+        policy,
+        freeze,
+        corpus,
+        partition,
+        budget,
+    )
+    return 0, {
+        "command": "calibrate",
+        "status": "calibration_ready",
+        "execution_mode": "explicit_local_live",
+        "network_access": False,
+        "live_writes": [],
+        "partition_binding": partition,
+        "budget": budget,
+        "operator_only_raw_evidence_root": str(raw_root),
+        **bindings,
+    }
+
+
+def replay_command(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
+    request = _require_object(
+        read_json_file(args.request, "analysis replay request"),
+        "analysis replay request",
+    )
+    bundle = build_analysis_replay_bundle(request)
+    return 0, {"command": "replay", **bundle}
+
+
+def freeze_analysis_plan_command(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
+    report = _require_object(
+        read_json_file(args.calibration_report, "calibration report"),
+        "calibration report",
+    )
+    draft = _require_object(
+        read_json_file(args.draft_plan, "analysis plan draft"),
+        "analysis plan draft",
+    )
+    partition = _require_calibration_partition(
+        report.get("calibration_partition_binding")
+    )
+    provenance = _require_object(report.get("freeze_provenance"), "freeze provenance")
+    if provenance.get("frozen_after_calibration") is not True:
+        raise QualificationBoundaryError(
+            "calibration_not_complete",
+            "analysis plan may freeze only after calibration",
+        )
+    if provenance.get("cohort_outcome_observed") is not False:
+        raise QualificationBoundaryError(
+            "cohort_outcome_observed",
+            "analysis plan must freeze before cohort outcomes are observed",
+        )
+    _require_binding(
+        provenance.get("independent_review_binding"),
+        "independent review binding",
+    )
+    evidence = report.get("calibration_evidence_bindings")
+    if not isinstance(evidence, list) or not evidence:
+        raise QualificationBoundaryError(
+            "calibration_evidence_missing",
+            "analysis plan freeze requires calibration evidence bindings",
+        )
+    for item in evidence:
+        _require_binding(item, "calibration evidence binding")
+    frozen = copy.deepcopy(draft)
+    frozen["status"] = "frozen"
+    frozen["calibration_partition_binding"] = partition
+    frozen["calibration_evidence_bindings"] = copy.deepcopy(evidence)
+    frozen["freeze_provenance"] = copy.deepcopy(provenance)
+    frozen["analysis_plan_digest"] = digest({
+        key: value
+        for key, value in frozen.items()
+        if key not in {"analysis_plan_id", "analysis_plan_digest"}
+    })
+    frozen["analysis_plan_id"] = content_id(frozen, "analysis_plan_id")
+    try:
+        frozen = validate_analysis_plan(frozen)
+    except ValueError as exc:
+        raise QualificationBoundaryError(
+            "analysis_plan_schema_invalid",
+            str(exc),
+        ) from exc
+    write_json_file(args.output, frozen, "frozen analysis plan")
+    return 0, frozen
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subcommands = parser.add_subparsers(dest="command", required=True)
@@ -289,6 +588,32 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument("--score-request", type=Path, required=True)
     score.add_argument("--validated-treatment", type=Path)
 
+    calibrate = subcommands.add_parser(
+        "calibrate",
+        help="Validate an explicit, pinned, local-only calibration campaign.",
+    )
+    calibrate.add_argument("--partition", type=Path, required=True)
+    calibrate.add_argument("--candidate-freeze", type=Path, required=True)
+    calibrate.add_argument("--experiment-policy", type=Path, required=True)
+    calibrate.add_argument("--corpus", type=Path, required=True)
+    calibrate.add_argument("--budget", type=Path, required=True)
+    calibrate.add_argument("--raw-evidence-root", type=Path, required=True)
+    calibrate.add_argument("--confirm-explicit-local-live", action="store_true")
+
+    replay = subcommands.add_parser(
+        "replay",
+        help="Recompute a deterministic qualification decision without live inputs.",
+    )
+    replay.add_argument("--request", type=Path, required=True)
+
+    freeze = subcommands.add_parser(
+        "freeze-analysis-plan",
+        help="Freeze a versioned analysis plan from calibration-only evidence.",
+    )
+    freeze.add_argument("--calibration-report", type=Path, required=True)
+    freeze.add_argument("--draft-plan", type=Path, required=True)
+    freeze.add_argument("--output", type=Path, required=True)
+
     return parser
 
 
@@ -301,6 +626,9 @@ def main(argv: list[str] | None = None) -> int:
         "validate-treatment": validate_treatment_command,
         "publish-successor-freeze": publish_successor_freeze_command,
         "score": score_command,
+        "calibrate": calibrate_command,
+        "replay": replay_command,
+        "freeze-analysis-plan": freeze_analysis_plan_command,
     }
     try:
         exit_code, payload = handlers[args.command](args)
@@ -310,6 +638,14 @@ def main(argv: list[str] | None = None) -> int:
             "message": str(exc),
             "reason": "score_before_treatment_refused",
             "status": "blocked",
+        })
+        return 2
+    except QualificationBoundaryError as exc:
+        emit_json({
+            "command": args.command,
+            "error": str(exc),
+            "reason": exc.reason,
+            "status": "error",
         })
         return 2
     except (OSError, ValueError, RecursionError) as exc:
@@ -332,13 +668,16 @@ __all__ = [
     "LEGACY_SMOKE_SCORER",
     "QUALIFICATION_ENTRY_POINT",
     "build_parser",
+    "calibrate_command",
     "canonical_json",
+    "freeze_analysis_plan_command",
     "main",
     "materialize_source",
     "matching_materialization",
     "publish_materialization_command",
     "publish_successor_freeze_command",
     "read_json_file",
+    "replay_command",
     "score_command",
     "validate_treatment_command",
     "write_json_file",

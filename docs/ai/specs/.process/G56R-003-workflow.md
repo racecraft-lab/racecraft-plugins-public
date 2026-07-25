@@ -77,7 +77,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | Repaired to 25 self-contained TDD tasks, 3 conflict-safe fixture groups, all 38 requirements mapped; G5 rerun passed |
 | Analyze | `$speckit-analyze` | Complete | Task-contract rerun passed with zero findings; G6 rerun passed |
 | Confidence Gate | G6.5 | Complete | Task-repair rerun passed at 0.99 against the 0.90 advisory threshold |
-| Implement | `$speckit-implement` | In Progress | Slices 1-2 complete with G7 passed; Slice 3 T017 next |
+| Implement | `$speckit-implement` | Complete | All 25 tasks complete; Slice 3 G7 passed with 25/25 tasks and zero markers |
 | Post | Post-Implementation | Pending | Run full verification, review, PR, and handoff work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -1037,6 +1037,15 @@ For every task:
 | T014 | Complete | Score-bundle additions produced 2 failures and 50 missing schema/API errors | Scoring 20/20; immutable ID/digest joins, closed taxonomy, terminal estimand records, and additive invalidation verified |
 | T015 | Complete | Evidence safety/replay additions produced 5 failures against the prior 19-test baseline | Scoring 24/24; deny-by-default sanitizer, opaque bindings, stale-version invalidation, deterministic replay, and zero sensitive scan matches verified |
 | T016 | Complete | End-to-end regression produced 1 failure and 1 missing summary API error | Scoring 25/25; corpus 10/10 + 3/3 + 1/1 + 1/1; privacy 10/10; Layer 4 1637/1637; docs reference current; G7 passed |
+| T017 | Complete | Four contract tests produced 6 assertions for missing repository schemas | Qualification contracts 19/19; closed experiment, analysis-plan, and ordered decision schemas verified |
+| T018 | Complete | Five comparison tests produced 21 missing-API errors and 1 export failure | Qualification contracts 24/24; complete pre-execution joins, calibration isolation, additive invalidation, and rebinding refusal verified |
+| T019 | Complete | Six statistics tests produced 12 missing-behavior assertion failures | Statistics 6/6; floors → paired cluster-adjusted NI → raw Pareto order, uncertainty, ties, mixed outcomes, and no hidden weights verified |
+| T020 | Complete | Four workload/cache tests produced 10 failures and 1 missing-API error | Statistics 10/10; closed strata, p95 tail guardrails, minimum tasks, unknown-stratum handling, cache isolation, and order-leak rejection verified |
+| T021 | Complete | Four terminal/rerun tests produced 4 failures and 5 missing-behavior errors | Statistics 14/14; acceptance-zero terminals, evidence-boundary attrition, capped complete-pair reruns, and one-arm/complete-case refusal verified |
+| T022 | Complete | Three budget/partition tests produced 17 failures and 10 errors | Statistics 17/17; all seven budget ceilings, calibration-only partitions/decisions, no final policy/default/aggregate/release, and one no-qualification path verified |
+| T023 | Complete | Replay/CLI additions produced contract 1 failure + 4 errors and statistics 2 failures + 1 error | Qualification contracts 27/27; statistics/replay 20/20; deterministic offline decision identity, explicit local calibration, frozen analysis-plan output, complete bindings, and no-network/no-live-write boundaries verified |
+| T024 | Complete | Six new methods and one expanded test produced 11 failures and 1 error | Statistics/replay 26/26; qualification contracts 27/27; closed freeze metadata/numeric validation and all prohibited route, evidence, retry, mutation, cache, attrition, code, and budget boundaries verified; stale runner absent |
+| T025 | Complete | Full source-lineage replay failed once on the missing closed-shape join | Focused G56R-003 107/107; G56R-002 99/99; full suite 3251/3251; exact suite registration, docs reference/validation, release-title validation, and diff check passed; final release-artifact check awaits the Slice 3 checkpoint for the regenerated reference page |
 
 ---
 
@@ -1044,7 +1053,7 @@ For every task:
 
 | Post Item | Status |
 |---|---|
-| Post: Doctor Extension Check | Pending |
+| Post: Doctor Extension Check | In Progress |
 | Post: Verify Implementation | Pending |
 | Post: Verify Tasks Phantom Check | Pending |
 | Post: Code Review | Pending |
@@ -1059,14 +1068,14 @@ For every task:
 | Post: Review Remediation | Pending |
 | Post: Retrospective | Pending |
 
-- [ ] All tasks are complete and trace to requirements.
-- [ ] Every slice has red-green-refactor evidence.
-- [ ] Focused capability, treatment, materializer, corpus, scorer, and
+- [x] All tasks are complete and trace to requirements.
+- [x] Every slice has red-green-refactor evidence.
+- [x] Focused capability, treatment, materializer, corpus, scorer, and
   statistical tests pass.
-- [ ] `python3 -u tests/speckit-pro/run-all.py` passes.
+- [x] `python3 -u tests/speckit-pro/run-all.py` passes.
 - [ ] Release artifacts were refreshed after shipped runner changes.
 - [ ] `refresh-release-artifacts.py --check` reports no drift.
-- [ ] The calibration-only pilot is explicitly non-qualification evidence.
+- [x] The calibration-only pilot is explicitly non-qualification evidence.
 - [ ] No screening, selection, cohort-lock, or integrated-confirmation
   objective was consumed.
 - [ ] No final per-agent route policy or installed default was created.

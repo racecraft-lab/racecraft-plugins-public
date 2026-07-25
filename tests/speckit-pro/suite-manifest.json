@@ -105,6 +105,7 @@
         { "path": "tests/speckit-pro/unit/test-codex-corpus-fixtures-b.py", "label": "test-codex-corpus-fixtures-b", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-codex-corpus-fixtures-c.py", "label": "test-codex-corpus-fixtures-c", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-codex-qualification-scoring.py", "label": "test-codex-qualification-scoring", "baseline": null },
+        { "path": "tests/speckit-pro/unit/test-codex-qualification-statistics.py", "label": "test-codex-qualification-statistics", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-efficiency-runner-portability.py", "label": "test-efficiency-runner-portability", "baseline": "tests/speckit-pro/parity/bash-to-python/test-efficiency-runner-portability-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-parity-extractors.py", "label": "test-parity-extractors", "baseline": "tests/speckit-pro/parity/bash-to-python/test-parity-extractors-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-parity-judge.py", "label": "test-parity-judge", "baseline": "tests/speckit-pro/parity/bash-to-python/test-parity-judge-baseline.txt" },

@@ -1,0 +1,472 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-003/analysis-decision.schema.json",
+  "title": "G56R-003 Analysis Decision Bundle",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "decision_bundle_id",
+    "decision_bundle_version",
+    "decision_bundle_digest",
+    "partition_binding",
+    "comparison_set_binding",
+    "assignment_bindings",
+    "score_bundle_bindings",
+    "analysis_plan_binding",
+    "analysis_output",
+    "ordered_gate_results",
+    "decision",
+    "qualification_policy_output",
+    "evidence_refs"
+  ],
+  "properties": {
+    "schema_version": {"const": "analysis-decision.v1"},
+    "decision_bundle_id": {"$ref": "#/$defs/digest"},
+    "decision_bundle_version": {"type": "string", "minLength": 1},
+    "decision_bundle_digest": {"$ref": "#/$defs/digest"},
+    "partition_binding": {"$ref": "#/$defs/calibrationPartitionBinding"},
+    "comparison_set_binding": {"$ref": "#/$defs/binding"},
+    "assignment_bindings": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/binding"}
+    },
+    "score_bundle_bindings": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/binding"}
+    },
+    "analysis_plan_binding": {"$ref": "#/$defs/binding"},
+    "analysis_output": {"$ref": "#/$defs/analysisOutput"},
+    "ordered_gate_results": {"$ref": "#/$defs/orderedGateResults"},
+    "decision": {
+      "enum": [
+        "no_qualification",
+        "inconclusive",
+        "calibration_complete",
+        "invalid"
+      ]
+    },
+    "qualification_policy_output": {"$ref": "#/$defs/qualificationPolicyOutput"},
+    "evidence_refs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/digest"}
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "calibrationPartitionBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "partition_id",
+        "partition_type",
+        "partition_digest",
+        "qualification_eligible"
+      ],
+      "properties": {
+        "partition_id": {"type": "string", "minLength": 1},
+        "partition_type": {"const": "calibration"},
+        "partition_digest": {"$ref": "#/$defs/digest"},
+        "qualification_eligible": {"const": false}
+      }
+    },
+    "analysisOutput": {
+      "oneOf": [
+        {"$ref": "#/$defs/completeDominanceOutput"},
+        {"$ref": "#/$defs/floorFailureOutput"},
+        {"$ref": "#/$defs/nonInferiorityFailureOutput"},
+        {"$ref": "#/$defs/mixedParetoOutput"},
+        {"$ref": "#/$defs/incompleteOutput"}
+      ]
+    },
+    "analysisOutputBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "analysis_output_id",
+        "analysis_output_digest",
+        "complete",
+        "floor_result",
+        "non_inferiority_result",
+        "pareto_result",
+        "terminal_analysis_disposition"
+      ],
+      "properties": {
+        "analysis_output_id": {"$ref": "#/$defs/digest"},
+        "analysis_output_digest": {"$ref": "#/$defs/digest"},
+        "complete": {"type": "boolean"},
+        "floor_result": {
+          "enum": ["pass", "fail", "uncertain", "not_evaluated"]
+        },
+        "non_inferiority_result": {
+          "enum": ["pass", "fail", "uncertain", "not_evaluated"]
+        },
+        "pareto_result": {
+          "enum": [
+            "candidate_dominates",
+            "comparator_dominates",
+            "tie",
+            "mixed",
+            "uncertain",
+            "not_evaluated"
+          ]
+        },
+        "terminal_analysis_disposition": {
+          "enum": [
+            "no_qualification",
+            "inconclusive",
+            "calibration_complete",
+            "invalid"
+          ]
+        }
+      }
+    },
+    "completeDominanceOutput": {
+      "allOf": [
+        {"$ref": "#/$defs/analysisOutputBase"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "analysis_output_id",
+            "analysis_output_digest",
+            "complete",
+            "floor_result",
+            "non_inferiority_result",
+            "pareto_result",
+            "terminal_analysis_disposition"
+          ],
+          "properties": {
+            "analysis_output_id": {"$ref": "#/$defs/digest"},
+            "analysis_output_digest": {"$ref": "#/$defs/digest"},
+            "complete": {"const": true},
+            "floor_result": {"const": "pass"},
+            "non_inferiority_result": {"const": "pass"},
+            "pareto_result": {"const": "candidate_dominates"},
+            "terminal_analysis_disposition": {"const": "calibration_complete"}
+          }
+        }
+      ]
+    },
+    "floorFailureOutput": {
+      "allOf": [
+        {"$ref": "#/$defs/analysisOutputBase"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "analysis_output_id",
+            "analysis_output_digest",
+            "complete",
+            "floor_result",
+            "non_inferiority_result",
+            "pareto_result",
+            "terminal_analysis_disposition"
+          ],
+          "properties": {
+            "analysis_output_id": {"$ref": "#/$defs/digest"},
+            "analysis_output_digest": {"$ref": "#/$defs/digest"},
+            "complete": {"const": true},
+            "floor_result": {"const": "fail"},
+            "non_inferiority_result": {"const": "not_evaluated"},
+            "pareto_result": {"const": "not_evaluated"},
+            "terminal_analysis_disposition": {"const": "no_qualification"}
+          }
+        }
+      ]
+    },
+    "nonInferiorityFailureOutput": {
+      "allOf": [
+        {"$ref": "#/$defs/analysisOutputBase"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "analysis_output_id",
+            "analysis_output_digest",
+            "complete",
+            "floor_result",
+            "non_inferiority_result",
+            "pareto_result",
+            "terminal_analysis_disposition"
+          ],
+          "properties": {
+            "analysis_output_id": {"$ref": "#/$defs/digest"},
+            "analysis_output_digest": {"$ref": "#/$defs/digest"},
+            "complete": {"const": true},
+            "floor_result": {"const": "pass"},
+            "non_inferiority_result": {"const": "fail"},
+            "pareto_result": {"const": "not_evaluated"},
+            "terminal_analysis_disposition": {"const": "no_qualification"}
+          }
+        }
+      ]
+    },
+    "mixedParetoOutput": {
+      "allOf": [
+        {"$ref": "#/$defs/analysisOutputBase"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "analysis_output_id",
+            "analysis_output_digest",
+            "complete",
+            "floor_result",
+            "non_inferiority_result",
+            "pareto_result",
+            "terminal_analysis_disposition"
+          ],
+          "properties": {
+            "analysis_output_id": {"$ref": "#/$defs/digest"},
+            "analysis_output_digest": {"$ref": "#/$defs/digest"},
+            "complete": {"const": true},
+            "floor_result": {"const": "pass"},
+            "non_inferiority_result": {"const": "pass"},
+            "pareto_result": {"enum": ["tie", "mixed", "uncertain"]},
+            "terminal_analysis_disposition": {"const": "inconclusive"}
+          }
+        }
+      ]
+    },
+    "incompleteOutput": {
+      "allOf": [
+        {"$ref": "#/$defs/analysisOutputBase"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "analysis_output_id",
+            "analysis_output_digest",
+            "complete",
+            "floor_result",
+            "non_inferiority_result",
+            "pareto_result",
+            "terminal_analysis_disposition"
+          ],
+          "properties": {
+            "analysis_output_id": {"$ref": "#/$defs/digest"},
+            "analysis_output_digest": {"$ref": "#/$defs/digest"},
+            "complete": {"const": false},
+            "floor_result": {"const": "not_evaluated"},
+            "non_inferiority_result": {"const": "not_evaluated"},
+            "pareto_result": {"const": "not_evaluated"},
+            "terminal_analysis_disposition": {"const": "inconclusive"}
+          }
+        }
+      ]
+    },
+    "orderedGateResults": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "prefixItems": [
+        {"$ref": "#/$defs/gateBindings"},
+        {"$ref": "#/$defs/gatePartition"},
+        {"$ref": "#/$defs/gateTreatment"},
+        {"$ref": "#/$defs/gateDeterministic"},
+        {"$ref": "#/$defs/gateProvenance"},
+        {"$ref": "#/$defs/gateCompleteness"},
+        {"$ref": "#/$defs/gateFloors"},
+        {"$ref": "#/$defs/gateNonInferiority"},
+        {"$ref": "#/$defs/gatePareto"}
+      ],
+      "items": false
+    },
+    "gateResultBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "gate", "result"],
+      "properties": {
+        "sequence": {"type": "integer", "minimum": 1},
+        "gate": {"enum": [
+          "bindings",
+          "partition",
+          "treatment",
+          "deterministic",
+          "provenance",
+          "completeness",
+          "floors",
+          "non_inferiority",
+          "pareto"
+        ]},
+        "result": {"enum": ["pass", "fail", "uncertain", "not_evaluated"]}
+      }
+    },
+    "gateBindings": {
+      "allOf": [
+        {"$ref": "#/$defs/gateResultBase"},
+        {"$ref": "#/$defs/gateBindingsConst"}
+      ]
+    },
+    "gateBindingsConst": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "gate", "result"],
+      "properties": {
+        "sequence": {"const": 1},
+        "gate": {"const": "bindings"},
+        "result": {"enum": ["pass", "fail", "uncertain", "not_evaluated"]}
+      }
+    },
+    "gatePartition": {
+      "allOf": [
+        {"$ref": "#/$defs/gateResultBase"},
+        {"$ref": "#/$defs/gatePartitionConst"}
+      ]
+    },
+    "gatePartitionConst": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "gate", "result"],
+      "properties": {
+        "sequence": {"const": 2},
+        "gate": {"const": "partition"},
+        "result": {"enum": ["pass", "fail", "uncertain", "not_evaluated"]}
+      }
+    },
+    "gateTreatment": {
+      "allOf": [
+        {"$ref": "#/$defs/gateResultBase"},
+        {"$ref": "#/$defs/gateTreatmentConst"}
+      ]
+    },
+    "gateTreatmentConst": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "gate", "result"],
+      "properties": {
+        "sequence": {"const": 3},
+        "gate": {"const": "treatment"},
+        "result": {"enum": ["pass", "fail", "uncertain", "not_evaluated"]}
+      }
+    },
+    "gateDeterministic": {
+      "allOf": [
+        {"$ref": "#/$defs/gateResultBase"},
+        {"$ref": "#/$defs/gateDeterministicConst"}
+      ]
+    },
+    "gateDeterministicConst": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "gate", "result"],
+      "properties": {
+        "sequence": {"const": 4},
+        "gate": {"const": "deterministic"},
+        "result": {"enum": ["pass", "fail", "uncertain", "not_evaluated"]}
+      }
+    },
+    "gateProvenance": {
+      "allOf": [
+        {"$ref": "#/$defs/gateResultBase"},
+        {"$ref": "#/$defs/gateProvenanceConst"}
+      ]
+    },
+    "gateProvenanceConst": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "gate", "result"],
+      "properties": {
+        "sequence": {"const": 5},
+        "gate": {"const": "provenance"},
+        "result": {"enum": ["pass", "fail", "uncertain", "not_evaluated"]}
+      }
+    },
+    "gateCompleteness": {
+      "allOf": [
+        {"$ref": "#/$defs/gateResultBase"},
+        {"$ref": "#/$defs/gateCompletenessConst"}
+      ]
+    },
+    "gateCompletenessConst": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "gate", "result"],
+      "properties": {
+        "sequence": {"const": 6},
+        "gate": {"const": "completeness"},
+        "result": {"enum": ["pass", "fail", "uncertain", "not_evaluated"]}
+      }
+    },
+    "gateFloors": {
+      "allOf": [
+        {"$ref": "#/$defs/gateResultBase"},
+        {"$ref": "#/$defs/gateFloorsConst"}
+      ]
+    },
+    "gateFloorsConst": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "gate", "result"],
+      "properties": {
+        "sequence": {"const": 7},
+        "gate": {"const": "floors"},
+        "result": {"enum": ["pass", "fail", "uncertain", "not_evaluated"]}
+      }
+    },
+    "gateNonInferiority": {
+      "allOf": [
+        {"$ref": "#/$defs/gateResultBase"},
+        {"$ref": "#/$defs/gateNonInferiorityConst"}
+      ]
+    },
+    "gateNonInferiorityConst": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "gate", "result"],
+      "properties": {
+        "sequence": {"const": 8},
+        "gate": {"const": "non_inferiority"},
+        "result": {"enum": ["pass", "fail", "uncertain", "not_evaluated"]}
+      }
+    },
+    "gatePareto": {
+      "allOf": [
+        {"$ref": "#/$defs/gateResultBase"},
+        {"$ref": "#/$defs/gateParetoConst"}
+      ]
+    },
+    "gateParetoConst": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sequence", "gate", "result"],
+      "properties": {
+        "sequence": {"const": 9},
+        "gate": {"const": "pareto"},
+        "result": {"enum": ["pass", "fail", "uncertain", "not_evaluated"]}
+      }
+    },
+    "qualificationPolicyOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "preferred_route_policy_created",
+        "fallback_route_policy_created",
+        "installed_default_changed"
+      ],
+      "properties": {
+        "preferred_route_policy_created": {"const": false},
+        "fallback_route_policy_created": {"const": false},
+        "installed_default_changed": {"const": false}
+      }
+    }
+  }
+}
