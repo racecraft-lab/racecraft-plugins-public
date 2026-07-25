@@ -56,7 +56,7 @@ reference shape. The following were aligned to it after the interview:
 |---|---|
 | Four user stories: successor freeze, exact treatment, corpus scoring, analysis plan | US1–US4 |
 | Four Clarify sessions, including a dedicated materialization/delivery/trace-join session | Clarifications S1–S4 |
-| Checklist domains: data-integrity, error-handling, llm-integration | committed `checklists/` |
+| Checklist domains: data-integrity, error-handling, llm-integration, performance | committed `checklists/` |
 | Explicit score-eligibility predicate gating every scored outcome | FR-030 |
 | Separate closed failure taxonomies per plane, incl. unclassifiable attrition | FR-029, FR-034 |
 | Byte-identical / content-hash materialization proof, not parsed or semantic equivalence | FR-006, FR-008 |
@@ -539,10 +539,15 @@ rerun policy, attrition, and fail-closed publication (**error-handling**); real
 model dispatch, alias resolution, effort levels, and token accounting
 (**llm-integration**).
 
-**Domains: data-integrity, error-handling, llm-integration** — the same three
-G56R-003 ran, so both platforms are validated against identical lenses.
-Statistical-rigor concerns are carried inside the error-handling and
-data-integrity focus areas rather than run as a separate domain, matching G56R.
+Plus p95 resource and duration guardrails, campaign budgets, wall-time and
+raw-token caps, racing and futility rules, the powered long-horizon stratum, and
+cache isolation between arms (**performance**).
+
+**Domains: data-integrity, error-handling, llm-integration, performance** — the
+same four G56R-003 ran in its completed Checklist phase, so both platforms are
+validated against identical lenses. Statistical-rigor concerns are carried inside
+the error-handling and data-integrity focus areas rather than run as a separate
+domain, matching G56R.
 
 ### Step 2: Run Enriched Checklist Prompts
 
@@ -598,6 +603,23 @@ Focus on CAR-003 requirements:
 - Pay special attention to: any path where a failure could be silently absorbed, reclassified into a different plane, or scored against the observed rather than the requested route
 ```
 
+#### 4. performance Checklist
+
+<!-- Why this domain: campaign budgets, p95 guardrails, and cache isolation are the constraints that keep a long-running evaluation both affordable and statistically valid; G56R-003 ran this domain in its completed Checklist phase. -->
+
+```text
+/speckit-checklist performance
+
+Focus on CAR-003 requirements:
+- Campaign budgets freeze maximum raw-token use, wall time, candidate count, futility rules, racing method, and confirmation-entry cap before any outcome-bearing run
+- The guardrail registry defines p95 resource and p95 duration guardrails with unit, denominator, comparator, margin, confidence method, missing-data rule, multiplicity position, and minimum unique-task count
+- Cache state is isolated between arms so one arm cannot warm another's cache; billed cache writes make crossover directly distortive
+- The powered long-horizon stratum derives membership from task and protocol characteristics before either arm runs, never from realized duration, turns, tokens, retries, or compactions
+- Late-failure, retry, and compaction guardrails are defined alongside the resource and duration ones
+- The deterministic replay suite stays fast enough to run in default CI with zero live calls
+- Pay special attention to: any budget or guardrail threshold that could be set or relaxed after outcomes are observed
+```
+
 ### Checklist Results
 
 | Checklist | Items | Gaps | Spec References |
@@ -605,6 +627,7 @@ Focus on CAR-003 requirements:
 | data-integrity | | | |
 | error-handling | | | |
 | llm-integration | | | |
+| performance | | | |
 | **Total** | | | |
 
 ### Addressing Gaps

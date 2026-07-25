@@ -502,7 +502,7 @@ reference shape. Eight items were aligned to it after the interview closed:
 |---|---|
 | Four user stories — successor freeze, exact treatment, corpus scoring, analysis plan — mapped onto the same three slices | US1–US4 |
 | Four Clarify sessions, adding a dedicated materialization/delivery/trace-join session | Clarifications S1–S4 |
-| Checklist domains changed to data-integrity, error-handling, llm-integration | committed `checklists/` |
+| Checklist domains changed to data-integrity, error-handling, llm-integration, performance | committed `checklists/` |
 | Explicit score-eligibility predicate gating every scored outcome | FR-030 |
 | Separate closed failure taxonomies per plane, including unclassifiable attrition as an evidence-boundary failure | FR-029, FR-034 |
 | Equivalence proven by content-hash identity, not parsed-field or semantic comparison | FR-006, FR-008 |
