@@ -1,0 +1,246 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-003/role-corpus.schema.json",
+  "title": "G56R-003 Governed Role Corpus",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "corpus_id",
+    "corpus_version",
+    "corpus_digest",
+    "partition_binding",
+    "roles"
+  ],
+  "properties": {
+    "schema_version": {"const": "role-corpus.v1"},
+    "corpus_id": {"type": "string", "minLength": 1},
+    "corpus_version": {"type": "string", "minLength": 1},
+    "corpus_digest": {"$ref": "#/$defs/digest"},
+    "partition_binding": {"$ref": "#/$defs/partitionBinding"},
+    "roles": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/roleContract"}
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestampOrNull": {
+      "oneOf": [
+        {"type": "string", "format": "date-time"},
+        {"type": "null"}
+      ]
+    },
+    "roleContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role_id",
+        "required_core",
+        "optional_helper",
+        "executable",
+        "source_binding",
+        "fixture_binding",
+        "objective_binding",
+        "partition_binding",
+        "permitted_tools",
+        "sandbox",
+        "expected_artifacts",
+        "acceptance_oracle",
+        "independent_review",
+        "route_bindings"
+      ],
+      "properties": {
+        "role_id": {
+          "enum": [
+            "analyze-executor",
+            "autopilot-fast-helper",
+            "checklist-executor",
+            "clarify-executor",
+            "codebase-analyst",
+            "consensus-synthesizer",
+            "domain-researcher",
+            "gate-validator",
+            "implement-executor",
+            "phase-executor",
+            "spec-context-analyst",
+            "uat-runbook-author"
+          ]
+        },
+        "required_core": {"type": "boolean"},
+        "optional_helper": {"type": "boolean"},
+        "executable": {"type": "boolean"},
+        "source_binding": {"$ref": "#/$defs/sourceBinding"},
+        "fixture_binding": {"$ref": "#/$defs/fixtureBinding"},
+        "objective_binding": {"$ref": "#/$defs/objectiveBinding"},
+        "partition_binding": {"$ref": "#/$defs/partitionBinding"},
+        "permitted_tools": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "sandbox": {"$ref": "#/$defs/sandbox"},
+        "expected_artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/expectedArtifact"}
+        },
+        "acceptance_oracle": {"$ref": "#/$defs/acceptanceOracle"},
+        "independent_review": {"$ref": "#/$defs/independentReview"},
+        "route_bindings": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/routeBinding"}
+        }
+      }
+    },
+    "sourceBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_path", "source_kind", "source_digest"],
+      "properties": {
+        "source_path": {"type": "string", "minLength": 1},
+        "source_kind": {
+          "enum": ["codex_toml", "governed_markdown_contract"]
+        },
+        "source_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "fixtureBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fixture_id",
+        "fixture_version",
+        "fixture_digest",
+        "fixture_state",
+        "current",
+        "invalidated_at",
+        "invalidation_reason"
+      ],
+      "properties": {
+        "fixture_id": {"type": "string", "minLength": 1},
+        "fixture_version": {"type": "string", "minLength": 1},
+        "fixture_digest": {"$ref": "#/$defs/digest"},
+        "fixture_state": {"enum": ["valid"]},
+        "current": {"const": true},
+        "invalidated_at": {"$ref": "#/$defs/timestampOrNull"},
+        "invalidation_reason": {
+          "oneOf": [
+            {"type": "string", "minLength": 1},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "objectiveBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["objective_id", "objective_digest"],
+      "properties": {
+        "objective_id": {"type": "string", "minLength": 1},
+        "objective_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "partitionBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "partition_id",
+        "partition_type",
+        "partition_digest",
+        "qualification_eligible"
+      ],
+      "properties": {
+        "partition_id": {"type": "string", "minLength": 1},
+        "partition_type": {
+          "enum": [
+            "calibration",
+            "screening",
+            "selection",
+            "cohort_lock",
+            "integrated_confirmation"
+          ]
+        },
+        "partition_digest": {"$ref": "#/$defs/digest"},
+        "qualification_eligible": {"type": "boolean"}
+      }
+    },
+    "sandbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "network", "mutation"],
+      "properties": {
+        "mode": {"enum": ["read-only", "workspace-write"]},
+        "network": {"const": "restricted"},
+        "mutation": {"enum": ["read_only", "workspace_write"]}
+      }
+    },
+    "expectedArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_contract_id", "artifact_type", "artifact_digest"],
+      "properties": {
+        "artifact_contract_id": {"type": "string", "minLength": 1},
+        "artifact_type": {"type": "string", "minLength": 1},
+        "artifact_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "acceptanceOracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["oracle_id", "oracle_version", "oracle_digest"],
+      "properties": {
+        "oracle_id": {"type": "string", "minLength": 1},
+        "oracle_version": {"type": "string", "minLength": 1},
+        "oracle_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "independentReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "review_id",
+        "reviewer_digest",
+        "review_digest",
+        "review_state",
+        "reviewed_at"
+      ],
+      "properties": {
+        "review_id": {"type": "string", "minLength": 1},
+        "reviewer_digest": {"$ref": "#/$defs/digest"},
+        "review_digest": {"$ref": "#/$defs/digest"},
+        "review_state": {"const": "passed"},
+        "reviewed_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "routeBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role_id",
+        "route_id",
+        "candidate_freeze_id",
+        "agent_contract_id",
+        "route_digest",
+        "admission_status"
+      ],
+      "properties": {
+        "role_id": {"type": "string", "minLength": 1},
+        "route_id": {"type": "string", "minLength": 1},
+        "candidate_freeze_id": {"$ref": "#/$defs/digest"},
+        "agent_contract_id": {"type": "string", "minLength": 1},
+        "route_digest": {"$ref": "#/$defs/digest"},
+        "admission_status": {"const": "admitted"}
+      }
+    }
+  }
+}

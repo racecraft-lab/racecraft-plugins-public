@@ -77,7 +77,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | Repaired to 25 self-contained TDD tasks, 3 conflict-safe fixture groups, all 38 requirements mapped; G5 rerun passed |
 | Analyze | `$speckit-analyze` | Complete | Task-contract rerun passed with zero findings; G6 rerun passed |
 | Confidence Gate | G6.5 | Complete | Task-repair rerun passed at 0.99 against the 0.90 advisory threshold |
-| Implement | `$speckit-implement` | In Progress | Slice 1 complete with G7 passed; Slice 2 T007 next |
+| Implement | `$speckit-implement` | In Progress | Slices 1-2 complete with G7 passed; Slice 3 T017 next |
 | Post | Post-Implementation | Pending | Run full verification, review, PR, and handoff work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -1016,8 +1016,8 @@ For every task:
 | Slice | Goal | Status |
 |---|---|---|
 | 1 | Capability, materialization, and trace | Complete |
-| 2 | Corpus and blinded scoring | In Progress |
-| 3 | Experiment policy, statistics, and calibration | Pending |
+| 2 | Corpus and blinded scoring | Complete |
+| 3 | Experiment policy, statistics, and calibration | In Progress |
 
 ### Task Evidence
 
@@ -1029,6 +1029,14 @@ For every task:
 | T004 | Complete | 5 CLI tests failed because the entry point was missing | Combined qualification/CLI 14/14; stale roadmap runner absent |
 | T005 | Complete | Trust assertion failed because the materializer was absent from runner metadata | Trust 8/8; generator-only refresh committed at `a9bdfe0e`; final generated drift check passed |
 | T006 | Complete | End-to-end replay failed because qualification did not accept successor authority | Focused 5/5 + 8/8 + 15/15; Layer 4 1637/1637; docs reference current; G7 passed |
+| T007 | Complete | 8 corpus-contract tests failed before the validator/schema existed | Corpus 8/8; exact 12/11/9/2/1 role boundary and admitted-route scheduling verified |
+| T008-T010 | Complete | Disjoint fixture groups failed on 4, 5, and 3 missing role fixtures | Fixture groups A/B/C independently pass 3/3, 1/1, and 1/1 |
+| T011 | Complete | Shared-manifest RED failed before the manifest and non-executable skip reasons existed | Corpus 10/10; fixture groups A/B/C 3/3, 1/1, and 1/1; manifest digest frozen |
+| T012 | Complete | 8 focused tests produced 14 missing-implementation assertion failures | Hard-gate scoring 8/8; closed seven-gate order, fail-closed evidence, and score-before-gates prohibition verified |
+| T013 | Complete | Ballot/adjudication additions produced 1 failure and 15 missing-API errors | Scoring 12/12; distinct blind ballots, frozen rubric, current calibration, and non-reused third adjudicator verified |
+| T014 | Complete | Score-bundle additions produced 2 failures and 50 missing schema/API errors | Scoring 20/20; immutable ID/digest joins, closed taxonomy, terminal estimand records, and additive invalidation verified |
+| T015 | Complete | Evidence safety/replay additions produced 5 failures against the prior 19-test baseline | Scoring 24/24; deny-by-default sanitizer, opaque bindings, stale-version invalidation, deterministic replay, and zero sensitive scan matches verified |
+| T016 | Complete | End-to-end regression produced 1 failure and 1 missing summary API error | Scoring 25/25; corpus 10/10 + 3/3 + 1/1 + 1/1; privacy 10/10; Layer 4 1637/1637; docs reference current; G7 passed |
 
 ---
 
