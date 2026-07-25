@@ -484,14 +484,25 @@ Four sessions, matching G56R-003's four Clarify sessions one-for-one.
 | 1 | Q1 — sole admitting runtime surface | `[codebase, domain]` | 1 | codebase-analyst, domain-researcher | **N=2, both agree** — no Round 2 | Print-mode canary probe is the sole admitting authority; all other surfaces diagnostic-only. Decisive evidence: the CAR-002 capability library already encodes the catalog endpoint as "corroborating (never alias-establishing)" and returns evidence only under `api_key` mode — so admitting on it would make freeze admission depend on an auth mode FR-042 forbids requiring. Domain research added the binding refinement that probe-vs-diagnostic disagreement must trigger investigate-or-exclude, else the design collapses into mono-operation bias. Applied to FR-002 / FR-004 |
 | 1 | Q2 — alias re-point vs resolver fallback | `[domain, ambiguous]` | 1 (full fan-out; `[ambiguous]` never single-routes) | codebase-analyst, spec-context-analyst, domain-researcher | **N=3, converged** on "classification already settled, detection mechanics incomplete" | spec-context (high): the roadmap already fixes the category boundary; only mechanics were open; parity with G56R-003 holds and the `alias_repoint_unresolved` vs `hidden_state_disagreement` difference is a pre-decided value divergence. codebase (low, but concrete): no ordered-fallback resolver exists in shipped source (deferred to CAR-006); frozen `record_class` is closed so attribution needs an additive record; `resolved_dated_model_id` is ambiguous across freeze-time and run-time records; `client_version` is a missing fifth observable. domain (high): the four-observable elimination argument is not closed-world safe — documented serving-infrastructure change alters behavior without changing model identity — and the catch-22 resolves via synthetic replay below the live trigger. Applied to FR-039 / FR-045 / FR-046 |
 
-**Why no Round 2 on Q2 despite a low-confidence analyst:** `[ambiguous]` routes to
+| 2 | Q1 — does `scorable` bind the predicate; what is `treatment_disposition` | `[spec, codebase]` | 1 | codebase-analyst, spec-context-analyst | **N=2, both agree, both high** | Both **rejected the executor's proposed enum**. `treatment_disposition` already ships closed as `proven`/`unknown`/`non_scorable_rerouted`/`hard_fail` in the shared treatment-record contract, and that file is **byte-identical across both worktrees** (`diff` empty). Adopting the executor's four invented names would have created a third unbridged vocabulary and manufactured divergence. `scorable` is keyed purely off record class via a fixed pairing table, so it cannot certify materialization or route proof — necessary, never sufficient. Applied to FR-030 |
+| 2 | Q4 — ordering of co-occurring disqualifiers | `[spec]` | **1 → 2** (Round 1 returned low confidence) | R1 spec-context; R2 codebase-analyst, domain-researcher | **N=3, converged; executor's proposal rejected on both counts** | R1 (low on order, high on recording): reject "record first match, discard rest" — the project pattern is a scalar terminal cause plus complete provenance. R2 codebase (**high, dispositive**): shipped shared code has **no condition-level precedence at all** — conditions are derived independently and merged by set union into a real `disposition_reasons` array; the only ordering is a disposition-*bucket* chain `hard_fail` > `non_scorable_rerouted` > `unknown` > `proven`. All three lib files plus the schema are byte-identical across both worktrees, so documenting this creates **zero** divergence. R2 domain (low-med): the correct genre is a specified, evidence-preserving precedence, and cross-implementation determinism requires the order be fixed in-spec rather than left to each implementation; one terminal cause plus retained contributing causes matches established incident-classification practice. Applied to FR-031 + a new Edge Case |
+
+**Why Round 2 fired on Session 2 Q4:** `[spec]` routes to a single analyst, and
+that analyst returned `confidence: low` on the core question, which the
+single-analyst rule escalates. Escalating was correct — Round 1 had read only
+specs and the PRD, and the shipped code turned out to contradict the proposed
+answer. Had we shipped Round 1's recommendation, the spec would have mandated a
+condition-level ordering that does not exist in the code both platforms already
+share.
+
+**Why no Round 2 on Session 1 Q2 despite a low-confidence analyst:** `[ambiguous]` routes to
 all three in Round 1, so the item already had full fan-out. The codebase
 analyst's low confidence was scoped to *completeness of the observable set* —
 precisely the point the domain researcher independently confirmed was
 incomplete. The three answers are complementary rather than contradictory, and
 all three findings were folded into the resolution instead of being averaged
 away.
-| 2 | Materialization, delivery, and trace joins | | |
+| 2 | Materialization, delivery, and trace joins | 5 asked, 3 applied directly, 2 to consensus (1 escalated to Round 2) | FR-008 digest preimage pinned to on-disk bytes; **FR-009 mandatory-observation manifest** (the inherited profile never enumerated them, leaving the requirement undecidable); FR-032 trace-digest verification; FR-030 binds the **already-shipped** disposition enum instead of inventing one; FR-031 co-occurrence precedence + union recording |
 | 3 | Corpus and blinded scoring | | |
 | 4 | Partitions, statistics, and campaign controls | | |
 
