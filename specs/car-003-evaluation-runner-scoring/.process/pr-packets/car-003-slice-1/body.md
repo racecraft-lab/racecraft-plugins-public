@@ -128,3 +128,21 @@ No manual UAT runbook was provided; use verification evidence for this PR.
 - Two requirements disagree on how a missing hard-gate failure is coded; both readings are kept visible and a fix must land on both platforms together.
 - The sibling platform's experiment policy still cannot validate a calibration run, and the direction-of-preference wording needs mirroring there.
 - A rare unreproducible failure was observed twice in one test layer under heavy parallel load; the affected files are untouched by this branch.
+
+## Release note
+
+```release-note
+Adds the evaluation platform that turns capability evidence into qualification
+evidence for Claude Code agent route selection. Publishes a successor
+capability freeze that detects when the platform silently re-points a model
+alias, ships a single canonical materializer that proves the exact agent policy
+a run received by hashing the bytes written to disk, governs a twelve-role
+fixture corpus scored by two blinded ballots with a third adjudicator, and
+freezes a replayable decision ladder that qualifies a route only after absolute
+floors, paired non-inferiority, and Pareto dominance all pass. A tie, mixed
+dominance, incomplete evidence, or statistical uncertainty returns no
+qualification rather than a forced ranking. Subscription authentication is the
+supported path and no supported path requires an API key. The legacy
+prompt-emulation smoke runner is demoted to non-release evidence rather than
+deleted.
+```
