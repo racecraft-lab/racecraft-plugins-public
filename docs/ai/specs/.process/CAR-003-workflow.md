@@ -103,7 +103,7 @@ not rewritten.
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 PASS — 4 domains, 218 items, 57 gaps found / 57 remediated; spec 50 → 58 FRs |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 PASS — 86 tasks, 14 parallel-safe, all 58 FR + 25 SC covered; route one-navigable-PR; marker plan persisted |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 PASS — 12 findings (0 CRITICAL), all remediated; 3 twin-side coordination handoffs |
-| Implement | `/speckit-implement` | 🔄 In Progress | 86 tasks, 3 ordered slices |
+| Implement | `/speckit-implement` | ✅ Complete | 83/86 tasks; 3 deliberately operator-gated. Suite 4143/4143. Six fail-open paths found by independent review and fixed |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -1052,6 +1052,90 @@ For each task, follow this cycle:
 | Slice 3 — US4 calibration analysis plan and replayable decision bundles | | | |
 
 ---
+
+## UAT Runbook (fail-open; logged)
+
+`generate-uat-skeleton` is **registered but deferred on the installed runner**,
+so it was not invoked as an active helper — that is the documented contract, not
+a workaround. No skeleton was generated and the `uat-runbook-author` subagent
+was therefore **not** spawned, since it only runs against an existing skeleton.
+
+**A committed source-derived runbook already exists and is reused instead:**
+`specs/car-003-evaluation-runner-scoring/quickstart.md`. It is the operator-facing
+acceptance runbook — numbered commands runnable from the repository root, plain
+setup prose, explicit prerequisites, and every operator-only section marked as
+such. It states the zero-live-call default and the no-API-key guarantee up front.
+
+Fail-open outcome recorded: **skipped (deferred helper), superseded by a
+committed source-derived runbook.** No acceptance evidence was fabricated.
+
+## Self-Review (mandatory; reporting only, never gates the PR)
+
+### 1. What might be wrong that verification would not catch?
+
+**The three incomplete tasks are the honest answer.** T022 (live capability
+probe), T078 (live calibration pilot), and T079 (freeze the analysis plan,
+blocked on T078) are all operator-only. Everything shipped here is therefore
+validated against **recorded fixtures, never a live run**. The alias-re-point
+detector in particular is validated by synthetic replay because inducing a real
+re-point requires setting the very override the proof requires to be unset —
+FR-046 records it as unvalidated-in-band rather than claiming tested coverage.
+A reviewer should read "4143 tests pass" as "the deterministic contract holds",
+not "this has been exercised against the live platform."
+
+### 2. What did I assume rather than verify?
+
+- I stated early that the parity-mirror contracts were "byte-identical to the
+  twin." **They are not, and never were** — they differ in `$id`, `title`,
+  `description`, and CAR carries `reasoning_token_report`. I had over-generalised
+  an analyst finding that diffed the *enum blocks*, not the files. The real
+  invariant — identical enum sets and identical decision dimensions — was
+  verified programmatically afterwards and does hold.
+- I confirmed `WEIGHTING_KEY_MARKERS` **existed** and treated the no-weighted-ranking
+  guarantee as enforced. The independent review found it was never called on the
+  write path. Existence is not enforcement; I checked the definition, not the
+  call site.
+- I told an implementation agent the estimator undershoots by 1.4–1.7x. It
+  measured 2.48x on slice 3 and recorded the true figure over my number.
+- I told an implementation agent the Pareto dimension was `duration_ms`. The
+  frozen contract and the twin both pin `duration`. The agent followed the
+  contract over my instruction, correctly.
+
+### 3. What is the weakest evidence relied on?
+
+- **A rare, unreproducible L4 flake.** Two independent agents observed a single
+  unexplained L4 failure in different layers, non-reproducible in isolation, on
+  runs where wall-clock tripled. The likely cause is CPU contention from several
+  concurrent agents each running the full suite. That is a *hypothesis*. The
+  affected test files are untouched by this branch and the final runs are clean,
+  but it deserves a ticket rather than a shrug.
+- **`source_digest` and `acceptance_oracle_digest` are declared, not recomputed
+  from live shipped bytes.** Binding the corpus to the shipped agent definitions
+  would make any unrelated agent edit fail this suite. Documented in the module,
+  but it means corpus-to-agent drift is not currently detected.
+- **Two checklist items were resolved at medium confidence** and left applied:
+  `malformed_catalog` as the home for missing provenance, and the
+  `invalidation_reason` set having no analysis-plan/budget-change member (worked
+  around via binding identity).
+
+### 4. What would a reviewer most reasonably object to?
+
+**The size.** 81 files and ~22,000 added lines is a large change by any
+standard, and it exceeds both the 800-LOC and 25-file thresholds. The defence is
+compositional, not rhetorical: exactly **one** authored production file reaches
+the shipped payload. The remainder is repository-only harness, generated
+artifacts, and specification documents that the constitution deliberately keeps
+outside the install-facing directory. Slice 1 cannot be subdivided to fit —
+the roadmap requires Work Package A intact — so this needs a **typed size
+exception**, which is an operator decision and is recorded as such rather than
+worked around.
+
+Second most likely objection: **an unresolved requirement contradiction shipped
+knowingly.** FR-014 and FR-034 disagree on how a missing hard-gate failure is
+coded. Both came from different checklist domains, neither is obviously wrong,
+and a fix must land on both platforms together. The implementation keeps both
+readings visible instead of silently picking one, and it is recorded for a
+ruling.
 
 ## Post-Implementation Checklist
 

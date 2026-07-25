@@ -90,5 +90,24 @@
       "Operator-ratified split decision recorded in the design concept (Q14) and the spec's Reviewability Budget: one specification, three ordered slices, Work Package A intact."
     ],
     "verdict": "pass_with_warning_and_marker_plan"
+  },
+  "final_reviewability_gate": {
+    "status": "size_block_with_current_marker_evidence",
+    "measured_at": "post-implementation, after fail-open remediation",
+    "total_files_changed": 81,
+    "lines_added": 21986,
+    "lines_removed": 76,
+    "composition": {
+      "authored_production_source_files": 1,
+      "authored_production_source": "speckit-pro/speckit_pro_runner/materializer.py (247 lines, 149 logic)",
+      "generated_or_regenerated_artifacts": 27,
+      "repository_only_harness_files": 38,
+      "repository_only_harness_added": 13221,
+      "spec_and_process_doc_files": 32,
+      "spec_and_process_doc_added": 7867
+    },
+    "verdict": "Size-only block against both the 800-LOC and 25-file thresholds. NOT a correctness block: no malformed or stale marker state, no failed verification, no invalid packet, no unsafe output, no non-size safety finding. Current marker evidence exists, so this proceeds to marker-based emission rather than a manual re-slicing stop.",
+    "operator_decision_required": "Slice 1 exceeds the 800-LOC block on its own and the roadmap requires Work Package A stay intact, so it cannot be subdivided to fit. A typed size exception is needed. The authored production surface is a single file; the overrun is entirely repository-only harness, generated artifacts, and specification documents, which the constitution deliberately keeps outside the shipped payload.",
+    "not_a_reslicing_stop_because": "The committed evidence chain is current: setup-mode gate pass-with-warning, plan-phase authoritative re-run pass-with-warning and zero blockers, and an operator-ratified three-slice division. The boundary treats a valid current size-only block with marker evidence as a marker-planning input."
   }
 }
