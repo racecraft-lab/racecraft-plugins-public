@@ -74,10 +74,10 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Clarify | `$speckit-clarify` | Complete | Four sessions resolved authority, treatment, scoring, partition, statistical, and evidence contracts; G2 passed with zero markers |
 | Plan | `$speckit-plan` | Complete | Three ordered slices, six contract families, explicit ownership and generated boundaries; G3 passed |
 | Checklist | `$speckit-checklist` | Complete | All 141 checks pass; 6 gaps across Error Handling and Performance were remediated; G4 passed |
-| Tasks | `$speckit-tasks` | Complete | 86 TDD tasks, 12 conflict-safe fixture tasks, all 38 requirements mapped; G5 passed |
-| Analyze | `$speckit-analyze` | Complete | 12/12 reconciliation checks passed with zero findings; G6 passed |
-| Confidence Gate | G6.5 | Complete | Advisory gate passed: 0.99 ≥ 0.90; no remediation required |
-| Implement | `$speckit-implement` | In Progress | Slice 1 capability, materialization, and trace is active |
+| Tasks | `$speckit-tasks` | Complete | Repaired to 25 self-contained TDD tasks, 3 conflict-safe fixture groups, all 38 requirements mapped; G5 rerun passed |
+| Analyze | `$speckit-analyze` | Complete | Task-contract rerun passed with zero findings; G6 rerun passed |
+| Confidence Gate | G6.5 | Complete | Task-repair rerun passed at 0.99 against the 0.90 advisory threshold |
+| Implement | `$speckit-implement` | In Progress | Slice 1 is active |
 | Post | Post-Implementation | Pending | Run full verification, review, PR, and handoff work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -476,6 +476,19 @@ so the mandatory consensus row completed without analyst escalation.
 - Risk assessment: 1.00
 - Completeness: 1.00
 
+#### Analyze Consensus Rerun After Task-Executor Contract Repair
+
+The rerun verified 25 self-contained executor tasks, complete FR coverage, safe
+fixture parallelism, and all prior Analyze checks with zero findings.
+
+📊 Confidence: 0.99
+
+- Task understanding: 0.98
+- Approach clarity: 0.98
+- Requirements alignment: 1.00
+- Risk assessment: 1.00
+- Completeness: 1.00
+
 ---
 
 ## Phase 3: Plan
@@ -803,11 +816,11 @@ Read:
 
 | Metric | Required Record |
 |---|---|
-| Total tasks | 86 |
+| Total tasks | 25 self-contained implement-executor tasks |
 | Review slices | 3 ordered implementation/review slices |
-| Parallel opportunities | 12 disjoint role-fixture contracts (T023–T034); shared manifests, schemas, helpers, and generated artifacts stay serial |
+| Parallel opportunities | 3 disjoint role-fixture groups (T008–T010); shared manifests, schemas, helpers, and generated artifacts stay serial |
 | Requirements covered | FR-001 through FR-038, with an explicit traceability matrix |
-| Non-goal tests | T077 rejects final policies, integrated confirmation, live-default CI, raw evidence, arm-only retry, post-hoc thresholds, trace mutation, duplicate materializers, cache leakage, unknown attrition, unrestricted codes, and missing budgets |
+| Non-goal tests | T024 rejects final policies, integrated confirmation, live-default CI, raw evidence, arm-only retry, post-hoc thresholds, trace mutation, duplicate materializers, cache leakage, unknown attrition, unrestricted codes, and missing budgets |
 
 **Tasks-phase reviewability evidence**:
 
@@ -820,10 +833,10 @@ Read:
 - Correctness result: no malformed or stale marker state, failed verification,
   unsafe output, or non-size safety finding was observed.
 
-**G5 Gate:** Passed — 86 unchecked tasks found, every FR-001 through FR-038 is
-mapped, the Phase 7 placeholder is replaced with three concrete task groups,
-and each slice has RED, GREEN, REFACTOR, focused verification, reviewability,
-and closeout work.
+**G5 Gate:** Passed after executor-contract repair — 25 unchecked,
+self-contained RED→GREEN→REFACTOR tasks found; every FR-001 through FR-038 is
+mapped; the Phase 7 rows name the three concrete task groups; and no executor
+must cross a task boundary to complete its mandatory TDD cycle.
 
 ---
 
@@ -925,11 +938,11 @@ Analyze.
 
 | Field | Result |
 |---|---|
-| Findings | 0 CRITICAL, 0 HIGH, 0 MEDIUM, 0 LOW |
-| Remediation | None required |
-| Consensus | Completed by zero-unresolved-item rule |
-| Mechanical checks | Six schemas parse, all 38 FRs map to tasks, stale roadmap filename remains absent |
-| G6 | Passed — 0 CRITICAL/HIGH findings |
+| Findings | Rerun: 0 CRITICAL, 0 HIGH, 0 MEDIUM, 0 LOW |
+| Remediation | Tasks repaired to match the single-task implement-executor contract |
+| Consensus | Rerun completed by zero-unresolved-item rule |
+| Mechanical checks | 25 self-contained TDD tasks, all 38 FRs mapped, 6 schemas valid, stale runner path absent |
+| G6 | Passed after task repair — 0 CRITICAL/HIGH findings |
 
 ---
 
@@ -943,7 +956,7 @@ workflow confidence emit.
 |---|---|
 | Mode | Advisory |
 | Threshold | 0.90 |
-| Status | Passed — 0.99 ≥ 0.90 |
+| Status | Passed after task repair — 0.99 ≥ 0.90 |
 | Bounded remediation | Not required |
 
 ---
