@@ -1154,14 +1154,26 @@ scaffolding. No `[tidiness]` findings remain.
 
 ## Lessons Learned
 
-Populate during post-implementation with:
-
-- What made exact-treatment delivery reproducible.
-- Which corpus/scorer assumptions failed calibration.
-- Which evidence or generated-artifact boundaries should be reused by
-  G56R-004 through G56R-010.
-- Any invalidation trigger or statistical assumption that later cohort specs
-  must re-check.
+- Exact-treatment delivery became reproducible only after score authorization
+  replayed the original qualification evidence and joined both the immutable
+  execution-trace ID and its source digest. The shipped canonical materializer
+  prevents treatment construction from drifting across callers.
+- Trace IDs, role names, and caller-resealed digests were not sufficient
+  authority by themselves. Corpus membership must join the canonical fixture
+  manifest and admitted-route evidence, while ballots, adjudication, rubric
+  bindings, and analysis decisions must be recomputed rather than trusted from
+  caller summaries.
+- G56R-004 through G56R-010 should reuse the governed corpus, qualification
+  schemas, replayable score bundles, create-only freeze outputs, and
+  calibration-only boundary. The materializer remains shipped runner source;
+  fixtures, scorers, and statistical evidence remain repository test assets,
+  with release payloads and reference pages refreshed only from their authored
+  sources.
+- Later cohorts must refresh capability authority after client, account,
+  catalog, or official-source-ledger invalidation. Fixture, scorer, rubric, or
+  partition version changes invalidate affected scores and decisions. Each
+  cohort must freeze its numeric plan before outcomes, preserve disjoint
+  partitions, and use multi-cluster evidence for cluster-aware inference.
 
 ---
 
