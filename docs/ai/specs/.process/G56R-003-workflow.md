@@ -77,7 +77,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Tasks | `$speckit-tasks` | Complete | Repaired to 25 self-contained TDD tasks, 3 conflict-safe fixture groups, all 38 requirements mapped; G5 rerun passed |
 | Analyze | `$speckit-analyze` | Complete | Task-contract rerun passed with zero findings; G6 rerun passed |
 | Confidence Gate | G6.5 | Complete | Task-repair rerun passed at 0.99 against the 0.90 advisory threshold |
-| Implement | `$speckit-implement` | In Progress | Slice 1 is active; T001-T004 complete, T005 next |
+| Implement | `$speckit-implement` | In Progress | Slice 1 complete with G7 passed; Slice 2 T007 next |
 | Post | Post-Implementation | Pending | Run full verification, review, PR, and handoff work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -1015,8 +1015,8 @@ For every task:
 
 | Slice | Goal | Status |
 |---|---|---|
-| 1 | Capability, materialization, and trace | In Progress |
-| 2 | Corpus and blinded scoring | Pending |
+| 1 | Capability, materialization, and trace | Complete |
+| 2 | Corpus and blinded scoring | In Progress |
 | 3 | Experiment policy, statistics, and calibration | Pending |
 
 ### Task Evidence
@@ -1027,6 +1027,8 @@ For every task:
 | T002 | Complete | 7 tests failed because the shipped canonical module was missing | Materialization 7/7; pure exact-byte contract and shared shipped import verified |
 | T003 | Complete | Initial 9 failures; corrective materialization/public-API RED also confirmed | Qualification 9/9; unchanged G56R-002 capability contract 99/99 |
 | T004 | Complete | 5 CLI tests failed because the entry point was missing | Combined qualification/CLI 14/14; stale roadmap runner absent |
+| T005 | Complete | Trust assertion failed because the materializer was absent from runner metadata | Trust 8/8; generator-only refresh committed at `a9bdfe0e`; final generated drift check passed |
+| T006 | Complete | End-to-end replay failed because qualification did not accept successor authority | Focused 5/5 + 8/8 + 15/15; Layer 4 1637/1637; docs reference current; G7 passed |
 
 ---
 

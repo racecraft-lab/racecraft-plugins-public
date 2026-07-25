@@ -21,6 +21,7 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[3]
 QUALIFICATION_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/qualification_contracts.py"
 QUALIFICATION_RUNNER_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/run-codex-qualification.py"
+SUCCESSOR_TEST_PATH = ROOT / "tests/speckit-pro/unit/test-codex-successor-capability.py"
 TREATMENT_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"
 TREATMENT_FIXTURE_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
 MANIFEST_PATH = ROOT / "docs/ai/research/codex-agent-route-candidate-manifest.json"
@@ -117,6 +118,17 @@ def load_qualification_cli():
     spec = importlib.util.spec_from_file_location(module_name, QUALIFICATION_RUNNER_PATH)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"cannot load {QUALIFICATION_RUNNER_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_successor_test_helpers():
+    module_name = f"_g56r_003_successor_test_helpers_{uuid4().hex}"
+    spec = importlib.util.spec_from_file_location(module_name, SUCCESSOR_TEST_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {SUCCESSOR_TEST_PATH}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -355,6 +367,40 @@ def phase_policy_for_trace(trace: dict) -> str:
     )
 
 
+def build_successor_freeze_from_sanitized_catalog() -> dict:
+    helpers = load_successor_test_helpers()
+    successor = helpers.load_successor_module(f"_g56r_003_successor_e2e_{uuid4().hex}")
+    fixture = helpers.load_json(helpers.FIXTURE_PATH)
+    manifest = helpers.load_json(helpers.MANIFEST_PATH)
+    helper = helpers.CodexSuccessorCapabilityTests(
+        "test_successor_build_is_additive_and_diagnostics_do_not_grant_availability",
+    )
+    helper.fixture = fixture
+    helper.manifest = manifest
+    helper.identity = helpers.capabilities.build_client_identity(fixture["client_identity"])
+    predecessor = helper.predecessor_freeze()
+    request = helper.successor_request(predecessor, successor)
+    freeze = successor.build_successor_freeze(predecessor, request, manifest=manifest)
+    return successor.validate_successor_freeze(freeze, predecessor, request, manifest=manifest)
+
+
+def materialize_trace_policy(trace: dict):
+    module = load_materializer_module()
+    source_bytes = phase_policy_for_trace(trace).encode("utf-8")
+    return module.materialize_agent_policy(
+        source_relative_path=PHASE_AGENT_RELATIVE_PATH,
+        source_bytes=source_bytes,
+        candidate_route={
+            "agent_name": trace["named_agent"],
+            "model": trace["requested_model"],
+            "model_reasoning_effort": trace["requested_effort"],
+        },
+        parent_controls={
+            "sandbox_mode": str(trace["sandbox"]["mode"]).replace("_", "-"),
+        },
+    )
+
+
 def apply_materialized_source(wrapper: dict, source_path: Path) -> dict:
     module = load_materializer_module()
     trace = wrapper["treatment_bundle"]["treatment_traces"][0]
@@ -396,6 +442,20 @@ def set_assignment_ids(wrapper: dict) -> dict:
         trace_wrapper["source_trace_digest"] = treatment.digest(traces[trace_wrapper["execution_trace_id"]])
         trace_wrapper["qualification_trace_id"] = content_id(trace_wrapper, "qualification_trace_id")
     return wrapper
+
+
+def successor_freeze_binding(successor_freeze: dict, candidate_route_id: str) -> dict:
+    decision = next(
+        item for item in successor_freeze["tuple_decisions"]
+        if item["candidate_route_id"] == candidate_route_id
+    )
+    return {
+        "candidate_freeze_id": successor_freeze["candidate_freeze_id"],
+        "runtime_capability_snapshot_id": successor_freeze["runtime_capability_snapshot_id"],
+        "catalog_capture_digest": successor_freeze["runtime_capability_snapshot"]["catalog_capture_digest"],
+        "included_candidate_route_id": candidate_route_id,
+        "tuple_decision_digest": treatment.digest(decision),
+    }
 
 
 def qualification_bundle(treatment_bundle: dict, *, score_eligible: bool = True, delivery_status: str = "delivered") -> dict:
@@ -640,6 +700,67 @@ class QualificationContractTests(unittest.TestCase):
                 )
                 self.assertFalse(validated["qualification_assignments"][0]["score_eligible"])
                 self.assertEqual(validated["qualification_assignments"][0]["delivery_status"], delivery_status)
+
+    def test_sanitized_successor_freeze_materialization_assignment_and_trace_replay_join(self) -> None:
+        successor_freeze = build_successor_freeze_from_sanitized_catalog()
+        self.assertGreater(len(successor_freeze["included_candidate_route_ids"]), 0)
+
+        trace = copy.deepcopy(self.base_treatment)["treatment_traces"][0]
+        candidate_route_id = trace["objective_binding"]["candidate_route_id"]
+        self.assertIn(candidate_route_id, successor_freeze["included_candidate_route_ids"])
+        materialized = materialize_trace_policy(trace)
+
+        wrapper = qualification_bundle(self.base_treatment)
+        wrapper["successor_freeze_binding"] = successor_freeze_binding(
+            successor_freeze, candidate_route_id,
+        )
+        materialization = wrapper["materializations"][0]
+        materialization["requested_model"] = trace["requested_model"]
+        materialization["requested_effort"] = trace["requested_effort"]
+        materialization["destination_bytes_digest"] = materialized.destination_bytes_digest
+        materialization["instruction_digest"] = materialized.instruction_digest
+        materialization["materialization_id"] = content_id(materialization, "materialization_id")
+        assignment = wrapper["qualification_assignments"][0]
+        assignment["materialization_id"] = materialization["materialization_id"]
+        assignment["installed_agent_bytes_digest"] = materialized.destination_bytes_digest
+        next(
+            item for item in assignment["observations"]
+            if item["field_path"] == "installed.agent_bytes_digest"
+        )["value"] = materialized.destination_bytes_digest
+        wrapper = set_assignment_ids(wrapper)
+
+        expected_assignment_id = wrapper["qualification_assignments"][0]["qualification_assignment_id"]
+        expected_materialization_id = wrapper["materializations"][0]["materialization_id"]
+        expected_trace_wrapper = copy.deepcopy(wrapper["qualification_traces"][0])
+        expected_source_trace_digest = expected_trace_wrapper["source_trace_digest"]
+        expected_binding = copy.deepcopy(wrapper["successor_freeze_binding"])
+
+        try:
+            validated = self.qualification.validate_qualification_bundle(
+                copy.deepcopy(wrapper),
+                successor_freeze=copy.deepcopy(successor_freeze),
+            )
+        except TypeError as exc:
+            self.fail(f"qualification replay must accept successor freeze authority: {exc}")
+
+        validated_assignment = validated["qualification_assignments"][0]
+        validated_materialization = validated["materializations"][0]
+        validated_trace = validated["treatment_bundle"]["treatment_traces"][0]
+        self.assertEqual(validated["successor_freeze_binding"], expected_binding)
+        self.assertEqual(validated_assignment["qualification_assignment_id"], expected_assignment_id)
+        self.assertEqual(validated_materialization["materialization_id"], expected_materialization_id)
+        self.assertEqual(validated_assignment["materialization_id"], expected_materialization_id)
+        self.assertEqual(validated_materialization["destination_bytes_digest"], materialized.destination_bytes_digest)
+        self.assertEqual(validated_materialization["instruction_digest"], materialized.instruction_digest)
+        self.assertEqual(validated_assignment["installed_agent_bytes_digest"], materialized.destination_bytes_digest)
+        self.assertTrue(validated_assignment["score_eligible"])
+        self.assertEqual(validated_assignment["score_ineligibility_reasons"], [])
+        self.assertEqual(
+            validated_trace["objective_binding"]["execution_trace_id"],
+            trace["objective_binding"]["execution_trace_id"],
+        )
+        self.assertEqual(validated["qualification_traces"][0], expected_trace_wrapper)
+        self.assertEqual(validated["qualification_traces"][0]["source_trace_digest"], expected_source_trace_digest)
 
     def test_assignments_and_trace_wrappers_are_one_to_one_and_conflict_closed(self) -> None:
         duplicate = qualification_bundle(self.base_treatment)

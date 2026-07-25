@@ -56,6 +56,22 @@ DELIVERY_FAILURE_BY_CODE = {
     "reroute_unapproved": "unapproved",
     "reroute_unidentifiable": "unidentifiable",
 }
+SUCCESSOR_FREEZE_BINDING_FIELDS = frozenset({
+    "candidate_freeze_id",
+    "runtime_capability_snapshot_id",
+    "catalog_capture_digest",
+    "included_candidate_route_id",
+    "tuple_decision_digest",
+})
+QUALIFICATION_BUNDLE_FIELDS = frozenset({
+    "schema_version",
+    "owner_spec_id",
+    "treatment_bundle",
+    "materializations",
+    "qualification_assignments",
+    "qualification_traces",
+})
+OPTIONAL_QUALIFICATION_BUNDLE_FIELDS = frozenset({"successor_freeze_binding"})
 
 
 def _validate_qualification_observations(value: object) -> dict[str, dict]:
@@ -263,21 +279,76 @@ def _validate_trace_wrapper(wrapper: object, assignment: dict, trace: dict) -> d
     return row
 
 
+def _validate_qualification_bundle_shape(value: object) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError("qualification bundle must use its closed shape")
+    keys = set(value)
+    if (
+        not QUALIFICATION_BUNDLE_FIELDS <= keys
+        or keys - QUALIFICATION_BUNDLE_FIELDS - OPTIONAL_QUALIFICATION_BUNDLE_FIELDS
+    ):
+        raise ValueError("qualification bundle must use its closed shape")
+    return value
+
+
+def _validate_successor_freeze_binding(
+    binding: object,
+    successor_freeze: Mapping[str, object] | None,
+    assignments: list[dict],
+) -> dict:
+    row = _closed(binding, set(SUCCESSOR_FREEZE_BINDING_FIELDS), "successor freeze binding")
+    for field in (
+        "candidate_freeze_id",
+        "runtime_capability_snapshot_id",
+        "catalog_capture_digest",
+        "tuple_decision_digest",
+    ):
+        _digest(row[field], f"successor freeze binding {field}")
+    _text(row["included_candidate_route_id"], "successor freeze binding included route")
+    if successor_freeze is None:
+        raise ValueError("successor freeze authority is required for successor freeze binding")
+    if not isinstance(successor_freeze, Mapping):
+        raise ValueError("successor freeze authority must be an object")
+    if row["candidate_freeze_id"] != successor_freeze.get("candidate_freeze_id"):
+        raise ValueError("successor freeze binding candidate freeze ID does not match authority")
+    if row["runtime_capability_snapshot_id"] != successor_freeze.get("runtime_capability_snapshot_id"):
+        raise ValueError("successor freeze binding runtime snapshot ID does not match authority")
+    snapshot = successor_freeze.get("runtime_capability_snapshot")
+    if not isinstance(snapshot, Mapping):
+        raise ValueError("successor freeze authority is missing its runtime snapshot")
+    if row["catalog_capture_digest"] != snapshot.get("catalog_capture_digest"):
+        raise ValueError("successor freeze binding catalog digest does not match authority")
+    included_routes = successor_freeze.get("included_candidate_route_ids")
+    if not isinstance(included_routes, list) or row["included_candidate_route_id"] not in included_routes:
+        raise ValueError("successor freeze binding route is not included by the successor freeze")
+    assignment_route_ids = {item["candidate_route_id"] for item in assignments}
+    if row["included_candidate_route_id"] not in assignment_route_ids:
+        raise ValueError("successor freeze binding route does not join any qualification assignment")
+    if any(route_id not in included_routes for route_id in assignment_route_ids):
+        raise ValueError("qualification assignment route is not included by the successor freeze")
+    decisions = successor_freeze.get("tuple_decisions")
+    if not isinstance(decisions, list):
+        raise ValueError("successor freeze authority is missing tuple decisions")
+    matching_decisions = [
+        item for item in decisions
+        if isinstance(item, dict) and item.get("candidate_route_id") == row["included_candidate_route_id"]
+    ]
+    if len(matching_decisions) != 1 or matching_decisions[0].get("decision") != "included":
+        raise ValueError("successor freeze binding route does not join one included tuple decision")
+    if row["tuple_decision_digest"] != digest(matching_decisions[0]):
+        raise ValueError("successor freeze binding tuple decision digest does not match authority")
+    return row
+
+
 def validate_qualification_bundle(
     bundle: object, *, schema_path: Path = SCHEMA_PATH, manifest_path: Path = MANIFEST_PATH,
     trusted_qualification_evidence: Mapping[str, dict] | None = None,
+    successor_freeze: Mapping[str, object] | None = None,
 ) -> dict:
     """Validate G56R-003 score qualification against an existing G56R-002 treatment bundle."""
     _validate_resource_bounds(bundle)
     _validate_retained_strings(bundle, "qualification bundle")
-    value = _closed(
-        copy.deepcopy(bundle),
-        {
-            "schema_version", "owner_spec_id", "treatment_bundle", "materializations",
-            "qualification_assignments", "qualification_traces",
-        },
-        "qualification bundle",
-    )
+    value = _validate_qualification_bundle_shape(copy.deepcopy(bundle))
     if value["schema_version"] != QUALIFICATION_SCHEMA_VERSION:
         raise ValueError("qualification schema version is unsupported")
     if value["owner_spec_id"] != QUALIFICATION_OWNER_SPEC_ID:
@@ -342,6 +413,12 @@ def validate_qualification_bundle(
         raise ValueError("materialization registry contains a missing or orphan owner")
     if len(validated_wrappers) != len(value["qualification_traces"]):
         raise ValueError("qualification trace wrappers contain an orphan join")
+    if "successor_freeze_binding" in value:
+        value["successor_freeze_binding"] = _validate_successor_freeze_binding(
+            value["successor_freeze_binding"], successor_freeze, validated_assignments,
+        )
+    elif successor_freeze is not None:
+        raise ValueError("successor freeze authority requires a successor freeze binding")
     value["treatment_bundle"] = treatment
     value["materializations"] = validated_materializations
     value["qualification_assignments"] = validated_assignments
