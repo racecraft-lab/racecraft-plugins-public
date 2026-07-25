@@ -74,8 +74,8 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Clarify | `$speckit-clarify` | Complete | Four sessions resolved authority, treatment, scoring, partition, statistical, and evidence contracts; G2 passed with zero markers |
 | Plan | `$speckit-plan` | Complete | Three ordered slices, five contract families, explicit ownership and generated boundaries; G3 passed |
 | Checklist | `$speckit-checklist` | Complete | All 141 checks pass; 6 gaps across Error Handling and Performance were remediated; G4 passed |
-| Tasks | `$speckit-tasks` | In Progress | Produce TDD-first tasks grouped by the three accepted slices |
-| Analyze | `$speckit-analyze` | Pending | Reconcile roadmap, design concept, spec, plan, and tasks |
+| Tasks | `$speckit-tasks` | Complete | 86 TDD tasks, 12 conflict-safe fixture tasks, all 38 requirements mapped; G5 passed |
+| Analyze | `$speckit-analyze` | In Progress | Reconcile roadmap, design concept, spec, plan, and tasks |
 | Confidence Gate | G6.5 | Pending | Evaluate the Analyze consensus confidence emit before implementation |
 | Implement | `$speckit-implement` | Pending | Execute red-green-refactor and release-artifact regeneration |
 | Post | Post-Implementation | Pending | Run full verification, review, PR, and handoff work |
@@ -790,11 +790,27 @@ Read:
 
 | Metric | Required Record |
 |---|---|
-| Total tasks | Count after generation |
-| Review slices | Exactly 3 unless G3 approved a documented revision |
-| Parallel opportunities | Explicit and conflict-safe |
-| Requirements covered | Every functional requirement |
-| Non-goal tests | Every prohibited boundary above |
+| Total tasks | 86 |
+| Review slices | 3 ordered implementation/review slices |
+| Parallel opportunities | 12 disjoint role-fixture contracts (T023–T034); shared manifests, schemas, helpers, and generated artifacts stay serial |
+| Requirements covered | FR-001 through FR-038, with an explicit traceability matrix |
+| Non-goal tests | T077 rejects final policies, integrated confirmation, live-default CI, raw evidence, arm-only retry, post-hoc thresholds, trace mutation, duplicate materializers, cache leakage, unknown attrition, unrestricted codes, and missing budgets |
+
+**Tasks-phase reviewability evidence**:
+
+- `reviewability-gate` requested mode: tasks
+- Helper diagnostic: installed runner supports setup mode only; tasks mode is
+  deferred and was not invoked as an active helper.
+- Fallback evidence: scaffold/setup reviewability was non-blocking;
+  plan-phase `estimate-reviewable-loc` returned `pass`; the workflow-ratified
+  decomposition remains three ordered slices.
+- Correctness result: no malformed or stale marker state, failed verification,
+  unsafe output, or non-size safety finding was observed.
+
+**G5 Gate:** Passed — 86 unchecked tasks found, every FR-001 through FR-038 is
+mapped, the Phase 7 placeholder is replaced with three concrete task groups,
+and each slice has RED, GREEN, REFACTOR, focused verification, reviewability,
+and closeout work.
 
 ---
 
@@ -813,10 +829,26 @@ reviewability decision.
 
 | Field | Value |
 |---|---|
-| **Route** | |
-| **Releasable** | |
-| **Signals** | |
-| **Warnings** | |
+| **Route** | `one-navigable-PR` |
+| **Releasable** | `true` |
+| **Signals** | `change-shape:modify-heavy` |
+| **Warnings** | None |
+
+The classifier chose one navigable PR because the shared manifest, schemas,
+runner entry point, and generated artifacts make the task graph modify-heavy.
+The PR still preserves the three ordered review slices and their independent
+G7 evidence.
+
+---
+
+## Layer Plan
+
+| Field | Value |
+|---|---|
+| **Status** | `skipped` |
+| **Reason** | Atomicity route is `one-navigable-PR`, not `split-PR` |
+| **Planner invocation** | Not required |
+| **PR mechanics** | One PR with three ordered review slices |
 
 ---
 
