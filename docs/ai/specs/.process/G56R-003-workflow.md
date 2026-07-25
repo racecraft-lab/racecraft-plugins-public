@@ -76,8 +76,8 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Checklist | `$speckit-checklist` | Complete | All 141 checks pass; 6 gaps across Error Handling and Performance were remediated; G4 passed |
 | Tasks | `$speckit-tasks` | Complete | 86 TDD tasks, 12 conflict-safe fixture tasks, all 38 requirements mapped; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | 12/12 reconciliation checks passed with zero findings; G6 passed |
-| Confidence Gate | G6.5 | In Progress | Evaluate the 0.99 Analyze confidence emit in advisory mode |
-| Implement | `$speckit-implement` | Pending | Execute red-green-refactor and release-artifact regeneration |
+| Confidence Gate | G6.5 | Complete | Advisory gate passed: 0.99 ≥ 0.90; no remediation required |
+| Implement | `$speckit-implement` | In Progress | Slice 1 capability, materialization, and trace is active |
 | Post | Post-Implementation | Pending | Run full verification, review, PR, and handoff work |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -943,8 +943,8 @@ workflow confidence emit.
 |---|---|
 | Mode | Advisory |
 | Threshold | 0.90 |
-| Status | In Progress |
-| Bounded remediation | Not required by the 0.99 emit; pending gate execution |
+| Status | Passed — 0.99 ≥ 0.90 |
+| Bounded remediation | Not required |
 
 ---
 
@@ -1002,7 +1002,7 @@ For every task:
 
 | Slice | Goal | Status |
 |---|---|---|
-| 1 | Capability, materialization, and trace | Pending |
+| 1 | Capability, materialization, and trace | In Progress |
 | 2 | Corpus and blinded scoring | Pending |
 | 3 | Experiment policy, statistics, and calibration | Pending |
 
