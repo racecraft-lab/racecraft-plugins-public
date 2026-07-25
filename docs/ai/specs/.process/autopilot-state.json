@@ -596,6 +596,8 @@
       "pr_body": {
         "status": "passed",
         "validation_helper": "validate-pr-packet-read-only",
+        "validation_write_helper": "validate-pr-packet-write",
+        "validation_result_path": "specs/g56r-003-evaluation-runner-scoring/.process/pr-packets/g56r-003/validation.json",
         "pr_blocked": false,
         "release_note": "present"
       }
