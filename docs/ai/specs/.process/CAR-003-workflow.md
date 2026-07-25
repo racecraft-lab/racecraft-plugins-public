@@ -103,7 +103,7 @@ not rewritten.
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 PASS — 4 domains, 218 items, 57 gaps found / 57 remediated; spec 50 → 58 FRs |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 PASS — 86 tasks, 14 parallel-safe, all 58 FR + 25 SC covered; route one-navigable-PR; marker plan persisted |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 PASS — 12 findings (0 CRITICAL), all remediated; 3 twin-side coordination handoffs |
-| Implement | `/speckit-implement` | ✅ Complete | 83/86 tasks; 3 deliberately operator-gated. Suite 4143/4143. Six fail-open paths found by independent review and fixed |
+| Implement | `/speckit-implement` | ✅ Complete | **86/86 tasks.** Live capability probe closed CAP-Q6, calibration pilot ran inside all nine ceilings, analysis plan frozen from measured estimates. Suite 4172/4172. Six fail-open paths found by independent review and fixed |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -202,7 +202,7 @@ Mirrors the G56R-003 SC set one-for-one so both platforms are measured the same 
 - [x] **SC-009** 100% of candidate-caused failures, timeouts, cancellations, budget exhaustion events, and abandoned work are included in the estimand with acceptance zero
 - [x] **SC-010** 100% of approved transient harness reruns are complete-pair reruns under a documented cap, with zero one-arm reruns or complete-case substitutions
 - [x] **SC-011** Deterministic replay reconstructs the same terminal decisions from frozen experiment, score, analysis, and decision bundles on a clean checkout
-- [ ] **SC-012** The numeric analysis plan is frozen before any CAR-007 through CAR-010 outcome-bearing cohort evidence is observed — **not yet satisfied.** Blocked on the operator-only calibration pilot; freezing invented variance estimates would bind later cohorts to uncalibrated values and violate the calibration-evidence-only rule.
+- [x] **SC-012** The numeric analysis plan is frozen before any CAR-007 through CAR-010 outcome-bearing cohort evidence is observed — satisfied: the plan froze at 14:30Z, after the calibration pilot completed at 13:57Z, carries a pre-cohort outcome-absence digest, and no cohort evidence exists on the branch.
 - [x] **SC-013** The planning reviewability gate records three ordered review slices and maps each slice to requirements, files, and verification evidence
 - [x] **SC-014** Every shipped runner source change has synchronized generated payloads, hashes, and installed-cache proofs before the phase is complete
 - [x] **SC-015** 100% of committed capability snapshots and replay fixtures pass deny-by-default sensitive-field inspection and contain only allowlisted sanitized boundary evidence
@@ -1193,16 +1193,16 @@ ruling.
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] Tests pass: `python3 tests/speckit-pro/run-all.py` (Layers 1/4/5), zero live calls
-- [ ] Generated artifact contract accounted for — payload, hashes, installed-cache proofs
-- [ ] Plugin-shaped run verified with `speckit-pro/` alone
-- [ ] Privacy scan clean — no absolute home paths, no raw session identifiers
-- [ ] Reviewability gate re-run and the new production-file count recorded
-- [ ] Merge coordination with `g56r-003-evaluation-runner-scoring` resolved
-- [ ] Manual verification complete
-- [ ] PR created and reviewed
-- [ ] Merged to main branch
+- [x] All tasks marked complete in tasks.md (86/86)
+- [x] Tests pass: `python3 tests/speckit-pro/run-all.py` (Layers 1/4/5), zero live calls — 4172/4172 on the committed tree
+- [x] Generated artifact contract accounted for — payload, hashes, installed-cache proofs; refresh is a genuine no-op and all five copies of the shipped module share one hash
+- [x] Plugin-shaped run verified with `speckit-pro/` alone — this caught a real defect: a frozen dataclass under postponed annotations crashes when path-loaded without a module entry, which is exactly how an installed plugin loads it
+- [x] Privacy scan clean — no absolute home paths, no raw session identifiers; live-probe raw captures are held in the gitignored operator-only store and only digests are committed
+- [x] Reviewability gate re-run and the new production-file count recorded — 1 shipped production file, on budget; measured figures supersede the estimate and a typed `infra` size exception is recorded
+- [ ] Merge coordination with `g56r-003-evaluation-runner-scoring` **not resolved** — the twin worktree holds uncommitted work from another session, including new files at the repo-level shared contracts path. The shared smoke runner itself is safe: this branch edited it with a single added line and the twin has not touched it. See `CAR-003-twin-handoff.md`
+- [x] Manual verification complete — 24 completed tasks opened and checked against real artifacts by the phantom-completion detector, none phantom
+- [x] PR created (#385) with a written review packet body; independent code review found and fixed six fail-open paths. Human review pending
+- [ ] Merged to main branch — **operator action. Not performed by this run.**
 
 ---
 
