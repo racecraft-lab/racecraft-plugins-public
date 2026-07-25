@@ -733,7 +733,6 @@ def _normalize_attempt_row(raw: dict) -> dict:
     terminal_state = row.get("terminal_state", vector.get("terminal_state"))
     candidate_terminal = _candidate_terminal_state(row)
     if candidate_terminal is not None:
-        terminal_state = candidate_terminal
         vector["acceptance"] = 0
         vector["terminal_state"] = candidate_terminal
         row["terminal_state"] = candidate_terminal

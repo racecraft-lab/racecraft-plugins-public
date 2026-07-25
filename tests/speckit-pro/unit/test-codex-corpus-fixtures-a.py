@@ -274,7 +274,7 @@ class CodexCorpusFixtureGroupATests(unittest.TestCase):
             for bucket in ("required_core", "optional_helpers")
             for item in schedule[bucket]
         }
-        self.assertTrue(set(GROUP_ROLE_IDS) <= scheduled_roles)
+        self.assertLessEqual(set(GROUP_ROLE_IDS), scheduled_roles)
 
 
 if __name__ == "__main__":

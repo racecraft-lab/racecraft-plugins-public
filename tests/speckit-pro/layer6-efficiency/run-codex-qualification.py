@@ -23,7 +23,6 @@ for _path in (PLUGIN_ROOT, LIB_DIR):
 
 from speckit_pro_runner.agent_materialization import (  # noqa: E402
     MATERIALIZATION_SCHEMA_VERSION,
-    MATERIALIZER_VERSION,
     AgentMaterialization,
     materialize_agent_policy,
     verify_destination_bytes,

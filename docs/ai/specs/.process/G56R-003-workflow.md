@@ -78,7 +78,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Analyze | `$speckit-analyze` | Complete | Task-contract rerun passed with zero findings; G6 rerun passed |
 | Confidence Gate | G6.5 | Complete | Task-repair rerun passed at 0.99 against the 0.90 advisory threshold |
 | Implement | `$speckit-implement` | Complete | All 25 tasks complete; Slice 3 G7 passed with 25/25 tasks and zero markers |
-| Post | Post-Implementation | Complete | PR #386 is open; current-head review and all applicable CI checks passed; retrospective and roadmap handoff are complete |
+| Post | Post-Implementation | In Progress | PR #386 is open; three late GitHub Code Quality findings are being remediated against the current head |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -1065,7 +1065,7 @@ For every task:
 | Post: PR Packet/Body Generation | Complete | Packet and packet-owned body emitted by `pr-packet-output` in dry-run and apply modes | None |
 | Post: PR Body Generation | Complete | Read-only packet validation passed with `pr_blocked=false`; the required consumer-facing release-note block is present | None |
 | Post: PR Creation | Complete | PR [#386](https://github.com/racecraft-lab/racecraft-plugins-public/pull/386) created from the validated packet at pushed head `9fcff1d2` | None |
-| Post: Review Remediation | Complete | Head `9446eaf3` had 0 inline comments, 0 actionable reviews, and all applicable CI checks passed; Copilot's size-limit comment was non-actionable | None |
+| Post: Review Remediation | In Progress | GitHub Code Quality reported one imprecise assertion, one unused import, and one unused assignment after the earlier green review audit | Apply the three surgical fixes, rerun focused and full gates, and verify the next pushed head |
 | Post: Retrospective | Complete | Reproducibility, failed authority assumptions, reusable boundaries, and later-cohort invalidation rules recorded; roadmap marks G56R-003 complete in PR #386 | None |
 
 - [x] All tasks are complete and trace to requirements.
@@ -1082,7 +1082,7 @@ For every task:
 - [x] No raw live capture, secret, credential, or personal path is committed.
 - [x] Actual reviewability evidence passes for the three ratified slices.
 - [x] The exact PR title passes release readiness.
-- [x] Review findings are remediated against the final pushed head.
+- [ ] Review findings are remediated against the final pushed head.
 - [x] Roadmap and workflow status accurately reflect the final state.
 
 ---
