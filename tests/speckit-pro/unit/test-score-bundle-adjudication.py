@@ -194,7 +194,7 @@ class DeterministicGateTests(unittest.TestCase):
                 self.assertFalse(verdict.complete)
                 self.assertFalse(verdict.all_passed)
                 self.assertEqual(verdict.missing, (gate,))
-                self.assertEqual(verdict.failure_plane, "schema")
+                self.assertEqual(verdict.failure_plane, "evidence_boundary")
                 self.assertEqual(verdict.failure_code, "required_evidence_missing")
 
     def test_there_is_no_per_role_gate_subset(self) -> None:
@@ -206,7 +206,9 @@ class DeterministicGateTests(unittest.TestCase):
         duplicated.append(dict(duplicated[0]))
         verdict = self.module.evaluate_gates(duplicated)
         self.assertFalse(verdict.complete)
+        self.assertEqual(verdict.missing, ())
         self.assertEqual(verdict.failure_plane, "schema")
+        self.assertEqual(verdict.failure_code, "schema_invalid")
 
     def test_an_unknown_gate_name_is_refused(self) -> None:
         with self.assertRaises(self.module.ScoreBundleError):
@@ -780,16 +782,15 @@ class ClosedTaxonomyTests(unittest.TestCase):
         self.assertEqual(
             self.module.normalize_failure("candidate", "ballot_non_blind"), ("schema", "schema_invalid")
         )
-        # FR-014 authors the missing-gate pair as (schema, required_evidence_missing),
-        # which the FR-034 table files under evidence_boundary. The pair is unlisted,
-        # so the fail-closed rule applies and the conflict is visible, not absorbed.
-        self.assertEqual(
-            self.module.normalize_failure("schema", "required_evidence_missing"),
-            ("schema", "schema_invalid"),
-        )
+        # The missing-gate pair FR-014 authors is a listed row, so it survives
+        # normalization unchanged; the mis-planed variant is what fails closed.
         self.assertEqual(
             self.module.normalize_failure("evidence_boundary", "required_evidence_missing"),
             ("evidence_boundary", "required_evidence_missing"),
+        )
+        self.assertEqual(
+            self.module.normalize_failure("schema", "required_evidence_missing"),
+            ("schema", "schema_invalid"),
         )
 
     def test_an_unknown_code_is_refused(self) -> None:

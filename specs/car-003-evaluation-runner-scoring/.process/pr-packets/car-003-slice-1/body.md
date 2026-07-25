@@ -3,19 +3,84 @@
 ## Summary
 
 <!-- speckit-pro-editable:summary:start -->
-Generated SpecKit Pro review packet.
+This ships the platform that turns capability evidence into qualification
+evidence for Claude Code agent route selection, and it already caught the
+problem it was built to catch.
+
+The archived capability snapshot bound the `opus` alias to one model. A live
+probe run on this branch resolves it to a different one. Anything scored
+against that stale binding would have measured a model it did not name, and
+reported the result as qualification evidence. That is the failure mode this
+feature exists to prevent, observed on its first real run rather than in
+theory.
+
+Nothing here decides a route. It builds the machinery that could, and refuses
+to produce an answer when the evidence does not support one.
 <!-- speckit-pro-editable:summary:end -->
 
 ## What Changed
 
 <!-- speckit-pro-editable:what_changed:start -->
-- See changed-file scope evidence in the packet.
+**One shipped file.** `speckit-pro/speckit_pro_runner/materializer.py` is the
+only addition to the installed payload. Everything else is repository-only
+harness, generated artifacts, or specification documents that the constitution
+deliberately keeps outside the shipped directory.
+
+**A successor capability freeze** built from live print-mode canary probes
+across the full ordered effort ladder for every role-eligible alias. Twenty
+tuples admitted, none excluded, no authority failures. This covers the effort
+rung the predecessor snapshot never probed at all.
+
+**Exact-treatment proof.** Equivalence is established by hashing the destination
+bytes read back from disk after write, never from an in-memory buffer. The claim
+is deliberately bounded: plugin-loaded agent definitions silently ignore hook,
+server, and permission keys that the identical bytes honour when loaded from the
+project directory, so a content hash alone cannot prove behavioural equivalence.
+The materialization branch is refused outright for definitions declaring one of
+those keys.
+
+**A governed twelve-role corpus** with seven closed deterministic gates, two
+candidate-blind ballots against a frozen rubric, and a frozen adjudicator for
+every decision-affecting disagreement. Scorers and adjudicators are excluded
+from any candidate's own model family, because published evaluation research
+shows judges recognise their own family's output well above chance and that
+recognition correlates with preferring it.
+
+**A replayable decision ladder**: absolute floors, then task-paired
+cluster-adjusted non-inferiority, then Pareto dominance over exactly eight
+dimensions with declared direction of preference. A tie, mixed dominance,
+incomplete evidence, or statistical uncertainty yields no qualification. A guard
+rejects any weighted ranking, composite score, or price coefficient before a
+bundle can seal.
 <!-- speckit-pro-editable:what_changed:end -->
 
 ## Why It Matters
 
 <!-- speckit-pro-editable:why_it_matters:start -->
-This prepares the completed SpecKit work for review.
+**Because a clean number can be wrong.** Every defect this branch fixed shares
+one property: it produced confident, well-formed, incorrect output rather than
+an error. An independent review found six fail-open paths in code whose only job
+is to fail closed — a tuple with no provenance being admitted, a bundle with
+zero ballots sealing as accepted while asserting blinding passed, a rerun
+classified three hours after its outcome being granted because timestamps were
+compared as text. None of them would have raised an exception. All are fixed,
+each with a test that reproduces the permissive behaviour first.
+
+**Because the requirements were not checkable.** The specification grew from 43
+to 58 requirements during clarification and checklists, and almost none of that
+was padding. "Every mandatory observation must be present" had nothing
+enumerating which were mandatory. "A failure in one plane is never recorded in
+another" had two unlinked enumerations. "No worse on every dimension" had no
+declared direction of preference, so the core selection rule was literally
+undecidable. One requirement pair formed a circular dependency that made the
+specification unimplementable: every comparison pair had to bind an analysis
+plan that only freezes after the calibration those pairs perform.
+
+**Because the platform moved underneath the evidence.** Two refresh triggers
+fired simultaneously during this work — the alias re-point and a client version
+change. Reading both observables is what keeps a client upgrade from being
+misattributed as a platform change. With one fewer observable the two are
+indistinguishable.
 <!-- speckit-pro-editable:why_it_matters:end -->
 
 ## How To Review

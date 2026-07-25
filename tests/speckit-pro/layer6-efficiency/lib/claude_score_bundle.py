@@ -29,13 +29,14 @@ see them rather than infer them:
   context (``effort: xhigh``) or joined to an alias (``opus-high``). Model
   identities, aliases, and route identifiers are distinctive and are matched as
   whole tokens anywhere.
-* **FR-014 and FR-034 disagree about the missing-gate pair.** FR-014 authors it as
-  ``(schema, required_evidence_missing)``; FR-034's total table files
-  ``required_evidence_missing`` under ``evidence_boundary``. The declared pair is
-  emitted verbatim by :func:`evaluate_gates`, and :func:`normalize_failure` — the
-  FR-034 gate — then sees an unlisted pair and fails it closed to
-  ``(schema, schema_invalid)`` exactly as that requirement directs. The conflict
-  stays visible in both layers instead of being silently resolved one way.
+* **A missing gate and a duplicated gate are different failures.** An absent gate
+  result is missing evidence, so it is filed on the evidence-boundary plane as
+  ``(evidence_boundary, required_evidence_missing)`` — the row FR-034's total
+  table already carries for that code. A duplicated gate name is a malformed
+  record rather than an absent observation, so it is filed as
+  ``(schema, schema_invalid)``. Both pairs are listed, so :func:`normalize_failure`
+  passes them through unchanged and the sealed bundle records the same
+  classification :func:`evaluate_gates` derived.
 
 The digest helper is imported from ``claude_successor_freeze`` so one FR-033
 preimage rule governs every CAR-003 digest. This module is
@@ -85,9 +86,12 @@ class ScoreBundleError(AssertionError):
 REQUIRED_GATES = ("role", "safety", "grounding", "mutation", "tool", "output", "acceptance")
 GATE_RESULT_FIELDS = ("evidence_digest", "gate", "pass")
 
-# FR-014's authored missing-gate classification, kept verbatim; see the module
-# docstring for how the FR-034 normalizer treats it.
-MISSING_GATE_DECLARED_FAILURE = ("schema", "required_evidence_missing")
+# FR-014, FR-034: an absent gate result is missing evidence, so it lands on the
+# evidence-boundary plane the FR-034 table files its code under. A duplicated gate
+# name is a malformed record, not an absent one, and stays on the schema plane so
+# the two conditions are never filed together.
+MISSING_GATE_FAILURE = ("evidence_boundary", "required_evidence_missing")
+DUPLICATE_GATE_FAILURE = ("schema", "schema_invalid")
 FAILED_GATE_FAILURE = ("candidate", "candidate_failed")
 
 
@@ -126,9 +130,12 @@ def evaluate_gates(results: Sequence[Mapping[str, Any]]) -> GateVerdict:
 
     missing = tuple(gate for gate in REQUIRED_GATES if gate not in seen)
     duplicated = len(set(seen)) != len(seen)
-    if missing or duplicated:
-        plane, code = MISSING_GATE_DECLARED_FAILURE
+    if missing:
+        plane, code = MISSING_GATE_FAILURE
         return GateVerdict(False, False, missing, tuple(failed), plane, code)
+    if duplicated:
+        plane, code = DUPLICATE_GATE_FAILURE
+        return GateVerdict(False, False, (), tuple(failed), plane, code)
     if failed:
         plane, code = FAILED_GATE_FAILURE
         return GateVerdict(True, False, (), tuple(failed), plane, code)
@@ -583,7 +590,9 @@ SERVICE_REROUTE_FAILURE_CODE = "service_reroute"
 
 # The stage a live failure came from picks between the two live-failure
 # dispositions: a deterministic hard gate produces a candidate-plane outcome or a
-# schema-plane evidence refusal; anything downstream is non-scorable.
+# schema-plane malformation refusal; anything downstream, and any missing-evidence
+# refusal, is non-scorable — evidence that was never produced cannot carry the
+# "evidence sufficient, bar not cleared" reading FR-019 gives a failed gate.
 GATE_STAGE_CODES = frozenset(
     {
         "candidate_failed",

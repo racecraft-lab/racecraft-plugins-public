@@ -191,25 +191,25 @@ changes.
 
 Mirrors the G56R-003 SC set one-for-one so both platforms are measured the same way.
 
-- [ ] **SC-001** 100% of CAR-002 artifact paths and IDs remain unchanged after CAR-003 artifacts are generated
-- [ ] **SC-002** The successor freeze contains at least one admitted tuple, and every admitted tuple carries both official-source and pinned-runtime support evidence
-- [ ] **SC-003** 100% of excluded candidate tuples include a machine-checkable exclusion reason from the closed taxonomy
-- [ ] **SC-004** 100% of accepted score bundles reference a pre-score immutable treatment record with content-hash-identical materialization or installed-policy proof, configured-route proof, complete mandatory observations, authoritative route-change monitoring, `treatment_disposition=proven`, and no disqualifying re-point or treatment failure
-- [ ] **SC-005** The fixture corpus contains exactly twelve valid role contracts: the eleven required core roles plus `autopilot-fast-helper`, reported separately from required-core statistics
-- [ ] **SC-006** 100% of semantic score outcomes include two distinct independently executed candidate-blind ballots bound to one frozen rubric, and 100% of decision-affecting disagreements include a frozen third adjudicator record
-- [ ] **SC-007** 100% of decision bundles apply semantic and reliability floors before paired cluster-adjusted non-inferiority, and non-inferiority before the resource comparison
-- [ ] **SC-008** 100% of inconclusive or incomplete evidence paths produce no qualification
-- [ ] **SC-009** 100% of candidate-caused failures, timeouts, cancellations, budget exhaustion events, and abandoned work are included in the estimand with acceptance zero
-- [ ] **SC-010** 100% of approved transient harness reruns are complete-pair reruns under a documented cap, with zero one-arm reruns or complete-case substitutions
-- [ ] **SC-011** Deterministic replay reconstructs the same terminal decisions from frozen experiment, score, analysis, and decision bundles on a clean checkout
-- [ ] **SC-012** The numeric analysis plan is frozen before any CAR-007 through CAR-010 outcome-bearing cohort evidence is observed
-- [ ] **SC-013** The planning reviewability gate records three ordered review slices and maps each slice to requirements, files, and verification evidence
-- [ ] **SC-014** Every shipped runner source change has synchronized generated payloads, hashes, and installed-cache proofs before the phase is complete
-- [ ] **SC-015** 100% of committed capability snapshots and replay fixtures pass deny-by-default sensitive-field inspection and contain only allowlisted sanitized boundary evidence
-- [ ] **SC-016** 100% of empty, malformed, stale, untrusted, unsanitized, identity-mismatched, or digest-mismatched successor collections block authoritative freeze publication
-- [ ] **SC-017** *(CAR-specific)* CAP-Q6 is closed: alias re-pointing is detected from observed-versus-resolved model ID, recorded as platform behavior, and never reported as SpecKit Pro fallback
-- [ ] **SC-018** *(CAR-specific)* The full ordered effort set `low` through `max` is probed per role-eligible model, including `high` as the documented search origin
-- [ ] **SC-019** Full default suite green with zero live calls; payload boundary clean
+- [x] **SC-001** 100% of CAR-002 artifact paths and IDs remain unchanged after CAR-003 artifacts are generated
+- [x] **SC-002** The successor freeze contains at least one admitted tuple, and every admitted tuple carries both official-source and pinned-runtime support evidence
+- [x] **SC-003** 100% of excluded candidate tuples include a machine-checkable exclusion reason from the closed taxonomy
+- [x] **SC-004** 100% of accepted score bundles reference a pre-score immutable treatment record with content-hash-identical materialization or installed-policy proof, configured-route proof, complete mandatory observations, authoritative route-change monitoring, `treatment_disposition=proven`, and no disqualifying re-point or treatment failure
+- [x] **SC-005** The fixture corpus contains exactly twelve valid role contracts: the eleven required core roles plus `autopilot-fast-helper`, reported separately from required-core statistics
+- [x] **SC-006** 100% of semantic score outcomes include two distinct independently executed candidate-blind ballots bound to one frozen rubric, and 100% of decision-affecting disagreements include a frozen third adjudicator record
+- [x] **SC-007** 100% of decision bundles apply semantic and reliability floors before paired cluster-adjusted non-inferiority, and non-inferiority before the resource comparison
+- [x] **SC-008** 100% of inconclusive or incomplete evidence paths produce no qualification
+- [x] **SC-009** 100% of candidate-caused failures, timeouts, cancellations, budget exhaustion events, and abandoned work are included in the estimand with acceptance zero
+- [x] **SC-010** 100% of approved transient harness reruns are complete-pair reruns under a documented cap, with zero one-arm reruns or complete-case substitutions
+- [x] **SC-011** Deterministic replay reconstructs the same terminal decisions from frozen experiment, score, analysis, and decision bundles on a clean checkout
+- [ ] **SC-012** The numeric analysis plan is frozen before any CAR-007 through CAR-010 outcome-bearing cohort evidence is observed — **not yet satisfied.** Blocked on the operator-only calibration pilot; freezing invented variance estimates would bind later cohorts to uncalibrated values and violate the calibration-evidence-only rule.
+- [x] **SC-013** The planning reviewability gate records three ordered review slices and maps each slice to requirements, files, and verification evidence
+- [x] **SC-014** Every shipped runner source change has synchronized generated payloads, hashes, and installed-cache proofs before the phase is complete
+- [x] **SC-015** 100% of committed capability snapshots and replay fixtures pass deny-by-default sensitive-field inspection and contain only allowlisted sanitized boundary evidence
+- [x] **SC-016** 100% of empty, malformed, stale, untrusted, unsanitized, identity-mismatched, or digest-mismatched successor collections block authoritative freeze publication
+- [x] **SC-017** *(CAR-specific)* CAP-Q6 is closed: alias re-pointing is detected from observed-versus-resolved model ID, recorded as platform behavior, and never reported as SpecKit Pro fallback
+- [x] **SC-018** *(CAR-specific)* The full ordered effort set `low` through `max` is probed per role-eligible model, including `high` as the documented search origin
+- [x] **SC-019** Full default suite green with zero live calls; payload boundary clean
 
 ---
 

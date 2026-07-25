@@ -147,22 +147,23 @@ Success criteria covered here: SC-005, SC-006, SC-015.
 
 ## 8. Known gaps
 
-1. **Outstanding spec contradiction, FR-014 versus FR-034 — needs an operator
-   ruling, deliberately not resolved in code.** FR-014 states that a missing hard
-   gate result must fail closed as `failure_plane=schema` with
-   `failure_code=required_evidence_missing`. FR-034 defines a *total*
-   code-to-plane mapping that files `required_evidence_missing` under
-   `evidence_boundary`, and further orders that any pair not in its table must
-   fail closed as `(schema, schema_invalid)`. The pair FR-014 prescribes is
-   therefore precisely a pair FR-034's table excludes, and FR-034 would rewrite
-   it to a different failure code entirely. The three readings —
-   `(schema, required_evidence_missing)`, `(evidence_boundary,
-   required_evidence_missing)`, and `(schema, schema_invalid)` — are mutually
-   incompatible. The implementation keeps **both requirements visible** rather
-   than silently picking a winner, because choosing one here would quietly narrow
-   a closed cross-platform taxonomy that FR-034 requires to stay byte-identical
-   with the Codex twin. Resolving this is an operator decision and will need a
-   matching change on both platforms.
+1. **Spec contradiction, FR-014 versus FR-034 — resolved by operator ruling in
+   favour of FR-034's table.** FR-014 previously stated that a missing hard gate
+   result must fail closed as `failure_plane=schema` with
+   `failure_code=required_evidence_missing`, a pair FR-034's *total* code-to-plane
+   mapping excludes because it files `required_evidence_missing` under
+   `evidence_boundary`. FR-014's plane was the defect: it authored a plane beside
+   its own code, which FR-034 forbids, and it contradicted FR-051, FR-021, the
+   cache-isolation `unobserved` branch, and the leak-check refusal, all of which
+   already file that code on the evidence-boundary plane. FR-014 now authors
+   `(evidence_boundary, required_evidence_missing)` for an absent gate result and
+   `(schema, schema_invalid)` for the separate duplicated-gate-name condition, so
+   both pairs are listed rows that survive normalization unchanged and a missing
+   gate seals as `non_scorable` rather than asserting the "evidence sufficient,
+   bar not cleared" reading `gate_failed` carries into FR-019. No enum member is
+   coined and no contract byte changes: the Codex twin's FR-014 names no plane or
+   code and its FR-034 carries no mapping table, so the mirrored change is the
+   empty diff and the four closed taxonomy enums stay byte-identical.
 2. **Blinding is bounded, not complete.** Every ballot records
    `provenance_inferred`. Stylistic fingerprints are not removable by the leak
    check, so residual identity signal is possible. This is reported honestly in
