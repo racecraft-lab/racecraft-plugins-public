@@ -504,7 +504,7 @@ all three findings were folded into the resolution instead of being averaged
 away.
 | 2 | Materialization, delivery, and trace joins | 5 asked, 3 applied directly, 2 to consensus (1 escalated to Round 2) | FR-008 digest preimage pinned to on-disk bytes; **FR-009 mandatory-observation manifest** (the inherited profile never enumerated them, leaving the requirement undecidable); FR-032 trace-digest verification; FR-030 binds the **already-shipped** disposition enum instead of inventing one; FR-031 co-occurrence precedence + union recording |
 | 3 | Corpus and blinded scoring | 5 asked, 3 applied directly, 2 to consensus | FR-014 seven closed hard gates; FR-012 twelve-role `required_core`/`executable` split; FR-033 digest preimage (twin pins format but not preimage); FR-034 reuses the shared reroute code instead of coining one; **FR-047 scorer-family exclusion** and **FR-048 bounded-blinding disclosure** — both new, from documented judge self-preference and style bias |
-| 4 | Partitions, statistics, and campaign controls | | |
+| 4 | Partitions, statistics, and campaign controls | 5 asked, 4 applied directly, 2 to consensus | **FR-037 resolved a circular dependency** (calibration pairs were required to bind a plan that freezes only after calibration); FR-013 objective-level disjointness registry; FR-021 arm-blind pre-outcome transient classification; FR-038 authoritative analysis-plan budget; **FR-049** reasoning tokens reported but not decision-bearing, as a stated limitation; **FR-050** three multiplicity families + clustering as precondition |
 
 ---
 
