@@ -143,7 +143,7 @@ section 3b.
 - [ ] T018 [US1] Implement the alias re-point detector and the additive attribution record in `tests/speckit-pro/layer6-efficiency/lib/claude_successor_freeze.py`, carrying the `{id, digest}` binding to the specific CAR-003 freeze the resolved identity was read from and recording the elimination argument as bounded by its enumerated cause set (FR-039, FR-045) — makes T011 pass
 - [ ] T019 [US1] Implement the four versioned refresh triggers and their additive-invalidation semantics in `tests/speckit-pro/layer6-efficiency/lib/claude_successor_freeze.py`, recording per trigger which evidence is invalidated and which survives (FR-041) — makes T012 pass
 - [ ] T020 [P] [US1] Author `tests/speckit-pro/layer6-efficiency/fixtures/car-003-alias-repoint-replay.json` supplying a divergent observed identity below the live trigger path while environment overrides remain genuinely unset, so detector validation never requires setting the override the proof requires unset; keep it bounded in size so suite cost does not scale with campaigns (FR-046, FR-057)
-- [ ] T021 [US1] Register `tests/speckit-pro/unit/test-successor-capability-freeze.py` in the Layer 4 script list of `tests/speckit-pro/suite-manifest.json` and confirm `python3 tests/speckit-pro/run-all.py --layer 4` is green
+- [ ] T021 [US1] Register `tests/speckit-pro/unit/test-successor-capability-freeze.py` in the Layer 4 (`"id": "4"`) `scripts` array of `tests/speckit-pro/suite-manifest.json` — each entry is an object `{"path", "label", "baseline"}`, not a bare path string, with `"baseline": null` for these unit tests and confirm `python3 tests/speckit-pro/run-all.py --layer 4` is green
 - [ ] T022 [US1] **OPERATOR-ONLY, NEVER IN THE DEFAULT SUITE.** As the first operator action of slice 1, run the `claude -p --model <alias-or-id>` print-mode canary probe on the pinned client over the full ordered effort ladder for every role-eligible model under an explicit, local, pinned, budgeted invocation, and publish `docs/ai/research/claude-car-003-successor-capability-freeze.json`. Record the result whichever way it resolves, including whether the `opus` alias has re-pointed since the archived snapshot. Verify the published file passes deny-by-default sensitive-field inspection and contains no absolute paths or session identifiers (FR-002, FR-040, SC-002, SC-018, SC-015)
 
 **Checkpoint**: The successor freeze publishes or fails closed with a recordable
@@ -185,7 +185,7 @@ any score bundle is accepted — `quickstart.md` sections 3a, 3d, and 6.
 - [ ] T037 [US2] Implement independent derivation of every disqualifying condition, the union of fired codes into `disposition_reasons`, and terminal selection by the shared disposition-bucket precedence in `tests/speckit-pro/layer6-efficiency/lib/claude_treatment_runner.py` (FR-031) — makes T026 pass
 - [ ] T038 [US2] Implement immutable `execution_trace_id` creation, foreign-key-style bundle references, canonical-JSON trace digest recomputation, the `trace_reference_integrity_failure` invalidation path, and re-derivation of `resource_vector` and `reasoning_token_report` from the digest-verified trace in `tests/speckit-pro/layer6-efficiency/lib/claude_treatment_runner.py`, consuming `lib/treatment_trace_io.py`, `lib/treatment_trace_bundle.py`, and `lib/treatment_trace_authority.py` unmodified (FR-010, FR-032) — makes T027 pass
 - [ ] T039 [US2] Implement per-arm cache-state isolation and observed isolation evidence in `tests/speckit-pro/layer6-efficiency/lib/claude_treatment_runner.py`, recording the distinct cache root each arm used and its disjointness, and excluding pairs that cannot show distinct roots from the resource comparison (FR-049) — makes T028 pass
-- [ ] T040 [US2] Register `tests/speckit-pro/unit/test-canonical-agent-materializer.py` and `tests/speckit-pro/unit/test-exact-treatment-runner.py` in the Layer 4 script list of `tests/speckit-pro/suite-manifest.json` and confirm `python3 tests/speckit-pro/run-all.py --layer 4` is green
+- [ ] T040 [US2] Register `tests/speckit-pro/unit/test-canonical-agent-materializer.py` and `tests/speckit-pro/unit/test-exact-treatment-runner.py` in the Layer 4 (`"id": "4"`) `scripts` array of `tests/speckit-pro/suite-manifest.json` — each entry is an object `{"path", "label", "baseline"}`, not a bare path string, with `"baseline": null` for these unit tests and confirm `python3 tests/speckit-pro/run-all.py --layer 4` is green
 - [ ] T041 [US2] **Generated-artifact contract — a required step, not a footnote.** Because `speckit-pro/speckit_pro_runner/materializer.py` ships in the plugin payload, run `python3 scripts/refresh-release-artifacts.py` to regenerate `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json`, `speckit-pro-runner.sha256`, `install_inventory.json`, `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json`, and both install payloads under `dist/claude/speckit-pro/speckit_pro_runner/` and `dist/codex/speckit-pro/speckit_pro_runner/`. Confirm the refresh is idempotent (a second run makes no further changes), hand-edit none of the outputs, then prove plugin-shaped resolution by copying `speckit-pro/` alone into an empty temporary directory with no `tests/` tree and importing the module from that copy. Re-run `python3 tests/speckit-pro/run-all.py --layer 1` (FR-026, SC-014)
 
 **Checkpoint**: Slice 1 complete. Exact treatment is provable before any outcome
@@ -227,7 +227,7 @@ section 4.
 - [ ] T055 [US3] Implement static same-family exclusion enforced against the scorer's and adjudicator's run-observed route identity with the FR-039 divergence check, seeded presentation-order randomization, and the bounded blinding residual record on every ballot, in `tests/speckit-pro/layer6-efficiency/lib/claude_score_bundle.py` (FR-047, FR-048) — makes T045 and T046 pass
 - [ ] T056 [US3] Implement the closed score taxonomies, the total single-valued `failure_code` to `failure_plane` mapping, the `score_disposition` binding, additive invalidation on fixture, scorer, rubric, adjudicator, treatment, capability, partition, or schema change, and the operator-only boundary keeping raw prompts, responses, transcripts, and identity mappings out of committed evidence, in `tests/speckit-pro/layer6-efficiency/lib/claude_score_bundle.py` (FR-034, FR-036) — makes T047 pass
 - [ ] T057 [US3] Add the allow rule naming the consolidated baseline file explicitly to `tests/speckit-pro/layer6-efficiency/.gitignore` while keeping per-run raw outputs ignored; do not un-ignore the directory (FR-027) — makes T048 pass
-- [ ] T058 [US3] Register `tests/speckit-pro/unit/test-role-corpus-governance.py` and `tests/speckit-pro/unit/test-score-bundle-adjudication.py` in the Layer 4 script list of `tests/speckit-pro/suite-manifest.json` and confirm `python3 tests/speckit-pro/run-all.py --layer 4` is green
+- [ ] T058 [US3] Register `tests/speckit-pro/unit/test-role-corpus-governance.py` and `tests/speckit-pro/unit/test-score-bundle-adjudication.py` in the Layer 4 (`"id": "4"`) `scripts` array of `tests/speckit-pro/suite-manifest.json` — each entry is an object `{"path", "label", "baseline"}`, not a bare path string, with `"baseline": null` for these unit tests and confirm `python3 tests/speckit-pro/run-all.py --layer 4` is green
 
 **Checkpoint**: Slice 2 complete. The governed corpus scores through hard gates
 and blinded ballots with closed failure classes. **Slice 2 PR may open here.**
@@ -270,7 +270,7 @@ sections 5 and 8.
 - [ ] T074 [US4] Implement assigned-attempt estimand retention at acceptance zero with no complete-case filtering, capped complete-pair arm-symmetric rerun governance with the immutable transient-classification record and its pre-outcome ordering check, immutable retention of superseded pairs, and the campaign-ceiling versus candidate-budget separation, in `tests/speckit-pro/layer6-efficiency/lib/claude_analysis_decision.py` (FR-020, FR-021, FR-056) — makes T065 pass
 - [ ] T075 [US4] Implement the fully declared p95 guardrail comparisons, per-stratum `minimum_unique_tasks` floors returning inconclusive below the floor, the three-family multiplicity declaration with cluster-adjusted variance as a precondition, the guardrail family declared distinct from those three, and the racing and futility declarations with interim looks, boundaries, bindingness, complete-pair stop scope, and stopped-not-completed reporting, in `tests/speckit-pro/layer6-efficiency/lib/claude_analysis_decision.py` (FR-050, FR-053, FR-054, FR-055) — makes T066 pass
 - [ ] T076 [P] [US4] Author `tests/speckit-pro/layer6-efficiency/fixtures/car-003-calibration-replay.json` carrying frozen experiment, score, analysis, and decision bundles for deterministic replay, bounded in count and size so suite cost does not scale per campaign (SC-011, FR-057) — makes T067 pass
-- [ ] T077 [US4] Register `tests/speckit-pro/unit/test-experiment-policy-partitions.py` and `tests/speckit-pro/unit/test-analysis-decision-ladder.py` in the Layer 4 script list of `tests/speckit-pro/suite-manifest.json` and confirm `python3 tests/speckit-pro/run-all.py --layer 4` is green
+- [ ] T077 [US4] Register `tests/speckit-pro/unit/test-experiment-policy-partitions.py` and `tests/speckit-pro/unit/test-analysis-decision-ladder.py` in the Layer 4 (`"id": "4"`) `scripts` array of `tests/speckit-pro/suite-manifest.json` — each entry is an object `{"path", "label", "baseline"}`, not a bare path string, with `"baseline": null` for these unit tests and confirm `python3 tests/speckit-pro/run-all.py --layer 4` is green
 - [ ] T078 [US4] **OPERATOR-ONLY, NEVER IN THE DEFAULT SUITE.** Follow `specs/car-003-evaluation-runner-scoring/quickstart.md` section 8 item 2 to run the calibration pilot against only disposable `qualification_eligible=false` calibration objectives under an explicit, local, pinned, budgeted invocation with all eight ceilings set. Prove exact dispatch, scoring, and statistical plumbing end to end and collect the variance estimates the analysis plan needs. Verify no screening, selection, cohort-lock, or integrated-confirmation objective was consumed, and that all committed evidence passes deny-by-default sensitive-field inspection with no absolute paths and no session identifiers (FR-023, SC-015)
 - [ ] T079 [US4] Author `docs/ai/research/claude-car-003-analysis-plan.json` freezing workload strata, p95 guardrails, margins, sample sizes and assumptions, power, alpha, the three multiplicity families, racing and futility rules, attrition caps, campaign budgets, cache policy, and terminal rules, using the T078 calibration estimates. This MUST happen after the pilot and before any CAR-007 through CAR-010 cohort outcome exists (FR-023, FR-038, SC-012)
 
@@ -455,6 +455,21 @@ exercised for fixture digests in slice 2 (T043, T050) and for the partition
 objective-set digest in slice 3 (T059). FR-057 is cross-cutting: fixture-bounding
 obligations sit on the fixture tasks and the wall-clock budget on T080.
 
+**Tasks that intentionally trace to no numbered FR.** Seven tasks carry no FR
+mapping because their obligation comes from the constitution or from a mandatory
+`spec.md` section rather than from a functional requirement, and inventing an FR
+reference for them would be false traceability:
+
+- **T021, T040, T058, T077** (suite-manifest registration) discharge constitution
+  Principle IV, which requires layer membership and dispatch to stay declared in
+  `tests/speckit-pro/suite-manifest.json`. Without registration the new Layer 4
+  tests exist but never run, so the Principle IV completion bar cannot be met.
+- **T082, T083, T084** (per-slice PR review packets) discharge the `spec.md`
+  section "PR Review Packet Requirements", which is mandatory and enumerates the
+  nine sections each packet must carry. They also carry the FR-025 slice structure
+  into the review artifact, but the packet contents are governed by that spec
+  section, not by FR-025.
+
 ---
 
 ## Success Criteria Coverage
@@ -500,12 +515,24 @@ obligations sit on the fixture tasks and the wall-clock budget on T080.
 - Operator-only tasks are T022 (successor freeze collection) and T078
   (calibration pilot). Neither runs in the default suite or in CI.
 - Do not extend the repo-level shared contracts under
-  `tests/speckit-pro/layer6-efficiency/contracts/`. The two open cross-platform
-  coordination items recorded in `plan.md` Known Gaps — the score-bundle
-  terminal-field constraints and the experiment-policy binding cycle — must be
-  agreed with the Codex twin and landed on both platforms in the same change.
-  Neither is slice-blocking, but T047 and T060 must not apply a one-sided schema
-  constraint.
+  `tests/speckit-pro/layer6-efficiency/contracts/`. Three cross-platform
+  coordination items are recorded in `plan.md` Known Gaps:
+  1. **Score-bundle terminal-field constraints** — the `failure_code` to
+     `failure_plane` mapping and the `score_disposition` binding. Deliberately
+     **not** applied to `contracts/score-bundle.schema.json`, which carries no
+     conditional subschemas. T047 asserts these rules against the Python
+     implementation and MUST NOT add a one-sided schema constraint.
+  2. **Experiment-policy binding cycle** — **already applied on this side.**
+     `contracts/experiment-policy.schema.json` makes `analysis_plan_binding`
+     conditional on `partition.qualification_eligible` rather than unconditionally
+     required. T060 asserts behaviour the schema already enforces; the open work is
+     bringing the Codex twin into line, not changing this side.
+  3. **No `invalidation_reason` member for an analysis-plan or budget change** —
+     FR-056 enforces non-pooling through `{id, digest}` binding identity instead.
+     Deliberately not coined unilaterally; tracked as `checklists/performance.md`
+     CHK051.
+
+  None is slice-blocking.
 - Avoid: implementing a second materializer, editing CAR-002 evidence, adding a
   taxonomy member unilaterally, or expanding this task list past the per-slice
   reviewability budget instead of re-running the setup-mode gate.

@@ -60,6 +60,7 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
+            "units",
             "denominator",
             "comparator",
             "margin",
@@ -71,6 +72,23 @@
             "decision_bearing"
           ],
           "properties": {
+            "units": {
+              "description": "FR-053 and SC-023: the unit of each guarded quantity, declared rather than inferred from the field-name suffix. A threshold with an undeclared unit is not an objectively decidable comparison — the same integer means different things as milliseconds and as tokens — and a suffix is a naming convention, not a contract. Keys are closed to the four per-stratum guarded quantities so a unit can never be declared for a quantity that carries no ceiling.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "p95_duration_ms_max",
+                "p95_input_tokens_max",
+                "p95_cached_input_tokens_max",
+                "p95_output_tokens_max"
+              ],
+              "properties": {
+                "p95_duration_ms_max": {"const": "milliseconds"},
+                "p95_input_tokens_max": {"const": "tokens"},
+                "p95_cached_input_tokens_max": {"const": "tokens"},
+                "p95_output_tokens_max": {"const": "tokens"}
+              }
+            },
             "denominator": {
               "description": "FR-053: the population the percentile is computed over. Without it the same threshold means different things per attempt, per pair, and per task.",
               "enum": ["per_attempt_within_stratum_arm", "per_pair_within_stratum", "per_task_within_stratum_arm"]

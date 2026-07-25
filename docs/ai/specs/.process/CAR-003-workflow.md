@@ -102,8 +102,8 @@ not rewritten.
 | Plan | `/speckit-plan` | 🔄 In Progress | |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 PASS — 4 domains, 218 items, 57 gaps found / 57 remediated; spec 50 → 58 FRs |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 PASS — 86 tasks, 14 parallel-safe, all 58 FR + 25 SC covered; route one-navigable-PR; marker plan persisted |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ✅ Complete | G6 PASS — 12 findings (0 CRITICAL), all remediated; 3 twin-side coordination handoffs |
+| Implement | `/speckit-implement` | 🔄 In Progress | 86 tasks, 3 ordered slices |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -949,9 +949,54 @@ Focus on:
 
 ### Analysis Results
 
+Completed 2026-07-24. **G6: PASS** — 0 CRITICAL/HIGH findings remaining.
+**12 findings (0 CRITICAL, 4 HIGH, 6 MEDIUM, 2 LOW), all 12 remediated.**
+Suite re-verified green at 3251/3251 with zero live calls after the edits.
+
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| A1 | HIGH | `plan.md` claimed the FR-037 conditional was "deliberately **not** applied" and that the CAR contract still required `analysis_plan_binding` unconditionally — but the paired `allOf` had already been applied | Rewrote the gap entry: the CAR side is fixed, the **twin** is what remains unconditional. Reverting the schema to match stale prose was rejected — that would fix a document by re-breaking the code it describes |
+| A2 | HIGH | The slice mapping omitted FR-052…FR-058 — six requirements appeared nowhere in `plan.md` — while the plan asserted "Deferred work: none. Every requirement lands in a slice" | Slice 3 extended to FR-052…FR-056 and FR-058; new cross-cutting entry for FR-025/FR-057. Re-verified 58/58 mapped |
+| A3 | HIGH | FR-053, SC-023, and T066 all require a declared **unit** per p95 guardrail, but the analysis-plan schema had none — units were implied by field-name suffixes | Added a required closed `units` map to the CAR-owned `guardrail_method` |
+| A4 | HIGH | The performance checklist left CHK050 open as needing a joint cross-platform change, but FR-058 had since resolved it | Marked resolved; re-verified `pareto_policy` still carries exactly 8 enum strings and no `direction` member, confirming the semantics-not-schema route creates no divergence |
+| A5 | MEDIUM | `car-003-additive-records` description said "three record classes"; the `oneOf` lists four | Corrected |
+| A6 | MEDIUM | `plan.md` contracts table stale — missing `guardrail_method`, strata fields, racing/futility, `stratum_assignment`, `scorerIdentityAttestation` | Four rows rewritten |
+| A7 | MEDIUM | The third coordination item was absent from Known Gaps; `tasks.md` said "two" and wrongly warned a task off an already-applied change | Plan gained the item; tasks now enumerate three |
+| A8 | MEDIUM | FR-054 forbade a manifest-wide floor while the schema declared both | FR-054 amended: per-stratum governs admissibility, manifest-wide permitted as a backstop |
+| A9 | MEDIUM | Four tasks described a "Layer 4 script list"; entries are `{path,label,baseline}` objects | Entry shape named |
+| A10 | MEDIUM | `data-model.md` omitted `scorerIdentityAttestation` and understated FR-047 | Added to the Semantic Ballot entity |
+| A11 | LOW | Calibration guard described as self-contained; it is a two-schema composition | Corrected |
+| A12 | LOW | Seven tasks traced to no FR | Traced to constitution principle IV and the PR review packet requirements |
+
+**Verified and explicitly NOT defects:** the 3251 baseline (suite run twice,
+empirically exact; a stale 2512 figure exists but is two weeks old); 11 shipped
+agents with no `autopilot-fast-helper` definition, matching FR-011 and the role
+enum exactly; the smoke runner is exactly 495 lines and its parity baseline is a
+9-byte placeholder on a `live_only` layer, so editing it needs no baseline
+refresh; and the `malformed_catalog` provenance mapping is sound with no member
+coined. One stale statement found in the design concept — its aside that CAR
+carries cache-write-by-TTL in the shared `rawTokenVector` is wrong, since the
+shipped contract carries `cached_input_tokens` and `reasoning_output_tokens`.
+FR-018/FR-049 read the real file correctly. The design concept was left unedited
+as out of scope.
+
+### Coordination handoffs (twin-side; NOT CAR-003 defects)
+
+Consensus was **not** dispatched on these three. Each is blocked on a change to
+the `g56r-003` branch that no analyst can make or unblock, and Analyze already
+labelled them coordination rather than defects — dispatching analysts would have
+re-confirmed a settled reading at real cost. Recorded here as handoffs:
+
+1. The twin's `experiment-policy.schema.json` still requires
+   `analysis_plan_binding` unconditionally, so **G56R-003's calibration pilot
+   cannot validate as written**. CAR-003 is ahead; the twin needs the same
+   conditional.
+2. `invalidation_reason` has no analysis-plan/budget-change member on either
+   side. FR-056 works around it through `{id, digest}` binding identity; naming
+   it properly requires a joint change to a parity mirror.
+3. FR-058's direction-of-preference wording must be mirrored to the twin
+   verbatim. Until it is, both platforms compare the same eight dimensions but
+   only this side states how.
 
 ---
 

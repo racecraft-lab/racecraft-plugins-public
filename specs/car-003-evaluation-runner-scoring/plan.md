@@ -350,7 +350,7 @@ Package A, kept intact.
 **Slice 3 — Experiment policy, statistics, calibration pilot.**
 
 - Requirements: FR-013 (registry), FR-017 … FR-024, FR-037, FR-038, FR-049,
-  FR-050, plus FR-026 re-verification.
+  FR-050, FR-052 … FR-056, FR-058, plus FR-026 re-verification.
 - Files: `claude_experiment_policy.py`; `claude_analysis_decision.py`; the
   calibration replay fixture; the frozen analysis plan; two unit tests;
   `suite-manifest.json`.
@@ -358,11 +358,19 @@ Package A, kept intact.
   `experiment-assignment`.
 - Verification: `quickstart.md` sections 5 and 8.
 
-**Deferred work**: none. Every requirement lands in a slice, so there is no
-follow-up spec or issue ID to name. The excluded policy areas — CAR-004 policy
-controls, CAR-005 availability simulation, CAR-006 resolver and preflight, CAR-011
-the `autopilot-fast-helper` agent — were already out of scope in the spec, not
-deferred by this plan.
+**Cross-cutting requirements.** Two requirements are not slice-local because they
+govern the whole feature rather than a module: **FR-025** (three ordered slices,
+reviewability gate re-run during planning) is discharged by the **Reviewability
+Gate** section above, and **FR-057** (default-suite wall-clock budget, bounded
+replay fixtures, quantified replay bound) constrains every slice's fixtures and is
+declared in **Performance Goals** above. Both are verified in Polish rather than
+inside a single slice.
+
+**Deferred work**: none. Every requirement lands in a slice or in the two
+cross-cutting entries above, so there is no follow-up spec or issue ID to name. The
+excluded policy areas — CAR-004 policy controls, CAR-005 availability simulation,
+CAR-006 resolver and preflight, CAR-011 the `autopilot-fast-helper` agent — were
+already out of scope in the spec, not deferred by this plan.
 
 ### Sequencing and coordination
 
@@ -395,11 +403,11 @@ needs records the twin does not publish.
 | `successor-capability-freeze` | Mirror. Diverges on the effort ladder (`low`…`max` versus the Codex ladder) and on one exclusion reason (`alias_repoint_unresolved` versus `hidden_state_disagreement`). Both are platform *values*, not logic. |
 | `role-corpus` | Mirror. Identical twelve `role_id` values, verified against the shipped agent inventory. `mutation_contract` replaces the twin's `sandbox`. |
 | `score-bundle` | Mirror. All four closed taxonomies adopted verbatim per FR-034, including `service_reroute`. Adds the FR-049 reasoning-token report and the FR-048 blinding residual. |
-| `experiment-policy` | Mirror. Adds the FR-047 static family exclusion and the FR-022 cache ceilings by TTL class. |
-| `analysis-plan` | Mirror. Pareto dimensions identical. Multiplicity expanded to the three families FR-050 requires. |
-| `analysis-decision` | Mirror. Adds `decision_reasons`, `reported_limitations`, and a schema guard making `qualified` unreachable from a calibration partition. |
-| `experiment-assignment` | **CAR-003-additive.** The twin publishes no assignment schema. Carries the partition registry entry, the calibration protocol, and the comparison-set assignment, with the FR-037 calibration substitution enforced by schema. Also carries the FR-051 environment contract, whose values all reuse frozen CAR-002 route-resolution and snapshot fields. Because the twin publishes no assignment schema, this addition creates no mirror divergence. |
-| `car-003-additive-records` | **CAR-003-additive.** Carries the mandatory-observation manifest, the alias-repoint attribution, and the cache diagnostic — three records that frozen closed enums and closed objects cannot hold. |
+| `experiment-policy` | Mirror. Adds the FR-047 static family exclusion and the FR-022 cache ceilings by TTL class (key space closed to `ephemeral_5m` and `ephemeral_1h` through `propertyNames`). **Currently ahead of the twin**: `analysis_plan_binding` is conditional on `partition.qualification_eligible` rather than unconditionally required, closing the FR-037 transitive cycle. See Known Gaps. |
+| `analysis-plan` | Mirror on the surfaces the twin publishes — `pareto_policy.dimensions` is exactly the eight of FR-018 with no added member. Multiplicity expanded to the three families FR-050 requires. Adds the CAR-owned FR-052 … FR-055 surfaces the twin does not carry: `workload_manifest.guardrail_method` (FR-053), per-stratum `membership_rule`, `stratum_minimum_unique_tasks`, and `stratum_sample_size` (FR-052, FR-054), `reliability_guardrails`, and structured `racing_policy` and `futility_policy` (FR-055). |
+| `analysis-decision` | Mirror. Adds `decision_reasons` and `reported_limitations`, plus a guard restricting `decision=qualified` to a partition with `qualification_eligible=true`. `qualified` is unreachable from a calibration partition by **composition**, not by a single self-contained guard: this contract binds the decision to `qualification_eligible`, and `experiment-assignment`'s partition registry entry binds `partition_type=calibration` to `qualification_eligible=false` (FR-013). Both halves are required for the property to hold. |
+| `experiment-assignment` | **CAR-003-additive.** The twin publishes no assignment schema. Carries the partition registry entry, the calibration protocol, and the comparison-set assignment, with the FR-037 calibration substitution enforced by schema and keyed on `qualification_eligible` so the branches are exhaustive. Also carries the FR-051 environment contract, whose values all reuse frozen CAR-002 route-resolution and snapshot fields, and the FR-052 `stratum_assignment` with its non-empty closed `membership_basis` and `derived_from_realized_outcomes` pinned false. Because the twin publishes no assignment schema, this addition creates no mirror divergence. |
+| `car-003-additive-records` | **CAR-003-additive.** Carries **four** records that frozen closed enums and closed objects cannot hold: the mandatory-observation manifest (FR-009), the alias-repoint attribution with its `{id, digest}` freeze binding (FR-039, FR-045), the cache diagnostic including `observed_cache_isolation` (FR-022, FR-049), and the scorer identity attestation (FR-047). The attestation lives here rather than in `score-bundle` precisely because that contract is a parity mirror and must not gain a unilateral member. |
 
 **Repo-level shared contracts are not touched.** `capability-freeze.schema.json`,
 `marker-checkpoint.schema.json`, and `treatment-record.schema.json` under
@@ -472,18 +480,39 @@ payload boundary clean (SC-019).
   is pinned to the existing `malformed_catalog` rather than widened unilaterally.
 - **Open cross-platform coordination item — the experiment-policy binding
   cycle.** FR-037 resolves the calibration circular dependency at the comparison-pair
-  level, and this plan's `experiment-assignment` schema enforces it. One edge away,
-  the cycle survives: every assignment binds an experiment policy, and both this
-  spec's `experiment-policy` contract and the Codex twin's require an
-  `analysis_plan_binding` unconditionally — so a calibration pair still transitively
-  requires the frozen plan that only exists after calibration completes. `spec.md`
-  FR-037 now states the required shape (an ineligible partition's policy binds the
-  calibration protocol instead). The schema change is deliberately **not** applied
-  here: `experiment-policy` is a logical mirror, and FR-049 fixes the rule that a
-  mirror divergence must be a joint change landed on both platforms together. It is
-  not slice-blocking — slice 3 owns the policy contract, and the calibration pilot
-  is the first execution that would exercise the binding — but it must be agreed
-  with the twin before that pilot runs.
+  level, and this plan's `experiment-assignment` schema enforces it. The cycle
+  survived one edge away — every assignment binds an experiment policy, and an
+  experiment policy requiring `analysis_plan_binding` unconditionally would put a
+  calibration pair back in transitive need of the plan that only exists after
+  calibration completes. **The Claude-side fix is applied.**
+  `contracts/experiment-policy.schema.json` drops `analysis_plan_binding` from the
+  unconditional `required` list and gates both bindings through a paired `allOf`
+  keyed on `partition.qualification_eligible`: `true` requires
+  `analysis_plan_binding` and forbids `calibration_protocol_binding`, `false`
+  requires the protocol and forbids the plan. Keying on `qualification_eligible`
+  rather than `partition_type` is what makes the two branches exhaustive.
+  **What remains open is the twin, not this side.** The Codex `experiment-policy`
+  contract still requires `analysis_plan_binding` unconditionally, so the two
+  platforms are currently out of step on this object and the twin carries the cycle
+  this side has closed. Under the FR-049 joint-change rule the twin must be brought
+  into line rather than this side reverted, because reverting would reintroduce a
+  defect to preserve symmetry with a defect. It is not slice-blocking — slice 3 owns
+  the policy contract, and the calibration pilot is the first execution that would
+  exercise the binding — but the twin-side change must land before that pilot runs.
+
+- **Open cross-platform coordination item — no `invalidation_reason` member for an
+  analysis-plan or budget change.** FR-056 forbids relaxing a budget ceiling or
+  guardrail threshold for a partition whose outcomes have been observed, and
+  requires a changed threshold to produce a new versioned analysis plan with a new
+  id and digest whose outcomes are never pooled with the superseded plan's. That
+  non-pooling is enforced purely through `{id, digest}` binding identity, because
+  the closed `invalidation_reason` set in the mirrored `score-bundle` contract
+  carries no `analysis_plan_changed` or `budget_changed` member and is closed under
+  `additionalProperties: false`. Binding identity is sufficient to *detect* the
+  change, but the invalidation itself stays unnamed, so a reviewer reading a
+  superseded bundle sees no recorded reason for its exclusion. Adding the member is
+  a joint cross-platform change under the FR-049 rule and is deliberately not made
+  unilaterally. Tracked as `checklists/performance.md` CHK051. Not slice-blocking.
 
 ## Complexity Tracking
 

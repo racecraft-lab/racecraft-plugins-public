@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://racecraft.dev/schemas/car-003/car-003-additive-records.schema.json",
   "title": "CAR-003 Additive Evidence Records",
-  "description": "CAR-003-additive. A oneOf over three record classes the frozen CAR-002 contracts cannot carry, mirroring the CAR-002 trace contract's own oneOf idiom. Each exists because a frozen enum or object is closed: record_class is closed to success/null/unavailable/misdelivery, the shared rawTokenVector is closed under additionalProperties:false, and the frozen telemetry profile constrains list cardinality without enumerating fields.",
+  "description": "CAR-003-additive. A oneOf over four record classes the frozen CAR-002 contracts cannot carry, mirroring the CAR-002 trace contract's own oneOf idiom. Each exists because a frozen enum or object is closed: record_class is closed to success/null/unavailable/misdelivery, the shared rawTokenVector is closed under additionalProperties:false, the frozen telemetry profile constrains list cardinality without enumerating fields, and score-bundle is a parity mirror that must not gain a unilateral member.",
   "oneOf": [
     {"$ref": "#/$defs/mandatoryObservationManifest"},
     {"$ref": "#/$defs/aliasRepointAttribution"},

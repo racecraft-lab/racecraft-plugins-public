@@ -429,7 +429,20 @@ digest. **No ballot is collected until every required gate has passed.**
   route identifiers. Failure records `ballot_non_blind` and blocks scoring.
 - A scorer or adjudicator is never drawn from a candidate's own model family.
   The exclusion is static and declared in the frozen experiment policy, so it
-  costs nothing at replay.
+  costs nothing at replay — but a static declaration cannot see a platform alias
+  re-point that happens after the policy freezes, which would silently move a
+  scorer into a candidate's family while the policy still read as satisfied.
+  Every scorer and adjudicator execution therefore also emits a **Scorer Identity
+  Attestation** (`record_kind: scorer_identity_attestation` in
+  `contracts/car-003-additive-records.schema.json`) recording its requested alias
+  and its run-observed model identity from the per-model usage breakdown, on the
+  same observed-source rule FR-009 applies to candidate runs, and checked for the
+  FR-039 observed-versus-resolved divergence. A scorer whose observed identity
+  diverges from its declared route blocks that ballot rather than degrading it,
+  and a ballot violating family exclusion under the **observed** identity is not
+  counted. The attestation is CAR-003-additive rather than a `score-bundle`
+  field because `score-bundle` is a parity mirror that must not gain a unilateral
+  member (FR-047).
 - Presentation order is randomized under a seed recorded for replay. The rubric
   scores only checkable properties.
 - Artifact paraphrase or style normalization before scoring is **prohibited**:
@@ -558,9 +571,13 @@ invalidation without mutating prior bundles.
 - Binds workload strata with p95 raw-resource and p95-duration guardrails, and a
   cache-state isolation policy, before either arm runs (FR-049).
 - A guardrail is a **complete comparison, not a bare ceiling**. `guardrail_method`
-  supplies the denominator, comparator, margin, confidence method, missing-data
-  rule, direction, multiplicity family, and breach result that the four
-  `p95_*_max` thresholds alone cannot express (FR-053). Guardrails form their own
+  supplies the unit, denominator, comparator, margin, confidence method,
+  missing-data rule, direction, multiplicity family, and breach result that the
+  four `p95_*_max` thresholds alone cannot express (FR-053). Units are declared
+  in a closed `units` map keyed by the four guarded quantities rather than
+  inferred from the `_ms` and `_tokens` field-name suffixes, because a suffix is
+  a naming convention and the same integer means different things as
+  milliseconds and as tokens. Guardrails form their own
   multiplicity family, distinct from the three of FR-050, and are pinned
   `decision_bearing: false` — they gate qualification but never join the eight
   Pareto dimensions, since each added dimension weakens dominance and raises the
