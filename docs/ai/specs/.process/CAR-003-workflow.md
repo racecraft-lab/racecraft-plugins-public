@@ -100,8 +100,8 @@ not rewritten.
 | Specify | `/speckit-specify` | ✅ Complete | G1 PASS — 43 FR, 4 US, SC-001…019, 0 markers; Pareto + auth amendment verified |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 PASS — 4 sessions, 6 consensus rounds, 1 Round-2 escalation; spec 43 → 50 FRs, 0 markers |
 | Plan | `/speckit-plan` | 🔄 In Progress | |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Checklist | `/speckit-checklist` | ✅ Complete | G4 PASS — 4 domains, 218 items, 57 gaps found / 57 remediated; spec 50 → 58 FRs |
+| Tasks | `/speckit-tasks` | ✅ Complete | G5 PASS — 86 tasks, 14 parallel-safe, all 58 FR + 25 SC covered; route one-navigable-PR; marker plan persisted |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
@@ -852,12 +852,59 @@ slice 1 is roadmap Work Package A and the roadmap requires it stay intact.
 the read-only atomicity classifier and records its decision here. This is a
 **placeholder** until then — leave the cells blank during scoping.
 
+Recorded 2026-07-24 after G5.
+
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change. |
-| **Signals** | | The decisive detector findings behind the route and releasability reading. |
-| **Warnings** | | Any release-safety warning attached to the change. |
+| **Route** | `one-navigable-PR` | One PR, organized for review — not several PRs. |
+| **Releasable** | `true` | No destructive migration or concurrency-sensitive change detected. |
+| **Signals** | `change-shape:modify-heavy` | The decisive detector finding. |
+| **Warnings** | none | No release-safety warning attached. |
+
+**No conflict with the recorded three-slice division.** The scoping note above
+asks that any contradiction be surfaced rather than silently overridden. There
+is none: the classifier distinguishes *one PR from several*, while the slice
+division fixes *review order inside the work*. `split-PR` would mean three
+separate pull requests; the recorded decision is one specification implemented
+and reviewed as three ordered slices, with roadmap Work Package A intact as
+slice 1.
+
+## Layer Plan
+
+`layer_plan.status = skipped`. The layer planner runs only when the atomicity
+route is exactly `split-PR`; the route here is `one-navigable-PR`, so planning
+is skipped and route context carries forward.
+
+## PR Marker Plan
+
+Persisted to `.specify/autopilot-state.json` under `pr_marker_plan`.
+
+**Why marker planning is required even on a non-split route:** whole-feature
+reviewable LOC is **1,858**, which exceeds the **800-LOC block** threshold,
+while each slice is comfortably under it (735 / 533 / 590) and total files (23)
+are under the 25-file block. That is a **size-only** condition backed by a
+committed slice division, which the boundary treats as a marker-planning input
+rather than a manual re-slicing stop. Without a current marker plan the final
+full-diff gate would block PR emission on size alone.
+
+| Order | Marker | Stories | LOC | Intact? |
+|-------|--------|---------|-----|---------|
+| 1 | `car-003-slice-1-capability-freeze-and-materialized-treatment` | US1, US2 | 735 | **Yes** — roadmap Work Package A must not be subdivided to fit a threshold |
+| 2 | `car-003-slice-2-governed-corpus-and-blinded-scoring` | US3 | 533 | no |
+| 3 | `car-003-slice-3-experiment-policy-statistics-and-pilot` | US4 | 590 | no |
+
+**Tasks-phase reviewability gate:** `reviewability-gate` in `tasks` mode is
+**deferred on the installed runner** (setup mode only) and was therefore not
+invoked. Verdict rests on the committed fallback evidence chain — the
+setup-mode gate from scaffold, the Plan-phase authoritative re-run
+(`warn`, `pass: true`, 0 blockers), and the operator-ratified split decision —
+giving `pass_with_warning_and_marker_plan`.
+
+⚠️ **Two estimator false positives are recorded in the state file so neither is
+mistaken for evidence of a small change:** `estimate-reviewable-loc` reports
+`projected: 0` / `production: 0` because its heuristic matches no Python here,
+and a tasks-count heuristic of 86 × 40 is likewise meaningless. Neither may
+trigger a Work Package A split.
 
 To produce the decision, run the classifier against the feature directory:
 
