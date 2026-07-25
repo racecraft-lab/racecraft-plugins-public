@@ -68,6 +68,8 @@
         { "path": "tests/speckit-pro/unit/test-unit-layout.py", "label": "test-unit-layout", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-codex-capability-contract.py", "label": "test-codex-capability-contract", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-successor-capability-freeze.py", "label": "test-successor-capability-freeze", "baseline": null },
+        { "path": "tests/speckit-pro/unit/test-canonical-agent-materializer.py", "label": "test-canonical-agent-materializer", "baseline": null },
+        { "path": "tests/speckit-pro/unit/test-exact-treatment-runner.py", "label": "test-exact-treatment-runner", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-check-toolchain.py", "label": "test-check-toolchain", "baseline": "tests/speckit-pro/parity/bash-to-python/test-check-toolchain-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-post-implementation-reference.py", "label": "test-post-implementation-reference", "baseline": "tests/speckit-pro/parity/bash-to-python/test-post-implementation-reference-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py", "label": "test-reviewability-marker-guidance", "baseline": "tests/speckit-pro/parity/bash-to-python/test-reviewability-marker-guidance-baseline.txt" },

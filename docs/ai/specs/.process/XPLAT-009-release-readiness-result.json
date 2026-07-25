@@ -1082,6 +1082,15 @@
               "transform": "none"
             },
             {
+              "byte_count": 9854,
+              "kind": "runner",
+              "path": "speckit_pro_runner/materializer.py",
+              "required": true,
+              "sha256": "2ca80dec339f91ddea13db765bafc66434e0044b396f9a175fc212a380c729af",
+              "source_path": "speckit-pro/speckit_pro_runner/materializer.py",
+              "transform": "none"
+            },
+            {
               "byte_count": 451,
               "kind": "runner",
               "path": "speckit_pro_runner/merge_utils.py",
@@ -1109,20 +1118,20 @@
               "transform": "none"
             },
             {
-              "byte_count": 5793,
+              "byte_count": 6060,
               "kind": "trust_metadata",
               "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
               "required": true,
-              "sha256": "91045eb7db262629bf6408cf821e5073fb557c63908cd91410416cd7dfde35e8",
+              "sha256": "7352981367c49d5e1a02fdf873c1413aca54b20b9e5d1a4db6cb33a128edd78a",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
               "transform": "none"
             },
             {
-              "byte_count": 2056,
+              "byte_count": 2157,
               "kind": "checksum",
               "path": "speckit_pro_runner/speckit-pro-runner.sha256",
               "required": true,
-              "sha256": "c6bec925d49a91d47de1e8b2257ab1764bed838e0f5d79294a881696d9322bd6",
+              "sha256": "95f5b149543f89ffa8686945b9d2b82565f779a31585f1325c6603c9a1ce5fbf",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
               "transform": "none"
             }
@@ -1984,6 +1993,15 @@
               "transform": "none"
             },
             {
+              "byte_count": 9854,
+              "kind": "runner",
+              "path": "speckit_pro_runner/materializer.py",
+              "required": true,
+              "sha256": "2ca80dec339f91ddea13db765bafc66434e0044b396f9a175fc212a380c729af",
+              "source_path": "speckit-pro/speckit_pro_runner/materializer.py",
+              "transform": "none"
+            },
+            {
               "byte_count": 451,
               "kind": "runner",
               "path": "speckit_pro_runner/merge_utils.py",
@@ -2011,26 +2029,26 @@
               "transform": "none"
             },
             {
-              "byte_count": 5793,
+              "byte_count": 6060,
               "kind": "trust_metadata",
               "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
               "required": true,
-              "sha256": "91045eb7db262629bf6408cf821e5073fb557c63908cd91410416cd7dfde35e8",
+              "sha256": "7352981367c49d5e1a02fdf873c1413aca54b20b9e5d1a4db6cb33a128edd78a",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
               "transform": "none"
             },
             {
-              "byte_count": 2056,
+              "byte_count": 2157,
               "kind": "checksum",
               "path": "speckit_pro_runner/speckit-pro-runner.sha256",
               "required": true,
-              "sha256": "c6bec925d49a91d47de1e8b2257ab1764bed838e0f5d79294a881696d9322bd6",
+              "sha256": "95f5b149543f89ffa8686945b9d2b82565f779a31585f1325c6603c9a1ce5fbf",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
               "transform": "none"
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "87918ea60b0280500658ea74479293e379224fa0246c3a2347a763bed2359a6c",
+          "file_tree_hash": "f965256c75d0f35ab8c48afd65a208728be2b9cea50099adddec00ca1aa3322e",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -3051,6 +3069,15 @@
               "transform": "none"
             },
             {
+              "byte_count": 9854,
+              "kind": "runner",
+              "path": "speckit_pro_runner/materializer.py",
+              "required": true,
+              "sha256": "2ca80dec339f91ddea13db765bafc66434e0044b396f9a175fc212a380c729af",
+              "source_path": "speckit-pro/speckit_pro_runner/materializer.py",
+              "transform": "none"
+            },
+            {
               "byte_count": 451,
               "kind": "runner",
               "path": "speckit_pro_runner/merge_utils.py",
@@ -3078,20 +3105,20 @@
               "transform": "none"
             },
             {
-              "byte_count": 5793,
+              "byte_count": 6060,
               "kind": "trust_metadata",
               "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
               "required": true,
-              "sha256": "91045eb7db262629bf6408cf821e5073fb557c63908cd91410416cd7dfde35e8",
+              "sha256": "7352981367c49d5e1a02fdf873c1413aca54b20b9e5d1a4db6cb33a128edd78a",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
               "transform": "none"
             },
             {
-              "byte_count": 2056,
+              "byte_count": 2157,
               "kind": "checksum",
               "path": "speckit_pro_runner/speckit-pro-runner.sha256",
               "required": true,
-              "sha256": "c6bec925d49a91d47de1e8b2257ab1764bed838e0f5d79294a881696d9322bd6",
+              "sha256": "95f5b149543f89ffa8686945b9d2b82565f779a31585f1325c6603c9a1ce5fbf",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
               "transform": "none"
             }
@@ -4106,6 +4133,15 @@
               "transform": "none"
             },
             {
+              "byte_count": 9854,
+              "kind": "runner",
+              "path": "speckit_pro_runner/materializer.py",
+              "required": true,
+              "sha256": "2ca80dec339f91ddea13db765bafc66434e0044b396f9a175fc212a380c729af",
+              "source_path": "speckit-pro/speckit_pro_runner/materializer.py",
+              "transform": "none"
+            },
+            {
               "byte_count": 451,
               "kind": "runner",
               "path": "speckit_pro_runner/merge_utils.py",
@@ -4133,26 +4169,26 @@
               "transform": "none"
             },
             {
-              "byte_count": 5793,
+              "byte_count": 6060,
               "kind": "trust_metadata",
               "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
               "required": true,
-              "sha256": "91045eb7db262629bf6408cf821e5073fb557c63908cd91410416cd7dfde35e8",
+              "sha256": "7352981367c49d5e1a02fdf873c1413aca54b20b9e5d1a4db6cb33a128edd78a",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
               "transform": "none"
             },
             {
-              "byte_count": 2056,
+              "byte_count": 2157,
               "kind": "checksum",
               "path": "speckit_pro_runner/speckit-pro-runner.sha256",
               "required": true,
-              "sha256": "c6bec925d49a91d47de1e8b2257ab1764bed838e0f5d79294a881696d9322bd6",
+              "sha256": "95f5b149543f89ffa8686945b9d2b82565f779a31585f1325c6603c9a1ce5fbf",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
               "transform": "none"
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "fe64032e2fcbcd32f6de61c9dd6918d33dcca3a23b91a25473ab6685e748f7c0",
+          "file_tree_hash": "939810c005fa18fd42f9ce150e83cc5aba28a7404f5f2d4a551a0fdedbb28e3f",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

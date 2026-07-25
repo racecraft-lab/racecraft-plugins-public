@@ -149,6 +149,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/materializer.py",
+        "display": "speckit_pro_runner/materializer.py"
+      },
+      "sha256": "2ca80dec339f91ddea13db765bafc66434e0044b396f9a175fc212a380c729af"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/merge_utils.py",
         "display": "speckit_pro_runner/merge_utils.py"
       },
