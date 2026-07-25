@@ -1,0 +1,1252 @@
+{
+  "schema_version": "1.0.0",
+  "fixture_kind": "calibration_decision_replay",
+  "description": "SC-011 deterministic replay evidence. Each case carries the frozen experiment, score, analysis, and decision bundles for one calibration comparison pair, and replay reconstructs the terminal decision from the recorded evidence rather than reading it back from the committed bundle. Bounded to six cases so suite cost does not scale with accumulated campaign evidence (FR-057). Every partition here is calibration and qualification-ineligible, so no case can reach the qualified terminal member (FR-024). Contains no raw captures, no account or authentication material, no absolute paths, and no session identifiers (FR-027, FR-036).",
+  "analysis_plan_note": "analysis_plan below is a SYNTHETIC replay artifact whose numeric content exercises the decision code paths. It is deliberately NOT the authoritative frozen analysis plan of FR-023 and FR-038, which freezes only after the operator calibration pilot supplies its variance estimates and is published separately under docs/ai/research/.",
+  "analysis_plan": {
+    "schema_version": "1.0.0",
+    "analysis_plan_id": "CAR-003-ANALYSIS-PLAN-REPLAY-SYNTHETIC-V1",
+    "status": "frozen",
+    "calibration_binding": {
+      "id": "CAR-003-CALIBRATION-PROTOCOL-V1",
+      "digest": "sha256:b274ad16d4cf21ddd189521d54a0dc22131d0e594d4f7ccefca975c2481bb44d"
+    },
+    "workload_manifest": {
+      "manifest_id": "CAR-003-WORKLOAD-MANIFEST-SYNTHETIC-V1",
+      "minimum_unique_tasks": 12,
+      "unknown_stratum_policy": "inconclusive",
+      "guardrail_method": {
+        "units": {
+          "p95_duration_ms_max": "milliseconds",
+          "p95_input_tokens_max": "tokens",
+          "p95_cached_input_tokens_max": "tokens",
+          "p95_output_tokens_max": "tokens"
+        },
+        "denominator": "per_attempt_within_stratum_arm",
+        "comparator": "absolute_ceiling",
+        "margin": 0.05,
+        "confidence_method": {
+          "method": "upper_confidence_bound_order_statistic",
+          "confidence_level": 0.95
+        },
+        "missing_data_rule": "worst_case_imputation",
+        "direction": "higher_is_worse",
+        "multiplicity_family": {
+          "family": "guardrail",
+          "adjustment": "holm_bonferroni_within_the_guardrail_family",
+          "rationale": "Guardrails are a family of their own, distinct from the three FR-050 families, which cover the conjunctive stage, the Pareto disjunctive half, and the across-ladder set. Leaving guardrails unassigned would leave a set of thresholds evaluated with no stated error control."
+        },
+        "breach_result": "no_qualification",
+        "decision_bearing": false
+      },
+      "strata": [
+        {
+          "stratum_id": "short-horizon",
+          "weight": 0.6,
+          "long_horizon": false,
+          "membership_rule": {
+            "permitted_basis": [
+              "role_id",
+              "objective",
+              "permitted_tools"
+            ],
+            "derived_from_realized_outcomes": false
+          },
+          "stratum_minimum_unique_tasks": 12,
+          "stratum_sample_size": 48,
+          "p95_duration_ms_max": 420000,
+          "p95_input_tokens_max": 180000,
+          "p95_cached_input_tokens_max": 90000,
+          "p95_output_tokens_max": 14000
+        },
+        {
+          "stratum_id": "long-horizon",
+          "weight": 0.4,
+          "long_horizon": true,
+          "membership_rule": {
+            "permitted_basis": [
+              "role_id",
+              "objective",
+              "expected_artifacts",
+              "acceptance_oracle"
+            ],
+            "derived_from_realized_outcomes": false
+          },
+          "stratum_minimum_unique_tasks": 20,
+          "stratum_sample_size": 64,
+          "p95_duration_ms_max": 1800000,
+          "p95_input_tokens_max": 640000,
+          "p95_cached_input_tokens_max": 420000,
+          "p95_output_tokens_max": 48000
+        }
+      ],
+      "manifest_digest": "sha256:803a9248c515c011c4ca470472989cf99b969153be26d6f8410cd6fb1c7ff017"
+    },
+    "reliability_guardrails": {
+      "p95_retries_max": 2,
+      "p95_compactions_max": 1,
+      "late_failure_definition": {
+        "budget_fraction_consumed_min": 0.6,
+        "qualifying_failure_planes": [
+          "candidate",
+          "infrastructure"
+        ]
+      },
+      "late_failure_rate_max": 0.1,
+      "breach_result": "no_qualification"
+    },
+    "cache_policy": {
+      "policy_id": "CAR-003-CACHE-ISOLATION-V1",
+      "pair_isolation": true,
+      "order_leakage_prohibited": true,
+      "policy_digest": "sha256:0455999a846634c9968ccb6ade4291ce57f735c41ef028e4d709a0ea99955602"
+    },
+    "quality_floors": {
+      "semantic_minimum": 0.7,
+      "reliability_minimum": 0.9
+    },
+    "non_inferiority": {
+      "endpoints": [
+        "semantic_score",
+        "acceptance_rate"
+      ],
+      "margins": {
+        "semantic_score": 0.03,
+        "acceptance_rate": 0.02
+      },
+      "confidence_level": 0.95,
+      "alpha": 0.05,
+      "power": 0.8,
+      "sample_sizes": {
+        "semantic_score": 96,
+        "acceptance_rate": 96
+      },
+      "sample_size_assumptions": {
+        "paired_within_task": true,
+        "assumed_within_role_correlation": 0.4,
+        "assumed_acceptance_rate": 0.85,
+        "variance_source": "placeholder pending the operator calibration pilot; this replay plan is not the authoritative frozen plan"
+      },
+      "cluster_unit": "role",
+      "cluster_adjustment": "cluster_robust_sandwich_variance_by_role",
+      "multiplicity_declaration": {
+        "conjunctive_family": {
+          "adjustment": "none_required",
+          "rationale": "The absolute floors and the non-inferiority stage are conjunctive: all must pass, so the stage controls error at alpha with no adjustment and no alpha relaxation, paying the cost in power."
+        },
+        "pareto_disjunctive_family": {
+          "adjustment": "holm_bonferroni_over_the_eight_dimension_disjunction",
+          "rationale": "'Better on at least one dimension' is disjunctive and inflates the spurious-win rate with each added dimension unless controlled. The conjunctive 'no worse everywhere' half needs no adjustment, so leaving the whole stage unadjusted would under-protect."
+        },
+        "across_ladder_family": {
+          "adjustment": "benjamini_hochberg_false_discovery_control_across_candidate_role_stratum_ladders",
+          "rationale": "Many ladders across candidates, roles, and strata form a family of their own, declared independently of the within-ladder rule."
+        },
+        "cluster_adjustment_is_precondition": true
+      }
+    },
+    "pareto_policy": {
+      "dimensions": [
+        "input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "duration",
+        "retries",
+        "compactions",
+        "acceptance",
+        "terminal_state"
+      ],
+      "weights_prohibited": true,
+      "mixed_or_tied_result": "inconclusive",
+      "reasoning_tokens_decision_bearing": false,
+      "reasoning_tokens_limitation": "reasoning_output_tokens is recorded and reported for every attempt but is not a Pareto dimension while the Codex twin's frozen policy omits it. The field is disjoint from output_tokens and is billed, so this is a stated limitation rather than a claim the cost is absent; adding it must be a joint cross-platform change."
+    },
+    "attrition_policy": {
+      "cap": 0.1,
+      "unclassifiable_result": "inconclusive",
+      "complete_case_filtering": false
+    },
+    "rerun_policy": {
+      "eligible_failure": "independently_preclassified_transient_harness_failure",
+      "scope": "complete_pair",
+      "cap": 2,
+      "classification_timing": "arm_blind_before_outcome_read"
+    },
+    "campaign_budget": {
+      "max_attempts": 48,
+      "max_duration_seconds": 5400,
+      "max_input_tokens": 4000000,
+      "max_cache_write_tokens_by_ttl_class": {
+        "ephemeral_5m": 800000,
+        "ephemeral_1h": 200000
+      },
+      "max_cache_read_tokens": 6000000,
+      "max_output_tokens": 600000,
+      "max_candidates": 4,
+      "max_confirmation_entries": 0
+    },
+    "racing_policy": {
+      "interim_looks": {
+        "count": 2,
+        "information_fractions": [
+          0.5,
+          0.75
+        ]
+      },
+      "boundary": {
+        "type": "obrien_fleming_alpha_spending",
+        "rationale": "Repeatedly testing accumulating data inflates the false-positive rate when boundaries are left unadjusted. An alpha-spending boundary distributes the total error rate across the planned looks rather than testing at the nominal level each time. This is a fourth error-control concern, distinct from the three FR-050 multiplicity families."
+      },
+      "look_schedule_frozen": true,
+      "early_stop_biases_estimate": true,
+      "stop_scope": "complete_pair"
+    },
+    "futility_policy": {
+      "interim_looks": {
+        "count": 2,
+        "information_fractions": [
+          0.5,
+          0.75
+        ]
+      },
+      "boundary_binding": "non_binding",
+      "boundary": {
+        "type": "conditional_power_below_twenty_percent",
+        "rationale": "Declared non-binding, so it may be overridden and no error-rate credit is taken for it. A binding boundary would be part of the error-rate calculation, and the two are not interchangeable."
+      },
+      "look_schedule_frozen": true,
+      "early_stop_biases_estimate": true,
+      "stop_scope": "complete_pair"
+    },
+    "terminal_policy": {
+      "candidate_failure_acceptance": 0,
+      "incomplete_result": "inconclusive",
+      "uncertain_result": "inconclusive"
+    },
+    "frozen_at": "2026-07-24T12:00:00Z",
+    "pre_cohort_outcome_absence_digest": "sha256:9f3b1a59f10ae0d234f237d2d6f082ed83d8dc14bd67c1171dceb9988a603e84",
+    "analysis_plan_digest": "sha256:f19199683fb1fc4ef507826480ba76554454cfd6d74260ecd4b0765bc2dc6a85"
+  },
+  "cases": [
+    {
+      "case_id": "calibration_pair_completes_cleanly",
+      "purpose": "Every stage is reached and passes, and the candidate is no worse on all eight dimensions and better on one. The partition is calibration, so the terminal member is calibration_complete: qualified is structurally unreachable here (FR-024).",
+      "decision_bundle_id": "CAR-003-DECISION-CALIBRATION-PAIR-COMPLETES-CLEANLY",
+      "partition": {
+        "partition_id": "CAR-003-CAL-01",
+        "partition_type": "calibration",
+        "qualification_eligible": false
+      },
+      "comparison_set_binding": {
+        "id": "CS-CAL-calibration_pair_completes_cleanly",
+        "digest": "sha256:1d3aa36074ad4e50d11cda33b55a52517e663fab67aa78a4678706f73a736c81"
+      },
+      "assignment_bindings": [
+        {
+          "id": "CS-CAL-calibration_pair_completes_cleanly-A0",
+          "digest": "sha256:96767fff28becd477bcc1010a259bb2c37d1f833b030bae4c708cfa97926f262"
+        },
+        {
+          "id": "CS-CAL-calibration_pair_completes_cleanly-A1",
+          "digest": "sha256:7d033f5769952fd18aa5be86fc173a645a95e8f013bbe3e8abf9935afa38416f"
+        }
+      ],
+      "score_bundle_bindings": [
+        {
+          "id": "SB-CAL-calibration_pair_completes_cleanly-A0",
+          "digest": "sha256:5c972e7f6c814f7cf184da7ebb03bcde0a7a0a0cd3a80ed3143942b1488de550"
+        },
+        {
+          "id": "SB-CAL-calibration_pair_completes_cleanly-A1",
+          "digest": "sha256:c1cf4fbc50cf58b44a518cae0ecc3f6c7ccfe0e7f1c8dd64583781c3f5fb9e01"
+        }
+      ],
+      "analysis_plan_binding": {
+        "id": "CAR-003-ANALYSIS-PLAN-REPLAY-SYNTHETIC-V1",
+        "digest": "sha256:f19199683fb1fc4ef507826480ba76554454cfd6d74260ecd4b0765bc2dc6a85"
+      },
+      "analysis_output_id": "CAR-003-ANALYSIS-OUTPUT-CALIBRATION-PAIR-COMPLETES-CLEANLY",
+      "evidence": {
+        "gate_outcomes": {
+          "bindings": "pass",
+          "partition": "pass",
+          "treatment": "pass",
+          "deterministic": "pass",
+          "provenance": "pass",
+          "completeness": "pass"
+        },
+        "floor_result": "pass",
+        "non_inferiority_result": "pass",
+        "candidate_vector": {
+          "input_tokens": 104000,
+          "cached_input_tokens": 42000,
+          "output_tokens": 9100,
+          "duration": 238000,
+          "retries": 1,
+          "compactions": 0,
+          "acceptance": 1.0,
+          "terminal_state": "completed"
+        },
+        "comparator_vector": {
+          "input_tokens": 118000,
+          "cached_input_tokens": 42000,
+          "output_tokens": 9100,
+          "duration": 238000,
+          "retries": 1,
+          "compactions": 0,
+          "acceptance": 1.0,
+          "terminal_state": "completed"
+        },
+        "conditions": [],
+        "reasoning_output_tokens_total": 41200,
+        "provenance_inference_count": 1
+      },
+      "evidence_refs": [
+        "sha256:967b2f09514c5832c51e8bfc67c0a5b1dab7583e5be5c21a0cff3c6434810d61",
+        "sha256:3de7a1fc62d1c7370f868aa72c4f78db67aa16f5c80d5e9daba5b745210854c7"
+      ],
+      "expected_decision": "calibration_complete",
+      "expected_decision_reasons": [
+        "calibration_only"
+      ],
+      "decision_bundle": {
+        "schema_version": "1.0.0",
+        "decision_bundle_id": "CAR-003-DECISION-CALIBRATION-PAIR-COMPLETES-CLEANLY",
+        "partition": {
+          "partition_id": "CAR-003-CAL-01",
+          "partition_type": "calibration",
+          "qualification_eligible": false
+        },
+        "comparison_set_binding": {
+          "id": "CS-CAL-calibration_pair_completes_cleanly",
+          "digest": "sha256:1d3aa36074ad4e50d11cda33b55a52517e663fab67aa78a4678706f73a736c81"
+        },
+        "assignment_bindings": [
+          {
+            "id": "CS-CAL-calibration_pair_completes_cleanly-A0",
+            "digest": "sha256:96767fff28becd477bcc1010a259bb2c37d1f833b030bae4c708cfa97926f262"
+          },
+          {
+            "id": "CS-CAL-calibration_pair_completes_cleanly-A1",
+            "digest": "sha256:7d033f5769952fd18aa5be86fc173a645a95e8f013bbe3e8abf9935afa38416f"
+          }
+        ],
+        "score_bundle_bindings": [
+          {
+            "id": "SB-CAL-calibration_pair_completes_cleanly-A0",
+            "digest": "sha256:5c972e7f6c814f7cf184da7ebb03bcde0a7a0a0cd3a80ed3143942b1488de550"
+          },
+          {
+            "id": "SB-CAL-calibration_pair_completes_cleanly-A1",
+            "digest": "sha256:c1cf4fbc50cf58b44a518cae0ecc3f6c7ccfe0e7f1c8dd64583781c3f5fb9e01"
+          }
+        ],
+        "analysis_plan_binding": {
+          "id": "CAR-003-ANALYSIS-PLAN-REPLAY-SYNTHETIC-V1",
+          "digest": "sha256:f19199683fb1fc4ef507826480ba76554454cfd6d74260ecd4b0765bc2dc6a85"
+        },
+        "analysis_output": {
+          "analysis_output_id": "CAR-003-ANALYSIS-OUTPUT-CALIBRATION-PAIR-COMPLETES-CLEANLY",
+          "complete": true,
+          "floor_result": "pass",
+          "non_inferiority_result": "pass",
+          "pareto_result": "candidate_dominates",
+          "analysis_output_digest": "sha256:12cc4d49fec517c980bf4cd2c2b2c301e04fc9079173cb1137a83cdb6c99d336"
+        },
+        "ordered_gate_results": [
+          {
+            "gate": "bindings",
+            "result": "pass"
+          },
+          {
+            "gate": "partition",
+            "result": "pass"
+          },
+          {
+            "gate": "treatment",
+            "result": "pass"
+          },
+          {
+            "gate": "deterministic",
+            "result": "pass"
+          },
+          {
+            "gate": "provenance",
+            "result": "pass"
+          },
+          {
+            "gate": "completeness",
+            "result": "pass"
+          },
+          {
+            "gate": "floors",
+            "result": "pass"
+          },
+          {
+            "gate": "non_inferiority",
+            "result": "pass"
+          },
+          {
+            "gate": "pareto",
+            "result": "pass"
+          }
+        ],
+        "decision": "calibration_complete",
+        "decision_reasons": [
+          "calibration_only"
+        ],
+        "reported_limitations": {
+          "reasoning_output_tokens_total": 41200,
+          "reasoning_tokens_excluded_from_dominance": true,
+          "blinding_bounded": true,
+          "provenance_inference_count": 1
+        },
+        "evidence_refs": [
+          "sha256:967b2f09514c5832c51e8bfc67c0a5b1dab7583e5be5c21a0cff3c6434810d61",
+          "sha256:3de7a1fc62d1c7370f868aa72c4f78db67aa16f5c80d5e9daba5b745210854c7"
+        ],
+        "decision_bundle_digest": "sha256:4193e496a129ac12859035d1aabbdc3844be4098beedbb9139655de4665333c6"
+      }
+    },
+    {
+      "case_id": "absolute_floor_not_cleared",
+      "purpose": "The absolute semantic floor fails, so non-inferiority and the resource comparison are never reached and record not_evaluated rather than being omitted. Evidence was sufficient and the bar was not cleared, so the member is no_qualification (FR-017, FR-019).",
+      "decision_bundle_id": "CAR-003-DECISION-ABSOLUTE-FLOOR-NOT-CLEARED",
+      "partition": {
+        "partition_id": "CAR-003-CAL-01",
+        "partition_type": "calibration",
+        "qualification_eligible": false
+      },
+      "comparison_set_binding": {
+        "id": "CS-CAL-absolute_floor_not_cleared",
+        "digest": "sha256:019be098f8b4445ac239a0125faed454dd3b0780cebf05f2884aa704fc42d65e"
+      },
+      "assignment_bindings": [
+        {
+          "id": "CS-CAL-absolute_floor_not_cleared-A0",
+          "digest": "sha256:01ffcf8058d8b09909450927be14cd98e2cb7b887c8da47e871e12dff44c5685"
+        },
+        {
+          "id": "CS-CAL-absolute_floor_not_cleared-A1",
+          "digest": "sha256:ff7889c0ae2088a0f2c65ddd16a05d2ff2e33315bd0c7fd813eb7683a20390de"
+        }
+      ],
+      "score_bundle_bindings": [
+        {
+          "id": "SB-CAL-absolute_floor_not_cleared-A0",
+          "digest": "sha256:45d460dea052e07a17af6ac09a423c2063d54975ffcb255e01c86efd00d3b9a2"
+        },
+        {
+          "id": "SB-CAL-absolute_floor_not_cleared-A1",
+          "digest": "sha256:e9fc785ceaea9e57fef106698035ae58b0ec7207f3c77f61c369583cdead502e"
+        }
+      ],
+      "analysis_plan_binding": {
+        "id": "CAR-003-ANALYSIS-PLAN-REPLAY-SYNTHETIC-V1",
+        "digest": "sha256:f19199683fb1fc4ef507826480ba76554454cfd6d74260ecd4b0765bc2dc6a85"
+      },
+      "analysis_output_id": "CAR-003-ANALYSIS-OUTPUT-ABSOLUTE-FLOOR-NOT-CLEARED",
+      "evidence": {
+        "gate_outcomes": {
+          "bindings": "pass",
+          "partition": "pass",
+          "treatment": "pass",
+          "deterministic": "pass",
+          "provenance": "pass",
+          "completeness": "pass"
+        },
+        "floor_result": "fail",
+        "non_inferiority_result": "not_evaluated",
+        "candidate_vector": null,
+        "comparator_vector": null,
+        "conditions": [],
+        "reasoning_output_tokens_total": 41200,
+        "provenance_inference_count": 1
+      },
+      "evidence_refs": [
+        "sha256:174c20de60cadfbe2681f197e00a85f224ad9a7194016a36e0243c2a4eec870a",
+        "sha256:87ade80e9ca01d9e15184b9f9dc8ac57d39c88d75d63093e89bf44232f13eda2"
+      ],
+      "expected_decision": "no_qualification",
+      "expected_decision_reasons": [
+        "floors_failed"
+      ],
+      "decision_bundle": {
+        "schema_version": "1.0.0",
+        "decision_bundle_id": "CAR-003-DECISION-ABSOLUTE-FLOOR-NOT-CLEARED",
+        "partition": {
+          "partition_id": "CAR-003-CAL-01",
+          "partition_type": "calibration",
+          "qualification_eligible": false
+        },
+        "comparison_set_binding": {
+          "id": "CS-CAL-absolute_floor_not_cleared",
+          "digest": "sha256:019be098f8b4445ac239a0125faed454dd3b0780cebf05f2884aa704fc42d65e"
+        },
+        "assignment_bindings": [
+          {
+            "id": "CS-CAL-absolute_floor_not_cleared-A0",
+            "digest": "sha256:01ffcf8058d8b09909450927be14cd98e2cb7b887c8da47e871e12dff44c5685"
+          },
+          {
+            "id": "CS-CAL-absolute_floor_not_cleared-A1",
+            "digest": "sha256:ff7889c0ae2088a0f2c65ddd16a05d2ff2e33315bd0c7fd813eb7683a20390de"
+          }
+        ],
+        "score_bundle_bindings": [
+          {
+            "id": "SB-CAL-absolute_floor_not_cleared-A0",
+            "digest": "sha256:45d460dea052e07a17af6ac09a423c2063d54975ffcb255e01c86efd00d3b9a2"
+          },
+          {
+            "id": "SB-CAL-absolute_floor_not_cleared-A1",
+            "digest": "sha256:e9fc785ceaea9e57fef106698035ae58b0ec7207f3c77f61c369583cdead502e"
+          }
+        ],
+        "analysis_plan_binding": {
+          "id": "CAR-003-ANALYSIS-PLAN-REPLAY-SYNTHETIC-V1",
+          "digest": "sha256:f19199683fb1fc4ef507826480ba76554454cfd6d74260ecd4b0765bc2dc6a85"
+        },
+        "analysis_output": {
+          "analysis_output_id": "CAR-003-ANALYSIS-OUTPUT-ABSOLUTE-FLOOR-NOT-CLEARED",
+          "complete": true,
+          "floor_result": "fail",
+          "non_inferiority_result": "not_evaluated",
+          "pareto_result": "not_evaluated",
+          "analysis_output_digest": "sha256:f3147e3a0aa5b50526c9f770fb1bccf56b04d9e5f47161ba4d71d41626dd0a51"
+        },
+        "ordered_gate_results": [
+          {
+            "gate": "bindings",
+            "result": "pass"
+          },
+          {
+            "gate": "partition",
+            "result": "pass"
+          },
+          {
+            "gate": "treatment",
+            "result": "pass"
+          },
+          {
+            "gate": "deterministic",
+            "result": "pass"
+          },
+          {
+            "gate": "provenance",
+            "result": "pass"
+          },
+          {
+            "gate": "completeness",
+            "result": "pass"
+          },
+          {
+            "gate": "floors",
+            "result": "fail"
+          },
+          {
+            "gate": "non_inferiority",
+            "result": "not_evaluated"
+          },
+          {
+            "gate": "pareto",
+            "result": "not_evaluated"
+          }
+        ],
+        "decision": "no_qualification",
+        "decision_reasons": [
+          "floors_failed"
+        ],
+        "reported_limitations": {
+          "reasoning_output_tokens_total": 41200,
+          "reasoning_tokens_excluded_from_dominance": true,
+          "blinding_bounded": true,
+          "provenance_inference_count": 1
+        },
+        "evidence_refs": [
+          "sha256:174c20de60cadfbe2681f197e00a85f224ad9a7194016a36e0243c2a4eec870a",
+          "sha256:87ade80e9ca01d9e15184b9f9dc8ac57d39c88d75d63093e89bf44232f13eda2"
+        ],
+        "decision_bundle_digest": "sha256:ed2586b63cbb391b46bfe0507c9ab90ef3b6ad6718ada911cdc7d4a00cc880df"
+      }
+    },
+    {
+      "case_id": "terminal_state_difference_is_mixed_not_better",
+      "purpose": "The candidate is better on three resource dimensions but reaches a different terminal state. Terminal state is categorical and unordered, so the comparison is mixed rather than dominant, and a mixed result routes to inconclusive (FR-058, FR-019).",
+      "decision_bundle_id": "CAR-003-DECISION-TERMINAL-STATE-DIFFERENCE-IS-MIXED-NOT-BETTER",
+      "partition": {
+        "partition_id": "CAR-003-CAL-01",
+        "partition_type": "calibration",
+        "qualification_eligible": false
+      },
+      "comparison_set_binding": {
+        "id": "CS-CAL-terminal_state_difference_is_mixed_not_better",
+        "digest": "sha256:ff52518eea56cf6e557c88db34251d8bf79d6545e648e033cafc8378f6d683b9"
+      },
+      "assignment_bindings": [
+        {
+          "id": "CS-CAL-terminal_state_difference_is_mixed_not_better-A0",
+          "digest": "sha256:3cb84edbbe652c06c01562da4095150ecf15624fb0c4c20483026312dd3af6ce"
+        },
+        {
+          "id": "CS-CAL-terminal_state_difference_is_mixed_not_better-A1",
+          "digest": "sha256:6f5a01b26fabf5747b412288010fc2a2ffafc1699a7df33bbb07fe62ed7b6662"
+        }
+      ],
+      "score_bundle_bindings": [
+        {
+          "id": "SB-CAL-terminal_state_difference_is_mixed_not_better-A0",
+          "digest": "sha256:9b51c3979be4335f03c7759f1fd74e1f280ad1646c4fb64026c229dec095f79d"
+        },
+        {
+          "id": "SB-CAL-terminal_state_difference_is_mixed_not_better-A1",
+          "digest": "sha256:251b19f3c1e8d6bec136ad60116392dbb6e37e66211bc2328d65378c116eb2f6"
+        }
+      ],
+      "analysis_plan_binding": {
+        "id": "CAR-003-ANALYSIS-PLAN-REPLAY-SYNTHETIC-V1",
+        "digest": "sha256:f19199683fb1fc4ef507826480ba76554454cfd6d74260ecd4b0765bc2dc6a85"
+      },
+      "analysis_output_id": "CAR-003-ANALYSIS-OUTPUT-TERMINAL-STATE-DIFFERENCE-IS-MIXED-NOT-BETTER",
+      "evidence": {
+        "gate_outcomes": {
+          "bindings": "pass",
+          "partition": "pass",
+          "treatment": "pass",
+          "deterministic": "pass",
+          "provenance": "pass",
+          "completeness": "pass"
+        },
+        "floor_result": "pass",
+        "non_inferiority_result": "pass",
+        "candidate_vector": {
+          "input_tokens": 91000,
+          "cached_input_tokens": 42000,
+          "output_tokens": 7400,
+          "duration": 196000,
+          "retries": 1,
+          "compactions": 0,
+          "acceptance": 1.0,
+          "terminal_state": "timed_out"
+        },
+        "comparator_vector": {
+          "input_tokens": 118000,
+          "cached_input_tokens": 42000,
+          "output_tokens": 9100,
+          "duration": 238000,
+          "retries": 1,
+          "compactions": 0,
+          "acceptance": 1.0,
+          "terminal_state": "completed"
+        },
+        "conditions": [],
+        "reasoning_output_tokens_total": 41200,
+        "provenance_inference_count": 1
+      },
+      "evidence_refs": [
+        "sha256:523ea97397780b4e30815ca20162fef9fd1b7578914abe38d52551e91413c776",
+        "sha256:c857e44c492507dcd4a1e2ca6597f840ee230fda047c3ce82feef69dd4282b01"
+      ],
+      "expected_decision": "inconclusive",
+      "expected_decision_reasons": [
+        "pareto_mixed"
+      ],
+      "decision_bundle": {
+        "schema_version": "1.0.0",
+        "decision_bundle_id": "CAR-003-DECISION-TERMINAL-STATE-DIFFERENCE-IS-MIXED-NOT-BETTER",
+        "partition": {
+          "partition_id": "CAR-003-CAL-01",
+          "partition_type": "calibration",
+          "qualification_eligible": false
+        },
+        "comparison_set_binding": {
+          "id": "CS-CAL-terminal_state_difference_is_mixed_not_better",
+          "digest": "sha256:ff52518eea56cf6e557c88db34251d8bf79d6545e648e033cafc8378f6d683b9"
+        },
+        "assignment_bindings": [
+          {
+            "id": "CS-CAL-terminal_state_difference_is_mixed_not_better-A0",
+            "digest": "sha256:3cb84edbbe652c06c01562da4095150ecf15624fb0c4c20483026312dd3af6ce"
+          },
+          {
+            "id": "CS-CAL-terminal_state_difference_is_mixed_not_better-A1",
+            "digest": "sha256:6f5a01b26fabf5747b412288010fc2a2ffafc1699a7df33bbb07fe62ed7b6662"
+          }
+        ],
+        "score_bundle_bindings": [
+          {
+            "id": "SB-CAL-terminal_state_difference_is_mixed_not_better-A0",
+            "digest": "sha256:9b51c3979be4335f03c7759f1fd74e1f280ad1646c4fb64026c229dec095f79d"
+          },
+          {
+            "id": "SB-CAL-terminal_state_difference_is_mixed_not_better-A1",
+            "digest": "sha256:251b19f3c1e8d6bec136ad60116392dbb6e37e66211bc2328d65378c116eb2f6"
+          }
+        ],
+        "analysis_plan_binding": {
+          "id": "CAR-003-ANALYSIS-PLAN-REPLAY-SYNTHETIC-V1",
+          "digest": "sha256:f19199683fb1fc4ef507826480ba76554454cfd6d74260ecd4b0765bc2dc6a85"
+        },
+        "analysis_output": {
+          "analysis_output_id": "CAR-003-ANALYSIS-OUTPUT-TERMINAL-STATE-DIFFERENCE-IS-MIXED-NOT-BETTER",
+          "complete": true,
+          "floor_result": "pass",
+          "non_inferiority_result": "pass",
+          "pareto_result": "mixed",
+          "analysis_output_digest": "sha256:040b2aaf3445c3bd23934561769acfe0062eb11d8fcf13579b1fece3367a7a96"
+        },
+        "ordered_gate_results": [
+          {
+            "gate": "bindings",
+            "result": "pass"
+          },
+          {
+            "gate": "partition",
+            "result": "pass"
+          },
+          {
+            "gate": "treatment",
+            "result": "pass"
+          },
+          {
+            "gate": "deterministic",
+            "result": "pass"
+          },
+          {
+            "gate": "provenance",
+            "result": "pass"
+          },
+          {
+            "gate": "completeness",
+            "result": "pass"
+          },
+          {
+            "gate": "floors",
+            "result": "pass"
+          },
+          {
+            "gate": "non_inferiority",
+            "result": "pass"
+          },
+          {
+            "gate": "pareto",
+            "result": "fail"
+          }
+        ],
+        "decision": "inconclusive",
+        "decision_reasons": [
+          "pareto_mixed"
+        ],
+        "reported_limitations": {
+          "reasoning_output_tokens_total": 41200,
+          "reasoning_tokens_excluded_from_dominance": true,
+          "blinding_bounded": true,
+          "provenance_inference_count": 1
+        },
+        "evidence_refs": [
+          "sha256:523ea97397780b4e30815ca20162fef9fd1b7578914abe38d52551e91413c776",
+          "sha256:c857e44c492507dcd4a1e2ca6597f840ee230fda047c3ce82feef69dd4282b01"
+        ],
+        "decision_bundle_digest": "sha256:f8bc64ebdda8e1a9e365a183aed9f8fc505235b443056b6fbd1d66566c77eca4"
+      }
+    },
+    {
+      "case_id": "campaign_ceiling_truncated_the_pair",
+      "purpose": "A campaign ceiling was reached between the two arms. That is an administrative truncation of the harness, recorded on the infrastructure plane and never as candidate_budget_exhausted, and the pair is incomplete rather than one-armed. It returns inconclusive and is never completed by a one-arm rerun (FR-056).",
+      "decision_bundle_id": "CAR-003-DECISION-CAMPAIGN-CEILING-TRUNCATED-THE-PAIR",
+      "partition": {
+        "partition_id": "CAR-003-CAL-01",
+        "partition_type": "calibration",
+        "qualification_eligible": false
+      },
+      "comparison_set_binding": {
+        "id": "CS-CAL-campaign_ceiling_truncated_the_pair",
+        "digest": "sha256:e0d8a92c9ff409aa37fcf0fca488c0fce8046c315ebade18f76f17f4ea35a61f"
+      },
+      "assignment_bindings": [
+        {
+          "id": "CS-CAL-campaign_ceiling_truncated_the_pair-A0",
+          "digest": "sha256:b1a9c55483516017703f74177eb6bc44abef517d9c1aab516fc4d2ce17b36cc1"
+        },
+        {
+          "id": "CS-CAL-campaign_ceiling_truncated_the_pair-A1",
+          "digest": "sha256:ad2ebb2973a7fbb50dc997869fe29f10a23f816fe2015932804d808dd63fbf1e"
+        }
+      ],
+      "score_bundle_bindings": [
+        {
+          "id": "SB-CAL-campaign_ceiling_truncated_the_pair-A0",
+          "digest": "sha256:553350ba8e2a348e2c4d716f48f6771d533ab8c7ba8e80f469a39b5d69c8ae70"
+        },
+        {
+          "id": "SB-CAL-campaign_ceiling_truncated_the_pair-A1",
+          "digest": "sha256:6fac5dd2e0a2e25862d28022526167a65c6aa2f1d76cf2f484815161de409d90"
+        }
+      ],
+      "analysis_plan_binding": {
+        "id": "CAR-003-ANALYSIS-PLAN-REPLAY-SYNTHETIC-V1",
+        "digest": "sha256:f19199683fb1fc4ef507826480ba76554454cfd6d74260ecd4b0765bc2dc6a85"
+      },
+      "analysis_output_id": "CAR-003-ANALYSIS-OUTPUT-CAMPAIGN-CEILING-TRUNCATED-THE-PAIR",
+      "evidence": {
+        "gate_outcomes": {
+          "bindings": "pass",
+          "partition": "pass",
+          "treatment": "pass",
+          "deterministic": "pass",
+          "provenance": "pass",
+          "completeness": "fail"
+        },
+        "floor_result": "not_evaluated",
+        "non_inferiority_result": "not_evaluated",
+        "candidate_vector": null,
+        "comparator_vector": null,
+        "conditions": [
+          "campaign_budget_exhausted"
+        ],
+        "reasoning_output_tokens_total": 18400,
+        "provenance_inference_count": 0
+      },
+      "evidence_refs": [
+        "sha256:f3e4881c90ae0858401e323b48ccde61cb1ff51445e2039116aa07afdc9b11cb",
+        "sha256:3dd3dcb33bcefb57251d26e77e63e40903bbbbe89abfa73efbe070f50ea2daf8"
+      ],
+      "expected_decision": "inconclusive",
+      "expected_decision_reasons": [
+        "budget_exhausted",
+        "evidence_incomplete"
+      ],
+      "decision_bundle": {
+        "schema_version": "1.0.0",
+        "decision_bundle_id": "CAR-003-DECISION-CAMPAIGN-CEILING-TRUNCATED-THE-PAIR",
+        "partition": {
+          "partition_id": "CAR-003-CAL-01",
+          "partition_type": "calibration",
+          "qualification_eligible": false
+        },
+        "comparison_set_binding": {
+          "id": "CS-CAL-campaign_ceiling_truncated_the_pair",
+          "digest": "sha256:e0d8a92c9ff409aa37fcf0fca488c0fce8046c315ebade18f76f17f4ea35a61f"
+        },
+        "assignment_bindings": [
+          {
+            "id": "CS-CAL-campaign_ceiling_truncated_the_pair-A0",
+            "digest": "sha256:b1a9c55483516017703f74177eb6bc44abef517d9c1aab516fc4d2ce17b36cc1"
+          },
+          {
+            "id": "CS-CAL-campaign_ceiling_truncated_the_pair-A1",
+            "digest": "sha256:ad2ebb2973a7fbb50dc997869fe29f10a23f816fe2015932804d808dd63fbf1e"
+          }
+        ],
+        "score_bundle_bindings": [
+          {
+            "id": "SB-CAL-campaign_ceiling_truncated_the_pair-A0",
+            "digest": "sha256:553350ba8e2a348e2c4d716f48f6771d533ab8c7ba8e80f469a39b5d69c8ae70"
+          },
+          {
+            "id": "SB-CAL-campaign_ceiling_truncated_the_pair-A1",
+            "digest": "sha256:6fac5dd2e0a2e25862d28022526167a65c6aa2f1d76cf2f484815161de409d90"
+          }
+        ],
+        "analysis_plan_binding": {
+          "id": "CAR-003-ANALYSIS-PLAN-REPLAY-SYNTHETIC-V1",
+          "digest": "sha256:f19199683fb1fc4ef507826480ba76554454cfd6d74260ecd4b0765bc2dc6a85"
+        },
+        "analysis_output": {
+          "analysis_output_id": "CAR-003-ANALYSIS-OUTPUT-CAMPAIGN-CEILING-TRUNCATED-THE-PAIR",
+          "complete": false,
+          "floor_result": "uncertain",
+          "non_inferiority_result": "not_evaluated",
+          "pareto_result": "not_evaluated",
+          "analysis_output_digest": "sha256:f38565db62f031da6f764d2004b3512a55e2784c8f8ca420c89c705c2f45e287"
+        },
+        "ordered_gate_results": [
+          {
+            "gate": "bindings",
+            "result": "pass"
+          },
+          {
+            "gate": "partition",
+            "result": "pass"
+          },
+          {
+            "gate": "treatment",
+            "result": "pass"
+          },
+          {
+            "gate": "deterministic",
+            "result": "pass"
+          },
+          {
+            "gate": "provenance",
+            "result": "pass"
+          },
+          {
+            "gate": "completeness",
+            "result": "fail"
+          },
+          {
+            "gate": "floors",
+            "result": "not_evaluated"
+          },
+          {
+            "gate": "non_inferiority",
+            "result": "not_evaluated"
+          },
+          {
+            "gate": "pareto",
+            "result": "not_evaluated"
+          }
+        ],
+        "decision": "inconclusive",
+        "decision_reasons": [
+          "budget_exhausted",
+          "evidence_incomplete"
+        ],
+        "reported_limitations": {
+          "reasoning_output_tokens_total": 18400,
+          "reasoning_tokens_excluded_from_dominance": true,
+          "blinding_bounded": true,
+          "provenance_inference_count": 0
+        },
+        "evidence_refs": [
+          "sha256:f3e4881c90ae0858401e323b48ccde61cb1ff51445e2039116aa07afdc9b11cb",
+          "sha256:3dd3dcb33bcefb57251d26e77e63e40903bbbbe89abfa73efbe070f50ea2daf8"
+        ],
+        "decision_bundle_digest": "sha256:e05bbb07fadc4f99a60a18163be5477ad3b9860f8bb8083b6759ff0f3396d578"
+      }
+    },
+    {
+      "case_id": "rerun_cap_exhausted_before_complete_evidence",
+      "purpose": "The per-pair rerun cap is exhausted while complete paired evidence is still unavailable. The cap counts reruns rather than attempts, and exclusion stays complete-pair and arm-symmetric, so the pair returns inconclusive (FR-021).",
+      "decision_bundle_id": "CAR-003-DECISION-RERUN-CAP-EXHAUSTED-BEFORE-COMPLETE-EVIDENCE",
+      "partition": {
+        "partition_id": "CAR-003-CAL-01",
+        "partition_type": "calibration",
+        "qualification_eligible": false
+      },
+      "comparison_set_binding": {
+        "id": "CS-CAL-rerun_cap_exhausted_before_complete_evidence",
+        "digest": "sha256:b517d4287e1a44594e385a63ebee053973c62464557f24c12bc2c16791eaf3f0"
+      },
+      "assignment_bindings": [
+        {
+          "id": "CS-CAL-rerun_cap_exhausted_before_complete_evidence-A0",
+          "digest": "sha256:0b2dc29235748e8c56e1ed7e49c4ca758ec38720869d850dc24be71363593eac"
+        },
+        {
+          "id": "CS-CAL-rerun_cap_exhausted_before_complete_evidence-A1",
+          "digest": "sha256:28921ef6d1b12438ddf65578ff32e0df069018f0fe743167a84eaed372a9dd22"
+        }
+      ],
+      "score_bundle_bindings": [
+        {
+          "id": "SB-CAL-rerun_cap_exhausted_before_complete_evidence-A0",
+          "digest": "sha256:23b037b8033d0b75e35e31f8470163f01d91c864cb27d55f9d56cae5323a808f"
+        },
+        {
+          "id": "SB-CAL-rerun_cap_exhausted_before_complete_evidence-A1",
+          "digest": "sha256:90177f070283d8f6beaaf0b086a52ba439e3806ea9d2d81d868019514d0e7018"
+        }
+      ],
+      "analysis_plan_binding": {
+        "id": "CAR-003-ANALYSIS-PLAN-REPLAY-SYNTHETIC-V1",
+        "digest": "sha256:f19199683fb1fc4ef507826480ba76554454cfd6d74260ecd4b0765bc2dc6a85"
+      },
+      "analysis_output_id": "CAR-003-ANALYSIS-OUTPUT-RERUN-CAP-EXHAUSTED-BEFORE-COMPLETE-EVIDENCE",
+      "evidence": {
+        "gate_outcomes": {
+          "bindings": "pass",
+          "partition": "pass",
+          "treatment": "pass",
+          "deterministic": "pass",
+          "provenance": "pass",
+          "completeness": "fail"
+        },
+        "floor_result": "not_evaluated",
+        "non_inferiority_result": "not_evaluated",
+        "candidate_vector": null,
+        "comparator_vector": null,
+        "conditions": [
+          "rerun_cap_exhausted"
+        ],
+        "reasoning_output_tokens_total": null,
+        "provenance_inference_count": 0
+      },
+      "evidence_refs": [
+        "sha256:0d00220b82c67436fbec7df35bcced9382c6ace61aa24836973a114db03e7e27",
+        "sha256:f141babf78186191670d79c314549ddb09ef3d95c67c0856d5ed6d440b44ef04"
+      ],
+      "expected_decision": "inconclusive",
+      "expected_decision_reasons": [
+        "evidence_incomplete",
+        "rerun_cap_exhausted"
+      ],
+      "decision_bundle": {
+        "schema_version": "1.0.0",
+        "decision_bundle_id": "CAR-003-DECISION-RERUN-CAP-EXHAUSTED-BEFORE-COMPLETE-EVIDENCE",
+        "partition": {
+          "partition_id": "CAR-003-CAL-01",
+          "partition_type": "calibration",
+          "qualification_eligible": false
+        },
+        "comparison_set_binding": {
+          "id": "CS-CAL-rerun_cap_exhausted_before_complete_evidence",
+          "digest": "sha256:b517d4287e1a44594e385a63ebee053973c62464557f24c12bc2c16791eaf3f0"
+        },
+        "assignment_bindings": [
+          {
+            "id": "CS-CAL-rerun_cap_exhausted_before_complete_evidence-A0",
+            "digest": "sha256:0b2dc29235748e8c56e1ed7e49c4ca758ec38720869d850dc24be71363593eac"
+          },
+          {
+            "id": "CS-CAL-rerun_cap_exhausted_before_complete_evidence-A1",
+            "digest": "sha256:28921ef6d1b12438ddf65578ff32e0df069018f0fe743167a84eaed372a9dd22"
+          }
+        ],
+        "score_bundle_bindings": [
+          {
+            "id": "SB-CAL-rerun_cap_exhausted_before_complete_evidence-A0",
+            "digest": "sha256:23b037b8033d0b75e35e31f8470163f01d91c864cb27d55f9d56cae5323a808f"
+          },
+          {
+            "id": "SB-CAL-rerun_cap_exhausted_before_complete_evidence-A1",
+            "digest": "sha256:90177f070283d8f6beaaf0b086a52ba439e3806ea9d2d81d868019514d0e7018"
+          }
+        ],
+        "analysis_plan_binding": {
+          "id": "CAR-003-ANALYSIS-PLAN-REPLAY-SYNTHETIC-V1",
+          "digest": "sha256:f19199683fb1fc4ef507826480ba76554454cfd6d74260ecd4b0765bc2dc6a85"
+        },
+        "analysis_output": {
+          "analysis_output_id": "CAR-003-ANALYSIS-OUTPUT-RERUN-CAP-EXHAUSTED-BEFORE-COMPLETE-EVIDENCE",
+          "complete": false,
+          "floor_result": "uncertain",
+          "non_inferiority_result": "not_evaluated",
+          "pareto_result": "not_evaluated",
+          "analysis_output_digest": "sha256:1a318fe621a2ffa35edda28dade30ebb4b4a8266130d34fe961e9c9118a552cd"
+        },
+        "ordered_gate_results": [
+          {
+            "gate": "bindings",
+            "result": "pass"
+          },
+          {
+            "gate": "partition",
+            "result": "pass"
+          },
+          {
+            "gate": "treatment",
+            "result": "pass"
+          },
+          {
+            "gate": "deterministic",
+            "result": "pass"
+          },
+          {
+            "gate": "provenance",
+            "result": "pass"
+          },
+          {
+            "gate": "completeness",
+            "result": "fail"
+          },
+          {
+            "gate": "floors",
+            "result": "not_evaluated"
+          },
+          {
+            "gate": "non_inferiority",
+            "result": "not_evaluated"
+          },
+          {
+            "gate": "pareto",
+            "result": "not_evaluated"
+          }
+        ],
+        "decision": "inconclusive",
+        "decision_reasons": [
+          "evidence_incomplete",
+          "rerun_cap_exhausted"
+        ],
+        "reported_limitations": {
+          "reasoning_output_tokens_total": null,
+          "reasoning_tokens_excluded_from_dominance": true,
+          "blinding_bounded": true,
+          "provenance_inference_count": 0
+        },
+        "evidence_refs": [
+          "sha256:0d00220b82c67436fbec7df35bcced9382c6ace61aa24836973a114db03e7e27",
+          "sha256:f141babf78186191670d79c314549ddb09ef3d95c67c0856d5ed6d440b44ef04"
+        ],
+        "decision_bundle_digest": "sha256:91e2c1da85da45c8ed580358f28e42519ce6809899c47d2a74bc99630240bb27"
+      }
+    },
+    {
+      "case_id": "dangling_trace_reference_blocks_the_bundle",
+      "purpose": "A bound execution trace no longer resolves, so the bindings gate fails and reference integrity fails with it. The record itself cannot be trusted, so the member is invalid, and the bundle is blocked rather than repaired by rewrite (FR-032, FR-019).",
+      "decision_bundle_id": "CAR-003-DECISION-DANGLING-TRACE-REFERENCE-BLOCKS-THE-BUNDLE",
+      "partition": {
+        "partition_id": "CAR-003-CAL-01",
+        "partition_type": "calibration",
+        "qualification_eligible": false
+      },
+      "comparison_set_binding": {
+        "id": "CS-CAL-dangling_trace_reference_blocks_the_bundle",
+        "digest": "sha256:82d056861bbcb69619e57e6f3fe14aaa13467ba1244e92cae6465ac40949ef4c"
+      },
+      "assignment_bindings": [
+        {
+          "id": "CS-CAL-dangling_trace_reference_blocks_the_bundle-A0",
+          "digest": "sha256:82ce176c6f23a8074957d63641efde742c2b72164904fbda8db7c220310d9d18"
+        },
+        {
+          "id": "CS-CAL-dangling_trace_reference_blocks_the_bundle-A1",
+          "digest": "sha256:57789973858734ee2edee611d8015ce02f4c5b3f171590e64ec90ef7db9439c9"
+        }
+      ],
+      "score_bundle_bindings": [
+        {
+          "id": "SB-CAL-dangling_trace_reference_blocks_the_bundle-A0",
+          "digest": "sha256:2db4425447d897c921f3c667e6ea8bfd96db89cd3d8d97b4530e90e6346e8cdf"
+        },
+        {
+          "id": "SB-CAL-dangling_trace_reference_blocks_the_bundle-A1",
+          "digest": "sha256:35794654378fd8b3201a8369daec9366923e77155e80e31e877876904b4414c5"
+        }
+      ],
+      "analysis_plan_binding": {
+        "id": "CAR-003-ANALYSIS-PLAN-REPLAY-SYNTHETIC-V1",
+        "digest": "sha256:f19199683fb1fc4ef507826480ba76554454cfd6d74260ecd4b0765bc2dc6a85"
+      },
+      "analysis_output_id": "CAR-003-ANALYSIS-OUTPUT-DANGLING-TRACE-REFERENCE-BLOCKS-THE-BUNDLE",
+      "evidence": {
+        "gate_outcomes": {
+          "bindings": "fail",
+          "partition": "pass",
+          "treatment": "pass",
+          "deterministic": "pass",
+          "provenance": "pass",
+          "completeness": "pass"
+        },
+        "floor_result": "not_evaluated",
+        "non_inferiority_result": "not_evaluated",
+        "candidate_vector": null,
+        "comparator_vector": null,
+        "conditions": [
+          "reference_integrity_failure"
+        ],
+        "reasoning_output_tokens_total": null,
+        "provenance_inference_count": 0
+      },
+      "evidence_refs": [
+        "sha256:ea87de335b2a368f6ddb5e46645a25aec1c036af3bbc4dd000dad9555f5dfee4",
+        "sha256:f41988565fc694b5f66b9ef08e03762cfb50790c1d863309920367716b6d6dea"
+      ],
+      "expected_decision": "invalid",
+      "expected_decision_reasons": [
+        "gate_failed",
+        "trace_reference_integrity_failure"
+      ],
+      "decision_bundle": {
+        "schema_version": "1.0.0",
+        "decision_bundle_id": "CAR-003-DECISION-DANGLING-TRACE-REFERENCE-BLOCKS-THE-BUNDLE",
+        "partition": {
+          "partition_id": "CAR-003-CAL-01",
+          "partition_type": "calibration",
+          "qualification_eligible": false
+        },
+        "comparison_set_binding": {
+          "id": "CS-CAL-dangling_trace_reference_blocks_the_bundle",
+          "digest": "sha256:82d056861bbcb69619e57e6f3fe14aaa13467ba1244e92cae6465ac40949ef4c"
+        },
+        "assignment_bindings": [
+          {
+            "id": "CS-CAL-dangling_trace_reference_blocks_the_bundle-A0",
+            "digest": "sha256:82ce176c6f23a8074957d63641efde742c2b72164904fbda8db7c220310d9d18"
+          },
+          {
+            "id": "CS-CAL-dangling_trace_reference_blocks_the_bundle-A1",
+            "digest": "sha256:57789973858734ee2edee611d8015ce02f4c5b3f171590e64ec90ef7db9439c9"
+          }
+        ],
+        "score_bundle_bindings": [
+          {
+            "id": "SB-CAL-dangling_trace_reference_blocks_the_bundle-A0",
+            "digest": "sha256:2db4425447d897c921f3c667e6ea8bfd96db89cd3d8d97b4530e90e6346e8cdf"
+          },
+          {
+            "id": "SB-CAL-dangling_trace_reference_blocks_the_bundle-A1",
+            "digest": "sha256:35794654378fd8b3201a8369daec9366923e77155e80e31e877876904b4414c5"
+          }
+        ],
+        "analysis_plan_binding": {
+          "id": "CAR-003-ANALYSIS-PLAN-REPLAY-SYNTHETIC-V1",
+          "digest": "sha256:f19199683fb1fc4ef507826480ba76554454cfd6d74260ecd4b0765bc2dc6a85"
+        },
+        "analysis_output": {
+          "analysis_output_id": "CAR-003-ANALYSIS-OUTPUT-DANGLING-TRACE-REFERENCE-BLOCKS-THE-BUNDLE",
+          "complete": false,
+          "floor_result": "uncertain",
+          "non_inferiority_result": "not_evaluated",
+          "pareto_result": "not_evaluated",
+          "analysis_output_digest": "sha256:df3afc370b51bf71f8f2cac97d1d4fdb911c7227f699117068956093845711ec"
+        },
+        "ordered_gate_results": [
+          {
+            "gate": "bindings",
+            "result": "fail"
+          },
+          {
+            "gate": "partition",
+            "result": "not_evaluated"
+          },
+          {
+            "gate": "treatment",
+            "result": "not_evaluated"
+          },
+          {
+            "gate": "deterministic",
+            "result": "not_evaluated"
+          },
+          {
+            "gate": "provenance",
+            "result": "not_evaluated"
+          },
+          {
+            "gate": "completeness",
+            "result": "not_evaluated"
+          },
+          {
+            "gate": "floors",
+            "result": "not_evaluated"
+          },
+          {
+            "gate": "non_inferiority",
+            "result": "not_evaluated"
+          },
+          {
+            "gate": "pareto",
+            "result": "not_evaluated"
+          }
+        ],
+        "decision": "invalid",
+        "decision_reasons": [
+          "gate_failed",
+          "trace_reference_integrity_failure"
+        ],
+        "reported_limitations": {
+          "reasoning_output_tokens_total": null,
+          "reasoning_tokens_excluded_from_dominance": true,
+          "blinding_bounded": true,
+          "provenance_inference_count": 0
+        },
+        "evidence_refs": [
+          "sha256:ea87de335b2a368f6ddb5e46645a25aec1c036af3bbc4dd000dad9555f5dfee4",
+          "sha256:f41988565fc694b5f66b9ef08e03762cfb50790c1d863309920367716b6d6dea"
+        ],
+        "decision_bundle_digest": "sha256:f6dbd0ebf82ef2d9e8363e31549c9dbe293ee806ea017640c58e5d338fbc85e8"
+      }
+    }
+  ]
+}
