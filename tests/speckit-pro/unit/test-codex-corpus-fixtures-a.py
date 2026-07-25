@@ -16,6 +16,7 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/qualification_corpus.py"
 FIXTURE_ROOT = ROOT / "tests/speckit-pro/layer6-efficiency/fixtures-codex"
+CORPUS_MANIFEST_PATH = FIXTURE_ROOT / "corpus-manifest.json"
 
 GROUP_ROLE_IDS = (
     "analyze-executor",
@@ -208,18 +209,16 @@ def expected_contract(role_id: str) -> dict:
 
 
 def full_corpus_with_group_fixtures() -> dict:
-    roles = [expected_contract(role_id) for role_id in CORPUS.GOVERNED_ROLE_ORDER]
+    corpus = json.loads(CORPUS_MANIFEST_PATH.read_text(encoding="utf-8"))
+    roles = corpus["roles"]
     by_role = {role["role_id"]: role for role in roles}
     for role_id in GROUP_ROLE_IDS:
         by_role[role_id] = read_fixture(role_id)
-    return {
-        "corpus_digest": CORPUS.digest({"corpus_id": "g56r-003-role-corpus-v1", "version": "1.0.0"}),
-        "corpus_id": "g56r-003-role-corpus-v1",
-        "corpus_version": "1.0.0",
-        "partition_binding": copy.deepcopy(PARTITION_BINDING),
-        "roles": [by_role[role_id] for role_id in reversed(CORPUS.GOVERNED_ROLE_ORDER)],
-        "schema_version": CORPUS.ROLE_CORPUS_SCHEMA_VERSION,
-    }
+    corpus["roles"] = [
+        by_role[role_id]
+        for role_id in reversed(CORPUS.GOVERNED_ROLE_ORDER)
+    ]
+    return corpus
 
 
 class CodexCorpusFixtureGroupATests(unittest.TestCase):
@@ -251,7 +250,25 @@ class CodexCorpusFixtureGroupATests(unittest.TestCase):
             for binding in role["route_bindings"]
             if binding["admission_status"] == "admitted"
         }
-        schedule = CORPUS.schedule_admitted_roles(validated, admitted_route_ids=admitted_route_ids)
+        active_route_bindings = [
+            binding
+            for role in validated["roles"]
+            for binding in role["route_bindings"]
+        ]
+        schedule = CORPUS.schedule_admitted_roles(
+            validated,
+            admitted_route_ids=admitted_route_ids,
+            active_route_bindings=active_route_bindings,
+            trusted_route_authority_binding={
+                "id": "g56r-003-active-route-authority",
+                "digest": CORPUS.digest(
+                    sorted(
+                        active_route_bindings,
+                        key=lambda item: (item["role_id"], item["route_id"]),
+                    )
+                ),
+            },
+        )
         scheduled_roles = {
             item["role_id"]
             for bucket in ("required_core", "optional_helpers")

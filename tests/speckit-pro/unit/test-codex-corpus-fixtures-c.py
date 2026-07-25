@@ -15,6 +15,7 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/qualification_corpus.py"
 FIXTURE_ROOT = ROOT / "tests/speckit-pro/layer6-efficiency/fixtures-codex"
+CORPUS_MANIFEST_PATH = FIXTURE_ROOT / "corpus-manifest.json"
 
 ROLE_ORDER = (
     "analyze-executor",
@@ -231,8 +232,8 @@ class CodexCorpusFixturesCTests(unittest.TestCase):
                 self.assertEqual(fixture, role_fixture(role_id))
                 fixtures[role_id] = fixture
 
-        roles = [fixtures.get(role_id, role_fixture(role_id)) for role_id in ROLE_ORDER]
-        validated = self.corpus.validate_role_corpus(role_corpus(roles), repo_root=ROOT)
+        corpus = json.loads(CORPUS_MANIFEST_PATH.read_text(encoding="utf-8"))
+        validated = self.corpus.validate_role_corpus(corpus, repo_root=ROOT)
 
         stats = self.corpus.corpus_statistics(validated)
         self.assertEqual(stats["required_core_roles"], 11)
@@ -244,10 +245,28 @@ class CodexCorpusFixturesCTests(unittest.TestCase):
 
         admitted_route_ids = {
             route["route_id"]
-            for role in roles
+            for role in validated["roles"]
             for route in role["route_bindings"]
         }
-        schedule = self.corpus.schedule_admitted_roles(validated, admitted_route_ids=admitted_route_ids)
+        active_route_bindings = [
+            route
+            for role in validated["roles"]
+            for route in role["route_bindings"]
+        ]
+        schedule = self.corpus.schedule_admitted_roles(
+            validated,
+            admitted_route_ids=admitted_route_ids,
+            active_route_bindings=active_route_bindings,
+            trusted_route_authority_binding={
+                "id": "g56r-003-active-route-authority",
+                "digest": self.corpus.digest(
+                    sorted(
+                        active_route_bindings,
+                        key=lambda item: (item["role_id"], item["route_id"]),
+                    )
+                ),
+            },
+        )
         self.assertEqual(
             [entry["role_id"] for entry in schedule["unschedulable_governed"]],
             ["consensus-synthesizer", "gate-validator"],

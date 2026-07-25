@@ -664,6 +664,21 @@ def _derived_delivery_status(trace: dict, observations: dict[str, dict]) -> str:
     return "delivered"
 
 
+def _score_ineligibility_reasons(trace: dict, delivery_status: str) -> list[str]:
+    if delivery_status != "delivered":
+        return [f"delivery_{delivery_status}"]
+    disposition = trace["treatment_disposition"]
+    if disposition == "hard_fail":
+        return ["treatment_hard_fail"]
+    if disposition != "proven":
+        return ["treatment_unknown"]
+    if trace["disposition_reasons"] != [
+        "configured_route_proof_and_complete_reroute_monitoring"
+    ]:
+        return ["treatment_profile_only"]
+    return []
+
+
 def _expected_route_proof(trace: dict) -> dict:
     proof = trace["configured_route_proof"]
     if proof is None:
@@ -752,8 +767,8 @@ def _validate_assignment(assignment: object, trace: dict, materialization: dict)
     delivery_status = _derived_delivery_status(trace, observations)
     if row["delivery_status"] != delivery_status:
         raise ValueError("qualification delivery status does not match the treatment trace")
-    derived_eligible = delivery_status == "delivered"
-    expected_reasons = [] if derived_eligible else [f"delivery_{delivery_status}"]
+    expected_reasons = _score_ineligibility_reasons(trace, delivery_status)
+    derived_eligible = not expected_reasons
     if row["score_eligible"] != derived_eligible:
         raise ValueError("declared score eligibility does not match derived eligibility")
     if reasons != expected_reasons:

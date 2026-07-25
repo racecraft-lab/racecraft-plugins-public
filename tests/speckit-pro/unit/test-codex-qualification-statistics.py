@@ -153,6 +153,17 @@ def content_id(value: dict, identity_field: str) -> str:
     return digest({key: item for key, item in value.items() if key != identity_field})
 
 
+def seal_analysis_plan(plan: dict) -> dict:
+    sealed = copy.deepcopy(plan)
+    sealed["analysis_plan_digest"] = digest({
+        key: value
+        for key, value in sealed.items()
+        if key not in {"analysis_plan_id", "analysis_plan_digest"}
+    })
+    sealed["analysis_plan_id"] = content_id(sealed, "analysis_plan_id")
+    return sealed
+
+
 def write_canonical_json(path: Path, value: object) -> None:
     path.write_text(canonical_json(value), encoding="utf-8")
 
@@ -253,7 +264,7 @@ def campaign_budget_fixture() -> dict:
 
 
 def analysis_plan_fixture(cluster_unit: str = "role", per_cluster_minimum: int = 1) -> dict:
-    return {
+    return seal_analysis_plan({
         "schema_version": "analysis-plan.v1",
         "analysis_plan_id": digest("analysis-plan"),
         "analysis_plan_version": "2026-07-24.calibration",
@@ -339,7 +350,7 @@ def analysis_plan_fixture(cluster_unit: str = "role", per_cluster_minimum: int =
             "uncertain_result": "inconclusive",
             "no_forced_ranking": True,
         },
-    }
+    })
 
 
 def resource_vector(
@@ -454,7 +465,7 @@ def paired_outcomes(
 
 def analysis_replay_request() -> dict:
     plan = analysis_plan_fixture(per_cluster_minimum=1)
-    return {
+    request = {
         "schema_version": "analysis-replay-request.v1",
         "analysis_plan": plan,
         "partition": partition_binding(),
@@ -483,6 +494,8 @@ def analysis_replay_request() -> dict:
             "operator_only_raw_evidence_root": "operator-retention://g56r-003/calibration",
         },
     }
+    request["source_lineage"] = source_lineage_fixture(request)
+    return request
 
 
 def source_lineage_fixture(request: dict) -> dict:
@@ -492,7 +505,10 @@ def source_lineage_fixture(request: dict) -> dict:
     materialization = binding("canonical-materialization")
     treatment_trace = binding("immutable-treatment-trace")
     corpus = binding("governed-twelve-role-corpus")
-    score_bundle = binding("accepted-score-bundle")
+    score_bundle = {
+        "id": "accepted-score-bundle",
+        "digest": digest(request["paired_outcomes"]),
+    }
     analysis_plan = object_binding(
         plan["analysis_plan_id"],
         plan["analysis_plan_digest"],
@@ -521,6 +537,7 @@ def source_lineage_fixture(request: dict) -> dict:
         },
         "score_bundle": {
             "score_bundle_binding": score_bundle,
+            "paired_outcomes_digest": digest(request["paired_outcomes"]),
             "execution_trace_binding": copy.deepcopy(treatment_trace),
             "corpus_binding": copy.deepcopy(corpus),
             "candidate_freeze_binding": copy.deepcopy(successor_freeze["candidate_freeze_binding"]),
@@ -706,6 +723,25 @@ class QualificationStatisticsTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     self.evaluate(plan, paired_outcomes())
 
+    def test_frozen_plan_identity_and_partition_authority_reject_drift(self) -> None:
+        stale_identity = analysis_plan_fixture()
+        stale_identity["quality_floors"]["semantic"]["minimum"] = 0.86
+        with self.assertRaisesRegex(ValueError, "analysis plan digest does not match"):
+            self.evaluate(stale_identity, paired_outcomes())
+
+        alternate_partition = partition_binding()
+        alternate_partition["partition_id"] = "alternate-calibration-partition"
+        alternate_partition["partition_digest"] = digest("alternate-calibration-partition")
+        result = self.evaluate(
+            analysis_plan_fixture(),
+            paired_outcomes(),
+            partition=alternate_partition,
+        )
+
+        self.assertEqual(result["decision"], "invalid")
+        self.assertIn("partition_binding_mismatch", result["reason_codes"])
+        self.assertEqual(result["partition_boundary"]["status"], "fail")
+
         post_cohort = analysis_plan_fixture()
         post_cohort["freeze_provenance"]["cohort_outcome_observed"] = True
         with self.assertRaises(ValueError):
@@ -809,6 +845,7 @@ class QualificationStatisticsTests(unittest.TestCase):
                 plan = analysis_plan_fixture()
                 outcomes = paired_outcomes(cluster_count=2, pairs_per_cluster=1)
                 plan["campaign_budget"][field] = ceiling
+                plan = seal_analysis_plan(plan)
                 if row_override is not None:
                     key, value = row_override
                     outcomes[0][key] = value
@@ -943,6 +980,7 @@ class QualificationStatisticsTests(unittest.TestCase):
     def test_transient_harness_failures_use_capped_complete_pair_reruns(self) -> None:
         plan = analysis_plan_fixture(per_cluster_minimum=1)
         plan["attrition_policy"]["cap"] = 0.5
+        plan = seal_analysis_plan(plan)
         outcomes = [
             outcome(
                 "pair-rerun",
@@ -987,6 +1025,7 @@ class QualificationStatisticsTests(unittest.TestCase):
                 outcome(
                     pair_id,
                     "candidate",
+                    role_id=f"role-control-{index}",
                     semantic_score=0.9,
                     reliability_score=0.98,
                     vector=resource_vector(80, 8, 35, 900),
@@ -994,6 +1033,7 @@ class QualificationStatisticsTests(unittest.TestCase):
                 outcome(
                     pair_id,
                     "comparator",
+                    role_id=f"role-control-{index}",
                     semantic_score=0.87,
                     reliability_score=0.96,
                     vector=resource_vector(100, 10, 40, 1000),
@@ -1062,6 +1102,7 @@ class QualificationStatisticsTests(unittest.TestCase):
 
         after_cap = copy.deepcopy(plan)
         after_cap["attrition_policy"]["cap"] = 1.0
+        after_cap = seal_analysis_plan(after_cap)
         incomplete_after_cap = [
             outcome(
                 "pair-after-cap",
@@ -1116,6 +1157,7 @@ class QualificationStatisticsTests(unittest.TestCase):
 
         attrition_cap = analysis_plan_fixture()
         attrition_cap["attrition_policy"]["cap"] = 0.0
+        attrition_cap = seal_analysis_plan(attrition_cap)
         resolved = copy.deepcopy(incomplete_after_cap[:2])
         resolved.extend([
             outcome(
@@ -1180,6 +1222,7 @@ class QualificationStatisticsTests(unittest.TestCase):
         plan = analysis_plan_fixture()
         too_few_tasks = copy.deepcopy(plan)
         too_few_tasks["workload_manifest"]["minimum_unique_tasks"] = 7
+        too_few_tasks = seal_analysis_plan(too_few_tasks)
 
         minimum_result = self.evaluate(too_few_tasks, paired_outcomes())
 
@@ -1356,6 +1399,19 @@ class QualificationStatisticsTests(unittest.TestCase):
         self.assertEqual(result["non_inferiority"]["status"], "uncertain")
         self.assertEqual(result["pareto"]["result"], "not_evaluated")
 
+    def test_non_inferiority_requires_two_independent_clusters(self) -> None:
+        result = self.evaluate(
+            analysis_plan_fixture(per_cluster_minimum=1),
+            paired_outcomes(cluster_count=1, pairs_per_cluster=3),
+        )
+
+        self.assertEqual(result["decision"], "inconclusive")
+        self.assertIn("independent_cluster_count_insufficient", result["reason_codes"])
+        endpoint = result["non_inferiority"]["endpoints"]["semantic_score"]
+        self.assertEqual(endpoint["status"], "uncertain")
+        self.assertEqual(endpoint["cluster_count"], 1)
+        self.assertIsNone(endpoint["lower_confidence_bound"])
+
     def test_raw_vector_pareto_cases_use_no_weights_or_forced_ranking(self) -> None:
         cases = [
             (
@@ -1513,6 +1569,22 @@ class DeterministicQualificationReplayTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.replay.build_analysis_replay_bundle(later_partition)
 
+        missing_lineage = analysis_replay_request()
+        del missing_lineage["source_lineage"]
+        with self.assertRaises(ValueError):
+            self.replay.build_analysis_replay_bundle(missing_lineage)
+
+        synthetic_outcomes = analysis_replay_request()
+        synthetic_outcomes["paired_outcomes"][0]["semantic_score"] = 1.0
+        synthetic_outcomes["source_lineage"]["score_bundle"][
+            "paired_outcomes_digest"
+        ] = digest(synthetic_outcomes["paired_outcomes"])
+        with self.assertRaisesRegex(
+            ValueError,
+            "score bundle binding does not bind paired outcomes",
+        ):
+            self.replay.build_analysis_replay_bundle(synthetic_outcomes)
+
     def test_analysis_replay_rejects_prohibited_live_raw_integrated_and_trace_mutation_boundaries(self) -> None:
         cases = [
             ("integrated_confirmation", ("partition",), partition_binding("integrated_confirmation", eligible=True)),
@@ -1590,6 +1662,50 @@ class DeterministicQualificationReplayTests(unittest.TestCase):
                 payload = json.loads(completed.stdout)
                 self.assertEqual(payload["status"], "error")
                 self.assertEqual(payload["reason"], "analysis_plan_schema_invalid")
+
+    def test_cli_freeze_analysis_plan_never_overwrites_an_existing_output(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            report_path = root / "calibration-report.json"
+            draft_path = root / "analysis-plan-draft.json"
+            output_path = root / "analysis-plan.json"
+            report = calibration_report_fixture()
+            draft = analysis_plan_fixture()
+            draft["status"] = "draft_from_calibration"
+            write_canonical_json(report_path, report)
+            write_canonical_json(draft_path, draft)
+
+            first = run_qualification_cli(
+                "freeze-analysis-plan",
+                "--calibration-report", str(report_path),
+                "--draft-plan", str(draft_path),
+                "--output", str(output_path),
+            )
+            original = output_path.read_bytes()
+            second = run_qualification_cli(
+                "freeze-analysis-plan",
+                "--calibration-report", str(report_path),
+                "--draft-plan", str(draft_path),
+                "--output", str(output_path),
+            )
+
+            self.assertEqual(first.returncode, 0, first.stderr)
+            self.assertEqual(second.returncode, 2)
+            self.assertEqual(output_path.read_bytes(), original)
+
+            target_path = root / "symlink-target.json"
+            target_path.write_text("do-not-overwrite\n", encoding="utf-8")
+            symlink_path = root / "symlink-output.json"
+            symlink_path.symlink_to(target_path)
+            symlinked = run_qualification_cli(
+                "freeze-analysis-plan",
+                "--calibration-report", str(report_path),
+                "--draft-plan", str(draft_path),
+                "--output", str(symlink_path),
+            )
+
+            self.assertEqual(symlinked.returncode, 2)
+            self.assertEqual(target_path.read_text(encoding="utf-8"), "do-not-overwrite\n")
 
 
 if __name__ == "__main__":

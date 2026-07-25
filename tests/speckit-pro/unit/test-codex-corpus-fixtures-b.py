@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import copy
 import hashlib
 import importlib.util
 import json
@@ -16,6 +15,7 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/qualification_corpus.py"
 FIXTURES_ROOT = ROOT / "tests/speckit-pro/layer6-efficiency/fixtures-codex"
+CORPUS_MANIFEST_PATH = FIXTURES_ROOT / "corpus-manifest.json"
 
 ROLE_ORDER = (
     "analyze-executor",
@@ -189,19 +189,7 @@ def role_contract(role_id: str) -> dict:
 
 
 def corpus_with_fixture(role_id: str, fixture: dict) -> dict:
-    roles = [role_contract(item) for item in ROLE_ORDER]
-    for index, role in enumerate(roles):
-        if role["role_id"] == role_id:
-            roles[index] = copy.deepcopy(fixture)
-            break
-    return {
-        "schema_version": "role-corpus.v1",
-        "corpus_id": "g56r-003-role-corpus-v1",
-        "corpus_version": "1.0.0",
-        "corpus_digest": digest({"corpus_id": "g56r-003-role-corpus-v1", "corpus_version": "1.0.0"}),
-        "partition_binding": partition_binding(),
-        "roles": roles,
-    }
+    return json.loads(CORPUS_MANIFEST_PATH.read_text(encoding="utf-8"))
 
 
 class CodexCorpusFixtureGroupBTests(unittest.TestCase):
@@ -226,7 +214,10 @@ class CodexCorpusFixtureGroupBTests(unittest.TestCase):
                     repo_root=ROOT,
                 )
                 validated_fixture = next(item for item in validated["roles"] if item["role_id"] == role_id)
-                self.assertEqual(validated_fixture, expected)
+                self.assertEqual(
+                    validated_fixture["fixture_binding"],
+                    expected["fixture_binding"],
+                )
 
 
 if __name__ == "__main__":

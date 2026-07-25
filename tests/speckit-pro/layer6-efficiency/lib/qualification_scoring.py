@@ -1080,7 +1080,7 @@ def evaluate_blinded_ballots(gate_result: object, value: object) -> dict:
     )
 
 
-def _semantic_result_record(value: object) -> dict | None:
+def _semantic_result_record(value: object, *, gate_result: dict | None = None) -> dict | None:
     if value is None:
         return None
     result = _closed(_copy.deepcopy(value), _SEMANTIC_RESULT_FIELDS, "semantic result")
@@ -1116,6 +1116,27 @@ def _semantic_result_record(value: object) -> dict | None:
         raise ValueError("semantic result digest does not match content")
     if result["semantic_result_id"] != content_id(result, "semantic_result_id"):
         raise ValueError("semantic result ID does not match content")
+    if gate_result is not None:
+        replay_request = {
+            "score_bundle_draft_id": result["score_bundle_draft_id"],
+            "ballots": [
+                {field: ballot[field] for field in _BALLOT_INPUT_FIELDS}
+                for ballot in ballots
+            ],
+            "adjudication": (
+                None
+                if adjudication is None
+                else {
+                    field: adjudication[field]
+                    for field in _ADJUDICATION_INPUT_FIELDS
+                }
+            ),
+        }
+        replayed = evaluate_blinded_ballots(gate_result, replay_request)
+        if result != replayed:
+            if replayed["failure_code"] == "ballot_non_blind":
+                raise ValueError("semantic result replays from non-blind ballot evidence")
+            raise ValueError("semantic result does not replay from ballot evidence")
     return result
 
 
@@ -1152,7 +1173,10 @@ def _score_bundle_request(value: object) -> dict:
         raise ValueError("embedded trace documents are not allowed in score bundles")
     request = _closed(_copy.deepcopy(value), _SCORE_BUNDLE_REQUEST_FIELDS, "score bundle request")
     gate_result = assert_semantic_scoring_allowed(request["gate_result"])
-    semantic_result = _semantic_result_record(request["semantic_result"])
+    semantic_result = _semantic_result_record(
+        request["semantic_result"],
+        gate_result=gate_result,
+    )
     bindings = {
         field: _binding_record(request[field], field.replace("_", " "))
         for field in _SCORE_BINDING_FIELDS
@@ -1295,6 +1319,92 @@ def sanitize_committed_scorer_evidence(value: object) -> dict:
     return validate_score_bundle(evidence)
 
 
+def _validate_accepted_semantic_evidence(
+    ballots: list[dict],
+    adjudication: dict | None,
+    semantic_score: float | None,
+    reliability_score: float | None,
+    rubric_binding: dict,
+) -> None:
+    replayed_ballots = [
+        _ballot_record({
+            field: ballot[field]
+            for field in _BALLOT_INPUT_FIELDS
+        })
+        for ballot in ballots
+    ]
+    if replayed_ballots != ballots:
+        raise ValueError("accepted semantic score contains invalid ballot evidence")
+    if len(ballots) != 2:
+        raise ValueError("accepted semantic score requires exactly two ballots")
+    if any(ballot["candidate_blind"] is not True for ballot in ballots):
+        raise ValueError("accepted semantic score contains non-blind ballot evidence")
+    if any(not ballot["provenance_refs"] for ballot in ballots):
+        raise ValueError("accepted semantic score has incomplete ballot provenance")
+    if len({ballot["scorer_id"] for ballot in ballots}) != 2:
+        raise ValueError("accepted semantic score reuses a scorer identity")
+    if len({ballot["scorer_execution_id"] for ballot in ballots}) != 2:
+        raise ValueError("accepted semantic score reuses a scorer execution")
+    if any(not _opaque_id(ballot["scorer_id"]) for ballot in ballots):
+        raise ValueError("accepted semantic score has an invalid scorer identity")
+    if any(ballot["scorer_status"] != "current" for ballot in ballots):
+        raise ValueError("accepted semantic score has a stale scorer")
+    if any(ballot["calibration_status"] != "current" for ballot in ballots):
+        raise ValueError("accepted semantic score has stale scorer calibration")
+    if (
+        any(ballot["rubric_status"] != "frozen" for ballot in ballots)
+        or _rubric_binding(ballots[0]) != _rubric_binding(ballots[1])
+    ):
+        raise ValueError("accepted semantic score has stale or mismatched rubric evidence")
+    if rubric_binding != _binding(
+        ballots[0]["rubric_id"],
+        ballots[0]["rubric_digest"],
+    ):
+        raise ValueError(
+            "accepted semantic score does not match the frozen rubric binding"
+        )
+    disagreement = ballots[0]["outcome"] != ballots[1]["outcome"]
+    if disagreement != (adjudication is not None):
+        raise ValueError("accepted semantic score adjudication does not match ballot disagreement")
+    if adjudication is not None:
+        replayed_adjudication = _adjudication_record(
+            {
+                field: adjudication[field]
+                for field in _ADJUDICATION_INPUT_FIELDS
+            },
+            ballots=ballots,
+        )
+        if replayed_adjudication != adjudication:
+            raise ValueError(
+                "accepted semantic score contains invalid adjudication evidence"
+            )
+        if not adjudication["provenance_refs"] or not _opaque_id(adjudication["adjudicator_id"]):
+            raise ValueError("accepted semantic score has invalid adjudicator provenance")
+        if adjudication["adjudicator_id"] in {ballot["scorer_id"] for ballot in ballots}:
+            raise ValueError("accepted semantic score reuses a primary scorer as adjudicator")
+        if adjudication["adjudicator_execution_id"] in {
+            ballot["scorer_execution_id"] for ballot in ballots
+        }:
+            raise ValueError("accepted semantic score reuses a primary scorer execution")
+        if (
+            adjudication["adjudicator_status"] != "current"
+            or adjudication["calibration_status"] != "current"
+            or adjudication["rubric_status"] != "frozen"
+            or _rubric_binding(adjudication) != _rubric_binding(ballots[0])
+        ):
+            raise ValueError("accepted semantic score has stale adjudicator evidence")
+    expected_semantic = round(
+        sum(ballot["criterion_scores"]["semantic"] for ballot in ballots) / 2,
+        6,
+    )
+    expected_reliability = round(
+        sum(ballot["criterion_scores"]["reliability"] for ballot in ballots) / 2,
+        6,
+    )
+    if semantic_score != expected_semantic or reliability_score != expected_reliability:
+        raise ValueError("accepted semantic scores do not match ballot evidence")
+
+
 def validate_score_bundle(value: object) -> dict:
     """Validate an already-built score bundle without accepting embedded traces."""
     bundle = _closed(_copy.deepcopy(value), _SCORE_BUNDLE_FIELDS, "score bundle")
@@ -1395,6 +1505,14 @@ def validate_score_bundle(value: object) -> dict:
     )
     bundle["semantic_score"] = _nullable_number(bundle["semantic_score"], "semantic score")
     bundle["reliability_score"] = _nullable_number(bundle["reliability_score"], "reliability score")
+    if failure_code == "none":
+        _validate_accepted_semantic_evidence(
+            bundle["ballots"],
+            bundle["adjudication"],
+            bundle["semantic_score"],
+            bundle["reliability_score"],
+            bundle["rubric_binding"],
+        )
     bundle["evidence_refs"] = _digest_refs(bundle["evidence_refs"], "score bundle evidence refs")
     if bundle["score_bundle_digest"] != digest(_score_bundle_digest_payload(bundle)):
         raise ValueError("score bundle digest does not match content")

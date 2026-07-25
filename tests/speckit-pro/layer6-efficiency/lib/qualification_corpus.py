@@ -99,6 +99,7 @@ _FIXTURE_FIELDS = frozenset({
     "invalidation_reason",
 })
 _OBJECTIVE_FIELDS = frozenset({"objective_id", "objective_digest"})
+_BINDING_FIELDS = frozenset({"id", "digest"})
 _PARTITION_FIELDS = frozenset({
     "partition_id",
     "partition_type",
@@ -117,6 +118,7 @@ _ROUTE_FIELDS = frozenset({
     "route_digest",
     "admission_status",
 })
+_FIXTURE_ROOT = "tests/speckit-pro/layer6-efficiency/fixtures-codex"
 
 
 def canonical_bytes(value: object) -> bytes:
@@ -211,7 +213,25 @@ def _validate_source_binding(value: object, *, role_id: str, repo_root: _Path) -
     return _copy.deepcopy(row)
 
 
-def _validate_fixture_binding(value: object) -> dict:
+def _fixture_relative_path(role_id: str) -> str:
+    return f"{_FIXTURE_ROOT}/{role_id}/fixture.json"
+
+
+def _fixture_bytes(repo_root: _Path, role_id: str) -> bytes:
+    path = repo_root / _fixture_relative_path(role_id)
+    try:
+        raw = path.read_bytes()
+        fixture = _json.loads(raw.decode("utf-8"))
+    except (OSError, UnicodeDecodeError, _json.JSONDecodeError) as exc:
+        raise ValueError("role fixture authority is missing or invalid") from exc
+    if raw != canonical_bytes(fixture) + b"\n":
+        raise ValueError("role fixture authority is not canonical JSON plus LF")
+    if not isinstance(fixture, dict) or fixture.get("role_id") != role_id:
+        raise ValueError("role fixture authority does not match governed role")
+    return raw
+
+
+def _validate_fixture_binding(value: object, *, role_id: str, repo_root: _Path) -> dict:
     row = _closed(value, _FIXTURE_FIELDS, "fixture binding")
     _text(row["fixture_id"], "fixture ID")
     _text(row["fixture_version"], "fixture version")
@@ -220,6 +240,9 @@ def _validate_fixture_binding(value: object) -> dict:
         raise ValueError("stale fixture cannot be scheduled")
     if row["invalidated_at"] is not None or row["invalidation_reason"] is not None:
         raise ValueError("stale fixture cannot be scheduled")
+    fixture = _json.loads(_fixture_bytes(repo_root, role_id).decode("utf-8"))
+    if row != fixture.get("fixture_binding"):
+        raise ValueError("fixture digest does not match canonical fixture authority")
     return _copy.deepcopy(row)
 
 
@@ -360,13 +383,17 @@ def _validate_role(value: object, *, repo_root: _Path, corpus_partition: dict) -
         if role_id in _NON_EXECUTABLE_CORE_SET:
             raise ValueError("non-executable governed role cannot be marked executable")
         raise ValueError("executable governed role cannot be marked non-executable")
-    return {
+    validated = {
         "role_id": role_id,
         "required_core": required_core,
         "optional_helper": optional_helper,
         "executable": executable,
         "source_binding": _validate_source_binding(row["source_binding"], role_id=role_id, repo_root=repo_root),
-        "fixture_binding": _validate_fixture_binding(row["fixture_binding"]),
+        "fixture_binding": _validate_fixture_binding(
+            row["fixture_binding"],
+            role_id=role_id,
+            repo_root=repo_root,
+        ),
         "objective_binding": _validate_objective_binding(row["objective_binding"]),
         "partition_binding": _validate_partition_binding(
             row["partition_binding"], expected=corpus_partition, label="role partition binding",
@@ -380,6 +407,11 @@ def _validate_role(value: object, *, repo_root: _Path, corpus_partition: dict) -
             row["route_bindings"], role_id=role_id, executable=executable,
         ),
     }
+    fixture_authority = _json.loads(_fixture_bytes(repo_root, role_id).decode("utf-8"))
+    fixture_authority["partition_binding"] = _copy.deepcopy(corpus_partition)
+    if validated != fixture_authority:
+        raise ValueError("role contract does not match canonical fixture authority")
+    return validated
 
 
 def validate_role_corpus(corpus: object, *, repo_root: _Path | str | None = None) -> dict:
@@ -413,6 +445,21 @@ def validate_role_corpus(corpus: object, *, repo_root: _Path | str | None = None
         _validate_role(role, repo_root=root, corpus_partition=corpus_partition)
         for role in roles
     ]
+    expected_corpus_digest = digest({
+        "corpus_id": value["corpus_id"],
+        "corpus_version": value["corpus_version"],
+        "fixture_byte_digests": [
+            {
+                "fixture_digest": digest(_fixture_bytes(root, role_id)),
+                "fixture_path": _fixture_relative_path(role_id),
+                "role_id": role_id,
+            }
+            for role_id in GOVERNED_ROLE_ORDER
+        ],
+        "partition_binding": corpus_partition,
+    })
+    if value["corpus_digest"] != expected_corpus_digest:
+        raise ValueError("corpus digest does not match canonical fixture bytes")
     value["partition_binding"] = corpus_partition
     value["roles"] = sorted(validated_roles, key=lambda role: _ROLE_INDEX[role["role_id"]])
     return value
@@ -457,8 +504,48 @@ def _schedule_entry(role: dict, *, skip_reasons: list[str] | None = None) -> dic
     return entry
 
 
-def schedule_admitted_roles(corpus: dict, *, admitted_route_ids: _Iterable[str]) -> dict:
+def schedule_admitted_roles(
+    corpus: dict,
+    *,
+    admitted_route_ids: _Iterable[str],
+    active_route_bindings: _Iterable[dict] | None = None,
+    trusted_route_authority_binding: dict | None = None,
+) -> dict:
     """Return only executable roles whose route IDs are admitted by the active freeze."""
+    if active_route_bindings is None:
+        raise ValueError("active freeze route authority is required")
+    if trusted_route_authority_binding is None:
+        raise ValueError("trusted active freeze route authority binding is required")
+    trusted_authority = _closed(
+        _copy.deepcopy(trusted_route_authority_binding),
+        _BINDING_FIELDS,
+        "trusted active freeze route authority binding",
+    )
+    _text(
+        trusted_authority["id"],
+        "trusted active freeze route authority ID",
+    )
+    trusted_routes_digest = _digest(
+        trusted_authority["digest"],
+        "trusted active freeze route authority digest",
+    )
+    active_by_route: dict[str, dict] = {}
+    for raw in active_route_bindings:
+        if not isinstance(raw, dict):
+            raise ValueError("active freeze route authority must contain route bindings")
+        role_id = raw.get("role_id")
+        if role_id not in _EXECUTABLE_ROLE_SET:
+            raise ValueError("active freeze route authority has an invalid governed role")
+        binding = _validate_route_bindings([raw], role_id=role_id, executable=True)[0]
+        if binding["route_id"] in active_by_route:
+            raise ValueError("active freeze route authority contains duplicate routes")
+        active_by_route[binding["route_id"]] = binding
+    normalized_active_routes = sorted(
+        active_by_route.values(),
+        key=lambda item: (item["role_id"], item["route_id"]),
+    )
+    if digest(normalized_active_routes) != trusted_routes_digest:
+        raise ValueError("active freeze route authority does not match trusted route digest")
     admitted = set(admitted_route_ids)
     schedule = {"required_core": [], "optional_helpers": [], "unschedulable_governed": []}
     roles = sorted(corpus["roles"], key=lambda role: _ROLE_INDEX[role["role_id"]])
@@ -472,6 +559,9 @@ def schedule_admitted_roles(corpus: dict, *, admitted_route_ids: _Iterable[str])
         route_ids = {route["route_id"] for route in role["route_bindings"]}
         if not route_ids or not route_ids <= admitted:
             raise ValueError("scheduled roles must have admitted route bindings")
+        for route in role["route_bindings"]:
+            if active_by_route.get(route["route_id"]) != route:
+                raise ValueError("scheduled route does not match active freeze authority")
         if role["optional_helper"]:
             schedule["optional_helpers"].append(entry)
         else:

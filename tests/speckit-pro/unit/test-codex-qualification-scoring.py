@@ -7,7 +7,10 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
+import subprocess
 import sys
+import tempfile
 import types
 import unittest
 from pathlib import Path
@@ -17,6 +20,9 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/qualification_scoring.py"
 REPLAY_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/qualification_replay.py"
+QUALIFICATION_RUNNER_PATH = (
+    ROOT / "tests/speckit-pro/layer6-efficiency/run-codex-qualification.py"
+)
 SCORE_BUNDLE_SCHEMA_PATH = (
     ROOT / "tests/speckit-pro/layer6-efficiency/contracts/score-bundle.schema.json"
 )
@@ -780,6 +786,136 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
 
         request["gate_result"]["trace_digest"] = digest({"trace": "mutated-after-build"})
         self.assertEqual(bundle["execution_trace_binding"], original["execution_trace_binding"])
+
+    def test_cli_score_rejects_a_fabricated_treatment_receipt(self) -> None:
+        gate_result = self.scoring.evaluate_hard_gates(gate_request())
+        semantic_result = self.scoring.evaluate_blinded_ballots(
+            gate_result,
+            semantic_request(),
+        )
+        request = score_bundle_request(gate_result, semantic_result=semantic_result)
+        validated_treatment = {
+            "status": "valid",
+            "validated_treatment": "exact",
+            "score_eligible_count": 1,
+            "score_eligible_execution_trace_ids": [
+                request["execution_trace_binding"]["id"],
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            request_path = root / "score-request.json"
+            treatment_path = root / "validated-treatment.json"
+            request_path.write_text(
+                json.dumps(request, sort_keys=True, separators=(",", ":")) + "\n",
+                encoding="utf-8",
+            )
+            treatment_path.write_text(
+                json.dumps(
+                    validated_treatment,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ) + "\n",
+                encoding="utf-8",
+            )
+            environment = os.environ.copy()
+            environment["PYTHONDONTWRITEBYTECODE"] = "1"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(QUALIFICATION_RUNNER_PATH),
+                    "score",
+                    "--score-request",
+                    str(request_path),
+                    "--validated-treatment",
+                    str(treatment_path),
+                ],
+                cwd=ROOT,
+                text=True,
+                encoding="utf-8",
+                capture_output=True,
+                env=environment,
+                shell=False,
+                check=False,
+            )
+
+        self.assertEqual(completed.returncode, 2)
+        payload = json.loads(completed.stdout)
+        self.assertEqual(payload["status"], "blocked")
+        self.assertEqual(payload["reason"], "score_before_treatment_refused")
+
+    def test_score_bundle_builder_rejects_resealed_non_blind_semantic_result(self) -> None:
+        gate_result = self.scoring.evaluate_hard_gates(gate_request())
+        semantic_result = self.scoring.evaluate_blinded_ballots(gate_result, semantic_request())
+        ballot = semantic_result["ballots"][0]
+        ballot["candidate_blind"] = False
+        ballot["ballot_digest"] = self.scoring.digest(ballot_digest_payload(ballot))
+        ballot["ballot_id"] = self.scoring.content_id(ballot, "ballot_id")
+        semantic_result["semantic_result_digest"] = self.scoring.digest(
+            semantic_digest_payload(semantic_result)
+        )
+        semantic_result["semantic_result_id"] = self.scoring.content_id(
+            semantic_result,
+            "semantic_result_id",
+        )
+
+        with self.assertRaisesRegex(ValueError, "non-blind"):
+            self.scoring.build_score_bundle(
+                score_bundle_request(gate_result, semantic_result=semantic_result)
+            )
+
+    def test_score_bundle_validation_rejects_resealed_duplicate_scorer_execution(self) -> None:
+        gate_result = self.scoring.evaluate_hard_gates(gate_request())
+        semantic_result = self.scoring.evaluate_blinded_ballots(gate_result, semantic_request())
+        bundle = self.scoring.build_score_bundle(
+            score_bundle_request(gate_result, semantic_result=semantic_result)
+        )
+        ballot = bundle["ballots"][1]
+        ballot["scorer_execution_id"] = bundle["ballots"][0]["scorer_execution_id"]
+        ballot["ballot_digest"] = self.scoring.digest(ballot_digest_payload(ballot))
+        ballot["ballot_id"] = self.scoring.content_id(ballot, "ballot_id")
+        bundle["ballot_bindings"][1] = {
+            "id": ballot["ballot_id"],
+            "digest": ballot["ballot_digest"],
+        }
+        bundle["score_bundle_digest"] = self.scoring.digest(score_bundle_digest_payload(bundle))
+        bundle["score_bundle_id"] = self.scoring.content_id(bundle, "score_bundle_id")
+
+        with self.assertRaisesRegex(ValueError, "scorer execution"):
+            self.scoring.validate_score_bundle(bundle)
+
+    def test_score_bundle_validation_rejects_resealed_rubric_drift(self) -> None:
+        gate_result = self.scoring.evaluate_hard_gates(gate_request())
+        semantic_result = self.scoring.evaluate_blinded_ballots(
+            gate_result,
+            semantic_request(),
+        )
+        bundle = self.scoring.build_score_bundle(
+            score_bundle_request(gate_result, semantic_result=semantic_result)
+        )
+        for index, ballot in enumerate(bundle["ballots"]):
+            ballot["rubric_id"] = "attacker-controlled-rubric"
+            ballot["rubric_version"] = "9.9.9"
+            ballot["rubric_digest"] = digest("attacker-controlled-rubric")
+            ballot["ballot_digest"] = self.scoring.digest(
+                ballot_digest_payload(ballot)
+            )
+            ballot["ballot_id"] = self.scoring.content_id(ballot, "ballot_id")
+            bundle["ballot_bindings"][index] = {
+                "id": ballot["ballot_id"],
+                "digest": ballot["ballot_digest"],
+            }
+        bundle["score_bundle_digest"] = self.scoring.digest(
+            score_bundle_digest_payload(bundle)
+        )
+        bundle["score_bundle_id"] = self.scoring.content_id(
+            bundle,
+            "score_bundle_id",
+        )
+
+        with self.assertRaisesRegex(ValueError, "frozen rubric binding"):
+            self.scoring.validate_score_bundle(bundle)
 
     def test_score_bundle_requires_every_upstream_id_and_digest_join(self) -> None:
         gate_result = self.scoring.evaluate_hard_gates(gate_request())

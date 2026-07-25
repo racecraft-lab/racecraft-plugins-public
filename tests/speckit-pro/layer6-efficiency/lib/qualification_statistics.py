@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import copy
+import hashlib
+import json
 import math
 import re
 from collections import defaultdict
@@ -215,6 +217,19 @@ _ENDPOINTS = frozenset({"semantic_score", "reliability_score"})
 _ARMS = frozenset({"candidate", "comparator"})
 _ROUND_PLACES = 6
 _NORMAL = NormalDist()
+
+
+def _content_digest(value: object) -> str:
+    payload = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
 _DIGEST_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 _TRANSIENT_CLASSIFICATION = "independently_preclassified_transient_harness_failure"
 _CANDIDATE_TERMINAL_FAILURE_CODE_BY_STATE = {
@@ -606,6 +621,20 @@ def _validate_plan(analysis_plan: object) -> dict:
     if plan.get("schema_version") != "analysis-plan.v1" or plan.get("status") != "frozen":
         raise ValueError("analysis plan must be a frozen analysis-plan.v1 object")
     _require(plan, _ANALYSIS_PLAN_FIELDS, "analysis plan")
+    expected_digest = _content_digest({
+        key: value
+        for key, value in plan.items()
+        if key not in {"analysis_plan_id", "analysis_plan_digest"}
+    })
+    if plan["analysis_plan_digest"] != expected_digest:
+        raise ValueError("analysis plan digest does not match frozen content")
+    expected_id = _content_digest({
+        key: value
+        for key, value in plan.items()
+        if key != "analysis_plan_id"
+    })
+    if plan["analysis_plan_id"] != expected_id:
+        raise ValueError("analysis plan ID does not match frozen content")
     validated = plan
     validated["analysis_plan_id"] = _digest(plan["analysis_plan_id"], "analysis plan ID")
     validated["analysis_plan_version"] = _text(
@@ -1193,13 +1222,24 @@ def _cluster_endpoint(endpoint: str, pairs: list[dict], policy: dict) -> dict:
             "reason": "sample_size_insufficient",
         }
     if len(cluster_means) < 2:
-        lower_bound = mean_difference
-    else:
-        values = list(cluster_means.values())
-        variance = sum((value - mean_difference) ** 2 for value in values) / (len(values) - 1)
-        standard_error = math.sqrt(variance) / math.sqrt(len(values))
-        critical = _NORMAL.inv_cdf(1 - _adjusted_alpha(policy))
-        lower_bound = mean_difference - critical * standard_error
+        return {
+            "status": "uncertain",
+            "cluster_unit": cluster_unit,
+            "cluster_count": len(cluster_means),
+            "pair_count": pair_count,
+            "mean_difference": _round(mean_difference),
+            "lower_confidence_bound": None,
+            "margin": _round(policy["margins"][endpoint]),
+            "confidence_level": _round(policy["confidence_level"]),
+            "alpha": _round(policy["alpha"]),
+            "adjusted_alpha": _round(_adjusted_alpha(policy)),
+            "reason": "independent_cluster_count_insufficient",
+        }
+    values = list(cluster_means.values())
+    variance = sum((value - mean_difference) ** 2 for value in values) / (len(values) - 1)
+    standard_error = math.sqrt(variance) / math.sqrt(len(values))
+    critical = _NORMAL.inv_cdf(1 - _adjusted_alpha(policy))
+    lower_bound = mean_difference - critical * standard_error
     status = "pass" if lower_bound >= policy["margins"][endpoint] else "fail"
     return {
         "status": status,
@@ -1224,7 +1264,11 @@ def _evaluate_non_inferiority(plan: dict, pairs: list[dict]) -> tuple[dict, list
     reasons: list[str] = []
     if any(item["status"] == "uncertain" for item in endpoints.values()):
         status = "uncertain"
-        reasons.append("sample_size_insufficient")
+        reasons.extend(sorted({
+            item.get("reason", "sample_size_insufficient")
+            for item in endpoints.values()
+            if item["status"] == "uncertain"
+        }))
     elif any(item["status"] == "fail" for item in endpoints.values()):
         status = "fail"
         reasons.append("non_inferiority_failed")
@@ -1413,6 +1457,10 @@ def evaluate_qualification_decision(
     plan = _validate_plan(analysis_plan)
     partition_binding = _validate_partition(partition)
     partition_boundary, partition_reasons = _evaluate_partition_boundary(partition_binding)
+    if partition_binding != plan["calibration_partition_binding"]:
+        partition_reasons.append("partition_binding_mismatch")
+        partition_boundary["status"] = "fail"
+        partition_boundary["reason_codes"] = list(partition_reasons)
     if partition_reasons:
         return _decision_payload(
             plan=plan,

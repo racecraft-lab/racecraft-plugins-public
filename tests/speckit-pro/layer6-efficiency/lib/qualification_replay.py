@@ -48,8 +48,9 @@ _ANALYSIS_REQUEST_FIELDS = frozenset({
     "paired_outcomes",
     "binding_authorities",
     "execution_boundary",
+    "source_lineage",
 })
-_ANALYSIS_OPTIONAL_REQUEST_FIELDS = frozenset({"source_lineage"})
+_ANALYSIS_OPTIONAL_REQUEST_FIELDS = frozenset()
 _ANALYSIS_BINDING_FIELDS = frozenset({
     "analysis_plan_binding",
     "partition_binding",
@@ -105,6 +106,7 @@ _CORPUS_LINEAGE_FIELDS = frozenset({
 })
 _SCORE_BUNDLE_LINEAGE_FIELDS = frozenset({
     "score_bundle_binding",
+    "paired_outcomes_digest",
     "execution_trace_binding",
     "corpus_binding",
     "candidate_freeze_binding",
@@ -210,6 +212,7 @@ def _validate_source_lineage(
     authorities: dict,
     plan: dict,
     partition: dict,
+    paired_outcomes: list,
 ) -> dict:
     lineage = _closed(
         _copy.deepcopy(value),
@@ -339,6 +342,21 @@ def _validate_source_lineage(
         score_bundle["score_bundle_binding"],
         "score bundle",
     )
+    score_bundle["paired_outcomes_digest"] = _digest_ref(
+        score_bundle["paired_outcomes_digest"],
+        "score bundle paired outcomes digest",
+    )
+    if (
+        score_bundle["paired_outcomes_digest"]
+        != score_bundle["score_bundle_binding"]["digest"]
+    ):
+        raise ValueError(
+            "source lineage score bundle binding does not bind paired outcomes"
+        )
+    if score_bundle["paired_outcomes_digest"] != _scoring().digest(paired_outcomes):
+        raise ValueError(
+            "source lineage score bundle does not match paired outcomes"
+        )
     score_bundle["execution_trace_binding"] = _binding_record(
         score_bundle["execution_trace_binding"],
         "score bundle execution trace",
@@ -516,13 +534,13 @@ def _validate_analysis_request(value: object) -> dict:
     request["execution_boundary"] = _validate_execution_boundary(
         request["execution_boundary"]
     )
-    if "source_lineage" in request:
-        request["source_lineage"] = _validate_source_lineage(
-            request["source_lineage"],
-            request["binding_authorities"],
-            plan,
-            request["partition"],
-        )
+    request["source_lineage"] = _validate_source_lineage(
+        request["source_lineage"],
+        request["binding_authorities"],
+        plan,
+        request["partition"],
+        request["paired_outcomes"],
+    )
     if not isinstance(request["paired_outcomes"], list):
         raise ValueError("analysis replay paired outcomes must be an array")
     return request

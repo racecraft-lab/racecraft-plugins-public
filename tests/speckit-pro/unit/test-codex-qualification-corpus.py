@@ -218,68 +218,10 @@ def route_binding(role_id: str, *, admitted: bool = True) -> dict:
 
 
 def role_contract(role_id: str) -> dict:
-    executable = role_id in EXPECTED_EXECUTABLE_CORE or role_id in EXPECTED_HELPERS
-    required_core = role_id in EXPECTED_REQUIRED_CORE
-    source = source_path(role_id)
-    mutation = "read_only" if role_id in {
-        "autopilot-fast-helper",
-        "codebase-analyst",
-        "consensus-synthesizer",
-        "domain-researcher",
-        "gate-validator",
-        "spec-context-analyst",
-    } else "workspace_write"
-    return {
-        "role_id": role_id,
-        "required_core": required_core,
-        "optional_helper": role_id in EXPECTED_HELPERS,
-        "executable": executable,
-        "source_binding": {
-            "source_path": source,
-            "source_kind": "governed_markdown_contract" if role_id in EXPECTED_NON_EXECUTABLE_CORE else "codex_toml",
-            "source_digest": file_digest(source),
-        },
-        "fixture_binding": {
-            "fixture_id": f"g56r-003-fixture-{role_id}",
-            "fixture_version": "1.0.0",
-            "fixture_digest": digest({"fixture": role_id, "version": "1.0.0"}),
-            "fixture_state": "valid",
-            "current": True,
-            "invalidated_at": None,
-            "invalidation_reason": None,
-        },
-        "objective_binding": {
-            "objective_id": f"g56r-003-objective-{role_id}",
-            "objective_digest": digest({"objective": role_id, "partition": "calibration"}),
-        },
-        "partition_binding": partition_binding(),
-        "permitted_tools": ["filesystem.read", "shell.exec"] if mutation == "workspace_write" else ["filesystem.read"],
-        "sandbox": {
-            "mode": "workspace-write" if mutation == "workspace_write" else "read-only",
-            "network": "restricted",
-            "mutation": mutation,
-        },
-        "expected_artifacts": [
-            {
-                "artifact_contract_id": f"g56r-003-artifact-{role_id}-summary",
-                "artifact_type": "markdown_summary",
-                "artifact_digest": digest({"artifact": role_id, "type": "markdown_summary"}),
-            }
-        ],
-        "acceptance_oracle": {
-            "oracle_id": f"g56r-003-oracle-{role_id}",
-            "oracle_version": "1.0.0",
-            "oracle_digest": digest({"oracle": role_id, "version": "1.0.0"}),
-        },
-        "independent_review": {
-            "review_id": f"g56r-003-review-{role_id}",
-            "reviewer_digest": digest({"reviewer": "independent-corpus-reviewer"}),
-            "review_digest": digest({"review": role_id, "result": "passed"}),
-            "review_state": "passed",
-            "reviewed_at": CALIBRATION_TIME,
-        },
-        "route_bindings": [route_binding(role_id)] if executable else [],
-    }
+    fixture, _raw = read_fixture(role_id)
+    fixture = copy.deepcopy(fixture)
+    fixture["partition_binding"] = partition_binding()
+    return fixture
 
 
 def valid_corpus(*, role_order: tuple[str, ...] = tuple(reversed(EXPECTED_ROLE_ORDER))) -> dict:
@@ -288,10 +230,11 @@ def valid_corpus(*, role_order: tuple[str, ...] = tuple(reversed(EXPECTED_ROLE_O
         "schema_version": "role-corpus.v1",
         "corpus_id": "g56r-003-role-corpus-v1",
         "corpus_version": "1.0.0",
-        "corpus_digest": digest({"corpus_id": "g56r-003-role-corpus-v1", "corpus_version": "1.0.0"}),
+        "corpus_digest": "",
         "partition_binding": partition_binding(),
         "roles": roles,
     }
+    corpus["corpus_digest"] = digest(corpus_digest_payload(corpus))
     return corpus
 
 
@@ -300,6 +243,25 @@ def admitted_route_ids(corpus: dict) -> set[str]:
         binding["route_id"]
         for role in corpus["roles"]
         for binding in role["route_bindings"]
+    }
+
+
+def active_route_bindings(corpus: dict) -> list[dict]:
+    return [
+        copy.deepcopy(binding)
+        for role in corpus["roles"]
+        for binding in role["route_bindings"]
+    ]
+
+
+def trusted_route_authority_binding(corpus: dict) -> dict:
+    routes = sorted(
+        active_route_bindings(corpus),
+        key=lambda item: (item["role_id"], item["route_id"]),
+    )
+    return {
+        "id": "g56r-003-active-route-authority",
+        "digest": digest(routes),
     }
 
 
@@ -390,6 +352,20 @@ class CodexQualificationCorpusTests(unittest.TestCase):
             },
         )
 
+    def test_corpus_and_fixture_content_digests_are_recomputed(self) -> None:
+        with self.subTest(digest="corpus"):
+            corpus = valid_corpus()
+            corpus["corpus_digest"] = "sha256:" + "f" * 64
+            with self.assertRaisesRegex(ValueError, "corpus digest"):
+                self.corpus.validate_role_corpus(corpus, repo_root=ROOT)
+
+        with self.subTest(digest="fixture"):
+            corpus = valid_corpus()
+            role = next(item for item in corpus["roles"] if item["role_id"] == "phase-executor")
+            role["fixture_binding"]["fixture_digest"] = "sha256:" + "f" * 64
+            with self.assertRaisesRegex(ValueError, "fixture digest"):
+                self.corpus.validate_role_corpus(corpus, repo_root=ROOT)
+
     def test_committed_corpus_manifest_serializes_all_disjoint_fixture_groups(self) -> None:
         manifest, _raw = read_corpus_manifest()
 
@@ -443,7 +419,14 @@ class CodexQualificationCorpusTests(unittest.TestCase):
         manifest, _raw = read_corpus_manifest()
         validated = self.corpus.validate_role_corpus(manifest, repo_root=ROOT)
         admitted = admitted_route_ids(validated)
-        schedule = self.corpus.schedule_admitted_roles(validated, admitted_route_ids=admitted)
+        schedule = self.corpus.schedule_admitted_roles(
+            validated,
+            admitted_route_ids=admitted,
+            active_route_bindings=active_route_bindings(validated),
+            trusted_route_authority_binding=trusted_route_authority_binding(
+                validated
+            ),
+        )
 
         self.assertEqual([item["role_id"] for item in schedule["required_core"]], list(EXPECTED_EXECUTABLE_CORE))
         self.assertEqual([item["role_id"] for item in schedule["optional_helpers"]], ["autopilot-fast-helper"])
@@ -572,10 +555,29 @@ class CodexQualificationCorpusTests(unittest.TestCase):
             "independent review",
         )
 
+        def reseal_objective(corpus: dict) -> None:
+            objective = role(corpus)["objective_binding"]
+            objective["objective_id"] = "g56r-003-objective-resealed"
+            objective["objective_digest"] = digest(
+                {"objective": "resealed", "partition": "calibration"}
+            )
+
+        self.assert_rejects(
+            reseal_objective,
+            "canonical fixture authority",
+        )
+
     def test_scheduler_allows_only_executable_roles_with_admitted_routes(self) -> None:
         corpus = valid_corpus()
         validated = self.corpus.validate_role_corpus(corpus, repo_root=ROOT)
-        schedule = self.corpus.schedule_admitted_roles(validated, admitted_route_ids=admitted_route_ids(corpus))
+        schedule = self.corpus.schedule_admitted_roles(
+            validated,
+            admitted_route_ids=admitted_route_ids(corpus),
+            active_route_bindings=active_route_bindings(validated),
+            trusted_route_authority_binding=trusted_route_authority_binding(
+                validated
+            ),
+        )
 
         self.assertEqual(
             [item["role_id"] for item in schedule["required_core"]],
@@ -596,13 +598,47 @@ class CodexQualificationCorpusTests(unittest.TestCase):
         admitted = admitted_route_ids(corpus)
         admitted.remove("g56r-003-route-phase-executor")
         with self.assertRaisesRegex(ValueError, "admitted route"):
-            self.corpus.schedule_admitted_roles(validated, admitted_route_ids=admitted)
+            self.corpus.schedule_admitted_roles(
+                validated,
+                admitted_route_ids=admitted,
+                active_route_bindings=active_route_bindings(validated),
+                trusted_route_authority_binding=trusted_route_authority_binding(
+                    validated
+                ),
+            )
 
         def route_not_admitted(corpus: dict) -> None:
             role = next(item for item in corpus["roles"] if item["role_id"] == "phase-executor")
             role["route_bindings"][0] = route_binding("phase-executor", admitted=False)
 
         self.assert_rejects(route_not_admitted, "admitted route")
+
+    def test_scheduler_requires_exact_active_freeze_route_authority(self) -> None:
+        corpus = valid_corpus()
+        validated = self.corpus.validate_role_corpus(corpus, repo_root=ROOT)
+        authority = [
+            copy.deepcopy(route)
+            for role in validated["roles"]
+            for route in role["route_bindings"]
+        ]
+        phase_authority = next(
+            item for item in authority
+            if item["route_id"] == "g56r-003-route-phase-executor"
+        )
+        phase_authority["candidate_freeze_id"] = "sha256:" + "f" * 64
+        phase_authority["route_digest"] = digest({
+            key: phase_authority[key]
+            for key in ("agent_contract_id", "candidate_freeze_id", "role_id", "route_id")
+        })
+        trusted_authority = trusted_route_authority_binding(validated)
+
+        with self.assertRaisesRegex(ValueError, "active freeze"):
+            self.corpus.schedule_admitted_roles(
+                validated,
+                admitted_route_ids=admitted_route_ids(corpus),
+                active_route_bindings=authority,
+                trusted_route_authority_binding=trusted_authority,
+            )
 
     def test_closed_validation_rejects_unknown_fields(self) -> None:
         self.assert_rejects(

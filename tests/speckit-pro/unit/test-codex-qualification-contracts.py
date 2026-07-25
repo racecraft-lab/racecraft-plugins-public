@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[3]
 QUALIFICATION_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/qualification_contracts.py"
 QUALIFICATION_RUNNER_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/run-codex-qualification.py"
 SUCCESSOR_TEST_PATH = ROOT / "tests/speckit-pro/unit/test-codex-successor-capability.py"
+SCORING_TEST_PATH = ROOT / "tests/speckit-pro/unit/test-codex-qualification-scoring.py"
 TREATMENT_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/treatment_trace_schema.py"
 TREATMENT_FIXTURE_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
 CONTRACT_DIR = ROOT / "tests/speckit-pro/layer6-efficiency/contracts"
@@ -161,6 +162,17 @@ def load_successor_test_helpers():
     spec = importlib.util.spec_from_file_location(module_name, SUCCESSOR_TEST_PATH)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"cannot load {SUCCESSOR_TEST_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_scoring_test_helpers():
+    module_name = f"_g56r_003_scoring_test_helpers_{uuid4().hex}"
+    spec = importlib.util.spec_from_file_location(module_name, SCORING_TEST_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {SCORING_TEST_PATH}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -650,10 +662,32 @@ def successor_freeze_binding(successor_freeze: dict, candidate_route_id: str) ->
     }
 
 
-def qualification_bundle(treatment_bundle: dict, *, score_eligible: bool = True, delivery_status: str = "delivered") -> dict:
+def qualification_bundle(
+    treatment_bundle: dict,
+    *,
+    score_eligible: bool | None = None,
+    delivery_status: str = "delivered",
+) -> dict:
     source = rebound(copy.deepcopy(treatment_bundle))
     trace = source["treatment_traces"][0]
     proof = trace["configured_route_proof"]
+    if score_eligible is None:
+        score_eligible = (
+            delivery_status == "delivered"
+            and trace["treatment_disposition"] == "proven"
+            and trace["disposition_reasons"]
+            == ["configured_route_proof_and_complete_reroute_monitoring"]
+        )
+    if score_eligible:
+        score_ineligibility_reasons = []
+    elif delivery_status != "delivered":
+        score_ineligibility_reasons = [f"delivery_{delivery_status}"]
+    elif trace["treatment_disposition"] == "hard_fail":
+        score_ineligibility_reasons = ["treatment_hard_fail"]
+    elif trace["treatment_disposition"] != "proven":
+        score_ineligibility_reasons = ["treatment_unknown"]
+    else:
+        score_ineligibility_reasons = ["treatment_profile_only"]
     materialization = {
         "materialization_id": "sha256:" + "0" * 64,
         "owner_spec_id": "G56R-003",
@@ -679,7 +713,7 @@ def qualification_bundle(treatment_bundle: dict, *, score_eligible: bool = True,
         "configured_route_proof_id": proof["proof_id"],
         "delivery_status": delivery_status,
         "score_eligible": score_eligible,
-        "score_ineligibility_reasons": [] if score_eligible else [f"delivery_{delivery_status}"],
+        "score_ineligibility_reasons": score_ineligibility_reasons,
         "observations": [
             observed("assignment.requested_model", trace["requested_model"]),
             observed("assignment.requested_effort", trace["requested_effort"]),
@@ -1398,19 +1432,68 @@ class QualificationContractTests(unittest.TestCase):
         self.assertTrue(callable(self.qualification.validate_qualification_bundle))
         self.assertEqual(set(self.qualification.__all__), expected_api)
 
-    def test_scoreable_assignment_wraps_g56r002_trace_and_is_idempotent(self) -> None:
+    def test_unknown_treatment_assignment_is_non_scorable_and_idempotent(self) -> None:
         wrapper = qualification_bundle(self.base_treatment)
         first = self.validate(copy.deepcopy(wrapper))
         second = self.validate(copy.deepcopy(first))
         self.assertEqual(treatment.canonical_bytes(first), treatment.canonical_bytes(second))
         assignment = first["qualification_assignments"][0]
-        self.assertTrue(assignment["score_eligible"])
-        self.assertEqual(assignment["score_ineligibility_reasons"], [])
+        self.assertFalse(assignment["score_eligible"])
+        self.assertEqual(assignment["score_ineligibility_reasons"], ["treatment_unknown"])
         self.assertEqual(first["qualification_traces"][0]["owner_spec_id"], "G56R-003")
         self.assertEqual(
             first["qualification_traces"][0]["execution_trace_id"],
             first["qualification_assignments"][0]["execution_trace_id"],
         )
+
+    def test_treatment_disposition_and_proof_authority_gate_score_eligibility(self) -> None:
+        cases = (
+            ("unknown", ["effective_treatment_unknown"], ["treatment_unknown"], False),
+            (
+                "proven",
+                ["profile_supported_effective_treatment"],
+                ["treatment_profile_only"],
+                True,
+            ),
+            ("hard_fail", ["configuration_mismatch"], ["treatment_hard_fail"], True),
+        )
+        for disposition, disposition_reasons, expected_reasons, bypass_treatment_validation in cases:
+            with self.subTest(disposition=disposition, disposition_reasons=disposition_reasons):
+                treatment_bundle = copy.deepcopy(self.base_treatment)
+                trace = treatment_bundle["treatment_traces"][0]
+                trace["treatment_disposition"] = disposition
+                trace["disposition_reasons"] = disposition_reasons
+                trace["treatment_failures"] = [] if disposition == "proven" else [{
+                    "failure_code": disposition_reasons[0],
+                    "affected_field": "treatment.evidence",
+                    "expected_evidence_ref": None,
+                    "observed_evidence_ref": None,
+                    "resulting_disposition": disposition,
+                }]
+                treatment_bundle["fixture_provenance"]["expected_dispositions"] = [{
+                    "execution_trace_id": trace["objective_binding"]["execution_trace_id"],
+                    "treatment_disposition": disposition,
+                }]
+                wrapper = qualification_bundle(
+                    treatment_bundle,
+                    score_eligible=False,
+                    delivery_status="delivered",
+                )
+                assignment = wrapper["qualification_assignments"][0]
+                assignment["score_ineligibility_reasons"] = expected_reasons
+                wrapper = set_assignment_ids(wrapper)
+                if bypass_treatment_validation:
+                    self.qualification._validate_treatment_bundle = (
+                        lambda value, **_kwargs: copy.deepcopy(value)
+                    )
+
+                validated = self.validate(wrapper)
+
+                self.assertFalse(validated["qualification_assignments"][0]["score_eligible"])
+                self.assertEqual(
+                    validated["qualification_assignments"][0]["score_ineligibility_reasons"],
+                    expected_reasons,
+                )
 
     def test_mandatory_observation_coverage_and_null_only_states_are_closed(self) -> None:
         for state in ("explicit_null", "missing", "unavailable", "undocumented"):
@@ -1601,8 +1684,8 @@ class QualificationContractTests(unittest.TestCase):
         self.assertEqual(validated_materialization["destination_bytes_digest"], materialized.destination_bytes_digest)
         self.assertEqual(validated_materialization["instruction_digest"], materialized.instruction_digest)
         self.assertEqual(validated_assignment["installed_agent_bytes_digest"], materialized.destination_bytes_digest)
-        self.assertTrue(validated_assignment["score_eligible"])
-        self.assertEqual(validated_assignment["score_ineligibility_reasons"], [])
+        self.assertFalse(validated_assignment["score_eligible"])
+        self.assertEqual(validated_assignment["score_ineligibility_reasons"], ["treatment_unknown"])
         self.assertEqual(
             validated_trace["objective_binding"]["execution_trace_id"],
             trace["objective_binding"]["execution_trace_id"],
@@ -1671,7 +1754,7 @@ class QualificationContractTests(unittest.TestCase):
         self.assertEqual(payload["instruction_digest"], trace["instruction_hash"])
         self.assertNotIn("destination_bytes", payload)
 
-    def test_cli_validate_treatment_uses_materializer_and_accepts_score_eligible_bundle(self) -> None:
+    def test_cli_validate_treatment_reports_unknown_treatment_as_score_ineligible(self) -> None:
         self.assertTrue(QUALIFICATION_RUNNER_PATH.exists())
 
         with tempfile.TemporaryDirectory() as temporary:
@@ -1697,9 +1780,58 @@ class QualificationContractTests(unittest.TestCase):
         self.assertEqual(completed.stdout, canonical_json(payload))
         self.assertEqual(payload["status"], "valid")
         self.assertEqual(payload["validated_treatment"], "exact")
-        self.assertEqual(payload["score_eligible_count"], 1)
-        self.assertEqual(payload["score_ineligible_count"], 0)
+        self.assertEqual(payload["score_eligible_count"], 0)
+        self.assertEqual(payload["score_ineligible_count"], 1)
         self.assertEqual(payload["materializer_source_path"], "speckit-pro/speckit_pro_runner/agent_materialization.py")
+
+    def test_cli_score_rejects_a_receipt_resealed_against_original_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            trace = copy.deepcopy(self.base_treatment)["treatment_traces"][0]
+            source_path = root / "phase-executor.toml"
+            source_path.write_text(phase_policy_for_trace(trace), encoding="utf-8")
+            qualification_path = root / "qualification.json"
+            wrapper = apply_materialized_source(
+                qualification_bundle(self.base_treatment),
+                source_path,
+            )
+            write_canonical_json(qualification_path, wrapper)
+            receipt_path = root / "validated-treatment.json"
+            validation = run_qualification_cli(
+                "validate-treatment",
+                "--qualification-bundle", str(qualification_path),
+                "--agent-policy-source", str(source_path),
+                "--source-relative-path", PHASE_AGENT_RELATIVE_PATH,
+                "--output", str(receipt_path),
+            )
+            self.assertEqual(validation.returncode, 0, validation.stdout)
+
+            forged = load_json(receipt_path)
+            trace_id = trace["objective_binding"]["execution_trace_id"]
+            forged["score_eligible_execution_trace_ids"] = [trace_id]
+            forged["score_eligible_count"] = 1
+            forged["score_ineligible_count"] = 0
+            write_canonical_json(receipt_path, forged)
+            score_request_path = root / "score-request.json"
+            write_canonical_json(
+                score_request_path,
+                {"execution_trace_binding": {"id": trace_id}},
+            )
+
+            completed = run_qualification_cli(
+                "score",
+                "--score-request", str(score_request_path),
+                "--validated-treatment", str(receipt_path),
+                "--qualification-bundle", str(qualification_path),
+                "--agent-policy-source", str(source_path),
+                "--source-relative-path", PHASE_AGENT_RELATIVE_PATH,
+            )
+
+        self.assertEqual(completed.returncode, 2)
+        payload = json.loads(completed.stdout)
+        self.assertEqual(payload["status"], "blocked")
+        self.assertEqual(payload["reason"], "score_before_treatment_refused")
+        self.assertIn("joined to original evidence", payload["message"])
 
     def test_cli_validate_treatment_rejects_source_bytes_that_do_not_match_materialization(self) -> None:
         self.assertTrue(QUALIFICATION_RUNNER_PATH.exists())
@@ -1749,6 +1881,100 @@ class QualificationContractTests(unittest.TestCase):
         self.assertEqual(payload["status"], "blocked")
         self.assertEqual(payload["reason"], "score_before_treatment_refused")
         self.assertIn("validated exact treatment", payload["message"])
+
+    def test_cli_score_accepts_only_a_replayed_exact_treatment_receipt(self) -> None:
+        cli = load_qualification_cli()
+        helpers = load_scoring_test_helpers()
+        scoring = helpers.load_scoring_module()
+        gate_result = scoring.evaluate_hard_gates(helpers.gate_request())
+        semantic_result = scoring.evaluate_blinded_ballots(
+            gate_result,
+            helpers.semantic_request(),
+        )
+        score_request = helpers.score_bundle_request(
+            gate_result,
+            semantic_result=semantic_result,
+        )
+        receipt = {
+            "command": "validate-treatment",
+            "execution_trace_ids": [gate_result["execution_trace_id"]],
+            "score_eligible_execution_trace_ids": [
+                gate_result["execution_trace_id"]
+            ],
+            "score_eligible_execution_trace_bindings": [{
+                "id": gate_result["execution_trace_id"],
+                "digest": gate_result["trace_digest"],
+            }],
+            "materialization_ids": [schema_digest("materialization")],
+            "materializer_source_path": (
+                "speckit-pro/speckit_pro_runner/agent_materialization.py"
+            ),
+            "matched_materialization_id": schema_digest("materialization"),
+            "score_eligible_count": 1,
+            "score_ineligible_count": 0,
+            "status": "valid",
+            "validated_treatment": "exact",
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            score_request_path = root / "score-request.json"
+            write_canonical_json(score_request_path, score_request)
+            receipt_path = root / "validated-treatment.json"
+            write_canonical_json(receipt_path, receipt)
+            cli.validate_treatment_command = lambda _args: (
+                0,
+                copy.deepcopy(receipt),
+            )
+            exit_code, payload = cli.score_command(
+                types.SimpleNamespace(
+                    score_request=score_request_path,
+                    validated_treatment=receipt_path,
+                    qualification_bundle=root / "qualification.json",
+                    agent_policy_source=root / "phase-executor.toml",
+                    source_relative_path=PHASE_AGENT_RELATIVE_PATH,
+                    trusted_qualification_evidence=None,
+                )
+            )
+            drift_gate_request = helpers.gate_request()
+            drift_gate_request["execution_trace_id"] = gate_result[
+                "execution_trace_id"
+            ]
+            drift_gate_request["trace_digest"] = schema_digest(
+                "different-source-trace"
+            )
+            drift_gate_result = scoring.evaluate_hard_gates(drift_gate_request)
+            drift_semantic_result = scoring.evaluate_blinded_ballots(
+                drift_gate_result,
+                helpers.semantic_request(),
+            )
+            write_canonical_json(
+                score_request_path,
+                helpers.score_bundle_request(
+                    drift_gate_result,
+                    semantic_result=drift_semantic_result,
+                ),
+            )
+            with self.assertRaisesRegex(
+                cli.ScoreBlocked,
+                "execution trace binding",
+            ):
+                cli.score_command(
+                    types.SimpleNamespace(
+                        score_request=score_request_path,
+                        validated_treatment=receipt_path,
+                        qualification_bundle=root / "qualification.json",
+                        agent_policy_source=root / "phase-executor.toml",
+                        source_relative_path=PHASE_AGENT_RELATIVE_PATH,
+                        trusted_qualification_evidence=None,
+                    )
+                )
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["status"], "scored")
+        self.assertEqual(
+            payload["score_bundle"],
+            scoring.build_score_bundle(score_request),
+        )
 
     def test_cli_calibrate_refuses_implicit_live_and_accepts_confirmed_pinned_local_setup(self) -> None:
         self.assertTrue(QUALIFICATION_RUNNER_PATH.exists())

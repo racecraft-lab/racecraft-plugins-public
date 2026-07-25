@@ -1,7 +1,7 @@
 # Implementation Plan: Evaluation Runner, Fixtures, Scoring, and Statistical Analysis
 
-**Branch**: `g56r-003-evaluation-runner-scoring` | **Date**: 2026-07-24  
-**Spec**: `specs/g56r-003-evaluation-runner-scoring/spec.md`  
+**Branch**: `g56r-003-evaluation-runner-scoring` | **Date**: 2026-07-24
+**Spec**: `specs/g56r-003-evaluation-runner-scoring/spec.md`
 **Design authority**: `docs/ai/specs/.process/G56R-003-design-concept.md`
 
 ## Summary
@@ -22,24 +22,24 @@ through G56R-010.
 
 ## Technical Context
 
-**Language/Version**: Python 3.11+ standard library  
-**Primary source**: `speckit-pro/speckit_pro_runner/`  
-**Evaluation adapters**: `tests/speckit-pro/layer6-efficiency/`  
-**Unit tests**: `tests/speckit-pro/unit/`  
-**Contract format**: JSON Schema 2020-12 plus deterministic JSON fixtures  
-**Storage**: immutable, content-addressed JSON files and Git object bindings  
-**CI boundary**: deterministic contracts, replay, scorer, and statistical tests  
-**Local-only boundary**: opt-in pinned live calibration campaigns  
-**Primary surface**: harness/adapter  
+**Language/Version**: Python 3.11+ standard library
+**Primary source**: `speckit-pro/speckit_pro_runner/`
+**Evaluation adapters**: `tests/speckit-pro/layer6-efficiency/`
+**Unit tests**: `tests/speckit-pro/unit/`
+**Contract format**: JSON Schema 2020-12 plus deterministic JSON fixtures
+**Storage**: immutable, content-addressed JSON files and Git object bindings
+**CI boundary**: deterministic contracts, replay, scorer, and statistical tests
+**Local-only boundary**: opt-in pinned live calibration campaigns
+**Primary surface**: harness/adapter
 **Performance goal**: deterministic validation of a frozen replay bundle with
 p95 runtime under 10 seconds on a normal developer checkout; live campaign
 performance is recorded under frozen budgets and guardrails, not optimized by
 this feature
 **Runtime constraints**: no active Bash or `jq`; structured parsers,
-`pathlib`, argument arrays, `shell=False`, deterministic UTF-8 I/O  
+`pathlib`, argument arrays, `shell=False`, deterministic UTF-8 I/O
 **Privacy constraints**: Git receives only the sanitized allowlist; raw
 catalog, prompt, response, identity, account, auth, billing, host, path, and
-remote evidence remains operator-only  
+remote evidence remains operator-only
 **Scale**: twelve role contracts, only admitted executable routes run; helper
 statistics stay separate from the eleven-role required-core population
 

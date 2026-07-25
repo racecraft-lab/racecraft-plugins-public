@@ -31,7 +31,7 @@ from speckit_pro_runner.agent_materialization import (  # noqa: E402
 from codex_successor_capability import publish_successor_freeze  # noqa: E402
 from qualification_contracts import validate_qualification_bundle  # noqa: E402
 from qualification_replay import build_analysis_replay_bundle  # noqa: E402
-from qualification_scoring import content_id, digest  # noqa: E402
+from qualification_scoring import build_score_bundle, content_id, digest  # noqa: E402
 from qualification_statistics import _validate_plan as validate_analysis_plan  # noqa: E402
 
 
@@ -85,6 +85,17 @@ def write_json_file(path: Path, value: Any, label: str) -> None:
         path.write_text(canonical_json(value), encoding="utf-8", newline="\n")
     except OSError as exc:
         raise QualificationCliError(f"{label} could not be written: {exc}") from exc
+
+
+def write_json_file_exclusive(path: Path, value: Any, label: str) -> None:
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("x", encoding="utf-8", newline="\n") as output:
+            output.write(canonical_json(value))
+    except OSError as exc:
+        raise QualificationCliError(
+            f"{label} requires a new output path and could not be written: {exc}"
+        ) from exc
 
 
 def materialize_source(source: Path, source_relative_path: str) -> tuple[AgentMaterialization, bytes]:
@@ -201,10 +212,30 @@ def validate_treatment_command(args: argparse.Namespace) -> tuple[int, dict[str,
     )
     matched = matching_materialization(validated, materialized)
     assignments = validated["qualification_assignments"]
+    trace_digests = {
+        item["execution_trace_id"]: item["source_trace_digest"]
+        for item in validated["qualification_traces"]
+    }
     eligible = sum(1 for item in assignments if item["score_eligible"])
     payload = {
         "command": "validate-treatment",
         "execution_trace_ids": sorted(item["execution_trace_id"] for item in assignments),
+        "score_eligible_execution_trace_ids": sorted(
+            item["execution_trace_id"]
+            for item in assignments
+            if item["score_eligible"]
+        ),
+        "score_eligible_execution_trace_bindings": sorted(
+            (
+                {
+                    "id": item["execution_trace_id"],
+                    "digest": trace_digests[item["execution_trace_id"]],
+                }
+                for item in assignments
+                if item["score_eligible"]
+            ),
+            key=lambda item: (item["id"], item["digest"]),
+        ),
         "materialization_ids": sorted(item["materialization_id"] for item in validated["materializations"]),
         "materializer_source_path": materialized.materializer_binding["path"],
         "matched_materialization_id": matched["materialization_id"],
@@ -238,21 +269,49 @@ def publish_successor_freeze_command(args: argparse.Namespace) -> tuple[int, dic
 
 
 def score_command(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
-    read_json_file(args.score_request, "score request")
-    if args.validated_treatment is None:
-        raise ScoreBlocked("score requires validated exact treatment before outcome scoring")
-    treatment = read_json_file(args.validated_treatment, "validated treatment")
-    if not (
-        isinstance(treatment, dict)
-        and treatment.get("status") == "valid"
-        and treatment.get("validated_treatment") == "exact"
+    score_request = read_json_file(args.score_request, "score request")
+    if not isinstance(score_request, dict):
+        raise QualificationCliError("score request must be a JSON object")
+    if (
+        args.validated_treatment is None
+        or args.qualification_bundle is None
+        or args.agent_policy_source is None
+        or args.source_relative_path is None
     ):
-        raise ScoreBlocked("score requires validated exact treatment before outcome scoring")
-    return 2, {
+        raise ScoreBlocked(
+            "score requires validated exact treatment joined to original evidence"
+        )
+    treatment = read_json_file(args.validated_treatment, "validated treatment")
+    _code, replayed_treatment = validate_treatment_command(
+        argparse.Namespace(
+            qualification_bundle=args.qualification_bundle,
+            agent_policy_source=args.agent_policy_source,
+            source_relative_path=args.source_relative_path,
+            trusted_qualification_evidence=args.trusted_qualification_evidence,
+            output=None,
+        )
+    )
+    if treatment != replayed_treatment:
+        raise ScoreBlocked(
+            "score requires a validated treatment receipt joined to original evidence"
+        )
+    execution_trace_binding = score_request.get("execution_trace_binding")
+    eligible_trace_bindings = replayed_treatment[
+        "score_eligible_execution_trace_bindings"
+    ]
+    if (
+        not isinstance(execution_trace_binding, dict)
+        or not isinstance(eligible_trace_bindings, list)
+        or execution_trace_binding not in eligible_trace_bindings
+    ):
+        raise ScoreBlocked(
+            "score requires validated exact treatment for the requested execution trace binding"
+        )
+    bundle = build_score_bundle(score_request)
+    return 0, {
         "command": "score",
-        "message": "scoring is intentionally unavailable in this slice",
-        "reason": "score_engine_unavailable",
-        "status": "blocked",
+        "score_bundle": bundle,
+        "status": "scored",
     }
 
 
@@ -540,7 +599,7 @@ def freeze_analysis_plan_command(args: argparse.Namespace) -> tuple[int, dict[st
             "analysis_plan_schema_invalid",
             str(exc),
         ) from exc
-    write_json_file(args.output, frozen, "frozen analysis plan")
+    write_json_file_exclusive(args.output, frozen, "frozen analysis plan")
     return 0, frozen
 
 
@@ -587,6 +646,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     score.add_argument("--score-request", type=Path, required=True)
     score.add_argument("--validated-treatment", type=Path)
+    score.add_argument("--qualification-bundle", type=Path)
+    score.add_argument("--agent-policy-source", type=Path)
+    score.add_argument("--source-relative-path")
+    score.add_argument("--trusted-qualification-evidence", type=Path)
 
     calibrate = subcommands.add_parser(
         "calibrate",

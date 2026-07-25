@@ -78,7 +78,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Analyze | `$speckit-analyze` | Complete | Task-contract rerun passed with zero findings; G6 rerun passed |
 | Confidence Gate | G6.5 | Complete | Task-repair rerun passed at 0.99 against the 0.90 advisory threshold |
 | Implement | `$speckit-implement` | Complete | All 25 tasks complete; Slice 3 G7 passed with 25/25 tasks and zero markers |
-| Post | Post-Implementation | Pending | Run full verification, review, PR, and handoff work |
+| Post | Post-Implementation | In Progress | Verification, task audit, review remediation, and integration are complete; PR preparation is active |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -1017,7 +1017,7 @@ For every task:
 |---|---|---|
 | 1 | Capability, materialization, and trace | Complete |
 | 2 | Corpus and blinded scoring | Complete |
-| 3 | Experiment policy, statistics, and calibration | In Progress |
+| 3 | Experiment policy, statistics, and calibration | Complete |
 
 ### Task Evidence
 
@@ -1051,22 +1051,22 @@ For every task:
 
 ## Post-Implementation Checklist
 
-| Post Item | Status |
-|---|---|
-| Post: Doctor Extension Check | In Progress |
-| Post: Verify Implementation | Pending |
-| Post: Verify Tasks Phantom Check | Pending |
-| Post: Code Review | Pending |
-| Post: Integration Suite | Pending |
-| Post: Reviewability Diff Gate | Pending |
-| Post: Self-Review | Pending |
-| Post: UAT Runbook Generation | Pending |
-| Post: Final Reviewability Backstop | Pending |
-| Post: PR Packet/Body Generation | Pending |
-| Post: PR Body Generation | Pending |
-| Post: PR Creation | Pending |
-| Post: Review Remediation | Pending |
-| Post: Retrospective | Pending |
+| Post Item | Status | Findings | Action Needed |
+|---|---|---|---|
+| Post: Doctor Extension Check | Complete | 0 failures; known warning that Claude integration has no `.claude/commands/` in this Codex worktree | None |
+| Post: Verify Implementation | Complete | 25/25 tasks, 38/38 requirements, 0 findings | None |
+| Post: Verify Tasks Phantom Check | Complete | 25 VERIFIED; 0 partial, weak, not found, or skipped | None |
+| Post: Code Review | Complete | Multiple authority and replay joins were remediated; final independent review found 0 findings | None |
+| Post: Integration Suite | Complete | 3251/3251 passed; G56R-002 regression 99/99 passed | None |
+| Post: Reviewability Diff Gate | In Progress | Current committed plan evidence preserves three ordered review slices under the one-navigable-PR route | Apply the deferred-backstop evidence rule |
+| Post: Self-Review | Pending | — | Record final reviewer-facing findings |
+| Post: UAT Runbook Generation | Pending | — | Reuse a committed runbook or record the deferred skip |
+| Post: Final Reviewability Backstop | Pending | — | Confirm current committed evidence before PR side effects |
+| Post: PR Packet/Body Generation | Pending | — | Emit packet in dry-run, then apply |
+| Post: PR Body Generation | Pending | — | Validate packet-owned body |
+| Post: PR Creation | Pending | — | Create from validated packet fields |
+| Post: Review Remediation | Pending | — | Resolve findings against the pushed head |
+| Post: Retrospective | Pending | — | Record lessons and final state |
 
 - [x] All tasks are complete and trace to requirements.
 - [x] Every slice has red-green-refactor evidence.
@@ -1076,12 +1076,12 @@ For every task:
 - [x] Release artifacts were refreshed after shipped runner changes.
 - [x] `refresh-release-artifacts.py --check` reports no drift.
 - [x] The calibration-only pilot is explicitly non-qualification evidence.
-- [ ] No screening, selection, cohort-lock, or integrated-confirmation
+- [x] No screening, selection, cohort-lock, or integrated-confirmation
   objective was consumed.
-- [ ] No final per-agent route policy or installed default was created.
-- [ ] No raw live capture, secret, credential, or personal path is committed.
+- [x] No final per-agent route policy or installed default was created.
+- [x] No raw live capture, secret, credential, or personal path is committed.
 - [ ] Actual reviewable LOC and file counts pass the final gate for each slice.
-- [ ] The exact PR title passes release readiness.
+- [x] The exact PR title passes release readiness.
 - [ ] Review findings are remediated against the final pushed head.
 - [ ] Roadmap and workflow status accurately reflect the final state.
 

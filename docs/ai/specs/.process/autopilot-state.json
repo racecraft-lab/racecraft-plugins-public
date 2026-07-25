@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-003-workflow.md",
   "spec_id": "G56R-003",
   "feature_dir": "specs/g56r-003-evaluation-runner-scoring",
-  "updated_at": "2026-07-25T16:18:51Z",
-  "active_step": "Post: Doctor Extension Check",
+  "updated_at": "2026-07-25T17:34:50Z",
+  "active_step": "Post: Reviewability Diff Gate",
   "status": "in_progress",
   "settings": {
     "auto_commit": "per-phase",
@@ -496,6 +496,52 @@
         "tasks_total": 25,
         "markers": 0
       }
+    },
+    "post_implementation": {
+      "status": "in_progress",
+      "doctor": {
+        "status": "completed_with_warning",
+        "failures": 0,
+        "warning": "Claude integration is configured without .claude/commands in the Codex worktree."
+      },
+      "verify": {
+        "status": "passed",
+        "tasks_complete": 25,
+        "functional_requirements_mapped": 38,
+        "findings": 0
+      },
+      "verify_tasks": {
+        "status": "passed",
+        "verified": 25,
+        "partial": 0,
+        "weak": 0,
+        "not_found": 0,
+        "skipped": 0,
+        "report": "specs/g56r-003-evaluation-runner-scoring/verify-tasks-report.md"
+      },
+      "code_review": {
+        "status": "passed_after_remediation",
+        "final_critical": 0,
+        "final_high": 0,
+        "final_medium": 0,
+        "final_low": 0,
+        "remediation_summary": [
+          "Replayed score authorization from original qualification evidence and joined the exact trace ID and digest.",
+          "Bound corpus roles and active routes to canonical fixture and trusted route authority.",
+          "Recomputed ballot, adjudication, rubric, plan, partition, and analysis replay authority.",
+          "Made frozen outputs create-only and preserved fail-closed one-cluster behavior."
+        ]
+      },
+      "integration": {
+        "status": "passed",
+        "suite": "python3 tests/speckit-pro/run-all.py",
+        "passed": 3251,
+        "total": 3251,
+        "g56r_002_regression": "99/99 passed",
+        "release_artifacts": "current",
+        "docs_reference": "current",
+        "release_title": "feat(g56r-003): add evaluation runner scoring"
+      }
     }
   },
   "atomicity_route": {
@@ -622,27 +668,27 @@
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Self-Review",
