@@ -267,7 +267,13 @@
         "max_attempts": {"type": "integer", "minimum": 1},
         "max_duration_seconds": {"type": "integer", "minimum": 1},
         "max_input_tokens": {"type": "integer", "minimum": 1},
-        "max_cache_write_tokens_by_ttl_class": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "integer", "minimum": 0}},
+        "max_cache_write_tokens_by_ttl_class": {
+          "description": "FR-022: closed TTL-class key space, identical to the experiment-policy budget and the additive cache diagnostic. Required for the FR-038 budget-equality check to be decidable.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {"enum": ["ephemeral_5m", "ephemeral_1h"]},
+          "additionalProperties": {"type": "integer", "minimum": 0}
+        },
         "max_cache_read_tokens": {"type": "integer", "minimum": 0},
         "max_output_tokens": {"type": "integer", "minimum": 1},
         "max_candidates": {"type": "integer", "minimum": 1},

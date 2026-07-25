@@ -487,6 +487,18 @@ Four sessions, matching G56R-003's four Clarify sessions one-for-one.
 | 2 | Q1 — does `scorable` bind the predicate; what is `treatment_disposition` | `[spec, codebase]` | 1 | codebase-analyst, spec-context-analyst | **N=2, both agree, both high** | Both **rejected the executor's proposed enum**. `treatment_disposition` already ships closed as `proven`/`unknown`/`non_scorable_rerouted`/`hard_fail` in the shared treatment-record contract, and that file is **byte-identical across both worktrees** (`diff` empty). Adopting the executor's four invented names would have created a third unbridged vocabulary and manufactured divergence. `scorable` is keyed purely off record class via a fixed pairing table, so it cannot certify materialization or route proof — necessary, never sufficient. Applied to FR-030 |
 | 2 | Q4 — ordering of co-occurring disqualifiers | `[spec]` | **1 → 2** (Round 1 returned low confidence) | R1 spec-context; R2 codebase-analyst, domain-researcher | **N=3, converged; executor's proposal rejected on both counts** | R1 (low on order, high on recording): reject "record first match, discard rest" — the project pattern is a scalar terminal cause plus complete provenance. R2 codebase (**high, dispositive**): shipped shared code has **no condition-level precedence at all** — conditions are derived independently and merged by set union into a real `disposition_reasons` array; the only ordering is a disposition-*bucket* chain `hard_fail` > `non_scorable_rerouted` > `unknown` > `proven`. All three lib files plus the schema are byte-identical across both worktrees, so documenting this creates **zero** divergence. R2 domain (low-med): the correct genre is a specified, evidence-preserving precedence, and cross-implementation determinism requires the order be fixed in-spec rather than left to each implementation; one terminal cause plus retained contributing causes matches established incident-classification practice. Applied to FR-031 + a new Edge Case |
 
+| 4 (data-integrity) | CHK039 — experiment policy reintroduced the FR-037 cycle | `[spec, domain]` | resolved by orchestrator on mechanically verified evidence | — | objective internal contradiction | The checklist diagnosed, and I confirmed by direct inspection, that `analysis_plan_binding` sat in the **unconditional** `required` array — so every assignment transitively required the analysis plan, and a calibration policy still could not validate. FR-037 forbids exactly this. That is a contradiction between CAR-003's own spec and CAR-003's own contract, not a judgement call, so consensus was unnecessary. Fixed in the CAR-owned copy: `analysis_plan_binding` removed from the base `required` set, `calibration_protocol_binding` added, and two `allOf` branches keyed on `partition.qualification_eligible` now require exactly one of the two and forbid the other. All 8 contracts re-parse. **The twin carries the identical defect and needs the mirror fix** — its calibration pilot cannot validate as written |
+
+**Cross-worktree hazard observed 2026-07-24 (no action taken — not this branch):**
+the `g56r-003` worktree has an **untracked**
+`tests/speckit-pro/layer6-efficiency/contracts/successor-capability-freeze.schema.json`
+(timestamped 21:46) at the **repo-level shared** contracts path — a fourth
+shared contract. CAR-003 authored its own **spec-scoped** copy of that same
+contract during Plan, and `plan.md` names only three shared files. If the twin
+lands theirs at the shared path, the two become duplicate sources of truth for
+one contract. Left untouched because it is in-flight on another branch; flagged
+for operator coordination before either side merges.
+
 **Why Round 2 fired on Session 2 Q4:** `[spec]` routes to a single analyst, and
 that analyst returned `confidence: low` on the core question, which the
 single-analyst rule escalates. Escalating was correct — Round 1 had read only
@@ -751,7 +763,7 @@ Focus on CAR-003 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| data-integrity | | | |
+| data-integrity | 60 | 10 found / 10 remediated | FR-014, FR-018/022, FR-027, FR-032, FR-033, FR-037, FR-039, FR-044; plan.md; 4 CAR-owned contracts; data-model.md |
 | error-handling | | | |
 | llm-integration | | | |
 | performance | | | |

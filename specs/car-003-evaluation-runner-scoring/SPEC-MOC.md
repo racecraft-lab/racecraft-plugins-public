@@ -42,6 +42,7 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [contracts/role-corpus.schema.json](contracts/role-corpus.schema.json)
 - [contracts/score-bundle.schema.json](contracts/score-bundle.schema.json)
 - [contracts/successor-capability-freeze.schema.json](contracts/successor-capability-freeze.schema.json)
+- [checklists/data-integrity.md](checklists/data-integrity.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

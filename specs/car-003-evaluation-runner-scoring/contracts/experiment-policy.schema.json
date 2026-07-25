@@ -12,13 +12,24 @@
     "partition",
     "candidate_freeze_binding",
     "corpus_binding",
-    "analysis_plan_binding",
     "assignment_policy",
     "terminal_policy",
     "rerun_policy",
     "scorer_family_exclusion",
     "budget",
     "execution_mode"
+  ],
+  "allOf": [
+    {
+      "description": "FR-037. A qualification-eligible policy MUST bind the frozen analysis plan and MUST NOT carry a calibration protocol binding.",
+      "if": {"properties": {"partition": {"properties": {"qualification_eligible": {"const": true}}}}, "required": ["partition"]},
+      "then": {"required": ["analysis_plan_binding"], "not": {"required": ["calibration_protocol_binding"]}}
+    },
+    {
+      "description": "FR-037. A calibration policy MUST bind the calibration protocol and MUST NOT bind the analysis plan, which does not yet exist when calibration runs.",
+      "if": {"properties": {"partition": {"properties": {"qualification_eligible": {"const": false}}}}, "required": ["partition"]},
+      "then": {"required": ["calibration_protocol_binding"], "not": {"required": ["analysis_plan_binding"]}}
+    }
   ],
   "properties": {
     "schema_version": {"const": "1.0.0"},
@@ -28,6 +39,10 @@
     "candidate_freeze_binding": {"$ref": "#/$defs/binding"},
     "corpus_binding": {"$ref": "#/$defs/binding"},
     "analysis_plan_binding": {"$ref": "#/$defs/binding"},
+    "calibration_protocol_binding": {
+      "$ref": "#/$defs/binding",
+      "description": "FR-037. A calibration-partition policy binds this instead of analysis_plan_binding. The analysis plan freezes only AFTER calibration, so requiring a calibration policy to bind it is a circular dependency that makes the calibration pilot unrunnable. The calibration protocol carries no margins, sample sizes, or terminal thresholds; the frozen analysis plan later references it as its calibration binding."
+    },
     "assignment_policy": {
       "type": "object",
       "additionalProperties": false,
@@ -132,9 +147,10 @@
         "max_duration_seconds": {"type": "integer", "minimum": 1},
         "max_input_tokens": {"type": "integer", "minimum": 1},
         "max_cache_write_tokens_by_ttl_class": {
-          "description": "FR-022: separate cache-write ceilings by TTL class. Diagnostic-only, never a Pareto dimension.",
+          "description": "FR-022: separate cache-write ceilings by TTL class. Diagnostic-only, never a Pareto dimension. The key space is closed to the two cache-creation classes the frozen CAR-002 telemetry profile already records, and matches the additive cache diagnostic exactly so a ceiling can never be keyed differently from its measurement.",
           "type": "object",
           "minProperties": 1,
+          "propertyNames": {"enum": ["ephemeral_5m", "ephemeral_1h"]},
           "additionalProperties": {"type": "integer", "minimum": 0}
         },
         "max_cache_read_tokens": {"type": "integer", "minimum": 0},

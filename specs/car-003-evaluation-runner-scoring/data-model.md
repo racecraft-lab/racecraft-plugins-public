@@ -87,10 +87,18 @@ timestamps; invalidation criteria; `authentication_mode`.
 - Fast mode and any orchestration-topology-changing mode is a CAR-004
   policy-level control, recorded as
   `topology_control_not_candidate_effort` (FR-005).
-- A non-empty `authority_failures` array means diagnostic collection evidence
-  only: no authoritative freeze, qualification-capable execution blocked, and the
-  six archived CAR-002 tuples are **never** promoted to an active candidate set.
+- Authority failures mean diagnostic collection evidence only: **no freeze record
+  is emitted at all**, qualification-capable execution is blocked, and the six
+  archived CAR-002 tuples are **never** promoted to an active candidate set. The
+  failures are carried on the runtime catalog collection record, which is why a
+  published freeze always has an empty `authority_failures` array and at least one
+  admitted tuple — the existence of the record *is* the publication signal.
   Immutable does not imply reusable (FR-028, FR-044).
+- Non-reuse is checked, not asserted: each admitted tuple's
+  `runtime_evidence_digest` must resolve to the collection record named by this
+  freeze's own `runtime_snapshot_binding`. One resolving to the archived snapshot
+  is rejected with `availability_not_proven`. `historical_freeze_binding` proves
+  the predecessor was read unmutated and is never a source of tuples (FR-044).
 - CAR-002 artifacts, identifiers, and snapshot evidence are unchanged. Every
   CAR-003 capability record is additive (FR-001, SC-001).
 
@@ -129,7 +137,10 @@ Surviving records are **marked** invalidated, never rebound.
 1. The requested alias.
 2. The identity bound by **CAR-003's own successor freeze** — explicitly not the
    identically named run-time route-resolution field, and never the archived
-   CAR-002 snapshot.
+   CAR-002 snapshot. Carried with a `candidate_freeze_binding` `{id, digest}` so
+   the provenance is verifiable at replay rather than self-declared; a binding
+   resolving to anything but a published CAR-003 freeze records
+   `alias_repoint_unresolved`.
 3. The run-observed identity from the per-model usage breakdown.
 4. The complete environment-override proof.
 5. The pinned client version at freeze time **and** at run time.
@@ -522,6 +533,13 @@ pinned `false`. Carried additively because the shared `rawTokenVector` is closed
 under `additionalProperties: false`, is byte-identical across worktrees, and
 carries only `input_tokens`, `output_tokens`, `cached_input_tokens`, and
 `reasoning_output_tokens` (FR-018).
+
+The TTL-class key space is closed to `ephemeral_5m` and `ephemeral_1h` — the two
+cache-creation classes the frozen CAR-002 telemetry profile already classifies as
+`stable_native` observations, reused rather than renamed. The budget ceilings in
+both the experiment policy and the analysis plan use the identical key set, so a
+ceiling can never be keyed differently from the measurement it bounds and silently
+stop applying (FR-022, FR-038).
 
 ## Sensitive-Evidence Allowlist
 

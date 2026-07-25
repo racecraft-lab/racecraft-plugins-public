@@ -21,7 +21,13 @@ and seven unit-test files. The eight schemas carry the rules — closed
 enumerations, required bindings, conditional shapes — and Python carries only
 what a schema cannot express: set-intersection admission, byte-level read-back
 hashing, disposition precedence over a co-firing reason set, the ordered decision
-ladder, digest recomputation, and objective-level partition disjointness. That
+ladder, digest recomputation, objective-level partition disjointness, the
+cross-record resolution checks a single-document schema cannot reach (an admitted
+tuple's runtime evidence resolving to this freeze's own snapshot rather than the
+archived one, and the alias-attribution record's freeze binding resolving to a
+published CAR-003 freeze), and re-deriving the score bundle's resource vector and
+reasoning-token report from the digest-verified trace so the trace stays the sole
+source of truth. That
 posture is inherited from the existing CAR-002 validator, which checks the entire
 frozen trace contract in 240 lines by driving every rule *from* the schema.
 
@@ -414,6 +420,20 @@ payload boundary clean (SC-019).
 - Alias-re-point attribution is bounded by its enumerated cause set. Documented
   serving-infrastructure changes can alter behavior without changing model
   identity, so the enumeration cannot certify its own completeness.
+- **Open cross-platform coordination item — the experiment-policy binding
+  cycle.** FR-037 resolves the calibration circular dependency at the comparison-pair
+  level, and this plan's `experiment-assignment` schema enforces it. One edge away,
+  the cycle survives: every assignment binds an experiment policy, and both this
+  spec's `experiment-policy` contract and the Codex twin's require an
+  `analysis_plan_binding` unconditionally — so a calibration pair still transitively
+  requires the frozen plan that only exists after calibration completes. `spec.md`
+  FR-037 now states the required shape (an ineligible partition's policy binds the
+  calibration protocol instead). The schema change is deliberately **not** applied
+  here: `experiment-policy` is a logical mirror, and FR-049 fixes the rule that a
+  mirror divergence must be a joint change landed on both platforms together. It is
+  not slice-blocking — slice 3 owns the policy contract, and the calibration pilot
+  is the first execution that would exercise the binding — but it must be agreed
+  with the twin before that pilot runs.
 
 ## Complexity Tracking
 

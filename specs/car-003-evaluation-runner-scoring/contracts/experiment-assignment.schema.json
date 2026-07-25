@@ -40,7 +40,10 @@
         "partition_id": {"type": "string", "minLength": 1},
         "partition_type": {"enum": ["calibration", "screening", "selection", "cohort_lock", "integrated_confirmation"]},
         "qualification_eligible": {"type": "boolean"},
-        "objective_set_digest": {"$ref": "#/$defs/digest"},
+        "objective_set_digest": {
+          "description": "FR-033: SHA-256 over the canonical JSON serialization of the deduplicated, lexicographically sorted objective_ids array. Pinning the preimage is what makes two partitions listing the same objectives in different orders collide detectably.",
+          "$ref": "#/$defs/digest"
+        },
         "objective_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
         "frozen_at": {"type": "string", "format": "date-time"},
         "owning_spec": {"type": "string", "minLength": 1}
@@ -165,8 +168,8 @@
           "then": {"required": ["analysis_plan_binding"], "not": {"required": ["calibration_protocol_binding"]}}
         },
         {
-          "description": "FR-037: calibration-partition pairs bind the versioned calibration protocol instead, because the analysis plan does not yet exist.",
-          "if": {"properties": {"partition": {"properties": {"partition_type": {"const": "calibration"}}, "required": ["partition_type"]}}, "required": ["partition"]},
+          "description": "FR-037: every qualification-ineligible pair binds the versioned calibration protocol instead, because the analysis plan does not yet exist. Keyed on qualification_eligible rather than partition_type so the two branches are exhaustive — keying on partition_type=calibration alone would leave a non-calibration ineligible partition bound to neither artifact, failing open.",
+          "if": {"properties": {"partition": {"properties": {"qualification_eligible": {"const": false}}, "required": ["qualification_eligible"]}}, "required": ["partition"]},
           "then": {"required": ["calibration_protocol_binding"], "not": {"required": ["analysis_plan_binding"]}}
         }
       ]

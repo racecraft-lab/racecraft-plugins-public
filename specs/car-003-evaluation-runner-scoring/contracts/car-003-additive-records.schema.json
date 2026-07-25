@@ -93,6 +93,7 @@
         "attribution_id",
         "attribution_digest",
         "execution_trace_binding",
+        "candidate_freeze_binding",
         "requested_alias",
         "freeze_bound_identity",
         "freeze_bound_identity_source",
@@ -111,10 +112,14 @@
         "attribution_id": {"type": "string", "minLength": 1},
         "attribution_digest": {"$ref": "#/$defs/digest"},
         "execution_trace_binding": {"$ref": "#/$defs/binding"},
+        "candidate_freeze_binding": {
+          "description": "FR-039: the {id, digest} binding to the specific CAR-003 successor freeze freeze_bound_identity was read from. Makes the provenance verifiable at replay instead of self-declared; a binding resolving to the archived snapshot records alias_repoint_unresolved.",
+          "$ref": "#/$defs/binding"
+        },
         "requested_alias": {"type": "string", "minLength": 1},
         "freeze_bound_identity": {"type": "string", "minLength": 1},
         "freeze_bound_identity_source": {
-          "description": "FR-039: read from CAR-003's own successor freeze, explicitly not the identically named run-time route-resolution field and never the archived predecessor snapshot.",
+          "description": "FR-039: read from CAR-003's own successor freeze, explicitly not the identically named run-time route-resolution field and never the archived predecessor snapshot. The claim is corroborated by candidate_freeze_binding.",
           "const": "car_003_successor_freeze"
         },
         "run_observed_identity": {
@@ -166,8 +171,10 @@
         "diagnostic_digest": {"$ref": "#/$defs/digest"},
         "execution_trace_binding": {"$ref": "#/$defs/binding"},
         "cache_write_tokens_by_ttl_class": {
+          "description": "FR-022: closed TTL-class key space, reusing the two cache-creation classes the frozen CAR-002 telemetry profile already records as stable_native observations. Identical key set to the budget ceilings, so a ceiling can never be keyed differently from its measurement.",
           "type": "object",
           "minProperties": 1,
+          "propertyNames": {"enum": ["ephemeral_5m", "ephemeral_1h"]},
           "additionalProperties": {"type": ["integer", "null"], "minimum": 0}
         },
         "cache_read_tokens": {"type": ["integer", "null"], "minimum": 0},
