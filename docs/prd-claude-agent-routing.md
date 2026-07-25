@@ -368,10 +368,23 @@ plugin release.
   cache-write by TTL class, cache-read, and output tokens - plus request/turn
   count, wall time, retries, compaction, and failed or abandoned work through
   the terminal policy. The selection rule among passing candidates is one
-  predeclared weighted scalar whose per-category coefficients are pinned from
-  a dated revision of the published Anthropic API price sheet -
-  content-addressed at lock time and labeled diagnostic-derived, never plan
-  accounting - with the complete raw vector always reported alongside.
+  predeclared environment-independent Pareto rule over that complete raw
+  vector, applied only after absolute quality and reliability floors and
+  task-paired cluster-adjusted non-inferiority have passed. A failed gate, a
+  tie, mixed dominance, incomplete evidence, or statistical uncertainty is
+  inconclusive and yields no qualification; no weighted ranking may be forced.
+  The complete raw vector is always reported. Published price data may be cited
+  as diagnostic context only, never as a selection coefficient and never as
+  plan accounting.
+  **Amendment 2026-07-24 (CAR-003):** this criterion previously mandated one
+  predeclared weighted scalar whose per-category coefficients were pinned from
+  a dated revision of the published Anthropic API price sheet, content-addressed
+  at lock time and labeled diagnostic-derived. It is amended to the Pareto rule
+  above to hold logical parity with the Codex routing program, whose PRD permits
+  "one predeclared environment-independent score or Pareto rule" and whose
+  G56R-003 specification selected Pareto dominance and forbids a forced weighted
+  ranking. The raw-vector reporting obligation is unchanged; only the rule that
+  ranks passing candidates changed.
 - **AC-2.6 — Per-agent attribution**: Paired per-agent experiments freeze the
   parent session model and effort, every non-candidate agent route, all
   prompts other than the allowed Stage B candidate prompt, tools, skills,

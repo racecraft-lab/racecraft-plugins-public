@@ -38,7 +38,7 @@ captured during scoping.
 | Q6 | Evidence schema | New trace records under the frozen CAR-002 contract + a separate versioned score bundle |
 | Q7 | Scoring authority | Deterministic hard gates + frozen blinded semantic rubric |
 | Q8 | Adjudication | Two candidate-blind ballots, third adjudicator on disagreement, all ballots retained |
-| Q9 | Selection rule | Content-address one dated price-sheet revision at lock time and freeze it |
+| Q9 | Selection rule | **Superseded by the parity decision below** — raw-vector Pareto dominance, not a price-weighted scalar |
 | Q10 | CI boundary | Explicit local budgeted campaigns; CI runs deterministic replay only, zero live calls |
 | Q11 | Stage ownership | CAR-003 implements the stages; CAR-007 through CAR-010 run outcome-bearing campaigns |
 | Q12 | Pilot validity | Calibration-only partition; records explicitly ineligible for qualification |
@@ -62,6 +62,7 @@ reference shape. The following were aligned to it after the interview:
 | Byte-identical / content-hash materialization proof, not parsed or semantic equivalence | FR-006, FR-008 |
 | Deny-by-default sanitization allowlist that fails closed and blocks publication | FR-027, FR-036 |
 | Non-executable role contracts retained but never run until a route is admitted | FR-011, FR-012 |
+| Selection rule: absolute floors → paired non-inferiority → raw-vector Pareto dominance, no forced weighted ranking | FR-018, FR-019 |
 
 **Known platform-surface differences (values, not logic):** the raw token vector
 categories differ (CAR carries cache-write by TTL class and cache-read; Codex
@@ -69,13 +70,26 @@ carries cached-input tokens), and CAR carries the AC-2.19 auth amendment because
 only the Claude PRD constrains the scored-run auth environment. Both sides record
 the auth mode of every run and produce no plan-based claim.
 
-**Open parity blocker — selection rule.** G56R FR-019 forbids a weighted ranking
-and ends in raw-vector Pareto dominance; CAR PRD AC-2.5 mandates a predeclared
-price-weighted scalar. The Codex PRD permits "one predeclared
-environment-independent score **or** Pareto rule", so converging both sides on the
-weighted scalar needs no PRD amendment, while converging on Pareto would require
-amending CAR's AC-2.5 and roadmap. Resolve before the Plan phase locks the
-decision contract.
+**Selection rule — RESOLVED 2026-07-24 in favour of Pareto.** CAR-003 adopts
+raw-vector **Pareto dominance**, matching G56R-003 FR-018/FR-019. Absolute
+quality and reliability floors run first, then task-paired cluster-adjusted
+non-inferiority, then Pareto comparison over the complete raw vector. A failed
+gate, tie, mixed dominance, incomplete evidence, or statistical uncertainty is
+inconclusive and yields no qualification; **no weighted ranking is forced**.
+Published price data may be cited as diagnostic context only, never as a
+selection coefficient.
+
+This required amending two Claude-side documents, both carried on this branch:
+
+| Document | Change |
+|---|---|
+| `docs/prd-claude-agent-routing.md` AC-2.5 | Price-weighted scalar → Pareto rule, with a dated inline amendment note preserving the superseded wording and its rationale |
+| `docs/ai/specs/claude-agent-routing-technical-roadmap.md` qualification rule | Same substitution, cross-referencing PRD AC-2.5 |
+
+The raw-vector reporting obligation is unchanged; only the rule that ranks
+passing candidates changed. Design concept Q9 is superseded and annotated as
+such — the Q&A log records what was asked and answered at scoping time and is
+not rewritten.
 
 ---
 
@@ -186,7 +200,7 @@ Mirrors the G56R-003 SC set one-for-one so both platforms are measured the same 
 ### Specify Prompt
 
 ```text
-/speckit-specify Build the reusable, qualification-capable evaluation platform for Claude Code agent route selection: a successor runtime capability freeze, a canonical shipped materializer with proven exact-treatment equivalence, a governed twelve-role corpus with blinded scoring, a frozen experiment policy with a price-weighted selection scalar, and a calibration-only live pilot — without emitting any final route policy.
+/speckit-specify Build the reusable, qualification-capable evaluation platform for Claude Code agent route selection: a successor runtime capability freeze, a canonical shipped materializer with proven content-hash exact-treatment equivalence, a governed twelve-role corpus with blinded scoring, a frozen experiment policy whose selection rule is raw-vector Pareto dominance after absolute floors and paired non-inferiority, and a calibration-only live pilot — without emitting any final route policy.
 ```
 
 #### Detailed Prompt (for complex specs)
@@ -483,21 +497,18 @@ Four sessions, matching G56R-003's four Clarify sessions one-for-one.
   frontmatter-plus-body, not parsed-field comparison. The materializer owns the
   rendered bytes and the instruction/configuration digests
 - Selection: deterministic hard gates, then absolute quality and reliability
-  floors, then task-paired cluster-adjusted non-inferiority, then the resource
-  comparison over the raw token vector (input, cache-write by TTL class,
-  cache-read, output). A failed gate, tie, incomplete evidence, or statistical
-  uncertainty returns no qualification. The complete raw vector, duration,
-  retries, and compaction are always reported
-- **Selection-rule parity blocker — resolve before this phase locks the decision
-  contract.** CAR PRD AC-2.5 mandates a predeclared price-weighted scalar with
-  coefficients content-addressed from a dated published price-sheet revision and
-  labeled diagnostic-derived. G56R-003 FR-019 instead forbids a weighted ranking
-  and ends in raw-vector Pareto dominance. The Codex PRD permits "one predeclared
-  environment-independent score **or** Pareto rule", so aligning both platforms on
-  the weighted scalar requires no PRD amendment, whereas aligning on Pareto
-  requires amending CAR's AC-2.5 and the roadmap qualification rule. Do not
-  implement either branch until this is decided; the decision-bundle schema
-  depends on it
+  floors, then task-paired cluster-adjusted non-inferiority, then **Pareto
+  dominance** over the raw token vector (input, cache-write by TTL class,
+  cache-read, output) plus duration, retries, and compaction. A failed gate,
+  tie, mixed dominance, incomplete evidence, or statistical uncertainty returns
+  no qualification, and no weighted ranking is forced. The complete raw vector,
+  duration, retries, and compaction are always reported. Published price data is
+  diagnostic context only, never a selection coefficient
+- The decision-bundle contract must express Pareto dominance and an explicit
+  inconclusive terminal state. It must **not** carry per-category weights, price
+  coefficients, or a scalar score field — mirror G56R-003's
+  `contracts/analysis-decision.schema.json` shape rather than inventing a
+  Claude-only decision schema
 - Slicing: three ordered slices per design concept Q14 — WP-A intact; corpus and
   blinded scoring; experiment policy, statistics and the calibration pilot
 ```
@@ -643,9 +654,9 @@ slice 1 is roadmap Work Package A and the roadmap requires it stay intact.
    allow rule for consolidated baselines
 3. Slice 3 / US4 — frozen `experiment_policy_id`, registry-bound closed
    partitions, immutable pair binding, immutable production comparator, the
-   resolved selection rule, stage implementations for A1/A2/A3/B/C, campaign
-   budgets, replayable statistics, calibration-only pilot, frozen analysis plan,
-   generated-artifact refresh
+   Pareto selection rule with an explicit inconclusive terminal state, stage
+   implementations for A1/A2/A3/B/C, campaign budgets, replayable statistics,
+   calibration-only pilot, frozen analysis plan, generated-artifact refresh
 
 ## Constraints
 

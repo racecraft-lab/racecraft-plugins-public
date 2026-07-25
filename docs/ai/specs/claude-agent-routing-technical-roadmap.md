@@ -137,10 +137,15 @@ creates them.
   gates; quality and reliability floors plus production non-inferiority pass
   before any resource ranking.
 - The selection rule among passing candidates is one predeclared
-  environment-independent weighted scalar over the raw token vector (input,
-  cache-write by TTL class, cache-read, output) with coefficients pinned from
-  a dated published API price-sheet revision, labeled diagnostic-derived; the
-  complete raw vector, duration, retries, and compaction are always reported.
+  environment-independent Pareto rule over the raw token vector (input,
+  cache-write by TTL class, cache-read, output) plus duration, retries, and
+  compaction, applied only after absolute quality and reliability floors and
+  task-paired cluster-adjusted non-inferiority pass. A tie, mixed dominance,
+  incomplete evidence, or statistical uncertainty is inconclusive and yields no
+  qualification; no weighted ranking is forced. The complete raw vector,
+  duration, retries, and compaction are always reported. Amended 2026-07-24
+  under CAR-003 from the previous price-weighted scalar, for logical parity with
+  G56R-003; see PRD AC-2.5.
 - Effort search starts at the documented default (`high`), ascends to the
   first stable pass when necessary, then descends and boundary-retests to the
   lowest stable ordinary effort. The current uniform `max` pins are the

@@ -47,9 +47,11 @@ stop_reason: "natural"
   acceptance contracts, then measure quality with a frozen semantic rubric under
   two candidate-blind ballots plus a third adjudicator on disagreement, with all
   ballots retained (Q7, Q8).
-- Freeze the selection scalar by content-addressing one dated published API
-  price-sheet revision at lock time and using those coefficients for the whole
-  campaign (Q9).
+- Select among passing candidates by **raw-vector Pareto dominance** after
+  absolute quality and reliability floors and task-paired cluster-adjusted
+  non-inferiority, returning no qualification on a tie, mixed dominance, or
+  uncertainty and never forcing a weighted ranking (Q9 as superseded by the
+  2026-07-24 parity decision; see Parity Alignment).
 - Keep live campaigns explicit, local, budgeted, and pinned; CI runs
   deterministic replay, contract, scorer, and statistical tests only, with zero
   live calls (Q10).
@@ -145,6 +147,13 @@ axis was split out into Q2.
 **Notes:** User constraint stated verbatim: *"we don't have an API key and
 shouldn't need one. The plugin does support api keys but we should not require
 one."*
+
+The reasoning above cited AC-2.5's price-sheet-pinned coefficients as what keeps
+the resource evidence diagnostic-derived. AC-2.5 was subsequently amended to the
+Pareto rule (see Q9 and Parity Alignment), which strengthens rather than weakens
+this decision: with no price coefficients anywhere in the selection rule, there
+is no plan-accounting surface for the auth mode to contaminate. The decision to
+amend AC-2.19 is unchanged.
 
 ---
 
@@ -306,10 +315,20 @@ than rebase.
 
 **User's answer:** Content-address one dated revision, freeze it (Recommended)
 
-**Notes:** Platform divergence, recorded deliberately. G56R-003 chose a
-quality-first Pareto comparison over raw resource vectors; the CAR PRD (AC-2.5)
-and roadmap both mandate a single predeclared price-weighted scalar. The
-platforms differ here by design, not by oversight.
+**Notes:** At interview time this was framed as a deliberate platform divergence:
+G56R-003 chose a quality-first Pareto comparison over raw resource vectors, while
+the CAR PRD (AC-2.5) and roadmap both mandated a single predeclared
+price-weighted scalar.
+
+**SUPERSEDED 2026-07-24.** The maintainer subsequently directed that CAR-003 and
+G56R-003 be logically the same with no logical divergence, and chose the Pareto
+rule. CAR-003 therefore selects by **raw-vector Pareto dominance**, and the
+price-sheet pinning mechanism described above is not implemented. Published price
+data may be cited as diagnostic context only, never as a selection coefficient.
+This required amending PRD AC-2.5 and the roadmap qualification rule, both
+carried on this branch with dated amendment notes. This entry is retained
+unrewritten because the Q&A log records what was asked and answered at scoping
+time.
 
 ---
 
@@ -402,7 +421,7 @@ platforms differ here by design, not by oversight.
 > shipped materializer, exact-treatment runner, and trace records. Slice 2 is
 > corpus plus scoring: twelve-role fixtures, scorer contracts, two-ballot
 > adjudication, and the gitignore allow rule. Slice 3 is experiment policy,
-> price-sheet pinning, statistics, and the calibration-only pilot. The shared
+> selection rule, statistics, and the calibration-only pilot. The shared
 > estimator returned `estimated_loc: 502`, `suggested_slices: 2`, `status: warn`
 > on the roadmap's recorded signals; re-run with post-interview signals
 > (approximately 26 files, 19 requirements) it returns `estimated_loc: 675`,
@@ -490,6 +509,24 @@ reference shape. Eight items were aligned to it after the interview closed:
 | Deny-by-default sanitization allowlist that fails closed and blocks publication | FR-027, FR-036 |
 | Contract-only roles retained but never run until a route is admitted | FR-011, FR-012 |
 | Success criteria mirrored one-for-one | SC-001–SC-016 |
+| **Selection rule: raw-vector Pareto dominance after absolute floors and paired non-inferiority; no forced weighted ranking** | FR-018, FR-019 |
+
+**Selection rule — the one item that required amending Claude-side source
+documents.** CAR PRD AC-2.5 and the roadmap qualification rule both mandated a
+predeclared price-weighted scalar with coefficients pinned from a dated published
+price sheet. G56R-003 FR-019 forbids a forced weighted ranking and ends in Pareto
+dominance. The Codex PRD is permissive here — line 355 allows "one predeclared
+environment-independent score **or** Pareto rule" — so G56R-003's Pareto choice
+was a free interview decision, while CAR's scalar was mandatory. Converging on
+Pareto therefore required amending the Claude side. On 2026-07-24 the maintainer
+directed exactly that. Both documents now carry dated amendment notes preserving
+the superseded wording and its rationale:
+
+- `docs/prd-claude-agent-routing.md` — AC-2.5
+- `docs/ai/specs/claude-agent-routing-technical-roadmap.md` — qualification rule
+
+The raw-vector reporting obligation is unchanged; only the rule that ranks
+passing candidates changed.
 
 **Platform-surface differences retained (values, not logic).** The raw token
 vector categories differ — CAR carries cache-write by TTL class and cache-read
@@ -506,21 +543,6 @@ a maintainer decision recorded in this document, not a contract obligation.
 
 ## Open Questions
 
-- **What:** Selection rule — does the pair converge on the price-weighted scalar
-  or on raw-vector Pareto dominance? This is the one remaining logical divergence
-  between CAR-003 and G56R-003. CAR PRD AC-2.5 and the roadmap qualification rule
-  both mandate a predeclared price-weighted scalar; G56R-003 FR-019 forbids a
-  weighted ranking and ends in Pareto dominance.
-  **Why deferred:** Resolving it requires either amending CAR's AC-2.5 plus the
-  roadmap, or revising G56R-003 — which is already past Plan with a committed
-  `analysis-decision.schema.json`. That is a maintainer decision, not a scoping
-  one. Note the Codex PRD (line 355) permits "one predeclared
-  environment-independent score **or** Pareto rule", so converging on the
-  weighted scalar needs no PRD amendment on either side, while converging on
-  Pareto needs one on the Claude side.
-  **Suggested next step:** Decide before the Plan phase locks the decision
-  contract; the decision-bundle schema depends on it. Recorded as a blocker in
-  the workflow's Plan prompt.
 - **What:** Has the `opus` alias actually re-pointed from `claude-opus-4-8` to
   `claude-opus-5` since the CAR-002 snapshot was captured?
   **Why deferred:** Confirming it requires an operator live probe, which is
