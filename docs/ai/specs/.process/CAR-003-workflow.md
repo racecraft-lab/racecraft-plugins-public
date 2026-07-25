@@ -45,6 +45,38 @@ captured during scoping.
 | Q13 | Analysis plan | Freeze margins, sample sizes, power, multiplicity, attrition after calibration |
 | Q14 | Reviewability | Three ordered slices; WP-A stays intact as slice 1 |
 
+### Parity alignment with G56R-003
+
+CAR-003 and G56R-003 must be **logically the same**, diverging only where a
+platform genuinely documents a different surface. G56R-003 is further along
+(through Plan, with committed contract schemas), so its `spec.md` is the
+reference shape. The following were aligned to it after the interview:
+
+| Aligned item | G56R reference |
+|---|---|
+| Four user stories: successor freeze, exact treatment, corpus scoring, analysis plan | US1–US4 |
+| Four Clarify sessions, including a dedicated materialization/delivery/trace-join session | Clarifications S1–S4 |
+| Checklist domains: data-integrity, error-handling, llm-integration | committed `checklists/` |
+| Explicit score-eligibility predicate gating every scored outcome | FR-030 |
+| Separate closed failure taxonomies per plane, incl. unclassifiable attrition | FR-029, FR-034 |
+| Byte-identical / content-hash materialization proof, not parsed or semantic equivalence | FR-006, FR-008 |
+| Deny-by-default sanitization allowlist that fails closed and blocks publication | FR-027, FR-036 |
+| Non-executable role contracts retained but never run until a route is admitted | FR-011, FR-012 |
+
+**Known platform-surface differences (values, not logic):** the raw token vector
+categories differ (CAR carries cache-write by TTL class and cache-read; Codex
+carries cached-input tokens), and CAR carries the AC-2.19 auth amendment because
+only the Claude PRD constrains the scored-run auth environment. Both sides record
+the auth mode of every run and produce no plan-based claim.
+
+**Open parity blocker — selection rule.** G56R FR-019 forbids a weighted ranking
+and ends in raw-vector Pareto dominance; CAR PRD AC-2.5 mandates a predeclared
+price-weighted scalar. The Codex PRD permits "one predeclared
+environment-independent score **or** Pareto rule", so converging both sides on the
+weighted scalar needs no PRD amendment, while converging on Pareto would require
+amending CAR's AC-2.5 and roadmap. Resolve before the Plan phase locks the
+decision contract.
+
 ---
 
 ## Workflow Overview
@@ -123,22 +155,27 @@ Each phase requires **human review and approval** before proceeding:
 
 ### Success Criteria Summary
 
-- [ ] An immutable successor capability snapshot exists, captured under the recorded auth mode, covering the full ordered effort set `low` through `max` per role-eligible model
-- [ ] CAP-Q6 is closed: the alias-re-pointing detection rule distinguishes platform-initiated route change from SpecKit Pro fallback, and never reports the former as the latter
-- [ ] Versioned refresh triggers are defined and invalidate affected evidence on client change, catalog change, alias re-point, or source-ledger change
-- [ ] A canonical materializer in `speckit_pro_runner` parses `agents/*.md` into a policy structure and renders evaluation configurations proven semantically equivalent to real `speckit-pro:<name>` dispatch
-- [ ] Real installed-plugin dispatch is proven from the transcript, with the per-model usage breakdown establishing the effective model
-- [ ] Treatment misdelivery is classified separately from candidate quality, and any platform-initiated route change marks the run non-scorable
-- [ ] The legacy prompt-emulation path is labeled smoke-only; historical results carry `non_release_evidence`
-- [ ] A governed twelve-role corpus exists under `fixtures/<agent>/`, with versioned fixture and scorer contracts
-- [ ] `results/consolidated-*.json` commits through an explicit gitignore allow rule while per-run outputs stay ignored
-- [ ] Blind adjudication resolves low or surprising output into exactly one of the five AC-2.20 causes, with no score threshold predetermining the cause
-- [ ] `experiment_policy_id` is frozen with disjoint screening / selection / cohort-lock / confirmation partitions and `inconclusive => no qualification`
-- [ ] The immutable production comparator is bound: repository revision, plugin version, eleven current frontmatter tuples with dated-ID resolution from the snapshot, instruction hashes, mutation contracts, client version, corpus snapshot
-- [ ] The selection scalar's coefficients are content-addressed from one dated price-sheet revision, labeled diagnostic-derived, with the complete raw token vector always reported alongside
-- [ ] A calibration-only live pilot proves the platform end-to-end, and every pilot record states it is ineligible for qualification
-- [ ] Campaign budgets are frozen before any outcome-bearing run: maximum raw-token use, wall time, candidate count, futility rules, racing method, confirmation-entry cap
-- [ ] Full default suite green with zero live calls; payload boundary clean
+Mirrors the G56R-003 SC set one-for-one so both platforms are measured the same way.
+
+- [ ] **SC-001** 100% of CAR-002 artifact paths and IDs remain unchanged after CAR-003 artifacts are generated
+- [ ] **SC-002** The successor freeze contains at least one admitted tuple, and every admitted tuple carries both official-source and pinned-runtime support evidence
+- [ ] **SC-003** 100% of excluded candidate tuples include a machine-checkable exclusion reason from the closed taxonomy
+- [ ] **SC-004** 100% of accepted score bundles reference a pre-score immutable treatment record with content-hash-identical materialization or installed-policy proof, configured-route proof, complete mandatory observations, authoritative route-change monitoring, `treatment_disposition=proven`, and no disqualifying re-point or treatment failure
+- [ ] **SC-005** The fixture corpus contains exactly twelve valid role contracts: the eleven required core roles plus `autopilot-fast-helper`, reported separately from required-core statistics
+- [ ] **SC-006** 100% of semantic score outcomes include two distinct independently executed candidate-blind ballots bound to one frozen rubric, and 100% of decision-affecting disagreements include a frozen third adjudicator record
+- [ ] **SC-007** 100% of decision bundles apply semantic and reliability floors before paired cluster-adjusted non-inferiority, and non-inferiority before the resource comparison
+- [ ] **SC-008** 100% of inconclusive or incomplete evidence paths produce no qualification
+- [ ] **SC-009** 100% of candidate-caused failures, timeouts, cancellations, budget exhaustion events, and abandoned work are included in the estimand with acceptance zero
+- [ ] **SC-010** 100% of approved transient harness reruns are complete-pair reruns under a documented cap, with zero one-arm reruns or complete-case substitutions
+- [ ] **SC-011** Deterministic replay reconstructs the same terminal decisions from frozen experiment, score, analysis, and decision bundles on a clean checkout
+- [ ] **SC-012** The numeric analysis plan is frozen before any CAR-007 through CAR-010 outcome-bearing cohort evidence is observed
+- [ ] **SC-013** The planning reviewability gate records three ordered review slices and maps each slice to requirements, files, and verification evidence
+- [ ] **SC-014** Every shipped runner source change has synchronized generated payloads, hashes, and installed-cache proofs before the phase is complete
+- [ ] **SC-015** 100% of committed capability snapshots and replay fixtures pass deny-by-default sensitive-field inspection and contain only allowlisted sanitized boundary evidence
+- [ ] **SC-016** 100% of empty, malformed, stale, untrusted, unsanitized, identity-mismatched, or digest-mismatched successor collections block authoritative freeze publication
+- [ ] **SC-017** *(CAR-specific)* CAP-Q6 is closed: alias re-pointing is detected from observed-versus-resolved model ID, recorded as platform behavior, and never reported as SpecKit Pro fallback
+- [ ] **SC-018** *(CAR-specific)* The full ordered effort set `low` through `max` is probed per role-eligible model, including `high` as the documented search origin
+- [ ] **SC-019** Full default suite green with zero live calls; payload boundary clean
 
 ---
 
@@ -187,33 +224,89 @@ origin — was never observed at all.
 
 ### User Stories
 
-Derive the user stories from the two roadmap work packages, preserving both, and
-from the three-slice division recorded in design concept Q14:
+Use exactly these four, mirroring G56R-003's US1 through US4 so the two
+platforms decompose identically. They map onto the three review slices as
+US1+US2 → slice 1 (roadmap Work Package A, kept intact), US3 → slice 2,
+US4 → slice 3.
 
-[US1] Treatment and capability — successor capability freeze with the full
-ordered effort ladder, alias-re-pointing detection and refresh triggers, the
-canonical materializer in `speckit_pro_runner`, real installed-plugin dispatch
-with transcript-proven spawn, cache isolation between arms, misdelivery
-classification, and new execution-trace records under the frozen CAR-002
-contract. This is roadmap Work Package A, kept intact.
+[US1] Publish successor capability freeze (P1) — collect the pinned-runtime
+catalog, canonicalize ordinary effort values through an explicit evidence-backed
+map, admit only tuples present in both the official-source candidate ledger and
+the pinned runtime, probe the full ordered effort set `low` through `max`
+including `high` as the documented search origin, close CAP-Q6 with an
+alias-re-pointing detection rule, and define versioned refresh triggers. Publish
+additively; never mutate or reuse archived CAR-002 evidence. An empty, malformed,
+stale, untrusted, unsanitized, or digest-mismatched collection records diagnostic
+evidence and blocks authoritative publication.
 
-[US2] Corpus and blinded scoring — the governed twelve-role corpus, versioned
-fixture and scorer contracts, deterministic hard gates, the frozen semantic
-rubric under two candidate-blind ballots plus a disagreement adjudicator, the
-five-cause adjudication taxonomy, and the gitignore allow rule for consolidated
-baselines.
+[US2] Prove exact treatment before scoring (P1) — one shipped materializer in
+`speckit_pro_runner` owning the exact rendered destination bytes and
+instruction/configuration digests; real installed-plugin `speckit-pro:<name>`
+dispatch proven from the transcript; cache isolation between arms; an explicit
+score-eligibility predicate that admits an outcome only on `treatment_disposition
+=proven` with content-hash-identical materialization or installed-policy proof,
+configured-route proof, complete mandatory telemetry-profile observations, and
+complete route-change monitoring. Every assigned attempt emits an immutable trace
+regardless of score eligibility; platform-re-pointed attempts stay immutable but
+non-scorable for the requested route, and different-agent, ambiguous, unapproved,
+or unidentifiable delivery is a hard treatment failure that never scores the
+observed destination.
 
-[US3] Experiment policy and statistics — the frozen `experiment_policy_id` with
-disjoint partitions, the immutable production comparator, the content-addressed
-price-weighted selection scalar, stage implementations for A1, A2, A3, B and C,
-campaign budgets, replayable task-level paired inference, and the
-calibration-only live pilot.
+[US3] Score governed twelve-role corpus (P2) — eleven required core roles plus
+`autopilot-fast-helper` analyzed separately from required-core primary
+statistics. Run only roles with admitted executable routes; retain contracts for
+roles without a shipped agent definition and never run them until a route is
+admitted. Each versioned fixture binds role/source digest, objective, evidence
+partition, permitted tools and mutation contract, expected artifacts, acceptance
+oracle, fixture digest, and independent validity review. Deterministic hard gates
+run before semantic evaluation and fail closed on missing gate evidence; semantic
+scoring requires two distinct candidate-blind scorer identities on one frozen
+rubric plus a frozen third adjudicator for every decision-affecting disagreement.
+
+[US4] Freeze calibration analysis plan (P3) — registry-bound `partition_id` with
+closed partition types (`calibration`, `screening`, `selection`, `cohort_lock`,
+`integrated_confirmation`); calibration is always `qualification_eligible=false`
+and cross-partition reuse fails closed. Each pair immutably binds its comparison
+set, routes, role, fixture, task, hashes, capability freeze, route resolution,
+experiment policy, and analysis plan before execution; later refreshes create
+additive invalidations and never rebind. One versioned plan freezes margins,
+sample sizes, power, alpha, multiplicity, racing and futility rules, attrition
+caps, campaign budgets, and terminal rules after the calibration-only pilot and
+before any CAR-007 through CAR-010 outcome is observed.
+
+### Closed taxonomies (required)
+
+Keep these failure planes in **separate closed taxonomies**; a failure in one
+plane must never be recorded as a failure in another:
+
+- **Capability exclusion** — why a candidate tuple was not admitted to the freeze
+- **Snapshot / publication authority** — why an authoritative freeze could not be published
+- **Treatment and scoring** — score disposition, failure plane, failure code, and
+  invalidation reason. The failure-code taxonomy must distinguish at minimum:
+  treatment misdelivery, platform route change, missing mandatory telemetry,
+  invalid or stale fixture, invalid or stale scorer, missing or non-blind ballot,
+  unresolved adjudication disagreement, invalid or stale adjudicator, candidate
+  terminal outcome, infrastructure failure, evidence-boundary violation,
+  partition violation, schema violation, and **unclassifiable attrition**
+
+Unknown or unclassifiable attrition is never treated as candidate-caused,
+transient, or complete-case evidence — it is an evidence-boundary failure that
+blocks completeness and returns inconclusive unless resolved before terminal
+analysis.
 
 ### Constraints
 
 - Python 3.11+ standard library only; no new Bash or `jq` dependency
 - The canonical materializer ships in `speckit_pro_runner`; Layer 6 keeps only a
-  thin adapter, and there is exactly one materializer implementation
+  thin adapter, and there is exactly one materializer implementation. It owns the
+  exact rendered destination bytes and the instruction/configuration digests
+  consumed by both Layer 6 evidence and CAR-006 resolver behavior — no
+  parsed-only or divergent evaluation materializer
+- Equivalence is proven by **content-hash identity** over the shipped
+  frontmatter-plus-body, matching the roadmap's own definition of
+  `resolved_agent_policy_id` as an "exact shipped frontmatter-plus-body content
+  hash." Parsed-field equivalence or source-template equality does not prove
+  installed-policy equivalence
 - The CAR-002 capability snapshot, telemetry profile, and trace contract schema
   are immutable — emit new records under them, never edit them
 - Scores live in a separate versioned bundle referencing trace records by ID;
@@ -224,8 +317,16 @@ calibration-only live pilot.
   AC-2.19 and must be recorded as such
 - Live campaigns are operator-only and explicitly budgeted; the default suite
   runs deterministic replay with zero live calls
-- Raw captures inherit CAR-002's sanitization contract — no raw model, CLI,
-  prompt, or response bytes are committed
+- Committed evidence is a **deny-by-default allowlist that fails closed**. Git may
+  contain only sanitized client identity, opaque account or environment boundary
+  IDs, collection metadata, digests and content-addressed references, tuple
+  decisions, invalidation criteria, schemas, manifests, deterministic fixtures,
+  opaque scorer identities, rubric/scorer/adjudicator digests, anonymized ballots,
+  score bundles, and evidence references. Raw captures, prompts, responses,
+  transcripts, account identifiers, authentication material, credentials,
+  headers, cookies, private hostnames, absolute paths, repository remotes, and
+  plan or billing identifiers stay operator-only. Any non-allowlisted field
+  **blocks publication** rather than being silently stripped
 - Fast mode and any orchestration-topology-changing mode are policy-level
   controls owned by CAR-004, never ordinary per-agent efforts
 - The shared dual-platform smoke runner is also touched by the in-flight
@@ -286,31 +387,40 @@ else was settled during the interview and should not be re-litigated.
 
 ### Clarify Prompts
 
-#### Session 1: Capability freeze and invalidation
+Four sessions, matching G56R-003's four Clarify sessions one-for-one.
+
+#### Session 1: Successor freeze and invalidation
 
 ```text
-/speckit-clarify Focus on the successor capability freeze: what exactly constitutes an alias re-pointing event versus a SpecKit Pro fallback; which observable fields the detection rule reads; what the four refresh triggers (client change, catalog change, alias re-point, source-ledger change) invalidate and what survives; how an unresolved availability blocks a route's scored run; and how the recorded auth mode interacts with the AC-2.19 amendment.
+/speckit-clarify Focus on the successor capability freeze: which runtime surface is the sole authority for freeze admission and which observations are diagnostic-only; how source-admitted ordinary effort values are canonicalized through an evidence-backed map before intersection with the pinned runtime; what exactly constitutes an alias re-pointing event versus a SpecKit Pro fallback and which observable fields the detection rule reads; what each of the four refresh triggers invalidates and what survives; what an empty or invalid intersection publishes; and the closed taxonomy separating tuple-local capability exclusions from snapshot-publication authority failures.
 ```
 
-#### Session 2: Scoring contracts and adjudication
+#### Session 2: Materialization, delivery, and trace joins
 
 ```text
-/speckit-clarify Focus on scoring: the boundary between deterministic hard gates and the semantic rubric; how a fixture or scorer version bump invalidates affected candidate results; what evidence the two blinded ballots and the disagreement adjudicator retain for replay; how blinding is enforced so the adjudicator cannot infer candidate identity; and how the five AC-2.20 causes are assigned without any score threshold predetermining the cause.
+/speckit-clarify Focus on treatment: the exact score-eligibility predicate that admits an outcome; what content-hash-identical materialization proves that parsed-field equivalence does not; which mandatory telemetry-profile observations must be present and where explicit nulls remain permitted; how platform route change (immutable but non-scorable) is distinguished from different-agent, ambiguous, unapproved, or unidentifiable delivery (hard treatment failure); and how score and decision bundles reference immutable trace IDs and digests without embedding or mutating traces.
 ```
 
-#### Session 3: Partitions, comparator, and budgets
+#### Session 3: Corpus and blinded scoring
 
 ```text
-/speckit-clarify Focus on experiment policy: how the screening, selection, cohort-lock and confirmation partitions stay provably disjoint; what makes a calibration-only record permanently ineligible for qualification; exactly which fields pin the immutable production comparator; how the price-sheet revision is content-addressed and what happens when list prices change mid-series; and which campaign budget fields must be frozen before the first outcome-bearing run.
+/speckit-clarify Focus on the corpus and scorers: which of the twelve roles are currently executable versus contract-only, and how a contract-only role is retained without being run; what each versioned fixture must bind before any candidate scores against it; the boundary between deterministic hard gates and the semantic rubric; what the two blinded ballots and the disagreement adjudicator retain for replay and how blinding is enforced; how fixture, scorer, rubric, or adjudicator version changes invalidate affected bundles additively; and the closed score disposition, failure-plane, failure-code, and invalidation-reason fields including unclassifiable attrition.
+```
+
+#### Session 4: Partitions, statistics, and campaign controls
+
+```text
+/speckit-clarify Focus on experiment policy: how the closed partition types stay provably disjoint and how cross-partition reuse fails closed; exactly which fields each comparison pair immutably binds before execution and why refreshes must be additive rather than rebinding; the decision sequence from absolute floors through task-paired cluster-adjusted non-inferiority to the resource comparison, and what makes a result inconclusive; the assigned-attempt estimand and the capped complete-pair rerun rule; and which campaign budget and terminal-policy fields freeze after calibration and before any cohort outcome.
 ```
 
 ### Clarify Results
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Capability freeze and invalidation | | |
-| 2 | Scoring contracts and adjudication | | |
-| 3 | Partitions, comparator, and budgets | | |
+| 1 | Successor freeze and invalidation | | |
+| 2 | Materialization, delivery, and trace joins | | |
+| 3 | Corpus and blinded scoring | | |
+| 4 | Partitions, statistics, and campaign controls | | |
 
 ---
 
@@ -369,11 +479,25 @@ else was settled during the interview and should not be re-litigated.
   semantically equivalent to that dispatch
 - Score bundle: versioned experiment, score, and decision records keyed by
   `execution_trace_id`
-- Selection: deterministic hard gates, then quality and reliability floors and
-  paired non-inferiority, then one predeclared price-weighted scalar over the
-  raw token vector (input, cache-write by TTL class, cache-read, output) with
-  coefficients content-addressed from one dated published price-sheet revision
-  and labeled diagnostic-derived. The complete raw vector is always reported
+- Exact treatment: prove equivalence by content-hash identity over the shipped
+  frontmatter-plus-body, not parsed-field comparison. The materializer owns the
+  rendered bytes and the instruction/configuration digests
+- Selection: deterministic hard gates, then absolute quality and reliability
+  floors, then task-paired cluster-adjusted non-inferiority, then the resource
+  comparison over the raw token vector (input, cache-write by TTL class,
+  cache-read, output). A failed gate, tie, incomplete evidence, or statistical
+  uncertainty returns no qualification. The complete raw vector, duration,
+  retries, and compaction are always reported
+- **Selection-rule parity blocker — resolve before this phase locks the decision
+  contract.** CAR PRD AC-2.5 mandates a predeclared price-weighted scalar with
+  coefficients content-addressed from a dated published price-sheet revision and
+  labeled diagnostic-derived. G56R-003 FR-019 instead forbids a weighted ranking
+  and ends in raw-vector Pareto dominance. The Codex PRD permits "one predeclared
+  environment-independent score **or** Pareto rule", so aligning both platforms on
+  the weighted scalar requires no PRD amendment, whereas aligning on Pareto
+  requires amending CAR's AC-2.5 and the roadmap qualification rule. Do not
+  implement either branch until this is decided; the decision-bundle schema
+  depends on it
 - Slicing: three ordered slices per design concept Q14 — WP-A intact; corpus and
   blinded scoring; experiment policy, statistics and the calibration pilot
 ```
@@ -399,13 +523,15 @@ else was settled during the interview and should not be re-litigated.
 ### Step 1: Analyze Spec for Recommended Domains
 
 Signals present in this spec: JSON schemas and immutable evidence records
-(**data-integrity**); real model dispatch, alias resolution, effort levels, token
-accounting (**llm-integration**); statistical partitions, margins, multiplicity,
-attrition (**research-rigor**). Error handling appears throughout as misdelivery
-classification, rerun policy, and attrition, and is folded into the
-data-integrity and research-rigor focus areas rather than run separately.
+(**data-integrity**); closed failure taxonomies, misdelivery classification,
+rerun policy, attrition, and fail-closed publication (**error-handling**); real
+model dispatch, alias resolution, effort levels, and token accounting
+(**llm-integration**).
 
-**Recommended domains: data-integrity, llm-integration, research-rigor.**
+**Domains: data-integrity, error-handling, llm-integration** — the same three
+G56R-003 ran, so both platforms are validated against identical lenses.
+Statistical-rigor concerns are carried inside the error-handling and
+data-integrity focus areas rather than run as a separate domain, matching G56R.
 
 ### Step 2: Run Enriched Checklist Prompts
 
@@ -444,21 +570,21 @@ Focus on CAR-003 requirements:
 - Pay special attention to: whether the materializer rendering and real dispatch are proven equivalent, or merely asserted to be
 ```
 
-#### 3. research-rigor Checklist
+#### 3. error-handling Checklist
 
-<!-- Why this domain: the statistical claims are what make a route qualification defensible, and most of the ways this spec can be wrong are silent. -->
+<!-- Why this domain: this spec's correctness lives in its failure paths — closed taxonomies, fail-closed publication, attrition, and the rules that decide when to return no qualification rather than a number. -->
 
 ```text
-/speckit-checklist research-rigor
+/speckit-checklist error-handling
 
 Focus on CAR-003 requirements:
-- Screening, selection, cohort-lock and confirmation partitions are provably disjoint, and the confirmation set is consumed exactly once
-- Calibration-only records are permanently ineligible for qualification and cannot leak into any outcome-bearing claim
-- The analysis plan predeclares primary endpoint, practical margin, one-sided confidence rule, alpha and multiplicity, target power, clustering assumptions, sample sizes, racing adjustment, attrition thresholds, terminal policy, and `inconclusive => no qualification`
-- Blind adjudication assigns exactly one of the five AC-2.20 causes with no score threshold predetermining the cause
-- Only independently preclassified transient harness failure receives a capped complete-pair rerun; candidate-caused failures remain outcomes in the estimand
-- The immutable production comparator is fully pinned, and the price-sheet revision is content-addressed at lock time
-- Pay special attention to: any numeric threshold that could be set or changed after outcomes are observed
+- Capability exclusion, snapshot-publication authority, and treatment/scoring failures use separate closed taxonomies, and a failure in one plane is never recorded in another
+- The score failure-code taxonomy distinguishes treatment misdelivery, platform route change, missing mandatory telemetry, invalid or stale fixture, invalid or stale scorer, missing or non-blind ballot, unresolved adjudication disagreement, invalid or stale adjudicator, candidate terminal outcome, infrastructure failure, evidence-boundary violation, partition violation, schema violation, and unclassifiable attrition
+- Unknown or unclassifiable attrition is an evidence-boundary failure that returns inconclusive, never candidate-caused, transient, or complete-case evidence
+- Only independently preclassified transient harness failure receives a capped complete-pair rerun; one-arm reruns are impossible by construction
+- A failed gate, tie, incomplete evidence, or statistical uncertainty returns no qualification rather than a forced ranking
+- Publication fails closed on empty, malformed, stale, untrusted, unsanitized, identity-mismatched, or digest-mismatched collections, and on any non-allowlisted committed field
+- Pay special attention to: any path where a failure could be silently absorbed, reclassified into a different plane, or scored against the observed rather than the requested route
 ```
 
 ### Checklist Results
@@ -466,8 +592,8 @@ Focus on CAR-003 requirements:
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
 | data-integrity | | | |
+| error-handling | | | |
 | llm-integration | | | |
-| research-rigor | | | |
 | **Total** | | | |
 
 ### Addressing Gaps
@@ -503,17 +629,23 @@ When checklist identifies `[Gap]` items:
 Mirror the three ordered slices from design concept Q14. Do not reorder them —
 slice 1 is roadmap Work Package A and the roadmap requires it stay intact.
 
-1. Slice 1 / US1 — successor capability freeze and collector, refresh triggers,
-   alias-re-pointing detection, canonical materializer in `speckit_pro_runner`,
-   Layer 6 adapter, real-dispatch exact-treatment runner, cache isolation,
-   misdelivery classification, execution-trace records, smoke-runner demotion
-2. Slice 2 / US2 — twelve-role corpus, versioned fixture and scorer contracts,
-   deterministic hard gates, blinded semantic rubric, two-ballot adjudication
-   plus disagreement adjudicator, gitignore allow rule for consolidated baselines
-3. Slice 3 / US3 — frozen `experiment_policy_id`, disjoint partitions, immutable
-   production comparator, content-addressed price-weighted scalar, stage
-   implementations for A1/A2/A3/B/C, campaign budgets, replayable statistics,
-   calibration-only pilot, frozen analysis plan
+1. Slice 1 / US1 + US2 — successor capability freeze and collector, effort
+   normalization map, alias-re-pointing detection and refresh triggers,
+   fail-closed publication gate, canonical materializer in `speckit_pro_runner`
+   with content-hash equality proof, Layer 6 adapter, real-dispatch
+   exact-treatment runner, cache isolation, score-eligibility predicate,
+   route-change versus misdelivery classification, immutable execution-trace
+   records, smoke-runner demotion. This is roadmap Work Package A, kept intact
+2. Slice 2 / US3 — twelve-role corpus with contract-only roles retained but not
+   run, versioned fixture and scorer contracts, deterministic hard gates,
+   blinded semantic rubric, two-ballot adjudication plus disagreement
+   adjudicator, closed score disposition and failure-code taxonomy, gitignore
+   allow rule for consolidated baselines
+3. Slice 3 / US4 — frozen `experiment_policy_id`, registry-bound closed
+   partitions, immutable pair binding, immutable production comparator, the
+   resolved selection rule, stage implementations for A1/A2/A3/B/C, campaign
+   budgets, replayable statistics, calibration-only pilot, frozen analysis plan,
+   generated-artifact refresh
 
 ## Constraints
 
@@ -646,9 +778,9 @@ For each task, follow this cycle:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Slice 1 — capability and treatment | | | Roadmap Work Package A, kept intact |
-| Slice 2 — corpus and blinded scoring | | | |
-| Slice 3 — policy, statistics, pilot | | | |
+| Slice 1 — US1 + US2 capability freeze and materialized treatment trace | | | Roadmap Work Package A, kept intact |
+| Slice 2 — US3 governed corpus, hard gates, blinded scoring | | | |
+| Slice 3 — US4 calibration analysis plan and replayable decision bundles | | | |
 
 ---
 

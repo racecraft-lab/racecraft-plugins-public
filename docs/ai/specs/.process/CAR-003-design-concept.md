@@ -471,8 +471,56 @@ committed repository artifacts and the documented model catalog; no claim is mad
 about how the `opus` alias resolves today, which the CAR-003 collector must
 establish by operator probe.
 
+## Parity Alignment with G56R-003
+
+Post-interview directive from the maintainer: CAR-003 and G56R-003 must be
+**logically the same, with no logical divergence** — differing only in values
+where a platform documents a different surface. G56R-003 is further along
+(through Plan, with committed contract schemas), so its `spec.md` is the
+reference shape. Eight items were aligned to it after the interview closed:
+
+| Aligned item | G56R reference |
+|---|---|
+| Four user stories — successor freeze, exact treatment, corpus scoring, analysis plan — mapped onto the same three slices | US1–US4 |
+| Four Clarify sessions, adding a dedicated materialization/delivery/trace-join session | Clarifications S1–S4 |
+| Checklist domains changed to data-integrity, error-handling, llm-integration | committed `checklists/` |
+| Explicit score-eligibility predicate gating every scored outcome | FR-030 |
+| Separate closed failure taxonomies per plane, including unclassifiable attrition as an evidence-boundary failure | FR-029, FR-034 |
+| Equivalence proven by content-hash identity, not parsed-field or semantic comparison | FR-006, FR-008 |
+| Deny-by-default sanitization allowlist that fails closed and blocks publication | FR-027, FR-036 |
+| Contract-only roles retained but never run until a route is admitted | FR-011, FR-012 |
+| Success criteria mirrored one-for-one | SC-001–SC-016 |
+
+**Platform-surface differences retained (values, not logic).** The raw token
+vector categories differ — CAR carries cache-write by TTL class and cache-read
+where Codex carries cached-input tokens — and CAR carries the AC-2.19 auth
+amendment because only the Claude PRD constrains the scored-run authentication
+environment. Both platforms record the auth mode of every run and produce no
+plan-based claim. The parity contract explicitly contemplates this: platform
+differences remain values, not schemas.
+
+**Note on the parity contract's scope.** `agent-routing-parity-contract.md`
+states it applies to `CAR-001` and `G56R-001` and is the active foundation for
+the `-002` pair. It does not formally extend to `-003`. Parity here is therefore
+a maintainer decision recorded in this document, not a contract obligation.
+
 ## Open Questions
 
+- **What:** Selection rule — does the pair converge on the price-weighted scalar
+  or on raw-vector Pareto dominance? This is the one remaining logical divergence
+  between CAR-003 and G56R-003. CAR PRD AC-2.5 and the roadmap qualification rule
+  both mandate a predeclared price-weighted scalar; G56R-003 FR-019 forbids a
+  weighted ranking and ends in Pareto dominance.
+  **Why deferred:** Resolving it requires either amending CAR's AC-2.5 plus the
+  roadmap, or revising G56R-003 — which is already past Plan with a committed
+  `analysis-decision.schema.json`. That is a maintainer decision, not a scoping
+  one. Note the Codex PRD (line 355) permits "one predeclared
+  environment-independent score **or** Pareto rule", so converging on the
+  weighted scalar needs no PRD amendment on either side, while converging on
+  Pareto needs one on the Claude side.
+  **Suggested next step:** Decide before the Plan phase locks the decision
+  contract; the decision-bundle schema depends on it. Recorded as a blocker in
+  the workflow's Plan prompt.
 - **What:** Has the `opus` alias actually re-pointed from `claude-opus-4-8` to
   `claude-opus-5` since the CAR-002 snapshot was captured?
   **Why deferred:** Confirming it requires an operator live probe, which is
