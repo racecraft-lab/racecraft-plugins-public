@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://racecraft.dev/schemas/g56r-003/analysis-decision.schema.json",
+  "$id": "https://racecraft.dev/schemas/g56r-003/runtime/analysis-decision.schema.json",
   "title": "G56R-003 Analysis Decision Bundle",
   "type": "object",
   "additionalProperties": false,
@@ -92,8 +92,11 @@
         {"$ref": "#/$defs/completeDominanceOutput"},
         {"$ref": "#/$defs/floorFailureOutput"},
         {"$ref": "#/$defs/nonInferiorityFailureOutput"},
+        {"$ref": "#/$defs/nonInferiorityUncertainOutput"},
+        {"$ref": "#/$defs/paretoFailureOutput"},
         {"$ref": "#/$defs/mixedParetoOutput"},
-        {"$ref": "#/$defs/incompleteOutput"}
+        {"$ref": "#/$defs/incompleteOutput"},
+        {"$ref": "#/$defs/invalidOutput"}
       ]
     },
     "analysisOutputBase": {
@@ -128,6 +131,7 @@
             "not_evaluated"
           ]
         },
+        "details": {},
         "terminal_analysis_disposition": {
           "enum": [
             "no_qualification",
@@ -160,6 +164,7 @@
             "floor_result": {"const": "pass"},
             "non_inferiority_result": {"const": "pass"},
             "pareto_result": {"const": "candidate_dominates"},
+            "details": {},
             "terminal_analysis_disposition": {"const": "calibration_complete"}
           }
         }
@@ -187,6 +192,7 @@
             "floor_result": {"const": "fail"},
             "non_inferiority_result": {"const": "not_evaluated"},
             "pareto_result": {"const": "not_evaluated"},
+            "details": {},
             "terminal_analysis_disposition": {"const": "no_qualification"}
           }
         }
@@ -214,6 +220,63 @@
             "floor_result": {"const": "pass"},
             "non_inferiority_result": {"const": "fail"},
             "pareto_result": {"const": "not_evaluated"},
+            "details": {},
+            "terminal_analysis_disposition": {"const": "no_qualification"}
+          }
+        }
+      ]
+    },
+    "nonInferiorityUncertainOutput": {
+      "allOf": [
+        {"$ref": "#/$defs/analysisOutputBase"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "analysis_output_id",
+            "analysis_output_digest",
+            "complete",
+            "floor_result",
+            "non_inferiority_result",
+            "pareto_result",
+            "terminal_analysis_disposition"
+          ],
+          "properties": {
+            "analysis_output_id": {"$ref": "#/$defs/digest"},
+            "analysis_output_digest": {"$ref": "#/$defs/digest"},
+            "complete": {"const": true},
+            "floor_result": {"const": "pass"},
+            "non_inferiority_result": {"const": "uncertain"},
+            "pareto_result": {"const": "not_evaluated"},
+            "details": {},
+            "terminal_analysis_disposition": {"const": "inconclusive"}
+          }
+        }
+      ]
+    },
+    "paretoFailureOutput": {
+      "allOf": [
+        {"$ref": "#/$defs/analysisOutputBase"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "analysis_output_id",
+            "analysis_output_digest",
+            "complete",
+            "floor_result",
+            "non_inferiority_result",
+            "pareto_result",
+            "terminal_analysis_disposition"
+          ],
+          "properties": {
+            "analysis_output_id": {"$ref": "#/$defs/digest"},
+            "analysis_output_digest": {"$ref": "#/$defs/digest"},
+            "complete": {"const": true},
+            "floor_result": {"const": "pass"},
+            "non_inferiority_result": {"const": "pass"},
+            "pareto_result": {"const": "comparator_dominates"},
+            "details": {},
             "terminal_analysis_disposition": {"const": "no_qualification"}
           }
         }
@@ -241,6 +304,7 @@
             "floor_result": {"const": "pass"},
             "non_inferiority_result": {"const": "pass"},
             "pareto_result": {"enum": ["tie", "mixed", "uncertain"]},
+            "details": {},
             "terminal_analysis_disposition": {"const": "inconclusive"}
           }
         }
@@ -268,7 +332,36 @@
             "floor_result": {"const": "not_evaluated"},
             "non_inferiority_result": {"const": "not_evaluated"},
             "pareto_result": {"const": "not_evaluated"},
+            "details": {},
             "terminal_analysis_disposition": {"const": "inconclusive"}
+          }
+        }
+      ]
+    },
+    "invalidOutput": {
+      "allOf": [
+        {"$ref": "#/$defs/analysisOutputBase"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "analysis_output_id",
+            "analysis_output_digest",
+            "complete",
+            "floor_result",
+            "non_inferiority_result",
+            "pareto_result",
+            "terminal_analysis_disposition"
+          ],
+          "properties": {
+            "analysis_output_id": {"$ref": "#/$defs/digest"},
+            "analysis_output_digest": {"$ref": "#/$defs/digest"},
+            "complete": {"const": false},
+            "floor_result": {"const": "not_evaluated"},
+            "non_inferiority_result": {"const": "not_evaluated"},
+            "pareto_result": {"const": "not_evaluated"},
+            "details": {},
+            "terminal_analysis_disposition": {"const": "invalid"}
           }
         }
       ]

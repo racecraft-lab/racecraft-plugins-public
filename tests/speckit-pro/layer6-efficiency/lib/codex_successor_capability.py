@@ -298,12 +298,15 @@ def _validate_catalog_capture(raw, predecessor, published_at):
 
     normalized_models = []
     for item in validated_models:
-        default_label = (
-            "implicit_default"
-            if item["default_effort"] is None
-            else _normalized_label(item["default_effort"], "catalog default effort")
+        default_label = _normalized_label(
+            item["default_effort"] if item["default_effort"] is not None else defaults["effort"],
+            "catalog default effort",
         )
-        canonical_default = normalization.get(default_label)
+        canonical_default = (
+            "topology-control"
+            if default_label in _TOPOLOGY_LABELS
+            else normalization.get(default_label)
+        )
         normalized_efforts = []
         for effort in item["supported_efforts"]:
             label = _normalized_label(effort, "catalog supported effort")
@@ -461,9 +464,38 @@ def _catalog_authority(catalog):
         result[item["model"]] = {
             "ordinary_supported": "ordinary" in item["normalized_supported_efforts"],
             "topology_supported": "topology-control" in item["normalized_supported_efforts"],
+            "default_effort": item["default_effort"],
             "catalog_entry_digest": item["catalog_entry_digest"],
         }
     return result
+
+
+def _diagnostic_exclusion_reasons(candidate, diagnostics):
+    reasons = []
+    for diagnostic in diagnostics:
+        fields = diagnostic["diagnostic_fields"]
+        diagnostic_model = fields.get("assignment.supported_effective_model")
+        diagnostic_effort = fields.get("assignment.supported_effective_effort")
+        if (diagnostic_model is None) != (diagnostic_effort is None):
+            reasons.append("surface_evidence_incomplete")
+            continue
+        if diagnostic_model is not None:
+            normalized_effort = _normalize_diagnostic_effort(diagnostic_effort)
+            normalized_effort = "ordinary" if normalized_effort is None else normalized_effort
+            if (
+                diagnostic_model != candidate["model"]
+                or normalized_effort != candidate["canonical_effort"]
+                or fields.get("availability") is False
+            ):
+                reasons.append("surface_disagreement")
+        hidden_values = {
+            key: value
+            for key, value in fields.items()
+            if any(marker in key.lower() for marker in ("hidden", "cache", "bundled"))
+        }
+        if any(value not in (None, False, "", [], {}) for value in hidden_values.values()):
+            reasons.append("hidden_state_disagreement")
+    return reasons
 
 
 def _build_tuple_decisions(predecessor, request, manifest):
@@ -473,18 +505,26 @@ def _build_tuple_decisions(predecessor, request, manifest):
     decisions = []
     for candidate, route, source_authoritative in _source_route_rows(manifest, predecessor):
         raw_effort = route["effort_selector"].get("requested_value")
+        catalog_entry = catalog_by_model.get(candidate["model"])
         effort_label = (
-            "implicit_default"
-            if raw_effort is None
+            None if raw_effort is None
             else _normalized_label(raw_effort, "candidate effort")
         )
-        canonical_effort = normalization.get(effort_label)
+        canonical_effort = (
+            catalog_entry["default_effort"]
+            if effort_label is None and catalog_entry
+            else (
+                "topology-control"
+                if effort_label in _TOPOLOGY_LABELS
+                else normalization.get(effort_label)
+            )
+        )
+        candidate["canonical_effort"] = canonical_effort
         reasons = []
         if canonical_effort is None:
             reasons.append("canonical_effort_unknown")
         if not source_authoritative:
             reasons.append("source_not_admitted")
-        catalog_entry = catalog_by_model.get(candidate["model"])
         catalog_supported = bool(
             catalog_entry
             and canonical_effort == "ordinary"
@@ -492,6 +532,7 @@ def _build_tuple_decisions(predecessor, request, manifest):
         )
         if not catalog_supported:
             reasons.append("availability_not_proven")
+        reasons.extend(_diagnostic_exclusion_reasons(candidate, request["diagnostics"]))
         included = source_authoritative and catalog_supported and not reasons
         decisions.append({
             "candidate_route_id": candidate["candidate_route_id"],
@@ -655,9 +696,9 @@ def publish_successor_freeze(
         raise ValueError("retained raw catalog evidence digest does not match the request")
     successor = build_successor_freeze(predecessor, request, manifest=manifest)
     successor_bytes = canonical_bytes(successor) + b"\n"
-    _private._write_public_append_only_bytes(output, successor_bytes)
     if _io._read_bounded_regular_file(predecessor_path) != predecessor_bytes:
         raise ValueError("predecessor freeze bytes changed during successor publication")
+    _private._write_public_append_only_bytes(output, successor_bytes)
     return {
         "predecessor_candidate_freeze_id": predecessor["candidate_freeze_id"],
         "successor_candidate_freeze_id": successor["candidate_freeze_id"],

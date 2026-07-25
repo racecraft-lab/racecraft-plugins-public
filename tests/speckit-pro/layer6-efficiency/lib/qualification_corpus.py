@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy as _copy
+import datetime as _datetime
 import hashlib as _hashlib
 import json as _json
 import re as _re
@@ -63,7 +64,9 @@ _NON_EXECUTABLE_CORE_SET = frozenset(NON_EXECUTABLE_CORE_ROLES)
 _HELPER_SET = frozenset(OPTIONAL_HELPER_ROLES)
 _EXECUTABLE_ROLE_SET = _EXECUTABLE_CORE_SET | _HELPER_SET
 _DIGEST_RE = _re.compile(r"^sha256:[0-9a-f]{64}$")
-_UTC_RE = _re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+_RFC3339_RE = _re.compile(
+    r"^\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})$"
+)
 _TOP_LEVEL_FIELDS = frozenset({
     "schema_version",
     "corpus_id",
@@ -157,7 +160,15 @@ def _digest(value: object, label: str) -> str:
 
 
 def _timestamp(value: object, label: str) -> str:
-    if not isinstance(value, str) or _UTC_RE.fullmatch(value) is None:
+    if not isinstance(value, str) or _RFC3339_RE.fullmatch(value) is None:
+        raise ValueError(f"{label} must be an RFC3339 UTC timestamp")
+    try:
+        parsed = _datetime.datetime.fromisoformat(
+            value[:-1] + "+00:00" if value[-1] in "Zz" else value
+        )
+    except ValueError as exc:
+        raise ValueError(f"{label} must be an RFC3339 UTC timestamp") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() != _datetime.timedelta(0):
         raise ValueError(f"{label} must be an RFC3339 UTC timestamp")
     return value
 
@@ -408,7 +419,6 @@ def _validate_role(value: object, *, repo_root: _Path, corpus_partition: dict) -
         ),
     }
     fixture_authority = _json.loads(_fixture_bytes(repo_root, role_id).decode("utf-8"))
-    fixture_authority["partition_binding"] = _copy.deepcopy(corpus_partition)
     if validated != fixture_authority:
         raise ValueError("role contract does not match canonical fixture authority")
     return validated
@@ -416,7 +426,7 @@ def _validate_role(value: object, *, repo_root: _Path, corpus_partition: dict) -
 
 def validate_role_corpus(corpus: object, *, repo_root: _Path | str | None = None) -> dict:
     """Validate and deterministically order the governed twelve-role corpus."""
-    root = _Path(repo_root) if repo_root is not None else _Path(__file__).resolve().parents[3]
+    root = _Path(repo_root) if repo_root is not None else _Path(__file__).resolve().parents[4]
     value = _closed(_copy.deepcopy(corpus), _TOP_LEVEL_FIELDS, "closed corpus")
     if value["schema_version"] != ROLE_CORPUS_SCHEMA_VERSION:
         raise ValueError("role corpus schema version is unsupported")
@@ -537,6 +547,8 @@ def schedule_admitted_roles(
         if role_id not in _EXECUTABLE_ROLE_SET:
             raise ValueError("active freeze route authority has an invalid governed role")
         binding = _validate_route_bindings([raw], role_id=role_id, executable=True)[0]
+        if binding["candidate_freeze_id"] != trusted_authority["id"]:
+            raise ValueError("active freeze route does not bind the trusted freeze ID")
         if binding["route_id"] in active_by_route:
             raise ValueError("active freeze route authority contains duplicate routes")
         active_by_route[binding["route_id"]] = binding

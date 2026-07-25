@@ -260,7 +260,7 @@ class CodexCorpusFixtureGroupATests(unittest.TestCase):
             admitted_route_ids=admitted_route_ids,
             active_route_bindings=active_route_bindings,
             trusted_route_authority_binding={
-                "id": "g56r-003-active-route-authority",
+                "id": CANDIDATE_FREEZE_ID,
                 "digest": CORPUS.digest(
                     sorted(
                         active_route_bindings,

@@ -18,8 +18,8 @@ is prepared for `$speckit-scaffold-spec G56R-NNN`.
 **Status:** Active; G56R-001 is complete and archived after PR #360 merged on
 the shared official-source evidence foundation from PR #362;
 [G56R-002](.process/G56R-002-workflow.md) is complete and archived after
-PRs #366-#368; [G56R-003](.process/G56R-003-workflow.md) implementation is
-complete in PR #386 and awaits merge
+PRs #366-#368; [G56R-003](.process/G56R-003-workflow.md) is in review
+remediation in PR #386
 
 **Legacy identifier note:** `G56R` and the existing filenames are retained for
 traceability. They do not limit the candidate catalog to GPT-5.6.
@@ -50,7 +50,7 @@ G56R-011
 internal dependencies still apply: the shared official-source evidence
 foundation merged via PR #362, G56R-001 merged via PR #360, and G56R-002
 completed through PRs #366-#368 under the preserved no-qualification boundary.
-G56R-003 implementation is complete in PR #386. It consumes the canonical
+G56R-003 is in review remediation in PR #386. It consumes the canonical
 capability evidence, treatment contracts, replay fixtures, and evidence report
 while preserving the archived zero-eligible freeze and producing its additive
 successor.
@@ -221,7 +221,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 |---|---|---|---|---|
 | G56R-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | PR #360 merged; canonical evidence lives under `docs/ai/research/` |
 | G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Complete / Archived | [.process/G56R-002-workflow.md](.process/G56R-002-workflow.md) | PRs #366-#368 merged; canonical evidence, contracts, replay fixtures, and validators live outside `specs/**` |
-| G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Complete / PR Open | [.process/G56R-003-workflow.md](.process/G56R-003-workflow.md) | PR #386 is open; merge before starting G56R-004 |
+| G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | In Progress / PR Open | [.process/G56R-003-workflow.md](.process/G56R-003-workflow.md) | Remediate the completed `/review` findings in PR #386, then merge before starting G56R-004 |
 | G56R-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by merge of G56R-003 PR #386 |
 | G56R-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by G56R-004 |
 | G56R-006 | Capability-aware Resolver, Materializer, Installer, and Strict Override | Pending | - | Blocked by G56R-005 |

@@ -125,7 +125,7 @@ class CodexSuccessorCapabilityTests(unittest.TestCase):
             "captured_at": "2026-07-16T00:00:00Z",
             "reported_effort": "Ordinary",
             "diagnostic_fields": {
-                "assignment.supported_effective_model": "model-a",
+                "assignment.supported_effective_model": "gpt-5.6-sol",
                 "assignment.supported_effective_effort": "ordinary",
                 "discovery.models": ["model-a"],
                 "discovery.capabilities": ["tool-use"],
@@ -540,19 +540,60 @@ class CodexSuccessorCapabilityTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "source/runtime intersection is empty"):
             successor.build_successor_freeze(predecessor, empty_intersection, manifest=self.manifest)
-        missing_default_normalization = copy.deepcopy(valid)
-        missing_default_normalization["catalog_capture"]["effort_normalization_map"] = [
-            item for item in missing_default_normalization["catalog_capture"]["effort_normalization_map"]
-            if item["raw_effort"] != "implicit_default"
+        missing_ordinary_normalization = copy.deepcopy(valid)
+        missing_ordinary_normalization["catalog_capture"]["effort_normalization_map"] = [
+            item for item in missing_ordinary_normalization["catalog_capture"]["effort_normalization_map"]
+            if item["raw_effort"] != "Ordinary"
         ]
-        missing_default_normalization["catalog_capture"]["parsed_catalog_digest"] = successor.digest({
-            "visible_models": missing_default_normalization["catalog_capture"]["visible_models"],
-            "defaults": missing_default_normalization["catalog_capture"]["defaults"],
-            "supported_efforts": missing_default_normalization["catalog_capture"]["supported_efforts"],
-            "effort_normalization_map": missing_default_normalization["catalog_capture"]["effort_normalization_map"],
+        missing_ordinary_normalization["catalog_capture"]["parsed_catalog_digest"] = successor.digest({
+            "visible_models": missing_ordinary_normalization["catalog_capture"]["visible_models"],
+            "defaults": missing_ordinary_normalization["catalog_capture"]["defaults"],
+            "supported_efforts": missing_ordinary_normalization["catalog_capture"]["supported_efforts"],
+            "effort_normalization_map": missing_ordinary_normalization["catalog_capture"]["effort_normalization_map"],
         })
         with self.assertRaisesRegex(ValueError, "canonical effort unknown"):
-            successor.build_successor_freeze(predecessor, missing_default_normalization, manifest=self.manifest)
+            successor.build_successor_freeze(predecessor, missing_ordinary_normalization, manifest=self.manifest)
+
+    def test_unset_routes_use_the_models_actual_default_effort(self) -> None:
+        successor = load_successor_module("g56r_003_successor_model_default")
+        predecessor = self.predecessor_freeze()
+        catalog = self.catalog_capture(
+            predecessor,
+            successor,
+            visible_models=[{
+                "model": "gpt-5.6-sol",
+                "default_effort": "Ultra",
+                "supported_efforts": ["Ordinary", "Ultra"],
+            }],
+        )
+        request = self.successor_request(
+            predecessor,
+            successor,
+            catalog_capture=catalog,
+        )
+        with self.assertRaisesRegex(ValueError, "source/runtime intersection is empty"):
+            successor.build_successor_freeze(predecessor, request, manifest=self.manifest)
+
+    def test_diagnostic_disagreement_excludes_catalog_supported_tuples(self) -> None:
+        successor = load_successor_module("g56r_003_successor_diagnostic_disagreement")
+        predecessor = self.predecessor_freeze()
+        diagnostics = [{
+            "surface": "cli",
+            "captured_at": "2026-07-16T00:00:00Z",
+            "reported_effort": "Ordinary",
+            "diagnostic_fields": {
+                "assignment.supported_effective_model": "different-model",
+                "assignment.supported_effective_effort": "ordinary",
+                "availability": True,
+            },
+        }]
+        request = self.successor_request(
+            predecessor,
+            successor,
+            diagnostics=diagnostics,
+        )
+        with self.assertRaisesRegex(ValueError, "source/runtime intersection is empty"):
+            successor.build_successor_freeze(predecessor, request, manifest=self.manifest)
 
 
 if __name__ == "__main__":

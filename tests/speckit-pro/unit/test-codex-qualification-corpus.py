@@ -75,8 +75,8 @@ EXPECTED_PUBLIC_API = frozenset(
         "validate_role_corpus",
     }
 )
-PARTITION_DIGEST = "sha256:" + "1" * 64
-FREEZE_ID = "sha256:" + "2" * 64
+PARTITION_DIGEST = "sha256:345cf184dd42fb4644f88c141053eb821c484500ac4e15ac94d59bd7673367d6"
+FREEZE_ID = "sha256:734672cea5a83e5b8f296ee604f7cb8d93e0a5296a3f864b873fe78bfe518f1e"
 CALIBRATION_TIME = "2026-07-24T00:00:00Z"
 
 
@@ -260,7 +260,7 @@ def trusted_route_authority_binding(corpus: dict) -> dict:
         key=lambda item: (item["role_id"], item["route_id"]),
     )
     return {
-        "id": "g56r-003-active-route-authority",
+        "id": FREEZE_ID,
         "digest": digest(routes),
     }
 
@@ -399,6 +399,12 @@ class CodexQualificationCorpusTests(unittest.TestCase):
             {"calibration"},
         )
         self.assertFalse(any(role["partition_binding"]["qualification_eligible"] for role in validated["roles"]))
+
+        self.assertEqual(
+            self.corpus.validate_role_corpus(manifest),
+            validated,
+            "the default corpus root must resolve to the repository",
+        )
         for role in validated["roles"]:
             role_id = role["role_id"]
             self.assertEqual(role["fixture_binding"], fixture_bindings_by_role[role_id])
@@ -414,6 +420,21 @@ class CodexQualificationCorpusTests(unittest.TestCase):
         self.assertEqual(stats["required_core_primary_role_ids"], list(EXPECTED_REQUIRED_CORE))
         self.assertEqual(stats["optional_helper_role_ids"], ["autopilot-fast-helper"])
         self.assertNotIn("autopilot-fast-helper", stats["required_core_primary_role_ids"])
+
+    def test_runtime_timestamp_validation_accepts_schema_valid_rfc3339_utc_forms(self) -> None:
+        for value in (
+            "2026-07-24T00:00:00.123Z",
+            "2026-07-24T00:00:00+00:00",
+        ):
+            with self.subTest(value=value):
+                self.assertEqual(self.corpus._timestamp(value, "timestamp"), value)
+        for value in (
+            "2026-07-24 00:00:00+00:00",
+            "2026-07-24T00:00:00+01:00",
+        ):
+            with self.subTest(value=value):
+                with self.assertRaisesRegex(ValueError, "RFC3339 UTC"):
+                    self.corpus._timestamp(value, "timestamp")
 
     def test_committed_corpus_manifest_schedules_only_executable_roles_with_skip_reasons(self) -> None:
         manifest, _raw = read_corpus_manifest()

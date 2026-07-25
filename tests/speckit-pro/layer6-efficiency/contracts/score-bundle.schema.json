@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://racecraft.dev/schemas/g56r-003/score-bundle.schema.json",
+  "$id": "https://racecraft.dev/schemas/g56r-003/runtime/score-bundle.schema.json",
   "title": "G56R-003 Immutable Score Bundle",
   "type": "object",
   "additionalProperties": false,
@@ -94,6 +94,7 @@
     "failure_plane": {
       "enum": [
         "none",
+        "gate",
         "treatment",
         "fixture",
         "scorer",
@@ -109,6 +110,7 @@
     "failure_code": {
       "enum": [
         "none",
+        "gate_failed",
         "treatment_misdelivery",
         "service_reroute",
         "mandatory_telemetry_missing",
@@ -164,8 +166,8 @@
         {"$ref": "#/$defs/binding"}
       ]
     },
-    "semantic_score": {"type": ["number", "null"]},
-    "reliability_score": {"type": ["number", "null"]},
+    "semantic_score": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
+    "reliability_score": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
     "resource_vector": {
       "type": "object",
       "additionalProperties": false,
@@ -186,7 +188,7 @@
         "duration_ms": {"type": "integer", "minimum": 0},
         "retries": {"type": "integer", "minimum": 0},
         "compactions": {"type": "integer", "minimum": 0},
-        "acceptance": {"type": ["number", "null"]},
+        "acceptance": {"type": ["number", "null"], "minimum": 0, "maximum": 1},
         "terminal_state": {
           "enum": ["completed", "failed", "timed_out", "cancelled", "budget_exhausted", "abandoned", "unknown"]
         }

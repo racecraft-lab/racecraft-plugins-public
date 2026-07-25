@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 from collections.abc import Mapping
 
 if __package__:
@@ -390,8 +391,8 @@ def _validate_assignment_pair(
     )
     _require_equal(row["experiment_policy_binding"], policy_binding, "comparison policy binding")
     _require_equal(row["analysis_plan_binding"], plan_binding, "comparison plan binding")
-    if row["assigned_order"] != ["candidate", "comparator"]:
-        raise ValueError("comparison assigned order must be frozen candidate/comparator")
+    if sorted(row["assigned_order"]) != ["candidate", "comparator"]:
+        raise ValueError("comparison assigned order must contain each treatment arm exactly once")
     if row["invalidation_policy"] != "additive_only":
         raise ValueError("comparison invalidation policy must be additive only")
     if row["assignment_pair_digest"] != content_id(row, "assignment_pair_digest"):
@@ -406,6 +407,7 @@ def _validate_comparison_sets(
     invalidations: list[dict],
     policy_binding: dict,
     plan_binding: dict,
+    comparison_policy: dict,
 ) -> list[dict]:
     if not isinstance(value, list) or not value:
         raise ValueError("comparison sets must be a non-empty array")
@@ -423,6 +425,45 @@ def _validate_comparison_sets(
             _validate_assignment_pair(item, authorities, invalidations, policy_binding, plan_binding)
             for item in row["assignment_pairs"]
         ]
+        ordered_pairs = sorted(
+            row["assignment_pairs"],
+            key=lambda item: hashlib.sha256(
+                (
+                    comparison_policy["randomization_seed_digest"]
+                    + "|"
+                    + item["assignment_pair_id"]
+                ).encode("utf-8")
+            ).digest(),
+        )
+        start_candidate = (
+            hashlib.sha256(
+                comparison_policy["randomization_seed_digest"].encode("utf-8")
+            ).digest()[0]
+            % 2
+            == 0
+        )
+        for index, pair in enumerate(ordered_pairs):
+            if comparison_policy["order_rule"] == "seeded_balanced":
+                candidate_first = start_candidate if index % 2 == 0 else not start_candidate
+            else:
+                candidate_first = (
+                    hashlib.sha256(
+                        (
+                            comparison_policy["randomization_seed_digest"]
+                            + "|"
+                            + pair["assignment_pair_id"]
+                        ).encode("utf-8")
+                    ).digest()[0]
+                    % 2
+                    == 0
+                )
+            expected_order = (
+                ["candidate", "comparator"]
+                if candidate_first
+                else ["comparator", "candidate"]
+            )
+            if pair["assigned_order"] != expected_order:
+                raise ValueError("comparison assigned order does not match the frozen seed")
         if row["comparison_set_digest"] != content_id(row, "comparison_set_digest"):
             raise ValueError("comparison set digest is not content addressed")
         if row["comparison_set_id"] in seen:
@@ -539,7 +580,7 @@ def _validate_experiment_policy_for_assignment(
     _digest(policy["randomization_seed_digest"], "comparison randomization seed digest")
     value["comparison_sets"] = _validate_comparison_sets(
         value.get("comparison_sets"), registry_partition, authorities, invalidations,
-        policy_binding, plan_binding,
+        policy_binding, plan_binding, policy,
     )
     return value
 
@@ -940,6 +981,8 @@ def validate_qualification_bundle(
         raise ValueError("materialization registry contains a missing or orphan owner")
     if len(validated_wrappers) != len(value["qualification_traces"]):
         raise ValueError("qualification trace wrappers contain an orphan join")
+    if seen_trace_ids != set(traces_by_id):
+        raise ValueError("every treatment trace must have exactly one qualification assignment")
     if "successor_freeze_binding" in value:
         value["successor_freeze_binding"] = _validate_successor_freeze_binding(
             value["successor_freeze_binding"], successor_freeze, validated_assignments,

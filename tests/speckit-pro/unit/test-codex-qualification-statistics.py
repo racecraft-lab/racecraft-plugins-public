@@ -20,9 +20,14 @@ from uuid import uuid4
 ROOT = Path(__file__).resolve().parents[3]
 MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/qualification_statistics.py"
 REPLAY_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/qualification_replay.py"
+SCORING_TEST_PATH = ROOT / "tests/speckit-pro/unit/test-codex-qualification-scoring.py"
+CONTRACT_TEST_PATH = ROOT / "tests/speckit-pro/unit/test-codex-qualification-contracts.py"
 QUALIFICATION_RUNNER_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/run-codex-qualification.py"
 ANALYSIS_PLAN_SCHEMA_PATH = (
     ROOT / "tests/speckit-pro/layer6-efficiency/contracts/analysis-plan.schema.json"
+)
+ANALYSIS_DECISION_SCHEMA_PATH = (
+    ROOT / "tests/speckit-pro/layer6-efficiency/contracts/analysis-decision.schema.json"
 )
 RUN_CODEX_ROLE_EVAL_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/run_codex_role_eval.py"
 SHIPPED_MATERIALIZER_PATH = ROOT / "speckit-pro/speckit_pro_runner/agent_materialization.py"
@@ -52,6 +57,7 @@ EXPECTED_PUBLIC_API = frozenset({
     "TERMINAL_STATE_ORDER",
     "compare_pareto_vectors",
     "evaluate_qualification_decision",
+    "validate_analysis_decision_bundle",
 })
 EXPECTED_REPLAY_PUBLIC_API = frozenset({
     "ANALYSIS_REPLAY_SCHEMA_VERSION",
@@ -116,11 +122,33 @@ def load_statistics_module():
     return module
 
 
+def load_contract_test_helpers():
+    module_name = f"_g56r_003_contract_test_helpers_{uuid4().hex}"
+    spec = importlib.util.spec_from_file_location(module_name, CONTRACT_TEST_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {CONTRACT_TEST_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
 def load_replay_module():
     module_name = f"_g56r_003_qualification_replay_statistics_{uuid4().hex}"
     spec = importlib.util.spec_from_file_location(module_name, REPLAY_MODULE_PATH)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"cannot load {REPLAY_MODULE_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_scoring_test_helpers():
+    module_name = f"_g56r_003_scoring_helpers_{uuid4().hex}"
+    spec = importlib.util.spec_from_file_location(module_name, SCORING_TEST_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {SCORING_TEST_PATH}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[module_name] = module
     spec.loader.exec_module(module)
@@ -196,7 +224,13 @@ def cache_policy_binding() -> dict:
 
 
 def scorer_bindings() -> list[dict]:
-    return [binding("opaque-scorer-a"), binding("opaque-scorer-b")]
+    return [
+        {
+            "id": scorer_id,
+            "digest": digest({"scorer": scorer_id, "version": "1.0.0"}),
+        }
+        for scorer_id in ("opaque-scorer-a", "opaque-scorer-b")
+    ]
 
 
 def partition_binding(partition_type: str = "calibration", *, eligible: bool = False) -> dict:
@@ -362,7 +396,7 @@ def resource_vector(
     retries: int = 0,
     compactions: int = 0,
     acceptance: int = 1,
-    terminal_state: str = "succeeded",
+    terminal_state: str = "completed",
 ) -> dict:
     return {
         "raw_input_tokens": raw_input_tokens,
@@ -390,7 +424,7 @@ def outcome(
     outcome_cache_policy_binding: dict | None = None,
     cache_state: str = "isolated_by_pair",
     treatment_order_leakage: bool = False,
-    terminal_state: str = "succeeded",
+    terminal_state: str = "completed",
     score_disposition: str = "accepted",
     failure_plane: str = "none",
     failure_code: str = "none",
@@ -421,6 +455,8 @@ def outcome(
         "wall_clock_seconds": wall_clock_seconds,
         "candidate_route_id": candidate_route_id,
         "confirmation_entries": confirmation_entries,
+        "assignment_binding": binding(f"assignment-{pair_id}-{arm}"),
+        "score_bundle_binding": binding(f"score-{pair_id}-{arm}"),
     }
 
 
@@ -440,6 +476,11 @@ def paired_outcomes(
         fixture_id = f"fixture-{cluster_index}" if cluster_unit == "fixture" else "shared-fixture"
         for pair_index in range(pairs_per_cluster):
             pair_id = f"pair-{cluster_index}-{pair_index}"
+            workload_stratum_id = (
+                "analysis-long"
+                if cluster_index == 0 and pair_index == 0
+                else "implementation-small"
+            )
             rows.extend([
                 outcome(
                     pair_id,
@@ -449,6 +490,7 @@ def paired_outcomes(
                     semantic_score=candidate_semantic,
                     reliability_score=candidate_reliability,
                     vector=resource_vector(80, 10, 40, 900),
+                    workload_stratum_id=workload_stratum_id,
                 ),
                 outcome(
                     pair_id,
@@ -458,6 +500,7 @@ def paired_outcomes(
                     semantic_score=comparator_semantic,
                     reliability_score=comparator_reliability,
                     vector=resource_vector(100, 15, 50, 1100),
+                    workload_stratum_id=workload_stratum_id,
                 ),
             ])
     return rows
@@ -465,29 +508,36 @@ def paired_outcomes(
 
 def analysis_replay_request() -> dict:
     plan = analysis_plan_fixture(per_cluster_minimum=1)
+    outcomes = paired_outcomes(cluster_count=3, pairs_per_cluster=1)
+    authorities = {
+        "analysis_plan_binding": object_binding(
+            plan["analysis_plan_id"],
+            plan["analysis_plan_digest"],
+        ),
+        "partition_binding": copy.deepcopy(plan["calibration_partition_binding"]),
+        "pinned_client_binding": binding("codex-0.145.0"),
+        "runtime_snapshot_binding": binding("runtime-snapshot"),
+        "candidate_freeze_binding": binding("candidate-freeze"),
+        "scorer_bindings": scorer_bindings(),
+        "rubric_binding": {
+            "id": "g56r-003-semantic-rubric",
+            "digest": digest({"rubric": "g56r-003", "version": "1.0.0"}),
+        },
+        "adjudicator_binding": binding("opaque-adjudicator-c"),
+        "workload_manifest_binding": {
+            "id": plan["workload_manifest"]["manifest_id"],
+            "digest": plan["workload_manifest"]["manifest_digest"],
+        },
+        "cache_policy_binding": cache_policy_binding(),
+    }
+    score_bundles = score_bundles_for_outcomes(outcomes, plan, authorities)
     request = {
         "schema_version": "analysis-replay-request.v1",
         "analysis_plan": plan,
         "partition": partition_binding(),
-        "paired_outcomes": paired_outcomes(cluster_count=3, pairs_per_cluster=1),
-        "binding_authorities": {
-            "analysis_plan_binding": object_binding(
-                plan["analysis_plan_id"],
-                plan["analysis_plan_digest"],
-            ),
-            "partition_binding": copy.deepcopy(plan["calibration_partition_binding"]),
-            "pinned_client_binding": binding("codex-0.145.0"),
-            "runtime_snapshot_binding": binding("runtime-snapshot"),
-            "candidate_freeze_binding": binding("candidate-freeze"),
-            "scorer_bindings": scorer_bindings(),
-            "rubric_binding": binding("g56r-003-semantic-rubric"),
-            "adjudicator_binding": binding("opaque-adjudicator-c"),
-            "workload_manifest_binding": {
-                "id": plan["workload_manifest"]["manifest_id"],
-                "digest": plan["workload_manifest"]["manifest_digest"],
-            },
-            "cache_policy_binding": cache_policy_binding(),
-        },
+        "paired_outcomes": outcomes,
+        "score_bundles": score_bundles,
+        "binding_authorities": authorities,
         "execution_boundary": {
             "network_access": False,
             "live_repository_writes": [],
@@ -498,6 +548,73 @@ def analysis_replay_request() -> dict:
     return request
 
 
+def score_bundles_for_outcomes(
+    outcomes: list[dict],
+    plan: dict,
+    authorities: dict,
+) -> list[dict]:
+    helpers = load_scoring_test_helpers()
+    scoring = helpers.load_scoring_module()
+    bundles = []
+    for index, row in enumerate(outcomes):
+        gate_request = helpers.gate_request(role_id=f"{row['role_id']}-{index}")
+        gate_request.update({
+            "fixture_id": row["fixture_id"],
+            "fixture_digest": digest({"fixture_id": row["fixture_id"]}),
+        })
+        gate_result = scoring.evaluate_hard_gates(gate_request)
+        ballots = [
+            helpers.scorer_ballot(
+                "opaque-scorer-a",
+                semantic=row["semantic_score"],
+                reliability=row["reliability_score"],
+            ),
+            helpers.scorer_ballot(
+                "opaque-scorer-b",
+                semantic=row["semantic_score"],
+                reliability=row["reliability_score"],
+            ),
+        ]
+        semantic_result = scoring.evaluate_blinded_ballots(
+            gate_result,
+            helpers.semantic_request(ballots=ballots),
+        )
+        vector = row["resource_vector"]
+        request = helpers.score_bundle_request(
+            gate_result,
+            semantic_result=semantic_result,
+            vector={
+                "input_tokens": vector["raw_input_tokens"],
+                "cached_input_tokens": vector["cached_input_tokens"],
+                "output_tokens": vector["output_tokens"],
+                "duration_ms": vector["duration_ms"],
+                "retries": vector["retries"],
+                "compactions": vector["compactions"],
+                "acceptance": vector["acceptance"],
+                "terminal_state": vector["terminal_state"],
+            },
+        )
+        request["assignment_binding"] = copy.deepcopy(row["assignment_binding"])
+        request["partition_binding"] = {
+            "id": plan["calibration_partition_binding"]["partition_id"],
+            "digest": plan["calibration_partition_binding"]["partition_digest"],
+        }
+        request["candidate_route_binding"]["id"] = row["candidate_route_id"]
+        request["runtime_snapshot_binding"] = copy.deepcopy(
+            authorities["runtime_snapshot_binding"]
+        )
+        request["candidate_freeze_binding"] = copy.deepcopy(
+            authorities["candidate_freeze_binding"]
+        )
+        bundle = scoring.build_score_bundle(request)
+        row["score_bundle_binding"] = {
+            "id": bundle["score_bundle_id"],
+            "digest": bundle["score_bundle_digest"],
+        }
+        bundles.append(bundle)
+    return bundles
+
+
 def source_lineage_fixture(request: dict) -> dict:
     plan = request["analysis_plan"]
     authorities = request["binding_authorities"]
@@ -505,10 +622,16 @@ def source_lineage_fixture(request: dict) -> dict:
     materialization = binding("canonical-materialization")
     treatment_trace = binding("immutable-treatment-trace")
     corpus = binding("governed-twelve-role-corpus")
-    score_bundle = {
-        "id": "accepted-score-bundle",
-        "digest": digest(request["paired_outcomes"]),
-    }
+    score_bundle_bindings = sorted(
+        (
+            {
+                "id": item["score_bundle_id"],
+                "digest": item["score_bundle_digest"],
+            }
+            for item in request["score_bundles"]
+        ),
+        key=lambda item: (item["id"], item["digest"]),
+    )
     analysis_plan = object_binding(
         plan["analysis_plan_id"],
         plan["analysis_plan_digest"],
@@ -536,7 +659,7 @@ def source_lineage_fixture(request: dict) -> dict:
             "partition_binding": copy.deepcopy(request["partition"]),
         },
         "score_bundle": {
-            "score_bundle_binding": score_bundle,
+            "score_bundle_bindings": score_bundle_bindings,
             "paired_outcomes_digest": digest(request["paired_outcomes"]),
             "execution_trace_binding": copy.deepcopy(treatment_trace),
             "corpus_binding": copy.deepcopy(corpus),
@@ -586,12 +709,25 @@ def ordered_results(stop_gate: str | None = None) -> list[tuple[str, str]]:
 
 def calibration_report_fixture() -> dict:
     plan = analysis_plan_fixture()
-    return {
+    decision = load_statistics_module().evaluate_qualification_decision(
+        analysis_plan=plan,
+        paired_outcomes=paired_outcomes(),
+        partition=partition_binding(),
+    )
+    report = {
         "schema_version": "calibration-report.v1",
         "calibration_partition_binding": partition_binding(),
         "calibration_evidence_bindings": copy.deepcopy(plan["calibration_evidence_bindings"]),
         "freeze_provenance": copy.deepcopy(plan["freeze_provenance"]),
+        "analysis_decision": decision,
     }
+    report["calibration_report_digest"] = digest({
+        key: value
+        for key, value in report.items()
+        if key not in {"calibration_report_id", "calibration_report_digest"}
+    })
+    report["calibration_report_id"] = content_id(report, "calibration_report_id")
+    return report
 
 
 class QualificationStatisticsTests(unittest.TestCase):
@@ -599,18 +735,28 @@ class QualificationStatisticsTests(unittest.TestCase):
 
     def setUp(self) -> None:
         self.stats = load_statistics_module()
+        self.contracts = load_contract_test_helpers()
+        self.decision_schema = json.loads(
+            ANALYSIS_DECISION_SCHEMA_PATH.read_text(encoding="utf-8")
+        )
 
     def evaluate(self, plan: dict, outcomes: list[dict], *, partition: dict | None = None) -> dict:
-        return self.stats.evaluate_qualification_decision(
+        decision = self.stats.evaluate_qualification_decision(
             analysis_plan=copy.deepcopy(plan),
             paired_outcomes=copy.deepcopy(outcomes),
             partition=copy.deepcopy(partition or partition_binding()),
         )
+        self.contracts.validate_contract_schema_instance(
+            decision,
+            self.decision_schema,
+            self.decision_schema,
+        )
+        return decision["analysis_output"]["details"]
 
     def assert_calibration_decision(self, result: dict, expected: str) -> None:
         self.assertEqual(result["decision"], expected)
         self.assertIn(result["decision"], set(self.stats.CALIBRATION_DECISIONS))
-        self.assertNotIn(result["decision"], {"qualified", "no_qualification"})
+        self.assertNotIn(result["decision"], {"qualified"})
         self.assertEqual(result["qualification_policy_output"], {
             "preferred_route_policy_created": False,
             "fallback_route_policy_created": False,
@@ -634,6 +780,7 @@ class QualificationStatisticsTests(unittest.TestCase):
         ))
         self.assertEqual(tuple(self.stats.CALIBRATION_DECISIONS), (
             "calibration_complete",
+            "no_qualification",
             "inconclusive",
             "invalid",
         ))
@@ -882,7 +1029,7 @@ class QualificationStatisticsTests(unittest.TestCase):
                     ordered_results("partition"),
                 )
 
-    def test_calibration_terminal_cases_emit_only_calibration_complete_inconclusive_or_invalid(self) -> None:
+    def test_calibration_terminal_cases_emit_the_governed_closed_decisions(self) -> None:
         plan = analysis_plan_fixture(per_cluster_minimum=1)
         tie = equal_resource_outcomes()
         mixed = paired_outcomes()
@@ -904,9 +1051,9 @@ class QualificationStatisticsTests(unittest.TestCase):
         uncertain_plan = analysis_plan_fixture(per_cluster_minimum=3)
         cases = [
             ("dominates", plan, paired_outcomes(), "calibration_complete", None),
-            ("floor_failed", plan, floor_failed, "inconclusive", "semantic_floor_failed"),
-            ("non_inferiority_failed", plan, non_inferiority_failed, "inconclusive", "non_inferiority_failed"),
-            ("comparator_dominates", plan, comparator_dominates, "inconclusive", "pareto_comparator_dominates"),
+            ("floor_failed", plan, floor_failed, "no_qualification", "semantic_floor_failed"),
+            ("non_inferiority_failed", plan, non_inferiority_failed, "no_qualification", "non_inferiority_failed"),
+            ("comparator_dominates", plan, comparator_dominates, "no_qualification", "pareto_comparator_dominates"),
             ("tie", plan, tie, "inconclusive", "pareto_tie"),
             ("mixed", plan, mixed, "inconclusive", "pareto_mixed"),
             ("incomplete", plan, incomplete, "inconclusive", "unpaired_comparison"),
@@ -931,7 +1078,7 @@ class QualificationStatisticsTests(unittest.TestCase):
                     "failure_code": failure_code,
                     "attrition_classification": "candidate_terminal",
                 })
-                terminal["resource_vector"]["terminal_state"] = "succeeded"
+                terminal["resource_vector"]["terminal_state"] = "completed"
                 terminal["resource_vector"]["acceptance"] = 1
 
                 result = self.evaluate(analysis_plan_fixture(), outcomes)
@@ -944,13 +1091,13 @@ class QualificationStatisticsTests(unittest.TestCase):
                     result["completeness"]["candidate_terminal_counts"][terminal_state],
                     1,
                 )
-                self.assertEqual(result["pareto"]["candidate_vector"]["acceptance"], 2)
+                self.assertEqual(result["pareto"]["candidate_vector"]["acceptance"], 0.75)
                 self.assertEqual(
                     result["pareto"]["candidate_vector"]["terminal_state"],
                     terminal_state,
                 )
                 self.assertEqual(result["pareto"]["result"], "comparator_dominates")
-                self.assert_calibration_decision(result, "inconclusive")
+                self.assert_calibration_decision(result, "no_qualification")
                 self.assertNotIn("complete_case_filtered", result["reason_codes"])
 
     def test_unclassifiable_attrition_blocks_completeness_without_complete_case_filtering(self) -> None:
@@ -1009,6 +1156,7 @@ class QualificationStatisticsTests(unittest.TestCase):
                 semantic_score=0.9,
                 reliability_score=0.98,
                 vector=resource_vector(80, 8, 35, 900),
+                workload_stratum_id="analysis-long",
             ),
             outcome(
                 "pair-rerun",
@@ -1017,6 +1165,7 @@ class QualificationStatisticsTests(unittest.TestCase):
                 semantic_score=0.87,
                 reliability_score=0.96,
                 vector=resource_vector(100, 10, 40, 1000),
+                workload_stratum_id="analysis-long",
             ),
         ]
         for index in range(2):
@@ -1242,17 +1391,45 @@ class QualificationStatisticsTests(unittest.TestCase):
         self.assertIn("unknown_workload_stratum", unknown_result["reason_codes"])
         self.assertEqual(unknown_result["workload_cache"]["unknown_stratum_policy"], "inconclusive")
 
+        missing_weighted_stratum = [
+            row
+            for row in paired_outcomes()
+            if row["workload_stratum_id"] != "analysis-long"
+        ]
+        missing_result = self.evaluate(plan, missing_weighted_stratum)
+        self.assertEqual(missing_result["decision"], "inconclusive")
+        self.assertIn("weighted_stratum_missing_candidate", missing_result["reason_codes"])
+        self.assertIn("weighted_stratum_missing_comparator", missing_result["reason_codes"])
+
+    def test_pareto_aggregation_applies_frozen_workload_weights(self) -> None:
+        outcomes = paired_outcomes()
+        for row in outcomes:
+            if row["workload_stratum_id"] == "implementation-small":
+                row["resource_vector"]["raw_input_tokens"] = (
+                    10 if row["arm"] == "candidate" else 20
+                )
+            else:
+                row["resource_vector"]["raw_input_tokens"] = (
+                    100 if row["arm"] == "candidate" else 50
+                )
+
+        result = self.evaluate(analysis_plan_fixture(), outcomes)
+
+        self.assertTrue(result["pareto"]["workload_weights_applied"])
+        self.assertEqual(result["pareto"]["candidate_vector"]["raw_input_tokens"], 32.5)
+        self.assertEqual(result["pareto"]["comparator_vector"]["raw_input_tokens"], 27.5)
+
     def test_p95_guardrails_block_average_only_token_and_duration_claims(self) -> None:
         cases = [
             ("raw_input_tokens", 400, "raw_input_tokens_max"),
             ("cached_input_tokens", 100, "cached_input_tokens_max"),
             ("output_tokens", 200, "output_tokens_max"),
-            ("duration_ms", 4000, "duration_ms_max"),
+            ("duration_ms", 3500, "duration_ms_max"),
         ]
         for dimension, tail_value, guardrail_key in cases:
             with self.subTest(dimension=dimension):
-                outcomes = paired_outcomes()
-                outcomes[0]["resource_vector"][dimension] = tail_value
+                outcomes = paired_outcomes(pairs_per_cluster=2)
+                outcomes[2]["resource_vector"][dimension] = tail_value
 
                 result = self.evaluate(analysis_plan_fixture(), outcomes)
 
@@ -1306,7 +1483,7 @@ class QualificationStatisticsTests(unittest.TestCase):
 
                 result = self.evaluate(analysis_plan_fixture(), outcomes)
 
-                self.assert_calibration_decision(result, "inconclusive")
+                self.assert_calibration_decision(result, "no_qualification")
                 self.assertIn(reason, result["reason_codes"])
                 self.assertEqual(
                     [(row["gate"], row["result"]) for row in result["ordered_results"]],
@@ -1330,11 +1507,54 @@ class QualificationStatisticsTests(unittest.TestCase):
                 self.assertEqual(endpoint["mean_difference"], 0.03)
                 self.assertEqual(endpoint["lower_confidence_bound"], 0.03)
                 self.assertGreaterEqual(endpoint["lower_confidence_bound"], endpoint["margin"])
+                self.assertEqual(endpoint["degrees_of_freedom"], 2)
+                self.assertEqual(
+                    endpoint["adjusted_confidence_level"],
+                    1.0 - endpoint["adjusted_alpha"],
+                )
+
+    def test_holm_uses_ordered_step_down_thresholds_and_confidence_matches_alpha(self) -> None:
+        invalid = analysis_plan_fixture()
+        invalid["non_inferiority"]["alpha"] = 0.2
+        invalid = seal_analysis_plan(invalid)
+        with self.assertRaisesRegex(ValueError, "one minus alpha"):
+            self.evaluate(invalid, paired_outcomes())
+
+        plan = analysis_plan_fixture()
+        p_values = {"semantic_score": 0.01, "reliability_score": 0.04}
+        original = self.stats._cluster_endpoint
+
+        def fake_endpoint(endpoint, _pairs, _policy, adjusted_alpha):
+            return {
+                "status": "pass" if p_values[endpoint] <= adjusted_alpha else "fail",
+                "p_value": p_values[endpoint],
+                "adjusted_alpha": adjusted_alpha,
+            }
+
+        try:
+            self.stats._cluster_endpoint = fake_endpoint
+            holm, _reasons = self.stats._evaluate_non_inferiority(plan, [])
+            bonferroni_plan = copy.deepcopy(plan)
+            bonferroni_plan["non_inferiority"][
+                "multiplicity_adjustment"
+            ] = "bonferroni"
+            bonferroni, _reasons = self.stats._evaluate_non_inferiority(
+                bonferroni_plan,
+                [],
+            )
+        finally:
+            self.stats._cluster_endpoint = original
+
+        self.assertEqual(holm["endpoints"]["semantic_score"]["adjusted_alpha"], 0.025)
+        self.assertEqual(holm["endpoints"]["reliability_score"]["adjusted_alpha"], 0.05)
+        self.assertEqual(holm["status"], "pass")
+        self.assertEqual(bonferroni["status"], "fail")
 
     def test_cluster_adjustment_and_pairing_fail_closed_without_complete_pairs(self) -> None:
         plan = analysis_plan_fixture(cluster_unit="role", per_cluster_minimum=1)
         outcomes = []
         for index in range(5):
+            workload_stratum_id = "analysis-long" if index == 0 else "implementation-small"
             outcomes.extend([
                 outcome(
                     f"role-a-{index}",
@@ -1343,6 +1563,7 @@ class QualificationStatisticsTests(unittest.TestCase):
                     semantic_score=0.9,
                     reliability_score=0.97,
                     vector=resource_vector(80, 10, 40, 900),
+                    workload_stratum_id=workload_stratum_id,
                 ),
                 outcome(
                     f"role-a-{index}",
@@ -1351,6 +1572,7 @@ class QualificationStatisticsTests(unittest.TestCase):
                     semantic_score=0.85,
                     reliability_score=0.95,
                     vector=resource_vector(100, 15, 50, 1100),
+                    workload_stratum_id=workload_stratum_id,
                 ),
             ])
         outcomes.extend([
@@ -1374,7 +1596,7 @@ class QualificationStatisticsTests(unittest.TestCase):
 
         result = self.evaluate(plan, outcomes)
 
-        self.assert_calibration_decision(result, "inconclusive")
+        self.assert_calibration_decision(result, "no_qualification")
         self.assertEqual(result["non_inferiority"]["status"], "fail")
         semantic = result["non_inferiority"]["endpoints"]["semantic_score"]
         self.assertEqual(semantic["cluster_count"], 2)
@@ -1471,7 +1693,10 @@ class DeterministicQualificationReplayTests(unittest.TestCase):
         self.assertEqual(first["schema_version"], self.replay.ANALYSIS_REPLAY_SCHEMA_VERSION)
         self.assertEqual(first["status"], "replayed")
         self.assertEqual(first["decision"]["decision"], "calibration_complete")
-        self.assertEqual(first["decision_binding"]["digest"], digest(first["decision"]))
+        self.assertEqual(first["decision_binding"], {
+            "id": first["decision"]["decision_bundle_id"],
+            "digest": first["decision"]["decision_bundle_digest"],
+        })
         self.assertEqual(
             first["analysis_replay_artifact_digest"],
             digest({
@@ -1581,7 +1806,7 @@ class DeterministicQualificationReplayTests(unittest.TestCase):
         ] = digest(synthetic_outcomes["paired_outcomes"])
         with self.assertRaisesRegex(
             ValueError,
-            "score bundle binding does not bind paired outcomes",
+            "paired outcome semantic_score does not match score bundle",
         ):
             self.replay.build_analysis_replay_bundle(synthetic_outcomes)
 

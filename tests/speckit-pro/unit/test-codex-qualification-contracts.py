@@ -36,11 +36,25 @@ CONTRACT_SCHEMA_PATHS = (
     ANALYSIS_PLAN_SCHEMA_PATH,
     ANALYSIS_DECISION_SCHEMA_PATH,
 )
+SPEC_CONTRACT_DIR = ROOT / "specs/g56r-003-evaluation-runner-scoring/contracts"
+G56R_003_RUNTIME_CONTRACT_NAMES = (
+    "analysis-decision.schema.json",
+    "analysis-plan.schema.json",
+    "experiment-policy.schema.json",
+    "role-corpus.schema.json",
+    "score-bundle.schema.json",
+    "successor-capability-freeze.schema.json",
+)
 MANIFEST_PATH = ROOT / "docs/ai/research/codex-agent-route-candidate-manifest.json"
 PLUGIN_ROOT = ROOT / "speckit-pro"
 MATERIALIZER_MODULE_PATH = PLUGIN_ROOT / "speckit_pro_runner/agent_materialization.py"
-PHASE_AGENT_SOURCE = PLUGIN_ROOT / "codex-agents/phase-executor.toml"
-PHASE_AGENT_RELATIVE_PATH = "speckit-pro/codex-agents/phase-executor.toml"
+PHASE_AGENT_SOURCE = (
+    ROOT
+    / "tests/speckit-pro/unit/fixtures/qualification-agent-policies/phase-executor-sol.toml"
+)
+PHASE_AGENT_RELATIVE_PATH = (
+    "tests/speckit-pro/unit/fixtures/qualification-agent-policies/phase-executor-sol.toml"
+)
 DECISION_GATE_ORDER = [
     "bindings",
     "partition",
@@ -662,6 +676,18 @@ def successor_freeze_binding(successor_freeze: dict, candidate_route_id: str) ->
     }
 
 
+def bind_qualification_to_successor(wrapper: dict) -> tuple[dict, dict]:
+    successor_freeze = build_successor_freeze_from_sanitized_catalog()
+    candidate_route_id = wrapper["treatment_bundle"]["treatment_traces"][0][
+        "objective_binding"
+    ]["candidate_route_id"]
+    wrapper["successor_freeze_binding"] = successor_freeze_binding(
+        successor_freeze,
+        candidate_route_id,
+    )
+    return set_assignment_ids(wrapper), successor_freeze
+
+
 def qualification_bundle(
     treatment_bundle: dict,
     *,
@@ -1147,6 +1173,39 @@ def decision_bundle_fixture(
     }
 
 
+def seal_decision_bundle(bundle: dict) -> dict:
+    sealed = copy.deepcopy(bundle)
+    output = sealed["analysis_output"]
+    output["details"] = {}
+    output["analysis_output_digest"] = treatment.digest({
+        key: value
+        for key, value in output.items()
+        if key not in {"analysis_output_id", "analysis_output_digest"}
+    })
+    output["analysis_output_id"] = content_id(output, "analysis_output_id")
+    sealed["decision_bundle_digest"] = treatment.digest({
+        key: value
+        for key, value in sealed.items()
+        if key not in {"decision_bundle_id", "decision_bundle_digest"}
+    })
+    sealed["decision_bundle_id"] = content_id(sealed, "decision_bundle_id")
+    return sealed
+
+
+def seal_calibration_report(report: dict) -> dict:
+    sealed = copy.deepcopy(report)
+    sealed["calibration_report_digest"] = treatment.digest({
+        key: value
+        for key, value in sealed.items()
+        if key not in {"calibration_report_id", "calibration_report_digest"}
+    })
+    sealed["calibration_report_id"] = content_id(
+        sealed,
+        "calibration_report_id",
+    )
+    return sealed
+
+
 class ExperimentAnalysisContractSchemaTests(unittest.TestCase):
     maxDiff = None
 
@@ -1186,6 +1245,14 @@ class ExperimentAnalysisContractSchemaTests(unittest.TestCase):
                     if node.get("type") == "object" or "properties" in node:
                         self.assertIn("additionalProperties", node)
                         self.assertFalse(node["additionalProperties"], node.get("title", node))
+
+    def test_runtime_and_specification_contracts_have_distinct_schema_ids(self) -> None:
+        for name in G56R_003_RUNTIME_CONTRACT_NAMES:
+            with self.subTest(name=name):
+                runtime_schema = self.schema_for(CONTRACT_DIR / name)
+                specification_schema = self.schema_for(SPEC_CONTRACT_DIR / name)
+                self.assertNotEqual(runtime_schema["$id"], specification_schema["$id"])
+                self.assertIn("/runtime/", runtime_schema["$id"])
 
     def test_experiment_policy_schema_closes_partition_pair_budget_and_rerun_contracts(self) -> None:
         schema = self.schema_for(EXPERIMENT_POLICY_SCHEMA_PATH)
@@ -1730,7 +1797,7 @@ class QualificationContractTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary:
             source_path = Path(temporary) / "phase-executor.toml"
-            source_path.write_text(phase_policy_for_trace(trace), encoding="utf-8")
+            source_path.write_bytes(PHASE_AGENT_SOURCE.read_bytes())
             expected = expected_materializer.materialize_agent_policy(
                 source_relative_path=PHASE_AGENT_RELATIVE_PATH,
                 source_bytes=source_path.read_bytes(),
@@ -1760,19 +1827,20 @@ class QualificationContractTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             source_path = root / "phase-executor.toml"
-            source_path.write_text(
-                phase_policy_for_trace(copy.deepcopy(self.base_treatment)["treatment_traces"][0]),
-                encoding="utf-8",
-            )
+            source_path.write_bytes(PHASE_AGENT_SOURCE.read_bytes())
             bundle_path = root / "qualification.json"
             wrapper = apply_materialized_source(qualification_bundle(self.base_treatment), source_path)
+            wrapper, successor_freeze = bind_qualification_to_successor(wrapper)
+            successor_path = root / "successor.json"
             write_canonical_json(bundle_path, wrapper)
+            write_canonical_json(successor_path, successor_freeze)
 
             completed = run_qualification_cli(
                 "validate-treatment",
                 "--qualification-bundle", str(bundle_path),
                 "--agent-policy-source", str(source_path),
                 "--source-relative-path", PHASE_AGENT_RELATIVE_PATH,
+                "--successor-freeze", str(successor_path),
             )
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
@@ -1789,19 +1857,23 @@ class QualificationContractTests(unittest.TestCase):
             root = Path(temporary)
             trace = copy.deepcopy(self.base_treatment)["treatment_traces"][0]
             source_path = root / "phase-executor.toml"
-            source_path.write_text(phase_policy_for_trace(trace), encoding="utf-8")
+            source_path.write_bytes(PHASE_AGENT_SOURCE.read_bytes())
             qualification_path = root / "qualification.json"
             wrapper = apply_materialized_source(
                 qualification_bundle(self.base_treatment),
                 source_path,
             )
+            wrapper, successor_freeze = bind_qualification_to_successor(wrapper)
+            successor_path = root / "successor.json"
             write_canonical_json(qualification_path, wrapper)
+            write_canonical_json(successor_path, successor_freeze)
             receipt_path = root / "validated-treatment.json"
             validation = run_qualification_cli(
                 "validate-treatment",
                 "--qualification-bundle", str(qualification_path),
                 "--agent-policy-source", str(source_path),
                 "--source-relative-path", PHASE_AGENT_RELATIVE_PATH,
+                "--successor-freeze", str(successor_path),
                 "--output", str(receipt_path),
             )
             self.assertEqual(validation.returncode, 0, validation.stdout)
@@ -1825,6 +1897,7 @@ class QualificationContractTests(unittest.TestCase):
                 "--qualification-bundle", str(qualification_path),
                 "--agent-policy-source", str(source_path),
                 "--source-relative-path", PHASE_AGENT_RELATIVE_PATH,
+                "--successor-freeze", str(successor_path),
             )
 
         self.assertEqual(completed.returncode, 2)
@@ -1840,24 +1913,22 @@ class QualificationContractTests(unittest.TestCase):
             root = Path(temporary)
             original_source = root / "phase-executor.toml"
             trace = copy.deepcopy(self.base_treatment)["treatment_traces"][0]
-            original_source.write_text(phase_policy_for_trace(trace), encoding="utf-8")
+            original_source.write_bytes(PHASE_AGENT_SOURCE.read_bytes())
             wrapper = apply_materialized_source(qualification_bundle(self.base_treatment), original_source)
+            wrapper, successor_freeze = bind_qualification_to_successor(wrapper)
             bundle_path = root / "qualification.json"
+            successor_path = root / "successor.json"
             write_canonical_json(bundle_path, wrapper)
+            write_canonical_json(successor_path, successor_freeze)
             changed_source = root / "changed-phase-executor.toml"
-            changed_source.write_text(
-                phase_policy_for_trace(trace).replace(
-                    "Fixture policy for qualification CLI validation.",
-                    "Changed fixture policy for qualification CLI validation.",
-                ),
-                encoding="utf-8",
-            )
+            changed_source.write_bytes(PHASE_AGENT_SOURCE.read_bytes() + b"\n# changed\n")
 
             completed = run_qualification_cli(
                 "validate-treatment",
                 "--qualification-bundle", str(bundle_path),
                 "--agent-policy-source", str(changed_source),
                 "--source-relative-path", PHASE_AGENT_RELATIVE_PATH,
+                "--successor-freeze", str(successor_path),
             )
 
         self.assertEqual(completed.returncode, 2)
@@ -1865,7 +1936,7 @@ class QualificationContractTests(unittest.TestCase):
         self.assertEqual(completed.stdout, canonical_json(payload))
         self.assertEqual(payload["status"], "error")
         self.assertEqual(payload["command"], "validate-treatment")
-        self.assertIn("source materialization", payload["error"])
+        self.assertIn("do not match the declared repository path", payload["error"])
 
     def test_cli_score_refuses_score_before_validated_exact_treatment(self) -> None:
         self.assertTrue(QUALIFICATION_RUNNER_PATH.exists())
@@ -1915,6 +1986,23 @@ class QualificationContractTests(unittest.TestCase):
             "status": "valid",
             "validated_treatment": "exact",
         }
+        authority_fields = (
+            "assignment_binding",
+            "candidate_route_binding",
+            "agent_contract_binding",
+            "runtime_snapshot_binding",
+            "candidate_freeze_binding",
+            "route_resolution_binding",
+            "experiment_policy_binding",
+            "treatment_contract_binding",
+            "telemetry_profile_binding",
+        )
+        receipt["score_authority_bindings_by_execution_trace_id"] = {
+            gate_result["execution_trace_id"]: {
+                field: copy.deepcopy(score_request[field])
+                for field in authority_fields
+            }
+        }
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             score_request_path = root / "score-request.json"
@@ -1933,6 +2021,7 @@ class QualificationContractTests(unittest.TestCase):
                     agent_policy_source=root / "phase-executor.toml",
                     source_relative_path=PHASE_AGENT_RELATIVE_PATH,
                     trusted_qualification_evidence=None,
+                    successor_freeze=root / "successor.json",
                 )
             )
             drift_gate_request = helpers.gate_request()
@@ -1966,6 +2055,7 @@ class QualificationContractTests(unittest.TestCase):
                         agent_policy_source=root / "phase-executor.toml",
                         source_relative_path=PHASE_AGENT_RELATIVE_PATH,
                         trusted_qualification_evidence=None,
+                        successor_freeze=root / "successor.json",
                     )
                 )
 
@@ -2047,6 +2137,65 @@ class QualificationContractTests(unittest.TestCase):
         self.assertEqual(payload["workload_manifest_binding"], policy["workload_manifest_binding"])
         self.assertEqual(payload["cache_policy_binding"], policy["cache_policy_binding"])
 
+    def test_cli_calibrate_consumes_the_published_successor_freeze_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            partition = partition_binding()
+            freeze = build_successor_freeze_from_sanitized_catalog()
+            corpus = calibration_corpus_fixture()
+            budget = full_budget()
+            snapshot = freeze["runtime_capability_snapshot"]
+            pinned_client = {
+                "id": snapshot["client_identity_id"],
+                "digest": snapshot["client_identity_id"],
+            }
+            runtime_snapshot = {
+                "id": snapshot["runtime_capability_snapshot_id"],
+                "digest": treatment.digest(snapshot),
+            }
+            policy = calibration_cli_policy_fixture()
+            policy.update({
+                "candidate_freeze_binding": {
+                    "id": freeze["candidate_freeze_id"],
+                    "digest": treatment.digest(freeze),
+                },
+                "pinned_client_binding": pinned_client,
+                "runtime_snapshot_binding": runtime_snapshot,
+            })
+            paths = {
+                "partition": root / "partition.json",
+                "freeze": root / "freeze.json",
+                "policy": root / "policy.json",
+                "corpus": root / "corpus.json",
+                "budget": root / "budget.json",
+            }
+            for name, value in (
+                ("partition", partition),
+                ("freeze", freeze),
+                ("policy", policy),
+                ("corpus", corpus),
+                ("budget", budget),
+            ):
+                write_canonical_json(paths[name], value)
+            raw_root = root / "operator-raw"
+            raw_root.mkdir()
+
+            completed = run_qualification_cli(
+                "calibrate",
+                "--partition", str(paths["partition"]),
+                "--candidate-freeze", str(paths["freeze"]),
+                "--experiment-policy", str(paths["policy"]),
+                "--corpus", str(paths["corpus"]),
+                "--budget", str(paths["budget"]),
+                "--raw-evidence-root", str(raw_root),
+                "--confirm-explicit-local-live",
+            )
+
+        self.assertEqual(completed.returncode, 0, completed.stdout)
+        payload = json.loads(completed.stdout)
+        self.assertEqual(payload["pinned_client_binding"], pinned_client)
+        self.assertEqual(payload["runtime_snapshot_binding"], runtime_snapshot)
+
     def test_cli_calibrate_rejects_later_partitions_missing_budgets_and_repo_raw_root(self) -> None:
         cases = [
             ("later_partition", {"partition": partition_binding("selection", eligible=True)}, "calibration_partition_required"),
@@ -2103,7 +2252,7 @@ class QualificationContractTests(unittest.TestCase):
             report_path = root / "calibration-report.json"
             draft_path = root / "analysis-plan-draft.json"
             output_path = root / "analysis-plan.json"
-            report = {
+            report = seal_calibration_report({
                 "schema_version": "calibration-report.v1",
                 "calibration_partition_binding": partition_binding(),
                 "calibration_evidence_bindings": [schema_binding("calibration-evidence")],
@@ -2114,7 +2263,10 @@ class QualificationContractTests(unittest.TestCase):
                     "pre_cohort_outcome_absence_digest": schema_digest("pre-cohort-absence"),
                     "independent_review_binding": schema_binding("analysis-review"),
                 },
-            }
+                "analysis_decision": seal_decision_bundle(
+                    decision_bundle_fixture()
+                ),
+            })
             draft = analysis_plan_fixture()
             draft["status"] = "draft_from_calibration"
             write_canonical_json(report_path, report)
@@ -2146,6 +2298,7 @@ class QualificationContractTests(unittest.TestCase):
             self.assertNotEqual(frozen["analysis_plan_id"], draft["analysis_plan_id"])
 
             report["freeze_provenance"]["cohort_outcome_observed"] = True
+            report = seal_calibration_report(report)
             write_canonical_json(report_path, report)
             refused = run_qualification_cli(
                 "freeze-analysis-plan",

@@ -15,6 +15,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 LIB_DIR = SCRIPT_DIR / "lib"
 REPO_ROOT = SCRIPT_DIR.parents[2]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
+ROUTE_MANIFEST_PATH = REPO_ROOT / "docs/ai/research/codex-agent-route-candidate-manifest.json"
 
 for _path in (PLUGIN_ROOT, LIB_DIR):
     _text = str(_path)
@@ -31,7 +32,10 @@ from codex_successor_capability import publish_successor_freeze  # noqa: E402
 from qualification_contracts import validate_qualification_bundle  # noqa: E402
 from qualification_replay import build_analysis_replay_bundle  # noqa: E402
 from qualification_scoring import build_score_bundle, content_id, digest  # noqa: E402
-from qualification_statistics import _validate_plan as validate_analysis_plan  # noqa: E402
+from qualification_statistics import (  # noqa: E402
+    _validate_plan as validate_analysis_plan,
+    validate_analysis_decision_bundle,
+)
 
 
 QUALIFICATION_ENTRY_POINT = "tests/speckit-pro/layer6-efficiency/run-codex-qualification.py"
@@ -98,10 +102,19 @@ def write_json_file_exclusive(path: Path, value: Any, label: str) -> None:
 
 
 def materialize_source(source: Path, source_relative_path: str) -> tuple[AgentMaterialization, bytes]:
+    declared = Path(source_relative_path)
+    if declared.is_absolute() or ".." in declared.parts:
+        raise QualificationCliError("source relative path must stay within the repository")
+    declared_path = REPO_ROOT / declared
     try:
         source_bytes = source.read_bytes()
+        declared_bytes = declared_path.read_bytes()
     except OSError as exc:
         raise QualificationCliError(f"agent policy source could not be read: {exc}") from exc
+    if source_bytes != declared_bytes:
+        raise QualificationCliError(
+            "agent policy source bytes do not match the declared repository path"
+        )
     materialized = materialize_agent_policy(
         source_relative_path=source_relative_path,
         source_bytes=source_bytes,
@@ -205,9 +218,16 @@ def validate_treatment_command(args: argparse.Namespace) -> tuple[int, dict[str,
     if not isinstance(bundle, dict):
         raise QualificationCliError("qualification bundle must be a JSON object")
     trusted = load_trusted_qualification_evidence(args.trusted_qualification_evidence)
+    successor_path = getattr(args, "successor_freeze", None)
+    successor_freeze = (
+        read_json_file(successor_path, "successor freeze")
+        if successor_path is not None
+        else None
+    )
     validated = validate_qualification_bundle(
         bundle,
         trusted_qualification_evidence=trusted,
+        successor_freeze=successor_freeze,
     )
     matched = matching_materialization(validated, materialized)
     assignments = validated["qualification_assignments"]
@@ -216,6 +236,83 @@ def validate_treatment_command(args: argparse.Namespace) -> tuple[int, dict[str,
         for item in validated["qualification_traces"]
     }
     eligible = sum(1 for item in assignments if item["score_eligible"])
+    score_authorities: dict[str, dict[str, dict[str, str]]] = {}
+    if successor_freeze is not None:
+        treatment = validated["treatment_bundle"]
+        route_manifest = read_json_file(ROUTE_MANIFEST_PATH, "route manifest")
+        agent_contracts = {
+            item["agent_contract_id"]: item
+            for item in route_manifest["agent_contracts"]
+        }
+        route_resolutions = {
+            item["route_resolution_id"]: item for item in treatment["route_resolutions"]
+        }
+        experiment_policies = {
+            item["experiment_policy_id"]: item
+            for item in treatment["experiment_policy_registry"]
+        }
+        tuple_decisions = {
+            item["candidate_route_id"]: item
+            for item in successor_freeze["tuple_decisions"]
+            if item["decision"] == "included"
+        }
+        for assignment in assignments:
+            if not assignment["score_eligible"]:
+                continue
+            trace = next(
+                item for item in treatment["treatment_traces"]
+                if item["objective_binding"]["execution_trace_id"]
+                == assignment["execution_trace_id"]
+            )
+            objective = trace["objective_binding"]
+            route_resolution = route_resolutions[objective["route_resolution_id"]]
+            experiment_policy = experiment_policies[objective["experiment_policy_id"]]
+            tuple_decision = tuple_decisions.get(objective["candidate_route_id"])
+            agent_contract = agent_contracts.get(objective["agent_contract_id"])
+            if tuple_decision is None or agent_contract is None:
+                raise QualificationCliError(
+                    "score authority is missing the validated route or agent contract"
+                )
+            score_authorities[assignment["execution_trace_id"]] = {
+                "assignment_binding": {
+                    "id": assignment["qualification_assignment_id"],
+                    "digest": digest(assignment),
+                },
+                "candidate_route_binding": {
+                    "id": objective["candidate_route_id"],
+                    "digest": digest(tuple_decision),
+                },
+                "agent_contract_binding": {
+                    "id": objective["agent_contract_id"],
+                    "digest": digest(agent_contract),
+                },
+                "runtime_snapshot_binding": {
+                    "id": objective["runtime_capability_snapshot_id"],
+                    "digest": digest(
+                        successor_freeze["runtime_capability_snapshot"]
+                    ),
+                },
+                "candidate_freeze_binding": {
+                    "id": successor_freeze["candidate_freeze_id"],
+                    "digest": digest(successor_freeze),
+                },
+                "route_resolution_binding": {
+                    "id": objective["route_resolution_id"],
+                    "digest": digest(route_resolution),
+                },
+                "experiment_policy_binding": {
+                    "id": objective["experiment_policy_id"],
+                    "digest": digest(experiment_policy),
+                },
+                "treatment_contract_binding": {
+                    "id": treatment["treatment_contract_digest"],
+                    "digest": treatment["treatment_contract_digest"],
+                },
+                "telemetry_profile_binding": {
+                    "id": treatment["telemetry_profile_id"],
+                    "digest": digest(treatment["telemetry_profile"]),
+                },
+            }
     payload = {
         "command": "validate-treatment",
         "execution_trace_ids": sorted(item["execution_trace_id"] for item in assignments),
@@ -235,6 +332,7 @@ def validate_treatment_command(args: argparse.Namespace) -> tuple[int, dict[str,
             ),
             key=lambda item: (item["id"], item["digest"]),
         ),
+        "score_authority_bindings_by_execution_trace_id": score_authorities,
         "materialization_ids": sorted(item["materialization_id"] for item in validated["materializations"]),
         "materializer_source_path": materialized.materializer_binding["path"],
         "matched_materialization_id": matched["materialization_id"],
@@ -276,6 +374,7 @@ def score_command(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
         or args.qualification_bundle is None
         or args.agent_policy_source is None
         or args.source_relative_path is None
+        or args.successor_freeze is None
     ):
         raise ScoreBlocked(
             "score requires validated exact treatment joined to original evidence"
@@ -287,6 +386,7 @@ def score_command(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
             agent_policy_source=args.agent_policy_source,
             source_relative_path=args.source_relative_path,
             trusted_qualification_evidence=args.trusted_qualification_evidence,
+            successor_freeze=args.successor_freeze,
             output=None,
         )
     )
@@ -306,6 +406,15 @@ def score_command(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
         raise ScoreBlocked(
             "score requires validated exact treatment for the requested execution trace binding"
         )
+    trace_id = execution_trace_binding["id"]
+    expected_score_authorities = replayed_treatment[
+        "score_authority_bindings_by_execution_trace_id"
+    ].get(trace_id)
+    if expected_score_authorities is None:
+        raise ScoreBlocked("score requires successor-bound treatment authority")
+    for field, expected in expected_score_authorities.items():
+        if score_request.get(field) != expected:
+            raise ScoreBlocked(f"score {field} does not match validated treatment authority")
     bundle = build_score_bundle(score_request)
     return 0, {
         "command": "score",
@@ -400,9 +509,12 @@ def _require_policy_bindings(
     partition: dict[str, Any],
     budget: dict[str, int],
 ) -> dict[str, Any]:
+    freeze_digest = freeze.get("freeze_digest")
+    if not isinstance(freeze_digest, str):
+        freeze_digest = digest(freeze)
     expected_freeze = _binding(
         freeze.get("candidate_freeze_id"),
-        freeze.get("freeze_digest"),
+        freeze_digest,
         "candidate freeze",
     )
     expected_corpus = _binding(
@@ -430,14 +542,29 @@ def _require_policy_bindings(
             "campaign_budget_binding_mismatch",
             "experiment policy budget does not match the requested campaign budget",
         )
-    pinned_client = _require_binding(
-        freeze.get("pinned_client_binding"),
-        "pinned client binding",
-    )
-    runtime_snapshot = _require_binding(
-        freeze.get("runtime_snapshot_binding"),
-        "runtime snapshot binding",
-    )
+    snapshot = freeze.get("runtime_capability_snapshot")
+    if freeze.get("pinned_client_binding") is not None:
+        pinned_client = _require_binding(
+            freeze.get("pinned_client_binding"),
+            "pinned client binding",
+        )
+    else:
+        snapshot_row = _require_object(snapshot, "runtime capability snapshot")
+        client_id = snapshot_row.get("client_identity_id")
+        pinned_client = _binding(client_id, client_id, "pinned client binding")
+    if freeze.get("runtime_snapshot_binding") is not None:
+        runtime_snapshot = _require_binding(
+            freeze.get("runtime_snapshot_binding"),
+            "runtime snapshot binding",
+        )
+    else:
+        snapshot_row = _require_object(snapshot, "runtime capability snapshot")
+        snapshot_id = snapshot_row.get("runtime_capability_snapshot_id")
+        runtime_snapshot = _binding(
+            snapshot_id,
+            digest(snapshot_row),
+            "runtime snapshot binding",
+        )
     if policy.get("pinned_client_binding") != pinned_client:
         raise QualificationBoundaryError(
             "pinned_client_binding_mismatch",
@@ -550,13 +677,66 @@ def freeze_analysis_plan_command(args: argparse.Namespace) -> tuple[int, dict[st
         read_json_file(args.calibration_report, "calibration report"),
         "calibration report",
     )
+    expected_report_fields = {
+        "schema_version",
+        "calibration_report_id",
+        "calibration_report_digest",
+        "calibration_partition_binding",
+        "calibration_evidence_bindings",
+        "freeze_provenance",
+        "analysis_decision",
+    }
+    if set(report) != expected_report_fields:
+        raise QualificationBoundaryError(
+            "calibration_report_invalid",
+            "calibration report must use its closed schema",
+        )
     draft = _require_object(
         read_json_file(args.draft_plan, "analysis plan draft"),
         "analysis plan draft",
     )
+    if report.get("schema_version") != "calibration-report.v1":
+        raise QualificationBoundaryError(
+            "calibration_report_invalid",
+            "calibration report schema version is unsupported",
+        )
+    report_digest = report.get("calibration_report_digest")
+    report_id = report.get("calibration_report_id")
+    expected_report_digest = digest({
+        key: value
+        for key, value in report.items()
+        if key not in {"calibration_report_id", "calibration_report_digest"}
+    })
+    if report_digest != expected_report_digest:
+        raise QualificationBoundaryError(
+            "calibration_report_invalid",
+            "calibration report digest does not match content",
+        )
+    if report_id != content_id(report, "calibration_report_id"):
+        raise QualificationBoundaryError(
+            "calibration_report_invalid",
+            "calibration report ID does not match content",
+        )
+    try:
+        decision = validate_analysis_decision_bundle(report.get("analysis_decision"))
+    except ValueError as exc:
+        raise QualificationBoundaryError(
+            "calibration_decision_invalid",
+            str(exc),
+        ) from exc
+    if decision["decision"] != "calibration_complete":
+        raise QualificationBoundaryError(
+            "calibration_not_complete",
+            "analysis plan may freeze only after a calibration-complete decision",
+        )
     partition = _require_calibration_partition(
         report.get("calibration_partition_binding")
     )
+    if partition != decision["partition_binding"]:
+        raise QualificationBoundaryError(
+            "calibration_report_invalid",
+            "calibration report partition does not match the analysis decision",
+        )
     provenance = _require_object(report.get("freeze_provenance"), "freeze provenance")
     if provenance.get("frozen_after_calibration") is not True:
         raise QualificationBoundaryError(
@@ -627,6 +807,7 @@ def build_parser() -> argparse.ArgumentParser:
     treatment.add_argument("--agent-policy-source", type=Path, required=True)
     treatment.add_argument("--source-relative-path", required=True)
     treatment.add_argument("--trusted-qualification-evidence", type=Path)
+    treatment.add_argument("--successor-freeze", type=Path, required=True)
     treatment.add_argument("--output", type=Path)
 
     successor = subcommands.add_parser(
@@ -649,6 +830,7 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument("--agent-policy-source", type=Path)
     score.add_argument("--source-relative-path")
     score.add_argument("--trusted-qualification-evidence", type=Path)
+    score.add_argument("--successor-freeze", type=Path)
 
     calibrate = subcommands.add_parser(
         "calibrate",

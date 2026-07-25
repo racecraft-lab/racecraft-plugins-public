@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/G56R-003-workflow.md",
   "spec_id": "G56R-003",
   "feature_dir": "specs/g56r-003-evaluation-runner-scoring",
-  "updated_at": "2026-07-25T18:22:22Z",
-  "active_step": "Complete",
-  "status": "completed",
+  "updated_at": "2026-07-25T23:24:50Z",
+  "active_step": "Post: Review Remediation",
+  "status": "in_progress",
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
@@ -498,7 +498,7 @@
       }
     },
     "post_implementation": {
-      "status": "completed",
+      "status": "in_progress",
       "doctor": {
         "status": "completed_with_warning",
         "failures": 0,
@@ -611,18 +611,30 @@
         "title": "feat(g56r-003): add evaluation runner scoring"
       },
       "review_remediation": {
-        "status": "passed_after_remediation",
-        "reviewed_head": "afe6fcd9",
+        "status": "awaiting_remote_ci",
+        "reviewed_head": "b324f3b3",
         "inline_comments": 3,
-        "actionable_reviews": 3,
-        "remediated_findings": 3,
+        "actionable_reviews": 34,
+        "reported_p1": 23,
+        "reported_p2": 11,
+        "remediated_findings": 34,
         "resolved_threads": 3,
-        "ci": "all applicable checks passed",
+        "local_validation": "full repository suite passed 3251/3251 after all review remediations",
+        "ci": "pending push of the remediated head",
         "non_actionable_review": "Copilot exceeded its 20,000-line review limit under the ratified one-navigable-PR route.",
-        "findings": [
-          "Replace an imprecise subset assertion with assertLessEqual.",
-          "Remove the unused MATERIALIZER_VERSION import.",
-          "Remove the unused candidate-terminal local assignment."
+        "finding_clusters": [
+          "corpus and active-route authority",
+          "treatment assignment completeness and ordering",
+          "CLI provenance and successor-to-analysis pipeline joins",
+          "successor capability publication authority",
+          "score bundle validation and sanitization",
+          "replay lineage and role authority",
+          "statistical validation, inference, weighting, and governed output schemas"
+        ],
+        "prior_remediation": [
+          "Replaced an imprecise subset assertion with assertLessEqual.",
+          "Removed the unused MATERIALIZER_VERSION import.",
+          "Removed the unused candidate-terminal local assignment."
         ]
       },
       "retrospective": {
@@ -804,7 +816,7 @@
     },
     {
       "step": "Post: Review Remediation",
-      "status": "completed"
+      "status": "in_progress"
     },
     {
       "step": "Post: Retrospective",

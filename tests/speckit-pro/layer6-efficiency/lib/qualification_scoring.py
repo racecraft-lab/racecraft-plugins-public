@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy as _copy
 import hashlib as _hashlib
 import json as _json
+import math as _math
 import re as _re
 
 
@@ -28,6 +29,7 @@ GATE_FAILURE_CODES = ("none", "gate_failed", "gate_missing", "evidence_missing",
 SCORE_DISPOSITIONS = ("accepted", "gate_failed", "non_scorable", "invalidated")
 SCORE_FAILURE_PLANES = (
     "none",
+    "gate",
     "treatment",
     "fixture",
     "scorer",
@@ -41,6 +43,7 @@ SCORE_FAILURE_PLANES = (
 )
 SCORE_FAILURE_CODES = (
     "none",
+    "gate_failed",
     "treatment_misdelivery",
     "service_reroute",
     "mandatory_telemetry_missing",
@@ -96,6 +99,7 @@ CANDIDATE_TERMINALS = {
 }
 FAILURE_CODE_PLANES = {
     "none": "none",
+    "gate_failed": "gate",
     "treatment_misdelivery": "treatment",
     "service_reroute": "treatment",
     "mandatory_telemetry_missing": "treatment",
@@ -433,8 +437,13 @@ def _scores(value: object) -> dict:
     result: dict[str, float] = {}
     for key in ("semantic", "reliability"):
         score = value[key]
-        if not isinstance(score, (int, float)) or isinstance(score, bool):
-            raise ValueError("criterion scores must be numeric")
+        if (
+            not isinstance(score, (int, float))
+            or isinstance(score, bool)
+            or not _math.isfinite(score)
+            or not 0.0 <= float(score) <= 1.0
+        ):
+            raise ValueError("criterion scores must be finite values from zero to one")
         result[key] = float(score)
     return result
 
@@ -442,7 +451,10 @@ def _scores(value: object) -> dict:
 def _digest_refs(value: object, label: str) -> list[str]:
     if not isinstance(value, list):
         raise ValueError(f"{label} must be an array")
-    return [_digest(item, label) for item in value]
+    result = [_digest(item, label) for item in value]
+    if len(result) != len(set(result)):
+        raise ValueError(f"{label} must contain unique digests")
+    return result
 
 
 def _key_path(path: tuple[str, ...]) -> str:
@@ -492,13 +504,14 @@ def _validate_gate(value: object) -> dict:
     gate_name = _text(row["gate_name"], "gate name")
     if gate_name not in _GATE_SET:
         raise ValueError("gate name must be a closed hard gate")
-    return {
+    result = {
         "gate_name": gate_name,
         "passed": _bool(row["passed"], "gate pass marker"),
         "evidence_refs": _digest_refs(row["evidence_refs"], "gate evidence refs"),
         "evaluator_version": _text(row["evaluator_version"], "evaluator version"),
         "evaluator_digest": _digest(row["evaluator_digest"], "evaluator digest"),
     }
+    return result
 
 
 def _request(value: object) -> dict:
@@ -597,9 +610,20 @@ def _integer(value: object, label: str) -> int:
 def _nullable_number(value: object, label: str) -> float | None:
     if value is None:
         return None
-    if not isinstance(value, (int, float)) or isinstance(value, bool):
+    if (
+        not isinstance(value, (int, float))
+        or isinstance(value, bool)
+        or not _math.isfinite(value)
+    ):
         raise ValueError(f"{label} must be numeric or null")
     return float(value)
+
+
+def _nullable_unit_interval(value: object, label: str) -> float | None:
+    result = _nullable_number(value, label)
+    if result is not None and not 0.0 <= result <= 1.0:
+        raise ValueError(f"{label} must be a value from zero to one or null")
+    return result
 
 
 def _resource_vector(value: object) -> dict:
@@ -614,9 +638,10 @@ def _resource_vector(value: object) -> dict:
         "duration_ms": _integer(row["duration_ms"], "duration ms"),
         "retries": _integer(row["retries"], "retries"),
         "compactions": _integer(row["compactions"], "compactions"),
-        "acceptance": _nullable_number(row["acceptance"], "acceptance"),
+        "acceptance": _nullable_unit_interval(row["acceptance"], "acceptance"),
         "terminal_state": terminal_state,
     }
+    return result
 
 
 def _score_bundle_digest_payload(bundle: dict) -> dict:
@@ -669,6 +694,17 @@ def _validate_score_classification(
             raise ValueError("invalidation reason must be none unless the bundle is invalidated")
         if invalidated_bundle_binding is not None:
             raise ValueError("invalidated bundle binding is allowed only for invalidated bundles")
+
+    if score_disposition == "accepted" and failure_plane not in {"none", "candidate"}:
+        raise ValueError("accepted score bundles cannot carry non-candidate failures")
+    if score_disposition == "gate_failed":
+        if failure_plane in {"none", "candidate"} or failure_code == "none":
+            raise ValueError("gate-failed score bundles require a non-candidate failure")
+    if score_disposition == "non_scorable":
+        if failure_plane in {"none", "candidate"} or failure_code == "none":
+            raise ValueError("non-scorable score bundles require a non-candidate failure")
+    if failure_code == "none" and score_disposition not in {"accepted", "invalidated"}:
+        raise ValueError("failure-free score bundles must be accepted or invalidated")
 
     terminal_state = vector["terminal_state"]
     if failure_plane == "candidate":
@@ -881,33 +917,38 @@ def evaluate_hard_gates(value: object) -> dict:
     )
 
 
+def _validated_gate_result(gate_result: object) -> dict:
+    result = _closed(_copy.deepcopy(gate_result), _RESULT_FIELDS, "hard gate result")
+    if result["schema_version"] != HARD_GATE_SCHEMA_VERSION:
+        raise ValueError("hard gate schema version is unsupported")
+    _digest(result["gate_result_id"], "gate result ID")
+    _digest(result["gate_result_digest"], "gate result digest")
+    _digest(result["execution_trace_id"], "execution trace ID")
+    _digest(result["trace_digest"], "trace digest")
+    _text(result["fixture_id"], "fixture ID")
+    _digest(result["fixture_digest"], "fixture digest")
+    if result["gate_disposition"] not in GATE_DISPOSITIONS:
+        raise ValueError("gate disposition is outside the closed inventory")
+    if result["failure_code"] not in GATE_FAILURE_CODES:
+        raise ValueError("gate failure code is outside the closed inventory")
+    if result["first_failed_gate"] is not None and result["first_failed_gate"] not in _GATE_SET:
+        raise ValueError("first failed gate is outside the closed inventory")
+    if not isinstance(result["gates"], list):
+        raise ValueError("hard gates must be an array")
+    validated = evaluate_hard_gates(_replay_request(result))
+    if result["gate_result_digest"] != digest(_result_digest_payload(result)):
+        raise ValueError("gate result digest does not match content")
+    if result["gate_result_id"] != content_id(result, "gate_result_id"):
+        raise ValueError("gate result ID does not match content")
+    if result != validated:
+        raise ValueError("hard gate result does not replay from gate evidence")
+    return result
+
+
 def assert_semantic_scoring_allowed(gate_result: object) -> dict:
     """Return a validated gate result only after deterministic gates pass."""
     try:
-        result = _closed(_copy.deepcopy(gate_result), _RESULT_FIELDS, "hard gate result")
-        if result["schema_version"] != HARD_GATE_SCHEMA_VERSION:
-            raise ValueError("hard gate schema version is unsupported")
-        _digest(result["gate_result_id"], "gate result ID")
-        _digest(result["gate_result_digest"], "gate result digest")
-        _digest(result["execution_trace_id"], "execution trace ID")
-        _digest(result["trace_digest"], "trace digest")
-        _text(result["fixture_id"], "fixture ID")
-        _digest(result["fixture_digest"], "fixture digest")
-        if result["gate_disposition"] not in GATE_DISPOSITIONS:
-            raise ValueError("gate disposition is outside the closed inventory")
-        if result["failure_code"] not in GATE_FAILURE_CODES:
-            raise ValueError("gate failure code is outside the closed inventory")
-        if result["first_failed_gate"] is not None and result["first_failed_gate"] not in _GATE_SET:
-            raise ValueError("first failed gate is outside the closed inventory")
-        if not isinstance(result["gates"], list):
-            raise ValueError("hard gates must be an array")
-        validated = evaluate_hard_gates(_replay_request(result))
-        if result["gate_result_digest"] != digest(_result_digest_payload(result)):
-            raise ValueError("gate result digest does not match content")
-        if result["gate_result_id"] != content_id(result, "gate_result_id"):
-            raise ValueError("gate result ID does not match content")
-        if result != validated:
-            raise ValueError("hard gate result does not replay from gate evidence")
+        result = _validated_gate_result(gate_result)
         if result["gate_disposition"] != "passed" or result["failure_code"] != "none":
             raise ValueError("hard gates failed")
         return result
@@ -1172,7 +1213,7 @@ def _score_bundle_request(value: object) -> dict:
     if isinstance(value, dict) and any(key in value for key in ("execution_trace", "trace", "trace_record")):
         raise ValueError("embedded trace documents are not allowed in score bundles")
     request = _closed(_copy.deepcopy(value), _SCORE_BUNDLE_REQUEST_FIELDS, "score bundle request")
-    gate_result = assert_semantic_scoring_allowed(request["gate_result"])
+    gate_result = _validated_gate_result(request["gate_result"])
     semantic_result = _semantic_result_record(
         request["semantic_result"],
         gate_result=gate_result,
@@ -1231,6 +1272,11 @@ def _score_bundle_request(value: object) -> dict:
         invalidated_bundle_binding=invalidated_bundle_binding,
         vector=vector,
     )
+    if score_disposition == "gate_failed":
+        if gate_result["gate_disposition"] != "failed" or request["semantic_result"] is not None:
+            raise ValueError("gate-failed score bundles require failed gates and no semantic result")
+    elif gate_result["gate_disposition"] != "passed":
+        raise ValueError("deterministic hard gates must pass before semantic scoring")
     score_bundle_version = _text(request["score_bundle_version"], "score bundle version")
     if score_bundle_version != _CURRENT_SCORE_BUNDLE_VERSION:
         raise ValueError("stale score bundle version is not committed directly")
@@ -1307,6 +1353,7 @@ def build_score_bundle(value: object) -> dict:
     }
     bundle["score_bundle_digest"] = digest(_score_bundle_digest_payload(bundle))
     bundle["score_bundle_id"] = content_id(bundle, "score_bundle_id")
+    _scan_committed_scorer_evidence(bundle)
     return validate_score_bundle(bundle)
 
 
@@ -1503,8 +1550,10 @@ def validate_score_bundle(value: object) -> dict:
         invalidated_bundle_binding=invalidated_bundle_binding,
         vector=vector,
     )
-    bundle["semantic_score"] = _nullable_number(bundle["semantic_score"], "semantic score")
-    bundle["reliability_score"] = _nullable_number(bundle["reliability_score"], "reliability score")
+    bundle["semantic_score"] = _nullable_unit_interval(bundle["semantic_score"], "semantic score")
+    bundle["reliability_score"] = _nullable_unit_interval(
+        bundle["reliability_score"], "reliability score"
+    )
     if failure_code == "none":
         _validate_accepted_semantic_evidence(
             bundle["ballots"],

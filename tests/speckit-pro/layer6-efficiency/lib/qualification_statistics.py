@@ -9,7 +9,6 @@ import json
 import math
 import re
 from collections import defaultdict
-from statistics import NormalDist
 
 
 STATISTICS_SCHEMA_VERSION = "qualification-statistics.v1"
@@ -79,6 +78,7 @@ CAMPAIGN_BUDGET_FIELDS = (
 )
 CALIBRATION_DECISIONS = (
     "calibration_complete",
+    "no_qualification",
     "inconclusive",
     "invalid",
 )
@@ -96,6 +96,7 @@ TERMINAL_STATE_ORDER = (
     "timed_out",
     "failed",
     "succeeded",
+    "completed",
 )
 
 _PARTITION_TYPES = frozenset({
@@ -189,6 +190,12 @@ _FREEZE_PROVENANCE_FIELDS = frozenset({
     "independent_review_binding",
 })
 _BINDING_FIELDS = frozenset({"id", "digest"})
+_PARTITION_FIELDS = frozenset({
+    "partition_id",
+    "partition_type",
+    "partition_digest",
+    "qualification_eligible",
+})
 _OUTCOME_FIELDS = frozenset({
     "pair_id",
     "attempt_index",
@@ -211,12 +218,13 @@ _OUTCOME_FIELDS = frozenset({
     "wall_clock_seconds",
     "candidate_route_id",
     "confirmation_entries",
+    "assignment_binding",
+    "score_bundle_binding",
 })
 _QUALITY_FLOOR_FIELDS = frozenset({"evaluation_order", "semantic", "reliability"})
 _ENDPOINTS = frozenset({"semantic_score", "reliability_score"})
 _ARMS = frozenset({"candidate", "comparator"})
 _ROUND_PLACES = 6
-_NORMAL = NormalDist()
 
 
 def _content_digest(value: object) -> str:
@@ -244,6 +252,7 @@ _CANDIDATE_TERMINAL_STATE_BY_FAILURE_CODE = {
 }
 _FAILURE_CODES_BY_PLANE = {
     "none": frozenset({"none"}),
+    "gate": frozenset({"gate_failed"}),
     "treatment": frozenset({
         "treatment_misdelivery",
         "service_reroute",
@@ -293,7 +302,7 @@ _FAILURE_CODES_BY_PLANE = {
         "binding_digest_mismatch",
     }),
 }
-_SCORE_DISPOSITIONS = frozenset({"accepted", "non_scorable"})
+_SCORE_DISPOSITIONS = frozenset({"accepted", "gate_failed", "non_scorable"})
 _ATTRITION_CLASSIFICATION_INPUTS = frozenset({
     *ATTRITION_CLASSIFICATIONS,
     _TRANSIENT_CLASSIFICATION,
@@ -339,6 +348,7 @@ def _digest(value: object, label: str) -> str:
 
 def _validate_binding(value: object, label: str) -> dict:
     row = _closed(value, _BINDING_FIELDS, label)
+    _require(row, _BINDING_FIELDS, label)
     return {
         "id": _text(row["id"], f"{label} ID"),
         "digest": _digest(row["digest"], f"{label} digest"),
@@ -371,10 +381,10 @@ def _validate_partition(
     require_calibration: bool = False,
     label: str = "partition",
 ) -> dict:
-    row = _require_mapping(partition, label)
-    for field in ("partition_id", "partition_type", "partition_digest", "qualification_eligible"):
-        if field not in row:
-            raise ValueError(f"{label} is missing {field}")
+    row = _closed(partition, _PARTITION_FIELDS, label)
+    _require(row, _PARTITION_FIELDS, label)
+    _text(row["partition_id"], f"{label} ID")
+    _digest(row["partition_digest"], f"{label} digest")
     if row["partition_type"] not in _PARTITION_TYPES:
         raise ValueError("partition type is outside the closed inventory")
     if not isinstance(row["qualification_eligible"], bool):
@@ -423,7 +433,7 @@ def _validate_workload_manifest(value: object) -> dict:
     _require(row, _WORKLOAD_MANIFEST_FIELDS, "workload manifest")
     manifest = {
         "manifest_id": _text(row["manifest_id"], "workload manifest ID"),
-        "manifest_digest": _text(row["manifest_digest"], "workload manifest digest"),
+        "manifest_digest": _digest(row["manifest_digest"], "workload manifest digest"),
         "minimum_unique_tasks": _positive_int(
             row["minimum_unique_tasks"], "minimum unique tasks",
         ),
@@ -466,7 +476,7 @@ def _validate_cache_policy(value: object) -> dict:
     _require(row, _CACHE_POLICY_FIELDS, "cache policy")
     policy = {
         "policy_id": _text(row["policy_id"], "cache policy ID"),
-        "policy_digest": _text(row["policy_digest"], "cache policy digest"),
+        "policy_digest": _digest(row["policy_digest"], "cache policy digest"),
         "pair_isolation": row["pair_isolation"],
         "order_leakage_prohibited": row["order_leakage_prohibited"],
         "cache_state": row["cache_state"],
@@ -541,7 +551,15 @@ def _validate_floor(value: object, label: str) -> dict:
     minimum = _number(row["minimum"], f"{label} minimum")
     if minimum < 0 or minimum > 1:
         raise ValueError(f"{label} minimum must be between 0 and 1")
-    return {"metric": str(row["metric"]), "minimum": minimum}
+    metric = _text(row["metric"], f"{label} metric")
+    allowed = (
+        {"semantic_score", "semantic_acceptance_rate"}
+        if label == "semantic floor"
+        else {"reliability_score", "non_candidate_failure_free_rate"}
+    )
+    if metric not in allowed:
+        raise ValueError(f"{label} metric is outside the closed inventory")
+    return {"metric": metric, "minimum": minimum}
 
 
 def _validate_quality_floors(value: object) -> dict:
@@ -580,6 +598,12 @@ def _validate_non_inferiority(value: object) -> dict:
     power = _number(row["power"], "power")
     if not 0 < confidence_level < 1 or not 0 < alpha < 1 or not 0 < power < 1:
         raise ValueError("confidence level, alpha, and power must be inside (0, 1)")
+    if not math.isclose(confidence_level, 1.0 - alpha, rel_tol=0.0, abs_tol=1e-12):
+        raise ValueError("confidence level must equal one minus alpha")
+    if row["cluster_adjustment"] != "cluster_robust":
+        raise ValueError("cluster adjustment must be cluster_robust")
+    if row["multiplicity_adjustment"] not in {"holm", "bonferroni", "none"}:
+        raise ValueError("multiplicity adjustment is outside the closed inventory")
     missingness = _number(sample_assumptions["expected_missingness_rate"], "expected missingness")
     if missingness < 0 or missingness > 1:
         raise ValueError("expected missingness must be between 0 and 1")
@@ -730,6 +754,8 @@ def _candidate_terminal_state(row: dict) -> str | None:
 def _normalize_attempt_row(raw: dict) -> dict:
     row = copy.deepcopy(_validate_outcome_row(raw))
     vector = copy.deepcopy(_require_mapping(row.get("resource_vector"), "resource vector"))
+    if "input_tokens" in vector and "raw_input_tokens" not in vector:
+        vector["raw_input_tokens"] = vector["input_tokens"]
     terminal_state = row.get("terminal_state", vector.get("terminal_state"))
     candidate_terminal = _candidate_terminal_state(row)
     if candidate_terminal is not None:
@@ -737,6 +763,8 @@ def _normalize_attempt_row(raw: dict) -> dict:
         vector["terminal_state"] = candidate_terminal
         row["terminal_state"] = candidate_terminal
     elif isinstance(terminal_state, str) and terminal_state:
+        if terminal_state == "succeeded":
+            terminal_state = "completed"
         row["terminal_state"] = terminal_state
         vector["terminal_state"] = terminal_state
     row["resource_vector"] = vector
@@ -758,6 +786,13 @@ def _validate_failure_code(row: dict) -> None:
 
 def _validate_outcome_row(raw: dict) -> dict:
     row = _closed(raw, _OUTCOME_FIELDS, "paired outcome")
+    _require(row, _OUTCOME_FIELDS, "paired outcome")
+    row["assignment_binding"] = _validate_binding(
+        row["assignment_binding"], "paired outcome assignment binding"
+    )
+    row["score_bundle_binding"] = _validate_binding(
+        row["score_bundle_binding"], "paired outcome score bundle binding"
+    )
     if row["score_disposition"] not in _SCORE_DISPOSITIONS:
         raise ValueError("score disposition is outside the closed inventory")
     if row["attrition_classification"] not in _ATTRITION_CLASSIFICATION_INPUTS:
@@ -1125,6 +1160,8 @@ def _evaluate_workload_cache(plan: dict, pairs: list[dict]) -> tuple[dict, list[
             arm_summary = summary["strata"][stratum_id][arm]
             arm_values = values[stratum_id][arm]
             arm_summary["count"] = max((len(item) for item in arm_values.values()), default=0)
+            if arm_summary["count"] == 0:
+                reasons.append(f"weighted_stratum_missing_{arm}")
             for dimension, guardrail_key in _P95_DIMENSION_GUARDRAILS.items():
                 dimension_values = arm_values[dimension]
                 if not dimension_values:
@@ -1153,8 +1190,28 @@ def _mean(values: list[float]) -> float:
 def _evaluate_quality_floors(plan: dict, pairs: list[dict]) -> tuple[dict, list[str]]:
     floors = plan["quality_floors"]
     candidate_rows = [pair["candidate"] for pair in pairs]
-    semantic_mean = _mean([_number(row["semantic_score"], "candidate semantic score") for row in candidate_rows])
-    reliability_mean = _mean([_number(row["reliability_score"], "candidate reliability score") for row in candidate_rows])
+    metric_values = {
+        "semantic_score": lambda row: _number(
+            row["semantic_score"], "candidate semantic score"
+        ),
+        "reliability_score": lambda row: _number(
+            row["reliability_score"], "candidate reliability score"
+        ),
+        "semantic_acceptance_rate": lambda row: 1.0
+        if row["score_disposition"] == "accepted" and row["semantic_score"] is not None
+        else 0.0,
+        "non_candidate_failure_free_rate": lambda row: 1.0
+        if row["failure_plane"] in {"none", "candidate"}
+        else 0.0,
+    }
+    semantic_metric = floors["semantic"]["metric"]
+    reliability_metric = floors["reliability"]["metric"]
+    semantic_mean = _mean([
+        metric_values[semantic_metric](row) for row in candidate_rows
+    ])
+    reliability_mean = _mean([
+        metric_values[reliability_metric](row) for row in candidate_rows
+    ])
     semantic_status = "pass" if semantic_mean >= floors["semantic"]["minimum"] else "fail"
     reliability_status = "pass" if reliability_mean >= floors["reliability"]["minimum"] else "fail"
     reasons: list[str] = []
@@ -1179,11 +1236,90 @@ def _evaluate_quality_floors(plan: dict, pairs: list[dict]) -> tuple[dict, list[
     }, reasons
 
 
-def _adjusted_alpha(policy: dict) -> float:
-    endpoint_count = max(len(policy["endpoints"]), 1)
-    if policy["multiplicity_adjustment"].lower() in {"holm", "bonferroni"}:
-        return policy["alpha"] / endpoint_count
-    return policy["alpha"]
+def _beta_continued_fraction(a: float, b: float, x: float) -> float:
+    maximum_iterations = 200
+    epsilon = 3e-14
+    floor = 1e-300
+    qab = a + b
+    qap = a + 1.0
+    qam = a - 1.0
+    c = 1.0
+    d = 1.0 - qab * x / qap
+    if abs(d) < floor:
+        d = floor
+    d = 1.0 / d
+    result = d
+    for iteration in range(1, maximum_iterations + 1):
+        even = 2 * iteration
+        coefficient = iteration * (b - iteration) * x / (
+            (qam + even) * (a + even)
+        )
+        d = 1.0 + coefficient * d
+        if abs(d) < floor:
+            d = floor
+        c = 1.0 + coefficient / c
+        if abs(c) < floor:
+            c = floor
+        d = 1.0 / d
+        result *= d * c
+        coefficient = -(a + iteration) * (qab + iteration) * x / (
+            (a + even) * (qap + even)
+        )
+        d = 1.0 + coefficient * d
+        if abs(d) < floor:
+            d = floor
+        c = 1.0 + coefficient / c
+        if abs(c) < floor:
+            c = floor
+        d = 1.0 / d
+        delta = d * c
+        result *= delta
+        if abs(delta - 1.0) < epsilon:
+            break
+    return result
+
+
+def _regularized_incomplete_beta(a: float, b: float, x: float) -> float:
+    if x <= 0.0:
+        return 0.0
+    if x >= 1.0:
+        return 1.0
+    front = math.exp(
+        math.lgamma(a + b)
+        - math.lgamma(a)
+        - math.lgamma(b)
+        + a * math.log(x)
+        + b * math.log1p(-x)
+    )
+    if x < (a + 1.0) / (a + b + 2.0):
+        return front * _beta_continued_fraction(a, b, x) / a
+    return 1.0 - front * _beta_continued_fraction(b, a, 1.0 - x) / b
+
+
+def _student_t_survival(value: float, degrees_of_freedom: int) -> float:
+    if degrees_of_freedom < 1:
+        raise ValueError("finite-cluster inference requires positive degrees of freedom")
+    x = degrees_of_freedom / (degrees_of_freedom + value * value)
+    tail = 0.5 * _regularized_incomplete_beta(
+        degrees_of_freedom / 2.0,
+        0.5,
+        x,
+    )
+    return tail if value >= 0 else 1.0 - tail
+
+
+def _student_t_critical(alpha: float, degrees_of_freedom: int) -> float:
+    lower = 0.0
+    upper = 1.0
+    while _student_t_survival(upper, degrees_of_freedom) > alpha:
+        upper *= 2.0
+    for _ in range(100):
+        midpoint = (lower + upper) / 2.0
+        if _student_t_survival(midpoint, degrees_of_freedom) > alpha:
+            lower = midpoint
+        else:
+            upper = midpoint
+    return (lower + upper) / 2.0
 
 
 def _cluster_key(pair: dict, cluster_unit: str) -> str:
@@ -1191,7 +1327,12 @@ def _cluster_key(pair: dict, cluster_unit: str) -> str:
     return str(pair["candidate"][field])
 
 
-def _cluster_endpoint(endpoint: str, pairs: list[dict], policy: dict) -> dict:
+def _cluster_endpoint(
+    endpoint: str,
+    pairs: list[dict],
+    policy: dict,
+    adjusted_alpha: float,
+) -> dict:
     cluster_unit = policy["cluster_unit"]
     per_cluster_minimum = policy["sample_sizes"]["per_role_minimum"]
     clustered: dict[str, list[float]] = defaultdict(list)
@@ -1217,7 +1358,8 @@ def _cluster_endpoint(endpoint: str, pairs: list[dict], policy: dict) -> dict:
             "margin": _round(policy["margins"][endpoint]),
             "confidence_level": _round(policy["confidence_level"]),
             "alpha": _round(policy["alpha"]),
-            "adjusted_alpha": _round(_adjusted_alpha(policy)),
+            "adjusted_alpha": _round(adjusted_alpha),
+            "adjusted_confidence_level": _round(1.0 - adjusted_alpha),
             "reason": "sample_size_insufficient",
         }
     if len(cluster_means) < 2:
@@ -1231,15 +1373,24 @@ def _cluster_endpoint(endpoint: str, pairs: list[dict], policy: dict) -> dict:
             "margin": _round(policy["margins"][endpoint]),
             "confidence_level": _round(policy["confidence_level"]),
             "alpha": _round(policy["alpha"]),
-            "adjusted_alpha": _round(_adjusted_alpha(policy)),
+            "adjusted_alpha": _round(adjusted_alpha),
+            "adjusted_confidence_level": _round(1.0 - adjusted_alpha),
             "reason": "independent_cluster_count_insufficient",
         }
     values = list(cluster_means.values())
     variance = sum((value - mean_difference) ** 2 for value in values) / (len(values) - 1)
     standard_error = math.sqrt(variance) / math.sqrt(len(values))
-    critical = _NORMAL.inv_cdf(1 - _adjusted_alpha(policy))
+    degrees_of_freedom = len(values) - 1
+    margin = policy["margins"][endpoint]
+    if standard_error == 0.0:
+        statistic = math.inf if mean_difference >= margin else -math.inf
+        p_value = 0.0 if mean_difference >= margin else 1.0
+    else:
+        statistic = (mean_difference - margin) / standard_error
+        p_value = _student_t_survival(statistic, degrees_of_freedom)
+    critical = _student_t_critical(adjusted_alpha, degrees_of_freedom)
     lower_bound = mean_difference - critical * standard_error
-    status = "pass" if lower_bound >= policy["margins"][endpoint] else "fail"
+    status = "pass" if p_value <= adjusted_alpha else "fail"
     return {
         "status": status,
         "cluster_unit": cluster_unit,
@@ -1247,19 +1398,44 @@ def _cluster_endpoint(endpoint: str, pairs: list[dict], policy: dict) -> dict:
         "pair_count": pair_count,
         "mean_difference": _round(mean_difference),
         "lower_confidence_bound": _round(lower_bound),
-        "margin": _round(policy["margins"][endpoint]),
+        "margin": _round(margin),
         "confidence_level": _round(policy["confidence_level"]),
         "alpha": _round(policy["alpha"]),
-        "adjusted_alpha": _round(_adjusted_alpha(policy)),
+        "adjusted_alpha": _round(adjusted_alpha),
+        "adjusted_confidence_level": _round(1.0 - adjusted_alpha),
+        "degrees_of_freedom": degrees_of_freedom,
+        "p_value": _round(p_value),
     }
 
 
 def _evaluate_non_inferiority(plan: dict, pairs: list[dict]) -> tuple[dict, list[str]]:
     policy = plan["non_inferiority"]
+    endpoint_count = len(policy["endpoints"])
+    initial_alpha = (
+        policy["alpha"] / endpoint_count
+        if policy["multiplicity_adjustment"] in {"holm", "bonferroni"}
+        else policy["alpha"]
+    )
     endpoints = {
-        endpoint: _cluster_endpoint(endpoint, pairs, policy)
+        endpoint: _cluster_endpoint(endpoint, pairs, policy, initial_alpha)
         for endpoint in policy["endpoints"]
     }
+    if (
+        policy["multiplicity_adjustment"] == "holm"
+        and not any(item["status"] == "uncertain" for item in endpoints.values())
+    ):
+        ordered = sorted(
+            policy["endpoints"],
+            key=lambda endpoint: endpoints[endpoint]["p_value"],
+        )
+        continue_rejecting = True
+        for rank, endpoint in enumerate(ordered):
+            adjusted_alpha = policy["alpha"] / (endpoint_count - rank)
+            item = _cluster_endpoint(endpoint, pairs, policy, adjusted_alpha)
+            if not continue_rejecting or item["p_value"] > adjusted_alpha:
+                item["status"] = "fail"
+                continue_rejecting = False
+            endpoints[endpoint] = item
     reasons: list[str] = []
     if any(item["status"] == "uncertain" for item in endpoints.values()):
         status = "uncertain"
@@ -1287,6 +1463,7 @@ def _compare_dimension(candidate: object, comparator: object, direction: str) ->
         return "uncertain"
     if direction == "not_worse":
         order = {state: index for index, state in enumerate(TERMINAL_STATE_ORDER)}
+        order["completed"] = order["succeeded"]
         if candidate not in order or comparator not in order:
             return "uncertain"
         if order[candidate] > order[comparator]:
@@ -1346,14 +1523,32 @@ def compare_pareto_vectors(candidate: dict, comparator: dict, pareto_policy: dic
     }
 
 
-def _aggregate_vectors(rows: list[dict]) -> dict:
-    aggregate = {dimension: 0 for dimension in PARETO_DIMENSIONS if dimension != "terminal_state"}
+def _aggregate_vectors(rows: list[dict], workload_manifest: dict) -> dict:
+    aggregate = {
+        dimension: 0.0
+        for dimension in PARETO_DIMENSIONS
+        if dimension != "terminal_state"
+    }
+    rows_by_stratum: dict[str, list[dict]] = defaultdict(list)
+    for row in rows:
+        rows_by_stratum[row["workload_stratum_id"]].append(row)
+    for stratum in workload_manifest["strata"]:
+        stratum_rows = rows_by_stratum.get(stratum["stratum_id"], [])
+        if not stratum_rows:
+            raise ValueError("positive-weight workload stratum has no observations")
+        for dimension in aggregate:
+            aggregate[dimension] += stratum["target_weight"] * _mean([
+                _number(
+                    _require_mapping(row["resource_vector"], "resource vector").get(dimension),
+                    f"resource {dimension}",
+                )
+                for row in stratum_rows
+            ])
     terminal_order = {state: index for index, state in enumerate(TERMINAL_STATE_ORDER)}
-    worst_terminal = "succeeded"
+    terminal_order["completed"] = terminal_order["succeeded"]
+    worst_terminal = "completed"
     for row in rows:
         vector = _require_mapping(row["resource_vector"], "resource vector")
-        for dimension in aggregate:
-            aggregate[dimension] += _number(vector.get(dimension), f"resource {dimension}")
         terminal_state = vector.get("terminal_state", row.get("terminal_state"))
         if terminal_state not in terminal_order:
             worst_terminal = None
@@ -1367,8 +1562,14 @@ def _aggregate_vectors(rows: list[dict]) -> dict:
 
 
 def _evaluate_pareto(plan: dict, pairs: list[dict]) -> dict:
-    candidate_vector = _aggregate_vectors([pair["candidate"] for pair in pairs])
-    comparator_vector = _aggregate_vectors([pair["comparator"] for pair in pairs])
+    candidate_vector = _aggregate_vectors(
+        [pair["candidate"] for pair in pairs],
+        plan["workload_manifest"],
+    )
+    comparator_vector = _aggregate_vectors(
+        [pair["comparator"] for pair in pairs],
+        plan["workload_manifest"],
+    )
     result = compare_pareto_vectors(candidate_vector, comparator_vector, plan["pareto_policy"])
     return {
         "status": "pass" if result["result"] == "candidate_dominates" else "inconclusive",
@@ -1377,6 +1578,7 @@ def _evaluate_pareto(plan: dict, pairs: list[dict]) -> dict:
         "comparator_vector": comparator_vector,
         "dimension_results": result["dimension_results"],
         "weights_used": False,
+        "workload_weights_applied": True,
     }
 
 
@@ -1416,9 +1618,10 @@ def _decision_payload(
     quality_floors: dict,
     non_inferiority: dict,
     pareto: dict,
+    paired_outcomes: list[dict],
 ) -> dict:
     policy_output = {field: False for field in PROHIBITED_FINAL_OUTPUTS}
-    return {
+    details = {
         "schema_version": STATISTICS_SCHEMA_VERSION,
         "decision": decision,
         "reason_codes": reason_codes,
@@ -1440,10 +1643,295 @@ def _decision_payload(
         "qualification_policy_output": policy_output,
         "frozen_plan": _frozen_plan_summary(plan),
     }
+    assignment_bindings = sorted(
+        {
+            (row["assignment_binding"]["id"], row["assignment_binding"]["digest"])
+            for row in paired_outcomes
+            if isinstance(row, dict) and isinstance(row.get("assignment_binding"), dict)
+        }
+    )
+    score_bundle_bindings = sorted(
+        {
+            (row["score_bundle_binding"]["id"], row["score_bundle_binding"]["digest"])
+            for row in paired_outcomes
+            if isinstance(row, dict) and isinstance(row.get("score_bundle_binding"), dict)
+        }
+    )
+    pair_ids = sorted({
+        row["pair_id"]
+        for row in paired_outcomes
+        if isinstance(row, dict) and isinstance(row.get("pair_id"), str)
+    })
+    comparison_digest = _content_digest({"pair_ids": pair_ids})
+    complete = (
+        completeness.get("status") == "pass"
+        and workload_cache.get("status") == "pass"
+    )
+    floor_result = quality_floors.get("status", "not_evaluated")
+    ni_result = non_inferiority.get("status", "not_evaluated")
+    pareto_result = pareto.get("result", "not_evaluated")
+    analysis_output = {
+        "complete": complete,
+        "floor_result": floor_result,
+        "non_inferiority_result": ni_result,
+        "pareto_result": pareto_result,
+        "terminal_analysis_disposition": decision,
+        "details": details,
+    }
+    analysis_output["analysis_output_digest"] = _content_digest(analysis_output)
+    analysis_output["analysis_output_id"] = _content_digest({
+        key: value
+        for key, value in analysis_output.items()
+        if key != "analysis_output_id"
+    })
+
+    gate_values = {
+        "bindings": "pass",
+        "partition": partition_boundary.get("status", "pass")
+        if partition_boundary is not None
+        else "pass",
+        "treatment": "pass",
+        "deterministic": "pass",
+        "provenance": "pass",
+        "completeness": completeness.get("status", "not_evaluated"),
+        "floors": floor_result,
+        "non_inferiority": ni_result,
+        "pareto": (
+            "pass"
+            if pareto_result == "candidate_dominates"
+            else "not_evaluated"
+            if pareto_result == "not_evaluated"
+            else "uncertain"
+        ),
+    }
+    ordered_gate_results = [
+        {"sequence": index, "gate": gate, "result": gate_values[gate]}
+        for index, gate in enumerate(
+            (
+                "bindings",
+                "partition",
+                "treatment",
+                "deterministic",
+                "provenance",
+                "completeness",
+                "floors",
+                "non_inferiority",
+                "pareto",
+            ),
+            start=1,
+        )
+    ]
+    result = {
+        "schema_version": "analysis-decision.v1",
+        "decision_bundle_version": plan["analysis_plan_version"],
+        "partition_binding": copy.deepcopy(plan["calibration_partition_binding"]),
+        "comparison_set_binding": {
+            "id": comparison_digest,
+            "digest": comparison_digest,
+        },
+        "assignment_bindings": [
+            {"id": value_id, "digest": value_digest}
+            for value_id, value_digest in assignment_bindings
+        ],
+        "score_bundle_bindings": [
+            {"id": value_id, "digest": value_digest}
+            for value_id, value_digest in score_bundle_bindings
+        ],
+        "analysis_plan_binding": {
+            "id": plan["analysis_plan_id"],
+            "digest": plan["analysis_plan_digest"],
+        },
+        "analysis_output": analysis_output,
+        "ordered_gate_results": ordered_gate_results,
+        "decision": decision,
+        "qualification_policy_output": {
+            key: False
+            for key in (
+                "preferred_route_policy_created",
+                "fallback_route_policy_created",
+                "installed_default_changed",
+            )
+        },
+        "evidence_refs": sorted({
+            item["digest"] for item in plan["calibration_evidence_bindings"]
+        } | {
+            value_digest for _value_id, value_digest in score_bundle_bindings
+        }),
+    }
+    result["decision_bundle_digest"] = _content_digest(result)
+    result["decision_bundle_id"] = _content_digest({
+        key: value for key, value in result.items() if key != "decision_bundle_id"
+    })
+    return result
 
 
 def _calibration_non_qualifying_decision() -> str:
-    return "inconclusive"
+    return "no_qualification"
+
+
+def validate_analysis_decision_bundle(value: object) -> dict:
+    """Validate the governed decision identity and all score/assignment bindings."""
+    fields = frozenset({
+        "schema_version",
+        "decision_bundle_id",
+        "decision_bundle_version",
+        "decision_bundle_digest",
+        "partition_binding",
+        "comparison_set_binding",
+        "assignment_bindings",
+        "score_bundle_bindings",
+        "analysis_plan_binding",
+        "analysis_output",
+        "ordered_gate_results",
+        "decision",
+        "qualification_policy_output",
+        "evidence_refs",
+    })
+    bundle = _closed(copy.deepcopy(value), fields, "analysis decision bundle")
+    _require(bundle, fields, "analysis decision bundle")
+    if bundle["schema_version"] != "analysis-decision.v1":
+        raise ValueError("analysis decision schema version is unsupported")
+    bundle["partition_binding"] = _validate_partition(
+        bundle["partition_binding"], require_calibration=True
+    )
+    for field in (
+        "comparison_set_binding",
+        "analysis_plan_binding",
+    ):
+        bundle[field] = _validate_binding(bundle[field], field.replace("_", " "))
+    for field in ("assignment_bindings", "score_bundle_bindings"):
+        rows = bundle[field]
+        if not isinstance(rows, list) or len(rows) < 2:
+            raise ValueError(f"{field} must contain both comparison arms")
+        bundle[field] = [
+            _validate_binding(item, field.replace("_", " ")) for item in rows
+        ]
+        if len({(item["id"], item["digest"]) for item in bundle[field]}) != len(
+            bundle[field]
+        ):
+            raise ValueError(f"{field} must be unique")
+    output = _require_mapping(bundle["analysis_output"], "analysis output")
+    output_fields = frozenset({
+        "analysis_output_id",
+        "analysis_output_digest",
+        "complete",
+        "floor_result",
+        "non_inferiority_result",
+        "pareto_result",
+        "terminal_analysis_disposition",
+        "details",
+    })
+    output = _closed(output, output_fields, "analysis output")
+    _require(output, output_fields, "analysis output")
+    if type(output["complete"]) is not bool:
+        raise ValueError("analysis output complete marker must be boolean")
+    if not isinstance(output["details"], dict):
+        raise ValueError("analysis output details must be an object")
+    _digest(output["analysis_output_id"], "analysis output ID")
+    _digest(output["analysis_output_digest"], "analysis output digest")
+    expected_output_digest = _content_digest({
+        key: item
+        for key, item in output.items()
+        if key not in {"analysis_output_id", "analysis_output_digest"}
+    })
+    if output["analysis_output_digest"] != expected_output_digest:
+        raise ValueError("analysis output digest does not match content")
+    if output["analysis_output_id"] != _content_digest({
+        key: item for key, item in output.items() if key != "analysis_output_id"
+    }):
+        raise ValueError("analysis output ID does not match content")
+    if output["terminal_analysis_disposition"] != bundle["decision"]:
+        raise ValueError("analysis output disposition does not match decision")
+    disposition_tuple = (
+        output["complete"],
+        output["floor_result"],
+        output["non_inferiority_result"],
+        output["pareto_result"],
+        output["terminal_analysis_disposition"],
+    )
+    allowed_dispositions = {
+        (True, "pass", "pass", "candidate_dominates", "calibration_complete"),
+        (True, "fail", "not_evaluated", "not_evaluated", "no_qualification"),
+        (True, "pass", "fail", "not_evaluated", "no_qualification"),
+        (True, "pass", "pass", "comparator_dominates", "no_qualification"),
+        (True, "pass", "uncertain", "not_evaluated", "inconclusive"),
+        (True, "pass", "pass", "tie", "inconclusive"),
+        (True, "pass", "pass", "mixed", "inconclusive"),
+        (True, "pass", "pass", "uncertain", "inconclusive"),
+        (
+            False,
+            "not_evaluated",
+            "not_evaluated",
+            "not_evaluated",
+            "inconclusive",
+        ),
+        (
+            False,
+            "not_evaluated",
+            "not_evaluated",
+            "not_evaluated",
+            "invalid",
+        ),
+    }
+    if disposition_tuple not in allowed_dispositions:
+        raise ValueError("analysis output metrics contradict its terminal disposition")
+    bundle["analysis_output"] = output
+    if bundle["decision"] not in CALIBRATION_DECISIONS:
+        raise ValueError("analysis decision is outside the closed inventory")
+    _text(bundle["decision_bundle_version"], "analysis decision bundle version")
+    if not isinstance(bundle["ordered_gate_results"], list) or len(
+        bundle["ordered_gate_results"]
+    ) != 9:
+        raise ValueError("analysis decision must contain nine ordered gate results")
+    expected_gates = (
+        "bindings",
+        "partition",
+        "treatment",
+        "deterministic",
+        "provenance",
+        "completeness",
+        "floors",
+        "non_inferiority",
+        "pareto",
+    )
+    for index, (gate, expected_gate) in enumerate(
+        zip(bundle["ordered_gate_results"], expected_gates), start=1
+    ):
+        if gate != {
+            "sequence": index,
+            "gate": expected_gate,
+            "result": gate.get("result") if isinstance(gate, dict) else None,
+        } or gate["result"] not in {"pass", "fail", "uncertain", "not_evaluated"}:
+            raise ValueError("analysis decision gates are not in frozen order")
+    policy_output = bundle["qualification_policy_output"]
+    expected_policy_output = {
+        "preferred_route_policy_created": False,
+        "fallback_route_policy_created": False,
+        "installed_default_changed": False,
+    }
+    if policy_output != expected_policy_output:
+        raise ValueError("analysis decision cannot create qualification policy")
+    if not isinstance(bundle["evidence_refs"], list):
+        raise ValueError("analysis decision evidence references must be an array")
+    bundle["evidence_refs"] = [
+        _digest(item, "analysis decision evidence reference")
+        for item in bundle["evidence_refs"]
+    ]
+    if len(bundle["evidence_refs"]) != len(set(bundle["evidence_refs"])):
+        raise ValueError("analysis decision evidence references must be unique")
+    _digest(bundle["decision_bundle_id"], "analysis decision bundle ID")
+    _digest(bundle["decision_bundle_digest"], "analysis decision bundle digest")
+    if bundle["decision_bundle_digest"] != _content_digest({
+        key: item
+        for key, item in bundle.items()
+        if key not in {"decision_bundle_id", "decision_bundle_digest"}
+    }):
+        raise ValueError("analysis decision bundle digest does not match content")
+    if bundle["decision_bundle_id"] != _content_digest({
+        key: item for key, item in bundle.items() if key != "decision_bundle_id"
+    }):
+        raise ValueError("analysis decision bundle ID does not match content")
+    return bundle
 
 
 def evaluate_qualification_decision(
@@ -1461,7 +1949,7 @@ def evaluate_qualification_decision(
         partition_boundary["status"] = "fail"
         partition_boundary["reason_codes"] = list(partition_reasons)
     if partition_reasons:
-        return _decision_payload(
+        return validate_analysis_decision_bundle(_decision_payload(
             plan=plan,
             partition_binding=partition_binding,
             decision="invalid",
@@ -1474,10 +1962,11 @@ def evaluate_qualification_decision(
             quality_floors=_not_evaluated("quality_floors"),
             non_inferiority=_not_evaluated("non_inferiority"),
             pareto=_not_evaluated("pareto"),
-        )
+            paired_outcomes=paired_outcomes,
+        ))
     budget, budget_reasons = _evaluate_campaign_budget(plan, paired_outcomes)
     if budget_reasons:
-        return _decision_payload(
+        return validate_analysis_decision_bundle(_decision_payload(
             plan=plan,
             partition_binding=partition_binding,
             decision="invalid",
@@ -1490,10 +1979,11 @@ def evaluate_qualification_decision(
             quality_floors=_not_evaluated("quality_floors"),
             non_inferiority=_not_evaluated("non_inferiority"),
             pareto=_not_evaluated("pareto"),
-        )
+            paired_outcomes=paired_outcomes,
+        ))
     pairs, pairing_reasons, completeness = _pair_outcomes(paired_outcomes, plan)
     if pairing_reasons:
-        return _decision_payload(
+        return validate_analysis_decision_bundle(_decision_payload(
             plan=plan,
             partition_binding=partition_binding,
             decision="inconclusive",
@@ -1506,10 +1996,11 @@ def evaluate_qualification_decision(
             quality_floors=_not_evaluated("quality_floors"),
             non_inferiority=_not_evaluated("non_inferiority"),
             pareto=_not_evaluated("pareto"),
-        )
+            paired_outcomes=paired_outcomes,
+        ))
     workload_cache, workload_reasons = _evaluate_workload_cache(plan, pairs)
     if workload_reasons:
-        return _decision_payload(
+        return validate_analysis_decision_bundle(_decision_payload(
             plan=plan,
             partition_binding=partition_binding,
             decision="inconclusive",
@@ -1522,10 +2013,11 @@ def evaluate_qualification_decision(
             quality_floors=_not_evaluated("quality_floors"),
             non_inferiority=_not_evaluated("non_inferiority"),
             pareto=_not_evaluated("pareto"),
-        )
+            paired_outcomes=paired_outcomes,
+        ))
     quality_floors, floor_reasons = _evaluate_quality_floors(plan, pairs)
     if floor_reasons:
-        return _decision_payload(
+        return validate_analysis_decision_bundle(_decision_payload(
             plan=plan,
             partition_binding=partition_binding,
             decision=_calibration_non_qualifying_decision(),
@@ -1538,13 +2030,18 @@ def evaluate_qualification_decision(
             quality_floors=quality_floors,
             non_inferiority=_not_evaluated("non_inferiority"),
             pareto=_not_evaluated("pareto"),
-        )
+            paired_outcomes=paired_outcomes,
+        ))
     non_inferiority, ni_reasons = _evaluate_non_inferiority(plan, pairs)
     if non_inferiority["status"] != "pass":
-        return _decision_payload(
+        return validate_analysis_decision_bundle(_decision_payload(
             plan=plan,
             partition_binding=partition_binding,
-            decision=_calibration_non_qualifying_decision(),
+            decision=(
+                "no_qualification"
+                if non_inferiority["status"] == "fail"
+                else "inconclusive"
+            ),
             reason_codes=ni_reasons,
             stop_gate="non_inferiority",
             partition_boundary=partition_boundary,
@@ -1554,14 +2051,17 @@ def evaluate_qualification_decision(
             quality_floors=quality_floors,
             non_inferiority=non_inferiority,
             pareto=_not_evaluated("pareto"),
-        )
+            paired_outcomes=paired_outcomes,
+        ))
     pareto = _evaluate_pareto(plan, pairs)
     pareto_reasons = [] if pareto["result"] == "candidate_dominates" else [f"pareto_{pareto['result']}"]
     if pareto["result"] == "candidate_dominates":
         decision = "calibration_complete"
+    elif pareto["result"] == "comparator_dominates":
+        decision = "no_qualification"
     else:
-        decision = _calibration_non_qualifying_decision()
-    return _decision_payload(
+        decision = "inconclusive"
+    return validate_analysis_decision_bundle(_decision_payload(
         plan=plan,
         partition_binding=partition_binding,
         decision=decision,
@@ -1574,7 +2074,8 @@ def evaluate_qualification_decision(
         quality_floors=quality_floors,
         non_inferiority=non_inferiority,
         pareto=pareto,
-    )
+        paired_outcomes=paired_outcomes,
+    ))
 
 
 __all__ = [
@@ -1592,4 +2093,5 @@ __all__ = [
     "TERMINAL_STATE_ORDER",
     "compare_pareto_vectors",
     "evaluate_qualification_decision",
+    "validate_analysis_decision_bundle",
 ]

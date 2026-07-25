@@ -16,6 +16,7 @@ ANALYSIS_REPLAY_SCHEMA_VERSION = "analysis-replay.v1"
 
 _SCORING_MODULE_NAME = "_g56r_003_qualification_scoring_for_replay"
 _STATISTICS_MODULE_NAME = "_g56r_003_qualification_statistics_for_replay"
+_CORPUS_MODULE_NAME = "_g56r_003_qualification_corpus_for_replay"
 _REPLAY_REQUEST_FIELDS = frozenset({"score_bundle", "evidence_refs"})
 _REPLAY_BUNDLE_FIELDS = frozenset({
     "schema_version",
@@ -25,8 +26,8 @@ _REPLAY_BUNDLE_FIELDS = frozenset({
     "score_bundle",
     "evidence_refs",
 })
-_SUMMARY_REQUEST_FIELDS = frozenset({"score_replays"})
-_SUMMARY_ROW_FIELDS = frozenset({"role_id", "required_core", "optional_helper", "replay_bundle"})
+_SUMMARY_REQUEST_FIELDS = frozenset({"score_replays", "role_corpus"})
+_SUMMARY_ROW_FIELDS = frozenset({"role_id", "replay_bundle"})
 _SUMMARY_FIELDS = frozenset({
     "schema_version",
     "summary_id",
@@ -46,6 +47,7 @@ _ANALYSIS_REQUEST_FIELDS = frozenset({
     "analysis_plan",
     "partition",
     "paired_outcomes",
+    "score_bundles",
     "binding_authorities",
     "execution_boundary",
     "source_lineage",
@@ -105,7 +107,7 @@ _CORPUS_LINEAGE_FIELDS = frozenset({
     "partition_binding",
 })
 _SCORE_BUNDLE_LINEAGE_FIELDS = frozenset({
-    "score_bundle_binding",
+    "score_bundle_bindings",
     "paired_outcomes_digest",
     "execution_trace_binding",
     "corpus_binding",
@@ -140,6 +142,20 @@ def _statistics():
         raise RuntimeError(f"cannot load {module_path}")
     module = _importlib_util.module_from_spec(spec)
     _sys.modules[_STATISTICS_MODULE_NAME] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _corpus():
+    module = _sys.modules.get(_CORPUS_MODULE_NAME)
+    if module is not None:
+        return module
+    module_path = _Path(__file__).with_name("qualification_corpus.py")
+    spec = _importlib_util.spec_from_file_location(_CORPUS_MODULE_NAME, module_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {module_path}")
+    module = _importlib_util.module_from_spec(spec)
+    _sys.modules[_CORPUS_MODULE_NAME] = module
     spec.loader.exec_module(module)
     return module
 
@@ -213,6 +229,7 @@ def _validate_source_lineage(
     plan: dict,
     partition: dict,
     paired_outcomes: list,
+    score_bundles: list[dict],
 ) -> dict:
     lineage = _closed(
         _copy.deepcopy(value),
@@ -338,21 +355,25 @@ def _validate_source_lineage(
         _SCORE_BUNDLE_LINEAGE_FIELDS,
         "source lineage score bundle",
     )
-    score_bundle["score_bundle_binding"] = _binding_record(
-        score_bundle["score_bundle_binding"],
-        "score bundle",
+    raw_score_bindings = score_bundle["score_bundle_bindings"]
+    if not isinstance(raw_score_bindings, list):
+        raise ValueError("source lineage score bundle bindings must be an array")
+    score_bundle["score_bundle_bindings"] = [
+        _binding_record(item, "score bundle") for item in raw_score_bindings
+    ]
+    expected_score_bindings = sorted(
+        (
+            _binding(item["score_bundle_id"], item["score_bundle_digest"])
+            for item in score_bundles
+        ),
+        key=lambda item: (item["id"], item["digest"]),
     )
+    if score_bundle["score_bundle_bindings"] != expected_score_bindings:
+        raise ValueError("source lineage score bundle bindings do not match score authority")
     score_bundle["paired_outcomes_digest"] = _digest_ref(
         score_bundle["paired_outcomes_digest"],
         "score bundle paired outcomes digest",
     )
-    if (
-        score_bundle["paired_outcomes_digest"]
-        != score_bundle["score_bundle_binding"]["digest"]
-    ):
-        raise ValueError(
-            "source lineage score bundle binding does not bind paired outcomes"
-        )
     if score_bundle["paired_outcomes_digest"] != _scoring().digest(paired_outcomes):
         raise ValueError(
             "source lineage score bundle does not match paired outcomes"
@@ -411,6 +432,103 @@ def _validate_source_lineage(
     lineage["corpus"] = corpus
     lineage["score_bundle"] = score_bundle
     return lineage
+
+
+def _validate_analysis_score_bundles(
+    value: object,
+    paired_outcomes: object,
+    plan: dict,
+    authorities: dict,
+) -> list[dict]:
+    if not isinstance(value, list) or not value:
+        raise ValueError("analysis replay requires score bundles")
+    if not isinstance(paired_outcomes, list):
+        raise ValueError("analysis replay paired outcomes must be an array")
+    scoring = _scoring()
+    bundles = [scoring.sanitize_committed_scorer_evidence(item) for item in value]
+    by_binding = {
+        (item["score_bundle_id"], item["score_bundle_digest"]): item
+        for item in bundles
+    }
+    if len(by_binding) != len(bundles):
+        raise ValueError("analysis replay score bundles must be unique")
+    expected_partition = {
+        "id": plan["calibration_partition_binding"]["partition_id"],
+        "digest": plan["calibration_partition_binding"]["partition_digest"],
+    }
+    scorer_bindings: set[tuple[str, str]] = set()
+    for bundle in bundles:
+        for field, expected in (
+            ("partition_binding", expected_partition),
+            ("runtime_snapshot_binding", authorities["runtime_snapshot_binding"]),
+            ("candidate_freeze_binding", authorities["candidate_freeze_binding"]),
+            ("rubric_binding", authorities["rubric_binding"]),
+        ):
+            if bundle[field] != expected:
+                raise ValueError(f"score bundle {field} does not match analysis authority")
+        scorer_bindings.update(
+            (item["id"], item["digest"]) for item in bundle["scorer_bindings"]
+        )
+        if (
+            bundle["adjudication_binding"] is not None
+            and bundle["adjudication_binding"] != authorities["adjudicator_binding"]
+        ):
+            raise ValueError("score bundle adjudicator does not match analysis authority")
+    expected_scorers = {
+        (item["id"], item["digest"]) for item in authorities["scorer_bindings"]
+    }
+    if scorer_bindings != expected_scorers:
+        raise ValueError("score bundle scorers do not match analysis authority")
+    used_bindings: set[tuple[str, str]] = set()
+    for outcome in paired_outcomes:
+        if not isinstance(outcome, dict):
+            raise ValueError("analysis replay outcomes must be objects")
+        binding = _binding_record(
+            outcome.get("score_bundle_binding"),
+            "paired outcome score bundle",
+        )
+        bundle = by_binding.get((binding["id"], binding["digest"]))
+        if bundle is None:
+            raise ValueError("paired outcome does not bind a validated score bundle")
+        binding_key = (binding["id"], binding["digest"])
+        if binding_key in used_bindings:
+            raise ValueError("paired outcomes cannot reuse a score bundle")
+        used_bindings.add(binding_key)
+        if outcome.get("assignment_binding") != bundle["assignment_binding"]:
+            raise ValueError("paired outcome assignment does not match score bundle")
+        if outcome.get("fixture_id") != bundle["fixture_binding"]["id"]:
+            raise ValueError("paired outcome fixture does not match score bundle")
+        if outcome.get("candidate_route_id") != bundle["candidate_route_binding"]["id"]:
+            raise ValueError("paired outcome candidate route does not match score bundle")
+        for outcome_field, bundle_field in (
+            ("score_disposition", "score_disposition"),
+            ("failure_plane", "failure_plane"),
+            ("failure_code", "failure_code"),
+            ("semantic_score", "semantic_score"),
+            ("reliability_score", "reliability_score"),
+        ):
+            if outcome.get(outcome_field) != bundle[bundle_field]:
+                raise ValueError(f"paired outcome {outcome_field} does not match score bundle")
+        vector = outcome.get("resource_vector")
+        if not isinstance(vector, dict):
+            raise ValueError("paired outcome resource vector is missing")
+        expected_vector = {
+            "raw_input_tokens": bundle["resource_vector"]["input_tokens"],
+            "cached_input_tokens": bundle["resource_vector"]["cached_input_tokens"],
+            "output_tokens": bundle["resource_vector"]["output_tokens"],
+            "duration_ms": bundle["resource_vector"]["duration_ms"],
+            "retries": bundle["resource_vector"]["retries"],
+            "compactions": bundle["resource_vector"]["compactions"],
+            "acceptance": bundle["resource_vector"]["acceptance"],
+            "terminal_state": bundle["resource_vector"]["terminal_state"],
+        }
+        if {
+            key: vector.get(key) for key in expected_vector
+        } != expected_vector:
+            raise ValueError("paired outcome resource vector does not match score bundle")
+    if used_bindings != set(by_binding):
+        raise ValueError("analysis replay contains an orphan score bundle")
+    return bundles
 
 
 def _analysis_replay_digest_payload(bundle: dict) -> dict:
@@ -534,12 +652,19 @@ def _validate_analysis_request(value: object) -> dict:
     request["execution_boundary"] = _validate_execution_boundary(
         request["execution_boundary"]
     )
+    request["score_bundles"] = _validate_analysis_score_bundles(
+        request["score_bundles"],
+        request["paired_outcomes"],
+        plan,
+        request["binding_authorities"],
+    )
     request["source_lineage"] = _validate_source_lineage(
         request["source_lineage"],
         request["binding_authorities"],
         plan,
         request["partition"],
         request["paired_outcomes"],
+        request["score_bundles"],
     )
     if not isinstance(request["paired_outcomes"], list):
         raise ValueError("analysis replay paired outcomes must be an array")
@@ -561,8 +686,11 @@ def build_analysis_replay_bundle(value: object) -> dict:
         "status": "replayed",
         "decision": decision,
         "decision_binding": _binding(
-            _text(decision.get("decision"), "analysis decision"),
-            scoring.digest(decision),
+            _digest_ref(decision.get("decision_bundle_id"), "analysis decision bundle ID"),
+            _digest_ref(
+                decision.get("decision_bundle_digest"),
+                "analysis decision bundle digest",
+            ),
         ),
     }
     bundle["analysis_replay_artifact_digest"] = scoring.digest(
@@ -610,8 +738,14 @@ def validate_analysis_replay_bundle(value: object) -> dict:
     if bundle["decision"] != expected_decision:
         raise ValueError("analysis replay decision does not match recomputation")
     expected_decision_binding = _binding(
-        _text(expected_decision.get("decision"), "analysis decision"),
-        scoring.digest(expected_decision),
+        _digest_ref(
+            expected_decision.get("decision_bundle_id"),
+            "analysis decision bundle ID",
+        ),
+        _digest_ref(
+            expected_decision.get("decision_bundle_digest"),
+            "analysis decision bundle digest",
+        ),
     )
     if bundle["decision_binding"] != expected_decision_binding:
         raise ValueError("analysis replay decision binding does not match")
@@ -760,6 +894,11 @@ def summarize_score_replays(value: object) -> dict:
     request = _closed(_copy.deepcopy(value), _SUMMARY_REQUEST_FIELDS, "score replay summary request")
     if not isinstance(request["score_replays"], list):
         raise ValueError("score replays must be an array")
+    corpus = _corpus().validate_role_corpus(
+        request["role_corpus"],
+        repo_root=_Path(__file__).resolve().parents[4],
+    )
+    roles = {item["role_id"]: item for item in corpus["roles"]}
     groups = {
         "required_core": _empty_summary_group(),
         "optional_helpers": _empty_summary_group(),
@@ -767,12 +906,19 @@ def summarize_score_replays(value: object) -> dict:
     for item in request["score_replays"]:
         row = _closed(item, _SUMMARY_ROW_FIELDS, "score replay summary row")
         role_id = _text(row["role_id"], "score replay role ID")
-        required_core = _bool(row["required_core"], "required-core marker")
-        optional_helper = _bool(row["optional_helper"], "optional-helper marker")
-        if required_core == optional_helper:
-            raise ValueError("score replay role classification must separate required core and optional helper")
+        if role_id not in roles:
+            raise ValueError("score replay role is outside the governed corpus")
+        required_core = roles[role_id]["required_core"]
+        optional_helper = roles[role_id]["optional_helper"]
         replay_bundle = validate_score_replay_bundle(row["replay_bundle"])
         score_bundle = replay_score_bundle(replay_bundle)
+        fixture = roles[role_id]["fixture_binding"]
+        expected_fixture_binding = {
+            "id": fixture["fixture_id"],
+            "digest": fixture["fixture_digest"],
+        }
+        if score_bundle["fixture_binding"] != expected_fixture_binding:
+            raise ValueError("score replay does not bind the governed role fixture")
         _record_summary_row(
             groups["optional_helpers" if optional_helper else "required_core"],
             role_id=role_id,

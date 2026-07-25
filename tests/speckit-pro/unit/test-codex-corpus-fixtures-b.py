@@ -49,8 +49,8 @@ READ_ONLY_ROLES = (
     "gate-validator",
     "spec-context-analyst",
 )
-PARTITION_DIGEST = "sha256:" + "1" * 64
-FREEZE_ID = "sha256:" + "2" * 64
+PARTITION_DIGEST = "sha256:345cf184dd42fb4644f88c141053eb821c484500ac4e15ac94d59bd7673367d6"
+FREEZE_ID = "sha256:734672cea5a83e5b8f296ee604f7cb8d93e0a5296a3f864b873fe78bfe518f1e"
 CALIBRATION_TIME = "2026-07-24T00:00:00Z"
 
 

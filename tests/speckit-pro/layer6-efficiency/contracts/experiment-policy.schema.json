@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://racecraft.dev/schemas/g56r-003/experiment-policy.schema.json",
+  "$id": "https://racecraft.dev/schemas/g56r-003/runtime/experiment-policy.schema.json",
   "title": "G56R-003 Experiment Policy and Immutable Pair Assignment",
   "type": "object",
   "additionalProperties": false,
@@ -149,14 +149,28 @@
         "experiment_policy_binding": {"$ref": "#/$defs/binding"},
         "analysis_plan_binding": {"$ref": "#/$defs/binding"},
         "assigned_order": {
-          "type": "array",
-          "minItems": 2,
-          "maxItems": 2,
-          "prefixItems": [
-            {"const": "candidate"},
-            {"const": "comparator"}
-          ],
-          "items": false
+          "oneOf": [
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "prefixItems": [
+                {"const": "candidate"},
+                {"const": "comparator"}
+              ],
+              "items": false
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "prefixItems": [
+                {"const": "comparator"},
+                {"const": "candidate"}
+              ],
+              "items": false
+            }
+          ]
         },
         "invalidation_policy": {"const": "additive_only"}
       }

@@ -26,6 +26,9 @@ QUALIFICATION_RUNNER_PATH = (
 SCORE_BUNDLE_SCHEMA_PATH = (
     ROOT / "tests/speckit-pro/layer6-efficiency/contracts/score-bundle.schema.json"
 )
+ROLE_CORPUS_PATH = (
+    ROOT / "tests/speckit-pro/layer6-efficiency/fixtures-codex/corpus-manifest.json"
+)
 
 EXPECTED_HARD_GATE_ORDER = (
     "role",
@@ -249,6 +252,7 @@ EXPECTED_SCORE_BINDING_FIELDS = (
 EXPECTED_SCORE_DISPOSITIONS = ("accepted", "gate_failed", "non_scorable", "invalidated")
 EXPECTED_SCORE_FAILURE_PLANES = (
     "none",
+    "gate",
     "treatment",
     "fixture",
     "scorer",
@@ -262,6 +266,7 @@ EXPECTED_SCORE_FAILURE_PLANES = (
 )
 EXPECTED_SCORE_FAILURE_CODES = (
     "none",
+    "gate_failed",
     "treatment_misdelivery",
     "service_reroute",
     "mandatory_telemetry_missing",
@@ -317,6 +322,7 @@ EXPECTED_CANDIDATE_TERMINALS = {
 }
 EXPECTED_FAILURE_CODE_PLANES = {
     "none": "none",
+    "gate_failed": "gate",
     "treatment_misdelivery": "treatment",
     "service_reroute": "treatment",
     "mandatory_telemetry_missing": "treatment",
@@ -711,7 +717,10 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         schema = json.loads(SCORE_BUNDLE_SCHEMA_PATH.read_text(encoding="utf-8"))
 
         self.assertEqual(schema["$schema"], "https://json-schema.org/draft/2020-12/schema")
-        self.assertEqual(schema["$id"], "https://racecraft.dev/schemas/g56r-003/score-bundle.schema.json")
+        self.assertEqual(
+            schema["$id"],
+            "https://racecraft.dev/schemas/g56r-003/runtime/score-bundle.schema.json",
+        )
         self.assertFalse(schema["additionalProperties"])
         self.assertEqual(schema["required"], EXPECTED_SCORE_BUNDLE_REQUIRED)
         self.assertEqual(set(schema["properties"]), EXPECTED_SCORE_BUNDLE_FIELDS)
@@ -786,6 +795,82 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
 
         request["gate_result"]["trace_digest"] = digest({"trace": "mutated-after-build"})
         self.assertEqual(bundle["execution_trace_binding"], original["execution_trace_binding"])
+
+    def test_score_bundle_records_gate_failures_and_rejects_invalid_publication_values(self) -> None:
+        gates = [gate_evidence(name) for name in EXPECTED_HARD_GATE_ORDER]
+        gates[0]["passed"] = False
+        failed_gates = self.scoring.evaluate_hard_gates(gate_request(gates=gates))
+        gate_failure_request = score_bundle_request(
+            failed_gates,
+            semantic_result=None,
+            score_disposition="gate_failed",
+            failure_plane="gate",
+            failure_code="gate_failed",
+            vector=resource_vector(acceptance=None),
+        )
+
+        gate_failure = self.scoring.build_score_bundle(gate_failure_request)
+
+        self.assertEqual(gate_failure["score_disposition"], "gate_failed")
+        self.assertEqual(gate_failure["failure_plane"], "gate")
+        self.assertEqual(gate_failure["failure_code"], "gate_failed")
+        self.assertIsNone(gate_failure["semantic_score"])
+
+        passed_gates = self.scoring.evaluate_hard_gates(gate_request())
+        semantic_result = self.scoring.evaluate_blinded_ballots(
+            passed_gates,
+            semantic_request(),
+        )
+        accepted = score_bundle_request(
+            passed_gates,
+            semantic_result=semantic_result,
+        )
+        invalid_cases = (
+            (
+                "acceptance",
+                lambda request: request["resource_vector"].update({"acceptance": 2.0}),
+                "zero to one",
+            ),
+            (
+                "duplicate evidence",
+                lambda request: request["evidence_refs"].append(
+                    request["evidence_refs"][0]
+                ),
+                "unique digests",
+            ),
+            (
+                "sensitive binding",
+                lambda request: request["candidate_route_binding"].update(
+                    {"id": "/private/runtime/candidate"}
+                ),
+                "sensitive evidence",
+            ),
+            (
+                "accepted fixture failure",
+                lambda request: request.update({
+                    "failure_plane": "fixture",
+                    "failure_code": "fixture_invalid",
+                }),
+                "accepted score bundles",
+            ),
+        )
+        for label, mutate, message in invalid_cases:
+            with self.subTest(label=label):
+                request = copy.deepcopy(accepted)
+                mutate(request)
+                with self.assertRaisesRegex(ValueError, message):
+                    self.scoring.build_score_bundle(request)
+
+        invalid_ballots = [
+            scorer_ballot("opaque-scorer-a", semantic=100),
+            scorer_ballot("opaque-scorer-b"),
+        ]
+        invalid_result = self.scoring.evaluate_blinded_ballots(
+            passed_gates,
+            semantic_request(ballots=invalid_ballots),
+        )
+        self.assertEqual(invalid_result["score_disposition"], "non_scorable")
+        self.assertIsNone(invalid_result["semantic_score"])
 
     def test_cli_score_rejects_a_fabricated_treatment_receipt(self) -> None:
         gate_result = self.scoring.evaluate_hard_gates(gate_request())
@@ -1227,7 +1312,15 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
             self.replay.replay_score_bundle(rebound_drift)
 
     def test_treatment_proven_governed_fixture_adjudication_replay_and_helper_summary(self) -> None:
-        gate_result = self.scoring.evaluate_hard_gates(gate_request(role_id="implement-executor"))
+        role_corpus = json.loads(ROLE_CORPUS_PATH.read_text(encoding="utf-8"))
+        roles = {item["role_id"]: item for item in role_corpus["roles"]}
+        implement_fixture = roles["implement-executor"]["fixture_binding"]
+        implement_gate_request = gate_request(role_id="implement-executor")
+        implement_gate_request.update({
+            "fixture_id": implement_fixture["fixture_id"],
+            "fixture_digest": implement_fixture["fixture_digest"],
+        })
+        gate_result = self.scoring.evaluate_hard_gates(implement_gate_request)
         ballots = [
             scorer_ballot("opaque-scorer-a", outcome="accept"),
             scorer_ballot("opaque-scorer-b", outcome="reject", semantic=0.72, reliability=0.74),
@@ -1252,7 +1345,13 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         self.assertEqual(bundle["semantic_score"], 0.82)
         self.assertEqual(bundle["reliability_score"], 0.81)
 
-        helper_gate = self.scoring.evaluate_hard_gates(gate_request(role_id="autopilot-fast-helper"))
+        helper_fixture = roles["autopilot-fast-helper"]["fixture_binding"]
+        helper_gate_request = gate_request(role_id="autopilot-fast-helper")
+        helper_gate_request.update({
+            "fixture_id": helper_fixture["fixture_id"],
+            "fixture_digest": helper_fixture["fixture_digest"],
+        })
+        helper_gate = self.scoring.evaluate_hard_gates(helper_gate_request)
         helper_semantic = self.scoring.evaluate_blinded_ballots(helper_gate, semantic_request())
         helper_bundle = self.scoring.build_score_bundle(
             score_bundle_request(helper_gate, semantic_result=helper_semantic)
@@ -1266,17 +1365,14 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
 
         summary = self.replay.summarize_score_replays(
             {
+                "role_corpus": role_corpus,
                 "score_replays": [
                     {
                         "role_id": "implement-executor",
-                        "required_core": True,
-                        "optional_helper": False,
                         "replay_bundle": replay_bundle,
                     },
                     {
                         "role_id": "autopilot-fast-helper",
-                        "required_core": False,
-                        "optional_helper": True,
                         "replay_bundle": helper_replay,
                     },
                 ]
@@ -1294,6 +1390,14 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         self.assertNotIn("autopilot-fast-helper", summary["required_core"]["role_ids"])
         self.assertEqual(summary["summary_digest"], self.scoring.digest(score_replay_summary_digest_payload(summary)))
         self.assertEqual(summary["summary_id"], self.scoring.content_id(summary, "summary_id"))
+        with self.assertRaisesRegex(ValueError, "governed role fixture"):
+            self.replay.summarize_score_replays({
+                "role_corpus": role_corpus,
+                "score_replays": [{
+                    "role_id": "implement-executor",
+                    "replay_bundle": helper_replay,
+                }],
+            })
 
     def test_all_ordered_hard_gates_pass_before_semantic_scoring(self) -> None:
         request = gate_request()
