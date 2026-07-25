@@ -1,0 +1,276 @@
+{
+  "schema_version": "1.0.0",
+  "fixture_kind": "alias_repoint_replay",
+  "description": "FR-046 synthetic replay for the alias re-point detector. Each case supplies a divergent observed identity below the live trigger path while environment overrides remain genuinely unset, so detector validation never requires setting the override the proof requires to be unset. Bounded to seven cases so suite cost does not scale with accumulated campaign evidence (FR-057). Contains no raw captures, no account or authentication material, no absolute paths, and no session identifiers (FR-027).",
+  "published_freeze_binding": {
+    "id": "CAR-003-FREEZE-2026-07-24-V1",
+    "digest": "sha256:a92c5095f2d22b98ccfc3df9d78edcecf6169dd9670ee752ed456a9cc59fab9f"
+  },
+  "cases": [
+    {
+      "case_id": "platform_route_change",
+      "purpose": "Divergent observed identity supplied below the live trigger path while every local override stays genuinely unset. Inducing this live would require setting the very override the proof requires unset.",
+      "expected_attribution": "platform_route_change",
+      "expected_admits": true,
+      "observation": {
+        "requested_alias": "opus",
+        "freeze_bound_identity": "claude-opus-5",
+        "freeze_bound_identity_source": "car_003_successor_freeze",
+        "candidate_freeze_binding": {
+          "id": "CAR-003-FREEZE-2026-07-24-V1",
+          "digest": "sha256:a92c5095f2d22b98ccfc3df9d78edcecf6169dd9670ee752ed456a9cc59fab9f"
+        },
+        "run_observed_identity": "claude-opus-4-8",
+        "env_override_proof": {
+          "fallback_model_unset": true,
+          "fallbackModel_unset": true,
+          "claude_code_subagent_model_unset": true,
+          "available_models_absent": true,
+          "enforce_available_models_observed": null,
+          "config_dir_isolation": "partial_defense_in_depth",
+          "inherit_equivalent_to_unset": null,
+          "org_restriction_gap": null
+        },
+        "client_version_at_freeze": "2.1.240 (Claude Code)",
+        "client_version_at_run": "2.1.240 (Claude Code)",
+        "requested_route_unchanged": true,
+        "plugin_initiated_substitution": false,
+        "behavioral_divergence_observed": false,
+        "execution_trace_binding": {
+          "id": "CAR-003-REPLAY-TRACE-0001",
+          "digest": "sha256:773dcd7b1393ebc6a936ab30619a7209b1553a58695e2f81c4f1eac13a0b542a"
+        },
+        "attribution_id": "CAR-003-REPLAY-ATTR-0001",
+        "recorded_at": "2026-07-24T18:45:00Z",
+        "validated_by": "synthetic_replay_fixture"
+      }
+    },
+    {
+      "case_id": "resolver_fallback",
+      "purpose": "A plugin-initiated route substitution is a resolver fallback, never platform behavior.",
+      "expected_attribution": "resolver_fallback",
+      "expected_admits": true,
+      "observation": {
+        "requested_alias": "opus",
+        "freeze_bound_identity": "claude-opus-5",
+        "freeze_bound_identity_source": "car_003_successor_freeze",
+        "candidate_freeze_binding": {
+          "id": "CAR-003-FREEZE-2026-07-24-V1",
+          "digest": "sha256:a92c5095f2d22b98ccfc3df9d78edcecf6169dd9670ee752ed456a9cc59fab9f"
+        },
+        "run_observed_identity": "claude-opus-4-8",
+        "env_override_proof": {
+          "fallback_model_unset": true,
+          "fallbackModel_unset": true,
+          "claude_code_subagent_model_unset": true,
+          "available_models_absent": true,
+          "enforce_available_models_observed": null,
+          "config_dir_isolation": "partial_defense_in_depth",
+          "inherit_equivalent_to_unset": null,
+          "org_restriction_gap": null
+        },
+        "client_version_at_freeze": "2.1.240 (Claude Code)",
+        "client_version_at_run": "2.1.240 (Claude Code)",
+        "requested_route_unchanged": true,
+        "plugin_initiated_substitution": true,
+        "behavioral_divergence_observed": false,
+        "execution_trace_binding": {
+          "id": "CAR-003-REPLAY-TRACE-0002",
+          "digest": "sha256:ae125b46cb0d33499fa9188ed7ad46a17c2d30b2eb21db919c6581766c55dd3a"
+        },
+        "attribution_id": "CAR-003-REPLAY-ATTR-0002",
+        "recorded_at": "2026-07-24T18:45:00Z",
+        "validated_by": "synthetic_replay_fixture"
+      }
+    },
+    {
+      "case_id": "incomplete_override_proof",
+      "purpose": "A proof missing any of the eight frozen members is unresolved and blocks admission.",
+      "expected_attribution": "alias_repoint_unresolved",
+      "expected_admits": false,
+      "observation": {
+        "requested_alias": "opus",
+        "freeze_bound_identity": "claude-opus-5",
+        "freeze_bound_identity_source": "car_003_successor_freeze",
+        "candidate_freeze_binding": {
+          "id": "CAR-003-FREEZE-2026-07-24-V1",
+          "digest": "sha256:a92c5095f2d22b98ccfc3df9d78edcecf6169dd9670ee752ed456a9cc59fab9f"
+        },
+        "run_observed_identity": "claude-opus-4-8",
+        "env_override_proof": {
+          "fallback_model_unset": true,
+          "fallbackModel_unset": true,
+          "claude_code_subagent_model_unset": true,
+          "available_models_absent": true,
+          "enforce_available_models_observed": null,
+          "config_dir_isolation": "partial_defense_in_depth",
+          "inherit_equivalent_to_unset": null
+        },
+        "client_version_at_freeze": "2.1.240 (Claude Code)",
+        "client_version_at_run": "2.1.240 (Claude Code)",
+        "requested_route_unchanged": true,
+        "plugin_initiated_substitution": false,
+        "behavioral_divergence_observed": false,
+        "execution_trace_binding": {
+          "id": "CAR-003-REPLAY-TRACE-0003",
+          "digest": "sha256:024c968f409ea077bd11fb43fdf19447fd6c72ad1dbbc9b976206a32f4fafa9b"
+        },
+        "attribution_id": "CAR-003-REPLAY-ATTR-0003",
+        "recorded_at": "2026-07-24T18:45:00Z",
+        "validated_by": "synthetic_replay_fixture"
+      }
+    },
+    {
+      "case_id": "subagent_model_override_recorded_set",
+      "purpose": "A recorded claude_code_subagent_model_unset=false blocks admission. The value is a recorded observation, not an environment mutation.",
+      "expected_attribution": "alias_repoint_unresolved",
+      "expected_admits": false,
+      "observation": {
+        "requested_alias": "opus",
+        "freeze_bound_identity": "claude-opus-5",
+        "freeze_bound_identity_source": "car_003_successor_freeze",
+        "candidate_freeze_binding": {
+          "id": "CAR-003-FREEZE-2026-07-24-V1",
+          "digest": "sha256:a92c5095f2d22b98ccfc3df9d78edcecf6169dd9670ee752ed456a9cc59fab9f"
+        },
+        "run_observed_identity": "claude-opus-4-8",
+        "env_override_proof": {
+          "fallback_model_unset": true,
+          "fallbackModel_unset": true,
+          "claude_code_subagent_model_unset": false,
+          "available_models_absent": true,
+          "enforce_available_models_observed": null,
+          "config_dir_isolation": "partial_defense_in_depth",
+          "inherit_equivalent_to_unset": null,
+          "org_restriction_gap": null
+        },
+        "client_version_at_freeze": "2.1.240 (Claude Code)",
+        "client_version_at_run": "2.1.240 (Claude Code)",
+        "requested_route_unchanged": true,
+        "plugin_initiated_substitution": false,
+        "behavioral_divergence_observed": false,
+        "execution_trace_binding": {
+          "id": "CAR-003-REPLAY-TRACE-0004",
+          "digest": "sha256:165f0c79ffc8612265887230576d37c7a475a21e9bd0f40b1f309648950ddb2f"
+        },
+        "attribution_id": "CAR-003-REPLAY-ATTR-0004",
+        "recorded_at": "2026-07-24T18:45:00Z",
+        "validated_by": "synthetic_replay_fixture"
+      }
+    },
+    {
+      "case_id": "changed_client_version",
+      "purpose": "A client change is its own refresh trigger; the divergence cannot be attributed to the platform.",
+      "expected_attribution": "alias_repoint_unresolved",
+      "expected_admits": false,
+      "observation": {
+        "requested_alias": "opus",
+        "freeze_bound_identity": "claude-opus-5",
+        "freeze_bound_identity_source": "car_003_successor_freeze",
+        "candidate_freeze_binding": {
+          "id": "CAR-003-FREEZE-2026-07-24-V1",
+          "digest": "sha256:a92c5095f2d22b98ccfc3df9d78edcecf6169dd9670ee752ed456a9cc59fab9f"
+        },
+        "run_observed_identity": "claude-opus-4-8",
+        "env_override_proof": {
+          "fallback_model_unset": true,
+          "fallbackModel_unset": true,
+          "claude_code_subagent_model_unset": true,
+          "available_models_absent": true,
+          "enforce_available_models_observed": null,
+          "config_dir_isolation": "partial_defense_in_depth",
+          "inherit_equivalent_to_unset": null,
+          "org_restriction_gap": null
+        },
+        "client_version_at_freeze": "2.1.240 (Claude Code)",
+        "client_version_at_run": "2.2.001 (Claude Code)",
+        "requested_route_unchanged": true,
+        "plugin_initiated_substitution": false,
+        "behavioral_divergence_observed": false,
+        "execution_trace_binding": {
+          "id": "CAR-003-REPLAY-TRACE-0005",
+          "digest": "sha256:dd56f54e76ea5a2a8882e56d43565ad474726c2a6118e96f08b48cbebd2d4ea8"
+        },
+        "attribution_id": "CAR-003-REPLAY-ATTR-0005",
+        "recorded_at": "2026-07-24T18:45:00Z",
+        "validated_by": "synthetic_replay_fixture"
+      }
+    },
+    {
+      "case_id": "archived_snapshot_binding",
+      "purpose": "A freeze binding resolving to the archived CAR-002 snapshot is unresolved: the archived predecessor is never an authority for a CAR-003 identity.",
+      "expected_attribution": "alias_repoint_unresolved",
+      "expected_admits": false,
+      "observation": {
+        "requested_alias": "opus",
+        "freeze_bound_identity": "claude-opus-5",
+        "freeze_bound_identity_source": "car_003_successor_freeze",
+        "candidate_freeze_binding": {
+          "id": "CAR-002-RCS-2026-07-17-V3",
+          "digest": "sha256:f1747c30507614522d7f2ad513e710a7852028e1583b342d347ce9ae4c9ae089"
+        },
+        "run_observed_identity": "claude-opus-4-8",
+        "env_override_proof": {
+          "fallback_model_unset": true,
+          "fallbackModel_unset": true,
+          "claude_code_subagent_model_unset": true,
+          "available_models_absent": true,
+          "enforce_available_models_observed": null,
+          "config_dir_isolation": "partial_defense_in_depth",
+          "inherit_equivalent_to_unset": null,
+          "org_restriction_gap": null
+        },
+        "client_version_at_freeze": "2.1.240 (Claude Code)",
+        "client_version_at_run": "2.1.240 (Claude Code)",
+        "requested_route_unchanged": true,
+        "plugin_initiated_substitution": false,
+        "behavioral_divergence_observed": false,
+        "execution_trace_binding": {
+          "id": "CAR-003-REPLAY-TRACE-0006",
+          "digest": "sha256:0bcb5d8e6219f93fe26195b6dd3aacf2aa21c4476e49893679c60d6c905553e2"
+        },
+        "attribution_id": "CAR-003-REPLAY-ATTR-0006",
+        "recorded_at": "2026-07-24T18:45:00Z",
+        "validated_by": "synthetic_replay_fixture"
+      }
+    },
+    {
+      "case_id": "behavioral_only_divergence",
+      "purpose": "A behavioral difference without an identity change is a separate diagnostic condition, never an alias re-point.",
+      "expected_attribution": "no_divergence",
+      "expected_admits": true,
+      "observation": {
+        "requested_alias": "opus",
+        "freeze_bound_identity": "claude-opus-5",
+        "freeze_bound_identity_source": "car_003_successor_freeze",
+        "candidate_freeze_binding": {
+          "id": "CAR-003-FREEZE-2026-07-24-V1",
+          "digest": "sha256:a92c5095f2d22b98ccfc3df9d78edcecf6169dd9670ee752ed456a9cc59fab9f"
+        },
+        "run_observed_identity": "claude-opus-5",
+        "env_override_proof": {
+          "fallback_model_unset": true,
+          "fallbackModel_unset": true,
+          "claude_code_subagent_model_unset": true,
+          "available_models_absent": true,
+          "enforce_available_models_observed": null,
+          "config_dir_isolation": "partial_defense_in_depth",
+          "inherit_equivalent_to_unset": null,
+          "org_restriction_gap": null
+        },
+        "client_version_at_freeze": "2.1.240 (Claude Code)",
+        "client_version_at_run": "2.1.240 (Claude Code)",
+        "requested_route_unchanged": true,
+        "plugin_initiated_substitution": false,
+        "behavioral_divergence_observed": true,
+        "execution_trace_binding": {
+          "id": "CAR-003-REPLAY-TRACE-0007",
+          "digest": "sha256:8005e97e3d95925af8467616f174fc13c3a3cb83792b1dc063024a99d1b760d8"
+        },
+        "attribution_id": "CAR-003-REPLAY-ATTR-0007",
+        "recorded_at": "2026-07-24T18:45:00Z",
+        "validated_by": "synthetic_replay_fixture"
+      }
+    }
+  ]
+}
