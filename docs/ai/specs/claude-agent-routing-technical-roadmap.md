@@ -18,7 +18,7 @@ PRD and is prepared for `$speckit-scaffold-spec CAR-NNN`.
 **Proposed branch:** `claude/agent-routing-fallback`
 **Status:** Active; dependency graph approved 2026-07-12; CAR-001 is complete
 and archived after PRs #350 and #362; CAR-002 is complete and archived after
-PR #369; CAR-003 is ready
+PR #369; CAR-003 is in progress
 
 **Parity note:** This roadmap is the Claude half of the shared twelve-agent
 catalog. The Codex half lives in the companion Codex routing roadmap (PR #330
@@ -216,7 +216,7 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
 |---|---|---|---|---|
 | CAR-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/CAR-001-workflow.md](.process/CAR-001-workflow.md) | PR #350 and evidence-parity amendment PR #362 merged; canonical evidence lives under `docs/ai/research/` |
 | CAR-002 | Capability Probing, Telemetry Profile, and Exact-Treatment Contract | Complete / Archived | [.process/CAR-002-workflow.md](.process/CAR-002-workflow.md) | PR #369 merged; canonical snapshot, telemetry profile, trace schema, and validators live outside `specs/**` |
-| CAR-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Ready | - | CAR-002 dependency satisfied by PR #369 |
+| CAR-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | In Progress | [.process/CAR-003-workflow.md](.process/CAR-003-workflow.md) | Scaffolded 2026-07-24; three ordered slices, Work Package A kept intact |
 | CAR-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by CAR-003 |
 | CAR-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by CAR-004 |
 | CAR-006 | Route-policy Manifest, Materializer, Preflight, and Strict Override | Pending | - | Blocked by CAR-005 |
