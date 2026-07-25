@@ -2,7 +2,7 @@
   "workflow_file": "docs/ai/specs/.process/G56R-003-workflow.md",
   "spec_id": "G56R-003",
   "feature_dir": "specs/g56r-003-evaluation-runner-scoring",
-  "updated_at": "2026-07-25T23:34:23Z",
+  "updated_at": "2026-07-25T23:58:57Z",
   "active_step": "Complete",
   "status": "completed",
   "settings": {
@@ -520,7 +520,7 @@
         "report": "specs/g56r-003-evaluation-runner-scoring/verify-tasks-report.md"
       },
       "code_review": {
-        "status": "passed_after_remediation",
+        "status": "in_progress",
         "final_critical": 0,
         "final_high": 0,
         "final_medium": 0,
@@ -607,21 +607,22 @@
         "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/386",
         "base": "main",
         "head": "g56r-003-evaluation-runner-scoring",
-        "pushed_head": "50255490",
+        "pushed_head": "b926d8a4",
         "title": "feat(g56r-003): add evaluation runner scoring"
       },
       "review_remediation": {
         "status": "passed_after_remediation",
         "reviewed_head": "b324f3b3",
-        "remediation_head": "50255490",
-        "inline_comments": 3,
-        "actionable_reviews": 34,
+        "remediation_head": "b926d8a4",
+        "inline_comments": 6,
+        "actionable_reviews": 37,
         "reported_p1": 23,
         "reported_p2": 11,
-        "remediated_findings": 34,
-        "resolved_threads": 3,
-        "local_validation": "full repository suite passed 3251/3251 after all review remediations",
-        "ci": "all PR checks passed on remediation code head 50255490",
+        "reported_static_quality": 3,
+        "remediated_findings": 37,
+        "resolved_threads": 6,
+        "local_validation": "affected scoring and statistics suites passed 62/62; full repository suite passed 3251/3251",
+        "ci": "all PR checks passed on final remediation code head b926d8a4",
         "non_actionable_review": "Copilot exceeded its 20,000-line review limit under the ratified one-navigable-PR route.",
         "finding_clusters": [
           "corpus and active-route authority",
