@@ -3,7 +3,7 @@
   "spec_id": "G56R-003",
   "feature_dir": "specs/g56r-003-evaluation-runner-scoring",
   "updated_at": "2026-07-25T17:37:11Z",
-  "active_step": "Post: PR Creation",
+  "active_step": "Post: Review Remediation",
   "status": "in_progress",
   "settings": {
     "auto_commit": "per-phase",
@@ -600,6 +600,15 @@
         "validation_result_path": "specs/g56r-003-evaluation-runner-scoring/.process/pr-packets/g56r-003/validation.json",
         "pr_blocked": false,
         "release_note": "present"
+      },
+      "pr_creation": {
+        "status": "completed",
+        "number": 386,
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/386",
+        "base": "main",
+        "head": "g56r-003-evaluation-runner-scoring",
+        "pushed_head": "9fcff1d2",
+        "title": "feat(g56r-003): add evaluation runner scoring"
       }
     }
   },
@@ -771,11 +780,11 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Retrospective",
