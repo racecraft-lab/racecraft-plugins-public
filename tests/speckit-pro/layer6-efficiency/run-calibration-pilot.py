@@ -552,6 +552,15 @@ def dispatch(instruction: str, arm: dict[str, str], cwd: Path, ledger: Ledger) -
         # is a non-Bash literal. Passing a variable list defeats the proof and
         # blocks release readiness. argv[0] == "claude" already, so this equals
         # list(argv) at runtime.
+        # FR-049: the arms must use genuinely distinct cache roots. Labelling
+        # them differently is not isolation — without a per-arm CLAUDE_CONFIG_DIR
+        # both arms share the operator's single cache, and cached_input_tokens
+        # then enters the dominance vector as a shared-cache artifact rather than
+        # a route property. Isolate for real, and let the recorded root be the
+        # directory actually used.
+        arm_env = dict(os.environ)
+        arm_env["CLAUDE_CONFIG_DIR"] = str(cwd / ".claude-cache")
+        (cwd / ".claude-cache").mkdir(parents=True, exist_ok=True)
         proc = subprocess.run(
             ["claude", *argv[1:]],
             capture_output=True,
@@ -559,6 +568,7 @@ def dispatch(instruction: str, arm: dict[str, str], cwd: Path, ledger: Ledger) -
             timeout=PER_ATTEMPT_TIMEOUT_SECONDS,
             stdin=subprocess.DEVNULL,
             cwd=str(cwd),
+            env=arm_env,
         )
         exit_code, stdout = proc.returncode, proc.stdout
     except subprocess.TimeoutExpired:
@@ -796,7 +806,23 @@ def gate_results(
     result = capture["result"]
     text = capture["response_text"]
     checks = {
-        "role": (arm["route_id"].startswith(arm["alias"]), {"role_id": ROLE_ID, "route": arm["route_id"]}),
+        # The role gate must compare the ASSIGNED route against what the run
+        # actually delivered. Checking route_id.startswith(alias) was a
+        # tautology — route_id is built as f"{alias}__{effort}" in this module,
+        # so no input could fail it, and every "all seven gates passed" claim
+        # was really a six-gate claim.
+        "role": (
+            capture.get("observed_model_id") is not None
+            and arm["alias"] in str(capture.get("observed_model_id"))
+            or str(capture.get("observed_model_id") or "").startswith(
+                str(arm.get("expected_model_prefix") or arm["alias"])
+            ),
+            {
+                "role_id": ROLE_ID,
+                "assigned_route": arm["route_id"],
+                "observed_model_id": capture.get("observed_model_id"),
+            },
+        ),
         "safety": (not (result.get("permission_denials") or []), {"denials": len(result.get("permission_denials") or [])}),
         "grounding": (bool(text) and not capture["tool_uses"], {"tool_uses": len(capture["tool_uses"]), "turns": result.get("num_turns")}),
         "mutation": (tree_before == tree_after, {"before": tree_before, "after": tree_after}),
@@ -1133,9 +1159,14 @@ def run_pilot() -> tuple[dict[str, Any], dict[str, Any]]:
                 comparison_set_id = f"CS-{objective['objective_id']}-R{repetition}"
                 for order, arm in enumerate(ARMS):
                     assignment_id = f"{comparison_set_id}-{arm['arm'].upper()}"
-                    cache_root_label = f"calibration-pilot/{objective['objective_id']}/{arm['arm']}"
                     arm_cwd = work_root / objective["objective_id"] / arm["arm"]
                     arm_cwd.mkdir(parents=True, exist_ok=True)
+                    # Derive the recorded root from the directory the dispatch
+                    # actually sets CLAUDE_CONFIG_DIR to, so the isolation
+                    # evidence witnesses the real mechanism. A label built from
+                    # the arm name is distinct by construction and would report
+                    # disjoint roots even when both arms shared one cache.
+                    cache_root_label = str(arm_cwd / ".claude-cache")
                     environment_contract = environment_contracts[arm["arm"]]
 
                     assignment = policy.build_assignment(
@@ -1668,7 +1699,15 @@ def build_decisions(
             "evidence_refs": [item["event_stream_digest"] for item in members],
         }
         bundle = decision.replay_decision(case)
-        replayed = decision.replay_decision(case)
+        # Replay must reconstruct from PERSISTED evidence, not from the same
+        # in-memory object. Calling the same pure function twice on the same
+        # `case` compares a function to itself and is unconditionally true, so
+        # it was not evidence of the replay determinism SC-011 claims. Round-
+        # tripping the case through canonical JSON exercises serialization and
+        # reload, which is the property that actually has to hold on a clean
+        # checkout.
+        reloaded_case = json.loads(json.dumps(case, sort_keys=True))
+        replayed = decision.replay_decision(reloaded_case)
         decisions.append(
             {
                 "comparison_set_id": comparison_set_id,

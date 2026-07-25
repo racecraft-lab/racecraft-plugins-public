@@ -6721,7 +6721,16 @@
     "Scoring uses two declared deterministic rubric scorers and a deterministic adjudicator, not model scorers. The score-bundle plumbing, the gate barrier, the blinding leak check, the disagreement path, and the identity attestation are all exercised, but the semantic-score dispersion below is rubric dispersion and is not an estimate of model-scorer variance.",
     "The absolute floors and the non-inferiority stage are not evaluated. A calibration protocol carries no margins, no sample sizes, and no terminal thresholds by construction (FR-037), so both stages record not_evaluated and the Pareto stage is unreached. The dominance comparison reported separately is diagnostic only and is marked decision_bearing false.",
     "The pilot dispatches print mode at top level, so no plugin-namespaced agent spawn exists to admit. dispatch_namespace is recorded null rather than repaired, and the named agent is recorded as the observed print-mode top-level agent.",
-    "Objectives are short-horizon single-turn probes. The long-horizon stratum is registered with sample size zero and is unestimated here."
+    "Objectives are short-horizon single-turn probes. The long-horizon stratum is registered with sample size zero and is unestimated here.",
+    {
+      "cache_isolation_not_proven_in_this_run": {
+        "consequence": "cached_input_tokens and cache_write figures from THIS pilot are shared-cache artifacts rather than route properties. Any variance estimate derived from those two quantities is contaminated and must not be treated as a measured route difference.",
+        "finding": "The recorded per-arm cache roots were synthetic labels derived from the arm name, so they were distinct by construction and the pair always reported disjoint roots. The same run recorded config_dir_isolation='none', meaning no per-arm CLAUDE_CONFIG_DIR was set and both arms in fact shared the operator's single cache.",
+        "measured_by_the_calibration_pilot": false,
+        "remediation": "The driver now sets a per-arm CLAUDE_CONFIG_DIR and records the directory it actually used, so a re-run produces genuine isolation evidence. This record is annotated rather than rewritten; the campaign was not re-run.",
+        "unaffected": "Estimates for duration_ms, output_tokens, reasoning_output_tokens, input_tokens, acceptance and semantic_score do not depend on cache-root disjointness."
+      }
+    }
   ],
   "variance_estimates": {
     "estimand_note": "Every assigned attempt is retained, including any that failed a gate; no complete-case filtering was applied (FR-020).",
