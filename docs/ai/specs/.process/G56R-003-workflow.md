@@ -71,7 +71,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Phase | Command | Status | Notes |
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | 26 testable requirements, 4 user stories, 14 success criteria; G1 passed with zero clarification markers |
-| Clarify | `$speckit-clarify` | Pending | Resolve contract-level details without reopening accepted Grill Me decisions |
+| Clarify | `$speckit-clarify` | Complete | Four sessions resolved authority, treatment, scoring, partition, statistical, and evidence contracts; G2 passed with zero markers |
 | Plan | `$speckit-plan` | Pending | Design three ordered review slices and re-run reviewability |
 | Checklist | `$speckit-checklist` | Pending | Run four risk-focused requirement checklists |
 | Tasks | `$speckit-tasks` | Pending | Produce TDD-first tasks grouped by the three accepted slices |
@@ -443,14 +443,25 @@ $speckit-clarify Focus on disjoint calibration/screening/selection/cohort-lock/i
 
 ### Clarify Results
 
-| Session | Focus Area | Required Outcome |
+| Session | Focus Area | Outcome |
 |---|---|---|
-| 1 | Successor freeze | One unambiguous authority, publication, and invalidation contract |
-| 2 | Treatment and joins | One exact materialization/delivery predicate and immutable join model |
-| 3 | Corpus and scoring | Governed role/fixture/scorer/adjudicator contracts |
-| 4 | Statistics and campaigns | Frozen partition, estimand, rerun, budget, and analysis-plan rules |
+| 1 | Successor freeze | Complete: refreshed `codex debug models` authority, sanitized evidence allowlist, source/runtime effort normalization, non-empty publication rule, and separate tuple/snapshot/treatment failure planes |
+| 2 | Treatment and joins | Complete: byte-owned materialization, strict requested-route score predicate, explicit null/missing behavior, reroute/misdelivery disposition, and additive trace-to-bundle joins |
+| 3 | Corpus and scoring | Complete: explicit 9+2 core role inventory plus helper, fixture validity contract, closed failure/invalidation planes, two blinded ballots, frozen adjudicator, and sanitized scorer evidence |
+| 4 | Statistics and campaigns | Complete: closed partitions, immutable pair bindings, floors→paired NI→Pareto sequence, assigned-attempt estimand, capped complete-pair reruns, and post-calibration/pre-cohort analysis-plan freeze |
 
 **G2 Gate:** Pass only when zero unresolved requirement markers remain.
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|---|---|---|---|---|---|---|
+| 1 | Clarify | Runtime catalog authority | [codebase, domain] | 1 | both-agree | Refreshed `codex debug models` is runtime authority; other surfaces are diagnostic only | codebase-analyst, domain-researcher |
+| 2 | Clarify | Commit-safe account and auth boundary | [security] | 1 | 3/3 | Applied deny-by-default sanitized allowlist under the already accepted operator-only raw-evidence decision | codebase-analyst, spec-context-analyst, domain-researcher |
+| 3 | Clarify | Effort vocabulary normalization | [spec, domain] | 1 | both-agree | Normalize only evidence-backed ordinary tokens before source/runtime intersection; exclude topology controls | spec-context-analyst, domain-researcher |
+| 4 | Clarify | Tuple exclusion taxonomy | [codebase, spec] | 1→2 | escape-hatch, 2/3 | Kept capability tuple reasons closed and separate from snapshot authority and treatment/scoring failure planes | codebase-analyst, spec-context-analyst, domain-researcher |
+| 5 | Clarify | Requested-route score eligibility | [codebase, spec] | 1 | both-agree | Require byte-identical/configured-route proof, complete mandatory observations and reroute monitoring, proven disposition, and no disqualifying delivery failure | codebase-analyst, spec-context-analyst |
+| 6 | Clarify | Commit-safe scorer evidence | [security] | 1 (reused) | 3/3 prior consensus | Reused Session 1's deny-by-default sanitized allowlist for scorer artifacts; raw/private evidence stays operator-only | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 

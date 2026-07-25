@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-003-workflow.md",
   "spec_id": "G56R-003",
   "feature_dir": "specs/g56r-003-evaluation-runner-scoring",
-  "updated_at": "2026-07-24T23:30:09Z",
-  "active_step": "Phase 2: Clarify - Successor Freeze and Invalidation",
+  "updated_at": "2026-07-25T00:23:02Z",
+  "active_step": "Phase 3: Plan",
   "status": "in_progress",
   "settings": {
     "auto_commit": "per-phase",
@@ -77,6 +77,63 @@
         "specs/g56r-003-evaluation-runner-scoring/checklists/requirements.md"
       ],
       "doctor_hook": "warning: Claude integration configured without .claude/commands in the Codex worktree"
+    },
+    "clarify_session_1": {
+      "status": "completed",
+      "questions": 5,
+      "consensus_items": 4,
+      "round_2_items": 1,
+      "remaining_markers": 0,
+      "decisions": [
+        "refreshed codex debug models is the pinned runtime authority",
+        "committed boundary evidence is sanitized and deny-by-default",
+        "ordinary effort normalization is explicit and evidence-backed",
+        "invalid or empty intersections do not publish an authoritative freeze",
+        "capability, snapshot-authority, and treatment/scoring failures use separate planes"
+      ]
+    },
+    "clarify_session_2": {
+      "status": "completed",
+      "questions": 5,
+      "consensus_items": 1,
+      "round_2_items": 0,
+      "remaining_markers": 0,
+      "decisions": [
+        "strict requested-route score eligibility",
+        "canonical materializer-owned destination bytes",
+        "explicit mandatory observation and null behavior",
+        "rerouted attempts remain immutable and non-scorable for the requested route",
+        "score and decision bundles use additive foreign-key-style joins"
+      ]
+    },
+    "clarify_session_3": {
+      "status": "completed",
+      "questions": 5,
+      "consensus_items": 1,
+      "consensus_reused": "clarify_session_1 security evidence boundary",
+      "remaining_markers": 0,
+      "decisions": [
+        "nine executable core roles plus two non-executable core contracts",
+        "fixture validity precedes scoring",
+        "closed score failure and invalidation planes",
+        "two distinct blinded scorers and a frozen third adjudicator",
+        "sanitized committed scorer evidence only"
+      ]
+    },
+    "clarify_session_4": {
+      "status": "completed",
+      "questions": 5,
+      "consensus_items": 0,
+      "remaining_markers": 0,
+      "gate": "G2",
+      "gate_status": "passed",
+      "decisions": [
+        "closed evidence partitions",
+        "immutable comparison assignment",
+        "floors then paired non-inferiority then Pareto",
+        "assigned-attempt estimand with capped complete-pair reruns",
+        "post-calibration pre-cohort analysis-plan freeze"
+      ]
     }
   },
   "plan": [
@@ -94,39 +151,39 @@
     },
     {
       "step": "Phase 2: Clarify - Successor Freeze and Invalidation",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Successor Freeze and Invalidation Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Materialization, Delivery, and Trace Joins",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Materialization, Delivery, and Trace Joins Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Corpus and Blinded Scoring",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Corpus and Blinded Scoring Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Partitions, Statistics, and Campaign Controls",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Partitions, Statistics, and Campaign Controls Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - LLM Integration",
