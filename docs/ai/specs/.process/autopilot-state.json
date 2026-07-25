@@ -2,7 +2,7 @@
   "workflow_file": "docs/ai/specs/.process/G56R-003-workflow.md",
   "spec_id": "G56R-003",
   "feature_dir": "specs/g56r-003-evaluation-runner-scoring",
-  "updated_at": "2026-07-25T02:10:07Z",
+  "updated_at": "2026-07-25T03:35:39Z",
   "active_step": "Phase 7: Implement - Slice 1 Capability Materialization and Trace (T001-T006)",
   "status": "in_progress",
   "settings": {
@@ -274,6 +274,50 @@
       "recommended_action": "proceed",
       "bounded_remediation_iterations": 0,
       "rerun_completed_at": "2026-07-25T02:10:07Z"
+    },
+    "implementation": {
+      "status": "in_progress",
+      "active_slice": 1,
+      "active_task": "T005",
+      "completed_tasks": [
+        "T001",
+        "T002",
+        "T003",
+        "T004"
+      ],
+      "task_evidence": {
+        "T001": {
+          "status": "completed",
+          "execution": "implement-executor first pass plus parent fallback after the catalog correction executor stalled in RED",
+          "red": "Corrective catalog-contract run produced 5 tests with 18 failures and 3 errors.",
+          "focused_green": "python3 tests/speckit-pro/unit/test-codex-successor-capability.py: 5 tests passed",
+          "regression_green": "python3 tests/speckit-pro/unit/test-codex-capability-contract.py: 99 tests passed",
+          "predecessor_immutability": "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json has no diff"
+        },
+        "T002": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "7 focused tests failed because the shipped canonical materializer module was missing.",
+          "focused_green": "python3 tests/speckit-pro/unit/test-agent-materialization.py: 7 tests passed",
+          "contract": "Exact UTF-8 bytes, source/materializer bindings, separate digests, idempotence, byte-proof rejection, and shared shipped import verified"
+        },
+        "T003": {
+          "status": "completed",
+          "execution": "implement-executor plus corrective TDD for exact-byte materialization binding",
+          "red": "Initial qualification suite produced 9 failures; corrective materialization-registry and closed-public-API tests also failed before GREEN.",
+          "focused_green": "python3 tests/speckit-pro/unit/test-codex-qualification-contracts.py: 9 tests passed",
+          "regression_green": "python3 tests/speckit-pro/unit/test-codex-capability-contract.py: 99 tests passed",
+          "contract": "Destination-byte, instruction, and configuration digests are distinct; exact treatment and one-to-one assignment/trace joins fail closed"
+        },
+        "T004": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "5 CLI tests failed because the durable qualification entry point was missing.",
+          "focused_green": "python3 tests/speckit-pro/unit/test-codex-qualification-contracts.py: 14 tests passed",
+          "structural_green": "run_codex_role_eval.py absent; legacy runner remains explicitly non-release smoke",
+          "deferred_expected": "refresh-release-artifacts.py --check reports T002 shipped-runner drift; T005 owns regeneration"
+        }
+      }
     }
   },
   "atomicity_route": {
