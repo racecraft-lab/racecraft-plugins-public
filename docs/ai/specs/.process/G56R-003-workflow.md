@@ -1065,7 +1065,7 @@ For every task:
 | Post: PR Packet/Body Generation | Complete | Packet and packet-owned body emitted by `pr-packet-output` in dry-run and apply modes | None |
 | Post: PR Body Generation | Complete | Read-only packet validation passed with `pr_blocked=false`; the required consumer-facing release-note block is present | None |
 | Post: PR Creation | Complete | PR [#386](https://github.com/racecraft-lab/racecraft-plugins-public/pull/386) created from the validated packet at pushed head `9fcff1d2` | None |
-| Post: Review Remediation | In Progress | All 23 P1 and 11 P2 findings from the completed `/review` are remediated with regression coverage; the full repository suite passes 3251/3251 | Push the repaired PR head and verify its remote checks |
+| Post: Review Remediation | Complete | All 23 P1 and 11 P2 findings from the completed `/review` are remediated at `50255490` with regression coverage; the full repository suite passes 3251/3251 and all PR checks passed on that code head | None |
 | Post: Retrospective | Complete | Reproducibility, failed authority assumptions, reusable boundaries, and later-cohort invalidation rules recorded; roadmap marks G56R-003 complete in PR #386 | None |
 
 - [x] All tasks are complete and trace to requirements.
@@ -1082,7 +1082,7 @@ For every task:
 - [x] No raw live capture, secret, credential, or personal path is committed.
 - [x] Actual reviewability evidence passes for the three ratified slices.
 - [x] The exact PR title passes release readiness.
-- [ ] Review findings are remediated against the final pushed head.
+- [x] Review findings are remediated against the final pushed head.
 - [x] Roadmap and workflow status accurately reflect the final state.
 
 ---
