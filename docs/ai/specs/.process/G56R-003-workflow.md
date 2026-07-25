@@ -1045,7 +1045,7 @@ For every task:
 | T022 | Complete | Three budget/partition tests produced 17 failures and 10 errors | Statistics 17/17; all seven budget ceilings, calibration-only partitions/decisions, no final policy/default/aggregate/release, and one no-qualification path verified |
 | T023 | Complete | Replay/CLI additions produced contract 1 failure + 4 errors and statistics 2 failures + 1 error | Qualification contracts 27/27; statistics/replay 20/20; deterministic offline decision identity, explicit local calibration, frozen analysis-plan output, complete bindings, and no-network/no-live-write boundaries verified |
 | T024 | Complete | Six new methods and one expanded test produced 11 failures and 1 error | Statistics/replay 26/26; qualification contracts 27/27; closed freeze metadata/numeric validation and all prohibited route, evidence, retry, mutation, cache, attrition, code, and budget boundaries verified; stale runner absent |
-| T025 | Complete | Full source-lineage replay failed once on the missing closed-shape join | Focused G56R-003 107/107; G56R-002 99/99; full suite 3251/3251; exact suite registration, docs reference/validation, release-title validation, and diff check passed; final release-artifact check awaits the Slice 3 checkpoint for the regenerated reference page |
+| T025 | Complete | Full source-lineage replay failed once on the missing closed-shape join | Focused G56R-003 107/107; G56R-002 99/99; full suite 3251/3251; exact suite registration, docs reference/validation, release-title validation, diff check, and post-checkpoint release-artifact check passed |
 
 ---
 
@@ -1073,8 +1073,8 @@ For every task:
 - [x] Focused capability, treatment, materializer, corpus, scorer, and
   statistical tests pass.
 - [x] `python3 -u tests/speckit-pro/run-all.py` passes.
-- [ ] Release artifacts were refreshed after shipped runner changes.
-- [ ] `refresh-release-artifacts.py --check` reports no drift.
+- [x] Release artifacts were refreshed after shipped runner changes.
+- [x] `refresh-release-artifacts.py --check` reports no drift.
 - [x] The calibration-only pilot is explicitly non-qualification evidence.
 - [ ] No screening, selection, cohort-lock, or integrated-confirmation
   objective was consumed.
