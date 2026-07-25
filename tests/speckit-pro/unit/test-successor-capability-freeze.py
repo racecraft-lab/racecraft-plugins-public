@@ -1067,6 +1067,127 @@ class RefreshTriggerTests(unittest.TestCase):
             self.module.apply_refresh_trigger("vibes_changed", evidence_graph())
 
 
+class FailClosedEvidenceTests(unittest.TestCase):
+    """Missing provenance is refused rather than promoted. An observation that
+    names no surface admits nothing, an attribution with no published freeze to
+    compare against stays unresolved, published diagnostic evidence verifies
+    against its own digest, and no emitted record aliases module state
+    (FR-002, FR-004, FR-033, FR-039)."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_successor_freeze, "claude_successor_freeze is not importable")
+        self.module = claude_successor_freeze
+
+    def unlabeled_collection(self) -> dict[str, object]:
+        """A collection whose opus ladder carries no ``surface`` on any rung."""
+        fields = collection_fields()
+        fields["supported_efforts"] = dict(fields["supported_efforts"])
+        fields["supported_efforts"]["opus"] = [
+            {key: value for key, value in observation.items() if key != "surface"}
+            for observation in probe_ladder("opus")
+        ]
+        return self.module.build_collection_record(**fields)
+
+    def publish(self, **overrides: object) -> object:
+        arguments: dict[str, object] = {
+            "source_ledger": source_ledger(),
+            "collection": self.module.build_collection_record(**collection_fields()),
+            "freeze_id": "CAR-003-FREEZE-2026-07-24-V1",
+            "published_at": "2026-07-24T18:30:00Z",
+            "pinned_client_version": PINNED_CLIENT,
+        }
+        arguments.update(overrides)
+        return self.module.publish_freeze(**arguments)
+
+    def test_the_unlabeled_surface_sentinel_is_refused_by_the_classifier(self) -> None:
+        self.assertNotEqual(self.module.UNLABELED_SURFACE, self.module.ADMITTING_SURFACE)
+        self.assertNotIn(self.module.UNLABELED_SURFACE, self.module.DIAGNOSTIC_SURFACES)
+        with self.assertRaises(self.module.SuccessorFreezeError):
+            self.module.classify_surface(self.module.UNLABELED_SURFACE)
+
+    def test_an_unlabeled_observation_never_admits_a_tuple(self) -> None:
+        result = self.module.admit_tuples(
+            source_ledger=source_ledger(), collection=self.unlabeled_collection()
+        )
+        admitted = {(item["model"], item["effort"]) for item in result.admitted}
+        for effort in self.module.EFFORT_LADDER:
+            with self.subTest(effort=effort):
+                self.assertNotIn(("opus", effort), admitted)
+                self.assertEqual(
+                    [
+                        item.reason
+                        for item in result.excluded
+                        if item.model == "opus" and item.effort == effort
+                    ],
+                    ["surface_evidence_incomplete"],
+                )
+        # The labelled half of the same collection is untouched.
+        self.assertIn(("sonnet", "max"), admitted)
+
+    def test_an_unlabeled_observation_leaves_every_ladder_rung_unprobed(self) -> None:
+        coverage = self.module.ladder_coverage(self.unlabeled_collection(), ROLE_ELIGIBLE_MODELS)
+        self.assertEqual(coverage["opus"]["probed"], [])
+        self.assertEqual(coverage["opus"]["unprobed"], list(self.module.EFFORT_LADDER))
+        self.assertEqual(coverage["sonnet"]["unprobed"], [])
+
+    def test_an_unlabeled_collection_publishes_no_freeze_for_that_model(self) -> None:
+        publication = self.publish(collection=self.unlabeled_collection())
+        self.assertIsNotNone(publication.freeze)
+        admitted = {item["model"] for item in publication.freeze["admitted_tuples"]}
+        self.assertEqual(admitted, {"sonnet"})
+
+    def test_an_attribution_with_no_published_freeze_binding_is_unresolved(self) -> None:
+        finding = self.module.detect_alias_repoint(repoint_observation())
+        self.assertEqual(finding.attribution, "alias_repoint_unresolved")
+        self.assertFalse(finding.admits)
+        self.assertEqual(finding.exclusion_reason, "alias_repoint_unresolved")
+
+    def test_an_empty_candidate_freeze_binding_is_unresolved(self) -> None:
+        for published in (None, dict(FREEZE_BINDING)):
+            with self.subTest(published_freeze_binding=published):
+                finding = self.module.detect_alias_repoint(
+                    repoint_observation(candidate_freeze_binding={}),
+                    published_freeze_binding=published,
+                )
+                self.assertEqual(finding.attribution, "alias_repoint_unresolved")
+                self.assertFalse(finding.admits)
+
+    def test_the_emitted_diagnostic_record_verifies_against_its_own_digest(self) -> None:
+        publications = {
+            "published": self.publish(),
+            "diagnostic_only": self.publish(
+                source_ledger=source_ledger(candidates=[{"model": "haiku", "efforts": ["max"]}])
+            ),
+        }
+        for state, publication in sorted(publications.items()):
+            with self.subTest(publication_state=state):
+                record = publication.collection_record
+                self.assertEqual(record["publication_state"], state)
+                self.assertEqual(
+                    record["publication_record_digest"],
+                    self.module.record_digest(record, digest_field="publication_record_digest"),
+                )
+                self.assertEqual(self.module.inspect_sensitive_fields(record), ())
+
+    def test_a_published_freeze_never_aliases_the_module_trigger_lists(self) -> None:
+        publication = self.publish()
+        self.assertIsNotNone(publication.freeze)
+        for entry in publication.freeze["invalidation_triggers"]:
+            entry["invalidates"].append("everything_everywhere")
+            entry["survives"].clear()
+        for entry in self.module.INVALIDATION_TRIGGERS:
+            with self.subTest(trigger=entry["trigger"]):
+                self.assertNotIn("everything_everywhere", entry["invalidates"])
+                self.assertEqual(
+                    list(entry["survives"]),
+                    ["execution_traces", "treatment_records", "bound_pairs"],
+                )
+        for entry in self.publish().freeze["invalidation_triggers"]:
+            with self.subTest(republished=entry["trigger"]):
+                self.assertNotIn("everything_everywhere", entry["invalidates"])
+                self.assertTrue(entry["survives"])
+
+
 TEST_CASES = (
     ExclusionTaxonomyTests,
     CollectionRecordProvenanceTests,
@@ -1075,6 +1196,7 @@ TEST_CASES = (
     HistoricalImmutabilityTests,
     AliasRepointDetectionTests,
     RefreshTriggerTests,
+    FailClosedEvidenceTests,
 )
 
 

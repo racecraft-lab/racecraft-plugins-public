@@ -35,6 +35,7 @@ module fixes the split as:
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import re
@@ -61,6 +62,15 @@ SCHEMA_VERSION = "1.0.0"
 
 # FR-002: the sole admitting runtime authority.
 ADMITTING_SURFACE = "print_mode_canary_probe"
+
+# FR-002, FR-004: what an observation that names no surface is read as. Missing
+# provenance is a refusal, never a promotion: defaulting an unlabeled
+# observation to the admitting surface would hand the one authority permitted to
+# admit a tuple to the evidence that says least about where it came from. The
+# sentinel sits outside both the admitting and the diagnostic sets, so
+# :func:`classify_surface` refuses it and the rung it covers is recorded as
+# ``surface_evidence_incomplete``.
+UNLABELED_SURFACE = "unlabeled_surface"
 
 # FR-004: corroborate or invalidate, never admit.
 DIAGNOSTIC_SURFACES = (
@@ -288,6 +298,21 @@ def classify_surface(surface: str) -> str:
     )
 
 
+def observation_admits(observation: Mapping[str, Any]) -> bool:
+    """True only for an observation that names the sole admitting surface.
+
+    An unlabeled observation is refused rather than classified: with no declared
+    surface it can neither admit a tuple nor corroborate one, so it leaves the
+    ladder rung it covers unprobed instead of standing in for a canary probe.
+    """
+    surface = observation.get("surface")
+    if surface is None:
+        surface = UNLABELED_SURFACE
+    if surface == UNLABELED_SURFACE:
+        return False
+    return classify_surface(surface) == "admitting"
+
+
 def ladder_coverage(
     collection: Mapping[str, Any], models: Sequence[str]
 ) -> dict[str, dict[str, Any]]:
@@ -299,7 +324,7 @@ def ladder_coverage(
         probed = {
             observation.get("effort")
             for observation in supported.get(model, ())
-            if classify_surface(observation.get("surface", ADMITTING_SURFACE)) == "admitting"
+            if observation_admits(observation)
         }
         coverage[model] = {
             "probed": [effort for effort in EFFORT_LADDER if effort in probed],
@@ -353,7 +378,7 @@ def _runtime_observations(
         for observation in observations:
             effort = observation.get("effort")
             model_observed.add(effort)
-            if classify_surface(observation.get("surface", ADMITTING_SURFACE)) != "admitting":
+            if not observation_admits(observation):
                 continue
             # The last admitting-surface observation for a rung decides it: a
             # re-probe that rejects an effort supersedes an earlier acceptance.
@@ -370,7 +395,7 @@ def _admitting_surface_efforts(collection: Mapping[str, Any], model: str) -> set
     return {
         observation.get("effort")
         for observation in (collection.get("supported_efforts") or {}).get(model, ())
-        if classify_surface(observation.get("surface", ADMITTING_SURFACE)) == "admitting"
+        if observation_admits(observation)
     }
 
 
@@ -556,6 +581,7 @@ def car002_immutability_report(baseline: Mapping[str, str]) -> dict[str, list[st
 COLLECTION_FIELD_ALLOWLIST = frozenset(REQUIRED_COLLECTION_FIELDS) | {
     "authority_failures",
     "publication_state",
+    "publication_record_digest",
     "sensitive_field_findings",
     "promoted_tuples",
     "collection_max_age_hours",
@@ -782,6 +808,14 @@ def publish_freeze(
     # candidate set, whatever the outcome.
     record["promoted_tuples"] = []
     record["publication_state"] = "diagnostic_only" if ordered_failures else "published"
+    # FR-033: the publication annotations above are added after the collection
+    # sealed its own identity digest, so they carry a digest of their own.
+    # ``collection_digest`` stays the collection's identity — it is what the
+    # freeze binds — while ``publication_record_digest`` makes the emitted
+    # diagnostic record verifiable at replay instead of only re-derivable.
+    record["publication_record_digest"] = record_digest(
+        record, digest_field="publication_record_digest"
+    )
 
     if ordered_failures:
         return FreezePublication(
@@ -816,7 +850,11 @@ def publish_freeze(
         "excluded_tuples": [item.as_record() for item in admission.excluded],
         "authority_failures": [],
         "published_at": published_at,
-        "invalidation_triggers": [dict(entry) for entry in INVALIDATION_TRIGGERS],
+        # Deep-copied: ``dict(entry)`` would hand the emitted freeze the module
+        # constant's own ``invalidates`` and ``survives`` list objects, so one
+        # caller editing a published record would rewrite the declaration every
+        # later freeze is built from.
+        "invalidation_triggers": copy.deepcopy(list(INVALIDATION_TRIGGERS)),
     }
     freeze["freeze_digest"] = record_digest(freeze, digest_field="freeze_digest")
     return FreezePublication(
@@ -888,7 +926,11 @@ def detect_alias_repoint(
     successor freeze**, never from the identically named run-time
     route-resolution field and never from the archived CAR-002 snapshot. The
     ``candidate_freeze_binding`` makes that provenance verifiable at replay
-    instead of self-declared.
+    instead of self-declared, so ``published_freeze_binding`` is required
+    evidence: with nothing to compare the binding against, "verifiable at
+    replay" degrades to the observation's own word for it, and an observation
+    carrying no binding at all would attribute a divergence on no provenance.
+    An absent published binding is therefore ``alias_repoint_unresolved``.
 
     Attribution is bounded by its enumerated cause set rather than proven:
     documented serving-infrastructure changes can alter observable behavior with
@@ -899,9 +941,11 @@ def detect_alias_repoint(
         "runtime_capability_snapshot_id"
     ]
     binding_ok = (
-        observation.get("freeze_bound_identity_source") == FREEZE_BOUND_IDENTITY_SOURCE
+        bool(binding)
+        and observation.get("freeze_bound_identity_source") == FREEZE_BOUND_IDENTITY_SOURCE
         and binding.get("id") != archived_id
-        and (published_freeze_binding is None or binding == dict(published_freeze_binding))
+        and published_freeze_binding is not None
+        and binding == dict(published_freeze_binding)
     )
 
     proof = dict(observation.get("env_override_proof") or {})

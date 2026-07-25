@@ -383,6 +383,18 @@ class MandatoryObservationTests(TreatmentRunnerTestCase):
 
         self.assertEqual(runner.check_mandatory_observations(observations, manifest=manifest), ())
 
+    def test_the_cached_manifest_is_not_mutable_through_one_of_its_nested_lists(self) -> None:
+        # A read-only mapping proxy guards its top level only. If the nested
+        # lists are handed out by reference, one caller's edit silently rewrites
+        # the manifest every later caller reads.
+        manifest = runner.load_mandatory_manifest()
+        manifest["required_fields"].clear()
+        manifest["nullable_exemptions"].append("injected.field.path")
+
+        refreshed = runner.load_mandatory_manifest()
+        self.assertTrue(refreshed["required_fields"], "the cached manifest lost its required fields")
+        self.assertNotIn("injected.field.path", refreshed["nullable_exemptions"])
+
 
 class RealDispatchRecordingTests(TreatmentRunnerTestCase):
     """What ran is read from the run, never from the request (FR-009, SC-021)."""

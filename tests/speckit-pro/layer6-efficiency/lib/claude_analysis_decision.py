@@ -64,12 +64,16 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Iterable, Mapping, Sequence
 
+# ``_parse_timestamp`` is reused rather than reimplemented: an ISO instant is
+# only comparable once it is parsed and normalized to UTC, and a second parser
+# would be a second place for the two modules to disagree about what "before"
+# means.
 if __package__:  # pragma: no cover - the lib is imported flat by the suite
     from .claude_score_bundle import REASONING_TOKEN_LIMITATION
-    from .claude_successor_freeze import record_digest
+    from .claude_successor_freeze import _parse_timestamp, record_digest
 else:
     from claude_score_bundle import REASONING_TOKEN_LIMITATION
-    from claude_successor_freeze import record_digest
+    from claude_successor_freeze import _parse_timestamp, record_digest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -601,9 +605,31 @@ def grant_rerun(
         findings.append("the transient-classification record does not match its own digest")
     if classification_record.get("classification_timing") != CLASSIFICATION_TIMING:
         findings.append(f"classification_timing must be {CLASSIFICATION_TIMING!r}")
-    recorded_at = str(classification_record.get("recorded_at"))
+    # Instants, not strings. ``2026-07-01T09:00:00-06:00`` sorts below
+    # ``2026-07-01T12:00:00Z`` as text while being three hours later in fact, so
+    # a textual comparison reads a post-dated classification as arm-blind and
+    # silently readmits the outcome-conditioned filtering FR-021 forbids. A
+    # timestamp that will not parse is refused rather than ordered.
+    recorded_at = classification_record.get("recorded_at")
+    recorded_instant = _parse_timestamp(recorded_at)
+    if recorded_instant is None:
+        findings.append(
+            f"the transient-classification recorded_at {recorded_at!r} is not a parseable "
+            "instant, so it cannot be shown to pre-date the arm outcomes"
+        )
+    if not arm_outcome_digest_timestamps:
+        findings.append(
+            "no arm outcome digest timestamp is bound to this rerun, so the arm-blind "
+            "precommitment has nothing to be checked against"
+        )
     for outcome_timestamp in arm_outcome_digest_timestamps:
-        if recorded_at >= str(outcome_timestamp):
+        outcome_instant = _parse_timestamp(outcome_timestamp)
+        if outcome_instant is None:
+            findings.append(
+                f"the arm outcome digest timestamp {outcome_timestamp!r} is not a parseable "
+                "instant, so the classification cannot be shown to pre-date it"
+            )
+        elif recorded_instant is not None and recorded_instant >= outcome_instant:
             findings.append(
                 "the transient-classification record post-dates an arm outcome digest "
                 f"({recorded_at} >= {outcome_timestamp}); classifying after outcomes are "
@@ -1098,6 +1124,18 @@ def build_decision_bundle(
         },
         "evidence_refs": list(evidence_refs),
     }
+    # FR-019, FR-024: both guards run here, on the write path, before the digest
+    # seals. Read as a report they name a violation that has already been
+    # committed; run as a gate they are the only thing standing between a
+    # caller-supplied nested mapping — a partition, a binding, an evidence
+    # reference — and a weight, price coefficient, or final route policy inside
+    # sealed decision evidence.
+    findings = weighting_findings(bundle) + final_output_findings(bundle)
+    if findings:
+        raise AnalysisDecisionError(
+            "a decision bundle may carry no weight, scalar score, price coefficient, or "
+            f"final route policy: {findings}"
+        )
     bundle["decision_bundle_digest"] = record_digest(bundle, digest_field="decision_bundle_digest")
     return bundle
 

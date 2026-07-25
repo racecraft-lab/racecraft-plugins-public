@@ -630,6 +630,79 @@ class EstimandAndRerunTests(unittest.TestCase):
             any("outcome" in finding for finding in verdict.findings), verdict
         )
 
+    def test_an_offset_timestamp_is_compared_as_an_instant_rather_than_as_a_string(self) -> None:
+        # 09:00 at UTC-06:00 is 15:00Z, three hours AFTER the 12:00Z outcome. As
+        # strings "2026-07-01T09..." sorts below "2026-07-01T12...", so a textual
+        # comparison reads a post-dated classification as arm-blind.
+        offset = self.module.build_transient_classification_record(
+            record_id="TCR-003",
+            arm_blind_evidence_digest=digest_over({"evidence": "harness-timeout"}),
+            recorded_at="2026-07-01T09:00:00-06:00",
+        )
+        verdict = self.module.grant_rerun(
+            classification_record=offset,
+            arm_outcome_digest_timestamps=("2026-07-01T12:00:00Z",),
+            cap=2,
+            reruns_used=0,
+            scope="complete_pair",
+        )
+        self.assertFalse(verdict.granted, verdict)
+        self.assertEqual(verdict.pair_result, "inconclusive")
+        self.assertEqual(verdict.failure_condition, "incomplete_evidence")
+        self.assertTrue(any("outcome" in finding for finding in verdict.findings), verdict)
+
+    def test_an_offset_timestamp_that_truly_pre_dates_the_outcome_is_still_granted(self) -> None:
+        early = self.module.build_transient_classification_record(
+            record_id="TCR-004",
+            arm_blind_evidence_digest=digest_over({"evidence": "harness-timeout"}),
+            recorded_at="2026-07-01T09:00:00+06:00",
+        )
+        verdict = self.module.grant_rerun(
+            classification_record=early,
+            arm_outcome_digest_timestamps=("2026-07-01T12:00:00Z",),
+            cap=2,
+            reruns_used=0,
+            scope="complete_pair",
+        )
+        self.assertTrue(verdict.granted, verdict)
+
+    def test_an_unparseable_timestamp_on_either_side_refuses_the_rerun(self) -> None:
+        corrupt = self.module.build_transient_classification_record(
+            record_id="TCR-005",
+            arm_blind_evidence_digest=digest_over({"evidence": "harness-timeout"}),
+            recorded_at="0000-00-00T00:00:00Z",
+        )
+        unparseable_record = self.module.grant_rerun(
+            classification_record=corrupt,
+            arm_outcome_digest_timestamps=("2026-07-24T03:00:00Z",),
+            cap=2,
+            reruns_used=0,
+            scope="complete_pair",
+        )
+        self.assertFalse(unparseable_record.granted, unparseable_record)
+        unparseable_outcome = self.module.grant_rerun(
+            classification_record=self.record,
+            arm_outcome_digest_timestamps=("2026-07-24T99:00:00Z",),
+            cap=2,
+            reruns_used=0,
+            scope="complete_pair",
+        )
+        self.assertFalse(unparseable_outcome.granted, unparseable_outcome)
+
+    def test_zero_arm_outcome_timestamps_refuse_the_rerun(self) -> None:
+        # With no arm outcome bound, the arm-blind precommitment has nothing to
+        # be checked against, so the loop must not read as "no violation found".
+        verdict = self.module.grant_rerun(
+            classification_record=self.record,
+            arm_outcome_digest_timestamps=(),
+            cap=2,
+            reruns_used=0,
+            scope="complete_pair",
+        )
+        self.assertFalse(verdict.granted, verdict)
+        self.assertEqual(verdict.pair_result, "inconclusive")
+        self.assertEqual(verdict.failure_condition, "incomplete_evidence")
+
     def test_a_classification_record_carries_its_arm_blind_evidence_and_own_digest(self) -> None:
         self.assertEqual(self.module.CLASSIFICATION_TIMING, "arm_blind_before_outcome_read")
         for required_field in (
@@ -1018,12 +1091,109 @@ class ReplayAndNonPoolingTests(unittest.TestCase):
                 self.assertNotIn(forbidden, text)
 
 
+def decision_bundle(module: object, **overrides: object) -> dict[str, object]:
+    """One clean calibration decision bundle, assembled through the builder."""
+    fields: dict[str, object] = {
+        "decision_bundle_id": "CAR-003-DECISION-WRITE-GUARD-001",
+        "partition": {
+            "partition_id": "CAR-003-CAL-01",
+            "partition_type": "calibration",
+            "qualification_eligible": False,
+        },
+        "comparison_set_binding": {"id": "CS-CAL-01", "digest": digest_over({"comparison_set": 1})},
+        "assignment_bindings": [{"id": "CS-CAL-01-A0", "digest": digest_over({"assignment": 0})}],
+        "score_bundle_bindings": [{"id": "SB-CAL-01-A0", "digest": digest_over({"score_bundle": 0})}],
+        "analysis_plan_binding": {"id": "PLAN-01", "digest": digest_over({"plan": 1})},
+        "analysis_output_id": "AO-CAL-01",
+        "ordered_gate_results": list(
+            module.evaluate_ladder({gate: "pass" for gate in module.LADDER_GATES})  # type: ignore[attr-defined]
+        ),
+        "floor_result": "pass",
+        "non_inferiority_result": "pass",
+        "pareto_result": "candidate_dominates",
+        "complete": True,
+        "decision": "calibration_complete",
+        "decision_reasons": ["calibration_only"],
+        "reasoning_output_tokens_total": 800,
+        "provenance_inference_count": 0,
+        "evidence_refs": [digest_over({"evidence": "gate-log"})],
+    }
+    fields.update(overrides)
+    return module.build_decision_bundle(**fields)  # type: ignore[attr-defined]
+
+
+def calibration_partition(**extra: object) -> dict[str, object]:
+    partition: dict[str, object] = {
+        "partition_id": "CAR-003-CAL-01",
+        "partition_type": "calibration",
+        "qualification_eligible": False,
+    }
+    partition.update(extra)
+    return partition
+
+
+class DecisionBundleWriteGuardTests(unittest.TestCase):
+    """The no-weighting and no-final-output guards run on the write path, before
+    the bundle is sealed and digested. A guard that only exists as a reader
+    cannot stop a caller-supplied weight from reaching sealed evidence
+    (FR-019, FR-024)."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_analysis_decision, "claude_analysis_decision is not importable")
+        self.module = claude_analysis_decision
+
+    def test_a_clean_bundle_still_seals_against_its_own_digest(self) -> None:
+        bundle = decision_bundle(self.module)
+        self.assertEqual(self.module.weighting_findings(bundle), ())
+        self.assertEqual(self.module.final_output_findings(bundle), ())
+        self.assertEqual(
+            bundle["decision_bundle_digest"],
+            digest_over(
+                {key: value for key, value in bundle.items() if key != "decision_bundle_digest"}
+            ),
+        )
+
+    def test_a_weighting_key_in_a_caller_supplied_mapping_is_refused_before_sealing(self) -> None:
+        provocations = {
+            "partition": {"partition": calibration_partition(criterion_weight=0.4)},
+            "binding": {
+                "analysis_plan_binding": {
+                    "id": "PLAN-01",
+                    "digest": digest_over({"plan": 1}),
+                    "price_coefficient": 3.0,
+                }
+            },
+            "nested_binding": {
+                "assignment_bindings": [
+                    {
+                        "id": "CS-CAL-01-A0",
+                        "digest": digest_over({"assignment": 0}),
+                        "composite_score": 0.91,
+                    }
+                ]
+            },
+            "ranking": {"partition": calibration_partition(ranking=["opus", "sonnet"])},
+            "scalar_score": {"partition": calibration_partition(scalar_score=7.25)},
+        }
+        for label, overrides in sorted(provocations.items()):
+            with self.subTest(surface=label):
+                with self.assertRaises(self.module.AnalysisDecisionError):
+                    decision_bundle(self.module, **overrides)
+
+    def test_a_forbidden_final_output_key_is_refused_before_sealing(self) -> None:
+        for key in self.module.FORBIDDEN_OUTPUT_KEYS:
+            with self.subTest(forbidden=key):
+                with self.assertRaises(self.module.AnalysisDecisionError):
+                    decision_bundle(self.module, partition=calibration_partition(**{key: "opus"}))
+
+
 TEST_CASES = (
     OrderedLadderTests,
     ParetoDominanceTests,
     TerminalMappingTests,
     EstimandAndRerunTests,
     GuardrailAndErrorControlTests,
+    DecisionBundleWriteGuardTests,
     ReplayAndNonPoolingTests,
 )
 

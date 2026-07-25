@@ -261,6 +261,30 @@ def scorer_a_ballot(module: object, **overrides: object) -> dict[str, object]:
     return module.build_ballot(**fields)  # type: ignore[attr-defined]
 
 
+def leak_lexicon(module: object) -> dict[str, object]:
+    return module.build_leak_lexicon(  # type: ignore[attr-defined]
+        model_identities=CANDIDATE_MODEL_IDS,
+        aliases=CANDIDATE_ALIASES,
+        efforts=EFFORT_VALUES,
+        route_identifiers=CANDIDATE_ROUTE_IDS,
+    )
+
+
+def passing_leak_finding(module: object) -> object:
+    """A real leak-check verdict over a clean artifact.
+
+    Supplied wherever a caller must present blinding evidence: the collector and
+    the bundle builder consume a recorded finding and never assume one passed.
+    """
+    return module.leak_check(BLINDED_ARTIFACT, leak_lexicon(module))  # type: ignore[attr-defined]
+
+
+def failing_leak_finding(module: object) -> object:
+    return module.leak_check(  # type: ignore[attr-defined]
+        BLINDED_ARTIFACT + "\nclaude-opus-4-6-20260115\n", leak_lexicon(module)
+    )
+
+
 def scorer_b_ballot(module: object, **overrides: object) -> dict[str, object]:
     fields: dict[str, object] = {
         "ballot_id": "ballot-scorer-b-001",
@@ -496,6 +520,10 @@ class ScorerProvenanceTests(unittest.TestCase):
             "ballots": (scorer_a_ballot(self.module), scorer_b_ballot(self.module)),
             "rubric": FROZEN_RUBRIC,
             "current_calibrations": CURRENT_CALIBRATIONS,
+            # Real blinding evidence, because an absent finding is a refusal:
+            # the collector consumes the leak check's verdict and never assumes
+            # a check it was not shown.
+            "leak_finding": passing_leak_finding(self.module),
         }
         fields.update(overrides)
         return self.module.collect_ballots(gate_results(), **fields)
@@ -890,6 +918,62 @@ class ClosedTaxonomyTests(unittest.TestCase):
         self.assertEqual(status.stdout.strip(), "", "a repo-level shared contract was modified")
 
 
+class BlindingEvidenceTests(unittest.TestCase):
+    """Blinding and ballot evidence is consumed, never asserted. A bundle with no
+    leak-check finding, a failed finding, or no ballot at all fails closed instead
+    of sealing as accepted (FR-014, FR-035, FR-048)."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_score_bundle, "claude_score_bundle is not importable")
+        self.module = claude_score_bundle
+        self.passing = passing_leak_finding(self.module)
+        self.failing = failing_leak_finding(self.module)
+
+    def test_a_bundle_with_no_leak_check_evidence_never_seals_as_accepted(self) -> None:
+        bundle = complete_bundle(self.module)
+        self.assertNotEqual(bundle["score_disposition"], "accepted")
+        self.assertFalse(bundle["blinding_residual"]["leak_check_passed"])
+        self.assertEqual(self.module.disposition_findings(bundle), ())
+
+    def test_a_bundle_with_no_ballots_never_seals_as_accepted(self) -> None:
+        self.assertNotEqual(
+            complete_bundle(self.module, ballots=(), adjudication=None)["score_disposition"],
+            "accepted",
+        )
+        evidenced = complete_bundle(
+            self.module, ballots=(), adjudication=None, leak_finding=self.passing
+        )
+        self.assertEqual(evidenced["failure_plane"], "ballot")
+        self.assertEqual(evidenced["failure_code"], "ballot_missing")
+        self.assertEqual(self.module.disposition_findings(evidenced), ())
+
+    def test_a_failed_leak_check_blocks_bundle_acceptance(self) -> None:
+        self.assertFalse(self.failing.passed, self.failing.hits)
+        bundle = complete_bundle(self.module, leak_finding=self.failing)
+        self.assertNotEqual(bundle["score_disposition"], "accepted")
+        self.assertEqual(bundle["failure_plane"], "ballot")
+        self.assertEqual(bundle["failure_code"], "ballot_non_blind")
+        self.assertFalse(bundle["blinding_residual"]["leak_check_passed"])
+
+    def test_a_passing_leak_check_with_two_ballots_seals_as_accepted(self) -> None:
+        bundle = complete_bundle(self.module, leak_finding=self.passing)
+        self.assertEqual(bundle["score_disposition"], "accepted")
+        self.assertTrue(bundle["blinding_residual"]["leak_check_passed"])
+        self.assertEqual(self.module.disposition_findings(bundle), ())
+
+    def test_ballot_collection_with_no_leak_finding_is_refused(self) -> None:
+        collection = self.module.collect_ballots(
+            gate_results(),
+            ballots=(scorer_a_ballot(self.module), scorer_b_ballot(self.module)),
+            rubric=FROZEN_RUBRIC,
+            current_calibrations=CURRENT_CALIBRATIONS,
+        )
+        self.assertFalse(collection.accepted)
+        self.assertEqual(collection.ballots, ())
+        self.assertEqual(collection.failure_plane, "evidence_boundary")
+        self.assertEqual(collection.failure_code, "required_evidence_missing")
+
+
 class EvidenceBoundaryIgnoreTests(unittest.TestCase):
     """Both halves of the evidence ignore rule: the named consolidated baseline is
     trackable, a representative per-run raw output beside it is still ignored, and
@@ -951,6 +1035,7 @@ TEST_CASES = (
     BlindedBallotTests,
     ScorerProvenanceTests,
     ClosedTaxonomyTests,
+    BlindingEvidenceTests,
     EvidenceBoundaryIgnoreTests,
 )
 

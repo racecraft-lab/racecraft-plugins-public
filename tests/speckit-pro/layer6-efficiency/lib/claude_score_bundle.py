@@ -160,6 +160,12 @@ AGENT_FRONTMATTER_KEYS = (
 EFFORT_DECLARATION_KEYS = ("effort", "reasoning_effort", "reasoning-effort", "thinking_effort")
 BALLOT_NON_BLIND = "ballot_non_blind"
 
+# FR-014, FR-035: a leak check that was never run is missing evidence, not a
+# pass. It lands on the evidence-boundary plane, distinct from the ballot-plane
+# code a check that ran and failed records.
+LEAK_CHECK_NOT_RUN = "leak_check_not_run"
+MISSING_LEAK_EVIDENCE_FAILURE = ("evidence_boundary", "required_evidence_missing")
+
 
 @dataclass(frozen=True)
 class LeakFinding:
@@ -354,12 +360,19 @@ def collect_ballots(
     adjudication: Mapping[str, Any] | None = None,
 ) -> BallotCollection:
     """Two distinct scorers, one frozen rubric, current calibration, resolved
-    disagreement — checked in that order so the earliest cause is reported."""
+    disagreement — checked in that order so the earliest cause is reported.
+
+    ``leak_finding`` is required evidence. An absent finding means the mechanical
+    blinding check never ran, which is a missing-evidence refusal rather than a
+    reason to collect the ballots unblinded.
+    """
     verdict = evaluate_gates(gate_results)
     if not (verdict.complete and verdict.all_passed):
         return _refused(verdict.failure_plane, verdict.failure_code, "gate_barrier")
 
-    if leak_finding is not None and not leak_finding.passed:
+    if leak_finding is None:
+        return _refused(*MISSING_LEAK_EVIDENCE_FAILURE, LEAK_CHECK_NOT_RUN)
+    if not leak_finding.passed:
         return _refused(leak_finding.failure_plane, leak_finding.failure_code, BALLOT_NON_BLIND)
 
     if len(ballots) != 2:
@@ -723,15 +736,34 @@ def build_score_bundle(
     resource_vector: Mapping[str, Any],
     reasoning_output_tokens: int | None,
     evidence_refs: Sequence[str],
+    leak_finding: LeakFinding | None = None,
     invalidation_reason: str = "none",
 ) -> dict[str, Any]:
-    """Assemble one score bundle with its disposition bound to its failure fields."""
+    """Assemble one score bundle with its disposition bound to its failure fields.
+
+    The blinding residual is **consumed, never asserted**. ``leak_finding`` is the
+    recorded verdict of the mechanical check :func:`collect_ballots` runs; a
+    bundle built without one cannot claim the check passed, and a bundle carrying
+    no ballot has nothing a scorer could have been blinded to. Both fail closed
+    rather than sealing as ``accepted`` on evidence that was never produced
+    (FR-014, FR-035, FR-048).
+    """
     missing_bindings = tuple(name for name in PROVENANCE_BINDINGS if name not in bindings)
     if missing_bindings:
         raise ScoreBundleError(f"score bundle is missing provenance bindings: {missing_bindings}")
 
     verdict = evaluate_gates(deterministic_gates)
     plane, code = normalize_failure(verdict.failure_plane, verdict.failure_code)
+    leak_check_passed = leak_finding is not None and leak_finding.passed
+    if plane == "none" and code == "none":
+        # Checked in the order collect_ballots checks them, so the earliest
+        # missing cause is the one the bundle records.
+        if leak_finding is None:
+            plane, code = normalize_failure(*MISSING_LEAK_EVIDENCE_FAILURE)
+        elif not leak_finding.passed:
+            plane, code = normalize_failure(leak_finding.failure_plane, leak_finding.failure_code)
+        elif len(ballots) != 2:
+            plane, code = normalize_failure("ballot", "ballot_missing")
     bundle: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
         "score_bundle_id": score_bundle_id,
@@ -749,7 +781,9 @@ def build_score_bundle(
             "decision_bearing": False,
             "stated_limitation": REASONING_TOKEN_LIMITATION,
         },
-        "blinding_residual": blinding_residual(leak_check_passed=True, ballots=ballots),
+        "blinding_residual": blinding_residual(
+            leak_check_passed=leak_check_passed, ballots=ballots
+        ),
         "evidence_refs": list(evidence_refs),
     }
     bundle["score_bundle_digest"] = record_digest(bundle, digest_field="score_bundle_digest")

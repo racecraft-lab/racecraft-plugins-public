@@ -42,6 +42,7 @@ What the module proves, in the order an attempt is evaluated:
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import re
@@ -190,8 +191,15 @@ def _read_manifest(path: str) -> Mapping[str, Any]:
 
 
 def load_mandatory_manifest(path: Path | None = None) -> Mapping[str, Any]:
-    """Load the versioned manifest, verifying it still digests to its own record."""
-    return _read_manifest(str(path or MANDATORY_MANIFEST_PATH))
+    """Load the versioned manifest, verifying it still digests to its own record.
+
+    Deep-copied on the way out. A ``MappingProxyType`` is read-only at its top
+    level only, so handing out the cached record would let one caller edit the
+    manifest — through ``required_fields`` or ``nullable_exemptions`` — that
+    every later caller in the process then reads as authoritative.
+    """
+    cached = _read_manifest(str(path or MANDATORY_MANIFEST_PATH))
+    return MappingProxyType(copy.deepcopy(dict(cached)))
 
 
 def mandatory_field_paths(manifest: Mapping[str, Any]) -> tuple[str, ...]:
@@ -375,7 +383,7 @@ def check_environment_conformance(
 
     for field in ("fast_mode_state", "parent_session_configuration", "authentication_mode"):
         value = observed.get(field)
-        pinned = contract["fast_mode_state"] if field == "fast_mode_state" else contract[field]
+        pinned = contract[field]
         if value is None or value == "unknown":
             unobservable.append(field)
         elif value != pinned:
