@@ -475,7 +475,22 @@ Four sessions, matching G56R-003's four Clarify sessions one-for-one.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Successor freeze and invalidation | | |
+| 1 | Successor freeze and invalidation | 5 asked, 3 applied directly, 2 to consensus | FR-003 effort map bounded to the closed ladder; FR-041 invalidates/survives mapping stated; **FR-044 new** (empty intersection publishes nothing and never promotes archived CAR-002 tuples); FR-002/FR-004 sole-admitting-authority; **FR-045, FR-046 new** (bounded attribution in an additive record; detector validated by synthetic replay) |
+
+### Consensus Resolution Log
+
+| Session | Item | Tags | Round | Analysts | Agreement | Resolution |
+|---------|------|------|-------|----------|-----------|------------|
+| 1 | Q1 — sole admitting runtime surface | `[codebase, domain]` | 1 | codebase-analyst, domain-researcher | **N=2, both agree** — no Round 2 | Print-mode canary probe is the sole admitting authority; all other surfaces diagnostic-only. Decisive evidence: the CAR-002 capability library already encodes the catalog endpoint as "corroborating (never alias-establishing)" and returns evidence only under `api_key` mode — so admitting on it would make freeze admission depend on an auth mode FR-042 forbids requiring. Domain research added the binding refinement that probe-vs-diagnostic disagreement must trigger investigate-or-exclude, else the design collapses into mono-operation bias. Applied to FR-002 / FR-004 |
+| 1 | Q2 — alias re-point vs resolver fallback | `[domain, ambiguous]` | 1 (full fan-out; `[ambiguous]` never single-routes) | codebase-analyst, spec-context-analyst, domain-researcher | **N=3, converged** on "classification already settled, detection mechanics incomplete" | spec-context (high): the roadmap already fixes the category boundary; only mechanics were open; parity with G56R-003 holds and the `alias_repoint_unresolved` vs `hidden_state_disagreement` difference is a pre-decided value divergence. codebase (low, but concrete): no ordered-fallback resolver exists in shipped source (deferred to CAR-006); frozen `record_class` is closed so attribution needs an additive record; `resolved_dated_model_id` is ambiguous across freeze-time and run-time records; `client_version` is a missing fifth observable. domain (high): the four-observable elimination argument is not closed-world safe — documented serving-infrastructure change alters behavior without changing model identity — and the catch-22 resolves via synthetic replay below the live trigger. Applied to FR-039 / FR-045 / FR-046 |
+
+**Why no Round 2 on Q2 despite a low-confidence analyst:** `[ambiguous]` routes to
+all three in Round 1, so the item already had full fan-out. The codebase
+analyst's low confidence was scoped to *completeness of the observable set* —
+precisely the point the domain researcher independently confirmed was
+incomplete. The three answers are complementary rather than contradictory, and
+all three findings were folded into the resolution instead of being averaged
+away.
 | 2 | Materialization, delivery, and trace joins | | |
 | 3 | Corpus and blinded scoring | | |
 | 4 | Partitions, statistics, and campaign controls | | |

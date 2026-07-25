@@ -105,14 +105,71 @@ As an experiment owner, I can run a calibration-only pilot, freeze the numeric a
 - Replay produces a different decision from the same versioned experiment, score, and analysis bundles.
 - A run executes under API-key authentication when only subscription authentication was expected, or the auth mode is not recorded at all.
 
+## Clarifications
+
+### Session 1 — Successor freeze and invalidation (2026-07-24)
+
+- **Q: What may the effort canonicalization map admit?** → The map is keyed to
+  official-source display strings and targets only the closed ordered ladder
+  `low` < `medium` < `high` < `xhigh` < `max`. Omitted, `inherit`, runtime-only,
+  API-only, alias, aggregate, and topology-changing values can never become
+  ordinary candidate efforts; any unmapped source value records
+  `canonical_effort_unknown`. (FR-003)
+- **Q: What does each of the four refresh triggers invalidate, and what
+  survives?** → All four invalidate freeze admission and every unexecuted
+  binding derived from it, and additively invalidate affected experiment, score,
+  and decision bundles. Immutable execution traces, treatment records, and
+  already-bound pairs survive unchanged and are marked invalidated rather than
+  rebound. Alias re-point additionally marks in-flight attempts for that alias
+  non-scorable; a source-ledger change alone cannot admit a tuple the runtime
+  never supported. (FR-041)
+- **Q: What does an empty or invalid intersection publish, and may CAR-002's
+  tuples be reused?** → Diagnostic collection evidence only; no authoritative
+  successor freeze; qualification-capable execution blocked; and the six
+  archived CAR-002 tuples are never promoted to an active candidate set.
+  Immutable does not imply reusable — silently falling back to the archived
+  binding is a live treatment-integrity failure mode, because that snapshot
+  binds `opus` to a predecessor that differs from the current model on thinking
+  defaults. (FR-044, new)
+- **Q: Which runtime surface is the sole authority for freeze admission?** → The
+  operator-run `claude -p` print-mode canary probe on the pinned client, with
+  effort admitted only by configuration acceptance on that same surface.
+  Subagent-frontmatter dispatch, the model picker, the catalog endpoint, visible
+  defaults, and bundled client strings are diagnostic-only: they may corroborate
+  or invalidate, never admit. Two independent grounds converge — the existing
+  CAR-002 capability library already encodes the catalog endpoint as
+  "corroborating (never alias-establishing)", and that endpoint yields evidence
+  only under API-key authentication, so admitting on it would make freeze
+  admission depend on an auth mode FR-042 forbids requiring. Disagreement
+  between the admitting probe and a diagnostic observation must trigger recorded
+  investigation or exclusion, never a logged-and-ignored footnote. (FR-002,
+  FR-004)
+- **Q: What separates an alias re-pointing event from a resolver fallback?** →
+  The classification was already settled upstream: resolver fallback is a
+  resolution-time substitution of the requested route; a platform route change
+  is a delivery-time divergence from a route SpecKit Pro did not change. Only
+  the detection mechanics were open, and they need five observables rather than
+  four — the fifth is the pinned client version, because a client change is a
+  distinct refresh trigger and would otherwise be misattributed as a platform
+  re-point. The freeze-bound identity must be read from CAR-003's own successor
+  freeze, not the identically named run-time field and not the archived CAR-002
+  snapshot. Attribution is bounded rather than proven: documented
+  serving-infrastructure changes can alter behavior without changing the model
+  identity, so the enumerated cause set cannot certify its own completeness.
+  The attribution label lives in a new additive record because the frozen
+  `record_class` enumeration is closed. The detector is validated by synthetic
+  replay below the live trigger path, which resolves the standing catch-22 that
+  inducing a real re-point requires setting the very override the proof
+  requires to be unset. (FR-039, FR-045, FR-046)
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
 - **FR-001**: The system MUST preserve all CAR-002 artifacts, identifiers, and snapshot evidence as immutable historical records and publish any CAR-003 capability evidence as additive successor artifacts.
-- **FR-002**: The system MUST collect the pinned runtime catalog through an operator-run probe of the pinned Claude Code client and record the command contract, client version and distribution, sanitized account and environment boundary, raw and parsed catalog digests, observed models, alias bindings, defaults, supported efforts, timestamps, and invalidation criteria.
-- **FR-003**: The system MUST canonicalize source-admitted ordinary effort values only through an explicit evidence-backed normalization map and admit only model and effort tuples present in both the current official-source candidate ledger and the pinned-runtime-supported tuple set.
-- **FR-004**: The system MUST prevent diagnostic runtime observations from adding a model or effort absent from the official-source ledger or the refreshed pinned runtime catalog.
+- **FR-002**: The system MUST collect the pinned runtime catalog through an operator-run `claude -p --model <alias-or-id>` print-mode canary probe of the pinned Claude Code client as the **sole admitting runtime authority**, MUST admit effort support only by configuration acceptance on that same surface, and MUST record the command contract, client version and distribution, sanitized account and environment boundary, raw and parsed catalog digests, observed models, alias bindings, defaults, supported efforts, timestamps, and invalidation criteria.
+- **FR-003**: The system MUST canonicalize source-admitted ordinary effort values only through an explicit evidence-backed normalization map and admit only model and effort tuples present in both the current official-source candidate ledger and the pinned-runtime-supported tuple set. Omitted, `inherit`, runtime-only, API-only, alias, aggregate, and topology-changing values MUST NOT become ordinary candidate efforts, and any source value without an evidence-backed mapping to the ordered ladder `low`, `medium`, `high`, `xhigh`, `max` MUST record `canonical_effort_unknown`.
+- **FR-004**: The system MUST prevent subagent-frontmatter, model-picker, models-endpoint, visible-default, bundled-client, or any other diagnostic runtime observation from adding a model or effort absent from the official-source ledger or the refreshed pinned runtime catalog. Diagnostic observations MAY corroborate or invalidate an admitted tuple but MUST NEVER admit one. Because the catalog endpoint yields evidence only under API-key authentication, treating it as admitting would make freeze admission depend on an authentication mode FR-042 forbids requiring. Any disagreement between the admitting probe and a diagnostic observation MUST trigger recorded investigation or exclusion of the affected tuple and MUST NOT be logged and ignored.
 - **FR-005**: The system MUST classify fast mode and any orchestration-topology-changing mode as a CAR-004 policy-level control rather than an ordinary per-agent effort candidate.
 - **FR-006**: The system MUST maintain one shipped materialization contract in `speckit_pro_runner` that owns the exact rendered destination bytes and instruction/configuration digests consumed by both Layer 6 evidence and CAR-006 resolver behavior, with no parsed-only or divergent evaluation materializer.
 - **FR-007**: The system MUST keep the existing dual-platform efficiency runner and the lexical quality scorer as non-release smoke surfaces and MUST NOT promote their historical results as route qualification evidence.
@@ -147,11 +204,14 @@ As an experiment owner, I can run a calibration-only pilot, freeze the numeric a
 - **FR-036**: Committed scorer evidence MUST be limited to sanitized schemas, manifests, deterministic fixtures, opaque scorer identities, rubric/scorer/adjudicator digests, anonymized ballots, score bundles, and evidence references; raw scoring prompts, responses, transcripts, personal identity mappings, and private runtime evidence MUST remain operator-only.
 - **FR-037**: Before execution, each pair MUST immutably bind the comparison set, candidate and comparator routes, role, fixture, task, instruction/configuration hashes, capability snapshot/freeze, route resolution, experiment policy, and analysis plan; later refreshes MUST create additive invalidations instead of rebinding.
 - **FR-038**: One schema-governed, versioned analysis plan MUST freeze workload strata, p95 guardrails, margins, sample sizes, sample-size assumptions, power, alpha, multiplicity, racing and futility rules, attrition caps, campaign budgets, cache policy, and terminal rules after calibration and before any CAR-007 through CAR-010 cohort outcome is observed.
-- **FR-039**: The system MUST close CAP-Q6 by detecting alias re-pointing from a mismatch between the observed model identity and the resolved qualified identity for a requested alias, MUST record every such event as platform behavior, and MUST NOT report it as a SpecKit Pro fallback.
+- **FR-039**: The system MUST close CAP-Q6 by detecting alias re-pointing from a mismatch between the observed model identity and the resolved qualified identity for a requested alias, MUST record every such event as platform behavior, and MUST NOT report it as a SpecKit Pro fallback. Detection MUST read five observables: the requested alias; the resolved identity bound by **CAR-003's own successor freeze** (explicitly disambiguated from the identically named run-time route-resolution field, and never read from the archived CAR-002 snapshot as authoritative); the run-observed identity from the per-model usage breakdown; the complete environment-override proof; and the pinned client version at both freeze time and run time. A mismatch MUST be attributed to the platform only when the requested route is unchanged, every local override is proven unset, and the client version is unchanged; a plugin-initiated route substitution MUST be classified as resolver fallback; and any mismatch with incomplete override proof, a changed client version, or an otherwise unattributable cause MUST record `alias_repoint_unresolved` and block admission.
+- **FR-045**: The platform-attribution label MUST be carried in a new additive CAR-003 record, because the frozen CAR-002 `record_class` enumeration is closed and MUST NOT be extended. The attribution claim MUST be bounded to observed-identity divergence: a behavioral difference without an identity change is a separate diagnostic condition and MUST NOT be recorded as an alias re-point, since documented serving-infrastructure changes can alter observable behavior while the model identity and weights are unchanged. The elimination argument behind attribution MUST therefore be recorded as bounded by its enumerated cause set rather than as proof of platform causation.
+- **FR-046**: The alias-re-pointing detector MUST be validated by a synthetic replay fixture that supplies a divergent observed identity below the live trigger path while environment overrides remain genuinely unset, so validation never requires setting the override that would violate the override-unset proof. If that replay path cannot be built, the detector MUST be recorded as unvalidated-in-band rather than reported as tested coverage.
 - **FR-040**: The system MUST probe and record the full ordered supported-effort set from `low` through `max` for every role-eligible model, including `high` as the documented search origin, so that the within-model effort boundary search has a defined ladder.
-- **FR-041**: The system MUST define versioned refresh triggers covering client change, catalog change, alias re-point, and source-ledger change, and MUST record for each trigger which evidence it invalidates and which evidence survives.
+- **FR-041**: The system MUST define versioned refresh triggers covering client change, catalog change, alias re-point, and source-ledger change, and MUST record for each trigger which evidence it invalidates and which evidence survives. All four triggers MUST invalidate freeze admission and every unexecuted binding derived from it, and MUST additively invalidate affected experiment, score, and decision bundles. Immutable execution traces, treatment records, and already-bound pairs MUST survive unchanged and MUST be marked invalidated rather than rebound. An alias re-point MUST additionally mark in-flight attempts for that alias non-scorable for the requested route, and a source-ledger change alone MUST NOT admit a tuple the pinned runtime never supported.
 - **FR-042**: The system MUST treat subscription authentication as the supported scored path, MUST NOT require API-key authentication on any supported path, MUST record the authentication mode of every run, and MUST NOT produce any plan-based or billing-based claim. This relaxation MUST be recorded as a dated amendment to AC-2.19 so later cross-artifact analysis does not read it as specification-versus-PRD drift.
 - **FR-043**: The system MUST treat the shared dual-platform smoke runner as jointly owned with the in-flight G56R-003 branch, MUST sync from the default branch before editing it, and MUST resolve any overlap by merge rather than rebase.
+- **FR-044**: When the source/runtime intersection is empty or invalid, the system MUST record diagnostic collection evidence only, MUST NOT publish an authoritative CAR-003 successor freeze, MUST block qualification-capable execution, and MUST NOT reuse, rewrite, or promote the archived CAR-002 snapshot tuples as an active candidate set.
 
 ### Reviewability Notes *(if applicable)*
 
