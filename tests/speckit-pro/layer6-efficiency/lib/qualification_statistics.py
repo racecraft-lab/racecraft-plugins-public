@@ -1383,7 +1383,6 @@ def _cluster_endpoint(
     degrees_of_freedom = len(values) - 1
     margin = policy["margins"][endpoint]
     if standard_error == 0.0:
-        statistic = math.inf if mean_difference >= margin else -math.inf
         p_value = 0.0 if mean_difference >= margin else 1.0
     else:
         statistic = (mean_difference - margin) / standard_error

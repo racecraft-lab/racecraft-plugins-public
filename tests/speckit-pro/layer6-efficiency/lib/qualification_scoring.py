@@ -641,7 +641,6 @@ def _resource_vector(value: object) -> dict:
         "acceptance": _nullable_unit_interval(row["acceptance"], "acceptance"),
         "terminal_state": terminal_state,
     }
-    return result
 
 
 def _score_bundle_digest_payload(bundle: dict) -> dict:

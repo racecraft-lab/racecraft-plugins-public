@@ -908,7 +908,6 @@ def summarize_score_replays(value: object) -> dict:
         role_id = _text(row["role_id"], "score replay role ID")
         if role_id not in roles:
             raise ValueError("score replay role is outside the governed corpus")
-        required_core = roles[role_id]["required_core"]
         optional_helper = roles[role_id]["optional_helper"]
         replay_bundle = validate_score_replay_bundle(row["replay_bundle"])
         score_bundle = replay_score_bundle(replay_bundle)
