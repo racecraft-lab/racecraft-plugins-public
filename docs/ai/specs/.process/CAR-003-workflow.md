@@ -1053,6 +1053,60 @@ For each task, follow this cycle:
 
 ---
 
+## Retrospective
+
+**Outcome:** PR #385, all 20 CI checks green, 27 commits, 83 of 86 tasks. Suite
+3251 → 4143 with zero regressions.
+
+### What the process caught that review-by-reading would not
+
+Four requirements were **unverifiable as written** and each was found by a
+different phase: an undecidable mandatory-observation set (Clarify 2), an
+unlinked code-to-plane mapping (Checklist error-handling), an undeclared
+direction of preference that made the core selection rule non-evaluable
+(Checklist performance), and a precommitment that was asserted but never
+evidenced (same). Clarify 4 additionally found a **circular dependency** that
+made the spec unimplementable: every pair had to bind an analysis plan that
+freezes only after the calibration those pairs perform.
+
+The single highest-value step was the **independent code review**, which found
+**six fail-open paths** by executing the code. None would have raised an error.
+Each produced clean, confident, wrong data — the precise failure mode this
+feature exists to prevent.
+
+### Recurring lesson: verify against the real gate, not a proxy
+
+This bit three times.
+
+1. **The suite was verified before committing, not after.** A governance guard
+   evaluates *committed* `docs/` paths, so the artifact was invisible while
+   untracked. The commit turned the suite red. Post-commit verification is now
+   the standing rule.
+2. **Two gates are not covered by the test suite at all** — the generated docs
+   reference and the spec index. Both pass locally and fail only in clean CI.
+3. **The release-note fence** was absent from the packet-generated body and only
+   CI enforces it. Fixed in the packet body, then validated against the repo's
+   own validator before pushing.
+
+### Orchestrator errors worth carrying forward
+
+- Verified that the anti-weighting guard **existed**, and treated the Pareto-only
+  guarantee as enforced. It was never called on the write path. **Checking a
+  definition is not checking a call site.**
+- Asserted the parity mirrors were "byte-identical to the twin" by
+  over-generalising a finding that had diffed *enum blocks*, not files.
+- Gave implementation agents two wrong facts — an estimator ratio and a
+  dimension name. Both agents measured or read the contract and corrected me.
+  Agents following the artifact over the prompt is the behaviour to preserve.
+
+### Estimation finding worth reusing
+
+The reviewable-LOC estimator undershoots this repository's Python harness by
+**1.4x–2.5x** (1.88x overall, 2.48x worst slice), and the shipped helper reports
+`projected: 0` because its heuristic recognises neither the language nor the
+layout. Future planning here should derive figures from declared file
+operations, not from the estimator.
+
 ## UAT Runbook (fail-open; logged)
 
 `generate-uat-skeleton` is **registered but deferred on the installed runner**,

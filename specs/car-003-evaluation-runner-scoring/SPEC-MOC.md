@@ -48,5 +48,9 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/llm-integration.md](checklists/llm-integration.md)
 - [checklists/performance.md](checklists/performance.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [.process/changed-files.txt](.process/changed-files.txt)
+- [.process/pr-packets/car-003-slice-1.json](.process/pr-packets/car-003-slice-1.json)
+- [.process/pr-packets/car-003-slice-1/body.md](.process/pr-packets/car-003-slice-1/body.md)
+- [.process/pr-packets/car-003-slice-1/validation.json](.process/pr-packets/car-003-slice-1/validation.json)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->
