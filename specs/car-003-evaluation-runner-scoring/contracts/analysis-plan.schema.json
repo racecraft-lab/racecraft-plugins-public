@@ -12,6 +12,7 @@
     "status",
     "calibration_binding",
     "workload_manifest",
+    "reliability_guardrails",
     "cache_policy",
     "quality_floors",
     "non_inferiority",
@@ -42,13 +43,86 @@
         "manifest_digest",
         "minimum_unique_tasks",
         "unknown_stratum_policy",
+        "guardrail_method",
         "strata"
       ],
       "properties": {
         "manifest_id": {"type": "string", "minLength": 1},
         "manifest_digest": {"$ref": "#/$defs/digest"},
-        "minimum_unique_tasks": {"type": "integer", "minimum": 1},
+        "minimum_unique_tasks": {
+          "description": "FR-054: the manifest-wide floor. Each stratum additionally declares its own stratum_minimum_unique_tasks, because a guardrail is evaluated per stratum and a manifest-wide floor says nothing about whether any single stratum can support the percentile it claims.",
+          "type": "integer",
+          "minimum": 1
+        },
         "unknown_stratum_policy": {"const": "inconclusive"},
+        "guardrail_method": {
+          "description": "FR-053: the four p95_*_max fields below are thresholds only. This object supplies the rest of the comparison, without which a bare ceiling is not a decidable test. Declared once for the manifest so every stratum is evaluated identically.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "denominator",
+            "comparator",
+            "margin",
+            "confidence_method",
+            "missing_data_rule",
+            "direction",
+            "multiplicity_family",
+            "breach_result",
+            "decision_bearing"
+          ],
+          "properties": {
+            "denominator": {
+              "description": "FR-053: the population the percentile is computed over. Without it the same threshold means different things per attempt, per pair, and per task.",
+              "enum": ["per_attempt_within_stratum_arm", "per_pair_within_stratum", "per_task_within_stratum_arm"]
+            },
+            "comparator": {
+              "description": "FR-053: absolute_ceiling compares the observed percentile against the frozen p95_*_max. relative_to_comparator_arm compares the candidate arm against its paired comparator arm, with margin applied.",
+              "enum": ["absolute_ceiling", "relative_to_comparator_arm"]
+            },
+            "margin": {
+              "description": "FR-053: distinct from the FR-018 non-inferiority margins and never reused from them. Zero means the threshold is applied exactly.",
+              "type": "number",
+              "minimum": 0
+            },
+            "confidence_method": {
+              "description": "FR-054: point_estimate compares the sample percentile directly and is only defensible at large n. upper_confidence_bound compares a distribution-free bound built from the order statistics, which is what keeps the comparison honest when a stratum is small.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["method", "confidence_level"],
+              "properties": {
+                "method": {"enum": ["point_estimate", "upper_confidence_bound_order_statistic", "upper_confidence_bound_bootstrap"]},
+                "confidence_level": {"type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1}
+              }
+            },
+            "missing_data_rule": {
+              "description": "FR-053: MUST NOT be silent exclusion. Failed, timed-out, and cancelled attempts are the ones most likely to occupy the upper tail, so dropping them biases the percentile downward and contradicts FR-020's prohibition on complete-case filtering. worst_case_imputation assigns the stratum ceiling to an attempt with no observation; report_jointly evaluates the guardrail only alongside the attrition count so the omission stays visible.",
+              "enum": ["worst_case_imputation", "report_jointly_with_attrition"]
+            },
+            "direction": {
+              "description": "FR-053: which way is worse. All four guarded quantities are costs, so higher is worse; stating it makes a breach objectively decidable rather than inferred from the _max suffix.",
+              "const": "higher_is_worse"
+            },
+            "multiplicity_family": {
+              "description": "FR-053: guardrails form a family of their own, distinct from the three FR-050 families, which cover the conjunctive floors-and-non-inferiority stage, the Pareto disjunctive half, and the across-ladder family. A guardrail belongs to none of them, so leaving it unassigned would leave a set of thresholds evaluated with no stated error control.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["family", "adjustment", "rationale"],
+              "properties": {
+                "family": {"const": "guardrail"},
+                "adjustment": {"type": "string", "minLength": 1},
+                "rationale": {"type": "string", "minLength": 1}
+              }
+            },
+            "breach_result": {
+              "description": "FR-053 and FR-019: a breach returns no qualification. It is never traded off against another dimension and never resolved by weighting.",
+              "const": "no_qualification"
+            },
+            "decision_bearing": {
+              "description": "FR-053: guardrails gate qualification but are NOT Pareto dimensions. The decision vector stays at the eight of FR-018; each added dimension would weaken dominance as a discriminator and raise the inconclusive rate.",
+              "const": false
+            }
+          }
+        },
         "strata": {
           "type": "array",
           "minItems": 1,
@@ -59,6 +133,9 @@
               "stratum_id",
               "weight",
               "long_horizon",
+              "membership_rule",
+              "stratum_minimum_unique_tasks",
+              "stratum_sample_size",
               "p95_duration_ms_max",
               "p95_input_tokens_max",
               "p95_cached_input_tokens_max",
@@ -68,6 +145,43 @@
               "stratum_id": {"type": "string", "minLength": 1},
               "weight": {"type": "number", "exclusiveMinimum": 0},
               "long_horizon": {"type": "boolean"},
+              "membership_rule": {
+                "description": "FR-052: the rule assigning a task to this stratum, stated in the frozen plan rather than left to the implementation. permitted_basis reuses the closed pre-execution set the assignment record's stratum_assignment carries, every member of which the role-corpus contract already binds before execution.",
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["permitted_basis", "derived_from_realized_outcomes"],
+                "properties": {
+                  "permitted_basis": {
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": {
+                      "enum": [
+                        "role_id",
+                        "objective",
+                        "permitted_tools",
+                        "mutation_contract",
+                        "expected_artifacts",
+                        "acceptance_oracle"
+                      ]
+                    }
+                  },
+                  "derived_from_realized_outcomes": {
+                    "description": "FR-052: pinned false. Realized duration, turns, tokens, retries, and compactions are post-treatment quantities; stratifying on them conditions the comparison on a consequence of the treatment, and would let the powered long-horizon stratum be populated after results are visible.",
+                    "const": false
+                  }
+                }
+              },
+              "stratum_minimum_unique_tasks": {
+                "description": "FR-054: the per-stratum estimability floor. A 95th percentile from a small sample is unstable — a distribution-free interval for an extreme upper percentile can fall well below its nominal confidence level at small n — so a stratum below this floor returns inconclusive rather than passing by default or being silently skipped.",
+                "type": "integer",
+                "minimum": 1
+              },
+              "stratum_sample_size": {
+                "description": "FR-052: every stratum, and the powered long_horizon stratum in particular, carries its own sample size rather than inheriting the pooled one. A stratum reported as a finding without an independent power declaration is a post-hoc subgroup rather than a prespecified one.",
+                "type": "integer",
+                "minimum": 1
+              },
               "p95_duration_ms_max": {"type": "integer", "minimum": 1},
               "p95_input_tokens_max": {"type": "integer", "minimum": 1},
               "p95_cached_input_tokens_max": {"type": "integer", "minimum": 0},
@@ -75,6 +189,33 @@
             }
           }
         }
+      }
+    },
+    "reliability_guardrails": {
+      "description": "FR-053: retry, compaction, and late-failure guardrails, frozen alongside the resource and duration ones. retries and compactions are already Pareto dimensions under FR-018, but pairwise dominance imposes no ABSOLUTE bound — two arms can both be unacceptably retry-heavy and still be mutually non-dominated — so these ceilings are a separate obligation from the decision vector and, like the p95 guardrails, are not decision-bearing dimensions.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["p95_retries_max", "p95_compactions_max", "late_failure_definition", "late_failure_rate_max", "breach_result"],
+      "properties": {
+        "p95_retries_max": {"type": "integer", "minimum": 0},
+        "p95_compactions_max": {"type": "integer", "minimum": 0},
+        "late_failure_definition": {
+          "description": "FR-053: 'late failure' is defined rather than assumed. A late failure is a candidate-plane terminal failure reached after the attempt has consumed at least this fraction of its per-attempt budget — the expensive failure mode, because the resource is spent and no outcome is produced. The failure itself is already classified by the closed candidate-plane codes; this only fixes what makes it late.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["budget_fraction_consumed_min", "qualifying_failure_planes"],
+          "properties": {
+            "budget_fraction_consumed_min": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+            "qualifying_failure_planes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"enum": ["candidate", "infrastructure"]}
+            }
+          }
+        },
+        "late_failure_rate_max": {"type": "number", "minimum": 0, "maximum": 1},
+        "breach_result": {"const": "no_qualification"}
       }
     },
     "cache_policy": {
@@ -221,8 +362,87 @@
       "description": "FR-038: this budget is authoritative. The experiment-policy budget must equal it for qualification-eligible partitions.",
       "$ref": "#/$defs/budget"
     },
-    "racing_policy": {"type": "object", "minProperties": 1},
-    "futility_policy": {"type": "object", "minProperties": 1},
+    "racing_policy": {
+      "description": "FR-055: racing stops a comparison early on accumulating evidence, so its content must be frozen, not merely its existence. Repeatedly testing accumulating data inflates the false-positive rate when boundaries are left unadjusted, which is a FOURTH error-control concern distinct from the three FR-050 multiplicity families — those address dimensions and ladders, not repeated looks over time.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interim_looks", "boundary", "look_schedule_frozen", "early_stop_biases_estimate", "stop_scope"],
+      "properties": {
+        "interim_looks": {
+          "description": "The number and information timing of every planned look. Information fractions are prespecified so a look cannot be added, moved, or repeated once an outcome is visible.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["count", "information_fractions"],
+          "properties": {
+            "count": {"type": "integer", "minimum": 0},
+            "information_fractions": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+            }
+          }
+        },
+        "boundary": {
+          "description": "How the inflation from repeated looks is controlled. An alpha-spending boundary distributes the total error rate across the planned looks rather than testing at the nominal level each time.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "rationale"],
+          "properties": {
+            "type": {"enum": ["obrien_fleming_alpha_spending", "pocock_alpha_spending", "no_early_efficacy_stop"]},
+            "rationale": {"type": "string", "minLength": 1}
+          }
+        },
+        "look_schedule_frozen": {
+          "description": "FR-055: pinned true. A look added after any outcome is visible invalidates the declaration rather than being absorbed into it.",
+          "const": true
+        },
+        "early_stop_biases_estimate": {
+          "description": "FR-055: pinned true. Stopping early biases the effect estimate, so a raced comparison is reported as stopped with its stopping reason and never presented as a completed one.",
+          "const": true
+        },
+        "stop_scope": {
+          "description": "FR-021 already requires complete-pair, arm-symmetric handling, so a stop retires the pair as a whole and never a single arm.",
+          "const": "complete_pair"
+        }
+      }
+    },
+    "futility_policy": {
+      "description": "FR-055: futility stops a comparison that is unlikely to reach a conclusion. Its boundary type must be declared because a binding boundary is part of the error-rate calculation while a non-binding one may be overridden without invalidating it — the two are not interchangeable.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interim_looks", "boundary_binding", "boundary", "look_schedule_frozen", "early_stop_biases_estimate", "stop_scope"],
+      "properties": {
+        "interim_looks": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["count", "information_fractions"],
+          "properties": {
+            "count": {"type": "integer", "minimum": 0},
+            "information_fractions": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+            }
+          }
+        },
+        "boundary_binding": {
+          "description": "FR-055: binding means crossing the boundary MUST stop the comparison and the boundary is credited in the error-rate calculation. non_binding means it MAY be overridden, so no error-rate credit is taken.",
+          "enum": ["binding", "non_binding"]
+        },
+        "boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "rationale"],
+          "properties": {
+            "type": {"type": "string", "minLength": 1},
+            "rationale": {"type": "string", "minLength": 1}
+          }
+        },
+        "look_schedule_frozen": {"const": true},
+        "early_stop_biases_estimate": {"const": true},
+        "stop_scope": {"const": "complete_pair"}
+      }
+    },
     "terminal_policy": {
       "type": "object",
       "additionalProperties": false,

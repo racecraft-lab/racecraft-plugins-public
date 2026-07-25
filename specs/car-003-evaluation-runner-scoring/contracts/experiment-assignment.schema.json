@@ -109,6 +109,7 @@
         "materialization_binding",
         "experiment_policy_binding",
         "environment_contract",
+        "stratum_assignment",
         "assigned_order",
         "pre_execution_timestamp",
         "superseded"
@@ -182,6 +183,40 @@
             "authentication_mode": {
               "description": "FR-042: the expected mode, compared against the run's observed mode reached through the snapshot binding. Subscription is the supported scored path; no supported path requires an API key.",
               "enum": ["subscription", "api_key"]
+            }
+          }
+        },
+        "stratum_assignment": {
+          "description": "FR-052: the workload stratum this pair belongs to, fixed in the pre-execution binding record alongside every other assignment field. Recording membership here is what makes 'membership was fixed before either arm ran' provable at replay rather than asserted. Stratum membership is a design-time allocation variable, so it must be derived from characteristics known before treatment, exactly as randomization strata in a controlled trial are built from prognostic baseline covariates rather than from observed results.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stratum_id", "long_horizon", "membership_basis", "derived_from_realized_outcomes"],
+          "properties": {
+            "stratum_id": {
+              "description": "MUST resolve to a stratum registered in the bound analysis plan's workload manifest, or to the manifest's unknown-stratum policy.",
+              "type": "string",
+              "minLength": 1
+            },
+            "long_horizon": {"type": "boolean"},
+            "membership_basis": {
+              "description": "FR-052: the closed set of task and protocol characteristics membership may be derived from. Every member is a field the role-corpus contract already binds before execution, so no new pre-execution vocabulary is coined. An empty basis is not permitted, because a stratum assignment with no stated basis is indistinguishable from one chosen after the fact.",
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "role_id",
+                  "objective",
+                  "permitted_tools",
+                  "mutation_contract",
+                  "expected_artifacts",
+                  "acceptance_oracle"
+                ]
+              }
+            },
+            "derived_from_realized_outcomes": {
+              "description": "FR-052: pinned false. Realized duration, turns, tokens, retries, and compactions are post-treatment quantities; stratifying on them conditions the comparison on an outcome of the treatment and induces selection bias, and would additionally let the powered long-horizon stratum be populated after results are visible.",
+              "const": false
             }
           }
         },

@@ -767,9 +767,10 @@ Focus on CAR-003 requirements:
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
 | data-integrity | 60 | 10 found / 10 remediated | FR-014, FR-018/022, FR-027, FR-032, FR-033, FR-037, FR-039, FR-044; plan.md; 4 CAR-owned contracts; data-model.md |
-| error-handling | | | |
+| error-handling | 60 | 7 found / 7 remediated | FR-019, FR-021, FR-028, FR-034, FR-051, SC-016; data-model.md; plan.md |
 | llm-integration | 47 | 10 found / 10 remediated | FR-002, FR-008, FR-009, FR-030, FR-039, FR-042, FR-047, FR-049; **new FR-051** environment contract; new SC-020/SC-021; plan.md, data-model.md, `experiment-assignment` |
-| performance | | | |
+| performance | 51 | 30 found / 30 remediated | FR-052…FR-057 new, SC-019 extended, SC-022…SC-025; `analysis-plan`, `experiment-assignment`, `car-003-additive-records`; plan.md, data-model.md |
+| **Total** | **218** | **57 found / 57 remediated** | 4 domains, matching G56R-003's completed set |
 | **Total** | | | |
 
 ### Addressing Gaps

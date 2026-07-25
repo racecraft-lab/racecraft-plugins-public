@@ -94,6 +94,18 @@ timestamps; invalidation criteria; `authentication_mode`.
   published freeze always has an empty `authority_failures` array and at least one
   admitted tuple — the existence of the record *is* the publication signal.
   Immutable does not imply reusable (FR-028, FR-044).
+- Every FR-028 publication-blocking condition maps to a closed
+  `authority_failures` member, so a blocked publication always carries a
+  recordable reason and is distinguishable at replay from a collection that
+  never ran. Nine conditions map one-to-one onto their like-named members. The
+  tenth — **required provenance missing**, where collection succeeds but omits
+  client version, environment boundary, collection method, raw digest,
+  timestamps, defaults, supported efforts, or invalidation criteria — records
+  `malformed_catalog`: a record lacking its own mandatory provenance is
+  structurally ill-formed, whereas `untrusted_collection` stays reserved for a
+  collection whose *authority* is in doubt rather than whose shape is
+  incomplete. No tenth member is coined; `authority_failures` matches the twin's
+  and widening it is a joint cross-platform change (FR-028, SC-016).
 - Non-reuse is checked, not asserted: each admitted tuple's
   `runtime_evidence_digest` must resolve to the collection record named by this
   freeze's own `runtime_snapshot_binding`. One resolving to the archived snapshot
@@ -193,6 +205,15 @@ fields, pinned and bound before execution. No new fields are introduced.
   contract; divergence blocks outcome scoring and records
   `failure_plane=treatment` with the existing closed
   `treatment_infrastructure_failure` code. No new failure-code member is coined.
+- A **confirmed divergence** and an **unobservable environment** never share a
+  code. Confirmed divergence is the treatment-plane record above. An environment
+  that cannot be observed at all is an evidence-completeness failure recording
+  `failure_plane=evidence_boundary` with the existing closed
+  `required_evidence_missing` code, and returns the terminal member
+  `inconclusive` (FR-051, FR-021). Both branches name a code: fixing one and
+  leaving the other unnamed would make the separation uncheckable and leave the
+  unobservable case free to be absorbed into the very code it must not share.
+  A condition with no evidence cannot be classified as having deviated.
 - Pinning the parent session is load-bearing, not bookkeeping: a subagent that
   declares no model inherits the parent's, and a plugin-shipped agent inherits
   the parent's permission mode, so an unpinned parent changes the treatment.
@@ -445,6 +466,38 @@ Closed taxonomies adopted verbatim from the Codex twin (FR-034):
   alias re-pointing. The capability-plane code `alias_repoint_unresolved` stays
   at the capability-freeze plane and is never repurposed here.
 
+**Plane is derived from code, never authored beside it** (FR-034). The two fields
+are one classification at two granularities, so the mapping is total in the code
+direction and onto in the plane direction:
+
+| `failure_plane` | `failure_code` members |
+|---|---|
+| `none` | `none` |
+| `treatment` | `treatment_misdelivery`, `service_reroute`, `mandatory_telemetry_missing`, `treatment_infrastructure_failure` |
+| `fixture` | `fixture_invalid`, `fixture_stale`, `fixture_partition_invalid`, `fixture_oracle_invalid` |
+| `scorer` | `scorer_invalid`, `scorer_stale`, `scorer_calibration_missing` |
+| `ballot` | `ballot_missing`, `ballot_non_blind`, `ballot_provenance_incomplete`, `ballot_rubric_stale` |
+| `adjudication` | `adjudication_disagreement_unresolved`, `adjudicator_invalid`, `adjudicator_stale`, `adjudicator_reused_primary_scorer` |
+| `candidate` | `candidate_failed`, `candidate_timed_out`, `candidate_cancelled`, `candidate_budget_exhausted`, `candidate_abandoned` |
+| `infrastructure` | `transient_harness_failure`, `infrastructure_failure` |
+| `evidence_boundary` | `unclassifiable_attrition`, `sensitive_evidence_violation`, `required_evidence_missing` |
+| `partition` | `partition_mismatch`, `partition_not_eligible`, `cross_partition_reuse` |
+| `schema` | `schema_invalid`, `binding_digest_mismatch` |
+
+A pair outside this table fails closed with `failure_plane=schema` and
+`failure_code=schema_invalid`. All 35 codes and all 11 planes are covered, so no
+failure can be filed on a plane other than its own.
+
+**Disposition is bound to the failure fields** (FR-034). `score_disposition=accepted`
+holds **if and only if** `failure_plane`, `failure_code`, and `invalidation_reason`
+are all `none`; `gate_failed` and `non_scorable` each carry a non-`none` plane and
+code; `invalidated` carries a non-`none` invalidation reason. Without the
+biconditional a bundle could record a live failure and still declare itself
+accepted — the failure written down and then absorbed with no effect on the
+outcome. This constrains **combinations** of existing members only; no member is
+added on either platform, and schema enforcement of the two rules above is a
+joint cross-platform change.
+
 **Resource vector**: exactly the eight decision-bearing dimensions —
 `input_tokens`, `cached_input_tokens`, `output_tokens`, `duration_ms`,
 `retries`, `compactions`, `acceptance`, `terminal_state` — identical to the
@@ -475,6 +528,14 @@ invalidation without mutating prior bundles.
   `classification_timing` pinned to `arm_blind_before_outcome_read`, because
   classifying after outcomes are visible is outcome-conditioned filtering
   (FR-021).
+- That pinned timing is a precommitment, not evidence it held. Each rerun
+  additionally binds an immutable **transient-classification record** carrying
+  the arm-blind evidence digest it was decided from, its own digest, and a
+  timestamp, created before either arm's outcome digest exists. A rerun whose
+  record is absent, or whose record post-dates an outcome digest for either arm,
+  is not granted and the pair returns `inconclusive`. This is the same
+  precommitment-versus-evidence correction FR-049 applies to cache-state
+  isolation, where a bound policy likewise needed observed per-arm evidence.
 - `scorer_family_exclusion` is static, with `paraphrase_normalization` pinned to
   `prohibited` (FR-047).
 - The budget **must equal** the frozen analysis-plan budget for
@@ -496,6 +557,44 @@ invalidation without mutating prior bundles.
   `pre_cohort_outcome_absence_digest` (FR-023, SC-012).
 - Binds workload strata with p95 raw-resource and p95-duration guardrails, and a
   cache-state isolation policy, before either arm runs (FR-049).
+- A guardrail is a **complete comparison, not a bare ceiling**. `guardrail_method`
+  supplies the denominator, comparator, margin, confidence method, missing-data
+  rule, direction, multiplicity family, and breach result that the four
+  `p95_*_max` thresholds alone cannot express (FR-053). Guardrails form their own
+  multiplicity family, distinct from the three of FR-050, and are pinned
+  `decision_bearing: false` — they gate qualification but never join the eight
+  Pareto dimensions, since each added dimension weakens dominance and raises the
+  inconclusive rate.
+- The missing-data rule is never silent exclusion. Failed, timed-out, and
+  cancelled attempts are the ones most likely to occupy the upper tail, so
+  dropping them biases the percentile downward and contradicts FR-020's
+  prohibition on complete-case filtering (FR-053).
+- Each stratum carries `membership_rule`, `stratum_minimum_unique_tasks`, and
+  `stratum_sample_size`. Membership derives only from the closed pre-execution
+  basis and pins `derived_from_realized_outcomes: false`, because realized
+  duration, turns, tokens, retries, and compactions are post-treatment
+  quantities — stratifying on them conditions the comparison on a consequence of
+  the treatment, and would let the powered `long_horizon` stratum be populated
+  after results are visible (FR-052).
+- A stratum below its estimability floor returns **inconclusive** rather than
+  passing by default. A p95 from a small sample is unstable: a distribution-free
+  interval for an extreme upper percentile can fall well below its nominal
+  confidence level at small n, so a point estimate compared against a fixed
+  ceiling is not a decidable test there (FR-054).
+- `reliability_guardrails` freezes retry, compaction, and late-failure ceilings
+  alongside the resource ones. `retries` and `compactions` are already Pareto
+  dimensions, but pairwise dominance imposes no **absolute** bound — two arms can
+  both be unacceptably retry-heavy and still be mutually non-dominated — so the
+  ceilings are a separate obligation from the decision vector (FR-053).
+- `racing_policy` and `futility_policy` state their content, not merely their
+  existence: the count and information timing of every planned look, the stopping
+  boundary, and — for futility — whether the boundary is binding or non-binding.
+  Repeated looks on accumulating data inflate the false-positive rate, which is a
+  **fourth** error-control concern distinct from the three FR-050 families; those
+  address dimensions and ladders, not repeated looks over time.
+  `look_schedule_frozen` and `early_stop_biases_estimate` are pinned true, and
+  `stop_scope` is pinned `complete_pair` because FR-021 already requires
+  arm-symmetric handling (FR-055).
 - `pareto_policy.dimensions` is exactly eight, `weights_prohibited` is pinned
   true, and `mixed_or_tied_result` is pinned `inconclusive`.
 - The multiplicity declaration covers **three families**, not one global
@@ -538,6 +637,25 @@ A stage that was not reached records `not_evaluated` rather than being omitted.
 **Terminal states**: `qualified`, `no_qualification`, `inconclusive`,
 `calibration_complete`, `invalid`.
 
+**Terminal mapping** (FR-019). "No qualification" in prose is the umbrella
+outcome — the candidate does not qualify — and is not the single member
+`no_qualification`. Every member except `qualified` is non-qualifying, so this
+mapping fixes *which* member is recorded, never *whether* a candidate qualifies.
+SC-011 requires replay to reconstruct the same member, so the routing is a
+correctness property:
+
+| Condition | Terminal member |
+|---|---|
+| Failed gate, failed absolute floor, failed non-inferiority | `no_qualification` — evidence sufficient, bar not cleared |
+| Tie, mixed dominance, statistical uncertainty, incomplete evidence, rerun-cap exhaustion, attrition cap exceeded, unclassifiable attrition, unobservable environment, campaign-budget exhaustion stopping collection early | `inconclusive` — evidence could not decide |
+| Binding, partition-eligibility, or reference-integrity failure | `invalid` |
+| Calibration partition completed | `calibration_complete` |
+
+Ties and mixed dominance route to `inconclusive` because the frozen plan pins
+`pareto_policy.mixed_or_tied_result`, and unclassifiable attrition because it
+pins `attrition_policy.unclassifiable_result` — both identical on the twin. The
+mapping records already-frozen behavior rather than choosing new behavior.
+
 **Invariants**:
 
 - A failed gate, tie, mixed dominance, incomplete evidence, or statistical
@@ -569,6 +687,33 @@ cache-creation classes the frozen CAR-002 telemetry profile already classifies a
 both the experiment policy and the analysis plan use the identical key set, so a
 ceiling can never be keyed differently from the measurement it bounds and silently
 stop applying (FR-022, FR-038).
+
+`observed_cache_isolation` carries the evidence half of FR-049. Binding
+`per_arm_ephemeral_root` in the experiment policy is a **precommitment**, not proof
+that isolation held, so each arm records the cache root it actually used and its
+disjointness from the paired arm's. Roots are recorded as **digests rather than
+paths**, because an absolute filesystem path is operator-only under FR-027 and
+FR-036 while a digest is sufficient to decide disjointness.
+
+`status` mirrors the FR-051 split between a confirmed deviation and an
+unobservable condition:
+
+- `observed_disjoint` — the only status that lets the pair contribute to the
+  resource comparison. It must carry both root digests and `roots_disjoint=true`;
+  it can never be asserted with absent evidence.
+- `observed_shared` — a confirmed isolation breach, recorded with the existing
+  closed `infrastructure_failure` code at `failure_plane=infrastructure`. The
+  infrastructure plane rather than the treatment plane, because a warmed cache
+  distorts the measurement of a run, not the route delivered to it.
+- `unobserved` — an evidence-completeness failure recorded with the existing
+  closed `required_evidence_missing` code at `failure_plane=evidence_boundary`,
+  following the FR-051 precedent that an unobservable condition returns
+  inconclusive under FR-021 rather than being classified as having deviated.
+
+No new failure code is coined for either branch; the score-plane taxonomy is closed
+and adopted verbatim under FR-034. This matters because `cached_input_tokens` is
+one of the eight decision-bearing dimensions, so an unverified cache artifact would
+enter the dominance result directly as though it were a route property.
 
 ## Sensitive-Evidence Allowlist
 

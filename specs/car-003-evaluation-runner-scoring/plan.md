@@ -60,8 +60,27 @@ this repository.
 **Project Type**: Plugin source (`speckit-pro/`) plus repository-only validation
 harness (`tests/speckit-pro/`).
 
-**Performance Goals**: None. Determinism and replayability are the operative
-properties, not speed. The default suite must make zero live model calls.
+**Performance Goals**: Determinism and replayability are the operative properties,
+but they are not free — the deterministic suite is the only surface that
+demonstrates SC-011 replay and SC-019 zero-live-call behavior, so an unbounded
+suite would leave both criteria unverifiable in routine practice (FR-057). Three
+bounds therefore apply:
+
+- **Deterministic replay**: p95 replay-bundle runtime under 10 seconds on a normal
+  developer checkout, matching the Codex twin's declared bound. The two platforms
+  must not diverge on whether replay cost is a stated property, since SC-011 is
+  claimed identically on both.
+- **Default suite**: CAR-003's additions must keep
+  `python3 tests/speckit-pro/run-all.py` within 6 minutes wall-clock on the CI
+  runner, derived from the measured pre-change baseline of roughly 4m30s at
+  3251/3251. The test workflow declares no `timeout-minutes`, so this budget is
+  the only ceiling; anything that would exceed it moves behind the operator-only
+  live path instead of entering the default suite.
+- **Replay fixtures**: bounded in count and size rather than growing per campaign,
+  so suite cost does not scale with accumulated cohort evidence.
+
+The default suite must make zero live model calls. Live campaign performance is
+recorded under frozen budgets and guardrails, not optimized by this feature.
 
 **Constraints**: No second materializer. No API-key requirement on any supported
 path. CAR-002 evidence and schemas immutable — emit new records under them, never
@@ -432,6 +451,25 @@ payload boundary clean (SC-019).
   that the effort took effect, and no independent effort-effect observation
   exists. The ladder is a claim about accepted configuration, not realized
   reasoning behavior.
+- **Open cross-platform coordination item — score-bundle terminal-field
+  constraints.** `score_disposition`, `failure_plane`, `failure_code`, and
+  `invalidation_reason` are four independent closed enumerations in the mirrored
+  `score-bundle` contract, with no cross-field constraint on either platform.
+  Nothing schema-side stops a code being filed on a foreign plane, or a bundle
+  declaring `score_disposition=accepted` while carrying a live failure plane and
+  code — a failure recorded and then absorbed with no effect on the outcome.
+  `spec.md` FR-034 now fixes both rules: plane is a total single-valued function
+  of code, and `accepted` holds if and only if all three failure fields are
+  `none`. The schema change is deliberately **not** applied here. The four
+  enumerations are verified byte-identical to the twin's, so a one-sided
+  constraint would reject on Claude what still validates on Codex, and FR-049
+  fixes the rule that a mirror divergence must be a joint change landed on both
+  platforms together. It is not slice-blocking — slice 2 owns the score-bundle
+  contract and the constraint restricts only *combinations* of members already
+  present on both sides — but it must be agreed with the twin before scoring
+  runs. The same coordination applies to `authority_failures`, where FR-028's
+  "required provenance is missing" has no dedicated member on either platform and
+  is pinned to the existing `malformed_catalog` rather than widened unilaterally.
 - **Open cross-platform coordination item — the experiment-policy binding
   cycle.** FR-037 resolves the calibration circular dependency at the comparison-pair
   level, and this plan's `experiment-assignment` schema enforces it. One edge away,
