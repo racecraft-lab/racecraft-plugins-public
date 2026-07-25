@@ -89,8 +89,8 @@ require to stay intact.
 **Purpose**: Establish the branch and measurement baseline every later task is
 judged against.
 
-- [ ] T001 Sync the default branch into this branch before any slice-1 edit, then confirm `tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py` is still unmodified on both the default branch and the in-flight Codex twin branch; resolve any overlap on that file by `git merge`, never rebase (FR-043)
-- [ ] T002 [P] Record the pre-change baseline in the slice-1 PR packet notes: run `python3 tests/speckit-pro/run-all.py` and capture the 3251/3251 result plus wall-clock, establishing the 6-minute CI budget reference and the zero-live-call starting point (FR-057, SC-019)
+- [x] T001 Sync the default branch into this branch before any slice-1 edit, then confirm `tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py` is still unmodified on both the default branch and the in-flight Codex twin branch; resolve any overlap on that file by `git merge`, never rebase (FR-043)
+- [x] T002 [P] Record the pre-change baseline in the slice-1 PR packet notes: run `python3 tests/speckit-pro/run-all.py` and capture the 3251/3251 result plus wall-clock, establishing the 6-minute CI budget reference and the zero-live-call starting point (FR-057, SC-019)
 
 ---
 
@@ -101,9 +101,9 @@ Both must land before any module work begins.
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T003 Re-verify the reviewability budget against this task list's actual file and slice scope and record the split decision (three ordered slices, Work Package A intact) in `specs/car-003-evaluation-runner-scoring/plan.md` Reviewability Gate; a regenerated set larger than twelve artifacts means re-run the gate and record the result, never split Work Package A (FR-025, SC-013)
-- [ ] T004 [P] TDD RED: add a failing assertion in `tests/speckit-pro/unit/test-exact-treatment-runner.py` that the dual-platform prompt-emulation runner and the lexical quality scorer emit a non-release marker in their results metadata, and that no historical smoke result can be read as route qualification evidence; observe FAIL before T005 (FR-007)
-- [ ] T005 Demote the shared dual-platform smoke runner: add the `non_release_evidence` marker to results metadata in `tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py` and make T004 pass. **This file is jointly owned with the in-flight Codex twin branch.** It is currently 495 lines and neither the default branch nor the twin has modified it, so this side may land first. T001 must have synced the default branch; resolve any later overlap by `git merge`, never rebase. This is the ONLY task that edits this file (FR-007, FR-043)
+- [x] T003 Re-verify the reviewability budget against this task list's actual file and slice scope and record the split decision (three ordered slices, Work Package A intact) in `specs/car-003-evaluation-runner-scoring/plan.md` Reviewability Gate; a regenerated set larger than twelve artifacts means re-run the gate and record the result, never split Work Package A (FR-025, SC-013)
+- [x] T004 [P] TDD RED: add a failing assertion in `tests/speckit-pro/unit/test-exact-treatment-runner.py` that the dual-platform prompt-emulation runner and the lexical quality scorer emit a non-release marker in their results metadata, and that no historical smoke result can be read as route qualification evidence; observe FAIL before T005 (FR-007)
+- [x] T005 Demote the shared dual-platform smoke runner: add the `non_release_evidence` marker to results metadata in `tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py` and make T004 pass. **This file is jointly owned with the in-flight Codex twin branch.** It is currently 495 lines and neither the default branch nor the twin has modified it, so this side may land first. T001 must have synced the default branch; resolve any later overlap by `git merge`, never rebase. This is the ONLY task that edits this file (FR-007, FR-043)
 
 **Checkpoint**: Shared surface claimed, reviewability decision recorded. Slice 1
 module work can begin.

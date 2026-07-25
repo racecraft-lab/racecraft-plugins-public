@@ -372,6 +372,34 @@ excluded policy areas — CAR-004 policy controls, CAR-005 availability simulati
 CAR-006 resolver and preflight, CAR-011 the `autopilot-fast-helper` agent — were
 already out of scope in the spec, not deferred by this plan.
 
+### Re-verification against the task list
+
+*Re-run at Setup against the committed `tasks.md`, as FR-025 and SC-013 require.*
+
+The task list decomposes the feature into 86 tasks. Re-deriving the budget from
+the repository paths those tasks actually name reproduces the per-slice figures
+above with no change: slice 1 names 11 authored files and 735 logic LOC, slice 2
+names 7 and 533, slice 3 names 7 and 590. The whole-feature total holds at 23
+authored files, because `suite-manifest.json` is the only path shared by all three
+slices and is counted once.
+
+The regenerated set named by T041 is **twelve** artifacts: `install_inventory.json`,
+`speckit-pro-runner.manifest.json`, and `speckit-pro-runner.sha256` under
+`speckit-pro/speckit_pro_runner/`; the installed-cache proof under
+`tests/speckit-pro/unit/fixtures/plugin-bash-confinement/`; and the four mirrored
+payload paths under each of `dist/claude/` and `dist/codex/`. Twelve is not larger
+than twelve, so the re-run trigger recorded above has not fired, and slice 1 holds
+at 23 changed paths — two under the 25-file block threshold.
+
+**Decision, unchanged: three ordered slices with Work Package A intact.** No task
+moves a slice across a threshold, so there is no basis to subdivide US1 and US2,
+which FR-025 and the roadmap require to stay together. The mechanical tasks-mode
+estimator disagrees, projecting `86 x 40` reviewable LOC and classifying
+production files by path prefix; neither heuristic fits a repository whose Python
+lives under `speckit-pro/` and `tests/speckit-pro/` and whose task list is
+deliberately fine-grained for TDD, so task count tracks test granularity rather
+than diff size. The hand-derived figures above stay authoritative.
+
 ### Sequencing and coordination
 
 1. **Sync from the default branch before slice 1 begins.** The shared
@@ -428,6 +456,17 @@ platform and fail on the other.
 
 Completion bar: the 3251 baseline plus the new tests, green, zero live calls,
 payload boundary clean (SC-019).
+
+**Pre-change baseline, measured at Setup.** Run on this branch before the first
+CAR-003 implementation edit, `python3 tests/speckit-pro/run-all.py` reported
+**3251/3251 passed** — Layer 1 1428, Layer 4 1637, Layer 5 186 — at exit 0 with
+zero failures, zero live model calls, and a wall clock of **4m41s**. That is the
+zero-live-call starting point and the reference the FR-057 six-minute CI budget
+and SC-019 are measured against, and it is the figure the slice-1 PR packet notes
+carry. At the same point the branch was level with the default branch (nothing
+behind), and the shared dual-platform smoke runner was byte-identical on the
+default branch, this branch, and the Codex twin branch, so the FR-043 coordination
+risk was still latent and this side could edit it first.
 
 ## Known Gaps
 
