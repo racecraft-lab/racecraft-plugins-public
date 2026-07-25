@@ -99,8 +99,10 @@ Before the first live call, the adapter must print and require confirmation of:
 - pinned client/build and runtime snapshot IDs;
 - `partition_type=calibration`;
 - `qualification_eligible=false`;
-- attempt, token, duration, and cost ceilings;
+- attempt, wall-clock, raw-input-token, cached-input-token, output-token,
+  candidate-count, confirmation-entry, and cost ceilings;
 - scorer/adjudicator and rubric versions;
+- frozen workload strata, p95 guardrails, and cache-isolation policy;
 - raw retention root outside the repository;
 - complete-pair rerun cap.
 

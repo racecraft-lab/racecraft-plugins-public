@@ -73,8 +73,8 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Specify | `$speckit-specify` | Complete | 26 testable requirements, 4 user stories, 14 success criteria; G1 passed with zero clarification markers |
 | Clarify | `$speckit-clarify` | Complete | Four sessions resolved authority, treatment, scoring, partition, statistical, and evidence contracts; G2 passed with zero markers |
 | Plan | `$speckit-plan` | Complete | Three ordered slices, five contract families, explicit ownership and generated boundaries; G3 passed |
-| Checklist | `$speckit-checklist` | In Progress | LLM integration checklist is the active domain |
-| Tasks | `$speckit-tasks` | Pending | Produce TDD-first tasks grouped by the three accepted slices |
+| Checklist | `$speckit-checklist` | Complete | All 141 checks pass; 6 gaps across Error Handling and Performance were remediated; G4 passed |
+| Tasks | `$speckit-tasks` | In Progress | Produce TDD-first tasks grouped by the three accepted slices |
 | Analyze | `$speckit-analyze` | Pending | Reconcile roadmap, design concept, spec, plan, and tasks |
 | Confidence Gate | G6.5 | Pending | Evaluate the Analyze consensus confidence emit before implementation |
 | Implement | `$speckit-implement` | Pending | Execute red-green-refactor and release-artifact regeneration |
@@ -592,7 +592,7 @@ $speckit-plan
 | `plan.md` | Complete — three slices, shipped materializer ownership, constitution, generated artifacts, and reviewability |
 | `research.md` | Complete — twelve decisions covering authority, reuse, calibration, inference, and CI/live boundaries |
 | `data-model.md` | Complete — append-only ID graph, state transitions, joins, invalidation, and evidence allowlist |
-| `contracts/` | Complete — successor freeze, experiment policy, corpus, score/adjudication, and analysis/decision schemas |
+| `contracts/` | Complete — successor freeze, experiment policy, corpus, score/adjudication, analysis-plan, and analysis/decision schemas |
 | `quickstart.md` | Complete — replay, explicit calibration, retention, analysis freeze, regeneration, and verification |
 
 ### Planning Reviewability Inputs
@@ -602,11 +602,11 @@ them from prose:
 
 - Reviewable LOC: 760 for the largest individual slice
 - Production Files: 5 for the largest individual slice
-- Total Files: 15 for the largest individual slice
+- Total Files: 16 for the largest individual slice
 - Primary Surface: harness/adapter
 - Accepted decomposition: three ordered review slices
 
-The authoritative `estimate-reviewable-loc` helper returned `pass` with 23
+The authoritative `estimate-reviewable-loc` helper returned `pass` with 24
 declared file operations. Its current production-file taxonomy reported zero
 because these Python sources live below repository-specific nested roots, so
 the explicit per-slice estimates above remain the conservative planning
@@ -700,15 +700,16 @@ Focus on G56R-003 requirements:
 
 ### Checklist Results
 
-| Checklist | Required Verdict |
-|---|---|
-| LLM integration | No unsupported platform claim or treatment/scoring ambiguity |
-| Data integrity | Complete immutable joins, partitions, versions, and retention rules |
-| Error handling | Every failure class and rerun path is explicit and fail-closed |
-| Performance | Estimand, budgets, inference, and decision rules are measurable |
+| Checklist | Status | Required Verdict |
+|---|---|---|
+| LLM integration | Complete — 34/34 pass, zero gaps; consensus skipped because no unresolved item was reported | No unsupported platform claim or treatment/scoring ambiguity |
+| Data integrity | Complete — 38/38 pass, zero gaps; consensus skipped because no unresolved item was reported | Complete immutable joins, partitions, versions, and retention rules |
+| Error handling | Complete — 35/35 pass after closing 2 gaps; consensus skipped because no unresolved item remained | Every failure class and rerun path is explicit and fail-closed |
+| Performance | Complete — 34/34 pass after closing 4 gaps; consensus skipped because no unresolved item remained | Estimand, budgets, inference, and decision rules are measurable |
 
-**G4 Gate:** Address every `[Gap]` or document why it is a deliberate
-non-goal, then rerun the affected checklist.
+**G4 Gate:** Passed — 0 `[Gap]` markers remain after one remediation loop for
+Error Handling and one for Performance. Every checklist executor reported zero
+unresolved consensus items.
 
 ---
 

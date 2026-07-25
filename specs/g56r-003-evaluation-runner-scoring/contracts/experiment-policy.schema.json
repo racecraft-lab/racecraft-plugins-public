@@ -57,12 +57,23 @@
     "budget": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["max_attempts", "max_duration_seconds", "max_input_tokens", "max_output_tokens"],
+      "required": [
+        "max_attempts",
+        "max_duration_seconds",
+        "max_input_tokens",
+        "max_cached_input_tokens",
+        "max_output_tokens",
+        "max_candidates",
+        "max_confirmation_entries"
+      ],
       "properties": {
         "max_attempts": {"type": "integer", "minimum": 1},
         "max_duration_seconds": {"type": "integer", "minimum": 1},
         "max_input_tokens": {"type": "integer", "minimum": 1},
-        "max_output_tokens": {"type": "integer", "minimum": 1}
+        "max_cached_input_tokens": {"type": "integer", "minimum": 0},
+        "max_output_tokens": {"type": "integer", "minimum": 1},
+        "max_candidates": {"type": "integer", "minimum": 1},
+        "max_confirmation_entries": {"type": "integer", "minimum": 0}
       }
     },
     "execution_mode": {"enum": ["deterministic_replay", "explicit_local_live"]}

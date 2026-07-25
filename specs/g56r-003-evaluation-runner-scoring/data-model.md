@@ -198,7 +198,8 @@ A non-executable contract may be `valid` but cannot become `assigned`.
 - analysis plan ID/digest
 - comparison-set generation policy
 - randomization/order policy
-- attempt budget and time limits
+- attempt, wall-clock, raw-input-token, cached-input-token, output-token,
+  candidate-count, and confirmation-entry ceilings
 - terminal-state disposition map
 - transient harness failure classifier
 - complete-pair rerun cap
@@ -346,12 +347,16 @@ acceptance zero when treatment evidence is otherwise valid.
 - `analysis_plan_id`, version, digest, status
 - calibration partition inputs and provenance
 - semantic/reliability floor definitions
+- frozen workload strata, target weights, long-horizon flags, minimum unique
+  tasks, unknown-stratum handling, p95 raw-resource and duration guardrails
 - non-inferiority endpoints, margins, confidence level, alpha, power, sample
   sizes, cluster unit/correlation handling, multiplicity adjustment
+- frozen cache-state isolation and treatment-order leakage policy
 - raw Pareto resource dimensions and directions
 - assigned-attempt estimand and terminal-state mapping
 - transient failure classifier and paired rerun cap
-- attrition limits, racing/futility rules, campaign budgets
+- attrition limits, racing/futility rules, and complete campaign budget
+  ceilings
 - freeze timestamp and proof that no later-cohort outcome existed
 
 **State**:
