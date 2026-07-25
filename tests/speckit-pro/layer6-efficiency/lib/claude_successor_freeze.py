@@ -999,12 +999,34 @@ def detect_alias_repoint(
     }
     record["attribution_digest"] = record_digest(record, digest_field="attribution_digest")
 
+    # A CONFIRMED re-point must block admission just as firmly as an
+    # unattributable one. Admitting only on "not unresolved" inverts the rule:
+    # the strongest possible evidence that the alias moved — an observed
+    # identity differing from the freeze-bound identity, with a complete
+    # override proof and an unchanged client — would be admitted, while merely
+    # unproven evidence would be excluded. A tuple whose alias no longer serves
+    # the bound identity is not a candidate for that identity (FR-039).
+    #
+    # `behavioral_only` is the one divergence that does NOT block: it is a
+    # documented serving-infrastructure change with the identity unchanged,
+    # which FR-045 records as bounded diagnostic context rather than a re-point.
+    # Only an UNATTRIBUTABLE divergence blocks freeze admission, and that is
+    # deliberate rather than fail-open. A confirmed re-point is handled on a
+    # different plane: FR-039 makes it non-scorable for the requested *run*,
+    # which the score-eligibility predicate enforces through
+    # `non_scorable_rerouted` — it does not disqualify the alias from the
+    # successor freeze. Blocking admission here would mean a re-pointed alias
+    # could never be admitted at all, which defeats the purpose of publishing a
+    # successor freeze: the freeze exists to record the new binding. An
+    # unattributable divergence is different in kind — a binding that cannot be
+    # attributed cannot be published on any evidence.
     admits = attribution != "alias_repoint_unresolved"
+    exclusion_reason = None if admits else "alias_repoint_unresolved"
     return AliasRepointFinding(
         record=record,
         attribution=attribution,
         admits=admits,
-        exclusion_reason=None if admits else "alias_repoint_unresolved",
+        exclusion_reason=exclusion_reason,
         behavioral_only=behavioral_only,
     )
 

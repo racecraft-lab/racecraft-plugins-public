@@ -320,6 +320,30 @@ class ParetoDominanceTests(unittest.TestCase):
         result = self.module.pareto_compare(vector(), vector(input_tokens=100_000))
         self.assertEqual(result.result, "comparator_dominates")
 
+    def test_a_strictly_beaten_candidate_fails_the_stage_and_cannot_qualify(self) -> None:
+        """A candidate the comparator dominates MUST NOT pass the resource stage.
+
+        Regression guard. The mapping previously treated `comparator_dominates`
+        as a stage pass, which is the clearest possible losing case. With no
+        condition raised the terminal resolver saw an empty condition set and
+        returned `qualified`, so the worst possible candidate qualified. Only
+        calibration partitions being ineligible kept that off a real decision.
+        """
+        for outcome, expected in (
+            ("candidate_dominates", "pass"),
+            ("comparator_dominates", "fail"),
+            ("mixed", "fail"),
+            ("tie", "fail"),
+            ("uncertain", "uncertain"),
+        ):
+            with self.subTest(outcome=outcome):
+                self.assertEqual(self.module._pareto_stage_result(outcome), expected)
+
+        # End to end: the strictly-beaten candidate must not reach `qualified`.
+        beaten = self.module.pareto_compare(vector(), vector(input_tokens=100_000))
+        self.assertEqual(beaten.result, "comparator_dominates")
+        self.assertEqual(self.module._pareto_stage_result(beaten.result), "fail")
+
     def test_identical_vectors_tie(self) -> None:
         self.assertEqual(self.module.pareto_compare(vector(), vector()).result, "tie")
 

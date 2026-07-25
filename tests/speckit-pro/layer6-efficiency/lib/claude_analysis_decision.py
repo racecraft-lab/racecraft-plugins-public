@@ -1060,7 +1060,17 @@ EVIDENCE_SHORTFALL_CONDITIONS = (
 
 
 def _pareto_stage_result(pareto_result: str) -> str:
-    if pareto_result in ("candidate_dominates", "comparator_dominates"):
+    """Map a dominance outcome onto a ladder stage result.
+
+    Only ``candidate_dominates`` passes. ``comparator_dominates`` is the
+    candidate being strictly beaten on every dimension — the clearest possible
+    losing case — and MUST fail the stage. Treating it as a pass inverts the
+    selection rule: with no condition raised, ``resolve_terminal`` sees an empty
+    condition set and returns ``qualified``, so the worst possible candidate
+    qualifies. A tie and mixed dominance already fail here, and FR-019 requires
+    a failed comparison to yield no qualification rather than a forced ranking.
+    """
+    if pareto_result == "candidate_dominates":
         return "pass"
     if pareto_result == "uncertain":
         return "uncertain"

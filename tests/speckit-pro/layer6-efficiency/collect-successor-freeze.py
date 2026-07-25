@@ -328,9 +328,15 @@ def collect() -> dict:
     ]
     body["sanitization_status"] = "passed"
 
-    body["collection_digest"] = sha256_text(
-        json.dumps({k: v for k, v in body.items() if k != "collection_digest"}, sort_keys=True)
-    )
+    # Seal with the LIBRARY's canonical digest, not a local json.dumps. The
+    # publication gate verifies with record_digest(), whose canonical form uses
+    # compact separators and ensure_ascii=False; sealing with default separators
+    # produces a digest that can never match, so every freeze would fail closed
+    # on `digest_mismatch` and no record would ever publish.
+    sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
+    from claude_successor_freeze import record_digest  # noqa: E402
+
+    body["collection_digest"] = record_digest(body, digest_field="collection_digest")
     return body
 
 
@@ -348,7 +354,11 @@ def main() -> int:
         return 2
     out_path.write_text(text, encoding="utf-8")
 
-    budget = record["budget"]
+    # The budget ledger is operator-only and lives in the retention store, not
+    # on the committed record — reading it off `record` raised KeyError after
+    # the write, so every operator run died before printing its summary.
+    retention = json.loads((REPO_ROOT / RETENTION_RELATIVE).read_text(encoding="utf-8"))
+    budget = retention["budget_ledger"]
     print(f"collection: {record['collection_id']}")
     print(f"attempts: {budget['attempts_used']}  cost: ${budget['observed_cost_usd']}")
     print(f"stop: {budget['stop_reason']}")
