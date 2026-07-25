@@ -78,7 +78,7 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Analyze | `$speckit-analyze` | Complete | Task-contract rerun passed with zero findings; G6 rerun passed |
 | Confidence Gate | G6.5 | Complete | Task-repair rerun passed at 0.99 against the 0.90 advisory threshold |
 | Implement | `$speckit-implement` | Complete | All 25 tasks complete; Slice 3 G7 passed with 25/25 tasks and zero markers |
-| Post | Post-Implementation | In Progress | Verification, task audit, review remediation, and integration are complete; PR preparation is active |
+| Post | Post-Implementation | In Progress | Verification, task audit, review remediation, integration, and packet validation are complete; PR creation is active |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -1062,9 +1062,9 @@ For every task:
 | Post: Self-Review | Complete | No edge-case gaps, requirement orphans, silent deferrals, or tidiness findings | None |
 | Post: UAT Runbook Generation | Skipped | `skipped: generate-uat-skeleton deferred`; no committed source-derived runbook exists | None; deferred output is fail-open |
 | Post: Final Reviewability Backstop | Complete | Deferred-helper rule satisfied by estimator pass at `3981dfe0`, three G7 slice records, and the ratified one-navigable-PR route | None |
-| Post: PR Packet/Body Generation | In Progress | — | Emit packet in dry-run, then apply |
-| Post: PR Body Generation | Pending | — | Validate packet-owned body |
-| Post: PR Creation | Pending | — | Create from validated packet fields |
+| Post: PR Packet/Body Generation | Complete | Packet and packet-owned body emitted by `pr-packet-output` in dry-run and apply modes | None |
+| Post: PR Body Generation | Complete | Read-only packet validation passed with `pr_blocked=false`; the required consumer-facing release-note block is present | None |
+| Post: PR Creation | In Progress | — | Persist packet validation, run the workflow contract, push, and create from validated packet fields |
 | Post: Review Remediation | Pending | — | Resolve findings against the pushed head |
 | Post: Retrospective | Pending | — | Record lessons and final state |
 

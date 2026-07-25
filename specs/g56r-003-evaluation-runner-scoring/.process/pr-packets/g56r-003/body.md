@@ -52,3 +52,9 @@ No manual UAT runbook was generated because the installed helper is deferred. Ru
 
 - Manual UAT runbook generation is deferred; deterministic verification is complete.
 - The optional Claude command directory is absent in this Codex worktree; doctor classified it as a non-blocking configuration warning.
+
+## Release note
+
+```release-note
+Codex routing evaluations now use reproducible, source-bound qualification evidence and calibration-only scoring before later routing policy decisions.
+```

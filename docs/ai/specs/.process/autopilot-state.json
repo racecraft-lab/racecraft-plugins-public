@@ -3,7 +3,7 @@
   "spec_id": "G56R-003",
   "feature_dir": "specs/g56r-003-evaluation-runner-scoring",
   "updated_at": "2026-07-25T17:37:11Z",
-  "active_step": "Post: PR Packet/Body Generation",
+  "active_step": "Post: PR Creation",
   "status": "in_progress",
   "settings": {
     "auto_commit": "per-phase",
@@ -583,6 +583,21 @@
         "atomicity_route": "one-navigable-PR",
         "marker_plan_present": false,
         "pr_side_effects_allowed": true
+      },
+      "pr_packet": {
+        "status": "passed",
+        "helper_id": "pr-packet-output",
+        "dry_run": "passed",
+        "apply": "passed",
+        "packet_path": "specs/g56r-003-evaluation-runner-scoring/.process/pr-packets/g56r-003.json",
+        "body_file": "specs/g56r-003-evaluation-runner-scoring/.process/pr-packets/g56r-003/body.md",
+        "title": "feat(g56r-003): add evaluation runner scoring"
+      },
+      "pr_body": {
+        "status": "passed",
+        "validation_helper": "validate-pr-packet-read-only",
+        "pr_blocked": false,
+        "release_note": "present"
       }
     }
   },
@@ -746,15 +761,15 @@
     },
     {
       "step": "Post: PR Packet/Body Generation",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Review Remediation",
