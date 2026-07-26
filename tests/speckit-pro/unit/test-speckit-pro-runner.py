@@ -19,6 +19,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 RUNNER_DIR = PLUGIN_ROOT / "speckit_pro_runner"
 RELEASE_PLEASE_BRANCH_PREFIX = "release-please--branches--"
+MANIFESTS_REFERENCE_PAGE = "docs-site/src/content/docs/reference/manifests.md"
+DEV_INSTALL_MANIFEST_PREFIX = ".specify/integrations/"
 sys.path.insert(0, str(PLUGIN_ROOT))
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
 RUNBOOK_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "platform-runbook-fixtures.md"
@@ -90,6 +92,39 @@ def changed_paths_against_review_base() -> list[str]:
             return changed
 
     raise AssertionError(f"Unable to diff changed paths against review base: {'; '.join(errors)}")
+
+
+def changed_lines_against_review_base(path: str) -> list[str]:
+    """Return added and removed content lines for one path, against the review base."""
+    candidates = ["origin/main...HEAD"]
+    parents = subprocess.run(
+        ["git", "rev-list", "--parents", "-n", "1", "HEAD"],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if parents.returncode == 0 and len(parents.stdout.split()) >= 3:
+        candidates.append("HEAD^1...HEAD")
+
+    errors = []
+    for candidate in candidates:
+        completed = subprocess.run(
+            ["git", "diff", "--unified=0", candidate, "--", path],
+            cwd=REPO_ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if completed.returncode == 0:
+            return [
+                line
+                for line in completed.stdout.splitlines()
+                if line[:1] in {"+", "-"} and not line.startswith(("+++", "---"))
+            ]
+        errors.append(f"{candidate}: {completed.stderr.strip() or completed.stdout.strip()}")
+
+    raise AssertionError(f"Unable to diff {path} against review base: {'; '.join(errors)}")
 
 
 def changed_status_against_review_base() -> dict[str, str]:
@@ -539,9 +574,22 @@ class RunnerFoundationTests(unittest.TestCase):
             allowed_exact.update(
                 {
                     *forbidden_exact,
-                    "docs-site/src/content/docs/reference/manifests.md",
+                    MANIFESTS_REFERENCE_PAGE,
                 }
             )
+        elif MANIFESTS_REFERENCE_PAGE in changed:
+            # The generated manifests page carries two kinds of claim. Published
+            # plugin versions are release surface and only a release may move
+            # them. The repo's own SpecKit dev-install state under
+            # .specify/integrations/ is not shipped to consumers, yet it feeds
+            # the same page, so a SpecKit upgrade previously deadlocked: the
+            # docs gate demanded a regenerate that this gate forbade.
+            # Gate on the claim rather than the path -- outside a release review
+            # the page may only move lines that cite a dev-install source.
+            dev_install_citation = f"`{DEV_INSTALL_MANIFEST_PREFIX}"
+            for line in changed_lines_against_review_base(MANIFESTS_REFERENCE_PAGE):
+                self.assertIn(dev_install_citation, line, line)
+            allowed_exact.add(MANIFESTS_REFERENCE_PAGE)
         allowed_xplat008_exact = {
             "docs-site/src/content/docs/contribute-and-release.md",
             "docs-site/src/content/docs/first-run.md",
