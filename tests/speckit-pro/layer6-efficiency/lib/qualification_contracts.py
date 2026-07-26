@@ -80,7 +80,7 @@ BINDING_AUTHORITY_FIELDS = frozenset({
     "corpus_binding",
     "workload_manifest_binding",
     "experiment_policy_binding",
-    "analysis_plan_binding",
+    "calibration_protocol_binding",
     "role_binding",
     "fixture_binding",
     "objective_binding",
@@ -105,9 +105,28 @@ COMPARISON_ASSIGNMENT_BUNDLE_FIELDS = frozenset({
     "partition_registry",
     "binding_authorities",
     "experiment_policy",
-    "analysis_plan",
+    "calibration_protocol",
     "executed_pair_snapshots",
     "refresh_invalidations",
+})
+CALIBRATION_PROTOCOL_FIELDS = frozenset({
+    "schema_version",
+    "calibration_protocol_id",
+    "calibration_protocol_version",
+    "calibration_protocol_digest",
+    "status",
+    "partition_binding",
+    "candidate_freeze_binding",
+    "runtime_snapshot_binding",
+    "pinned_client_binding",
+    "corpus_binding",
+    "workload_manifest_binding",
+    "scorer_bindings",
+    "rubric_binding",
+    "adjudicator_binding",
+    "cache_policy_binding",
+    "frozen_at",
+    "independent_review_binding",
 })
 PARTITION_BINDING_FIELDS = frozenset({
     "partition_id",
@@ -152,7 +171,7 @@ ASSIGNMENT_PAIR_FIELDS = frozenset({
     "instruction_binding",
     "capability_binding",
     "experiment_policy_binding",
-    "analysis_plan_binding",
+    "calibration_protocol_binding",
     "assigned_order",
     "invalidation_policy",
 })
@@ -235,7 +254,7 @@ def _validated_refresh_invalidations(value: object) -> list[dict]:
             "materialization_refresh",
             "route_resolution_refresh",
             "policy_refresh",
-            "plan_refresh",
+            "protocol_refresh",
             "partition_refresh",
         }:
             raise ValueError("refresh invalidation reason is outside the closed inventory")
@@ -281,7 +300,7 @@ def _validate_binding_authorities(value: object, registry_partition: dict) -> di
         "corpus_binding",
         "workload_manifest_binding",
         "experiment_policy_binding",
-        "analysis_plan_binding",
+        "calibration_protocol_binding",
         "role_binding",
         "fixture_binding",
         "objective_binding",
@@ -334,7 +353,7 @@ def _validate_assignment_pair(
     authorities: dict,
     invalidations: list[dict],
     policy_binding: dict,
-    plan_binding: dict,
+    protocol_binding: dict,
 ) -> dict:
     row = _closed(value, set(ASSIGNMENT_PAIR_FIELDS), "comparison assignment pair")
     _digest(row["assignment_pair_id"], "comparison assignment pair ID")
@@ -386,11 +405,16 @@ def _validate_assignment_pair(
     row["experiment_policy_binding"] = _validate_binding(
         row["experiment_policy_binding"], "comparison experiment policy binding",
     )
-    row["analysis_plan_binding"] = _validate_binding(
-        row["analysis_plan_binding"], "comparison analysis plan binding",
+    row["calibration_protocol_binding"] = _validate_binding(
+        row["calibration_protocol_binding"],
+        "comparison calibration protocol binding",
     )
     _require_equal(row["experiment_policy_binding"], policy_binding, "comparison policy binding")
-    _require_equal(row["analysis_plan_binding"], plan_binding, "comparison plan binding")
+    _require_equal(
+        row["calibration_protocol_binding"],
+        protocol_binding,
+        "comparison calibration protocol binding",
+    )
     if sorted(row["assigned_order"]) != ["candidate", "comparator"]:
         raise ValueError("comparison assigned order must contain each treatment arm exactly once")
     if row["invalidation_policy"] != "additive_only":
@@ -406,7 +430,7 @@ def _validate_comparison_sets(
     authorities: dict,
     invalidations: list[dict],
     policy_binding: dict,
-    plan_binding: dict,
+    protocol_binding: dict,
     comparison_policy: dict,
 ) -> list[dict]:
     if not isinstance(value, list) or not value:
@@ -422,7 +446,13 @@ def _validate_comparison_sets(
         )
         _require_equal(row["partition_binding"], registry_partition, "comparison set partition binding")
         row["assignment_pairs"] = [
-            _validate_assignment_pair(item, authorities, invalidations, policy_binding, plan_binding)
+            _validate_assignment_pair(
+                item,
+                authorities,
+                invalidations,
+                policy_binding,
+                protocol_binding,
+            )
             for item in row["assignment_pairs"]
         ]
         ordered_pairs = sorted(
@@ -473,20 +503,92 @@ def _validate_comparison_sets(
     return rows
 
 
-def _validate_analysis_plan_for_assignment(value: object, authorities: dict, registry_partition: dict) -> dict:
-    if not isinstance(value, dict):
-        raise ValueError("analysis plan must be an object")
-    if value.get("schema_version") != "analysis-plan.v1" or value.get("status") != "frozen":
-        raise ValueError("analysis plan must be frozen before assignment validation")
-    plan_binding = _expected_object_binding(
-        value, "analysis_plan_id", "analysis_plan_digest", "analysis plan",
+def _validate_calibration_protocol_for_assignment(
+    value: object,
+    authorities: dict,
+    registry_partition: dict,
+    invalidations: list[dict],
+) -> dict:
+    row = _closed(
+        value,
+        set(CALIBRATION_PROTOCOL_FIELDS),
+        "calibration protocol",
     )
-    _require_equal(plan_binding, authorities["analysis_plan_binding"], "analysis plan binding")
+    if (
+        row["schema_version"] != "calibration-protocol.v1"
+        or row["status"] != "frozen_before_calibration"
+    ):
+        raise ValueError("calibration protocol must be frozen before assignment validation")
+    expected_digest = digest({
+        key: item
+        for key, item in row.items()
+        if key not in {"calibration_protocol_id", "calibration_protocol_digest"}
+    })
+    if row["calibration_protocol_digest"] != expected_digest:
+        raise ValueError("calibration protocol digest does not match frozen content")
+    if row["calibration_protocol_id"] != content_id(
+        row,
+        "calibration_protocol_id",
+    ):
+        raise ValueError("calibration protocol ID does not match frozen content")
+    protocol_binding = _expected_object_binding(
+        row,
+        "calibration_protocol_id",
+        "calibration_protocol_digest",
+        "calibration protocol",
+    )
+    _require_equal(
+        protocol_binding,
+        authorities["calibration_protocol_binding"],
+        "calibration protocol binding",
+    )
     partition = _validate_partition_binding(
-        value.get("calibration_partition_binding"), "analysis plan calibration partition",
+        row["partition_binding"],
+        "calibration protocol partition",
     )
-    _require_equal(partition, registry_partition, "analysis plan partition binding")
-    return value
+    _require_equal(
+        partition,
+        registry_partition,
+        "calibration protocol partition binding",
+    )
+    for field in ("candidate_freeze_binding", "runtime_snapshot_binding"):
+        binding = _validate_binding(
+            row[field],
+            f"calibration protocol {field}",
+        )
+        _binding_is_current_or_invalidated(
+            binding,
+            authorities[field],
+            invalidations,
+            f"calibration protocol {field}",
+        )
+        row[field] = binding
+    for field in ("corpus_binding", "workload_manifest_binding"):
+        row[field] = _validate_binding(row[field], f"calibration protocol {field}")
+        _require_equal(
+            row[field],
+            authorities[field],
+            f"calibration protocol {field}",
+        )
+    for field in (
+        "pinned_client_binding",
+        "rubric_binding",
+        "adjudicator_binding",
+        "cache_policy_binding",
+        "independent_review_binding",
+    ):
+        row[field] = _validate_binding(row[field], f"calibration protocol {field}")
+    if not isinstance(row["scorer_bindings"], list) or len(row["scorer_bindings"]) != 2:
+        raise ValueError("calibration protocol must bind exactly two scorers")
+    row["scorer_bindings"] = [
+        _validate_binding(item, "calibration protocol scorer binding")
+        for item in row["scorer_bindings"]
+    ]
+    if len({item["id"] for item in row["scorer_bindings"]}) != 2:
+        raise ValueError("calibration protocol scorer bindings must be distinct")
+    _text(row["calibration_protocol_version"], "calibration protocol version")
+    _timestamp(row["frozen_at"], "calibration protocol freeze timestamp")
+    return row
 
 
 def _validate_executed_pair_snapshots(value: object, pairs: Mapping[str, dict]) -> list[dict]:
@@ -519,7 +621,7 @@ def _validate_executed_pair_snapshots(value: object, pairs: Mapping[str, dict]) 
 
 def _validate_experiment_policy_for_assignment(
     value: object,
-    analysis_plan: dict,
+    calibration_protocol: dict,
     registry_partition: dict,
     authorities: dict,
     invalidations: list[dict],
@@ -532,10 +634,17 @@ def _validate_experiment_policy_for_assignment(
         value, "experiment_policy_id", "policy_digest", "experiment policy",
     )
     _require_equal(policy_binding, authorities["experiment_policy_binding"], "experiment policy binding")
-    plan_binding = _expected_object_binding(
-        analysis_plan, "analysis_plan_id", "analysis_plan_digest", "analysis plan",
+    protocol_binding = _expected_object_binding(
+        calibration_protocol,
+        "calibration_protocol_id",
+        "calibration_protocol_digest",
+        "calibration protocol",
     )
-    _require_equal(plan_binding, authorities["analysis_plan_binding"], "policy analysis plan authority")
+    _require_equal(
+        protocol_binding,
+        authorities["calibration_protocol_binding"],
+        "policy calibration protocol authority",
+    )
     partition = _validate_partition_binding(
         value.get("partition_binding"), "experiment policy partition binding",
     )
@@ -554,9 +663,12 @@ def _validate_experiment_policy_for_assignment(
             f"experiment policy {field}",
         )
     _require_equal(
-        _validate_binding(value.get("analysis_plan_binding"), "experiment policy analysis plan binding"),
-        plan_binding,
-        "experiment policy analysis plan binding",
+        _validate_binding(
+            value.get("calibration_protocol_binding"),
+            "experiment policy calibration protocol binding",
+        ),
+        protocol_binding,
+        "experiment policy calibration protocol binding",
     )
     policy = _closed(
         value.get("comparison_policy"),
@@ -580,7 +692,7 @@ def _validate_experiment_policy_for_assignment(
     _digest(policy["randomization_seed_digest"], "comparison randomization seed digest")
     value["comparison_sets"] = _validate_comparison_sets(
         value.get("comparison_sets"), registry_partition, authorities, invalidations,
-        policy_binding, plan_binding, policy,
+        policy_binding, protocol_binding, policy,
     )
     return value
 
@@ -602,11 +714,18 @@ def validate_comparison_assignment_bundle(bundle: object) -> dict:
     )
     invalidations = _validated_refresh_invalidations(row["refresh_invalidations"])
     authorities = _validate_binding_authorities(row["binding_authorities"], registry_partition)
-    row["analysis_plan"] = _validate_analysis_plan_for_assignment(
-        row["analysis_plan"], authorities, registry_partition,
+    row["calibration_protocol"] = _validate_calibration_protocol_for_assignment(
+        row["calibration_protocol"],
+        authorities,
+        registry_partition,
+        invalidations,
     )
     row["experiment_policy"] = _validate_experiment_policy_for_assignment(
-        row["experiment_policy"], row["analysis_plan"], registry_partition, authorities, invalidations,
+        row["experiment_policy"],
+        row["calibration_protocol"],
+        registry_partition,
+        authorities,
+        invalidations,
     )
     pairs = {
         pair["assignment_pair_id"]: pair

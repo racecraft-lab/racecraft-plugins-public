@@ -80,8 +80,10 @@ freeze path and exits nonzero.
 ## 5. Run the explicit calibration-only pilot
 
 Live execution is never a default CI action. The operator must provide a
-calibration partition, a pinned successor freeze, a frozen experiment policy,
-an explicit budget, and an operator-only raw evidence root:
+calibration partition, a pinned successor freeze, a frozen calibration
+protocol-bound experiment policy, an explicit budget, and an operator-only raw
+evidence root. The protocol is frozen before pilot execution and contains no
+margins, sample sizes, quality floors, or terminal thresholds:
 
 ```bash
 python3 tests/speckit-pro/layer6-efficiency/run-codex-qualification.py \
@@ -143,9 +145,11 @@ python3 tests/speckit-pro/layer6-efficiency/run-codex-qualification.py \
   --output tests/speckit-pro/layer6-efficiency/calibration/analysis-plan.json
 ```
 
-The freeze must prove that no G56R-007 through G56R-010 outcome-bearing
-evidence existed at the freeze point. Later changes create a new plan and
-invalidate dependent decisions; they never mutate the old plan.
+The freeze copies the calibration protocol binding from the independently
+reviewed calibration report into the plan and must prove that no G56R-007
+through G56R-010 outcome-bearing evidence existed at the freeze point. Later
+changes create a new plan and invalidate dependent decisions; they never
+mutate the old plan.
 
 ## 8. Refresh shipped runner artifacts
 

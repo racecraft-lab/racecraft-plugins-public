@@ -12,7 +12,7 @@
     "partition_binding",
     "candidate_freeze_binding",
     "corpus_binding",
-    "analysis_plan_binding",
+    "calibration_protocol_binding",
     "workload_manifest_binding",
     "comparison_policy",
     "comparison_sets",
@@ -29,7 +29,7 @@
     "partition_binding": {"$ref": "#/$defs/calibrationPartitionBinding"},
     "candidate_freeze_binding": {"$ref": "#/$defs/binding"},
     "corpus_binding": {"$ref": "#/$defs/binding"},
-    "analysis_plan_binding": {"$ref": "#/$defs/binding"},
+    "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
     "workload_manifest_binding": {"$ref": "#/$defs/binding"},
     "comparison_policy": {"$ref": "#/$defs/comparisonPolicy"},
     "comparison_sets": {
@@ -129,7 +129,7 @@
         "instruction_binding",
         "capability_binding",
         "experiment_policy_binding",
-        "analysis_plan_binding",
+        "calibration_protocol_binding",
         "assigned_order",
         "invalidation_policy"
       ],
@@ -147,7 +147,7 @@
         "instruction_binding": {"$ref": "#/$defs/instructionBinding"},
         "capability_binding": {"$ref": "#/$defs/capabilityBinding"},
         "experiment_policy_binding": {"$ref": "#/$defs/binding"},
-        "analysis_plan_binding": {"$ref": "#/$defs/binding"},
+        "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
         "assigned_order": {
           "oneOf": [
             {

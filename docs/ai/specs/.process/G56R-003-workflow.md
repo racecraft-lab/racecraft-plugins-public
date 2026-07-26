@@ -72,13 +72,13 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | 26 testable requirements, 4 user stories, 14 success criteria; G1 passed with zero clarification markers |
 | Clarify | `$speckit-clarify` | Complete | Four sessions resolved authority, treatment, scoring, partition, statistical, and evidence contracts; G2 passed with zero markers |
-| Plan | `$speckit-plan` | Complete | Three ordered slices, six contract families, explicit ownership and generated boundaries; G3 passed |
+| Plan | `$speckit-plan` | Complete | Three ordered slices, seven contract families, explicit ownership and generated boundaries; G3 passed |
 | Checklist | `$speckit-checklist` | Complete | All 141 checks pass; 6 gaps across Error Handling and Performance were remediated; G4 passed |
 | Tasks | `$speckit-tasks` | Complete | Repaired to 25 self-contained TDD tasks, 3 conflict-safe fixture groups, all 38 requirements mapped; G5 rerun passed |
 | Analyze | `$speckit-analyze` | Complete | Task-contract rerun passed with zero findings; G6 rerun passed |
 | Confidence Gate | G6.5 | Complete | Task-repair rerun passed at 0.99 against the 0.90 advisory threshold |
 | Implement | `$speckit-implement` | Complete | All 25 tasks complete; Slice 3 G7 passed with 25/25 tasks and zero markers |
-| Post | Post-Implementation | In Progress | PR #386 is open; a completed `/review` reported 34 additional blocking findings across provenance, cross-module contracts, and statistical decisions |
+| Post | Post-Implementation | Complete | PR #386 is open; review findings and the follow-up experiment-policy ordering contradiction are remediated |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -618,7 +618,7 @@ $speckit-plan
 | `plan.md` | Complete — three slices, shipped materializer ownership, constitution, generated artifacts, and reviewability |
 | `research.md` | Complete — twelve decisions covering authority, reuse, calibration, inference, and CI/live boundaries |
 | `data-model.md` | Complete — append-only ID graph, state transitions, joins, invalidation, and evidence allowlist |
-| `contracts/` | Complete — successor freeze, experiment policy, corpus, score/adjudication, analysis-plan, and analysis/decision schemas |
+| `contracts/` | Complete — successor freeze, calibration protocol, experiment policy, corpus, score/adjudication, analysis-plan, and analysis/decision schemas |
 | `quickstart.md` | Complete — replay, explicit calibration, retention, analysis freeze, regeneration, and verification |
 
 ### Planning Reviewability Inputs
@@ -1037,8 +1037,8 @@ For every task:
 | T014 | Complete | Score-bundle additions produced 2 failures and 50 missing schema/API errors | Scoring 20/20; immutable ID/digest joins, closed taxonomy, terminal estimand records, and additive invalidation verified |
 | T015 | Complete | Evidence safety/replay additions produced 5 failures against the prior 19-test baseline | Scoring 24/24; deny-by-default sanitizer, opaque bindings, stale-version invalidation, deterministic replay, and zero sensitive scan matches verified |
 | T016 | Complete | End-to-end regression produced 1 failure and 1 missing summary API error | Scoring 25/25; corpus 10/10 + 3/3 + 1/1 + 1/1; privacy 10/10; Layer 4 1637/1637; docs reference current; G7 passed |
-| T017 | Complete | Four contract tests produced 6 assertions for missing repository schemas | Qualification contracts 19/19; closed experiment, analysis-plan, and ordered decision schemas verified |
-| T018 | Complete | Five comparison tests produced 21 missing-API errors and 1 export failure | Qualification contracts 24/24; complete pre-execution joins, calibration isolation, additive invalidation, and rebinding refusal verified |
+| T017 | Complete | Four contract tests produced 6 assertions for missing repository schemas; follow-up RED rejected every calibration policy without a post-calibration plan | Qualification contracts 34/34; calibration-protocol substitution, closed experiment, analysis-plan lineage, and ordered decision schemas verified |
+| T018 | Complete | Five comparison tests produced 21 missing-API errors and 1 export failure | Qualification contracts 34/34; complete pre-execution protocol joins, calibration isolation, additive invalidation, and rebinding refusal verified |
 | T019 | Complete | Six statistics tests produced 12 missing-behavior assertion failures | Statistics 6/6; floors → paired cluster-adjusted NI → raw Pareto order, uncertainty, ties, mixed outcomes, and no hidden weights verified |
 | T020 | Complete | Four workload/cache tests produced 10 failures and 1 missing-API error | Statistics 10/10; closed strata, p95 tail guardrails, minimum tasks, unknown-stratum handling, cache isolation, and order-leak rejection verified |
 | T021 | Complete | Four terminal/rerun tests produced 4 failures and 5 missing-behavior errors | Statistics 14/14; acceptance-zero terminals, evidence-boundary attrition, capped complete-pair reruns, and one-arm/complete-case refusal verified |
@@ -1066,6 +1066,7 @@ For every task:
 | Post: PR Body Generation | Complete | Read-only packet validation passed with `pr_blocked=false`; the required consumer-facing release-note block is present | None |
 | Post: PR Creation | Complete | PR [#386](https://github.com/racecraft-lab/racecraft-plugins-public/pull/386) created from the validated packet at pushed head `9fcff1d2` | None |
 | Post: Review Remediation | Complete | All 23 P1, 11 P2, and 3 later static-quality findings are remediated through `b926d8a4`; the full repository suite passes 3251/3251, all PR checks passed on that code head, and all 6 review threads are resolved | None |
+| Post: Experiment-Policy Contradiction Remediation | Complete | Both experiment-policy contracts now bind the pre-calibration protocol correctly; FR-037/FR-038 and protocol-to-plan lineage are repaired without weakening the validated calibration-decision gate; focused contract/statistics tests pass 67/67 and the full suite passes 3251/3251 | Full closed-schema enforcement on the pilot entry point remains a separately scoped follow-up; this contradiction fix lands first |
 | Post: Retrospective | Complete | Reproducibility, failed authority assumptions, reusable boundaries, and later-cohort invalidation rules recorded; roadmap marks G56R-003 complete in PR #386 | None |
 
 - [x] All tasks are complete and trace to requirements.

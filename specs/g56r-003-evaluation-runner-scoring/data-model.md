@@ -18,16 +18,17 @@ source_snapshot_id + current_ledger_digest
   └─ runtime_catalog_collection_id + raw_catalog_digest + parsed_catalog_digest
       └─ runtime_capability_snapshot_id
           └─ candidate_freeze_id
-              └─ comparison_set_id
-                  └─ assignment_id
-                      ├─ materialization_id
-                      ├─ fixture_id
-                      ├─ experiment_policy_id
-                      ├─ analysis_plan_id
-                      └─ execution_trace_id
-                          └─ score_bundle_id
-                              └─ analysis_output_id
-                                  └─ decision_bundle_id
+              └─ calibration_protocol_id
+                  └─ comparison_set_id
+                      └─ assignment_id
+                          ├─ materialization_id
+                          ├─ fixture_id
+                          ├─ experiment_policy_id
+                          └─ execution_trace_id
+                              └─ score_bundle_id
+                                  └─ analysis_plan_id
+                                      └─ analysis_output_id
+                                          └─ decision_bundle_id
 ```
 
 The graph is append-only. Every child validates the ID and digest of each
@@ -188,6 +189,28 @@ A non-executable contract may be `valid` but cannot become `assigned`.
 - helper results are excluded from required-core primary statistics;
 - only admitted executable routes are scheduled.
 
+## Entity: Calibration Protocol
+
+**Purpose**: Freeze the calibration-only operational authorities that must
+exist before any pilot pair executes, without precommitting values that
+calibration exists to estimate.
+
+**Required fields**:
+
+- `calibration_protocol_id`, version, digest, and
+  `status=frozen_before_calibration`
+- calibration partition ID/type/digest with `qualification_eligible=false`
+- candidate freeze, runtime snapshot, pinned client, corpus, and workload
+  manifest bindings
+- scorer, rubric, adjudicator, cache-policy, and independent-review bindings
+- pre-calibration freeze timestamp
+
+**Invariants**:
+
+- margins, sample sizes, quality floors, and terminal thresholds are forbidden;
+- changes issue a new protocol and additively invalidate affected assignments;
+- the later frozen analysis plan binds the exact protocol ID and digest.
+
 ## Entity: Experiment Policy
 
 **Required fields**:
@@ -195,7 +218,8 @@ A non-executable contract may be `valid` but cannot become `assigned`.
 - `experiment_policy_id`, version, digest
 - partition ID/type and eligibility
 - candidate freeze and corpus ID/digest bindings
-- analysis plan ID/digest
+- exactly one eligibility-selected authority: calibration protocol ID/digest
+  for ineligible partitions, or analysis plan ID/digest for eligible partitions
 - comparison-set generation policy
 - randomization/order policy
 - attempt, wall-clock, raw-input-token, cached-input-token, output-token,
@@ -223,7 +247,8 @@ A non-executable contract may be `valid` but cannot become `assigned`.
 - candidate freeze and runtime snapshot bindings
 - route-resolution binding
 - materialization binding
-- experiment policy and analysis plan bindings
+- experiment policy binding and exactly one eligibility-selected calibration
+  protocol or analysis plan binding
 - assigned order and pre-execution timestamp
 
 **Invariants**:
@@ -345,6 +370,7 @@ acceptance zero when treatment evidence is otherwise valid.
 **Required fields**:
 
 - `analysis_plan_id`, version, digest, status
+- calibration protocol ID/digest
 - calibration partition inputs and provenance
 - semantic/reliability floor definitions
 - frozen workload strata, target weights, long-horizon flags, minimum unique

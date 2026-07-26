@@ -10,6 +10,7 @@
     "analysis_plan_version",
     "analysis_plan_digest",
     "status",
+    "calibration_protocol_binding",
     "calibration_partition_binding",
     "calibration_evidence_bindings",
     "freeze_provenance",
@@ -32,6 +33,7 @@
     "analysis_plan_version": {"type": "string", "minLength": 1},
     "analysis_plan_digest": {"$ref": "#/$defs/digest"},
     "status": {"const": "frozen"},
+    "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
     "calibration_partition_binding": {"$ref": "#/$defs/calibrationPartitionBinding"},
     "calibration_evidence_bindings": {
       "type": "array",

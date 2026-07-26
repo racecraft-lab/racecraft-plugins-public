@@ -37,6 +37,7 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [research.md](research.md)
 - [contracts/analysis-decision.schema.json](contracts/analysis-decision.schema.json)
 - [contracts/analysis-plan.schema.json](contracts/analysis-plan.schema.json)
+- [contracts/calibration-protocol.schema.json](contracts/calibration-protocol.schema.json)
 - [contracts/experiment-policy.schema.json](contracts/experiment-policy.schema.json)
 - [contracts/role-corpus.schema.json](contracts/role-corpus.schema.json)
 - [contracts/score-bundle.schema.json](contracts/score-bundle.schema.json)

@@ -190,8 +190,11 @@ As an experiment owner, I can run a calibration-only pilot, freeze the numeric a
 - **Immutable comparison assignment**: Before execution, each pair binds its
   comparison set, candidate/comparator routes, role, fixture, task,
   instruction/configuration hashes, capability snapshot/freeze, route
-  resolution, experiment policy, and analysis plan. Later refreshes create
-  additive invalidations and never rebind the pair.
+  resolution, experiment policy, and exactly one eligibility-selected
+  authority: the frozen calibration protocol when
+  `qualification_eligible=false`, or the frozen analysis plan when
+  `qualification_eligible=true`. Later refreshes create additive invalidations
+  and never rebind the pair.
 - **Decision sequence**: Apply absolute semantic/reliability floors, then
   task-paired and cluster-adjusted non-inferiority against prespecified
   margins, then raw-vector Pareto dominance. A failed gate, tie, mixed
@@ -248,8 +251,8 @@ As an experiment owner, I can run a calibration-only pilot, freeze the numeric a
 - **FR-034**: Score bundles MUST use closed score disposition, failure plane, failure code, and invalidation reason fields; fixture, scorer, rubric, adjudicator, treatment, capability, partition, or schema version changes MUST create additive invalidations without mutating prior bundles. The closed score failure-code taxonomy MUST include `none` only for `failure_plane=none` and MUST distinguish, at minimum, treatment misdelivery, service reroute, missing mandatory telemetry, invalid or stale fixture, invalid or stale scorer, missing or non-blind ballot, unresolved adjudication disagreement, invalid or stale adjudicator, candidate terminal outcome, infrastructure failure, evidence-boundary violation, partition violation, schema violation, and unclassifiable attrition.
 - **FR-035**: Semantic scoring MUST require two distinct scorer identities and execution records, candidate-blind artifacts, a frozen rubric version/digest, current scorer calibration, and a frozen third adjudicator for every decision-affecting ballot disagreement.
 - **FR-036**: Committed scorer evidence MUST be limited to sanitized schemas, manifests, deterministic fixtures, opaque scorer identities, rubric/scorer/adjudicator digests, anonymized ballots, score bundles, and evidence references; raw scoring prompts, responses, transcripts, personal identity mappings, and private runtime evidence MUST remain operator-only.
-- **FR-037**: Before execution, each pair MUST immutably bind the comparison set, candidate and comparator routes, role, fixture, task, instruction/configuration hashes, capability snapshot/freeze, route resolution, experiment policy, and analysis plan; later refreshes MUST create additive invalidations instead of rebinding.
-- **FR-038**: One schema-governed, versioned analysis plan MUST freeze workload strata, p95 guardrails, margins, sample sizes, sample-size assumptions, power, alpha, multiplicity, racing and futility rules, attrition caps, campaign budgets, cache policy, and terminal rules after calibration and before any G56R-007 through G56R-010 cohort outcome is observed.
+- **FR-037**: Before execution, each pair MUST immutably bind the comparison set, candidate and comparator routes, role, fixture, task, instruction/configuration hashes, capability snapshot/freeze, route resolution, experiment policy, and exactly one eligibility-selected authority: `calibration_protocol_binding` when `qualification_eligible=false`, or `analysis_plan_binding` when `qualification_eligible=true`; binding both, neither, or the wrong authority MUST fail closed, and later refreshes MUST create additive invalidations instead of rebinding.
+- **FR-038**: Before calibration, one schema-governed, versioned calibration protocol MUST freeze the calibration partition and operational authority bindings without margins, sample sizes, quality floors, or terminal thresholds. After calibration and before any G56R-007 through G56R-010 cohort outcome is observed, one schema-governed, versioned analysis plan MUST bind that protocol and freeze workload strata, p95 guardrails, margins, sample sizes, sample-size assumptions, power, alpha, multiplicity, racing and futility rules, attrition caps, campaign budgets, cache policy, and terminal rules.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -283,10 +286,11 @@ As an experiment owner, I can run a calibration-only pilot, freeze the numeric a
 - **Execution Trace**: A replayable G56R-003 trace identified by `execution_trace_id` and trace digest under the existing G56R-002 trace contract; it exists for every assigned attempt regardless of score eligibility.
 - **Role Fixture Contract**: A versioned role/source-bound objective, partition, tool/sandbox, expected-artifact, acceptance-oracle, digest, and independent-validity contract, including roles without executable Codex TOMLs.
 - **Fixture Corpus**: The full twelve-role corpus containing the eleven required core roles and `autopilot-fast-helper`.
-- **Experiment Bundle**: Versioned assignment record that immutably binds partition, comparison set, candidate/comparator routes, role, fixture, task, configuration, capability, route-resolution, policy, and analysis-plan identities before execution.
+- **Calibration Protocol**: Versioned pre-calibration authority for the ineligible partition, pinned runtime, corpus/workload, scorer/rubric/adjudicator, cache policy, and independent review; it intentionally excludes margins, sample sizes, quality floors, and terminal thresholds.
+- **Experiment Bundle**: Versioned assignment record that immutably binds partition, comparison set, candidate/comparator routes, role, fixture, task, configuration, capability, route-resolution, policy, and exactly one eligibility-selected calibration-protocol or analysis-plan identity before execution.
 - **Ballot**: Candidate-blind scorer judgment tied to one opaque scorer identity and execution record, frozen rubric and calibration versions, timestamp, and provenance.
 - **Score Bundle**: Versioned hard-gate, two-ballot, adjudication, closed failure/invalidation, and provenance output that references but never embeds or mutates its immutable execution traces.
-- **Analysis Plan**: Schema-governed, post-calibration, pre-cohort frozen numeric rules for floors, workload strata, p95 raw-resource and p95-duration guardrails, clustered paired non-inferiority, Pareto comparison, margins, sample size and assumptions, power, alpha, multiplicity, racing/futility, reruns, attrition, campaign budgets, cache-state isolation, terminal policy, estimand inclusion, and inconclusive outcomes.
+- **Analysis Plan**: Schema-governed, post-calibration, pre-cohort frozen numeric rules that bind their source calibration protocol and define floors, workload strata, p95 raw-resource and p95-duration guardrails, clustered paired non-inferiority, Pareto comparison, margins, sample size and assumptions, power, alpha, multiplicity, racing/futility, reruns, attrition, campaign budgets, cache-state isolation, terminal policy, estimand inclusion, and inconclusive outcomes.
 - **Decision Bundle**: Replayable qualification result that references the frozen analysis plan and score-bundle versions/digests and records the terminal decision and reasons.
 
 ## Success Criteria *(mandatory)*

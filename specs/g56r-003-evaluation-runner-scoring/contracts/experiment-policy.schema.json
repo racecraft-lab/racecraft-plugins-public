@@ -11,7 +11,6 @@
     "partition",
     "candidate_freeze_binding",
     "corpus_binding",
-    "analysis_plan_binding",
     "assignment_policy",
     "terminal_policy",
     "rerun_policy",
@@ -25,6 +24,7 @@
     "partition": {"$ref": "#/$defs/partition"},
     "candidate_freeze_binding": {"$ref": "#/$defs/binding"},
     "corpus_binding": {"$ref": "#/$defs/binding"},
+    "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
     "analysis_plan_binding": {"$ref": "#/$defs/binding"},
     "assignment_policy": {
       "type": "object",
@@ -78,6 +78,29 @@
     },
     "execution_mode": {"enum": ["deterministic_replay", "explicit_local_live"]}
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "partition": {
+            "properties": {
+              "qualification_eligible": {"const": true}
+            },
+            "required": ["qualification_eligible"]
+          }
+        },
+        "required": ["partition"]
+      },
+      "then": {
+        "required": ["analysis_plan_binding"],
+        "not": {"required": ["calibration_protocol_binding"]}
+      },
+      "else": {
+        "required": ["calibration_protocol_binding"],
+        "not": {"required": ["analysis_plan_binding"]}
+      }
+    }
+  ],
   "$defs": {
     "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "binding": {

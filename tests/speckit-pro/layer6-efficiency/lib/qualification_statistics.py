@@ -166,6 +166,7 @@ _ANALYSIS_PLAN_FIELDS = frozenset({
     "analysis_plan_version",
     "analysis_plan_digest",
     "status",
+    "calibration_protocol_binding",
     "calibration_partition_binding",
     "calibration_evidence_bindings",
     "freeze_provenance",
@@ -666,6 +667,10 @@ def _validate_plan(analysis_plan: object) -> dict:
     )
     validated["analysis_plan_digest"] = _digest(
         plan["analysis_plan_digest"], "analysis plan digest",
+    )
+    validated["calibration_protocol_binding"] = _validate_binding(
+        plan["calibration_protocol_binding"],
+        "analysis plan calibration protocol binding",
     )
     validated["calibration_partition_binding"] = _validate_partition(
         plan["calibration_partition_binding"],
@@ -1585,6 +1590,9 @@ def _frozen_plan_summary(plan: dict) -> dict:
     policy = plan["non_inferiority"]
     return {
         "analysis_plan_version": plan["analysis_plan_version"],
+        "calibration_protocol_binding": copy.deepcopy(
+            plan["calibration_protocol_binding"]
+        ),
         "calibration_partition_binding": copy.deepcopy(plan["calibration_partition_binding"]),
         "calibration_evidence_bindings": copy.deepcopy(plan["calibration_evidence_bindings"]),
         "freeze_provenance": copy.deepcopy(plan["freeze_provenance"]),

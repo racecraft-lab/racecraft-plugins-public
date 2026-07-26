@@ -211,6 +211,11 @@ freezes margins, sample sizes, power, alpha, multiplicity, racing/futility,
 attrition caps, budgets, and terminal rules before any G56R-007 through
 G56R-010 outcome is observed.
 
+A versioned calibration protocol freezes the calibration partition and
+operational authority bindings before pilot execution. It deliberately carries
+no margins, sample sizes, quality floors, or terminal thresholds. The later
+analysis plan binds the protocol from which it was derived.
+
 Every artifact binds one closed partition. Calibration is permanently
 `qualification_eligible=false`, cannot mix with later partitions, and cannot
 emit final route policy.

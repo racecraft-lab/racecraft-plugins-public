@@ -304,6 +304,7 @@ def analysis_plan_fixture(cluster_unit: str = "role", per_cluster_minimum: int =
         "analysis_plan_version": "2026-07-24.calibration",
         "analysis_plan_digest": digest("analysis-plan-digest"),
         "status": "frozen",
+        "calibration_protocol_binding": binding("calibration-protocol"),
         "calibration_partition_binding": partition_binding("calibration", eligible=False),
         "calibration_evidence_bindings": [binding("calibration-evidence")],
         "freeze_provenance": {
@@ -707,27 +708,40 @@ def ordered_results(stop_gate: str | None = None) -> list[tuple[str, str]]:
     return rows
 
 
-def calibration_report_fixture() -> dict:
+def seal_calibration_report(report: dict) -> dict:
+    sealed = copy.deepcopy(report)
+    sealed["calibration_report_digest"] = digest({
+        key: value
+        for key, value in sealed.items()
+        if key not in {"calibration_report_id", "calibration_report_digest"}
+    })
+    sealed["calibration_report_id"] = content_id(
+        sealed,
+        "calibration_report_id",
+    )
+    return sealed
+
+
+def calibration_report_fixture(*, completed: bool = True) -> dict:
     plan = analysis_plan_fixture()
+    outcomes = paired_outcomes(
+        candidate_semantic=0.9 if completed else 0.84,
+    )
     decision = load_statistics_module().evaluate_qualification_decision(
         analysis_plan=plan,
-        paired_outcomes=paired_outcomes(),
+        paired_outcomes=outcomes,
         partition=partition_binding(),
     )
-    report = {
+    return seal_calibration_report({
         "schema_version": "calibration-report.v1",
+        "calibration_protocol_binding": copy.deepcopy(
+            plan["calibration_protocol_binding"]
+        ),
         "calibration_partition_binding": partition_binding(),
         "calibration_evidence_bindings": copy.deepcopy(plan["calibration_evidence_bindings"]),
         "freeze_provenance": copy.deepcopy(plan["freeze_provenance"]),
         "analysis_decision": decision,
-    }
-    report["calibration_report_digest"] = digest({
-        key: value
-        for key, value in report.items()
-        if key not in {"calibration_report_id", "calibration_report_digest"}
     })
-    report["calibration_report_id"] = content_id(report, "calibration_report_id")
-    return report
 
 
 class QualificationStatisticsTests(unittest.TestCase):
@@ -836,6 +850,10 @@ class QualificationStatisticsTests(unittest.TestCase):
         self.assertEqual(result["frozen_plan"]["cache_policy"], plan["cache_policy"])
         self.assertEqual(result["frozen_plan"]["campaign_budget"], plan["campaign_budget"])
         self.assertEqual(result["frozen_plan"]["analysis_plan_version"], plan["analysis_plan_version"])
+        self.assertEqual(
+            result["frozen_plan"]["calibration_protocol_binding"],
+            plan["calibration_protocol_binding"],
+        )
         self.assertEqual(result["frozen_plan"]["calibration_evidence_bindings"], plan["calibration_evidence_bindings"])
         self.assertEqual(result["frozen_plan"]["freeze_provenance"], plan["freeze_provenance"])
         self.assertEqual(result["workload_cache"]["status"], "pass")
@@ -854,6 +872,7 @@ class QualificationStatisticsTests(unittest.TestCase):
     def test_analysis_plan_freeze_metadata_is_required_before_statistics(self) -> None:
         cases = [
             ("analysis_plan_version", ("analysis_plan_version",)),
+            ("calibration_protocol_binding", ("calibration_protocol_binding",)),
             ("calibration_evidence_bindings", ("calibration_evidence_bindings",)),
             ("freeze_provenance", ("freeze_provenance",)),
             ("independent_review_binding", ("freeze_provenance", "independent_review_binding")),
@@ -897,6 +916,7 @@ class QualificationStatisticsTests(unittest.TestCase):
     def test_analysis_plan_schema_keeps_numeric_freeze_and_budget_complete(self) -> None:
         schema = json.loads(ANALYSIS_PLAN_SCHEMA_PATH.read_text(encoding="utf-8"))
 
+        self.assertIn("calibration_protocol_binding", schema["required"])
         self.assertIn("freeze_provenance", schema["required"])
         self.assertIn("independent_review_binding", schema["$defs"]["freezeProvenance"]["required"])
         self.assertIn(
@@ -1849,6 +1869,52 @@ class DeterministicQualificationReplayTests(unittest.TestCase):
         self.assertEqual(payload["decision"]["decision"], "calibration_complete")
         self.assertFalse(payload["execution_boundary"]["network_access"])
         self.assertEqual(payload["execution_boundary"]["live_repository_writes"], [])
+
+    def test_cli_freeze_analysis_plan_requires_completed_protocol_bound_report(self) -> None:
+        cases = (
+            (
+                "missing_protocol",
+                "calibration_report_invalid",
+            ),
+            (
+                "incomplete",
+                "calibration_not_complete",
+            ),
+            (
+                "invalid_protocol_binding",
+                "calibration_protocol_binding_invalid",
+            ),
+        )
+        for label, reason in cases:
+            with self.subTest(case=label):
+                with tempfile.TemporaryDirectory() as temporary:
+                    root = Path(temporary)
+                    report_path = root / "calibration-report.json"
+                    draft_path = root / "analysis-plan-draft.json"
+                    output_path = root / "analysis-plan.json"
+                    report = calibration_report_fixture(
+                        completed=label != "incomplete",
+                    )
+                    if label == "missing_protocol":
+                        report.pop("calibration_protocol_binding")
+                    elif label == "invalid_protocol_binding":
+                        report["calibration_protocol_binding"].pop("digest")
+                    report = seal_calibration_report(report)
+                    draft = analysis_plan_fixture()
+                    draft["status"] = "draft_from_calibration"
+                    write_canonical_json(report_path, report)
+                    write_canonical_json(draft_path, draft)
+
+                    completed = run_qualification_cli(
+                        "freeze-analysis-plan",
+                        "--calibration-report", str(report_path),
+                        "--draft-plan", str(draft_path),
+                        "--output", str(output_path),
+                    )
+
+                self.assertEqual(completed.returncode, 2)
+                payload = json.loads(completed.stdout)
+                self.assertEqual(payload["reason"], reason)
 
     def test_cli_freeze_analysis_plan_rejects_schema_invalid_post_hoc_and_missing_budget_drafts(self) -> None:
         cases = [

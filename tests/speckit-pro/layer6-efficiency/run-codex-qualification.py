@@ -681,6 +681,7 @@ def freeze_analysis_plan_command(args: argparse.Namespace) -> tuple[int, dict[st
         "schema_version",
         "calibration_report_id",
         "calibration_report_digest",
+        "calibration_protocol_binding",
         "calibration_partition_binding",
         "calibration_evidence_bindings",
         "freeze_provenance",
@@ -729,6 +730,10 @@ def freeze_analysis_plan_command(args: argparse.Namespace) -> tuple[int, dict[st
             "calibration_not_complete",
             "analysis plan may freeze only after a calibration-complete decision",
         )
+    protocol_binding = _require_binding(
+        report.get("calibration_protocol_binding"),
+        "calibration protocol binding",
+    )
     partition = _require_calibration_partition(
         report.get("calibration_partition_binding")
     )
@@ -762,6 +767,7 @@ def freeze_analysis_plan_command(args: argparse.Namespace) -> tuple[int, dict[st
         _require_binding(item, "calibration evidence binding")
     frozen = copy.deepcopy(draft)
     frozen["status"] = "frozen"
+    frozen["calibration_protocol_binding"] = protocol_binding
     frozen["calibration_partition_binding"] = partition
     frozen["calibration_evidence_bindings"] = copy.deepcopy(evidence)
     frozen["freeze_provenance"] = copy.deepcopy(provenance)
