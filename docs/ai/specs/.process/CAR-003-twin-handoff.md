@@ -432,9 +432,21 @@ be recorded on both specs because both currently assert the spec-scoped placemen
 
 ## Summary of what the Claude side owes
 
-| Item | Claude-side action | Blocks the twin? |
+| Item | Claude-side action | Status |
 |---|---|---|
-| 1 — experiment policy | none (already fixed) | no |
-| 2 — FR-058 | update FR-058's trailing sentence once the mirror lands | no |
-| 3 — FR-014 ruling | four edits listed above, in the same joint change | yes — must land together |
-| 4 — shared contracts | none under Option 1; substantial under Option 2 | depends on option |
+| 1 — experiment policy | none (already fixed) | **CLOSED** — twin landed `06a77dd3` |
+| 2 — FR-058 | update FR-058's trailing sentence once the mirror lands | open, waiting on the twin's mirror |
+| 3 — FR-014 ruling | four edits listed above | **CLOSED on this side** — all four verified applied 2026-07-26; twin-side additions remain |
+| 4 — shared contracts | none under Option 1; substantial under Option 2 | open, option not yet chosen |
+
+**Where the remainder is tracked.** Items 2 and 4, together with the twin-side
+half of item 3, are carried by roadmap spec **CAR-012 / G56R-012 — Mirrored
+Evaluation-Contract Reconciliation**, raised 2026-07-26 so nothing here depends on
+this handoff document being re-read. Anything G56R-003 closes on its own PR leaves
+that scope; anything it does not, enters it.
+
+CAR-012 also carries three items this handoff did not name, because they were
+found after it was written: the `invalidation_reason` gap (CHK051), the
+score-bundle terminal-field constraints, and the analysis-decision calibration
+binding — where a `calibration_complete` bundle is required to bind an analysis
+plan that does not exist yet, on both platforms.

@@ -42,6 +42,7 @@ tiers**.
 | 6 | CAR-006 | Route-policy manifest, materializer, session preflight, and override validation | Sequential framework slice |
 | 7 | CAR-007, CAR-008, CAR-009, CAR-010 | Qualify four disjoint agent cohorts | Parallel after CAR-006; serialize shared regeneration |
 | 8 | CAR-011 | Compose final identities, rebuild payload, run installed UAT, and prove release readiness | Sequential integration |
+| 9 | CAR-012 | Reconcile the mirrored evaluation contracts with G56R-003 | Joint change; must land on both platforms together |
 
 **Execution order:** CAR-001 -> CAR-002 -> CAR-003 -> CAR-004 ->
 CAR-005 -> CAR-006 -> CAR-007 + CAR-008 + CAR-009 + CAR-010 ->
@@ -213,6 +214,12 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
                                                             |
                                                             v
                  CAR-011 Final Composition, Installed UAT, and Release Proof
+
+CAR-003 --+
+          +--> CAR-012 Mirrored Evaluation-Contract Reconciliation
+G56R-003 -+     (joint change; lands with G56R-012 on both platforms)
+                Not on the CAR-004..CAR-011 critical path. Required before any
+                analysis pools outcomes across the two platforms.
 ```
 
 ## Progress Tracking
@@ -230,6 +237,7 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
 | CAR-009 | Read-only Reasoning and Orchestration-support Agent Routing | Pending | - | Blocked by CAR-006 |
 | CAR-010 | Optional Latency-first Helper Routing and No-helper Path | Pending | - | Blocked by CAR-006 |
 | CAR-011 | Payload, Installed Skill UAT, Fallback Proof, and Release Integration | Pending | - | Blocked by CAR-007 through CAR-010 |
+| CAR-012 | Mirrored Evaluation-Contract Reconciliation with G56R-003 | Pending | - | Raised 2026-07-26 from CAR-003 open coordination items; joint change with G56R-012 |
 
 **Status legend:** Pending | Ready | In Progress | In Review | Complete | Blocked
 
@@ -920,6 +928,86 @@ fixes if warned
 - `tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py`
 - `tests/speckit-pro/layer7-integration/` - skill-driven spawn and result-use proof
 - `docs/ai/specs/.process/` - release and live-UAT evidence
+
+---
+
+### CAR-012: Mirrored Evaluation-Contract Reconciliation with G56R-003
+
+**Priority:** P2 | **Depends On:** CAR-003 (merged), G56R-003 (merged) |
+**Enables:** pooled cross-platform analysis in CAR-007 through CAR-010
+
+**Goal:** Land, as one joint change across both platforms, the mirrored
+evaluation-contract corrections that CAR-003 and G56R-003 each identified but
+neither could apply alone.
+
+**Why this cannot be a unilateral fix.** Every item below touches a contract
+whose members are verified byte-identical across the two worktrees. FR-049 fixes
+the rule: a mirror divergence must be a joint change landed on both platforms
+together. A one-sided edit produces evidence that validates on the platform that
+made it and fails on the platform that did not, which is worse than the gap it
+closes. Each item was therefore deliberately left open with its reasoning
+recorded, not overlooked.
+
+**Reviewability Budget:** Primary surface: contracts/schemas |
+Projected reviewable LOC: 180 | Suggested slices: 1 | Status: ok |
+Production files: approximately 0 | Total files: approximately 12 |
+Budget result: re-estimate at scaffold; schema-and-spec change with paired tests
+on both platforms
+
+**Scope:**
+
+- **Analysis-decision calibration binding.** Both platforms require
+  `analysis_plan_binding` unconditionally on every decision bundle, including a
+  `calibration_complete` bundle produced before any analysis plan exists. The
+  CAR-003 calibration pilot satisfies that requirement by writing the calibration
+  protocol binding into the plan-named field, so a calibration decision claims to
+  bind an artifact it did not. Apply the FR-037 substitution one edge further:
+  a `qualification_eligible=false` decision binds the calibration protocol and not
+  the plan. Both contracts pin `schema_version` to `const "1.0.0"` and committed
+  CAR-003 evidence declares that version, so the change requires a coordinated
+  version bump rather than an in-place tightening — already-sealed evidence must
+  stay conforming to the version it was written under.
+- **CHK051 — `invalidation_reason` has no analysis-plan or budget-change member.**
+  FR-056 currently enforces non-pooling through `{id, digest}` binding identity,
+  which detects a superseding plan but leaves the invalidation unnamed, so a
+  reviewer reading an excluded bundle sees no recorded reason. The enum is closed
+  under `additionalProperties: false` and byte-identical on both sides; a
+  unilateral member would validate on one platform and fail on the other.
+- **Score-bundle terminal-field constraints.** FR-034 fixes two rules — plane is a
+  total single-valued function of code, and `score_disposition=accepted` holds if
+  and only if all three failure fields are `none` — and both are enforced in the
+  Python implementation on each platform. Neither schema carries the cross-field
+  constraint, so nothing schema-side stops a code being filed on a foreign plane
+  or a bundle absorbing a live failure while declaring `accepted`. The same
+  coordination covers `authority_failures`, where FR-028's "required provenance is
+  missing" is pinned to the existing `malformed_catalog` rather than widened.
+- **Carry over any G56R-003 handoff item still open at merge.** The CAR-003 twin
+  handoff records the twin-side additions: FR-034's total plane-by-code mapping,
+  FR-014's missing-gate sentence with its `non_scorable` disposition consequence,
+  the FR-058 direction-of-preference mirror, and the three-way shared-contract
+  collision at `tests/speckit-pro/layer6-efficiency/contracts/` where two
+  structurally different documents share one `$id`. Items G56R-003 closes on its
+  own PR leave this scope; items it does not, enter it.
+
+**Out of Scope:**
+
+- Any change to the four closed enumerations' existing members. Additions are in
+  scope only where named above; renames and removals are not.
+- Regenerating CAR-003's committed calibration evidence. There is no
+  rebuild-from-retention path, so regeneration means a new live run whose
+  measurements would differ from the ones the frozen analysis plan was derived
+  from.
+- Reverting either platform's correct side to restore symmetry with a defect.
+
+**Key Files:**
+
+- `specs/car-003-evaluation-runner-scoring/contracts/analysis-decision.schema.json`
+- `specs/car-003-evaluation-runner-scoring/contracts/score-bundle.schema.json`
+- `specs/g56r-003-evaluation-runner-scoring/contracts/` - the mirrored copies
+- `tests/speckit-pro/layer6-efficiency/lib/claude_score_bundle.py`
+- `tests/speckit-pro/layer6-efficiency/run-calibration-pilot.py`
+- `tests/speckit-pro/unit/test-analysis-decision-ladder.py`
+- `docs/ai/specs/.process/CAR-003-twin-handoff.md` - the source record
 
 ---
 

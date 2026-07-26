@@ -517,6 +517,29 @@ risk was still latent and this side could edit it first.
   runs. The same coordination applies to `authority_failures`, where FR-028's
   "required provenance is missing" has no dedicated member on either platform and
   is pinned to the existing `malformed_catalog` rather than widened unilaterally.
+  **Tracked as roadmap spec CAR-012 / G56R-012.**
+- **Open cross-platform coordination item — a calibration decision binds the
+  analysis plan it cannot have.** `analysis-decision.schema.json` requires
+  `analysis_plan_binding` on every decision bundle, unconditionally, on **both**
+  platforms. A `calibration_complete` bundle is produced before any analysis plan
+  exists, so the calibration pilot satisfies the requirement by writing the
+  calibration protocol binding into the plan-named field: the bundle claims to
+  bind an artifact it did not. This is the FR-037 substitution one edge further
+  out than FR-037 reaches — FR-037 fixed the pair and the experiment policy, and
+  the decision bundle is the next edge that carries the same binding. It is a
+  provenance defect, not a live failure: the pilot runs, the digests seal, and the
+  bound protocol is recorded truthfully everywhere except in the field's name.
+  Not fixable on one side. Both contracts pin `schema_version` to
+  `const "1.0.0"` and CAR-003's committed calibration evidence declares that
+  version, so tightening the contract in place would leave already-sealed evidence
+  non-conforming to its own declared version, and there is no rebuild-from-retention
+  path — regenerating it means a new live run whose measurements would differ from
+  the ones this plan's assumptions were derived from. The resolution is a
+  coordinated version bump landed on both platforms. **Tracked as roadmap spec
+  CAR-012 / G56R-012.** Found 2026-07-26 while verifying the twin's report that
+  its own analysis-plan freeze path consumes a plan-bound calibration decision;
+  the twin is addressing its side through a schema-governed calibration-completion
+  artifact.
 - **Open cross-platform coordination item — the experiment-policy binding
   cycle.** FR-037 resolves the calibration circular dependency at the comparison-pair
   level, and this plan's `experiment-assignment` schema enforces it. The cycle
@@ -564,7 +587,8 @@ risk was still latent and this side could edit it first.
   change, but the invalidation itself stays unnamed, so a reviewer reading a
   superseded bundle sees no recorded reason for its exclusion. Adding the member is
   a joint cross-platform change under the FR-049 rule and is deliberately not made
-  unilaterally. Tracked as `checklists/performance.md` CHK051. Not slice-blocking.
+  unilaterally. Tracked as `checklists/performance.md` CHK051 and as roadmap spec
+  **CAR-012 / G56R-012**. Not slice-blocking.
 
 ## Complexity Tracking
 

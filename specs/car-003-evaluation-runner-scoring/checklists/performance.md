@@ -94,7 +94,7 @@
 
 ## Open — Requires Joint Cross-Platform Change
 
-- [ ] CHK051 - Does the closed `invalidation_reason` set carry a member for an analysis-plan or budget change, so a post-freeze threshold amendment can be recorded as an additive invalidation rather than only detected through binding identity? [Gap, Completeness, Spec §FR-041] — **Not remediated unilaterally**: `invalidation_reason` lives in the parity-mirror score-bundle contract under `additionalProperties: false`, so a unilateral member would validate on one platform and fail on the other. FR-056 currently enforces non-pooling through `{id, digest}` binding identity instead, which works but leaves the invalidation unnamed. Surfaced as the third open coordination item in `plan.md` **Known Gaps** and in `tasks.md` **Notes**.
+- [ ] CHK051 - Does the closed `invalidation_reason` set carry a member for an analysis-plan or budget change, so a post-freeze threshold amendment can be recorded as an additive invalidation rather than only detected through binding identity? [Gap, Completeness, Spec §FR-041] — **Not remediated unilaterally**: `invalidation_reason` lives in the parity-mirror score-bundle contract under `additionalProperties: false`, so a unilateral member would validate on one platform and fail on the other. FR-056 currently enforces non-pooling through `{id, digest}` binding identity instead, which works but leaves the invalidation unnamed. Surfaced as the third open coordination item in `plan.md` **Known Gaps** and in `tasks.md` **Notes**, and tracked for delivery as roadmap spec **CAR-012 / G56R-012** (raised 2026-07-26).
 
 ## Remediation Record
 

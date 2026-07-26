@@ -515,8 +515,9 @@ reference for them would be false traceability:
 - Operator-only tasks are T022 (successor freeze collection) and T078
   (calibration pilot). Neither runs in the default suite or in CI.
 - Do not extend the repo-level shared contracts under
-  `tests/speckit-pro/layer6-efficiency/contracts/`. Three cross-platform
-  coordination items are recorded in `plan.md` Known Gaps:
+  `tests/speckit-pro/layer6-efficiency/contracts/`. Four cross-platform
+  coordination items are recorded in `plan.md` Known Gaps, and all of them are
+  tracked for delivery as roadmap spec **CAR-012 / G56R-012**:
   1. **Score-bundle terminal-field constraints** — the `failure_code` to
      `failure_plane` mapping and the `score_disposition` binding. Deliberately
      **not** applied to `contracts/score-bundle.schema.json`, which carries no
@@ -532,6 +533,13 @@ reference for them would be false traceability:
      FR-056 enforces non-pooling through `{id, digest}` binding identity instead.
      Deliberately not coined unilaterally; tracked as `checklists/performance.md`
      CHK051.
+  4. **A calibration decision binds the analysis plan it cannot have** —
+     `analysis-decision.schema.json` requires `analysis_plan_binding`
+     unconditionally on both platforms, so the calibration pilot writes the
+     protocol binding into the plan-named field. The FR-037 substitution has to
+     reach one edge further than it does today. Not fixable on one side: both
+     contracts pin `schema_version` to `const "1.0.0"` and committed evidence
+     declares it, so the fix is a coordinated version bump.
 
   None is slice-blocking.
 - Avoid: implementing a second materializer, editing CAR-002 evidence, adding a
