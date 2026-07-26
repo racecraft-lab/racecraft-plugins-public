@@ -1,0 +1,447 @@
+{
+  "schema_version": "1.0.0",
+  "corpus_id": "claude-car-003-role-corpus-v1",
+  "partition_binding": {
+    "id": "car-003-calibration-partition-v1",
+    "digest": "sha256:c8c98023113adb4e434ce3e5b385771284682b5717507db42a552e81b5ecdd5c"
+  },
+  "roles": [
+    {
+      "role_id": "analyze-executor",
+      "required_core": true,
+      "executable": true,
+      "source_digest": "sha256:6cd58a277ea668059d94c159f66c1115cd7aa1af0678694ece13cbdf3bd0f6b1",
+      "objective_binding": {
+        "id": "calibration-objective-analyze-executor",
+        "digest": "sha256:9e9207450b58bf825ac0f42743494d1ad898e68a4d846d5d180b68790732c5f4"
+      },
+      "permitted_tools": [
+        "Bash",
+        "Edit",
+        "Glob",
+        "Grep",
+        "Read",
+        "Write"
+      ],
+      "mutation_contract": "spec_artifact_write_only",
+      "expected_artifacts": [
+        "analysis-findings-report",
+        "remediated-spec-artifact"
+      ],
+      "acceptance_oracle_digest": "sha256:f10b2f53e352b4cf5472bcae4d9a981dbee10d39c98ff5a6e3a1c904c53924ed",
+      "independent_review_binding": {
+        "id": "validity-review-analyze-executor",
+        "digest": "sha256:d6caba6f075d4b257eb2df7fe374173a8b5f82be18514c42373a493b528b9c91"
+      },
+      "candidate_route_bindings": [
+        {
+          "id": "route-analyze-executor-candidate",
+          "digest": "sha256:21a927067e159852a637bae62f9b75d6e88baaf10854426f7aa20f52ebf7408b"
+        },
+        {
+          "id": "route-analyze-executor-comparator",
+          "digest": "sha256:4b5cccd3da598b811b1935f8bc5fe5275b23afa3eeeb91b367038b537a432e90"
+        }
+      ],
+      "fixture_digest": "sha256:7e941c5f70735e962bcb3f7596dd44d7c8254f826cf742f650fabe5d9e3ba0a3"
+    },
+    {
+      "role_id": "autopilot-fast-helper",
+      "required_core": true,
+      "executable": false,
+      "source_digest": "sha256:a1c1b2ba83f9ae2f8d623034b135358ca849fc112fef988365b7c8008c51433e",
+      "objective_binding": {
+        "id": "calibration-objective-autopilot-fast-helper",
+        "digest": "sha256:63cbbea5ea4002813b8d90f37a7a581f7f3cc1cfea938318deee85c1356fd086"
+      },
+      "permitted_tools": [
+        "Bash",
+        "Glob",
+        "Grep",
+        "Read"
+      ],
+      "mutation_contract": "read_only_no_repository_mutation",
+      "expected_artifacts": [
+        "fast-path-helper-answer"
+      ],
+      "acceptance_oracle_digest": "sha256:c7f555dbafb12c94008b4676a171be7eb805850770114df3110275ae4dc162d9",
+      "independent_review_binding": {
+        "id": "validity-review-autopilot-fast-helper",
+        "digest": "sha256:9c83100293269c1c76f112a3edd0e2b71af066a67950e477f3516e6cf7ccd9a2"
+      },
+      "fixture_digest": "sha256:7c8d633e5a713875d0439dc53ed1cb19f55d6bf3767bbf8166e315bcac38530a"
+    },
+    {
+      "role_id": "checklist-executor",
+      "required_core": true,
+      "executable": true,
+      "source_digest": "sha256:db260e51b6d015a9d0f978a1c3020aeed0a9e1fb81ae1d18d831257b60a30103",
+      "objective_binding": {
+        "id": "calibration-objective-checklist-executor",
+        "digest": "sha256:65036e82c142a88d2d459bfee061d9cdf85a282a94b499ef6e46fcc9b1cf3b49"
+      },
+      "permitted_tools": [
+        "Bash",
+        "Edit",
+        "Glob",
+        "Grep",
+        "Read",
+        "Write"
+      ],
+      "mutation_contract": "spec_artifact_write_only",
+      "expected_artifacts": [
+        "checklist-domain-report",
+        "remediated-gap-entry"
+      ],
+      "acceptance_oracle_digest": "sha256:eb3984babf6e78538163cd53a0167f18a1feccdae596fae1f0f8a8ac2d8fa0d7",
+      "independent_review_binding": {
+        "id": "validity-review-checklist-executor",
+        "digest": "sha256:4d5f90ad6804f6b7f6f8f68d762a4ceb24aaad37fdc2eb46e87ef87997e04db2"
+      },
+      "candidate_route_bindings": [
+        {
+          "id": "route-checklist-executor-candidate",
+          "digest": "sha256:50849b04dd4c0a28a7706111b5b6f6125a09a1b56b0023159b248cd0141e8a4e"
+        },
+        {
+          "id": "route-checklist-executor-comparator",
+          "digest": "sha256:a6dc18f209209d2c14f2664f0d6b2261bed156e454e10dfd73d8b22571434a78"
+        }
+      ],
+      "fixture_digest": "sha256:8c5796fccae1c7a0845bdcd8eb006ae912ecd4850f6cd88e697b20654ebcf57b"
+    },
+    {
+      "role_id": "clarify-executor",
+      "required_core": true,
+      "executable": true,
+      "source_digest": "sha256:5e9801faab43afd18fbf18297b65a7dc16678d2b9c0d373455ec3e995c8db1ea",
+      "objective_binding": {
+        "id": "calibration-objective-clarify-executor",
+        "digest": "sha256:9f30db2b70b4c6d158494dbe70e462311f2dfe41291ba6f158db32f96b08a80a"
+      },
+      "permitted_tools": [
+        "Bash",
+        "Glob",
+        "Grep",
+        "Read"
+      ],
+      "mutation_contract": "read_only_no_repository_mutation",
+      "expected_artifacts": [
+        "prioritised-question-set"
+      ],
+      "acceptance_oracle_digest": "sha256:37110cfd82513be4c3003c38ed09e9f47a411aabbce48930e5755f6c4b3dd100",
+      "independent_review_binding": {
+        "id": "validity-review-clarify-executor",
+        "digest": "sha256:406ac064f42ee5097097f66bfe593f0f78100661b6b334a14c2a6ce6780a66a3"
+      },
+      "candidate_route_bindings": [
+        {
+          "id": "route-clarify-executor-candidate",
+          "digest": "sha256:7e8d979b3e44a91c3b69548ac1f560ae0c56092f350f99edee0588cf27552539"
+        },
+        {
+          "id": "route-clarify-executor-comparator",
+          "digest": "sha256:0626625c07d0781132edd4d267a4ca89d2deb5a34c3e092d8171eed5f997cca0"
+        }
+      ],
+      "fixture_digest": "sha256:e30920a40f18c6df090072e04016c52675eae7fa5d0d7ab2cdddf9c3a3ef5ae5"
+    },
+    {
+      "role_id": "codebase-analyst",
+      "required_core": true,
+      "executable": true,
+      "source_digest": "sha256:b036111a6df10c40cb72b7e1e4f0ea50f6642e08161bf1058574e1603e30cbb0",
+      "objective_binding": {
+        "id": "calibration-objective-codebase-analyst",
+        "digest": "sha256:077bcff76afbd2ac5ae82122cd9509e2f61579a8850584b9e7db55f8d450cf56"
+      },
+      "permitted_tools": [
+        "Bash",
+        "Glob",
+        "Grep",
+        "Read"
+      ],
+      "mutation_contract": "read_only_no_repository_mutation",
+      "expected_artifacts": [
+        "codebase-evidence-answer"
+      ],
+      "acceptance_oracle_digest": "sha256:368e5c43754912f20b3085eca999192a7d7472375ef69e1d3f244590622e52ac",
+      "independent_review_binding": {
+        "id": "validity-review-codebase-analyst",
+        "digest": "sha256:5eb16bf206e3519db698c385cea2008c55f5a1744343da8073354451d90cf04d"
+      },
+      "candidate_route_bindings": [
+        {
+          "id": "route-codebase-analyst-candidate",
+          "digest": "sha256:24f19337ec0d5e073b57828187c9a6c438d877313744cc9e9d1e48572794e0f2"
+        },
+        {
+          "id": "route-codebase-analyst-comparator",
+          "digest": "sha256:e745c2a69addf507319022a6f11f9243a90f1d1b7dfa38b0e6d8af54fa549603"
+        }
+      ],
+      "fixture_digest": "sha256:0ed71439e6e97f121079cc78fa6a0c9c4f5040e87273ef8680fb1dd2a98a136d"
+    },
+    {
+      "role_id": "consensus-synthesizer",
+      "required_core": true,
+      "executable": true,
+      "source_digest": "sha256:fa7d17a3656c2b1cbabe592f26373099f4ed49348d97a94d9ccafbbf6d5d34c5",
+      "objective_binding": {
+        "id": "calibration-objective-consensus-synthesizer",
+        "digest": "sha256:29c5b4f959c714f0d08eac6e51d45720c8b8ed30c5ceb028a877ed60860d0e12"
+      },
+      "permitted_tools": [
+        "Bash",
+        "Glob",
+        "Grep",
+        "Read"
+      ],
+      "mutation_contract": "read_only_no_repository_mutation",
+      "expected_artifacts": [
+        "synthesised-answer-with-confidence"
+      ],
+      "acceptance_oracle_digest": "sha256:e3df85cd82db2b8a82f3c23c2a5f265f2c9c00958692e543e54495d824ff3511",
+      "independent_review_binding": {
+        "id": "validity-review-consensus-synthesizer",
+        "digest": "sha256:2b83b91e0c3755e0c17dfaf27ef62325a94acc41383d69f7b01982237ebd4efd"
+      },
+      "candidate_route_bindings": [
+        {
+          "id": "route-consensus-synthesizer-candidate",
+          "digest": "sha256:cd6aa276c7c29301f072c6863a8c3949e0806b8df3ef1c25fa996f4ddc2a9b20"
+        },
+        {
+          "id": "route-consensus-synthesizer-comparator",
+          "digest": "sha256:f1ca14b003524328272eb4c019e5c9a267e85da32f4ae1187e8c73dd282b9925"
+        }
+      ],
+      "fixture_digest": "sha256:fb530ad97d2e8794c60188f86c6648dfac82df7ca2b4e2db8e7e024f147d65b3"
+    },
+    {
+      "role_id": "domain-researcher",
+      "required_core": true,
+      "executable": true,
+      "source_digest": "sha256:7f176645305b3a999866bbbfe08e1d729397bb0fe2db7147d789f71801551511",
+      "objective_binding": {
+        "id": "calibration-objective-domain-researcher",
+        "digest": "sha256:c7e05eee4d89b333eaf8896b7a035dbd8fbadb5c4bae9f65a16fc3e1c7edd8c6"
+      },
+      "permitted_tools": [
+        "Glob",
+        "Grep",
+        "Read",
+        "WebFetch",
+        "WebSearch"
+      ],
+      "mutation_contract": "read_only_no_repository_mutation",
+      "expected_artifacts": [
+        "externally-sourced-recommendation"
+      ],
+      "acceptance_oracle_digest": "sha256:0c923a2e5d4508e18e8d8edfc25127a0995ecc4cdc119a65e87914a23c9502e1",
+      "independent_review_binding": {
+        "id": "validity-review-domain-researcher",
+        "digest": "sha256:65f2998ad803c53c94b6909b17577b48677d22680a1c94386d922f93616b5a13"
+      },
+      "candidate_route_bindings": [
+        {
+          "id": "route-domain-researcher-candidate",
+          "digest": "sha256:e09a8d785a6476d818f3751288cd5fd5c9993b4640435db2fa5abb925585d73d"
+        },
+        {
+          "id": "route-domain-researcher-comparator",
+          "digest": "sha256:84e44a553747e008a864cea6606577b95be5914b2a7773312961033f35d9eac5"
+        }
+      ],
+      "fixture_digest": "sha256:9a0b5deeac36868e655dc041f766e3f4c46bc34da3250882f526407264c3a7ff"
+    },
+    {
+      "role_id": "gate-validator",
+      "required_core": true,
+      "executable": true,
+      "source_digest": "sha256:54cfc7c347199027a70e0d14d835fd150fb75a62ba0c54b8ee8887b397fd35c7",
+      "objective_binding": {
+        "id": "calibration-objective-gate-validator",
+        "digest": "sha256:a1a173835df5d78db42612c4894ecba2f87cd190d7856184553c20b5582908b1"
+      },
+      "permitted_tools": [
+        "Bash",
+        "Glob",
+        "Grep",
+        "Read"
+      ],
+      "mutation_contract": "read_only_no_repository_mutation",
+      "expected_artifacts": [
+        "gate-verdict-record"
+      ],
+      "acceptance_oracle_digest": "sha256:0e1219b1e7f25125af710d905529fe69c57bc34477e7ccd5609628979668ae17",
+      "independent_review_binding": {
+        "id": "validity-review-gate-validator",
+        "digest": "sha256:5c16b2b179ca2332f427db42ea597acb614d20a37f6d3bafcaa822c246138f28"
+      },
+      "candidate_route_bindings": [
+        {
+          "id": "route-gate-validator-candidate",
+          "digest": "sha256:2e3af77613eeae73add12c810811d9e85886a76bd864ec989cc99b4434b3bb27"
+        },
+        {
+          "id": "route-gate-validator-comparator",
+          "digest": "sha256:7ad5d8930eea53d865559830555846ca128df901441b7cfed7b49b4ec062ae1e"
+        }
+      ],
+      "fixture_digest": "sha256:b0e14faf9ea51647d750d983bf99040f6f3959662cd940e7b93d16e171c24b84"
+    },
+    {
+      "role_id": "implement-executor",
+      "required_core": true,
+      "executable": true,
+      "source_digest": "sha256:24f8a0d36c9cb975c0efb1dc585b341bcee8734fab50bc935bf537a96e864a72",
+      "objective_binding": {
+        "id": "calibration-objective-implement-executor",
+        "digest": "sha256:67badca44d905b35a8c5b50465c7518adc8f5ac78c23b87069fdeabc5f9d2989"
+      },
+      "permitted_tools": [
+        "Bash",
+        "Edit",
+        "Glob",
+        "Grep",
+        "Read",
+        "Write"
+      ],
+      "mutation_contract": "workspace_scoped_write_with_test_first_ordering",
+      "expected_artifacts": [
+        "failing-test-first",
+        "passing-implementation"
+      ],
+      "acceptance_oracle_digest": "sha256:97d02ad0097c2f6ede0645fe10004ed0b55ba62d5c2c5c200d850102c79758cf",
+      "independent_review_binding": {
+        "id": "validity-review-implement-executor",
+        "digest": "sha256:524e09cf3185cd90a5ced8f8b9ce620b64e68ff509cb21179ba59dee1af54234"
+      },
+      "candidate_route_bindings": [
+        {
+          "id": "route-implement-executor-candidate",
+          "digest": "sha256:16015037b54eb83e0d82b6a34fca215ba988cdf9dae12a5ebf9291b06dfffb59"
+        },
+        {
+          "id": "route-implement-executor-comparator",
+          "digest": "sha256:bc220e91acaa359d1276f153ec55a99b4cfb63979c22c10304a0bc0607e9d3de"
+        }
+      ],
+      "fixture_digest": "sha256:0e1c99ea30815b9eb49c7d34a17677473889494fbddcbc38f4794739ab2326ca"
+    },
+    {
+      "role_id": "phase-executor",
+      "required_core": true,
+      "executable": true,
+      "source_digest": "sha256:f96de9c21cb7a560f5c80f63636f5182df45d303d5c095b832dbd1a56d4a7835",
+      "objective_binding": {
+        "id": "calibration-objective-phase-executor",
+        "digest": "sha256:9a16a27e50ce666473fce22dd44c22bdfba2b006731ad741b4bf9cfc147aef42"
+      },
+      "permitted_tools": [
+        "Bash",
+        "Edit",
+        "Glob",
+        "Grep",
+        "Read",
+        "Write"
+      ],
+      "mutation_contract": "spec_artifact_write_only",
+      "expected_artifacts": [
+        "phase-artifact-set"
+      ],
+      "acceptance_oracle_digest": "sha256:c04f649ae26f7057738f8b4104d107f3774647b600a8ac1614bd23631ae1c5d5",
+      "independent_review_binding": {
+        "id": "validity-review-phase-executor",
+        "digest": "sha256:6059454903f3b43399320fd9f2c86ea5eefc1e84e9737136cbaa80a30188f8a5"
+      },
+      "candidate_route_bindings": [
+        {
+          "id": "route-phase-executor-candidate",
+          "digest": "sha256:35fe94bf3aacadf4c477d0ecdbeda8ce62a6a4cb30a6620b2abaab59e963ddf3"
+        },
+        {
+          "id": "route-phase-executor-comparator",
+          "digest": "sha256:300cad9df97ddfa266c07107a6769a6224fd0ca8b5bc4526b0b48d94864e20a3"
+        }
+      ],
+      "fixture_digest": "sha256:5ff8dde3eededa82055bc11f8c898035c85af689029596fbe491ba95ff82f64d"
+    },
+    {
+      "role_id": "spec-context-analyst",
+      "required_core": true,
+      "executable": true,
+      "source_digest": "sha256:144683c9dd51e090e2035eae4475f63295b41a3f31daf46470a7327bdd61bc97",
+      "objective_binding": {
+        "id": "calibration-objective-spec-context-analyst",
+        "digest": "sha256:94122ece2ed8b4e160610478cb8833d4916469f36f48c8cbfe5672ca2296b2d1"
+      },
+      "permitted_tools": [
+        "Bash",
+        "Glob",
+        "Grep",
+        "Read"
+      ],
+      "mutation_contract": "read_only_no_repository_mutation",
+      "expected_artifacts": [
+        "project-decision-grounded-answer"
+      ],
+      "acceptance_oracle_digest": "sha256:2608380c8d68e624ba411765697682f6cf89b18a99d632a54f81fcd9749bf446",
+      "independent_review_binding": {
+        "id": "validity-review-spec-context-analyst",
+        "digest": "sha256:6e314559af3dafc9816a1d2cd37215130e8631f515bdd87002b4b6ce016577f9"
+      },
+      "candidate_route_bindings": [
+        {
+          "id": "route-spec-context-analyst-candidate",
+          "digest": "sha256:786f423640ab14c0f438cb8dd5a3b8ec17251a099e548fe448cd27f947e7bdf0"
+        },
+        {
+          "id": "route-spec-context-analyst-comparator",
+          "digest": "sha256:2f9906c8c24efebe4bd09cb82773ee86578df2222bffab1afe23ddc65b87e9cf"
+        }
+      ],
+      "fixture_digest": "sha256:4d8b4110a4dbb5c0ad4eb90b4d0169d8382856107e1edc1731a48443487e2bdd"
+    },
+    {
+      "role_id": "uat-runbook-author",
+      "required_core": true,
+      "executable": true,
+      "source_digest": "sha256:f67d51affa0f58755e1915c01271afc4a48aa0813162969b6a8f46a22c103f1b",
+      "objective_binding": {
+        "id": "calibration-objective-uat-runbook-author",
+        "digest": "sha256:8207baed1696739f84e8c4e562e75d466017cba348f7edf69fcde42664db2edc"
+      },
+      "permitted_tools": [
+        "Bash",
+        "Edit",
+        "Glob",
+        "Grep",
+        "Read",
+        "Write"
+      ],
+      "mutation_contract": "spec_artifact_write_only",
+      "expected_artifacts": [
+        "executable-acceptance-runbook"
+      ],
+      "acceptance_oracle_digest": "sha256:1aa201382a239baa23cdb7d4085d5a587d80e5353ec5a41646ceab480ae798c4",
+      "independent_review_binding": {
+        "id": "validity-review-uat-runbook-author",
+        "digest": "sha256:48a7d600901ea71a3a8a845e5dfa2b2d51aff9c2eea48249bc2d4583872012e7"
+      },
+      "candidate_route_bindings": [
+        {
+          "id": "route-uat-runbook-author-candidate",
+          "digest": "sha256:abbe4583860ddb9e8a34e3784929c6337beac535e29bd7038dad66792c72904b"
+        },
+        {
+          "id": "route-uat-runbook-author-comparator",
+          "digest": "sha256:b677bf3782676c3371814e7b29d2ef85f622a6ae4d34d8355125ef4efc8b654a"
+        }
+      ],
+      "fixture_digest": "sha256:60abedef6ccfa06baeb65d44163881cb9a3098b0fbacab66354332506cb11369"
+    }
+  ],
+  "corpus_digest": "sha256:839c8b8082b1d30f49d76e239ac39dff6c214c1b9c9d8f89f6a120f2f6365a9f"
+}

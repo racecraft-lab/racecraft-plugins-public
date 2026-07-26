@@ -1,0 +1,360 @@
+{
+  "analysis_plan_digest": "sha256:8082c2eb9791e9f4d13a0779c16d2ab86cf968d95e267b7ed6f08c5b0b290616",
+  "analysis_plan_id": "CAR-003-ANALYSIS-PLAN-V1",
+  "attrition_policy": {
+    "cap": 0.1,
+    "complete_case_filtering": false,
+    "unclassifiable_result": "inconclusive"
+  },
+  "cache_policy": {
+    "order_leakage_prohibited": true,
+    "pair_isolation": true,
+    "policy_digest": "sha256:2144a6f0afda7e9a54a12740bea0f5267f69429276daf79290835f8622259249",
+    "policy_id": "CAR-003-CACHE-ISOLATION-POLICY-V1"
+  },
+  "calibration_completion_binding": {
+    "digest": "sha256:84fab3454dc0ca2240bdec47765f36d40cce14f25e4f10439c96d81c29d693c1",
+    "id": "CAR-003-CAL-COMPLETION-20260725T135543Z"
+  },
+  "calibration_protocol_binding": {
+    "digest": "sha256:21bfb805d62fb2b8ad5462750a71d33dd825d30376208303c7f445f95d5bcb86",
+    "id": "CAR-003-CAL-PILOT-PROTOCOL-V1"
+  },
+  "campaign_budget": {
+    "max_attempts": 3632,
+    "max_cache_read_tokens": 403555556,
+    "max_cache_write_tokens_by_ttl_class": {
+      "ephemeral_1h": 282488889,
+      "ephemeral_5m": 80711112
+    },
+    "max_candidates": 2,
+    "max_confirmation_entries": 0,
+    "max_duration_seconds": 363200,
+    "max_input_tokens": 20177778,
+    "max_output_tokens": 12106667
+  },
+  "frozen_at": "2026-07-25T14:30:00Z",
+  "futility_policy": {
+    "boundary": {
+      "rationale": "One futility look at half information. A futility-only boundary cannot inflate the type-I error rate, because crossing it stops for LACK of evidence of non-inferiority and never declares one; it costs power instead. Declared NON-BINDING, so it may be overridden and no error-rate credit is taken for it \u2014 a binding boundary would be part of the error-rate calculation and the two are not interchangeable. Because no credit is taken, the frozen sample sizes are the sizes computed with no futility look, and the small power loss the look causes is absorbed rather than recovered by enlarging the sample. A comparison stopped here is reported as stopped with its stopping reason, never as a completed comparison, and the stop retires the complete pair.",
+      "type": "conditional_power_below_ten_percent"
+    },
+    "boundary_binding": "non_binding",
+    "early_stop_biases_estimate": true,
+    "interim_looks": {
+      "count": 1,
+      "information_fractions": [
+        0.5
+      ]
+    },
+    "look_schedule_frozen": true,
+    "stop_scope": "complete_pair"
+  },
+  "non_inferiority": {
+    "alpha": 0.025,
+    "cluster_adjustment": "cluster_robust_sandwich_variance_by_role",
+    "cluster_unit": "role",
+    "confidence_level": 0.95,
+    "endpoints": [
+      "semantic_score",
+      "acceptance_rate"
+    ],
+    "margins": {
+      "acceptance_rate": 0.05,
+      "semantic_score": 0.05
+    },
+    "multiplicity_declaration": {
+      "across_ladder_family": {
+        "adjustment": "benjamini_hochberg_false_discovery_control_across_candidate_role_stratum_ladders",
+        "rationale": "Running many complete ladders across candidates, roles, and strata forms a family of its own, and its declaration is independent of whatever rule governs a single ladder's internals. False-discovery control rather than familywise control is declared here because the across-ladder question is 'what fraction of the routes we qualify are spurious', which is a discovery-rate question; familywise control across a large ladder set would suppress nearly every true qualification. This is a THIRD family, not a global correction applied to the other two."
+      },
+      "cluster_adjustment_is_precondition": true,
+      "conjunctive_family": {
+        "adjustment": "none_required",
+        "rationale": "The absolute semantic and reliability floors and the non-inferiority stage are conjunctive: every one of them must pass for the ladder to advance. A conjunction of tests controls the error rate at alpha without adjustment and without alpha relaxation, and pays for it in power rather than in protection. No correction is applied here because none is needed, not because none was considered."
+      },
+      "pareto_disjunctive_family": {
+        "adjustment": "holm_bonferroni_over_the_eight_dimension_disjunction",
+        "rationale": "The Pareto stage decomposes into two halves that behave in opposite directions. 'No worse on every dimension' is conjunctive and grows MORE conservative as dimensions are added. 'Better on at least one dimension' is disjunctive and inflates the spurious-win rate with each added dimension unless controlled: eight independent chances to find a win at alpha is not a test at alpha. Holm-Bonferroni is applied to the eight per-dimension comparisons that constitute the 'better on at least one' claim. Leaving the stage unadjusted because its conjunctive half is conservative would under-protect the half that is not."
+      }
+    },
+    "power": 0.8,
+    "sample_size_assumptions": {
+      "alpha_convention": "alpha is one-sided at 0.025 and pairs with a two-sided 95% confidence interval, which is the standard non-inferiority pairing. The two are stated together so the declared confidence level and the declared alpha cannot contradict each other.",
+      "assumed_intracluster_correlation": 0.02,
+      "assumptions_not_measured": {
+        "assumed_intracluster_correlation": {
+          "basis": "The pilot dispatched a single role (the print-mode top-level agent), so it contains one cluster and no between-role contrast; an intracluster correlation is unidentifiable from a single cluster. 0.02 is declared as a planning value on the reasoning that the analysed quantity is a WITHIN-TASK PAIRED DIFFERENCE, which removes the task-level and role-level effects that generate most of the intracluster correlation seen in raw outcomes, leaving a materially smaller residual. It is an assumption, not an estimate, and the sensitivity block records that the design becomes infeasible at 0.05.",
+          "measured_by_the_calibration_pilot": false,
+          "value": 0.02
+        },
+        "attrition_cap": {
+          "basis": "This campaign hit ZERO infrastructure failures in eighteen attempts, and a discarded earlier run hit one transient API failure in eighteen attempts. One event in one discarded run is an anecdote, not a rate. Zero events in eighteen attempts is consistent with any true rate up to 0.1533 (the exact one-sided 95% upper bound, 1 - 0.05^(1/18)), so the pilot CANNOT certify that a campaign will stay under this cap; the cap sits below what the pilot can rule out. 0.10 is a prespecified administrative tolerance, chosen above the 0.0556 anecdote so a single transient failure does not void a campaign, and it MUST NOT be read as an estimate of the true attrition rate.",
+          "measured_by_the_calibration_pilot": false,
+          "value": 0.1
+        },
+        "cache_dependent_dispersion_is_contaminated": {
+          "basis": "The calibration pilot recorded per-arm cache roots as labels derived from the arm name, distinct by construction, while the same run recorded config_dir_isolation='none'. No per-arm CLAUDE_CONFIG_DIR was set, so both arms shared one cache. Dispersion for cached_input_tokens and the cache-write quantities therefore reflects shared-cache behaviour rather than a route difference, which is exactly the contamination the cache-isolation requirement exists to block. Dispersion for duration, output tokens, reasoning tokens, acceptance and semantic score does not depend on cache-root disjointness and is unaffected. The driver now sets a per-arm config directory and records the directory it actually used, so a re-run yields genuine isolation evidence; this plan is annotated rather than rewritten because the campaign was not re-run.",
+          "measured_by_the_calibration_pilot": false,
+          "value": "contaminated"
+        },
+        "campaign_envelope_headroom": {
+          "basis": "Every token and duration ceiling below is the operator's frozen pilot ceiling expressed per attempt and re-multiplied by the planned attempt count, so the campaign carries exactly the per-attempt headroom the pilot actually ran under. The pilot consumed 23.0% of its cache-read ceiling, 22.1% of its 1h cache-write ceiling, 3.1% of its output ceiling, 0.1% of its input ceiling and 6.1% of its duration ceiling. Those consumption rates come from disposable single-turn probes; a long-horizon multi-turn attempt will consume more per attempt than this headroom assumes, and the pilot could not test that.",
+          "measured_by_the_calibration_pilot": false,
+          "value": "pilot ceiling / 18 attempts, re-multiplied by 3632"
+        },
+        "late_failure_budget_fraction_threshold": {
+          "basis": "Definitional. A terminal failure past the midpoint of its per-attempt budget has consumed more resource than it left, which is what makes it the expensive failure mode. The pilot observed no failures, so the threshold carries no measured support.",
+          "measured_by_the_calibration_pilot": false,
+          "value": 0.5
+        },
+        "late_failure_rate_max": {
+          "basis": "No attempt in the pilot failed at all, late or otherwise, so the late-failure rate is unobserved. The ceiling is set equal to the attrition cap for the same reason and on the same evidence, and inherits the same 0.1533 zero-event upper bound.",
+          "measured_by_the_calibration_pilot": false,
+          "value": 0.1
+        },
+        "long_horizon_stratum_ceilings_and_size": {
+          "basis": "The pilot registered the long-horizon stratum at sample size ZERO and measured nothing inside it; its objectives were short-horizon single-turn probes and every attempt ran at num_turns = 1. Every long-horizon number in this manifest \u2014 the four per-attempt ceilings and the per-attempt share of the campaign envelope \u2014 is an assumption with no pilot support. The stratum's own estimability floor still governs: until it carries 59 unique tasks its guardrail comparison returns inconclusive rather than passing.",
+          "measured_by_the_calibration_pilot": false,
+          "value": "5x the short-horizon per-attempt ceilings"
+        },
+        "non_inferiority_margins": {
+          "basis": "A non-inferiority margin is the largest quality loss the programme is willing to trade for a resource gain. That is a prespecified judgement about acceptable harm, not a quantity any pilot can estimate. Both endpoints are scored on 0-1, and 0.05 is five percentage points of acceptance or semantic score. It is declared here so the sample sizes it drives are traceable to a judgement rather than to a measurement.",
+          "measured_by_the_calibration_pilot": false,
+          "value": 0.05
+        },
+        "p95_compactions_max": {
+          "basis": "The pilot's dispatch surface records NO compaction member in its resource vector at all, so compactions were not merely zero, they were unobservable. This ceiling has no measured support of any kind. It matters because compactions is one of the eight decision-bearing Pareto dimensions, so a dimension that governs qualification was never observed by the run that calibrated this plan.",
+          "measured_by_the_calibration_pilot": false,
+          "value": 1
+        },
+        "p95_retries_max": {
+          "basis": "Retries were MEASURED at zero on all eighteen attempts, so the observed p95 is zero. The ceiling is nevertheless set at 1, not 0, because a ceiling of 0 requires the true per-attempt retry rate to sit below 5%, and the pilot's 0/18 is consistent with rates up to 15.33%. The ceiling is therefore the value the measurement can actually support, and the headroom above the observation is the assumption.",
+          "measured_by_the_calibration_pilot": false,
+          "value": 1
+        },
+        "quality_floors": {
+          "basis": "Absolute prespecified bars under FR-017, evaluated before non-inferiority. A calibration protocol carries no floors by construction (FR-037), so the pilot's floors stage recorded not_evaluated and these values are uncalibrated policy. For context only: the pilot's candidate arm observed acceptance and semantic score of 0.8889 on nine disposable probes, which sits below the 0.90 reliability floor. That is recorded as context, not as a qualification outcome.",
+          "measured_by_the_calibration_pilot": false,
+          "value": {
+            "reliability_minimum": 0.9,
+            "semantic_minimum": 0.7
+          }
+        },
+        "semantic_score_rubric_dispersion_understates_scorer_variance": {
+          "basis": "The pilot scored with two declared DETERMINISTIC rubric scorers and a deterministic adjudicator, and its own stated limitation records that the resulting dispersion is rubric dispersion rather than an estimate of model-scorer variance. The adjudication path never fired, because no attempt produced a gate-passing multi-line answer. Real scoring in a qualification-eligible campaign carries scorer variance this number does not contain, so the semantic_score sample size derived from it is a FLOOR and understates what a model-scored campaign needs. The measured value is used because it is the only measurement available; inflating it by an invented factor would substitute fabricated precision for a stated limitation.",
+          "measured_by_the_calibration_pilot": false,
+          "value": 0.333333
+        }
+      },
+      "calibration_source": {
+        "estimand_note": "Every assigned attempt is retained, including any that failed a gate; no complete-case filtering was applied (FR-020).",
+        "estimate_path": "variance_estimates.paired_within_task_difference",
+        "pairs_used": 9,
+        "pilot_digest": "sha256:a8315db822b775e0cea33811dfbad58d93afccbb3ddc821a9fbae7bc0fbd9991",
+        "pilot_id": "CAR-003-CAL-PILOT-20260725T135543Z"
+      },
+      "cluster_count": 12,
+      "cluster_count_basis": "Measured, not assumed: the frozen role corpus registers twelve roles and the cluster unit is the role.",
+      "design": "paired_within_task_one_sided_non_inferiority",
+      "endpoints": {
+        "acceptance_rate": {
+          "design_effect": 2.340974,
+          "n_pairs": 817,
+          "n_unclustered_pairs": 349,
+          "paired_difference_pairs": 9,
+          "paired_difference_sd": 0.333333,
+          "pilot_estimate_field": "acceptance",
+          "within_task_correlation": null,
+          "within_task_correlation_note": "The calibration pilot reports the within-task correlation between arms as null for this endpoint, because one arm had zero dispersion (the comparator scored 1.0 on all nine pairs) and a correlation is undefined against a constant. No assumed value is substituted, because none is needed: the sample size is computed from the MEASURED paired-difference standard deviation, which already embeds whatever the correlation is (sd_d^2 = sd_candidate^2 + sd_comparator^2 - 2 * rho * sd_candidate * sd_comparator). A correlation would only be required had the size been derived from the two per-arm standard deviations instead. The one correlation this plan does assume is the intracluster correlation of the paired differences WITHIN a role, which is a different quantity and is declared separately under assumptions_not_measured."
+        },
+        "semantic_score": {
+          "design_effect": 2.340974,
+          "n_pairs": 817,
+          "n_unclustered_pairs": 349,
+          "paired_difference_pairs": 9,
+          "paired_difference_sd": 0.333333,
+          "pilot_estimate_field": "semantic_score",
+          "within_task_correlation": null,
+          "within_task_correlation_note": "The calibration pilot reports the within-task correlation between arms as null for this endpoint, because one arm had zero dispersion (the comparator scored 1.0 on all nine pairs) and a correlation is undefined against a constant. No assumed value is substituted, because none is needed: the sample size is computed from the MEASURED paired-difference standard deviation, which already embeds whatever the correlation is (sd_d^2 = sd_candidate^2 + sd_comparator^2 - 2 * rho * sd_candidate * sd_comparator). A correlation would only be required had the size been derived from the two per-arm standard deviations instead. The one correlation this plan does assume is the intracluster correlation of the paired differences WITHIN a role, which is a different quantity and is declared separately under assumptions_not_measured."
+        }
+      },
+      "formula": "n_unclustered = ((z_(1-alpha) + z_power)^2 * sd_paired_difference^2) / margin^2, then inflated for clustering by the fixed point of n = n_unclustered * (1 + (n / cluster_count - 1) * assumed_intracluster_correlation).",
+      "measured_correlations_not_used_for_sizing": {
+        "cache_write_ephemeral_1h": 0.486565,
+        "cached_input_tokens": 0.605188,
+        "duration_ms": -0.270909,
+        "note": "The pilot did estimate within-task correlations for four resource quantities. They are recorded here as calibration context and are NOT sample-size inputs, because no resource quantity is a non-inferiority endpoint; resources are compared at the Pareto stage, which is a dominance comparison rather than a powered test. The negative correlations are worth reading: pairing does not reduce variance for those quantities, it increases it.",
+        "output_tokens": -0.612713,
+        "unestimable": [
+          "acceptance",
+          "cache_write_ephemeral_5m",
+          "input_tokens",
+          "num_turns",
+          "reasoning_output_tokens",
+          "semantic_score"
+        ]
+      },
+      "sensitivity": {
+        "intracluster_correlation_sensitivity": [
+          {
+            "feasible": true,
+            "intracluster_correlation": 0.01,
+            "max_attainable_effective_pairs": 1200.0,
+            "note": "Feasible: 487 pairs per endpoint would suffice."
+          },
+          {
+            "feasible": true,
+            "intracluster_correlation": 0.02,
+            "max_attainable_effective_pairs": 600.0,
+            "note": "The frozen assumption. Feasible: 817 pairs per endpoint."
+          },
+          {
+            "feasible": false,
+            "intracluster_correlation": 0.05,
+            "max_attainable_effective_pairs": 240.0,
+            "note": "INFEASIBLE. With twelve clusters the effective sample size is capped at R / icc = 240 pairs however many pairs are run, which is below the 349 unclustered pairs the margin requires. The feasibility of this design is therefore load-bearing on an assumption the pilot could not measure."
+          }
+        ],
+        "variance_estimate_degrees_of_freedom": 8,
+        "variance_estimate_note": "The paired-difference standard deviation of 0.333333 rests on nine pairs, one of which was discordant. A standard deviation on eight degrees of freedom is itself imprecise: its one-sided 95% upper confidence limit is 0.6386, roughly 1.92 times the point estimate. Planning at that upper limit would require 1281 unclustered pairs, and at the assumed intracluster correlation of 0.02 with twelve role clusters NO achievable sample size would reach 80% power at all. The frozen sizes therefore use the point estimate and are NOT conservative with respect to the imprecision of a nine-pair variance estimate. A revised variance estimate is a changed threshold under FR-056 and produces a new versioned plan rather than a re-computation inside this one; no blinded sample size re-estimation is declared, because an unplanned re-estimation is exactly the outcome-dependent adjustment FR-038 forbids.",
+        "variance_estimate_pairs": 9
+      }
+    },
+    "sample_sizes": {
+      "acceptance_rate": 817,
+      "semantic_score": 817
+    }
+  },
+  "pareto_policy": {
+    "dimensions": [
+      "input_tokens",
+      "cached_input_tokens",
+      "output_tokens",
+      "duration",
+      "retries",
+      "compactions",
+      "acceptance",
+      "terminal_state"
+    ],
+    "mixed_or_tied_result": "inconclusive",
+    "reasoning_tokens_decision_bearing": false,
+    "reasoning_tokens_limitation": "reasoning_output_tokens is recorded and reported for every attempt and is never a Pareto dimension while the Codex twin's frozen policy omits it. This is a stated limitation, not a claim the cost is absent, and the calibration pilot measured exactly how large the omission is: the candidate arm spent 177.9 reasoning output tokens per attempt (sd 44.7) against 0.0 for the comparator, while the two arms' billed output tokens were 195.1 and 10.7. Reasoning tokens are disjoint from output_tokens in the shared contract and are billed at the output rate, so on this very evidence the candidate's true output cost is roughly double what the eight compared dimensions carry, and the dimension set deliberately does not weigh it. Adding the dimension MUST be a joint cross-platform change applied to both platforms at once, and MUST account for each added dimension weakening dominance as a discriminator and raising the inconclusive rate.",
+    "weights_prohibited": true
+  },
+  "pre_cohort_outcome_absence_digest": "sha256:a2567b739183bf5f8243d847328818bcaf60cc954b01591a59797939d8666f84",
+  "quality_floors": {
+    "reliability_minimum": 0.9,
+    "semantic_minimum": 0.7
+  },
+  "racing_policy": {
+    "boundary": {
+      "rationale": "No interim efficacy look is planned, so no alpha is spent on repeated testing and the fourth error-control concern \u2014 inflation from repeatedly testing accumulating data, which is distinct from the three FR-050 multiplicity families \u2014 does not arise. The calibration pilot provides no basis for an information-time schedule: it ran nine pairs of disposable single-turn probes in 110 seconds, so it neither measured how information accrues over a real campaign nor showed that an early stop would save anything material. Freezing an unfounded look schedule would be fabricated precision, and a look added later, after any outcome is visible, invalidates the declaration rather than being absorbed into it.",
+      "type": "no_early_efficacy_stop"
+    },
+    "early_stop_biases_estimate": true,
+    "interim_looks": {
+      "count": 0,
+      "information_fractions": []
+    },
+    "look_schedule_frozen": true,
+    "stop_scope": "complete_pair"
+  },
+  "reliability_guardrails": {
+    "breach_result": "no_qualification",
+    "late_failure_definition": {
+      "budget_fraction_consumed_min": 0.5,
+      "qualifying_failure_planes": [
+        "candidate",
+        "infrastructure"
+      ]
+    },
+    "late_failure_rate_max": 0.1,
+    "p95_compactions_max": 1,
+    "p95_retries_max": 1
+  },
+  "rerun_policy": {
+    "cap": 1,
+    "classification_timing": "arm_blind_before_outcome_read",
+    "eligible_failure": "independently_preclassified_transient_harness_failure",
+    "scope": "complete_pair"
+  },
+  "schema_version": "1.0.0",
+  "status": "frozen",
+  "terminal_policy": {
+    "candidate_failure_acceptance": 0,
+    "incomplete_result": "inconclusive",
+    "uncertain_result": "inconclusive"
+  },
+  "workload_manifest": {
+    "guardrail_method": {
+      "breach_result": "no_qualification",
+      "comparator": "absolute_ceiling",
+      "confidence_method": {
+        "confidence_level": 0.95,
+        "method": "upper_confidence_bound_order_statistic"
+      },
+      "decision_bearing": false,
+      "denominator": "per_attempt_within_stratum_arm",
+      "direction": "higher_is_worse",
+      "margin": 0,
+      "missing_data_rule": "worst_case_imputation",
+      "multiplicity_family": {
+        "adjustment": "holm_bonferroni_across_the_four_guarded_quantities_within_each_stratum",
+        "family": "guardrail",
+        "rationale": "Guardrails are their own family, distinct from the three FR-050 families, which cover the conjunctive floors-and-non-inferiority stage, the Pareto disjunctive half, and the across-ladder set. A guardrail belongs to none of them, so leaving it unassigned would leave four thresholds per stratum evaluated with no stated error control. Holm-Bonferroni is applied across the four guarded quantities within a stratum because a breach on any one of them returns no qualification, which makes the family disjunctive in exactly the way that inflates without correction."
+      },
+      "units": {
+        "p95_cached_input_tokens_max": "tokens",
+        "p95_duration_ms_max": "milliseconds",
+        "p95_input_tokens_max": "tokens",
+        "p95_output_tokens_max": "tokens"
+      }
+    },
+    "manifest_digest": "sha256:948b2e080b80e71c7578cefbf8943677141b53671a484306117bdb34072ed658",
+    "manifest_id": "CAR-003-WORKLOAD-MANIFEST-V1",
+    "minimum_unique_tasks": 118,
+    "strata": [
+      {
+        "long_horizon": false,
+        "membership_rule": {
+          "derived_from_realized_outcomes": false,
+          "permitted_basis": [
+            "role_id",
+            "objective",
+            "acceptance_oracle"
+          ]
+        },
+        "p95_cached_input_tokens_max": 111111,
+        "p95_duration_ms_max": 180000,
+        "p95_input_tokens_max": 5555,
+        "p95_output_tokens_max": 3333,
+        "stratum_id": "short-horizon-single-turn",
+        "stratum_minimum_unique_tasks": 59,
+        "stratum_sample_size": 817,
+        "weight": 0.5
+      },
+      {
+        "long_horizon": true,
+        "membership_rule": {
+          "derived_from_realized_outcomes": false,
+          "permitted_basis": [
+            "role_id",
+            "objective",
+            "expected_artifacts",
+            "acceptance_oracle"
+          ]
+        },
+        "p95_cached_input_tokens_max": 555555,
+        "p95_duration_ms_max": 900000,
+        "p95_input_tokens_max": 27775,
+        "p95_output_tokens_max": 16665,
+        "stratum_id": "long-horizon-multi-turn",
+        "stratum_minimum_unique_tasks": 59,
+        "stratum_sample_size": 817,
+        "weight": 0.5
+      }
+    ],
+    "unknown_stratum_policy": "inconclusive"
+  }
+}

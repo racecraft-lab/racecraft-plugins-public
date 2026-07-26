@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/car-003/successor-capability-freeze.schema.json",
+  "title": "CAR-003 Successor Capability Freeze",
+  "description": "Logical mirror of the G56R-003 spec-scoped successor-capability-freeze contract. Structurally identical; the effort ladder and one exclusion reason carry Claude-platform values per FR-003 and FR-029.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "candidate_freeze_id",
+    "freeze_digest",
+    "historical_freeze_binding",
+    "source_ledger_binding",
+    "runtime_snapshot_binding",
+    "normalization_map_digest",
+    "admitting_surface",
+    "authentication_mode",
+    "admitted_tuples",
+    "excluded_tuples",
+    "authority_failures",
+    "published_at",
+    "invalidation_triggers"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "candidate_freeze_id": {"$ref": "#/$defs/digest"},
+    "freeze_digest": {"$ref": "#/$defs/digest"},
+    "historical_freeze_binding": {"$ref": "#/$defs/binding"},
+    "source_ledger_binding": {"$ref": "#/$defs/binding"},
+    "runtime_snapshot_binding": {"$ref": "#/$defs/binding"},
+    "normalization_map_digest": {"$ref": "#/$defs/digest"},
+    "admitting_surface": {
+      "description": "FR-002: the sole admitting runtime authority. Diagnostic surfaces may corroborate or invalidate but never admit.",
+      "const": "print_mode_canary_probe"
+    },
+    "authentication_mode": {
+      "description": "FR-042: recorded for every collection. No supported path may require api_key.",
+      "enum": ["subscription", "api_key"]
+    },
+    "admitted_tuples": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/tuple"}
+    },
+    "excluded_tuples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["model", "effort", "reason"],
+        "properties": {
+          "model": {"type": "string", "minLength": 1},
+          "effort": {"type": "string", "minLength": 1},
+          "reason": {
+            "enum": [
+              "source_not_admitted",
+              "effort_not_source_admitted",
+              "effort_source_not_admitted",
+              "canonical_effort_unknown",
+              "surface_evidence_incomplete",
+              "surface_disagreement",
+              "alias_repoint_unresolved",
+              "availability_not_proven",
+              "topology_control_not_candidate_effort"
+            ]
+          }
+        }
+      }
+    },
+    "authority_failures": {
+      "description": "FR-028 and FR-044: a non-empty array means no authoritative freeze is published and qualification-capable execution is blocked. Archived predecessor tuples are never promoted.",
+      "type": "array",
+      "items": {
+        "enum": [
+          "empty_intersection",
+          "malformed_source",
+          "malformed_catalog",
+          "stale_collection",
+          "untrusted_collection",
+          "sanitization_failed",
+          "retention_failed",
+          "identity_mismatch",
+          "digest_mismatch",
+          "historical_mutation"
+        ]
+      }
+    },
+    "published_at": {"type": "string", "format": "date-time"},
+    "invalidation_triggers": {
+      "description": "FR-041: the four versioned refresh triggers.",
+      "type": "array",
+      "minItems": 4,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["trigger", "invalidates", "survives"],
+        "properties": {
+          "trigger": {
+            "enum": [
+              "client_change",
+              "catalog_change",
+              "alias_repoint",
+              "source_ledger_change"
+            ]
+          },
+          "invalidates": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "freeze_admission",
+                "unexecuted_bindings",
+                "experiment_bundles",
+                "score_bundles",
+                "decision_bundles",
+                "in_flight_attempts_for_alias"
+              ]
+            }
+          },
+          "survives": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "execution_traces",
+                "treatment_records",
+                "bound_pairs"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "tuple": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_route_id",
+        "model",
+        "effort",
+        "source_evidence_digest",
+        "runtime_evidence_digest"
+      ],
+      "properties": {
+        "candidate_route_id": {"type": "string", "minLength": 1},
+        "model": {"type": "string", "minLength": 1},
+        "effort": {
+          "description": "FR-003: the closed ordered Claude ladder. Omitted, inherit, runtime-only, API-only, alias, aggregate, and topology-changing values are never ordinary candidate efforts.",
+          "enum": ["low", "medium", "high", "xhigh", "max"]
+        },
+        "source_evidence_digest": {"$ref": "#/$defs/digest"},
+        "runtime_evidence_digest": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}

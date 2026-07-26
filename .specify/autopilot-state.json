@@ -1,0 +1,113 @@
+{
+  "schema_version": "1.0",
+  "spec_id": "CAR-003",
+  "feature_dir": "specs/car-003-evaluation-runner-scoring",
+  "branch": "car-003-evaluation-runner-scoring",
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "warnings": [],
+    "hints": [],
+    "recorded_after": "G5",
+    "conflict_with_scoping": "none",
+    "conflict_note": "Design concept Q14 and the reviewability budget record three ordered slices. That is not a contradiction of one-navigable-PR: the classifier distinguishes one PR from several, while the slice division fixes review order inside the work. split-PR would mean three separate pull requests; the recorded decision is one specification implemented and reviewed as three ordered slices, with roadmap Work Package A kept intact as slice 1."
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "Layer planner runs only when the atomicity route is exactly split-PR. Route is one-navigable-PR, so planning is skipped and the route context is carried forward."
+  },
+  "pr_marker_plan": {
+    "status": "planned",
+    "reason": "Whole-feature reviewable LOC is 1858, which exceeds the 800-LOC block threshold, while each slice is under it (735 / 533 / 590) and total files (23) are under the 25-file block. This is a size-only condition with a committed slice division, so it is a marker-planning input rather than a manual re-slicing stop.",
+    "ordered_markers": [
+      {
+        "marker_id": "car-003-slice-1-capability-freeze-and-materialized-treatment",
+        "order": 1,
+        "user_stories": [
+          "US1",
+          "US2"
+        ],
+        "reviewable_loc": 735,
+        "roadmap_work_package": "A",
+        "must_stay_intact": true,
+        "intact_reason": "The roadmap independently requires Work Package A remain a single reviewable unit; it must not be subdivided to fit a threshold."
+      },
+      {
+        "marker_id": "car-003-slice-2-governed-corpus-and-blinded-scoring",
+        "order": 2,
+        "user_stories": [
+          "US3"
+        ],
+        "reviewable_loc": 533,
+        "must_stay_intact": false
+      },
+      {
+        "marker_id": "car-003-slice-3-experiment-policy-statistics-and-pilot",
+        "order": 3,
+        "user_stories": [
+          "US4"
+        ],
+        "reviewable_loc": 590,
+        "must_stay_intact": false
+      }
+    ],
+    "evidence_paths": [
+      "docs/ai/specs/.process/CAR-003-workflow.md",
+      "specs/car-003-evaluation-runner-scoring/spec.md",
+      "specs/car-003-evaluation-runner-scoring/plan.md",
+      "specs/car-003-evaluation-runner-scoring/tasks.md"
+    ],
+    "authoritative_figures": {
+      "production_files": 1,
+      "total_authored_files": 23,
+      "reviewable_loc": 1858,
+      "source": "Plan-phase re-derivation from the real design; supersedes the roadmap's recorded 0 production files and the spec's 6-10 projection."
+    },
+    "estimator_caveat": "Do not rely on estimate-reviewable-loc or a tasks-count heuristic here. The LOC estimator reports projected 0 and production 0 because its heuristic keys on path prefixes and JavaScript extensions and matches no Python in this repository. A tasks-mode heuristic of 86 tasks by 40 lines is likewise a false positive. Neither may be read as evidence that this change is small, and neither may trigger a Work Package A split.",
+    "measured_trajectory": {
+      "recorded_at_task": "T021 (US1 complete, 16 of 86 tasks)",
+      "shipped_production_files": 0,
+      "shipped_production_loc": 0,
+      "harness_loc_added": 2557,
+      "spec_and_process_loc_added": 7049,
+      "total_files_changed": 33,
+      "note": "The Plan-phase estimate of 1858 authored logic LOC across ALL three slices is already exceeded by slice-1 harness code alone (2557) with US2, US3 and US4 unwritten. Total files changed (33) already exceeds the 25-file block. The estimate was low; these measured figures supersede it.",
+      "consequence": "Slice 1 will exceed the 800-LOC block on its own. The roadmap independently requires Work Package A stay intact, so slice 1 MUST NOT be subdivided to fit the threshold. This is a size-only condition with committed, operator-ratified slice evidence, which the boundary treats as a marker-planning input rather than a manual re-slicing stop. Expect the final gate to need marker-based emission and possibly a typed size exception for slice 1; that is an operator decision, not something to paper over.",
+      "production_budget_status": "on track - still 0 shipped files; the single shipped materializer arrives in US2"
+    }
+  },
+  "tasks_phase_reviewability": {
+    "requested_mode": "tasks",
+    "helper_id": "reviewability-gate",
+    "status": "deferred_on_installed_runner",
+    "deferral_reason": "The installed runner supports reviewability-gate in setup mode only; tasks mode is deferred and must not be invoked as an active helper.",
+    "fallback_evidence_chain": [
+      "Setup-mode gate recorded at scaffold: status warn, pass true, 0 blockers, 1 warning (primary surfaces 5 over warn threshold 1).",
+      "Plan-phase authoritative gate re-run: status warn, pass true, 0 blockers, exit 0, reviewable_loc 735, production_files 1, total_files 23, primary_surface_count 1.",
+      "Operator-ratified split decision recorded in the design concept (Q14) and the spec's Reviewability Budget: one specification, three ordered slices, Work Package A intact."
+    ],
+    "verdict": "pass_with_warning_and_marker_plan"
+  },
+  "final_reviewability_gate": {
+    "status": "size_block_with_current_marker_evidence",
+    "measured_at": "post-implementation, after fail-open remediation",
+    "total_files_changed": 81,
+    "lines_added": 21986,
+    "lines_removed": 76,
+    "composition": {
+      "authored_production_source_files": 1,
+      "authored_production_source": "speckit-pro/speckit_pro_runner/materializer.py (247 lines, 149 logic)",
+      "generated_or_regenerated_artifacts": 27,
+      "repository_only_harness_files": 38,
+      "repository_only_harness_added": 13221,
+      "spec_and_process_doc_files": 32,
+      "spec_and_process_doc_added": 7867
+    },
+    "verdict": "Size-only block against both the 800-LOC and 25-file thresholds. NOT a correctness block: no malformed or stale marker state, no failed verification, no invalid packet, no unsafe output, no non-size safety finding. Current marker evidence exists, so this proceeds to marker-based emission rather than a manual re-slicing stop.",
+    "operator_decision_required": "Slice 1 exceeds the 800-LOC block on its own and the roadmap requires Work Package A stay intact, so it cannot be subdivided to fit. A typed size exception is needed. The authored production surface is a single file; the overrun is entirely repository-only harness, generated artifacts, and specification documents, which the constitution deliberately keeps outside the shipped payload.",
+    "not_a_reslicing_stop_because": "The committed evidence chain is current: setup-mode gate pass-with-warning, plan-phase authoritative re-run pass-with-warning and zero blockers, and an operator-ratified three-slice division. The boundary treats a valid current size-only block with marker evidence as a marker-planning input."
+  }
+}

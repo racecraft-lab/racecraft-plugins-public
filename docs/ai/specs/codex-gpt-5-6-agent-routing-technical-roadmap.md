@@ -41,6 +41,7 @@ tiers**.
 | 6 | G56R-006 | Resolver, materializer, atomic installer, and strict override | Sequential framework slice |
 | 7 | G56R-007, G56R-008, G56R-009, G56R-010 | Qualify four disjoint agent cohorts | Parallel after G56R-006; serialize shared regeneration |
 | 8 | G56R-011 | Compose final identities, rebuild payload, run installed UAT, and prove release readiness | Sequential integration |
+| 9 | G56R-012 | Reconcile the mirrored evaluation contracts with CAR-003 | Joint change; must land on both platforms together |
 
 **Execution order:** G56R-001 -> G56R-002 -> G56R-003 -> G56R-004 ->
 G56R-005 -> G56R-006 -> G56R-007 + G56R-008 + G56R-009 + G56R-010 ->
@@ -230,6 +231,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 | G56R-009 | Read-only Reasoning and Orchestration-support Agent Routing | Pending | - | Blocked by G56R-006 |
 | G56R-010 | Optional Helper Routing and No-helper Path | Pending | - | Blocked by G56R-006 |
 | G56R-011 | Payload, Installed Skill UAT, Fallback Proof, and Release Integration | Pending | - | Blocked by G56R-007 through G56R-010 |
+| G56R-012 | Mirrored Evaluation-Contract Reconciliation with CAR-003 | Pending | - | Raised 2026-07-26; the Codex half of a joint change, scoped in CAR-012 |
 
 **Status legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -893,6 +895,43 @@ Budget result: re-estimate at scaffold; split release evidence from source fixes
 - `tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py`
 - `tests/speckit-pro/layer7-integration/` - skill-driven spawn and result-use proof
 - `docs/ai/specs/.process/` - release and live-UAT evidence
+
+---
+
+### G56R-012: Mirrored Evaluation-Contract Reconciliation with CAR-003
+
+**Priority:** P2 | **Depends On:** G56R-003 (merged), CAR-003 (merged) |
+**Enables:** pooled cross-platform analysis in G56R-007 through G56R-010
+
+**Goal:** Land the Codex half of one joint change across both platforms. The
+scope, rationale, and per-item reasoning are authored once in
+[CAR-012](claude-agent-routing-technical-roadmap.md#car-012-mirrored-evaluation-contract-reconciliation-with-g56r-003)
+and are not restated here — duplicating them is how two platforms drift while
+both believe they agree.
+
+**Why a separate spec ID for one change.** The work is a single joint change, but
+each platform carries its own roadmap, progress table, and reviewability budget.
+This entry exists so the Codex roadmap does not silently omit work its contracts
+require. Scaffold whichever ID leads; the other closes when the joint change
+lands on both.
+
+**Scope:** as CAR-012, applied to
+`specs/g56r-003-evaluation-runner-scoring/contracts/` and the Codex
+qualification harness. Two items are Codex-side additions the CAR-003 twin
+handoff already specifies in full: FR-034's total plane-by-code mapping, and
+FR-014's missing-gate sentence together with its `non_scorable` disposition
+consequence, which must be verified explicitly rather than assumed to follow from
+the plane change.
+
+**Out of Scope:** as CAR-012.
+
+**Key Files:**
+
+- `specs/g56r-003-evaluation-runner-scoring/contracts/analysis-decision.schema.json`
+- `specs/g56r-003-evaluation-runner-scoring/contracts/score-bundle.schema.json`
+- `specs/g56r-003-evaluation-runner-scoring/spec.md` - FR-014, FR-034, FR-058
+- `tests/speckit-pro/layer6-efficiency/lib/qualification_contracts.py`
+- `tests/speckit-pro/layer6-efficiency/contracts/` - the shared-path collision
 
 ---
 
