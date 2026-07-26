@@ -516,6 +516,46 @@ class EnvironmentContractTests(TreatmentRunnerTestCase):
                 self.assertIs(result.blocks_scoring, True)
                 self.assertIn(label.replace("subagent_override", "env_override_proof"), " ".join(result.diverged_fields))
 
+    def test_fast_mode_on_is_refused_and_never_repaired(self) -> None:
+        """FR-051: "frozen off" is an admission precondition, not an action.
+
+        Fast mode is Opus-only and usage-credit-billed. A harness that switched
+        it on would spend an operator's credits for a speed characteristic no
+        requirement asks for; one that switched it off would silently revoke a
+        setting the operator chose. So an attempt observed with fast mode on is
+        refused and recorded, never repaired by changing the environment.
+        """
+        observed = observed_environment(fast_mode_state="on")
+        before = dict(observed)
+
+        result = runner.check_environment_conformance(
+            runner.bind_environment_contract(), observed
+        )
+
+        self.assertIs(result.blocks_scoring, True)
+        self.assertIn("fast_mode_state", " ".join(result.diverged_fields))
+        # The observed environment is evidence, not a thing to edit. Conformance
+        # checking must leave it byte-identical.
+        self.assertEqual(observed, before)
+        self.assertEqual(observed["fast_mode_state"], "on")
+
+    def test_the_runner_exposes_no_way_to_set_fast_mode(self) -> None:
+        """The plugin never grants or revokes this setting.
+
+        The contract may *declare* the required state and the checker may
+        *compare* against it, but nothing in the runner may write it.
+        """
+        import inspect
+
+        source = inspect.getsource(runner)
+        for forbidden in (
+            'os.environ["CLAUDE_FAST_MODE"]',
+            "os.environ['CLAUDE_FAST_MODE']",
+            "--fast",
+            "/fast",
+        ):
+            self.assertNotIn(forbidden, source, f"runner must not emit {forbidden!r}")
+
     def test_an_unobservable_environment_lands_on_the_evidence_boundary_plane(self) -> None:
         result = runner.check_environment_conformance(
             runner.bind_environment_contract(), observed_environment(fast_mode_state=None)

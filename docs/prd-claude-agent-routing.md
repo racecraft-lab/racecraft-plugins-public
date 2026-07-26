@@ -192,7 +192,16 @@ duration, retries, compaction, and accepted-workflow rate.
   availability preflight is a native subagent-frontmatter feature. SpecKit Pro
   owns the ordered route policy, preflight resolver, and materializer.
 - Adopting fast mode, orchestration-changing execution modes, or Agent SDK
-  features beyond the pinned harness usage.
+  features beyond the pinned harness usage. **Fast mode is never enabled by
+  SpecKit Pro, on any surface, under any qualification outcome.** It is
+  Opus-only and usage-credit-billed, so enabling it on an operator's behalf
+  spends their credits for a speed characteristic they did not ask for. It is
+  used only when the operator turns it on themselves. The converse also binds:
+  no SpecKit Pro surface may turn fast mode *off* on an operator who has
+  enabled it. The plugin neither grants nor revokes this setting — it observes
+  the state and, for a scored run, refuses rather than mutates. No result from
+  CAR-004's policy-control evaluation or CAR-011's comparison may be read as
+  authority to adopt it: a control that measures well is still not adopted.
 - Unbounded or aesthetic prompt rewriting. Prompt changes must target measured
   instruction, handoff, tool-schema, duplicated-context, cache-write, or
   compaction overhead and be tested against an unchanged-prompt control.
