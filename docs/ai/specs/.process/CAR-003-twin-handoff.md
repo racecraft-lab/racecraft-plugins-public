@@ -31,29 +31,57 @@ resolution depends on which files actually landed.
 
 ---
 
-## 1. `experiment-policy.schema.json` makes the calibration pilot unrunnable
+## 1. `experiment-policy.schema.json` contradicts FR-037 (latent, not yet blocking)
 
-**Status: VERIFIED still true**, and worse than reported.
+**Status: the contradiction is CONFIRMED by execution; the "unrunnable pilot"
+claim is REFUTED.** Corrected 2026-07-25 after the twin session triaged this item
+at `6f7daf63`. The original framing below overstated the impact — read the
+ordering note before acting.
 
-**What is wrong.** In `specs/g56r-003-evaluation-runner-scoring/contracts/experiment-policy.schema.json`:
+**What is wrong.** `analysis_plan_binding` sits in the top-level `required` array
+unconditionally, there is no `calibration_protocol_binding` property at all, and
+the object is `additionalProperties: false`. A calibration policy is therefore
+doubly blocked: it cannot omit the analysis-plan binding, and it cannot substitute
+a calibration-protocol binding. The twin session confirmed this by validating a
+`qualification_eligible=false` policy carrying no analysis plan against the
+committed schema:
 
-- `analysis_plan_binding` sits in the top-level `required` array unconditionally.
-- There is no `calibration_protocol_binding` property at all.
-- The object is `additionalProperties: false`.
+```text
+SPEC_SCHEMA_RESULT=REJECTED
+VALIDATION_OUTPUT=$ is missing required contract fields: ['analysis_plan_binding']
+```
 
-So a calibration policy is doubly blocked: it cannot omit the analysis-plan binding
-(required), and it cannot substitute a calibration-protocol binding (no such
-property, and unknown keys are rejected).
+**This affects TWO schemas, not one.** The original report named only the
+spec-scoped design artifact, and the twin's triage checked only that one. The same
+unconditional `required` entry — with no `allOf`/`if`/`anyOf`/`oneOf` branches — is
+also present in the twin's *runtime harness* contract:
 
-**Why it matters.** The analysis plan freezes only *after* calibration. Requiring a
-calibration policy to bind it is a circular dependency: the artifact that
-calibration produces is demanded as calibration's own precondition. No conforming
-calibration policy can be authored, so the twin's calibration pilot cannot run as
-specified. Everything downstream — variance estimates, sample sizes, margins, the
-frozen analysis plan itself — is blocked behind it.
+| File | Layer | Validated by |
+| ---- | ----- | ------------ |
+| `specs/g56r-003-evaluation-runner-scoring/contracts/experiment-policy.schema.json` | SpecKit Phase-1 design artifact | design review only |
+| `tests/speckit-pro/layer6-efficiency/contracts/experiment-policy.schema.json` | runtime contract (`$id .../g56r-003/runtime/…`) | `tests/speckit-pro/unit/test-codex-qualification-contracts.py` |
 
-**Exact change needed.** Apply the same shape CAR-003 uses. Three edits, nothing
-else:
+Both need the fix. The runtime copy is the load-bearing one — a live contract test
+already schema-validates against it.
+
+**Why the pilot is NOT blocked today.** `run-codex-qualification.py` never
+validates a policy against either schema; it checks selected bindings through
+`_require_policy_bindings`. The twin session removed `analysis_plan_binding` from
+the policy and from every assignment pair, and the calibration path still exited 0
+with `"status":"calibration_ready"`. The circularity is real in the contract text
+but currently unreachable through the executing code.
+
+**Why it still has to be fixed, and in what order.** The twin's triage identified
+the reachable finding as the inverse of this one: the pilot's experiment-policy
+input bypasses full closed-schema, version, digest, comparison-set, and
+analysis-plan validation. That enforcement gap is precisely what masks the
+contradiction. **Closing the gap first would convert a latent defect into an active
+blocker** — the moment the pilot validates the full closed schema, no conforming
+calibration policy can be authored. Fix the contradiction before closing the
+enforcement gap, or land both together.
+
+**Exact change needed.** Apply the same shape CAR-003 uses, to **both** files in
+the table above. Three edits per file, nothing else:
 
 1. Remove `"analysis_plan_binding"` from the top-level `required` array. Leave the
    property definition in `properties` unchanged.
@@ -100,6 +128,28 @@ reasoning; mirror it into the twin's FR text as well as the schema.
 
 **Also update the twin's FR-037 prose**, or the schema will contradict the spec it
 implements.
+
+**CAR-side reference state — no equivalent gap here.** CAR-003 does not carry the
+enforcement gap that masks this defect on the twin, because the rule lives on the
+executing path rather than in schema validation alone:
+
+- `tests/speckit-pro/layer6-efficiency/lib/claude_experiment_policy.py` enforces the
+  substitution in code — `required_plan_binding(qualification_eligible)` selects the
+  required key and `_plan_binding_findings` rejects binding both, binding neither,
+  or binding the wrong artifact for the eligibility. `run-calibration-pilot.py` runs
+  through that library, so the rule is reachable at execution.
+- `tests/speckit-pro/unit/test-experiment-policy-partitions.py` reads the
+  spec-scoped schema directly (`CONTRACT_ROOT = specs/car-003-evaluation-runner-scoring/contracts`)
+  and asserts the two paired branches literally, so the contract and the library
+  cannot silently drift apart.
+- CAR-003 has no runtime-harness copy of this schema to keep in sync; the shared
+  `tests/speckit-pro/layer6-efficiency/contracts/` directory holds only
+  `capability-freeze`, `marker-checkpoint`, and `treatment-record`.
+
+Verified 2026-07-25: `test-experiment-policy-partitions` 90/90 passed, including
+the transitive policy-edge case. If the twin closes its enforcement gap, mirroring
+this two-place arrangement (library enforces, test pins the schema to the library)
+is the shape that makes the contradiction impossible to reintroduce unnoticed.
 
 ---
 
