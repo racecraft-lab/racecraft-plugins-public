@@ -499,11 +499,29 @@ plugin release.
   configuration, client version, and controlled runtime overrides. The
   environment contract freezes fast mode off, a pinned client version range, a
   pinned parent-session model and effort, and proof that
-  `CLAUDE_CODE_SUBAGENT_MODEL` is unset; scored campaigns run under a
-  dedicated API-key-authenticated environment, at least one installed-UAT
-  smoke row runs under subscription authentication, and the authentication
-  mode of every run is recorded in the environment snapshot without producing
-  any plan-based claim. Preferred-route unavailability invokes the resolver
+  `CLAUDE_CODE_SUBAGENT_MODEL` is unset; scored campaigns run under
+  subscription authentication, no supported path requires API-key
+  authentication, and the authentication mode of every run is recorded in the
+  environment snapshot without producing any plan-based claim.
+  **Amendment 2026-07-26 (CAR-003):** this criterion previously required scored
+  campaigns to run under a dedicated API-key-authenticated environment with at
+  least one installed-UAT smoke row under subscription authentication. That
+  inverted the product's actual delivery model: SpecKit Pro ships to operators
+  running Claude Code under a subscription, so evidence gathered only under an
+  authentication mode most operators never use would not describe the routes
+  they actually get. Requiring an API key on the scored path would also make
+  qualification depend on a credential the product does not require. It is
+  amended to make subscription the supported scored path and to forbid any
+  supported path requiring API-key authentication. CAR-003 FR-042 implements
+  this and additionally makes the recorded mode *constraining* — the observed
+  mode is compared against the mode pinned in the run's FR-051 environment
+  contract and a divergence blocks scoring, so the field is not merely
+  observable. The recording-without-plan-claims obligation is unchanged; only
+  which mode the scored path uses changed. Note the knock-on already relied
+  upon elsewhere: FR-004 refuses to let the models catalog endpoint *admit* a
+  tuple precisely because that endpoint yields evidence only under API-key
+  authentication, which this amendment forbids requiring.
+  Preferred-route unavailability invokes the resolver
   before assignment. A scored run begins only after one approved route is
   resolved and exact treatment is proven. Runtime UAT may continue after a
   platform-initiated route change only when the observed model is itself a

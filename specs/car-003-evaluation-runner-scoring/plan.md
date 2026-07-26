@@ -468,6 +468,61 @@ behind), and the shared dual-platform smoke runner was byte-identical on the
 default branch, this branch, and the Codex twin branch, so the FR-043 coordination
 risk was still latent and this side could edit it first.
 
+## PRD Traceability Of The Late Requirements
+
+CAR-003 grew from 38 to 58 functional requirements through its clarify,
+checklist, and analyze passes. An adversarial trace on 2026-07-26 checked every
+one of the twenty late requirements against `docs/prd-claude-agent-routing.md`
+looking for overfitting — a requirement written around a single observed
+incident, or one constraining a situation that cannot arise.
+
+**Seventeen are directly anchored, several near-verbatim.** FR-040 restates
+AC-2.11's ordered `low`..`max` effort set; FR-051's environment contract is
+AC-2.19's sentence; FR-052 is AC-2.9's pre-execution stratum membership; FR-053
+is AC-2.15's guardrail field list. FR-039, FR-041, and FR-044 come from AC-2.2,
+AC-2.3, and AC-2.21 on alias re-pointing and invalidation. FR-050, FR-054,
+FR-055, and FR-056 come from AC-2.12, AC-2.15, AC-2.16, and AC-2.11 on
+multiplicity, estimability, racing/futility, and campaign bounds. FR-058 is not
+an addition to AC-2.5 but a precondition of it: "no worse on every dimension" is
+undecidable without a declared direction.
+
+**Three carry no direct acceptance-criterion anchor and are recorded here as
+derived rather than free-standing:**
+
+- **FR-046** (synthetic replay validation of the alias-re-point detector) is
+  derived from FR-042 and FR-051 rather than from the PRD. The detector cannot
+  be exercised live — an alias re-point cannot be summoned on demand — and the
+  obvious alternative, setting an environment override to force divergence,
+  would violate the very override-unset proof FR-051 requires. The requirement
+  exists because those two constraints leave exactly one validation path.
+- **FR-047** (scorer and adjudicator family exclusion) is a methodological
+  control the PRD does not name. AC-2.20 governs scorer contracts, independent
+  review, and blind adjudication, but not self-preference bias when a scorer
+  shares a model family with the candidate it scores. It is implemented and
+  blocking (`family_exclusion_holds=false` refuses the bundle) but currently
+  **inert**: CAR-003 scores with declared deterministic rubric scorers, not
+  model scorers, so no violation is reachable in today's configuration. It
+  guards the model-scorer configuration the stated limitations describe as the
+  intended end state. Kept deliberately; a reviewer is entitled to ask whether
+  it belongs in AC-2.20 instead.
+- **FR-057** (default suite stays cheap enough for an ordinary CI gate) is
+  instrumentally required by SC-011 and SC-019 rather than by the PRD. Both
+  criteria are only verifiable if the suite actually runs routinely, so an
+  unbounded suite would leave them unverifiable in practice. Its zero-live-call
+  half *is* anchored, in the PRD's scored-run discipline.
+
+**One genuine defect was found, and it was the inverse of overfitting.** FR-042
+(subscription is the supported scored path; no supported path may require an API
+key) directly contradicted AC-2.19, which required scored campaigns to run under
+a dedicated API-key-authenticated environment. The requirement is correct — the
+product ships to operators on subscriptions, and qualifying routes under a
+credential the product does not require would describe routes nobody gets — but
+the spec had silently overridden its own source PRD. AC-2.19 is now amended to
+match, following the same pattern AC-2.5 used for the Pareto change. The
+deviation had already propagated: FR-004 refuses to let the models catalog
+endpoint admit a tuple *because* that endpoint needs API-key authentication,
+reasoning from a rule the PRD still contradicted.
+
 ## Known Gaps
 
 - The exact numeric floors, margins, sample sizes, alpha, power, multiplicity
