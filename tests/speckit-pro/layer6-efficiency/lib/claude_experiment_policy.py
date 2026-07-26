@@ -281,7 +281,16 @@ def register_partitions(entries: Sequence[Mapping[str, Any]]) -> PartitionVerdic
                 f"{partition_id}: partition_type {entry.get('partition_type')!r} is not closed"
             )
         recorded = entry.get("objective_set_digest")
-        if recorded != objective_set_digest(entry.get("objective_ids", ())):
+        objective_ids = tuple(entry.get("objective_ids", ()))
+        if not objective_ids:
+            # ``objective_set_digest`` refuses an empty set by raising, which is
+            # correct at the builder. It is wrong here: this loop accumulates
+            # findings across every entry, so letting the exception escape would
+            # discard every finding already collected and hand the caller a
+            # traceback where every other refusal returns a verdict. Record it
+            # and keep validating the rest.
+            findings.append(f"{partition_id}: registers no objectives")
+        elif recorded != objective_set_digest(objective_ids):
             findings.append(f"{partition_id}: objective_set_digest does not match its preimage")
     if findings:
         return _refused(PARTITION_MISMATCH, findings)

@@ -410,13 +410,27 @@ def collect_ballots(
 def blinding_residual(
     *, leak_check_passed: bool, ballots: Sequence[Mapping[str, Any]]
 ) -> dict[str, Any]:
-    """FR-048: report the residual rather than claiming blinding succeeded."""
+    """FR-048: report the residual rather than claiming blinding succeeded.
+
+    Every inferring ballot's signal is carried. Reporting only the first one
+    understated the residual exactly where it mattered most: the more scorers
+    that independently inferred provenance, the more evidence was dropped, and
+    a reader could not distinguish one scorer's tell from three. ``inference_signal``
+    is retained as the first signal because it is part of the cross-platform
+    score-bundle contract and appears in already-committed bundles;
+    ``inference_signals`` is the complete record.
+    """
     inferring = [ballot for ballot in ballots if ballot.get("provenance_inferred")]
-    signal = next((ballot.get("inference_signal") for ballot in inferring), None)
+    signals = tuple(
+        ballot.get("inference_signal")
+        for ballot in inferring
+        if ballot.get("inference_signal") is not None
+    )
     return {
         "leak_check_passed": bool(leak_check_passed),
         "provenance_inferred": bool(inferring),
-        "inference_signal": signal,
+        "inference_signal": signals[0] if signals else None,
+        "inference_signals": signals,
     }
 
 

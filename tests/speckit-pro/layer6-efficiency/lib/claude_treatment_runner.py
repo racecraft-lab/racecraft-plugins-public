@@ -67,6 +67,7 @@ if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 
 from speckit_pro_runner import materializer  # noqa: E402
+from speckit_pro_runner.merge_utils import deep_merge  # noqa: E402
 
 CONTRACT_ROOT = REPO_ROOT / "specs" / "car-003-evaluation-runner-scoring" / "contracts"
 ADDITIVE_SCHEMA_PATH = CONTRACT_ROOT / "car-003-additive-records.schema.json"
@@ -351,7 +352,15 @@ def bind_environment_contract(**overrides: Any) -> dict[str, Any]:
         },
         "authentication_mode": "subscription",
     }
-    contract.update(overrides)
+    # Nested merge, not ``dict.update``. A shallow update replaces the whole
+    # ``env_override_proof`` block with whatever partial mapping the caller
+    # passed, silently dropping the pinned proofs it did not mention — and
+    # ``check_environment_conformance`` then subscripts the missing members and
+    # raises ``KeyError`` instead of returning a conformance. Dropping proofs
+    # from the record that exists to prove the environment was untampered is
+    # the worst possible failure here, so the members survive a partial
+    # override.
+    deep_merge(contract, dict(overrides))
     return contract
 
 

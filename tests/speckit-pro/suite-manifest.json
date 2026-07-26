@@ -74,6 +74,7 @@
         { "path": "tests/speckit-pro/unit/test-score-bundle-adjudication.py", "label": "test-score-bundle-adjudication", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-experiment-policy-partitions.py", "label": "test-experiment-policy-partitions", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-analysis-decision-ladder.py", "label": "test-analysis-decision-ladder", "baseline": null },
+        { "path": "tests/speckit-pro/unit/test-calibration-pilot-driver.py", "label": "test-calibration-pilot-driver", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-check-toolchain.py", "label": "test-check-toolchain", "baseline": "tests/speckit-pro/parity/bash-to-python/test-check-toolchain-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-post-implementation-reference.py", "label": "test-post-implementation-reference", "baseline": "tests/speckit-pro/parity/bash-to-python/test-post-implementation-reference-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-reviewability-marker-guidance.py", "label": "test-reviewability-marker-guidance", "baseline": "tests/speckit-pro/parity/bash-to-python/test-reviewability-marker-guidance-baseline.txt" },

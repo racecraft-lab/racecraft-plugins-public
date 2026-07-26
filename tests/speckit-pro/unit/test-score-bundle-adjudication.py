@@ -699,9 +699,45 @@ class ScorerProvenanceTests(unittest.TestCase):
         residual = self.module.blinding_residual(
             leak_check_passed=True, ballots=(scorer_a_ballot(self.module), scorer_b_ballot(self.module))
         )
-        self.assertEqual(tuple(sorted(residual)), ("inference_signal", "leak_check_passed", "provenance_inferred"))
+        self.assertEqual(
+            tuple(sorted(residual)),
+            ("inference_signal", "inference_signals", "leak_check_passed", "provenance_inferred"),
+        )
         self.assertIn("bounded", self.module.BLINDING_CLAIM.lower())
         self.assertNotIn("complete", self.module.BLINDING_CLAIM.lower())
+
+    def test_every_inferring_ballot_contributes_its_signal(self) -> None:
+        """FR-048: the residual must not shrink as more scorers infer.
+
+        Taking ``next(...)`` over the inferring ballots reported one signal no
+        matter how many scorers independently saw through the blinding, so the
+        residual understated itself exactly when the blinding was weakest.
+        """
+        first = scorer_a_ballot(
+            self.module, provenance_inferred=True, inference_signal="section_heading_style"
+        )
+        second = scorer_b_ballot(
+            self.module, provenance_inferred=True, inference_signal="list_marker_choice"
+        )
+        residual = self.module.blinding_residual(
+            leak_check_passed=False, ballots=(first, second)
+        )
+        self.assertEqual(
+            tuple(residual["inference_signals"]),
+            ("section_heading_style", "list_marker_choice"),
+        )
+        self.assertTrue(residual["provenance_inferred"])
+        # The scalar stays the first signal for the cross-platform contract.
+        self.assertEqual(residual["inference_signal"], "section_heading_style")
+
+    def test_a_residual_with_no_inference_carries_an_empty_signal_list(self) -> None:
+        residual = self.module.blinding_residual(
+            leak_check_passed=True,
+            ballots=(scorer_a_ballot(self.module), scorer_b_ballot(self.module)),
+        )
+        self.assertEqual(tuple(residual["inference_signals"]), ())
+        self.assertIsNone(residual["inference_signal"])
+        self.assertFalse(residual["provenance_inferred"])
 
 
 def complete_bundle(module: object, **overrides: object) -> dict[str, object]:

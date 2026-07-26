@@ -257,6 +257,28 @@ class PartitionRegistryTests(unittest.TestCase):
         self.assertFalse(verdict.ok)
         self.assertEqual(verdict.failure_plane, "partition")
 
+    def test_an_entry_registering_no_objectives_returns_a_verdict(self) -> None:
+        """A refusal must arrive as a verdict, not as an exception.
+
+        ``objective_set_digest`` raises on an empty set. Calling it inside the
+        findings loop let that exception escape ``register_partitions``, so a
+        caller got a traceback instead of a verdict and every finding already
+        accumulated for the other entries was discarded.
+        """
+        empty = dict(self.calibration, partition_id="CAR-003-EMPTY-01", objective_ids=[])
+        duplicated = dict(self.screening)
+        verdict = self.module.register_partitions((self.screening, duplicated, empty))
+        self.assertFalse(verdict.ok)
+        self.assertEqual(verdict.failure_plane, "partition")
+        self.assertTrue(
+            any("registers no objectives" in finding for finding in verdict.findings), verdict
+        )
+        # The finding from the earlier entry survived rather than being lost to
+        # the exception that used to escape here.
+        self.assertTrue(
+            any("registered more than once" in finding for finding in verdict.findings), verdict
+        )
+
     def test_partition_type_and_eligibility_are_immutable_after_freeze(self) -> None:
         retyped = dict(self.calibration, partition_type="screening")
         relaxed = dict(self.screening, qualification_eligible=False)

@@ -1171,6 +1171,29 @@ not "this has been exercised against the live platform."
   `malformed_catalog` as the home for missing provenance, and the
   `invalidation_reason` set having no analysis-plan/budget-change member (worked
   around via binding identity).
+- **Two committed proofs were recorded by checks that could not fail.** Both were
+  found by post-implementation review and are fixed on this branch with
+  regression tests, but the evidence they produced predates the fix and was not
+  regenerated:
+  - The calibration pilot's FR-039 `env_override_proof.fallback_model_unset`
+    tested `"--fallback-model"` for membership in a SHA-256 digest *string*, so
+    that half of the conjunction was unconditionally true and only the
+    `CLAUDE_CODE_FALLBACK_MODEL` environment half carried signal. The recorded
+    value is nonetheless correct — the pilot builds argv as a fixed literal list
+    that never contains the flag — but the committed run did not *prove* what it
+    asserted.
+  - The successor freeze's CAR-002 immutability check hashed
+    `read_text(...).encode(...)`, and text mode collapses CRLF to LF before the
+    bytes are hashed, so a line-ending mutation of an archived artifact would
+    have read as unchanged. All three archived artifacts are LF-only and their
+    digests are byte-identical under the corrected byte-hashing path, so nothing
+    was missed — but the committed freeze proved less than it claimed.
+
+  Neither run was regenerated. Re-running the pilot costs live spend for no new
+  information, and editing a digest-sealed record to append a caveat would mutate
+  frozen evidence and cascade into the analysis plan that binds its digest. The
+  correction is recorded here instead, which is the honest place for "this proof
+  was weaker than stated".
 
 ### 4. What would a reviewer most reasonably object to?
 

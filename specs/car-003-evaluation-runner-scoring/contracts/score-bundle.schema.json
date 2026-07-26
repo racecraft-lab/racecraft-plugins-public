@@ -163,7 +163,15 @@
       "properties": {
         "leak_check_passed": {"type": "boolean"},
         "provenance_inferred": {"type": "boolean"},
-        "inference_signal": {"type": ["string", "null"]}
+        "inference_signal": {
+          "description": "FR-048: the first inferring ballot's signal. Retained for the cross-platform contract; read inference_signals for the complete residual.",
+          "type": ["string", "null"]
+        },
+        "inference_signals": {
+          "description": "FR-048: every inferring ballot's signal, in ballot order. Reporting only the first understated the residual precisely when several scorers independently inferred provenance. CROSS-PLATFORM: G56R-003 needs the same additive field to hold score-bundle parity.",
+          "type": "array",
+          "items": {"type": "string"}
+        }
       }
     },
     "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}

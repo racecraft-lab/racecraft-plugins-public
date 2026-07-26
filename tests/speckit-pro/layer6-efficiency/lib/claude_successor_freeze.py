@@ -558,10 +558,16 @@ def resolves_to_archived_snapshot(digest: str) -> bool:
 
 
 def car002_artifact_digests() -> dict[str, str]:
-    """Current digest of every archived CAR-002 artifact."""
+    """Current digest of every archived CAR-002 artifact.
+
+    Hashes raw bytes. ``read_text`` opens in universal-newline mode, which
+    rewrites ``\\r\\n`` to ``\\n`` before the bytes are ever hashed — so a
+    line-ending mutation of an archived artifact would produce an identical
+    digest and pass the immutability check unnoticed. An immutability proof
+    that cannot see a byte change is not a proof.
+    """
     return {
-        path: "sha256:"
-        + hashlib.sha256((REPO_ROOT / path).read_text(encoding="utf-8").encode("utf-8")).hexdigest()
+        path: "sha256:" + hashlib.sha256((REPO_ROOT / path).read_bytes()).hexdigest()
         for path in CAR002_ARTIFACTS
     }
 

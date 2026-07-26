@@ -458,6 +458,37 @@ class EnvironmentContractTests(TreatmentRunnerTestCase):
         self.assertEqual(len(runner.ENV_OVERRIDE_PROOF_MEMBERS), 8)
         self.assertIs(contract["env_override_proof"]["claude_code_subagent_model_unset"], True)
 
+    def test_a_partial_override_preserves_every_other_pinned_proof(self) -> None:
+        """Overriding one proof member must not delete the other seven.
+
+        A shallow ``dict.update`` replaced the whole ``env_override_proof``
+        block with the caller's partial mapping, so the contract silently
+        stopped pinning the members it no longer carried, and
+        ``check_environment_conformance`` raised ``KeyError`` on the first
+        observed member the truncated contract had lost.
+        """
+        contract = runner.bind_environment_contract(
+            env_override_proof={"fallback_model_unset": False}
+        )
+
+        self.assertEqual(
+            set(contract["env_override_proof"]), set(runner.ENV_OVERRIDE_PROOF_MEMBERS)
+        )
+        self.assertIs(contract["env_override_proof"]["fallback_model_unset"], False)
+        self.assertIs(contract["env_override_proof"]["fallbackModel_unset"], True)
+
+        # The conformance check returns a verdict rather than raising.
+        result = runner.check_environment_conformance(contract, observed_environment())
+        self.assertEqual(result.status, runner.ENVIRONMENT_DIVERGENT)
+        self.assertIn("env_override_proof.fallback_model_unset", result.diverged_fields)
+
+    def test_a_top_level_override_still_replaces_a_scalar(self) -> None:
+        contract = runner.bind_environment_contract(fast_mode_state="on")
+        self.assertEqual(contract["fast_mode_state"], "on")
+        self.assertEqual(
+            set(contract["env_override_proof"]), set(runner.ENV_OVERRIDE_PROOF_MEMBERS)
+        )
+
     def test_a_conformant_environment_is_admitted(self) -> None:
         result = runner.check_environment_conformance(runner.bind_environment_contract(), observed_environment())
 

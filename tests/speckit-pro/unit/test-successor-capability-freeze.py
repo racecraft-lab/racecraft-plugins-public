@@ -26,6 +26,7 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -651,8 +652,11 @@ class HistoricalImmutabilityTests(unittest.TestCase):
         self.module = claude_successor_freeze
 
     def artifact_state(self) -> dict[str, str]:
+        # Raw bytes, not decoded text: a text read collapses CRLF to LF before
+        # hashing, so a baseline built that way is blind to the line-ending
+        # mutation this suite exists to catch.
         return {
-            path: digest_of((REPO_ROOT / path).read_text(encoding="utf-8"))
+            path: "sha256:" + hashlib.sha256((REPO_ROOT / path).read_bytes()).hexdigest()
             for path in self.module.CAR002_ARTIFACTS
         }
 
@@ -697,6 +701,35 @@ class HistoricalImmutabilityTests(unittest.TestCase):
             report["mutated"], ["docs/ai/research/claude-trace-contract.schema.json"]
         )
         self.assertEqual(self.artifact_state(), self.artifact_state())
+
+    def test_a_line_ending_only_mutation_is_still_a_mutation(self) -> None:
+        """The digest must be taken over bytes, not decoded text.
+
+        ``read_text`` opens in universal-newline mode, so a CRLF rewrite of an
+        archived artifact decodes to the identical string and would hash the
+        same. The immutability check would report ``unchanged`` on a file whose
+        bytes moved.
+        """
+        original_root = self.module.REPO_ROOT
+        original_artifacts = self.module.CAR002_ARTIFACTS
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "archived.json").write_bytes(b'{"a": 1}\n{"b": 2}\n')
+            self.module.REPO_ROOT = root
+            self.module.CAR002_ARTIFACTS = ("archived.json",)
+            try:
+                baseline = self.module.car002_artifact_digests()
+                self.assertEqual(
+                    self.module.car002_immutability_report(baseline)["mutated"], []
+                )
+                # Same characters, different bytes.
+                (root / "archived.json").write_bytes(b'{"a": 1}\r\n{"b": 2}\r\n')
+                report = self.module.car002_immutability_report(baseline)
+                self.assertEqual(report["mutated"], ["archived.json"])
+                self.assertEqual(report["unchanged"], [])
+            finally:
+                self.module.REPO_ROOT = original_root
+                self.module.CAR002_ARTIFACTS = original_artifacts
 
     def test_every_non_allowlisted_sensitive_category_is_detected(self) -> None:
         for category, leak in SENSITIVE_PROVOCATIONS.items():

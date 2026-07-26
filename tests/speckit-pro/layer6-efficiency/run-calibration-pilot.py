@@ -239,6 +239,15 @@ class Ledger:
             self._fail("cost_ceiling_reached")
 
     def record_usage(self, usage: dict[str, Any], cost: float | None) -> None:
+        """Accumulate spend. Deliberately does **not** stop the run.
+
+        The ceiling check is the caller's, and it belongs after the attempt's
+        record has been stored. Raising from here destroyed the evidence the
+        spend had already bought: the live call had completed and the tokens
+        were gone, but the exception unwound before ``dispatch`` returned its
+        capture, so the run recorded a consumed objective with no attempt row
+        and an attempt count one higher than the attempts it could show.
+        """
         self.input_tokens += int(usage.get("input_tokens") or 0)
         self.output_tokens += int(usage.get("output_tokens") or 0)
         self.cache_read_tokens += int(usage.get("cache_read_input_tokens") or 0)
@@ -251,7 +260,6 @@ class Ledger:
         )
         if isinstance(cost, (int, float)):
             self.cost_usd += float(cost)
-        self.check()
 
     @property
     def elapsed_seconds(self) -> float:
@@ -613,6 +621,9 @@ def dispatch(instruction: str, arm: dict[str, str], cwd: Path, ledger: Ledger) -
 
     return {
         "argv_digest": digest_of(argv[:1] + argv[3:]),
+        # The FR-039 override proof needs the argv itself, not its digest. A
+        # membership test against the digest string can never witness a flag.
+        "fallback_model_flag_absent": "--fallback-model" not in argv,
         "instruction_digest": sha256_text(instruction),
         "exit_code": exit_code,
         "wall_time_ms": wall_ms,
@@ -664,7 +675,7 @@ def observed_environment(capture: dict[str, Any], arm: dict[str, str]) -> dict[s
         if init.get("apiKeySource") is not None
         else None,
         "env_override_proof": {
-            "fallback_model_unset": "--fallback-model" not in capture["argv_digest"]
+            "fallback_model_unset": bool(capture["fallback_model_flag_absent"])
             and os.environ.get("CLAUDE_CODE_FALLBACK_MODEL") is None,
             "fallbackModel_unset": os.environ.get("ANTHROPIC_MODEL") is None,
             "claude_code_subagent_model_unset": os.environ.get("CLAUDE_CODE_SUBAGENT_MODEL")
@@ -972,24 +983,39 @@ def variance_estimates(attempts: list[dict[str, Any]]) -> dict[str, Any]:
         for arm, quantities in by_arm.items()
     }
 
+    # Both the paired differences and the correlation are within-task
+    # quantities, so both must be built from the SAME task-joined pairs. Taking
+    # the correlation from the per-arm lists instead would align the i-th
+    # candidate against whatever comparator happened to sit at index i: those
+    # lists are in attempts order, and a single attempt dropped from one arm
+    # shifts every later row against a different task. The equal-length guard
+    # that used to sit here caught count skew but never ordering skew, so a
+    # silently misaligned correlation could still be produced — and it is the
+    # sample-size input the frozen analysis plan is derived from.
     paired: dict[str, list[float]] = {name: [] for name in VARIANCE_QUANTITIES}
+    aligned: dict[str, tuple[list[float], list[float]]] = {
+        name: ([], []) for name in VARIANCE_QUANTITIES
+    }
     index = {(record["comparison_set_id"], record["arm"]): record for record in attempts}
-    pairs = sorted({key[0] for key in index})
-    for comparison_set_id in pairs:
+    comparison_sets = sorted({key[0] for key in index})
+    complete_pairs = 0
+    for comparison_set_id in comparison_sets:
         candidate = index.get((comparison_set_id, "candidate"))
         comparator = index.get((comparison_set_id, "comparator"))
         if candidate is None or comparator is None:
             continue
+        complete_pairs += 1
         for name in VARIANCE_QUANTITIES:
-            paired[name].append(
-                float(candidate["quantities"][name]) - float(comparator["quantities"][name])
-            )
+            candidate_value = float(candidate["quantities"][name])
+            comparator_value = float(comparator["quantities"][name])
+            paired[name].append(candidate_value - comparator_value)
+            aligned[name][0].append(candidate_value)
+            aligned[name][1].append(comparator_value)
 
     correlation: dict[str, Any] = {}
     for name in VARIANCE_QUANTITIES:
-        candidate_values = by_arm.get("candidate", {}).get(name, [])
-        comparator_values = by_arm.get("comparator", {}).get(name, [])
-        if len(candidate_values) < 2 or len(candidate_values) != len(comparator_values):
+        candidate_values, comparator_values = aligned[name]
+        if len(candidate_values) < 2:
             correlation[name] = None
             continue
         try:
@@ -1007,7 +1033,9 @@ def variance_estimates(attempts: list[dict[str, Any]]) -> dict[str, Any]:
             name: summarize(values) for name, values in paired.items()
         },
         "within_task_pearson_correlation": correlation,
-        "pairs_used": len(pairs),
+        # Complete pairs only. Counting every comparison set over-reported the
+        # pair count whenever one arm was missing.
+        "pairs_used": complete_pairs,
         "estimand_note": (
             "Every assigned attempt is retained, including any that failed a gate; "
             "no complete-case filtering was applied (FR-020)."
@@ -1235,6 +1263,12 @@ def run_pilot() -> tuple[dict[str, Any], dict[str, Any]]:
                     score_bundles.append(record["score_bundle"])
                     attestations.append(record["attestation"])
                     conformances.append(record["conformance"])
+
+                    # Deferred ceiling check. The pre-dispatch check above stops
+                    # the run before spending; this one stops it after the spend
+                    # is recorded AND its evidence is stored. Checking inside
+                    # record_usage discarded the capture the spend paid for.
+                    ledger.check()
     except BudgetExhausted:
         pass
     finally:
