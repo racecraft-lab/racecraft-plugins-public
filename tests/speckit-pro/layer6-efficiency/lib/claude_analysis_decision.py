@@ -87,7 +87,6 @@ REPLAY_FIXTURE_PATH = LAYER6_ROOT / "fixtures" / "car-003-calibration-replay.jso
 # the plan's name. The contract still accepts 1.0.0 so evidence already sealed
 # under it stays conforming to the version it declared.
 SCHEMA_VERSION = "1.1.0"
-LEGACY_SCHEMA_VERSIONS = ("1.0.0",)
 
 
 class AnalysisDecisionError(AssertionError):
@@ -1076,7 +1075,18 @@ def _pareto_stage_result(pareto_result: str) -> str:
     condition set and returns ``qualified``, so the worst possible candidate
     qualifies. A tie and mixed dominance already fail here, and FR-019 requires
     a failed comparison to yield no qualification rather than a forced ranking.
+
+    The outcome is checked against the closed ``PARETO_RESULTS`` set first. Every
+    unrecognised value would otherwise fall through to ``fail``, so a typo in a
+    caller — ``"uncertian"`` for ``"uncertain"`` — would silently convert an
+    inconclusive comparison into a definite loss instead of raising. Failing
+    closed is right for a value that IS a losing outcome; it is wrong for one
+    that is not an outcome at all.
     """
+    if pareto_result not in PARETO_RESULTS:
+        raise AnalysisDecisionError(
+            f"{pareto_result!r} is not a closed Pareto dominance outcome"
+        )
     if pareto_result == "candidate_dominates":
         return "pass"
     if pareto_result == "uncertain":

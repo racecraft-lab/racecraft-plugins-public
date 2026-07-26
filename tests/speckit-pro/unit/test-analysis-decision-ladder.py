@@ -344,6 +344,30 @@ class ParetoDominanceTests(unittest.TestCase):
         self.assertEqual(beaten.result, "comparator_dominates")
         self.assertEqual(self.module._pareto_stage_result(beaten.result), "fail")
 
+    def test_an_outcome_outside_the_closed_set_is_refused_not_failed(self) -> None:
+        """A typo must raise, not silently become a losing outcome.
+
+        Every unrecognised value used to fall through to ``fail``. Failing
+        closed is right for a value that IS a losing outcome; it is wrong for
+        one that is not an outcome at all, because it converts an inconclusive
+        comparison into a definite loss with nothing recorded.
+        """
+        self.assertEqual(
+            self.module.PARETO_RESULTS,
+            ("candidate_dominates", "comparator_dominates", "tie", "mixed", "uncertain", "not_evaluated"),
+        )
+        for bogus in ("uncertian", "candidate_dominate", "", "pass"):
+            with self.subTest(outcome=bogus):
+                with self.assertRaises(self.module.AnalysisDecisionError):
+                    self.module._pareto_stage_result(bogus)
+
+        # Every closed member still resolves without raising.
+        for outcome in self.module.PARETO_RESULTS:
+            with self.subTest(outcome=outcome):
+                self.assertIn(
+                    self.module._pareto_stage_result(outcome), ("pass", "fail", "uncertain")
+                )
+
     def test_identical_vectors_tie(self) -> None:
         self.assertEqual(self.module.pareto_compare(vector(), vector()).result, "tie")
 

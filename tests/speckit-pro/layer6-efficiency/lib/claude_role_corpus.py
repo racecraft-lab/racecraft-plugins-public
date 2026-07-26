@@ -47,8 +47,6 @@ else:
 
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
-CONTRACT_ROOT = REPO_ROOT / "specs" / "car-003-evaluation-runner-scoring" / "contracts"
-CORPUS_SCHEMA_PATH = CONTRACT_ROOT / "role-corpus.schema.json"
 CORPUS_FIXTURE_PATH = (
     REPO_ROOT / "tests" / "speckit-pro" / "layer6-efficiency" / "fixtures" / "car-003-role-corpus.json"
 )
@@ -144,7 +142,13 @@ def role_index(corpus: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
 
 
 def unbound_contract_fields(role: Mapping[str, Any]) -> tuple[str, ...]:
-    """Name every always-bound contract field left absent or null (FR-012)."""
+    """Name every always-bound contract field left absent, null, or empty (FR-012).
+
+    An empty list counts as unbound deliberately. These fields hold bindings,
+    and a field carrying zero bindings has bound nothing — treating ``[]`` as
+    satisfied would let a role declare a binding list and supply none, which is
+    the shape FR-012 exists to refuse.
+    """
     return tuple(
         field
         for field in ALWAYS_BOUND_CONTRACT_FIELDS

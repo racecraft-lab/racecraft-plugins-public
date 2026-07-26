@@ -53,7 +53,6 @@ from __future__ import annotations
 import copy
 import hashlib
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
 if __package__:  # pragma: no cover - the lib is imported flat by the suite
@@ -63,8 +62,6 @@ else:
     from claude_score_bundle import INVALIDATION_REASONS
     from claude_successor_freeze import canonical_json, record_digest
 
-
-REPO_ROOT = Path(__file__).resolve().parents[4]
 
 SCHEMA_VERSION = "1.0.0"
 

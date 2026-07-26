@@ -39,7 +39,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import subprocess
 import sys
@@ -227,6 +226,14 @@ def collect() -> dict:
             for effort in EFFORT_LADDER:
                 tuple_evidence.append(probe_effort(alias, effort, ledger))
     except BudgetExhausted:
+        # Deliberate: a budget stop ends collection, it does not discard what
+        # collection already paid for. Every alias binding and effort
+        # observation gathered before the ceiling was reached is already in
+        # `alias_bindings` and `tuple_evidence`, and the caller records the
+        # stop reason from the ledger. Re-raising would throw away live probe
+        # evidence that was already bought; the partial set is admitted through
+        # the same authority checks as a complete one and simply covers fewer
+        # tuples.
         pass
 
     # supported_efforts maps model -> OBSERVATION RECORDS, not bare effort
