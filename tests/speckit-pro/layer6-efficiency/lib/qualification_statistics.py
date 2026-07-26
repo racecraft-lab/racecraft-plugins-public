@@ -9,6 +9,7 @@ import json
 import math
 import re
 from collections import defaultdict
+from datetime import datetime
 
 
 STATISTICS_SCHEMA_VERSION = "qualification-statistics.v1"
@@ -167,6 +168,7 @@ _ANALYSIS_PLAN_FIELDS = frozenset({
     "analysis_plan_digest",
     "status",
     "calibration_protocol_binding",
+    "calibration_completion_binding",
     "calibration_partition_binding",
     "calibration_evidence_bindings",
     "freeze_provenance",
@@ -188,6 +190,27 @@ _FREEZE_PROVENANCE_FIELDS = frozenset({
     "frozen_after_calibration",
     "cohort_outcome_observed",
     "pre_cohort_outcome_absence_digest",
+    "independent_review_binding",
+})
+_CALIBRATION_COMPLETION_FIELDS = frozenset({
+    "schema_version",
+    "calibration_completion_id",
+    "calibration_completion_version",
+    "calibration_completion_digest",
+    "status",
+    "calibration_protocol_binding",
+    "calibration_partition_binding",
+    "comparison_set_bindings",
+    "assignment_bindings",
+    "score_bundle_bindings",
+    "calibration_evidence_bindings",
+    "completion_provenance",
+})
+_COMPLETION_PROVENANCE_FIELDS = frozenset({
+    "completed_at",
+    "calibration_execution_complete",
+    "analysis_plan_observed",
+    "cohort_outcome_observed",
     "independent_review_binding",
 })
 _BINDING_FIELDS = frozenset({"id", "digest"})
@@ -339,6 +362,25 @@ def _text(value: object, label: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{label} must be a non-empty string")
     return value
+
+
+def _timestamp(value: object, label: str) -> str:
+    text = _text(value, label)
+    if re.fullmatch(
+        r"[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])"
+        r"[Tt](?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]"
+        r"(?:\.[0-9]+)?(?:[Zz]|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])",
+        text,
+    ) is None:
+        raise ValueError(f"{label} must be an RFC3339 timestamp")
+    try:
+        normalized = text[:-1] + "+00:00" if text[-1] in "Zz" else text
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        raise ValueError(f"{label} must be an RFC3339 timestamp") from exc
+    if parsed.utcoffset() is None:
+        raise ValueError(f"{label} must include an RFC3339 offset")
+    return text
 
 
 def _digest(value: object, label: str) -> str:
@@ -518,7 +560,123 @@ def _validate_campaign_budget(value: object) -> dict:
 def _validate_bindings(value: object, label: str) -> list[dict]:
     if not isinstance(value, list) or not value:
         raise ValueError(f"{label} must be a non-empty array")
-    return [_validate_binding(item, label) for item in value]
+    rows = [_validate_binding(item, label) for item in value]
+    if len({(row["id"], row["digest"]) for row in rows}) != len(rows):
+        raise ValueError(f"{label} must contain unique bindings")
+    return rows
+
+
+def validate_calibration_completion(value: object) -> dict:
+    """Validate plan-free, content-addressed calibration completion evidence."""
+    row = _closed(
+        copy.deepcopy(value),
+        _CALIBRATION_COMPLETION_FIELDS,
+        "calibration completion",
+    )
+    _require(
+        row,
+        _CALIBRATION_COMPLETION_FIELDS,
+        "calibration completion",
+    )
+    if (
+        row["schema_version"] != "calibration-completion.v1"
+        or row["status"] != "complete"
+    ):
+        raise ValueError(
+            "calibration completion must be a complete calibration-completion.v1 object"
+        )
+    expected_digest = _content_digest({
+        key: item
+        for key, item in row.items()
+        if key not in {
+            "calibration_completion_id",
+            "calibration_completion_digest",
+        }
+    })
+    if row["calibration_completion_digest"] != expected_digest:
+        raise ValueError("calibration completion digest does not match content")
+    expected_id = _content_digest({
+        key: item
+        for key, item in row.items()
+        if key != "calibration_completion_id"
+    })
+    if row["calibration_completion_id"] != expected_id:
+        raise ValueError("calibration completion ID does not match content")
+    row["calibration_completion_id"] = _digest(
+        row["calibration_completion_id"],
+        "calibration completion ID",
+    )
+    row["calibration_completion_version"] = _text(
+        row["calibration_completion_version"],
+        "calibration completion version",
+    )
+    row["calibration_completion_digest"] = _digest(
+        row["calibration_completion_digest"],
+        "calibration completion digest",
+    )
+    row["calibration_protocol_binding"] = _validate_binding(
+        row["calibration_protocol_binding"],
+        "calibration completion protocol binding",
+    )
+    row["calibration_partition_binding"] = _validate_partition(
+        row["calibration_partition_binding"],
+        require_calibration=True,
+        label="calibration completion partition",
+    )
+    for field in (
+        "comparison_set_bindings",
+        "assignment_bindings",
+        "score_bundle_bindings",
+        "calibration_evidence_bindings",
+    ):
+        row[field] = _validate_bindings(
+            row[field],
+            field.replace("_", " "),
+        )
+    if len(row["assignment_bindings"]) < 2 or len(
+        row["score_bundle_bindings"]
+    ) < 2:
+        raise ValueError(
+            "calibration completion must bind both comparison arms"
+        )
+    if len(row["assignment_bindings"]) != len(row["score_bundle_bindings"]):
+        raise ValueError(
+            "calibration completion assignment and score binding counts differ"
+        )
+    provenance = _closed(
+        row["completion_provenance"],
+        _COMPLETION_PROVENANCE_FIELDS,
+        "calibration completion provenance",
+    )
+    _require(
+        provenance,
+        _COMPLETION_PROVENANCE_FIELDS,
+        "calibration completion provenance",
+    )
+    if provenance["calibration_execution_complete"] is not True:
+        raise ValueError("calibration execution must be complete")
+    if provenance["analysis_plan_observed"] is not False:
+        raise ValueError(
+            "calibration completion must precede analysis plan observation"
+        )
+    if provenance["cohort_outcome_observed"] is not False:
+        raise ValueError(
+            "calibration completion must precede cohort outcomes"
+        )
+    row["completion_provenance"] = {
+        "completed_at": _timestamp(
+            provenance["completed_at"],
+            "calibration completion timestamp",
+        ),
+        "calibration_execution_complete": True,
+        "analysis_plan_observed": False,
+        "cohort_outcome_observed": False,
+        "independent_review_binding": _validate_binding(
+            provenance["independent_review_binding"],
+            "calibration completion independent review binding",
+        ),
+    }
+    return row
 
 
 def _validate_freeze_provenance(value: object) -> dict:
@@ -671,6 +829,10 @@ def _validate_plan(analysis_plan: object) -> dict:
     validated["calibration_protocol_binding"] = _validate_binding(
         plan["calibration_protocol_binding"],
         "analysis plan calibration protocol binding",
+    )
+    validated["calibration_completion_binding"] = _validate_binding(
+        plan["calibration_completion_binding"],
+        "analysis plan calibration completion binding",
     )
     validated["calibration_partition_binding"] = _validate_partition(
         plan["calibration_partition_binding"],
@@ -1593,6 +1755,9 @@ def _frozen_plan_summary(plan: dict) -> dict:
         "calibration_protocol_binding": copy.deepcopy(
             plan["calibration_protocol_binding"]
         ),
+        "calibration_completion_binding": copy.deepcopy(
+            plan["calibration_completion_binding"]
+        ),
         "calibration_partition_binding": copy.deepcopy(plan["calibration_partition_binding"]),
         "calibration_evidence_bindings": copy.deepcopy(plan["calibration_evidence_bindings"]),
         "freeze_provenance": copy.deepcopy(plan["freeze_provenance"]),
@@ -2101,4 +2266,5 @@ __all__ = [
     "compare_pareto_vectors",
     "evaluate_qualification_decision",
     "validate_analysis_decision_bundle",
+    "validate_calibration_completion",
 ]

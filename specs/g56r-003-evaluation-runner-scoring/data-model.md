@@ -26,9 +26,10 @@ source_snapshot_id + current_ledger_digest
                           ├─ experiment_policy_id
                           └─ execution_trace_id
                               └─ score_bundle_id
-                                  └─ analysis_plan_id
-                                      └─ analysis_output_id
-                                          └─ decision_bundle_id
+                                  └─ calibration_completion_id
+                                      └─ analysis_plan_id
+                                          └─ analysis_output_id
+                                              └─ decision_bundle_id
 ```
 
 The graph is append-only. Every child validates the ID and digest of each
@@ -209,7 +210,8 @@ calibration exists to estimate.
 
 - margins, sample sizes, quality floors, and terminal thresholds are forbidden;
 - changes issue a new protocol and additively invalidate affected assignments;
-- the later frozen analysis plan binds the exact protocol ID and digest.
+- the later completion artifact and frozen analysis plan bind the exact
+  protocol ID and digest.
 
 ## Entity: Experiment Policy
 
@@ -365,12 +367,35 @@ pending_ballots -> pending_adjudication -> accepted
 Candidate-caused terminal outcomes produce accepted estimand records with
 acceptance zero when treatment evidence is otherwise valid.
 
+## Entity: Calibration Completion
+
+**Purpose**: Prove that protocol-bound calibration evidence collection is
+complete without depending on the numeric analysis plan that calibration
+exists to inform.
+
+**Required fields**:
+
+- `calibration_completion_id`, version, digest, and `status=complete`
+- calibration protocol and ineligible partition bindings
+- comparison-set, assignment, score-bundle, and calibration-evidence bindings
+- completion timestamp and independent-review binding
+- `calibration_execution_complete=true`
+- `analysis_plan_observed=false` and `cohort_outcome_observed=false`
+
+**Invariants**:
+
+- the object is content addressed and closed to unknown fields;
+- margins, sample sizes, quality floors, and terminal thresholds are forbidden;
+- assignment and score bindings cover both comparison arms;
+- the later analysis plan binds this exact completion ID and digest.
+
 ## Entity: Analysis Plan
 
 **Required fields**:
 
 - `analysis_plan_id`, version, digest, status
 - calibration protocol ID/digest
+- calibration completion ID/digest
 - calibration partition inputs and provenance
 - semantic/reliability floor definitions
 - frozen workload strata, target weights, long-horizon flags, minimum unique

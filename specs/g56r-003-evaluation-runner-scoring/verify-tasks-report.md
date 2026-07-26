@@ -1,9 +1,9 @@
 # Verify Tasks Report: G56R-003
 
-Date: 2026-07-25
+Date: 2026-07-26
 Scope: all
 Feature: specs/g56r-003-evaluation-runner-scoring
-Task Count: 25 completed / 25 total
+Task Count: 26 completed / 26 total
 Rerun Context: Post-remediation verification against the current dirty worktree.
 
 > FRESH SESSION ADVISORY: For maximum reliability, run `/speckit.verify-tasks`
@@ -14,7 +14,7 @@ Rerun Context: Post-remediation verification against the current dirty worktree.
 
 | Verdict | Count |
 |---------|------:|
-| ✅ VERIFIED | 25 |
+| ✅ VERIFIED | 26 |
 | 🔍 PARTIAL | 0 |
 | ⚠️ WEAK | 0 |
 | ❌ NOT_FOUND | 0 |
@@ -53,6 +53,7 @@ No flagged items.
 | T023 | ✅ VERIFIED | Deterministic analysis replay and `calibrate`, `replay`, `freeze-analysis-plan` CLI paths exist with focused CLI/replay tests. |
 | T024 | ✅ VERIFIED | Analysis freeze and prohibited-boundary coverage exists in statistics/replay tests. |
 | T025 | ✅ VERIFIED | Full sanitized replay regression, suite registration, and generated artifact evidence are present. |
+| T026 | ✅ VERIFIED | Calibration now validates the complete closed policy/protocol authority graph, and analysis-plan freeze binds plan-free calibration-completion evidence. |
 
 ## Unassessable Items
 
@@ -93,6 +94,7 @@ None.
 | T023 | ✅ VERIFIED | implemented |
 | T024 | ✅ VERIFIED | implemented |
 | T025 | ✅ VERIFIED | implemented |
+| T026 | ✅ VERIFIED | implemented |
 
 ## Walkthrough Log
 

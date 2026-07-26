@@ -29,12 +29,16 @@ from speckit_pro_runner.agent_materialization import (  # noqa: E402
     verify_destination_bytes,
 )
 from codex_successor_capability import publish_successor_freeze  # noqa: E402
-from qualification_contracts import validate_qualification_bundle  # noqa: E402
+from qualification_contracts import (  # noqa: E402
+    validate_calibration_experiment_policy,
+    validate_calibration_protocol,
+    validate_qualification_bundle,
+)
 from qualification_replay import build_analysis_replay_bundle  # noqa: E402
 from qualification_scoring import build_score_bundle, content_id, digest  # noqa: E402
 from qualification_statistics import (  # noqa: E402
     _validate_plan as validate_analysis_plan,
-    validate_analysis_decision_bundle,
+    validate_calibration_completion,
 )
 
 
@@ -504,6 +508,7 @@ def _require_campaign_budget(value: Any) -> dict[str, int]:
 
 def _require_policy_bindings(
     policy: dict[str, Any],
+    protocol: dict[str, Any],
     freeze: dict[str, Any],
     corpus: dict[str, Any],
     partition: dict[str, Any],
@@ -522,6 +527,11 @@ def _require_policy_bindings(
         corpus.get("corpus_digest"),
         "corpus",
     )
+    expected_protocol = _binding(
+        protocol.get("calibration_protocol_id"),
+        protocol.get("calibration_protocol_digest"),
+        "calibration protocol",
+    )
     if policy.get("partition_binding") != partition:
         raise QualificationBoundaryError(
             "partition_binding_mismatch",
@@ -536,6 +546,26 @@ def _require_policy_bindings(
         raise QualificationBoundaryError(
             "corpus_binding_mismatch",
             "experiment policy corpus binding does not match",
+        )
+    if policy.get("calibration_protocol_binding") != expected_protocol:
+        raise QualificationBoundaryError(
+            "calibration_protocol_binding_mismatch",
+            "experiment policy calibration protocol binding does not match",
+        )
+    if protocol.get("partition_binding") != partition:
+        raise QualificationBoundaryError(
+            "partition_binding_mismatch",
+            "calibration protocol partition binding does not match",
+        )
+    if protocol.get("candidate_freeze_binding") != expected_freeze:
+        raise QualificationBoundaryError(
+            "candidate_freeze_binding_mismatch",
+            "calibration protocol candidate freeze binding does not match",
+        )
+    if protocol.get("corpus_binding") != expected_corpus:
+        raise QualificationBoundaryError(
+            "corpus_binding_mismatch",
+            "calibration protocol corpus binding does not match",
         )
     if policy.get("budget") != budget:
         raise QualificationBoundaryError(
@@ -565,17 +595,17 @@ def _require_policy_bindings(
             digest(snapshot_row),
             "runtime snapshot binding",
         )
-    if policy.get("pinned_client_binding") != pinned_client:
+    if protocol.get("pinned_client_binding") != pinned_client:
         raise QualificationBoundaryError(
             "pinned_client_binding_mismatch",
-            "experiment policy pinned client binding does not match",
+            "calibration protocol pinned client binding does not match",
         )
-    if policy.get("runtime_snapshot_binding") != runtime_snapshot:
+    if protocol.get("runtime_snapshot_binding") != runtime_snapshot:
         raise QualificationBoundaryError(
             "runtime_snapshot_binding_mismatch",
-            "experiment policy runtime snapshot binding does not match",
+            "calibration protocol runtime snapshot binding does not match",
         )
-    scorers = policy.get("scorer_bindings")
+    scorers = protocol.get("scorer_bindings")
     if not isinstance(scorers, list) or len(scorers) != 2:
         raise QualificationBoundaryError(
             "scorer_bindings_invalid",
@@ -588,20 +618,21 @@ def _require_policy_bindings(
             "experiment policy scorer bindings must be distinct",
         )
     return {
+        "calibration_protocol_binding": expected_protocol,
         "pinned_client_binding": pinned_client,
         "runtime_snapshot_binding": runtime_snapshot,
         "scorer_bindings": validated_scorers,
-        "rubric_binding": _require_binding(policy.get("rubric_binding"), "rubric binding"),
+        "rubric_binding": _require_binding(protocol.get("rubric_binding"), "rubric binding"),
         "adjudicator_binding": _require_binding(
-            policy.get("adjudicator_binding"),
+            protocol.get("adjudicator_binding"),
             "adjudicator binding",
         ),
         "workload_manifest_binding": _require_binding(
-            policy.get("workload_manifest_binding"),
+            protocol.get("workload_manifest_binding"),
             "workload manifest binding",
         ),
         "cache_policy_binding": _require_binding(
-            policy.get("cache_policy_binding"),
+            protocol.get("cache_policy_binding"),
             "cache policy binding",
         ),
     }
@@ -622,10 +653,31 @@ def calibrate_command(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
         read_json_file(args.candidate_freeze, "candidate freeze"),
         "candidate freeze",
     )
-    policy = _require_object(
+    raw_policy = _require_object(
         read_json_file(args.experiment_policy, "experiment policy"),
         "experiment policy",
     )
+    raw_protocol = _require_object(
+        read_json_file(args.calibration_protocol, "calibration protocol"),
+        "calibration protocol",
+    )
+    try:
+        protocol = validate_calibration_protocol(raw_protocol)
+    except ValueError as exc:
+        raise QualificationBoundaryError(
+            "calibration_protocol_invalid",
+            str(exc),
+        ) from exc
+    try:
+        policy = validate_calibration_experiment_policy(
+            raw_policy,
+            protocol,
+        )
+    except ValueError as exc:
+        raise QualificationBoundaryError(
+            "experiment_policy_schema_invalid",
+            str(exc),
+        ) from exc
     corpus = _require_object(read_json_file(args.corpus, "corpus"), "corpus")
     budget = _require_campaign_budget(read_json_file(args.budget, "campaign budget"))
     raw_root = args.raw_evidence_root.resolve()
@@ -645,6 +697,7 @@ def calibrate_command(args: argparse.Namespace) -> tuple[int, dict[str, Any]]:
         )
     bindings = _require_policy_bindings(
         policy,
+        protocol,
         freeze,
         corpus,
         partition,
@@ -685,7 +738,7 @@ def freeze_analysis_plan_command(args: argparse.Namespace) -> tuple[int, dict[st
         "calibration_partition_binding",
         "calibration_evidence_bindings",
         "freeze_provenance",
-        "analysis_decision",
+        "calibration_completion",
     }
     if set(report) != expected_report_fields:
         raise QualificationBoundaryError(
@@ -718,18 +771,22 @@ def freeze_analysis_plan_command(args: argparse.Namespace) -> tuple[int, dict[st
             "calibration_report_invalid",
             "calibration report ID does not match content",
         )
-    try:
-        decision = validate_analysis_decision_bundle(report.get("analysis_decision"))
-    except ValueError as exc:
-        raise QualificationBoundaryError(
-            "calibration_decision_invalid",
-            str(exc),
-        ) from exc
-    if decision["decision"] != "calibration_complete":
+    raw_completion = report.get("calibration_completion")
+    if (
+        not isinstance(raw_completion, dict)
+        or raw_completion.get("status") != "complete"
+    ):
         raise QualificationBoundaryError(
             "calibration_not_complete",
-            "analysis plan may freeze only after a calibration-complete decision",
+            "analysis plan may freeze only after governed calibration completion",
         )
+    try:
+        completion = validate_calibration_completion(raw_completion)
+    except ValueError as exc:
+        raise QualificationBoundaryError(
+            "calibration_completion_invalid",
+            str(exc),
+        ) from exc
     protocol_binding = _require_binding(
         report.get("calibration_protocol_binding"),
         "calibration protocol binding",
@@ -737,10 +794,15 @@ def freeze_analysis_plan_command(args: argparse.Namespace) -> tuple[int, dict[st
     partition = _require_calibration_partition(
         report.get("calibration_partition_binding")
     )
-    if partition != decision["partition_binding"]:
+    if protocol_binding != completion["calibration_protocol_binding"]:
         raise QualificationBoundaryError(
             "calibration_report_invalid",
-            "calibration report partition does not match the analysis decision",
+            "calibration report protocol does not match calibration completion",
+        )
+    if partition != completion["calibration_partition_binding"]:
+        raise QualificationBoundaryError(
+            "calibration_report_invalid",
+            "calibration report partition does not match calibration completion",
         )
     provenance = _require_object(report.get("freeze_provenance"), "freeze provenance")
     if provenance.get("frozen_after_calibration") is not True:
@@ -753,10 +815,18 @@ def freeze_analysis_plan_command(args: argparse.Namespace) -> tuple[int, dict[st
             "cohort_outcome_observed",
             "analysis plan must freeze before cohort outcomes are observed",
         )
-    _require_binding(
+    independent_review = _require_binding(
         provenance.get("independent_review_binding"),
         "independent review binding",
     )
+    if (
+        independent_review
+        != completion["completion_provenance"]["independent_review_binding"]
+    ):
+        raise QualificationBoundaryError(
+            "calibration_report_invalid",
+            "analysis plan review does not match calibration completion review",
+        )
     evidence = report.get("calibration_evidence_bindings")
     if not isinstance(evidence, list) or not evidence:
         raise QualificationBoundaryError(
@@ -765,9 +835,20 @@ def freeze_analysis_plan_command(args: argparse.Namespace) -> tuple[int, dict[st
         )
     for item in evidence:
         _require_binding(item, "calibration evidence binding")
+    if evidence != completion["calibration_evidence_bindings"]:
+        raise QualificationBoundaryError(
+            "calibration_report_invalid",
+            "calibration report evidence does not match calibration completion",
+        )
+    completion_binding = _binding(
+        completion["calibration_completion_id"],
+        completion["calibration_completion_digest"],
+        "calibration completion",
+    )
     frozen = copy.deepcopy(draft)
     frozen["status"] = "frozen"
     frozen["calibration_protocol_binding"] = protocol_binding
+    frozen["calibration_completion_binding"] = completion_binding
     frozen["calibration_partition_binding"] = partition
     frozen["calibration_evidence_bindings"] = copy.deepcopy(evidence)
     frozen["freeze_provenance"] = copy.deepcopy(provenance)
@@ -845,6 +926,7 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate.add_argument("--partition", type=Path, required=True)
     calibrate.add_argument("--candidate-freeze", type=Path, required=True)
     calibrate.add_argument("--experiment-policy", type=Path, required=True)
+    calibrate.add_argument("--calibration-protocol", type=Path, required=True)
     calibrate.add_argument("--corpus", type=Path, required=True)
     calibrate.add_argument("--budget", type=Path, required=True)
     calibrate.add_argument("--raw-evidence-root", type=Path, required=True)

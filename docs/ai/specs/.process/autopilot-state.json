@@ -2,7 +2,7 @@
   "workflow_file": "docs/ai/specs/.process/G56R-003-workflow.md",
   "spec_id": "G56R-003",
   "feature_dir": "specs/g56r-003-evaluation-runner-scoring",
-  "updated_at": "2026-07-26T01:21:48Z",
+  "updated_at": "2026-07-26T12:51:36Z",
   "active_step": "Complete",
   "status": "completed",
   "settings": {
@@ -229,7 +229,9 @@
       "execution": "direct parent fallback after two context-stalled phase-executor attempts",
       "gate": "G5",
       "gate_status": "passed",
-      "total_tasks": 25,
+      "total_tasks": 26,
+      "initial_g5_tasks": 25,
+      "post_review_follow_up_tasks": 1,
       "parallel_safe_tasks": 3,
       "review_slices": 3,
       "functional_requirements_covered": 38,
@@ -304,7 +306,8 @@
         "T022",
         "T023",
         "T024",
-        "T025"
+        "T025",
+        "T026"
       ],
       "task_evidence": {
         "T001": {
@@ -484,6 +487,14 @@
           "docs": "pnpm --dir docs-site reference:check and validate passed after canonical reference generation.",
           "release_title": "feat(g56r-003): add evaluation runner scoring passed live release-readiness validation.",
           "generated_check": "After checkpoint 49af42be, PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py --check passed and docs reference:check remained current."
+        },
+        "T026": {
+          "status": "completed",
+          "execution": "direct post-review remediation",
+          "red": "Regression coverage exposed the pilot's partial policy-binding checks and the analysis-plan freeze dependency on a plan-bound calibration decision before the new validators and completion contract existed.",
+          "focused_green": "Qualification contracts passed 36/36; qualification statistics/replay passed 34/34.",
+          "full_suite": "PYTHONDONTWRITEBYTECODE=1 python3 -u tests/speckit-pro/run-all.py passed 3251/3251.",
+          "contract": "Calibration validates the full closed policy and protocol schemas, content identities, comparison-set and pair digests, seeded ordering, and authority joins; analysis-plan freeze requires content-addressed plan-free calibration completion and binds it into the frozen plan."
         }
       },
       "gate": "G7",
@@ -492,8 +503,10 @@
         "helper_id": "validate-gate",
         "mode": "read_only",
         "writes_state": false,
-        "tasks_done": 25,
-        "tasks_total": 25,
+        "tasks_done": 26,
+        "tasks_total": 26,
+        "initial_slice_tasks": 25,
+        "post_review_follow_up_tasks": 1,
         "markers": 0
       }
     },
@@ -647,11 +660,24 @@
         ],
         "phase_1_resolution": "Eligibility-selected exclusive calibration-protocol or analysis-plan binding keyed on partition.qualification_eligible.",
         "runtime_resolution": "Calibration-only contract uses the const-false partition and requires the calibration-protocol binding directly.",
-        "analysis_plan_lineage": "The frozen analysis plan binds the pre-calibration protocol while preserving the validated calibration-decision gate.",
-        "additional_follow_up": "The calibration decision is itself plan-bound; resolving that distinct ordering issue requires a schema-governed completion artifact rather than weakening the gate to a caller boolean.",
-        "enforcement_gap": "Full closed-schema validation on the pilot entry point is deferred; this contradiction remediation lands first.",
+        "analysis_plan_lineage": "The frozen analysis plan binds the pre-calibration protocol and, after T026, the plan-free calibration-completion authority.",
+        "additional_follow_up": "Resolved by T026 with a schema-governed, content-addressed calibration-completion artifact that is independent of the later analysis plan.",
+        "enforcement_gap": "Resolved by T026; the pilot now validates the full closed policy/protocol schemas, identities, comparison sets, pairs, ordering, and authority joins before execution.",
         "focused_validation": "Qualification contracts and statistics passed 67/67.",
         "full_suite": "PYTHONDONTWRITEBYTECODE=1 python3 -u tests/speckit-pro/run-all.py passed 3251/3251."
+      },
+      "calibration_authority_follow_up_remediation": {
+        "status": "passed",
+        "resolved_findings": [
+          "calibration entry point bypassed full closed experiment-policy validation",
+          "analysis-plan freeze depended on a plan-bound calibration decision"
+        ],
+        "policy_enforcement": "The calibration CLI requires an explicit frozen protocol, validates both closed schemas and content identities, recomputes comparison-set and pair digests, derives seeded order, and joins all immutable authorities before returning calibration_ready.",
+        "completion_authority": "A closed calibration-completion.v1 artifact binds the protocol, ineligible partition, comparison sets, assignments, score bundles, evidence, completion provenance, and independent review without margins, sample sizes, quality floors, terminal thresholds, or analysis-plan authority.",
+        "analysis_plan_lineage": "The analysis-plan contract and freeze command require and persist the exact calibration-completion ID/digest.",
+        "focused_validation": "Qualification contracts passed 36/36; qualification statistics/replay passed 34/34.",
+        "full_suite": "PYTHONDONTWRITEBYTECODE=1 python3 -u tests/speckit-pro/run-all.py passed 3251/3251.",
+        "score_taxonomies_changed": false
       },
       "retrospective": {
         "status": "completed",
@@ -836,6 +862,10 @@
     },
     {
       "step": "Post: Experiment Policy Contradiction Remediation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Calibration Authority Follow-up Remediation",
       "status": "completed"
     },
     {

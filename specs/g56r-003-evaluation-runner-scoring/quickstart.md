@@ -91,9 +91,11 @@ python3 tests/speckit-pro/layer6-efficiency/run-codex-qualification.py \
   --partition tests/speckit-pro/layer6-efficiency/calibration/partition.json \
   --candidate-freeze tests/speckit-pro/layer6-efficiency/calibration/successor-freeze.json \
   --experiment-policy tests/speckit-pro/layer6-efficiency/calibration/experiment-policy.json \
+  --calibration-protocol tests/speckit-pro/layer6-efficiency/calibration/protocol.json \
   --corpus tests/speckit-pro/layer6-efficiency/fixtures-codex/corpus-manifest.json \
   --budget tests/speckit-pro/layer6-efficiency/calibration/budget.json \
-  --raw-evidence-root /absolute/operator-controlled/path
+  --raw-evidence-root /absolute/operator-controlled/path \
+  --confirm-explicit-local-live
 ```
 
 Before the first live call, the adapter must print and require confirmation of:
@@ -109,7 +111,10 @@ Before the first live call, the adapter must print and require confirmation of:
 - complete-pair rerun cap.
 
 The command must refuse screening, selection, cohort-lock, or integrated
-confirmation partitions. It must never emit final route policy.
+confirmation partitions. It validates the full closed experiment-policy and
+calibration-protocol schemas, content identities, comparison-set and pair
+digests, seeded ordering, and authority joins before returning
+`calibration_ready`. It must never emit final route policy.
 
 ## 6. Raw evidence retention
 
@@ -134,8 +139,16 @@ fields block publication; do not manually redact around the validator.
 
 ## 7. Freeze the numeric analysis plan
 
-After the calibration report is independently reviewed, create a versioned
-plan that records all required numeric and terminal rules:
+After calibration evidence is independently reviewed, publish a
+content-addressed `calibration-completion.v1` object in the calibration report.
+The completion object binds the protocol, ineligible partition, comparison
+sets, assignments, score bundles, and evidence while proving that calibration
+execution is complete and neither an analysis plan nor later-cohort outcome was
+observed. It contains no margins, sample sizes, quality floors, or terminal
+thresholds.
+
+Then create a versioned plan that records all required numeric and terminal
+rules:
 
 ```bash
 python3 tests/speckit-pro/layer6-efficiency/run-codex-qualification.py \
@@ -145,11 +158,11 @@ python3 tests/speckit-pro/layer6-efficiency/run-codex-qualification.py \
   --output tests/speckit-pro/layer6-efficiency/calibration/analysis-plan.json
 ```
 
-The freeze copies the calibration protocol binding from the independently
-reviewed calibration report into the plan and must prove that no G56R-007
-through G56R-010 outcome-bearing evidence existed at the freeze point. Later
-changes create a new plan and invalidate dependent decisions; they never
-mutate the old plan.
+The freeze validates the completion object, copies both its completion binding
+and calibration protocol binding into the plan, and must prove that no
+G56R-007 through G56R-010 outcome-bearing evidence existed at the freeze point.
+Later changes create a new completion/plan lineage and invalidate dependent
+decisions; they never mutate old artifacts.
 
 ## 8. Refresh shipped runner artifacts
 

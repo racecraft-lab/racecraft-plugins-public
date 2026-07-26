@@ -29,11 +29,13 @@ TREATMENT_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/treatmen
 TREATMENT_FIXTURE_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-replay/treatment-replay.json"
 CONTRACT_DIR = ROOT / "tests/speckit-pro/layer6-efficiency/contracts"
 CALIBRATION_PROTOCOL_SCHEMA_PATH = CONTRACT_DIR / "calibration-protocol.schema.json"
+CALIBRATION_COMPLETION_SCHEMA_PATH = CONTRACT_DIR / "calibration-completion.schema.json"
 EXPERIMENT_POLICY_SCHEMA_PATH = CONTRACT_DIR / "experiment-policy.schema.json"
 ANALYSIS_PLAN_SCHEMA_PATH = CONTRACT_DIR / "analysis-plan.schema.json"
 ANALYSIS_DECISION_SCHEMA_PATH = CONTRACT_DIR / "analysis-decision.schema.json"
 CONTRACT_SCHEMA_PATHS = (
     CALIBRATION_PROTOCOL_SCHEMA_PATH,
+    CALIBRATION_COMPLETION_SCHEMA_PATH,
     EXPERIMENT_POLICY_SCHEMA_PATH,
     ANALYSIS_PLAN_SCHEMA_PATH,
     ANALYSIS_DECISION_SCHEMA_PATH,
@@ -42,6 +44,7 @@ SPEC_CONTRACT_DIR = ROOT / "specs/g56r-003-evaluation-runner-scoring/contracts"
 G56R_003_RUNTIME_CONTRACT_NAMES = (
     "analysis-decision.schema.json",
     "analysis-plan.schema.json",
+    "calibration-completion.schema.json",
     "calibration-protocol.schema.json",
     "experiment-policy.schema.json",
     "role-corpus.schema.json",
@@ -296,9 +299,12 @@ def validate_contract_schema_instance(value: object, schema: object, root: dict,
         if "pattern" in schema and re.search(schema["pattern"], value) is None:
             raise AssertionError(f"{path} does not match its contract pattern")
         if schema.get("format") == "date-time" and re.fullmatch(
-            r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", value,
+            r"[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])"
+            r"[Tt](?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]"
+            r"(?:\.[0-9]+)?(?:[Zz]|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])",
+            value,
         ) is None:
-            raise AssertionError(f"{path} must be an RFC3339 UTC timestamp")
+            raise AssertionError(f"{path} must be an RFC3339 timestamp")
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         if "minimum" in schema and value < schema["minimum"]:
             raise AssertionError(f"{path} is below its minimum")
@@ -787,9 +793,31 @@ def route_assignment(label: str) -> dict:
     return assignment
 
 
-def refresh_comparison_pair_digests(policy: dict) -> dict:
+def refresh_comparison_pair_digests(
+    policy: dict,
+    *,
+    refresh_policy_binding: bool = True,
+) -> dict:
+    if refresh_policy_binding:
+        policy["policy_digest"] = treatment.digest({
+            key: value
+            for key, value in policy.items()
+            if key not in {
+                "experiment_policy_id",
+                "policy_digest",
+                "comparison_sets",
+            }
+        })
+        policy["experiment_policy_id"] = treatment.digest({
+            "schema_version": policy["schema_version"],
+            "experiment_policy_version": policy["experiment_policy_version"],
+            "policy_digest": policy["policy_digest"],
+        })
+        policy_binding = experiment_policy_binding(policy)
     for comparison_set in policy["comparison_sets"]:
         for pair in comparison_set["assignment_pairs"]:
+            if refresh_policy_binding:
+                pair["experiment_policy_binding"] = copy.deepcopy(policy_binding)
             pair["candidate_assignment"]["assignment_id"] = content_id(
                 pair["candidate_assignment"], "assignment_id",
             )
@@ -919,6 +947,104 @@ def specification_calibration_protocol_fixture() -> dict:
     }
 
 
+def seal_calibration_completion(completion: dict) -> dict:
+    sealed = copy.deepcopy(completion)
+    sealed["calibration_completion_digest"] = treatment.digest({
+        key: value
+        for key, value in sealed.items()
+        if key not in {
+            "calibration_completion_id",
+            "calibration_completion_digest",
+        }
+    })
+    sealed["calibration_completion_id"] = content_id(
+        sealed,
+        "calibration_completion_id",
+    )
+    return sealed
+
+
+def calibration_completion_fixture() -> dict:
+    return seal_calibration_completion({
+        "schema_version": "calibration-completion.v1",
+        "calibration_completion_id": schema_digest("calibration-completion"),
+        "calibration_completion_version": "2026-07-24.calibration",
+        "calibration_completion_digest": schema_digest(
+            "calibration-completion-digest"
+        ),
+        "status": "complete",
+        "calibration_protocol_binding": calibration_protocol_binding(
+            calibration_protocol_fixture()
+        ),
+        "calibration_partition_binding": partition_binding(),
+        "comparison_set_bindings": [schema_binding("comparison-set")],
+        "assignment_bindings": [
+            schema_binding("candidate-assignment"),
+            schema_binding("comparator-assignment"),
+        ],
+        "score_bundle_bindings": [
+            schema_binding("candidate-score"),
+            schema_binding("comparator-score"),
+        ],
+        "calibration_evidence_bindings": [
+            schema_binding("calibration-evidence")
+        ],
+        "completion_provenance": {
+            "completed_at": "2026-07-24T15:00:00Z",
+            "calibration_execution_complete": True,
+            "analysis_plan_observed": False,
+            "cohort_outcome_observed": False,
+            "independent_review_binding": schema_binding("analysis-review"),
+        },
+    })
+
+
+def calibration_completion_binding(completion: dict) -> dict:
+    return object_binding(
+        completion["calibration_completion_id"],
+        completion["calibration_completion_digest"],
+    )
+
+
+def specification_calibration_completion_fixture() -> dict:
+    return {
+        "schema_version": "1.0.0",
+        "calibration_completion_id": "calibration-completion",
+        "calibration_completion_version": "2026-07-24.calibration",
+        "calibration_completion_digest": schema_digest(
+            "calibration-completion"
+        ),
+        "status": "complete",
+        "calibration_protocol_binding": schema_binding(
+            "calibration-protocol"
+        ),
+        "partition": {
+            "partition_id": "calibration-partition",
+            "partition_type": "calibration",
+            "qualification_eligible": False,
+        },
+        "comparison_set_bindings": [schema_binding("comparison-set")],
+        "assignment_bindings": [
+            schema_binding("candidate-assignment"),
+            schema_binding("comparator-assignment"),
+        ],
+        "score_bundle_bindings": [
+            schema_binding("candidate-score"),
+            schema_binding("comparator-score"),
+        ],
+        "calibration_evidence_bindings": [
+            schema_binding("calibration-evidence")
+        ],
+        "completion_provenance": {
+            "completed_at": "2026-07-24T15:00:00Z",
+            "calibration_execution_complete": True,
+            "analysis_plan_observed": False,
+            "cohort_outcome_observed": False,
+            "independent_review_binding": schema_binding("analysis-review"),
+        },
+    }
+
+
 def specification_experiment_policy_fixture(*, eligible: bool) -> dict:
     policy = {
         "schema_version": "1.0.0",
@@ -964,29 +1090,34 @@ def specification_experiment_policy_fixture(*, eligible: bool) -> dict:
     return policy
 
 
-def calibration_cli_policy_fixture() -> dict:
+def calibration_cli_policy_fixture(
+    protocol: dict | None = None,
+) -> dict:
     policy = experiment_policy_fixture()
-    freeze = calibration_candidate_freeze_fixture()
-    corpus = calibration_corpus_fixture()
-    policy["candidate_freeze_binding"] = object_binding(
-        freeze["candidate_freeze_id"],
-        freeze["freeze_digest"],
+    protocol = copy.deepcopy(protocol or calibration_protocol_fixture())
+    policy["candidate_freeze_binding"] = copy.deepcopy(
+        protocol["candidate_freeze_binding"]
     )
-    policy["corpus_binding"] = object_binding(corpus["corpus_id"], corpus["corpus_digest"])
-    policy["pinned_client_binding"] = copy.deepcopy(freeze["pinned_client_binding"])
-    policy["runtime_snapshot_binding"] = copy.deepcopy(freeze["runtime_snapshot_binding"])
-    policy["scorer_bindings"] = [
-        schema_binding("opaque-scorer-a"),
-        schema_binding("opaque-scorer-b"),
-    ]
-    policy["rubric_binding"] = schema_binding("g56r-003-semantic-rubric")
-    policy["adjudicator_binding"] = schema_binding("opaque-adjudicator-c")
-    policy["cache_policy_binding"] = {
-        "id": "cache-isolation-v1",
-        "digest": schema_digest("cache-policy"),
-    }
+    policy["corpus_binding"] = copy.deepcopy(protocol["corpus_binding"])
+    policy["workload_manifest_binding"] = copy.deepcopy(
+        protocol["workload_manifest_binding"]
+    )
+    policy["calibration_protocol_binding"] = calibration_protocol_binding(protocol)
+    for comparison_set in policy["comparison_sets"]:
+        for pair in comparison_set["assignment_pairs"]:
+            pair["capability_binding"] = {
+                "runtime_snapshot_binding": copy.deepcopy(
+                    protocol["runtime_snapshot_binding"]
+                ),
+                "candidate_freeze_binding": copy.deepcopy(
+                    protocol["candidate_freeze_binding"]
+                ),
+            }
+            pair["calibration_protocol_binding"] = calibration_protocol_binding(
+                protocol
+            )
     policy["budget"] = full_budget()
-    return policy
+    return refresh_comparison_pair_digests(policy)
 
 
 def experiment_policy_fixture() -> dict:
@@ -1075,6 +1206,9 @@ def analysis_plan_fixture() -> dict:
         "status": "frozen",
         "calibration_protocol_binding": calibration_protocol_binding(
             calibration_protocol_fixture()
+        ),
+        "calibration_completion_binding": calibration_completion_binding(
+            calibration_completion_fixture()
         ),
         "calibration_partition_binding": partition_binding(),
         "calibration_evidence_bindings": [schema_binding("calibration-evidence")],
@@ -1464,6 +1598,34 @@ class ExperimentAnalysisContractSchemaTests(unittest.TestCase):
                     f"calibration protocol cannot freeze {prohibited}",
                 )
 
+    def test_calibration_completion_schema_proves_evidence_collection_without_a_plan(self) -> None:
+        runtime_schema = self.schema_for(CALIBRATION_COMPLETION_SCHEMA_PATH)
+        specification_schema = self.schema_for(
+            SPEC_CONTRACT_DIR / "calibration-completion.schema.json"
+        )
+        runtime = calibration_completion_fixture()
+        specification = specification_calibration_completion_fixture()
+
+        self.assert_accepts(runtime_schema, runtime)
+        self.assert_accepts(specification_schema, specification)
+        self.assertNotIn("analysis_plan_binding", runtime_schema["properties"])
+        self.assertNotIn("analysis_plan_binding", specification_schema["properties"])
+
+        for prohibited in (
+            "margins",
+            "sample_sizes",
+            "quality_floors",
+            "terminal_thresholds",
+        ):
+            with self.subTest(prohibited=prohibited):
+                invalid = calibration_completion_fixture()
+                invalid[prohibited] = {}
+                self.assert_rejects(
+                    runtime_schema,
+                    invalid,
+                    f"calibration completion cannot freeze {prohibited}",
+                )
+
     def test_experiment_policy_schema_closes_partition_pair_budget_and_rerun_contracts(self) -> None:
         schema = self.schema_for(EXPERIMENT_POLICY_SCHEMA_PATH)
         valid = experiment_policy_fixture()
@@ -1517,6 +1679,14 @@ class ExperimentAnalysisContractSchemaTests(unittest.TestCase):
             schema,
             missing_protocol,
             "frozen analysis plan must bind its calibration protocol",
+        )
+
+        missing_completion = copy.deepcopy(valid)
+        del missing_completion["calibration_completion_binding"]
+        self.assert_rejects(
+            schema,
+            missing_completion,
+            "frozen analysis plan must bind calibration completion",
         )
 
         missing_p95_cache = copy.deepcopy(valid)
@@ -1602,8 +1772,16 @@ class ComparisonAssignmentValidatorTests(unittest.TestCase):
         with self.assertRaises(ValueError, msg=message):
             self.validate_assignment_bundle(bundle)
 
-    def recompute_policy_digests(self, bundle: dict) -> dict:
-        bundle["experiment_policy"] = refresh_comparison_pair_digests(bundle["experiment_policy"])
+    def recompute_policy_digests(
+        self,
+        bundle: dict,
+        *,
+        refresh_policy_binding: bool = True,
+    ) -> dict:
+        bundle["experiment_policy"] = refresh_comparison_pair_digests(
+            bundle["experiment_policy"],
+            refresh_policy_binding=refresh_policy_binding,
+        )
         return bundle
 
     def test_comparison_assignment_validator_accepts_complete_pre_execution_join_graph(self) -> None:
@@ -1623,6 +1801,66 @@ class ComparisonAssignmentValidatorTests(unittest.TestCase):
             calibration_protocol_binding(first["calibration_protocol"]),
         )
         self.assertEqual(first["executed_pair_snapshots"][0]["assignment_pair_digest"], pair["assignment_pair_digest"])
+
+    def test_calibration_policy_validator_enforces_closed_schema_identity_and_protocol_joins(self) -> None:
+        policy = experiment_policy_fixture()
+        protocol = calibration_protocol_fixture()
+
+        validated_protocol = self.qualification.validate_calibration_protocol(
+            copy.deepcopy(protocol)
+        )
+        validated_policy = self.qualification.validate_calibration_experiment_policy(
+            copy.deepcopy(policy),
+            copy.deepcopy(validated_protocol),
+        )
+
+        self.assertEqual(validated_protocol, protocol)
+        self.assertEqual(validated_policy, policy)
+
+        offset_protocol = copy.deepcopy(protocol)
+        offset_protocol["frozen_at"] = "2026-07-24T12:30:00+01:30"
+        offset_protocol = seal_calibration_protocol(offset_protocol)
+        self.assertEqual(
+            self.qualification.validate_calibration_protocol(offset_protocol),
+            offset_protocol,
+        )
+
+        cases = (
+            (
+                "open_shape",
+                lambda value: value.__setitem__("operator_note", "untrusted"),
+            ),
+            (
+                "policy_digest",
+                lambda value: value.__setitem__(
+                    "policy_digest",
+                    schema_digest("wrong-policy"),
+                ),
+            ),
+            (
+                "comparison_set_digest",
+                lambda value: value["comparison_sets"][0].__setitem__(
+                    "comparison_set_digest",
+                    schema_digest("wrong-comparison-set"),
+                ),
+            ),
+            (
+                "protocol_binding",
+                lambda value: value.__setitem__(
+                    "calibration_protocol_binding",
+                    schema_binding("wrong-protocol"),
+                ),
+            ),
+        )
+        for label, mutate in cases:
+            with self.subTest(case=label):
+                invalid = copy.deepcopy(policy)
+                mutate(invalid)
+                with self.assertRaises(ValueError):
+                    self.qualification.validate_calibration_experiment_policy(
+                        invalid,
+                        protocol,
+                    )
 
     def test_comparison_assignment_validator_rejects_each_required_pre_execution_join_mismatch(self) -> None:
         cases = [
@@ -1652,7 +1890,10 @@ class ComparisonAssignmentValidatorTests(unittest.TestCase):
                 for key in path[:-1]:
                     target = target[key]
                 target[path[-1]] = value
-                self.recompute_policy_digests(bundle)
+                self.recompute_policy_digests(
+                    bundle,
+                    refresh_policy_binding=label != "policy",
+                )
                 self.assert_invalid_assignment(bundle, f"{label} join must fail closed")
 
     def test_partition_joins_and_cross_partition_reuse_fail_closed(self) -> None:
@@ -1739,6 +1980,7 @@ class QualificationContractTests(unittest.TestCase):
             "MATERIALIZATION_FIELDS", "NULL_ONLY_OBSERVATION_FIELDS",
             "PARTITION_TYPES", "QUALIFICATION_OBSERVATION_FIELDS", "QUALIFICATION_OWNER_SPEC_ID",
             "QUALIFICATION_SCHEMA_VERSION", "TREATMENT_OWNER_SPEC_ID",
+            "validate_calibration_experiment_policy", "validate_calibration_protocol",
             "validate_comparison_assignment_bundle", "validate_qualification_bundle",
         }
         self.assertTrue(QUALIFICATION_MODULE_PATH.exists())
@@ -2320,6 +2562,7 @@ class QualificationContractTests(unittest.TestCase):
             partition_path = root / "partition.json"
             freeze_path = root / "freeze.json"
             policy_path = root / "policy.json"
+            protocol_path = root / "protocol.json"
             corpus_path = root / "corpus.json"
             budget_path = root / "budget.json"
             raw_root = root / "operator-raw"
@@ -2327,12 +2570,14 @@ class QualificationContractTests(unittest.TestCase):
             partition = partition_binding()
             freeze = calibration_candidate_freeze_fixture()
             corpus = calibration_corpus_fixture()
-            policy = calibration_cli_policy_fixture()
+            protocol = calibration_protocol_fixture()
+            policy = calibration_cli_policy_fixture(protocol)
             budget = full_budget()
             for path, value in (
                 (partition_path, partition),
                 (freeze_path, freeze),
                 (policy_path, policy),
+                (protocol_path, protocol),
                 (corpus_path, corpus),
                 (budget_path, budget),
             ):
@@ -2343,6 +2588,7 @@ class QualificationContractTests(unittest.TestCase):
                 "--partition", str(partition_path),
                 "--candidate-freeze", str(freeze_path),
                 "--experiment-policy", str(policy_path),
+                "--calibration-protocol", str(protocol_path),
                 "--corpus", str(corpus_path),
                 "--budget", str(budget_path),
                 "--raw-evidence-root", str(raw_root),
@@ -2359,6 +2605,7 @@ class QualificationContractTests(unittest.TestCase):
                 "--partition", str(partition_path),
                 "--candidate-freeze", str(freeze_path),
                 "--experiment-policy", str(policy_path),
+                "--calibration-protocol", str(protocol_path),
                 "--corpus", str(corpus_path),
                 "--budget", str(budget_path),
                 "--raw-evidence-root", str(raw_root),
@@ -2377,11 +2624,12 @@ class QualificationContractTests(unittest.TestCase):
         self.assertEqual(payload["pinned_client_binding"], freeze["pinned_client_binding"])
         self.assertEqual(payload["runtime_snapshot_binding"], freeze["runtime_snapshot_binding"])
         self.assertEqual(payload["budget"], budget)
-        self.assertEqual(payload["scorer_bindings"], policy["scorer_bindings"])
-        self.assertEqual(payload["rubric_binding"], policy["rubric_binding"])
-        self.assertEqual(payload["adjudicator_binding"], policy["adjudicator_binding"])
-        self.assertEqual(payload["workload_manifest_binding"], policy["workload_manifest_binding"])
-        self.assertEqual(payload["cache_policy_binding"], policy["cache_policy_binding"])
+        self.assertEqual(payload["calibration_protocol_binding"], calibration_protocol_binding(protocol))
+        self.assertEqual(payload["scorer_bindings"], protocol["scorer_bindings"])
+        self.assertEqual(payload["rubric_binding"], protocol["rubric_binding"])
+        self.assertEqual(payload["adjudicator_binding"], protocol["adjudicator_binding"])
+        self.assertEqual(payload["workload_manifest_binding"], protocol["workload_manifest_binding"])
+        self.assertEqual(payload["cache_policy_binding"], protocol["cache_policy_binding"])
 
     def test_cli_calibrate_consumes_the_published_successor_freeze_shape(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -2399,19 +2647,27 @@ class QualificationContractTests(unittest.TestCase):
                 "id": snapshot["runtime_capability_snapshot_id"],
                 "digest": treatment.digest(snapshot),
             }
-            policy = calibration_cli_policy_fixture()
-            policy.update({
-                "candidate_freeze_binding": {
-                    "id": freeze["candidate_freeze_id"],
-                    "digest": treatment.digest(freeze),
-                },
+            successor_binding = {
+                "id": freeze["candidate_freeze_id"],
+                "digest": treatment.digest(freeze),
+            }
+            protocol = calibration_protocol_fixture()
+            protocol.update({
+                "candidate_freeze_binding": successor_binding,
                 "pinned_client_binding": pinned_client,
                 "runtime_snapshot_binding": runtime_snapshot,
             })
+            protocol = seal_calibration_protocol(protocol)
+            policy = calibration_cli_policy_fixture(protocol)
+            policy.update({
+                "candidate_freeze_binding": successor_binding,
+            })
+            policy = refresh_comparison_pair_digests(policy)
             paths = {
                 "partition": root / "partition.json",
                 "freeze": root / "freeze.json",
                 "policy": root / "policy.json",
+                "protocol": root / "protocol.json",
                 "corpus": root / "corpus.json",
                 "budget": root / "budget.json",
             }
@@ -2419,6 +2675,7 @@ class QualificationContractTests(unittest.TestCase):
                 ("partition", partition),
                 ("freeze", freeze),
                 ("policy", policy),
+                ("protocol", protocol),
                 ("corpus", corpus),
                 ("budget", budget),
             ):
@@ -2431,6 +2688,7 @@ class QualificationContractTests(unittest.TestCase):
                 "--partition", str(paths["partition"]),
                 "--candidate-freeze", str(paths["freeze"]),
                 "--experiment-policy", str(paths["policy"]),
+                "--calibration-protocol", str(paths["protocol"]),
                 "--corpus", str(paths["corpus"]),
                 "--budget", str(paths["budget"]),
                 "--raw-evidence-root", str(raw_root),
@@ -2447,6 +2705,7 @@ class QualificationContractTests(unittest.TestCase):
             ("later_partition", {"partition": partition_binding("selection", eligible=True)}, "calibration_partition_required"),
             ("missing_budget", {"drop_budget_field": "max_output_tokens"}, "campaign_budget_incomplete"),
             ("repo_raw_root", {"raw_root": ROOT}, "operator_only_raw_root_required"),
+            ("open_policy", {"open_policy": True}, "experiment_policy_schema_invalid"),
         ]
         for label, override, reason in cases:
             with self.subTest(case=label):
@@ -2455,6 +2714,7 @@ class QualificationContractTests(unittest.TestCase):
                     partition_path = root / "partition.json"
                     freeze_path = root / "freeze.json"
                     policy_path = root / "policy.json"
+                    protocol_path = root / "protocol.json"
                     corpus_path = root / "corpus.json"
                     budget_path = root / "budget.json"
                     raw_root = Path(override.get("raw_root", root / "operator-raw"))
@@ -2463,14 +2723,18 @@ class QualificationContractTests(unittest.TestCase):
                     partition = copy.deepcopy(override.get("partition", partition_binding()))
                     freeze = calibration_candidate_freeze_fixture()
                     corpus = calibration_corpus_fixture()
-                    policy = calibration_cli_policy_fixture()
+                    protocol = calibration_protocol_fixture()
+                    policy = calibration_cli_policy_fixture(protocol)
                     budget = full_budget()
                     if "drop_budget_field" in override:
                         del budget[override["drop_budget_field"]]
+                    if override.get("open_policy"):
+                        policy["operator_note"] = "untrusted"
                     for path, value in (
                         (partition_path, partition),
                         (freeze_path, freeze),
                         (policy_path, policy),
+                        (protocol_path, protocol),
                         (corpus_path, corpus),
                         (budget_path, budget),
                     ):
@@ -2481,6 +2745,7 @@ class QualificationContractTests(unittest.TestCase):
                         "--partition", str(partition_path),
                         "--candidate-freeze", str(freeze_path),
                         "--experiment-policy", str(policy_path),
+                        "--calibration-protocol", str(protocol_path),
                         "--corpus", str(corpus_path),
                         "--budget", str(budget_path),
                         "--raw-evidence-root", str(raw_root),
@@ -2512,9 +2777,7 @@ class QualificationContractTests(unittest.TestCase):
                     "pre_cohort_outcome_absence_digest": schema_digest("pre-cohort-absence"),
                     "independent_review_binding": schema_binding("analysis-review"),
                 },
-                "analysis_decision": seal_decision_bundle(
-                    decision_bundle_fixture()
-                ),
+                "calibration_completion": calibration_completion_fixture(),
             })
             draft = analysis_plan_fixture()
             draft["status"] = "draft_from_calibration"
@@ -2537,6 +2800,12 @@ class QualificationContractTests(unittest.TestCase):
             self.assertEqual(
                 frozen["calibration_protocol_binding"],
                 report["calibration_protocol_binding"],
+            )
+            self.assertEqual(
+                frozen["calibration_completion_binding"],
+                calibration_completion_binding(
+                    report["calibration_completion"]
+                ),
             )
             self.assertEqual(frozen["calibration_partition_binding"], report["calibration_partition_binding"])
             self.assertEqual(frozen["calibration_evidence_bindings"], report["calibration_evidence_bindings"])

@@ -5,20 +5,33 @@ from __future__ import annotations
 
 import copy
 import hashlib
+import json
 from collections.abc import Mapping
+from pathlib import Path
 
 if __package__:
     from .treatment_trace_model import *
     from .treatment_trace_bundle import _validate_treatment_bundle
+    from .treatment_trace_json_schema import (
+        _validate_schema_instance,
+        _validate_schema_timestamp,
+    )
 else:
     from treatment_trace_model import *
     from treatment_trace_bundle import _validate_treatment_bundle
+    from treatment_trace_json_schema import (
+        _validate_schema_instance,
+        _validate_schema_timestamp,
+    )
 
 
 QUALIFICATION_SCHEMA_VERSION = "1.0.0"
 COMPARISON_ASSIGNMENT_SCHEMA_VERSION = "comparison-assignment.v1"
 QUALIFICATION_OWNER_SPEC_ID = "G56R-003"
 TREATMENT_OWNER_SPEC_ID = "G56R-002"
+CONTRACT_DIR = Path(__file__).resolve().parents[1] / "contracts"
+CALIBRATION_PROTOCOL_SCHEMA_PATH = CONTRACT_DIR / "calibration-protocol.schema.json"
+EXPERIMENT_POLICY_SCHEMA_PATH = CONTRACT_DIR / "experiment-policy.schema.json"
 PARTITION_TYPES = frozenset({
     "calibration",
     "screening",
@@ -233,6 +246,54 @@ def _expected_object_binding(value: Mapping[str, object], id_field: str, digest_
 def _require_equal(left: object, right: object, label: str) -> None:
     if left != right:
         raise ValueError(f"{label} does not match its immutable authority")
+
+
+def _load_contract_schema(path: Path, label: str) -> dict:
+    try:
+        schema = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"{label} schema is unavailable or malformed") from exc
+    if not isinstance(schema, dict):
+        raise ValueError(f"{label} schema must be an object")
+    return schema
+
+
+def _validate_runtime_contract(value: object, path: Path, label: str) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be an object")
+    schema = _load_contract_schema(path, label)
+    try:
+        _validate_schema_instance(value, schema, schema)
+    except ValueError as exc:
+        raise ValueError(f"{label} does not satisfy its closed schema: {exc}") from exc
+    return copy.deepcopy(value)
+
+
+def _experiment_policy_digest(value: Mapping[str, object]) -> str:
+    return digest({
+        key: item
+        for key, item in value.items()
+        if key not in {
+            "experiment_policy_id",
+            "policy_digest",
+            "comparison_sets",
+        }
+    })
+
+
+def _experiment_policy_id(value: Mapping[str, object]) -> str:
+    return digest({
+        "schema_version": value.get("schema_version"),
+        "experiment_policy_version": value.get("experiment_policy_version"),
+        "policy_digest": value.get("policy_digest"),
+    })
+
+
+def _validate_experiment_policy_identity(value: Mapping[str, object]) -> None:
+    if value.get("policy_digest") != _experiment_policy_digest(value):
+        raise ValueError("experiment policy digest does not match frozen policy content")
+    if value.get("experiment_policy_id") != _experiment_policy_id(value):
+        raise ValueError("experiment policy ID does not match its versioned policy digest")
 
 
 def _validated_refresh_invalidations(value: object) -> list[dict]:
@@ -587,8 +648,49 @@ def _validate_calibration_protocol_for_assignment(
     if len({item["id"] for item in row["scorer_bindings"]}) != 2:
         raise ValueError("calibration protocol scorer bindings must be distinct")
     _text(row["calibration_protocol_version"], "calibration protocol version")
-    _timestamp(row["frozen_at"], "calibration protocol freeze timestamp")
+    _validate_schema_timestamp(
+        row["frozen_at"],
+        "calibration protocol freeze timestamp",
+    )
     return row
+
+
+def validate_calibration_protocol(value: object) -> dict:
+    """Validate one content-addressed pre-calibration protocol artifact."""
+    row = _validate_runtime_contract(
+        value,
+        CALIBRATION_PROTOCOL_SCHEMA_PATH,
+        "calibration protocol",
+    )
+    protocol_binding = _expected_object_binding(
+        row,
+        "calibration_protocol_id",
+        "calibration_protocol_digest",
+        "calibration protocol",
+    )
+    authorities = {
+        "calibration_protocol_binding": protocol_binding,
+        "candidate_freeze_binding": copy.deepcopy(
+            row["candidate_freeze_binding"]
+        ),
+        "runtime_snapshot_binding": copy.deepcopy(
+            row["runtime_snapshot_binding"]
+        ),
+        "corpus_binding": copy.deepcopy(row["corpus_binding"]),
+        "workload_manifest_binding": copy.deepcopy(
+            row["workload_manifest_binding"]
+        ),
+    }
+    partition = _validate_partition_binding(
+        row["partition_binding"],
+        "calibration protocol partition",
+    )
+    return _validate_calibration_protocol_for_assignment(
+        row,
+        authorities,
+        partition,
+        [],
+    )
 
 
 def _validate_executed_pair_snapshots(value: object, pairs: Mapping[str, dict]) -> list[dict]:
@@ -630,6 +732,7 @@ def _validate_experiment_policy_for_assignment(
         raise ValueError("experiment policy must be an object")
     if value.get("schema_version") != "experiment-policy.v1":
         raise ValueError("experiment policy schema version is unsupported")
+    _validate_experiment_policy_identity(value)
     policy_binding = _expected_object_binding(
         value, "experiment_policy_id", "policy_digest", "experiment policy",
     )
@@ -695,6 +798,227 @@ def _validate_experiment_policy_for_assignment(
         policy_binding, protocol_binding, policy,
     )
     return value
+
+
+def _pair_local_authorities(pair: Mapping[str, object], protocol: dict) -> dict:
+    candidate = pair["candidate_assignment"]
+    comparator = pair["comparator_assignment"]
+    instructions = pair["instruction_binding"]
+    if (
+        not isinstance(candidate, dict)
+        or not isinstance(comparator, dict)
+        or not isinstance(instructions, dict)
+    ):
+        raise ValueError("comparison assignment authority fields must be objects")
+    return {
+        "role_binding": copy.deepcopy(pair["role_binding"]),
+        "fixture_binding": copy.deepcopy(pair["fixture_binding"]),
+        "objective_binding": copy.deepcopy(pair["objective_binding"]),
+        "task_binding": copy.deepcopy(pair["task_binding"]),
+        "candidate_route_binding": copy.deepcopy(candidate["route_binding"]),
+        "candidate_agent_contract_binding": copy.deepcopy(
+            candidate["agent_contract_binding"]
+        ),
+        "candidate_materialization_binding": copy.deepcopy(
+            candidate["materialization_binding"]
+        ),
+        "candidate_route_resolution_binding": copy.deepcopy(
+            candidate["route_resolution_binding"]
+        ),
+        "candidate_instruction_digest": instructions[
+            "candidate_instruction_digest"
+        ],
+        "candidate_configuration_digest": instructions[
+            "candidate_configuration_digest"
+        ],
+        "comparator_route_binding": copy.deepcopy(comparator["route_binding"]),
+        "comparator_agent_contract_binding": copy.deepcopy(
+            comparator["agent_contract_binding"]
+        ),
+        "comparator_materialization_binding": copy.deepcopy(
+            comparator["materialization_binding"]
+        ),
+        "comparator_route_resolution_binding": copy.deepcopy(
+            comparator["route_resolution_binding"]
+        ),
+        "comparator_instruction_digest": instructions[
+            "comparator_instruction_digest"
+        ],
+        "comparator_configuration_digest": instructions[
+            "comparator_configuration_digest"
+        ],
+        "runtime_snapshot_binding": copy.deepcopy(
+            protocol["runtime_snapshot_binding"]
+        ),
+        "candidate_freeze_binding": copy.deepcopy(
+            protocol["candidate_freeze_binding"]
+        ),
+    }
+
+
+def _validate_policy_comparison_sets(
+    value: object,
+    *,
+    partition: dict,
+    policy_binding: dict,
+    protocol: dict,
+    protocol_binding: dict,
+    comparison_policy: dict,
+) -> list[dict]:
+    if not isinstance(value, list) or not value:
+        raise ValueError("comparison sets must be a non-empty array")
+    rows: list[dict] = []
+    seen: set[str] = set()
+    for raw in value:
+        row = _closed(raw, set(COMPARISON_SET_FIELDS), "comparison set")
+        _digest(row["comparison_set_id"], "comparison set ID")
+        _digest(row["comparison_set_digest"], "comparison set digest")
+        row["partition_binding"] = _validate_partition_binding(
+            row["partition_binding"],
+            "comparison set partition binding",
+        )
+        _require_equal(
+            row["partition_binding"],
+            partition,
+            "comparison set partition binding",
+        )
+        raw_pairs = row["assignment_pairs"]
+        if not isinstance(raw_pairs, list) or not raw_pairs:
+            raise ValueError("comparison assignment pairs must be a non-empty array")
+        row["assignment_pairs"] = [
+            _validate_assignment_pair(
+                item,
+                _pair_local_authorities(item, protocol),
+                [],
+                policy_binding,
+                protocol_binding,
+            )
+            for item in raw_pairs
+        ]
+        ordered_pairs = sorted(
+            row["assignment_pairs"],
+            key=lambda item: hashlib.sha256(
+                (
+                    comparison_policy["randomization_seed_digest"]
+                    + "|"
+                    + item["assignment_pair_id"]
+                ).encode("utf-8")
+            ).digest(),
+        )
+        start_candidate = (
+            hashlib.sha256(
+                comparison_policy["randomization_seed_digest"].encode("utf-8")
+            ).digest()[0]
+            % 2
+            == 0
+        )
+        for index, pair in enumerate(ordered_pairs):
+            if comparison_policy["order_rule"] == "seeded_balanced":
+                candidate_first = (
+                    start_candidate if index % 2 == 0 else not start_candidate
+                )
+            else:
+                candidate_first = (
+                    hashlib.sha256(
+                        (
+                            comparison_policy["randomization_seed_digest"]
+                            + "|"
+                            + pair["assignment_pair_id"]
+                        ).encode("utf-8")
+                    ).digest()[0]
+                    % 2
+                    == 0
+                )
+            expected_order = (
+                ["candidate", "comparator"]
+                if candidate_first
+                else ["comparator", "candidate"]
+            )
+            if pair["assigned_order"] != expected_order:
+                raise ValueError(
+                    "comparison assigned order does not match the frozen seed"
+                )
+        if row["comparison_set_digest"] != content_id(
+            row,
+            "comparison_set_digest",
+        ):
+            raise ValueError("comparison set digest is not content addressed")
+        if row["comparison_set_id"] in seen:
+            raise ValueError("duplicate comparison set ID")
+        seen.add(row["comparison_set_id"])
+        rows.append(row)
+    return rows
+
+
+def validate_calibration_experiment_policy(
+    value: object,
+    calibration_protocol: object,
+) -> dict:
+    """Validate a closed calibration policy and every immutable pair join."""
+    protocol = validate_calibration_protocol(calibration_protocol)
+    row = _validate_runtime_contract(
+        value,
+        EXPERIMENT_POLICY_SCHEMA_PATH,
+        "experiment policy",
+    )
+    _validate_experiment_policy_identity(row)
+    partition = _validate_partition_binding(
+        row["partition_binding"],
+        "experiment policy partition binding",
+    )
+    _require_equal(
+        partition,
+        protocol["partition_binding"],
+        "experiment policy partition binding",
+    )
+    protocol_binding = _expected_object_binding(
+        protocol,
+        "calibration_protocol_id",
+        "calibration_protocol_digest",
+        "calibration protocol",
+    )
+    expected_bindings = {
+        "candidate_freeze_binding": protocol["candidate_freeze_binding"],
+        "corpus_binding": protocol["corpus_binding"],
+        "workload_manifest_binding": protocol["workload_manifest_binding"],
+        "calibration_protocol_binding": protocol_binding,
+    }
+    for field, expected in expected_bindings.items():
+        actual = _validate_binding(row[field], f"experiment policy {field}")
+        _require_equal(actual, expected, f"experiment policy {field}")
+        row[field] = actual
+    comparison_policy = _closed(
+        row["comparison_policy"],
+        {
+            "pair_before_execution",
+            "comparison_set_generation",
+            "order_rule",
+            "randomization_seed_digest",
+            "rebinding_policy",
+        },
+        "comparison policy",
+    )
+    _digest(
+        comparison_policy["randomization_seed_digest"],
+        "comparison randomization seed digest",
+    )
+    policy_binding = _expected_object_binding(
+        row,
+        "experiment_policy_id",
+        "policy_digest",
+        "experiment policy",
+    )
+    row["comparison_sets"] = _validate_policy_comparison_sets(
+        row["comparison_sets"],
+        partition=partition,
+        policy_binding=policy_binding,
+        protocol=protocol,
+        protocol_binding=protocol_binding,
+        comparison_policy=comparison_policy,
+    )
+    row["partition_binding"] = partition
+    row["comparison_policy"] = comparison_policy
+    return row
 
 
 def validate_comparison_assignment_bundle(bundle: object) -> dict:
@@ -1127,6 +1451,8 @@ __all__ = [
     "QUALIFICATION_OWNER_SPEC_ID",
     "QUALIFICATION_SCHEMA_VERSION",
     "TREATMENT_OWNER_SPEC_ID",
+    "validate_calibration_experiment_policy",
+    "validate_calibration_protocol",
     "validate_comparison_assignment_bundle",
     "validate_qualification_bundle",
 ]

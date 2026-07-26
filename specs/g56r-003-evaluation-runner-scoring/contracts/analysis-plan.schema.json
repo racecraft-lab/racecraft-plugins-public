@@ -10,7 +10,7 @@
     "analysis_plan_digest",
     "status",
     "calibration_protocol_binding",
-    "calibration_binding",
+    "calibration_completion_binding",
     "workload_manifest",
     "cache_policy",
     "quality_floors",
@@ -31,7 +31,7 @@
     "analysis_plan_digest": {"$ref": "#/$defs/digest"},
     "status": {"const": "frozen"},
     "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
-    "calibration_binding": {"$ref": "#/$defs/binding"},
+    "calibration_completion_binding": {"$ref": "#/$defs/binding"},
     "workload_manifest": {
       "type": "object",
       "additionalProperties": false,

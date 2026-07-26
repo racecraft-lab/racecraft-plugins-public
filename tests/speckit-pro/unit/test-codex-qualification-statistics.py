@@ -29,6 +29,9 @@ ANALYSIS_PLAN_SCHEMA_PATH = (
 ANALYSIS_DECISION_SCHEMA_PATH = (
     ROOT / "tests/speckit-pro/layer6-efficiency/contracts/analysis-decision.schema.json"
 )
+CALIBRATION_COMPLETION_SCHEMA_PATH = (
+    ROOT / "tests/speckit-pro/layer6-efficiency/contracts/calibration-completion.schema.json"
+)
 RUN_CODEX_ROLE_EVAL_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/run_codex_role_eval.py"
 SHIPPED_MATERIALIZER_PATH = ROOT / "speckit-pro/speckit_pro_runner/agent_materialization.py"
 
@@ -57,6 +60,7 @@ EXPECTED_PUBLIC_API = frozenset({
     "TERMINAL_STATE_ORDER",
     "compare_pareto_vectors",
     "evaluate_qualification_decision",
+    "validate_calibration_completion",
     "validate_analysis_decision_bundle",
 })
 EXPECTED_REPLAY_PUBLIC_API = frozenset({
@@ -305,6 +309,7 @@ def analysis_plan_fixture(cluster_unit: str = "role", per_cluster_minimum: int =
         "analysis_plan_digest": digest("analysis-plan-digest"),
         "status": "frozen",
         "calibration_protocol_binding": binding("calibration-protocol"),
+        "calibration_completion_binding": binding("calibration-completion"),
         "calibration_partition_binding": partition_binding("calibration", eligible=False),
         "calibration_evidence_bindings": [binding("calibration-evidence")],
         "freeze_provenance": {
@@ -708,6 +713,64 @@ def ordered_results(stop_gate: str | None = None) -> list[tuple[str, str]]:
     return rows
 
 
+def seal_calibration_completion(completion: dict) -> dict:
+    sealed = copy.deepcopy(completion)
+    sealed["calibration_completion_digest"] = digest({
+        key: value
+        for key, value in sealed.items()
+        if key not in {
+            "calibration_completion_id",
+            "calibration_completion_digest",
+        }
+    })
+    sealed["calibration_completion_id"] = content_id(
+        sealed,
+        "calibration_completion_id",
+    )
+    return sealed
+
+
+def calibration_completion_fixture(plan: dict | None = None) -> dict:
+    plan = copy.deepcopy(plan or analysis_plan_fixture())
+    outcomes = paired_outcomes()
+    return seal_calibration_completion({
+        "schema_version": "calibration-completion.v1",
+        "calibration_completion_id": digest("calibration-completion"),
+        "calibration_completion_version": "2026-07-24.calibration",
+        "calibration_completion_digest": digest(
+            "calibration-completion-digest"
+        ),
+        "status": "complete",
+        "calibration_protocol_binding": copy.deepcopy(
+            plan["calibration_protocol_binding"]
+        ),
+        "calibration_partition_binding": copy.deepcopy(
+            plan["calibration_partition_binding"]
+        ),
+        "comparison_set_bindings": [binding("comparison-set")],
+        "assignment_bindings": [
+            copy.deepcopy(row["assignment_binding"])
+            for row in outcomes
+        ],
+        "score_bundle_bindings": [
+            copy.deepcopy(row["score_bundle_binding"])
+            for row in outcomes
+        ],
+        "calibration_evidence_bindings": copy.deepcopy(
+            plan["calibration_evidence_bindings"]
+        ),
+        "completion_provenance": {
+            "completed_at": "2026-07-24T15:00:00Z",
+            "calibration_execution_complete": True,
+            "analysis_plan_observed": False,
+            "cohort_outcome_observed": False,
+            "independent_review_binding": copy.deepcopy(
+                plan["freeze_provenance"]["independent_review_binding"]
+            ),
+        },
+    })
+
+
 def seal_calibration_report(report: dict) -> dict:
     sealed = copy.deepcopy(report)
     sealed["calibration_report_digest"] = digest({
@@ -724,14 +787,10 @@ def seal_calibration_report(report: dict) -> dict:
 
 def calibration_report_fixture(*, completed: bool = True) -> dict:
     plan = analysis_plan_fixture()
-    outcomes = paired_outcomes(
-        candidate_semantic=0.9 if completed else 0.84,
-    )
-    decision = load_statistics_module().evaluate_qualification_decision(
-        analysis_plan=plan,
-        paired_outcomes=outcomes,
-        partition=partition_binding(),
-    )
+    completion = calibration_completion_fixture(plan)
+    if not completed:
+        completion["status"] = "incomplete"
+        completion = seal_calibration_completion(completion)
     return seal_calibration_report({
         "schema_version": "calibration-report.v1",
         "calibration_protocol_binding": copy.deepcopy(
@@ -740,7 +799,7 @@ def calibration_report_fixture(*, completed: bool = True) -> dict:
         "calibration_partition_binding": partition_binding(),
         "calibration_evidence_bindings": copy.deepcopy(plan["calibration_evidence_bindings"]),
         "freeze_provenance": copy.deepcopy(plan["freeze_provenance"]),
-        "analysis_decision": decision,
+        "calibration_completion": completion,
     })
 
 
@@ -854,6 +913,10 @@ class QualificationStatisticsTests(unittest.TestCase):
             result["frozen_plan"]["calibration_protocol_binding"],
             plan["calibration_protocol_binding"],
         )
+        self.assertEqual(
+            result["frozen_plan"]["calibration_completion_binding"],
+            plan["calibration_completion_binding"],
+        )
         self.assertEqual(result["frozen_plan"]["calibration_evidence_bindings"], plan["calibration_evidence_bindings"])
         self.assertEqual(result["frozen_plan"]["freeze_provenance"], plan["freeze_provenance"])
         self.assertEqual(result["workload_cache"]["status"], "pass")
@@ -869,10 +932,70 @@ class QualificationStatisticsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.evaluate(weighted, paired_outcomes())
 
+    def test_calibration_completion_is_plan_free_content_addressed_authority(self) -> None:
+        completion = calibration_completion_fixture()
+        schema = json.loads(
+            CALIBRATION_COMPLETION_SCHEMA_PATH.read_text(encoding="utf-8")
+        )
+
+        validated = self.stats.validate_calibration_completion(
+            copy.deepcopy(completion)
+        )
+        self.contracts.validate_contract_schema_instance(
+            validated,
+            schema,
+            schema,
+        )
+        self.assertEqual(validated, completion)
+        self.assertNotIn("analysis_plan_binding", validated)
+
+        offset_completion = copy.deepcopy(completion)
+        offset_completion["completion_provenance"]["completed_at"] = (
+            "2026-07-24T16:30:00+01:30"
+        )
+        offset_completion = seal_calibration_completion(offset_completion)
+        self.assertEqual(
+            self.stats.validate_calibration_completion(offset_completion),
+            offset_completion,
+        )
+
+        cases = (
+            (
+                "plan_observed",
+                lambda value: value["completion_provenance"].__setitem__(
+                    "analysis_plan_observed",
+                    True,
+                ),
+            ),
+            (
+                "open_shape",
+                lambda value: value.__setitem__(
+                    "quality_floors",
+                    {"semantic": 0.9},
+                ),
+            ),
+            (
+                "digest_drift",
+                lambda value: value.__setitem__(
+                    "calibration_completion_digest",
+                    digest("wrong-completion"),
+                ),
+            ),
+        )
+        for label, mutate in cases:
+            with self.subTest(case=label):
+                invalid = copy.deepcopy(completion)
+                mutate(invalid)
+                if label != "digest_drift":
+                    invalid = seal_calibration_completion(invalid)
+                with self.assertRaises(ValueError):
+                    self.stats.validate_calibration_completion(invalid)
+
     def test_analysis_plan_freeze_metadata_is_required_before_statistics(self) -> None:
         cases = [
             ("analysis_plan_version", ("analysis_plan_version",)),
             ("calibration_protocol_binding", ("calibration_protocol_binding",)),
+            ("calibration_completion_binding", ("calibration_completion_binding",)),
             ("calibration_evidence_bindings", ("calibration_evidence_bindings",)),
             ("freeze_provenance", ("freeze_provenance",)),
             ("independent_review_binding", ("freeze_provenance", "independent_review_binding")),
@@ -917,6 +1040,7 @@ class QualificationStatisticsTests(unittest.TestCase):
         schema = json.loads(ANALYSIS_PLAN_SCHEMA_PATH.read_text(encoding="utf-8"))
 
         self.assertIn("calibration_protocol_binding", schema["required"])
+        self.assertIn("calibration_completion_binding", schema["required"])
         self.assertIn("freeze_provenance", schema["required"])
         self.assertIn("independent_review_binding", schema["$defs"]["freezeProvenance"]["required"])
         self.assertIn(
@@ -1877,8 +2001,16 @@ class DeterministicQualificationReplayTests(unittest.TestCase):
                 "calibration_report_invalid",
             ),
             (
+                "missing_completion",
+                "calibration_report_invalid",
+            ),
+            (
                 "incomplete",
                 "calibration_not_complete",
+            ),
+            (
+                "plan_bound_completion",
+                "calibration_completion_invalid",
             ),
             (
                 "invalid_protocol_binding",
@@ -1897,6 +2029,17 @@ class DeterministicQualificationReplayTests(unittest.TestCase):
                     )
                     if label == "missing_protocol":
                         report.pop("calibration_protocol_binding")
+                    elif label == "missing_completion":
+                        report.pop("calibration_completion")
+                    elif label == "plan_bound_completion":
+                        report["calibration_completion"][
+                            "analysis_plan_binding"
+                        ] = binding("analysis-plan")
+                        report["calibration_completion"] = (
+                            seal_calibration_completion(
+                                report["calibration_completion"]
+                            )
+                        )
                     elif label == "invalid_protocol_binding":
                         report["calibration_protocol_binding"].pop("digest")
                     report = seal_calibration_report(report)

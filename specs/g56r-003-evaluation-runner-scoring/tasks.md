@@ -57,6 +57,7 @@ and run only explicit budgeted calibration that cannot qualify a route.
 - [x] T023 [US4] [FR-010] [FR-022] [FR-023] [FR-032] Implement deterministic replay and explicit local CLI with strict TDD: RED clean-checkout ID/digest/recomputed-decision equality, no-network/no-live-write, explicit confirmation, pinned client/snapshot, calibration partition, budgets, operator-only raw root, scorer/rubric/adjudicator/workload/cache bindings, and implicit-live refusal in focused contract/statistics tests; GREEN replay in `qualification_replay.py` plus `calibrate`, `replay`, and `freeze-analysis-plan` commands in `run-codex-qualification.py`; REFACTOR one deterministic command/result path; VERIFY focused replay/CLI tests
 - [x] T024 [US4] [FR-013] [FR-019] [FR-020] [FR-021] [FR-023] [FR-024] [FR-027] [FR-034] [FR-038] Implement analysis freeze and prohibited-boundary coverage with strict TDD: RED independent review/schema validity/numeric completeness/pre-cohort absence plus final route policy, integrated confirmation, live-default CI, raw evidence, arm-only retry, post-hoc threshold, trace mutation, duplicate materializer, cache leak, unknown attrition, unrestricted code, and missing budget cases in `test-codex-qualification-statistics.py`; GREEN versioned freeze/additive invalidation and minimum boundary fixes; REFACTOR audit-friendly errors; VERIFY all focused tests and absence of `run_codex_role_eval.py`
 - [x] T025 [US1] [US2] [US3] [US4] [FR-001] [FR-010] [FR-016] [FR-025] [FR-026] Close Slice 3 and the feature with strict cross-slice regression TDD: RED one full sanitized source-ledger→successor→materialization→trace→corpus→score→analysis-plan→calibration-decision replay exposing any remaining join drift; GREEN only minimum cross-slice fixes; REFACTOR final `suite-manifest.json` registration; VERIFY all focused tests, G56R-002 regressions, `python3 -u tests/speckit-pro/run-all.py`, `PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py --check`, `git diff --check`, exact PR-title release-readiness validation, and Slice 3 G7 evidence
+- [x] T026 [US4] [FR-022] [FR-023] [FR-037] [FR-038] Close the two post-review calibration authority gaps with strict TDD: RED pilot acceptance of open or digest-drifted experiment policies and analysis-plan freeze from a plan-bound decision; GREEN explicit frozen-protocol input plus full closed policy/protocol and immutable-pair validation, content-addressed plan-free calibration-completion contracts, and completion-bound analysis-plan freeze; REFACTOR shared policy identity and completion validators; VERIFY focused contracts/statistics and the full committed-file suite
 
 ## Dependencies and Parallel Safety
 
@@ -95,8 +96,8 @@ and run only explicit budgeted calibration that cannot qualify a route.
 | FR-019 | T017, T019, T022, T024 |
 | FR-020 | T021, T024 |
 | FR-021 | T017, T021, T024 |
-| FR-022 | T017, T022–T023 |
-| FR-023 | T017, T023–T024 |
+| FR-022 | T017, T022–T023, T026 |
+| FR-023 | T017, T023–T024, T026 |
 | FR-024 | T017, T022, T024 |
 | FR-025 | T006, T016, T025 |
 | FR-026 | T005–T006, T025 |
@@ -110,8 +111,8 @@ and run only explicit budgeted calibration that cannot qualify a route.
 | FR-034 | T014–T015, T021, T024 |
 | FR-035 | T013 |
 | FR-036 | T015 |
-| FR-037 | T017–T018 |
-| FR-038 | T017, T020, T022, T024 |
+| FR-037 | T017–T018, T026 |
+| FR-038 | T017, T020, T022, T024, T026 |
 
 All 38 functional requirements are mapped. Every numbered task is a complete
 TDD unit that one implementation executor can own without crossing into a

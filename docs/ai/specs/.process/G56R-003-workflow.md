@@ -58,8 +58,9 @@ Its accepted decisions are binding inputs to every phase:
 - Refresh immutable capability snapshots only on declared client, account,
   catalog, or source-ledger invalidation triggers.
 - Deliver three ordered review slices.
-- Use a disposable calibration-only pilot, then freeze one versioned analysis
-  plan before any cohort outcome is observed.
+- Use a disposable calibration-only pilot, publish plan-free governed
+  calibration completion, then freeze one versioned analysis plan before any
+  cohort outcome is observed.
 
 Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 `$speckit-clarify` and the consensus protocol, never Grill Me.
@@ -74,11 +75,11 @@ Grill Me is human-in-the-loop only. Once autopilot begins, clarifications use
 | Clarify | `$speckit-clarify` | Complete | Four sessions resolved authority, treatment, scoring, partition, statistical, and evidence contracts; G2 passed with zero markers |
 | Plan | `$speckit-plan` | Complete | Three ordered slices, seven contract families, explicit ownership and generated boundaries; G3 passed |
 | Checklist | `$speckit-checklist` | Complete | All 141 checks pass; 6 gaps across Error Handling and Performance were remediated; G4 passed |
-| Tasks | `$speckit-tasks` | Complete | Repaired to 25 self-contained TDD tasks, 3 conflict-safe fixture groups, all 38 requirements mapped; G5 rerun passed |
+| Tasks | `$speckit-tasks` | Complete | 25 phase tasks plus post-review T026 are complete; 3 conflict-safe fixture groups and all 38 requirements remain mapped |
 | Analyze | `$speckit-analyze` | Complete | Task-contract rerun passed with zero findings; G6 rerun passed |
 | Confidence Gate | G6.5 | Complete | Task-repair rerun passed at 0.99 against the 0.90 advisory threshold |
-| Implement | `$speckit-implement` | Complete | All 25 tasks complete; Slice 3 G7 passed with 25/25 tasks and zero markers |
-| Post | Post-Implementation | Complete | PR #386 is open; review findings and the follow-up experiment-policy ordering contradiction are remediated |
+| Implement | `$speckit-implement` | Complete | All 26 tasks complete; T026 passed focused and full committed-file verification |
+| Post | Post-Implementation | Complete | PR #386 is open; review findings, the experiment-policy contradiction, and both calibration-authority follow-ups are remediated |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -1046,6 +1047,7 @@ For every task:
 | T023 | Complete | Replay/CLI additions produced contract 1 failure + 4 errors and statistics 2 failures + 1 error | Qualification contracts 27/27; statistics/replay 20/20; deterministic offline decision identity, explicit local calibration, frozen analysis-plan output, complete bindings, and no-network/no-live-write boundaries verified |
 | T024 | Complete | Six new methods and one expanded test produced 11 failures and 1 error | Statistics/replay 26/26; qualification contracts 27/27; closed freeze metadata/numeric validation and all prohibited route, evidence, retry, mutation, cache, attrition, code, and budget boundaries verified; stale runner absent |
 | T025 | Complete | Full source-lineage replay failed once on the missing closed-shape join | Focused G56R-003 107/107; G56R-002 99/99; full suite 3251/3251; exact suite registration, docs reference/validation, release-title validation, diff check, and post-checkpoint release-artifact check passed |
+| T026 | Complete | New regressions exposed the open-schema pilot bypass and the plan-bound calibration gate before the new validators/contracts existed | Qualification contracts 36/36; statistics/replay 34/34; full suite 3251/3251; closed policy/protocol identity, comparison joins, plan-free completion, and completion-bound plan freeze verified |
 
 ---
 
@@ -1054,7 +1056,7 @@ For every task:
 | Post Item | Status | Findings | Action Needed |
 |---|---|---|---|
 | Post: Doctor Extension Check | Complete | 0 failures; known warning that Claude integration has no `.claude/commands/` in this Codex worktree | None |
-| Post: Verify Implementation | Complete | 25/25 tasks, 38/38 requirements, 0 findings | None |
+| Post: Verify Implementation | Complete | 26/26 tasks, 38/38 requirements, 0 findings | None |
 | Post: Verify Tasks Phantom Check | Complete | 25 VERIFIED; 0 partial, weak, not found, or skipped | None |
 | Post: Code Review | Complete | Multiple authority and replay joins were remediated; final independent review found 0 findings | None |
 | Post: Integration Suite | Complete | 3251/3251 passed; G56R-002 regression 99/99 passed | None |
@@ -1066,7 +1068,8 @@ For every task:
 | Post: PR Body Generation | Complete | Read-only packet validation passed with `pr_blocked=false`; the required consumer-facing release-note block is present | None |
 | Post: PR Creation | Complete | PR [#386](https://github.com/racecraft-lab/racecraft-plugins-public/pull/386) created from the validated packet at pushed head `9fcff1d2` | None |
 | Post: Review Remediation | Complete | All 23 P1, 11 P2, and 3 later static-quality findings are remediated through `b926d8a4`; the full repository suite passes 3251/3251, all PR checks passed on that code head, and all 6 review threads are resolved | None |
-| Post: Experiment-Policy Contradiction Remediation | Complete | Both experiment-policy contracts now bind the pre-calibration protocol correctly; FR-037/FR-038 and protocol-to-plan lineage are repaired without weakening the validated calibration-decision gate; focused contract/statistics tests pass 67/67 and the full suite passes 3251/3251 | Full closed-schema enforcement on the pilot entry point remains a separately scoped follow-up; this contradiction fix lands first |
+| Post: Experiment-Policy Contradiction Remediation | Complete | Both experiment-policy contracts now bind the pre-calibration protocol correctly; FR-037/FR-038 and protocol-to-plan lineage are repaired; focused contract/statistics tests passed 67/67 and the full suite passed 3251/3251 | The two follow-ups identified during this remediation are resolved by T026 |
+| Post: Calibration Authority Follow-up Remediation | Complete | The pilot validates the full closed policy/protocol authority graph before execution, and plan freeze consumes schema-governed, content-addressed, plan-free calibration completion; focused contract/statistics tests pass 70/70 and the full suite passes 3251/3251 | None |
 | Post: Retrospective | Complete | Reproducibility, failed authority assumptions, reusable boundaries, and later-cohort invalidation rules recorded; roadmap marks G56R-003 complete in PR #386 | None |
 
 - [x] All tasks are complete and trace to requirements.
@@ -1137,13 +1140,13 @@ FR-008→T002/T004; FR-009→T003/T004; FR-010→T003/T004/T006/T023/T025;
 FR-011→T007–T011/T016; FR-012→T007/T010/T011; FR-013→T011/T017/T018/T022/T024;
 FR-014→T012/T016; FR-015→T013/T016; FR-016→T014–T016/T025;
 FR-017→T017/T019; FR-018→T017/T019/T020; FR-019→T017/T019/T022/T024;
-FR-020→T021/T024; FR-021→T017/T021/T024; FR-022→T017/T022/T023;
-FR-023→T017/T023/T024; FR-024→T017/T022/T024; FR-025→T006/T016/T025;
+FR-020→T021/T024; FR-021→T017/T021/T024; FR-022→T017/T022/T023/T026;
+FR-023→T017/T023/T024/T026; FR-024→T017/T022/T024; FR-025→T006/T016/T025;
 FR-026→T005/T006/T025; FR-027→T001/T015/T024; FR-028→T001;
 FR-029→T001; FR-030→T003; FR-031→T003; FR-032→T014/T017/T023;
 FR-033→T007–T011; FR-034→T014/T015/T021/T024; FR-035→T013;
-FR-036→T015; FR-037→T017/T018; FR-038→T017/T020/T022/T024.
-All 25 tasks are complete with commit and passing-test evidence; no orphans exist
+FR-036→T015; FR-037→T017/T018/T026; FR-038→T017/T020/T022/T024/T026.
+All 26 tasks are complete with commit and passing-test evidence; no orphans exist
 in either direction.
 
 **Follow-up & tidiness:** No `[TODO]`, `[DEFERRED]`, or `[OUT-OF-SCOPE]`
