@@ -26,6 +26,9 @@ QUALIFICATION_RUNNER_PATH = (
 SCORE_BUNDLE_SCHEMA_PATH = (
     ROOT / "tests/speckit-pro/layer6-efficiency/contracts/score-bundle.schema.json"
 )
+SPEC_SCORE_BUNDLE_SCHEMA_PATH = (
+    ROOT / "specs/g56r-003-evaluation-runner-scoring/contracts/score-bundle.schema.json"
+)
 ROLE_CORPUS_PATH = (
     ROOT / "tests/speckit-pro/layer6-efficiency/fixtures-codex/corpus-manifest.json"
 )
@@ -270,7 +273,6 @@ EXPECTED_SCORE_BINDING_FIELDS = (
 EXPECTED_SCORE_DISPOSITIONS = ("accepted", "gate_failed", "non_scorable", "invalidated")
 EXPECTED_SCORE_FAILURE_PLANES = (
     "none",
-    "gate",
     "treatment",
     "fixture",
     "scorer",
@@ -284,7 +286,6 @@ EXPECTED_SCORE_FAILURE_PLANES = (
 )
 EXPECTED_SCORE_FAILURE_CODES = (
     "none",
-    "gate_failed",
     "treatment_misdelivery",
     "service_reroute",
     "mandatory_telemetry_missing",
@@ -340,7 +341,6 @@ EXPECTED_CANDIDATE_TERMINALS = {
 }
 EXPECTED_FAILURE_CODE_PLANES = {
     "none": "none",
-    "gate_failed": "gate",
     "treatment_misdelivery": "treatment",
     "service_reroute": "treatment",
     "mandatory_telemetry_missing": "treatment",
@@ -898,6 +898,20 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
             tuple(schema["properties"]["invalidation_reason"]["enum"]),
             tuple(self.scoring.SCORE_INVALIDATION_REASONS),
         )
+        specification_schema = json.loads(
+            SPEC_SCORE_BUNDLE_SCHEMA_PATH.read_text(encoding="utf-8")
+        )
+        for field in (
+            "score_disposition",
+            "failure_plane",
+            "failure_code",
+            "invalidation_reason",
+        ):
+            self.assertEqual(
+                tuple(schema["properties"][field]["enum"]),
+                tuple(specification_schema["properties"][field]["enum"]),
+                f"runtime and specification score taxonomies diverge for {field}",
+            )
         self.assertEqual(
             tuple(schema["properties"]["resource_vector"]["properties"]["terminal_state"]["enum"]),
             ("completed", "failed", "timed_out", "cancelled", "budget_exhausted", "abandoned", "unknown"),
@@ -970,21 +984,48 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         gates = [gate_evidence(name) for name in EXPECTED_HARD_GATE_ORDER]
         gates[0]["passed"] = False
         failed_gates = self.scoring.evaluate_hard_gates(gate_request(gates=gates))
+        self.assertEqual(failed_gates["failure_code"], "gate_failed")
         gate_failure_request = score_bundle_request(
             failed_gates,
             semantic_result=None,
-            score_disposition="gate_failed",
-            failure_plane="gate",
-            failure_code="gate_failed",
+            score_disposition="non_scorable",
+            failure_plane="evidence_boundary",
+            failure_code="required_evidence_missing",
             vector=resource_vector(acceptance=None),
         )
 
         gate_failure = self.scoring.build_score_bundle(gate_failure_request)
 
-        self.assertEqual(gate_failure["score_disposition"], "gate_failed")
-        self.assertEqual(gate_failure["failure_plane"], "gate")
-        self.assertEqual(gate_failure["failure_code"], "gate_failed")
+        self.assertEqual(gate_failure["score_disposition"], "non_scorable")
+        self.assertEqual(gate_failure["failure_plane"], "evidence_boundary")
+        self.assertEqual(gate_failure["failure_code"], "required_evidence_missing")
         self.assertIsNone(gate_failure["semantic_score"])
+
+        legacy_gate_classification = copy.deepcopy(gate_failure_request)
+        legacy_gate_classification.update({
+            "score_disposition": "gate_failed",
+            "failure_plane": "gate",
+            "failure_code": "gate_failed",
+        })
+        with self.assertRaisesRegex(ValueError, "closed inventory"):
+            self.scoring.build_score_bundle(legacy_gate_classification)
+
+        out_of_order = [gate_evidence(name) for name in EXPECTED_HARD_GATE_ORDER]
+        out_of_order[0], out_of_order[1] = out_of_order[1], out_of_order[0]
+        malformed_gates = self.scoring.evaluate_hard_gates(
+            gate_request(gates=out_of_order)
+        )
+        malformed_bundle = self.scoring.build_score_bundle(score_bundle_request(
+            malformed_gates,
+            semantic_result=None,
+            score_disposition="gate_failed",
+            failure_plane="schema",
+            failure_code="schema_invalid",
+            vector=resource_vector(acceptance=None),
+        ))
+        self.assertEqual(malformed_bundle["score_disposition"], "gate_failed")
+        self.assertEqual(malformed_bundle["failure_plane"], "schema")
+        self.assertEqual(malformed_bundle["failure_code"], "schema_invalid")
 
         passed_gates = self.scoring.evaluate_hard_gates(gate_request())
         semantic_result = self.scoring.evaluate_blinded_ballots(

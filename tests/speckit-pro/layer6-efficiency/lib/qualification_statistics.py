@@ -323,7 +323,6 @@ _CANDIDATE_TERMINAL_STATE_BY_FAILURE_CODE = {
 }
 _FAILURE_CODES_BY_PLANE = {
     "none": frozenset({"none"}),
-    "gate": frozenset({"gate_failed"}),
     "treatment": frozenset({
         "treatment_misdelivery",
         "service_reroute",

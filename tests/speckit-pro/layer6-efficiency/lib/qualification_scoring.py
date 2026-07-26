@@ -29,7 +29,6 @@ GATE_FAILURE_CODES = ("none", "gate_failed", "gate_missing", "evidence_missing",
 SCORE_DISPOSITIONS = ("accepted", "gate_failed", "non_scorable", "invalidated")
 SCORE_FAILURE_PLANES = (
     "none",
-    "gate",
     "treatment",
     "fixture",
     "scorer",
@@ -43,7 +42,6 @@ SCORE_FAILURE_PLANES = (
 )
 SCORE_FAILURE_CODES = (
     "none",
-    "gate_failed",
     "treatment_misdelivery",
     "service_reroute",
     "mandatory_telemetry_missing",
@@ -99,7 +97,6 @@ CANDIDATE_TERMINALS = {
 }
 FAILURE_CODE_PLANES = {
     "none": "none",
-    "gate_failed": "gate",
     "treatment_misdelivery": "treatment",
     "service_reroute": "treatment",
     "mandatory_telemetry_missing": "treatment",
@@ -1361,6 +1358,40 @@ def _validated_gate_row(value: object) -> dict:
     }
 
 
+def _gate_result_score_classification(gate_result: dict) -> tuple[str, str, str] | None:
+    if gate_result["gate_disposition"] == "passed":
+        return None
+    if gate_result["failure_code"] == "gate_order_invalid":
+        return ("gate_failed", "schema", "schema_invalid")
+    return ("non_scorable", "evidence_boundary", "required_evidence_missing")
+
+
+def _gate_rows_score_classification(gates: list[dict]) -> tuple[str, str, str] | None:
+    gate_names = [gate["gate"] for gate in gates]
+    if len(gate_names) != len(HARD_GATE_ORDER) or set(gate_names) != _GATE_SET:
+        return ("non_scorable", "evidence_boundary", "required_evidence_missing")
+    if tuple(gate_names) != HARD_GATE_ORDER:
+        return ("gate_failed", "schema", "schema_invalid")
+    if any(
+        not gate["pass"] or gate["evidence_digest"] == digest([])
+        for gate in gates
+    ):
+        return ("non_scorable", "evidence_boundary", "required_evidence_missing")
+    return None
+
+
+def _require_gate_score_classification(
+    expected: tuple[str, str, str] | None,
+    actual: tuple[str, str, str],
+) -> None:
+    if expected is None:
+        if actual[0] == "gate_failed":
+            raise ValueError("gate-failed score disposition requires a failed hard gate")
+        return
+    if actual != expected:
+        raise ValueError("score classification does not match deterministic hard-gate evidence")
+
+
 def _score_bundle_request(value: object) -> dict:
     if isinstance(value, dict) and any(key in value for key in ("execution_trace", "trace", "trace_record")):
         raise ValueError("embedded trace documents are not allowed in score bundles")
@@ -1430,11 +1461,13 @@ def _score_bundle_request(value: object) -> dict:
         invalidated_bundle_binding=invalidated_bundle_binding,
         vector=vector,
     )
-    if score_disposition == "gate_failed":
-        if gate_result["gate_disposition"] != "failed" or request["semantic_result"] is not None:
-            raise ValueError("gate-failed score bundles require failed gates and no semantic result")
-    elif gate_result["gate_disposition"] != "passed":
-        raise ValueError("deterministic hard gates must pass before semantic scoring")
+    expected_gate_classification = _gate_result_score_classification(gate_result)
+    _require_gate_score_classification(
+        expected_gate_classification,
+        (score_disposition, failure_plane, failure_code),
+    )
+    if expected_gate_classification is not None and request["semantic_result"] is not None:
+        raise ValueError("failed hard gates cannot carry semantic results")
     score_bundle_version = _text(request["score_bundle_version"], "score bundle version")
     if score_bundle_version != _CURRENT_SCORE_BUNDLE_VERSION:
         raise ValueError("stale score bundle version is not committed directly")
@@ -1771,6 +1804,10 @@ def validate_score_bundle(value: object) -> dict:
         invalidation_reason=invalidation_reason,
         invalidated_bundle_binding=invalidated_bundle_binding,
         vector=vector,
+    )
+    _require_gate_score_classification(
+        _gate_rows_score_classification(bundle["deterministic_gates"]),
+        (score_disposition, failure_plane, failure_code),
     )
     bundle["semantic_score"] = _nullable_unit_interval(bundle["semantic_score"], "semantic score")
     bundle["reliability_score"] = _nullable_unit_interval(
