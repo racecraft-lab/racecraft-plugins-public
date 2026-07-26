@@ -164,11 +164,11 @@
         "leak_check_passed": {"type": "boolean"},
         "provenance_inferred": {"type": "boolean"},
         "inference_signal": {
-          "description": "FR-048: the first inferring ballot's signal. Retained for the cross-platform contract; read inference_signals for the complete residual.",
+          "description": "FR-048: the first inferring ballot's signal. Retained because already-committed bundles carry it; read inference_signals for the complete residual.",
           "type": ["string", "null"]
         },
         "inference_signals": {
-          "description": "FR-048: every inferring ballot's signal, in ballot order. Reporting only the first understated the residual precisely when several scorers independently inferred provenance. CROSS-PLATFORM: G56R-003 needs the same additive field to hold score-bundle parity.",
+          "description": "FR-048: every inferring ballot's signal, in ballot order. Reporting only the first understated the residual precisely when several scorers independently inferred provenance. CAR-owned, not a mirror surface: blinding_residual has no counterpart in G56R-003, whose requirements stop at FR-038, so this addition creates no parity divergence and the twin owes nothing. The mirrored surfaces of this contract are the four closed enumerations, which are untouched and verified byte-identical to the twin's.",
           "type": "array",
           "items": {"type": "string"}
         }

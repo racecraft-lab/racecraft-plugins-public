@@ -522,11 +522,12 @@ reference for them would be false traceability:
      **not** applied to `contracts/score-bundle.schema.json`, which carries no
      conditional subschemas. T047 asserts these rules against the Python
      implementation and MUST NOT add a one-sided schema constraint.
-  2. **Experiment-policy binding cycle** — **already applied on this side.**
+  2. **Experiment-policy binding cycle** — **CLOSED on both platforms.**
      `contracts/experiment-policy.schema.json` makes `analysis_plan_binding`
      conditional on `partition.qualification_eligible` rather than unconditionally
-     required. T060 asserts behaviour the schema already enforces; the open work is
-     bringing the Codex twin into line, not changing this side.
+     required, and T060 asserts behaviour the schema already enforces. The twin
+     landed its matching fix in `06a77dd3` (PR #386), so the two platforms are back
+     in step and nothing remains open here.
   3. **No `invalidation_reason` member for an analysis-plan or budget change** —
      FR-056 enforces non-pooling through `{id, digest}` binding identity instead.
      Deliberately not coined unilaterally; tracked as `checklists/performance.md`

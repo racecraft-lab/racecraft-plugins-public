@@ -530,14 +530,27 @@ risk was still latent and this side could edit it first.
   `analysis_plan_binding` and forbids `calibration_protocol_binding`, `false`
   requires the protocol and forbids the plan. Keying on `qualification_eligible`
   rather than `partition_type` is what makes the two branches exhaustive.
-  **What remains open is the twin, not this side.** The Codex `experiment-policy`
-  contract still requires `analysis_plan_binding` unconditionally, so the two
-  platforms are currently out of step on this object and the twin carries the cycle
-  this side has closed. Under the FR-049 joint-change rule the twin must be brought
-  into line rather than this side reverted, because reverting would reintroduce a
-  defect to preserve symmetry with a defect. It is not slice-blocking — slice 3 owns
-  the policy contract, and the calibration pilot is the first execution that would
-  exercise the binding — but the twin-side change must land before that pilot runs.
+  **CLOSED 2026-07-25 — the twin is now in line.** G56R-003 landed the matching
+  fix in `06a77dd3` on PR #386: its Phase-1 contract drops the unconditional
+  requirement and gates both bindings through an exhaustive `if/then/else` keyed on
+  `partition.qualification_eligible`, and its runtime harness contract takes the
+  calibration-only resolution — its partition binding pins
+  `qualification_eligible` to `const: false`, so every policy that schema admits is
+  a calibration policy and the plan binding is simply replaced by the protocol
+  binding at both the policy and assignment-pair levels. The twin also added a
+  `calibration-protocol.schema.json` at each layer, carrying no margins, sample
+  sizes, or terminal thresholds. Re-verified here against the twin's own contract
+  validator across seven cases, including an ineligible policy binding the analysis
+  plan — the original cycle — which is now rejected as a prohibited shape.
+  Resolution went the direction FR-049 requires: the twin was brought into line
+  rather than this side reverted, because reverting would have reintroduced a
+  defect to preserve symmetry with a defect.
+
+  One ordering note for the record: this side's calibration pilot ran before the
+  twin's fix landed. That is harmless — the pilot validates against the CAR
+  contract, which was already correct, and calibration outcomes are never pooled
+  across platforms — but the precondition as originally written ("the twin-side
+  change must land before that pilot runs") was not met in that order.
 
 - **Open cross-platform coordination item — no `invalidation_reason` member for an
   analysis-plan or budget change.** FR-056 forbids relaxing a budget ceiling or

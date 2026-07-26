@@ -416,9 +416,14 @@ def blinding_residual(
     understated the residual exactly where it mattered most: the more scorers
     that independently inferred provenance, the more evidence was dropped, and
     a reader could not distinguish one scorer's tell from three. ``inference_signal``
-    is retained as the first signal because it is part of the cross-platform
-    score-bundle contract and appears in already-committed bundles;
+    is retained as the first signal because already-committed bundles carry it;
     ``inference_signals`` is the complete record.
+
+    This is a CAR-owned surface, not a mirror one. ``blinding_residual`` has no
+    counterpart in G56R-003 — its requirements stop at FR-038 and it carries no
+    blinding concept — so adding a field here creates no parity divergence and
+    the twin owes nothing. What is mirrored in this contract is the four closed
+    enumerations, which this change does not touch.
     """
     inferring = [ballot for ballot in ballots if ballot.get("provenance_inferred")]
     signals = tuple(
