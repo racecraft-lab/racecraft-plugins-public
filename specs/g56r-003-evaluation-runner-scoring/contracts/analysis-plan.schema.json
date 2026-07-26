@@ -40,6 +40,7 @@
         "manifest_digest",
         "minimum_unique_tasks",
         "unknown_stratum_policy",
+        "guardrail_method",
         "strata"
       ],
       "properties": {
@@ -47,6 +48,7 @@
         "manifest_digest": {"$ref": "#/$defs/digest"},
         "minimum_unique_tasks": {"type": "integer", "minimum": 1},
         "unknown_stratum_policy": {"const": "inconclusive"},
+        "guardrail_method": {"$ref": "#/$defs/guardrailMethod"},
         "strata": {
           "type": "array",
           "minItems": 1,
@@ -57,6 +59,8 @@
               "stratum_id",
               "weight",
               "long_horizon",
+              "sample_size",
+              "minimum_unique_tasks",
               "p95_duration_ms_max",
               "p95_input_tokens_max",
               "p95_cached_input_tokens_max",
@@ -66,6 +70,8 @@
               "stratum_id": {"type": "string", "minLength": 1},
               "weight": {"type": "number", "exclusiveMinimum": 0},
               "long_horizon": {"type": "boolean"},
+              "sample_size": {"type": "integer", "minimum": 1},
+              "minimum_unique_tasks": {"type": "integer", "minimum": 1},
               "p95_duration_ms_max": {"type": "integer", "minimum": 1},
               "p95_input_tokens_max": {"type": "integer", "minimum": 1},
               "p95_cached_input_tokens_max": {"type": "integer", "minimum": 0},
@@ -108,7 +114,8 @@
         "sample_size_assumptions",
         "cluster_unit",
         "cluster_adjustment",
-        "multiplicity_adjustment"
+        "multiplicity_adjustment",
+        "multiplicity_declaration"
       ],
       "properties": {
         "endpoints": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
@@ -120,7 +127,8 @@
         "sample_size_assumptions": {"type": "object", "minProperties": 1},
         "cluster_unit": {"enum": ["role", "fixture"]},
         "cluster_adjustment": {"type": "string", "minLength": 1},
-        "multiplicity_adjustment": {"type": "string", "minLength": 1}
+        "multiplicity_adjustment": {"type": "string", "minLength": 1},
+        "multiplicity_declaration": {"$ref": "#/$defs/multiplicityDeclaration"}
       }
     },
     "pareto_policy": {
@@ -170,8 +178,8 @@
       }
     },
     "campaign_budget": {"$ref": "#/$defs/budget"},
-    "racing_policy": {"type": "object", "minProperties": 1},
-    "futility_policy": {"type": "object", "minProperties": 1},
+    "racing_policy": {"$ref": "#/$defs/disabledRacingPolicy"},
+    "futility_policy": {"$ref": "#/$defs/disabledFutilityPolicy"},
     "terminal_policy": {
       "type": "object",
       "additionalProperties": false,
@@ -194,6 +202,175 @@
       "properties": {
         "id": {"type": "string", "minLength": 1},
         "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "guardrailMethod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "units",
+        "denominator",
+        "comparator",
+        "margin",
+        "confidence_method",
+        "missing_data_rule",
+        "direction",
+        "multiplicity_position",
+        "breach_result",
+        "decision_bearing"
+      ],
+      "properties": {
+        "units": {"$ref": "#/$defs/guardrailUnits"},
+        "denominator": {"const": "per_attempt_within_stratum_arm"},
+        "comparator": {"const": "absolute_ceiling"},
+        "margin": {"type": "number", "minimum": 0},
+        "confidence_method": {"$ref": "#/$defs/guardrailConfidenceMethod"},
+        "missing_data_rule": {"const": "report_jointly_with_attrition"},
+        "direction": {"const": "higher_is_worse"},
+        "multiplicity_position": {"$ref": "#/$defs/guardrailMultiplicityPosition"},
+        "breach_result": {"const": "no_qualification"},
+        "decision_bearing": {"const": false}
+      }
+    },
+    "guardrailUnits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "raw_input_tokens",
+        "cached_input_tokens",
+        "output_tokens",
+        "duration_ms"
+      ],
+      "properties": {
+        "raw_input_tokens": {"const": "tokens_per_attempt"},
+        "cached_input_tokens": {"const": "tokens_per_attempt"},
+        "output_tokens": {"const": "tokens_per_attempt"},
+        "duration_ms": {"const": "milliseconds_per_attempt"}
+      }
+    },
+    "guardrailConfidenceMethod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "confidence_level"],
+      "properties": {
+        "method": {"const": "empirical_order_statistic"},
+        "confidence_level": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        }
+      }
+    },
+    "guardrailMultiplicityPosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family", "adjustment", "rationale"],
+      "properties": {
+        "family": {"const": "guardrail"},
+        "adjustment": {"type": "string", "minLength": 1},
+        "rationale": {"type": "string", "minLength": 1}
+      }
+    },
+    "multiplicityDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "conjunctive_family",
+        "pareto_disjunctive_family",
+        "across_ladder_family",
+        "cluster_adjustment_is_precondition"
+      ],
+      "properties": {
+        "conjunctive_family": {"$ref": "#/$defs/multiplicityFamily"},
+        "pareto_disjunctive_family": {"$ref": "#/$defs/multiplicityFamily"},
+        "across_ladder_family": {"$ref": "#/$defs/multiplicityFamily"},
+        "cluster_adjustment_is_precondition": {"const": true}
+      }
+    },
+    "multiplicityFamily": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adjustment", "rationale"],
+      "properties": {
+        "adjustment": {"type": "string", "minLength": 1},
+        "rationale": {"type": "string", "minLength": 1}
+      }
+    },
+    "disabledRacingPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "terminal_rule",
+        "interim_looks",
+        "boundary",
+        "error_control",
+        "look_schedule_frozen",
+        "early_stop_biases_estimate",
+        "stop_scope"
+      ],
+      "properties": {
+        "enabled": {"const": false},
+        "terminal_rule": {"const": "disabled"},
+        "interim_looks": {"$ref": "#/$defs/zeroInterimLooks"},
+        "boundary": {"$ref": "#/$defs/disabledBoundary"},
+        "error_control": {"$ref": "#/$defs/disabledErrorControl"},
+        "look_schedule_frozen": {"const": true},
+        "early_stop_biases_estimate": {"const": true},
+        "stop_scope": {"const": "complete_pair"}
+      }
+    },
+    "disabledFutilityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "terminal_rule",
+        "interim_looks",
+        "boundary",
+        "error_control",
+        "look_schedule_frozen",
+        "early_stop_biases_estimate",
+        "stop_scope",
+        "boundary_binding"
+      ],
+      "properties": {
+        "enabled": {"const": false},
+        "terminal_rule": {"const": "disabled"},
+        "interim_looks": {"$ref": "#/$defs/zeroInterimLooks"},
+        "boundary": {"$ref": "#/$defs/disabledBoundary"},
+        "error_control": {"$ref": "#/$defs/disabledErrorControl"},
+        "look_schedule_frozen": {"const": true},
+        "early_stop_biases_estimate": {"const": true},
+        "stop_scope": {"const": "complete_pair"},
+        "boundary_binding": {"enum": ["binding", "non_binding"]}
+      }
+    },
+    "zeroInterimLooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "information_fractions"],
+      "properties": {
+        "count": {"const": 0},
+        "information_fractions": {"type": "array", "maxItems": 0}
+      }
+    },
+    "disabledBoundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "rationale"],
+      "properties": {
+        "type": {"const": "disabled"},
+        "rationale": {"type": "string", "minLength": 1}
+      }
+    },
+    "disabledErrorControl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["method", "rationale"],
+      "properties": {
+        "method": {"const": "none_no_interim_looks"},
+        "rationale": {"type": "string", "minLength": 1}
       }
     },
     "budget": {

@@ -31,12 +31,14 @@ CONTRACT_DIR = ROOT / "tests/speckit-pro/layer6-efficiency/contracts"
 CALIBRATION_PROTOCOL_SCHEMA_PATH = CONTRACT_DIR / "calibration-protocol.schema.json"
 CALIBRATION_COMPLETION_SCHEMA_PATH = CONTRACT_DIR / "calibration-completion.schema.json"
 EXPERIMENT_POLICY_SCHEMA_PATH = CONTRACT_DIR / "experiment-policy.schema.json"
+ENVIRONMENT_CONTRACT_SCHEMA_PATH = CONTRACT_DIR / "environment-contract.schema.json"
 ANALYSIS_PLAN_SCHEMA_PATH = CONTRACT_DIR / "analysis-plan.schema.json"
 ANALYSIS_DECISION_SCHEMA_PATH = CONTRACT_DIR / "analysis-decision.schema.json"
 CONTRACT_SCHEMA_PATHS = (
     CALIBRATION_PROTOCOL_SCHEMA_PATH,
     CALIBRATION_COMPLETION_SCHEMA_PATH,
     EXPERIMENT_POLICY_SCHEMA_PATH,
+    ENVIRONMENT_CONTRACT_SCHEMA_PATH,
     ANALYSIS_PLAN_SCHEMA_PATH,
     ANALYSIS_DECISION_SCHEMA_PATH,
 )
@@ -47,6 +49,7 @@ G56R_003_RUNTIME_CONTRACT_NAMES = (
     "calibration-completion.schema.json",
     "calibration-protocol.schema.json",
     "experiment-policy.schema.json",
+    "environment-contract.schema.json",
     "role-corpus.schema.json",
     "score-bundle.schema.json",
     "successor-capability-freeze.schema.json",
@@ -1057,6 +1060,9 @@ def specification_experiment_policy_fixture(*, eligible: bool) -> dict:
         },
         "candidate_freeze_binding": schema_binding("candidate-freeze"),
         "corpus_binding": schema_binding("corpus"),
+        "environment_contract_binding": schema_binding(
+            "environment-contract"
+        ),
         "assignment_policy": {
             "pair_before_execution": True,
             "order_rule": "seeded_random",
@@ -1133,6 +1139,9 @@ def experiment_policy_fixture() -> dict:
         "corpus_binding": schema_binding("corpus"),
         "calibration_protocol_binding": calibration_protocol_binding(protocol),
         "workload_manifest_binding": schema_binding("workload-manifest"),
+        "environment_contract_binding": schema_binding(
+            "environment-contract"
+        ),
         "comparison_policy": {
             "pair_before_execution": True,
             "comparison_set_generation": "paired_by_role_fixture_task",
@@ -1170,6 +1179,23 @@ def experiment_policy_fixture() -> dict:
                     schema_digest("experiment-policy-digest"),
                 ),
                 "calibration_protocol_binding": calibration_protocol_binding(protocol),
+                "environment_contract_binding": schema_binding(
+                    "environment-contract"
+                ),
+                "workload_stratum_assignment": {
+                    "workload_stratum_binding": schema_binding(
+                        "implementation-small"
+                    ),
+                    "membership_basis": [
+                        "role_id",
+                        "objective",
+                        "permitted_tools",
+                        "mutation_contract",
+                        "expected_artifacts",
+                        "acceptance_oracle",
+                    ],
+                    "derived_from_realized_outcomes": False,
+                },
                 "assigned_order": ["candidate", "comparator"],
                 "invalidation_policy": "additive_only",
             }],
@@ -1224,10 +1250,36 @@ def analysis_plan_fixture() -> dict:
             "manifest_digest": schema_digest("workload-manifest"),
             "minimum_unique_tasks": 12,
             "unknown_stratum_policy": "inconclusive",
+            "guardrail_method": {
+                "units": {
+                    "raw_input_tokens": "tokens_per_attempt",
+                    "cached_input_tokens": "tokens_per_attempt",
+                    "output_tokens": "tokens_per_attempt",
+                    "duration_ms": "milliseconds_per_attempt",
+                },
+                "denominator": "per_attempt_within_stratum_arm",
+                "comparator": "absolute_ceiling",
+                "margin": 0,
+                "confidence_method": {
+                    "method": "empirical_order_statistic",
+                    "confidence_level": 0.95,
+                },
+                "missing_data_rule": "report_jointly_with_attrition",
+                "direction": "higher_is_worse",
+                "multiplicity_position": {
+                    "family": "guardrail",
+                    "adjustment": "holm_within_guardrail_family",
+                    "rationale": "Controls the four prespecified upper-tail guardrails.",
+                },
+                "breach_result": "no_qualification",
+                "decision_bearing": False,
+            },
             "strata": [{
                 "stratum_id": "implementation-small",
                 "target_weight": 1.0,
                 "long_horizon": False,
+                "sample_size": 24,
+                "minimum_unique_tasks": 12,
                 "p95_guardrails": {
                     "raw_input_tokens_max": 8000,
                     "cached_input_tokens_max": 2000,
@@ -1263,6 +1315,21 @@ def analysis_plan_fixture() -> dict:
             "cluster_unit": "role",
             "cluster_adjustment": "cluster_robust",
             "multiplicity_adjustment": "holm",
+            "multiplicity_declaration": {
+                "conjunctive_family": {
+                    "adjustment": "none_required",
+                    "rationale": "Every ordered floor and non-inferiority gate must pass.",
+                },
+                "pareto_disjunctive_family": {
+                    "adjustment": "holm",
+                    "rationale": "Controls the better-on-at-least-one-dimension claim.",
+                },
+                "across_ladder_family": {
+                    "adjustment": "holm",
+                    "rationale": "Controls comparisons across candidates, roles, and strata.",
+                },
+                "cluster_adjustment_is_precondition": True,
+            },
         },
         "pareto_policy": {
             "evaluation_order": 3,
@@ -1305,8 +1372,39 @@ def analysis_plan_fixture() -> dict:
             "one_arm_rerun_prohibited": True,
         },
         "campaign_budget": full_budget(),
-        "racing_policy": {"enabled": False, "terminal_rule": "disabled"},
-        "futility_policy": {"enabled": False, "terminal_rule": "disabled"},
+        "racing_policy": {
+            "enabled": False,
+            "terminal_rule": "disabled",
+            "interim_looks": {"count": 0, "information_fractions": []},
+            "boundary": {
+                "type": "disabled",
+                "rationale": "Calibration replay has no interim racing looks.",
+            },
+            "error_control": {
+                "method": "none_no_interim_looks",
+                "rationale": "Zero looks create no repeated-testing error.",
+            },
+            "look_schedule_frozen": True,
+            "early_stop_biases_estimate": True,
+            "stop_scope": "complete_pair",
+        },
+        "futility_policy": {
+            "enabled": False,
+            "terminal_rule": "disabled",
+            "interim_looks": {"count": 0, "information_fractions": []},
+            "boundary": {
+                "type": "disabled",
+                "rationale": "Calibration replay has no interim futility looks.",
+            },
+            "error_control": {
+                "method": "none_no_interim_looks",
+                "rationale": "Zero looks create no repeated-testing error.",
+            },
+            "look_schedule_frozen": True,
+            "early_stop_biases_estimate": True,
+            "stop_scope": "complete_pair",
+            "boundary_binding": "non_binding",
+        },
         "terminal_policy": {
             "incomplete_result": "inconclusive",
             "uncertain_result": "inconclusive",
@@ -1323,6 +1421,9 @@ def comparison_assignment_authorities(policy: dict, protocol: dict) -> dict:
         "runtime_snapshot_binding": copy.deepcopy(pair["capability_binding"]["runtime_snapshot_binding"]),
         "corpus_binding": copy.deepcopy(policy["corpus_binding"]),
         "workload_manifest_binding": copy.deepcopy(policy["workload_manifest_binding"]),
+        "environment_contract_binding": copy.deepcopy(
+            policy["environment_contract_binding"]
+        ),
         "experiment_policy_binding": experiment_policy_binding(policy),
         "calibration_protocol_binding": calibration_protocol_binding(protocol),
         "role_binding": copy.deepcopy(pair["role_binding"]),
@@ -1693,6 +1794,42 @@ class ExperimentAnalysisContractSchemaTests(unittest.TestCase):
         del missing_p95_cache["workload_manifest"]["strata"][0]["p95_guardrails"]["cached_input_tokens_max"]
         self.assert_rejects(schema, missing_p95_cache, "workload strata must bind p95 cache guardrails")
 
+        missing_guardrail_method = copy.deepcopy(valid)
+        del missing_guardrail_method["workload_manifest"]["guardrail_method"]
+        self.assert_rejects(
+            schema,
+            missing_guardrail_method,
+            "p95 ceilings require their complete comparison method",
+        )
+
+        missing_stratum_floor = copy.deepcopy(valid)
+        del missing_stratum_floor["workload_manifest"]["strata"][0][
+            "minimum_unique_tasks"
+        ]
+        self.assert_rejects(
+            schema,
+            missing_stratum_floor,
+            "each workload stratum requires its own estimability floor",
+        )
+
+        missing_multiplicity_family = copy.deepcopy(valid)
+        del missing_multiplicity_family["non_inferiority"][
+            "multiplicity_declaration"
+        ]["across_ladder_family"]
+        self.assert_rejects(
+            schema,
+            missing_multiplicity_family,
+            "all three multiplicity families must be declared",
+        )
+
+        unstated_looks = copy.deepcopy(valid)
+        del unstated_looks["racing_policy"]["interim_looks"]
+        self.assert_rejects(
+            schema,
+            unstated_looks,
+            "disabled racing still declares zero interim looks",
+        )
+
         cache_leak = copy.deepcopy(valid)
         cache_leak["cache_policy"]["pair_isolation"] = False
         self.assert_rejects(schema, cache_leak, "cache state must be isolated by pair")
@@ -1757,6 +1894,47 @@ class ExperimentAnalysisContractSchemaTests(unittest.TestCase):
             pareto_result="candidate_dominates",
         )
         self.assert_rejects(schema, pareto_without_ni, "Pareto cannot be evaluated before NI passes")
+
+    def test_decision_v1_1_selects_authority_from_partition_eligibility(self) -> None:
+        schema = self.schema_for(ANALYSIS_DECISION_SCHEMA_PATH)
+        calibration = decision_bundle_fixture()
+        calibration["schema_version"] = "analysis-decision.v1.1"
+        del calibration["analysis_plan_binding"]
+        calibration["calibration_protocol_binding"] = schema_binding(
+            "calibration-protocol"
+        )
+        self.assert_accepts(schema, calibration)
+
+        eligible = decision_bundle_fixture(
+            decision="no_qualification",
+            floor_result="fail",
+            non_inferiority_result="not_evaluated",
+            pareto_result="not_evaluated",
+            failed_gate="floors",
+        )
+        eligible["schema_version"] = "analysis-decision.v1.1"
+        eligible["partition_binding"].update({
+            "partition_id": "selection-partition",
+            "partition_type": "selection",
+            "qualification_eligible": True,
+        })
+        self.assert_accepts(schema, eligible)
+
+        both = copy.deepcopy(calibration)
+        both["analysis_plan_binding"] = schema_binding("analysis-plan")
+        self.assert_rejects(
+            schema,
+            both,
+            "version 1.1 decision must not bind both protocol and plan",
+        )
+
+        eligible_without_plan = copy.deepcopy(eligible)
+        del eligible_without_plan["analysis_plan_binding"]
+        self.assert_rejects(
+            schema,
+            eligible_without_plan,
+            "qualification-eligible decision must bind the frozen plan",
+        )
 
 
 class ComparisonAssignmentValidatorTests(unittest.TestCase):
@@ -2625,6 +2803,10 @@ class QualificationContractTests(unittest.TestCase):
         self.assertEqual(payload["runtime_snapshot_binding"], freeze["runtime_snapshot_binding"])
         self.assertEqual(payload["budget"], budget)
         self.assertEqual(payload["calibration_protocol_binding"], calibration_protocol_binding(protocol))
+        self.assertEqual(
+            payload["environment_contract_binding"],
+            policy["environment_contract_binding"],
+        )
         self.assertEqual(payload["scorer_bindings"], protocol["scorer_bindings"])
         self.assertEqual(payload["rubric_binding"], protocol["rubric_binding"])
         self.assertEqual(payload["adjudicator_binding"], protocol["adjudicator_binding"])

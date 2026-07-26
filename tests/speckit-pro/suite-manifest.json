@@ -101,6 +101,7 @@
         { "path": "tests/speckit-pro/unit/test-agent-materialization.py", "label": "test-agent-materialization", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-codex-qualification-contracts.py", "label": "test-codex-qualification-contracts", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-codex-qualification-corpus.py", "label": "test-codex-qualification-corpus", "baseline": null },
+        { "path": "tests/speckit-pro/unit/test-codex-qualification-environment.py", "label": "test-codex-qualification-environment", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-codex-corpus-fixtures-a.py", "label": "test-codex-corpus-fixtures-a", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-codex-corpus-fixtures-b.py", "label": "test-codex-corpus-fixtures-b", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-codex-corpus-fixtures-c.py", "label": "test-codex-corpus-fixtures-c", "baseline": null },

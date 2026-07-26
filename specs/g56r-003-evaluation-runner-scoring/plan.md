@@ -213,8 +213,8 @@ untouched.
 
 ### Slice 1 — Capability, materialization, and trace
 
-**Requirements**: FR-001 through FR-010, FR-026 through FR-031; SC-001 through
-SC-004, SC-014 through SC-016.
+**Requirements**: FR-001 through FR-010, FR-026 through FR-031, FR-039 through
+FR-046, FR-051, FR-057; SC-001 through SC-004, SC-014 through SC-020.
 
 **Implementation**:
 
@@ -222,6 +222,10 @@ SC-004, SC-014 through SC-016.
 - reuse G56R-002 capability collection, retention, trace, and replay helpers;
 - add the pinned-catalog successor snapshot/freeze contract and publication
   validator;
+- record each model's actual ordered ordinary-effort ladder, detect alias
+  re-points from observed-versus-resolved identity, and freeze refresh effects;
+- observe and validate the pre-execution environment, authentication mode, and
+  Ultra-off admission precondition without mutating operator settings;
 - add the thin durable qualification adapter;
 - emit a new trace for every assigned attempt and hard-block scoring unless
   treatment is proven.
@@ -230,6 +234,9 @@ SC-004, SC-014 through SC-016.
 
 - unit tests for materialization bytes and G56R-006 importability;
 - successor publication positive/negative fixtures;
+- synthetic alias-re-point replay and environment-divergence matrices;
+- source inspection proving that no harness or shipped payload enables or
+  disables Ultra;
 - G56R-002 immutability snapshot;
 - treatment/misdelivery/reroute/null-state replay tests;
 - runner release-artifact refresh and drift check.
@@ -239,8 +246,8 @@ Primary Surface: harness/adapter.
 
 ### Slice 2 — Corpus and blinded scoring
 
-**Requirements**: FR-011 through FR-016, FR-032 through FR-036; SC-005,
-SC-006, SC-015.
+**Requirements**: FR-011 through FR-016, FR-032 through FR-036, FR-047 through
+FR-049; SC-005, SC-006, SC-015, SC-021, SC-024.
 
 **Implementation**:
 
@@ -253,6 +260,8 @@ SC-006, SC-015.
 - accept only two distinct, current, candidate-blind ballots under one frozen
   rubric and use a frozen third adjudicator for decision-affecting
   disagreement;
+- exclude same-family scorers, report every blinding-inference signal, record
+  reasoning tokens diagnostically, and require observed per-arm cache roots;
 - issue immutable score bundles with closed failure and invalidation fields.
 
 **Independent verification**:
@@ -269,8 +278,9 @@ Primary Surface: harness/adapter.
 
 ### Slice 3 — Experiment policy, statistics, and calibration
 
-**Requirements**: FR-013, FR-017 through FR-025, FR-032, FR-037, FR-038;
-SC-007 through SC-013.
+**Requirements**: FR-013, FR-017 through FR-025, FR-032, FR-037, FR-038,
+FR-050, FR-052 through FR-056, FR-058; SC-007 through SC-013, SC-022,
+SC-023, SC-025.
 
 **Implementation**:
 
@@ -301,6 +311,8 @@ SC-007 through SC-013.
 - replay fixtures for every terminal/attrition/rerun path;
 - statistical golden cases for floors, non-inferiority, clusters, Pareto,
   uncertainty, and multiplicity;
+- closed-plan checks for all three multiplicity families, full p95 guardrail
+  declarations, per-stratum unique-task floors, and sequential-look content;
 - workload-strata, p95 guardrail, budget-ceiling, and cache-leakage negative
   fixtures;
 - clean-checkout replay equality;
@@ -338,6 +350,15 @@ raw input tokens, cached-input tokens, output tokens, candidate count, and
 confirmation-entry count. A missing p95 guardrail, missing workload stratum, or
 post-treatment cache-policy change makes the affected comparison incomplete
 and therefore inconclusive.
+
+## Default-Suite Budget
+
+The manifest-driven deterministic default suite has a frozen wall-clock ceiling
+of 600 seconds on a normal developer checkout and makes zero live model calls.
+The 2026-07-26 pre-commit baseline completed in 303.33 seconds with 3251/3251
+tests passing. Replay fixtures remain bounded, and the existing frozen-bundle
+replay p95 target remains under ten seconds. Work that cannot fit this ceiling
+belongs behind the explicit operator-only live path.
 
 ## Generated-Artifact Contract
 
@@ -402,6 +423,7 @@ payloads and proof artifacts are intentionally excluded.
 - NEW tests/speckit-pro/layer6-efficiency/lib/codex_successor_capability.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/qualification_contracts.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/qualification_corpus.py
+- NEW tests/speckit-pro/layer6-efficiency/lib/qualification_environment.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/qualification_scoring.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/qualification_statistics.py
 - NEW tests/speckit-pro/layer6-efficiency/lib/qualification_replay.py
@@ -409,6 +431,7 @@ payloads and proof artifacts are intentionally excluded.
 - NEW tests/speckit-pro/layer6-efficiency/contracts/calibration-protocol.schema.json
 - NEW tests/speckit-pro/layer6-efficiency/contracts/calibration-completion.schema.json
 - NEW tests/speckit-pro/layer6-efficiency/contracts/experiment-policy.schema.json
+- NEW tests/speckit-pro/layer6-efficiency/contracts/environment-contract.schema.json
 - NEW tests/speckit-pro/layer6-efficiency/contracts/role-corpus.schema.json
 - NEW tests/speckit-pro/layer6-efficiency/contracts/score-bundle.schema.json
 - NEW tests/speckit-pro/layer6-efficiency/contracts/analysis-plan.schema.json
@@ -418,6 +441,7 @@ payloads and proof artifacts are intentionally excluded.
 - NEW tests/speckit-pro/unit/test-codex-successor-capability.py
 - NEW tests/speckit-pro/unit/test-codex-qualification-contracts.py
 - NEW tests/speckit-pro/unit/test-codex-qualification-corpus.py
+- NEW tests/speckit-pro/unit/test-codex-qualification-environment.py
 - NEW tests/speckit-pro/unit/test-codex-qualification-scoring.py
 - NEW tests/speckit-pro/unit/test-codex-qualification-statistics.py
 - MODIFIED tests/speckit-pro/suite-manifest.json

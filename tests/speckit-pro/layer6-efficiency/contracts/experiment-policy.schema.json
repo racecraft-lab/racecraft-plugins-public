@@ -14,6 +14,7 @@
     "corpus_binding",
     "calibration_protocol_binding",
     "workload_manifest_binding",
+    "environment_contract_binding",
     "comparison_policy",
     "comparison_sets",
     "terminal_policy",
@@ -31,6 +32,7 @@
     "corpus_binding": {"$ref": "#/$defs/binding"},
     "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
     "workload_manifest_binding": {"$ref": "#/$defs/binding"},
+    "environment_contract_binding": {"$ref": "#/$defs/binding"},
     "comparison_policy": {"$ref": "#/$defs/comparisonPolicy"},
     "comparison_sets": {
       "type": "array",
@@ -130,6 +132,8 @@
         "capability_binding",
         "experiment_policy_binding",
         "calibration_protocol_binding",
+        "environment_contract_binding",
+        "workload_stratum_assignment",
         "assigned_order",
         "invalidation_policy"
       ],
@@ -148,6 +152,10 @@
         "capability_binding": {"$ref": "#/$defs/capabilityBinding"},
         "experiment_policy_binding": {"$ref": "#/$defs/binding"},
         "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
+        "environment_contract_binding": {"$ref": "#/$defs/binding"},
+        "workload_stratum_assignment": {
+          "$ref": "#/$defs/workloadStratumAssignment"
+        },
         "assigned_order": {
           "oneOf": [
             {
@@ -216,6 +224,34 @@
       "properties": {
         "runtime_snapshot_binding": {"$ref": "#/$defs/binding"},
         "candidate_freeze_binding": {"$ref": "#/$defs/binding"}
+      }
+    },
+    "workloadStratumAssignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workload_stratum_binding",
+        "membership_basis",
+        "derived_from_realized_outcomes"
+      ],
+      "properties": {
+        "workload_stratum_binding": {"$ref": "#/$defs/binding"},
+        "membership_basis": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "role_id",
+              "objective",
+              "permitted_tools",
+              "mutation_contract",
+              "expected_artifacts",
+              "acceptance_oracle"
+            ]
+          }
+        },
+        "derived_from_realized_outcomes": {"const": false}
       }
     },
     "terminalPolicy": {

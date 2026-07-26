@@ -152,6 +152,7 @@ _REQUEST_FIELDS = frozenset({
 })
 _SEMANTIC_REQUEST_FIELDS = frozenset({
     "score_bundle_draft_id",
+    "candidate_model_families",
     "ballots",
     "adjudication",
 })
@@ -165,6 +166,12 @@ _GATE_FIELDS = frozenset({
 _BALLOT_INPUT_FIELDS = frozenset({
     "blinded_artifact_digest",
     "candidate_blind",
+    "requested_alias",
+    "declared_model_id",
+    "observed_model_id",
+    "model_family",
+    "provenance_inferred",
+    "inference_signals",
     "scorer_id",
     "scorer_status",
     "scorer_digest",
@@ -189,6 +196,10 @@ _ADJUDICATION_INPUT_FIELDS = frozenset({
     "adjudicator_digest",
     "adjudicator_execution_id",
     "adjudicator_execution_digest",
+    "requested_alias",
+    "declared_model_id",
+    "observed_model_id",
+    "model_family",
     "calibration_id",
     "calibration_digest",
     "calibration_status",
@@ -246,6 +257,7 @@ _SCORE_BUNDLE_REQUEST_FIELDS = frozenset({
     "invalidation_reason",
     "invalidated_bundle_binding",
     "resource_vector",
+    "reasoning_output_tokens",
     "evidence_refs",
 })
 _SCORE_BUNDLE_FIELDS = frozenset({
@@ -281,6 +293,9 @@ _SCORE_BUNDLE_FIELDS = frozenset({
     "semantic_score",
     "reliability_score",
     "resource_vector",
+    "candidate_model_families",
+    "blinding_residual",
+    "reasoning_token_report",
     "evidence_refs",
 })
 _RESOURCE_VECTOR_FIELDS = frozenset({
@@ -292,6 +307,20 @@ _RESOURCE_VECTOR_FIELDS = frozenset({
     "compactions",
     "acceptance",
     "terminal_state",
+})
+_REASONING_TOKEN_REPORT_FIELDS = frozenset({
+    "attempt_count",
+    "missing_count",
+    "reasoning_output_tokens_total",
+    "reported_for_every_attempt",
+    "decision_bearing",
+    "pareto_dimension",
+})
+_BLINDING_RESIDUAL_FIELDS = frozenset({
+    "bounded",
+    "complete_blinding_claimed",
+    "provenance_inferred",
+    "inference_signals",
 })
 _TERMINAL_STATES = frozenset({"completed", *CANDIDATE_TERMINALS, "unknown"})
 _RESULT_FIELDS = frozenset({
@@ -317,8 +346,10 @@ _SEMANTIC_RESULT_FIELDS = frozenset({
     "score_disposition",
     "failure_plane",
     "failure_code",
+    "candidate_model_families",
     "ballots",
     "adjudication",
+    "blinding_residual",
     "resolved_outcome",
     "semantic_score",
     "reliability_score",
@@ -331,6 +362,8 @@ _COMMITTED_SCORER_KEY_ALLOWLIST = (
     | _BALLOT_RESULT_FIELDS
     | _ADJUDICATION_RESULT_FIELDS
     | _RESOURCE_VECTOR_FIELDS
+    | _REASONING_TOKEN_REPORT_FIELDS
+    | _BLINDING_RESIDUAL_FIELDS
     | frozenset({
         "id",
         "digest",
@@ -339,6 +372,8 @@ _COMMITTED_SCORER_KEY_ALLOWLIST = (
         "evidence_digest",
         "semantic",
         "reliability",
+        "ballot_index",
+        "signal",
     })
 )
 _SENSITIVE_KEY_FRAGMENTS = (
@@ -404,6 +439,35 @@ def _text(value: object, label: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{label} must be a non-empty string")
     return value
+
+
+def _model_families(value: object, label: str, *, required: bool) -> list[str]:
+    if (
+        not isinstance(value, list)
+        or (required and not value)
+        or any(not isinstance(item, str) or not item for item in value)
+        or len(value) != len(set(value))
+    ):
+        qualifier = "non-empty unique" if required else "unique"
+        raise ValueError(f"{label} must be a {qualifier} string array")
+    return list(value)
+
+
+def _inference_signals(
+    value: object,
+    *,
+    inferred: bool,
+    label: str,
+) -> list[str]:
+    if (
+        not isinstance(value, list)
+        or any(not isinstance(item, str) or not item for item in value)
+        or len(value) != len(set(value))
+    ):
+        raise ValueError(f"{label} must be a unique non-empty string array")
+    if inferred != bool(value):
+        raise ValueError(f"{label} must agree with provenance inference")
+    return list(value)
 
 
 def _digest(value: object, label: str) -> str:
@@ -749,6 +813,7 @@ def _build_semantic_result(
     gate_result: dict,
     *,
     score_bundle_draft_id: str,
+    candidate_model_families: list[str],
     score_disposition: str,
     failure_plane: str,
     failure_code: str,
@@ -764,11 +829,13 @@ def _build_semantic_result(
         "gate_result_id": gate_result["gate_result_id"],
         "gate_result_digest": gate_result["gate_result_digest"],
         "score_bundle_draft_id": score_bundle_draft_id,
+        "candidate_model_families": _copy.deepcopy(candidate_model_families),
         "score_disposition": score_disposition,
         "failure_plane": failure_plane,
         "failure_code": failure_code,
         "ballots": _copy.deepcopy(ballots),
         "adjudication": _copy.deepcopy(adjudication),
+        "blinding_residual": blinding_residual(ballots),
         "resolved_outcome": resolved_outcome,
         "semantic_score": semantic_score,
         "reliability_score": reliability_score,
@@ -782,6 +849,11 @@ def _build_semantic_result(
 def _semantic_request(value: object) -> dict:
     row = _closed(_copy.deepcopy(value), _SEMANTIC_REQUEST_FIELDS, "semantic ballot request")
     row["score_bundle_draft_id"] = _text(row["score_bundle_draft_id"], "score bundle draft ID")
+    row["candidate_model_families"] = _model_families(
+        row["candidate_model_families"],
+        "candidate model families",
+        required=True,
+    )
     if not isinstance(row["ballots"], list):
         raise ValueError("semantic ballots must be an array")
     if row["adjudication"] is not None and not isinstance(row["adjudication"], dict):
@@ -791,9 +863,23 @@ def _semantic_request(value: object) -> dict:
 
 def _ballot_record(value: object) -> dict:
     row = _closed(_copy.deepcopy(value), _BALLOT_INPUT_FIELDS, "semantic ballot")
+    provenance_inferred = _bool(
+        row["provenance_inferred"],
+        "ballot provenance-inferred marker",
+    )
     record = {
         "blinded_artifact_digest": _digest(row["blinded_artifact_digest"], "blinded artifact digest"),
         "candidate_blind": _bool(row["candidate_blind"], "candidate-blind marker"),
+        "requested_alias": _text(row["requested_alias"], "scorer requested alias"),
+        "declared_model_id": _text(row["declared_model_id"], "scorer declared model"),
+        "observed_model_id": _text(row["observed_model_id"], "scorer observed model"),
+        "model_family": _text(row["model_family"], "scorer model family"),
+        "provenance_inferred": provenance_inferred,
+        "inference_signals": _inference_signals(
+            row["inference_signals"],
+            inferred=provenance_inferred,
+            label="ballot inference signals",
+        ),
         "scorer_id": _text(row["scorer_id"], "scorer ID"),
         "scorer_status": _status(row["scorer_status"], "scorer status"),
         "scorer_digest": _digest(row["scorer_digest"], "scorer digest"),
@@ -826,6 +912,22 @@ def _adjudication_record(value: object, *, ballots: list[dict]) -> dict:
         "adjudicator_digest": _digest(row["adjudicator_digest"], "adjudicator digest"),
         "adjudicator_execution_id": _text(row["adjudicator_execution_id"], "adjudicator execution ID"),
         "adjudicator_execution_digest": _digest(row["adjudicator_execution_digest"], "adjudicator execution digest"),
+        "requested_alias": _text(
+            row["requested_alias"],
+            "adjudicator requested alias",
+        ),
+        "declared_model_id": _text(
+            row["declared_model_id"],
+            "adjudicator declared model",
+        ),
+        "observed_model_id": _text(
+            row["observed_model_id"],
+            "adjudicator observed model",
+        ),
+        "model_family": _text(
+            row["model_family"],
+            "adjudicator model family",
+        ),
         "calibration_id": _text(row["calibration_id"], "adjudicator calibration ID"),
         "calibration_digest": _digest(row["calibration_digest"], "adjudicator calibration digest"),
         "calibration_status": _status(row["calibration_status"], "adjudicator calibration status"),
@@ -862,6 +964,7 @@ def _semantic_failure(
     return _build_semantic_result(
         gate_result,
         score_bundle_draft_id=request["score_bundle_draft_id"],
+        candidate_model_families=request["candidate_model_families"],
         score_disposition="non_scorable",
         failure_plane=_failure_plane_for_code(failure_code),
         failure_code=failure_code,
@@ -1026,6 +1129,26 @@ def evaluate_blinded_ballots(gate_result: object, value: object) -> dict:
             failure_code="ballot_rubric_stale",
             ballots=ballots,
         )
+    scorer_findings = scorer_governance_findings(
+        request["candidate_model_families"],
+        [
+            {
+                "role": "scorer",
+                "requested_alias": ballot["requested_alias"],
+                "declared_model_id": ballot["declared_model_id"],
+                "observed_model_id": ballot["observed_model_id"],
+                "model_family": ballot["model_family"],
+            }
+            for ballot in ballots
+        ],
+    )
+    if scorer_findings:
+        return _semantic_failure(
+            gate,
+            request,
+            failure_code="scorer_invalid",
+            ballots=ballots,
+        )
 
     disagreement = ballots[0]["outcome"] != ballots[1]["outcome"]
     adjudication = None
@@ -1047,6 +1170,25 @@ def evaluate_blinded_ballots(gate_result: object, value: object) -> dict:
                 request,
                 failure_code="adjudicator_invalid",
                 ballots=ballots,
+                disagreement=True,
+            )
+        adjudicator_findings = scorer_governance_findings(
+            request["candidate_model_families"],
+            [{
+                "role": "adjudicator",
+                "requested_alias": adjudication["requested_alias"],
+                "declared_model_id": adjudication["declared_model_id"],
+                "observed_model_id": adjudication["observed_model_id"],
+                "model_family": adjudication["model_family"],
+            }],
+        )
+        if adjudicator_findings:
+            return _semantic_failure(
+                gate,
+                request,
+                failure_code="adjudicator_invalid",
+                ballots=ballots,
+                adjudication=adjudication,
                 disagreement=True,
             )
         if not adjudication["provenance_refs"]:
@@ -1108,6 +1250,7 @@ def evaluate_blinded_ballots(gate_result: object, value: object) -> dict:
     return _build_semantic_result(
         gate,
         score_bundle_draft_id=request["score_bundle_draft_id"],
+        candidate_model_families=request["candidate_model_families"],
         score_disposition="accepted",
         failure_plane="none",
         failure_code="none",
@@ -1131,6 +1274,11 @@ def _semantic_result_record(value: object, *, gate_result: dict | None = None) -
     _digest(result["gate_result_id"], "semantic gate result ID")
     _digest(result["gate_result_digest"], "semantic gate result digest")
     _text(result["score_bundle_draft_id"], "score bundle draft ID")
+    result["candidate_model_families"] = _model_families(
+        result["candidate_model_families"],
+        "semantic candidate model families",
+        required=True,
+    )
     if result["score_disposition"] not in SCORE_DISPOSITIONS:
         raise ValueError("semantic result score disposition is outside the closed inventory")
     if result["failure_plane"] not in SCORE_FAILURE_PLANES:
@@ -1145,6 +1293,8 @@ def _semantic_result_record(value: object, *, gate_result: dict | None = None) -
             raise ValueError("ballot digest does not match content")
         if ballot["ballot_id"] != content_id(ballot, "ballot_id"):
             raise ValueError("ballot ID does not match content")
+    if result["blinding_residual"] != blinding_residual(ballots):
+        raise ValueError("semantic blinding residual does not match every ballot")
     adjudication = result["adjudication"]
     if adjudication is not None:
         adjudication = _closed(adjudication, _ADJUDICATION_RESULT_FIELDS, "semantic adjudication")
@@ -1159,6 +1309,9 @@ def _semantic_result_record(value: object, *, gate_result: dict | None = None) -
     if gate_result is not None:
         replay_request = {
             "score_bundle_draft_id": result["score_bundle_draft_id"],
+            "candidate_model_families": _copy.deepcopy(
+                result["candidate_model_families"]
+            ),
             "ballots": [
                 {field: ballot[field] for field in _BALLOT_INPUT_FIELDS}
                 for ballot in ballots
@@ -1255,6 +1408,12 @@ def _score_bundle_request(value: object) -> dict:
                 "rubric binding",
             )
     vector = _resource_vector(request["resource_vector"])
+    reasoning_output_tokens = request["reasoning_output_tokens"]
+    if reasoning_output_tokens is not None:
+        reasoning_output_tokens = _integer(
+            reasoning_output_tokens,
+            "reasoning output tokens",
+        )
     invalidated_bundle_binding = _nullable_binding(
         request["invalidated_bundle_binding"],
         "invalidated bundle",
@@ -1292,6 +1451,7 @@ def _score_bundle_request(value: object) -> dict:
         "invalidation_reason": invalidation_reason,
         "invalidated_bundle_binding": invalidated_bundle_binding,
         "resource_vector": vector,
+        "reasoning_output_tokens": reasoning_output_tokens,
         "evidence_refs": _digest_refs(request["evidence_refs"], "score bundle evidence refs"),
     }
 
@@ -1348,6 +1508,19 @@ def build_score_bundle(value: object) -> dict:
             else None
         ),
         "resource_vector": request["resource_vector"],
+        "candidate_model_families": (
+            _copy.deepcopy(semantic_result["candidate_model_families"])
+            if semantic_result is not None
+            else []
+        ),
+        "blinding_residual": (
+            _copy.deepcopy(semantic_result["blinding_residual"])
+            if semantic_result is not None
+            else blinding_residual([])
+        ),
+        "reasoning_token_report": reasoning_token_report([
+            request["reasoning_output_tokens"]
+        ]),
         "evidence_refs": request["evidence_refs"],
     }
     bundle["score_bundle_digest"] = digest(_score_bundle_digest_payload(bundle))
@@ -1371,7 +1544,14 @@ def _validate_accepted_semantic_evidence(
     semantic_score: float | None,
     reliability_score: float | None,
     rubric_binding: dict,
+    candidate_model_families: list[str],
+    residual: dict,
 ) -> None:
+    candidate_model_families = _model_families(
+        candidate_model_families,
+        "accepted candidate model families",
+        required=True,
+    )
     replayed_ballots = [
         _ballot_record({
             field: ballot[field]
@@ -1402,6 +1582,22 @@ def _validate_accepted_semantic_evidence(
         or _rubric_binding(ballots[0]) != _rubric_binding(ballots[1])
     ):
         raise ValueError("accepted semantic score has stale or mismatched rubric evidence")
+    if scorer_governance_findings(
+        candidate_model_families,
+        [
+            {
+                "role": "scorer",
+                "requested_alias": ballot["requested_alias"],
+                "declared_model_id": ballot["declared_model_id"],
+                "observed_model_id": ballot["observed_model_id"],
+                "model_family": ballot["model_family"],
+            }
+            for ballot in ballots
+        ],
+    ):
+        raise ValueError("accepted semantic score violates scorer family governance")
+    if residual != blinding_residual(ballots):
+        raise ValueError("accepted semantic score has an incomplete blinding residual")
     if rubric_binding != _binding(
         ballots[0]["rubric_id"],
         ballots[0]["rubric_digest"],
@@ -1439,6 +1635,19 @@ def _validate_accepted_semantic_evidence(
             or _rubric_binding(adjudication) != _rubric_binding(ballots[0])
         ):
             raise ValueError("accepted semantic score has stale adjudicator evidence")
+        if scorer_governance_findings(
+            candidate_model_families,
+            [{
+                "role": "adjudicator",
+                "requested_alias": adjudication["requested_alias"],
+                "declared_model_id": adjudication["declared_model_id"],
+                "observed_model_id": adjudication["observed_model_id"],
+                "model_family": adjudication["model_family"],
+            }],
+        ):
+            raise ValueError(
+                "accepted semantic score violates adjudicator family governance"
+            )
     expected_semantic = round(
         sum(ballot["criterion_scores"]["semantic"] for ballot in ballots) / 2,
         6,
@@ -1530,8 +1739,22 @@ def validate_score_bundle(value: object) -> dict:
         raise ValueError("scorer bindings do not match ballots")
     for expected, ballot in zip(bundle["scorer_bindings"], bundle["ballots"]):
         _require_binding_match(expected, ballot["scorer_id"], ballot["scorer_digest"], "scorer binding")
+    bundle["candidate_model_families"] = _model_families(
+        bundle["candidate_model_families"],
+        "score bundle candidate model families",
+        required=bool(bundle["ballots"]),
+    )
+    if bundle["blinding_residual"] != blinding_residual(bundle["ballots"]):
+        raise ValueError("score bundle blinding residual does not match every ballot")
     vector = _resource_vector(bundle["resource_vector"])
     bundle["resource_vector"] = vector
+    report = bundle["reasoning_token_report"]
+    if not isinstance(report, dict):
+        raise ValueError("reasoning token report must be an object")
+    total = report.get("reasoning_output_tokens_total")
+    expected_report = reasoning_token_report([total])
+    if report != expected_report:
+        raise ValueError("reasoning token report is not the diagnostic attempt projection")
     score_disposition = _text(bundle["score_disposition"], "score disposition")
     failure_plane = _text(bundle["failure_plane"], "failure plane")
     failure_code = _text(bundle["failure_code"], "failure code")
@@ -1560,6 +1783,8 @@ def validate_score_bundle(value: object) -> dict:
             bundle["semantic_score"],
             bundle["reliability_score"],
             bundle["rubric_binding"],
+            bundle["candidate_model_families"],
+            bundle["blinding_residual"],
         )
     bundle["evidence_refs"] = _digest_refs(bundle["evidence_refs"], "score bundle evidence refs")
     if bundle["score_bundle_digest"] != digest(_score_bundle_digest_payload(bundle)):
@@ -1567,6 +1792,128 @@ def validate_score_bundle(value: object) -> dict:
     if bundle["score_bundle_id"] != content_id(bundle, "score_bundle_id"):
         raise ValueError("score bundle ID does not match content")
     return bundle
+
+
+def scorer_governance_findings(
+    candidate_model_families: object,
+    scorer_observations: object,
+) -> tuple[str, ...]:
+    """Report route divergence and same-family judging without short-circuiting."""
+    if (
+        not isinstance(candidate_model_families, list)
+        or not candidate_model_families
+        or any(
+            not isinstance(item, str) or not item
+            for item in candidate_model_families
+        )
+    ):
+        raise ValueError("candidate model families must be a non-empty string array")
+    if not isinstance(scorer_observations, list) or not scorer_observations:
+        raise ValueError("scorer observations must be a non-empty array")
+    candidate_families = set(candidate_model_families)
+    findings: list[str] = []
+    required = {
+        "role",
+        "requested_alias",
+        "declared_model_id",
+        "observed_model_id",
+        "model_family",
+    }
+    for index, raw in enumerate(scorer_observations):
+        if not isinstance(raw, dict):
+            findings.append(f"scorer observation {index} is not an object")
+            continue
+        missing = sorted(required - set(raw))
+        extra = sorted(set(raw) - required)
+        if missing:
+            findings.append(
+                f"scorer observation {index} is missing {', '.join(missing)}"
+            )
+        if extra:
+            findings.append(
+                f"scorer observation {index} has undeclared {', '.join(extra)}"
+            )
+        if missing or extra:
+            continue
+        role = raw["role"]
+        if role not in {"scorer", "adjudicator"}:
+            findings.append(f"scorer observation {index} has invalid role")
+        for field in (
+            "requested_alias",
+            "declared_model_id",
+            "observed_model_id",
+            "model_family",
+        ):
+            if not isinstance(raw[field], str) or not raw[field]:
+                findings.append(
+                    f"scorer observation {index} has invalid {field}"
+                )
+        if any(
+            not isinstance(raw[field], str) or not raw[field]
+            for field in (
+                "requested_alias",
+                "declared_model_id",
+                "observed_model_id",
+                "model_family",
+            )
+        ):
+            continue
+        if raw["observed_model_id"] != raw["declared_model_id"]:
+            findings.append(
+                f"{role} observation {index} diverges from its declared route"
+            )
+        if raw["model_family"] in candidate_families:
+            findings.append(
+                f"{role} observation {index} uses a candidate model family"
+            )
+    return tuple(findings)
+
+
+def blinding_residual(ballots: object) -> dict:
+    """Report every provenance-inference signal; blinding remains bounded."""
+    if not isinstance(ballots, list):
+        raise ValueError("ballots must be an array")
+    signals: list[dict] = []
+    for index, ballot in enumerate(ballots):
+        if not isinstance(ballot, dict):
+            raise ValueError("ballots must be objects")
+        inferred = ballot.get("provenance_inferred")
+        ballot_signals = ballot.get("inference_signals", [])
+        if not isinstance(inferred, bool) or not isinstance(ballot_signals, list):
+            raise ValueError("ballot inference evidence is malformed")
+        if inferred and not ballot_signals:
+            raise ValueError("an inferring ballot must record its signals")
+        for signal in ballot_signals:
+            if not isinstance(signal, str) or not signal:
+                raise ValueError("ballot inference signals must be non-empty strings")
+            signals.append({"ballot_index": index, "signal": signal})
+    return {
+        "bounded": True,
+        "complete_blinding_claimed": False,
+        "provenance_inferred": bool(signals),
+        "inference_signals": signals,
+    }
+
+
+def reasoning_token_report(attempts: object) -> dict:
+    """Report reasoning tokens while keeping the eight-dimensional policy fixed."""
+    if not isinstance(attempts, list):
+        raise ValueError("reasoning token attempts must be an array")
+    values: list[int] = []
+    missing = 0
+    for value in attempts:
+        if value is None:
+            missing += 1
+        else:
+            values.append(_integer(value, "reasoning output tokens"))
+    return {
+        "attempt_count": len(attempts),
+        "missing_count": missing,
+        "reasoning_output_tokens_total": sum(values) if not missing else None,
+        "reported_for_every_attempt": True,
+        "decision_bearing": False,
+        "pareto_dimension": False,
+    }
 
 
 globals().pop("annotations", None)
@@ -1586,12 +1933,15 @@ __all__ = [
     "SCORE_INVALIDATION_REASONS",
     "SEMANTIC_BALLOT_SCHEMA_VERSION",
     "assert_semantic_scoring_allowed",
+    "blinding_residual",
     "build_score_bundle",
     "canonical_bytes",
     "content_id",
     "digest",
     "evaluate_blinded_ballots",
     "evaluate_hard_gates",
+    "reasoning_token_report",
     "sanitize_committed_scorer_evidence",
+    "scorer_governance_findings",
     "validate_score_bundle",
 ]

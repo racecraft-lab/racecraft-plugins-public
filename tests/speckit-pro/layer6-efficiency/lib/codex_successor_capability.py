@@ -10,6 +10,22 @@ from uuid import uuid4 as _uuid4
 
 
 SUCCESSOR_FREEZE_SCHEMA_VERSION = "successor-capability-freeze.v1"
+EFFORT_LADDER_SCHEMA_VERSION = "codex-effort-ladder.v1"
+ALIAS_REPOINT_SCHEMA_VERSION = "alias-repoint-attribution.v1"
+ORDINARY_EFFORT_ORDER = ("low", "medium", "high", "xhigh", "max")
+CONTROLLED_OVERRIDE_PROOF_FIELDS = (
+    "model_override_absent",
+    "reasoning_effort_override_absent",
+    "service_tier_override_absent",
+    "model_provider_override_absent",
+    "api_key_override_absent",
+)
+REFRESH_TRIGGERS = (
+    "client_change",
+    "catalog_change",
+    "alias_repoint",
+    "source_ledger_change",
+)
 SUCCESSOR_MUTABLE_FIELDS = (
     "candidate_freeze_id",
     "published_at",
@@ -114,6 +130,200 @@ def canonical_bytes(value):
 
 def digest(value):
     return _capability.digest(value)
+
+
+def _binding(value, label):
+    row = _closed(value, {"id", "digest"}, label)
+    if not isinstance(row["id"], str) or not row["id"]:
+        raise ValueError(f"{label} ID is invalid")
+    _need_digest(row["digest"], f"{label} digest")
+    return _copy.deepcopy(row)
+
+
+def validate_effort_ladder_capture(value, *, manifest=None):
+    """Validate the sanitized ordered-effort projection from the pinned catalog."""
+    row = _closed(
+        _copy.deepcopy(value),
+        {
+            "schema_version",
+            "captured_at",
+            "client_version",
+            "command_contract",
+            "ordinary_effort_order",
+            "role_eligible_models",
+            "authority",
+        },
+        "effort ladder capture",
+    )
+    if row["schema_version"] != EFFORT_LADDER_SCHEMA_VERSION:
+        raise ValueError("effort ladder schema version is unsupported")
+    _parsed_timestamp(row["captured_at"], "effort ladder capture timestamp")
+    if not isinstance(row["client_version"], str) or not row["client_version"]:
+        raise ValueError("effort ladder client version is invalid")
+    if row["command_contract"] != {
+        "argv": ["codex", "debug", "models"],
+        "requires_refresh": True,
+        "output": "sanitized_projection",
+    }:
+        raise ValueError("effort ladder command contract is not the refreshed authority")
+    if tuple(row["ordinary_effort_order"]) != ORDINARY_EFFORT_ORDER:
+        raise ValueError("ordinary effort order does not match the Codex ladder")
+    if row["authority"] != {
+        "collector": "codex-debug-models",
+        "trust": "pinned_client",
+        "sanitization": "allowlisted_projection_only",
+        "raw_capture_retained": "operator_only",
+    }:
+        raise ValueError("effort ladder authority or retention boundary is invalid")
+    models = row["role_eligible_models"]
+    if not isinstance(models, list) or not models:
+        raise ValueError("effort ladder must contain role-eligible models")
+    seen = set()
+    for raw in models:
+        item = _closed(
+            raw,
+            {
+                "model",
+                "default_effort",
+                "supported_ordinary_efforts",
+                "topology_controls",
+            },
+            "effort ladder model",
+        )
+        model = _token(item["model"], "effort ladder model")
+        if model in seen:
+            raise ValueError("effort ladder contains duplicate models")
+        seen.add(model)
+        efforts = item["supported_ordinary_efforts"]
+        if (
+            not isinstance(efforts, list)
+            or not efforts
+            or len(efforts) != len(set(efforts))
+            or [effort for effort in ORDINARY_EFFORT_ORDER if effort in efforts] != efforts
+        ):
+            raise ValueError("model ordinary efforts must be a unique ordered ladder")
+        if item["default_effort"] not in efforts:
+            raise ValueError("model default effort must be in its ordinary ladder")
+        controls = item["topology_controls"]
+        if (
+            not isinstance(controls, list)
+            or len(controls) != len(set(controls))
+            or any(control != "ultra" for control in controls)
+            or "ultra" in efforts
+        ):
+            raise ValueError("Ultra must remain a separate topology control")
+    if manifest is not None:
+        expected = {
+            route["model_selector"]["requested_value"]
+            for route in manifest.get("candidate_routes", [])
+            if route.get("model_selector", {}).get("requested_value")
+        }
+        if seen != expected:
+            raise ValueError("effort ladder does not cover exactly the role-eligible models")
+    return row
+
+
+def detect_alias_repoint(observation, *, published_freeze_binding):
+    """Build a bounded additive attribution from the five governed observables."""
+    required = {
+        "requested_alias",
+        "resolved_model_id",
+        "observed_model_id",
+        "successor_freeze_binding",
+        "execution_trace_binding",
+        "controlled_override_proof",
+        "client_version_at_freeze",
+        "client_version_at_run",
+        "requested_route_unchanged",
+        "plugin_initiated_substitution",
+        "behavioral_divergence_observed",
+        "recorded_at",
+    }
+    row = _closed(_copy.deepcopy(observation), required, "alias re-point observation")
+    freeze_binding = _binding(
+        row["successor_freeze_binding"], "alias re-point successor freeze binding"
+    )
+    published = _binding(
+        published_freeze_binding, "published successor freeze binding"
+    )
+    trace_binding = _binding(
+        row["execution_trace_binding"], "alias re-point execution trace binding"
+    )
+    proof = row["controlled_override_proof"]
+    proof_complete = (
+        isinstance(proof, dict)
+        and set(proof) == set(CONTROLLED_OVERRIDE_PROOF_FIELDS)
+    )
+    overrides_absent = proof_complete and all(
+        proof[field] is True for field in CONTROLLED_OVERRIDE_PROOF_FIELDS
+    )
+    client_unchanged = (
+        row["client_version_at_freeze"] == row["client_version_at_run"]
+    )
+    divergent = row["observed_model_id"] != row["resolved_model_id"]
+    behavioral_only = (
+        not divergent and row["behavioral_divergence_observed"] is True
+    )
+    if freeze_binding != published:
+        attribution = "alias_repoint_unresolved"
+    elif not divergent:
+        attribution = "no_identity_divergence"
+    elif not proof_complete or not overrides_absent or not client_unchanged:
+        attribution = "alias_repoint_unresolved"
+    elif row["plugin_initiated_substitution"] is True:
+        attribution = "resolver_fallback"
+    elif row["requested_route_unchanged"] is True:
+        attribution = "platform_alias_repoint"
+    else:
+        attribution = "alias_repoint_unresolved"
+    record = {
+        "schema_version": ALIAS_REPOINT_SCHEMA_VERSION,
+        "record_kind": "alias_repoint_attribution",
+        "execution_trace_binding": trace_binding,
+        "successor_freeze_binding": freeze_binding,
+        "requested_alias": _token(row["requested_alias"], "requested alias"),
+        "resolved_model_id": _token(row["resolved_model_id"], "resolved model"),
+        "observed_model_id": _token(row["observed_model_id"], "observed model"),
+        "override_proof_complete": proof_complete,
+        "overrides_absent": overrides_absent,
+        "client_version_at_freeze": row["client_version_at_freeze"],
+        "client_version_at_run": row["client_version_at_run"],
+        "attribution": attribution,
+        "attribution_bounded": True,
+        "behavioral_only_divergence": behavioral_only,
+        "score_eligible_for_requested_route": not divergent,
+        "recorded_at": row["recorded_at"],
+    }
+    _parsed_timestamp(record["recorded_at"], "alias re-point timestamp")
+    record["attribution_digest"] = digest(record)
+    record["attribution_id"] = digest(record)
+    return record
+
+
+def refresh_trigger_effects(trigger):
+    """Declare additive invalidation and immutable survivors for one refresh."""
+    if trigger not in REFRESH_TRIGGERS:
+        raise ValueError("refresh trigger is outside the closed versioned set")
+    invalidates = [
+        "freeze_admission",
+        "unexecuted_bindings",
+        "experiment_bundles",
+        "score_bundles",
+        "decision_bundles",
+    ]
+    if trigger == "alias_repoint":
+        invalidates.append("in_flight_attempts_for_alias")
+    return {
+        "trigger": trigger,
+        "invalidates": invalidates,
+        "survives": [
+            "execution_traces",
+            "treatment_records",
+            "bound_pairs",
+        ],
+        "additive_only": True,
+        "admits_runtime_unsupported": False,
+    }
 
 
 def _closed(value, keys, label):
@@ -712,13 +922,21 @@ def publish_successor_freeze(
 globals().pop("annotations", None)
 
 __all__ = (
+    "ALIAS_REPOINT_SCHEMA_VERSION",
+    "CONTROLLED_OVERRIDE_PROOF_FIELDS",
+    "EFFORT_LADDER_SCHEMA_VERSION",
+    "ORDINARY_EFFORT_ORDER",
+    "REFRESH_TRIGGERS",
     "SUCCESSOR_FREEZE_SCHEMA_VERSION",
     "SUCCESSOR_MUTABLE_FIELDS",
     "TOPOLOGY_CONTROL_FIELDS",
     "build_successor_freeze",
     "canonical_bytes",
+    "detect_alias_repoint",
     "digest",
     "publish_successor_freeze",
+    "refresh_trigger_effects",
+    "validate_effort_ladder_capture",
     "validate_successor_freeze",
     "validate_successor_request",
 )

@@ -55,13 +55,16 @@ EXPECTED_PUBLIC_API = frozenset(
         "SCORE_INVALIDATION_REASONS",
         "SEMANTIC_BALLOT_SCHEMA_VERSION",
         "assert_semantic_scoring_allowed",
+        "blinding_residual",
         "build_score_bundle",
         "canonical_bytes",
         "content_id",
         "digest",
         "evaluate_blinded_ballots",
         "evaluate_hard_gates",
+        "reasoning_token_report",
         "sanitize_committed_scorer_evidence",
+        "scorer_governance_findings",
         "validate_score_bundle",
     }
 )
@@ -111,11 +114,13 @@ EXPECTED_SEMANTIC_RESULT_FIELDS = frozenset(
         "gate_result_id",
         "gate_result_digest",
         "score_bundle_draft_id",
+        "candidate_model_families",
         "score_disposition",
         "failure_plane",
         "failure_code",
         "ballots",
         "adjudication",
+        "blinding_residual",
         "resolved_outcome",
         "semantic_score",
         "reliability_score",
@@ -128,6 +133,12 @@ EXPECTED_BALLOT_FIELDS = frozenset(
         "ballot_digest",
         "blinded_artifact_digest",
         "candidate_blind",
+        "requested_alias",
+        "declared_model_id",
+        "observed_model_id",
+        "model_family",
+        "provenance_inferred",
+        "inference_signals",
         "scorer_id",
         "scorer_status",
         "scorer_digest",
@@ -155,6 +166,10 @@ EXPECTED_ADJUDICATION_FIELDS = frozenset(
         "adjudicator_digest",
         "adjudicator_execution_id",
         "adjudicator_execution_digest",
+        "requested_alias",
+        "declared_model_id",
+        "observed_model_id",
+        "model_family",
         "calibration_id",
         "calibration_digest",
         "calibration_status",
@@ -202,6 +217,9 @@ EXPECTED_SCORE_BUNDLE_REQUIRED = [
     "semantic_score",
     "reliability_score",
     "resource_vector",
+    "candidate_model_families",
+    "blinding_residual",
+    "reasoning_token_report",
     "evidence_refs",
 ]
 EXPECTED_SCORE_BUNDLE_FIELDS = frozenset(EXPECTED_SCORE_BUNDLE_REQUIRED)
@@ -497,6 +515,11 @@ def scorer_ballot(
     scorer_id: str,
     *,
     scorer_execution_id: str | None = None,
+    declared_model_id: str = "judge-family-v1",
+    observed_model_id: str | None = None,
+    model_family: str = "judge-family",
+    provenance_inferred: bool = False,
+    inference_signals: list[str] | None = None,
     candidate_blind: bool = True,
     scorer_status: str = "current",
     calibration_status: str = "current",
@@ -512,6 +535,16 @@ def scorer_ballot(
     return {
         "blinded_artifact_digest": digest({"artifact": "candidate-blind-summary"}),
         "candidate_blind": candidate_blind,
+        "requested_alias": f"{scorer_id}-alias",
+        "declared_model_id": declared_model_id,
+        "observed_model_id": observed_model_id or declared_model_id,
+        "model_family": model_family,
+        "provenance_inferred": provenance_inferred,
+        "inference_signals": (
+            inference_signals
+            if inference_signals is not None
+            else (["style"] if provenance_inferred else [])
+        ),
         "scorer_id": scorer_id,
         "scorer_status": scorer_status,
         "scorer_digest": digest({"scorer": scorer_id, "version": "1.0.0"}),
@@ -534,6 +567,9 @@ def scorer_ballot(
 def adjudicator_record(
     *,
     adjudicator_id: str = "opaque-adjudicator-c",
+    declared_model_id: str = "judge-family-v1",
+    observed_model_id: str | None = None,
+    model_family: str = "judge-family",
     adjudicator_status: str = "current",
     calibration_status: str = "current",
     rubric_status: str = "frozen",
@@ -547,6 +583,10 @@ def adjudicator_record(
         "adjudicator_digest": digest({"adjudicator": adjudicator_id, "version": "1.0.0"}),
         "adjudicator_execution_id": execution_id,
         "adjudicator_execution_digest": digest({"adjudicator_execution": execution_id}),
+        "requested_alias": f"{adjudicator_id}-alias",
+        "declared_model_id": declared_model_id,
+        "observed_model_id": observed_model_id or declared_model_id,
+        "model_family": model_family,
         "calibration_id": "g56r-003-adjudicator-calibration-v1",
         "calibration_digest": digest({"calibration": "adjudicator", "version": "1.0.0"}),
         "calibration_status": calibration_status,
@@ -563,9 +603,19 @@ def adjudicator_record(
     }
 
 
-def semantic_request(*, ballots: list[dict] | None = None, adjudication: dict | None = None) -> dict:
+def semantic_request(
+    *,
+    ballots: list[dict] | None = None,
+    adjudication: dict | None = None,
+    candidate_model_families: list[str] | None = None,
+) -> dict:
     return {
         "score_bundle_draft_id": "g56r-003-score-draft-phase-executor",
+        "candidate_model_families": (
+            candidate_model_families
+            if candidate_model_families is not None
+            else ["candidate-family"]
+        ),
         "ballots": ballots
         if ballots is not None
         else [
@@ -642,6 +692,7 @@ def score_bundle_request(
         "invalidation_reason": invalidation_reason,
         "invalidated_bundle_binding": invalidated_bundle_binding,
         "resource_vector": vector if vector is not None else resource_vector(),
+        "reasoning_output_tokens": 12,
         "evidence_refs": [digest({"score-bundle-evidence": "phase-executor"})],
     }
 
@@ -708,6 +759,112 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         self.assertEqual(tuple(self.scoring.SCORE_INVALIDATION_REASONS), EXPECTED_INVALIDATION_REASONS)
         self.assertEqual(dict(self.scoring.CANDIDATE_TERMINALS), EXPECTED_CANDIDATE_TERMINALS)
         self.assertEqual(dict(self.scoring.FAILURE_CODE_PLANES), EXPECTED_FAILURE_CODE_PLANES)
+
+    def test_scorer_family_exclusion_uses_observed_identity_and_accumulates_findings(self) -> None:
+        observations = [
+            {
+                "role": "scorer",
+                "requested_alias": "judge-a",
+                "declared_model_id": "judge-family-a-v1",
+                "observed_model_id": "candidate-family-v2",
+                "model_family": "candidate-family",
+            },
+            {
+                "role": "adjudicator",
+                "requested_alias": "judge-b",
+                "declared_model_id": "judge-family-b-v1",
+                "observed_model_id": "judge-family-b-v1",
+                "model_family": "candidate-family",
+            },
+        ]
+        findings = self.scoring.scorer_governance_findings(
+            ["candidate-family"],
+            observations,
+        )
+        self.assertEqual(len(findings), 3)
+        self.assertTrue(any("diverges" in finding for finding in findings))
+        self.assertEqual(
+            sum("candidate model family" in finding for finding in findings),
+            2,
+        )
+
+    def test_scorer_and_adjudicator_family_governance_blocks_the_live_score_path(self) -> None:
+        gate_result = self.scoring.evaluate_hard_gates(gate_request())
+        same_family = self.scoring.evaluate_blinded_ballots(
+            gate_result,
+            semantic_request(ballots=[
+                scorer_ballot(
+                    "opaque-scorer-a",
+                    model_family="candidate-family",
+                ),
+                scorer_ballot("opaque-scorer-b"),
+            ]),
+        )
+        self.assert_failed_semantic_result(
+            same_family,
+            plane="scorer",
+            code="scorer_invalid",
+        )
+
+        divergent = self.scoring.evaluate_blinded_ballots(
+            gate_result,
+            semantic_request(ballots=[
+                scorer_ballot(
+                    "opaque-scorer-a",
+                    declared_model_id="judge-family-v1",
+                    observed_model_id="judge-family-v2",
+                ),
+                scorer_ballot("opaque-scorer-b"),
+            ]),
+        )
+        self.assert_failed_semantic_result(
+            divergent,
+            plane="scorer",
+            code="scorer_invalid",
+        )
+
+        adjudicator_same_family = self.scoring.evaluate_blinded_ballots(
+            gate_result,
+            semantic_request(
+                ballots=[
+                    scorer_ballot("opaque-scorer-a", outcome="accept"),
+                    scorer_ballot("opaque-scorer-b", outcome="reject"),
+                ],
+                adjudication=adjudicator_record(
+                    model_family="candidate-family",
+                ),
+            ),
+        )
+        self.assert_failed_semantic_result(
+            adjudicator_same_family,
+            plane="adjudication",
+            code="adjudicator_invalid",
+        )
+
+    def test_blinding_residual_reports_every_signal_and_reasoning_tokens_stay_diagnostic(self) -> None:
+        residual = self.scoring.blinding_residual([
+            {
+                "provenance_inferred": True,
+                "inference_signals": ["formatting", "tool-call style"],
+            },
+            {
+                "provenance_inferred": True,
+                "inference_signals": ["verbosity"],
+            },
+        ])
+        self.assertTrue(residual["bounded"])
+        self.assertFalse(residual["complete_blinding_claimed"])
+        self.assertEqual(
+            [item["signal"] for item in residual["inference_signals"]],
+            ["formatting", "tool-call style", "verbosity"],
+        )
+        report = self.scoring.reasoning_token_report([10, 20, 30])
+        self.assertEqual(report["reasoning_output_tokens_total"], 60)
+        self.assertFalse(report["decision_bearing"])
+        self.assertFalse(report["pareto_dimension"])
+        incomplete = self.scoring.reasoning_token_report([10, None])
+        self.assertIsNone(incomplete["reasoning_output_tokens_total"])
+        self.assertEqual(incomplete["missing_count"], 1)
 
     def test_score_bundle_schema_is_self_contained_and_matches_closed_contract(self) -> None:
         self.assertTrue(
@@ -791,6 +948,19 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         )
         self.assertEqual(bundle["score_bundle_digest"], self.scoring.digest(score_bundle_digest_payload(bundle)))
         self.assertEqual(bundle["score_bundle_id"], self.scoring.content_id(bundle, "score_bundle_id"))
+        self.assertEqual(bundle["candidate_model_families"], ["candidate-family"])
+        self.assertEqual(
+            bundle["blinding_residual"],
+            semantic_result["blinding_residual"],
+        )
+        self.assertEqual(bundle["reasoning_token_report"], {
+            "attempt_count": 1,
+            "missing_count": 0,
+            "reasoning_output_tokens_total": 12,
+            "reported_for_every_attempt": True,
+            "decision_bearing": False,
+            "pareto_dimension": False,
+        })
         self.assertEqual(self.scoring.validate_score_bundle(bundle), bundle)
 
         request["gate_result"]["trace_digest"] = digest({"trace": "mutated-after-build"})

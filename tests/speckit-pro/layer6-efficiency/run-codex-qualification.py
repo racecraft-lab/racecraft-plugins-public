@@ -619,6 +619,10 @@ def _require_policy_bindings(
         )
     return {
         "calibration_protocol_binding": expected_protocol,
+        "environment_contract_binding": _require_binding(
+            policy.get("environment_contract_binding"),
+            "environment contract binding",
+        ),
         "pinned_client_binding": pinned_client,
         "runtime_snapshot_binding": runtime_snapshot,
         "scorer_bindings": validated_scorers,

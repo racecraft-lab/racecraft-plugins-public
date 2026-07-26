@@ -172,8 +172,13 @@ vectors, duration, retries, compaction, and accepted-workflow rate.
   behavior.
 - Claiming that ordered model fallback is a native custom-agent TOML feature.
   SpecKit Pro owns the ordered route policy, resolver, and materializer.
-- Adopting GPT-5.6 Pro mode, persisted reasoning, Programmatic Tool Calling,
-  explicit prompt caching, or the Responses API multi-agent beta.
+- Adopting GPT-5.6 Pro mode, Ultra, persisted reasoning, Programmatic Tool
+  Calling, explicit prompt caching, or the Responses API multi-agent beta.
+  Ultra remains an operator-owned choice: SpecKit Pro never enables it and
+  never disables it. Evaluation may observe the operator's setting and refuse
+  a scored run whose observed state does not match its frozen environment
+  contract, but no SpecKit Pro surface may mutate that state to make a run
+  conform.
 - Unbounded or aesthetic prompt rewriting. Prompt changes must target measured
   instruction, handoff, tool-schema, duplicated-context, or compaction overhead
   and be tested against an unchanged-prompt control.
@@ -472,7 +477,15 @@ selection and G56R-011 composes the aggregates.
   never resolver success. An unapproved or unidentifiable reroute is a hard
   treatment failure. `codex exec --json` lifecycle output is not treated as
   universal proof of effective model or effort when the pinned telemetry
-  profile does not expose those fields.
+  profile does not expose those fields. **Authentication amendment
+  (2026-07-26):** ChatGPT sign-in is the supported scored baseline for this
+  public subscription-delivered plugin. API-key sign-in remains a supported
+  Codex authentication mode only when a separately frozen environment contract
+  pins it; it is never required for the baseline path and is never substituted
+  silently. Every run records and compares its observed authentication mode
+  with the pre-execution contract. A mismatch blocks scoring, and neither
+  authentication mode may be used to infer subscription plan, billing,
+  entitlement, or route preference.
 - **AC-2.20 — Blinded fixture and scorer governance**: Before evaluation, each
   fixture and scorer has a versioned contract, independent validity review, and
   frozen acceptance behavior. Low or surprising output is adjudicated blind to

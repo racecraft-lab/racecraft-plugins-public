@@ -92,6 +92,7 @@ BINDING_AUTHORITY_FIELDS = frozenset({
     "runtime_snapshot_binding",
     "corpus_binding",
     "workload_manifest_binding",
+    "environment_contract_binding",
     "experiment_policy_binding",
     "calibration_protocol_binding",
     "role_binding",
@@ -185,6 +186,8 @@ ASSIGNMENT_PAIR_FIELDS = frozenset({
     "capability_binding",
     "experiment_policy_binding",
     "calibration_protocol_binding",
+    "environment_contract_binding",
+    "workload_stratum_assignment",
     "assigned_order",
     "invalidation_policy",
 })
@@ -360,6 +363,7 @@ def _validate_binding_authorities(value: object, registry_partition: dict) -> di
         "runtime_snapshot_binding",
         "corpus_binding",
         "workload_manifest_binding",
+        "environment_contract_binding",
         "experiment_policy_binding",
         "calibration_protocol_binding",
         "role_binding",
@@ -476,6 +480,51 @@ def _validate_assignment_pair(
         protocol_binding,
         "comparison calibration protocol binding",
     )
+    row["environment_contract_binding"] = _validate_binding(
+        row["environment_contract_binding"],
+        "comparison environment contract binding",
+    )
+    _require_equal(
+        row["environment_contract_binding"],
+        authorities["environment_contract_binding"],
+        "comparison environment contract binding",
+    )
+    stratum = _closed(
+        row["workload_stratum_assignment"],
+        {
+            "workload_stratum_binding",
+            "membership_basis",
+            "derived_from_realized_outcomes",
+        },
+        "comparison workload stratum assignment",
+    )
+    stratum["workload_stratum_binding"] = _validate_binding(
+        stratum["workload_stratum_binding"],
+        "comparison workload stratum binding",
+    )
+    allowed_basis = {
+        "role_id",
+        "objective",
+        "permitted_tools",
+        "mutation_contract",
+        "expected_artifacts",
+        "acceptance_oracle",
+    }
+    basis = stratum["membership_basis"]
+    if (
+        not isinstance(basis, list)
+        or not basis
+        or len(basis) != len(set(basis))
+        or set(basis) - allowed_basis
+    ):
+        raise ValueError(
+            "workload stratum membership basis must be a non-empty closed pre-execution set"
+        )
+    if stratum["derived_from_realized_outcomes"] is not False:
+        raise ValueError(
+            "workload stratum membership cannot derive from realized outcomes"
+        )
+    row["workload_stratum_assignment"] = stratum
     if sorted(row["assigned_order"]) != ["candidate", "comparator"]:
         raise ValueError("comparison assigned order must contain each treatment arm exactly once")
     if row["invalidation_policy"] != "additive_only":
@@ -765,6 +814,16 @@ def _validate_experiment_policy_for_assignment(
             authorities[field],
             f"experiment policy {field}",
         )
+    environment_binding = _validate_binding(
+        value.get("environment_contract_binding"),
+        "experiment policy environment contract binding",
+    )
+    _require_equal(
+        environment_binding,
+        authorities["environment_contract_binding"],
+        "experiment policy environment contract binding",
+    )
+    value["environment_contract_binding"] = environment_binding
     _require_equal(
         _validate_binding(
             value.get("calibration_protocol_binding"),
@@ -800,7 +859,11 @@ def _validate_experiment_policy_for_assignment(
     return value
 
 
-def _pair_local_authorities(pair: Mapping[str, object], protocol: dict) -> dict:
+def _pair_local_authorities(
+    pair: Mapping[str, object],
+    protocol: dict,
+    environment_contract_binding: dict,
+) -> dict:
     candidate = pair["candidate_assignment"]
     comparator = pair["comparator_assignment"]
     instructions = pair["instruction_binding"]
@@ -853,6 +916,9 @@ def _pair_local_authorities(pair: Mapping[str, object], protocol: dict) -> dict:
         "candidate_freeze_binding": copy.deepcopy(
             protocol["candidate_freeze_binding"]
         ),
+        "environment_contract_binding": copy.deepcopy(
+            environment_contract_binding
+        ),
     }
 
 
@@ -863,6 +929,7 @@ def _validate_policy_comparison_sets(
     policy_binding: dict,
     protocol: dict,
     protocol_binding: dict,
+    environment_contract_binding: dict,
     comparison_policy: dict,
 ) -> list[dict]:
     if not isinstance(value, list) or not value:
@@ -888,7 +955,11 @@ def _validate_policy_comparison_sets(
         row["assignment_pairs"] = [
             _validate_assignment_pair(
                 item,
-                _pair_local_authorities(item, protocol),
+                _pair_local_authorities(
+                    item,
+                    protocol,
+                    environment_contract_binding,
+                ),
                 [],
                 policy_binding,
                 protocol_binding,
@@ -987,6 +1058,11 @@ def validate_calibration_experiment_policy(
         actual = _validate_binding(row[field], f"experiment policy {field}")
         _require_equal(actual, expected, f"experiment policy {field}")
         row[field] = actual
+    environment_contract_binding = _validate_binding(
+        row["environment_contract_binding"],
+        "experiment policy environment contract binding",
+    )
+    row["environment_contract_binding"] = environment_contract_binding
     comparison_policy = _closed(
         row["comparison_policy"],
         {
@@ -1014,6 +1090,7 @@ def validate_calibration_experiment_policy(
         policy_binding=policy_binding,
         protocol=protocol,
         protocol_binding=protocol_binding,
+        environment_contract_binding=environment_contract_binding,
         comparison_policy=comparison_policy,
     )
     row["partition_binding"] = partition

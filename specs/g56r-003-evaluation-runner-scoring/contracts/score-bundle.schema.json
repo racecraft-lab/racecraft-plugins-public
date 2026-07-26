@@ -27,6 +27,9 @@
     "failure_code",
     "invalidation_reason",
     "resource_vector",
+    "candidate_model_families",
+    "blinding_residual",
+    "reasoning_token_report",
     "evidence_refs"
   ],
   "properties": {
@@ -140,6 +143,35 @@
         "terminal_state": {"enum": ["completed", "failed", "timed_out", "cancelled", "budget_exhausted", "abandoned"]}
       }
     },
+    "candidate_model_families": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "blinding_residual": {"$ref": "#/$defs/blindingResidual"},
+    "reasoning_token_report": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempt_count",
+        "missing_count",
+        "reasoning_output_tokens_total",
+        "reported_for_every_attempt",
+        "decision_bearing",
+        "pareto_dimension"
+      ],
+      "properties": {
+        "attempt_count": {"const": 1},
+        "missing_count": {"enum": [0, 1]},
+        "reasoning_output_tokens_total": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "reported_for_every_attempt": {"const": true},
+        "decision_bearing": {"const": false},
+        "pareto_dimension": {"const": false}
+      }
+    },
     "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}
   },
   "$defs": {
@@ -153,15 +185,52 @@
         "digest": {"$ref": "#/$defs/digest"}
       }
     },
+    "blindingResidual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bounded",
+        "complete_blinding_claimed",
+        "provenance_inferred",
+        "inference_signals"
+      ],
+      "properties": {
+        "bounded": {"const": true},
+        "complete_blinding_claimed": {"const": false},
+        "provenance_inferred": {"type": "boolean"},
+        "inference_signals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ballot_index", "signal"],
+            "properties": {
+              "ballot_index": {"type": "integer", "minimum": 0},
+              "signal": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    },
     "ballot": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["ballot_id", "ballot_digest", "scorer_binding", "scorer_execution_id", "calibration_binding", "rubric_binding", "blinded_artifact_digest", "criterion_scores"],
+      "required": ["ballot_id", "ballot_digest", "scorer_binding", "scorer_execution_id", "requested_alias", "declared_model_id", "observed_model_id", "model_family", "provenance_inferred", "inference_signals", "calibration_binding", "rubric_binding", "blinded_artifact_digest", "criterion_scores"],
       "properties": {
         "ballot_id": {"type": "string", "minLength": 1},
         "ballot_digest": {"$ref": "#/$defs/digest"},
         "scorer_binding": {"$ref": "#/$defs/binding"},
         "scorer_execution_id": {"type": "string", "minLength": 1},
+        "requested_alias": {"type": "string", "minLength": 1},
+        "declared_model_id": {"type": "string", "minLength": 1},
+        "observed_model_id": {"type": "string", "minLength": 1},
+        "model_family": {"type": "string", "minLength": 1},
+        "provenance_inferred": {"type": "boolean"},
+        "inference_signals": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
         "calibration_binding": {"$ref": "#/$defs/binding"},
         "rubric_binding": {"$ref": "#/$defs/binding"},
         "blinded_artifact_digest": {"$ref": "#/$defs/digest"},

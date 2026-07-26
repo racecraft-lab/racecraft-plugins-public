@@ -17,16 +17,30 @@ MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/codex_successor_ca
 CAPABILITY_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/codex_capabilities.py"
 SCHEMA_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/contracts/successor-capability-freeze.schema.json"
 FIXTURE_PATH = ROOT / "tests/speckit-pro/unit/fixtures/capability-treatment-replay/capability-matrix.json"
+ALIAS_REPOINT_FIXTURE_PATH = (
+    ROOT / "tests/speckit-pro/unit/fixtures/codex-alias-repoint.json"
+)
+EFFORT_LADDER_PATH = (
+    ROOT / "docs/ai/research/codex-g56r-003-effort-ladder.json"
+)
 MANIFEST_PATH = ROOT / "docs/ai/research/codex-agent-route-candidate-manifest.json"
 
 EXPECTED_SUCCESSOR_PUBLIC_API = frozenset({
+    "ALIAS_REPOINT_SCHEMA_VERSION",
+    "CONTROLLED_OVERRIDE_PROOF_FIELDS",
+    "EFFORT_LADDER_SCHEMA_VERSION",
+    "ORDINARY_EFFORT_ORDER",
+    "REFRESH_TRIGGERS",
     "SUCCESSOR_FREEZE_SCHEMA_VERSION",
     "SUCCESSOR_MUTABLE_FIELDS",
     "TOPOLOGY_CONTROL_FIELDS",
     "build_successor_freeze",
     "canonical_bytes",
+    "detect_alias_repoint",
     "digest",
     "publish_successor_freeze",
+    "refresh_trigger_effects",
+    "validate_effort_ladder_capture",
     "validate_successor_freeze",
     "validate_successor_request",
 })
@@ -326,6 +340,74 @@ class CodexSuccessorCapabilityTests(unittest.TestCase):
         self.assertEqual(mutable_rule["prefixItems"], [{"const": item} for item in successor.SUCCESSOR_MUTABLE_FIELDS])
         diagnostic_fields = set(schema["$defs"]["diagnostic"]["properties"])
         self.assertFalse(diagnostic_fields & set(successor.TOPOLOGY_CONTROL_FIELDS))
+
+    def test_pinned_effort_ladder_covers_each_role_eligible_model_without_ultra(self) -> None:
+        successor = load_successor_module("g56r_003_successor_effort_ladder")
+        ladder = successor.validate_effort_ladder_capture(
+            load_json(EFFORT_LADDER_PATH),
+            manifest=self.manifest,
+        )
+        by_model = {
+            item["model"]: item for item in ladder["role_eligible_models"]
+        }
+        self.assertEqual(
+            by_model["gpt-5.3-codex-spark"]["supported_ordinary_efforts"],
+            ["low", "medium", "high", "xhigh"],
+        )
+        self.assertEqual(
+            by_model["gpt-5.6-sol"]["supported_ordinary_efforts"],
+            ["low", "medium", "high", "xhigh", "max"],
+        )
+        self.assertEqual(by_model["gpt-5.6-sol"]["default_effort"], "low")
+        self.assertEqual(by_model["gpt-5.6-terra"]["default_effort"], "medium")
+        self.assertTrue(all(
+            "ultra" not in item["supported_ordinary_efforts"]
+            for item in by_model.values()
+        ))
+        invalid = copy.deepcopy(ladder)
+        invalid["role_eligible_models"][0]["supported_ordinary_efforts"].append(
+            "ultra"
+        )
+        with self.assertRaisesRegex(ValueError, "ordered ladder|topology"):
+            successor.validate_effort_ladder_capture(
+                invalid,
+                manifest=self.manifest,
+            )
+
+    def test_alias_repoint_synthetic_replay_and_refresh_effects(self) -> None:
+        successor = load_successor_module("g56r_003_successor_alias_repoint")
+        fixture = load_json(ALIAS_REPOINT_FIXTURE_PATH)
+        observation = fixture["observation"]
+        record = successor.detect_alias_repoint(
+            observation,
+            published_freeze_binding=observation["successor_freeze_binding"],
+        )
+        self.assertEqual(record["attribution"], fixture["expected_attribution"])
+        self.assertFalse(record["score_eligible_for_requested_route"])
+        self.assertTrue(record["attribution_bounded"])
+        self.assertTrue(record["override_proof_complete"])
+        unresolved = copy.deepcopy(observation)
+        unresolved["controlled_override_proof"].pop("service_tier_override_absent")
+        self.assertEqual(
+            successor.detect_alias_repoint(
+                unresolved,
+                published_freeze_binding=observation[
+                    "successor_freeze_binding"
+                ],
+            )["attribution"],
+            "alias_repoint_unresolved",
+        )
+        for trigger in successor.REFRESH_TRIGGERS:
+            with self.subTest(trigger=trigger):
+                effects = successor.refresh_trigger_effects(trigger)
+                self.assertTrue(effects["additive_only"])
+                self.assertIn("freeze_admission", effects["invalidates"])
+                self.assertIn("bound_pairs", effects["survives"])
+                self.assertFalse(effects["admits_runtime_unsupported"])
+        self.assertIn(
+            "in_flight_attempts_for_alias",
+            successor.refresh_trigger_effects("alias_repoint")["invalidates"],
+        )
 
     def test_successor_build_is_additive_and_diagnostics_do_not_grant_availability(self) -> None:
         successor = load_successor_module()

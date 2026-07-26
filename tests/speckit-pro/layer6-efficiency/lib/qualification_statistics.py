@@ -119,6 +119,7 @@ _NON_INFERIORITY_FIELDS = frozenset({
     "cluster_unit",
     "cluster_adjustment",
     "multiplicity_adjustment",
+    "multiplicity_declaration",
 })
 _PARETO_POLICY_FIELDS = frozenset({
     "evaluation_order",
@@ -132,12 +133,15 @@ _WORKLOAD_MANIFEST_FIELDS = frozenset({
     "manifest_digest",
     "minimum_unique_tasks",
     "unknown_stratum_policy",
+    "guardrail_method",
     "strata",
 })
 _WORKLOAD_STRATUM_FIELDS = frozenset({
     "stratum_id",
     "target_weight",
     "long_horizon",
+    "sample_size",
+    "minimum_unique_tasks",
     "p95_guardrails",
 })
 _P95_GUARDRAIL_FIELDS = frozenset({
@@ -145,6 +149,48 @@ _P95_GUARDRAIL_FIELDS = frozenset({
     "cached_input_tokens_max",
     "output_tokens_max",
     "duration_ms_max",
+})
+_GUARDRAIL_METHOD_FIELDS = frozenset({
+    "units",
+    "denominator",
+    "comparator",
+    "margin",
+    "confidence_method",
+    "missing_data_rule",
+    "direction",
+    "multiplicity_position",
+    "breach_result",
+    "decision_bearing",
+})
+_GUARDRAIL_UNITS = {
+    "raw_input_tokens": "tokens_per_attempt",
+    "cached_input_tokens": "tokens_per_attempt",
+    "output_tokens": "tokens_per_attempt",
+    "duration_ms": "milliseconds_per_attempt",
+}
+_MULTIPLICITY_FAMILIES = (
+    "conjunctive_family",
+    "pareto_disjunctive_family",
+    "across_ladder_family",
+)
+_MULTIPLICITY_DECLARATION_FIELDS = frozenset({
+    *_MULTIPLICITY_FAMILIES,
+    "cluster_adjustment_is_precondition",
+})
+_MULTIPLICITY_FAMILY_FIELDS = frozenset({"adjustment", "rationale"})
+_SEQUENTIAL_POLICY_FIELDS = frozenset({
+    "enabled",
+    "terminal_rule",
+    "interim_looks",
+    "boundary",
+    "error_control",
+    "look_schedule_frozen",
+    "early_stop_biases_estimate",
+    "stop_scope",
+})
+_FUTILITY_POLICY_FIELDS = frozenset({
+    *_SEQUENTIAL_POLICY_FIELDS,
+    "boundary_binding",
 })
 _CACHE_POLICY_FIELDS = frozenset({
     "policy_id",
@@ -238,6 +284,7 @@ _OUTCOME_FIELDS = frozenset({
     "workload_stratum_id",
     "cache_policy_binding",
     "cache_state",
+    "cache_root_digest",
     "treatment_order_leakage",
     "wall_clock_seconds",
     "candidate_route_id",
@@ -471,6 +518,236 @@ def _validate_p95_guardrails(value: object) -> dict:
     }
 
 
+def guardrail_findings(
+    guardrail_method: object,
+    *,
+    non_inferiority_margins: object,
+) -> tuple[str, ...]:
+    """Return every incomplete or contradictory p95 declaration finding."""
+    if not isinstance(guardrail_method, dict):
+        return ("guardrail method must be an object",)
+    findings: list[str] = []
+    missing = sorted(_GUARDRAIL_METHOD_FIELDS - set(guardrail_method))
+    unexpected = sorted(set(guardrail_method) - _GUARDRAIL_METHOD_FIELDS)
+    findings.extend(f"guardrail method is missing {field}" for field in missing)
+    findings.extend(f"guardrail method has unknown field {field}" for field in unexpected)
+    if missing:
+        return tuple(findings)
+
+    if guardrail_method.get("units") != _GUARDRAIL_UNITS:
+        findings.append("guardrail units must declare each guarded quantity")
+    if guardrail_method.get("denominator") != "per_attempt_within_stratum_arm":
+        findings.append("guardrail denominator is outside the closed inventory")
+    if guardrail_method.get("comparator") != "absolute_ceiling":
+        findings.append("guardrail comparator must match the frozen absolute ceilings")
+
+    margin = guardrail_method.get("margin")
+    if isinstance(margin, bool) or not isinstance(margin, (int, float)) or margin < 0:
+        findings.append("guardrail margin must be a non-negative number")
+    elif isinstance(non_inferiority_margins, dict) and (
+        margin != 0 and margin in non_inferiority_margins.values()
+    ):
+        findings.append("guardrail margin must not reuse a non-inferiority margin")
+
+    confidence = guardrail_method.get("confidence_method")
+    if not isinstance(confidence, dict) or set(confidence) != {
+        "method",
+        "confidence_level",
+    }:
+        findings.append("guardrail confidence method is incompletely declared")
+    else:
+        level = confidence.get("confidence_level")
+        if (
+            confidence.get("method") != "empirical_order_statistic"
+            or isinstance(level, bool)
+            or not isinstance(level, (int, float))
+            or not 0 < level < 1
+        ):
+            findings.append("guardrail confidence method is invalid")
+
+    if guardrail_method.get("missing_data_rule") != "report_jointly_with_attrition":
+        findings.append("guardrail missing-data rule must not silently exclude attempts")
+    if guardrail_method.get("direction") != "higher_is_worse":
+        findings.append("guardrail direction must be higher_is_worse")
+
+    position = guardrail_method.get("multiplicity_position")
+    if not isinstance(position, dict) or set(position) != {
+        "family",
+        "adjustment",
+        "rationale",
+    }:
+        findings.append("guardrail multiplicity position is incompletely declared")
+    else:
+        if position.get("family") != "guardrail":
+            findings.append("guardrails must use their distinct multiplicity family")
+        if not isinstance(position.get("adjustment"), str) or not position["adjustment"]:
+            findings.append("guardrail multiplicity adjustment is missing")
+        if not isinstance(position.get("rationale"), str) or not position["rationale"]:
+            findings.append("guardrail multiplicity rationale is missing")
+
+    if guardrail_method.get("breach_result") != "no_qualification":
+        findings.append("guardrail breach result must be no_qualification")
+    if guardrail_method.get("decision_bearing") is not False:
+        findings.append("guardrails must remain outside the Pareto dimensions")
+    return tuple(findings)
+
+
+def guardrail_admissibility(
+    stratum: object,
+    *,
+    observed_unique_tasks: int,
+) -> dict:
+    """Evaluate a p95 claim against its own frozen stratum floor."""
+    if not isinstance(stratum, dict):
+        raise ValueError("guardrail stratum must be an object")
+    floor = _positive_int(
+        stratum.get("minimum_unique_tasks"),
+        "stratum minimum unique tasks",
+    )
+    observed = _non_negative_int(
+        observed_unique_tasks,
+        "observed stratum unique tasks",
+    )
+    admissible = observed >= floor
+    return {
+        "stratum_id": _text(stratum.get("stratum_id"), "workload stratum ID"),
+        "admissible": admissible,
+        "result": "admissible" if admissible else "inconclusive",
+        "observed_unique_tasks": observed,
+        "minimum_unique_tasks": floor,
+        "shortfall_reported": not admissible,
+    }
+
+
+def multiplicity_findings(declaration: object) -> tuple[str, ...]:
+    """Validate the three error-control families and cluster precondition."""
+    if not isinstance(declaration, dict):
+        return ("multiplicity declaration must be an object",)
+    findings: list[str] = []
+    missing = sorted(_MULTIPLICITY_DECLARATION_FIELDS - set(declaration))
+    unexpected = sorted(set(declaration) - _MULTIPLICITY_DECLARATION_FIELDS)
+    findings.extend(f"multiplicity declaration is missing {field}" for field in missing)
+    findings.extend(f"multiplicity declaration has unknown field {field}" for field in unexpected)
+    for family in _MULTIPLICITY_FAMILIES:
+        entry = declaration.get(family)
+        if not isinstance(entry, dict) or set(entry) != _MULTIPLICITY_FAMILY_FIELDS:
+            findings.append(f"{family} is incompletely declared")
+            continue
+        adjustment = entry.get("adjustment")
+        rationale = entry.get("rationale")
+        if not isinstance(adjustment, str) or not adjustment:
+            findings.append(f"{family} declares no adjustment")
+        if not isinstance(rationale, str) or not rationale:
+            findings.append(f"{family} declares no rationale")
+        if isinstance(adjustment, str) and "cluster" in adjustment.lower():
+            findings.append(f"{family} misuses cluster adjustment as multiplicity control")
+    conjunctive = declaration.get("conjunctive_family")
+    if isinstance(conjunctive, dict) and conjunctive.get("adjustment") != "none_required":
+        findings.append("conjunctive family must declare none_required")
+    disjunctive = declaration.get("pareto_disjunctive_family")
+    if isinstance(disjunctive, dict) and disjunctive.get("adjustment") in {
+        None,
+        "",
+        "none_required",
+    }:
+        findings.append("Pareto disjunctive family must declare an adjustment")
+    if declaration.get("cluster_adjustment_is_precondition") is not True:
+        findings.append("cluster adjustment must be a precondition")
+    return tuple(findings)
+
+
+def interim_look_findings(
+    policy: object,
+    *,
+    futility: bool = False,
+) -> tuple[str, ...]:
+    """Validate a complete-pair racing or futility declaration."""
+    if not isinstance(policy, dict):
+        return ("sequential policy must be an object",)
+    expected = _FUTILITY_POLICY_FIELDS if futility else _SEQUENTIAL_POLICY_FIELDS
+    findings: list[str] = []
+    missing = sorted(expected - set(policy))
+    unexpected = sorted(set(policy) - expected)
+    findings.extend(f"sequential policy is missing {field}" for field in missing)
+    findings.extend(f"sequential policy has unknown field {field}" for field in unexpected)
+    looks = policy.get("interim_looks")
+    if not isinstance(looks, dict) or set(looks) != {
+        "count",
+        "information_fractions",
+    }:
+        findings.append("interim looks are incompletely declared")
+    else:
+        count = looks.get("count")
+        fractions = looks.get("information_fractions")
+        if (
+            isinstance(count, bool)
+            or not isinstance(count, int)
+            or count < 0
+            or not isinstance(fractions, list)
+        ):
+            findings.append("interim look count or fractions are invalid")
+        elif count != len(fractions):
+            findings.append("interim look count disagrees with its schedule")
+        elif fractions != sorted(set(fractions)):
+            findings.append("interim look fractions must be unique and increasing")
+        elif any(
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or not 0 < value <= 1
+            for value in fractions
+        ):
+            findings.append("interim look fractions must be inside (0, 1]")
+    for field, label in (
+        ("boundary", "stopping boundary"),
+        ("error_control", "sequential error control"),
+    ):
+        entry = policy.get(field)
+        if not isinstance(entry, dict) or set(entry) != {"method" if field == "error_control" else "type", "rationale"}:
+            findings.append(f"{label} is incompletely declared")
+        elif not all(isinstance(value, str) and value for value in entry.values()):
+            findings.append(f"{label} contains an empty declaration")
+    if policy.get("look_schedule_frozen") is not True:
+        findings.append("look schedule must be frozen")
+    if policy.get("early_stop_biases_estimate") is not True:
+        findings.append("early-stop bias must be acknowledged")
+    if policy.get("stop_scope") != "complete_pair":
+        findings.append("sequential stop scope must be complete_pair")
+    if futility and policy.get("boundary_binding") not in {
+        "binding",
+        "non_binding",
+    }:
+        findings.append("futility boundary bindingness must be declared")
+    return tuple(findings)
+
+
+def classify_campaign_ceiling_stop(
+    *,
+    assignment_id: str,
+    arms_completed: int,
+) -> dict:
+    """Classify a between-arm campaign stop without blaming either candidate."""
+    assignment = _text(assignment_id, "campaign stop assignment ID")
+    completed = _non_negative_int(arms_completed, "completed campaign arms")
+    if completed >= 2:
+        raise ValueError("a completed pair is not a between-arm campaign truncation")
+    return {
+        "assignment_id": assignment,
+        "failure_plane": "infrastructure",
+        "failure_code": "infrastructure_failure",
+        "pair_status": "incomplete",
+        "one_arm_rerun_permitted": False,
+        "terminal_condition": "campaign_budget_exhausted",
+        "decision": "inconclusive",
+    }
+
+
+def _validate_guardrail_method(value: object) -> dict:
+    findings = guardrail_findings(value, non_inferiority_margins={})
+    if findings:
+        raise ValueError("; ".join(findings))
+    return copy.deepcopy(value)
+
+
 def _validate_workload_manifest(value: object) -> dict:
     row = _closed(value, _WORKLOAD_MANIFEST_FIELDS, "workload manifest")
     _require(row, _WORKLOAD_MANIFEST_FIELDS, "workload manifest")
@@ -481,6 +758,7 @@ def _validate_workload_manifest(value: object) -> dict:
             row["minimum_unique_tasks"], "minimum unique tasks",
         ),
         "unknown_stratum_policy": row["unknown_stratum_policy"],
+        "guardrail_method": _validate_guardrail_method(row["guardrail_method"]),
         "strata": [],
     }
     if manifest["unknown_stratum_policy"] != "inconclusive":
@@ -502,11 +780,25 @@ def _validate_workload_manifest(value: object) -> dict:
             raise ValueError("workload target weights must be positive")
         if not isinstance(stratum["long_horizon"], bool):
             raise ValueError("workload long_horizon must be boolean")
+        sample_size = _positive_int(
+            stratum["sample_size"],
+            "workload stratum sample size",
+        )
+        minimum_unique_tasks = _positive_int(
+            stratum["minimum_unique_tasks"],
+            "workload stratum minimum unique tasks",
+        )
+        if sample_size < minimum_unique_tasks:
+            raise ValueError(
+                "workload stratum sample size cannot be below its unique-task floor"
+            )
         total_weight += target_weight
         manifest["strata"].append({
             "stratum_id": stratum_id,
             "target_weight": target_weight,
             "long_horizon": stratum["long_horizon"],
+            "sample_size": sample_size,
+            "minimum_unique_tasks": minimum_unique_tasks,
             "p95_guardrails": _validate_p95_guardrails(stratum["p95_guardrails"]),
         })
     if not math.isclose(total_weight, 1.0, rel_tol=0.0, abs_tol=1e-9):
@@ -763,6 +1055,9 @@ def _validate_non_inferiority(value: object) -> dict:
         raise ValueError("cluster adjustment must be cluster_robust")
     if row["multiplicity_adjustment"] not in {"holm", "bonferroni", "none"}:
         raise ValueError("multiplicity adjustment is outside the closed inventory")
+    multiplicity_errors = multiplicity_findings(row["multiplicity_declaration"])
+    if multiplicity_errors:
+        raise ValueError("; ".join(multiplicity_errors))
     missingness = _number(sample_assumptions["expected_missingness_rate"], "expected missingness")
     if missingness < 0 or missingness > 1:
         raise ValueError("expected missingness must be between 0 and 1")
@@ -780,6 +1075,9 @@ def _validate_non_inferiority(value: object) -> dict:
         "cluster_unit": row["cluster_unit"],
         "cluster_adjustment": str(row["cluster_adjustment"]),
         "multiplicity_adjustment": str(row["multiplicity_adjustment"]),
+        "multiplicity_declaration": copy.deepcopy(
+            row["multiplicity_declaration"]
+        ),
     }
 
 
@@ -797,6 +1095,27 @@ def _validate_pareto_policy(value: object) -> dict:
     if row["mixed_or_tied_result"] != "inconclusive":
         raise ValueError("mixed or tied Pareto results must remain inconclusive")
     return copy.deepcopy(row)
+
+
+def _validate_sequential_policy(
+    value: object,
+    *,
+    futility: bool,
+) -> dict:
+    findings = interim_look_findings(value, futility=futility)
+    if findings:
+        raise ValueError("; ".join(findings))
+    policy = copy.deepcopy(value)
+    if policy["enabled"] is not False or policy["terminal_rule"] != "disabled":
+        raise ValueError(
+            "calibration replay requires an explicitly disabled sequential policy"
+        )
+    if policy["interim_looks"] != {
+        "count": 0,
+        "information_fractions": [],
+    }:
+        raise ValueError("disabled sequential policy must declare zero interim looks")
+    return policy
 
 
 def _validate_plan(analysis_plan: object) -> dict:
@@ -852,6 +1171,12 @@ def _validate_plan(analysis_plan: object) -> dict:
     validated["quality_floors"] = _validate_quality_floors(plan["quality_floors"])
     validated["non_inferiority"] = _validate_non_inferiority(plan["non_inferiority"])
     validated["pareto_policy"] = _validate_pareto_policy(plan["pareto_policy"])
+    guardrail_errors = guardrail_findings(
+        validated["workload_manifest"]["guardrail_method"],
+        non_inferiority_margins=validated["non_inferiority"]["margins"],
+    )
+    if guardrail_errors:
+        raise ValueError("; ".join(guardrail_errors))
     if plan["estimand_policy"].get("assigned_attempt") is not True:
         raise ValueError("statistics require the assigned-attempt estimand")
     if plan["estimand_policy"].get("candidate_terminal_acceptance_zero") is not True:
@@ -880,10 +1205,14 @@ def _validate_plan(analysis_plan: object) -> dict:
         raise ValueError("one-arm reruns are prohibited")
     if plan["terminal_policy"].get("no_forced_ranking") is not True:
         raise ValueError("terminal policy must prohibit forced rankings")
-    if plan["racing_policy"].get("enabled") is not False:
-        raise ValueError("racing policy must be frozen disabled for deterministic replay")
-    if plan["futility_policy"].get("enabled") is not False:
-        raise ValueError("futility policy must be frozen disabled for deterministic replay")
+    validated["racing_policy"] = _validate_sequential_policy(
+        plan["racing_policy"],
+        futility=False,
+    )
+    validated["futility_policy"] = _validate_sequential_policy(
+        plan["futility_policy"],
+        futility=True,
+    )
     return validated
 
 
@@ -960,6 +1289,8 @@ def _validate_outcome_row(raw: dict) -> dict:
     row["score_bundle_binding"] = _validate_binding(
         row["score_bundle_binding"], "paired outcome score bundle binding"
     )
+    if row["cache_root_digest"] is not None:
+        _digest(row["cache_root_digest"], "paired outcome cache root digest")
     if row["score_disposition"] not in _SCORE_DISPOSITIONS:
         raise ValueError("score disposition is outside the closed inventory")
     if row["attrition_classification"] not in _ATTRITION_CLASSIFICATION_INPUTS:
@@ -1071,7 +1402,15 @@ def _classifications_for_attempt(arms: dict[str, dict]) -> dict[str, str]:
 
 
 def _pair_bindings_match(candidate: dict, comparator: dict) -> bool:
-    return all(candidate.get(field) == comparator.get(field) for field in ("role_id", "fixture_id", "task_id"))
+    return all(
+        candidate.get(field) == comparator.get(field)
+        for field in (
+            "role_id",
+            "fixture_id",
+            "task_id",
+            "workload_stratum_id",
+        )
+    )
 
 
 def _pair_outcomes(paired_outcomes: object, plan: dict) -> tuple[list[dict], list[str], dict]:
@@ -1264,6 +1603,10 @@ def _empty_stratum_summary(stratum: dict) -> dict:
     base = {
         "target_weight": _round(stratum["target_weight"]),
         "long_horizon": stratum["long_horizon"],
+        "sample_size": stratum["sample_size"],
+        "minimum_unique_tasks": stratum["minimum_unique_tasks"],
+        "observed_unique_tasks": 0,
+        "guardrail_admissibility": "inconclusive",
         "p95_guardrails": copy.deepcopy(stratum["p95_guardrails"]),
     }
     for arm in _ARMS:
@@ -1288,6 +1631,7 @@ def _evaluate_workload_cache(plan: dict, pairs: list[dict]) -> tuple[dict, list[
         "unique_task_count": 0,
         "unknown_stratum_policy": manifest["unknown_stratum_policy"],
         "cache_policy_binding": _cache_policy_binding(cache_policy),
+        "cache_root_evidence": [],
         "strata": {
             stratum_id: _empty_stratum_summary(stratum)
             for stratum_id, stratum in strata_by_id.items()
@@ -1296,12 +1640,33 @@ def _evaluate_workload_cache(plan: dict, pairs: list[dict]) -> tuple[dict, list[
     }
     reasons: list[str] = []
     unique_tasks: set[str] = set()
+    unique_tasks_by_stratum: dict[str, set[str]] = {
+        stratum_id: set() for stratum_id in strata_by_id
+    }
     for pair in pairs:
+        candidate_root = pair["candidate"].get("cache_root_digest")
+        comparator_root = pair["comparator"].get("cache_root_digest")
+        cache_root_status = "observed_disjoint"
+        if candidate_root is None or comparator_root is None:
+            cache_root_status = "unobservable"
+            reasons.append("cache_root_unobservable")
+        elif candidate_root == comparator_root:
+            cache_root_status = "observed_shared"
+            reasons.append("cache_root_not_disjoint")
+        summary["cache_root_evidence"].append({
+            "pair_id": pair["candidate"]["pair_id"],
+            "candidate_cache_root_digest": candidate_root,
+            "comparator_cache_root_digest": comparator_root,
+            "status": cache_root_status,
+        })
         task_id = pair["candidate"].get("task_id")
         if not isinstance(task_id, str) or not task_id:
             reasons.append("task_binding_missing")
         else:
             unique_tasks.add(task_id)
+            stratum_id = pair["candidate"].get("workload_stratum_id")
+            if stratum_id in unique_tasks_by_stratum:
+                unique_tasks_by_stratum[stratum_id].add(task_id)
         for arm in _ARMS:
             row = pair[arm]
             stratum_id, row_reasons = _validate_outcome_workload_cache(
@@ -1322,9 +1687,20 @@ def _evaluate_workload_cache(plan: dict, pairs: list[dict]) -> tuple[dict, list[
     if len(unique_tasks) < manifest["minimum_unique_tasks"]:
         reasons.append("minimum_unique_tasks_not_met")
     for stratum_id, stratum in strata_by_id.items():
+        admissibility = guardrail_admissibility(
+            stratum,
+            observed_unique_tasks=len(unique_tasks_by_stratum[stratum_id]),
+        )
+        stratum_summary = summary["strata"][stratum_id]
+        stratum_summary["observed_unique_tasks"] = admissibility[
+            "observed_unique_tasks"
+        ]
+        stratum_summary["guardrail_admissibility"] = admissibility["result"]
+        if not admissibility["admissible"]:
+            reasons.append(f"stratum_minimum_unique_tasks_not_met_{stratum_id}")
         guardrails = stratum["p95_guardrails"]
         for arm in _ARMS:
-            arm_summary = summary["strata"][stratum_id][arm]
+            arm_summary = stratum_summary[arm]
             arm_values = values[stratum_id][arm]
             arm_summary["count"] = max((len(item) for item in arm_values.values()), default=0)
             if arm_summary["count"] == 0:
@@ -1628,15 +2004,9 @@ def _compare_dimension(candidate: object, comparator: object, direction: str) ->
     if candidate is None or comparator is None:
         return "uncertain"
     if direction == "not_worse":
-        order = {state: index for index, state in enumerate(TERMINAL_STATE_ORDER)}
-        order["completed"] = order["succeeded"]
-        if candidate not in order or comparator not in order:
+        if candidate not in TERMINAL_STATE_ORDER or comparator not in TERMINAL_STATE_ORDER:
             return "uncertain"
-        if order[candidate] > order[comparator]:
-            return "candidate_better"
-        if order[candidate] < order[comparator]:
-            return "comparator_better"
-        return "tie"
+        return "tie" if candidate == comparator else "categorical_mismatch"
     candidate_number = _number(candidate, "candidate Pareto dimension")
     comparator_number = _number(comparator, "comparator Pareto dimension")
     if candidate_number == comparator_number:
@@ -1672,6 +2042,8 @@ def compare_pareto_vectors(candidate: dict, comparator: dict, pareto_policy: dic
     values = set(dimension_results.values())
     if "uncertain" in values:
         result = "uncertain"
+    elif "categorical_mismatch" in values:
+        result = "mixed"
     elif "candidate_better" in values and "comparator_better" not in values:
         result = "candidate_dominates"
     elif "comparator_better" in values and "candidate_better" not in values:
@@ -1835,9 +2207,16 @@ def _decision_payload(
         if isinstance(row, dict) and isinstance(row.get("pair_id"), str)
     })
     comparison_digest = _content_digest({"pair_ids": pair_ids})
+    guardrail_breach_only = bool(reason_codes) and all(
+        reason.startswith("p95_") and reason.endswith("_guardrail_exceeded")
+        for reason in reason_codes
+    )
     complete = (
         completeness.get("status") == "pass"
-        and workload_cache.get("status") == "pass"
+        and (
+            workload_cache.get("status") == "pass"
+            or guardrail_breach_only
+        )
     )
     floor_result = quality_floors.get("status", "not_evaluated")
     ni_result = non_inferiority.get("status", "not_evaluated")
@@ -1894,9 +2273,9 @@ def _decision_payload(
         )
     ]
     result = {
-        "schema_version": "analysis-decision.v1",
+        "schema_version": "analysis-decision.v1.1",
         "decision_bundle_version": plan["analysis_plan_version"],
-        "partition_binding": copy.deepcopy(plan["calibration_partition_binding"]),
+        "partition_binding": copy.deepcopy(partition_binding),
         "comparison_set_binding": {
             "id": comparison_digest,
             "digest": comparison_digest,
@@ -1909,10 +2288,6 @@ def _decision_payload(
             {"id": value_id, "digest": value_digest}
             for value_id, value_digest in score_bundle_bindings
         ],
-        "analysis_plan_binding": {
-            "id": plan["analysis_plan_id"],
-            "digest": plan["analysis_plan_digest"],
-        },
         "analysis_output": analysis_output,
         "ordered_gate_results": ordered_gate_results,
         "decision": decision,
@@ -1930,6 +2305,15 @@ def _decision_payload(
             value_digest for _value_id, value_digest in score_bundle_bindings
         }),
     }
+    if partition_binding["qualification_eligible"]:
+        result["analysis_plan_binding"] = {
+            "id": plan["analysis_plan_id"],
+            "digest": plan["analysis_plan_digest"],
+        }
+    else:
+        result["calibration_protocol_binding"] = copy.deepcopy(
+            plan["calibration_protocol_binding"]
+        )
     result["decision_bundle_digest"] = _content_digest(result)
     result["decision_bundle_id"] = _content_digest({
         key: value for key, value in result.items() if key != "decision_bundle_id"
@@ -1943,7 +2327,7 @@ def _calibration_non_qualifying_decision() -> str:
 
 def validate_analysis_decision_bundle(value: object) -> dict:
     """Validate the governed decision identity and all score/assignment bindings."""
-    fields = frozenset({
+    base_fields = frozenset({
         "schema_version",
         "decision_bundle_id",
         "decision_bundle_version",
@@ -1952,24 +2336,48 @@ def validate_analysis_decision_bundle(value: object) -> dict:
         "comparison_set_binding",
         "assignment_bindings",
         "score_bundle_bindings",
-        "analysis_plan_binding",
         "analysis_output",
         "ordered_gate_results",
         "decision",
         "qualification_policy_output",
         "evidence_refs",
     })
-    bundle = _closed(copy.deepcopy(value), fields, "analysis decision bundle")
-    _require(bundle, fields, "analysis decision bundle")
-    if bundle["schema_version"] != "analysis-decision.v1":
-        raise ValueError("analysis decision schema version is unsupported")
-    bundle["partition_binding"] = _validate_partition(
-        bundle["partition_binding"], require_calibration=True
-    )
-    for field in (
-        "comparison_set_binding",
+    authority_fields = frozenset({
         "analysis_plan_binding",
-    ):
+        "calibration_protocol_binding",
+    })
+    bundle = _closed(
+        copy.deepcopy(value),
+        base_fields | authority_fields,
+        "analysis decision bundle",
+    )
+    _require(bundle, base_fields, "analysis decision bundle")
+    schema_version = bundle["schema_version"]
+    if schema_version not in {"analysis-decision.v1", "analysis-decision.v1.1"}:
+        raise ValueError("analysis decision schema version is unsupported")
+    legacy = schema_version == "analysis-decision.v1"
+    bundle["partition_binding"] = _validate_partition(
+        bundle["partition_binding"], require_calibration=legacy
+    )
+    expected_authority = (
+        "analysis_plan_binding"
+        if legacy or bundle["partition_binding"]["qualification_eligible"]
+        else "calibration_protocol_binding"
+    )
+    prohibited_authority = (
+        "calibration_protocol_binding"
+        if expected_authority == "analysis_plan_binding"
+        else "analysis_plan_binding"
+    )
+    if expected_authority not in bundle:
+        raise ValueError(
+            f"analysis decision is missing required {expected_authority}"
+        )
+    if prohibited_authority in bundle:
+        raise ValueError(
+            "analysis decision must bind exactly one eligibility-selected authority"
+        )
+    for field in ("comparison_set_binding", expected_authority):
         bundle[field] = _validate_binding(bundle[field], field.replace("_", " "))
     for field in ("assignment_bindings", "score_bundle_bindings"):
         rows = bundle[field]
@@ -2023,6 +2431,13 @@ def validate_analysis_decision_bundle(value: object) -> dict:
     )
     allowed_dispositions = {
         (True, "pass", "pass", "candidate_dominates", "calibration_complete"),
+        (
+            True,
+            "not_evaluated",
+            "not_evaluated",
+            "not_evaluated",
+            "no_qualification",
+        ),
         (True, "fail", "not_evaluated", "not_evaluated", "no_qualification"),
         (True, "pass", "fail", "not_evaluated", "no_qualification"),
         (True, "pass", "pass", "comparator_dominates", "no_qualification"),
@@ -2141,7 +2556,7 @@ def evaluate_qualification_decision(
         return validate_analysis_decision_bundle(_decision_payload(
             plan=plan,
             partition_binding=partition_binding,
-            decision="invalid",
+            decision="inconclusive",
             reason_codes=budget_reasons,
             stop_gate="budget",
             partition_boundary=partition_boundary,
@@ -2172,10 +2587,16 @@ def evaluate_qualification_decision(
         ))
     workload_cache, workload_reasons = _evaluate_workload_cache(plan, pairs)
     if workload_reasons:
+        guardrail_breach_only = all(
+            reason.startswith("p95_") and reason.endswith("_guardrail_exceeded")
+            for reason in workload_reasons
+        )
         return validate_analysis_decision_bundle(_decision_payload(
             plan=plan,
             partition_binding=partition_binding,
-            decision="inconclusive",
+            decision=(
+                "no_qualification" if guardrail_breach_only else "inconclusive"
+            ),
             reason_codes=workload_reasons,
             stop_gate="workload_cache",
             partition_boundary=partition_boundary,
@@ -2263,8 +2684,13 @@ __all__ = [
     "RERUN_DECISIONS",
     "STATISTICS_SCHEMA_VERSION",
     "TERMINAL_STATE_ORDER",
+    "classify_campaign_ceiling_stop",
     "compare_pareto_vectors",
     "evaluate_qualification_decision",
+    "guardrail_admissibility",
+    "guardrail_findings",
+    "interim_look_findings",
+    "multiplicity_findings",
     "validate_analysis_decision_bundle",
     "validate_calibration_completion",
 ]

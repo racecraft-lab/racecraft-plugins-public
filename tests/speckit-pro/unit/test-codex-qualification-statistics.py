@@ -58,8 +58,13 @@ EXPECTED_PUBLIC_API = frozenset({
     "RERUN_DECISIONS",
     "STATISTICS_SCHEMA_VERSION",
     "TERMINAL_STATE_ORDER",
+    "classify_campaign_ceiling_stop",
     "compare_pareto_vectors",
     "evaluate_qualification_decision",
+    "guardrail_admissibility",
+    "guardrail_findings",
+    "interim_look_findings",
+    "multiplicity_findings",
     "validate_calibration_completion",
     "validate_analysis_decision_bundle",
 })
@@ -252,11 +257,37 @@ def workload_manifest_fixture() -> dict:
         "manifest_digest": digest("workload-manifest"),
         "minimum_unique_tasks": 3,
         "unknown_stratum_policy": "inconclusive",
+        "guardrail_method": {
+            "units": {
+                "raw_input_tokens": "tokens_per_attempt",
+                "cached_input_tokens": "tokens_per_attempt",
+                "output_tokens": "tokens_per_attempt",
+                "duration_ms": "milliseconds_per_attempt",
+            },
+            "denominator": "per_attempt_within_stratum_arm",
+            "comparator": "absolute_ceiling",
+            "margin": 0,
+            "confidence_method": {
+                "method": "empirical_order_statistic",
+                "confidence_level": 0.95,
+            },
+            "missing_data_rule": "report_jointly_with_attrition",
+            "direction": "higher_is_worse",
+            "multiplicity_position": {
+                "family": "guardrail",
+                "adjustment": "holm_within_guardrail_family",
+                "rationale": "Controls the four prespecified upper-tail guardrails.",
+            },
+            "breach_result": "no_qualification",
+            "decision_bearing": False,
+        },
         "strata": [
             {
                 "stratum_id": "implementation-small",
                 "target_weight": 0.75,
                 "long_horizon": False,
+                "sample_size": 5,
+                "minimum_unique_tasks": 1,
                 "p95_guardrails": {
                     "raw_input_tokens_max": 150,
                     "cached_input_tokens_max": 30,
@@ -268,6 +299,8 @@ def workload_manifest_fixture() -> dict:
                 "stratum_id": "analysis-long",
                 "target_weight": 0.25,
                 "long_horizon": True,
+                "sample_size": 1,
+                "minimum_unique_tasks": 1,
                 "p95_guardrails": {
                     "raw_input_tokens_max": 300,
                     "cached_input_tokens_max": 60,
@@ -341,6 +374,21 @@ def analysis_plan_fixture(cluster_unit: str = "role", per_cluster_minimum: int =
             "cluster_unit": cluster_unit,
             "cluster_adjustment": "cluster_robust",
             "multiplicity_adjustment": "holm",
+            "multiplicity_declaration": {
+                "conjunctive_family": {
+                    "adjustment": "none_required",
+                    "rationale": "Every ordered floor and non-inferiority gate must pass.",
+                },
+                "pareto_disjunctive_family": {
+                    "adjustment": "holm",
+                    "rationale": "Controls the better-on-at-least-one-dimension claim.",
+                },
+                "across_ladder_family": {
+                    "adjustment": "holm",
+                    "rationale": "Controls comparisons across candidates, roles, and strata.",
+                },
+                "cluster_adjustment_is_precondition": True,
+            },
         },
         "pareto_policy": {
             "evaluation_order": 3,
@@ -383,8 +431,39 @@ def analysis_plan_fixture(cluster_unit: str = "role", per_cluster_minimum: int =
             "one_arm_rerun_prohibited": True,
         },
         "campaign_budget": campaign_budget_fixture(),
-        "racing_policy": {"enabled": False, "terminal_rule": "disabled"},
-        "futility_policy": {"enabled": False, "terminal_rule": "disabled"},
+        "racing_policy": {
+            "enabled": False,
+            "terminal_rule": "disabled",
+            "interim_looks": {"count": 0, "information_fractions": []},
+            "boundary": {
+                "type": "disabled",
+                "rationale": "Calibration replay has no interim racing looks.",
+            },
+            "error_control": {
+                "method": "none_no_interim_looks",
+                "rationale": "Zero looks create no repeated-testing error.",
+            },
+            "look_schedule_frozen": True,
+            "early_stop_biases_estimate": True,
+            "stop_scope": "complete_pair",
+        },
+        "futility_policy": {
+            "enabled": False,
+            "terminal_rule": "disabled",
+            "interim_looks": {"count": 0, "information_fractions": []},
+            "boundary": {
+                "type": "disabled",
+                "rationale": "Calibration replay has no interim futility looks.",
+            },
+            "error_control": {
+                "method": "none_no_interim_looks",
+                "rationale": "Zero looks create no repeated-testing error.",
+            },
+            "look_schedule_frozen": True,
+            "early_stop_biases_estimate": True,
+            "stop_scope": "complete_pair",
+            "boundary_binding": "non_binding",
+        },
         "terminal_policy": {
             "incomplete_result": "inconclusive",
             "uncertain_result": "inconclusive",
@@ -429,6 +508,7 @@ def outcome(
     workload_stratum_id: str = "implementation-small",
     outcome_cache_policy_binding: dict | None = None,
     cache_state: str = "isolated_by_pair",
+    cache_root_digest: str | None = "",
     treatment_order_leakage: bool = False,
     terminal_state: str = "completed",
     score_disposition: str = "accepted",
@@ -457,6 +537,11 @@ def outcome(
         "workload_stratum_id": workload_stratum_id,
         "cache_policy_binding": copy.deepcopy(outcome_cache_policy_binding or cache_policy_binding()),
         "cache_state": cache_state,
+        "cache_root_digest": (
+            digest(f"cache-root-{pair_id}-{arm}")
+            if cache_root_digest == ""
+            else cache_root_digest
+        ),
         "treatment_order_leakage": treatment_order_leakage,
         "wall_clock_seconds": wall_clock_seconds,
         "candidate_route_id": candidate_route_id,
@@ -1145,7 +1230,7 @@ class QualificationStatisticsTests(unittest.TestCase):
 
                 result = self.evaluate(plan, outcomes)
 
-                self.assert_calibration_decision(result, "invalid")
+                self.assert_calibration_decision(result, "inconclusive")
                 self.assertEqual(result["budget"]["status"], "fail")
                 self.assertIn(reason, result["reason_codes"])
                 self.assertEqual(
@@ -1240,8 +1325,8 @@ class QualificationStatisticsTests(unittest.TestCase):
                     result["pareto"]["candidate_vector"]["terminal_state"],
                     terminal_state,
                 )
-                self.assertEqual(result["pareto"]["result"], "comparator_dominates")
-                self.assert_calibration_decision(result, "no_qualification")
+                self.assertEqual(result["pareto"]["result"], "mixed")
+                self.assert_calibration_decision(result, "inconclusive")
                 self.assertNotIn("complete_case_filtered", result["reason_codes"])
 
     def test_unclassifiable_attrition_blocks_completeness_without_complete_case_filtering(self) -> None:
@@ -1528,6 +1613,7 @@ class QualificationStatisticsTests(unittest.TestCase):
 
         unknown = paired_outcomes()
         unknown[0]["workload_stratum_id"] = "operator-invented"
+        unknown[1]["workload_stratum_id"] = "operator-invented"
 
         unknown_result = self.evaluate(plan, unknown)
 
@@ -1577,7 +1663,7 @@ class QualificationStatisticsTests(unittest.TestCase):
 
                 result = self.evaluate(analysis_plan_fixture(), outcomes)
 
-                self.assertEqual(result["decision"], "inconclusive")
+                self.assertEqual(result["decision"], "no_qualification")
                 self.assertIn(f"p95_{dimension}_guardrail_exceeded", result["reason_codes"])
                 dimension_stats = (
                     result["workload_cache"]["strata"]["implementation-small"]["candidate"]
@@ -1586,6 +1672,71 @@ class QualificationStatisticsTests(unittest.TestCase):
                 guardrail = workload_manifest_fixture()["strata"][0]["p95_guardrails"][guardrail_key]
                 self.assertLess(dimension_stats["mean"], guardrail)
                 self.assertGreater(dimension_stats["p95"], guardrail)
+
+    def test_plan_declares_guardrail_multiplicity_and_zero_look_policies(self) -> None:
+        plan = analysis_plan_fixture()
+        self.assertEqual(
+            self.stats.guardrail_findings(
+                plan["workload_manifest"]["guardrail_method"],
+                non_inferiority_margins=plan["non_inferiority"]["margins"],
+            ),
+            (),
+        )
+        self.assertEqual(
+            self.stats.multiplicity_findings(
+                plan["non_inferiority"]["multiplicity_declaration"]
+            ),
+            (),
+        )
+        self.assertEqual(
+            self.stats.interim_look_findings(plan["racing_policy"]),
+            (),
+        )
+        self.assertEqual(
+            self.stats.interim_look_findings(
+                plan["futility_policy"],
+                futility=True,
+            ),
+            (),
+        )
+        for stratum in plan["workload_manifest"]["strata"]:
+            with self.subTest(stratum=stratum["stratum_id"]):
+                self.assertGreaterEqual(
+                    stratum["sample_size"],
+                    stratum["minimum_unique_tasks"],
+                )
+
+        invalid = copy.deepcopy(plan)
+        invalid["workload_manifest"]["guardrail_method"][
+            "missing_data_rule"
+        ] = "exclude_missing_attempts"
+        invalid = seal_analysis_plan(invalid)
+        with self.assertRaisesRegex(ValueError, "missing-data"):
+            self.evaluate(invalid, paired_outcomes())
+
+        invalid = copy.deepcopy(plan)
+        invalid["racing_policy"]["interim_looks"] = {
+            "count": 1,
+            "information_fractions": [],
+        }
+        invalid = seal_analysis_plan(invalid)
+        with self.assertRaisesRegex(ValueError, "count"):
+            self.evaluate(invalid, paired_outcomes())
+
+    def test_campaign_ceiling_stop_is_infrastructure_inconclusive(self) -> None:
+        stop = self.stats.classify_campaign_ceiling_stop(
+            assignment_id="pair-between-arms",
+            arms_completed=1,
+        )
+        self.assertEqual(stop["failure_plane"], "infrastructure")
+        self.assertEqual(stop["failure_code"], "infrastructure_failure")
+        self.assertEqual(stop["decision"], "inconclusive")
+        self.assertFalse(stop["one_arm_rerun_permitted"])
+        with self.assertRaises(ValueError):
+            self.stats.classify_campaign_ceiling_stop(
+                assignment_id="completed-pair",
+                arms_completed=2,
+            )
 
     def test_cache_policy_and_treatment_order_leakage_are_immutable_bindings(self) -> None:
         plan = analysis_plan_fixture()
@@ -1612,6 +1763,25 @@ class QualificationStatisticsTests(unittest.TestCase):
                 self.assertEqual(result["decision"], "inconclusive")
                 self.assertIn(expected_reason, result["reason_codes"])
                 self.assertEqual(result["workload_cache"]["cache_policy_binding"], cache_policy_binding())
+
+    def test_cache_isolation_requires_observed_disjoint_roots(self) -> None:
+        for expected_reason, comparator_root in [
+            ("cache_root_not_disjoint", digest("shared-cache-root")),
+            ("cache_root_unobservable", None),
+        ]:
+            with self.subTest(reason=expected_reason):
+                outcomes = paired_outcomes()
+                outcomes[0]["cache_root_digest"] = digest("shared-cache-root")
+                outcomes[1]["cache_root_digest"] = comparator_root
+
+                result = self.evaluate(analysis_plan_fixture(), outcomes)
+
+                self.assertEqual(result["decision"], "inconclusive")
+                self.assertIn(expected_reason, result["reason_codes"])
+                self.assertIn(
+                    result["workload_cache"]["cache_root_evidence"][0]["status"],
+                    {"observed_shared", "unobservable"},
+                )
 
     def test_semantic_and_reliability_floors_short_circuit_before_statistics(self) -> None:
         cases = [
@@ -1818,6 +1988,28 @@ class QualificationStatisticsTests(unittest.TestCase):
                 self.assertEqual(result["result"], expected)
                 self.assertFalse(result["weights_used"])
                 self.assertEqual(tuple(result["dimensions"]), PARETO_DIMENSIONS)
+
+    def test_terminal_state_is_unordered_and_any_difference_is_mixed(self) -> None:
+        candidate = resource_vector(
+            80, 8, 35, 900, retries=0, compactions=0, acceptance=1,
+            terminal_state="completed",
+        )
+        comparator = resource_vector(
+            100, 9, 40, 1000, retries=1, compactions=1, acceptance=1,
+            terminal_state="failed",
+        )
+
+        result = self.stats.compare_pareto_vectors(
+            candidate,
+            comparator,
+            analysis_plan_fixture()["pareto_policy"],
+        )
+
+        self.assertEqual(
+            result["dimension_results"]["terminal_state"],
+            "categorical_mismatch",
+        )
+        self.assertEqual(result["result"], "mixed")
 
 
 class DeterministicQualificationReplayTests(unittest.TestCase):

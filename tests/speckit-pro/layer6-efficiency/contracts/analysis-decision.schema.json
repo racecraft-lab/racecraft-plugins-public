@@ -13,7 +13,6 @@
     "comparison_set_binding",
     "assignment_bindings",
     "score_bundle_bindings",
-    "analysis_plan_binding",
     "analysis_output",
     "ordered_gate_results",
     "decision",
@@ -21,11 +20,13 @@
     "evidence_refs"
   ],
   "properties": {
-    "schema_version": {"const": "analysis-decision.v1"},
+    "schema_version": {
+      "enum": ["analysis-decision.v1", "analysis-decision.v1.1"]
+    },
     "decision_bundle_id": {"$ref": "#/$defs/digest"},
     "decision_bundle_version": {"type": "string", "minLength": 1},
     "decision_bundle_digest": {"$ref": "#/$defs/digest"},
-    "partition_binding": {"$ref": "#/$defs/calibrationPartitionBinding"},
+    "partition_binding": {"$ref": "#/$defs/partitionBinding"},
     "comparison_set_binding": {"$ref": "#/$defs/binding"},
     "assignment_bindings": {
       "type": "array",
@@ -40,6 +41,7 @@
       "items": {"$ref": "#/$defs/binding"}
     },
     "analysis_plan_binding": {"$ref": "#/$defs/binding"},
+    "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
     "analysis_output": {"$ref": "#/$defs/analysisOutput"},
     "ordered_gate_results": {"$ref": "#/$defs/orderedGateResults"},
     "decision": {
@@ -57,6 +59,73 @@
       "items": {"$ref": "#/$defs/digest"}
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schema_version": {"const": "analysis-decision.v1"}
+        },
+        "required": ["schema_version"]
+      },
+      "then": {
+        "allOf": [
+          {"required": ["analysis_plan_binding"]},
+          {"not": {"required": ["calibration_protocol_binding"]}},
+          {
+            "properties": {
+              "partition_binding": {
+                "$ref": "#/$defs/calibrationPartitionBinding"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_version": {"const": "analysis-decision.v1.1"}
+        },
+        "required": ["schema_version"]
+      },
+      "then": {
+        "oneOf": [
+          {
+            "allOf": [
+              {
+                "properties": {
+                  "partition_binding": {
+                    "properties": {
+                      "qualification_eligible": {"const": true}
+                    },
+                    "required": ["qualification_eligible"]
+                  }
+                }
+              },
+              {"required": ["analysis_plan_binding"]},
+              {"not": {"required": ["calibration_protocol_binding"]}}
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "properties": {
+                  "partition_binding": {
+                    "properties": {
+                      "qualification_eligible": {"const": false}
+                    },
+                    "required": ["qualification_eligible"]
+                  }
+                }
+              },
+              {"required": ["calibration_protocol_binding"]},
+              {"not": {"required": ["analysis_plan_binding"]}}
+            ]
+          }
+        ]
+      }
+    }
+  ],
   "$defs": {
     "digest": {
       "type": "string",
@@ -87,9 +156,34 @@
         "qualification_eligible": {"const": false}
       }
     },
+    "partitionBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "partition_id",
+        "partition_type",
+        "partition_digest",
+        "qualification_eligible"
+      ],
+      "properties": {
+        "partition_id": {"type": "string", "minLength": 1},
+        "partition_type": {
+          "enum": [
+            "calibration",
+            "screening",
+            "selection",
+            "cohort_lock",
+            "integrated_confirmation"
+          ]
+        },
+        "partition_digest": {"$ref": "#/$defs/digest"},
+        "qualification_eligible": {"type": "boolean"}
+      }
+    },
     "analysisOutput": {
       "oneOf": [
         {"$ref": "#/$defs/completeDominanceOutput"},
+        {"$ref": "#/$defs/guardrailFailureOutput"},
         {"$ref": "#/$defs/floorFailureOutput"},
         {"$ref": "#/$defs/nonInferiorityFailureOutput"},
         {"$ref": "#/$defs/nonInferiorityUncertainOutput"},
@@ -190,6 +284,34 @@
             "analysis_output_digest": {"$ref": "#/$defs/digest"},
             "complete": {"const": true},
             "floor_result": {"const": "fail"},
+            "non_inferiority_result": {"const": "not_evaluated"},
+            "pareto_result": {"const": "not_evaluated"},
+            "details": {},
+            "terminal_analysis_disposition": {"const": "no_qualification"}
+          }
+        }
+      ]
+    },
+    "guardrailFailureOutput": {
+      "allOf": [
+        {"$ref": "#/$defs/analysisOutputBase"},
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "analysis_output_id",
+            "analysis_output_digest",
+            "complete",
+            "floor_result",
+            "non_inferiority_result",
+            "pareto_result",
+            "terminal_analysis_disposition"
+          ],
+          "properties": {
+            "analysis_output_id": {"$ref": "#/$defs/digest"},
+            "analysis_output_digest": {"$ref": "#/$defs/digest"},
+            "complete": {"const": true},
+            "floor_result": {"const": "not_evaluated"},
             "non_inferiority_result": {"const": "not_evaluated"},
             "pareto_result": {"const": "not_evaluated"},
             "details": {},

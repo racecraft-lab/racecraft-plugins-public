@@ -11,6 +11,7 @@
     "partition",
     "candidate_freeze_binding",
     "corpus_binding",
+    "environment_contract_binding",
     "assignment_policy",
     "terminal_policy",
     "rerun_policy",
@@ -24,6 +25,7 @@
     "partition": {"$ref": "#/$defs/partition"},
     "candidate_freeze_binding": {"$ref": "#/$defs/binding"},
     "corpus_binding": {"$ref": "#/$defs/binding"},
+    "environment_contract_binding": {"$ref": "#/$defs/binding"},
     "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
     "analysis_plan_binding": {"$ref": "#/$defs/binding"},
     "assignment_policy": {

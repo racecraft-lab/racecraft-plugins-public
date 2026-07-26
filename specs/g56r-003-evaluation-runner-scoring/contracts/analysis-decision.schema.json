@@ -12,14 +12,13 @@
     "comparison_set_binding",
     "assignment_bindings",
     "score_bundle_bindings",
-    "analysis_plan_binding",
     "analysis_output",
     "ordered_gate_results",
     "decision",
     "evidence_refs"
   ],
   "properties": {
-    "schema_version": {"const": "1.0.0"},
+    "schema_version": {"enum": ["1.0.0", "1.1.0"]},
     "decision_bundle_id": {"type": "string", "minLength": 1},
     "decision_bundle_digest": {"$ref": "#/$defs/digest"},
     "partition": {
@@ -36,6 +35,7 @@
     "assignment_bindings": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/binding"}},
     "score_bundle_bindings": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/binding"}},
     "analysis_plan_binding": {"$ref": "#/$defs/binding"},
+    "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
     "analysis_output": {
       "type": "object",
       "additionalProperties": false,
@@ -65,6 +65,56 @@
     "decision": {"enum": ["qualified", "no_qualification", "inconclusive", "calibration_complete", "invalid"]},
     "evidence_refs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"schema_version": {"const": "1.0.0"}},
+        "required": ["schema_version"]
+      },
+      "then": {
+        "required": ["analysis_plan_binding"],
+        "not": {"required": ["calibration_protocol_binding"]}
+      }
+    },
+    {
+      "if": {
+        "properties": {"schema_version": {"const": "1.1.0"}},
+        "required": ["schema_version"]
+      },
+      "then": {
+        "oneOf": [
+          {
+            "allOf": [
+              {
+                "properties": {
+                  "partition": {
+                    "properties": {"qualification_eligible": {"const": true}},
+                    "required": ["qualification_eligible"]
+                  }
+                }
+              },
+              {"required": ["analysis_plan_binding"]},
+              {"not": {"required": ["calibration_protocol_binding"]}}
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "properties": {
+                  "partition": {
+                    "properties": {"qualification_eligible": {"const": false}},
+                    "required": ["qualification_eligible"]
+                  }
+                }
+              },
+              {"required": ["calibration_protocol_binding"]},
+              {"not": {"required": ["analysis_plan_binding"]}}
+            ]
+          }
+        ]
+      }
+    }
+  ],
   "$defs": {
     "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
     "binding": {
