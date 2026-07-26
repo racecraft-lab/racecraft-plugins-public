@@ -625,6 +625,7 @@ class RunnerFoundationTests(unittest.TestCase):
             "docs/ai/research/claude-car-003-successor-freeze-collection.json",
             "docs/ai/research/claude-car-003-successor-capability-freeze.json",
             "docs/ai/research/claude-car-003-calibration-pilot.json",
+            "docs/ai/research/claude-car-003-calibration-completion.json",
             "docs/ai/research/claude-car-003-analysis-plan.json",
             "docs/ai/research/codex-agent-route-candidates.md",
             "docs/ai/research/codex-agent-route-candidate-manifest.json",
