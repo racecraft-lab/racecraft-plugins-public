@@ -192,7 +192,16 @@ duration, retries, compaction, and accepted-workflow rate.
   availability preflight is a native subagent-frontmatter feature. SpecKit Pro
   owns the ordered route policy, preflight resolver, and materializer.
 - Adopting fast mode, orchestration-changing execution modes, or Agent SDK
-  features beyond the pinned harness usage.
+  features beyond the pinned harness usage. **Fast mode is never enabled by
+  SpecKit Pro, on any surface, under any qualification outcome.** It is
+  Opus-only and usage-credit-billed, so enabling it on an operator's behalf
+  spends their credits for a speed characteristic they did not ask for. It is
+  used only when the operator turns it on themselves. The converse also binds:
+  no SpecKit Pro surface may turn fast mode *off* on an operator who has
+  enabled it. The plugin neither grants nor revokes this setting — it observes
+  the state and, for a scored run, refuses rather than mutates. No result from
+  CAR-004's policy-control evaluation or CAR-011's comparison may be read as
+  authority to adopt it: a control that measures well is still not adopted.
 - Unbounded or aesthetic prompt rewriting. Prompt changes must target measured
   instruction, handoff, tool-schema, duplicated-context, cache-write, or
   compaction overhead and be tested against an unchanged-prompt control.
@@ -368,10 +377,23 @@ plugin release.
   cache-write by TTL class, cache-read, and output tokens - plus request/turn
   count, wall time, retries, compaction, and failed or abandoned work through
   the terminal policy. The selection rule among passing candidates is one
-  predeclared weighted scalar whose per-category coefficients are pinned from
-  a dated revision of the published Anthropic API price sheet -
-  content-addressed at lock time and labeled diagnostic-derived, never plan
-  accounting - with the complete raw vector always reported alongside.
+  predeclared environment-independent Pareto rule over that complete raw
+  vector, applied only after absolute quality and reliability floors and
+  task-paired cluster-adjusted non-inferiority have passed. A failed gate, a
+  tie, mixed dominance, incomplete evidence, or statistical uncertainty is
+  inconclusive and yields no qualification; no weighted ranking may be forced.
+  The complete raw vector is always reported. Published price data may be cited
+  as diagnostic context only, never as a selection coefficient and never as
+  plan accounting.
+  **Amendment 2026-07-24 (CAR-003):** this criterion previously mandated one
+  predeclared weighted scalar whose per-category coefficients were pinned from
+  a dated revision of the published Anthropic API price sheet, content-addressed
+  at lock time and labeled diagnostic-derived. It is amended to the Pareto rule
+  above to hold logical parity with the Codex routing program, whose PRD permits
+  "one predeclared environment-independent score or Pareto rule" and whose
+  G56R-003 specification selected Pareto dominance and forbids a forced weighted
+  ranking. The raw-vector reporting obligation is unchanged; only the rule that
+  ranks passing candidates changed.
 - **AC-2.6 — Per-agent attribution**: Paired per-agent experiments freeze the
   parent session model and effort, every non-candidate agent route, all
   prompts other than the allowed Stage B candidate prompt, tools, skills,
@@ -486,11 +508,29 @@ plugin release.
   configuration, client version, and controlled runtime overrides. The
   environment contract freezes fast mode off, a pinned client version range, a
   pinned parent-session model and effort, and proof that
-  `CLAUDE_CODE_SUBAGENT_MODEL` is unset; scored campaigns run under a
-  dedicated API-key-authenticated environment, at least one installed-UAT
-  smoke row runs under subscription authentication, and the authentication
-  mode of every run is recorded in the environment snapshot without producing
-  any plan-based claim. Preferred-route unavailability invokes the resolver
+  `CLAUDE_CODE_SUBAGENT_MODEL` is unset; scored campaigns run under
+  subscription authentication, no supported path requires API-key
+  authentication, and the authentication mode of every run is recorded in the
+  environment snapshot without producing any plan-based claim.
+  **Amendment 2026-07-26 (CAR-003):** this criterion previously required scored
+  campaigns to run under a dedicated API-key-authenticated environment with at
+  least one installed-UAT smoke row under subscription authentication. That
+  inverted the product's actual delivery model: SpecKit Pro ships to operators
+  running Claude Code under a subscription, so evidence gathered only under an
+  authentication mode most operators never use would not describe the routes
+  they actually get. Requiring an API key on the scored path would also make
+  qualification depend on a credential the product does not require. It is
+  amended to make subscription the supported scored path and to forbid any
+  supported path requiring API-key authentication. CAR-003 FR-042 implements
+  this and additionally makes the recorded mode *constraining* — the observed
+  mode is compared against the mode pinned in the run's FR-051 environment
+  contract and a divergence blocks scoring, so the field is not merely
+  observable. The recording-without-plan-claims obligation is unchanged; only
+  which mode the scored path uses changed. Note the knock-on already relied
+  upon elsewhere: FR-004 refuses to let the models catalog endpoint *admit* a
+  tuple precisely because that endpoint yields evidence only under API-key
+  authentication, which this amendment forbids requiring.
+  Preferred-route unavailability invokes the resolver
   before assignment. A scored run begins only after one approved route is
   resolved and exact treatment is proven. Runtime UAT may continue after a
   platform-initiated route change only when the observed model is itself a

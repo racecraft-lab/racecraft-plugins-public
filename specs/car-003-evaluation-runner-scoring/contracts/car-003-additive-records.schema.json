@@ -1,0 +1,257 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/car-003/car-003-additive-records.schema.json",
+  "title": "CAR-003 Additive Evidence Records",
+  "description": "CAR-003-additive. A oneOf over four record classes the frozen CAR-002 contracts cannot carry, mirroring the CAR-002 trace contract's own oneOf idiom. Each exists because a frozen enum or object is closed: record_class is closed to success/null/unavailable/misdelivery, the shared rawTokenVector is closed under additionalProperties:false, the frozen telemetry profile constrains list cardinality without enumerating fields, and score-bundle is a parity mirror that must not gain a unilateral member.",
+  "oneOf": [
+    {"$ref": "#/$defs/mandatoryObservationManifest"},
+    {"$ref": "#/$defs/aliasRepointAttribution"},
+    {"$ref": "#/$defs/cacheDiagnosticRecord"},
+    {"$ref": "#/$defs/scorerIdentityAttestation"}
+  ],
+  "$defs": {
+    "scorerIdentityAttestation": {
+      "description": "FR-047. Records the OBSERVED identity of each scorer and adjudicator at ballot time, alongside the family declared in the frozen experiment policy. Static family exclusion is declared at freeze time and therefore cannot see a post-freeze platform re-point of the scorer itself: a scorer frozen as out-family could be silently re-pointed into a candidate's family, restoring the self-preference bias the exclusion exists to prevent. This is CAR-003-additive rather than a score-bundle field because score-bundle is a parity mirror of the twin's contract and must not gain a unilateral member.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "record_kind", "attestation_id", "attestation_digest", "score_bundle_binding", "ballot_attestations", "recorded_at"],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_kind": {"const": "scorer_identity_attestation"},
+        "attestation_id": {"type": "string", "minLength": 1},
+        "attestation_digest": {"$ref": "#/$defs/digest"},
+        "score_bundle_binding": {"$ref": "#/$defs/binding"},
+        "ballot_attestations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ballot_role", "declared_family", "observed_model_id", "observed_family", "family_exclusion_holds"],
+            "properties": {
+              "ballot_role": {"enum": ["scorer_a", "scorer_b", "adjudicator"]},
+              "declared_family": {"type": "string", "minLength": 1},
+              "observed_model_id": {"type": ["string", "null"], "minLength": 1},
+              "observed_family": {"type": ["string", "null"], "minLength": 1},
+              "family_exclusion_holds": {
+                "description": "False when the observed family collides with any candidate family in the scored comparison, or when the observed identity is unavailable. A false value MUST block acceptance of the score bundle rather than being recorded and ignored.",
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "recorded_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "mandatoryObservationManifest": {
+      "description": "FR-009: the versioned closed manifest naming each required telemetry field. Published because the frozen CAR-002 telemetry profile constrains only list cardinality and never enumerates the fields, which left the requirement undecidable as written.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_kind",
+        "manifest_id",
+        "manifest_digest",
+        "telemetry_profile_binding",
+        "required_fields",
+        "nullable_exemptions",
+        "missing_field_failure_code",
+        "published_at"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_kind": {"const": "mandatory_observation_manifest"},
+        "manifest_id": {"type": "string", "minLength": 1},
+        "manifest_digest": {"$ref": "#/$defs/digest"},
+        "telemetry_profile_binding": {"$ref": "#/$defs/binding"},
+        "required_fields": {
+          "description": "Each mandatory field MUST carry a non-null observed value and a classification other than unavailable.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["field_path", "category"],
+            "properties": {
+              "field_path": {"type": "string", "minLength": 1},
+              "category": {
+                "enum": [
+                  "named_agent",
+                  "requested_route",
+                  "instruction_hash",
+                  "permitted_tools",
+                  "mutation_contract",
+                  "skills",
+                  "mcp_startup",
+                  "mcp_schema",
+                  "parent_controls",
+                  "client",
+                  "context",
+                  "configured_route_identity",
+                  "route_change_monitoring",
+                  "authentication_mode",
+                  "resource_vector"
+                ]
+              }
+            }
+          }
+        },
+        "nullable_exemptions": {
+          "description": "Explicit nulls remain permitted only on fields the frozen schema declares nullable that are absent from this manifest.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "missing_field_failure_code": {"const": "mandatory_telemetry_missing"},
+        "published_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "aliasRepointAttribution": {
+      "description": "FR-039, FR-045, FR-046. Carried here because the frozen CAR-002 record_class enumeration is closed and MUST NOT be extended. Attribution is bounded by its enumerated cause set rather than proven: documented serving-infrastructure changes can alter behavior without changing the model identity.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_kind",
+        "attribution_id",
+        "attribution_digest",
+        "execution_trace_binding",
+        "candidate_freeze_binding",
+        "requested_alias",
+        "freeze_bound_identity",
+        "freeze_bound_identity_source",
+        "run_observed_identity",
+        "override_proof_complete",
+        "client_version_at_freeze",
+        "client_version_at_run",
+        "attribution",
+        "attribution_bounded",
+        "validated_by",
+        "recorded_at"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_kind": {"const": "alias_repoint_attribution"},
+        "attribution_id": {"type": "string", "minLength": 1},
+        "attribution_digest": {"$ref": "#/$defs/digest"},
+        "execution_trace_binding": {"$ref": "#/$defs/binding"},
+        "candidate_freeze_binding": {
+          "description": "FR-039: the {id, digest} binding to the specific CAR-003 successor freeze freeze_bound_identity was read from. Makes the provenance verifiable at replay instead of self-declared; a binding resolving to the archived snapshot records alias_repoint_unresolved.",
+          "$ref": "#/$defs/binding"
+        },
+        "requested_alias": {"type": "string", "minLength": 1},
+        "freeze_bound_identity": {"type": "string", "minLength": 1},
+        "freeze_bound_identity_source": {
+          "description": "FR-039: read from CAR-003's own successor freeze, explicitly not the identically named run-time route-resolution field and never the archived predecessor snapshot. The claim is corroborated by candidate_freeze_binding.",
+          "const": "car_003_successor_freeze"
+        },
+        "run_observed_identity": {
+          "description": "FR-039: from the per-model usage breakdown, not inferred from configuration.",
+          "type": "string",
+          "minLength": 1
+        },
+        "override_proof_complete": {"type": "boolean"},
+        "client_version_at_freeze": {"type": "string", "minLength": 1},
+        "client_version_at_run": {"type": "string", "minLength": 1},
+        "attribution": {
+          "description": "platform_route_change requires an unchanged requested route, every local override proven unset, and an unchanged client version. A plugin-initiated substitution is resolver_fallback. Anything else records alias_repoint_unresolved and blocks admission.",
+          "enum": ["platform_route_change", "resolver_fallback", "alias_repoint_unresolved", "no_divergence"]
+        },
+        "attribution_bounded": {
+          "description": "FR-045: the elimination argument is recorded as bounded by its enumerated cause set rather than as proof of platform causation.",
+          "const": true
+        },
+        "behavioral_only_divergence": {
+          "description": "FR-045: a behavioral difference without an identity change is a separate diagnostic condition and MUST NOT be recorded as an alias re-point.",
+          "type": "boolean"
+        },
+        "validated_by": {
+          "description": "FR-046: synthetic replay supplies a divergent observed identity below the live trigger path while overrides remain genuinely unset. If that path cannot be built, the detector is recorded as unvalidated_in_band rather than reported as tested coverage.",
+          "enum": ["synthetic_replay_fixture", "unvalidated_in_band"]
+        },
+        "recorded_at": {"type": "string", "format": "date-time"}
+      }
+    },
+    "cacheDiagnosticRecord": {
+      "description": "FR-018: cache-write-by-TTL-class and cache-read breakdowns. Diagnostic only, never Pareto dimensions, because the shared rawTokenVector is closed under additionalProperties:false, is byte-identical across worktrees, and carries no such fields.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "record_kind",
+        "diagnostic_id",
+        "diagnostic_digest",
+        "execution_trace_binding",
+        "cache_write_tokens_by_ttl_class",
+        "cache_read_tokens",
+        "observed_cache_isolation",
+        "decision_bearing",
+        "recorded_at"
+      ],
+      "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_kind": {"const": "cache_diagnostic"},
+        "diagnostic_id": {"type": "string", "minLength": 1},
+        "diagnostic_digest": {"$ref": "#/$defs/digest"},
+        "execution_trace_binding": {"$ref": "#/$defs/binding"},
+        "cache_write_tokens_by_ttl_class": {
+          "description": "FR-022: closed TTL-class key space, reusing the two cache-creation classes the frozen CAR-002 telemetry profile already records as stable_native observations. Identical key set to the budget ceilings, so a ceiling can never be keyed differently from its measurement.",
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": {"enum": ["ephemeral_5m", "ephemeral_1h"]},
+          "additionalProperties": {"type": ["integer", "null"], "minimum": 0}
+        },
+        "cache_read_tokens": {"type": ["integer", "null"], "minimum": 0},
+        "observed_cache_isolation": {
+          "description": "FR-049: binding per_arm_ephemeral_root in the experiment policy is a PRECOMMITMENT, not evidence that isolation held. This record carries the observed evidence for one arm. Cache roots are recorded as digests rather than paths because an absolute filesystem path is operator-only under FR-027 and FR-036; the digest is enough to decide disjointness without committing the path.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "arm_cache_root_digest", "paired_arm_cache_root_digest", "roots_disjoint"],
+          "properties": {
+            "status": {
+              "description": "Mirrors the FR-051 split between a confirmed deviation and an unobservable condition. observed_disjoint is the only status that lets the pair contribute to the resource comparison. observed_shared is a confirmed isolation breach recorded with the existing closed infrastructure_failure code at failure_plane=infrastructure — the infrastructure plane rather than the treatment plane because a warmed cache distorts the measurement of a run, not the route delivered to it. unobserved is an evidence-completeness failure recorded with the existing closed required_evidence_missing code at failure_plane=evidence_boundary, following the FR-051 precedent that an unobservable condition returns inconclusive under FR-021 rather than being classified as having deviated. No new failure code is coined for either branch, because the score-plane taxonomy is closed and adopted verbatim under FR-034.",
+              "enum": ["observed_disjoint", "observed_shared", "unobserved"]
+            },
+            "arm_cache_root_digest": {"anyOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+            "paired_arm_cache_root_digest": {"anyOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+            "roots_disjoint": {
+              "description": "FR-049: a pair whose arms cannot be SHOWN to have used distinct roots MUST NOT contribute to the resource comparison. cached_input_tokens is one of the eight decision-bearing dimensions, so a cache-state artifact would otherwise enter the dominance result directly as though it were a route property.",
+              "type": ["boolean", "null"]
+            }
+          },
+          "allOf": [
+            {
+              "description": "An observed_disjoint claim MUST carry both root digests and roots_disjoint=true; it can never be asserted with absent evidence.",
+              "if": {"properties": {"status": {"const": "observed_disjoint"}}, "required": ["status"]},
+              "then": {
+                "properties": {
+                  "arm_cache_root_digest": {"$ref": "#/$defs/digest"},
+                  "paired_arm_cache_root_digest": {"$ref": "#/$defs/digest"},
+                  "roots_disjoint": {"const": true}
+                }
+              }
+            },
+            {
+              "description": "An observed_shared record is a confirmed breach, so it MUST carry roots_disjoint=false rather than a null.",
+              "if": {"properties": {"status": {"const": "observed_shared"}}, "required": ["status"]},
+              "then": {"properties": {"roots_disjoint": {"const": false}}}
+            }
+          ]
+        },
+        "decision_bearing": {"const": false},
+        "recorded_at": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

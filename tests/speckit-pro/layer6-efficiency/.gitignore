@@ -1,1 +1,8 @@
-results/
+# Per-run raw evaluation output stays operator-only (FR-027). The pattern ignores
+# the directory's CONTENTS rather than the directory itself, because git cannot
+# re-include a file whose parent directory is excluded.
+results/*
+# Only the consolidated baseline — a sanitized, deterministic, digest-addressed
+# summary carrying no raw captures — may be committed, and it is named explicitly
+# so future per-run artifacts written beside it stay ignored.
+!results/consolidated-baseline.json
