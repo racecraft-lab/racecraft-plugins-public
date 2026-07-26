@@ -28,6 +28,17 @@ branch, and every record carries the branch that served the run, the loader
 scope, and the fact that the equivalence claim is bounded to loader-honored
 keys.
 
+**No shipped caller yet, and that is deliberate.** Today the only importers are
+repository-only: the Layer 6 evaluation runner and this module's unit tests. The
+shipped consumers arrive in CAR-006 (route-policy manifest, frontmatter drift
+gate, and session preflight), which is named for this module. It lives here now
+rather than under ``tests/`` because relocating a payload-affecting module later
+means running the generated-artifact regeneration twice, and because a second
+materializer implementation is forbidden — CAR-003 design concept Q4 and research
+R-001 record both decisions. A reviewer noticing "shipped code with no consumer"
+has read the tree correctly; the answer is that the consumer is scheduled, not
+missing.
+
 Python 3.11+ standard library only.
 """
 
