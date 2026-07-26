@@ -273,6 +273,7 @@ EXPECTED_SCORE_BINDING_FIELDS = (
 EXPECTED_SCORE_DISPOSITIONS = ("accepted", "gate_failed", "non_scorable", "invalidated")
 EXPECTED_SCORE_FAILURE_PLANES = (
     "none",
+    "gate",
     "treatment",
     "fixture",
     "scorer",
@@ -286,6 +287,7 @@ EXPECTED_SCORE_FAILURE_PLANES = (
 )
 EXPECTED_SCORE_FAILURE_CODES = (
     "none",
+    "gate_failed",
     "treatment_misdelivery",
     "service_reroute",
     "mandatory_telemetry_missing",
@@ -341,6 +343,7 @@ EXPECTED_CANDIDATE_TERMINALS = {
 }
 EXPECTED_FAILURE_CODE_PLANES = {
     "none": "none",
+    "gate_failed": "gate",
     "treatment_misdelivery": "treatment",
     "service_reroute": "treatment",
     "mandatory_telemetry_missing": "treatment",
@@ -985,30 +988,46 @@ class CodexQualificationScoringGateTests(unittest.TestCase):
         gates[0]["passed"] = False
         failed_gates = self.scoring.evaluate_hard_gates(gate_request(gates=gates))
         self.assertEqual(failed_gates["failure_code"], "gate_failed")
+        # A gate that RAN and REJECTED the output is a scored quality outcome on
+        # its own plane. AC-2.7 keeps candidate-caused failures inside the
+        # estimand; missing evidence removes the attempt from scoring entirely,
+        # so recording a rejection as a shortfall would move real failures out of
+        # the denominator and flatter any candidate that fails hard gates.
         gate_failure_request = score_bundle_request(
             failed_gates,
             semantic_result=None,
-            score_disposition="non_scorable",
-            failure_plane="evidence_boundary",
-            failure_code="required_evidence_missing",
+            score_disposition="gate_failed",
+            failure_plane="gate",
+            failure_code="gate_failed",
             vector=resource_vector(acceptance=None),
         )
 
         gate_failure = self.scoring.build_score_bundle(gate_failure_request)
 
-        self.assertEqual(gate_failure["score_disposition"], "non_scorable")
-        self.assertEqual(gate_failure["failure_plane"], "evidence_boundary")
-        self.assertEqual(gate_failure["failure_code"], "required_evidence_missing")
+        self.assertEqual(gate_failure["score_disposition"], "gate_failed")
+        self.assertEqual(gate_failure["failure_plane"], "gate")
+        self.assertEqual(gate_failure["failure_code"], "gate_failed")
         self.assertIsNone(gate_failure["semantic_score"])
 
-        legacy_gate_classification = copy.deepcopy(gate_failure_request)
-        legacy_gate_classification.update({
+        # Recording that same failed gate as an evidence shortfall is refused.
+        misfiled_as_shortfall = copy.deepcopy(gate_failure_request)
+        misfiled_as_shortfall.update({
+            "score_disposition": "non_scorable",
+            "failure_plane": "evidence_boundary",
+            "failure_code": "required_evidence_missing",
+        })
+        with self.assertRaisesRegex(ValueError, "deterministic hard-gate evidence"):
+            self.scoring.build_score_bundle(misfiled_as_shortfall)
+
+        # A code outside the closed inventory is still refused.
+        outside_inventory = copy.deepcopy(gate_failure_request)
+        outside_inventory.update({
             "score_disposition": "gate_failed",
             "failure_plane": "gate",
-            "failure_code": "gate_failed",
+            "failure_code": "gate_rejected",
         })
         with self.assertRaisesRegex(ValueError, "closed inventory"):
-            self.scoring.build_score_bundle(legacy_gate_classification)
+            self.scoring.build_score_bundle(outside_inventory)
 
         out_of_order = [gate_evidence(name) for name in EXPECTED_HARD_GATE_ORDER]
         out_of_order[0], out_of_order[1] = out_of_order[1], out_of_order[0]

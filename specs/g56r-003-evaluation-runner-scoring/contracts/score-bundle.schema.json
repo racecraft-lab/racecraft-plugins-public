@@ -85,10 +85,11 @@
       ]
     },
     "score_disposition": {"enum": ["accepted", "gate_failed", "non_scorable", "invalidated"]},
-    "failure_plane": {"enum": ["none", "treatment", "fixture", "scorer", "ballot", "adjudication", "candidate", "infrastructure", "evidence_boundary", "partition", "schema"]},
+    "failure_plane": {"enum": ["none", "gate", "treatment", "fixture", "scorer", "ballot", "adjudication", "candidate", "infrastructure", "evidence_boundary", "partition", "schema"]},
     "failure_code": {
       "enum": [
         "none",
+        "gate_failed",
         "treatment_misdelivery",
         "service_reroute",
         "mandatory_telemetry_missing",

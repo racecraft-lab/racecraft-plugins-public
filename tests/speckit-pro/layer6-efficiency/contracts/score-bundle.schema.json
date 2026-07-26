@@ -97,6 +97,7 @@
     "failure_plane": {
       "enum": [
         "none",
+        "gate",
         "treatment",
         "fixture",
         "scorer",
@@ -112,6 +113,7 @@
     "failure_code": {
       "enum": [
         "none",
+        "gate_failed",
         "treatment_misdelivery",
         "service_reroute",
         "mandatory_telemetry_missing",

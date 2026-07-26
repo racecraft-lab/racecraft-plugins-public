@@ -29,6 +29,7 @@ GATE_FAILURE_CODES = ("none", "gate_failed", "gate_missing", "evidence_missing",
 SCORE_DISPOSITIONS = ("accepted", "gate_failed", "non_scorable", "invalidated")
 SCORE_FAILURE_PLANES = (
     "none",
+    "gate",
     "treatment",
     "fixture",
     "scorer",
@@ -42,6 +43,7 @@ SCORE_FAILURE_PLANES = (
 )
 SCORE_FAILURE_CODES = (
     "none",
+    "gate_failed",
     "treatment_misdelivery",
     "service_reroute",
     "mandatory_telemetry_missing",
@@ -97,6 +99,10 @@ CANDIDATE_TERMINALS = {
 }
 FAILURE_CODE_PLANES = {
     "none": "none",
+    # A hard gate that RAN and rejected the candidate's output. Distinct from a
+    # candidate TERMINAL outcome, which stays on the candidate plane as an
+    # AC-2.7 estimand-retained record with acceptance zero.
+    "gate_failed": "gate",
     "treatment_misdelivery": "treatment",
     "service_reroute": "treatment",
     "mandatory_telemetry_missing": "treatment",
@@ -1358,25 +1364,49 @@ def _validated_gate_row(value: object) -> dict:
     }
 
 
+# Three gate conditions, three classifications. None may collapse onto another.
+#
+# A gate that RAN and REJECTED the output is a scored quality outcome. A gate
+# that never reported is an evidence shortfall. AC-2.7 keeps candidate-caused
+# failures inside the estimand with acceptance zero, while missing evidence
+# removes the attempt from scoring entirely -- so recording a rejection as a
+# shortfall moves real failures out of the denominator, inflates the
+# evidence-shortfall count by the same attempts, and flatters any candidate that
+# fails hard gates. It also defeats AC-2.14's attrition accounting, which exists
+# to make exactly that kind of silent complete-case filtering visible.
+GATE_FAILED_CLASSIFICATION = ("gate_failed", "gate", "gate_failed")
+GATE_EVIDENCE_MISSING_CLASSIFICATION = (
+    "non_scorable",
+    "evidence_boundary",
+    "required_evidence_missing",
+)
+GATE_SHAPE_INVALID_CLASSIFICATION = ("gate_failed", "schema", "schema_invalid")
+
+
 def _gate_result_score_classification(gate_result: dict) -> tuple[str, str, str] | None:
     if gate_result["gate_disposition"] == "passed":
         return None
     if gate_result["failure_code"] == "gate_order_invalid":
-        return ("gate_failed", "schema", "schema_invalid")
-    return ("non_scorable", "evidence_boundary", "required_evidence_missing")
+        return GATE_SHAPE_INVALID_CLASSIFICATION
+    if gate_result["failure_code"] == "gate_failed":
+        return GATE_FAILED_CLASSIFICATION
+    # gate_missing and evidence_missing: the gate never reported, so there is
+    # nothing to conclude about the candidate either way.
+    return GATE_EVIDENCE_MISSING_CLASSIFICATION
 
 
 def _gate_rows_score_classification(gates: list[dict]) -> tuple[str, str, str] | None:
     gate_names = [gate["gate"] for gate in gates]
     if len(gate_names) != len(HARD_GATE_ORDER) or set(gate_names) != _GATE_SET:
-        return ("non_scorable", "evidence_boundary", "required_evidence_missing")
+        return GATE_EVIDENCE_MISSING_CLASSIFICATION
     if tuple(gate_names) != HARD_GATE_ORDER:
-        return ("gate_failed", "schema", "schema_invalid")
-    if any(
-        not gate["pass"] or gate["evidence_digest"] == digest([])
-        for gate in gates
-    ):
-        return ("non_scorable", "evidence_boundary", "required_evidence_missing")
+        return GATE_SHAPE_INVALID_CLASSIFICATION
+    # Absent evidence is checked first: a gate whose evidence is missing has
+    # established nothing, so its pass flag is not a candidate verdict.
+    if any(gate["evidence_digest"] == digest([]) for gate in gates):
+        return GATE_EVIDENCE_MISSING_CLASSIFICATION
+    if any(not gate["pass"] for gate in gates):
+        return GATE_FAILED_CLASSIFICATION
     return None
 
 
