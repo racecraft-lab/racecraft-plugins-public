@@ -289,9 +289,33 @@ with `{field_path, category}`; `nullable_exemptions`;
 - Carries no margins, no sample sizes, no terminal thresholds — all three are
   schema-pinned to `false`.
 - Calibration-partition pairs bind this instead of the analysis plan, and the
-  frozen analysis plan references it back through `calibration_binding`. This is
-  the resolution of the circular dependency: the plan freezes only after
+  frozen analysis plan references it back through `calibration_protocol_binding`.
+  This is the resolution of the circular dependency: the plan freezes only after
   calibration, so a calibration pair cannot bind a plan that does not yet exist.
+- The protocol proves the pre-calibration **design** only. The plan separately
+  binds a `calibration_completion_binding` proving which **execution** produced
+  its numbers; see the Calibration Completion entity below. Both are required.
+
+## Entity: Calibration Completion
+
+**Authority**: CAR-003 — `contracts/calibration-completion.schema.json`.
+Mirrors G56R-003's contract of the same name.
+
+- Attests that one calibration run finished, and names the evidence it produced:
+  the comparison sets, assignments, score bundles, and the committed pilot record
+  itself, each by `{id, digest}`.
+- Derived entirely from committed evidence. Nothing in it is authored by hand,
+  so its digest cannot be back-fitted to a plan that wants a particular answer.
+- `completion_provenance` pins `analysis_plan_observed: false` and
+  `cohort_outcome_observed: false` by contract — a calibration run that observed
+  either would not be calibration.
+- `independent_review_binding` is nullable here and non-nullable on the twin.
+  CAR-003's calibration protocol is a leaner anti-cycle token than the Codex
+  protocol, which carries scorer, rubric, adjudicator, cache-policy, and
+  independent-review bindings. The CAR-003 pilot scored with declared
+  deterministic rubric scorers, so no independent review artifact exists to bind
+  and one is deliberately **not** authored retroactively to fill the field.
+  Closing that protocol-shape gap is roadmap spec CAR-012.
 
 ## Entity: Role Fixture Contract and Corpus
 

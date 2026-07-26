@@ -1404,13 +1404,82 @@ class FrozenAnalysisPlanTests(unittest.TestCase):
     def test_the_plan_binds_the_calibration_protocol_it_was_derived_from(self) -> None:
         protocol = self.pilot["calibration_protocol"]
         self.assertEqual(
-            self.plan["calibration_binding"],
+            self.plan["calibration_protocol_binding"],
             {"id": protocol["calibration_protocol_id"], "digest": protocol["protocol_digest"]},
         )
         # FR-037: the protocol carries none of the numbers the plan freezes, which
         # is the whole reason a calibration pair binds it instead of the plan.
         for carried in ("carries_margins", "carries_sample_sizes", "carries_terminal_thresholds"):
             self.assertFalse(protocol[carried], carried)
+
+    def test_the_plan_binds_the_calibration_run_its_numbers_came_from(self) -> None:
+        """FR-038: the protocol proves the design; completion proves the execution.
+
+        Binding only the protocol let the plan claim derivation from a design
+        without naming the run that produced its variance estimates. The pilot
+        identity was committed only incidentally, inside the SC-012 pre-cohort
+        absence attestation, whose purpose is proving no cohort outcome existed.
+        """
+        completion = load_json(RESEARCH_ROOT / "claude-car-003-calibration-completion.json")
+        binding = self.plan["calibration_completion_binding"]
+
+        self.assertEqual(binding["id"], completion["calibration_completion_id"])
+        self.assertEqual(binding["digest"], completion["calibration_completion_digest"])
+        self.assertEqual(
+            binding["digest"],
+            digest_over(
+                {k: v for k, v in completion.items() if k != "calibration_completion_digest"}
+            ),
+            "the completion record does not seal against the digest the plan binds",
+        )
+        # It must attest to the pilot the plan was actually derived from, and to
+        # the same protocol the plan binds separately.
+        self.assertIn(
+            {"id": self.pilot["pilot_id"], "digest": self.pilot["pilot_digest"]},
+            completion["calibration_evidence_bindings"],
+        )
+        self.assertEqual(
+            completion["calibration_protocol_binding"], self.plan["calibration_protocol_binding"]
+        )
+
+    def test_the_completion_record_proves_calibration_preceded_the_plan(self) -> None:
+        completion = load_json(RESEARCH_ROOT / "claude-car-003-calibration-completion.json")
+        provenance = completion["completion_provenance"]
+
+        self.assertIs(provenance["calibration_execution_complete"], True)
+        # Both pinned false by contract: no plan exists while calibration runs,
+        # and no cohort outcome may precede it.
+        self.assertIs(provenance["analysis_plan_observed"], False)
+        self.assertIs(provenance["cohort_outcome_observed"], False)
+        self.assertEqual(completion["partition"]["partition_type"], "calibration")
+        self.assertIs(completion["partition"]["qualification_eligible"], False)
+        # Every bundle the completion attests to is a real pilot comparison set.
+        pilot_sets = {
+            entry["decision_bundle"]["comparison_set_binding"]["id"]
+            for entry in self.pilot["decision_bundles"]
+        }
+        self.assertEqual(
+            {b["id"] for b in completion["comparison_set_bindings"]}, pilot_sets
+        )
+
+    def test_the_completion_record_validates_against_its_contract(self) -> None:
+        completion = load_json(RESEARCH_ROOT / "claude-car-003-calibration-completion.json")
+        schema = load_json(CONTRACT_ROOT / "calibration-completion.schema.json")
+        self.assertEqual(
+            schema_findings(completion, schema, schema.get("$defs", {})), []
+        )
+
+    def test_the_independent_review_absence_is_recorded_not_fabricated(self) -> None:
+        """CAR-003 scored calibration with deterministic rubric scorers.
+
+        No independent review artifact exists to bind, so the field is null
+        rather than back-filled. G56R-003's protocol carries scorer, rubric,
+        adjudicator, cache-policy, and independent-review bindings that CAR-003's
+        leaner anti-cycle protocol does not; closing that shape gap is CAR-012.
+        """
+        completion = load_json(RESEARCH_ROOT / "claude-car-003-calibration-completion.json")
+        self.assertIsNone(completion["completion_provenance"]["independent_review_binding"])
+        self.assertNotIn("independent_review_binding", self.pilot["calibration_protocol"])
 
     def test_every_sample_size_derives_from_a_measured_paired_difference(self) -> None:
         measured = self.pilot["variance_estimates"]["paired_within_task_difference"]

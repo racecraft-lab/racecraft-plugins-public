@@ -1,5 +1,5 @@
 {
-  "analysis_plan_digest": "sha256:2c6b9901dd8981632cedb0c343744c1882c4a582ce70820a00649748bb4fbc07",
+  "analysis_plan_digest": "sha256:8082c2eb9791e9f4d13a0779c16d2ab86cf968d95e267b7ed6f08c5b0b290616",
   "analysis_plan_id": "CAR-003-ANALYSIS-PLAN-V1",
   "attrition_policy": {
     "cap": 0.1,
@@ -12,7 +12,11 @@
     "policy_digest": "sha256:2144a6f0afda7e9a54a12740bea0f5267f69429276daf79290835f8622259249",
     "policy_id": "CAR-003-CACHE-ISOLATION-POLICY-V1"
   },
-  "calibration_binding": {
+  "calibration_completion_binding": {
+    "digest": "sha256:84fab3454dc0ca2240bdec47765f36d40cce14f25e4f10439c96d81c29d693c1",
+    "id": "CAR-003-CAL-COMPLETION-20260725T135543Z"
+  },
+  "calibration_protocol_binding": {
     "digest": "sha256:21bfb805d62fb2b8ad5462750a71d33dd825d30376208303c7f445f95d5bcb86",
     "id": "CAR-003-CAL-PILOT-PROTOCOL-V1"
   },

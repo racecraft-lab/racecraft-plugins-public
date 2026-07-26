@@ -10,7 +10,8 @@
     "analysis_plan_id",
     "analysis_plan_digest",
     "status",
-    "calibration_binding",
+    "calibration_protocol_binding",
+    "calibration_completion_binding",
     "workload_manifest",
     "reliability_guardrails",
     "cache_policy",
@@ -31,8 +32,12 @@
     "analysis_plan_id": {"type": "string", "minLength": 1},
     "analysis_plan_digest": {"$ref": "#/$defs/digest"},
     "status": {"const": "frozen"},
-    "calibration_binding": {
-      "description": "FR-037: references the versioned calibration protocol that calibration-partition pairs bind. This is the receiving end of the circular-dependency resolution; the plan freezes after calibration, so calibration pairs bind the protocol instead of the plan.",
+    "calibration_protocol_binding": {
+      "description": "FR-037: the versioned calibration protocol that calibration-partition pairs bind. This is the receiving end of the circular-dependency resolution; the plan freezes after calibration, so calibration pairs bind the protocol instead of the plan. It proves the pre-calibration DESIGN.",
+      "$ref": "#/$defs/binding"
+    },
+    "calibration_completion_binding": {
+      "description": "FR-038: the completed calibration run whose evidence produced this plan's variance estimates and sample sizes. Distinct from calibration_protocol_binding and required alongside it: the protocol proves what was planned, this proves what was executed. Binding only the protocol let a frozen plan claim derivation from a design without naming the run its numbers came from -- the pilot identity was committed only incidentally, inside the SC-012 pre-cohort absence attestation, whose purpose is proving no cohort outcome existed rather than proving calibration provenance. Completion alone is not sufficient either; both are required, matching G56R-003.",
       "$ref": "#/$defs/binding"
     },
     "workload_manifest": {

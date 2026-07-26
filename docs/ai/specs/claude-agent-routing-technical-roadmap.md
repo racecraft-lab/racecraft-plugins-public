@@ -982,6 +982,28 @@ on both platforms
   or a bundle absorbing a live failure while declaring `accepted`. The same
   coordination covers `authority_failures`, where FR-028's "required provenance is
   missing" is pinned to the existing `malformed_catalog` rather than widened.
+- **Calibration-protocol shape parity.** G56R-003's calibration protocol carries
+  scorer, rubric, adjudicator, cache-policy, and independent-review bindings plus
+  a status and version; CAR-003's is a leaner anti-cycle token carrying the
+  objective bindings, the partition binding, and the three
+  carries-no-margins/sample-sizes/thresholds assertions. CAR-003 adopted the
+  twin's calibration-completion split, but had to make
+  `completion_provenance.independent_review_binding` nullable because its
+  protocol has no such binding to reference and the calibration pilot scored with
+  deterministic rubric scorers rather than model scorers — so no independent
+  review artifact exists, and authoring one retroactively to fill a required
+  field would be back-fitting. Bring the two protocols to one shape; the
+  nullability then closes on its own.
+- **The `gate` failure plane.** G56R-003's *runtime* score-bundle contract
+  carries `failure_plane=gate` and `failure_code=gate_failed`, live
+  (`qualification_scoring.py` maps `gate_failed` → `gate`), while its own
+  spec-scoped copy and both CAR-003 copies carry neither. That is simultaneously
+  an internal G56R inconsistency and a cross-platform divergence, and it collides
+  with the FR-014 ruling that files a missing gate on
+  `evidence_boundary`/`required_evidence_missing`. Note that ruling's supporting
+  diff was run against the spec-scoped copies only, so it was agreed on an
+  incomplete measurement and is open to re-argument. `gate_failed` is separately a
+  legitimate `score_disposition` member on both platforms and is not in question.
 - **Carry over any G56R-003 handoff item still open at merge.** The CAR-003 twin
   handoff records the twin-side additions: FR-034's total plane-by-code mapping,
   FR-014's missing-gate sentence with its `non_scorable` disposition consequence,
