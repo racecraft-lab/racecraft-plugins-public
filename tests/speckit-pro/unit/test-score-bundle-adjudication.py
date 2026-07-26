@@ -73,6 +73,7 @@ FAILURE_PLANES = (
     "candidate",
     "evidence_boundary",
     "fixture",
+    "gate",
     "infrastructure",
     "none",
     "partition",
@@ -806,6 +807,60 @@ class ClosedTaxonomyTests(unittest.TestCase):
                 self.assertEqual(plane, self.module.FAILURE_PLANE_BY_CODE[code])
         self.assertEqual(
             set(self.module.FAILURE_PLANE_BY_CODE.values()), set(self.module.FAILURE_PLANES)
+        )
+
+    def test_a_failed_gate_is_not_a_candidate_terminal_outcome(self) -> None:
+        """FR-014, AC-2.7: a gate rejection and a terminal failure are different facts.
+
+        A hard gate that ran and rejected the output was previously filed as
+        ``(candidate, candidate_failed)`` -- the same code AC-2.7 uses for an
+        estimand-retained terminal outcome. A score bundle carries no
+        ``terminal_state``, so a run that completed cleanly and failed a safety
+        gate was indistinguishable from one that crashed. Those imply completely
+        different remediation, and AC-2.7 lists its retained categories
+        specifically: failures, timeouts, cancellations, budget exhaustion,
+        abandoned branches. A gate rejection is not among them.
+        """
+        gate_plane, gate_code = self.module.FAILED_GATE_FAILURE
+        self.assertEqual((gate_plane, gate_code), ("gate", "gate_failed"))
+        self.assertEqual(self.module.failure_plane_for("gate_failed"), "gate")
+
+        # The candidate plane keeps its AC-2.7 terminal codes, and none of them
+        # is reachable from a gate rejection.
+        for terminal_code in (
+            "candidate_failed",
+            "candidate_timed_out",
+            "candidate_cancelled",
+            "candidate_budget_exhausted",
+            "candidate_abandoned",
+        ):
+            with self.subTest(code=terminal_code):
+                self.assertEqual(self.module.failure_plane_for(terminal_code), "candidate")
+                self.assertNotEqual(terminal_code, gate_code)
+
+        # Both still bind the gate_failed disposition -- the distinction is the
+        # plane and code, not the disposition.
+        self.assertEqual(
+            self.module.bind_disposition(gate_plane, gate_code, "none"), "gate_failed"
+        )
+
+    def test_the_missing_and_failed_and_duplicated_gate_cases_stay_distinct(self) -> None:
+        """Three gate conditions, three pairings. None may collapse onto another."""
+        pairings = {
+            "missing": self.module.MISSING_GATE_FAILURE,
+            "duplicated": self.module.DUPLICATE_GATE_FAILURE,
+            "failed": self.module.FAILED_GATE_FAILURE,
+        }
+        self.assertEqual(len(set(pairings.values())), 3, pairings)
+        self.assertEqual(pairings["missing"], ("evidence_boundary", "required_evidence_missing"))
+        self.assertEqual(pairings["duplicated"], ("schema", "schema_invalid"))
+        self.assertEqual(pairings["failed"], ("gate", "gate_failed"))
+        # A missing gate is not scorable; a failed gate is a scored rejection.
+        self.assertEqual(
+            self.module.bind_disposition(*pairings["missing"], "none"), "non_scorable"
+        )
+        self.assertEqual(
+            self.module.bind_disposition(*pairings["failed"], "none"), "gate_failed"
         )
 
     def test_the_none_code_is_the_only_member_on_the_none_plane(self) -> None:

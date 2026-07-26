@@ -994,16 +994,55 @@ on both platforms
   review artifact exists, and authoring one retroactively to fill a required
   field would be back-fitting. Bring the two protocols to one shape; the
   nullability then closes on its own.
-- **The `gate` failure plane.** G56R-003's *runtime* score-bundle contract
-  carries `failure_plane=gate` and `failure_code=gate_failed`, live
-  (`qualification_scoring.py` maps `gate_failed` → `gate`), while its own
-  spec-scoped copy and both CAR-003 copies carry neither. That is simultaneously
-  an internal G56R inconsistency and a cross-platform divergence, and it collides
-  with the FR-014 ruling that files a missing gate on
-  `evidence_boundary`/`required_evidence_missing`. Note that ruling's supporting
-  diff was run against the spec-scoped copies only, so it was agreed on an
-  incomplete measurement and is open to re-argument. `gate_failed` is separately a
-  legitimate `score_disposition` member on both platforms and is not in question.
+- **Where a failed hard gate is recorded, and what the `candidate` plane means.**
+  The two platforms model the `candidate` failure plane differently, and the
+  difference is substantive rather than cosmetic.
+
+  G56R-003 constrains it tightly: a `candidate`-plane bundle must carry a
+  `terminal_state` that matches its failure code through a closed
+  terminal-to-code map (`failed`, `timed_out`, `cancelled`, `budget_exhausted`,
+  `abandoned`), must record `score_disposition=accepted`, and must record
+  acceptance `0.0`. That is AC-2.7 implemented literally — a candidate-caused
+  failure stays inside the estimand, scored, with acceptance zero. On that
+  platform `candidate` means *the run terminated badly*.
+
+  CAR-003 has no such coupling. `FAILED_GATE_FAILURE = ("candidate",
+  "candidate_failed")` fires whenever a hard gate fails, with no reference to
+  terminal state, and yields disposition `gate_failed`. So a run that completed
+  cleanly but failed a safety, grounding, or mutation gate is recorded on this
+  side as `candidate_failed` — which reads as a run that failed.
+
+  A failed hard gate is not a candidate terminal outcome: the run can finish
+  perfectly and still be rejected by a deterministic contract check. G56R-003
+  previously carried a private `failure_plane=gate` for exactly that case. It was
+  reported to the twin as a parity violation and removed in `a0c5399a`, which
+  left nowhere correct to file a failed gate and produced a conflation of failed
+  gates with missing evidence — caught and reported by the twin rather than
+  shipped silently. That prompt was wrong: the plane it removed was serving a
+  real distinction this side lacks.
+
+  **Resolved on the Claude side; the twin needs to restore what it removed.**
+  CAR-003 adopted the twin's original distinction rather than defending its own
+  overload: `failure_plane=gate` and `failure_code=gate_failed` now exist in the
+  Claude taxonomy, `FAILED_GATE_FAILURE` routes there, and `candidate_failed`
+  reverts to meaning only an FR-020 estimand-retained terminal outcome. FR-034
+  carries an amendment recording the addition and why it is not a coined member:
+  the twin published this exact pair until `a0c5399a` removed it on a Claude-side
+  report that misread it as a parity violation.
+
+  What remains is the twin reverting that removal, which also repairs the
+  conflation the removal caused — with `gate` gone and `candidate` reserved for
+  terminal outcomes, G56R had nowhere correct to file a failed gate and fell back
+  to the missing-evidence pairing, so a candidate that fails a hard gate is
+  currently recorded as an evidence shortfall. That is an estimand defect, not a
+  labeling one: AC-2.7 keeps candidate-attributable failures in the denominator,
+  and an evidence shortfall removes them.
+
+  Until both sides land it, the taxonomies are knowingly out of step at 12/36
+  versus 11/35 and this is the one sanctioned divergence. The FR-014 ruling for a
+  *missing* gate (`evidence_boundary`/`required_evidence_missing`, disposition
+  `non_scorable`) is unaffected and stands. `gate_failed` as a `score_disposition`
+  member is correct on both platforms and was never in question.
 - **Carry over any G56R-003 handoff item still open at merge.** The CAR-003 twin
   handoff records the twin-side additions: FR-034's total plane-by-code mapping,
   FR-014's missing-gate sentence with its `non_scorable` disposition consequence,

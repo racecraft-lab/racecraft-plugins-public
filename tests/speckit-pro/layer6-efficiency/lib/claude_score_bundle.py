@@ -92,7 +92,10 @@ GATE_RESULT_FIELDS = ("evidence_digest", "gate", "pass")
 # the two conditions are never filed together.
 MISSING_GATE_FAILURE = ("evidence_boundary", "required_evidence_missing")
 DUPLICATE_GATE_FAILURE = ("schema", "schema_invalid")
-FAILED_GATE_FAILURE = ("candidate", "candidate_failed")
+# FR-014: a gate that ran and rejected the output. Distinct from a candidate
+# TERMINAL failure, which stays on the candidate plane as an AC-2.7
+# estimand-retained outcome.
+FAILED_GATE_FAILURE = ("gate", "gate_failed")
 
 
 @dataclass(frozen=True)
@@ -551,6 +554,17 @@ SCORE_DISPOSITIONS = ("accepted", "gate_failed", "non_scorable", "invalidated")
 FAILURE_PLANE_BY_CODE: Mapping[str, str] = MappingProxyType(
     {
         "none": "none",
+        # FR-014, FR-034. A hard gate that RAN and REJECTED the candidate's output
+        # is its own plane. It was previously filed as (candidate,
+        # candidate_failed), which overloaded that code: `candidate_failed` is
+        # also an AC-2.7 estimand-retained TERMINAL outcome, and a score bundle
+        # carries no terminal_state to tell the two apart. A run that completed
+        # cleanly and failed a safety gate was therefore indistinguishable from a
+        # run that crashed -- two facts implying completely different
+        # remediation. AC-2.7 lists its retained categories specifically
+        # (failures, timeouts, cancellations, budget exhaustion, abandoned
+        # branches); a gate rejection is a quality outcome, not a terminal one.
+        "gate_failed": "gate",
         "treatment_misdelivery": "treatment",
         "service_reroute": "treatment",
         "mandatory_telemetry_missing": "treatment",
@@ -614,6 +628,7 @@ SERVICE_REROUTE_FAILURE_CODE = "service_reroute"
 # "evidence sufficient, bar not cleared" reading FR-019 gives a failed gate.
 GATE_STAGE_CODES = frozenset(
     {
+        "gate_failed",
         "candidate_failed",
         "candidate_timed_out",
         "candidate_cancelled",
