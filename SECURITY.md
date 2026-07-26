@@ -7,12 +7,13 @@ documentation.
 
 ## Reporting a vulnerability
 
-Use GitHub's private reporting: open the **Security** tab and choose
-**Report a vulnerability**. That opens a private advisory visible only to the
-maintainers.
+Use GitHub's private reporting: open the **Security** tab of this repository and
+choose **Report a vulnerability**. That opens a private advisory visible only to
+the maintainers.
 
-If private advisories are unavailable to you, email
-<fgabelmannjr@racecraft.co>.
+If private advisories are unavailable to you, contact a maintainer through their
+GitHub profile and ask for a private channel. Do not include vulnerability
+details in that first message.
 
 Do not open a public issue, and do not describe the problem in a PR title,
 branch name, or commit message before a fix ships.
