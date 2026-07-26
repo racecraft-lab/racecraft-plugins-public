@@ -1142,7 +1142,12 @@ def decision_bundle(module: object, **overrides: object) -> dict[str, object]:
         "comparison_set_binding": {"id": "CS-CAL-01", "digest": digest_over({"comparison_set": 1})},
         "assignment_bindings": [{"id": "CS-CAL-01-A0", "digest": digest_over({"assignment": 0})}],
         "score_bundle_bindings": [{"id": "SB-CAL-01-A0", "digest": digest_over({"score_bundle": 0})}],
-        "analysis_plan_binding": {"id": "PLAN-01", "digest": digest_over({"plan": 1})},
+        # FR-037: this is a calibration partition, so it binds the protocol. It
+        # cannot bind a plan that does not freeze until calibration finishes.
+        "calibration_protocol_binding": {
+            "id": "CAL-PROTOCOL-01",
+            "digest": digest_over({"protocol": 1}),
+        },
         "analysis_output_id": "AO-CAL-01",
         "ordered_gate_results": list(
             module.evaluate_ladder({gate: "pass" for gate in module.LADDER_GATES})  # type: ignore[attr-defined]
@@ -1249,7 +1254,7 @@ def schema_findings(instance: object, node: object, defs: dict, path: str = "") 
         return [] if instance in node["enum"] else [f"{where}: {instance!r} not in enum"]
     declared = node.get("type")
     if declared is not None:
-        matched = {
+        by_name = {
             "object": isinstance(instance, dict),
             "array": isinstance(instance, list),
             "string": isinstance(instance, str),
@@ -1257,8 +1262,14 @@ def schema_findings(instance: object, node: object, defs: dict, path: str = "") 
             "integer": isinstance(instance, int) and not isinstance(instance, bool),
             "number": isinstance(instance, (int, float)) and not isinstance(instance, bool),
             "null": instance is None,
-        }.get(str(declared))
-        if matched is not True:
+        }
+        # JSON Schema allows a union, e.g. {"type": ["integer", "null"]}, and it
+        # is satisfied when ANY member matches. Looking the declaration up by
+        # str() collapsed a list to "['integer', 'null']", which is no key at
+        # all, so every union-typed field was reported as a type violation no
+        # matter what it held.
+        candidates = declared if isinstance(declared, list) else [declared]
+        if not any(by_name.get(str(name)) is True for name in candidates):
             return [f"{where}: expected type {declared!r}, got {type(instance).__name__}"]
     if isinstance(instance, str):
         minimum_length = node.get("minLength")
@@ -1563,6 +1574,121 @@ class FrozenAnalysisPlanTests(unittest.TestCase):
                 )
 
 
+class CalibrationDecisionBindingTests(unittest.TestCase):
+    """FR-037 at the decision layer: which artifact a bundle binds follows from
+    eligibility, not from what the caller passed.
+
+    FR-037 removed the calibration cycle at the comparison pair and again at the
+    experiment policy. The decision bundle is the next edge that carries the same
+    binding, and contract 1.0.0 required ``analysis_plan_binding`` on every
+    bundle unconditionally -- including a ``calibration_complete`` bundle
+    produced before any plan exists. The only way to satisfy that was to record
+    the calibration protocol's ``{id, digest}`` under the plan's name, so the
+    bundle stated a provenance that was not true. 1.1.0 substitutes on
+    ``qualification_eligible``.
+    """
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_analysis_decision, "claude_analysis_decision is not importable")
+        self.module = claude_analysis_decision
+        self.schema = load_json(DECISION_SCHEMA_PATH)
+
+    # The contract requires a pair on both binding arrays (minItems 2); the
+    # shared helper carries one because the tests that use it exercise the
+    # decision ladder rather than the contract.
+    PAIRED = {
+        "assignment_bindings": [
+            {"id": "CS-CAL-01-A0", "digest": digest_over({"assignment": 0})},
+            {"id": "CS-CAL-01-A1", "digest": digest_over({"assignment": 1})},
+        ],
+        "score_bundle_bindings": [
+            {"id": "SB-CAL-01-A0", "digest": digest_over({"score_bundle": 0})},
+            {"id": "SB-CAL-01-A1", "digest": digest_over({"score_bundle": 1})},
+        ],
+    }
+
+    def validate(self, bundle: dict[str, object]) -> list[str]:
+        return schema_findings(bundle, self.schema, self.schema.get("$defs", {}))
+
+    def test_an_ineligible_decision_binds_the_protocol_and_validates(self) -> None:
+        bundle = decision_bundle(self.module, **self.PAIRED)
+        self.assertIn("calibration_protocol_binding", bundle)
+        self.assertNotIn("analysis_plan_binding", bundle)
+        self.assertEqual(bundle["schema_version"], "1.1.0")
+        self.assertEqual(self.validate(bundle), [])
+
+    def test_an_ineligible_decision_may_not_bind_the_analysis_plan(self) -> None:
+        """The defect this version closes, stated as a test."""
+        with self.assertRaises(self.module.AnalysisDecisionError):
+            decision_bundle(
+                self.module,
+                calibration_protocol_binding=None,
+                analysis_plan_binding={"id": "PLAN-01", "digest": digest_over({"plan": 1})},
+            )
+
+    def test_an_ineligible_decision_may_not_bind_both(self) -> None:
+        with self.assertRaises(self.module.AnalysisDecisionError):
+            decision_bundle(
+                self.module,
+                analysis_plan_binding={"id": "PLAN-01", "digest": digest_over({"plan": 1})},
+            )
+
+    def test_an_ineligible_decision_must_bind_something(self) -> None:
+        with self.assertRaises(self.module.AnalysisDecisionError):
+            decision_bundle(self.module, calibration_protocol_binding=None)
+
+    def test_an_eligible_decision_binds_the_plan_and_not_the_protocol(self) -> None:
+        eligible = {
+            "partition_id": "CAR-003-SELECT-01",
+            "partition_type": "selection",
+            "qualification_eligible": True,
+        }
+        bundle = decision_bundle(
+            self.module,
+            partition=eligible,
+            calibration_protocol_binding=None,
+            analysis_plan_binding={"id": "PLAN-01", "digest": digest_over({"plan": 1})},
+            decision="no_qualification",
+            decision_reasons=["floors_failed"],
+            **self.PAIRED,
+        )
+        self.assertIn("analysis_plan_binding", bundle)
+        self.assertNotIn("calibration_protocol_binding", bundle)
+        self.assertEqual(self.validate(bundle), [])
+
+        with self.assertRaises(self.module.AnalysisDecisionError):
+            decision_bundle(
+                self.module,
+                partition=eligible,
+                decision="no_qualification",
+                decision_reasons=["floors_failed"],
+            )
+
+    def test_the_contract_still_accepts_evidence_sealed_under_1_0_0(self) -> None:
+        """A frozen record is not retroactively invalid because the contract improved.
+
+        The committed calibration pilot declared 1.0.0 and bound the protocol
+        under the plan's name, which is what 1.0.0 required. Regenerating it
+        would mean a new live run whose measurements would differ from the ones
+        the frozen analysis plan was derived from, so the contract keeps 1.0.0
+        valid rather than invalidating sealed evidence retroactively.
+        """
+        pilot = load_json(CALIBRATION_PILOT_PATH)
+        bundles = [entry["decision_bundle"] for entry in pilot["decision_bundles"]]
+        self.assertTrue(bundles, "the committed pilot records no decision bundles")
+        for bundle in bundles:
+            with self.subTest(bundle=bundle["decision_bundle_id"]):
+                self.assertEqual(bundle["schema_version"], "1.0.0")
+                self.assertIn("analysis_plan_binding", bundle)
+                self.assertEqual(self.validate(bundle), [])
+
+    def test_a_1_1_0_bundle_carrying_the_legacy_shape_is_refused_by_the_contract(self) -> None:
+        """Version alone must not be a loophole."""
+        bundle = dict(decision_bundle(self.module))
+        bundle["analysis_plan_binding"] = bundle.pop("calibration_protocol_binding")
+        self.assertNotEqual(self.validate(bundle), [])
+
+
 TEST_CASES = (
     OrderedLadderTests,
     ParetoDominanceTests,
@@ -1571,6 +1697,7 @@ TEST_CASES = (
     GuardrailAndErrorControlTests,
     DecisionBundleWriteGuardTests,
     ReplayAndNonPoolingTests,
+    CalibrationDecisionBindingTests,
     FrozenAnalysisPlanTests,
 )
 

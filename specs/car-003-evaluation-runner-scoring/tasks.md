@@ -534,12 +534,12 @@ reference for them would be false traceability:
      Deliberately not coined unilaterally; tracked as `checklists/performance.md`
      CHK051.
   4. **A calibration decision binds the analysis plan it cannot have** —
-     `analysis-decision.schema.json` requires `analysis_plan_binding`
-     unconditionally on both platforms, so the calibration pilot writes the
-     protocol binding into the plan-named field. The FR-037 substitution has to
-     reach one edge further than it does today. Not fixable on one side: both
-     contracts pin `schema_version` to `const "1.0.0"` and committed evidence
-     declares it, so the fix is a coordinated version bump.
+     **already applied on this side.** `analysis-decision.schema.json` accepts
+     `schema_version` 1.0.0 and 1.1.0: 1.0.0 preserves the legacy unconditional
+     plan binding so committed evidence stays conforming to the version it was
+     sealed under, and 1.1.0 substitutes the calibration protocol on
+     `qualification_eligible`. The open work is bringing the Codex twin into
+     line, not changing this side.
 
   None is slice-blocking.
 - Avoid: implementing a second materializer, editing CAR-002 evidence, adding a

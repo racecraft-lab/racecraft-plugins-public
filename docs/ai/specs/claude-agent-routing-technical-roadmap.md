@@ -956,17 +956,18 @@ on both platforms
 
 **Scope:**
 
-- **Analysis-decision calibration binding.** Both platforms require
-  `analysis_plan_binding` unconditionally on every decision bundle, including a
-  `calibration_complete` bundle produced before any analysis plan exists. The
-  CAR-003 calibration pilot satisfies that requirement by writing the calibration
-  protocol binding into the plan-named field, so a calibration decision claims to
-  bind an artifact it did not. Apply the FR-037 substitution one edge further:
-  a `qualification_eligible=false` decision binds the calibration protocol and not
-  the plan. Both contracts pin `schema_version` to `const "1.0.0"` and committed
-  CAR-003 evidence declares that version, so the change requires a coordinated
-  version bump rather than an in-place tightening — already-sealed evidence must
-  stay conforming to the version it was written under.
+- **Analysis-decision calibration binding — Claude side already applied; the twin
+  needs to catch up.** Both platforms required `analysis_plan_binding`
+  unconditionally on every decision bundle, including a `calibration_complete`
+  bundle produced before any analysis plan exists, so a calibration decision could
+  only satisfy the contract by carrying the protocol's `{id, digest}` under the
+  plan's name. CAR-003 closed this by version increment: `schema_version` accepts
+  `["1.0.0", "1.1.0"]`, 1.0.0 preserving the legacy shape so already-sealed
+  evidence stays conforming to the version it declared, and 1.1.0 substituting the
+  calibration protocol on `qualification_eligible`. The twin's contract still pins
+  `const "1.0.0"` and requires the plan binding unconditionally. Mirror the
+  Claude-side resolution, or agree a different one and land it on both — the same
+  posture as the experiment-policy cycle, which resolved the same way.
 - **CHK051 — `invalidation_reason` has no analysis-plan or budget-change member.**
   FR-056 currently enforces non-pooling through `{id, digest}` binding identity,
   which detects a superseding plan but leaves the invalidation unnamed, so a

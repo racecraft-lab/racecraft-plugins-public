@@ -1716,7 +1716,11 @@ def build_decisions(
                 {"id": item["score_bundle_id"], "digest": item["score_bundle_digest"]}
                 for item in members
             ],
-            "analysis_plan_binding": protocol_binding,
+            # FR-037: a calibration decision binds the protocol, under the
+            # protocol's own name. Contract 1.0.0 required analysis_plan_binding
+            # unconditionally, so this bound the right digest under the wrong
+            # field; 1.1.0 substitutes on qualification_eligible.
+            "calibration_protocol_binding": protocol_binding,
             "analysis_output_id": f"AO-{comparison_set_id}",
             "evidence": {
                 "gate_outcomes": gate_outcomes,

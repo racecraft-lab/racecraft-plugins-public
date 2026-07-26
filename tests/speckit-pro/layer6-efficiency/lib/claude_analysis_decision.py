@@ -80,7 +80,14 @@ REPO_ROOT = Path(__file__).resolve().parents[4]
 LAYER6_ROOT = REPO_ROOT / "tests" / "speckit-pro" / "layer6-efficiency"
 REPLAY_FIXTURE_PATH = LAYER6_ROOT / "fixtures" / "car-003-calibration-replay.json"
 
-SCHEMA_VERSION = "1.0.0"
+# FR-037. 1.1.0 substitutes the calibration protocol for the analysis plan on a
+# qualification-ineligible decision. Under 1.0.0 the plan binding was required
+# unconditionally, so a calibration bundle -- produced before any plan exists --
+# could only satisfy the contract by carrying the protocol's {id, digest} under
+# the plan's name. The contract still accepts 1.0.0 so evidence already sealed
+# under it stays conforming to the version it declared.
+SCHEMA_VERSION = "1.1.0"
+LEGACY_SCHEMA_VERSIONS = ("1.0.0",)
 
 
 class AnalysisDecisionError(AssertionError):
@@ -1084,7 +1091,8 @@ def build_decision_bundle(
     comparison_set_binding: Mapping[str, str],
     assignment_bindings: Sequence[Mapping[str, str]],
     score_bundle_bindings: Sequence[Mapping[str, str]],
-    analysis_plan_binding: Mapping[str, str],
+    analysis_plan_binding: Mapping[str, str] | None = None,
+    calibration_protocol_binding: Mapping[str, str] | None = None,
     analysis_output_id: str,
     ordered_gate_results: Sequence[Mapping[str, str]],
     floor_result: str,
@@ -1104,6 +1112,26 @@ def build_decision_bundle(
         raise AnalysisDecisionError(
             "qualified is unreachable from a partition that is not qualification-eligible"
         )
+    # FR-037: which artifact a bundle binds is decided by eligibility, not by the
+    # caller. An ineligible partition binds the calibration protocol because the
+    # analysis plan does not exist until calibration finishes; binding both, or
+    # the wrong one, is refused rather than silently accepted under whichever
+    # name the caller supplied.
+    eligible = bool(partition.get("qualification_eligible"))
+    required_binding = "analysis_plan_binding" if eligible else "calibration_protocol_binding"
+    forbidden_binding = "calibration_protocol_binding" if eligible else "analysis_plan_binding"
+    supplied = {
+        "analysis_plan_binding": analysis_plan_binding,
+        "calibration_protocol_binding": calibration_protocol_binding,
+    }
+    if supplied[required_binding] is None:
+        raise AnalysisDecisionError(
+            f"a decision with qualification_eligible={eligible} must bind {required_binding}"
+        )
+    if supplied[forbidden_binding] is not None:
+        raise AnalysisDecisionError(
+            f"a decision with qualification_eligible={eligible} must not bind {forbidden_binding}"
+        )
     analysis_output: dict[str, Any] = {
         "analysis_output_id": analysis_output_id,
         "complete": complete,
@@ -1121,7 +1149,7 @@ def build_decision_bundle(
         "comparison_set_binding": dict(comparison_set_binding),
         "assignment_bindings": [dict(item) for item in assignment_bindings],
         "score_bundle_bindings": [dict(item) for item in score_bundle_bindings],
-        "analysis_plan_binding": dict(analysis_plan_binding),
+        required_binding: dict(supplied[required_binding]),
         "analysis_output": analysis_output,
         "ordered_gate_results": [dict(entry) for entry in ordered_gate_results],
         "decision": decision,
@@ -1213,7 +1241,9 @@ def replay_decision(case: Mapping[str, Any]) -> dict[str, Any]:
         comparison_set_binding=case["comparison_set_binding"],
         assignment_bindings=case["assignment_bindings"],
         score_bundle_bindings=case["score_bundle_bindings"],
-        analysis_plan_binding=case["analysis_plan_binding"],
+        # FR-037: the case carries whichever binding its eligibility calls for.
+        analysis_plan_binding=case.get("analysis_plan_binding"),
+        calibration_protocol_binding=case.get("calibration_protocol_binding"),
         analysis_output_id=case["analysis_output_id"],
         ordered_gate_results=ordered,
         floor_result=floor_result,

@@ -13,7 +13,6 @@
     "comparison_set_binding",
     "assignment_bindings",
     "score_bundle_bindings",
-    "analysis_plan_binding",
     "analysis_output",
     "ordered_gate_results",
     "decision",
@@ -22,7 +21,10 @@
     "evidence_refs"
   ],
   "properties": {
-    "schema_version": {"const": "1.0.0"},
+    "schema_version": {
+      "description": "FR-037. 1.0.0 required analysis_plan_binding on every bundle, including a calibration bundle produced before any plan exists; 1.1.0 substitutes the calibration protocol for an ineligible partition. Both are accepted so evidence sealed under 1.0.0 stays conforming to the version it declared -- a frozen record is not retroactively invalid because the contract later improved.",
+      "enum": ["1.0.0", "1.1.0"]
+    },
     "decision_bundle_id": {"type": "string", "minLength": 1},
     "decision_bundle_digest": {"$ref": "#/$defs/digest"},
     "partition": {
@@ -39,6 +41,10 @@
     "assignment_bindings": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/binding"}},
     "score_bundle_bindings": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/binding"}},
     "analysis_plan_binding": {"$ref": "#/$defs/binding"},
+    "calibration_protocol_binding": {
+      "description": "FR-037. A qualification_eligible=false decision binds this instead of analysis_plan_binding. The analysis plan freezes only after calibration, so a calibration decision cannot bind one; under 1.0.0 the pilot satisfied the unconditional requirement by writing the protocol binding into the plan-named field, which recorded the right digest under the wrong name.",
+      "$ref": "#/$defs/binding"
+    },
     "analysis_output": {
       "type": "object",
       "additionalProperties": false,
@@ -110,6 +116,39 @@
       "description": "FR-024: CAR-003 never creates final preferred or fallback route policies. A qualified decision is only reachable from a qualification-eligible partition, and calibration is never qualification-eligible.",
       "if": {"properties": {"decision": {"const": "qualified"}}, "required": ["decision"]},
       "then": {"properties": {"partition": {"properties": {"qualification_eligible": {"const": true}}}}}
+    },
+    {
+      "description": "FR-037, schema_version 1.0.0. The legacy shape: analysis_plan_binding is required on every bundle regardless of eligibility. Preserved exactly so evidence sealed under 1.0.0 remains conforming to the version it declared.",
+      "if": {"properties": {"schema_version": {"const": "1.0.0"}}, "required": ["schema_version"]},
+      "then": {"required": ["analysis_plan_binding"]}
+    },
+    {
+      "description": "FR-037, schema_version 1.1.0. A qualification-eligible decision MUST bind the frozen analysis plan and MUST NOT carry a calibration protocol binding.",
+      "if": {
+        "properties": {
+          "schema_version": {"const": "1.1.0"},
+          "partition": {"properties": {"qualification_eligible": {"const": true}}, "required": ["qualification_eligible"]}
+        },
+        "required": ["schema_version", "partition"]
+      },
+      "then": {
+        "required": ["analysis_plan_binding"],
+        "not": {"required": ["calibration_protocol_binding"]}
+      }
+    },
+    {
+      "description": "FR-037, schema_version 1.1.0. A qualification-ineligible decision MUST bind the calibration protocol and MUST NOT bind the analysis plan, which does not exist when calibration runs. Keyed on qualification_eligible rather than partition_type so the branches are exhaustive: an ineligible screening or selection partition binds the protocol too.",
+      "if": {
+        "properties": {
+          "schema_version": {"const": "1.1.0"},
+          "partition": {"properties": {"qualification_eligible": {"const": false}}, "required": ["qualification_eligible"]}
+        },
+        "required": ["schema_version", "partition"]
+      },
+      "then": {
+        "required": ["calibration_protocol_binding"],
+        "not": {"required": ["analysis_plan_binding"]}
+      }
     }
   ],
   "$defs": {
