@@ -31,12 +31,35 @@ resolution depends on which files actually landed.
 
 ---
 
-## 1. `experiment-policy.schema.json` contradicts FR-037 (latent, not yet blocking)
+## 1. `experiment-policy.schema.json` contradicts FR-037 — RESOLVED on the twin
 
-**Status: the contradiction is CONFIRMED by execution; the "unrunnable pilot"
-claim is REFUTED.** Corrected 2026-07-25 after the twin session triaged this item
-at `6f7daf63`. The original framing below overstated the impact — read the
-ordering note before acting.
+**Status: RESOLVED 2026-07-25 in twin commit `06a77dd3` ("fix(g56r-003): break
+calibration policy cycle"), PR #386.** No further twin action required for this
+item. The history below is retained because the correction sequence matters.
+
+The twin's triage at `6f7daf63` confirmed the contradiction by execution and
+refuted the original "unrunnable pilot" impact claim — its qualification runner
+checks selected bindings rather than validating the closed schema, so nothing was
+blocked. Remediation then landed both fixes:
+
+- Phase-1 contract: `analysis_plan_binding` removed from the base `required` set,
+  `calibration_protocol_binding` added, and an exhaustive `if/then/else` keyed on
+  `partition.qualification_eligible`.
+- Runtime contract: the calibration-only resolution, swapping plan bindings for
+  protocol bindings at **both** the policy and assignment-pair levels — the pair
+  level was not named in the handoff and the twin caught it independently.
+- New `calibration-protocol.schema.json` at both layers, carrying no margins,
+  sample sizes, or terminal thresholds, `additionalProperties: false`.
+- Both analysis-plan contracts now bind the protocol the plan was derived from.
+
+Independently re-verified here against the twin's own contract validator, seven
+cases including three the twin did not report — most importantly an **ineligible
+policy binding the analysis plan**, the original cycle, now rejected as a
+prohibited shape. The ordering constraint was honored: the contradiction fix
+landed first and the enforcement gap remains deferred.
+
+**The original framing in this item overstated the impact.** It is kept below for
+the record, not as current guidance.
 
 **What is wrong.** `analysis_plan_binding` sits in the top-level `required` array
 unconditionally, there is no `calibration_protocol_binding` property at all, and
