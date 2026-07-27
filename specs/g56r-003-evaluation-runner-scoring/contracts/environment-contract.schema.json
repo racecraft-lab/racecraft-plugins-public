@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-003/environment-contract.schema.json",
+  "title": "G56R-003 Pre-execution Environment Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "environment_contract_id",
+    "environment_contract_digest",
+    "status",
+    "client_version_range",
+    "parent_session",
+    "controlled_runtime_overrides",
+    "authentication_mode",
+    "ultra_state",
+    "frozen_at"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "environment_contract_id": {"$ref": "#/$defs/digest"},
+    "environment_contract_digest": {"$ref": "#/$defs/digest"},
+    "status": {"const": "frozen_before_execution"},
+    "client_version_range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["minimum", "maximum"],
+      "properties": {
+        "minimum": {"type": "string", "minLength": 1},
+        "maximum": {"type": "string", "minLength": 1}
+      }
+    },
+    "parent_session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "effort"],
+      "properties": {
+        "model": {"type": "string", "minLength": 1},
+        "effort": {"type": "string", "minLength": 1}
+      }
+    },
+    "controlled_runtime_overrides": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_override_absent",
+        "reasoning_effort_override_absent",
+        "service_tier_override_absent",
+        "model_provider_override_absent",
+        "api_key_override_absent"
+      ],
+      "properties": {
+        "model_override_absent": {"const": true},
+        "reasoning_effort_override_absent": {"const": true},
+        "service_tier_override_absent": {"const": true},
+        "model_provider_override_absent": {"const": true},
+        "api_key_override_absent": {"const": true}
+      }
+    },
+    "authentication_mode": {
+      "enum": ["chatgpt_subscription", "api_key"]
+    },
+    "ultra_state": {"const": "off"},
+    "frozen_at": {"type": "string", "format": "date-time"}
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    }
+  }
+}

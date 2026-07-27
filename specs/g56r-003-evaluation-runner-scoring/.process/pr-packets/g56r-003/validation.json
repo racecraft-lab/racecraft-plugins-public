@@ -1,0 +1,41 @@
+{
+  "body_file": "specs/g56r-003-evaluation-runner-scoring/.process/pr-packets/g56r-003/body.md",
+  "error_class": "none",
+  "exit_code": 0,
+  "failures": [],
+  "mode": "single",
+  "packet_id": "g56r-003",
+  "pr_blocked": false,
+  "remediation_evidence": [],
+  "rule_outcomes": [
+    {
+      "evidence": "no failures",
+      "rule": "packet.validation",
+      "status": "passed"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "source_fingerprints": {
+    "body": {
+      "algorithm": "sha256",
+      "path": "specs/g56r-003-evaluation-runner-scoring/.process/pr-packets/g56r-003/body.md",
+      "sha256": "83f1e5c58ee29d3da18b79b55b1a6cb0557277526a079f67e9861a449d188ff0",
+      "size_bytes": 2848
+    },
+    "packet": {
+      "algorithm": "sha256",
+      "path": "specs/g56r-003-evaluation-runner-scoring/.process/pr-packets/g56r-003.json",
+      "sha256": "1ee2249ee977115d67ccff8886960c17ed17ab1e46f6ec7a50a78a677c91f44b",
+      "size_bytes": 12068
+    }
+  },
+  "status": "passed",
+  "stderr_line": "",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "g56r-003-evaluation-runner-scoring"
+  },
+  "timestamp": "2026-07-25T17:45:04Z",
+  "title_value": "feat(g56r-003): add evaluation runner scoring",
+  "validation_result_path": "specs/g56r-003-evaluation-runner-scoring/.process/pr-packets/g56r-003/validation.json"
+}

@@ -29,6 +29,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/agent_materialization.py",
+        "display": "speckit_pro_runner/agent_materialization.py"
+      },
+      "sha256": "624f5bea134d14eaa1053546f39bb636d0a6e6b60dc65c6f3b0a1b0fc96c9c3d"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/envelope.py",
         "display": "speckit_pro_runner/envelope.py"
       },

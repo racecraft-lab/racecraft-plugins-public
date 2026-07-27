@@ -1,0 +1,31 @@
+{
+  "schema_version": "codex-alias-repoint-fixture.v1",
+  "case_id": "known-platform-alias-repoint",
+  "expected_attribution": "platform_alias_repoint",
+  "observation": {
+    "requested_alias": "gpt-5.6",
+    "resolved_model_id": "gpt-5.6-sol",
+    "observed_model_id": "gpt-5.6-terra",
+    "successor_freeze_binding": {
+      "id": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+    },
+    "execution_trace_binding": {
+      "id": "fixture-trace",
+      "digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+    },
+    "controlled_override_proof": {
+      "model_override_absent": true,
+      "reasoning_effort_override_absent": true,
+      "service_tier_override_absent": true,
+      "model_provider_override_absent": true,
+      "api_key_override_absent": true
+    },
+    "client_version_at_freeze": "codex-cli 0.145.0",
+    "client_version_at_run": "codex-cli 0.145.0",
+    "requested_route_unchanged": true,
+    "plugin_initiated_substitution": false,
+    "behavioral_divergence_observed": true,
+    "recorded_at": "2026-07-26T05:00:00Z"
+  }
+}

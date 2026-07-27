@@ -18,14 +18,20 @@ def _read_manifest_snapshot(path: Path) -> dict:
 
 
 def _validate_schema_timestamp(value: str, label: str) -> None:
-    if RFC3339_UTC_RE.fullmatch(value) is None:
-        raise ValueError(f"{label} must be an RFC3339 UTC timestamp")
+    if re.fullmatch(
+        r"[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])"
+        r"[Tt](?:[01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]"
+        r"(?:\.[0-9]+)?(?:[Zz]|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])",
+        value,
+    ) is None:
+        raise ValueError(f"{label} must be an RFC3339 timestamp")
     try:
-        parsed = datetime.fromisoformat(value.removesuffix("Z") + "+00:00")
+        normalized = value[:-1] + "+00:00" if value[-1] in "Zz" else value
+        parsed = datetime.fromisoformat(normalized)
     except ValueError as exc:
         raise ValueError(f"{label} must be an RFC3339 timestamp") from exc
     if parsed.utcoffset() is None:
-        raise ValueError(f"{label} must be an RFC3339 UTC timestamp")
+        raise ValueError(f"{label} must include an RFC3339 offset")
 
 
 def _validate_resource_bounds(value: object, *, depth: int = 0, counter: list[int] | None = None) -> None:
@@ -105,17 +111,38 @@ def _validate_schema_instance(value: object, schema: object, root: dict, path: s
             raise ValueError(f"{path} has the wrong treatment schema type")
     if isinstance(value, str):
         if len(value) < schema.get("minLength", 0): raise ValueError(f"{path} is shorter than allowed")
+        if "maxLength" in schema and len(value) > schema["maxLength"]:
+            raise ValueError(f"{path} is longer than allowed")
         if "pattern" in schema and re.search(schema["pattern"], value) is None: raise ValueError(f"{path} does not match its pattern")
         if schema.get("format") == "date-time": _validate_schema_timestamp(value, path)
-    if isinstance(value, int) and not isinstance(value, bool) and "minimum" in schema and value < schema["minimum"]:
-        raise ValueError(f"{path} is below its minimum")
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if "minimum" in schema and value < schema["minimum"]:
+            raise ValueError(f"{path} is below its minimum")
+        if "maximum" in schema and value > schema["maximum"]:
+            raise ValueError(f"{path} is above its maximum")
+        if "exclusiveMinimum" in schema and value <= schema["exclusiveMinimum"]:
+            raise ValueError(f"{path} is not above its exclusive minimum")
+        if "exclusiveMaximum" in schema and value >= schema["exclusiveMaximum"]:
+            raise ValueError(f"{path} is not below its exclusive maximum")
     if isinstance(value, list):
         if len(value) < schema.get("minItems", 0): raise ValueError(f"{path} has too few items")
+        if "maxItems" in schema and len(value) > schema["maxItems"]:
+            raise ValueError(f"{path} has too many items")
         if schema.get("uniqueItems") and len({canonical_bytes(item) for item in value}) != len(value):
             raise ValueError(f"{path} must contain unique items")
-        if isinstance(schema.get("items"), dict):
-            for index, item in enumerate(value): _validate_schema_instance(item, schema["items"], root, f"{path}[{index}]")
+        prefix_items = schema.get("prefixItems", [])
+        if isinstance(prefix_items, list):
+            for index, item_schema in enumerate(prefix_items[:len(value)]):
+                _validate_schema_instance(value[index], item_schema, root, f"{path}[{index}]")
+        item_schema = schema.get("items")
+        if item_schema is not None:
+            for index, item in enumerate(value[len(prefix_items):], start=len(prefix_items)):
+                _validate_schema_instance(item, item_schema, root, f"{path}[{index}]")
     if isinstance(value, dict):
+        if len(value) < schema.get("minProperties", 0):
+            raise ValueError(f"{path} has too few properties")
+        if "maxProperties" in schema and len(value) > schema["maxProperties"]:
+            raise ValueError(f"{path} has too many properties")
         missing = set(schema.get("required", [])) - set(value)
         if missing: raise ValueError(f"{path} is missing required treatment schema fields")
         properties = schema.get("properties", {})

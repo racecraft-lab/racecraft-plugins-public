@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-003/calibration-protocol.schema.json",
+  "title": "G56R-003 Calibration Protocol",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "calibration_protocol_id",
+    "calibration_protocol_version",
+    "calibration_protocol_digest",
+    "status",
+    "partition",
+    "candidate_freeze_binding",
+    "runtime_snapshot_binding",
+    "pinned_client_binding",
+    "corpus_binding",
+    "workload_manifest_binding",
+    "scorer_bindings",
+    "rubric_binding",
+    "adjudicator_binding",
+    "cache_policy_binding",
+    "frozen_at",
+    "independent_review_binding"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "calibration_protocol_id": {"type": "string", "minLength": 1},
+    "calibration_protocol_version": {"type": "string", "minLength": 1},
+    "calibration_protocol_digest": {"$ref": "#/$defs/digest"},
+    "status": {"const": "frozen_before_calibration"},
+    "partition": {"$ref": "#/$defs/calibrationPartition"},
+    "candidate_freeze_binding": {"$ref": "#/$defs/binding"},
+    "runtime_snapshot_binding": {"$ref": "#/$defs/binding"},
+    "pinned_client_binding": {"$ref": "#/$defs/binding"},
+    "corpus_binding": {"$ref": "#/$defs/binding"},
+    "workload_manifest_binding": {"$ref": "#/$defs/binding"},
+    "scorer_bindings": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/binding"}
+    },
+    "rubric_binding": {"$ref": "#/$defs/binding"},
+    "adjudicator_binding": {"$ref": "#/$defs/binding"},
+    "cache_policy_binding": {"$ref": "#/$defs/binding"},
+    "frozen_at": {"type": "string", "format": "date-time"},
+    "independent_review_binding": {"$ref": "#/$defs/binding"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "calibrationPartition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["partition_id", "partition_type", "qualification_eligible"],
+      "properties": {
+        "partition_id": {"type": "string", "minLength": 1},
+        "partition_type": {"const": "calibration"},
+        "qualification_eligible": {"const": false}
+      }
+    }
+  }
+}
