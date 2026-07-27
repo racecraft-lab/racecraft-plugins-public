@@ -105,6 +105,7 @@ class ResultWriter:
                 "wall_time": wall_time,
                 "quality": quality,
                 "exit_code": exit_code,
+                "non_release_evidence": True,
             }
         )
         self.write()

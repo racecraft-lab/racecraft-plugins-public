@@ -1,0 +1,328 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-003/runtime/experiment-policy.schema.json",
+  "title": "G56R-003 Experiment Policy and Immutable Pair Assignment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "experiment_policy_id",
+    "experiment_policy_version",
+    "policy_digest",
+    "partition_binding",
+    "candidate_freeze_binding",
+    "corpus_binding",
+    "calibration_protocol_binding",
+    "workload_manifest_binding",
+    "environment_contract_binding",
+    "comparison_policy",
+    "comparison_sets",
+    "terminal_policy",
+    "rerun_policy",
+    "budget",
+    "execution_mode"
+  ],
+  "properties": {
+    "schema_version": {"const": "experiment-policy.v1"},
+    "experiment_policy_id": {"$ref": "#/$defs/digest"},
+    "experiment_policy_version": {"type": "string", "minLength": 1},
+    "policy_digest": {"$ref": "#/$defs/digest"},
+    "partition_binding": {"$ref": "#/$defs/calibrationPartitionBinding"},
+    "candidate_freeze_binding": {"$ref": "#/$defs/binding"},
+    "corpus_binding": {"$ref": "#/$defs/binding"},
+    "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
+    "workload_manifest_binding": {"$ref": "#/$defs/binding"},
+    "environment_contract_binding": {"$ref": "#/$defs/binding"},
+    "comparison_policy": {"$ref": "#/$defs/comparisonPolicy"},
+    "comparison_sets": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/comparisonSet"}
+    },
+    "terminal_policy": {"$ref": "#/$defs/terminalPolicy"},
+    "rerun_policy": {"$ref": "#/$defs/rerunPolicy"},
+    "budget": {"$ref": "#/$defs/budget"},
+    "execution_mode": {"$ref": "#/$defs/executionMode"}
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "calibrationPartitionBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "partition_id",
+        "partition_type",
+        "partition_digest",
+        "qualification_eligible"
+      ],
+      "properties": {
+        "partition_id": {"type": "string", "minLength": 1},
+        "partition_type": {"const": "calibration"},
+        "partition_digest": {"$ref": "#/$defs/digest"},
+        "qualification_eligible": {"const": false}
+      }
+    },
+    "comparisonPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pair_before_execution",
+        "comparison_set_generation",
+        "order_rule",
+        "randomization_seed_digest",
+        "rebinding_policy"
+      ],
+      "properties": {
+        "pair_before_execution": {"const": true},
+        "comparison_set_generation": {"const": "paired_by_role_fixture_task"},
+        "order_rule": {"enum": ["seeded_balanced", "seeded_random"]},
+        "randomization_seed_digest": {"$ref": "#/$defs/digest"},
+        "rebinding_policy": {"const": "additive_invalidation_only"}
+      }
+    },
+    "comparisonSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "comparison_set_id",
+        "comparison_set_digest",
+        "partition_binding",
+        "assignment_pairs"
+      ],
+      "properties": {
+        "comparison_set_id": {"$ref": "#/$defs/digest"},
+        "comparison_set_digest": {"$ref": "#/$defs/digest"},
+        "partition_binding": {"$ref": "#/$defs/calibrationPartitionBinding"},
+        "assignment_pairs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/assignmentPair"}
+        }
+      }
+    },
+    "assignmentPair": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignment_pair_id",
+        "assignment_pair_digest",
+        "binding_state",
+        "pre_execution_frozen_at",
+        "role_binding",
+        "fixture_binding",
+        "objective_binding",
+        "task_binding",
+        "candidate_assignment",
+        "comparator_assignment",
+        "instruction_binding",
+        "capability_binding",
+        "experiment_policy_binding",
+        "calibration_protocol_binding",
+        "environment_contract_binding",
+        "workload_stratum_assignment",
+        "assigned_order",
+        "invalidation_policy"
+      ],
+      "properties": {
+        "assignment_pair_id": {"$ref": "#/$defs/digest"},
+        "assignment_pair_digest": {"$ref": "#/$defs/digest"},
+        "binding_state": {"const": "pre_execution_frozen"},
+        "pre_execution_frozen_at": {"type": "string", "format": "date-time"},
+        "role_binding": {"$ref": "#/$defs/binding"},
+        "fixture_binding": {"$ref": "#/$defs/binding"},
+        "objective_binding": {"$ref": "#/$defs/binding"},
+        "task_binding": {"$ref": "#/$defs/binding"},
+        "candidate_assignment": {"$ref": "#/$defs/routeAssignment"},
+        "comparator_assignment": {"$ref": "#/$defs/routeAssignment"},
+        "instruction_binding": {"$ref": "#/$defs/instructionBinding"},
+        "capability_binding": {"$ref": "#/$defs/capabilityBinding"},
+        "experiment_policy_binding": {"$ref": "#/$defs/binding"},
+        "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
+        "environment_contract_binding": {"$ref": "#/$defs/binding"},
+        "workload_stratum_assignment": {
+          "$ref": "#/$defs/workloadStratumAssignment"
+        },
+        "assigned_order": {
+          "oneOf": [
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "prefixItems": [
+                {"const": "candidate"},
+                {"const": "comparator"}
+              ],
+              "items": false
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "prefixItems": [
+                {"const": "comparator"},
+                {"const": "candidate"}
+              ],
+              "items": false
+            }
+          ]
+        },
+        "invalidation_policy": {"const": "additive_only"}
+      }
+    },
+    "routeAssignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignment_id",
+        "route_binding",
+        "agent_contract_binding",
+        "materialization_binding",
+        "route_resolution_binding"
+      ],
+      "properties": {
+        "assignment_id": {"$ref": "#/$defs/digest"},
+        "route_binding": {"$ref": "#/$defs/binding"},
+        "agent_contract_binding": {"$ref": "#/$defs/binding"},
+        "materialization_binding": {"$ref": "#/$defs/binding"},
+        "route_resolution_binding": {"$ref": "#/$defs/binding"}
+      }
+    },
+    "instructionBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_instruction_digest",
+        "comparator_instruction_digest",
+        "candidate_configuration_digest",
+        "comparator_configuration_digest"
+      ],
+      "properties": {
+        "candidate_instruction_digest": {"$ref": "#/$defs/digest"},
+        "comparator_instruction_digest": {"$ref": "#/$defs/digest"},
+        "candidate_configuration_digest": {"$ref": "#/$defs/digest"},
+        "comparator_configuration_digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "capabilityBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime_snapshot_binding", "candidate_freeze_binding"],
+      "properties": {
+        "runtime_snapshot_binding": {"$ref": "#/$defs/binding"},
+        "candidate_freeze_binding": {"$ref": "#/$defs/binding"}
+      }
+    },
+    "workloadStratumAssignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "workload_stratum_binding",
+        "membership_basis",
+        "derived_from_realized_outcomes"
+      ],
+      "properties": {
+        "workload_stratum_binding": {"$ref": "#/$defs/binding"},
+        "membership_basis": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "role_id",
+              "objective",
+              "permitted_tools",
+              "mutation_contract",
+              "expected_artifacts",
+              "acceptance_oracle"
+            ]
+          }
+        },
+        "derived_from_realized_outcomes": {"const": false}
+      }
+    },
+    "terminalPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_failures_remain_in_estimand",
+        "candidate_failure_acceptance",
+        "unknown_attrition_result"
+      ],
+      "properties": {
+        "candidate_failures_remain_in_estimand": {"const": true},
+        "candidate_failure_acceptance": {"const": 0},
+        "unknown_attrition_result": {"const": "evidence_boundary_failure"}
+      }
+    },
+    "rerunPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "eligible_failure",
+        "scope",
+        "cap",
+        "one_arm_rerun_prohibited",
+        "complete_case_filtering"
+      ],
+      "properties": {
+        "eligible_failure": {"const": "independently_preclassified_transient_harness_failure"},
+        "scope": {"const": "complete_pair"},
+        "cap": {"type": "integer", "minimum": 0},
+        "one_arm_rerun_prohibited": {"const": true},
+        "complete_case_filtering": {"const": false}
+      }
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "max_attempts",
+        "max_wall_clock_seconds",
+        "max_raw_input_tokens",
+        "max_cached_input_tokens",
+        "max_output_tokens",
+        "max_candidates",
+        "max_confirmation_entries"
+      ],
+      "properties": {
+        "max_attempts": {"type": "integer", "minimum": 1},
+        "max_wall_clock_seconds": {"type": "integer", "minimum": 1},
+        "max_raw_input_tokens": {"type": "integer", "minimum": 1},
+        "max_cached_input_tokens": {"type": "integer", "minimum": 0},
+        "max_output_tokens": {"type": "integer", "minimum": 1},
+        "max_candidates": {"type": "integer", "minimum": 1},
+        "max_confirmation_entries": {"type": "integer", "minimum": 0}
+      }
+    },
+    "executionMode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_ci",
+        "live_mode",
+        "local_only",
+        "pinned_client_required"
+      ],
+      "properties": {
+        "default_ci": {"const": "deterministic_replay"},
+        "live_mode": {"const": "explicit_local_live"},
+        "local_only": {"const": true},
+        "pinned_client_required": {"const": true}
+      }
+    }
+  }
+}

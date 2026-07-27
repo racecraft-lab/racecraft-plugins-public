@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-003/runtime/successor-capability-freeze.schema.json",
+  "title": "G56R-003 Successor Capability Publication Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "predecessor_candidate_freeze_id",
+    "client_identity_id",
+    "account_identity_id",
+    "source_manifest_digest",
+    "source_refresh_set_digest",
+    "runtime_capability_snapshot_id",
+    "catalog_capture",
+    "diagnostic_capture_digest",
+    "published_at",
+    "successor_mutable_fields",
+    "diagnostics"
+  ],
+  "properties": {
+    "schema_version": {"const": "successor-capability-freeze.v1"},
+    "predecessor_candidate_freeze_id": {"$ref": "#/$defs/digest"},
+    "client_identity_id": {"$ref": "#/$defs/digest"},
+    "account_identity_id": {"$ref": "#/$defs/digest"},
+    "source_manifest_digest": {"$ref": "#/$defs/digest"},
+    "source_refresh_set_digest": {"$ref": "#/$defs/digest"},
+    "runtime_capability_snapshot_id": {"$ref": "#/$defs/digest"},
+    "catalog_capture": {"$ref": "#/$defs/catalogCapture"},
+    "diagnostic_capture_digest": {"$ref": "#/$defs/digest"},
+    "published_at": {"type": "string", "format": "date-time"},
+    "successor_mutable_fields": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "prefixItems": [
+        {"const": "candidate_freeze_id"},
+        {"const": "published_at"},
+        {"const": "supersedes_candidate_freeze_id"}
+      ]
+    },
+    "diagnostics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/diagnostic"}
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "rawRef": {
+      "type": "string",
+      "pattern": "^raw://sha256:[0-9a-f]{64}$"
+    },
+    "token": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "catalogCapture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "command_contract",
+        "client_identity",
+        "account_boundary_id",
+        "environment_boundary_id",
+        "raw_catalog_digest",
+        "raw_evidence_ref",
+        "parsed_catalog_digest",
+        "visible_models",
+        "defaults",
+        "supported_efforts",
+        "effort_normalization_map",
+        "collected_at",
+        "valid_until",
+        "invalidation_triggers",
+        "authority",
+        "sanitization"
+      ],
+      "properties": {
+        "schema_version": {"const": "codex-debug-models-catalog.v1"},
+        "command_contract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["argv", "requires_refresh", "output_format"],
+          "properties": {
+            "argv": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "prefixItems": [
+                {"const": "codex"},
+                {"const": "debug"},
+                {"const": "models"}
+              ]
+            },
+            "requires_refresh": {"const": true},
+            "output_format": {"const": "json"}
+          }
+        },
+        "client_identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "client_identity_id",
+            "reported_version",
+            "build_identifier_kind",
+            "build_identifier",
+            "distribution"
+          ],
+          "properties": {
+            "client_identity_id": {"$ref": "#/$defs/digest"},
+            "reported_version": {"type": "string", "minLength": 1},
+            "build_identifier_kind": {
+              "enum": ["vendor_build_id", "executable_sha256", "package_sha256"]
+            },
+            "build_identifier": {"type": "string", "minLength": 1},
+            "distribution": {"$ref": "#/$defs/token"}
+          }
+        },
+        "account_boundary_id": {"$ref": "#/$defs/digest"},
+        "environment_boundary_id": {"$ref": "#/$defs/digest"},
+        "raw_catalog_digest": {"$ref": "#/$defs/digest"},
+        "raw_evidence_ref": {"$ref": "#/$defs/rawRef"},
+        "parsed_catalog_digest": {"$ref": "#/$defs/digest"},
+        "visible_models": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["model", "default_effort", "supported_efforts", "catalog_entry_digest"],
+            "properties": {
+              "model": {"$ref": "#/$defs/token"},
+              "default_effort": {
+                "oneOf": [
+                  {"type": "string", "minLength": 1},
+                  {"type": "null"}
+                ]
+              },
+              "supported_efforts": {
+                "type": "array",
+                "minItems": 1,
+                "items": {"type": "string", "minLength": 1}
+              },
+              "catalog_entry_digest": {"$ref": "#/$defs/digest"}
+            }
+          }
+        },
+        "defaults": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["effort"],
+          "properties": {
+            "effort": {"type": "string", "minLength": 1}
+          }
+        },
+        "supported_efforts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "effort_normalization_map": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["raw_effort", "canonical_effort", "evidence_digest", "evidence_ref"],
+            "properties": {
+              "raw_effort": {"type": "string", "minLength": 1},
+              "canonical_effort": {"const": "ordinary"},
+              "evidence_digest": {"$ref": "#/$defs/digest"},
+              "evidence_ref": {"$ref": "#/$defs/rawRef"}
+            }
+          }
+        },
+        "collected_at": {"type": "string", "format": "date-time"},
+        "valid_until": {"type": "string", "format": "date-time"},
+        "invalidation_triggers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/token"}
+        },
+        "authority": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["collector", "trust", "currentness"],
+          "properties": {
+            "collector": {"const": "codex-debug-models"},
+            "trust": {"const": "pinned_client"},
+            "currentness": {"const": "current"}
+          }
+        },
+        "sanitization": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["allowlist_version", "result"],
+          "properties": {
+            "allowlist_version": {"const": "g56r-003-catalog-capture.v1"},
+            "result": {"const": "pass"}
+          }
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surface",
+        "captured_at",
+        "reported_effort",
+        "diagnostic_fields"
+      ],
+      "properties": {
+        "surface": {"enum": ["app_server", "cli", "interactive_picker"]},
+        "captured_at": {"type": "string", "format": "date-time"},
+        "reported_effort": {
+          "oneOf": [
+            {"$ref": "#/$defs/token"},
+            {"type": "null"}
+          ]
+        },
+        "diagnostic_fields": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "oneOf": [
+              {"type": "string"},
+              {"type": "number"},
+              {"type": "boolean"},
+              {"type": "null"},
+              {"type": "array"},
+              {"type": "object"}
+            ]
+          }
+        }
+      }
+    }
+  }
+}

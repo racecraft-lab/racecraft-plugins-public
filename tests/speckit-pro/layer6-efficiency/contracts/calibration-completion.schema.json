@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-003/runtime/calibration-completion.schema.json",
+  "title": "G56R-003 Calibration Completion Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "calibration_completion_id",
+    "calibration_completion_version",
+    "calibration_completion_digest",
+    "status",
+    "calibration_protocol_binding",
+    "calibration_partition_binding",
+    "comparison_set_bindings",
+    "assignment_bindings",
+    "score_bundle_bindings",
+    "calibration_evidence_bindings",
+    "completion_provenance"
+  ],
+  "properties": {
+    "schema_version": {"const": "calibration-completion.v1"},
+    "calibration_completion_id": {"$ref": "#/$defs/digest"},
+    "calibration_completion_version": {"type": "string", "minLength": 1},
+    "calibration_completion_digest": {"$ref": "#/$defs/digest"},
+    "status": {"const": "complete"},
+    "calibration_protocol_binding": {"$ref": "#/$defs/binding"},
+    "calibration_partition_binding": {"$ref": "#/$defs/calibrationPartitionBinding"},
+    "comparison_set_bindings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/binding"}
+    },
+    "assignment_bindings": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/binding"}
+    },
+    "score_bundle_bindings": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/binding"}
+    },
+    "calibration_evidence_bindings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/binding"}
+    },
+    "completion_provenance": {"$ref": "#/$defs/completionProvenance"}
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "calibrationPartitionBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "partition_id",
+        "partition_type",
+        "partition_digest",
+        "qualification_eligible"
+      ],
+      "properties": {
+        "partition_id": {"type": "string", "minLength": 1},
+        "partition_type": {"const": "calibration"},
+        "partition_digest": {"$ref": "#/$defs/digest"},
+        "qualification_eligible": {"const": false}
+      }
+    },
+    "completionProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "completed_at",
+        "calibration_execution_complete",
+        "analysis_plan_observed",
+        "cohort_outcome_observed",
+        "independent_review_binding"
+      ],
+      "properties": {
+        "completed_at": {"type": "string", "format": "date-time"},
+        "calibration_execution_complete": {"const": true},
+        "analysis_plan_observed": {"const": false},
+        "cohort_outcome_observed": {"const": false},
+        "independent_review_binding": {"$ref": "#/$defs/binding"}
+      }
+    }
+  }
+}

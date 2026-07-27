@@ -1,0 +1,237 @@
+{
+  "account_boundary": "<redacted-account-boundary>",
+  "admitting_surface": "print_mode_canary_probe",
+  "alias_bindings": [
+    {
+      "alias": "opus",
+      "exit_code": 0,
+      "fast_mode_state": "off",
+      "probe_output_mode": "json_print",
+      "raw_output_sha256": "sha256:c5b741332ccd929f2eda0135a34a1a34c3d23e72b6e9f2835feb39b24fc4f89d",
+      "resolved_dated_model_id": "claude-opus-5",
+      "sanitization": "home_paths_and_session_ids_normalized",
+      "service_tier": "standard",
+      "surface": "print_mode_canary_probe"
+    },
+    {
+      "alias": "sonnet",
+      "exit_code": 0,
+      "fast_mode_state": "off",
+      "probe_output_mode": "json_print",
+      "raw_output_sha256": "sha256:5afa7de54164e2575be744fb1347f37a7bc4e7ec746d3b5b59b5ce76bec39b46",
+      "resolved_dated_model_id": "claude-sonnet-5",
+      "sanitization": "home_paths_and_session_ids_normalized",
+      "service_tier": "standard",
+      "surface": "print_mode_canary_probe"
+    },
+    {
+      "alias": "haiku",
+      "exit_code": 0,
+      "fast_mode_state": "off",
+      "probe_output_mode": "json_print",
+      "raw_output_sha256": "sha256:90a8c37dde133bcb25d73f9ffa3a8138e4e75915383b07b4707f0e5a69db0f68",
+      "resolved_dated_model_id": "claude-haiku-4-5",
+      "sanitization": "home_paths_and_session_ids_normalized",
+      "service_tier": "standard",
+      "surface": "print_mode_canary_probe"
+    },
+    {
+      "alias": "fable",
+      "exit_code": 0,
+      "fast_mode_state": "off",
+      "probe_output_mode": "json_print",
+      "raw_output_sha256": "sha256:01fe81fe209dd842fa9a6c207ca1506c60dc6076a8051a2bdfa41a6bcfa963e0",
+      "resolved_dated_model_id": "claude-fable-5",
+      "sanitization": "home_paths_and_session_ids_normalized",
+      "service_tier": "standard",
+      "surface": "print_mode_canary_probe"
+    }
+  ],
+  "authentication_mode": "subscription",
+  "authority_failures": [],
+  "client_distribution": "local_cli",
+  "client_version": "2.1.220 (Claude Code)",
+  "collected_at_utc": "2026-07-25T13:06:45Z",
+  "collection_authority": "operator_pinned_client",
+  "collection_digest": "sha256:ce95b2ee527d05a6132d6b4f76003cd6cb70f7a9b1e6441ec362e2e1e87dfe1a",
+  "collection_id": "CAR-003-SCC-20260725T130645Z",
+  "collection_max_age_hours": 24,
+  "collection_method": "operator_run_print_mode_canary_probe",
+  "command_contract": "claude -p <canary> --model <alias> [--effort <effort>]",
+  "effort_admission": "configuration_acceptance_on_admitting_surface",
+  "effort_search_origin": "high",
+  "environment_boundary": "<redacted-environment-boundary>",
+  "invalidation_criteria": [
+    "client_change",
+    "catalog_change",
+    "alias_repoint",
+    "source_ledger_change"
+  ],
+  "observed_models": [
+    "opus",
+    "sonnet",
+    "haiku",
+    "fable"
+  ],
+  "parsed_catalog_digest": "sha256:4ab3b7b71f9128791451a822b6f6839e85c937828fc76a9a52bb4c3ef4d8b5b1",
+  "promoted_tuples": [],
+  "publication_record_digest": "sha256:bae8b23c3b7f92b876e0cd4cdd915d2ce5ab7c753d789fe2b2628dce68b13b75",
+  "publication_state": "published",
+  "raw_catalog_digest": "sha256:1eae73d90d6c8df62d49de39b7294caa7c42b4742b2ce3b6f77f221176036230",
+  "record_kind": "successor_capability_collection",
+  "retention_status": "passed",
+  "sanitization_status": "passed",
+  "schema_version": "1.0.0",
+  "sensitive_field_findings": [],
+  "supported_efforts": {
+    "fable": [
+      {
+        "acceptance": "accepted",
+        "effort": "low",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "medium",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "high",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "xhigh",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "max",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      }
+    ],
+    "haiku": [
+      {
+        "acceptance": "accepted",
+        "effort": "low",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "medium",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "high",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "xhigh",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "max",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      }
+    ],
+    "opus": [
+      {
+        "acceptance": "accepted",
+        "effort": "low",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "medium",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "high",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "xhigh",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "max",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      }
+    ],
+    "sonnet": [
+      {
+        "acceptance": "accepted",
+        "effort": "low",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "medium",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "high",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "xhigh",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      },
+      {
+        "acceptance": "accepted",
+        "effort": "max",
+        "evidence_digest": "sha256:dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22",
+        "probe_output_mode": "plain_text_print",
+        "surface": "print_mode_canary_probe"
+      }
+    ]
+  },
+  "visible_defaults": {}
+}
