@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import subprocess
@@ -15,6 +16,26 @@ from resolve_release_prs import ResolutionError, normalize_release_pr, parse_jso
 
 class SyncError(RuntimeError):
     """Raised when a release branch cannot be reconciled safely."""
+
+
+def regenerated_artifact_paths(repo_root: Path) -> tuple[str, ...]:
+    """Return the paths ``refresh-release-artifacts.py`` rewrites from source.
+
+    Read from that script's own ``CHECK_WORKTREE_PATHS`` rather than restated
+    here, so the two stay in step when the generated surface moves.
+    """
+    script = repo_root / "scripts" / "refresh-release-artifacts.py"
+    spec = importlib.util.spec_from_file_location("refresh_release_artifacts", script)
+    if spec is None or spec.loader is None:
+        raise SyncError(f"cannot load generated-artifact paths from {script}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return tuple(module.CHECK_WORKTREE_PATHS)
+
+
+def is_regenerated_artifact(path: str, regenerated: Sequence[str]) -> bool:
+    """True when ``path`` is a regenerated artifact or lives under one."""
+    return any(path == entry or path.startswith(f"{entry}/") for entry in regenerated)
 
 
 class CommandRunner:
@@ -80,6 +101,54 @@ class CommandRunner:
         return completed.stdout.strip()
 
 
+def merge_release_base(
+    repo_root: Path,
+    base_sha: str,
+    runner: CommandRunner,
+) -> None:
+    """Merge the release base, tolerating conflicts in regenerated artifacts.
+
+    ``refresh-release-artifacts.py`` runs immediately after this and rewrites
+    its managed paths from source, so a conflict confined to those paths has no
+    bearing on the result: whichever side is kept, the refresh emits identical
+    bytes. Resolve them to the base side and let the refresh settle them. A
+    conflict anywhere else is a real one and still fails the sync.
+    """
+    try:
+        runner.run(["git", "merge", "--no-edit", base_sha], repo_root)
+        return
+    except SyncError as exc:
+        merge_error = exc
+
+    conflicted = [
+        line
+        for line in runner.output(
+            ["git", "diff", "--name-only", "--diff-filter=U"], repo_root
+        ).splitlines()
+        if line
+    ]
+    if not conflicted:
+        # The merge failed for some reason other than a conflict, so keep git's
+        # own diagnostic rather than replacing it with a conflict story.
+        raise SyncError(f"{merge_error}; no conflicted path was reported") from merge_error
+
+    regenerated = regenerated_artifact_paths(repo_root)
+    unmanaged = sorted(
+        path for path in conflicted if not is_regenerated_artifact(path, regenerated)
+    )
+    if unmanaged:
+        raise SyncError(
+            "release base merge conflicts outside regenerated artifacts: "
+            + ", ".join(unmanaged)
+        )
+
+    for path in conflicted:
+        runner.run(["git", "checkout", "--theirs", "--", path], repo_root)
+        runner.run(["git", "add", "--", path], repo_root)
+    runner.run(["git", "commit", "--no-edit"], repo_root)
+    print(f"resolved {len(conflicted)} regenerated-artifact conflict(s) before refresh")
+
+
 def sync_release_branch(
     repo_root: Path,
     release_pr: dict,
@@ -106,7 +175,7 @@ def sync_release_branch(
         ],
         repo_root,
     )
-    runner.run(["git", "merge", "--no-edit", base_sha], repo_root)
+    merge_release_base(repo_root, base_sha, runner)
 
     runner.run(["corepack", "enable"], repo_root)
     runner.run(["corepack", "prepare", "pnpm@10.25.0", "--activate"], repo_root)
