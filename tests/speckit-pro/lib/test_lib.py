@@ -17,6 +17,7 @@ house-convention ``test-lib: {passed}/{total} passed`` summary.
 
 from __future__ import annotations
 
+import copy
 import sys
 import tempfile
 import unittest
@@ -28,6 +29,7 @@ if str(LIB_DIR) not in sys.path:
 
 import capture_baseline  # noqa: E402
 import test_result  # noqa: E402
+import treatment_fixture_helpers  # noqa: E402
 
 
 class _Sample(unittest.TestCase):
@@ -199,11 +201,120 @@ class CaptureBaselineParseTests(unittest.TestCase):
         self.assertIsInstance(env["is_root"], bool)
 
 
+class TreatmentFixtureHelpersTests(unittest.TestCase):
+    @staticmethod
+    def _bundle() -> dict:
+        return {
+            "treatment_traces": [
+                {
+                    "context": {"turnId": "turn-fixture-success"},
+                    "controlled_environment_id": "environment-success",
+                    "objective_binding": {
+                        "execution_trace_id": "execution-success",
+                        "route_resolution_id": "route-success",
+                    },
+                    "reroute_destination_assessments": [
+                        {"prequalification_evidence_id": "qualification-success"},
+                        {"prequalification_evidence_id": None},
+                    ],
+                    "treatment_disposition": "accepted",
+                },
+                {
+                    "context": {"turnId": "turn-fixture-misdelivery"},
+                    "controlled_environment_id": "environment-misdelivery",
+                    "objective_binding": {
+                        "execution_trace_id": "execution-misdelivery",
+                        "route_resolution_id": "route-misdelivery",
+                    },
+                    "reroute_destination_assessments": [
+                        {"prequalification_evidence_id": "qualification-misdelivery"},
+                    ],
+                    "treatment_disposition": "hard_fail",
+                },
+            ],
+            "controlled_environments": [
+                {"controlled_environment_id": "environment-success"},
+                {"controlled_environment_id": "environment-misdelivery"},
+            ],
+            "route_resolutions": [
+                {"route_resolution_id": "route-success"},
+                {"route_resolution_id": "route-misdelivery"},
+            ],
+            "qualification_evidence_registry": [
+                {"qualification_evidence_id": "qualification-success"},
+                {"qualification_evidence_id": "qualification-misdelivery"},
+                {"qualification_evidence_id": None},
+            ],
+            "fixture_provenance": {
+                "expected_dispositions": [{"existing": "value"}],
+                "source": "fixture",
+            },
+        }
+
+    def test_replay_trace_selects_case_by_fixture_turn_id(self) -> None:
+        bundle = self._bundle()
+        trace = treatment_fixture_helpers.replay_trace(bundle, "TRACE-MISDELIVERY")
+        self.assertIs(trace, bundle["treatment_traces"][1])
+
+    def test_single_case_deep_copies_without_mutating_input(self) -> None:
+        bundle = self._bundle()
+        original = copy.deepcopy(bundle)
+        isolated = treatment_fixture_helpers.single_treatment_case(bundle, "TRACE-SUCCESS")
+
+        self.assertEqual(bundle, original)
+        self.assertIsNot(isolated, bundle)
+        self.assertIsNot(isolated["treatment_traces"][0], bundle["treatment_traces"][0])
+
+    def test_single_case_filters_environment_route_and_qualification(self) -> None:
+        isolated = treatment_fixture_helpers.single_treatment_case(
+            self._bundle(), "TRACE-SUCCESS",
+        )
+
+        self.assertEqual(
+            [item["controlled_environment_id"] for item in isolated["controlled_environments"]],
+            ["environment-success"],
+        )
+        self.assertEqual(
+            [item["route_resolution_id"] for item in isolated["route_resolutions"]],
+            ["route-success"],
+        )
+        self.assertEqual(
+            [
+                item["qualification_evidence_id"]
+                for item in isolated["qualification_evidence_registry"]
+            ],
+            ["qualification-success"],
+        )
+
+    def test_single_case_excludes_none_qualification_reference(self) -> None:
+        isolated = treatment_fixture_helpers.single_treatment_case(
+            self._bundle(), "TRACE-SUCCESS",
+        )
+        qualification_ids = {
+            item["qualification_evidence_id"]
+            for item in isolated["qualification_evidence_registry"]
+        }
+        self.assertNotIn(None, qualification_ids)
+
+    def test_single_case_sets_exact_expected_disposition(self) -> None:
+        isolated = treatment_fixture_helpers.single_treatment_case(
+            self._bundle(), "TRACE-SUCCESS",
+        )
+        self.assertEqual(
+            isolated["fixture_provenance"]["expected_dispositions"],
+            [{
+                "execution_trace_id": "execution-success",
+                "treatment_disposition": "accepted",
+            }],
+        )
+
+
 def main() -> int:
     suite = unittest.TestSuite()
     loader = unittest.defaultTestLoader
     suite.addTests(loader.loadTestsFromTestCase(CountingTestResultTests))
     suite.addTests(loader.loadTestsFromTestCase(CaptureBaselineParseTests))
+    suite.addTests(loader.loadTestsFromTestCase(TreatmentFixtureHelpersTests))
     return test_result.run_counted(suite, label="test-lib")
 
 
