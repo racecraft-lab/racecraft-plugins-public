@@ -74,6 +74,41 @@ def row(product: str, tree_hash: str) -> dict:
     }
 
 
+RELEASE_PR = {
+    "number": 302,
+    "title": "release",
+    "headBranchName": "release-please--branches--main--components--speckit-pro",
+}
+
+
+class ConflictingMergeRunner:
+    """Fake runner whose base merge conflicts on the supplied paths."""
+
+    def __init__(self, conflicted: list[str]) -> None:
+        self.commands: list[list[str]] = []
+        self.conflicted = conflicted
+        self.fetch_heads = iter(["release-head", "main-head"])
+
+    def run(self, argv, _cwd) -> None:
+        command = list(argv)
+        self.commands.append(command)
+        if command == ["git", "merge", "--no-edit", "main-head"]:
+            raise sync.SyncError("command failed (1): git merge --no-edit main-head")
+
+    def output(self, argv, _cwd) -> str:
+        command = list(argv)
+        self.commands.append(command)
+        if command == ["git", "rev-parse", "FETCH_HEAD"]:
+            return next(self.fetch_heads)
+        if command == ["git", "diff", "--name-only", "--diff-filter=U"]:
+            return "\n".join(self.conflicted)
+        if command == ["git", "status", "--porcelain"]:
+            return " M generated-file"
+        if command == ["git", "rev-parse", "HEAD"]:
+            return "reconciled-head"
+        raise AssertionError(command)
+
+
 class ReleasePrReconciliationTests(unittest.TestCase):
     def test_mirror_tree_by_content_detects_mode_only_drift(self) -> None:
         if os.name == "nt":
@@ -158,6 +193,65 @@ class ReleasePrReconciliationTests(unittest.TestCase):
         self.assertLess(merge_index, refresh_index)
         self.assertLess(refresh_index, docs_index)
         self.assertLess(docs_index, push_index)
+
+    def test_regenerated_artifact_conflicts_resolve_to_base_and_continue(self) -> None:
+        conflicted = [
+            "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+            "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json",
+        ]
+        runner = ConflictingMergeRunner(conflicted)
+        sync.sync_release_branch(REPO_ROOT, RELEASE_PR, "main", runner)
+
+        for path in conflicted:
+            self.assertIn(["git", "checkout", "--theirs", "--", path], runner.commands)
+            self.assertIn(["git", "add", "--", path], runner.commands)
+        commit_index = runner.commands.index(["git", "commit", "--no-edit"])
+        refresh_index = runner.commands.index(
+            [sync.sys.executable, "scripts/refresh-release-artifacts.py"]
+        )
+        push_index = runner.commands.index(
+            ["git", "push", "origin", f"HEAD:{RELEASE_PR['headBranchName']}"]
+        )
+        self.assertLess(commit_index, refresh_index)
+        self.assertLess(refresh_index, push_index)
+
+    def test_conflict_outside_regenerated_artifacts_fails_the_sync(self) -> None:
+        runner = ConflictingMergeRunner(
+            [
+                "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+                "speckit-pro/speckit_pro_runner/__main__.py",
+            ]
+        )
+        with self.assertRaises(sync.SyncError) as caught:
+            sync.sync_release_branch(REPO_ROOT, RELEASE_PR, "main", runner)
+
+        self.assertIn("speckit-pro/speckit_pro_runner/__main__.py", str(caught.exception))
+        # The regenerated sibling must not be resolved away on the strength of a
+        # real conflict sharing the same merge.
+        self.assertNotIn(["git", "commit", "--no-edit"], runner.commands)
+
+    def test_merge_failure_without_a_conflicted_path_keeps_the_git_diagnostic(self) -> None:
+        runner = ConflictingMergeRunner([])
+        with self.assertRaises(sync.SyncError) as caught:
+            sync.sync_release_branch(REPO_ROOT, RELEASE_PR, "main", runner)
+        message = str(caught.exception)
+        self.assertIn("git merge --no-edit main-head", message)
+        self.assertIn("no conflicted path was reported", message)
+
+    def test_regenerated_artifact_paths_track_the_refresh_script(self) -> None:
+        paths = sync.regenerated_artifact_paths(REPO_ROOT)
+        self.assertEqual(paths, tuple(refresh.CHECK_WORKTREE_PATHS))
+        # The proof artifacts that deadlocked the release sync on 2026-07-27.
+        for path in (
+            "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+            "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
+            "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json",
+            "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json",
+            "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
+        ):
+            self.assertTrue(sync.is_regenerated_artifact(path, paths), path)
+        for path in ("speckit-pro/speckit_pro_runner/__main__.py", "distribution/notes.md"):
+            self.assertFalse(sync.is_regenerated_artifact(path, paths), path)
 
     def test_canonical_mapping_recovers_legacy_partial_bump(self) -> None:
         old_claude = "a" * 64
