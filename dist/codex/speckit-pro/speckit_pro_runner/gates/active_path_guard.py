@@ -1270,22 +1270,6 @@ def repo_bash_runtime_assignments(
     return merged
 
 
-def repo_bash_guidance_strings(
-    node: ast.AST | None,
-    assignments: dict[str, list[RepoBashBindingEvent]] | None = None,
-    context: ast.AST | None = None,
-) -> list[tuple[int, str]]:
-    if node is None:
-        return []
-    resolution = repo_bash_guidance_resolution(
-        node,
-        assignments or {},
-        context or node,
-        set(),
-    )
-    return [(item.line, item.value) for item in resolution.values]
-
-
 def repo_bash_guidance_resolution(
     node: ast.AST | None,
     assignments: dict[str, list[RepoBashBindingEvent]],
@@ -2412,29 +2396,6 @@ def repo_bash_assignment_nodes(nodes: list[ast.AST]) -> dict[str, list[RepoBashB
     for events in assignments.values():
         events.sort(key=lambda event: (event.line, event.column))
     return assignments
-
-
-def repo_bash_resolve_value(
-    node: ast.AST,
-    assignments: dict[str, list[RepoBashBindingEvent]],
-    context: ast.AST,
-    which_aliases: tuple[set[str], set[str]],
-    resolving: set[str],
-    sys_aliases: tuple[set[str], set[str]] | None = None,
-) -> str | list[str | None] | None:
-    resolution = repo_bash_static_resolution(
-        node,
-        assignments,
-        context,
-        which_aliases,
-        sys_aliases or (set(), set()),
-        resolving,
-    )
-    if resolution.kind == "scalar":
-        return resolution.scalar
-    if resolution.kind == "argv":
-        return list(resolution.argv)
-    return None
 
 
 def repo_bash_static_resolution(
@@ -3958,22 +3919,6 @@ def has_prohibited_script_suffix(path: str) -> bool:
 
 def executable_basename(path: str) -> str:
     return Path(normalize_path(path)).name.lower()
-
-
-def env_delegated_commands(argv: list[str]) -> list[str]:
-    candidates: list[str] = []
-    for delegated_argv in env_delegated_argvs(argv):
-        if delegated_argv:
-            candidates.append(delegated_argv[0])
-    return candidates
-
-
-def env_split_string_candidates(payload: str) -> list[str]:
-    candidates: list[str] = []
-    for delegated_argv in env_split_string_argvs(payload):
-        if delegated_argv:
-            candidates.append(delegated_argv[0])
-    return candidates
 
 
 def zero_bash_python_classification(path: str, category: str, allowlist: list[dict[str, Any]]) -> str:
