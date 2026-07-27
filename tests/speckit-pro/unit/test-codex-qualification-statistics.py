@@ -34,6 +34,7 @@ CALIBRATION_COMPLETION_SCHEMA_PATH = (
 )
 RUN_CODEX_ROLE_EVAL_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/run_codex_role_eval.py"
 SHIPPED_MATERIALIZER_PATH = ROOT / "speckit-pro/speckit_pro_runner/agent_materialization.py"
+CLAUDE_MATERIALIZER_PATH = ROOT / "speckit-pro/speckit_pro_runner/materializer.py"
 
 PARETO_DIMENSIONS = (
     "raw_input_tokens",
@@ -1186,7 +1187,7 @@ class QualificationStatisticsTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.evaluate(analysis_plan_fixture(), unknown_attrition)
 
-    def test_no_duplicate_materializer_or_legacy_role_eval_route_exists(self) -> None:
+    def test_no_duplicate_codex_materializer_or_legacy_role_eval_route_exists(self) -> None:
         candidates = sorted(
             path.relative_to(ROOT).as_posix()
             for base in (
@@ -1197,7 +1198,13 @@ class QualificationStatisticsTests(unittest.TestCase):
         )
 
         self.assertFalse(RUN_CODEX_ROLE_EVAL_PATH.exists())
-        self.assertEqual(candidates, [SHIPPED_MATERIALIZER_PATH.relative_to(ROOT).as_posix()])
+        self.assertEqual(
+            candidates,
+            sorted(
+                path.relative_to(ROOT).as_posix()
+                for path in (SHIPPED_MATERIALIZER_PATH, CLAUDE_MATERIALIZER_PATH)
+            ),
+        )
 
     def test_campaign_budget_requires_every_dimension_and_fails_closed_when_exceeded(self) -> None:
         for field in self.stats.CAMPAIGN_BUDGET_FIELDS:
