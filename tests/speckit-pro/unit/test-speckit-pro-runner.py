@@ -669,10 +669,17 @@ class RunnerFoundationTests(unittest.TestCase):
             "docs/ai/research/claude-telemetry-capability-profile.json",
             "docs/ai/research/claude-agent-route-candidates.md",
             "docs/ai/research/claude-agent-route-candidate-manifest.json",
+            "docs/ai/research/claude-car-003-mandatory-observation-manifest.json",
+            "docs/ai/research/claude-car-003-successor-freeze-collection.json",
+            "docs/ai/research/claude-car-003-successor-capability-freeze.json",
+            "docs/ai/research/claude-car-003-calibration-pilot.json",
+            "docs/ai/research/claude-car-003-calibration-completion.json",
+            "docs/ai/research/claude-car-003-analysis-plan.json",
             "docs/ai/research/codex-agent-route-candidates.md",
             "docs/ai/research/codex-agent-route-candidate-manifest.json",
             "docs/ai/research/codex-g56r-002-capability-evidence.md",
             "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json",
+            "docs/ai/research/codex-g56r-003-effort-ladder.json",
         }
         for path in changed:
             if (

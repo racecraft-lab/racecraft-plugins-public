@@ -1,0 +1,217 @@
+{
+  "body_file": "specs/g56r-003-evaluation-runner-scoring/.process/pr-packets/g56r-003/body.md",
+  "editable_fields": [
+    {
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->",
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->",
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->",
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->"
+    }
+  ],
+  "generated_title": {
+    "description": "add evaluation runner scoring",
+    "rejected_candidates": [
+      {
+        "reason": "The validated title uses an action verb and matches the completed feature.",
+        "value": "feat(g56r-003): evaluation runner scoring"
+      }
+    ],
+    "scope": "g56r-003",
+    "source_evidence": {
+      "kind": "release-readiness",
+      "source": "docs/ai/specs/.process/G56R-003-workflow.md",
+      "summary": "Exact title passed the live repository release-readiness gate."
+    },
+    "type": "feat",
+    "value": "feat(g56r-003): add evaluation runner scoring"
+  },
+  "mode": "single",
+  "packet_id": "g56r-003",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ],
+    "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "value": "257f84ed2e6f3faf89b31e131c52da4d8624eadc3fa64778833fd02794556c15"
+  },
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "schema_version": "1.0.0",
+  "scope_evidence": {
+    "budget_result": "warning",
+    "changed_files": [
+      "dist/claude/speckit-pro/speckit_pro_runner/agent_materialization.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "dist/codex/speckit-pro/speckit_pro_runner/agent_materialization.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "docs-site/src/content/docs/reference/tests.md",
+      "docs/ai/specs/.process/G56R-003-design-concept.md",
+      "docs/ai/specs/.process/G56R-003-workflow.md",
+      "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+      "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
+      "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json",
+      "docs/ai/specs/.process/autopilot-state.json",
+      "docs/ai/specs/codex-gpt-5-6-agent-routing-roadmap-MOC.md",
+      "docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md",
+      "speckit-pro/speckit_pro_runner/agent_materialization.py",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "specs/g56r-003-evaluation-runner-scoring/SPEC-MOC.md",
+      "specs/g56r-003-evaluation-runner-scoring/checklists/data-integrity.md",
+      "specs/g56r-003-evaluation-runner-scoring/checklists/error-handling.md",
+      "specs/g56r-003-evaluation-runner-scoring/checklists/llm-integration.md",
+      "specs/g56r-003-evaluation-runner-scoring/checklists/performance.md",
+      "specs/g56r-003-evaluation-runner-scoring/checklists/requirements.md",
+      "specs/g56r-003-evaluation-runner-scoring/contracts/analysis-decision.schema.json",
+      "specs/g56r-003-evaluation-runner-scoring/contracts/analysis-plan.schema.json",
+      "specs/g56r-003-evaluation-runner-scoring/contracts/experiment-policy.schema.json",
+      "specs/g56r-003-evaluation-runner-scoring/contracts/role-corpus.schema.json",
+      "specs/g56r-003-evaluation-runner-scoring/contracts/score-bundle.schema.json",
+      "specs/g56r-003-evaluation-runner-scoring/contracts/successor-capability-freeze.schema.json",
+      "specs/g56r-003-evaluation-runner-scoring/data-model.md",
+      "specs/g56r-003-evaluation-runner-scoring/plan.md",
+      "specs/g56r-003-evaluation-runner-scoring/quickstart.md",
+      "specs/g56r-003-evaluation-runner-scoring/research.md",
+      "specs/g56r-003-evaluation-runner-scoring/spec.md",
+      "specs/g56r-003-evaluation-runner-scoring/tasks.md",
+      "specs/g56r-003-evaluation-runner-scoring/verify-tasks-report.md",
+      "tests/speckit-pro/layer6-efficiency/contracts/analysis-decision.schema.json",
+      "tests/speckit-pro/layer6-efficiency/contracts/analysis-plan.schema.json",
+      "tests/speckit-pro/layer6-efficiency/contracts/experiment-policy.schema.json",
+      "tests/speckit-pro/layer6-efficiency/contracts/role-corpus.schema.json",
+      "tests/speckit-pro/layer6-efficiency/contracts/score-bundle.schema.json",
+      "tests/speckit-pro/layer6-efficiency/contracts/successor-capability-freeze.schema.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-codex/analyze-executor/fixture.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-codex/autopilot-fast-helper/fixture.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-codex/checklist-executor/fixture.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-codex/clarify-executor/fixture.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-codex/codebase-analyst/fixture.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-codex/consensus-synthesizer/fixture.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-codex/corpus-manifest.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-codex/domain-researcher/fixture.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-codex/gate-validator/fixture.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-codex/implement-executor/fixture.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-codex/phase-executor/fixture.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-codex/spec-context-analyst/fixture.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-codex/uat-runbook-author/fixture.json",
+      "tests/speckit-pro/layer6-efficiency/lib/codex_successor_capability.py",
+      "tests/speckit-pro/layer6-efficiency/lib/qualification_contracts.py",
+      "tests/speckit-pro/layer6-efficiency/lib/qualification_corpus.py",
+      "tests/speckit-pro/layer6-efficiency/lib/qualification_replay.py",
+      "tests/speckit-pro/layer6-efficiency/lib/qualification_scoring.py",
+      "tests/speckit-pro/layer6-efficiency/lib/qualification_statistics.py",
+      "tests/speckit-pro/layer6-efficiency/run-codex-qualification.py",
+      "tests/speckit-pro/suite-manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-partial-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/agent_materialization.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/agent_materialization.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/unit/test-agent-materialization.py",
+      "tests/speckit-pro/unit/test-codex-corpus-fixtures-a.py",
+      "tests/speckit-pro/unit/test-codex-corpus-fixtures-b.py",
+      "tests/speckit-pro/unit/test-codex-corpus-fixtures-c.py",
+      "tests/speckit-pro/unit/test-codex-qualification-contracts.py",
+      "tests/speckit-pro/unit/test-codex-qualification-corpus.py",
+      "tests/speckit-pro/unit/test-codex-qualification-scoring.py",
+      "tests/speckit-pro/unit/test-codex-qualification-statistics.py",
+      "tests/speckit-pro/unit/test-codex-successor-capability.py"
+    ],
+    "non_goals": [
+      "No final per-agent route policy, resolver default, or aggregate routing identity is created.",
+      "No screening, selection, cohort-lock, or integrated-confirmation outcome is consumed.",
+      "No raw live capture or private scorer evidence is committed."
+    ],
+    "production_files": 5,
+    "reviewable_loc": 760,
+    "total_files": 91
+  },
+  "source_feature_dir": "specs/g56r-003-evaluation-runner-scoring",
+  "source_markers": [
+    {
+      "marker_id": "g56r-003",
+      "rendered_text": "feat(g56r-003): add evaluation runner scoring",
+      "source": "specs/g56r-003-evaluation-runner-scoring"
+    }
+  ],
+  "target": {
+    "base_branch": "main",
+    "head_branch": "g56r-003-evaluation-runner-scoring"
+  },
+  "uat": {
+    "how_to_uat": "No manual UAT runbook was generated because the installed helper is deferred. Run `python3 tests/speckit-pro/run-all.py` and confirm 3251/3251, then run the release-artifact and documentation-reference drift checks.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "packet-input"
+  },
+  "validation_result_path": "specs/g56r-003-evaluation-runner-scoring/.process/pr-packets/g56r-003/validation.json",
+  "verification_evidence": [
+    {
+      "kind": "integration",
+      "result": "pass",
+      "source": "python3 tests/speckit-pro/run-all.py",
+      "summary": "Full deterministic repository suite passed 3251/3251."
+    },
+    {
+      "kind": "regression",
+      "result": "pass",
+      "source": "tests/speckit-pro/unit/test-codex-capability-contract.py",
+      "summary": "G56R-002 capability and treatment regression passed 99/99."
+    },
+    {
+      "kind": "spec-verification",
+      "result": "pass",
+      "source": "specs/g56r-003-evaluation-runner-scoring/verify-tasks-report.md",
+      "summary": "All 25 tasks and all 38 functional requirements verified with zero findings."
+    },
+    {
+      "kind": "release",
+      "result": "pass",
+      "source": "scripts/refresh-release-artifacts.py --check",
+      "summary": "Generated release artifacts match the source tree."
+    },
+    {
+      "kind": "documentation",
+      "result": "pass",
+      "source": "pnpm --dir docs-site reference:check",
+      "summary": "Generated documentation reference pages are current."
+    }
+  ]
+}

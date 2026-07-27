@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/car-003/role-corpus.schema.json",
+  "title": "CAR-003 Governed Role Corpus",
+  "description": "Logical mirror of the G56R-003 spec-scoped role-corpus contract. Structurally identical; the containment field carries the Claude-platform name mutation_contract per FR-012.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "corpus_id", "corpus_digest", "partition_binding", "roles"],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "corpus_id": {"type": "string", "minLength": 1},
+    "corpus_digest": {"$ref": "#/$defs/digest"},
+    "partition_binding": {"$ref": "#/$defs/binding"},
+    "roles": {
+      "description": "FR-011: exactly twelve role contracts. Eleven required-core roles with shipped agent definitions plus autopilot-fast-helper, which stays contract-only until CAR-011 authors it.",
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/role"}
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role_id",
+        "required_core",
+        "executable",
+        "source_digest",
+        "fixture_digest",
+        "objective_binding",
+        "permitted_tools",
+        "mutation_contract",
+        "expected_artifacts",
+        "acceptance_oracle_digest",
+        "independent_review_binding"
+      ],
+      "properties": {
+        "role_id": {
+          "enum": [
+            "analyze-executor",
+            "autopilot-fast-helper",
+            "checklist-executor",
+            "clarify-executor",
+            "codebase-analyst",
+            "consensus-synthesizer",
+            "domain-researcher",
+            "gate-validator",
+            "implement-executor",
+            "phase-executor",
+            "spec-context-analyst",
+            "uat-runbook-author"
+          ]
+        },
+        "required_core": {
+          "description": "FR-012: independent of executable. autopilot-fast-helper is analysed separately from required-core primary statistics.",
+          "type": "boolean"
+        },
+        "executable": {
+          "description": "FR-012: false means the contract is retained but the role is never run, emits no score bundle, and is never counted as attrition.",
+          "type": "boolean"
+        },
+        "source_digest": {"$ref": "#/$defs/digest"},
+        "fixture_digest": {"$ref": "#/$defs/digest"},
+        "objective_binding": {"$ref": "#/$defs/binding"},
+        "permitted_tools": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+        "mutation_contract": {"type": "string", "minLength": 1},
+        "expected_artifacts": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "acceptance_oracle_digest": {"$ref": "#/$defs/digest"},
+        "independent_review_binding": {"$ref": "#/$defs/binding"},
+        "candidate_route_bindings": {
+          "description": "FR-012: MUST be absent when executable is false.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/binding"}
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"executable": {"const": false}}, "required": ["executable"]},
+          "then": {"not": {"required": ["candidate_route_bindings"]}}
+        }
+      ]
+    }
+  }
+}

@@ -29,6 +29,14 @@
     {
       "path": {
         "kind": "plugin_relative",
+        "value": "speckit_pro_runner/agent_materialization.py",
+        "display": "speckit_pro_runner/agent_materialization.py"
+      },
+      "sha256": "624f5bea134d14eaa1053546f39bb636d0a6e6b60dc65c6f3b0a1b0fc96c9c3d"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
         "value": "speckit_pro_runner/envelope.py",
         "display": "speckit_pro_runner/envelope.py"
       },
@@ -145,6 +153,14 @@
         "display": "speckit_pro_runner/helpers/registry.py"
       },
       "sha256": "f3449e44e7cad1b48bf7de1e3efa2891f5ab92459385e30c339f836a1afce93b"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/materializer.py",
+        "display": "speckit_pro_runner/materializer.py"
+      },
+      "sha256": "d07d7eb158c1ec7cb801d76d80cda62a904f405caa5e9e7ed549731dbb3b66f0"
     },
     {
       "path": {

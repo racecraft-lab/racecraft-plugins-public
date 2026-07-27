@@ -18,7 +18,7 @@ PRD and is prepared for `$speckit-scaffold-spec CAR-NNN`.
 **Proposed branch:** `claude/agent-routing-fallback`
 **Status:** Active; dependency graph approved 2026-07-12; CAR-001 is complete
 and archived after PRs #350 and #362; CAR-002 is complete and archived after
-PR #369; CAR-003 is ready
+PR #369; CAR-003 is in progress
 
 **Parity note:** This roadmap is the Claude half of the shared twelve-agent
 catalog. The Codex half lives in the companion Codex routing roadmap (PR #330
@@ -42,6 +42,7 @@ tiers**.
 | 6 | CAR-006 | Route-policy manifest, materializer, session preflight, and override validation | Sequential framework slice |
 | 7 | CAR-007, CAR-008, CAR-009, CAR-010 | Qualify four disjoint agent cohorts | Parallel after CAR-006; serialize shared regeneration |
 | 8 | CAR-011 | Compose final identities, rebuild payload, run installed UAT, and prove release readiness | Sequential integration |
+| 9 | CAR-012 | Reconcile the mirrored evaluation contracts with G56R-003 | Joint change; must land on both platforms together |
 
 **Execution order:** CAR-001 -> CAR-002 -> CAR-003 -> CAR-004 ->
 CAR-005 -> CAR-006 -> CAR-007 + CAR-008 + CAR-009 + CAR-010 ->
@@ -137,10 +138,15 @@ creates them.
   gates; quality and reliability floors plus production non-inferiority pass
   before any resource ranking.
 - The selection rule among passing candidates is one predeclared
-  environment-independent weighted scalar over the raw token vector (input,
-  cache-write by TTL class, cache-read, output) with coefficients pinned from
-  a dated published API price-sheet revision, labeled diagnostic-derived; the
-  complete raw vector, duration, retries, and compaction are always reported.
+  environment-independent Pareto rule over the raw token vector (input,
+  cache-write by TTL class, cache-read, output) plus duration, retries, and
+  compaction, applied only after absolute quality and reliability floors and
+  task-paired cluster-adjusted non-inferiority pass. A tie, mixed dominance,
+  incomplete evidence, or statistical uncertainty is inconclusive and yields no
+  qualification; no weighted ranking is forced. The complete raw vector,
+  duration, retries, and compaction are always reported. Amended 2026-07-24
+  under CAR-003 from the previous price-weighted scalar, for logical parity with
+  G56R-003; see PRD AC-2.5.
 - Effort search starts at the documented default (`high`), ascends to the
   first stable pass when necessary, then descends and boundary-retests to the
   lowest stable ordinary effort. The current uniform `max` pins are the
@@ -208,6 +214,12 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
                                                             |
                                                             v
                  CAR-011 Final Composition, Installed UAT, and Release Proof
+
+CAR-003 --+
+          +--> CAR-012 Mirrored Evaluation-Contract Reconciliation
+G56R-003 -+     (joint change; lands with G56R-012 on both platforms)
+                Not on the CAR-004..CAR-011 critical path. Required before any
+                analysis pools outcomes across the two platforms.
 ```
 
 ## Progress Tracking
@@ -216,7 +228,7 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
 |---|---|---|---|---|
 | CAR-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/CAR-001-workflow.md](.process/CAR-001-workflow.md) | PR #350 and evidence-parity amendment PR #362 merged; canonical evidence lives under `docs/ai/research/` |
 | CAR-002 | Capability Probing, Telemetry Profile, and Exact-Treatment Contract | Complete / Archived | [.process/CAR-002-workflow.md](.process/CAR-002-workflow.md) | PR #369 merged; canonical snapshot, telemetry profile, trace schema, and validators live outside `specs/**` |
-| CAR-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Ready | - | CAR-002 dependency satisfied by PR #369 |
+| CAR-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | In Progress | [.process/CAR-003-workflow.md](.process/CAR-003-workflow.md) | Scaffolded 2026-07-24; three ordered slices, Work Package A kept intact |
 | CAR-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by CAR-003 |
 | CAR-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by CAR-004 |
 | CAR-006 | Route-policy Manifest, Materializer, Preflight, and Strict Override | Pending | - | Blocked by CAR-005 |
@@ -225,6 +237,7 @@ CAR-006 Route-policy Manifest, Materializer, Preflight, and Override
 | CAR-009 | Read-only Reasoning and Orchestration-support Agent Routing | Pending | - | Blocked by CAR-006 |
 | CAR-010 | Optional Latency-first Helper Routing and No-helper Path | Pending | - | Blocked by CAR-006 |
 | CAR-011 | Payload, Installed Skill UAT, Fallback Proof, and Release Integration | Pending | - | Blocked by CAR-007 through CAR-010 |
+| CAR-012 | Mirrored Evaluation-Contract Reconciliation with G56R-003 | Pending | - | Raised 2026-07-26 from CAR-003 open coordination items; joint change with G56R-012 |
 
 **Status legend:** Pending | Ready | In Progress | In Review | Complete | Blocked
 
@@ -915,6 +928,148 @@ fixes if warned
 - `tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.py`
 - `tests/speckit-pro/layer7-integration/` - skill-driven spawn and result-use proof
 - `docs/ai/specs/.process/` - release and live-UAT evidence
+
+---
+
+### CAR-012: Mirrored Evaluation-Contract Reconciliation with G56R-003
+
+**Priority:** P2 | **Depends On:** CAR-003 (merged), G56R-003 (merged) |
+**Enables:** pooled cross-platform analysis in CAR-007 through CAR-010
+
+**Goal:** Land, as one joint change across both platforms, the mirrored
+evaluation-contract corrections that CAR-003 and G56R-003 each identified but
+neither could apply alone.
+
+**Why this cannot be a unilateral fix.** Every item below touches a contract
+whose members are verified byte-identical across the two worktrees. FR-049 fixes
+the rule: a mirror divergence must be a joint change landed on both platforms
+together. A one-sided edit produces evidence that validates on the platform that
+made it and fails on the platform that did not, which is worse than the gap it
+closes. Each item was therefore deliberately left open with its reasoning
+recorded, not overlooked.
+
+**Reviewability Budget:** Primary surface: contracts/schemas |
+Projected reviewable LOC: 180 | Suggested slices: 1 | Status: ok |
+Production files: approximately 0 | Total files: approximately 12 |
+Budget result: re-estimate at scaffold; schema-and-spec change with paired tests
+on both platforms
+
+**Scope:**
+
+- **Analysis-decision calibration binding — Claude side already applied; the twin
+  needs to catch up.** Both platforms required `analysis_plan_binding`
+  unconditionally on every decision bundle, including a `calibration_complete`
+  bundle produced before any analysis plan exists, so a calibration decision could
+  only satisfy the contract by carrying the protocol's `{id, digest}` under the
+  plan's name. CAR-003 closed this by version increment: `schema_version` accepts
+  `["1.0.0", "1.1.0"]`, 1.0.0 preserving the legacy shape so already-sealed
+  evidence stays conforming to the version it declared, and 1.1.0 substituting the
+  calibration protocol on `qualification_eligible`. The twin's contract still pins
+  `const "1.0.0"` and requires the plan binding unconditionally. Mirror the
+  Claude-side resolution, or agree a different one and land it on both — the same
+  posture as the experiment-policy cycle, which resolved the same way.
+- **CHK051 — `invalidation_reason` has no analysis-plan or budget-change member.**
+  FR-056 currently enforces non-pooling through `{id, digest}` binding identity,
+  which detects a superseding plan but leaves the invalidation unnamed, so a
+  reviewer reading an excluded bundle sees no recorded reason. The enum is closed
+  under `additionalProperties: false` and byte-identical on both sides; a
+  unilateral member would validate on one platform and fail on the other.
+- **Score-bundle terminal-field constraints.** FR-034 fixes two rules — plane is a
+  total single-valued function of code, and `score_disposition=accepted` holds if
+  and only if all three failure fields are `none` — and both are enforced in the
+  Python implementation on each platform. Neither schema carries the cross-field
+  constraint, so nothing schema-side stops a code being filed on a foreign plane
+  or a bundle absorbing a live failure while declaring `accepted`. The same
+  coordination covers `authority_failures`, where FR-028's "required provenance is
+  missing" is pinned to the existing `malformed_catalog` rather than widened.
+- **Calibration-protocol shape parity.** G56R-003's calibration protocol carries
+  scorer, rubric, adjudicator, cache-policy, and independent-review bindings plus
+  a status and version; CAR-003's is a leaner anti-cycle token carrying the
+  objective bindings, the partition binding, and the three
+  carries-no-margins/sample-sizes/thresholds assertions. CAR-003 adopted the
+  twin's calibration-completion split, but had to make
+  `completion_provenance.independent_review_binding` nullable because its
+  protocol has no such binding to reference and the calibration pilot scored with
+  deterministic rubric scorers rather than model scorers — so no independent
+  review artifact exists, and authoring one retroactively to fill a required
+  field would be back-fitting. Bring the two protocols to one shape; the
+  nullability then closes on its own.
+- **Where a failed hard gate is recorded, and what the `candidate` plane means.**
+  The two platforms model the `candidate` failure plane differently, and the
+  difference is substantive rather than cosmetic.
+
+  G56R-003 constrains it tightly: a `candidate`-plane bundle must carry a
+  `terminal_state` that matches its failure code through a closed
+  terminal-to-code map (`failed`, `timed_out`, `cancelled`, `budget_exhausted`,
+  `abandoned`), must record `score_disposition=accepted`, and must record
+  acceptance `0.0`. That is AC-2.7 implemented literally — a candidate-caused
+  failure stays inside the estimand, scored, with acceptance zero. On that
+  platform `candidate` means *the run terminated badly*.
+
+  CAR-003 has no such coupling. `FAILED_GATE_FAILURE = ("candidate",
+  "candidate_failed")` fires whenever a hard gate fails, with no reference to
+  terminal state, and yields disposition `gate_failed`. So a run that completed
+  cleanly but failed a safety, grounding, or mutation gate is recorded on this
+  side as `candidate_failed` — which reads as a run that failed.
+
+  A failed hard gate is not a candidate terminal outcome: the run can finish
+  perfectly and still be rejected by a deterministic contract check. G56R-003
+  previously carried a private `failure_plane=gate` for exactly that case. It was
+  reported to the twin as a parity violation and removed in `a0c5399a`, which
+  left nowhere correct to file a failed gate and produced a conflation of failed
+  gates with missing evidence — caught and reported by the twin rather than
+  shipped silently. That prompt was wrong: the plane it removed was serving a
+  real distinction this side lacks.
+
+  **Resolved on the Claude side; the twin needs to restore what it removed.**
+  CAR-003 adopted the twin's original distinction rather than defending its own
+  overload: `failure_plane=gate` and `failure_code=gate_failed` now exist in the
+  Claude taxonomy, `FAILED_GATE_FAILURE` routes there, and `candidate_failed`
+  reverts to meaning only an FR-020 estimand-retained terminal outcome. FR-034
+  carries an amendment recording the addition and why it is not a coined member:
+  the twin published this exact pair until `a0c5399a` removed it on a Claude-side
+  report that misread it as a parity violation.
+
+  What remains is the twin reverting that removal, which also repairs the
+  conflation the removal caused — with `gate` gone and `candidate` reserved for
+  terminal outcomes, G56R had nowhere correct to file a failed gate and fell back
+  to the missing-evidence pairing, so a candidate that fails a hard gate is
+  currently recorded as an evidence shortfall. That is an estimand defect, not a
+  labeling one: AC-2.7 keeps candidate-attributable failures in the denominator,
+  and an evidence shortfall removes them.
+
+  Until both sides land it, the taxonomies are knowingly out of step at 12/36
+  versus 11/35 and this is the one sanctioned divergence. The FR-014 ruling for a
+  *missing* gate (`evidence_boundary`/`required_evidence_missing`, disposition
+  `non_scorable`) is unaffected and stands. `gate_failed` as a `score_disposition`
+  member is correct on both platforms and was never in question.
+- **Carry over any G56R-003 handoff item still open at merge.** The CAR-003 twin
+  handoff records the twin-side additions: FR-034's total plane-by-code mapping,
+  FR-014's missing-gate sentence with its `non_scorable` disposition consequence,
+  the FR-058 direction-of-preference mirror, and the three-way shared-contract
+  collision at `tests/speckit-pro/layer6-efficiency/contracts/` where two
+  structurally different documents share one `$id`. Items G56R-003 closes on its
+  own PR leave this scope; items it does not, enter it.
+
+**Out of Scope:**
+
+- Any change to the four closed enumerations' existing members. Additions are in
+  scope only where named above; renames and removals are not.
+- Regenerating CAR-003's committed calibration evidence. There is no
+  rebuild-from-retention path, so regeneration means a new live run whose
+  measurements would differ from the ones the frozen analysis plan was derived
+  from.
+- Reverting either platform's correct side to restore symmetry with a defect.
+
+**Key Files:**
+
+- `specs/car-003-evaluation-runner-scoring/contracts/analysis-decision.schema.json`
+- `specs/car-003-evaluation-runner-scoring/contracts/score-bundle.schema.json`
+- `specs/g56r-003-evaluation-runner-scoring/contracts/` - the mirrored copies
+- `tests/speckit-pro/layer6-efficiency/lib/claude_score_bundle.py`
+- `tests/speckit-pro/layer6-efficiency/run-calibration-pilot.py`
+- `tests/speckit-pro/unit/test-analysis-decision-ladder.py`
+- `docs/ai/specs/.process/CAR-003-twin-handoff.md` - the source record
 
 ---
 

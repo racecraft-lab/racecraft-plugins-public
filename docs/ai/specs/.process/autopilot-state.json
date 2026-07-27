@@ -1,43 +1,876 @@
 {
-  "workflow_file": "docs/ai/specs/.process/CAR-002-workflow.md",
-  "spec_id": "CAR-002",
-  "feature_dir": "specs/car-002-capability-probing-telemetry",
-  "updated_at": "2026-07-24T12:34:46Z",
-  "active_step": "Archived: post-merge cleanup applied for CAR-002 and G56R-002",
-  "status": "completed_archived",
-  "prior_run_note": "Detailed implementation and review state remains in the preserved CAR-002 and G56R-002 workflow files and git history.",
+  "workflow_file": "docs/ai/specs/.process/G56R-003-workflow.md",
+  "spec_id": "G56R-003",
+  "feature_dir": "specs/g56r-003-evaluation-runner-scoring",
+  "updated_at": "2026-07-26T12:51:36Z",
+  "active_step": "Complete",
+  "status": "completed",
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
     "consensus_mode": "moderate",
     "gate_failure": "stop"
   },
+  "runtime": {
+    "parent_model": "gpt-5.6-sol",
+    "parent_reasoning_effort": "xhigh",
+    "python": "3.11.0",
+    "runner_version": "0.1.0",
+    "implementation_agent": "implement-executor",
+    "subagent_slots": 3
+  },
   "archive_sweep": {
-    "status": "applied",
-    "cleanup_branch": "codex/archive-merged-specs-20260724",
-    "archived_specs": [
-      {
-        "spec_id": "CAR-002",
-        "pull_requests": [
-          369
-        ],
-        "report": ".specify/memory/archive-reports/2026-07-24-car-002-post-merge-hygiene.md"
-      },
-      {
-        "spec_id": "G56R-002",
-        "pull_requests": [
-          366,
-          367,
-          368
-        ],
-        "report": ".specify/memory/archive-reports/2026-07-24-g56r-002-post-merge-hygiene.md"
-      }
-    ]
+    "status": "no_candidates",
+    "execution_path": "extension_contract",
+    "invocation_available": true,
+    "prerequisite_available": true,
+    "prerequisite_mode": "codex_native_worktree_binding",
+    "archive_extension_installed": true,
+    "cleanup_mode": "apply_eligibility",
+    "eligible_previous_specs": [],
+    "excluded_current_spec": "specs/g56r-003-evaluation-runner-scoring",
+    "safeToApplyCleanup": false
+  },
+  "prerequisites": {
+    "all_pass": true,
+    "branch_from_git": "g56r-003-evaluation-runner-scoring",
+    "branch_from_runner": "",
+    "branch_runner_discrepancy": "Runner reported an empty branch on the linked worktree; direct git branch and upstream checks passed.",
+    "upstream": "origin/g56r-003-evaluation-runner-scoring",
+    "head": "8a54df37f784bb1cf961263a566706f17017f71b",
+    "specify_cli": "0.11.8",
+    "agent_install": "no_op",
+    "preset": "speckit-pro-reviewability v1.0.0",
+    "hooks": "18 hook events configured"
   },
   "project_commands": {
-    "spec_index_write": "generate-spec-index-write",
-    "spec_index_check": "generate-spec-index-check",
-    "structural_suite": "python3 tests/speckit-pro/run-all.py --layer 1",
-    "full_suite": "python3 tests/speckit-pro/run-all.py"
-  }
+    "BUILD": "N/A",
+    "TYPECHECK": "N/A",
+    "LINT": "N/A",
+    "LINT_FIX": "N/A",
+    "UNIT_TEST": "N/A",
+    "INTEGRATION_TEST": "N/A",
+    "SINGLE_FILE_TEST": "N/A",
+    "SINGLE_FILE_INTEGRATION": "N/A",
+    "FULL_VERIFY": "N/A"
+  },
+  "capability_paths": {
+    "codebase_and_spec_context": "repo-local files plus rg and git",
+    "library_documentation": "Context7 when a library or SDK contract is needed",
+    "openai_product_documentation": "official OpenAI documentation capability",
+    "web_and_domain_research": "primary-source web research",
+    "source_extraction": "direct page extraction or repository reads",
+    "repo_local_helpers": "speckit_pro_runner"
+  },
+  "phase_results": {
+    "specify": {
+      "status": "completed",
+      "gate": "G1",
+      "gate_status": "passed",
+      "functional_requirements": 26,
+      "user_stories": 4,
+      "acceptance_scenarios": 14,
+      "success_criteria": 14,
+      "needs_clarification_markers": 0,
+      "files": [
+        "specs/g56r-003-evaluation-runner-scoring/spec.md",
+        "specs/g56r-003-evaluation-runner-scoring/checklists/requirements.md"
+      ],
+      "doctor_hook": "warning: Claude integration configured without .claude/commands in the Codex worktree"
+    },
+    "clarify_session_1": {
+      "status": "completed",
+      "questions": 5,
+      "consensus_items": 4,
+      "round_2_items": 1,
+      "remaining_markers": 0,
+      "decisions": [
+        "refreshed codex debug models is the pinned runtime authority",
+        "committed boundary evidence is sanitized and deny-by-default",
+        "ordinary effort normalization is explicit and evidence-backed",
+        "invalid or empty intersections do not publish an authoritative freeze",
+        "capability, snapshot-authority, and treatment/scoring failures use separate planes"
+      ]
+    },
+    "clarify_session_2": {
+      "status": "completed",
+      "questions": 5,
+      "consensus_items": 1,
+      "round_2_items": 0,
+      "remaining_markers": 0,
+      "decisions": [
+        "strict requested-route score eligibility",
+        "canonical materializer-owned destination bytes",
+        "explicit mandatory observation and null behavior",
+        "rerouted attempts remain immutable and non-scorable for the requested route",
+        "score and decision bundles use additive foreign-key-style joins"
+      ]
+    },
+    "clarify_session_3": {
+      "status": "completed",
+      "questions": 5,
+      "consensus_items": 1,
+      "consensus_reused": "clarify_session_1 security evidence boundary",
+      "remaining_markers": 0,
+      "decisions": [
+        "nine executable core roles plus two non-executable core contracts",
+        "fixture validity precedes scoring",
+        "closed score failure and invalidation planes",
+        "two distinct blinded scorers and a frozen third adjudicator",
+        "sanitized committed scorer evidence only"
+      ]
+    },
+    "clarify_session_4": {
+      "status": "completed",
+      "questions": 5,
+      "consensus_items": 0,
+      "remaining_markers": 0,
+      "gate": "G2",
+      "gate_status": "passed",
+      "decisions": [
+        "closed evidence partitions",
+        "immutable comparison assignment",
+        "floors then paired non-inferiority then Pareto",
+        "assigned-attempt estimand with capped complete-pair reruns",
+        "post-calibration pre-cohort analysis-plan freeze"
+      ]
+    },
+    "plan": {
+      "status": "completed",
+      "execution": "direct parent fallback after two context-stalled phase-executor attempts",
+      "gate": "G3",
+      "gate_status": "passed",
+      "unresolved_markers": 0,
+      "reviewability_estimator": {
+        "status": "pass",
+        "projected": 0,
+        "declared_files": {
+          "production": 0,
+          "new": 21,
+          "modified": 3,
+          "total_entries": 24
+        },
+        "taxonomy_note": "Nested repository Python paths were not classified as production by the helper."
+      },
+      "explicit_largest_slice": {
+        "reviewable_loc": 760,
+        "production_files": 5,
+        "total_files": 16,
+        "primary_surface": "harness/adapter"
+      },
+      "decomposition": "three ordered review slices",
+      "artifacts": [
+        "specs/g56r-003-evaluation-runner-scoring/plan.md",
+        "specs/g56r-003-evaluation-runner-scoring/research.md",
+        "specs/g56r-003-evaluation-runner-scoring/data-model.md",
+        "specs/g56r-003-evaluation-runner-scoring/contracts/",
+        "specs/g56r-003-evaluation-runner-scoring/quickstart.md"
+      ]
+    },
+    "checklist_llm_integration": {
+      "status": "completed",
+      "items": 34,
+      "passed": 34,
+      "failed": 0,
+      "gaps": 0,
+      "remediation_edits": 0,
+      "consensus": "completed_by_zero_unresolved_item_skip",
+      "file": "specs/g56r-003-evaluation-runner-scoring/checklists/llm-integration.md"
+    },
+    "checklist_data_integrity": {
+      "status": "completed",
+      "items": 38,
+      "passed": 38,
+      "failed": 0,
+      "gaps": 0,
+      "remediation_edits": 0,
+      "consensus": "completed_by_zero_unresolved_item_skip",
+      "file": "specs/g56r-003-evaluation-runner-scoring/checklists/data-integrity.md"
+    },
+    "checklist_error_handling": {
+      "status": "completed",
+      "items": 35,
+      "passed": 35,
+      "failed": 0,
+      "initial_gaps": 2,
+      "final_gaps": 0,
+      "remediation_edits": [
+        "closed score failure-code taxonomy",
+        "unclassifiable attrition fail-closed behavior"
+      ],
+      "consensus": "completed_by_zero_unresolved_item_skip_after_remediation",
+      "file": "specs/g56r-003-evaluation-runner-scoring/checklists/error-handling.md"
+    },
+    "checklist_performance": {
+      "status": "completed",
+      "items": 34,
+      "passed": 34,
+      "failed": 0,
+      "initial_gaps": 4,
+      "final_gaps": 0,
+      "remediation_edits": [
+        "frozen workload strata and p95 guardrails",
+        "schema-governed analysis plan",
+        "complete campaign budget ceilings",
+        "cache-state isolation policy"
+      ],
+      "consensus": "completed_by_zero_unresolved_item_skip_after_remediation",
+      "file": "specs/g56r-003-evaluation-runner-scoring/checklists/performance.md"
+    },
+    "checklists": {
+      "status": "completed",
+      "gate": "G4",
+      "gate_status": "passed",
+      "total_items": 141,
+      "final_gaps": 0
+    },
+    "tasks": {
+      "status": "completed",
+      "execution": "direct parent fallback after two context-stalled phase-executor attempts",
+      "gate": "G5",
+      "gate_status": "passed",
+      "total_tasks": 26,
+      "initial_g5_tasks": 25,
+      "post_review_follow_up_tasks": 1,
+      "parallel_safe_tasks": 3,
+      "review_slices": 3,
+      "functional_requirements_covered": 38,
+      "executor_contract_repair": "Rewrote step-like RED/GREEN/REFACTOR rows into self-contained single-executor TDD tasks and reran G5.",
+      "reviewability": {
+        "helper_id": "reviewability-gate",
+        "requested_mode": "tasks",
+        "status": "deferred",
+        "reason": "installed helper supports setup mode only",
+        "fallback_setup_status": "non_blocking",
+        "fallback_plan_estimator_status": "pass",
+        "ratified_decomposition": "three ordered review slices"
+      }
+    },
+    "analyze": {
+      "status": "completed_after_task_repair",
+      "gate": "G6",
+      "gate_status": "passed",
+      "checks": 12,
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "remediations": 0,
+      "consensus": "rerun_completed_by_zero_unresolved_item_skip",
+      "rerun_findings": 0,
+      "confidence_emit": {
+        "aggregate": 0.99,
+        "task_understanding": 0.98,
+        "approach_clarity": 0.98,
+        "requirements_alignment": 1.0,
+        "risk_assessment": 1.0,
+        "completeness": 1.0
+      }
+    },
+    "confidence_gate": {
+      "status": "completed_after_task_repair",
+      "mode": "advisory",
+      "threshold": 0.9,
+      "composite": 0.99,
+      "pass": true,
+      "recommended_action": "proceed",
+      "bounded_remediation_iterations": 0,
+      "rerun_completed_at": "2026-07-25T02:10:07Z"
+    },
+    "implementation": {
+      "status": "completed",
+      "active_slice": 3,
+      "active_task": null,
+      "completed_tasks": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014",
+        "T015",
+        "T016",
+        "T017",
+        "T018",
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023",
+        "T024",
+        "T025",
+        "T026"
+      ],
+      "task_evidence": {
+        "T001": {
+          "status": "completed",
+          "execution": "implement-executor first pass plus parent fallback after the catalog correction executor stalled in RED",
+          "red": "Corrective catalog-contract run produced 5 tests with 18 failures and 3 errors.",
+          "focused_green": "python3 tests/speckit-pro/unit/test-codex-successor-capability.py: 5 tests passed",
+          "regression_green": "python3 tests/speckit-pro/unit/test-codex-capability-contract.py: 99 tests passed",
+          "predecessor_immutability": "docs/ai/research/codex-g56r-002-executable-candidate-freeze.json has no diff"
+        },
+        "T002": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "7 focused tests failed because the shipped canonical materializer module was missing.",
+          "focused_green": "python3 tests/speckit-pro/unit/test-agent-materialization.py: 7 tests passed",
+          "contract": "Exact UTF-8 bytes, source/materializer bindings, separate digests, idempotence, byte-proof rejection, and shared shipped import verified"
+        },
+        "T003": {
+          "status": "completed",
+          "execution": "implement-executor plus corrective TDD for exact-byte materialization binding",
+          "red": "Initial qualification suite produced 9 failures; corrective materialization-registry and closed-public-API tests also failed before GREEN.",
+          "focused_green": "python3 tests/speckit-pro/unit/test-codex-qualification-contracts.py: 9 tests passed",
+          "regression_green": "python3 tests/speckit-pro/unit/test-codex-capability-contract.py: 99 tests passed",
+          "contract": "Destination-byte, instruction, and configuration digests are distinct; exact treatment and one-to-one assignment/trace joins fail closed"
+        },
+        "T004": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "5 CLI tests failed because the durable qualification entry point was missing.",
+          "focused_green": "python3 tests/speckit-pro/unit/test-codex-qualification-contracts.py: 14 tests passed",
+          "structural_green": "run_codex_role_eval.py absent; legacy runner remains explicitly non-release smoke",
+          "deferred_expected": "refresh-release-artifacts.py --check reports T002 shipped-runner drift; T005 owns regeneration"
+        },
+        "T005": {
+          "status": "completed",
+          "execution": "implement-executor plus required generated-artifact checkpoint",
+          "red": "Runner-trust assertion failed because the materializer source digest was absent.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-agent-materialization.py: 8 tests passed",
+          "generated_refresh": "Generator-owned artifacts refreshed and checkpointed in a9bdfe0e",
+          "generated_check": "PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py --check passed after the checkpoint"
+        },
+        "T006": {
+          "status": "completed",
+          "execution": "implement-executor plus parent-owned generated reference refresh and G7 verification",
+          "red": "End-to-end replay failed because validate_qualification_bundle did not accept successor freeze authority.",
+          "focused_green": "Successor 5/5; materialization 8/8; qualification and end-to-end replay 15/15",
+          "layer4_green": "python3 tests/speckit-pro/run-all.py --layer 4: 1637/1637 passed",
+          "generated_reference": "pnpm --dir docs-site reference:check passed after canonical regeneration",
+          "gate": "G7",
+          "gate_status": "passed"
+        },
+        "T007": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "8 focused corpus-contract tests failed before the validator and schema existed.",
+          "focused_green": "python3 tests/speckit-pro/unit/test-codex-qualification-corpus.py: 8 tests passed",
+          "contract": "Exact twelve-role membership, core/helper counts, executability, digests, calibration partition, and admitted-route-only scheduling verified"
+        },
+        "T008-T010": {
+          "status": "completed",
+          "execution": "three parallel implement-executors with disjoint fixture ownership",
+          "red": "Fixture groups A, B, and C failed on their missing 4, 5, and 3 fixture contracts.",
+          "focused_green": "Group A 3 tests passed; Group B 1 test passed; Group C 1 test passed",
+          "parallel_safety": "No shared manifest or cross-group file was modified"
+        },
+        "T011": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Shared-manifest tests failed before corpus-manifest.json and governed non-executable skip reasons existed.",
+          "focused_green": "Corpus 10 tests passed; fixture groups A/B/C passed 3, 1, and 1 tests",
+          "contract": "Sole shared manifest freezes deterministic role ordering, exact 12/11/9/2/1 counts, partitions, skip reasons, helper separation, and sha256:dfbc404597899e9cf3d74b573b1be94b936deb462796e3da4932f5e31fcd731f"
+        },
+        "T012": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "8 focused tests produced 14 real assertion failures because qualification_scoring.py was missing.",
+          "focused_green": "python3 tests/speckit-pro/unit/test-codex-qualification-scoring.py: 8 tests passed",
+          "contract": "Closed role-to-acceptance gate order fails closed for failed gates, missing gates, missing evidence, and invalid ordering; semantic scoring requires a replay-valid passed result"
+        },
+        "T013": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Four new ballot/adjudication tests produced 1 failure and 15 missing-API errors before implementation.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-scoring.py: 12 tests passed",
+          "contract": "Two distinct current candidate-blind scorer executions share one frozen rubric; decision-affecting disagreement requires a current frozen third adjudicator that cannot reuse either primary scorer"
+        },
+        "T014": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Eight new score-bundle tests plus schema/API assertions produced 2 failures and 50 errors before implementation.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-scoring.py: 20 tests passed",
+          "contract": "Self-contained score-bundle schema and constructor enforce immutable upstream joins, closed taxonomy and none coupling, accepted zero-acceptance candidate terminals, evidence-boundary attrition, additive invalidation, and no embedded traces"
+        },
+        "T015": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Five scorer-evidence safety and replay tests failed against the prior nineteen-test baseline.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-scoring.py: 24 tests passed",
+          "contract": "One deny-by-default sanitizer enforces opaque committed bindings and blocks private values, unknown keys, and stale direct publication; replay is content-addressed and rejects drift",
+          "sensitive_scan": "No forbidden sensitive-field matches in committed corpus fixtures or Layer 6 contracts"
+        },
+        "T016": {
+          "status": "completed",
+          "execution": "implement-executor plus parent-owned generated reference refresh and G7 closeout",
+          "red": "End-to-end Slice 2 regression produced 1 failure and 1 error before replay summary support existed.",
+          "focused_green": "Scoring 25 tests passed; corpus tests passed 10, 3, 1, and 1",
+          "privacy_green": "python3 tests/speckit-pro/unit/test-privacy-scan.py: 10 tests passed",
+          "layer4_green": "python3 tests/speckit-pro/run-all.py --layer 4: 1637/1637 passed",
+          "suite_registration": "All five Slice 2 focused tests registered exactly once",
+          "generated_reference": "pnpm --dir docs-site reference:check passed after canonical regeneration",
+          "gate": "G7",
+          "gate_status": "passed"
+        },
+        "T017": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Four contract tests produced six failing assertions because all three repository schemas were missing.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-contracts.py: 19 tests passed",
+          "contract": "Self-contained closed schemas freeze calibration partition, immutable pair assignments, complete budgets, workload/cache/tail controls, quality-first statistical order, attrition/rerun rules, and ordered non-qualifying calibration decisions"
+        },
+        "T018": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Five comparison-assignment tests plus API export coverage produced twenty-one errors and one failure before validator implementation.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-contracts.py: 24 tests passed",
+          "contract": "Complete pre-execution ID/digest joins bind one non-eligible calibration partition; refreshes require additive invalidations, post-execution rebinding is rejected, and cross-partition reuse fails closed"
+        },
+        "T019": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Six focused statistics tests produced twelve assertion failures before the statistics module existed.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-statistics.py: 6 tests passed",
+          "contract": "Deterministic decisions short-circuit from pairing to absolute floors to paired cluster-adjusted non-inferiority to unweighted raw Pareto; missing pairs, uncertainty, ties, and mixed dominance cannot qualify"
+        },
+        "T020": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Four workload and cache tests produced ten failures and one error before implementation.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-statistics.py: 10 tests passed",
+          "contract": "A frozen workload/cache gate precedes floors, validates closed strata, target weights, long-horizon flags, minimum tasks, unknown handling, per-stratum per-arm p95 tails, immutable cache binding, isolation, and no treatment-order leakage"
+        },
+        "T021": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Four terminal, attrition, and rerun tests produced four failures and five errors before implementation.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-statistics.py: 14 tests passed",
+          "contract": "Candidate terminals remain assigned with acceptance zero; unclassifiable attrition blocks completeness; only independently preclassified transient harness failures may trigger capped complete-pair reruns, with one-arm and complete-case paths prohibited"
+        },
+        "T022": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Three budget, partition, and terminal decision tests produced seventeen failures and ten errors before implementation.",
+          "focused_green": "PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/unit/test-codex-qualification-statistics.py: 17 tests passed",
+          "contract": "All seven campaign budget dimensions fail closed when missing or exceeded; G56R-003 accepts only non-eligible calibration partitions, emits only calibration_complete/inconclusive/invalid, and cannot create final policy, default, aggregate, or release outputs"
+        },
+        "T023": {
+          "status": "completed",
+          "execution": "RED tests from implement-executor attempt plus parent recovery after two executor stalls before GREEN",
+          "red": "Qualification contracts produced one failure and four errors; statistics/replay produced two failures and one error before the replay and CLI paths existed.",
+          "focused_green": "Qualification contracts 27 tests passed; qualification statistics/replay 20 tests passed.",
+          "contract": "Content-addressed offline replay recomputes decisions and rejects drift; calibration requires explicit confirmed local execution, pinned client/snapshot, complete budgets and scorer/rubric/adjudicator/workload/cache bindings, an operator-only raw root, and no network or live repository writes; analysis-plan freeze is canonical and pre-cohort only."
+        },
+        "T024": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "Six new methods and one expanded statistics test produced eleven failures and one error before boundary hardening.",
+          "focused_green": "Qualification statistics/replay 26 tests passed; qualification contracts 27 tests passed.",
+          "contract": "Analysis-plan freeze requires closed versioned metadata, independent review, pre-cohort absence, complete numeric policies and budgets; final route policy, integrated confirmation, live-default CI, committed raw evidence, one-arm retry, post-hoc thresholds, trace mutation, duplicate materializers, cache leakage, unknown attrition, unrestricted failure codes, and missing budgets fail closed; run_codex_role_eval.py remains absent."
+        },
+        "T025": {
+          "status": "completed",
+          "execution": "implement-executor",
+          "red": "The full sanitized source-lineage replay produced one real closed-shape validation failure before source_lineage became an optional governed request field.",
+          "focused_green": "All G56R-003 focused tests passed 107/107; G56R-002 capability regression passed 99/99.",
+          "full_suite": "PYTHONDONTWRITEBYTECODE=1 python3 -u tests/speckit-pro/run-all.py passed 3251/3251.",
+          "suite_registration": "test-codex-qualification-statistics.py is registered exactly once in suite-manifest.json.",
+          "docs": "pnpm --dir docs-site reference:check and validate passed after canonical reference generation.",
+          "release_title": "feat(g56r-003): add evaluation runner scoring passed live release-readiness validation.",
+          "generated_check": "After checkpoint 49af42be, PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py --check passed and docs reference:check remained current."
+        },
+        "T026": {
+          "status": "completed",
+          "execution": "direct post-review remediation",
+          "red": "Regression coverage exposed the pilot's partial policy-binding checks and the analysis-plan freeze dependency on a plan-bound calibration decision before the new validators and completion contract existed.",
+          "focused_green": "Qualification contracts passed 36/36; qualification statistics/replay passed 34/34.",
+          "full_suite": "PYTHONDONTWRITEBYTECODE=1 python3 -u tests/speckit-pro/run-all.py passed 3251/3251.",
+          "contract": "Calibration validates the full closed policy and protocol schemas, content identities, comparison-set and pair digests, seeded ordering, and authority joins; analysis-plan freeze requires content-addressed plan-free calibration completion and binds it into the frozen plan."
+        }
+      },
+      "gate": "G7",
+      "gate_status": "passed",
+      "gate_evidence": {
+        "helper_id": "validate-gate",
+        "mode": "read_only",
+        "writes_state": false,
+        "tasks_done": 26,
+        "tasks_total": 26,
+        "initial_slice_tasks": 25,
+        "post_review_follow_up_tasks": 1,
+        "markers": 0
+      }
+    },
+    "post_implementation": {
+      "status": "completed",
+      "doctor": {
+        "status": "completed_with_warning",
+        "failures": 0,
+        "warning": "Claude integration is configured without .claude/commands in the Codex worktree."
+      },
+      "verify": {
+        "status": "passed",
+        "tasks_complete": 25,
+        "functional_requirements_mapped": 38,
+        "findings": 0
+      },
+      "verify_tasks": {
+        "status": "passed",
+        "verified": 25,
+        "partial": 0,
+        "weak": 0,
+        "not_found": 0,
+        "skipped": 0,
+        "report": "specs/g56r-003-evaluation-runner-scoring/verify-tasks-report.md"
+      },
+      "code_review": {
+        "status": "passed",
+        "final_critical": 0,
+        "final_high": 0,
+        "final_medium": 0,
+        "final_low": 0,
+        "remediation_summary": [
+          "Replayed score authorization from original qualification evidence and joined the exact trace ID and digest.",
+          "Bound corpus roles and active routes to canonical fixture and trusted route authority.",
+          "Recomputed ballot, adjudication, rubric, plan, partition, and analysis replay authority.",
+          "Made frozen outputs create-only and preserved fail-closed one-cluster behavior."
+        ]
+      },
+      "integration": {
+        "status": "passed",
+        "suite": "python3 tests/speckit-pro/run-all.py",
+        "passed": 3251,
+        "total": 3251,
+        "g56r_002_regression": "99/99 passed",
+        "release_artifacts": "current",
+        "docs_reference": "current",
+        "release_title": "feat(g56r-003): add evaluation runner scoring"
+      },
+      "reviewability": {
+        "status": "passed",
+        "checkpoint_commit": "3981dfe0",
+        "helper_id": "estimate-reviewable-loc",
+        "projected_reviewable_loc": 0,
+        "declared_files": {
+          "production": 0,
+          "new": 21,
+          "modified": 3,
+          "total_entries": 24
+        },
+        "ratified_decomposition": "three ordered review slices",
+        "atomicity_route": "one-navigable-PR"
+      },
+      "self_review": {
+        "status": "completed",
+        "tests_executed": "Applicable unit, integration, release-artifact, and generated-reference checks passed; build, typecheck, and lint are not defined for this scope.",
+        "acceptance_scenarios_reviewed": 14,
+        "edge_case_gaps": 0,
+        "functional_requirements_reviewed": 38,
+        "requirement_orphans": 0,
+        "task_orphans": 0,
+        "silent_deferrals": 0,
+        "tidiness_findings": 0
+      },
+      "uat": {
+        "status": "skipped",
+        "reason": "skipped: generate-uat-skeleton deferred",
+        "committed_runbook_present": false,
+        "blocking": false
+      },
+      "final_reviewability": {
+        "status": "passed",
+        "mode": "current_committed_evidence",
+        "checkpoint_commit": "3981dfe0",
+        "deferred_helper": "final-reviewability-backstop",
+        "estimator_status": "pass",
+        "g7_slices": 3,
+        "atomicity_route": "one-navigable-PR",
+        "marker_plan_present": false,
+        "pr_side_effects_allowed": true
+      },
+      "pr_packet": {
+        "status": "passed",
+        "helper_id": "pr-packet-output",
+        "dry_run": "passed",
+        "apply": "passed",
+        "packet_path": "specs/g56r-003-evaluation-runner-scoring/.process/pr-packets/g56r-003.json",
+        "body_file": "specs/g56r-003-evaluation-runner-scoring/.process/pr-packets/g56r-003/body.md",
+        "title": "feat(g56r-003): add evaluation runner scoring"
+      },
+      "pr_body": {
+        "status": "passed",
+        "validation_helper": "validate-pr-packet-read-only",
+        "validation_write_helper": "validate-pr-packet-write",
+        "validation_result_path": "specs/g56r-003-evaluation-runner-scoring/.process/pr-packets/g56r-003/validation.json",
+        "pr_blocked": false,
+        "release_note": "present"
+      },
+      "pr_creation": {
+        "status": "completed",
+        "number": 386,
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/386",
+        "base": "main",
+        "head": "g56r-003-evaluation-runner-scoring",
+        "pushed_head": "b926d8a4",
+        "title": "feat(g56r-003): add evaluation runner scoring"
+      },
+      "review_remediation": {
+        "status": "passed_after_remediation",
+        "reviewed_head": "b324f3b3",
+        "remediation_head": "b926d8a4",
+        "inline_comments": 6,
+        "actionable_reviews": 37,
+        "reported_p1": 23,
+        "reported_p2": 11,
+        "reported_static_quality": 3,
+        "remediated_findings": 37,
+        "resolved_threads": 6,
+        "local_validation": "affected scoring and statistics suites passed 62/62; full repository suite passed 3251/3251",
+        "ci": "all PR checks passed on final remediation code head b926d8a4",
+        "non_actionable_review": "Copilot exceeded its 20,000-line review limit under the ratified one-navigable-PR route.",
+        "finding_clusters": [
+          "corpus and active-route authority",
+          "treatment assignment completeness and ordering",
+          "CLI provenance and successor-to-analysis pipeline joins",
+          "successor capability publication authority",
+          "score bundle validation and sanitization",
+          "replay lineage and role authority",
+          "statistical validation, inference, weighting, and governed output schemas"
+        ],
+        "prior_remediation": [
+          "Replaced an imprecise subset assertion with assertLessEqual.",
+          "Removed the unused MATERIALIZER_VERSION import.",
+          "Removed the unused candidate-terminal local assignment."
+        ]
+      },
+      "experiment_policy_contradiction_remediation": {
+        "status": "passed",
+        "contract_inventory": [
+          "specs/g56r-003-evaluation-runner-scoring/contracts/experiment-policy.schema.json",
+          "tests/speckit-pro/layer6-efficiency/contracts/experiment-policy.schema.json"
+        ],
+        "phase_1_resolution": "Eligibility-selected exclusive calibration-protocol or analysis-plan binding keyed on partition.qualification_eligible.",
+        "runtime_resolution": "Calibration-only contract uses the const-false partition and requires the calibration-protocol binding directly.",
+        "analysis_plan_lineage": "The frozen analysis plan binds the pre-calibration protocol and, after T026, the plan-free calibration-completion authority.",
+        "additional_follow_up": "Resolved by T026 with a schema-governed, content-addressed calibration-completion artifact that is independent of the later analysis plan.",
+        "enforcement_gap": "Resolved by T026; the pilot now validates the full closed policy/protocol schemas, identities, comparison sets, pairs, ordering, and authority joins before execution.",
+        "focused_validation": "Qualification contracts and statistics passed 67/67.",
+        "full_suite": "PYTHONDONTWRITEBYTECODE=1 python3 -u tests/speckit-pro/run-all.py passed 3251/3251."
+      },
+      "calibration_authority_follow_up_remediation": {
+        "status": "passed",
+        "resolved_findings": [
+          "calibration entry point bypassed full closed experiment-policy validation",
+          "analysis-plan freeze depended on a plan-bound calibration decision"
+        ],
+        "policy_enforcement": "The calibration CLI requires an explicit frozen protocol, validates both closed schemas and content identities, recomputes comparison-set and pair digests, derives seeded order, and joins all immutable authorities before returning calibration_ready.",
+        "completion_authority": "A closed calibration-completion.v1 artifact binds the protocol, ineligible partition, comparison sets, assignments, score bundles, evidence, completion provenance, and independent review without margins, sample sizes, quality floors, terminal thresholds, or analysis-plan authority.",
+        "analysis_plan_lineage": "The analysis-plan contract and freeze command require and persist the exact calibration-completion ID/digest.",
+        "focused_validation": "Qualification contracts passed 36/36; qualification statistics/replay passed 34/34.",
+        "full_suite": "PYTHONDONTWRITEBYTECODE=1 python3 -u tests/speckit-pro/run-all.py passed 3251/3251.",
+        "score_taxonomies_changed": false
+      },
+      "retrospective": {
+        "status": "completed",
+        "lessons_recorded": 4,
+        "roadmap_status": "G56R-003 complete in PR #386; merge required before G56R-004"
+      }
+    }
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [],
+    "warnings": []
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "Atomicity route is one-navigable-PR, not split-PR."
+  },
+  "plan": [
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Successor Freeze and Invalidation",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Successor Freeze and Invalidation Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Materialization, Delivery, and Trace Joins",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Materialization, Delivery, and Trace Joins Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Corpus and Blinded Scoring",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Corpus and Blinded Scoring Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Partitions, Statistics, and Campaign Controls",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Partitions, Statistics, and Campaign Controls Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - LLM Integration",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - LLM Integration Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Data Integrity",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Data Integrity Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Performance",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Performance Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 1 Capability Materialization and Trace (T001-T006)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 2 Corpus and Blinded Scoring (T007-T016)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 3 Experiment Statistics and Calibration (T017-T025)",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "completed"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Final Reviewability Backstop",
+      "status": "completed"
+    },
+    {
+      "step": "Post: PR Packet/Body Generation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Experiment Policy Contradiction Remediation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Calibration Authority Follow-up Remediation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "completed"
+    }
+  ]
 }

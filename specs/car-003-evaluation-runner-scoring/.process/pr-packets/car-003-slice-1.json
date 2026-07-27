@@ -1,0 +1,198 @@
+{
+  "body_file": "specs/car-003-evaluation-runner-scoring/.process/pr-packets/car-003-slice-1/body.md",
+  "editable_fields": [
+    {
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->",
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->",
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->",
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->"
+    }
+  ],
+  "generated_title": {
+    "description": "Add the evaluation platform that turns capability evidence into qualification evidence",
+    "rejected_candidates": [],
+    "scope": "car-003",
+    "source_evidence": {
+      "kind": "workflow",
+      "source": "autopilot-state",
+      "summary": "Title generated from active SpecKit workflow evidence."
+    },
+    "type": "feat",
+    "value": "feat(car-003): Add the evaluation platform that turns capability evidence into qualification evidence"
+  },
+  "mode": "single",
+  "packet_id": "car-003-slice-1",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ],
+    "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "value": "128fd36cee1cce3ef94ca896b5b9c61add3c2f10736f9d49cade42f007f99566"
+  },
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "schema_version": "1.0.0",
+  "scope_evidence": {
+    "budget_result": "within_budget",
+    "changed_files": [
+      ".specify/autopilot-state.json",
+      "dist/claude/speckit-pro/speckit_pro_runner/materializer.py",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "dist/codex/speckit-pro/speckit_pro_runner/materializer.py",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "dist/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "docs-site/src/content/docs/reference/tests.md",
+      "docs/ai/research/claude-car-003-mandatory-observation-manifest.json",
+      "docs/ai/specs/.process/CAR-003-design-concept.md",
+      "docs/ai/specs/.process/CAR-003-slice-1-pr-packet.md",
+      "docs/ai/specs/.process/CAR-003-slice-2-pr-packet.md",
+      "docs/ai/specs/.process/CAR-003-slice-3-pr-packet.md",
+      "docs/ai/specs/.process/CAR-003-workflow.md",
+      "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+      "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
+      "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json",
+      "docs/ai/specs/claude-agent-routing-roadmap-MOC.md",
+      "docs/ai/specs/claude-agent-routing-technical-roadmap.md",
+      "docs/prd-claude-agent-routing.md",
+      "speckit-pro/speckit_pro_runner/materializer.py",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "specs/car-003-evaluation-runner-scoring/SPEC-MOC.md",
+      "specs/car-003-evaluation-runner-scoring/checklists/data-integrity.md",
+      "specs/car-003-evaluation-runner-scoring/checklists/error-handling.md",
+      "specs/car-003-evaluation-runner-scoring/checklists/llm-integration.md",
+      "specs/car-003-evaluation-runner-scoring/checklists/performance.md",
+      "specs/car-003-evaluation-runner-scoring/checklists/requirements.md",
+      "specs/car-003-evaluation-runner-scoring/contracts/analysis-decision.schema.json",
+      "specs/car-003-evaluation-runner-scoring/contracts/analysis-plan.schema.json",
+      "specs/car-003-evaluation-runner-scoring/contracts/car-003-additive-records.schema.json",
+      "specs/car-003-evaluation-runner-scoring/contracts/experiment-assignment.schema.json",
+      "specs/car-003-evaluation-runner-scoring/contracts/experiment-policy.schema.json",
+      "specs/car-003-evaluation-runner-scoring/contracts/role-corpus.schema.json",
+      "specs/car-003-evaluation-runner-scoring/contracts/score-bundle.schema.json",
+      "specs/car-003-evaluation-runner-scoring/contracts/successor-capability-freeze.schema.json",
+      "specs/car-003-evaluation-runner-scoring/data-model.md",
+      "specs/car-003-evaluation-runner-scoring/plan.md",
+      "specs/car-003-evaluation-runner-scoring/quickstart.md",
+      "specs/car-003-evaluation-runner-scoring/research.md",
+      "specs/car-003-evaluation-runner-scoring/spec.md",
+      "specs/car-003-evaluation-runner-scoring/tasks.md",
+      "tests/speckit-pro/layer6-efficiency/.gitignore",
+      "tests/speckit-pro/layer6-efficiency/fixtures/car-003-alias-repoint-replay.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures/car-003-calibration-replay.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures/car-003-role-corpus.json",
+      "tests/speckit-pro/layer6-efficiency/lib/claude_analysis_decision.py",
+      "tests/speckit-pro/layer6-efficiency/lib/claude_experiment_policy.py",
+      "tests/speckit-pro/layer6-efficiency/lib/claude_role_corpus.py",
+      "tests/speckit-pro/layer6-efficiency/lib/claude_score_bundle.py",
+      "tests/speckit-pro/layer6-efficiency/lib/claude_successor_freeze.py",
+      "tests/speckit-pro/layer6-efficiency/lib/claude_treatment_runner.py",
+      "tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.py",
+      "tests/speckit-pro/suite-manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-partial-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/materializer.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/materializer.py",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "tests/speckit-pro/unit/test-analysis-decision-ladder.py",
+      "tests/speckit-pro/unit/test-canonical-agent-materializer.py",
+      "tests/speckit-pro/unit/test-exact-treatment-runner.py",
+      "tests/speckit-pro/unit/test-experiment-policy-partitions.py",
+      "tests/speckit-pro/unit/test-role-corpus-governance.py",
+      "tests/speckit-pro/unit/test-score-bundle-adjudication.py",
+      "tests/speckit-pro/unit/test-speckit-pro-runner.py",
+      "tests/speckit-pro/unit/test-successor-capability-freeze.py"
+    ],
+    "non_goals": [
+      "No final preferred or fallback route policy, shipped default, or release claim is produced.",
+      "No outcome-bearing cohort campaign is run; this ships the stages, later specs execute them.",
+      "The legacy smoke runner is demoted, not deleted.",
+      "No supported path requires an API key."
+    ],
+    "production_files": 0,
+    "reviewable_loc": 0,
+    "total_files": 81
+  },
+  "source_feature_dir": "specs/car-003-evaluation-runner-scoring",
+  "source_markers": [
+    {
+      "marker_id": "car-003-slice-1",
+      "rendered_text": "feat(car-003): Add the evaluation platform that turns capability evidence into qualification evidence",
+      "source": "specs/car-003-evaluation-runner-scoring"
+    }
+  ],
+  "target": {
+    "base_branch": "main",
+    "head_branch": "car-003-evaluation-runner-scoring"
+  },
+  "uat": {
+    "how_to_uat": "No manual UAT runbook was provided; use verification evidence for this PR.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "packet-input"
+  },
+  "validation_result_path": "specs/car-003-evaluation-runner-scoring/.process/pr-packets/car-003-slice-1/validation.json",
+  "verification_evidence": [
+    {
+      "kind": "test-suite",
+      "source": "python3 tests/speckit-pro/run-all.py",
+      "summary": "4143 of 4143 passed on the committed tree, zero failures, zero live model calls. Baseline before this branch was 3251."
+    },
+    {
+      "kind": "generated-artifact",
+      "source": "refresh-release-artifacts.py",
+      "summary": "Second run is a genuine no-op. All five copies of the shipped materializer share one hash across source, both payloads, and both installed-cache proofs."
+    },
+    {
+      "kind": "generated-docs",
+      "source": "node docs-site/scripts/generate-reference-pages.mjs --check",
+      "summary": "Reference pages are current. This gate is not covered by the test suite and fails only in clean continuous integration."
+    },
+    {
+      "kind": "code-review",
+      "source": "independent review of the six evaluation libraries",
+      "summary": "Six fail-open paths found by executing the code and all fixed, each with a test reproducing the permissive behavior first."
+    },
+    {
+      "kind": "phantom-check",
+      "source": "verify-tasks extension",
+      "summary": "Twenty-four completed tasks opened and verified against real artifacts. No phantom completions found."
+    }
+  ]
+}
