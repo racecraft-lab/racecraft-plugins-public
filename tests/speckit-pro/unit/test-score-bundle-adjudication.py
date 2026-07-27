@@ -11,7 +11,7 @@ and from what signal (FR-014, FR-035, FR-048).
 Three families of checks live here:
 
 * **Contract-structural** cases load the parity-mirror
-  ``specs/car-003-evaluation-runner-scoring/contracts/score-bundle.schema.json``
+  ``tests/speckit-pro/layer6-efficiency/contracts-claude/score-bundle.schema.json``
   and assert the four closed taxonomies it publishes.
 * **Module-contract** cases exercise
   ``tests/speckit-pro/layer6-efficiency/lib/claude_score_bundle.py``: the gate
@@ -51,7 +51,7 @@ except ImportError:  # pragma: no cover - exercised only before the module lands
     claude_score_bundle = None  # type: ignore[assignment]
 
 
-CONTRACT_ROOT = REPO_ROOT / "specs" / "car-003-evaluation-runner-scoring" / "contracts"
+CONTRACT_ROOT = REPO_ROOT / "tests" / "speckit-pro" / "layer6-efficiency" / "contracts-claude"
 BUNDLE_SCHEMA_PATH = CONTRACT_ROOT / "score-bundle.schema.json"
 ADDITIVE_SCHEMA_PATH = CONTRACT_ROOT / "car-003-additive-records.schema.json"
 SHARED_CONTRACT_DIR = LAYER6_DIR / "contracts"

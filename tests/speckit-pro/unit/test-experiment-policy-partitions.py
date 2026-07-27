@@ -21,7 +21,7 @@ Three governance surfaces meet in this file, all of them pre-execution:
   runs, from a closed non-realized basis.
 
 Contract-structural cases read the committed schemas under
-``specs/car-003-evaluation-runner-scoring/contracts/``; module-contract cases
+``tests/speckit-pro/layer6-efficiency/contracts-claude/``; module-contract cases
 exercise ``tests/speckit-pro/layer6-efficiency/lib/claude_experiment_policy.py``.
 
 Every check is offline and makes zero live model calls.
@@ -53,7 +53,7 @@ except ImportError:  # pragma: no cover - exercised only before the module lands
     claude_experiment_policy = None  # type: ignore[assignment]
 
 
-CONTRACT_ROOT = REPO_ROOT / "specs" / "car-003-evaluation-runner-scoring" / "contracts"
+CONTRACT_ROOT = REPO_ROOT / "tests" / "speckit-pro" / "layer6-efficiency" / "contracts-claude"
 ASSIGNMENT_SCHEMA_PATH = CONTRACT_ROOT / "experiment-assignment.schema.json"
 POLICY_SCHEMA_PATH = CONTRACT_ROOT / "experiment-policy.schema.json"
 PLAN_SCHEMA_PATH = CONTRACT_ROOT / "analysis-plan.schema.json"

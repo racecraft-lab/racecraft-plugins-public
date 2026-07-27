@@ -11,7 +11,7 @@ way (FR-011, FR-012).
 Two families of checks live here:
 
 * **Contract-structural** cases load
-  ``specs/car-003-evaluation-runner-scoring/contracts/role-corpus.schema.json``
+  ``tests/speckit-pro/layer6-efficiency/contracts-claude/role-corpus.schema.json``
   and assert the closed role enumeration it publishes.
 * **Module-contract** cases exercise the standard-library implementation at
   ``tests/speckit-pro/layer6-efficiency/lib/claude_role_corpus.py`` against the
@@ -47,7 +47,7 @@ except ImportError:  # pragma: no cover - exercised only before the module lands
     claude_role_corpus = None  # type: ignore[assignment]
 
 
-CONTRACT_ROOT = REPO_ROOT / "specs" / "car-003-evaluation-runner-scoring" / "contracts"
+CONTRACT_ROOT = REPO_ROOT / "tests" / "speckit-pro" / "layer6-efficiency" / "contracts-claude"
 CORPUS_SCHEMA_PATH = CONTRACT_ROOT / "role-corpus.schema.json"
 AGENT_DIR = REPO_ROOT / "speckit-pro" / "agents"
 

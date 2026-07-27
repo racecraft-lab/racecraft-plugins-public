@@ -1669,3 +1669,42 @@ The cleanup migrates only live test-owned contracts and fixtures, removes the
 two merged active spec folders, regenerates SpecKit indexes, validates project
 state JSON, and runs focused plus repository structural checks. CAR-003 and
 G56R-003 may now scaffold against the canonical shipped evidence.
+
+## Revision 2026-07-27 - CAR-003 and G56R-003 Post-Merge Architecture
+
+### Technical Approach Preserved
+
+- CAR-003 keeps its single shipped production module at
+  `speckit-pro/speckit_pro_runner/materializer.py`, mirrored into both `dist/`
+  payloads, with durable evaluation evidence under `docs/ai/research/`,
+  qualification modules under `tests/speckit-pro/layer6-efficiency/lib/`, and
+  deterministic fixtures and suites under `tests/speckit-pro/`.
+- G56R-003 keeps `speckit-pro/speckit_pro_runner/agent_materialization.py` as
+  its shipped surface, its closed schemas under
+  `tests/speckit-pro/layer6-efficiency/contracts/`, its `qualification_*`
+  modules under `tests/speckit-pro/layer6-efficiency/lib/`, and its twelve
+  per-role fixtures behind one shared corpus manifest.
+- The two lanes had genuinely different contract layouts, and the archive had to
+  reconcile them before either spec folder could be removed. CAR-003 kept one
+  spec-scoped copy that a live Layer 6 library read directly; G56R-003 kept a
+  runtime copy in the test tree plus a specification copy in its spec folder.
+  Both sets were **moved** into the test tree - CAR-003's nine to
+  `contracts-claude/`, G56R-003's nine specification copies to
+  `contracts-codex-specification/` - so each artifact still has exactly one home
+  and no library or test reads from `specs/**`.
+- `tests/speckit-pro/layer6-efficiency/contracts/` was deliberately left alone.
+  It holds the three shared G56R-002 contracts plus G56R-003's runtime tier, and
+  roughly ten readers depend on it; touching it would have added risk the archive
+  did not need.
+- The runtime-versus-specification pair on the Codex side was preserved, not
+  collapsed. Its distinctness assertions are the standing evidence that CAR-012
+  and G56R-012 exist to reconcile.
+
+### Testing and Cleanup
+
+The cleanup removes the two merged active spec folders, records the archive
+sweep in both lane state files, regenerates the SpecKit index and docs
+reference pages, validates project state JSON, and runs structural plus full
+deterministic suites. CAR-004 and G56R-004 may now scaffold against the
+canonical shipped evidence. The mirrored-contract corrections that each twin
+identified remain open as the CAR-012 and G56R-012 joint change.

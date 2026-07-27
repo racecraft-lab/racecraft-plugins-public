@@ -26,8 +26,11 @@ QUALIFICATION_RUNNER_PATH = (
 SCORE_BUNDLE_SCHEMA_PATH = (
     ROOT / "tests/speckit-pro/layer6-efficiency/contracts/score-bundle.schema.json"
 )
+# The specification-side copy moved here when the G56R-003 active spec folder was
+# archived; the taxonomy-divergence assertion below still needs it.
 SPEC_SCORE_BUNDLE_SCHEMA_PATH = (
-    ROOT / "specs/g56r-003-evaluation-runner-scoring/contracts/score-bundle.schema.json"
+    ROOT
+    / "tests/speckit-pro/layer6-efficiency/contracts-codex-specification/score-bundle.schema.json"
 )
 ROLE_CORPUS_PATH = (
     ROOT / "tests/speckit-pro/layer6-efficiency/fixtures-codex/corpus-manifest.json"

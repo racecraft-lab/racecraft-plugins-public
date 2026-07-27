@@ -1862,6 +1862,65 @@ deleted. Exact PR titles, merged-at timestamps, merge commits, and head branches
 are recorded in
 `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`.
 
+## 2026-07-27 - CAR-003 and G56R-003 Post-Merge Archive Cleanup
+
+### CAR-003
+
+- PR: https://github.com/racecraft-lab/racecraft-plugins-public/pull/385
+- Title: `feat(car-003): add the evaluation platform that turns capability
+  evidence into qualification evidence`
+- Merged at: `2026-07-26T23:49:26Z`
+- Merge commit: `9fab2083cd74fcaca28cb6589cf8705e0e8ddd3c`
+- Source: `specs/car-003-evaluation-runner-scoring`
+- Canonical artifacts: `speckit-pro/speckit_pro_runner/materializer.py` as the
+  sole shipped production surface, the six
+  `docs/ai/research/claude-car-003-*.json` evidence files, six Layer 6
+  `claude_*` qualification modules with their fixtures, and eight deterministic
+  unit suites.
+- Governance note: the final gate recorded a size-only block with a typed size
+  exception preserved at `docs/ai/specs/.process/CAR-003-size-exception.md`.
+
+### G56R-003
+
+- PR: https://github.com/racecraft-lab/racecraft-plugins-public/pull/386
+- Title: `feat(g56r-003): add evaluation runner scoring`
+- Merged at: `2026-07-27T03:11:13Z`
+- Merge commit: `dcceef86daed97fe42e81a43c90e82556457dc48`
+- Source: `specs/g56r-003-evaluation-runner-scoring`
+- Canonical artifacts:
+  `speckit-pro/speckit_pro_runner/agent_materialization.py`,
+  `docs/ai/research/codex-g56r-003-effort-ladder.json`, nine closed schemas
+  under `tests/speckit-pro/layer6-efficiency/contracts/`, eight
+  `qualification_*` and `codex_*` Layer 6 modules, twelve per-role fixtures
+  with a single shared corpus manifest, and six deterministic unit suites.
+
+Both lanes preserve the no-qualification boundary: only non-eligible
+calibration partitions are accepted, and outputs are limited to
+calibration-complete, inconclusive, or invalid. Neither selects preferred
+routes, orders fallbacks, nor changes installed defaults.
+
+### Contract relocation
+
+Both spec folders held contract schemas that live code still read, so the
+archive moved them into the test tree before removing the folders:
+
+- CAR-003's nine to `tests/speckit-pro/layer6-efficiency/contracts-claude/`,
+  repointing one Layer 6 library and five unit tests.
+- G56R-003's nine specification-side copies to
+  `tests/speckit-pro/layer6-efficiency/contracts-codex-specification/`,
+  repointing two unit tests.
+
+Each schema was moved rather than copied, so every artifact still has exactly
+one home. `tests/speckit-pro/layer6-efficiency/contracts/` was left untouched.
+CAR-012 and G56R-012 Key Files were repointed to the new paths.
+
+Detailed recovery and verification evidence:
+
+- `.specify/memory/archive-reports/2026-07-27-car-003-post-merge-hygiene.md`
+- `.specify/memory/archive-reports/2026-07-27-g56r-003-post-merge-hygiene.md`
+
+---
+
 ## 2026-07-24 - CAR-002 and G56R-002 Post-Merge Archive Cleanup
 
 ### CAR-002
