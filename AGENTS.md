@@ -61,6 +61,8 @@ own failure patterns.
   `docs-site/src/content/docs/contribute-and-release.md`, the PR template, and
   the GitHub workflow files.
 - For docs-site commands and constraints, use `docs-site/AGENTS.md`.
+- For code-review calibration, use `REVIEW.md`.
+- For vulnerability reporting and the security model, use `SECURITY.md`.
 
 ## Editing Boundaries
 
@@ -75,6 +77,24 @@ own failure patterns.
 - If plugin source or payload-affecting files change, account for the generated
   artifact contract before calling the work done.
 
+## Code Review Rules
+
+Codex reads this section during review. Claude Code's managed Code Review reads
+the root `REVIEW.md` instead, which states the same rules in fuller form. Keep
+the two in step when either changes.
+
+- Treat as blocking: manifest or version drift; plugin source changed without
+  accounting for the generated artifact contract; malformed loader frontmatter;
+  repository tooling leaving the Python 3.11+ standard library or adding an
+  active Bash or `jq` dependency outside the allowed boundaries; a workflow that
+  exposes secrets or elevated permissions to untrusted PR content; a script or
+  test filename coupled to a temporary spec ID.
+- Treat style, naming, prose, and refactoring suggestions as minor at most.
+- Do not review generated reference pages, installed-cache proofs, generated
+  payloads, vendored upstream content, lockfiles, or archived specs.
+- Do not report anything CI already enforces.
+- Require a `file:line` citation for any claim about behavior.
+
 ## Agent File Hygiene
 
 - `AGENTS.md` is the only authored agent-instruction source in each scoped
@@ -83,3 +103,6 @@ own failure patterns.
 - `GEMINI.md` files must only import the sibling `AGENTS.md`.
 - Do not put feature plans, release notes, implementation transcripts, or
   detailed process history in agent files.
+- `REVIEW.md` lives only at the repository root and is injected verbatim into
+  review agents. It does not expand `@` imports, so write rules directly into it
+  rather than referencing other files.
