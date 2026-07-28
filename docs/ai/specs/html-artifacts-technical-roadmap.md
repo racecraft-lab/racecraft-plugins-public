@@ -163,7 +163,8 @@ Budget result: within budget
   (warm-neutral scale `#F7F6F4…#E0DED9`, brand red `#dc143c` punctuation-only,
   brand blue `#3c89c6` accents, GTO90 dark-mode set), typography stacks
   (Space Grotesk headings / Geist body / Fira Code mono via Google Fonts
-  `<link>` + `font-display: swap` + system fallbacks), AA-contrast pairings,
+  `<link>` URLs with the `display=swap` query parameter and system fallbacks),
+  AA-contrast pairings,
   focus-ring and reduced-motion rules. Provenance header cites
   racecraft-lab/racecraft `docs/brand/*` (source commit recorded) and
   `docs-site/src/styles/brand.css`.
@@ -775,7 +776,8 @@ When breaking a feature into specs:
 3. **Foundations first** — brand kit and staging before emission and sweep
 4. **Parallel tiers where seams allow** — template ports are sibling-independent
 5. **Integration spec near last** — ART-010 wires draft PR, templates, and notes together
-6. **Each spec gets its own directory**: `specs/art-NNN-<name>/`
+6. **Each spec gets its own directory**: `specs/<branch>/` (typically
+   `specs/art-NNN-<name>/` for this roadmap)
 
 ## Environment & Deployment Context
 
