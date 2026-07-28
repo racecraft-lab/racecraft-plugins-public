@@ -71,15 +71,20 @@ twin-handoff record's category 5 enumerates:
 | Analysis plan | `https://racecraft.dev/schemas/car-003/analysis-plan.schema.json` | comparison contract | supplies the frozen Pareto policy, the quality floors, the reliability guardrails, alpha, and the confidence level (FR-019, FR-020, FR-023) |
 | Experiment policy | `https://racecraft.dev/schemas/car-003/experiment-policy.schema.json` | registry `smoke_bounds` | supplies the closed budget member names and the TTL class key space (FR-030) |
 | Role corpus | `https://racecraft.dev/schemas/car-003/role-corpus.schema.json` | partition registry entries | supplies the objective identities partitions are built over (FR-025) |
+| Experiment assignment | `https://racecraft.dev/schemas/car-003/experiment-assignment.schema.json` | unpinned control, smoke record | supplies the Claude-side `environment_contract` object — `parent_session_model` and `parent_session_effort` for the pinned parent (FR-006), `claude_code_subagent_model_unset` for the no-override observation (FR-031a.6), and the `subscription \| api_key` `authentication_mode` (FR-030c.1) |
 
-The environment contract is bound by the unpinned control for its pinned
-parent-session model and effort (FR-006). It has no `contracts-claude/` member —
-only `contracts-codex-specification/environment-contract.schema.json` exists on
-this side — so the unpinned control binds the pinned parent by `{id, digest}`
-against the same source the CAR-003 harness reads, and the twin-handoff record
-files that binding under category 5 with an explicit note that the Claude side
-carries no local mirror of that document. Implementation confirms the exact id
-before freezing; a wrong binding is a digest mismatch, which fails closed.
+The environment binding the unpinned control carries is that last row, not the
+shared runtime environment-contract document. FR-006 settles the identity: the
+document CAR-004 binds is the Claude-side `environment_contract` object inside
+`contracts-claude/experiment-assignment.schema.json`, which does exist on this
+side and carries `parent_session_model`, `parent_session_effort`,
+`claude_code_subagent_model_unset`, and an `authentication_mode` enumerated
+`subscription | api_key`. The `contracts-codex-specification/environment-contract.schema.json`
+document answers to the same English name but is the wrong one: it shapes its
+parent session differently and enumerates its authentication mode
+`chatgpt_subscription | api_key`, the enum FR-030c.1 refuses. The twin-handoff
+record files the binding under category 5 against the experiment-assignment
+`$id`; a wrong binding is a digest mismatch, which fails closed.
 
 ---
 
@@ -185,9 +190,20 @@ rule, rather than a cross-product:
   enum (12 members).
 - `failure_code_response` — one entry per member of the frozen `failure_code`
   enum (36 members, counted from the committed schema rather than assumed).
+- `retry_count_response` — the `{threshold, direction, response}` entry that
+  gives the retry-count source its mapped response and its rank.
+- `budget_triggers` — the ordered `{member, direction, threshold, response}`
+  entries that give the budget-threshold source its mapped responses and its
+  rank, `member` drawn from the frozen budget field names.
 - `signal_precedence` — the frozen array `["failure_code", "failure_plane",
-  "terminal_state"]`. The first source whose observed value is not the `none`
-  member decides; if all are `none`-valued the terminal state decides.
+  "retry_count", "budget_threshold", "terminal_state"]`, ordered over the closed
+  five-member source set FR-010b requires, which must cover every source FR-008
+  admits. The first source whose observed value is not the `none` member decides;
+  terminal state is ranked last and is always valued, so every row resolves. It
+  has to be last rather than earlier: an always-valued source placed ahead of
+  `retry_count` and `budget_threshold` would make both unreachable, which is the
+  silently-unreachable outcome FR-010b fails closed on. A source FR-008 admits
+  but the array omits likewise fails the well-formedness check closed.
 
 The response enum is closed at three: `escalate`, `hold`, `non_scorable`.
 
@@ -209,9 +225,13 @@ is coined, so FR-009 holds.
 
 **Numeric triggers are separate and explicit.** Retry count and raw-token or
 duration budget thresholds are not enum-valued, so they are declared as
-`budget_trigger` entries — a bound member name drawn from the frozen budget
+`retry_count_response` and `budget_trigger` entries — a bound member name drawn
+from the frozen budget
 field set, a comparison direction, and a threshold — rather than being folded
-into the enum maps. They feed the same response enum.
+into the enum maps. They feed the same response enum, and they hold the third
+and fourth ranks of `signal_precedence` rather than sitting outside it: a source
+FR-008 admits that carries a mapped response but no rank would never be
+consulted, which is why FR-010b closes the precedence set at all five.
 
 **Clean pass, for the de-escalation streak.** Defined against already-frozen
 members, per the spec's Assumptions: `terminal_state == "completed"` and
@@ -396,14 +416,24 @@ for evidence.
 
 **Decision.** A total three-entry map in the comparison contract:
 
-| Verdict | Permitted claim class | Forbidden |
-|---|---|---|
-| `dominant` | `measured_improvement_over_previous_static_baseline` | `efficient`, `optimal`, `best_measured` |
-| `not_dominant` | `no_comparative_claim` | all three above |
-| `inconclusive` | `no_comparative_claim` | all three above |
+| Verdict | Permitted claim class | Forbidden | Messaging restriction |
+|---|---|---|---|
+| `dominant` | `measured_improvement_over_previous_static_baseline` | `efficient`, `optimal`, `best_measured` | yes |
+| `not_dominant` | `no_comparative_claim` | *(none)* | no |
+| `inconclusive` | `no_comparative_claim` | *(none)* | no |
 
 Claim classes and verdict states are both closed enums, and the map is validated
 total and single-valued over the verdict enum.
+
+**Only `dominant` restricts.** Neither non-dominant entry carries a forbidden
+set, because a forbidden set *is* a messaging restriction and FR-022 requires a
+mixed, tied, inconclusive, or incomplete comparison to impose none. The
+no-comparative-claim class says which wording the verdict licenses, not which
+wording is barred. The `dominant` entry additionally records
+`restriction_scope: "release_wording_only"` and
+`static_defaults_may_still_ship: true`, so a mechanical consumer cannot read a
+wording restriction as a shipping one — the second half of the acceptance
+criterion this map freezes.
 
 **Rationale.** FR-024 and design-concept Q9. A machine-readable mapping is what
 lets CAR-011's release-packet validation bind mechanically instead of relying on
@@ -418,7 +448,7 @@ distinction.
 ## D11. Smoke bounds, authentication, and cache isolation
 
 **Decision.** `smoke_bounds` is a registry-level object using the already-frozen
-budget member names, shared by all three controls:
+budget member names wherever one exists, shared by all three controls:
 
 | Member | Value | Note |
 |---|---|---|
@@ -426,19 +456,66 @@ budget member names, shared by all three controls:
 | `max_candidates` | 1 | one repetition |
 | `max_confirmation_entries` | 0 | no confirmation entry may be consumed |
 | `max_duration_seconds` | 1800 | 30-minute wall clock |
-| `max_input_tokens` | 800000 | inside the raw-token identity |
-| `max_cache_read_tokens` | 150000 | inside the raw-token identity |
-| `max_output_tokens` | 50000 | inside the raw-token identity |
-| `max_cache_write_tokens_by_ttl_class` | `{ephemeral_5m, ephemeral_1h}` | outside the identity; diagnostic only |
+| `max_input_tokens` | 800000 | inside the raw-token identity; bounds `input_tokens` |
+| `max_cached_input_tokens` | 150000 | inside the raw-token identity; bounds `cached_input_tokens`. Coined by CAR-004, as `raw_token_ceiling` is, because the frozen budget declares no ceiling for that raw-token member |
+| `max_output_tokens` | 50000 | inside the raw-token identity; bounds `output_tokens` |
+| `raw_token_ceiling` | 1000000 | the identity's declared right-hand side |
+| `max_cache_read_tokens` | 1200000 | outside the identity; bounds the `cache_read_tokens` diagnostic, which is what it bounds everywhere else in this repository |
+| `max_cache_write_tokens_by_ttl_class` | `{ephemeral_5m: 160000, ephemeral_1h: 40000}` | outside the identity; diagnostic only |
 
-`800000 + 150000 + 50000 == 1000000` is asserted as a machine-checked identity
-(SC-017). Cache write stays outside it because cache creation is diagnostic-only
-and never a Pareto dimension, exactly as the frozen budgets already treat it.
+`max_input_tokens + max_cached_input_tokens + max_output_tokens ==
+raw_token_ceiling` is asserted as a machine-checked identity against the
+**declared member**, never against a literal that appears only in prose: FR-034
+category 6 is derived from committed bytes, so a ceiling existing only as the sum
+of three other members could not be derived and would have to be transcribed,
+which FR-034a forbids (FR-030a). Every other member likewise carries a frozen
+value, `max_cache_read_tokens` and both cache-write TTL classes included; none is
+left for Implement to
+choose, because the object is hash-relevant to the registry's content address.
 
-**Authentication.** `authentication_mode` is the already-frozen enum member from
-`successor-capability-freeze.schema.json` (`subscription | api_key`). The smoke
-record must carry `subscription`, and `run-control-smoke.py` refuses to seal a
-record carrying `api_key`. This follows PRD AC-2.19 as amended 2026-07-26, which
+**Why the identity does not reuse `max_cache_read_tokens`.** It is the frozen
+budget's ceiling on the cache-read diagnostic — `run-calibration-pilot.py` checks
+`cache_read_tokens` against it, and `experiment-policy.schema.json` declares it
+beside `max_cache_write_tokens_by_ttl_class` — and FR-016e.4 keeps both cache
+diagnostics out of the raw-token identity. Using it as the identity's third
+summand would have decomposed a raw-token ceiling over a quantity the frozen
+four-member raw token vector does not carry, so the identity's summand for
+`cached_input_tokens` is declared under its own name instead. Cache read and
+cache write both stay outside the identity because cache traffic is
+diagnostic-only and never a Pareto dimension, exactly as the frozen budgets
+already treat it, and neither is constrained against `max_input_tokens`. Cache
+read's own ceiling is set on the same attempts-anchored basis as the write
+classes: the frozen CAR-003 campaign budget pairs 48 attempts with 6,000,000,
+which is 125,000 per attempt and 625,000 over the smoke's five, and 1,200,000
+sits just under twice that, rounded down to a round figure.
+
+The fourth raw-token member, `reasoning_output_tokens`, carries no ceiling and is
+not one the 1,000,000 is decomposed over: the frozen contract admits a null value
+for it and fixes it as never decision-bearing, so a ceiling read against it would
+turn an unrecorded reasoning report into either a breach or a silent zero. It is
+still summed across the unit under FR-016e.1, and FR-030b.2 states that the
+ceiling is read against the three bounded members alone.
+
+`authentication_mode` and `scored` are **not** members of `smoke_bounds`. Both
+belong to a produced smoke record; see the authentication note below.
+
+Each bound is counted over the parent-plus-children unit, `max_duration_seconds`
+as elapsed wall clock rather than as the additive `duration_ms` the Pareto rule
+sums, and a child dispatch consumes no attempt against `max_attempts` (FR-030b).
+
+**Authentication.** `authentication_mode` is the already-frozen Claude-side enum
+member (`subscription | api_key`) carried by
+`successor-capability-freeze.schema.json` and by the `environment_contract`
+object of `experiment-assignment.schema.json` — never the shared runtime
+environment contract's `chatgpt_subscription | api_key` member of the same name.
+The value recorded is an **observation** of the run that happened, never a
+declared constant, an operator intent, or a configuration setting, which is why
+it is not a `smoke_bounds` member and never a schema `const`. A smoke whose
+observed mode is `api_key` is refused **as FR-031 evidence** — it counts toward
+neither FR-031 nor SC-009 — while the observed `api_key` value is still recorded
+on that refused record alongside the refusal, so a refused run stays
+distinguishable from one that never ran. The remedy is a re-run on the
+subscription path; the recorded mode is never relabeled. This follows PRD AC-2.19 as amended 2026-07-26, which
 forbids any supported path requiring an API key without qualification, and the
 design concept's 2026-07-27 Revisions section, which corrects the original Q10 and
 Q15 recommendation. The roadmap's contrary wording at lines 159-160, 359-360, and
@@ -451,12 +528,27 @@ binding or a calibration-protocol binding, both of which CAR-004 is barred from
 creating. The bounds ride the frozen **member names** without riding the frozen
 **document**.
 
-**Cache isolation.** FR-032 reuses the frozen `per_arm_ephemeral_root` rule the
-CAR-003 experiment policy already declares: each control's smoke runs under its
-own ephemeral root, so no control's smoke can warm another arm's cache. The
-operator procedure in `quickstart.md` states the ordering, and the smoke record
-carries the root identity so a violation is visible in the record rather than
-only in the operator's memory.
+**Cache isolation.** The frozen `per_arm_ephemeral_root` assignment constant the
+CAR-003 experiment policy declares is a **precommitment** that arms will be
+isolated, not evidence that they were, and FR-032a.2 refuses to let it stand as
+the isolation claim on its own. The observable that discharges FR-032 is the
+frozen cache diagnostic's `observed_cache_isolation` object and its four members
+— the three-member `status`, this arm's cache-root digest, the paired arm's
+cache-root digest, and the disjointness flag — so no field, status, or code is
+coined and FR-009 holds.
+
+The claim is **pairwise across the whole series**: three arms means three
+unordered pairs, each recorded in the frozen single-pair shape, and every pair
+must read `observed_disjoint`. Recording only the immediately preceding run would
+leave the first-and-last pair unchecked, which FR-032 forbids rather than
+excuses. `observed_shared` is a confirmed breach carrying the frozen closed
+`infrastructure_failure` code at `failure_plane=infrastructure`; `unobserved` is
+an evidence-completeness failure carrying `required_evidence_missing` at
+`failure_plane=evidence_boundary`. Both invalidate the affected smoke as FR-031
+evidence and neither may be treated as a warning. Roots are recorded as digests,
+never as filesystem paths, and for the orchestration-changing control the arm's
+root must cover the parent and every unit member. The operator procedure in
+`quickstart.md` states the ordering; the record is what proves it.
 
 **Per-run output.** Written under `tests/speckit-pro/layer6-efficiency/results/`,
 which the existing layer6 `.gitignore` already excludes with `results/*`. No
@@ -528,12 +620,15 @@ once per worktree as `pnpm --dir docs-site install` then
 
 Stated rather than hidden. None of these blocks implementation.
 
-1. **The environment contract has no `contracts-claude/` mirror.** The unpinned
-   control must bind the pinned parent-session model and effort by `{id, digest}`
-   against whatever the CAR-003 harness actually reads. Confirm the exact
-   identity during implementation before freezing; a wrong binding fails closed
-   as a digest mismatch rather than passing silently, so the failure mode is
-   safe, but it will stop the build until corrected.
+1. **Two frozen documents answer to "environment contract".** The risk is a
+   reader's, not the build's: FR-006 settles the identity as the Claude-side
+   `environment_contract` object of `experiment-assignment.schema.json`, and D2's
+   bindings table records it. The shared runtime environment-contract document
+   remains reachable under the same English name and enumerates an authentication
+   mode CAR-004 refuses, so a binding authored from the name rather than from
+   FR-006 would be wrong. It fails closed as a digest mismatch rather than passing
+   silently, so the failure mode is safe, but it will stop the build until
+   corrected.
 2. **The reserved partition's type is a forecast about CAR-011.** D4 explains why
    `integrated_confirmation` is the right member of a set CAR-004 may not extend,
    and why a later change is a new entry rather than an edit. It remains a

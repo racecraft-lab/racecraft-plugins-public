@@ -60,6 +60,15 @@ Expected outcomes, each traceable to a success criterion:
 | Raw-token smoke bounds sum to exactly 1,000,000; no reference resolves outside `#/$defs/` | pass | SC-017 |
 | Twin-handoff categories 1 through 6 re-derive with zero differences in either direction | pass | SC-011 |
 | Delivered evidence carries zero outcome-bearing scored rows and consumes zero selection or confirmation objectives | pass | SC-010 |
+| Every recorded CAR-003 binding recomputes from the bound document's committed bytes; a seeded byte change fails closed | one pass, one refusal | SC-018 |
+| The claim-class lookup is total over every reachable outcome — the three verdicts and the eligibility-floor no-verdict — while the verdict enum still carries exactly three members | four lookups, three enum members | SC-019 |
+| Both partition entries register with `owning_spec: "CAR-004"`; a seeded duplicate partition id and a seeded shared objective each fail registration closed | one pass, two refusals | SC-020 |
+| A seeded membership change to a mirrored CAR-003 enum fails the set-equality check on every bound CAR-004 member | refusal | SC-021 |
+| Every observable row resolves to exactly one response, with every FR-008 source carrying a mapped response and a precedence rank, and the plane and terminal-state maps checked against the code map | zero unresolved, zero ambiguous | SC-022 |
+| Both bound-breach paths are exercised: `failed`/`candidate_failed` and `cancelled`/`candidate_cancelled`, each folding non-`completed` with acceptance 0 | two fixtures pass | SC-023 |
+| The streak does not advance on an escalating objective, neither advances nor resets on a non-scorable one, and resets at a boundary reached with three — including at the ladder floor, with no step and no wrap-around | pass | SC-024 |
+| Unit membership follows the authored spawn link through nested descendants; a member with no terminal state and one with no spawn link are each refused; a `service_reroute` anywhere makes the whole unit non-scorable | three refusals, one pass | SC-025 |
+| The aggregate sums all four raw-token members and both cache quantities keyed to their ceilings, with neither cache quantity entering the Pareto set or the raw-token identity, and an unrecorded quantity reported unobserved rather than zero | pass | SC-028 |
 
 ## 4. Additive-only verification, no execution required
 
@@ -109,10 +118,25 @@ clock — and each must demonstrate its own behavior:
 The plan step derives its objectives from the registered CAR-004 smoke partition
 and refuses to print any objective the frozen consumption path does not admit, so
 a reserved objective never reaches you in the first place.
-The seal step refuses a record whose `authentication_mode` is `api_key`, whose
-`scored` is not `false`, whose objectives touch the reserved partition, or whose
-consumed budget exceeds any frozen bound. A run that reaches a bound stops there
-and stays valid non-scored evidence.
+The seal step refuses a record whose observed `authentication_mode` is `api_key`,
+whose `scored` is not `false`, whose objectives touch the reserved partition, or
+whose consumed budget exceeds any frozen bound. A run that reaches a bound stops
+there and stays valid non-scored evidence.
+
+A refusal is not a discard: the refused record is still written under `results/`
+carrying its observed values — the observed `api_key` included — beside the
+refusal reason, so a refused run stays distinguishable from one that never ran.
+The remedy is a re-run on the subscription path, never a relabel. [FR-030c]
+
+After the third run, confirm from the three sealed records — not from memory:
+
+| Check | Expected | Criterion |
+|---|---|---|
+| Each smoke stays inside all four declared bounds, counted over the parent-plus-children unit, with the 30-minute cap read as elapsed wall clock and no child dispatch counted as an objective attempt | pass | SC-009, SC-029 |
+| Each smoke's named observable is read back from run evidence rather than from the dispatch request; a smoke lacking it is recorded *not demonstrated* and counts toward neither FR-031 nor SC-009 | three demonstrated | SC-026 |
+| Every smoke record carries the frozen `claude_code_subagent_model_unset` observation; no smoke missing it is reported as demonstrating an escalation or an inherit resolution | three present | SC-027 |
+| Every accepted smoke records an observed mode of `subscription` through the Claude-side frozen member; a run observed as `api_key` is refused as evidence with its observed value retained | three `subscription` | SC-030 |
+| All three unordered arm pairs record `observed_disjoint` with both root digests present and no root recorded as a filesystem path | three pairs | SC-031 |
 
 **Nothing from this section is committed.** Per-run output is written under
 `tests/speckit-pro/layer6-efficiency/results/`, which the existing layer6
@@ -152,6 +176,6 @@ Then confirm, from the artifacts rather than from memory:
 | Symptom | Likely cause |
 |---|---|
 | A totality check fails against a frozen enum after an upstream change | The frozen enums are read live from `score-bundle.schema.json` on purpose. The break is upstream, not in CAR-004; the failure message names the frozen source. |
-| A digest mismatch on the unpinned control | The pinned parent-session binding is wrong. The environment contract has no `contracts-claude/` mirror, so confirm the identity the CAR-003 harness actually reads before re-freezing. |
+| A digest mismatch on the unpinned control | The pinned parent-session binding is wrong. Two frozen documents answer to "environment contract": the one FR-006 identifies is the Claude-side `environment_contract` object inside `contracts-claude/experiment-assignment.schema.json`, carrying `parent_session_model` and `parent_session_effort`. The shared runtime `contracts/environment-contract.schema.json` is the wrong one — it shapes its parent session differently and enumerates its authentication mode `chatgpt_subscription \| api_key`. |
 | A digest changes after "only reordering the ladder" | Correct behavior. Array order is inside the preimage; reordering is a new control version, never an edit. [FR-011b] |
 | The smoke script refuses to seal | Read the refusal. It is one of: API-key authentication, a scored row, a reserved-partition reference, or a budget breach. All four are fail-closed by design. |

@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -32,29 +32,33 @@
 ## Notes
 
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
+- Every item now passes; the iteration-2 record below states how the three
+  iteration-1 clarifications were closed
 
-### Validation record (iteration 1, 2026-07-27)
+### Validation record (iteration 2, 2026-07-28 — post-Clarify)
 
-**Counts**: 1 user story - 36 functional requirements - 22 acceptance scenarios -
-12 edge cases - 12 success criteria - 3 open clarifications.
+**Counts**: 1 user story - 75 functional requirements - 45 acceptance scenarios -
+27 edge cases - 31 success criteria - 0 open clarifications.
 
-**Deliberately open — "No [NEEDS CLARIFICATION] markers remain" fails by design.**
-Three markers are carried forward on purpose rather than answered by invention.
-Two of them are the design concept's own recorded Open Questions, and both seeded
-Clarify sessions already exist in the workflow file to close them:
+**All three clarifications are closed.** Iteration 1 carried three
+[NEEDS CLARIFICATION] markers forward on purpose rather than answering them by
+invention, and routed each to a seeded Clarify session. Both sessions are
+recorded complete in the workflow file and no marker remains anywhere in this
+feature directory, so the "No [NEEDS CLARIFICATION] markers remain" item now
+passes rather than failing by design:
 
-| Marker | Location | Routed to |
+| Iteration-1 marker | Closed by | Where it landed in spec.md |
 |--------|----------|-----------|
-| Margin semantics: which Pareto dimensions are margin-eligible vs. no-worse-only, how acceptance and terminal state participate, and the zero-valued-component case | spec.md FR-021 (line 279) | Clarify session 2 — numeric registry freeze |
-| Exact twin mirror-membership set and G56R-004 coordination timing | spec.md FR-034 (line 328) | Clarify session 1 — twin parity and contract membership |
-| Final registry serialization of the frozen numerics (margin map, N = 3, smoke caps) plus alpha/multiplicity allocation for CAR-011's secondary arms | spec.md Assumptions (line 459) | Clarify session 2 — numeric registry freeze |
+| Margin semantics: which Pareto dimensions are margin-eligible vs. no-worse-only, how acceptance and terminal state participate, and the zero-valued-component case | Clarify session 2 — numeric registry freeze | FR-021 through FR-021e, with SC-016 as the criterion |
+| Exact twin mirror-membership set and G56R-004 coordination timing | Clarify session 1 — twin parity and contract membership | FR-034 through FR-037a, with SC-011 and SC-013 as the criteria |
+| Final registry serialization of the frozen numerics (margin map, N = 3, smoke caps) plus alpha/multiplicity allocation for CAR-011's secondary arms | Clarify session 2 — numeric registry freeze | Assumptions, serialized through FR-030, FR-030a, and FR-023, with SC-017 as the criterion |
 
-Gate G1 should read this row as "clarifications routed, not unresolved". The
-underlying decisions are settled (10% relative margin, N = 3, 5 objectives /
-1 rep / 1M tokens / 30 min); what remains open is their serialization into the
-content-addressed registry, which AC-2.16 places in the analysis plan during
-Plan/Implement rather than at scoping time. Answering them here would invent
-contract detail ahead of the phase that owns it.
+The underlying decisions were already settled at iteration 1 (10% relative
+margin, N = 3, 5 objectives / 1 rep / 1M tokens / 30 min); what the sessions
+added was their serialization into the content-addressed registry, which AC-2.16
+places in the analysis plan during Plan/Implement rather than at scoping time.
+No line references are carried here on purpose: the spec has since been
+remediated repeatedly and a pinned line number is stale the moment it is written.
 
 **Content-quality note.** Two structural facts appear in the spec by intent
 rather than as leaked implementation detail: the additive contract location

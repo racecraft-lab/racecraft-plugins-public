@@ -118,7 +118,11 @@ needs to land first, and nothing shipped to users changes.
     verdict states is looked up, **Then** exactly one permitted wording class is
     returned; **And** the dominant state restricts release wording to measured
     improvement over the previous static baseline and forbids the "efficient",
-    "optimal", and "best measured" claim classes. [FR-024]
+    "optimal", and "best measured" claim classes; **And** that entry also records
+    that the restriction is on wording alone — the static defaults may still ship
+    for declared operational simplicity and nothing obliges shipping the
+    dominating control; **And** the two non-dominant states carry no forbidden
+    wording set at all. [FR-024] [FR-022]
 17. **Given** the reserved CAR-011 comparison partition declared with
     content-addressed membership, **When** a replay row or smoke row is seeded to
     reference a reserved member, **Then** the guard fails; **And** on the
@@ -166,8 +170,8 @@ needs to land first, and nothing shipped to users changes.
     numeric, or decision-semantics entry, fails the check. [FR-035] [FR-035a]
 26. **Given** the record at publication, **When** its mirror obligations are
     enumerated, **Then** the reconciliation candidate list is explicitly stated
-    as empty and every entry is `mirror_required` or the single sanctioned
-    divergence. [FR-036a]
+    as empty and every entry carries one of `mirror_required`, `car_owned`, or
+    the single sanctioned divergence. [FR-036a]
 27. **Given** the CAR-004 implementation pull request, **When** its merge
     preconditions are checked, **Then** the only coordination obligations are
     that the record is committed in that pull request and that it states its
@@ -491,6 +495,21 @@ needs to land first, and nothing shipped to users changes.
   parent-session model and effort already pinned by the frozen environment
   contract; its agents omit the model or set it to inherit and ride the session
   model.
+  The frozen environment contract MUST be identified by its owning document
+  rather than by name alone, for the reason FR-030c.1 gives for
+  `authentication_mode`: the repository carries two frozen documents a reader can
+  reach for that name. The one every CAR-004 requirement means is the Claude-side
+  `environment_contract` object of the frozen experiment-assignment contract —
+  the object carrying `parent_session_model`, `parent_session_effort`,
+  `claude_code_subagent_model_unset`, and the `subscription | api_key`
+  `authentication_mode` — bound by identifier and digest under FR-004 and
+  re-verified under FR-005a. It is explicitly not the shared runtime
+  environment-contract document, whose parent session is a differently shaped
+  member and whose `authentication_mode` enumerates
+  `chatgpt_subscription | api_key`. Every later reference in this spec to "the
+  frozen environment contract" — FR-031a.4's pinned model and effort and
+  FR-031a.6's no-override observation among them — resolves to the document
+  identified here.
 - **FR-007**: A different pinned parent session MUST produce a different unpinned
   control version by content address. No matrix over multiple parent sessions may
   be frozen.
@@ -954,7 +973,9 @@ needs to land first, and nothing shipped to users changes.
   3. **Cache write by TTL class and cache read aggregate additively** — both sum
      across the parent and every unit member, cache write summed per TTL class
      over the frozen closed key space (`ephemeral_5m`, `ephemeral_1h`) so the
-     aggregate is keyed identically to the ceiling that bounds it. The FR-030
+     aggregate is keyed identically to the ceiling that bounds it,
+     `max_cache_write_tokens_by_ttl_class`, and cache read summed under the
+     ceiling that bounds it, `max_cache_read_tokens`. The FR-030
      bound check for these members MUST be read against the unit aggregate, not
      against the parent's own consumption, which is the only reading under which
      the declared ceilings bound what the run actually spent.
@@ -1070,6 +1091,20 @@ needs to land first, and nothing shipped to users changes.
   not-dominant, and inconclusive. The dominant state MUST restrict release wording
   to measured improvement over the previous static baseline and MUST forbid the
   "efficient", "optimal", and "best measured" claim classes.
+  Every consequence the mapping carries MUST be a wording consequence and nothing
+  else. The mapping MUST therefore declare, as a member of the dominant entry,
+  that a dominance verdict imposes no obligation to ship the dominating control
+  and no bar on continuing to ship the static defaults for declared operational
+  simplicity — the second half of the acceptance criterion this contract freezes,
+  which grants that permission in the same sentence that removes the "efficient",
+  "optimal", and "best measured" wording. Left unstated, a mechanical consumer
+  reading a `dominant` verdict out of the map has no way to tell a wording
+  restriction from a shipping one, and the safest reading of an unqualified
+  restriction is the wrong one.
+  The two non-dominant states MUST impose no messaging restriction at all under
+  FR-022: their permitted class is the no-comparative-claim class, and neither
+  may carry a forbidden-wording set, because a forbidden set is a restriction and
+  FR-022 refuses to impose one.
 - **FR-024a**: The FR-019 eligibility-floor outcome produces no member of the
   verdict enum at all, so a mapping total over dominant, not-dominant, and
   inconclusive does not by itself cover every outcome the frozen decision
@@ -1191,6 +1226,18 @@ needs to land first, and nothing shipped to users changes.
   forbids. Every other member of the smoke bounds MUST likewise carry a frozen
   value; none may be left for Implement to choose, because the object is
   hash-relevant to the registry's content address.
+
+  The identity's membership MUST be stated rather than inferred from member
+  names, because the registry declares six token ceilings and only three of them
+  belong to it. The three summands are `max_input_tokens`,
+  `max_cached_input_tokens`, and `max_output_tokens` — one ceiling per bounded
+  member of the frozen four-member raw token vector. `max_cache_read_tokens` and
+  both `max_cache_write_tokens_by_ttl_class` entries MUST stay outside it, being
+  the ceilings on the two cache diagnostics FR-016e.4 keeps out of it, and the
+  validator MUST refuse an identity that admits any of them. `max_input_tokens`
+  and `max_output_tokens` are the frozen budget's own names; `max_cached_input_tokens`
+  is coined by CAR-004 for the same reason `raw_token_ceiling` is, the frozen
+  budget carrying no ceiling for the raw vector's `cached_input_tokens`.
 - **FR-030b**: Each smoke bound MUST declare the scope it is counted over.
   FR-014a already fixes unit scope for the retry and cancellation bounds, while
   FR-030 alone scopes none of its own four, and on the orchestration-changing
@@ -1201,7 +1248,16 @@ needs to land first, and nothing shipped to users changes.
      FR-016d defines, so a run cannot stay inside a ceiling by distributing
      spend across children.
   2. **Token and cache ceilings read the aggregate** — the raw-token ceiling and
-     the cache ceilings are read against the FR-016e unit aggregate.
+     the cache ceilings are read against the FR-016e unit aggregate, each ceiling
+     against the aggregated quantity it names. The 1,000,000 is evaluated over
+     the sum of the three bounded raw-token members — `input_tokens`,
+     `cached_input_tokens`, and `output_tokens` — which is exactly the identity's
+     left-hand side; `reasoning_output_tokens` is aggregated under FR-016e.1 and
+     reported, but is not an input to that ceiling, because it carries no
+     sub-budget and admits a null value. The cache ceilings are read against the
+     two FR-016e.3 cache-diagnostic aggregates, `max_cache_read_tokens` against
+     aggregated cache read and each TTL class against its own aggregated cache
+     write. No ceiling is read against a quantity it does not name.
   3. **The wall clock is elapsed, not additive** — the 30-minute bound is
      elapsed wall clock over the unit, from the parent's dispatch to the last
      member's completion. It is deliberately not the additive `duration_ms`
@@ -1472,7 +1528,9 @@ needs to land first, and nothing shipped to users changes.
      member's evidence binds one, the parent-plus-children aggregation rule for
      every dimension the frozen Pareto rule reads and for the raw-token vector's
      reasoning member and the two cache-diagnostic quantities the smoke bounds
-     constrain, the unobserved-rather-than-zero disposition when one of those is
+     constrain, the precedence of FR-016b's acceptance floor over FR-016c's
+     null-acceptance allowance on a unit that failed before reaching its oracle,
+     the unobserved-rather-than-zero disposition when one of those is
      unrecorded, the scope each smoke bound is counted over together with the
      elapsed-versus-additive reading of the wall clock and the rule that a child
      dispatch consumes no attempt, the read-back rule and the three
@@ -1547,8 +1605,13 @@ needs to land first, and nothing shipped to users changes.
 - **FR-036a**: At publication the reconciliation candidate list MUST be empty
   and MUST say so explicitly rather than leaving an empty list ambiguous:
   G56R-004 has not started, so no member can yet be declared unmirrorable, and
-  every entry MUST therefore be `mirror_required` or the single sanctioned
-  divergence. A reconciliation candidate is a disposition only the twin owner's
+  every entry MUST therefore carry one of the three FR-034 obligations —
+  `mirror_required`, `car_owned`, or the single sanctioned divergence. The
+  requirement is that no entry is a reconciliation candidate at publication, not
+  that `car_owned` is unusable: a CAR-004-owned member the twin has no
+  counterpart for owes the twin nothing and is settled at publication in exactly
+  the way a reconciliation candidate is not.
+  A reconciliation candidate is a disposition only the twin owner's
   response can create, and creating one after CAR-004 merges is a normal
   follow-up change that reopens no frozen control identity.
 - **FR-037**: CAR-004 MUST NOT block on G56R-004. The complete coordination
@@ -1579,6 +1642,12 @@ needs to land first, and nothing shipped to users changes.
 - Setup-gate result (2026-07-27): pass. Reviewable LOC 250, production files 0,
   total files approximately 10, primary surface harness/fixtures, 1 slice. No
   split decision required and no typed reviewability exception is claimed.
+  The plan phase refined the file count to fifteen declared operations once the
+  twin-handoff record, the generated docs reference, and the suite-manifest
+  registration were enumerated. That count sits at the 15-file warn threshold and
+  below every block threshold, so the gate's pass result and the no-split
+  decision are unchanged; `plan.md` carries the refined figure and the PR-time
+  diff-mode gate is the authoritative check on it.
 - The surface is repository-only validation: no plugin runtime, payload, or
   shipped-default behavior changes.
 
@@ -1641,7 +1710,9 @@ needs to land first, and nothing shipped to users changes.
   [FR-026] [FR-026a]
 - **SC-008**: Every dominance verdict state resolves to exactly one permitted
   claim class, so a release reviewer can determine permitted wording without
-  exercising judgment. [FR-024]
+  exercising judgment; only the dominant state carries a forbidden-wording set,
+  and it records that the restriction reaches wording and not shipping.
+  [FR-024] [FR-022]
 - **SC-009**: Each control's live smoke completes inside all four declared bounds
   (at most 5 objectives, 1 repetition, 1,000,000 raw tokens, 30 minutes) and every
   smoke row is labeled non-scored. [FR-030]
@@ -1652,15 +1723,15 @@ needs to land first, and nothing shipped to users changes.
   Completeness across the mechanically derivable categories is machine-verified
   by re-derivation rather than attested, with zero differences in either
   direction. [FR-034] [FR-034a]
-- **SC-013**: CAR-004 merges with the twin-handoff record committed and the
-  G56R-004 owner notified, and with zero merge preconditions on twin
-  acknowledgment, response, or landing — verifiable from the record and the
-  change set alone. [FR-037] [FR-037a]
 - **SC-012**: Every control, the control-registry document, and the comparison
   contract carry a recorded freeze timestamp and a content address in a committed
   artifact, and an automated check recomputes each digest under the single frozen
   preimage rule and confirms it matches the recorded one.
   [FR-002] [FR-002a] [FR-002b] [FR-002c]
+- **SC-013**: CAR-004 merges with the twin-handoff record committed and the
+  G56R-004 owner notified, and with zero merge preconditions on twin
+  acknowledgment, response, or landing — verifiable from the record and the
+  change set alone. [FR-037] [FR-037a]
 - **SC-014**: The adaptive control's `escalation_ladder` carries every admitted
   tuple of its bound successor-capability freeze exactly once, and an automated
   check rejects a duplicate, an omission, a within-model position contradicting
@@ -1675,11 +1746,15 @@ needs to land first, and nothing shipped to users changes.
   dimensions, with four margin-eligible at 0.10 and four declared no-worse-only,
   and a zero-valued comparator component yields `margin_not_computable` rather
   than a dominance verdict. [FR-021] [FR-021a] [FR-021c]
-- **SC-017**: The registry's three raw-token smoke bounds sum to exactly the
-  declared `raw_token_ceiling` member of 1,000,000 as a machine-checked identity,
-  every other smoke-bound member carries a frozen value including both cache-write
-  TTL classes, and both new contract documents validate with no reference
-  resolving outside their own `#/$defs/`. [FR-023] [FR-030] [FR-030a]
+- **SC-017**: The registry's three raw-token smoke bounds — `max_input_tokens`,
+  `max_cached_input_tokens`, and `max_output_tokens` — sum to exactly the
+  declared `raw_token_ceiling` member of 1,000,000 as a machine-checked identity
+  that admits no cache ceiling, every other smoke-bound member carries a frozen
+  value including `max_cache_read_tokens` and both cache-write
+  TTL classes, the comparison contract declares its `secondary_control_arm_family`
+  disjoint from the frozen analysis plan's three families rather than added to
+  them, and both new contract documents validate with no reference
+  resolving outside their own `#/$defs/`. [FR-004] [FR-023] [FR-030] [FR-030a]
 - **SC-018**: Every CAR-003 binding recorded by a CAR-004 document has its digest
   recomputed from the bound document's committed bytes, and a seeded byte change
   to any bound document fails that check — so additive-only discipline is
@@ -1725,10 +1800,13 @@ needs to land first, and nothing shipped to users changes.
   observation, and no smoke missing it is reported as demonstrating an
   escalation or an inherit resolution. [FR-031a]
 - **SC-028**: The orchestration aggregate sums all four frozen raw-token members
-  and both cache-diagnostic quantities across the parent and every unit member,
-  keyed identically to the ceilings that bound them, with neither cache quantity
-  entering the Pareto dimension set or the raw-token identity, and an unrecorded
-  quantity reported unobserved rather than zero. [FR-016e]
+  and both cache-diagnostic quantities across the parent and every unit member;
+  each of the five quantities a smoke bound names — the three bounded raw-token
+  members and the two cache diagnostics — is keyed identically to the ceiling
+  that bounds it, `reasoning_output_tokens` is summed and reported under no
+  ceiling of its own, neither cache quantity enters the Pareto dimension set or
+  the raw-token identity, and an unrecorded
+  quantity is reported unobserved rather than zero. [FR-016e] [FR-030b]
 - **SC-029**: All four smoke bounds are evaluated over the whole unit, the wall
   clock as elapsed time rather than as the additive duration, with no child
   dispatch consuming an objective attempt. [FR-030b]
@@ -1815,12 +1893,38 @@ needs to land first, and nothing shipped to users changes.
   registry document rather than to any control's identity: `max_attempts: 5` and
   `max_candidates: 1` for five non-reserved objectives at one repetition each,
   `max_confirmation_entries: 0`, `max_duration_seconds: 1800`,
-  `max_input_tokens: 800000`, `max_cache_read_tokens: 150000`, and
+  `max_input_tokens: 800000`, `max_cached_input_tokens: 150000`, and
   `max_output_tokens: 50000`. The ceiling itself is a declared member,
-  `raw_token_ceiling: 1000000`, and the three raw-token bounds sum to exactly
+  `raw_token_ceiling: 1000000`, and those three raw-token bounds sum to exactly
   that member, asserted as an identity so FR-030's ceiling is machine-checked
   rather than prose and so FR-034 category 6 derives it from the committed bytes
   instead of transcribing it (FR-030a).
+
+  Every summand of that identity is a ceiling on a member of the frozen
+  four-member raw token vector, and nothing else may enter it. `max_input_tokens`
+  and `max_output_tokens` are the frozen budget's own names for the ceilings on
+  `input_tokens` and `output_tokens`. `max_cached_input_tokens` is coined here —
+  as `raw_token_ceiling` is — because the frozen budget carries no ceiling for the
+  raw vector's `cached_input_tokens` member, and an identity summand that bounds
+  no raw-token member would be an identity in name only. In particular the frozen
+  budget's `max_cache_read_tokens` is **not** that ceiling: in this repository it
+  bounds the `cache_read_tokens` cache diagnostic, which FR-016e.4 keeps out of
+  this identity, so reusing it here would have decomposed a raw-token ceiling over
+  a quantity the raw token vector does not carry. It is declared instead alongside
+  the cache-write classes at `max_cache_read_tokens: 1200000`, outside the
+  identity, on the same attempts-anchored basis those classes use: the frozen
+  CAR-003 campaign budget pairs 48 attempts with 6,000,000, which is 125,000 per
+  attempt and 625,000 over the smoke's five, and the declared ceiling sits just
+  under twice that, rounded down to a round figure.
+
+  The fourth raw-token member, `reasoning_output_tokens`, carries no ceiling and
+  is deliberately not one the 1,000,000 is decomposed over. The frozen contract
+  fixes it as never decision-bearing and admits a null value for it, so a ceiling
+  read against it would make an unrecorded reasoning report either a breach or a
+  silent zero. FR-016e.1 still requires it summed across the unit, because that is
+  what keeps the recorded cost honest, and FR-030b.2 states which members of that
+  aggregate the ceiling is read against.
+
   `max_cache_write_tokens_by_ttl_class` is declared over the frozen
   `ephemeral_5m` and `ephemeral_1h` classes at `ephemeral_5m: 160000` and
   `ephemeral_1h: 40000`. Cache write scales with dispatches rather than with
@@ -1841,14 +1945,16 @@ needs to land first, and nothing shipped to users changes.
   down to a round figure — headroom so a legitimate smoke never trips a diagnostic
   guard, rounded down so the guard stays tighter than the doubling rather than
   looser — and they preserve the frozen budget's own 4:1 ratio between the two
-  classes. Both classes stay outside
-  the raw-token identity, cache write being diagnostic-only and never a Pareto
-  dimension, and the validator enforces that both are present at their frozen
-  values and that neither enters that identity; it MUST NOT constrain either class
+  classes. All three cache ceilings — both write classes and
+  `max_cache_read_tokens` — stay outside
+  the raw-token identity, cache write and cache read alike being diagnostic-only
+  and never Pareto dimensions, and the validator enforces that all three are
+  present at their frozen values and that none enters that identity; it MUST NOT
+  constrain any of them
   against `max_input_tokens`, which is not the governing quantity. Leaving the
   member valueless would place an implementation-chosen number inside a
   hash-relevant object.
-  These two ceilings carry the same moderate confidence as the 1,000,000 and
+  These three ceilings carry the same moderate confidence as the 1,000,000 and
   30-minute caps. The smoke MUST NOT be
   serialized as an instance of the frozen CAR-003 experiment-policy document,
   whose branches would force a partition type and an analysis or calibration
@@ -1863,7 +1969,9 @@ needs to land first, and nothing shipped to users changes.
   `cluster_robust_sandwich_variance_by_role`. CAR-011's three predeclared
   secondary control arms form one new multiplicity family,
   `secondary_control_arm_family`, declared in the comparison contract beside and
-  disjoint from the three frozen FR-050 families and the guardrail family,
+  disjoint from the three frozen families and the guardrail family — CAR-003's
+  own FR-050 families, named that way inside the frozen analysis-plan document's
+  descriptions and not a CAR-004 requirement number —
   following the precedent that stood the guardrail family up as an error-control
   concern belonging to none of them; it MUST NOT be added to the frozen analysis
   plan's multiplicity declaration, which is closed at three families. Its

@@ -43,8 +43,10 @@ invariants a conforming instance must satisfy.
   "$defs": {
     "digest", "binding", "control",
     "unpinnedControl", "adaptiveControl", "orchestrationChangingControl",
-    "executionContract", "ladderRationale", "budgetTrigger",
-    "aggregationRule", "smokeBounds", "unitAndDirection"
+    "executionContract", "boundScopeAndBreach", "ladderRationale", "budgetTrigger",
+    "aggregationRule", "rawTokenAggregation", "cacheAggregation",
+    "topologyDescriptor", "childShape",
+    "smokeBounds", "unitAndDirection"
   }
 }
 ```
@@ -68,9 +70,14 @@ precedent already used in the frozen `experiment-policy.schema.json`.
 | R9 | The three response maps are total over their frozen enums and single-valued | validator, set-equality against `score-bundle.schema.json` | FR-010, SC-003 |
 | R10 | `terminal_state_severity` is set-equal — not order-equal — to the frozen terminal-state enum | validator | FR-016a |
 | R11 | `aggregation_rule` is total over all eight Pareto dimensions | validator | FR-016 |
-| R12 | `max_input_tokens + max_cache_read_tokens + max_output_tokens == 1000000` | validator, machine-checked identity | FR-030, SC-017 |
-| R13 | `smoke_bounds.authentication_mode == "subscription"` | schema `const` | FR-030 |
-| R14 | Every numeric in `smoke_bounds` carries its unit and comparison direction | schema shape (`$defs/unitAndDirection`) | FR-034.6 |
+| R12 | `max_input_tokens + max_cached_input_tokens + max_output_tokens == raw_token_ceiling`, asserted against the declared member and never against a prose literal. The three summands are the ceilings on the three bounded raw-token members; an identity admitting `max_cache_read_tokens` or a cache-write class is refused, both being cache-diagnostic ceilings FR-016e.4 keeps out of it | validator, machine-checked identity | FR-030, FR-030a, SC-017 |
+| R13 | `smoke_bounds` carries **no** `authentication_mode` and no `scored` member. Both are properties of a produced smoke record, not declared bounds: the recorded mode is an observation of the run that happened, so a `const "subscription"` bound would restate operator intent and would make a refused `api_key` record — which must still carry its observed value — unrepresentable | schema shape (`additionalProperties: false` over the closed bound set) | FR-030c |
+| R14 | Every numeric in `smoke_bounds` carries its unit and comparison direction, and every member carries a frozen value including `max_cache_read_tokens` and both cache-write TTL classes | schema shape (`$defs/unitAndDirection`) | FR-030a, FR-034.6 |
+| R15 | Each control declares both bound scopes and both breach outcomes as hash-relevant members: `counted_over` per objective (per unit on the orchestration-changing control), retry breach `failed`/`candidate_failed`, cancellation breach `cancelled`/`candidate_cancelled` under the frozen candidate-plane pairing | validator | FR-014a |
+| R16 | `signal_precedence` is the ordered array `["failure_code", "failure_plane", "retry_count", "budget_threshold", "terminal_state"]` over the closed source set covering every source FR-008 admits, with the always-valued terminal state ranked last so no lower-ranked source is unreachable; a source FR-008 admits but the array omits fails closed | validator | FR-010b |
+| R17 | The plane map agrees with the code map under the frozen plane derivation, and the terminal-state map agrees with it under the frozen candidate-plane pairing | validator; the plane derivation imported read-only from `lib/claude_score_bundle.py`, the pairing derived live from the frozen `failure_code` enum as `candidate_<state>` — neither transcribed | FR-010c |
+| R18 | The orchestration control declares raw-token and cache aggregation beside `aggregation_rule`, with `reasoning_output_tokens` summed but never a Pareto dimension and an unrecorded cache quantity reported unobserved rather than zero | validator | FR-016e |
+| R19 | `topology_descriptor.child_shape` declares the dispatch mechanism under which every unit member is dispatched through the CAR-004 harness, and that every unit member's recorded wall time is its full elapsed window | schema shape, hash-relevant | FR-016d.1, FR-031a.5 |
 
 ## Compatibility rules
 

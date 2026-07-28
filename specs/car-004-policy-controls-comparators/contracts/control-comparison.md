@@ -70,7 +70,10 @@ filter reached only on candidate dominance. [FR-020, FR-021a]
 | C10 | `secondary_control_arm_family` is declared here, disjoint from the frozen analysis plan's three families rather than added to them | FR-005, FR-023, SC-017 |
 | C11 | `messaging_map` is total and single-valued over `dominant \| not_dominant \| inconclusive` | FR-024, SC-008 |
 | C12 | The `dominant` entry restricts wording to measured improvement over the previous static baseline and forbids `efficient`, `optimal`, and `best_measured` | FR-024 |
-| C13 | `reserved_partition_binding` names the CAR-011 reserved entry by `{id, digest}` | FR-025 |
+| C13 | `reserved_partition_binding` names the CAR-011 reserved entry by `{id, digest}`, pinning its `partition_id` together with its membership digest — the digest over the deduplicated, lexicographically sorted objective identifiers, which is the only digest that pins membership | FR-025, FR-025c |
+| C14 | The two non-dominant entries carry an empty forbidden set and `messaging_restriction: false`; only `dominant` restricts, since a forbidden set *is* a restriction and FR-022 imposes none | FR-022, FR-024 |
+| C15 | The `dominant` entry records `restriction_scope: "release_wording_only"` and `static_defaults_may_still_ship: true`, so a mechanical consumer cannot read a wording restriction as a shipping one | FR-024 |
+| C16 | The eligibility-floor no-verdict outcome maps to `no_comparative_claim` with no restriction **inside the eligibility block**, not as a fourth verdict member or a fourth messaging-map row | FR-024a, SC-019 |
 
 ## What this document deliberately does not do
 

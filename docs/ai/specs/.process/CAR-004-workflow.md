@@ -34,12 +34,12 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
-| Plan | `/speckit-plan` | ⏳ Pending | |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | 36 FRs, 23 scenarios; 6 adversarially-verified findings applied, incl. the AC-2.19 authentication correction |
+| Clarify | `/speckit-clarify` | ✅ Complete | 2 sessions, all 5 markers resolved by 3-analyst consensus (4 unanimous/majority, 1 split at medium confidence) |
+| Plan | `/speckit-plan` | ✅ Complete | plan/research/data-model/quickstart + 3 contract docs; 15 file operations, 0 production LOC |
+| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains sequential: 135 items, 57 gaps found, 57 remediated, 12 escalated to consensus |
+| Tasks | `/speckit-tasks` | ✅ Complete | 64 tasks, 4 phases, 18 `[P]`, 25 RED→GREEN pairs, all 15 file ops covered |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -506,12 +506,35 @@ The decision answers "can this change be split into multiple small PRs safely?" 
 inspecting the change's structural seams (independent additive capabilities), not its
 line count. Surface the four fields the SKILL extracts from the emitted decision:
 
+Recorded 2026-07-28 from the read-only classifier run against
+`specs/car-004-policy-controls-comparators`.
+
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
-| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+| **Route** | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| **Releasable** | `true` | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
+| **Signals** | `change-shape:modify-heavy` | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
+| **Warnings** | *(none)* | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+
+## Layer Plan
+
+**Status: `skipped` — non-split route.** The layer planner runs only when the
+atomicity route is exactly `split-PR`. This change classified as
+`one-navigable-PR`, so no layer-plan envelope is produced and the run continues
+with route context only. No PR emission or branch splitting is wired.
+
+## Reviewability Evidence Chain
+
+The installed runner registers `reviewability-gate` tasks mode as **deferred**,
+so it was not invoked. Deferral recorded: helper `reviewability-gate`, requested
+mode `tasks`, reason *deferred on the installed runner — setup mode only*. The
+fallback evidence chain is current and all-passing:
+
+| Source | Result |
+|---|---|
+| Setup-mode gate at scaffold (2026-07-27) | `pass` — 250 LOC, 0 production files, 10 total, 1 surface |
+| Plan-phase `estimate-reviewable-loc` (2026-07-28) | `pass` — projected 0 production LOC, 15 declared file operations (13 new, 2 modified) |
+| Operator-ratified split decision | none required; single vertical slice |
 
 To produce the decision, run the classifier against the feature directory:
 

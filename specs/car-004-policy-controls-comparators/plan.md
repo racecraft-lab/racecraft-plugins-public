@@ -31,19 +31,27 @@ the schema document itself, as `lib/claude_trace_schema.py` already does.
 
 **Primary Dependencies**: In-repo only. Read-only reuse of frozen CAR-003
 modules — `canonical_json` and `record_digest` from `lib/claude_successor_freeze.py`
-(one FR-033 preimage rule for every digest in the program), and
+(the one FR-002a preimage rule for every digest in the program), and
 `build_partition_registry_entry` / `register_partitions` /
 `objective_set_digest` from `lib/claude_experiment_policy.py`. Frozen enums are
 read live from `contracts-claude/score-bundle.schema.json` rather than restated
 in Python, so a mirrored enum and a CAR-004 check can never drift apart silently;
 FR-010a makes that live read fail closed on a membership change instead of
-absorbing it. The two frozen derivations FR-010c checks against — the
-failure-code-to-plane mapping and the candidate-plane terminal-state pairing —
-are likewise imported read-only from `lib/claude_score_bundle.py`, which already
-derives the plane from the code rather than authoring it beside the code, so the
-consistency check reads the same source the contract does instead of a second
-transcription of it. `service_reroute` and its non-scorable disposition reason
-(FR-015a) come from that module's frozen constants for the same reason.
+absorbing it. Neither of the two frozen derivations FR-010c checks against is
+transcribed. The failure-code-to-plane mapping is imported read-only from
+`lib/claude_score_bundle.py`, which publishes it as `FAILURE_PLANE_BY_CODE` and
+`failure_plane_for` and already derives the plane from the code rather than
+authoring it beside the code, so the consistency check reads the same source the
+contract does. That module publishes no terminal-state-keyed map, so the
+candidate-plane terminal-state pairing is derived live from the frozen
+`failure_code` enum in `contracts-claude/score-bundle.schema.json` instead: each
+non-`completed` terminal state pairs with the `candidate_<state>` member of that
+enum, and a derived code the enum does not carry fails the check closed. Deriving
+it from the committed bytes is what keeps it out of both prohibited outcomes —
+no transcription, and no map added to a frozen module to make it importable.
+`service_reroute` and its non-scorable disposition reason
+(FR-015a) come from `claude_score_bundle.py`'s frozen constants for the same
+anti-transcription reason.
 Both partition entries are produced by the frozen builder and
 registered through `register_partitions`, so FR-025a's closed type set and
 FR-025b's disjointness are enforced by the machinery CAR-003 already uses rather
@@ -57,8 +65,12 @@ frozen surfaces, all read live from their committed schema documents rather than
 restated in Python for the same anti-drift reason: the cache diagnostic's
 `observed_cache_isolation` object and its closed status set (FR-032a), the
 configured-route proof's served `model`, `effort`, and `candidate_route_id`
-(FR-031a), the environment contract's pinned parent session and its
-`claude_code_subagent_model_unset` observation (FR-031a), and the shared trace's
+(FR-031a), the pinned parent session and the
+`claude_code_subagent_model_unset` observation carried by the Claude-side
+`environment_contract` object of the frozen experiment-assignment contract —
+the document FR-006 identifies, never the shared runtime environment-contract
+document, whose parent session is a differently shaped member (FR-006,
+FR-031a) — and the shared trace's
 `raw_token_vector`, `wall_time_ms`, and `parent_child_graph` (FR-016d, FR-016e,
 FR-031a). The `parent_child_graph` is a member of the shared treatment-record
 contract that the frozen Claude-side CAR-003 runner already binds, not of the
@@ -98,8 +110,10 @@ No application, service, or user-facing surface.
 
 **Performance Goals**: The Layer 4 additions stay deterministic and fast — no
 network, no subprocess, no live model call. Replay fixtures are bounded to a
-small closed case set following the CAR-003 precedent (six cases), so suite cost
-does not scale with accumulated evidence.
+small closed case set following the CAR-003 precedent — the nine cases of
+data-model.md §4, of which cases 7 and 8 are the two FR-014a bound-breach paths
+and case 9 is the FR-012a.3 streak that survives an excluded non-scorable
+objective — so suite cost does not scale with accumulated evidence.
 
 **Constraints**: Additive-only against the frozen CAR-003 contract set; no new
 telemetry field; no `$ref` outside a document's own `#/$defs/`; no script or test
