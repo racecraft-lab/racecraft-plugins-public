@@ -20,12 +20,12 @@
         {
           "type": "json",
           "path": "/.claude-plugin/marketplace.json",
-          "jsonpath": "$.plugins[0].version"
+          "jsonpath": "$.plugins[?(@.name==\"speckit-pro\")].version"
         },
         {
           "type": "json",
           "path": "/.agents/plugins/marketplace.json",
-          "jsonpath": "$.plugins[0].version"
+          "jsonpath": "$.plugins[?(@.name==\"speckit-pro\")].version"
         },
         {
           "type": "json",
