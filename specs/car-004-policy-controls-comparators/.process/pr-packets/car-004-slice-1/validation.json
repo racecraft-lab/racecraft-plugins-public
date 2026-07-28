@@ -35,7 +35,7 @@
     "base_branch": "main",
     "head_branch": "car-004-policy-controls-comparators"
   },
-  "timestamp": "2026-07-28T20:00:14Z",
+  "timestamp": "2026-07-28T21:44:47Z",
   "title_value": "feat(car-004): add the three routing policy controls and their comparison rules",
   "validation_result_path": "specs/car-004-policy-controls-comparators/.process/pr-packets/car-004-slice-1/validation.json"
 }
