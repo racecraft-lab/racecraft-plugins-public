@@ -21,6 +21,22 @@ Freezes the three AC-2.17 policy controls — unpinned, adaptive, and orchestrat
 
 <!-- speckit-pro-editable:why_it_matters:start -->
 The comparison rule has to be frozen before anybody can see which side wins, otherwise the rule becomes authorable after the results are visible. That is the exact failure this feature exists to prevent, so CAR-004 ships the question and the procedure and deliberately withholds the answer.
+
+```release-note
+Freezes the three policy-level comparators that a future Claude Code agent
+routing release will have to measure itself against, before any result exists
+to measure.
+
+The controls are recorded as content-addressed contracts with a machine-checked
+comparison rule, so a reader can verify later that the yardstick was fixed in
+advance rather than chosen once the answer was known. A dominance verdict maps
+to exactly one permitted class of release wording, and a slice of workload is
+reserved and guarded so the final comparison cannot quietly reuse data that
+selection already saw.
+
+This adds validation assets only. No plugin behavior, shipped default, or
+payload changes.
+```
 <!-- speckit-pro-editable:why_it_matters:end -->
 
 ## How To Review
