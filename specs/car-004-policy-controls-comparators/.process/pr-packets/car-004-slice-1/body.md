@@ -22,6 +22,19 @@ Freezes the three AC-2.17 policy controls — unpinned, adaptive, and orchestrat
 <!-- speckit-pro-editable:why_it_matters:start -->
 The comparison rule has to be frozen before anybody can see which side wins, otherwise the rule becomes authorable after the results are visible. That is the exact failure this feature exists to prevent, so CAR-004 ships the question and the procedure and deliberately withholds the answer.
 
+**Six success criteria ship unevidenced.** T062 — the three bounded developer-local live smokes — has never been run. It cannot be executed by an agent: it needs a real subscription-authenticated session. Everything else here is proven by the suite, but these six criteria have **no** evidence behind them, automated or manual:
+
+| Criterion | What is unproven |
+|---|---|
+| SC-009 | Each smoke completes inside all four declared bounds |
+| SC-026 | Each smoke records its named observable read back |
+| SC-027 | Every smoke record carries the frozen no-subagent-override proof |
+| SC-029 | All four bounds evaluate over the whole parent-plus-children unit |
+| SC-030 | Every accepted smoke records a subscription authentication mode |
+| SC-031 | All three smoke-arm pairs record disjoint cache state |
+
+Running the three smokes is the only thing that converts them into evidence; the operator runbook is at `specs/car-004-policy-controls-comparators/.process/CAR-004-live-smoke-runbook.md`. Merging without it means accepting that gap knowingly rather than unknowingly.
+
 ```release-note
 Freezes the three policy-level comparators that a future Claude Code agent
 routing release will have to measure itself against, before any result exists

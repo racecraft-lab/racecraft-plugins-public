@@ -298,7 +298,15 @@ def main(argv: list[str] | None = None) -> int:
     if outcome["admitted"]:
         print(f"sealed: {written}")
         return 0
-    print(f"REFUSED as FR-031 evidence: {outcome['refusal_reasons']}", file=sys.stderr)
+    # The reasons themselves are not echoed here. They are already written verbatim
+    # into the sealed record, and one of them names an observed authentication mode,
+    # which makes a stderr echo read to scanners as clear-text credential logging.
+    # Pointing at the record keeps every reason available without that ambiguity.
+    print(
+        f"REFUSED as FR-031 evidence: {len(outcome['refusal_reasons'])} reason(s) "
+        f"recorded in refusal_reasons of {written}",
+        file=sys.stderr,
+    )
     print(
         f"the refused record is written to {written} with its observed values; "
         "the remedy is a re-run, never a relabel",
