@@ -39,8 +39,8 @@ captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | plan/research/data-model/quickstart + 3 contract docs; 15 file operations, 0 production LOC |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains sequential: 135 items, 57 gaps found, 57 remediated, 12 escalated to consensus |
 | Tasks | `/speckit-tasks` | ✅ Complete | 64 tasks, 4 phases, 18 `[P]`, 25 RED→GREEN pairs, all 15 file ops covered |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ✅ Complete | 3-lens audit: 19 findings, all 19 reproduced and applied; G6 pass, 0 CRITICAL/HIGH |
+| Implement | `/speckit-implement` | ✅ Complete | 63/64 tasks (T062 is the manual operator smoke); suite 4909/4909, L7 257/257, L8 12/12; 0 phantoms |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -648,6 +648,189 @@ Before starting any task:
 - [ ] PR title passes the release-readiness gate (`<type>(<lowercase-scope>): <plain English description>`)
 - [ ] PR created and reviewed
 - [ ] Merged to main branch
+
+---
+
+## UAT Runbook (fail-open; logged)
+
+**Outcome: SKIPPED — deferred helper. No skeleton was generated, and none was
+fabricated.**
+
+`generate-uat-skeleton` is **registered but deferred on the installed runner**.
+Deferred helpers must not be invoked, so it was not called and no UAT skeleton
+exists for CAR-004. The `uat-runbook-author` subagent was therefore **not**
+spawned either: it only runs against an existing skeleton. This is the documented
+deferred contract, not a workaround, and it matches the record CAR-003 kept for
+the same helper.
+
+**A committed source-derived runbook already exists and is reused instead:**
+`specs/car-004-policy-controls-comparators/quickstart.md`. It is the
+operator-facing acceptance runbook — numbered commands runnable from the worktree
+root, explicit prerequisites, a per-section expected-outcome table traced to
+success criteria, and every operator-only section marked as such. It states the
+subscription-only authentication path and the no-API-key guarantee up front.
+
+**Plus one addition made in this step.** CAR-004 carries exactly one genuinely
+manual task, T062 — the three bounded live smokes, developer-local and never CI —
+so a short plain-English operator runbook was written for it at
+`specs/car-004-policy-controls-comparators/.process/CAR-004-live-smoke-runbook.md`.
+It is written for someone who did not build the feature: numbered steps with
+observable expected results, the supported subscription path (never an API key),
+the four bounds each run must stay inside (at most 5 non-reserved objectives, 1
+repetition, a 1,000,000 raw-token ceiling, a 30-minute elapsed wall clock), the
+observable that proves each control (an inherit resolution for `unpinned`, a
+one-rung dispatch-time escalation for `adaptive`, a parallel dispatch with child
+aggregation for `orchestration-changing`), the record template the seal step
+requires, and how to seal and cross-check the evidence. It supplements
+`quickstart.md` §5 rather than replacing it.
+
+No acceptance evidence was fabricated, and T062 remains open and honestly
+unticked.
+
+---
+
+## Self-Review
+
+**Date**: 2026-07-28 · **Scope**: the CAR-004 change as a whole (`origin/main...HEAD`,
+9 commits, 33 files, ~18k insertions, 0 production LOC). Reporting only; this
+section gates nothing.
+
+**Method**: read the diff and the three new library/test surfaces directly;
+re-ran `python3 tests/speckit-pro/run-all.py` in this session (**4909/4909** —
+L1 1428, L4 3295, L5 186, with the three new files at 518/125/26); executed
+`run-control-smoke.py --control adaptive --plan` to exercise the operator path
+that exists; scanned every changed file for absolute home-directory paths (none).
+
+### 1. What a reviewer should trust without re-deriving
+
+| Claim | Evidence |
+|---|---|
+| The surface really is repository-only, 0 production LOC | Every changed path is under `tests/`, `specs/`, `docs/`, plus the regenerated `docs-site/src/content/docs/reference/tests.md`. No plugin source, manifest, payload, or shipped default is touched. |
+| The suite is green, not assumed green | Re-run this session: 4909/4909. The three new files are registered in `tests/speckit-pro/suite-manifest.json:122-124`, so they run in CI rather than only by hand. |
+| Frozen enums and derivations are read from the frozen bytes, not transcribed | `candidate_code_for()` derives the candidate-plane pairing from the frozen `failure_code` enum and fails closed when the derived code is absent (`claude_policy_controls.py:607-620`); the failure-plane derivation is imported read-only from `claude_score_bundle` (`:42-45`, used at `:688`); `FROZEN_EFFORT_LADDER` is read out of `successor-capability-freeze.schema.json`'s own tuple definition (`:760`); `claude_control_comparison.py:122-130` refuses to import at all if its verdict enum disagrees with the committed schema's `messaging_map` required set. |
+| Content-addressing is verified against shipped bytes | `registry_digest`, every `control_digest`, the `topology_digest`, and every CAR-003 binding recompute over the committed instance, and a seeded byte change fails closed — `test-policy-control-contracts.py:2282-2337`. |
+| The twin-handoff is derived, not narrated | Categories 1-6 (146 of 167 members) diff to zero in **both** directions against the artifacts, with negative controls for a dropped member, an invented member, and a drifted fact (`test-twin-handoff-completeness.py:56-57, 622-668`). Membership: 156 `mirror_required`, 10 `car_owned`, 1 `sanctioned_divergence`, and the divergence set is test-closed at exactly one (`:739-760`). |
+| The raw-token ceiling is machine-checked, not prose | `max_input_tokens + max_cached_input_tokens + max_output_tokens == raw_token_ceiling`, asserted against declared members, with all three cache ceilings barred from the identity — `contracts/policy-control-registry.md` R12, enforced in the validator. |
+| An operator cannot be handed a reserved objective | The plan path re-registers the partitions through the frozen consumption path, re-checks each objective individually, then runs the reserved-partition guard last (`run-control-smoke.py:98-138`). Verified live: `--plan` printed only the five `CAR-004-SMOKE-OBJ-*` objectives. |
+| The known CI trap was handled | `docs-site/src/content/docs/reference/tests.md` is regenerated in the diff, so `validate-docs` / `reference:check` will not go stale on the new `.py` files. |
+
+### 2. Weakest parts, ranked
+
+**W1 — Seven frozen numbers are judgement calls hardened into a content address, and no live run has ever tested them.**
+`tests/speckit-pro/layer6-efficiency/fixtures-controls/policy-control-registry.json:314+`
+freezes `max_cache_read_tokens: 1200000`, `ephemeral_5m: 160000`,
+`ephemeral_1h: 40000`, `max_cached_input_tokens: 150000`, `max_input_tokens: 800000`,
+`max_output_tokens: 50000`, `max_duration_seconds: 1800`. The derivation
+(`spec.md:1912-1950`) is "per-attempt allowance from the frozen CAR-003 campaign
+budget, carried over five attempts, sit just under twice that, round down". The
+*basis* (attempts, not input) is genuinely argued from two repository instances;
+the *doubling* is invented. The only test that pins the values
+(`test-policy-control-contracts.py:2308`) compares the fixture to
+`synthetic_smoke_bounds()`, whose literals are the same numbers (`:339-353`) — a
+change detector, which is the right shape for a freeze, but it proves nothing
+about whether the numbers are livable. Cost if wrong: `smoke_bounds` is
+hash-relevant to the registry, so the first real smoke that trips a diagnostic
+ceiling forces a new `registry_digest`, which moves every recorded binding and the
+twin-handoff `sha256` entries with it. This is the highest-cost thing here to get
+wrong. Related: the per-objective cancellation bound is `1800000` ms, exactly equal
+to the whole-run `max_duration_seconds: 1800`, so inside a five-objective smoke the
+run-level ceiling always binds first and the cancellation-breach path is
+unreachable by the smoke as bounded.
+
+**W2 — T062 has never run, and the operator path is thinner than everything around it.**
+Three specific gaps, all in `tests/speckit-pro/layer6-efficiency/run-control-smoke.py`:
+(a) the docstring says `--plan` "prints the bounded command set" (`:13`, repeated at
+`:159`), but what it prints is identifiers, objectives, bounds, and one prose
+demonstration line — no commands; (b) nothing in the repository states *how* to
+induce a dispatch-time escalation, an inherit resolution, or a parallel child
+dispatch. `quickstart.md:101` says "Execute the printed plan by hand", and `grep -n
+induce spec.md` returns only unrelated aggregation prose; (c) `--seal` consumes a
+hand-authored JSON record with no template, example, or skeleton emitter — its shape
+must be reverse-engineered from `validate_smoke_record` (`claude_policy_controls.py:2083+`)
+or from the test's builders. Also asymmetric refusal fidelity: an observed `api_key`
+returns normally and keeps a full `bound_reading`, while a bound breach *raises*
+(`claude_policy_controls.py:2178`) and is caught at `run-control-smoke.py:250-258`,
+leaving `bound_reading` null and `demonstration` uncomputed. Both records are still
+written, so FR-030c.3 holds, but a breached record carries strictly less structured
+evidence than a refused-auth one.
+
+**W3 — Twin-handoff categories 7 and 8 (21 of 167 entries) are authored, not derived.**
+`test-twin-handoff-completeness.py:56-57` splits `DERIVED_CATEGORIES = (1..6)` from
+`AUTHORED_CATEGORIES = (7, 8)`, and the authored half is only presence-checked
+(`:614-620`). If a decision semantic changes in `claude_policy_controls.py` — the
+precedence order, the streak reset, the acceptance-floor precedence — nothing forces
+the matching category-7 prose to move. The twin can be handed stale semantics while
+the suite stays green.
+
+**W4 — `signal_precedence` is frozen by `const` with only one of its four orderings argued.**
+The schema pins the exact array (`policy-control-registry.schema.json`
+`$defs/adaptiveControl/properties/signal_precedence`) and the validator independently
+enforces set-equality plus `terminal_state` last (`claude_policy_controls.py:657-667`).
+Only that last clause has a proof behind it (terminal state is always valued, so
+ranking it earlier makes lower sources unreachable). `failure_code` before
+`failure_plane` is safe because the two maps are proven consistent (`:684-699`), so
+they cannot disagree. `retry_count` before `budget_threshold` is asserted and, as far
+as I can find, argued nowhere. Reordering it later changes the adaptive
+`control_digest` — cheap to settle now, expensive once CAR-011 binds.
+
+**W5 — The double-breach severity preference is coherent by coincidence, not by invariant.**
+Retry breach maps to `failed`/`candidate_failed`, cancellation breach to
+`cancelled`/`candidate_cancelled` (fixture `:35-58`). On a double breach,
+`evaluate_bounds` prefers the cancellation outcome as "more severe"
+(`claude_policy_controls.py:1019-1027`). That agrees with the declared
+`terminal_state_severity` array, where `cancelled` outranks `failed` (fixture
+`:289-296`) — but that array belongs to the **orchestration** control while the
+preference is applied to all three, and nothing enforces agreement between them. A
+future control declaring a contradicting severity order would not fail any test.
+
+**W6 — Workflow bookkeeping in this very file is stale.**
+Every per-phase Results table above is empty (Specify, Clarify, Plan, Checklist,
+Tasks, Analysis, Implementation Progress); the Workflow Overview table carries the
+summary instead. The Success Criteria checkboxes (lines 96-102) are all unticked
+despite the work being done. `docs/ai/specs/.process/autopilot-state.json` still names
+`G56R-003` as its `workflow_file` and was never advanced to CAR-004. Nothing shipped
+is affected, but a reader auditing provenance from this file alone gets less than git
+history holds. In particular, the Overview's "1 split at medium confidence" clarify
+outcome is recorded nowhere here: the *result* landed in `spec.md:1867-1990` (the
+serialization decision, with the ceilings explicitly kept at moderate confidence), but
+the split itself and the dissenting position are not written down.
+
+### 3. Deliberate omissions
+
+| Omitted | Recorded where | Correctly scoped? |
+|---|---|---|
+| Concluding dominance (CAR-011 owns it) | `spec.md:1823-1825` | Yes — the whole point of freezing first |
+| Any production adaptive-routing or orchestration feature | `spec.md:1826-1828` | Yes |
+| Edits to frozen CAR-003 schemas | `spec.md:1829-1830`; enforced by `$ref`-local-only resolution and `{id, digest}` bindings | Yes, and mechanically enforced rather than promised |
+| New telemetry fields | `spec.md:1831-1832` | Yes — every adaptive signal binds an existing stable member |
+| Unpinned matrix over multiple parent sessions | `spec.md:1833-1834` | Yes — a different parent is a different control version by content address |
+| Scored smoke rows / scored mini-campaigns | `spec.md:1835-1839` | Yes, and `scored is not False` is checked by identity (`claude_policy_controls.py:2109`) |
+| A fourth (justified-high-effort) control arm | `spec.md` Out of Scope + twin-handoff "Sanctioned platform divergences", test-closed at one entry | Yes — recorded twice, once as prose and once as a tested invariant |
+| Layer plan / PR split | "Layer Plan" section above: `skipped`, non-split route | Yes |
+| `reviewability-gate` tasks mode | "Reviewability Evidence Chain" above: deferred on the installed runner, fallback chain all-passing | Yes |
+| **T062's three live smokes** | `tasks.md:205` (unchecked), `verify-tasks-report.md` (out of assessment scope) | **Recorded, but under-stated.** It is correctly outside an agent's reach. What is not stated plainly anywhere is the consequence: SC-009, SC-026, SC-027, SC-029, SC-030, and SC-031 ship with **no** evidence behind them, automated or manual, and the PR will otherwise read as complete. The PR body should name those six success criteria as unevidenced, not merely note that T062 is a manual step. |
+
+### 4. What the human reviewer should look at personally, in priority order
+
+1. **The seven frozen numbers in `smoke_bounds`** (fixture `:314+`, rationale
+   `spec.md:1912-1950`). Cheapest to change today, most expensive after the digest is
+   consumed downstream. Ask specifically whether "just under twice the per-attempt
+   allowance" is the headroom you want, and whether the 30-minute per-objective
+   cancellation bound should be smaller than the 30-minute run ceiling.
+2. **T062 — run it, or accept the gap in writing.** Running all three smokes is the
+   only thing that converts W1 and W2 from open risk into evidence. If it is not run
+   before merge, say in the PR body which six SCs are unevidenced.
+3. **`signal_precedence` middle ordering and the double-breach severity preference**
+   (`claude_policy_controls.py:657-667` and `:1019-1027` against fixture `:289-296`).
+   Both are frozen into content addresses; both are one-line decisions.
+4. **Twin-handoff categories 7 and 8** — spot-check a few of the 21 authored entries
+   against the validator behavior they describe. No test will catch drift there.
+5. **The verdict-to-claim-class messaging map** in `control-comparison.json`. It is
+   release-facing wording; totality and single-valuedness are tested
+   (`claude_control_comparison.py:324-336`) but the wording itself is a human call.
+6. **Bookkeeping** (W6) — the empty Results tables, the unticked Success Criteria
+   boxes, and the stale `autopilot-state.json`. Cheap, and it is what the next spec
+   inherits.
 
 ---
 

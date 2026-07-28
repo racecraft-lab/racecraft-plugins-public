@@ -1,0 +1,41 @@
+{
+  "body_file": "specs/car-004-policy-controls-comparators/.process/pr-packets/car-004-slice-1/body.md",
+  "error_class": "none",
+  "exit_code": 0,
+  "failures": [],
+  "mode": "single",
+  "packet_id": "car-004-slice-1",
+  "pr_blocked": false,
+  "remediation_evidence": [],
+  "rule_outcomes": [
+    {
+      "evidence": "no failures",
+      "rule": "packet.validation",
+      "status": "passed"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "source_fingerprints": {
+    "body": {
+      "algorithm": "sha256",
+      "path": "specs/car-004-policy-controls-comparators/.process/pr-packets/car-004-slice-1/body.md",
+      "sha256": "b458e3898d736fa10ce39d3bc4b4b2a87072c6794bbaa035b085f53d7e049c6b",
+      "size_bytes": 9907
+    },
+    "packet": {
+      "algorithm": "sha256",
+      "path": "specs/car-004-policy-controls-comparators/.process/pr-packets/car-004-slice-1.json",
+      "sha256": "d702018e44ef0546f1093de21de438fa86b5d2d3a18897f96268d46f100637e4",
+      "size_bytes": 8569
+    }
+  },
+  "status": "passed",
+  "stderr_line": "",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "car-004-policy-controls-comparators"
+  },
+  "timestamp": "2026-07-28T20:00:14Z",
+  "title_value": "feat(car-004): add the three routing policy controls and their comparison rules",
+  "validation_result_path": "specs/car-004-policy-controls-comparators/.process/pr-packets/car-004-slice-1/validation.json"
+}
