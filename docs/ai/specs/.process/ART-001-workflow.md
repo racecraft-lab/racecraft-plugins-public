@@ -32,8 +32,8 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Two sessions seeded from Open Questions |
+| Specify | `/speckit-specify` | ✅ Complete | G1 pass — 14 FR, 9 SC, 3 user stories, 0 markers |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | Two sessions seeded from Open Questions |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | accessibility, data-integrity, security |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -70,7 +70,78 @@ captured during scoping.
 | KISS / YAGNI | No trigger DSL, no sync script, no build step (design concept Q2/Q4) | Plan review against design concept Non-goals |
 | Generated-artifact contract | Shipped bytes under `speckit-pro/` require payload/proof regeneration | Payload regen accounted before completion |
 
-**Constitution Check:** ✅ / ❌ (mark before proceeding to G1)
+**Constitution Check:** ✅ **PASS** (G0, 2026-07-28)
+
+### Phase 0 Record (pre-flight)
+
+**G0 baseline — `python3 tests/speckit-pro/run-all.py`: 4240/4240 passed**
+(L1 1428/1428, L4 2626/2626, L5 186/186; toolchain preflight ok).
+
+| Constitution principle | Quality gate | Result |
+|---|---|---|
+| I. Plugin Structure Compliance | Layer 1 | ✅ 1428/1428 |
+| II. Cross-Platform Runtime & Script Safety | Layer 4 | ✅ 2626/2626 (`test-repo-bash-confinement` 121/121) |
+| III. Semantic Versioning | Layer 1 `validate-plugin` | ✅ included in L1 |
+| IV. Test Coverage Before Merge | full default suite | ✅ 4240/4240 |
+| V. Conventional Commits | CI `validate-pr-title` | ⏳ deferred to PR boundary (`validate-pr-workflow-contract`) |
+| VI. KISS / YAGNI | plan review | ⏳ deferred to Phase 3 (G3) |
+
+**Environment**
+
+| Fact | Value |
+|---|---|
+| Python | 3.11.0 |
+| SpecKit CLI | specify 0.11.8 |
+| Branch / worktree | `art-001-brand-kit-gallery-foundation` / worktree = true |
+| Feature dir | pinned via `.specify/feature.json` (gitignored) to `specs/art-001-brand-kit-gallery-foundation` |
+| `ON_FEATURE_BRANCH` | **true** (asserted by orchestrator; the upstream `^[0-9]{3}-` regex does not match this repo's namespaced spec IDs, so `check-prerequisites` reports `on_feature_branch: false` — the branch is real and `feature.json` is the sanctioned resolution path) |
+| `PRESET_CONVENTIONS` | `speckit-pro-reviewability` v1.0.0 — spec/plan/tasks templates all resolve; spec adds mandatory Reviewability Budget + PR Review Packet Requirements, plan adds Declared File Operations |
+| `PROJECT_COMMANDS` | `detect-commands` returns `stack: unknown` (no JS/py package manifest at root). Repo-real: UNIT_TEST `run-all.py --layer 4`; STRUCTURAL `--layer 1`; FULL_VERIFY `run-all.py`; no BUILD/TYPECHECK/LINT surface |
+| `PROJECT_IMPLEMENTATION_AGENT` | none — `.claude/agents/` holds only `plugin-release-auditor` and `speckit-skill-reviewer` (both review-only). Implementation routes to `speckit-pro:implement-executor` |
+| `AGENT_TEAMS_AVAILABLE` | **false** — no `TeamCreate` in the session surface. `[P]` runs dispatch as batched subagents in one message |
+| `CONFIDENCE_GATE_MODE` | `advisory` (resolver default; no `--strict`/`--advisory` flag, no local config) |
+| Local settings | `.claude/speckit-pro.local.md` absent — defaults (`gate-failure: stop`) |
+
+**Capability inventory (Step 0.7).** Codebase context: Read/Grep/Glob, `gitnexus`
+(code graph), `RepoPromptCE` (file_search, get_code_structure). Web + domain
+research: `WebSearch`, `WebFetch`, `tavily` (search/extract/crawl/research).
+Notes vault: `qmd`. **No Context7 in this session** — library-documentation
+questions fall back to Tavily + WebFetch, which is an acceptable evidence path,
+so no escalation.
+
+**Archive sweep.** Nothing eligible. `specs/` holds only the current target
+(excluded by contract); CAR-003 and G56R-003 were swept 2026-07-27 (reports under
+`.specify/memory/archive-reports/`).
+
+**Tier-2 legacy relocation.** No eligible candidate — the only spec directory is
+the current target. `relocate-process-artifacts` remains deferred and was not
+invoked.
+
+**Hook decisions (`.specify/extensions.yml`, all 8 events reviewed).**
+
+| Hook | Decision | Why |
+|---|---|---|
+| `before_specify` → `speckit.git.feature` (`optional: false`) | **SKIP** | Destructive here: it creates a feature branch, but the branch already exists and is checked out in this worktree. Its purpose is already satisfied. |
+| `before_specify` → `speckit.archive.run` | **SKIP** | Duplicates the archive-sweep step above; nothing eligible. |
+| `before_*` → `speckit.git.commit` (clarify/plan/tasks/checklist/analyze/implement) | **SKIP** | Duplicates the autopilot's own per-phase checkpoint commits. |
+| `after_specify` → `speckit.speckit-utils.doctor` | **ACCEPT** | Read-only diagnostic; run at Phase 0. |
+| `after_plan` → `speckit.speckit-utils.validate` | **ACCEPT** | Read-only validation. |
+| `after_implement` → `verify.run`, `verify-tasks.run`, `retrospective.analyze` | **ACCEPT** | Mapped to the Post-Implementation task list. |
+| `after_*` → `speckit.git.commit` | **SKIP** | Same duplication as `before_*`. |
+
+**Doctor health check (`speckit.speckit-utils.doctor`, after G0): 4 PASS, 1 WARN, 0 FAIL.**
+Templates 5/5, Agent Config PASS, Python Runner PASS, Constitution PASS (996 words).
+The single WARN is expected and self-clearing:
+`art-001-brand-kit-gallery-foundation: spec ✗ plan ✗ tasks ✗ WARN (needs /speckit.specify)`
+— Phase 1 was already in flight when the check ran. No remediation.
+Note: the doctor's Agent Config check looks for `.claude/commands/speckit.*.md`; this
+project is on the v0.8.13+ skills migration (`ai_skills: true`, 27 `speckit-*` entries
+under `.claude/skills/`), so the literal path check is a false negative, not a gap.
+
+**Deferred runner operations (recorded, not invoked).** `reviewability-gate`
+tasks/pre-PR modes, `generate-uat-skeleton`, `final-reviewability-backstop`,
+`relocate-process-artifacts`, `restack`, `install-codex-agents`,
+`ensure-reviewability-preset`.
 
 ---
 
@@ -95,6 +166,17 @@ surfaces 3` is cross-spec noise). ART-001's own entry: 1 primary surface
 435 LOC (`warn`, suggested_slices 2) — **split declined in design concept Q9**
 under the PRD's 1.5× greenfield allowance for net-new-only slices (warn 600).
 One thin vertical slice: tokens → manifest → test.
+
+### Provenance Inputs (captured at Phase 0 — pin these, do not re-derive)
+
+The brand-kit provenance header and `brand-voice.md` attribution cite the private
+repo by name + commit SHA + date only. No prose is copied across the boundary.
+
+| Source | Pin |
+|---|---|
+| `racecraft-lab/racecraft` `docs/brand/` (`color-system.md`, `typography-system.md`) | `30237cceaeb398e9fc08d8570714f24ff661c867` (2026-07-04) |
+| `racecraft-lab/racecraft` `.claude/rules/content.md` (voice source for `brand-voice.md`) | `30237cceaeb398e9fc08d8570714f24ff661c867` (2026-07-04) |
+| Local token source (public, quotable) | `docs-site/src/styles/brand.css` |
 
 ### Success Criteria Summary
 
@@ -183,13 +265,33 @@ template port specs (ART-002…005) become mechanical and the workflow specs
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | <!-- fill after running --> |
-| User Stories | <!-- fill after running --> |
-| Acceptance Criteria | <!-- fill after running --> |
+| Functional Requirements | 14 (FR-001…FR-014) |
+| User Stories | 3 (P1 marker-block adoption, P2 catalog routing, P3 local render + theme) |
+| Acceptance Criteria | 29 Given/When/Then scenarios |
+| Success Criteria | 9 (SC-001…SC-009) |
+| `[NEEDS CLARIFICATION]` markers | 0 |
+
+**Gate G1: ✅ PASS** — `validate-gate` returned
+`{"gate":"G1","markers":0,"pass":true,"reason":"spec.md exists with 0 markers"}`.
+
+**Executor note.** The Phase 1 subagent terminated on an API connection error
+while composing its closing summary, *after* writing and self-validating both
+artifacts. The orchestrator verified the output directly rather than re-running:
+all mandatory preset sections present (Reviewability Notes / Budget / PR Review
+Packet Requirements), quality checklist fully ticked with a recorded
+fix-iteration note, zero absolute-path leaks. No re-run was needed.
+
+**Clarify is NOT skipped.** The generic rule ("Clarify only runs if G1 found
+markers") does not apply here. The executor deliberately routed the design
+concept's two open questions into `## Assumptions` as explicit deferrals instead
+of emitting markers, because both have recorded recommendations. Those two
+deferrals are exactly what the workflow's two seeded Clarify sessions exist to
+close, and they are load-bearing for the catalog rows — so Phase 2 runs.
 
 ### Files Generated
 
-- [ ] `specs/art-001-brand-kit-gallery-foundation/spec.md`
+- [x] `specs/art-001-brand-kit-gallery-foundation/spec.md`
+- [x] `specs/art-001-brand-kit-gallery-foundation/checklists/requirements.md`
 
 ### SpecKit Traceability Markers
 
