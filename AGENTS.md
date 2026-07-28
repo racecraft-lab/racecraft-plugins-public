@@ -52,6 +52,18 @@ own failure patterns.
 - Historical specs and generated planning artifacts are context on demand, not
   always-on agent instructions.
 
+## Worktree Preflight
+
+A fresh worktree holds only tracked files. Two facts cover every surface:
+
+- The repository test suite needs no bootstrap. Run
+  `python3 tests/speckit-pro/run-all.py` directly.
+- `docs-site/` is the only surface with dependencies. Run
+  `pnpm --dir docs-site install --frozen-lockfile` once per worktree before any docs command,
+  including the `pnpm --dir docs-site reference:generate` that the scoped
+  `tests/speckit-pro/` and `docs-site/` rules require after a tracked
+  `.md`, `.py`, or `.sh` change under the test tree.
+
 ## Source Of Truth
 
 - For plugin behavior, read the nearest `README.md`, manifests, skill files, and
