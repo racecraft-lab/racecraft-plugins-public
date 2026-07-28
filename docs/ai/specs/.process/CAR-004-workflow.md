@@ -182,7 +182,8 @@ predeclared and tamper-evident.
 - Messaging consequence: machine-readable verdict-to-claim-class mapping in
   the control-comparison contract (Q9).
 - Validation: synthetic replay for all three controls plus one bounded
-  API-key live smoke each (max 5 non-reserved objectives, 1 repetition,
+  live smoke each — subscription-authenticated, never API-key, per PRD AC-2.19
+  as amended 2026-07-26 (max 5 non-reserved objectives, 1 repetition,
   1M raw-token ceiling, 30-minute wall-clock) proving a real dispatch-time
   escalation, a real inherit resolution, and a real parallel child
   aggregation respectively (Q10, Q15).
@@ -594,7 +595,8 @@ Before starting any task:
   schema style, validator structure, error taxonomy discipline.
 - Replay fixtures are deterministic: no timestamps or randomness that break
   byte-stable replays.
-- The bounded live smokes are developer-local, API-key-authenticated, and
+- The bounded live smokes are developer-local, run on the supported subscription
+  authentication path (never API-key, per PRD AC-2.19 as amended 2026-07-26), and
   non-scored; their per-run outputs stay git-ignored.
 - The smallest useful check while iterating is the affected unit test file;
   run the broader suite (per suite-manifest.json) before the PR.

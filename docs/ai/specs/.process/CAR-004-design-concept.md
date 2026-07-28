@@ -20,6 +20,36 @@ stop_reason: "natural"
 > user-requested numeric-parameters extension; no new critical branches
 > surfaced)
 
+## Revisions
+
+**2026-07-27 — authentication mode of the live smoke runs (corrects Q10 and Q15).**
+The Q10 and Q15 recommendations specified an **API-key-authenticated** smoke run
+per control, reasoning that the subscription smoke-row rule attaches only to
+scored campaigns. That reasoning was wrong, and the recorded answers below are
+left unedited because they are an honest record of what was asked and chosen.
+
+PRD `AC-2.19` was amended on 2026-07-26 (under CAR-003) to "make subscription the
+supported scored path and to **forbid any supported path requiring API-key
+authentication**" — an unqualified prohibition, not one scoped to scored work
+(`docs/prd-claude-agent-routing.md:515-524`). The interview recommendation was
+derived from the technical roadmap, which still carries the superseded
+pre-amendment wording at lines 159-160, 359-360, and 1110. As written, the
+original decision would have made CAR-004's validation unexecutable for operators
+on the product's actual delivery model.
+
+**The governing decision is now:** each control's single bounded live smoke MUST
+NOT require API-key authentication and MUST run on the supported subscription
+path, with the observed mode recorded through the already-frozen
+`authentication_mode` field (enum `subscription|api_key`) rather than a newly
+coined one, so the no-new-telemetry rule is not breached. All other Q10/Q15
+parameters are unchanged: replay fixtures for all three controls, one bounded
+non-scored smoke each, at most 5 non-reserved objectives, 1 repetition, a
+1,000,000 raw-token ceiling, and a 30-minute wall clock.
+
+This supersedes the affected clauses in Goals, Non-goals, Q10, and Q15 below.
+The roadmap's stale authentication wording is a separate, wider drift that also
+affects CAR-005 through CAR-011 and is **not** corrected here.
+
 ## Goals
 
 - Freeze exactly the three AC-2.17 controls — unpinned, adaptive, and
@@ -59,7 +89,8 @@ stop_reason: "natural"
   mapping inside the control-comparison contract so CAR-011's release-packet
   validation binds to it mechanically (Q9).
 - Validate all three controls with synthetic replay fixtures plus one bounded
-  API-key live smoke each — at most 5 non-reserved objectives, one repetition,
+  live smoke each (subscription-authenticated per the 2026-07-27 revision above;
+  originally recorded as API-key) — at most 5 non-reserved objectives, one repetition,
   a 1M raw-token ceiling, and a 30-minute wall-clock cap per control —
   exercising a real dispatch-time escalation, a real inherit resolution, and a
   real harness-parallel child aggregation respectively (Q10, Q15).
@@ -80,8 +111,10 @@ stop_reason: "natural"
 - No new telemetry fields and no reopening of CAR-002's frozen telemetry
   profile (Q3).
 - No unpinned-control matrix over multiple parent-session models (Q4).
-- No subscription-authenticated smoke row — the scored-campaign smoke-row rule
-  does not attach to CAR-004's non-scored validation (Q10).
+- ~~No subscription-authenticated smoke row~~ — **superseded by the 2026-07-27
+  revision above.** Smoke rows are excluded from scored-campaign evidence rules
+  because they are non-scored, not because of their authentication mode; the
+  smoke runs on the supported subscription path (Q10).
 
 ## Design Tree (Q&A log)
 
@@ -278,6 +311,7 @@ stop_reason: "natural"
 **Branch:** Validation depth
 
 **Recommended answer:** Replay + 1 live smoke each
+> [Superseded on the authentication point only — see Revisions above.]
 > Synthetic replay fixtures for all three controls, plus one bounded API-key
 > live smoke per control on non-reserved data: adaptive proves a real
 > dispatch-time model switch, unpinned proves a real inherit run,
