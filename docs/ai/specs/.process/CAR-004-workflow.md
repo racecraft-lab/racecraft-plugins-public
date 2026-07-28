@@ -616,6 +616,7 @@ Before starting any task:
 - [ ] All tasks marked complete in tasks.md
 - [ ] Full repository suite passes per `tests/speckit-pro/suite-manifest.json`
 - [ ] New unit tests registered in the suite manifest
+- [ ] Docs reference regenerated (`pnpm --dir docs-site install` once per worktree, then `pnpm --dir docs-site reference:generate`) — new `.py` files under `tests/speckit-pro/` stale the generated `reference/tests.md`, and CI's validate-docs job runs `reference:check` against it
 - [ ] No frozen CAR-003 schema modified (additive-only verified in the diff)
 - [ ] Partition guard test proves the reserved CAR-011 partition untouched
 - [ ] Twin-handoff doc lists every member G56R-004 must mirror
