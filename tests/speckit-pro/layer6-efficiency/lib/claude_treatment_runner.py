@@ -69,7 +69,7 @@ if str(PLUGIN_ROOT) not in sys.path:
 from speckit_pro_runner import materializer  # noqa: E402
 from speckit_pro_runner.merge_utils import deep_merge  # noqa: E402
 
-CONTRACT_ROOT = REPO_ROOT / "specs" / "car-003-evaluation-runner-scoring" / "contracts"
+CONTRACT_ROOT = REPO_ROOT / "tests" / "speckit-pro" / "layer6-efficiency" / "contracts-claude"
 ADDITIVE_SCHEMA_PATH = CONTRACT_ROOT / "car-003-additive-records.schema.json"
 SHARED_CONTRACT_PATH = shared_authority.SCHEMA_PATH
 TRACE_CONTRACT_PATH = REPO_ROOT / "docs" / "ai" / "research" / "claude-trace-contract.schema.json"

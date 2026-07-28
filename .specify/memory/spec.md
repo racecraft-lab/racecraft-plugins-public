@@ -2215,3 +2215,37 @@ The active CAR-002 and G56R-002 folders were removed after merge provenance was
 confirmed. Historical workflow and design evidence remains under
 `docs/ai/specs/.process/`. Detailed provenance, canonical artifact locations,
 and recovery commands live in the dated CAR-002 and G56R-002 archive reports.
+
+## Revision 2026-07-27 - CAR-003 and G56R-003 Evaluation Platforms Archived
+
+### Shipped Behavior Preserved
+
+- CAR-003 shipped the Claude-side evaluation platform through merged PR #385:
+  the canonical agent materializer as its sole production surface, a governed
+  role corpus, blinded two-scorer plus frozen-adjudicator scoring, closed
+  experiment-policy and analysis-plan contracts, a statistical decision ladder,
+  and a calibration pilot with content-addressed offline replay.
+- G56R-003 shipped the mirrored Codex-side platform through merged PR #386: the
+  shipped agent-materialization module, a twelve-role qualification corpus
+  behind one shared manifest, nine closed contract schemas, blinded scoring with
+  a frozen third adjudicator, and a deterministic ladder of absolute floors,
+  paired cluster-adjusted non-inferiority, then unweighted raw Pareto.
+- Both lanes preserve the no-qualification boundary. Only non-eligible
+  calibration partitions are accepted, outputs are limited to
+  calibration-complete, inconclusive, or invalid, and neither can produce final
+  route policy, defaults, aggregates, or release outputs.
+- CAR-004 and G56R-004 are ready because their direct evaluation dependencies
+  now live in canonical research, contract, fixture, and validator paths.
+
+### Cleanup Note
+
+The active CAR-003 and G56R-003 folders were removed after merge provenance was
+confirmed. Historical workflow, design-concept, size-exception, and twin-handoff
+evidence remains under `docs/ai/specs/.process/`.
+
+Removal was not purely mechanical: both lanes kept contract schemas inside their
+spec folders that live code still read, so those eighteen schemas were moved into
+the test tree first. No enforced contract was dropped and no behavior changed;
+only the paths did. Detailed provenance, canonical artifact locations, the
+per-lane relocation record, and recovery commands live in the dated CAR-003 and
+G56R-003 archive reports.

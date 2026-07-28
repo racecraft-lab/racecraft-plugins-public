@@ -62,7 +62,7 @@ except ImportError:  # pragma: no cover - exercised only before the module lands
     claude_experiment_policy = None  # type: ignore[assignment]
 
 
-CONTRACT_ROOT = REPO_ROOT / "specs" / "car-003-evaluation-runner-scoring" / "contracts"
+CONTRACT_ROOT = REPO_ROOT / "tests" / "speckit-pro" / "layer6-efficiency" / "contracts-claude"
 PLAN_SCHEMA_PATH = CONTRACT_ROOT / "analysis-plan.schema.json"
 DECISION_SCHEMA_PATH = CONTRACT_ROOT / "analysis-decision.schema.json"
 ADDITIVE_SCHEMA_PATH = CONTRACT_ROOT / "car-003-additive-records.schema.json"

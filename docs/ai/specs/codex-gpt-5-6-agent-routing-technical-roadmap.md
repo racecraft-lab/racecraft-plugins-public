@@ -18,8 +18,8 @@ is prepared for `$speckit-scaffold-spec G56R-NNN`.
 **Status:** Active; G56R-001 is complete and archived after PR #360 merged on
 the shared official-source evidence foundation from PR #362;
 [G56R-002](.process/G56R-002-workflow.md) is complete and archived after
-PRs #366-#368; [G56R-003](.process/G56R-003-workflow.md) is complete in
-PR #386 and awaits merge
+PRs #366-#368; [G56R-003](.process/G56R-003-workflow.md) is complete and
+archived after PR #386; G56R-004 is ready
 
 **Legacy identifier note:** `G56R` and the existing filenames are retained for
 traceability. They do not limit the candidate catalog to GPT-5.6.
@@ -51,10 +51,9 @@ G56R-011
 internal dependencies still apply: the shared official-source evidence
 foundation merged via PR #362, G56R-001 merged via PR #360, and G56R-002
 completed through PRs #366-#368 under the preserved no-qualification boundary.
-G56R-003 is complete in PR #386 and awaits merge. It consumes the canonical
-capability evidence, treatment contracts, replay fixtures, and evidence report
-while preserving the archived zero-eligible freeze and producing its additive
-successor.
+G56R-003 merged via PR #386. It consumes the canonical capability evidence,
+treatment contracts, replay fixtures, and evidence report while preserving the
+archived zero-eligible freeze and producing its additive successor.
 A route-agnostic Python `install-codex-agents` helper is active for safe static
 agent refreshes. G56R-006 later extends that baseline with capability-aware
 resolution, materialization, and atomic policy installation; it must not
@@ -222,8 +221,8 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 |---|---|---|---|---|
 | G56R-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | PR #360 merged; canonical evidence lives under `docs/ai/research/` |
 | G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Complete / Archived | [.process/G56R-002-workflow.md](.process/G56R-002-workflow.md) | PRs #366-#368 merged; canonical evidence, contracts, replay fixtures, and validators live outside `specs/**` |
-| G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Complete / PR Open | [.process/G56R-003-workflow.md](.process/G56R-003-workflow.md) | PR #386 is remediated and green; merge before starting G56R-004 |
-| G56R-004 | Policy Controls and Adaptive Comparators | Pending | - | Blocked by merge of G56R-003 PR #386 |
+| G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Complete / Archived | [.process/G56R-003-workflow.md](.process/G56R-003-workflow.md) | PR #386 merged; canonical materialization module, contracts, corpus fixtures, and validators live outside `specs/**` |
+| G56R-004 | Policy Controls and Adaptive Comparators | Ready | - | G56R-003 dependency satisfied by PR #386 |
 | G56R-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by G56R-004 |
 | G56R-006 | Capability-aware Resolver, Materializer, Installer, and Strict Override | Pending | - | Blocked by G56R-005 |
 | G56R-007 | Quality-critical Executor Routing | Pending | - | Blocked by G56R-006 |
@@ -916,8 +915,8 @@ require. Scaffold whichever ID leads; the other closes when the joint change
 lands on both.
 
 **Scope:** as CAR-012, applied to
-`specs/g56r-003-evaluation-runner-scoring/contracts/` and the Codex
-qualification harness. Two items are Codex-side additions the CAR-003 twin
+`tests/speckit-pro/layer6-efficiency/contracts-codex-specification/` and the
+Codex qualification harness. Two items are Codex-side additions the CAR-003 twin
 handoff already specifies in full: FR-034's total plane-by-code mapping, and
 FR-014's missing-gate sentence together with its `non_scorable` disposition
 consequence, which must be verified explicitly rather than assumed to follow from
@@ -927,9 +926,11 @@ the plane change.
 
 **Key Files:**
 
-- `specs/g56r-003-evaluation-runner-scoring/contracts/analysis-decision.schema.json`
-- `specs/g56r-003-evaluation-runner-scoring/contracts/score-bundle.schema.json`
-- `specs/g56r-003-evaluation-runner-scoring/spec.md` - FR-014, FR-034, FR-058
+- `tests/speckit-pro/layer6-efficiency/contracts-codex-specification/analysis-decision.schema.json`
+- `tests/speckit-pro/layer6-efficiency/contracts-codex-specification/score-bundle.schema.json`
+- G56R-003 `spec.md` - FR-014, FR-034, FR-058. The spec is archived; recover it
+  with the commands in
+  `.specify/memory/archive-reports/2026-07-27-g56r-003-post-merge-hygiene.md`.
 - `tests/speckit-pro/layer6-efficiency/lib/qualification_contracts.py`
 - `tests/speckit-pro/layer6-efficiency/contracts/` - the shared-path collision
 

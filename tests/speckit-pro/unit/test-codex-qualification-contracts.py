@@ -47,7 +47,9 @@ CONTRACT_SCHEMA_PATHS = (
     ANALYSIS_PLAN_SCHEMA_PATH,
     ANALYSIS_DECISION_SCHEMA_PATH,
 )
-SPEC_CONTRACT_DIR = ROOT / "specs/g56r-003-evaluation-runner-scoring/contracts"
+# The specification-side copies moved here when the G56R-003 active spec folder
+# was archived; the runtime-vs-specification assertions below still need both.
+SPEC_CONTRACT_DIR = ROOT / "tests/speckit-pro/layer6-efficiency/contracts-codex-specification"
 G56R_003_RUNTIME_CONTRACT_NAMES = (
     "analysis-decision.schema.json",
     "analysis-plan.schema.json",

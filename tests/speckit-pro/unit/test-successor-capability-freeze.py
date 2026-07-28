@@ -10,7 +10,7 @@ tuple, never admit one (FR-004).
 Two families of checks live here:
 
 * **Contract-structural** cases load the CAR-003 schemas under
-  ``specs/car-003-evaluation-runner-scoring/contracts/`` and assert the closed
+  ``tests/speckit-pro/layer6-efficiency/contracts-claude/`` and assert the closed
   taxonomies they publish.
 * **Module-contract** cases exercise the standard-library implementation at
   ``tests/speckit-pro/layer6-efficiency/lib/claude_successor_freeze.py``:
@@ -47,7 +47,7 @@ except ImportError:  # pragma: no cover - exercised only before the module lands
     claude_successor_freeze = None  # type: ignore[assignment]
 
 
-CONTRACT_ROOT = REPO_ROOT / "specs" / "car-003-evaluation-runner-scoring" / "contracts"
+CONTRACT_ROOT = REPO_ROOT / "tests" / "speckit-pro" / "layer6-efficiency" / "contracts-claude"
 FREEZE_SCHEMA_PATH = CONTRACT_ROOT / "successor-capability-freeze.schema.json"
 ADDITIVE_SCHEMA_PATH = CONTRACT_ROOT / "car-003-additive-records.schema.json"
 
