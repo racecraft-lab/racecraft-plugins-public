@@ -763,14 +763,15 @@ SpecKit Pro validation layers and test-only files.
 - **Purpose:** Validation files in lib.
 - **Classification:** `test-only`
 - **Platform concept:** SpecKit Pro validation layer
-- **Claude Code:** tests/speckit-pro/lib/capture_baseline.py, tests/speckit-pro/lib/capture_python_baseline.py, tests/speckit-pro/lib/structural_helpers.py, tests/speckit-pro/lib/test_lib.py, tests/speckit-pro/lib/test_result.py, tests/speckit-pro/lib/treatment_fixture_helpers.py
-- **Codex:** tests/speckit-pro/lib/capture_baseline.py, tests/speckit-pro/lib/capture_python_baseline.py, tests/speckit-pro/lib/structural_helpers.py, tests/speckit-pro/lib/test_lib.py, tests/speckit-pro/lib/test_result.py, tests/speckit-pro/lib/treatment_fixture_helpers.py
+- **Claude Code:** tests/speckit-pro/lib/capture_baseline.py, tests/speckit-pro/lib/capture_python_baseline.py, tests/speckit-pro/lib/qualification_cli_test_helpers.py, tests/speckit-pro/lib/structural_helpers.py, tests/speckit-pro/lib/test_lib.py, tests/speckit-pro/lib/test_result.py, tests/speckit-pro/lib/treatment_fixture_helpers.py
+- **Codex:** tests/speckit-pro/lib/capture_baseline.py, tests/speckit-pro/lib/capture_python_baseline.py, tests/speckit-pro/lib/qualification_cli_test_helpers.py, tests/speckit-pro/lib/structural_helpers.py, tests/speckit-pro/lib/test_lib.py, tests/speckit-pro/lib/test_result.py, tests/speckit-pro/lib/treatment_fixture_helpers.py
 - **Runtime difference:** Layer 1 includes separate Claude Code and Codex structural checks where the repository has runtime-specific plugin surfaces.
 
 #### Source Facts
 
 - tests/speckit-pro/lib/capture_baseline.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/lib/capture_baseline.py`.
 - tests/speckit-pro/lib/capture_python_baseline.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/lib/capture_python_baseline.py`.
+- tests/speckit-pro/lib/qualification_cli_test_helpers.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/lib/qualification_cli_test_helpers.py`.
 - tests/speckit-pro/lib/structural_helpers.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/lib/structural_helpers.py`.
 - tests/speckit-pro/lib/test_lib.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/lib/test_lib.py`.
 - tests/speckit-pro/lib/test_result.py is checked in under the SpecKit Pro test suite. Source refs: `tests/speckit-pro/lib/test_result.py`.
@@ -780,6 +781,7 @@ SpecKit Pro validation layers and test-only files.
 
 - [tests/speckit-pro/lib/capture_baseline.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/lib/capture_baseline.py)
 - [tests/speckit-pro/lib/capture_python_baseline.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/lib/capture_python_baseline.py)
+- [tests/speckit-pro/lib/qualification_cli_test_helpers.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/lib/qualification_cli_test_helpers.py)
 - [tests/speckit-pro/lib/structural_helpers.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/lib/structural_helpers.py)
 - [tests/speckit-pro/lib/test_lib.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/lib/test_lib.py)
 - [tests/speckit-pro/lib/test_result.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/lib/test_result.py)
@@ -788,7 +790,7 @@ SpecKit Pro validation layers and test-only files.
 #### Inferred Notes
 
 - These files are validation evidence only; DOC-007 does not change test semantics unless a docs-site validation need explicitly requires it.
-  - Based on: `tests/speckit-pro/lib/capture_baseline.py`, `tests/speckit-pro/lib/capture_python_baseline.py`, `tests/speckit-pro/lib/structural_helpers.py`, `tests/speckit-pro/lib/test_lib.py`, `tests/speckit-pro/lib/test_result.py`, `tests/speckit-pro/lib/treatment_fixture_helpers.py`
+  - Based on: `tests/speckit-pro/lib/capture_baseline.py`, `tests/speckit-pro/lib/capture_python_baseline.py`, `tests/speckit-pro/lib/qualification_cli_test_helpers.py`, `tests/speckit-pro/lib/structural_helpers.py`, `tests/speckit-pro/lib/test_lib.py`, `tests/speckit-pro/lib/test_result.py`, `tests/speckit-pro/lib/treatment_fixture_helpers.py`
 
 ### tests/speckit-pro/parity
 
