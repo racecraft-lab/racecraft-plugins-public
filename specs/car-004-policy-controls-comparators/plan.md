@@ -157,6 +157,37 @@ test modules, one operator smoke script, one twin-handoff record.
 **Reviewability Budget**: Primary surface: harness/fixtures.
 Projected reviewable LOC 250; production files 0; total files 15; result pass.
 
+**Post-implementation reading against the actual change set (2026-07-28).**
+Diff mode is **deferred** on the authoritative runner. Requesting it returns
+`status: input_error`, exit code 2, and the runner's own diagnostic — helper id
+`reviewability-gate`, requested mode `diff`, refusal
+`reviewability-gate read-only runner supports setup mode only`. This is the same
+deferral the autopilot gate-validation reference already records for tasks mode,
+so the fallback evidence chain applies rather than a manual re-slice.
+
+The chain, all three links current:
+
+1. **Authoritative setup mode, re-run on the committed tree**: `status: pass`,
+   `pass: true`, one surface, no warnings and no blockers, and exactly the
+   figures on the budget line above.
+2. **Direct measurement of the committed change set** with the gate's own
+   classifier (`src/`, `app/`, `lib/`, `scripts/` prefixes and the
+   `.ts .tsx .js .jsx .mjs .cjs .sql` suffixes): zero files qualify as
+   production, so the reviewable production LOC estimate stays at 0. The
+   change-set count is 33 entries, of which 13 are harness and fixture assets
+   under `tests/speckit-pro/`, 14 are this feature's own spec artifacts, 5 are
+   `docs/ai/specs/` process and roadmap files, and 1 is the generated docs
+   reference page. Removing the in-feature spec artifacts and process output —
+   which the Declared File Operations section excludes by convention — leaves
+   exactly the fifteen declared entries.
+3. **Primary surface: harness/fixtures**, unchanged, since every non-spec,
+   non-process entry is a contract document, a frozen instance, a validator, a
+   test module, an operator script, or the regenerated reference page.
+
+Result: the no-split decision stands and the budget is not exceeded. The
+deferred-mode diagnostic is recorded rather than worked around, and no
+diff-mode figure is claimed that the runner did not produce.
+
 ## Declared File Operations
 
 - NEW tests/speckit-pro/layer6-efficiency/contracts-claude/policy-control-registry.schema.json
