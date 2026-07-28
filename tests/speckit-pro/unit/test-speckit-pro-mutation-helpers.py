@@ -904,6 +904,27 @@ class MutationHelperTests(unittest.TestCase):
             finally:
                 lock.release()
 
+    def test_mutation_lock_directory_can_be_reused_on_python_311(self) -> None:
+        from speckit_pro_runner.helpers import mutation
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(mutation.tempfile, "gettempdir", return_value=tmp):
+                first = mutation.mutation_lock_dir()
+                second = mutation.mutation_lock_dir()
+
+        self.assertEqual(first, second)
+
+    def test_installed_cache_prefers_nearest_specify_root_over_ancestor_source_checkout(self) -> None:
+        from speckit_pro_runner.helpers import read_only
+
+        with tempfile.TemporaryDirectory() as tmp:
+            source_root = Path(tmp) / "source"
+            (source_root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+            worktree_root = source_root / ".worktrees" / "feature"
+            (worktree_root / ".specify").mkdir(parents=True)
+
+            self.assertEqual(read_only.find_repo_root(worktree_root), worktree_root.resolve(strict=False))
+
     def test_apply_rejects_when_git_status_cannot_prove_clean_worktree(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
