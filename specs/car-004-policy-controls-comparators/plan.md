@@ -218,6 +218,16 @@ authorable after the static core's results are visible, which is the exact
 failure this feature exists to prevent. No follow-up spec IDs or deferred issue
 IDs are created.
 
+**Pre-implementation re-verification (2026-07-28).** The setup-mode
+reviewability gate was re-run against this plan before any implementation task
+started, and returned `status: pass` with reviewable LOC 250, production files
+0, total files 15, and primary surfaces `["harness/fixtures"]` — one surface,
+no warnings, no blockers. Task generation produced 64 tasks against the same
+fifteen declared file operations and added none, so the budget inputs are
+unchanged and **the no-split decision above stands**. The authoritative
+diff-mode reading against the actual change set is taken at PR time and
+recorded under "Reviewability Budget".
+
 ### Review load (informational, not a budget figure)
 
 A reviewer should expect roughly 2,200–2,700 changed lines across the fifteen

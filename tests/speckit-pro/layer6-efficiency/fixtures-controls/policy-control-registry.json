@@ -1,0 +1,374 @@
+{
+  "car_003_bindings": [
+    {
+      "digest": "sha256:ecc2d8cf4c905839c190bad2da7802339f5dac12d22790452dd71032fafc296e",
+      "id": "https://racecraft.dev/schemas/car-003/car-003-additive-records.schema.json"
+    },
+    {
+      "digest": "sha256:85e2ae0faf2c72bed3ba6f7469c5b39d9923fdfe5bcabbc540411473f022dc70",
+      "id": "https://racecraft.dev/schemas/car-003/experiment-assignment.schema.json"
+    },
+    {
+      "digest": "sha256:01a27974fda013ee516d3c5a876cb86421849bf4331ad657cd855210672321c6",
+      "id": "https://racecraft.dev/schemas/car-003/experiment-policy.schema.json"
+    },
+    {
+      "digest": "sha256:abe34d0c70a6f45aa437fa02bad0e6b170a9c69b4fff58d14663bbe9ea83b800",
+      "id": "https://racecraft.dev/schemas/car-003/score-bundle.schema.json"
+    },
+    {
+      "digest": "sha256:e92c28512834f533a5d4d4cf83dcb7dc89ece87b76d932d2e1b00ba31c41b8f4",
+      "id": "https://racecraft.dev/schemas/car-003/successor-capability-freeze.schema.json"
+    }
+  ],
+  "controls": [
+    {
+      "attribution_level": "policy",
+      "control_digest": "sha256:af094e6d3dd78b033fab4e2730ac3672dd89456726d922850a8c3b942ace79c6",
+      "control_id": "car-004-unpinned-control",
+      "control_kind": "unpinned",
+      "evidence_requirements": [
+        "execution_trace",
+        "score_bundle"
+      ],
+      "execution_contract": {
+        "cancellation_bounds": {
+          "counted_over": "per_objective",
+          "max_duration_ms": 1800000,
+          "on_breach": {
+            "failure_code": "candidate_cancelled",
+            "terminal_state": "cancelled"
+          }
+        },
+        "dispatch_parameters": {
+          "model_resolution": "inherit"
+        },
+        "observed_signals": [
+          "terminal_state",
+          "failure_code",
+          "retries"
+        ],
+        "retry_bounds": {
+          "counted_over": "per_objective",
+          "max_retries": 4,
+          "on_breach": {
+            "failure_code": "candidate_failed",
+            "terminal_state": "failed"
+          }
+        }
+      },
+      "frozen_at": "2026-07-27T00:00:00Z",
+      "unpinned": {
+        "arm_count": 1,
+        "model_resolution": "inherit",
+        "pinned_parent_binding": {
+          "digest": "sha256:85e2ae0faf2c72bed3ba6f7469c5b39d9923fdfe5bcabbc540411473f022dc70",
+          "id": "https://racecraft.dev/schemas/car-003/experiment-assignment.schema.json"
+        },
+        "pinned_parent_effort": "high",
+        "pinned_parent_model": "model-alpha"
+      }
+    },
+    {
+      "adaptive": {
+        "budget_triggers": [
+          {
+            "direction": "at_or_above",
+            "member": "max_duration_seconds",
+            "response": "escalate",
+            "threshold": 1800
+          }
+        ],
+        "candidate_freeze_id": "sha256:efccacf2bb277b2d87bf04f14bb542d941049d9456c94d55999ce8a311b4f392",
+        "clean_pass_accounting": {
+          "escalating_objective_counts": false,
+          "first_entry_de_escalation": "no_step_and_no_wrap_around",
+          "non_scorable_objective_disposition": "neither_advances_nor_resets",
+          "non_scorable_precedence": "outranks_reset_on_non_clean",
+          "reset_on_de_escalation_evaluation": true
+        },
+        "clean_pass_definition": {
+          "budget_trigger_met": false,
+          "failure_code": "none",
+          "max_retries": 0,
+          "terminal_state": "completed"
+        },
+        "de_escalation_clean_pass_threshold": 3,
+        "de_escalation_timing": "between_objectives",
+        "escalation_ladder": [
+          "model-alpha__medium",
+          "model-alpha__high",
+          "model-beta__high"
+        ],
+        "escalation_ladder_rationales": [
+          {
+            "from_route": "model-alpha__high",
+            "rationale": "cross-model rank is a declared capability judgment; no rule may derive it from a model identifier",
+            "to_route": "model-beta__high"
+          }
+        ],
+        "failure_code_response": {
+          "adjudication_disagreement_unresolved": "non_scorable",
+          "adjudicator_invalid": "non_scorable",
+          "adjudicator_reused_primary_scorer": "non_scorable",
+          "adjudicator_stale": "non_scorable",
+          "ballot_missing": "non_scorable",
+          "ballot_non_blind": "non_scorable",
+          "ballot_provenance_incomplete": "non_scorable",
+          "ballot_rubric_stale": "non_scorable",
+          "binding_digest_mismatch": "non_scorable",
+          "candidate_abandoned": "escalate",
+          "candidate_budget_exhausted": "escalate",
+          "candidate_cancelled": "escalate",
+          "candidate_failed": "escalate",
+          "candidate_timed_out": "escalate",
+          "cross_partition_reuse": "non_scorable",
+          "fixture_invalid": "non_scorable",
+          "fixture_oracle_invalid": "non_scorable",
+          "fixture_partition_invalid": "non_scorable",
+          "fixture_stale": "non_scorable",
+          "gate_failed": "hold",
+          "infrastructure_failure": "non_scorable",
+          "mandatory_telemetry_missing": "non_scorable",
+          "none": "hold",
+          "partition_mismatch": "non_scorable",
+          "partition_not_eligible": "non_scorable",
+          "required_evidence_missing": "non_scorable",
+          "schema_invalid": "non_scorable",
+          "scorer_calibration_missing": "non_scorable",
+          "scorer_invalid": "non_scorable",
+          "scorer_stale": "non_scorable",
+          "sensitive_evidence_violation": "non_scorable",
+          "service_reroute": "non_scorable",
+          "transient_harness_failure": "non_scorable",
+          "treatment_infrastructure_failure": "non_scorable",
+          "treatment_misdelivery": "non_scorable",
+          "unclassifiable_attrition": "non_scorable"
+        },
+        "failure_plane_response": {
+          "adjudication": "non_scorable",
+          "ballot": "non_scorable",
+          "candidate": "escalate",
+          "evidence_boundary": "non_scorable",
+          "fixture": "non_scorable",
+          "gate": "hold",
+          "infrastructure": "non_scorable",
+          "none": "hold",
+          "partition": "non_scorable",
+          "schema": "non_scorable",
+          "scorer": "non_scorable",
+          "treatment": "non_scorable"
+        },
+        "freeze_digest": "sha256:f4d588b3e4aeb4ce839df516e1447499749260bbe55d5bdb59091144d126c53f",
+        "max_escalations_per_objective": 1,
+        "retry_count_response": {
+          "direction": "at_or_above",
+          "response": "escalate",
+          "threshold": 1
+        },
+        "signal_precedence": [
+          "failure_code",
+          "failure_plane",
+          "retry_count",
+          "budget_threshold",
+          "terminal_state"
+        ],
+        "terminal_state_response": {
+          "abandoned": "escalate",
+          "budget_exhausted": "escalate",
+          "cancelled": "escalate",
+          "completed": "hold",
+          "failed": "escalate",
+          "timed_out": "escalate"
+        }
+      },
+      "attribution_level": "policy",
+      "control_digest": "sha256:211ba9a438ab78b7419a9dc46cb8c7b45b90c69b16ee8eb8a9db52b39493dfcd",
+      "control_id": "car-004-adaptive-control",
+      "control_kind": "adaptive",
+      "evidence_requirements": [
+        "execution_trace",
+        "score_bundle"
+      ],
+      "execution_contract": {
+        "cancellation_bounds": {
+          "counted_over": "per_objective",
+          "max_duration_ms": 1800000,
+          "on_breach": {
+            "failure_code": "candidate_cancelled",
+            "terminal_state": "cancelled"
+          }
+        },
+        "dispatch_parameters": {
+          "candidate_route_id": "model-alpha__medium",
+          "model_resolution": "explicit"
+        },
+        "observed_signals": [
+          "terminal_state",
+          "failure_plane",
+          "failure_code",
+          "retries"
+        ],
+        "retry_bounds": {
+          "counted_over": "per_objective",
+          "max_retries": 4,
+          "on_breach": {
+            "failure_code": "candidate_failed",
+            "terminal_state": "failed"
+          }
+        }
+      },
+      "frozen_at": "2026-07-27T00:00:00Z"
+    },
+    {
+      "attribution_level": "policy",
+      "control_digest": "sha256:a4c988a3de37ad6ea72ecac475b7a1d93a149bb2ba87456aaaf9f4c1fae2d049",
+      "control_id": "car-004-orchestration-changing-control",
+      "control_kind": "orchestration_changing",
+      "evidence_requirements": [
+        "execution_trace",
+        "score_bundle",
+        "cache_diagnostic"
+      ],
+      "execution_contract": {
+        "cancellation_bounds": {
+          "counted_over": "per_unit",
+          "max_duration_ms": 1800000,
+          "on_breach": {
+            "failure_code": "candidate_cancelled",
+            "terminal_state": "cancelled"
+          }
+        },
+        "dispatch_parameters": {
+          "fan_out": 2,
+          "model_resolution": "inherit"
+        },
+        "observed_signals": [
+          "terminal_state",
+          "failure_code",
+          "retries",
+          "compactions",
+          "duration_ms"
+        ],
+        "retry_bounds": {
+          "counted_over": "per_unit",
+          "max_retries": 4,
+          "on_breach": {
+            "failure_code": "candidate_failed",
+            "terminal_state": "failed"
+          }
+        }
+      },
+      "frozen_at": "2026-07-27T00:00:00Z",
+      "orchestration_changing": {
+        "acceptance_floor_on_non_completed": 0,
+        "acceptance_rule": "parent_objective_oracle",
+        "aggregation_rule": {
+          "acceptance": "parent_objective_oracle",
+          "cached_input_tokens": "sum",
+          "compactions": "sum",
+          "duration_ms": "sum",
+          "input_tokens": "sum",
+          "output_tokens": "sum",
+          "retries": "sum",
+          "terminal_state": "worst_wins_by_severity"
+        },
+        "cache_aggregation": {
+          "cache_read_tokens": "sum",
+          "cache_write_tokens_by_ttl_class": {
+            "ephemeral_1h": "sum",
+            "ephemeral_5m": "sum"
+          }
+        },
+        "raw_token_aggregation": {
+          "cached_input_tokens": "sum",
+          "input_tokens": "sum",
+          "output_tokens": "sum",
+          "reasoning_output_tokens": "sum"
+        },
+        "terminal_state_severity": [
+          "completed",
+          "failed",
+          "timed_out",
+          "cancelled",
+          "budget_exhausted",
+          "abandoned"
+        ],
+        "topology_descriptor": {
+          "child_shape": {
+            "dispatch_mechanism": "car_004_harness_child_dispatch",
+            "wall_time_window": "full_elapsed_including_child_wait"
+          },
+          "fan_out": 2,
+          "topology_id": "car-004-parallel-child-dispatch"
+        },
+        "topology_digest": "sha256:cf9f52256c9649610d0f524d65a1491d2498c4ac6d4b1575737daebb2a87a7ea",
+        "unrecorded_quantity_disposition": "unobserved"
+      }
+    }
+  ],
+  "frozen_at": "2026-07-27T00:00:00Z",
+  "registry_digest": "sha256:d0e232e4f72f3931a9d911cd42ae62f9e6eee8d97329b14a5c4d4145209767dd",
+  "registry_id": "car-004-policy-control-registry",
+  "schema_version": "1.0.0",
+  "smoke_bounds": {
+    "max_attempts": {
+      "direction": "higher_is_worse",
+      "unit": "attempts",
+      "value": 5
+    },
+    "max_cache_read_tokens": {
+      "direction": "higher_is_worse",
+      "unit": "tokens",
+      "value": 1200000
+    },
+    "max_cache_write_tokens_by_ttl_class": {
+      "ephemeral_1h": {
+        "direction": "higher_is_worse",
+        "unit": "tokens",
+        "value": 40000
+      },
+      "ephemeral_5m": {
+        "direction": "higher_is_worse",
+        "unit": "tokens",
+        "value": 160000
+      }
+    },
+    "max_cached_input_tokens": {
+      "direction": "higher_is_worse",
+      "unit": "tokens",
+      "value": 150000
+    },
+    "max_candidates": {
+      "direction": "higher_is_worse",
+      "unit": "candidates",
+      "value": 1
+    },
+    "max_confirmation_entries": {
+      "direction": "higher_is_worse",
+      "unit": "entries",
+      "value": 0
+    },
+    "max_duration_seconds": {
+      "direction": "higher_is_worse",
+      "unit": "seconds",
+      "value": 1800
+    },
+    "max_input_tokens": {
+      "direction": "higher_is_worse",
+      "unit": "tokens",
+      "value": 800000
+    },
+    "max_output_tokens": {
+      "direction": "higher_is_worse",
+      "unit": "tokens",
+      "value": 50000
+    },
+    "raw_token_ceiling": {
+      "direction": "higher_is_worse",
+      "unit": "tokens",
+      "value": 1000000
+    }
+  },
+  "status": "frozen"
+}

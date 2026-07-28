@@ -1,0 +1,3280 @@
+#!/usr/bin/env python3
+"""Policy-control registry contract, per-control rules, replay, guard, and smoke records.
+
+This module is the deterministic coverage for the three frozen policy controls —
+unpinned, adaptive, and orchestration-changing — and for everything the registry
+freezes about them: content addressing, additive-only bindings into the frozen
+CAR-003 contracts, the adaptive signal maps and escalation ladder, bound scope
+and breach outcomes, unit membership and aggregation, the reserved-partition
+guard, and the bounded operator smoke record.
+
+Contract-structural cases read the committed schema documents under
+``tests/speckit-pro/layer6-efficiency/contracts-claude/``; module-contract cases
+exercise ``tests/speckit-pro/layer6-efficiency/lib/claude_policy_controls.py``.
+
+Every check is offline and makes zero live model calls. The three live smokes are
+operator-driven and deliberately live outside this module.
+"""
+
+from __future__ import annotations
+
+import copy
+import hashlib
+import importlib.util
+import inspect
+import json
+import re
+import sys
+import tempfile
+import unittest
+from collections.abc import Iterator
+from pathlib import Path
+
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+TEST_ROOT = REPO_ROOT / "tests" / "speckit-pro"
+LIB_DIR = TEST_ROOT / "lib"
+LAYER6_LIB_DIR = TEST_ROOT / "layer6-efficiency" / "lib"
+for _path in (LIB_DIR, LAYER6_LIB_DIR):
+    if str(_path) not in sys.path:
+        sys.path.insert(0, str(_path))
+
+from test_result import run_counted  # noqa: E402
+
+# Frozen CAR-003 code, imported read-only: it publishes the one preimage rule the
+# whole program digests under, so these cases check CAR-004 addresses against an
+# oracle the module under test does not own (research D3).
+from claude_successor_freeze import canonical_json, record_digest  # noqa: E402
+
+# The frozen plane derivation, likewise read-only: a case that restated the
+# code-to-plane partition would author the very agreement FR-010c.1 checks.
+from claude_score_bundle import failure_plane_for  # noqa: E402
+
+# The frozen partition machinery, read-only: FR-025a and FR-025b oblige CAR-004
+# to register through the path CAR-003 already owns, so these cases exercise that
+# path rather than a CAR-004 restatement of it.
+from claude_experiment_policy import (  # noqa: E402
+    CROSS_PARTITION_REUSE,
+    PARTITION_MISMATCH,
+    PARTITION_PLANE,
+    ExperimentPolicyError,
+    build_partition_registry_entry,
+    register_partitions,
+)
+
+try:  # CAR-004 deliverable — absent until the policy-control module is implemented.
+    import claude_policy_controls  # type: ignore[import-not-found]  # noqa: E402
+except ImportError:  # pragma: no cover - exercised only before the module lands
+    claude_policy_controls = None  # type: ignore[assignment]
+
+
+CONTRACT_ROOT = TEST_ROOT / "layer6-efficiency" / "contracts-claude"
+FIXTURE_ROOT = TEST_ROOT / "layer6-efficiency" / "fixtures-controls"
+
+REGISTRY_SCHEMA_PATH = CONTRACT_ROOT / "policy-control-registry.schema.json"
+REGISTRY_SCHEMA_ID = "https://racecraft.dev/schemas/car-004/policy-control-registry.schema.json"
+JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
+
+# FR-004 and SC-017: a reference that leaves the owning document is refused, so
+# the only admissible prefix is the document's own local definition pointer.
+LOCAL_REF_PREFIX = "#/$defs/"
+
+# Keywords whose value is itself a schema, a list of schemas, or a mapping of
+# names to schemas. Walking only these avoids mistaking a ``const`` payload or a
+# property named after a keyword for a schema node.
+_SCHEMA_MAP_KEYWORDS = ("properties", "$defs", "patternProperties")
+_SCHEMA_KEYWORDS = ("items", "not", "if", "then", "else", "additionalProperties", "propertyNames", "contains")
+_SCHEMA_LIST_KEYWORDS = ("allOf", "anyOf", "oneOf", "prefixItems")
+
+
+def load_json(path: Path) -> dict[str, object]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def iter_subschemas(schema: object) -> Iterator[dict[str, object]]:
+    """Yield every schema node in a JSON Schema document, the root included."""
+    stack: list[object] = [schema]
+    while stack:
+        node = stack.pop()
+        if not isinstance(node, dict):
+            continue
+        yield node
+        for keyword in _SCHEMA_MAP_KEYWORDS:
+            container = node.get(keyword)
+            if isinstance(container, dict):
+                stack.extend(container.values())
+        for keyword in _SCHEMA_KEYWORDS:
+            stack.append(node.get(keyword))
+        for keyword in _SCHEMA_LIST_KEYWORDS:
+            branch = node.get(keyword)
+            if isinstance(branch, list):
+                stack.extend(branch)
+
+
+def open_object_nodes(schema: object) -> list[list[str]]:
+    """Member lists of every object node that fails to close its member set."""
+    return [
+        sorted(node.get("properties", {}))
+        for node in iter_subschemas(schema)
+        if node.get("type") == "object" and node.get("additionalProperties") is not False
+    ]
+
+
+def declared_refs(schema: object) -> list[str]:
+    return sorted({
+        node["$ref"] for node in iter_subschemas(schema) if isinstance(node.get("$ref"), str)
+    })
+
+
+class PolicyControlContractTests(unittest.TestCase):
+    def test_validator_module_directory_is_on_the_import_path(self) -> None:
+        self.assertTrue(LAYER6_LIB_DIR.is_dir())
+        self.assertIn(str(LAYER6_LIB_DIR), sys.path)
+
+    def test_schemas_and_frozen_instances_occupy_separate_roots(self) -> None:
+        self.assertTrue(CONTRACT_ROOT.is_dir())
+        self.assertNotEqual(CONTRACT_ROOT, FIXTURE_ROOT)
+        self.assertEqual(CONTRACT_ROOT.parent, FIXTURE_ROOT.parent)
+
+
+class RegistryDocumentShapeTests(unittest.TestCase):
+    """FR-004 and SC-017: the registry document's own shape, before any instance."""
+
+    def setUp(self) -> None:
+        # Per-test rather than per-class so a missing or malformed document
+        # surfaces as a counted failure on every case it breaks.
+        self.schema = load_json(REGISTRY_SCHEMA_PATH)
+
+    def test_the_registry_document_loads_and_declares_its_own_identifier(self) -> None:
+        self.assertEqual(self.schema["$schema"], JSON_SCHEMA_DIALECT)
+        self.assertEqual(self.schema["$id"], REGISTRY_SCHEMA_ID)
+
+    def test_the_registry_document_freezes_its_schema_version_and_status(self) -> None:
+        properties = self.schema["properties"]
+        self.assertEqual(properties["schema_version"]["const"], "1.0.0")
+        self.assertEqual(properties["status"]["const"], "frozen")
+        self.assertEqual(
+            sorted(self.schema["required"]),
+            [
+                "car_003_bindings",
+                "controls",
+                "frozen_at",
+                "registry_digest",
+                "registry_id",
+                "schema_version",
+                "smoke_bounds",
+                "status",
+            ],
+        )
+
+    def test_every_object_in_the_registry_document_closes_its_member_set(self) -> None:
+        self.assertEqual(open_object_nodes(self.schema), [])
+
+    def test_the_registry_document_resolves_every_reference_inside_its_own_defs(self) -> None:
+        local_definitions = self.schema["$defs"]
+        refs = declared_refs(self.schema)
+        self.assertTrue(refs, "the document declares no $ref at all")
+        for ref in refs:
+            with self.subTest(ref=ref):
+                self.assertTrue(ref.startswith(LOCAL_REF_PREFIX))
+                self.assertIn(ref[len(LOCAL_REF_PREFIX):], local_definitions)
+
+    def test_the_control_array_is_closed_at_exactly_three_members(self) -> None:
+        controls = self.schema["properties"]["controls"]
+        self.assertEqual(controls["type"], "array")
+        self.assertEqual(controls["minItems"], 3)
+        self.assertEqual(controls["maxItems"], 3)
+        self.assertIs(controls["uniqueItems"], True)
+        self.assertEqual(controls["items"]["$ref"], "#/$defs/control")
+
+    def test_the_registry_declares_shared_smoke_bounds_and_frozen_contract_bindings(self) -> None:
+        properties = self.schema["properties"]
+        self.assertEqual(properties["smoke_bounds"]["$ref"], "#/$defs/smokeBounds")
+        bindings = properties["car_003_bindings"]
+        self.assertEqual(bindings["type"], "array")
+        self.assertEqual(bindings["minItems"], 1)
+        self.assertEqual(bindings["items"]["$ref"], "#/$defs/binding")
+        binding = self.schema["$defs"]["binding"]
+        self.assertEqual(sorted(binding["required"]), ["digest", "id"])
+
+
+# A self-contained probe document, deliberately not the committed registry: the
+# engine is generic and its refusals must be provable without depending on any
+# frozen instance. It carries one member per keyword FR-004 and SC-017 name.
+ENGINE_PROBE_SCHEMA: dict[str, object] = {
+    "$schema": JSON_SCHEMA_DIALECT,
+    "$id": "https://racecraft.dev/schemas/car-004/engine-probe.schema.json",
+    "type": "object",
+    "additionalProperties": False,
+    "required": ["schema_version", "record_id", "frozen_at", "digest", "control_kinds"],
+    "properties": {
+        "schema_version": {"const": "1.0.0"},
+        "record_id": {"type": "string", "minLength": 1},
+        "frozen_at": {"type": "string", "format": "date-time"},
+        "digest": {"$ref": "#/$defs/digest"},
+        "control_kinds": {
+            "type": "array",
+            "minItems": 1,
+            "items": {"enum": ["unpinned", "adaptive", "orchestration_changing"]},
+        },
+    },
+    "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}},
+}
+
+ENGINE_PROBE_INSTANCE: dict[str, object] = {
+    "schema_version": "1.0.0",
+    "record_id": "car-004-engine-probe",
+    "frozen_at": "2026-07-27T00:00:00Z",
+    "digest": "sha256:" + "0" * 64,
+    "control_kinds": ["unpinned", "adaptive", "orchestration_changing"],
+}
+
+
+class SchemaEngineFailClosedTests(unittest.TestCase):
+    """FR-004 and SC-017: the shared engine refuses, it never degrades."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.schema = copy.deepcopy(ENGINE_PROBE_SCHEMA)
+        self.instance = copy.deepcopy(ENGINE_PROBE_INSTANCE)
+
+    def test_the_engine_error_is_an_assertion_error(self) -> None:
+        self.assertTrue(issubclass(self.error, AssertionError))
+
+    def test_load_contract_reads_a_committed_document_from_disk(self) -> None:
+        loaded = self.module.load_contract(REGISTRY_SCHEMA_PATH)
+        self.assertEqual(loaded["$id"], REGISTRY_SCHEMA_ID)
+        self.assertEqual(loaded, load_json(REGISTRY_SCHEMA_PATH))
+
+    def test_load_contract_refuses_a_document_that_is_not_on_disk(self) -> None:
+        with self.assertRaises(self.error):
+            self.module.load_contract(CONTRACT_ROOT / "no-such-contract.schema.json")
+
+    def test_a_conforming_instance_validates_and_is_returned_unchanged(self) -> None:
+        self.assertEqual(
+            self.module.validate_instance(self.instance, self.schema), self.instance
+        )
+
+    def test_a_reference_leaving_the_document_is_refused(self) -> None:
+        # SC-017: the refusal is what makes "resolves nothing outside its own
+        # #/$defs/" machine-checked rather than asserted.
+        self.schema["properties"]["digest"] = {
+            "$ref": "https://racecraft.dev/schemas/car-003/score-bundle.schema.json#/$defs/digest"
+        }
+        with self.assertRaises(self.error):
+            self.module.validate_instance(self.instance, self.schema)
+
+    def test_a_reference_to_an_undeclared_local_definition_is_refused(self) -> None:
+        self.schema["properties"]["digest"] = {"$ref": "#/$defs/absentDigest"}
+        with self.assertRaises(self.error):
+            self.module.validate_instance(self.instance, self.schema)
+
+    def test_a_missing_required_key_is_refused(self) -> None:
+        del self.instance["frozen_at"]
+        with self.assertRaises(self.error):
+            self.module.validate_instance(self.instance, self.schema)
+
+    def test_an_unexpected_key_under_a_closed_member_set_is_refused(self) -> None:
+        self.instance["authentication_mode"] = "subscription"
+        with self.assertRaises(self.error):
+            self.module.validate_instance(self.instance, self.schema)
+
+    def test_a_const_violation_is_refused(self) -> None:
+        self.instance["schema_version"] = "1.0.1"
+        with self.assertRaises(self.error):
+            self.module.validate_instance(self.instance, self.schema)
+
+    def test_an_enum_violation_is_refused(self) -> None:
+        self.instance["control_kinds"] = ["unpinned", "justified_high_effort"]
+        with self.assertRaises(self.error):
+            self.module.validate_instance(self.instance, self.schema)
+
+    def test_a_pattern_violation_is_refused(self) -> None:
+        self.instance["digest"] = "sha256:" + "F" * 64
+        with self.assertRaises(self.error):
+            self.module.validate_instance(self.instance, self.schema)
+
+    def test_a_min_length_violation_is_refused(self) -> None:
+        self.instance["record_id"] = ""
+        with self.assertRaises(self.error):
+            self.module.validate_instance(self.instance, self.schema)
+
+    def test_a_min_items_violation_is_refused(self) -> None:
+        self.instance["control_kinds"] = []
+        with self.assertRaises(self.error):
+            self.module.validate_instance(self.instance, self.schema)
+
+    def test_a_declared_type_violation_is_refused(self) -> None:
+        self.instance["record_id"] = 4
+        with self.assertRaises(self.error):
+            self.module.validate_instance(self.instance, self.schema)
+
+    def test_a_timestamp_that_is_not_a_z_suffixed_utc_instant_is_refused(self) -> None:
+        for stamp in ("2026-07-27T00:00:00+02:00", "2026-07-27T00:00:00", "not-a-timestamp"):
+            with self.subTest(frozen_at=stamp):
+                instance = dict(self.instance, frozen_at=stamp)
+                with self.assertRaises(self.error):
+                    self.module.validate_instance(instance, self.schema)
+
+
+# --------------------------------------------------------------------------- #
+# Synthetic registry subject                                                    #
+#                                                                               #
+# Built in-test rather than read from the committed instance so these cases      #
+# prove the rules independently of the fixture, which lands later. The committed #
+# instance gets its own conformance case.                                        #
+# --------------------------------------------------------------------------- #
+
+CONTROL_KINDS = ("unpinned", "adaptive", "orchestration_changing")
+FROZEN_AT = "2026-07-27T00:00:00Z"
+
+
+def bound(value: int, unit: str) -> dict[str, object]:
+    """A `smoke_bounds` member: every numeric carries its unit and direction."""
+    return {"value": value, "unit": unit, "direction": "higher_is_worse"}
+
+
+def synthetic_smoke_bounds() -> dict[str, object]:
+    """The frozen bound set. 800000 + 150000 + 50000 == 1000000 (FR-030a)."""
+    return {
+        "max_attempts": bound(5, "attempts"),
+        "max_candidates": bound(1, "candidates"),
+        "max_confirmation_entries": bound(0, "entries"),
+        "max_duration_seconds": bound(1800, "seconds"),
+        "max_input_tokens": bound(800000, "tokens"),
+        "max_cached_input_tokens": bound(150000, "tokens"),
+        "max_output_tokens": bound(50000, "tokens"),
+        "raw_token_ceiling": bound(1000000, "tokens"),
+        "max_cache_read_tokens": bound(1200000, "tokens"),
+        "max_cache_write_tokens_by_ttl_class": {
+            "ephemeral_5m": bound(160000, "tokens"),
+            "ephemeral_1h": bound(40000, "tokens"),
+        },
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Frozen enumerations, read live from the committed contracts                   #
+#                                                                               #
+# Never transcribed: FR-010a fails closed on an upstream membership change only  #
+# if both the control under test and the validator read the same committed       #
+# bytes, so a case that restated an enum would absorb the very drift it exists   #
+# to catch.                                                                      #
+# --------------------------------------------------------------------------- #
+
+SCORE_BUNDLE_SCHEMA_PATH = CONTRACT_ROOT / "score-bundle.schema.json"
+FREEZE_SCHEMA_PATH = CONTRACT_ROOT / "successor-capability-freeze.schema.json"
+ASSIGNMENT_SCHEMA_PATH = CONTRACT_ROOT / "experiment-assignment.schema.json"
+SHARED_CONTRACT_ROOT = TEST_ROOT / "layer6-efficiency" / "contracts"
+SHARED_ENVIRONMENT_CONTRACT_PATH = SHARED_CONTRACT_ROOT / "environment-contract.schema.json"
+
+POLICY_RESPONSES = ("escalate", "hold", "non_scorable")
+SIGNAL_SOURCES = (
+    "failure_code",
+    "failure_plane",
+    "retry_count",
+    "budget_threshold",
+    "terminal_state",
+)
+
+
+def frozen_terminal_states() -> list[str]:
+    resource_vector = load_json(SCORE_BUNDLE_SCHEMA_PATH)["properties"]["resource_vector"]
+    return list(resource_vector["properties"]["terminal_state"]["enum"])
+
+
+def frozen_failure_planes() -> list[str]:
+    return list(load_json(SCORE_BUNDLE_SCHEMA_PATH)["properties"]["failure_plane"]["enum"])
+
+
+def frozen_failure_codes() -> list[str]:
+    return list(load_json(SCORE_BUNDLE_SCHEMA_PATH)["properties"]["failure_code"]["enum"])
+
+
+def frozen_pareto_dimensions() -> list[str]:
+    return list(load_json(SCORE_BUNDLE_SCHEMA_PATH)["properties"]["resource_vector"]["required"])
+
+
+def frozen_effort_ladder() -> list[str]:
+    return list(load_json(FREEZE_SCHEMA_PATH)["$defs"]["tuple"]["properties"]["effort"]["enum"])
+
+
+# The policy's response per failure plane. Authored per plane rather than per
+# code because FR-010c.1 requires the plane map and the code map to agree under
+# the frozen plane derivation, so a per-code authoring would have to re-derive
+# the same partition by hand. treatment carries service_reroute, which FR-015a
+# fixes at non_scorable; candidate carries the five bound-breach outcomes.
+PLANE_RESPONSE: dict[str, str] = {
+    "none": "hold",
+    "gate": "hold",
+    "treatment": "non_scorable",
+    "fixture": "non_scorable",
+    "scorer": "non_scorable",
+    "ballot": "non_scorable",
+    "adjudication": "non_scorable",
+    "candidate": "escalate",
+    "infrastructure": "non_scorable",
+    "evidence_boundary": "non_scorable",
+    "partition": "non_scorable",
+    "schema": "non_scorable",
+}
+
+
+def synthetic_failure_code_response() -> dict[str, str]:
+    return {code: PLANE_RESPONSE[failure_plane_for(code)] for code in frozen_failure_codes()}
+
+
+def synthetic_terminal_state_response() -> dict[str, str]:
+    """Non-completed states take the response of their paired candidate code."""
+    codes = synthetic_failure_code_response()
+    return {
+        state: "hold" if state == "completed" else codes[f"candidate_{state}"]
+        for state in frozen_terminal_states()
+    }
+
+
+# A synthetic successor-capability freeze: two efforts on one model plus a
+# second model, so the ladder exercises the derived within-model rule and the
+# authored cross-model rule at once. Names are deliberately generic — a route
+# identifier is opaque to every rule under test.
+LADDER_ROUTES = ("route-alpha-low", "route-alpha-high", "route-beta-medium")
+
+
+def synthetic_freeze() -> dict[str, object]:
+    tuples = [
+        ("route-alpha-low", "model-alpha", "low"),
+        ("route-alpha-high", "model-alpha", "high"),
+        ("route-beta-medium", "model-beta", "medium"),
+    ]
+    return {
+        "candidate_freeze_id": "sha256:" + "a" * 64,
+        "freeze_digest": "sha256:" + "b" * 64,
+        "admitted_tuples": [
+            {
+                "candidate_route_id": route,
+                "model": model,
+                "effort": effort,
+                "source_evidence_digest": "sha256:" + "c" * 64,
+                "runtime_evidence_digest": "sha256:" + "d" * 64,
+            }
+            for route, model, effort in tuples
+        ],
+        "excluded_tuples": [],
+    }
+
+
+def synthetic_unpinned() -> dict[str, object]:
+    """FR-006: the pin rides the Claude-side experiment-assignment document."""
+    return {
+        "pinned_parent_binding": committed_binding("experiment-assignment.schema.json"),
+        "pinned_parent_model": "model-alpha",
+        "pinned_parent_effort": "high",
+        "arm_count": 1,
+        "model_resolution": "inherit",
+    }
+
+
+def synthetic_adaptive() -> dict[str, object]:
+    freeze = synthetic_freeze()
+    return {
+        "candidate_freeze_id": freeze["candidate_freeze_id"],
+        "freeze_digest": freeze["freeze_digest"],
+        "escalation_ladder": list(LADDER_ROUTES),
+        "escalation_ladder_rationales": [
+            {
+                "from_route": "route-alpha-high",
+                "to_route": "route-beta-medium",
+                "rationale": "cross-model rank is a declared capability judgment, not a derived one",
+            }
+        ],
+        "max_escalations_per_objective": 1,
+        "de_escalation_clean_pass_threshold": 3,
+        "de_escalation_timing": "between_objectives",
+        "terminal_state_response": synthetic_terminal_state_response(),
+        "failure_plane_response": dict(PLANE_RESPONSE),
+        "failure_code_response": synthetic_failure_code_response(),
+        "signal_precedence": list(SIGNAL_SOURCES),
+        "retry_count_response": {
+            "threshold": 1,
+            "direction": "at_or_above",
+            "response": "escalate",
+        },
+        "budget_triggers": [
+            {
+                "member": "max_duration_seconds",
+                "direction": "at_or_above",
+                "threshold": 1200,
+                "response": "escalate",
+            }
+        ],
+        "clean_pass_definition": {
+            "terminal_state": "completed",
+            "failure_code": "none",
+            "max_retries": 0,
+            "budget_trigger_met": False,
+        },
+        "clean_pass_accounting": {
+            "escalating_objective_counts": False,
+            "non_scorable_objective_disposition": "neither_advances_nor_resets",
+            "non_scorable_precedence": "outranks_reset_on_non_clean",
+            "reset_on_de_escalation_evaluation": True,
+            "first_entry_de_escalation": "no_step_and_no_wrap_around",
+        },
+    }
+
+
+TOPOLOGY_DESCRIPTOR: dict[str, object] = {
+    "topology_id": "car-004-parallel-fan-out",
+    "fan_out": 3,
+    "child_shape": {
+        "dispatch_mechanism": "car_004_harness_child_dispatch",
+        "wall_time_window": "full_elapsed_including_child_wait",
+    },
+}
+
+
+def synthetic_orchestration_changing() -> dict[str, object]:
+    return {
+        "topology_descriptor": copy.deepcopy(TOPOLOGY_DESCRIPTOR),
+        "topology_digest": record_digest(TOPOLOGY_DESCRIPTOR),
+        "aggregation_rule": {
+            "input_tokens": "sum",
+            "cached_input_tokens": "sum",
+            "output_tokens": "sum",
+            "duration_ms": "sum",
+            "retries": "sum",
+            "compactions": "sum",
+            "terminal_state": "worst_wins_by_severity",
+            "acceptance": "parent_objective_oracle",
+        },
+        "raw_token_aggregation": {
+            "input_tokens": "sum",
+            "output_tokens": "sum",
+            "cached_input_tokens": "sum",
+            "reasoning_output_tokens": "sum",
+        },
+        "cache_aggregation": {
+            "cache_write_tokens_by_ttl_class": {
+                "ephemeral_5m": "sum",
+                "ephemeral_1h": "sum",
+            },
+            "cache_read_tokens": "sum",
+        },
+        "unrecorded_quantity_disposition": "unobserved",
+        "terminal_state_severity": [
+            "completed",
+            "failed",
+            "timed_out",
+            "cancelled",
+            "budget_exhausted",
+            "abandoned",
+        ],
+        "acceptance_rule": "parent_objective_oracle",
+        "acceptance_floor_on_non_completed": 0,
+    }
+
+
+SPECIALIZATION_BUILDERS = {
+    "unpinned": synthetic_unpinned,
+    "adaptive": synthetic_adaptive,
+    "orchestration_changing": synthetic_orchestration_changing,
+}
+
+
+def synthetic_control(kind: str, frozen_at: str = FROZEN_AT) -> dict[str, object]:
+    scope = "per_unit" if kind == "orchestration_changing" else "per_objective"
+    return {
+        "control_id": f"car-004-{kind}",
+        "control_kind": kind,
+        "frozen_at": frozen_at,
+        "execution_contract": {
+            "dispatch_parameters": {"model_resolution": "inherit"},
+            "observed_signals": ["terminal_state"],
+            "retry_bounds": {
+                "max_retries": 2,
+                "counted_over": scope,
+                "on_breach": {"terminal_state": "failed", "failure_code": "candidate_failed"},
+            },
+            "cancellation_bounds": {
+                "max_duration_ms": 900000,
+                "counted_over": scope,
+                "on_breach": {
+                    "terminal_state": "cancelled",
+                    "failure_code": "candidate_cancelled",
+                },
+            },
+        },
+        "evidence_requirements": ["execution_trace"],
+        "attribution_level": "policy",
+        kind: SPECIALIZATION_BUILDERS[kind](),
+    }
+
+
+def control_of_kind(registry: dict[str, object], kind: str) -> dict[str, object]:
+    return next(control for control in registry["controls"] if control["control_kind"] == kind)
+
+
+def seal(registry: dict[str, object]) -> dict[str, object]:
+    """Stamp every address under the frozen preimage rule, controls first."""
+    for control in registry["controls"]:
+        control.pop("control_digest", None)
+        control["control_digest"] = record_digest(control, digest_field="control_digest")
+    registry.pop("registry_digest", None)
+    registry["registry_digest"] = record_digest(registry, digest_field="registry_digest")
+    return registry
+
+
+def synthetic_registry(frozen_at: str = FROZEN_AT) -> dict[str, object]:
+    return seal({
+        "schema_version": "1.0.0",
+        "registry_id": "car-004-policy-control-registry",
+        "status": "frozen",
+        "frozen_at": frozen_at,
+        "controls": [synthetic_control(kind, frozen_at) for kind in CONTROL_KINDS],
+        "smoke_bounds": synthetic_smoke_bounds(),
+        "car_003_bindings": [
+            {"id": "https://racecraft.dev/schemas/car-003/score-bundle.schema.json",
+             "digest": "sha256:" + "1" * 64},
+        ],
+    })
+
+
+class RegistryIdentityAndClosureTests(unittest.TestCase):
+    """FR-001, FR-002, FR-030a: one preimage rule, three controls, one identity."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = synthetic_registry()
+
+    def controls_by_kind(self, kind: str) -> dict[str, object]:
+        return next(c for c in self.registry["controls"] if c["control_kind"] == kind)
+
+    def test_a_control_address_is_the_frozen_preimage_over_its_own_record(self) -> None:
+        for control in self.registry["controls"]:
+            with self.subTest(control_kind=control["control_kind"]):
+                self.assertEqual(
+                    self.module.control_digest(control),
+                    record_digest(control, digest_field="control_digest"),
+                )
+                self.assertEqual(self.module.control_digest(control), control["control_digest"])
+
+    def test_a_control_preimage_drops_only_the_record_s_own_digest_member(self) -> None:
+        control = self.controls_by_kind("adaptive")
+        preimage = {key: value for key, value in control.items() if key != "control_digest"}
+        self.assertEqual(
+            self.module.control_digest(control),
+            "sha256:" + hashlib.sha256(canonical_json(preimage).encode("utf-8")).hexdigest(),
+        )
+
+    def test_the_registry_and_every_control_carry_their_own_address(self) -> None:
+        self.assertEqual(
+            self.registry["registry_digest"],
+            record_digest(self.registry, digest_field="registry_digest"),
+        )
+        self.assertEqual(len(self.registry["controls"]), 3)
+        for control in self.registry["controls"]:
+            with self.subTest(control_kind=control["control_kind"]):
+                self.assertIn("control_digest", control)
+        self.assertEqual(self.module.validate_registry(self.registry), self.registry)
+
+    def test_a_timestamp_only_change_moves_every_address(self) -> None:
+        # FR-002b: frozen_at is inside the preimage, so a re-issue that changes
+        # nothing but the instant is a new identity rather than a silent re-use.
+        reissued = synthetic_registry(frozen_at="2026-07-28T00:00:00Z")
+        self.assertNotEqual(reissued["registry_digest"], self.registry["registry_digest"])
+        for old, new in zip(self.registry["controls"], reissued["controls"]):
+            with self.subTest(control_kind=old["control_kind"]):
+                self.assertNotEqual(new["control_digest"], old["control_digest"])
+        self.assertEqual(self.module.validate_registry(reissued), reissued)
+
+    def test_a_recorded_address_that_does_not_recompute_is_refused(self) -> None:
+        control = self.controls_by_kind("unpinned")
+        control["evidence_requirements"] = ["execution_trace", "score_bundle"]
+        with self.assertRaises(self.error):
+            self.module.validate_registry(self.registry)
+
+    def test_a_registry_address_that_does_not_recompute_is_refused(self) -> None:
+        self.registry["registry_id"] = "car-004-policy-control-registry-v2"
+        with self.assertRaises(self.error):
+            self.module.validate_registry(self.registry)
+
+    def test_a_frozen_at_that_is_not_a_z_suffixed_utc_instant_is_refused(self) -> None:
+        for stamp in ("2026-07-27T00:00:00+02:00", "2026-07-27T00:00:00"):
+            with self.subTest(frozen_at=stamp):
+                registry = synthetic_registry(frozen_at=stamp)
+                with self.assertRaises(self.error):
+                    self.module.validate_registry(registry)
+
+    def test_the_raw_token_identity_is_read_against_the_declared_ceiling(self) -> None:
+        bounds = self.registry["smoke_bounds"]
+        self.assertEqual(
+            bounds["max_input_tokens"]["value"]
+            + bounds["max_cached_input_tokens"]["value"]
+            + bounds["max_output_tokens"]["value"],
+            bounds["raw_token_ceiling"]["value"],
+        )
+        bounds["max_output_tokens"] = bound(50001, "tokens")
+        with self.assertRaises(self.error):
+            self.module.validate_registry(seal(self.registry))
+
+    def test_an_identity_admitting_a_cache_ceiling_is_refused(self) -> None:
+        # FR-016e.4: both cache quantities are diagnostics and stay outside the
+        # identity, so a ceiling that only balances once one is added is refused.
+        cases = {
+            "cache_read": 1000000 + 1200000,
+            "cache_write_class": 1000000 + 160000,
+        }
+        for label, ceiling in cases.items():
+            with self.subTest(admits=label):
+                registry = synthetic_registry()
+                registry["smoke_bounds"]["raw_token_ceiling"] = bound(ceiling, "tokens")
+                with self.assertRaises(self.error):
+                    self.module.validate_registry(seal(registry))
+
+    def test_a_smoke_bound_missing_its_value_unit_or_direction_is_refused(self) -> None:
+        for dropped in ("value", "unit", "direction"):
+            with self.subTest(dropped=dropped):
+                registry = synthetic_registry()
+                del registry["smoke_bounds"]["max_attempts"][dropped]
+                with self.assertRaises(self.error):
+                    self.module.validate_registry(seal(registry))
+
+    def test_the_frozen_three_kinds_satisfy_closure(self) -> None:
+        self.assertIsNone(self.module.assert_closed_at_three(self.registry))
+
+    def test_a_seeded_fourth_control_is_refused(self) -> None:
+        # SC-001: including a justified high-effort arm.
+        fourth = synthetic_control("adaptive")
+        fourth["control_id"] = "car-004-justified-high-effort"
+        self.registry["controls"].append(fourth)
+        with self.assertRaises(self.error):
+            self.module.assert_closed_at_three(self.registry)
+        with self.assertRaises(self.error):
+            self.module.validate_registry(seal(self.registry))
+
+    def test_a_duplicate_control_kind_is_refused(self) -> None:
+        duplicate = synthetic_control("adaptive")
+        duplicate["control_id"] = "car-004-adaptive-second"
+        self.registry["controls"][0] = duplicate
+        with self.assertRaises(self.error):
+            self.module.assert_closed_at_three(self.registry)
+        with self.assertRaises(self.error):
+            self.module.validate_registry(seal(self.registry))
+
+    def test_fewer_than_three_controls_is_refused(self) -> None:
+        self.registry["controls"].pop()
+        with self.assertRaises(self.error):
+            self.module.assert_closed_at_three(self.registry)
+
+
+# The frozen CAR-003 documents research D2 binds. Nothing in them is edited,
+# re-versioned, or removed; each is referenced by stable identifier and digest.
+BOUND_CAR_003_DOCUMENTS = (
+    "score-bundle.schema.json",
+    "successor-capability-freeze.schema.json",
+    "analysis-plan.schema.json",
+    "experiment-policy.schema.json",
+    "role-corpus.schema.json",
+    "experiment-assignment.schema.json",
+)
+
+
+def file_bytes_digest(path: Path) -> str:
+    """FR-005a: the SHA-256 of a document's committed bytes."""
+    return "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def committed_binding(filename: str) -> dict[str, str]:
+    path = CONTRACT_ROOT / filename
+    return {"id": load_json(path)["$id"], "digest": file_bytes_digest(path)}
+
+
+class Car003BindingTests(unittest.TestCase):
+    """FR-005a and SC-018: additive-only references, checked against the bytes."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.document = {
+            "car_003_bindings": [committed_binding(name) for name in BOUND_CAR_003_DOCUMENTS]
+        }
+
+    def test_every_recorded_binding_recomputes_the_bound_document_s_committed_bytes(self) -> None:
+        self.assertIsNone(self.module.verify_car_003_bindings(self.document))
+
+    def test_a_seeded_byte_change_in_a_bound_document_fails_the_check_closed(self) -> None:
+        # The verifier compares a recorded digest against the committed bytes, so
+        # a document whose bytes drifted by one character and a record whose
+        # digest drifted by the same character are the same disagreement. Seeding
+        # it on the record leaves the frozen CAR-003 documents untouched, which
+        # FR-005 requires of every CAR-004 case.
+        for index, filename in enumerate(BOUND_CAR_003_DOCUMENTS):
+            with self.subTest(bound_document=filename):
+                document = copy.deepcopy(self.document)
+                seeded = (CONTRACT_ROOT / filename).read_bytes() + b"\n"
+                document["car_003_bindings"][index]["digest"] = (
+                    "sha256:" + hashlib.sha256(seeded).hexdigest()
+                )
+                with self.assertRaises(self.error):
+                    self.module.verify_car_003_bindings(document)
+
+    def test_a_binding_naming_no_committed_document_is_refused(self) -> None:
+        self.document["car_003_bindings"].append(
+            {
+                "id": "https://racecraft.dev/schemas/car-003/absent-contract.schema.json",
+                "digest": "sha256:" + "2" * 64,
+            }
+        )
+        with self.assertRaises(self.error):
+            self.module.verify_car_003_bindings(self.document)
+
+    def test_a_document_declaring_no_bindings_is_refused(self) -> None:
+        with self.assertRaises(self.error):
+            self.module.verify_car_003_bindings({"registry_id": "car-004-no-bindings"})
+
+    def test_the_file_bytes_digest_is_distinct_from_the_record_preimage(self) -> None:
+        # FR-002a addresses a record's canonical JSON; FR-005a addresses a
+        # document's committed bytes. Conflating them would let a reformat pass.
+        path = CONTRACT_ROOT / "score-bundle.schema.json"
+        self.assertNotEqual(
+            file_bytes_digest(path), record_digest(load_json(path), digest_field=None)
+        )
+
+    def test_a_binding_is_data_and_never_a_schema_reference(self) -> None:
+        # FR-004: the CAR-003 reference form is {id, digest}, never a $ref.
+        for binding in self.document["car_003_bindings"]:
+            with self.subTest(binding=binding["id"]):
+                self.assertEqual(sorted(binding), ["digest", "id"])
+
+
+class UnpinnedControlTests(unittest.TestCase):
+    """FR-006 and FR-007: one arm, riding the pinned parent, re-frozen on a re-pin."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = synthetic_registry()
+        self.control = control_of_kind(self.registry, "unpinned")
+
+    def test_the_unpinned_control_freezes_exactly_one_arm(self) -> None:
+        self.assertEqual(self.control["unpinned"]["arm_count"], 1)
+        self.assertIsNone(self.module.validate_unpinned_control(self.control))
+
+    def test_more_than_one_concurrent_arm_is_refused(self) -> None:
+        # FR-007: a matrix over parent sessions is not freezable as one control.
+        for seeded in (0, 2, True):
+            with self.subTest(arm_count=seeded):
+                control = copy.deepcopy(self.control)
+                control["unpinned"]["arm_count"] = seeded
+                with self.assertRaises(self.error):
+                    self.module.validate_unpinned_control(control)
+
+    def test_agents_inherit_the_session_model_rather_than_setting_one(self) -> None:
+        self.assertEqual(self.control["unpinned"]["model_resolution"], "inherit")
+        self.control["unpinned"]["model_resolution"] = "explicit"
+        with self.assertRaises(self.error):
+            self.module.validate_unpinned_control(self.control)
+
+    def test_the_pin_is_read_from_the_claude_side_experiment_assignment_document(self) -> None:
+        # FR-006: the repository carries two documents a reader can reach for
+        # "the environment contract"; this is the one carrying the four
+        # identifying members and the subscription | api_key mode.
+        identifier, node = self.module.pinned_parent_document()
+        self.assertEqual(identifier, load_json(ASSIGNMENT_SCHEMA_PATH)["$id"])
+        self.assertEqual(
+            sorted(node["properties"]["authentication_mode"]["enum"]),
+            ["api_key", "subscription"],
+        )
+        for member in ("parent_session_model", "parent_session_effort",
+                       "claude_code_subagent_model_unset"):
+            with self.subTest(member=member):
+                self.assertIn(member, node["properties"])
+        self.assertEqual(self.control["unpinned"]["pinned_parent_binding"]["id"], identifier)
+
+    def test_a_binding_to_the_shared_runtime_environment_contract_is_refused(self) -> None:
+        # The shared document's parent session is a differently shaped member and
+        # its authentication_mode enumerates chatgpt_subscription | api_key.
+        shared = load_json(SHARED_ENVIRONMENT_CONTRACT_PATH)
+        self.assertEqual(
+            sorted(shared["properties"]["authentication_mode"]["enum"]),
+            ["api_key", "chatgpt_subscription"],
+        )
+        self.control["unpinned"]["pinned_parent_binding"] = {
+            "id": shared["$id"],
+            "digest": file_bytes_digest(SHARED_ENVIRONMENT_CONTRACT_PATH),
+        }
+        with self.assertRaises(self.error):
+            self.module.validate_unpinned_control(self.control)
+
+    def test_a_pin_binding_whose_digest_drifted_is_refused(self) -> None:
+        self.control["unpinned"]["pinned_parent_binding"]["digest"] = "sha256:" + "e" * 64
+        with self.assertRaises(self.error):
+            self.module.validate_unpinned_control(self.control)
+
+    def test_the_pinned_effort_is_read_against_the_bound_document_s_own_enum(self) -> None:
+        admitted = load_json(ASSIGNMENT_SCHEMA_PATH)["$defs"]["comparisonSetAssignment"][
+            "properties"
+        ]["environment_contract"]["properties"]["parent_session_effort"]["enum"]
+        self.assertIn(self.control["unpinned"]["pinned_parent_effort"], admitted)
+        self.control["unpinned"]["pinned_parent_effort"] = "ultra"
+        with self.assertRaises(self.error):
+            self.module.validate_unpinned_control(self.control)
+
+    def test_a_pinned_model_that_is_not_a_recorded_string_is_refused(self) -> None:
+        for seeded in ("", None):
+            with self.subTest(pinned_parent_model=seeded):
+                control = copy.deepcopy(self.control)
+                control["unpinned"]["pinned_parent_model"] = seeded
+                with self.assertRaises(self.error):
+                    self.module.validate_unpinned_control(control)
+
+    def test_a_different_pin_yields_a_different_control_address(self) -> None:
+        # FR-007: a re-pin is a new control version, never a second concurrent arm.
+        repinned = copy.deepcopy(self.control)
+        repinned["unpinned"]["pinned_parent_model"] = "model-beta"
+        repinned.pop("control_digest")
+        repinned["control_digest"] = record_digest(repinned, digest_field="control_digest")
+        self.assertNotEqual(repinned["control_digest"], self.control["control_digest"])
+        self.assertEqual(repinned["unpinned"]["arm_count"], 1)
+        self.assertIsNone(self.module.validate_unpinned_control(repinned))
+
+    def test_the_registry_load_path_reaches_the_unpinned_rules(self) -> None:
+        self.control["unpinned"]["model_resolution"] = "explicit"
+        with self.assertRaises(self.error):
+            self.module.validate_registry(seal(self.registry))
+
+
+def clean_row() -> dict[str, object]:
+    """A row on which every source above terminal state carries the none sentinel."""
+    return {
+        "terminal_state": "completed",
+        "failure_plane": "none",
+        "failure_code": "none",
+        "retries": 0,
+        "budget_observations": {"max_duration_seconds": 100},
+    }
+
+
+class AdaptiveSignalMapTests(unittest.TestCase):
+    """FR-008 through FR-010c: total maps, one response per row, nothing unreachable."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = synthetic_registry()
+        self.control = control_of_kind(self.registry, "adaptive")
+        self.adaptive = self.control["adaptive"]
+
+    def test_each_response_map_is_set_equal_to_the_enum_read_live_from_the_contract(self) -> None:
+        cases = {
+            "terminal_state_response": frozen_terminal_states(),
+            "failure_plane_response": frozen_failure_planes(),
+            "failure_code_response": frozen_failure_codes(),
+        }
+        for member, enum in cases.items():
+            with self.subTest(map=member):
+                self.assertEqual(sorted(self.adaptive[member]), sorted(enum))
+        self.assertIsNone(self.module.validate_signal_maps(self.control))
+
+    def test_every_mapping_is_total_and_single_valued(self) -> None:
+        for member in ("terminal_state_response", "failure_plane_response",
+                       "failure_code_response"):
+            for signal, response in self.adaptive[member].items():
+                with self.subTest(map=member, signal=signal):
+                    self.assertIn(response, POLICY_RESPONSES)
+
+    def test_a_seeded_membership_change_on_a_frozen_enum_fails_closed(self) -> None:
+        # FR-010a: an added or removed member must refuse rather than leave a
+        # signal unmapped inside a content address that never moved.
+        cases = (
+            ("terminal_state_response", "completed", "quiesced"),
+            ("failure_plane_response", "candidate", "routing"),
+            ("failure_code_response", "service_reroute", "route_repointed"),
+        )
+        for member, dropped, added in cases:
+            with self.subTest(map=member, dropped=dropped):
+                control = copy.deepcopy(self.control)
+                del control["adaptive"][member][dropped]
+                with self.assertRaises(self.error):
+                    self.module.validate_signal_maps(control)
+            with self.subTest(map=member, added=added):
+                control = copy.deepcopy(self.control)
+                control["adaptive"][member][added] = "hold"
+                with self.assertRaises(self.error):
+                    self.module.validate_signal_maps(control)
+
+    def test_a_response_outside_the_closed_policy_enum_is_refused(self) -> None:
+        self.adaptive["failure_code_response"]["candidate_failed"] = "de_escalate"
+        with self.assertRaises(self.error):
+            self.module.validate_signal_maps(self.control)
+
+    def test_signal_precedence_covers_the_closed_five_member_source_set(self) -> None:
+        # FR-010b: the retry-count and budget-threshold sources hold ranks of
+        # their own rather than carrying a response no order ever consults.
+        self.assertEqual(self.adaptive["signal_precedence"], list(SIGNAL_SOURCES))
+        self.assertIn("retry_count", self.adaptive["signal_precedence"])
+        self.assertIn("budget_threshold", self.adaptive["signal_precedence"])
+
+    def test_a_precedence_array_omitting_an_admitted_source_is_refused(self) -> None:
+        for omitted in SIGNAL_SOURCES:
+            with self.subTest(omitted=omitted):
+                control = copy.deepcopy(self.control)
+                control["adaptive"]["signal_precedence"] = [
+                    source for source in SIGNAL_SOURCES if source != omitted
+                ]
+                with self.assertRaises(self.error):
+                    self.module.validate_signal_maps(control)
+
+    def test_terminal_state_ranked_ahead_of_a_lower_source_is_refused(self) -> None:
+        # The always-valued source placed above retry count or budget threshold
+        # would make both unreachable, which is what FR-010b fails closed on.
+        seeded = (
+            ["failure_code", "failure_plane", "terminal_state", "retry_count",
+             "budget_threshold"],
+            ["terminal_state", "failure_code", "failure_plane", "retry_count",
+             "budget_threshold"],
+            ["failure_code", "failure_plane", "retry_count", "terminal_state",
+             "budget_threshold"],
+        )
+        for order in seeded:
+            with self.subTest(signal_precedence=order):
+                control = copy.deepcopy(self.control)
+                control["adaptive"]["signal_precedence"] = list(order)
+                with self.assertRaises(self.error):
+                    self.module.validate_signal_maps(control)
+
+    def test_the_plane_map_agrees_with_the_code_map_under_the_frozen_derivation(self) -> None:
+        for code in frozen_failure_codes():
+            with self.subTest(failure_code=code):
+                self.assertEqual(
+                    self.adaptive["failure_plane_response"][failure_plane_for(code)],
+                    self.adaptive["failure_code_response"][code],
+                )
+        self.adaptive["failure_plane_response"]["candidate"] = "hold"
+        with self.assertRaises(self.error):
+            self.module.validate_signal_maps(self.control)
+
+    def test_the_terminal_state_map_agrees_under_the_candidate_plane_pairing(self) -> None:
+        codes = frozen_failure_codes()
+        for state in frozen_terminal_states():
+            if state == "completed":
+                continue
+            with self.subTest(terminal_state=state):
+                paired = f"candidate_{state}"
+                self.assertIn(paired, codes)
+                self.assertEqual(
+                    self.adaptive["terminal_state_response"][state],
+                    self.adaptive["failure_code_response"][paired],
+                )
+        self.adaptive["terminal_state_response"]["failed"] = "hold"
+        with self.assertRaises(self.error):
+            self.module.validate_signal_maps(self.control)
+
+    def test_a_derived_candidate_code_absent_from_the_frozen_enum_fails_closed(self) -> None:
+        # The pairing is derived live from the committed failure_code enum, so a
+        # terminal state with no candidate_<state> member refuses rather than
+        # being skipped. Exercised through the derivation itself: the committed
+        # enums agree today, and a case that mutated one would be testing its own
+        # edit rather than the guard.
+        codes = frozen_failure_codes()
+        for state in frozen_terminal_states():
+            if state == "completed":
+                continue
+            with self.subTest(terminal_state=state):
+                self.assertEqual(self.module.candidate_code_for(state), f"candidate_{state}")
+                self.assertIn(self.module.candidate_code_for(state), codes)
+        with self.assertRaises(self.error):
+            self.module.candidate_code_for("quiesced")
+
+    def test_the_registry_load_path_reaches_the_signal_map_rules(self) -> None:
+        self.adaptive["failure_plane_response"]["candidate"] = "hold"
+        with self.assertRaises(self.error):
+            self.module.validate_registry(seal(self.registry))
+
+
+class AdaptiveRowResolutionTests(unittest.TestCase):
+    """FR-010b and FR-015a: one response per row, decided by the declared order."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.control = control_of_kind(synthetic_registry(), "adaptive")
+
+    def test_a_row_carrying_only_a_terminal_state_resolves_through_the_last_rank(self) -> None:
+        self.assertEqual(self.module.resolve_response(self.control, clean_row()), "hold")
+
+    def test_a_failure_code_outranks_every_lower_source(self) -> None:
+        row = clean_row()
+        row.update(failure_code="candidate_failed", failure_plane="candidate", retries=3)
+        self.assertEqual(self.module.resolve_response(self.control, row), "escalate")
+
+    def test_a_platform_initiated_reroute_resolves_non_scorable(self) -> None:
+        # FR-015a: the observable is the already-frozen service_reroute code.
+        row = clean_row()
+        row.update(failure_code="service_reroute", failure_plane="treatment")
+        self.assertEqual(self.module.resolve_response(self.control, row), "non_scorable")
+
+    def test_a_failure_plane_decides_when_the_code_is_the_none_sentinel(self) -> None:
+        row = clean_row()
+        row["failure_plane"] = "candidate"
+        self.assertEqual(self.module.resolve_response(self.control, row), "escalate")
+
+    def test_the_retry_count_source_is_reachable_below_both_enum_sources(self) -> None:
+        row = clean_row()
+        row["retries"] = 1
+        self.assertEqual(self.module.resolve_response(self.control, row), "escalate")
+
+    def test_the_budget_threshold_source_is_reachable_below_the_retry_count(self) -> None:
+        row = clean_row()
+        row["budget_observations"] = {"max_duration_seconds": 1200}
+        self.assertEqual(self.module.resolve_response(self.control, row), "escalate")
+
+    def test_a_row_resolves_to_exactly_one_response_over_every_frozen_signal(self) -> None:
+        for code in frozen_failure_codes():
+            with self.subTest(failure_code=code):
+                row = clean_row()
+                row.update(failure_code=code, failure_plane=failure_plane_for(code))
+                self.assertIn(self.module.resolve_response(self.control, row), POLICY_RESPONSES)
+
+    def test_a_row_carrying_an_unmapped_signal_fails_closed(self) -> None:
+        cases = (
+            {"failure_code": "route_repointed"},
+            {"failure_plane": "routing"},
+            {"terminal_state": "quiesced"},
+        )
+        for seeded in cases:
+            with self.subTest(**seeded):
+                row = clean_row()
+                row.update(seeded)
+                with self.assertRaises(self.error):
+                    self.module.resolve_response(self.control, row)
+
+    def test_a_row_recording_no_terminal_state_fails_closed(self) -> None:
+        row = clean_row()
+        del row["terminal_state"]
+        with self.assertRaises(self.error):
+            self.module.resolve_response(self.control, row)
+
+
+class EscalationLadderTests(unittest.TestCase):
+    """FR-011, FR-011a, FR-011b: rank is array position, and the ladder is total."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = synthetic_registry()
+        self.control = control_of_kind(self.registry, "adaptive")
+        self.freeze = synthetic_freeze()
+
+    def test_a_well_formed_ladder_over_the_bound_freeze_is_accepted(self) -> None:
+        self.assertIsNone(
+            self.module.validate_escalation_ladder(self.control, self.freeze)
+        )
+
+    def test_exactly_one_freeze_is_bound_by_identifier_and_digest(self) -> None:
+        for member in ("candidate_freeze_id", "freeze_digest"):
+            with self.subTest(drifted=member):
+                control = copy.deepcopy(self.control)
+                control["adaptive"][member] = "sha256:" + "f" * 64
+                with self.assertRaises(self.error):
+                    self.module.validate_escalation_ladder(control, self.freeze)
+
+    def test_the_ladder_carries_every_admitted_tuple_exactly_once(self) -> None:
+        admitted = [t["candidate_route_id"] for t in self.freeze["admitted_tuples"]]
+        self.assertEqual(sorted(self.control["adaptive"]["escalation_ladder"]), sorted(admitted))
+
+    def test_a_seeded_duplicate_entry_is_refused(self) -> None:
+        self.control["adaptive"]["escalation_ladder"] = [
+            "route-alpha-low",
+            "route-alpha-low",
+            "route-alpha-high",
+            "route-beta-medium",
+        ]
+        with self.assertRaises(self.error):
+            self.module.validate_escalation_ladder(self.control, self.freeze)
+
+    def test_a_seeded_omission_is_refused(self) -> None:
+        # FR-011a.2: exclusion happens at the freeze through excluded_tuples,
+        # never by omission from the ladder.
+        self.control["adaptive"]["escalation_ladder"] = ["route-alpha-low", "route-alpha-high"]
+        with self.assertRaises(self.error):
+            self.module.validate_escalation_ladder(self.control, self.freeze)
+
+    def test_an_entry_outside_the_bound_freeze_is_refused(self) -> None:
+        self.control["adaptive"]["escalation_ladder"] = [
+            "route-alpha-low",
+            "route-alpha-high",
+            "route-gamma-max",
+        ]
+        with self.assertRaises(self.error):
+            self.module.validate_escalation_ladder(self.control, self.freeze)
+
+    def test_a_within_model_position_contradicting_the_frozen_effort_ladder_is_refused(
+        self,
+    ) -> None:
+        # The two model-alpha entries are swapped, and the cross-model step that
+        # the swap creates carries its rationale, so the only violation left is
+        # the derived within-model order.
+        ladder = ["route-alpha-high", "route-alpha-low", "route-beta-medium"]
+        self.assertLess(
+            frozen_effort_ladder().index("low"), frozen_effort_ladder().index("high")
+        )
+        self.control["adaptive"]["escalation_ladder"] = ladder
+        self.control["adaptive"]["escalation_ladder_rationales"] = [
+            {
+                "from_route": "route-alpha-low",
+                "to_route": "route-beta-medium",
+                "rationale": "declared cross-model judgment",
+            }
+        ]
+        with self.assertRaises(self.error):
+            self.module.validate_escalation_ladder(self.control, self.freeze)
+
+    def test_a_cross_model_step_with_no_recorded_rationale_is_refused(self) -> None:
+        self.control["adaptive"]["escalation_ladder_rationales"] = []
+        with self.assertRaises(self.error):
+            self.module.validate_escalation_ladder(self.control, self.freeze)
+
+    def test_a_rationale_recorded_for_a_step_the_ladder_does_not_take_is_refused(self) -> None:
+        self.control["adaptive"]["escalation_ladder_rationales"] = [
+            {
+                "from_route": "route-alpha-low",
+                "to_route": "route-beta-medium",
+                "rationale": "a step the ladder never takes",
+            }
+        ]
+        with self.assertRaises(self.error):
+            self.module.validate_escalation_ladder(self.control, self.freeze)
+
+    def test_reordering_the_ladder_yields_a_new_adaptive_control_address(self) -> None:
+        # FR-011b: array order is inside the preimage, so a reorder is a new
+        # version rather than an in-place edit.
+        reordered = copy.deepcopy(self.control)
+        reordered["adaptive"]["escalation_ladder"] = [
+            "route-alpha-high",
+            "route-alpha-low",
+            "route-beta-medium",
+        ]
+        reordered.pop("control_digest")
+        reordered["control_digest"] = record_digest(reordered, digest_field="control_digest")
+        self.assertNotEqual(reordered["control_digest"], self.control["control_digest"])
+
+    def test_the_next_higher_route_is_the_entry_at_the_following_index(self) -> None:
+        self.assertEqual(
+            self.module.next_route(self.control, "route-alpha-low"), "route-alpha-high"
+        )
+        self.assertEqual(
+            self.module.next_route(self.control, "route-alpha-high"), "route-beta-medium"
+        )
+
+    def test_an_escalation_at_the_ceiling_records_no_route_and_refuses_wrap_around(self) -> None:
+        self.assertIsNone(self.module.next_route(self.control, "route-beta-medium"))
+
+    def test_the_de_escalation_target_is_the_entry_at_the_preceding_index(self) -> None:
+        self.assertEqual(
+            self.module.previous_route(self.control, "route-beta-medium"), "route-alpha-high"
+        )
+
+    def test_a_de_escalation_at_the_floor_records_no_route_and_refuses_wrap_around(self) -> None:
+        self.assertIsNone(self.module.previous_route(self.control, "route-alpha-low"))
+
+    def test_a_route_outside_the_ladder_fails_closed_at_both_ends(self) -> None:
+        for entrypoint in (self.module.next_route, self.module.previous_route):
+            with self.subTest(entrypoint=entrypoint.__name__):
+                with self.assertRaises(self.error):
+                    entrypoint(self.control, "route-gamma-max")
+
+
+def objective(**overrides: object) -> dict[str, object]:
+    """A completed objective row; overrides make it non-clean or non-scorable."""
+    row = clean_row()
+    row.update({"objective_id": "car-004-smoke-objective-1", "escalated": False})
+    row.update(overrides)
+    return row
+
+
+class CleanPassStreakTests(unittest.TestCase):
+    """FR-012 and FR-012a: what counts, what resets, and what the floor does."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.control = control_of_kind(synthetic_registry(), "adaptive")
+        self.state = {"current_route_id": "route-alpha-high", "clean_streak": 0}
+
+    def walk(self, objectives: list[dict[str, object]],
+             state: dict[str, object] | None = None) -> dict[str, object]:
+        carried = dict(self.state if state is None else state)
+        for entry in objectives:
+            carried = self.module.advance_clean_streak(self.control, carried, entry)
+        return carried
+
+    def test_a_clean_pass_requires_every_declared_member_at_its_frozen_value(self) -> None:
+        declared = self.control["adaptive"]["clean_pass_definition"]
+        self.assertEqual(declared["terminal_state"], "completed")
+        self.assertEqual(declared["failure_code"], "none")
+        self.assertEqual(declared["max_retries"], 0)
+        self.assertIs(declared["budget_trigger_met"], False)
+        advanced = self.module.advance_clean_streak(self.control, self.state, objective())
+        self.assertTrue(advanced["clean_pass"])
+        self.assertEqual(advanced["clean_streak"], 1)
+
+    def test_an_objective_failing_any_declared_member_is_not_a_clean_pass(self) -> None:
+        cases = {
+            "terminal_state": {"terminal_state": "failed", "failure_code": "candidate_failed",
+                               "failure_plane": "candidate"},
+            "failure_code": {"failure_code": "gate_failed", "failure_plane": "gate"},
+            "retries": {"retries": 1},
+            "budget_trigger": {"budget_observations": {"max_duration_seconds": 1200}},
+        }
+        for label, overrides in cases.items():
+            with self.subTest(non_clean=label):
+                advanced = self.module.advance_clean_streak(
+                    self.control, {"current_route_id": "route-alpha-high", "clean_streak": 2},
+                    objective(**overrides),
+                )
+                self.assertFalse(advanced["clean_pass"])
+                self.assertEqual(advanced["clean_streak"], 0)
+
+    def test_the_bar_is_the_declared_trigger_rather_than_a_breach(self) -> None:
+        # FR-012a.1: a trigger that fired is evidence the route was strained, and
+        # it is the same threshold the policy escalates on.
+        trigger = self.control["adaptive"]["budget_triggers"][0]
+        at_threshold = objective(budget_observations={trigger["member"]: trigger["threshold"]})
+        self.assertFalse(
+            self.module.advance_clean_streak(self.control, self.state, at_threshold)["clean_pass"]
+        )
+        below = objective(budget_observations={trigger["member"]: trigger["threshold"] - 1})
+        self.assertTrue(
+            self.module.advance_clean_streak(self.control, self.state, below)["clean_pass"]
+        )
+
+    def test_an_objective_in_which_the_policy_escalated_never_counts(self) -> None:
+        # FR-012a.2: the clean run that licenses a step down is always measured
+        # at the route the policy moved to, never at the route it left.
+        advanced = self.module.advance_clean_streak(
+            self.control, {"current_route_id": "route-alpha-high", "clean_streak": 2},
+            objective(escalated=True),
+        )
+        self.assertFalse(advanced["clean_pass"])
+        self.assertEqual(advanced["clean_streak"], 0)
+        self.assertFalse(advanced["de_escalated"])
+
+    def test_three_consecutive_clean_passes_step_down_at_the_boundary(self) -> None:
+        final = self.walk([objective(), objective(), objective()])
+        self.assertTrue(final["de_escalation_evaluated"])
+        self.assertTrue(final["de_escalated"])
+        self.assertEqual(final["current_route_id"], "route-alpha-low")
+        self.assertEqual(final["clean_streak"], 0)
+
+    def test_an_interrupted_streak_does_not_step_down(self) -> None:
+        final = self.walk([objective(), objective(retries=1), objective()])
+        self.assertFalse(final["de_escalated"])
+        self.assertEqual(final["current_route_id"], "route-alpha-high")
+        self.assertEqual(final["clean_streak"], 1)
+
+    def test_a_non_scorable_objective_neither_advances_nor_resets_the_streak(self) -> None:
+        reroute = objective(failure_code="service_reroute", failure_plane="treatment")
+        self.assertEqual(self.module.resolve_response(self.control, reroute), "non_scorable")
+        carried = self.walk([objective(), objective(), reroute])
+        self.assertTrue(carried["excluded"])
+        self.assertEqual(carried["clean_streak"], 2)
+        self.assertEqual(carried["current_route_id"], "route-alpha-high")
+
+    def test_the_streak_resumes_across_an_excluded_objective_and_completes(self) -> None:
+        # FR-012a.3 and SC-024: proven by walking the sequence, not asserted.
+        reroute = objective(failure_code="service_reroute", failure_plane="treatment")
+        final = self.walk([objective(), objective(), reroute, objective()])
+        self.assertTrue(final["de_escalated"])
+        self.assertEqual(final["current_route_id"], "route-alpha-low")
+
+    def test_the_non_scorable_exclusion_outranks_the_reset_on_non_clean_rule(self) -> None:
+        # The row is non-clean on every other member and still leaves the streak
+        # untouched, which is what "takes precedence" means.
+        reroute = objective(
+            terminal_state="failed", failure_code="service_reroute",
+            failure_plane="treatment", retries=4,
+        )
+        carried = self.module.advance_clean_streak(
+            self.control, {"current_route_id": "route-alpha-high", "clean_streak": 2}, reroute
+        )
+        self.assertEqual(carried["clean_streak"], 2)
+        self.assertFalse(carried["clean_pass"])
+
+    def test_the_streak_resets_whenever_de_escalation_is_evaluated(self) -> None:
+        # FR-012a.4: reaching three licenses at most one downward step, not a
+        # further step at every subsequent boundary.
+        final = self.walk([objective(), objective(), objective(), objective()])
+        self.assertEqual(final["current_route_id"], "route-alpha-low")
+        self.assertEqual(final["clean_streak"], 1)
+
+    def test_a_de_escalation_due_at_the_first_entry_records_no_step(self) -> None:
+        floor = {"current_route_id": "route-alpha-low", "clean_streak": 0}
+        final = self.walk([objective(), objective(), objective()], state=floor)
+        self.assertTrue(final["de_escalation_evaluated"])
+        self.assertFalse(final["de_escalated"])
+        self.assertEqual(final["current_route_id"], "route-alpha-low")
+        self.assertNotEqual(final["current_route_id"], "route-beta-medium")
+        self.assertEqual(final["clean_streak"], 0)
+
+    def test_a_state_naming_a_route_outside_the_ladder_fails_closed(self) -> None:
+        with self.assertRaises(self.error):
+            self.module.advance_clean_streak(
+                self.control, {"current_route_id": "route-gamma-max", "clean_streak": 2},
+                objective(),
+            )
+
+
+def bounded_objective(attempts: list[dict[str, object]],
+                      counted_over: str = "per_objective",
+                      **overrides: object) -> dict[str, object]:
+    row: dict[str, object] = {
+        "objective_id": "car-004-smoke-objective-1",
+        "counted_over": counted_over,
+        "attempts": attempts,
+    }
+    row.update(overrides)
+    return row
+
+
+def attempt(route_id: str, retries: int, duration_ms: int,
+            **overrides: object) -> dict[str, object]:
+    row: dict[str, object] = {
+        "attempt_id": f"{route_id}-{retries}-{duration_ms}",
+        "route_id": route_id,
+        "retries": retries,
+        "duration_ms": duration_ms,
+    }
+    row.update(overrides)
+    return row
+
+
+class BoundScopeAndBreachTests(unittest.TestCase):
+    """FR-014 and FR-014a: scope, non-reset across escalation, and breach outcomes."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = synthetic_registry()
+        self.control = control_of_kind(self.registry, "adaptive")
+        self.orchestration = control_of_kind(self.registry, "orchestration_changing")
+
+    def test_both_counters_span_every_attempt_and_every_route_in_the_objective(self) -> None:
+        # FR-014a.1: an escalation resets neither counter, so the two attempts on
+        # two different routes are one count rather than two.
+        reading = self.module.evaluate_bounds(
+            self.control,
+            bounded_objective([
+                attempt("route-alpha-low", 1, 300000),
+                attempt("route-alpha-high", 1, 400000),
+            ]),
+        )
+        self.assertEqual(reading["retries"], 2)
+        self.assertEqual(reading["duration_ms"], 700000)
+        self.assertFalse(reading["retry_bound_breached"])
+        self.assertFalse(reading["cancellation_bound_breached"])
+
+    def test_an_attempt_recording_a_counter_reset_on_escalation_is_refused(self) -> None:
+        with self.assertRaises(self.error):
+            self.module.evaluate_bounds(
+                self.control,
+                bounded_objective([
+                    attempt("route-alpha-low", 2, 300000),
+                    attempt("route-alpha-high", 1, 300000, counter_reset_on_escalation=True),
+                ]),
+            )
+
+    def test_a_scope_disagreeing_with_the_declared_counted_over_is_refused(self) -> None:
+        cases = ((self.control, "per_unit"), (self.orchestration, "per_objective"))
+        for control, seeded in cases:
+            with self.subTest(control_kind=control["control_kind"], seeded=seeded):
+                with self.assertRaises(self.error):
+                    self.module.evaluate_bounds(
+                        control,
+                        bounded_objective([attempt("route-alpha-low", 0, 1000)], seeded),
+                    )
+
+    def test_the_orchestration_control_counts_both_bounds_over_the_whole_unit(self) -> None:
+        # FR-014a.2: a run cannot stay inside its bounds by distributing retries
+        # or elapsed time across children.
+        declared = self.orchestration["execution_contract"]
+        self.assertEqual(declared["retry_bounds"]["counted_over"], "per_unit")
+        self.assertEqual(declared["cancellation_bounds"]["counted_over"], "per_unit")
+        reading = self.module.evaluate_bounds(
+            self.orchestration,
+            bounded_objective([
+                attempt("parent", 1, 400000),
+                attempt("child-1", 1, 400000),
+                attempt("child-2", 1, 400000),
+            ], "per_unit"),
+        )
+        self.assertEqual(reading["retries"], 3)
+        self.assertTrue(reading["retry_bound_breached"])
+        self.assertTrue(reading["cancellation_bound_breached"])
+
+    def test_a_retry_bound_breach_records_failed_with_the_paired_candidate_code(self) -> None:
+        reading = self.module.evaluate_bounds(
+            self.control, bounded_objective([attempt("route-alpha-low", 3, 10000)])
+        )
+        self.assertTrue(reading["retry_bound_breached"])
+        self.assertEqual(reading["terminal_state"], "failed")
+        self.assertEqual(reading["failure_code"], "candidate_failed")
+        self.assertEqual(
+            reading["failure_code"], self.module.candidate_code_for(reading["terminal_state"])
+        )
+
+    def test_a_cancellation_bound_breach_records_cancelled_with_its_paired_code(self) -> None:
+        reading = self.module.evaluate_bounds(
+            self.control, bounded_objective([attempt("route-alpha-low", 0, 900001)])
+        )
+        self.assertTrue(reading["cancellation_bound_breached"])
+        self.assertEqual(reading["terminal_state"], "cancelled")
+        self.assertEqual(reading["failure_code"], "candidate_cancelled")
+
+    def test_a_recorded_outcome_other_than_the_declared_breach_pairing_is_refused(self) -> None:
+        # timed_out and budget_exhausted stay reserved and are not representable
+        # on the bound execution trace.
+        cases = (
+            ({"terminal_state": "timed_out", "failure_code": "candidate_timed_out"},
+             [attempt("route-alpha-low", 0, 900001)]),
+            ({"terminal_state": "budget_exhausted",
+              "failure_code": "candidate_budget_exhausted"},
+             [attempt("route-alpha-low", 3, 10000)]),
+            ({"terminal_state": "abandoned", "failure_code": "candidate_abandoned"},
+             [attempt("route-alpha-low", 3, 10000)]),
+            ({"terminal_state": "failed", "failure_code": "candidate_cancelled"},
+             [attempt("route-alpha-low", 3, 10000)]),
+        )
+        for outcome, attempts in cases:
+            with self.subTest(recorded_outcome=outcome):
+                with self.assertRaises(self.error):
+                    self.module.evaluate_bounds(
+                        self.control, bounded_objective(attempts, recorded_outcome=outcome)
+                    )
+
+    def test_a_respected_run_records_no_breach_outcome(self) -> None:
+        reading = self.module.evaluate_bounds(
+            self.control, bounded_objective([attempt("route-alpha-low", 2, 900000)])
+        )
+        self.assertFalse(reading["retry_bound_breached"])
+        self.assertFalse(reading["cancellation_bound_breached"])
+        self.assertIsNone(reading["terminal_state"])
+        self.assertIsNone(reading["failure_code"])
+
+
+class ServiceRerouteTests(unittest.TestCase):
+    """FR-015 and FR-015a: the already-frozen observable, never a coined signal."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.control = control_of_kind(synthetic_registry(), "adaptive")
+        self.row = objective(failure_code="service_reroute", failure_plane="treatment")
+
+    def test_the_observable_is_the_code_the_frozen_module_already_publishes(self) -> None:
+        import claude_score_bundle
+
+        self.assertEqual(
+            self.module.SERVICE_REROUTE_FAILURE_CODE,
+            claude_score_bundle.SERVICE_REROUTE_FAILURE_CODE,
+        )
+        self.assertEqual(
+            self.module.SERVICE_REROUTE_DISPOSITION_REASON,
+            claude_score_bundle.SERVICE_REROUTE_DISPOSITION_REASON,
+        )
+        self.assertIn(self.module.SERVICE_REROUTE_FAILURE_CODE, frozen_failure_codes())
+
+    def test_a_reroute_row_resolves_non_scorable_and_spends_no_allowance(self) -> None:
+        classified = self.module.classify_service_reroute(self.control, self.row)
+        self.assertTrue(classified["service_reroute"])
+        self.assertEqual(classified["response"], "non_scorable")
+        self.assertFalse(classified["escalation_allowance_spent"])
+        self.assertFalse(classified["ladder_position_changed"])
+        self.assertEqual(classified["failure_plane"], failure_plane_for("service_reroute"))
+        self.assertEqual(
+            classified["disposition_reason"], self.module.SERVICE_REROUTE_DISPOSITION_REASON
+        )
+
+    def test_a_reroute_makes_a_whole_orchestration_unit_non_scorable(self) -> None:
+        # terminal_state_severity carries no non-scorable member, so a rerouted
+        # member cannot be folded away.
+        classified = self.module.classify_service_reroute(self.control, self.row)
+        self.assertTrue(classified["unit_non_scorable"])
+        severity = control_of_kind(synthetic_registry(), "orchestration_changing")[
+            "orchestration_changing"
+        ]["terminal_state_severity"]
+        self.assertNotIn("non_scorable", severity)
+
+    def test_a_row_carrying_any_other_code_is_not_classified_as_a_reroute(self) -> None:
+        for code in ("none", "candidate_failed", "treatment_misdelivery"):
+            with self.subTest(failure_code=code):
+                row = objective(failure_code=code, failure_plane=failure_plane_for(code))
+                classified = self.module.classify_service_reroute(self.control, row)
+                self.assertFalse(classified["service_reroute"])
+                self.assertFalse(classified["unit_non_scorable"])
+
+    def test_a_reroute_row_leaves_the_ladder_position_untouched(self) -> None:
+        state = {"current_route_id": "route-alpha-high", "clean_streak": 1}
+        carried = self.module.advance_clean_streak(self.control, state, self.row)
+        self.assertEqual(carried["current_route_id"], "route-alpha-high")
+        self.assertFalse(carried["de_escalated"])
+
+
+ADDITIVE_DIMENSIONS = (
+    "input_tokens",
+    "cached_input_tokens",
+    "output_tokens",
+    "duration_ms",
+    "retries",
+    "compactions",
+)
+
+
+def unit_member(row_id: str, spawned_by: str | None = None, *,
+                terminal_state: str = "completed", acceptance: float | None = None,
+                cost: int = 10, **overrides: object) -> dict[str, object]:
+    member: dict[str, object] = {
+        "row_id": row_id,
+        "spawned_by": spawned_by,
+        "resource_vector": {
+            **{dimension: cost for dimension in ADDITIVE_DIMENSIONS},
+            "acceptance": acceptance,
+            "terminal_state": terminal_state,
+        },
+    }
+    member.update(overrides)
+    return member
+
+
+class AggregateFoldTests(unittest.TestCase):
+    """FR-016, FR-016a, FR-016b, FR-016c: what sums, what folds, what floors."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.control = control_of_kind(synthetic_registry(), "orchestration_changing")
+        self.severity = self.control["orchestration_changing"]["terminal_state_severity"]
+
+    def test_the_additive_dimensions_sum_across_the_parent_and_every_member(self) -> None:
+        parent = unit_member("parent", acceptance=0.9, cost=10)
+        children = [
+            unit_member("child-1", "parent", terminal_state="failed", cost=3),
+            unit_member("child-2", "parent", terminal_state="timed_out", cost=5),
+            unit_member("child-3", "parent", terminal_state="cancelled", cost=7),
+        ]
+        folded = self.module.aggregate_objective(parent, children, self.control)
+        for dimension in ADDITIVE_DIMENSIONS:
+            with self.subTest(dimension=dimension):
+                self.assertEqual(folded[dimension], 25)
+
+    def test_a_zero_child_run_folds_to_the_parent_s_own_values(self) -> None:
+        parent = unit_member("parent", acceptance=0.75, cost=11)
+        folded = self.module.aggregate_objective(parent, [], self.control)
+        for dimension in ADDITIVE_DIMENSIONS:
+            with self.subTest(dimension=dimension):
+                self.assertEqual(folded[dimension], 11)
+        self.assertEqual(folded["terminal_state"], "completed")
+        self.assertEqual(folded["acceptance"], 0.75)
+
+    def test_the_aggregate_state_is_completed_only_when_every_member_completed(self) -> None:
+        parent = unit_member("parent", acceptance=1.0)
+        self.assertEqual(
+            self.module.aggregate_objective(
+                parent, [unit_member("child-1", "parent")], self.control
+            )["terminal_state"],
+            "completed",
+        )
+        folded = self.module.aggregate_objective(
+            parent, [unit_member("child-1", "parent", terminal_state="failed")], self.control
+        )
+        self.assertEqual(folded["terminal_state"], "failed")
+
+    def test_the_fold_returns_the_most_severe_member_state(self) -> None:
+        cases = (
+            (["completed", "failed", "timed_out"], "timed_out"),
+            (["completed", "abandoned", "failed"], "abandoned"),
+            (["cancelled", "budget_exhausted"], "budget_exhausted"),
+            (["completed", "completed"], "completed"),
+        )
+        for states, expected in cases:
+            with self.subTest(states=states):
+                self.assertEqual(
+                    self.module.worst_terminal_state(states, self.severity), expected
+                )
+
+    def test_a_state_outside_the_declared_severity_order_fails_closed(self) -> None:
+        for states in ([], ["completed", "quiesced"], ["completed", None]):
+            with self.subTest(states=states):
+                with self.assertRaises(self.error):
+                    self.module.worst_terminal_state(states, self.severity)
+
+    def test_the_severity_array_is_validated_set_equal_rather_than_order_equal(self) -> None:
+        # FR-016a: a future reordering of the mirrored enum must not silently
+        # change a verdict, so membership is the check and order is a declaration.
+        self.assertEqual(sorted(self.severity), sorted(frozen_terminal_states()))
+        permuted = copy.deepcopy(self.control)
+        permuted["orchestration_changing"]["terminal_state_severity"] = list(
+            reversed(self.severity)
+        )
+        self.assertIsNone(self.module.validate_orchestration_control(permuted))
+
+    def test_a_severity_array_that_is_not_set_equal_to_the_frozen_enum_is_refused(self) -> None:
+        cases = {
+            "dropped": [state for state in self.severity if state != "abandoned"],
+            "added": list(self.severity) + ["quiesced"],
+            "substituted": [
+                "quiesced" if state == "abandoned" else state for state in self.severity
+            ],
+        }
+        for label, seeded in cases.items():
+            with self.subTest(severity=label):
+                control = copy.deepcopy(self.control)
+                control["orchestration_changing"]["terminal_state_severity"] = seeded
+                with self.assertRaises(self.error):
+                    self.module.validate_orchestration_control(control)
+
+    def test_the_aggregation_rule_is_total_over_all_eight_pareto_dimensions(self) -> None:
+        rule = self.control["orchestration_changing"]["aggregation_rule"]
+        self.assertEqual(sorted(rule), sorted(frozen_pareto_dimensions()))
+        for dimension in frozen_pareto_dimensions():
+            with self.subTest(omitted=dimension):
+                control = copy.deepcopy(self.control)
+                del control["orchestration_changing"]["aggregation_rule"][dimension]
+                with self.assertRaises(self.error):
+                    self.module.validate_orchestration_control(control)
+
+    def test_acceptance_is_the_parent_objective_oracle_result(self) -> None:
+        parent = unit_member("parent", acceptance=0.8)
+        folded = self.module.aggregate_objective(
+            parent, [unit_member("child-1", "parent", acceptance=0.1)], self.control
+        )
+        self.assertEqual(folded["acceptance"], 0.8)
+
+    def test_acceptance_floors_to_zero_whenever_the_unit_did_not_complete(self) -> None:
+        for state in [s for s in self.severity if s != "completed"]:
+            with self.subTest(child_terminal_state=state):
+                folded = self.module.aggregate_objective(
+                    unit_member("parent", acceptance=0.95),
+                    [unit_member("child-1", "parent", terminal_state=state)],
+                    self.control,
+                )
+                self.assertEqual(folded["terminal_state"], state)
+                self.assertEqual(folded["acceptance"], 0)
+
+    def test_a_failed_child_floors_acceptance_while_its_cost_still_sums(self) -> None:
+        folded = self.module.aggregate_objective(
+            unit_member("parent", acceptance=1.0, cost=10),
+            [unit_member("child-1", "parent", terminal_state="failed", cost=6)],
+            self.control,
+        )
+        self.assertEqual(folded["acceptance"], 0)
+        self.assertEqual(folded["input_tokens"], 16)
+
+    def test_acceptance_is_null_only_on_a_completed_unit_whose_oracle_did_not_run(self) -> None:
+        # FR-016c: the FR-016b floor outranks the null allowance wherever they meet.
+        completed = self.module.aggregate_objective(
+            unit_member("parent", acceptance=None), [unit_member("child-1", "parent")],
+            self.control,
+        )
+        self.assertIsNone(completed["acceptance"])
+        failed = self.module.aggregate_objective(
+            unit_member("parent", acceptance=None),
+            [unit_member("child-1", "parent", terminal_state="failed")], self.control,
+        )
+        self.assertEqual(failed["acceptance"], 0)
+
+    def test_a_child_missing_its_own_value_never_induces_a_null_aggregate(self) -> None:
+        folded = self.module.aggregate_objective(
+            unit_member("parent", acceptance=0.6),
+            [unit_member("child-1", "parent", acceptance=None)], self.control,
+        )
+        self.assertEqual(folded["acceptance"], 0.6)
+
+    def test_a_recorded_aggregate_disagreeing_with_the_fold_is_refused(self) -> None:
+        parent = unit_member("parent", acceptance=1.0)
+        parent["recorded_aggregate"] = {"terminal_state": "completed", "acceptance": 1.0}
+        with self.assertRaises(self.error):
+            self.module.aggregate_objective(
+                parent, [unit_member("child-1", "parent", terminal_state="failed")], self.control
+            )
+
+    def test_a_reroute_anywhere_in_the_unit_makes_the_whole_unit_non_scorable(self) -> None:
+        folded = self.module.aggregate_objective(
+            unit_member("parent", acceptance=1.0),
+            [unit_member("child-1", "parent", failure_code="service_reroute")],
+            self.control,
+        )
+        self.assertTrue(folded["non_scorable"])
+        self.assertNotIn("non_scorable", self.severity)
+
+    def test_no_committed_fixture_row_carries_a_null_aggregate_acceptance(self) -> None:
+        # FR-016c and SC-015. The scan is over whatever the fixture root carries,
+        # so it stays load-bearing as the replay fixtures land.
+        self.assertTrue(FIXTURE_ROOT.is_dir())
+        for path in sorted(FIXTURE_ROOT.glob("*.json")):
+            document = load_json(path)
+            for case in document.get("cases", []):
+                aggregate = case.get("expected_aggregate")
+                if aggregate is None:
+                    continue
+                with self.subTest(fixture=path.name, case=case.get("case_id")):
+                    self.assertIsNotNone(aggregate.get("acceptance"))
+
+
+def graph(root: str, parent: str | None, children: list[str]) -> dict[str, object]:
+    """The shared treatment-record contract's parent_child_graph shape."""
+    return {
+        "root_execution_trace_id": root,
+        "parent_execution_trace_id": parent,
+        "child_execution_trace_ids": children,
+    }
+
+
+class UnitMembershipTests(unittest.TestCase):
+    """FR-016d, FR-017, FR-017a, FR-018: who is in the unit, and how many may be."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.control = control_of_kind(synthetic_registry(), "orchestration_changing")
+        self.rows = [
+            unit_member("parent", None, cost=10),
+            unit_member("child-1", "parent", cost=4),
+            unit_member("grandchild-1", "child-1", cost=6),
+        ]
+
+    def test_a_nested_grandchild_is_inside_the_unit(self) -> None:
+        # FR-016d.1: a topology cannot shed cost by nesting a child one level
+        # deeper, so the closure is transitive rather than one generation.
+        members = self.module.unit_members(self.rows, self.control)
+        self.assertEqual(
+            [member["row_id"] for member in members], ["parent", "child-1", "grandchild-1"]
+        )
+
+    def test_a_nested_grandchild_contributes_to_the_additive_sum(self) -> None:
+        members = self.module.unit_members(self.rows, self.control)
+        folded = self.module.aggregate_objective(members[0], members[1:], self.control)
+        self.assertEqual(folded["input_tokens"], 20)
+
+    def test_the_fan_out_ceiling_is_read_against_every_non_parent_member(self) -> None:
+        # FR-016d.2: nesting does not buy fan-out headroom either.
+        self.assertEqual(self.control["orchestration_changing"]["topology_descriptor"]["fan_out"], 3)
+        self.assertEqual(len(self.module.unit_members(self.rows, self.control)), 3)
+        over = self.rows + [
+            unit_member("child-2", "parent"),
+            unit_member("grandchild-2", "child-1"),
+        ]
+        with self.assertRaises(self.error):
+            self.module.unit_members(over, self.control)
+
+    def test_a_zero_child_run_conforms_to_the_declared_ceiling(self) -> None:
+        # FR-017a: fan_out is a ceiling, never an exact count.
+        members = self.module.unit_members([unit_member("parent", None)], self.control)
+        self.assertEqual([member["row_id"] for member in members], ["parent"])
+
+    def test_a_member_recording_no_terminal_state_is_refused(self) -> None:
+        for seeded in (None, "absent"):
+            with self.subTest(terminal_state=seeded):
+                rows = copy.deepcopy(self.rows)
+                if seeded == "absent":
+                    del rows[1]["resource_vector"]["terminal_state"]
+                else:
+                    rows[1]["resource_vector"]["terminal_state"] = None
+                with self.assertRaises(self.error):
+                    self.module.unit_members(rows, self.control)
+
+    def test_a_row_carrying_no_authored_spawn_link_is_refused(self) -> None:
+        rows = copy.deepcopy(self.rows)
+        del rows[1]["spawned_by"]
+        with self.assertRaises(self.error):
+            self.module.unit_members(rows, self.control)
+
+    def test_more_than_one_parentless_row_leaves_the_boundary_undecidable(self) -> None:
+        rows = copy.deepcopy(self.rows) + [unit_member("orphan-parent", None)]
+        with self.assertRaises(self.error):
+            self.module.unit_members(rows, self.control)
+
+    def test_a_spawn_link_naming_no_row_in_the_set_is_refused(self) -> None:
+        rows = copy.deepcopy(self.rows)
+        rows[2]["spawned_by"] = "child-absent"
+        with self.assertRaises(self.error):
+            self.module.unit_members(rows, self.control)
+
+    def test_the_boundary_must_agree_with_a_bound_parent_child_graph(self) -> None:
+        rows = copy.deepcopy(self.rows)
+        rows[0]["parent_child_graph"] = graph("parent", None, ["child-1"])
+        rows[1]["parent_child_graph"] = graph("parent", "parent", ["grandchild-1"])
+        rows[2]["parent_child_graph"] = graph("parent", "child-1", [])
+        self.assertEqual(len(self.module.unit_members(rows, self.control)), 3)
+
+    def test_a_graph_disagreeing_with_the_authored_links_fails_the_row_closed(self) -> None:
+        cases = {
+            "child_set": graph("parent", None, ["child-1", "child-2"]),
+            "parent_link": graph("parent", "child-1", ["child-1"]),
+            "root": graph("child-1", None, ["child-1"]),
+        }
+        for label, seeded in cases.items():
+            with self.subTest(disagreement=label):
+                rows = copy.deepcopy(self.rows)
+                rows[0]["parent_child_graph"] = seeded
+                with self.assertRaises(self.error):
+                    self.module.unit_members(rows, self.control)
+
+    def test_a_member_binding_no_graph_leaves_the_authored_links_standing_alone(self) -> None:
+        # The obligation is conditional on the binding existing: a replay case
+        # need not bind a full execution trace.
+        rows = copy.deepcopy(self.rows)
+        rows[0]["parent_child_graph"] = graph("parent", None, ["child-1"])
+        self.assertEqual(len(self.module.unit_members(rows, self.control)), 3)
+
+    def test_evidence_is_attributed_at_policy_level_only(self) -> None:
+        # FR-018: never as evidence about any single agent's route.
+        self.assertEqual(self.control["attribution_level"], "policy")
+        control = copy.deepcopy(self.control)
+        control["attribution_level"] = "route"
+        with self.assertRaises(self.error):
+            self.module.unit_members(self.rows, control)
+
+    def test_the_topology_descriptor_declares_exactly_its_three_frozen_members(self) -> None:
+        descriptor = self.control["orchestration_changing"]["topology_descriptor"]
+        self.assertEqual(sorted(descriptor), ["child_shape", "fan_out", "topology_id"])
+        self.assertEqual(
+            sorted(descriptor["child_shape"]), ["dispatch_mechanism", "wall_time_window"]
+        )
+        self.assertEqual(
+            descriptor["child_shape"]["wall_time_window"], "full_elapsed_including_child_wait"
+        )
+        self.assertEqual(
+            self.control["orchestration_changing"]["topology_digest"],
+            record_digest(descriptor),
+        )
+
+    def test_a_topology_digest_that_does_not_recompute_is_refused(self) -> None:
+        control = copy.deepcopy(self.control)
+        control["orchestration_changing"]["topology_descriptor"]["fan_out"] = 4
+        with self.assertRaises(self.error):
+            self.module.validate_orchestration_control(control)
+
+
+TREATMENT_RECORD_SCHEMA_PATH = SHARED_CONTRACT_ROOT / "treatment-record.schema.json"
+ADDITIVE_RECORDS_SCHEMA_PATH = CONTRACT_ROOT / "car-003-additive-records.schema.json"
+
+
+def frozen_raw_token_members() -> list[str]:
+    return list(load_json(TREATMENT_RECORD_SCHEMA_PATH)["$defs"]["rawTokenVector"]["required"])
+
+
+def frozen_cache_ttl_classes() -> list[str]:
+    diagnostic = load_json(ADDITIVE_RECORDS_SCHEMA_PATH)["$defs"]["cacheDiagnosticRecord"]
+    return list(
+        diagnostic["properties"]["cache_write_tokens_by_ttl_class"]["propertyNames"]["enum"]
+    )
+
+
+def tokened_member(row_id: str, spawned_by: str | None = None, *,
+                   raw: tuple[int, int, int, int | None] = (100, 20, 30, 5),
+                   cache: tuple[int, int, int] | None = (7, 3, 40),
+                   **overrides: object) -> dict[str, object]:
+    member = unit_member(row_id, spawned_by, **overrides)
+    member["raw_token_vector"] = {
+        "input_tokens": raw[0],
+        "output_tokens": raw[1],
+        "cached_input_tokens": raw[2],
+        "reasoning_output_tokens": raw[3],
+    }
+    if cache is not None:
+        member["cache_diagnostic"] = {
+            "cache_write_tokens_by_ttl_class": {
+                "ephemeral_5m": cache[0],
+                "ephemeral_1h": cache[1],
+            },
+            "cache_read_tokens": cache[2],
+        }
+    return member
+
+
+class RawTokenAndCacheAggregationTests(unittest.TestCase):
+    """FR-016e: four raw members sum, two cache quantities sum, and none is promoted."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.control = control_of_kind(synthetic_registry(), "orchestration_changing")
+        self.members = [
+            tokened_member("parent", None),
+            tokened_member("child-1", "parent", raw=(200, 40, 60, 11), cache=(13, 5, 80)),
+        ]
+
+    def test_all_four_frozen_raw_token_members_sum_across_the_unit(self) -> None:
+        declared = self.control["orchestration_changing"]["raw_token_aggregation"]
+        self.assertEqual(sorted(declared), sorted(frozen_raw_token_members()))
+        folded = self.module.aggregate_raw_tokens_and_cache(self.members, self.control)
+        self.assertEqual(
+            folded["raw_tokens"],
+            {
+                "input_tokens": 300,
+                "output_tokens": 60,
+                "cached_input_tokens": 90,
+                "reasoning_output_tokens": 16,
+            },
+        )
+
+    def test_a_raw_token_aggregation_omitting_a_frozen_member_is_refused(self) -> None:
+        for member in frozen_raw_token_members():
+            with self.subTest(omitted=member):
+                control = copy.deepcopy(self.control)
+                del control["orchestration_changing"]["raw_token_aggregation"][member]
+                with self.assertRaises(self.error):
+                    self.module.validate_orchestration_control(control)
+
+    def test_reasoning_tokens_sum_but_are_not_a_pareto_dimension(self) -> None:
+        # FR-016e.2: admitting it would add a ninth dimension to a frozen
+        # eight-dimension policy.
+        folded = self.module.aggregate_raw_tokens_and_cache(self.members, self.control)
+        self.assertEqual(folded["raw_tokens"]["reasoning_output_tokens"], 16)
+        self.assertNotIn("reasoning_output_tokens", frozen_pareto_dimensions())
+        self.assertNotIn(
+            "reasoning_output_tokens",
+            self.control["orchestration_changing"]["aggregation_rule"],
+        )
+
+    def test_the_raw_token_ceiling_is_read_against_the_three_bounded_members_alone(self) -> None:
+        # FR-030a and SC-028: reasoning tokens are summed and reported under no
+        # ceiling, so they never move the quantity the ceiling is read against.
+        folded = self.module.aggregate_raw_tokens_and_cache(self.members, self.control)
+        self.assertEqual(
+            sorted(folded["raw_token_ceiling_members"]),
+            ["cached_input_tokens", "input_tokens", "output_tokens"],
+        )
+        self.assertEqual(folded["raw_token_ceiling_quantity"], 450)
+        louder = copy.deepcopy(self.members)
+        louder[0]["raw_token_vector"]["reasoning_output_tokens"] = 900000
+        self.assertEqual(
+            self.module.aggregate_raw_tokens_and_cache(louder, self.control)[
+                "raw_token_ceiling_quantity"
+            ],
+            450,
+        )
+        self.assertNotIn(
+            "reasoning_output_tokens", folded["raw_token_ceiling_members"]
+        )
+
+    def test_cache_write_sums_per_frozen_ttl_class_keyed_like_its_ceiling(self) -> None:
+        folded = self.module.aggregate_raw_tokens_and_cache(self.members, self.control)
+        self.assertEqual(
+            folded["cache_write_tokens_by_ttl_class"], {"ephemeral_5m": 20, "ephemeral_1h": 8}
+        )
+        bounds = synthetic_registry()["smoke_bounds"]["max_cache_write_tokens_by_ttl_class"]
+        self.assertEqual(
+            sorted(folded["cache_write_tokens_by_ttl_class"]), sorted(bounds)
+        )
+        self.assertEqual(sorted(bounds), sorted(frozen_cache_ttl_classes()))
+
+    def test_cache_read_sums_under_the_ceiling_that_bounds_it(self) -> None:
+        folded = self.module.aggregate_raw_tokens_and_cache(self.members, self.control)
+        self.assertEqual(folded["cache_read_tokens"], 120)
+        self.assertEqual(folded["bounded_by"]["cache_read_tokens"], "max_cache_read_tokens")
+        self.assertEqual(
+            folded["bounded_by"]["cache_write_tokens_by_ttl_class"],
+            "max_cache_write_tokens_by_ttl_class",
+        )
+
+    def test_neither_cache_quantity_is_promoted_by_being_aggregated(self) -> None:
+        # FR-016e.4: not a Pareto dimension, not in the identity, and never read
+        # against max_input_tokens.
+        folded = self.module.aggregate_raw_tokens_and_cache(self.members, self.control)
+        for quantity in ("cache_read_tokens", "cache_write_tokens_by_ttl_class"):
+            with self.subTest(quantity=quantity):
+                self.assertNotIn(quantity, frozen_pareto_dimensions())
+                self.assertNotIn(quantity, folded["raw_token_ceiling_members"])
+                self.assertNotEqual(folded["bounded_by"][quantity], "max_input_tokens")
+
+    def test_a_member_with_no_cache_diagnostic_records_the_bound_unobserved(self) -> None:
+        # FR-016e.5: never passed, never zero.
+        members = copy.deepcopy(self.members)
+        del members[1]["cache_diagnostic"]
+        folded = self.module.aggregate_raw_tokens_and_cache(members, self.control)
+        self.assertIsNone(folded["cache_read_tokens"])
+        self.assertIsNone(folded["cache_write_tokens_by_ttl_class"])
+        self.assertEqual(
+            sorted(folded["unobserved"]),
+            ["max_cache_read_tokens", "max_cache_write_tokens_by_ttl_class"],
+        )
+        self.assertEqual(
+            self.control["orchestration_changing"]["unrecorded_quantity_disposition"],
+            "unobserved",
+        )
+
+    def test_a_null_cache_quantity_is_unobserved_rather_than_zero(self) -> None:
+        members = copy.deepcopy(self.members)
+        members[1]["cache_diagnostic"]["cache_read_tokens"] = None
+        folded = self.module.aggregate_raw_tokens_and_cache(members, self.control)
+        self.assertIsNone(folded["cache_read_tokens"])
+        self.assertIn("max_cache_read_tokens", folded["unobserved"])
+        self.assertEqual(
+            folded["cache_write_tokens_by_ttl_class"], {"ephemeral_5m": 20, "ephemeral_1h": 8}
+        )
+
+    def test_a_null_reasoning_report_leaves_the_reasoning_sum_unobserved(self) -> None:
+        members = copy.deepcopy(self.members)
+        members[1]["raw_token_vector"]["reasoning_output_tokens"] = None
+        folded = self.module.aggregate_raw_tokens_and_cache(members, self.control)
+        self.assertIsNone(folded["raw_tokens"]["reasoning_output_tokens"])
+        self.assertEqual(folded["raw_token_ceiling_quantity"], 450)
+
+    def test_a_cache_aggregation_keyed_unlike_its_ceiling_is_refused(self) -> None:
+        control = copy.deepcopy(self.control)
+        aggregation = control["orchestration_changing"]["cache_aggregation"]
+        aggregation["cache_write_tokens_by_ttl_class"] = {"ephemeral_5m": "sum"}
+        with self.assertRaises(self.error):
+            self.module.validate_orchestration_control(control)
+
+    def test_a_disposition_other_than_unobserved_is_refused(self) -> None:
+        control = copy.deepcopy(self.control)
+        control["orchestration_changing"]["unrecorded_quantity_disposition"] = "zero"
+        with self.assertRaises(self.error):
+            self.module.validate_orchestration_control(control)
+
+
+# --------------------------------------------------------------------------- #
+# Deterministic replay of the committed fixture                                 #
+# (FR-026, FR-027, FR-028, SC-005, SC-010)                                      #
+# --------------------------------------------------------------------------- #
+
+REPLAY_FIXTURE_PATH = FIXTURE_ROOT / "control-replay.json"
+PARTITION_ENTRIES_PATH = FIXTURE_ROOT / "partition-registry-entries.json"
+
+# The partition types CAR-004 registers but may never draw evidence from: the
+# reserved comparison slice is `integrated_confirmation`, and `selection` is the
+# other qualification-bearing type the frozen consumption path refuses.
+WITHHELD_PARTITION_TYPES = ("selection", "integrated_confirmation")
+
+
+def replay_rows() -> list[dict[str, object]]:
+    """Every row of every committed replay case, flattened."""
+    fixture = load_json(REPLAY_FIXTURE_PATH)
+    return [row for case in fixture["cases"] for row in case["rows"]]
+
+
+def withheld_objective_ids() -> set[str]:
+    """Objective ids the committed entries reserve, read rather than transcribed."""
+    entries = load_json(PARTITION_ENTRIES_PATH)["entries"]
+    return {
+        objective
+        for entry in entries
+        if entry["partition_type"] in WITHHELD_PARTITION_TYPES
+        for objective in entry["objective_ids"]
+    }
+
+
+class ReplayDeterminismTests(unittest.TestCase):
+    """FR-028 and SC-005: the same committed bytes replay to the same result."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+
+    def test_two_replays_of_the_same_fixture_digest_identically(self) -> None:
+        # SC-005's byte-identical claim is tested rather than asserted: the
+        # replay output is digested twice under the frozen preimage rule.
+        first = self.module.replay(REPLAY_FIXTURE_PATH)
+        second = self.module.replay(REPLAY_FIXTURE_PATH)
+        self.assertTrue(first)
+        self.assertEqual(record_digest({"replay": first}), record_digest({"replay": second}))
+
+    def test_the_replay_covers_every_committed_case(self) -> None:
+        fixture = load_json(REPLAY_FIXTURE_PATH)
+        replayed = self.module.replay(REPLAY_FIXTURE_PATH)
+        self.assertEqual(
+            [outcome["case_id"] for outcome in replayed],
+            [case["case_id"] for case in fixture["cases"]],
+        )
+
+    def test_the_fixture_carries_no_run_time_value(self) -> None:
+        # FR-028: no timestamp generated at run time, no randomness, no absolute
+        # path, and no session identifier reaches the committed bytes.
+        text = REPLAY_FIXTURE_PATH.read_text(encoding="utf-8")
+        for forbidden in ("/Users/", "/home/", "session_"):
+            with self.subTest(forbidden=forbidden):
+                self.assertNotIn(forbidden, text)
+        self.assertIsNone(re.search(r"\d{4}-\d{2}-\d{2}T", text))
+
+    def test_every_replayed_row_is_recorded_non_scored(self) -> None:
+        rows = replay_rows()
+        self.assertTrue(rows)
+        for row in rows:
+            with self.subTest(row=row["row_id"]):
+                self.assertIs(row["scored"], False)
+
+    def test_no_replayed_row_is_outcome_bearing(self) -> None:
+        # FR-027 and SC-010: zero rows carry an outcome, so no replay evidence
+        # can be read as qualification-bearing.
+        self.assertEqual(
+            [row["row_id"] for row in replay_rows() if row["outcome_bearing"]], []
+        )
+
+    def test_no_replayed_row_references_a_withheld_objective(self) -> None:
+        withheld = withheld_objective_ids()
+        self.assertTrue(withheld, "the committed entries reserve no objective at all")
+        referenced = {row["objective_id"] for row in replay_rows()}
+        self.assertEqual(sorted(referenced & withheld), [])
+
+    def test_a_seeded_reserved_objective_reference_fails_the_replay_closed(self) -> None:
+        fixture = load_json(REPLAY_FIXTURE_PATH)
+        fixture["cases"][0]["rows"][0]["objective_id"] = sorted(withheld_objective_ids())[0]
+        with tempfile.TemporaryDirectory() as directory:
+            seeded = Path(directory) / "control-replay.json"
+            seeded.write_text(json.dumps(fixture), encoding="utf-8")
+            with self.assertRaises(self.error):
+                self.module.replay(seeded)
+
+    def test_a_seeded_scored_row_fails_the_replay_closed(self) -> None:
+        fixture = load_json(REPLAY_FIXTURE_PATH)
+        fixture["cases"][0]["rows"][0]["scored"] = True
+        with tempfile.TemporaryDirectory() as directory:
+            seeded = Path(directory) / "control-replay.json"
+            seeded.write_text(json.dumps(fixture), encoding="utf-8")
+            with self.assertRaises(self.error):
+                self.module.replay(seeded)
+
+
+# --------------------------------------------------------------------------- #
+# The committed registry instance (SC-012, SC-017, SC-018)                      #
+# --------------------------------------------------------------------------- #
+
+REGISTRY_INSTANCE_PATH = FIXTURE_ROOT / "policy-control-registry.json"
+
+
+class CommittedRegistryInstanceTests(unittest.TestCase):
+    """Every rule above, run against the bytes the repository actually ships."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = self.module.load_registry(REGISTRY_INSTANCE_PATH)
+
+    def test_the_committed_instance_loads_through_the_schema_and_the_semantics(self) -> None:
+        self.assertEqual(self.registry["schema_version"], "1.0.0")
+        self.assertEqual(self.registry["status"], "frozen")
+        self.assertEqual(len(self.registry["controls"]), len(CONTROL_KINDS))
+        self.assertEqual(
+            sorted(control["control_kind"] for control in self.registry["controls"]),
+            sorted(CONTROL_KINDS),
+        )
+
+    def test_every_recorded_address_recomputes_over_the_committed_bytes(self) -> None:
+        self.assertEqual(
+            self.registry["registry_digest"],
+            record_digest(self.registry, digest_field="registry_digest"),
+        )
+        for control in self.registry["controls"]:
+            with self.subTest(control=control["control_id"]):
+                self.assertEqual(
+                    control["control_digest"],
+                    record_digest(control, digest_field="control_digest"),
+                )
+        orchestration = control_of_kind(self.registry, "orchestration_changing")[
+            "orchestration_changing"
+        ]
+        self.assertEqual(
+            orchestration["topology_digest"],
+            record_digest(orchestration["topology_descriptor"]),
+        )
+
+    def test_every_recorded_binding_matches_the_bound_document_s_committed_bytes(self) -> None:
+        self.module.verify_car_003_bindings(self.registry)
+        pin = control_of_kind(self.registry, "unpinned")["unpinned"]["pinned_parent_binding"]
+        self.assertEqual(
+            pin["digest"], file_bytes_digest(CONTRACT_ROOT / "experiment-assignment.schema.json")
+        )
+
+    def test_the_committed_smoke_bounds_carry_the_frozen_values_and_their_units(self) -> None:
+        self.assertEqual(self.registry["smoke_bounds"], synthetic_smoke_bounds())
+
+    def test_the_committed_adaptive_control_binds_the_committed_replay_freeze(self) -> None:
+        freeze = load_json(REPLAY_FIXTURE_PATH)["bound_freeze"]
+        self.assertEqual(
+            freeze["freeze_digest"], record_digest(freeze, digest_field="freeze_digest")
+        )
+        control = control_of_kind(self.registry, "adaptive")
+        self.assertEqual(control["adaptive"]["candidate_freeze_id"], freeze["candidate_freeze_id"])
+        self.module.validate_escalation_ladder(control, freeze)
+
+    def test_the_comparison_binding_pins_the_committed_reserved_membership_digest(self) -> None:
+        entries = load_json(PARTITION_ENTRIES_PATH)["entries"]
+        reserved = next(entry for entry in entries if entry["qualification_eligible"])
+        comparison = load_json(FIXTURE_ROOT / "control-comparison.json")
+        self.assertEqual(
+            comparison["reserved_partition_binding"],
+            {"id": reserved["partition_id"], "digest": reserved["objective_set_digest"]},
+        )
+
+    def test_a_seeded_byte_change_in_the_committed_instance_fails_closed(self) -> None:
+        tampered = load_json(REGISTRY_INSTANCE_PATH)
+        tampered["registry_id"] = "car-004-policy-control-registry-tampered"
+        with tempfile.TemporaryDirectory() as directory:
+            seeded = Path(directory) / "policy-control-registry.json"
+            seeded.write_text(json.dumps(tampered), encoding="utf-8")
+            with self.assertRaises(self.error):
+                self.module.load_registry(seeded)
+
+
+# --------------------------------------------------------------------------- #
+# Reserved-partition registration and guard                                     #
+# (FR-025a, FR-025b, FR-025c, FR-025d, FR-026, SC-007, SC-020)                  #
+# --------------------------------------------------------------------------- #
+
+OWNING_SPEC = "CAR-004"
+
+
+def partition_entries() -> list[dict[str, object]]:
+    return load_json(PARTITION_ENTRIES_PATH)["entries"]
+
+
+def entry_of_eligibility(eligible: bool) -> dict[str, object]:
+    """The committed entry on one side of the qualification-eligibility split.
+
+    Selected by the flag the frozen admission path reads rather than by a
+    transcribed partition id, so re-freezing the reservation moves these cases
+    with it (FR-025a).
+    """
+    matches = [entry for entry in partition_entries() if entry["qualification_eligible"] is eligible]
+    if len(matches) != 1:
+        raise AssertionError(
+            f"the committed entries record {len(matches)} partitions with "
+            f"qualification_eligible={eligible}; exactly one is expected"
+        )
+    return matches[0]
+
+
+def smoke_row(**overrides: object) -> dict[str, object]:
+    """One row shaped like the bounded smoke record's, never committed (FR-033)."""
+    row = {
+        "row_id": "smoke-row-01",
+        "objective_id": entry_of_eligibility(False)["objective_ids"][0],
+        "partition_id": entry_of_eligibility(False)["partition_id"],
+        "scored": False,
+    }
+    row.update(overrides)
+    return row
+
+
+class ReservedPartitionRegistrationTests(unittest.TestCase):
+    """SC-020: disjointness is proven through the frozen path, not asserted."""
+
+    def setUp(self) -> None:
+        self.entries = partition_entries()
+        self.reserved = entry_of_eligibility(True)
+        self.smoke = entry_of_eligibility(False)
+
+    def test_both_entries_record_the_freezing_spec_as_their_owner(self) -> None:
+        # FR-025d: provenance is the spec that freezes them, never the successor
+        # that later benefits from the reservation.
+        for entry in self.entries:
+            with self.subTest(partition=entry["partition_id"]):
+                self.assertEqual(entry["owning_spec"], OWNING_SPEC)
+
+    def test_both_entries_take_a_member_of_the_frozen_partition_type_set(self) -> None:
+        # FR-025a: no new type is coined, and the smoke partition is the
+        # calibration one the frozen consumption path admits.
+        self.assertEqual(self.reserved["partition_type"], "integrated_confirmation")
+        self.assertEqual(self.smoke["partition_type"], "calibration")
+        self.assertIs(self.smoke["qualification_eligible"], False)
+
+    def test_the_committed_entries_register_clean_through_the_frozen_path(self) -> None:
+        # FR-025b: registered together, so disjointness is enforced mechanically
+        # against each other rather than declared in prose.
+        verdict = register_partitions(self.entries)
+        self.assertTrue(verdict.ok, verdict.findings)
+        self.assertEqual(verdict.failure_plane, "none")
+        self.assertEqual(verdict.failure_code, "none")
+
+    def test_a_seeded_duplicate_partition_identifier_fails_registration_closed(self) -> None:
+        duplicate = copy.deepcopy(self.smoke)
+        verdict = register_partitions([*self.entries, duplicate])
+        self.assertFalse(verdict.ok)
+        self.assertEqual(verdict.failure_plane, PARTITION_PLANE)
+        self.assertEqual(verdict.failure_code, PARTITION_MISMATCH)
+
+    def test_a_seeded_shared_objective_fails_registration_closed(self) -> None:
+        # Built through the frozen builder so its membership digest still matches
+        # its preimage: the refusal proves the objective collision, not a stale
+        # digest on a hand-edited record.
+        intruder = build_partition_registry_entry(
+            partition_id="CAR-004-SEEDED-OVERLAP",
+            partition_type="calibration",
+            qualification_eligible=False,
+            objective_ids=[self.reserved["objective_ids"][0]],
+            frozen_at=FROZEN_AT,
+            owning_spec=OWNING_SPEC,
+        )
+        verdict = register_partitions([*self.entries, intruder])
+        self.assertFalse(verdict.ok)
+        self.assertEqual(verdict.failure_plane, PARTITION_PLANE)
+        self.assertEqual(verdict.failure_code, CROSS_PARTITION_REUSE)
+
+    def test_the_frozen_builder_refuses_calibration_paired_with_eligibility(self) -> None:
+        # FR-027: the smoke partition is structurally incapable of carrying
+        # qualification-bearing rows, not merely instructed not to.
+        with self.assertRaises(ExperimentPolicyError):
+            build_partition_registry_entry(
+                partition_id=self.smoke["partition_id"],
+                partition_type="calibration",
+                qualification_eligible=True,
+                objective_ids=self.smoke["objective_ids"],
+                frozen_at=FROZEN_AT,
+                owning_spec=OWNING_SPEC,
+            )
+
+
+class ReservedPartitionGuardTests(unittest.TestCase):
+    """FR-026 and SC-007: one entry point covers replay rows and smoke rows."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.guard = self.module.assert_reserved_partition_untouched
+        self.reserved = entry_of_eligibility(True)
+        self.reserved_objective = self.reserved["objective_ids"][0]
+
+    def test_the_guard_passes_on_the_delivered_replay_evidence(self) -> None:
+        rows = replay_rows()
+        self.assertTrue(rows)
+        self.assertIsNone(self.guard(rows, self.reserved))
+
+    def test_the_guard_passes_on_a_clean_smoke_row_set(self) -> None:
+        self.assertIsNone(self.guard([smoke_row()], self.reserved))
+
+    def test_a_seeded_replay_row_fails_the_guard(self) -> None:
+        rows = copy.deepcopy(replay_rows())
+        rows[0]["objective_id"] = self.reserved_objective
+        with self.assertRaises(self.error):
+            self.guard(rows, self.reserved)
+
+    def test_a_seeded_smoke_row_fails_the_guard(self) -> None:
+        with self.assertRaises(self.error):
+            self.guard([smoke_row(objective_id=self.reserved_objective)], self.reserved)
+
+    def test_a_seeded_smoke_row_fails_the_guard_on_its_objective_array(self) -> None:
+        # The smoke record carries its consumed objectives as an array, so the one
+        # entry point reads both members rather than only the single-id shape.
+        row = smoke_row(objective_ids=[self.reserved_objective])
+        del row["objective_id"]
+        with self.assertRaises(self.error):
+            self.guard([row], self.reserved)
+
+    def test_a_smoke_row_naming_the_reserved_partition_fails_the_guard(self) -> None:
+        with self.assertRaises(self.error):
+            self.guard([smoke_row(partition_id=self.reserved["partition_id"])], self.reserved)
+
+    def test_a_reservation_declaring_no_objective_fails_the_guard_closed(self) -> None:
+        # An empty reservation would let the guard pass on every row, certifying
+        # non-consumption against nothing.
+        with self.assertRaises(self.error):
+            self.guard([smoke_row()], dict(self.reserved, objective_ids=[]))
+
+    def test_a_row_the_guard_cannot_read_fails_closed(self) -> None:
+        with self.assertRaises(self.error):
+            self.guard([self.reserved_objective], self.reserved)
+
+    def test_the_reserved_entry_is_read_from_the_committed_registration(self) -> None:
+        # The replay half runs in the committed suite, so it resolves the
+        # reservation itself rather than taking it from a caller (FR-026a.1).
+        self.assertEqual(self.module.reserved_partition_entry(), self.reserved)
+
+
+# --------------------------------------------------------------------------- #
+# Bounded smoke record: bounds, counting scope, and the constraining mode        #
+# (FR-027, FR-030, FR-030b, FR-030c, SC-009, SC-029, SC-030)                     #
+# --------------------------------------------------------------------------- #
+
+# The smoke partition's five objectives are committed; a sixth id is synthetic and
+# exists only to push the attempt count past its frozen ceiling.
+SIXTH_OBJECTIVE = "CAR-004-SMOKE-OBJ-06"
+
+
+def smoke_unit_row(
+    row_id: str,
+    spawned_by: str | None = None,
+    *,
+    wall_time_ms: int | None = 60000,
+    duration_ms: int = 60000,
+    raw: tuple[int, int, int, int | None] = (1000, 200, 300, 50),
+    cache: tuple[int, int, int] | None = (70, 30, 400),
+) -> dict[str, object]:
+    """One member of a smoke run's parent-plus-children unit.
+
+    ``wall_time_ms`` is the frozen trace's own nullable member, read for the
+    FR-031a.5 parallel inequality; ``duration_ms`` is the additive Pareto
+    dimension, deliberately a different quantity from the elapsed wall clock the
+    30-minute cap is read against (FR-030b.3).
+    """
+    row: dict[str, object] = {
+        "row_id": row_id,
+        "spawned_by": spawned_by,
+        "wall_time_ms": wall_time_ms,
+        "duration_ms": duration_ms,
+        "raw_token_vector": {
+            "input_tokens": raw[0],
+            "output_tokens": raw[1],
+            "cached_input_tokens": raw[2],
+            "reasoning_output_tokens": raw[3],
+        },
+    }
+    if cache is not None:
+        row["cache_diagnostic"] = {
+            "cache_write_tokens_by_ttl_class": {
+                "ephemeral_5m": cache[0],
+                "ephemeral_1h": cache[1],
+            },
+            "cache_read_tokens": cache[2],
+        }
+    return row
+
+
+def smoke_attempt(
+    objective_id: str, rows: list[dict[str, object]] | None = None
+) -> dict[str, object]:
+    """One objective attempt and the unit it dispatched."""
+    return {
+        "objective_id": objective_id,
+        "unit_rows": rows if rows is not None else [smoke_unit_row(f"{objective_id}-parent")],
+    }
+
+
+def route_observation(model: str, effort: str, route_id: str) -> dict[str, object]:
+    """The three frozen configured-route-proof members FR-031a.3 and .4 read back."""
+    return {"model": model, "effort": effort, "candidate_route_id": route_id}
+
+
+def demonstration_evidence(kind: str, **overrides: object) -> dict[str, object]:
+    """Evidence shaped as the run produced it, never as the dispatch asked for it."""
+    if kind == "adaptive":
+        evidence: dict[str, object] = {
+            "read_back_from": "configured_route_proof",
+            "pre_escalation": route_observation("model-alpha", "low", LADDER_ROUTES[0]),
+            "post_escalation": route_observation("model-alpha", "high", LADDER_ROUTES[1]),
+        }
+    elif kind == "unpinned":
+        evidence = {
+            "read_back_from": "configured_route_proof",
+            "served_route": route_observation("model-alpha", "high", LADDER_ROUTES[1]),
+        }
+    else:
+        evidence = {"read_back_from": "execution_trace"}
+    evidence.update(overrides)
+    return evidence
+
+
+def smoke_record(control: dict[str, object], **overrides: object) -> dict[str, object]:
+    """A produced smoke record, never committed (FR-033)."""
+    partition = entry_of_eligibility(False)
+    objective = partition["objective_ids"][0]
+    kind = str(control["control_kind"])
+    record: dict[str, object] = {
+        "record_kind": "policy_control_smoke",
+        "schema_version": "1.0.0",
+        "smoke_id": f"car-004-smoke-{kind}",
+        "arm_id": control["control_id"],
+        "control_id": control["control_id"],
+        "control_digest": control["control_digest"],
+        "authentication_mode": "subscription",
+        "scored": False,
+        "partition_id": partition["partition_id"],
+        "objective_ids": [objective],
+        "confirmation_entries": 0,
+        "elapsed_wall_clock_seconds": 600,
+        "claude_code_subagent_model_unset": True,
+        "objective_attempts": [smoke_attempt(objective)],
+        "observed_cache_isolation": [],
+        "demonstration_state": "demonstrated",
+        "demonstration_evidence": demonstration_evidence(kind),
+    }
+    record.update(overrides)
+    return record
+
+
+def smoke_attempts(count: int) -> list[dict[str, object]]:
+    objectives = list(entry_of_eligibility(False)["objective_ids"]) + [SIXTH_OBJECTIVE]
+    return [smoke_attempt(objective) for objective in objectives[:count]]
+
+
+class SmokeRecordBoundTests(unittest.TestCase):
+    """FR-030 and FR-030b: four bounds, one unit, one elapsed reading."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = synthetic_registry()
+        self.control = control_of_kind(self.registry, "unpinned")
+
+    def validate(self, **overrides: object) -> dict[str, object]:
+        return self.module.validate_smoke_record(
+            smoke_record(self.control, **overrides), self.registry
+        )
+
+    def test_a_conforming_record_is_admitted_as_evidence(self) -> None:
+        reading = self.validate()
+        self.assertEqual(reading["evidence_admissibility"], "admitted")
+        self.assertEqual(reading["refusal_reasons"], [])
+
+    def test_all_four_frozen_bounds_are_read_over_the_parent_plus_children_unit(self) -> None:
+        # FR-030b.1: an unscoped bound is not a bound, so the reading names the
+        # scope it counted over and reports every frozen bound it read.
+        reading = self.validate()
+        self.assertEqual(reading["counted_over"], "parent_plus_children_unit")
+        for member in ("max_attempts", "max_candidates", "raw_token_ceiling",
+                       "max_duration_seconds"):
+            with self.subTest(bound=member):
+                self.assertIn(member, reading["consumed"])
+
+    def test_a_consumed_budget_exceeding_a_frozen_bound_is_refused(self) -> None:
+        objectives = [attempt["objective_id"] for attempt in smoke_attempts(6)]
+        with self.assertRaises(self.error):
+            self.validate(objective_attempts=smoke_attempts(6), objective_ids=objectives)
+
+    def test_a_second_repetition_of_one_objective_breaches_the_candidate_bound(self) -> None:
+        objective = entry_of_eligibility(False)["objective_ids"][0]
+        with self.assertRaises(self.error):
+            self.validate(objective_attempts=[smoke_attempt(objective), smoke_attempt(objective)])
+
+    def test_a_child_dispatch_consumes_no_objective_attempt(self) -> None:
+        # FR-030b.4: five objectives with three children each stays inside the
+        # five-attempt ceiling; counting children would silently reduce it.
+        attempts = smoke_attempts(5)
+        for attempt in attempts:
+            parent = str(attempt["objective_id"]) + "-parent"
+            attempt["unit_rows"] = [smoke_unit_row(parent)] + [
+                smoke_unit_row(f"{parent}-child-{index}", parent) for index in range(3)
+            ]
+        reading = self.validate(
+            objective_attempts=attempts,
+            objective_ids=[attempt["objective_id"] for attempt in attempts],
+        )
+        self.assertEqual(reading["consumed"]["max_attempts"], 5)
+        self.assertEqual(reading["child_dispatch_count"], 15)
+
+    def test_a_child_s_tokens_are_charged_to_the_unit(self) -> None:
+        # FR-030b.1 and FR-030b.2: a run cannot stay inside a ceiling by
+        # distributing spend across children.
+        parent = smoke_unit_row("parent", raw=(400000, 100, 100, None))
+        child = smoke_unit_row("child", "parent", raw=(500000, 100, 100, None))
+        objective = entry_of_eligibility(False)["objective_ids"][0]
+        with self.assertRaises(self.error):
+            self.validate(objective_attempts=[smoke_attempt(objective, [parent, child])])
+
+    def test_the_thirty_minute_cap_is_read_as_elapsed_rather_than_additive(self) -> None:
+        # FR-030b.3: a parallel unit legitimately records an additive duration
+        # larger than its elapsed time, and both are recorded.
+        objective = entry_of_eligibility(False)["objective_ids"][0]
+        parent = smoke_unit_row("parent", duration_ms=1_200_000)
+        child = smoke_unit_row("child", "parent", duration_ms=1_200_000)
+        reading = self.validate(
+            objective_attempts=[smoke_attempt(objective, [parent, child])],
+            elapsed_wall_clock_seconds=1200,
+        )
+        self.assertEqual(reading["evidence_admissibility"], "admitted")
+        self.assertGreater(reading["additive_duration_ms"], 1800 * 1000)
+        self.assertEqual(reading["consumed"]["max_duration_seconds"], 1200)
+
+    def test_an_elapsed_wall_clock_past_the_cap_is_refused(self) -> None:
+        with self.assertRaises(self.error):
+            self.validate(elapsed_wall_clock_seconds=1801)
+
+    def test_a_member_with_no_cache_diagnostic_records_its_bound_unobserved(self) -> None:
+        # FR-016e.5 and FR-030b.2: never passed, never read as zero.
+        objective = entry_of_eligibility(False)["objective_ids"][0]
+        rows = [smoke_unit_row("parent"), smoke_unit_row("child", "parent", cache=None)]
+        reading = self.validate(objective_attempts=[smoke_attempt(objective, rows)])
+        self.assertEqual(
+            sorted(reading["bounds_unobserved"]),
+            ["max_cache_read_tokens", "max_cache_write_tokens_by_ttl_class"],
+        )
+
+
+class SmokeRecordEvidenceTests(unittest.TestCase):
+    """FR-027 and FR-030c: what makes a produced record inadmissible."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = synthetic_registry()
+        self.control = control_of_kind(self.registry, "adaptive")
+        self.reserved = entry_of_eligibility(True)
+
+    def validate(self, **overrides: object) -> dict[str, object]:
+        return self.module.validate_smoke_record(
+            smoke_record(self.control, **overrides), self.registry
+        )
+
+    def test_an_observed_api_key_refuses_the_record_as_evidence(self) -> None:
+        # FR-030c.3: refused as evidence rather than raised on, because the
+        # observation itself is required to survive.
+        reading = self.validate(authentication_mode="api_key")
+        self.assertEqual(reading["evidence_admissibility"], "refused")
+        self.assertIn(self.module.API_KEY_REFUSAL_REASON, reading["refusal_reasons"])
+
+    def test_the_refused_record_keeps_its_observed_mode_beside_the_refusal(self) -> None:
+        # An absent row and a refused row must never be indistinguishable.
+        reading = self.validate(authentication_mode="api_key")
+        self.assertEqual(reading["authentication_mode"], "api_key")
+        self.assertIn("max_attempts", reading["consumed"])
+
+    def test_the_mode_is_read_from_the_claude_side_frozen_member(self) -> None:
+        # FR-030c.1: the shared runtime member of the same name enumerates
+        # chatgpt_subscription, and recording against it would make the mode
+        # incomparable with every CAR-003 record on this platform.
+        shared = load_json(SHARED_ENVIRONMENT_CONTRACT_PATH)
+        shared_modes = set(self.module.shared_environment_authentication_modes(shared))
+        claude_modes = set(self.module.admissible_authentication_modes())
+        self.assertNotEqual(shared_modes, claude_modes)
+        self.assertEqual(claude_modes, {"subscription", "api_key"})
+        with self.assertRaises(self.error):
+            self.validate(authentication_mode="chatgpt_subscription")
+
+    def test_a_scored_row_is_refused(self) -> None:
+        for scored in (True, "false", None):
+            with self.subTest(scored=scored):
+                with self.assertRaises(self.error):
+                    self.validate(scored=scored)
+
+    def test_a_reserved_objective_reference_is_refused(self) -> None:
+        objective = self.reserved["objective_ids"][0]
+        with self.assertRaises(self.error):
+            self.validate(objective_ids=[objective], objective_attempts=[smoke_attempt(objective)])
+
+    def test_a_reserved_partition_reference_is_refused(self) -> None:
+        with self.assertRaises(self.error):
+            self.validate(partition_id=self.reserved["partition_id"])
+
+    def test_a_record_naming_no_registry_control_is_refused(self) -> None:
+        with self.assertRaises(self.error):
+            self.validate(control_digest="sha256:" + "e" * 64)
+
+    def test_the_recorded_objectives_must_agree_with_the_attempts(self) -> None:
+        with self.assertRaises(self.error):
+            self.validate(objective_ids=[SIXTH_OBJECTIVE])
+
+
+# --------------------------------------------------------------------------- #
+# Demonstration state and pairwise cache isolation                              #
+# (FR-031, FR-031a, FR-032, FR-032a, SC-026, SC-027, SC-031)                    #
+# --------------------------------------------------------------------------- #
+
+CACHE_DIAGNOSTIC_SCHEMA_PATH = CONTRACT_ROOT / "car-003-additive-records.schema.json"
+
+
+def frozen_isolation_statuses() -> list[str]:
+    """The closed status set, read from the frozen cache diagnostic (FR-032a.1)."""
+    diagnostic = load_json(CACHE_DIAGNOSTIC_SCHEMA_PATH)["$defs"]["cacheDiagnosticRecord"]
+    return list(
+        diagnostic["properties"]["observed_cache_isolation"]["properties"]["status"]["enum"]
+    )
+
+
+def isolation_pair(
+    paired_arm_id: str, status: str = "observed_disjoint", **overrides: object
+) -> dict[str, object]:
+    """One unordered arm pair, in the frozen single-pair shape (FR-032a.4)."""
+    disjoint = {"observed_disjoint": True, "observed_shared": False}.get(status)
+    pair: dict[str, object] = {
+        "paired_arm_id": paired_arm_id,
+        "status": status,
+        "arm_cache_root_digest": "sha256:" + "1" * 64,
+        "paired_arm_cache_root_digest": "sha256:" + "2" * 64,
+        "roots_disjoint": disjoint,
+    }
+    pair.update(overrides)
+    return pair
+
+
+def isolation_series(registry: dict[str, object], **statuses: str) -> list[dict[str, object]]:
+    """The three smokes as one ordered series of three arms."""
+    arms = [str(control["control_id"]) for control in registry["controls"]]
+    series = []
+    for arm in arms:
+        pairs = [
+            isolation_pair(other, statuses.get(f"{arm}|{other}", "observed_disjoint"))
+            for other in arms
+            if other != arm
+        ]
+        series.append({"arm_id": arm, "observed_cache_isolation": pairs})
+    return series
+
+
+def parallel_unit(*, parent_wall_time_ms: int | None = 50000,
+                  child_wall_times: tuple[int | None, ...] = (40000, 40000)) -> list[dict]:
+    rows = [smoke_unit_row("parent", wall_time_ms=parent_wall_time_ms)]
+    rows.extend(
+        smoke_unit_row(f"child-{index}", "parent", wall_time_ms=wall_time)
+        for index, wall_time in enumerate(child_wall_times)
+    )
+    return rows
+
+
+class DemonstrationStateTests(unittest.TestCase):
+    """FR-031a: 'real' is decidable from evidence, or it is not demonstrated."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = synthetic_registry()
+
+    def record_for(self, kind: str, **overrides: object) -> dict[str, object]:
+        control = control_of_kind(self.registry, kind)
+        if kind == "orchestration_changing":
+            objective = entry_of_eligibility(False)["objective_ids"][0]
+            overrides.setdefault(
+                "objective_attempts", [smoke_attempt(objective, parallel_unit())]
+            )
+        return smoke_record(control, **overrides)
+
+    def evaluate(self, kind: str, **overrides: object) -> dict[str, object]:
+        return self.module.evaluate_demonstration(self.record_for(kind, **overrides), self.registry)
+
+    def test_every_smoke_records_the_frozen_subagent_model_observation(self) -> None:
+        # FR-031a.6: all three carry one record shape, so the observation is a
+        # required member of every smoke record rather than an adaptive extra.
+        for kind in ("unpinned", "adaptive", "orchestration_changing"):
+            with self.subTest(control_kind=kind):
+                record = self.record_for(kind)
+                del record["claude_code_subagent_model_unset"]
+                with self.assertRaises(self.error):
+                    self.module.validate_smoke_record(record, self.registry)
+
+    def test_the_three_demonstrations_read_back_from_run_evidence(self) -> None:
+        for kind in ("unpinned", "adaptive", "orchestration_changing"):
+            with self.subTest(control_kind=kind):
+                self.assertEqual(self.evaluate(kind)["demonstration_state"], "demonstrated")
+
+    def test_an_observable_read_from_the_dispatch_request_is_not_a_demonstration(self) -> None:
+        # FR-031a.1: a demonstration evidenced only by the request is refused.
+        for kind in ("unpinned", "adaptive", "orchestration_changing"):
+            with self.subTest(control_kind=kind):
+                evidence = demonstration_evidence(
+                    kind if kind != "orchestration_changing" else "orchestration",
+                    read_back_from="dispatch_request",
+                )
+                observed = self.evaluate(kind, demonstration_evidence=evidence)
+                self.assertEqual(observed["demonstration_state"], "not_demonstrated")
+
+    def test_the_adaptive_smoke_moves_from_ladder_index_i_to_i_plus_one(self) -> None:
+        # FR-031a.3: the route identifiers must be consecutive ladder entries.
+        evidence = demonstration_evidence(
+            "adaptive",
+            post_escalation=route_observation("model-beta", "medium", LADDER_ROUTES[2]),
+        )
+        observed = self.module.evaluate_demonstration(
+            self.record_for("adaptive", demonstration_evidence=evidence), self.registry
+        )
+        self.assertEqual(observed["demonstration_state"], "not_demonstrated")
+
+    def test_matching_route_identifiers_alone_do_not_demonstrate_an_escalation(self) -> None:
+        # FR-031a.3: the served model and effort must move with the route id.
+        evidence = demonstration_evidence(
+            "adaptive",
+            post_escalation=route_observation("model-alpha", "low", LADDER_ROUTES[1]),
+        )
+        observed = self.module.evaluate_demonstration(
+            self.record_for("adaptive", demonstration_evidence=evidence), self.registry
+        )
+        self.assertEqual(observed["demonstration_state"], "not_demonstrated")
+
+    def test_the_unpinned_smoke_serves_the_pinned_parent_model_and_effort(self) -> None:
+        # FR-031a.4: what the platform resolved, not what the arm requested.
+        pin = control_of_kind(self.registry, "unpinned")["unpinned"]
+        observed = self.evaluate("unpinned")
+        self.assertEqual(observed["served"]["model"], pin["pinned_parent_model"])
+        self.assertEqual(observed["served"]["effort"], pin["pinned_parent_effort"])
+
+    def test_an_unpinned_smoke_serving_another_pin_is_not_demonstrated(self) -> None:
+        evidence = demonstration_evidence(
+            "unpinned", served_route=route_observation("model-beta", "low", LADDER_ROUTES[2])
+        )
+        observed = self.evaluate("unpinned", demonstration_evidence=evidence)
+        self.assertEqual(observed["demonstration_state"], "not_demonstrated")
+
+    def test_the_parallel_inequality_needs_two_non_parent_members(self) -> None:
+        # FR-031a.5: at least two members besides the parent.
+        objective = entry_of_eligibility(False)["objective_ids"][0]
+        rows = parallel_unit(child_wall_times=(40000,))
+        observed = self.evaluate(
+            "orchestration_changing", objective_attempts=[smoke_attempt(objective, rows)]
+        )
+        self.assertEqual(observed["demonstration_state"], "not_demonstrated")
+
+    def test_a_parent_wall_time_at_or_above_the_sum_is_not_demonstrated(self) -> None:
+        objective = entry_of_eligibility(False)["objective_ids"][0]
+        rows = parallel_unit(parent_wall_time_ms=80000)
+        observed = self.evaluate(
+            "orchestration_changing", objective_attempts=[smoke_attempt(objective, rows)]
+        )
+        self.assertEqual(observed["demonstration_state"], "not_demonstrated")
+
+    def test_a_null_wall_time_anywhere_records_the_demonstration_as_not_made(self) -> None:
+        # FR-031a.5: never satisfied by the members that did report, and never
+        # with a missing value read as zero, which would invert the check.
+        objective = entry_of_eligibility(False)["objective_ids"][0]
+        for rows in (
+            parallel_unit(parent_wall_time_ms=None),
+            parallel_unit(child_wall_times=(40000, None)),
+        ):
+            with self.subTest(rows=[row["wall_time_ms"] for row in rows]):
+                observed = self.evaluate(
+                    "orchestration_changing",
+                    objective_attempts=[smoke_attempt(objective, rows)],
+                )
+                self.assertEqual(observed["demonstration_state"], "not_demonstrated")
+
+    def test_an_unset_subagent_override_gates_the_adaptive_and_unpinned_smokes(self) -> None:
+        # FR-031a.6: the served model would otherwise be decided by the override
+        # rather than by the declared parameter or the parent session.
+        for kind in ("unpinned", "adaptive"):
+            with self.subTest(control_kind=kind):
+                observed = self.evaluate(kind, claude_code_subagent_model_unset=False)
+                self.assertEqual(observed["demonstration_state"], "not_demonstrated")
+
+    def test_the_override_observation_does_not_gate_the_orchestration_smoke(self) -> None:
+        # It gates rules 3 and 4 specifically; the parallel observable does not
+        # turn on which model was served.
+        observed = self.evaluate(
+            "orchestration_changing", claude_code_subagent_model_unset=False
+        )
+        self.assertEqual(observed["demonstration_state"], "demonstrated")
+
+    def test_an_unevidenced_demonstration_is_never_relabeled(self) -> None:
+        # FR-031a.7: the remedy is re-running the smoke, never relabeling.
+        evidence = demonstration_evidence("adaptive", read_back_from="dispatch_request")
+        observed = self.module.evaluate_demonstration(
+            self.record_for(
+                "adaptive", demonstration_evidence=evidence, demonstration_state="demonstrated"
+            ),
+            self.registry,
+        )
+        self.assertEqual(observed["demonstration_state"], "not_demonstrated")
+        self.assertIs(observed["relabel_refused"], True)
+
+    def test_the_demonstration_state_is_a_closed_member_this_spec_owns(self) -> None:
+        # FR-031a.7: never a score-plane failure code, because a non-scored smoke
+        # row produces no score bundle for such a code to sit on.
+        self.assertEqual(
+            sorted(self.module.DEMONSTRATION_STATES), ["demonstrated", "not_demonstrated"]
+        )
+        self.assertFalse(set(self.module.DEMONSTRATION_STATES) & set(frozen_failure_codes()))
+
+
+class CacheIsolationTests(unittest.TestCase):
+    """FR-032 and FR-032a: pairwise across the whole series, or not evidence."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = synthetic_registry()
+        self.arms = [str(control["control_id"]) for control in self.registry["controls"]]
+
+    def test_the_status_set_is_read_from_the_frozen_cache_diagnostic(self) -> None:
+        # FR-032a.1: no new field, status, or code is coined.
+        self.assertEqual(
+            sorted(self.module.ISOLATION_STATUSES), sorted(frozen_isolation_statuses())
+        )
+
+    def test_all_three_unordered_arm_pairs_are_recorded_disjoint(self) -> None:
+        observed = self.module.evaluate_cache_isolation(isolation_series(self.registry))
+        self.assertEqual(len(observed["pairs"]), 3)
+        self.assertIs(observed["all_pairs_disjoint"], True)
+        self.assertEqual(observed["invalidated_arms"], [])
+
+    def test_a_disjoint_pair_carries_both_root_digests(self) -> None:
+        for pair in self.module.evaluate_cache_isolation(isolation_series(self.registry))["pairs"]:
+            with self.subTest(pair=pair["pair"]):
+                self.assertRegex(pair["arm_cache_root_digest"], r"^sha256:[0-9a-f]{64}$")
+                self.assertRegex(pair["paired_arm_cache_root_digest"], r"^sha256:[0-9a-f]{64}$")
+
+    def test_a_disjoint_claim_missing_a_root_digest_fails_closed(self) -> None:
+        series = isolation_series(self.registry)
+        series[0]["observed_cache_isolation"][0]["arm_cache_root_digest"] = None
+        with self.assertRaises(self.error):
+            self.module.evaluate_cache_isolation(series)
+
+    def test_a_root_recorded_as_a_filesystem_path_fails_closed(self) -> None:
+        # FR-032a.6: a cache root is a digest, never a path, which also keeps the
+        # untracked-output discipline from being undone by a leaked path.
+        series = isolation_series(self.registry)
+        series[0]["observed_cache_isolation"][0]["arm_cache_root_digest"] = "/tmp/arm-cache"
+        with self.assertRaises(self.error):
+            self.module.evaluate_cache_isolation(series)
+
+    def test_the_precommitment_is_not_offered_as_the_observation(self) -> None:
+        # FR-032a.2: per_arm_ephemeral_root is a precommitment, not evidence.
+        series = isolation_series(self.registry)
+        series[0]["observed_cache_isolation"][0]["per_arm_ephemeral_root"] = True
+        with self.assertRaises(self.error):
+            self.module.evaluate_cache_isolation(series)
+
+    def test_a_series_missing_a_pair_fails_closed(self) -> None:
+        # FR-032a.4: consecutive pairs alone leave the first-to-last unchecked.
+        series = isolation_series(self.registry)
+        series[0]["observed_cache_isolation"] = series[0]["observed_cache_isolation"][:1]
+        series[2]["observed_cache_isolation"] = [
+            pair for pair in series[2]["observed_cache_isolation"]
+            if pair["paired_arm_id"] != self.arms[0]
+        ]
+        with self.assertRaises(self.error):
+            self.module.evaluate_cache_isolation(series)
+
+    def test_a_shared_pair_carries_the_frozen_infrastructure_code(self) -> None:
+        series = isolation_series(self.registry, **{
+            f"{self.arms[0]}|{self.arms[1]}": "observed_shared",
+            f"{self.arms[1]}|{self.arms[0]}": "observed_shared",
+        })
+        observed = self.module.evaluate_cache_isolation(series)
+        breached = [pair for pair in observed["pairs"] if pair["status"] == "observed_shared"]
+        self.assertEqual(len(breached), 1)
+        self.assertEqual(breached[0]["failure_code"], "infrastructure_failure")
+        self.assertEqual(breached[0]["failure_plane"], "infrastructure")
+        self.assertIs(observed["all_pairs_disjoint"], False)
+        self.assertEqual(observed["invalidated_arms"], sorted(self.arms[:2]))
+
+    def test_an_unobserved_pair_carries_the_frozen_evidence_boundary_code(self) -> None:
+        series = isolation_series(self.registry, **{
+            f"{self.arms[1]}|{self.arms[2]}": "unobserved",
+            f"{self.arms[2]}|{self.arms[1]}": "unobserved",
+        })
+        observed = self.module.evaluate_cache_isolation(series)
+        missing = [pair for pair in observed["pairs"] if pair["status"] == "unobserved"]
+        self.assertEqual(len(missing), 1)
+        self.assertEqual(missing[0]["failure_code"], "required_evidence_missing")
+        self.assertEqual(missing[0]["failure_plane"], "evidence_boundary")
+        self.assertEqual(observed["invalidated_arms"], sorted(self.arms[1:]))
+
+    def test_both_frozen_codes_are_members_of_the_frozen_code_enum(self) -> None:
+        codes = frozen_failure_codes()
+        for code in ("infrastructure_failure", "required_evidence_missing"):
+            with self.subTest(failure_code=code):
+                self.assertIn(code, codes)
+
+
+# --------------------------------------------------------------------------- #
+# Operator smoke driver: plan-time and seal-time enforcement                     #
+# (FR-026a, FR-030, FR-030c, FR-033, SC-007)                                     #
+# --------------------------------------------------------------------------- #
+
+SMOKE_DRIVER_PATH = TEST_ROOT / "layer6-efficiency" / "run-control-smoke.py"
+LAYER6_GITIGNORE_PATH = TEST_ROOT / "layer6-efficiency" / ".gitignore"
+
+
+def load_smoke_driver():
+    """Import the operator driver by path: its filename is not a module name.
+
+    The driver is live and operator-only, so it is deliberately absent from
+    ``suite-manifest.json``. Its deterministic seams are covered from here, the
+    same arrangement ``run-calibration-pilot.py`` already uses.
+    """
+    spec = importlib.util.spec_from_file_location("control_smoke_driver", SMOKE_DRIVER_PATH)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["control_smoke_driver"] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+try:  # CAR-004 deliverable — absent until the smoke driver lands.
+    smoke_driver = load_smoke_driver()
+except (FileNotFoundError, AttributeError):  # pragma: no cover - pre-implementation only
+    smoke_driver = None
+
+
+class SmokeDriverPlanTests(unittest.TestCase):
+    """FR-026a.1: a reserved objective never reaches an operator."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(smoke_driver, "run-control-smoke.py is not importable")
+        self.driver = smoke_driver
+        self.entries = partition_entries()
+        self.smoke = entry_of_eligibility(False)
+        self.reserved = entry_of_eligibility(True)
+
+    def test_the_plan_derives_its_objectives_from_the_registered_smoke_partition(self) -> None:
+        self.assertEqual(
+            list(self.driver.plan_objectives(self.entries)), sorted(self.smoke["objective_ids"])
+        )
+
+    def test_the_plan_emits_only_what_the_frozen_consumption_path_admits(self) -> None:
+        # The objective list is the frozen path's own answer, not a CAR-004
+        # restatement of it.
+        from claude_experiment_policy import consumable_objectives
+
+        self.assertEqual(
+            tuple(self.driver.plan_objectives(self.entries)),
+            consumable_objectives(self.entries),
+        )
+
+    def test_no_planned_objective_touches_the_reservation(self) -> None:
+        planned = set(self.driver.plan_objectives(self.entries))
+        self.assertTrue(planned)
+        self.assertFalse(planned & set(self.reserved["objective_ids"]))
+
+    def test_a_qualification_eligible_smoke_partition_leaves_nothing_to_plan(self) -> None:
+        seeded = copy.deepcopy(self.entries)
+        for entry in seeded:
+            if entry["partition_id"] == self.smoke["partition_id"]:
+                entry["qualification_eligible"] = True
+        with self.assertRaises(claude_policy_controls.ControlContractError):
+            self.driver.plan_objectives(seeded)
+
+    def test_a_reserved_objective_leaking_into_the_smoke_set_is_refused(self) -> None:
+        seeded = copy.deepcopy(self.entries)
+        for entry in seeded:
+            if entry["partition_id"] == self.smoke["partition_id"]:
+                entry["objective_ids"] = sorted(
+                    entry["objective_ids"] + [self.reserved["objective_ids"][0]]
+                )
+        with self.assertRaises(claude_policy_controls.ControlContractError):
+            self.driver.plan_objectives(seeded)
+
+    def test_the_printed_plan_names_one_control_and_its_objectives(self) -> None:
+        for flag, kind in self.driver.CONTROL_CHOICES.items():
+            with self.subTest(control=flag):
+                text = self.driver.render_plan(self.driver.build_plan(kind))
+                self.assertIn(kind, text)
+                for objective in self.driver.plan_objectives(self.entries):
+                    self.assertIn(objective, text)
+                for objective in self.reserved["objective_ids"]:
+                    self.assertNotIn(objective, text)
+
+
+class SmokeDriverSealTests(unittest.TestCase):
+    """FR-026a.2, FR-030c.3, FR-033: refuse, record the refusal, commit nothing."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(smoke_driver, "run-control-smoke.py is not importable")
+        self.driver = smoke_driver
+        self.registry = claude_policy_controls.load_registry()
+        self.control = control_of_kind(self.registry, "adaptive")
+        self.reserved = entry_of_eligibility(True)
+
+    def seal(self, **overrides: object) -> dict[str, object]:
+        with tempfile.TemporaryDirectory() as directory:
+            outcome = self.driver.seal_record(
+                smoke_record(self.control, **overrides), results_dir=Path(directory)
+            )
+            outcome["written"] = json.loads(Path(outcome["path"]).read_text(encoding="utf-8"))
+            return outcome
+
+    def test_a_conforming_record_is_sealed(self) -> None:
+        outcome = self.seal()
+        self.assertIs(outcome["admitted"], True)
+        self.assertEqual(outcome["refusal_reasons"], [])
+
+    def test_an_observed_api_key_is_refused_and_still_written(self) -> None:
+        outcome = self.seal(authentication_mode="api_key")
+        self.assertIs(outcome["admitted"], False)
+        self.assertEqual(outcome["written"]["authentication_mode"], "api_key")
+        self.assertIn(
+            claude_policy_controls.API_KEY_REFUSAL_REASON, outcome["written"]["refusal_reasons"]
+        )
+
+    def test_a_scored_record_is_refused(self) -> None:
+        outcome = self.seal(scored=True)
+        self.assertIs(outcome["admitted"], False)
+        self.assertTrue(outcome["written"]["refusal_reasons"])
+
+    def test_a_record_touching_the_reservation_is_refused(self) -> None:
+        objective = self.reserved["objective_ids"][0]
+        outcome = self.seal(objective_ids=[objective], objective_attempts=[smoke_attempt(objective)])
+        self.assertIs(outcome["admitted"], False)
+
+    def test_a_record_breaching_a_frozen_bound_is_refused(self) -> None:
+        outcome = self.seal(elapsed_wall_clock_seconds=1801)
+        self.assertIs(outcome["admitted"], False)
+
+    def test_a_refused_record_stays_distinguishable_from_one_that_never_ran(self) -> None:
+        outcome = self.seal(authentication_mode="api_key")
+        self.assertEqual(outcome["written"]["evidence_admissibility"], "refused")
+        self.assertEqual(outcome["written"]["control_id"], self.control["control_id"])
+
+    def test_sealed_records_are_written_under_the_git_ignored_results_directory(self) -> None:
+        # FR-033: per-run smoke output stays out of version control. The default
+        # destination is the directory the committed layer6 .gitignore excludes.
+        self.assertEqual(
+            self.driver.RESULTS_DIR, TEST_ROOT / "layer6-efficiency" / "results"
+        )
+        ignored = LAYER6_GITIGNORE_PATH.read_text(encoding="utf-8").splitlines()
+        self.assertIn("results/*", ignored)
+        default = inspect.signature(self.driver.seal_record).parameters["results_dir"].default
+        self.assertEqual(default, self.driver.RESULTS_DIR)
+
+    def test_a_sealed_record_lands_in_the_results_directory_it_was_given(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            outcome = self.driver.seal_record(
+                smoke_record(self.control), results_dir=Path(directory)
+            )
+            self.assertEqual(outcome["path"].parent, Path(directory))
+
+    def test_the_driver_is_not_registered_in_the_suite_manifest(self) -> None:
+        # Live and operator-only, so it never runs in the default suite; its
+        # deterministic seams are covered from this module instead.
+        manifest = load_json(TEST_ROOT / "suite-manifest.json")
+        registered = json.dumps(manifest)
+        self.assertNotIn(SMOKE_DRIVER_PATH.name, registered)
+
+
+TEST_CASES = (
+    PolicyControlContractTests,
+    RegistryDocumentShapeTests,
+    SchemaEngineFailClosedTests,
+    RegistryIdentityAndClosureTests,
+    Car003BindingTests,
+    UnpinnedControlTests,
+    AdaptiveSignalMapTests,
+    AdaptiveRowResolutionTests,
+    EscalationLadderTests,
+    CleanPassStreakTests,
+    BoundScopeAndBreachTests,
+    ServiceRerouteTests,
+    AggregateFoldTests,
+    UnitMembershipTests,
+    RawTokenAndCacheAggregationTests,
+    ReplayDeterminismTests,
+    CommittedRegistryInstanceTests,
+    ReservedPartitionRegistrationTests,
+    ReservedPartitionGuardTests,
+    SmokeRecordBoundTests,
+    SmokeRecordEvidenceTests,
+    DemonstrationStateTests,
+    CacheIsolationTests,
+    SmokeDriverPlanTests,
+    SmokeDriverSealTests,
+)
+
+
+def build_suite() -> unittest.TestSuite:
+    suite = unittest.TestSuite()
+    for case in TEST_CASES:
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
+    return suite
+
+
+if __name__ == "__main__":
+    raise SystemExit(run_counted(build_suite(), label="test-policy-control-contracts"))

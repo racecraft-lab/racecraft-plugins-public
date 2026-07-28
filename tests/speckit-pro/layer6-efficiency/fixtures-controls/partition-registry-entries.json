@@ -1,0 +1,37 @@
+{
+  "description": "The two partition registry entries CAR-004 freezes, both produced by the frozen build_partition_registry_entry and registered together through the frozen register_partitions so objective-level disjointness is proven rather than declared. The reserved entry is held untouched for CAR-011 and is referenced by no CAR-004 row; the calibration entry carries the at most five non-reserved objectives the bounded operator smokes use, and the frozen builder refuses to make it qualification-eligible.",
+  "entries": [
+    {
+      "frozen_at": "2026-07-27T00:00:00Z",
+      "objective_ids": [
+        "CAR-011-RESERVED-OBJ-COMPARISON"
+      ],
+      "objective_set_digest": "sha256:94e912446338eb5d5bd5ce8521d614d1e1d2ad0539bdfecdf7235e0639cd49da",
+      "owning_spec": "CAR-004",
+      "partition_id": "CAR-011-RESERVED-COMPARISON",
+      "partition_type": "integrated_confirmation",
+      "qualification_eligible": true,
+      "record_kind": "partition_registry_entry",
+      "schema_version": "1.0.0"
+    },
+    {
+      "frozen_at": "2026-07-27T00:00:00Z",
+      "objective_ids": [
+        "CAR-004-SMOKE-OBJ-01",
+        "CAR-004-SMOKE-OBJ-02",
+        "CAR-004-SMOKE-OBJ-03",
+        "CAR-004-SMOKE-OBJ-04",
+        "CAR-004-SMOKE-OBJ-05"
+      ],
+      "objective_set_digest": "sha256:00f318b36f68a6cb79bdf2cbf0ad9d38baea8613e12aabe9ec04e0b566769b04",
+      "owning_spec": "CAR-004",
+      "partition_id": "CAR-004-SMOKE",
+      "partition_type": "calibration",
+      "qualification_eligible": false,
+      "record_kind": "partition_registry_entry",
+      "schema_version": "1.0.0"
+    }
+  ],
+  "fixture_kind": "policy_control_partition_registry",
+  "schema_version": "1.0.0"
+}
