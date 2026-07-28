@@ -337,8 +337,66 @@ Layer 4 test; no formal JSON Schema document (stdlib can't validate one anyway).
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Signal vocabulary | | |
+| 1 | Signal vocabulary | 5 asked, 5 resolved (3 via consensus) | 5-signal closed vocabulary; 2 trigger forms with non-empty rule; stage filters before triggers; vocabulary declared in the catalog with a cardinality oracle in the test. Spec gained FR-015/016/017 + a Clarifications section |
 | 2 | Manifest shape | | |
+
+### Consensus Resolution Log
+
+| # | Type | Question | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|---|---|---|---|---|---|---|
+| 1 | Clarify | Vocabulary size — 5 consumer-grounded signals vs the broader set the seeded prompt named | `[codebase, spec]` | 1 | both-agree | **Exactly 5.** Both analysts independently rejected headroom. Applied to FR-015 with two corrections to the executor's evidence (below). | codebase-analyst, spec-context-analyst |
+| 2 | Clarify | Is a third `on_request` trigger form an acceptable widening of design-concept Q2? | `[spec]` | 1 | high-confidence | **No — two forms, non-empty signal set required.** The non-empty rule supplies all the safety the third form was proposed to buy, without contradicting the recorded operator decision. Applied to FR-008. | spec-context-analyst |
+| 3 | Clarify | Does the vocabulary live as data in the catalog or as a constant in the Layer 4 test? | `[codebase, spec]` | 1→2 | escape-hatch → 2/3 | **Catalog is the authority; test asserts cardinality, not a copied list.** Applied to FR-017 + FR-010. | codebase-analyst, spec-context-analyst (R1) + domain-researcher (R2) |
+
+**Item 1 — evidence corrected before acceptance.** Both analysts agreed on the
+answer, but the codebase analyst disproved two of the executor's supporting claims:
+(a) the producer for `competing_approaches` is the design concept's
+`**Alternatives offered:**` block, **not** plan.md `## Complexity Tracking`, which is
+gated on constitution violations and would be empty for a spec with competing designs
+and no violations; (b) excluding `ui_change`/`schema_change`/`api_change` for "no
+producer" is inconsistent, since all three are grounded in the same declared
+primary-surface field that grounds `operational_flow_change`. The spec therefore
+records the **consumer** test as the membership rule. Per both analysts,
+`operational_flow_change` was **not** reworded — signal evaluation is agent judgment
+for every member by design and belongs to ART-010.
+
+**Item 2 — cross-item conflict resolved by the orchestrator.** The item-1 and item-2
+spec-context analysts disagreed on whether ad-hoc entries carry narrowing signals
+(which would have grown the vocabulary past five). Resolved in favor of five on a
+point neither made: `when_to_use` is already a required field on every entry, so
+human narrowing across the ad-hoc set is already served; machine-readable narrowing
+signals no machine reads would duplicate it, and under the CAR precedent those
+members would be permanent because removals are forbidden. Recorded in Assumptions so
+a reviewer can contest it directly.
+
+**Item 3 — Round 2 overturned Round 1's precedent, verified independently.** The two
+Round 1 analysts each found a fact disqualifying the other's answer (payload boundary
+vs. self-reference hole), so this escaped to a full fan-out. The domain-researcher
+rejected the orchestrator's proposed three-site reconciliation and produced a better
+answer, resting on two claims the orchestrator then **verified directly** rather than
+accepting:
+- `tests/speckit-pro/unit/test-analysis-decision-ladder.py:65` resolves `CONTRACT_ROOT`
+  to `tests/speckit-pro/layer6-efficiency/contracts-claude`, and its constant lives at
+  `tests/speckit-pro/layer6-efficiency/lib/claude_analysis_decision.py` — **both
+  repo-only**. The precedent cited for a payload-crossing drift guard never crosses the
+  payload boundary. **Confirmed.**
+- "Zero shipped data files carry inline vocabularies" is **false**: 12 shipped contract
+  JSON files under `speckit-pro/skills/speckit-autopilot/contracts/` declare `enum`s,
+  and `routing-decision.schema.json` declares a **14-member signal enum inline**
+  (plus route 5, hints 4, warnings 2) with no duplicated constant. **Confirmed.**
+
+The deciding argument: consumer-driven contract testing presumes independently
+deployable parties, and a repo-only test that ships nowhere cannot skew from the
+catalog it validates. A duplicated list would be a change-detector tax on every
+legitimate vocabulary edit while leaving the hole open to a single two-file commit.
+The cardinality assertion is spec-derived — an oracle independent of the data it
+checks — and closes the typo case in both directions.
+
+**Security-keyword disposition.** The literal keyword rule matches "session" in item
+1's text ("the seeded session prompt"). Assessed as a false positive: the word refers
+to a clarify session, and none of the three items touches authentication, secrets, or
+access control. Not escalated to mandatory human review; recorded here so the call is
+auditable rather than silent.
 
 ---
 

@@ -8,6 +8,63 @@
 
 **Input**: User description: "SpecKit-Pro is adding a gallery of ~21 branded, single-file HTML artifact templates (draft-PR review artifacts, final-PR explainers, a UAT walkthrough, and ad-hoc templates). Nothing exists yet that those templates can share: no brand tokens, no routing manifest, no single-file-SPA contract, and no automated enforcement. ART-001 ships that platform-neutral foundation so the template port specs (ART-002…005) become mechanical and the workflow specs (ART-007/009/010) can route against a complete catalog. Constraints: 70-20-10 Racecraft palette; Space Grotesk / Geist / Fira Code via Google Fonts, the only permitted external references; WCAG AA audited per theme; pinned provenance with manual re-sync; an artifact-relevant brand-voice subset; a standard-runtime repository test registered in the default suite; shipped plugin payload, so the generated-artifact contract applies. Out of scope: any actual template port, workflow wiring, a trigger-expression DSL, automated cross-repo drift checks, a marker-block sync script, banning navigation or text URLs, and embedded font files."
 
+## Clarifications
+
+### Session 1 (2026-07-28) — Trigger signal vocabulary
+
+- **Q: What exactly is the closed signal vocabulary, and at what granularity?**
+  → **A: Exactly five signals** — `competing_approaches`, `brownfield_change`,
+  `self_review_findings`, `large_diff`, `operational_flow_change` — derived in one
+  pass from the when-to-use semantics of all 21 seeded entries. The derivation
+  closes exactly: 4 unconditional entries, 4 conditional entries consuming the five
+  signals, and 13 ad-hoc entries. The discriminator for membership is the
+  **consumer** test, not the producer test: several other conditions
+  (`ui_change`, `schema_change`, `api_change`) are equally observable from the
+  declared primary surface, but no seeded entry consumes them, so they are not
+  members. The vocabulary reserves no slack; a later spec that introduces a real
+  routing condition adds a member by recorded amendment naming its consuming entry.
+- **Q: Are always-applies and any-one-of the complete trigger form set, and is an
+  empty signal set legal?**
+  → **A: Two forms only; an empty signal set is a hard validation failure.** No
+  third "on request" form is introduced. The non-empty rule alone supplies the
+  safety a third form was proposed to buy: deleting the last signal from a
+  conditional entry yields an empty set, which fails validation rather than
+  silently disabling that entry's routing.
+- **Q: Is workflow stage an independent filter, or part of the trigger?**
+  → **A: An independent filter, applied first.** Routing selects entries whose
+  stage matches the stage being routed, then evaluates only those entries'
+  triggers. "Always applies" therefore means unconditional *within its own stage*.
+  Ad-hoc entries are never in any stage's candidate set, so they carry
+  always-applies and are suppressed by the stage filter, not by their trigger.
+  Narrowing within the ad-hoc set is served by the existing when-to-use field, so
+  ad-hoc entries contribute no signals.
+- **Q: Do all 21 seeded entries' triggers use only vocabulary signals?**
+  → **A: Yes.** Four always-applies (`implementation-plan` and `spec-explainer` at
+  draft-PR; `pr-writeup` and `uat-walkthrough` at final-PR), four conditional
+  (`code-approaches` → `competing_approaches`; `module-map` →
+  `brownfield_change`; `annotated-diff` → `self_review_findings` or `large_diff`;
+  `flowchart` → `operational_flow_change`), and 13 ad-hoc always-applies. Every
+  vocabulary signal is consumed by at least one entry, and no entry names a signal
+  outside the vocabulary — so closure is enforceable in both directions.
+- **Q: Where is the vocabulary enumerated so validation and every consumer read
+  one authoritative set?**
+  → **A: As data in the routing catalog, which ships.** The validation lives
+  outside the shipped plugin directory, so a vocabulary sited only in the test
+  would be invisible to every consumer of an installed plugin — that disqualifies
+  the test as the home. The catalog is also the file a routing consumer already
+  opens, and the repository already ships a closed signal vocabulary declared
+  inline in a shipped contract file, so this is the established shape rather than
+  a new one. Validation does **not** keep a duplicate list: a copy edited in the
+  same change as the catalog is not an independent check, and set-equality against
+  a copy would tax every legitimate vocabulary change. Validation instead asserts
+  the **member count** fixed by FR-015 plus closure in both directions — an oracle
+  derived from this specification rather than from the data it checks.
+- **Q: How are signal names formatted?**
+  → **A: Flat `snake_case`.** The one in-repo routing precedent uses namespaced
+  `family:value` tokens because that classifier groups signals into families; this
+  vocabulary has five flat members and no families, so namespacing would add
+  structure carrying no information.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Adopt shared branding with drift caught automatically (Priority: P1)
@@ -187,10 +244,13 @@ confirm it renders correctly, has no errors, and its theme control works.
   category, a title, when-to-use guidance, a workflow stage drawn from
   `draft-pr`, `final-pr`, or `ad-hoc`, a routing trigger, attribution to its
   source template, and a shipped status.
-- **FR-008**: Routing triggers MUST be expressed as either "always applies" or a
-  set of signals drawn from a closed, documented vocabulary. Automated
-  validation MUST reject any trigger that names a signal outside that
-  vocabulary or that uses an unrecognized trigger form. No expression language,
+- **FR-008**: Routing triggers MUST be expressed in exactly one of two forms:
+  "always applies", or a **non-empty** set of signals drawn from the closed,
+  documented vocabulary. The any-one-of relationship is the format's only
+  combining rule — signal sets MUST NOT nest, and no conjunction, negation, or
+  other operator exists. Automated validation MUST reject a trigger that names a
+  signal outside the vocabulary, that presents an empty signal set, or that uses
+  an unrecognized form, naming the offending entry. No expression language,
   operators, or evaluator are to be introduced.
 - **FR-009**: Each catalog entry's status MUST be either `planned` or `shipped`.
   Automated validation MUST require the named artifact file to exist for
@@ -199,8 +259,10 @@ confirm it renders correctly, has no errors, and its theme control works.
 - **FR-010**: The foundation MUST document the single-file contract every
   gallery artifact obeys — all behavior, styling, and data inline in one file;
   correct rendering when opened directly from the filesystem with no errors
-  reported; and the shape and field meanings of the routing catalog, since the
-  catalog format itself cannot carry explanatory notes.
+  reported; the shape and field meanings of the routing catalog, since the
+  catalog format itself cannot carry explanatory notes; the two trigger forms and
+  the two-step stage-then-trigger routing rule; and each routing signal's meaning
+  and evidence source.
 - **FR-011**: Automated validation MUST scan every gallery artifact for external
   references in resource-loading positions — script, image and frame sources,
   responsive-image source sets, stylesheet and preconnect link targets, style
@@ -225,6 +287,35 @@ confirm it renders correctly, has no errors, and its theme control works.
   repository's standard automated suite with no additional setup, services, or
   dependencies beyond the standard runtime, and MUST be discoverable by that
   suite's own registry rather than requiring a separate invocation.
+- **FR-015**: The closed vocabulary MUST consist of exactly five signals —
+  `competing_approaches` (planning weighed more than one viable implementation
+  approach), `brownfield_change` (the change modifies existing code rather than
+  adding only new files), `self_review_findings` (the pre-PR self-review recorded
+  at least one gap), `large_diff` (the finished change's size reached the
+  repository's existing warn or block threshold), and `operational_flow_change`
+  (the change alters a documented multi-step runtime or delivery process). Each
+  signal MUST be documented with the named workflow evidence a routing consumer
+  reads to decide it is present. A signal MUST NOT be defined unless at least one
+  catalog entry consumes it, and automated validation MUST fail both when an entry
+  names a signal outside the vocabulary and when the vocabulary carries a signal
+  no entry uses.
+- **FR-016**: Routing MUST resolve in two independent, ordered steps: first select
+  the entries whose stage matches the stage being routed, then evaluate the
+  triggers of only those entries. An always-applies trigger therefore means
+  "always within its own stage" and MUST NOT cause an entry to be produced at any
+  other stage. Entries staged for ad-hoc use MUST never enter a stage's candidate
+  set, so their triggers are never evaluated by automated routing; the trigger
+  field remains mandatory on those entries so every entry carries a uniform,
+  validated shape.
+- **FR-017**: The vocabulary MUST be declared as data inside the routing catalog
+  itself, which is the single authority for membership. Validation MUST NOT hold a
+  second copy of the list, because a copy edited in the same change as the catalog
+  is not an independent check. Instead, validation MUST assert the member count
+  against the count this specification fixes, so that inventing a signal (which
+  raises the count) and disguising it by removing a real one (which orphans the
+  entries still using the removed signal) both fail. The contract document MUST
+  explain each signal's meaning and evidence source and MUST name the catalog as
+  the authoritative list rather than restating it as an independent one.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -333,10 +424,26 @@ confirm it renders correctly, has no errors, and its theme control works.
 
 ## Assumptions
 
-- The exact closed vocabulary of routing signals is deliberately deferred to
-  planning, where it will be derived in one pass from the when-to-use semantics
-  of all 21 seeded entries. This spec fixes the requirement — a closed,
-  documented vocabulary whose violations are rejected — not the token list.
+- The closed vocabulary of routing signals is exactly five members (FR-015),
+  derived in one pass from the when-to-use semantics of all 21 seeded entries —
+  one member per conditional routing condition already committed in the product
+  plan. Membership is decided by the **consumer** test, not the producer test:
+  other conditions such as a UI, schema, or API surface change are equally
+  observable from the declared primary surface, but no seeded entry consumes them,
+  so they are not members. In keeping with the catalog seeding decision below, the
+  vocabulary reserves no slack: members are added by recorded amendment naming the
+  consuming entry, and existing members are not renamed or removed.
+- Signals are names, not computed predicates. This feature validates only that
+  every entry's trigger uses a recognized form and recognized signal names.
+  Deciding whether a signal holds for a given change is the emitting workflow's
+  concern in a later spec, which is why no expression language, operator, or
+  evaluator appears here. This is true of every member equally —
+  `operational_flow_change` is no more a judgment call than `large_diff`, which
+  likewise depends on a threshold a later spec owns.
+- Narrowing within the ad-hoc set is served by each entry's existing when-to-use
+  guidance, not by signals. Ad-hoc entries therefore carry an always-applies
+  trigger, are suppressed from automated routing by the stage filter (FR-016), and
+  contribute no vocabulary members.
 - Field-level catalog details (exact field names, whether a schema-version field
   is carried, and the category vocabulary) are deferred to planning. The
   expectation is that the catalog's shape is documented alongside the
