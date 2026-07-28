@@ -32,6 +32,7 @@ the slice artifacts in the body below.
 - [research.md](research.md)
 - [contracts/gallery-validation-contract.md](contracts/gallery-validation-contract.md)
 - [contracts/routing-catalog-contract.md](contracts/routing-catalog-contract.md)
+- [checklists/accessibility.md](checklists/accessibility.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

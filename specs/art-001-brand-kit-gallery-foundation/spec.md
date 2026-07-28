@@ -284,10 +284,29 @@ confirm it renders correctly, has no errors, and its theme control works.
   preference by default, MUST allow the reader to override it explicitly, and
   MUST retain that override for future visits where the browser permits local
   storage, degrading to a session-only override otherwise without surfacing an
-  error.
-- **FR-005**: Every foreground/background token pairing the kit defines MUST
-  meet WCAG AA contrast, audited independently for the light theme and the dark
-  theme rather than assumed from one another.
+  error. When the reader overrides the theme, the browser-rendered surfaces the
+  artifact does not paint itself — form-control widgets, scrollbars, and the
+  default canvas — MUST follow the **chosen** theme rather than the
+  operating-system preference. Declaring support for both schemes is not
+  sufficient for this, because that declaration resolves against the
+  operating-system preference; the override MUST set the applicable scheme
+  explicitly in each direction, or an overriding reader gets page colors from
+  one theme and native widgets from the other.
+- **FR-005**: Every foreground/background token pairing the kit **permits** MUST
+  meet WCAG AA contrast — at least 4.5:1 for normal text (WCAG 1.4.3), and at
+  least 3:1 for large text and for user-interface components and meaningful
+  graphics (WCAG 1.4.11) — audited independently for the light theme and the
+  dark theme rather than assumed from one another. "Large text" means at least
+  24px, or at least 18.66px when bold. The audit MUST be **complete and
+  symmetric**: every token audited in one theme MUST be audited in the other,
+  and every token MUST be measured against **every** surface it may pair with,
+  not against a single representative surface. Every token the audit names MUST
+  have its value defined for both themes, so each recorded ratio is
+  independently reproducible. Where a pairing does not meet its threshold it
+  MUST be explicitly **prohibited** by a usage rule carried in the kit itself
+  that names the token to use instead; a pairing that neither meets its
+  threshold nor carries such a rule is a defect. Recorded ratios MUST be
+  computed rather than asserted, and MUST NOT be rounded up to a threshold.
 - **FR-006**: Automated validation MUST compare each gallery artifact's embedded
   copy of a marked block against the canonical source exactly, and MUST fail
   with the artifact name and the block name on any difference. The comparison
@@ -325,8 +344,14 @@ confirm it renders correctly, has no errors, and its theme control works.
   correct rendering when opened directly from the filesystem with no errors
   reported; the shape and field meanings of the routing catalog, since the
   catalog format itself cannot carry explanatory notes; the two trigger forms and
-  the two-step stage-then-trigger routing rule; and each routing signal's meaning
-  and evidence source.
+  the two-step stage-then-trigger routing rule; each routing signal's meaning
+  and evidence source; and the accessibility obligations every artifact inherits
+  — the audited pairings and the prohibited ones (FR-005), the use-of-color rule
+  (FR-021), the theme-control obligations (FR-022), focus visibility and
+  reduced-motion behavior (FR-023), and the typography loading and fallback
+  rules (FR-024). The contract is the only place an obligation reaches all four
+  port specs at once; an accessibility duty absent from it is re-decided per
+  port or lost entirely.
 - **FR-011**: Automated validation MUST scan every gallery artifact for external
   references in resource-loading positions — script, image and frame sources,
   responsive-image source sets, stylesheet and preconnect link targets, style
@@ -409,7 +434,62 @@ confirm it renders correctly, has no errors, and its theme control works.
   carries an upstream copyright line while its entry declares no upstream origin.
   The `source` field's origin discriminator is what makes this mechanically
   checkable.
-
+- **FR-021**: Brand red MUST NOT be the sole visual means of conveying
+  information, indicating an action, prompting a response, or distinguishing an
+  element (WCAG 1.4.1, Level A). Wherever red carries a status or a distinction,
+  that meaning MUST also be available without color — as text, a shape, a
+  glyph, or a position — so it survives for a reader who cannot perceive the hue
+  and for a monochrome print or screenshot. This is a separate obligation from
+  contrast: a red that clears its ratio still fails if the color is the only
+  thing distinguishing the element. The kit's "punctuation-level" reservation is
+  a rule about **how much** red is used and at what sizes; it does not by itself
+  satisfy this requirement, and the two MUST be documented as distinct rules so
+  an authoring agent cannot read one as discharging the other.
+- **FR-022**: The canonical theme control MUST be operable by keyboard alone,
+  reachable in the document's normal focus order and activatable without a
+  pointer (WCAG 2.1.1, Level A). It MUST expose a programmatically determinable
+  name, role, and current state — the state identifying which theme is active —
+  so the control is usable by assistive technology (WCAG 4.1.2, Level A). The
+  control's semantic element and its state mechanism MUST be fixed in the
+  canonical snippet rather than left to each port: the snippet is embedded
+  verbatim into every artifact, so a defect here reaches all of them and no port
+  can correct it locally. A control that is reachable but unnamed, or named but
+  stateless, does not satisfy this requirement.
+- **FR-023**: The kit MUST define a focus-visible treatment and MUST require
+  that every interactive element in a gallery artifact carries it; suppressing
+  the focus indicator without an equivalent replacement is prohibited (WCAG
+  2.4.7, Level AA). The indicator's own contrast MUST be audited under FR-005
+  against every surface it can appear on. The kit MUST also honor a reader's
+  reduced-motion preference by suppressing or near-eliminating animation,
+  transition, and smooth-scrolling behavior for those readers. This explicitly
+  includes the cross-theme color transition, which is the shared kit's most
+  likely animation. Reduced-motion behavior is not asserted by the automated
+  suite and MUST therefore carry a named manual verification scenario, as the
+  other browser-observable outcomes already do.
+- **FR-024**: Text MUST remain visible throughout font loading — there MUST be
+  no period during which text is rendered invisibly while a brand face is
+  fetched. Because the artifacts link a hosted font stylesheet rather than
+  declaring their own font faces, the loading behavior is determined by the font
+  request itself: the request MUST carry the parameter that yields swap
+  behavior, and its absence MUST be treated as a defect rather than a style
+  preference, since the hosted default is a blocking behavior with an
+  invisible-text period. This MUST be enforced by automated validation, not left
+  to review. Each typeface role MUST additionally declare a fallback stack that
+  is distinguishable from the other roles' stacks, so the heading, body, and
+  monospace distinction survives with the brand faces unavailable. Where two
+  roles would otherwise resolve to the same fallback face, the specification
+  MUST state what carries the distinction instead — semantic level, size, and
+  weight rather than typeface identity — so the offline rendering is degraded in
+  appearance only and never in structure.
+- **FR-025**: The brand kit MUST distinguish two token classes and state the rule
+  that governs both. A **functional token** exists to serve a stated purpose and
+  MUST satisfy its contrast floor against every surface it may pair with; when it
+  does not, its value is corrected. A **brand primitive** is not re-valued to
+  resolve a contrast failure; instead the functional need it cannot serve is routed
+  to a functional token that can, and that sibling MUST exist and be named at the
+  primitive's point of definition so an author reading one sees the other. Any
+  restriction on a brand primitive MUST be stated as narrowly as the measurement
+  supports — naming the specific pairing and role that fail, not a blanket ban.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -427,15 +507,26 @@ confirm it renders correctly, has no errors, and its theme control works.
 - **Secondary surfaces, if any**: docs/process (the single-file contract and
   brand-voice references); harness/adapter (the validation added to the
   repository's standard suite)
-- **Projected reviewable LOC**: ~1,285 authored lines by honest hand count —
-  ~423 logic (the single validation module), ~460 declarative (design tokens and
-  catalog rows), ~355 prose, ~25 reproduced verbatim. Excludes regenerated payload
-  and proof artifacts, which are declared generated.
-- **Projected production files**: 9 authored (6 net-new shipped foundation files,
-  1 net-new validation module, 2 modified — the suite registry and the payload
-  builder)
-- **Projected total files**: 24 declared entries — 19 new, 5 modified — of which
-  15 are regenerated artifacts excluded from the review surface
+- **Projected reviewable LOC**: 62
+- **Projected production files**: 2
+- **Projected total files**: 24
+
+  The three figures above are stated against the binding metric, which the product
+  plan's Reviewability Contract defines as **production code only — documentation,
+  tests, and configuration do not contribute**. Under that rule the production
+  surface is the payload-builder edit (about two lines) plus the theme toggle's
+  inline behaviour (about sixty). The design tokens and the routing catalog are
+  configuration; the contract document, voice reference, and upstream notice are
+  documentation; the validation module is a test. Regenerated payload and proof
+  artifacts are declared generated and excluded.
+
+  **Total authored volume is much larger and is disclosed deliberately**: roughly
+  1,375 lines across nine authored files — about 452 in the validation module, 476
+  declarative (design tokens and catalog rows), 360 prose, 60 markup, and 25
+  reproduced verbatim. That figure is **not** the budget metric and must not be
+  compared against the budget thresholds, which the contract defines over
+  production code only. It is recorded because a reviewer deserves to know the real
+  size of what they are being asked to read, independent of what the metric counts.
 - **Budget result**: warning accepted, on a **different basis than at scaffold**
 - **Split decision**: Remains one spec, but the original justification no longer
   applies and has been replaced rather than restated.
@@ -454,21 +545,48 @@ confirm it renders correctly, has no errors, and its theme control works.
   Every file in this feature is CSS, HTML, JSON, Markdown, or Python, so none are
   counted. That zero must not be cited as a size argument in review.
 
-  **The honest position.** On a raw-line reading, ~1,285 exceeds the 800 block
-  threshold. The judgment to proceed rests on composition rather than volume: the
-  modification is two lines, the entire logic surface is one validation module of
-  roughly 420 lines, and two-thirds of the remaining volume is declarative rows
-  and prose that review at a glance. This is a judgment, not a measurement, and it
-  is the part of this spec a reviewer should push on hardest.
+  **What survives from the original decision.** The operator's recorded choice
+  rested on four legs. Two were greenfield-dependent and are dead. Two are not, and
+  they still carry: this is one thin vertical slice (tokens, then catalog, then
+  validation), and most of its volume is declarative token declarations and catalog
+  rows rather than logic. The vertical-slice leg is the one the slicing doctrine
+  actually cares about, and nothing has touched it.
 
-  **The original non-independence reason still stands.** Splitting the kit from
-  the catalog was rejected because the second slice's validation would import the
-  first slice's marker blocks, so the slices would not be independent, and the
-  split would double the wait for the four blocked port specs.
+  **A threshold comparison that was raised and does not hold.** During checklist
+  remediation the scoping estimator's figure was read as sitting a few points under
+  an 800 block threshold. That comparison is between two unrelated instruments. The
+  scoping estimator has a single ceiling of 400 and returns only "ok" or "warn" —
+  it has no block status and never blocks. The 800 belongs to the setup-mode
+  reviewability gate, which reads the declared figures from this document and does
+  not consume the estimator's output at all. Further requirements cannot trip a
+  block through that path.
 
-  **Fallback if a reviewer rejects the judgment**: split into 1a (brand kit,
-  theme toggle, brand voice, upstream notice, and their validation) and 1b
-  (routing catalog, contract document, catalog validation, payload wiring).
+  **What the size question actually turns on.** Under the binding
+  production-code-only metric this feature is nowhere near any threshold. The
+  disclosed total authored volume is large, but it is dominated by a test, by
+  declarative rows, and by prose — all excluded by the contract, and all reviewable
+  at a glance rather than line by line. The two-line production edit is the entire
+  production surface.
+
+  **Why splitting is rejected on its merits, not only on thresholds.** All four
+  blocked port specs require both the brand kit and the routing catalog, so a split
+  unblocks none of them earlier — it strictly delays all four. The fallback cut
+  recorded below is also not executable as written: one validation group reads the
+  catalog while being assigned to the kit slice, and suite registration falls in the
+  catalog slice, which would leave the kit slice shipping a test the suite never
+  runs. Adopting it would require re-deriving the cut — new, unreviewed design work
+  introduced late.
+
+  **Fallback if a reviewer still wants it**: 1a (brand kit, theme toggle, brand
+  voice, upstream notice, their validation, **and suite registration**) and 1b
+  (routing catalog, contract document, catalog validation, payload wiring). The
+  embedded-block check must move to 1b or be explicitly scoped to the vacuous case,
+  because it reads the catalog.
+
+  **Where the size decision is properly made.** Not here. The post-tasks atomicity
+  route and the pull-request-time diff gate are the two instruments that measure a
+  finished change rather than forecast one. This spec defers to them rather than
+  pre-empting them with a line-count trigger on a test file.
 
 ### PR Review Packet Requirements *(mandatory)*
 
@@ -532,15 +650,27 @@ confirm it renders correctly, has no errors, and its theme control works.
 - **SC-006**: With the network fully unavailable, every gallery artifact remains
   completely readable and every interactive control still works; the only
   observable difference is typeface substitution.
-- **SC-007**: 100% of the token set's text-on-surface pairings meet WCAG AA
-  contrast — at least 4.5:1 for body text and 3:1 for large text and meaningful
-  non-text elements — measured separately for the light and dark themes.
+- **SC-007**: 100% of the token set's **permitted** pairings meet WCAG AA
+  contrast — at least 4.5:1 for normal text and 3:1 for large text and
+  meaningful non-text elements — measured separately for the light and dark
+  themes, with every token measured against every surface it may pair with in
+  both themes. Every pairing that falls below its threshold is named as
+  prohibited with a stated replacement; zero pairings are left neither passing
+  nor prohibited, and zero recorded ratios are unreproducible from the token
+  values the artifacts define.
 - **SC-008**: Zero external hosts other than the two permitted font hosts appear
   in a resource-loading position across the entire gallery, while links a reader
   can click and addresses in comments or visible text continue to pass.
 - **SC-009**: The four blocked template-port specs can begin work using only the
   artifacts this feature delivers, with no additional foundation decisions
   required of them.
+- **SC-010**: The theme control can be reached and activated using the keyboard
+  alone, and reports a name, a role, and which theme is currently active to
+  assistive technology in both states — verified once against the canonical
+  snippet, because every artifact embeds that snippet verbatim.
+- **SC-011**: No gallery artifact renders text invisibly at any point during
+  font loading, and with the brand faces unavailable the heading, body, and
+  monospace roles remain distinguishable from one another.
 
 ## Assumptions
 
@@ -585,9 +715,27 @@ confirm it renders correctly, has no errors, and its theme control works.
   walkthrough. If a later spec adds a template, it adds an entry; this feature
   does not reserve slack.
 - Brand typefaces are Space Grotesk for headings, Geist for body, and Fira Code
-  for monospace, loaded as linked web fonts with swap behavior so text is
-  readable before fonts arrive. Font files are not embedded in artifacts —
-  embedding was rejected in the product plan on artifact-size grounds.
+  for monospace, loaded as linked web fonts. Swap behavior is not a property of
+  the link — it is served by the font provider only when the request asks for
+  it, and the provider's default is a blocking behavior, so FR-024 makes the
+  request parameter itself the requirement and puts it under automated
+  validation. Font files are not embedded in artifacts — embedding was rejected
+  in the product plan on artifact-size grounds.
+- The heading and body brand faces are both sans-serif, so a naive fallback
+  would resolve both roles to the same system face and flatten the visual
+  distinction between them offline. FR-024 therefore requires distinguishable
+  stacks and records that hierarchy is carried by semantic heading level, size,
+  and weight rather than by typeface identity — which is what keeps SC-006's
+  "typeface substitution only" claim true rather than aspirational.
+- The accessibility obligations this feature fixes are, by WCAG success
+  criterion: 1.4.1 Use of Color (A), 1.4.3 Contrast Minimum (AA), 1.4.11
+  Non-text Contrast (AA), 2.1.1 Keyboard (A), 2.4.7 Focus Visible (AA), and
+  4.1.2 Name, Role, Value (A). Honoring `prefers-reduced-motion` is **not**
+  required at AA — the nearest criterion, 2.3.3 Animation from Interactions, is
+  Level AAA. It is specified here anyway because the spec already committed to
+  it as an edge case and because the shared kit is the only place it can be
+  fixed once for all 21 artifacts; it is a deliberate choice above the
+  conformance floor, not an AA obligation.
 - `fonts.googleapis.com` and `fonts.gstatic.com` are the only external hosts any
   gallery artifact may load from, and only in resource-loading positions.
 - Upstream brand sources are the private `racecraft-lab/racecraft` repository's

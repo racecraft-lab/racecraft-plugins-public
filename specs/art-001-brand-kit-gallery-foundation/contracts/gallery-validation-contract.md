@@ -87,6 +87,19 @@ Positions scanned, and **only** these:
 | E1 | Every host in a scanned position ∈ {`fonts.googleapis.com`, `fonts.gstatic.com`} | any other external host; names file + reference |
 | E2 | Navigation `<a href>` to any host passes | — (must not fail) |
 | E3 | URLs in comments or visible text pass | — (must not fail) |
+| E4 | Every `fonts.googleapis.com` stylesheet request carries the swap-behavior parameter | the request would otherwise be served with the provider's blocking default, producing an invisible-text period; names file + reference |
+
+**On E4 (FR-024).** This is a host-allowlist scanner extended by one property of
+the request, because the allowlist alone cannot see the defect. The font
+provider's stylesheet only carries a swap descriptor when the request asks for
+it. Verified directly against the live endpoint: a `css2` request **without**
+the display parameter returns a stylesheet containing **zero** `font-display`
+declarations, which leaves the descriptor at its initial value — a blocking
+behavior with an invisible-text period in the major engines. The same request
+**with** the parameter returns `font-display: swap` on every `@font-face`. The
+spec's edge case ("never invisible while waiting") therefore depends on a single
+query parameter that no other check would notice, and that a port author can
+drop while still passing E1.
 
 E2 and E3 are **negative controls** and are asserted explicitly, because a scanner
 that fails them would reject the provenance and attribution links FR-012 and
@@ -145,6 +158,34 @@ G3 and G4 are **vacuously true in ART-001**, which ships no artifact. They are
 written now because they are the contract ART-002…005 inherit, and because
 writing them later means each port spec re-litigates the rule.
 
+## Group I — Shared-block accessibility invariants (FR-004, FR-022, FR-023)
+
+Presence checks on the **canonical** blocks only, not on artifacts. Each asserts
+that a construct the accessibility requirements depend on is actually inside the
+marked region — which is what makes it reach all 21 artifacts. These are cheap
+static assertions, not a conformance audit; the behavioral outcomes stay with
+the manual scenarios.
+
+| # | Check | Fails when |
+|---|-------|-----------|
+| I1 | The `brand-kit.css` marked region contains a `prefers-reduced-motion: reduce` at-rule | reduced-motion handling absent or left outside the copied region (FR-023) |
+| I2 | The marked region contains a `:focus-visible` rule | focus treatment absent or outside the copied region (FR-023) |
+| I3 | The marked region sets `color-scheme` under **both** `[data-theme="dark"]` and `[data-theme="light"]` | only the `light dark` declaration is present, so native UI would follow the OS rather than the override (FR-004) |
+| I4 | The `theme-toggle.html` marked region contains a `button` element carrying both an accessible-name source and a state attribute | control unnamed or stateless (FR-022) |
+
+**Why these are automated at all**, given that browser behavior is not: the
+failure mode here is *omission from the copied region*, which is a static
+property of two files. A token defined above the start marker looks correct in
+the canonical file and silently reaches no artifact — the same
+inside-vs-outside-the-marker distinction group A already depends on. I1–I4 cost
+a few assertions and close the one gap where "it is in `brand-kit.css`" is not
+the same as "every artifact has it".
+
+**What these do NOT claim.** Presence is not conformance. That the region
+contains a `:focus-visible` rule does not prove every interactive element is
+reachable, and that a `button` carries a state attribute does not prove the
+state is correct in both positions. Those remain manual (M7, M8).
+
 ## Group H — Suite integration (FR-014)
 
 | # | Check | Fails when |
@@ -167,3 +208,10 @@ evidence (SC-001, SC-005, SC-006):
 - First-paint theme correctness with no flash of light theme
 - Theme-toggle behavior and persistence, including the storage-refused path
 - Offline readability with system-typeface fallback
+- Keyboard reachability and activation of the theme control, and the name and
+  state it reports in **both** theme positions (FR-022, SC-010)
+- Reduced-motion behavior, including the cross-theme transition (FR-023)
+- Native form controls and scrollbars following a **manual** theme override
+  rather than the operating-system preference (FR-004)
+- Absence of an invisible-text period during font loading (FR-024, SC-011) —
+  E4 proves the request is correct, not that the rendering is

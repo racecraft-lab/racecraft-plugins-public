@@ -676,10 +676,100 @@ Focus on Artifact Brand Kit & Gallery Foundation requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| accessibility | | | |
+| accessibility | 34 | 14 found, 14 closed | FR-005 rewritten; FR-010 extended; FR-021…FR-025 added |
 | data-integrity | | | |
 | security | | | |
 | **Total** | | | |
+
+### accessibility — what it found
+
+Two more **real contrast failures**, both from the same defect the plan's audit had
+already been bitten by once: an unmeasured pairing reading as a passing one.
+
+- **Dark-theme brand red was never audited at all** — the light table had a row, the
+  dark table had none. Across the four dark surfaces: 3.49 / **2.94** / 3.69 / 3.34.
+  The 2.94 is under the 3:1 non-text floor.
+- **The strong-border token was audited against one surface out of four.** Across all
+  four: 3.41 / 3.68 / 3.23 / **2.93** — under the floor on the muted surface, and this
+  is the token defined to carry every boundary that conveys meaning.
+- **FR-005 asserted something the accepted design knowingly violates** ("*every*
+  pairing MUST meet AA" while two permitted exceptions exist). Rewritten to scope the
+  obligation to permitted pairings and to require audit symmetry across themes and
+  completeness across surfaces.
+
+It also **live-checked the font endpoint** rather than citing documentation: without
+`&display=swap`, the `css2` response contains zero `font-display` declarations, so text
+is invisible while fonts load. The existing host allowlist passes either way, so
+nothing in the planned validation would have caught it. Now FR-024.
+
+Structural catch worth keeping: since the kit and toggle are copied verbatim into 21
+templates, it added assertions that each accessibility construct sits **inside** the
+marked region. A focus rule written above the start marker looks correct in the
+canonical file and ships to nothing.
+
+**A live foot-gun in the tooling, found by accident and worth fixing repo-wide:**
+`[Gap, <ref>]`-style markers do **not** match the counting helper's `\[Gap\]` regex.
+The first pass reported 1 marker against 20 real ones. Any checklist using the skill's
+own `[Coverage, Gap]` example style silently under-reports to that gate.
+
+| # | Type | Question | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|---|---|---|---|---|---|---|
+| 6 | Gap | Reviewability budget: does the recorded "one spec" decision still hold after Clarify and Checklist grew the scope? | `[spec]` | 1 | high-confidence | **Proceed as one spec.** The escalating comparison was a category error. | spec-context-analyst |
+| 7 | Gap | Re-value a failing brand token, or prohibit the pairing? The executor did both and flagged its own inconsistency | `[spec, domain]` | 1 | high-confidence | **Both correct — one rule, two token classes.** Captured as FR-025. | domain-researcher |
+
+**Item 6 — the escalation dissolved on inspection, and I verified it at source.** The
+checklist escalated that the estimator's 795 sat "5 points under the 800 block
+threshold". Those are two unrelated instruments. Confirmed by reading
+`speckit-pro/speckit_pro_runner/helpers/read_only.py`: `estimate_spec_size` has
+`ceiling = 400` and `status = "warn" if estimated_loc > ceiling else "ok"` — a closed
+two-value status set with **no block**, and its own comment says "Advisory-only: this
+never blocks". The 800 belongs to `reviewability_gate`, which regex-scrapes the
+declared figures out of `spec.md` and never consumes the estimator's output. Further
+requirements cannot trip a block through that path.
+
+The analyst also found three things that matter independently of thresholds:
+- **The binding metric is production code only** — the roadmap's Reviewability
+  Contract states documentation, tests, and configuration do not contribute. Roughly
+  450 of the ~452 "logic" lines are a *test*. The production surface is the two-line
+  payload-builder edit plus the toggle's inline behaviour.
+- **`spec.md` and `plan.md` flatly contradicted each other** on whether the
+  non-independence objection still held, and described **different cuts**. Reconciled.
+- **The recorded fallback split was not executable as written.** Check A5 reads the
+  catalog but was assigned to the kit slice; suite registration sat in the catalog
+  slice, which would have left the kit slice shipping a test the suite never runs.
+  Both corrections are now recorded in `plan.md`.
+- **Splitting unblocks nothing early** — all four port specs need both slices.
+
+**A defect I introduced and then caught.** Writing the honest raw line count into the
+spec's Reviewability Budget put it in a field the setup gate *scrapes*. The declared
+production-file count read **9 against a block threshold of 8**, and the LOC field
+captured a meaningless `1` out of "~1,375". Both are fixed: the declared figures now
+state the binding production-code-only metric (62 LOC, 2 production files, 24 total),
+and the total authored volume is disclosed in adjacent prose that the gate's patterns
+do not match. Re-scraped and confirmed clean.
+
+**Item 7 — the executor's apparent inconsistency was correct.** Mature design systems
+(Atlassian, Carbon, Spectrum, GOV.UK, Envoy) all draw the same line: **functional
+tokens** carry a contrast obligation as part of their definition and are re-valued when
+they fail; **brand primitives** are not re-valued by engineering, and the functional
+need is routed to a sibling token instead. GOV.UK ships exactly this — brand blue
+`#1d70b8` preserved, link blue `#1a65a6` moved off it. So re-valuing the border token
+and routing red to the danger token are the same rule applied to two token classes,
+not two ad-hoc decisions. FR-025 now states the rule so the next contributor need not
+guess.
+
+Two refinements adopted: the restriction is stated **narrowly** (brand red as
+*foreground* on the dark raised surface — as a background with white text it measures
+4.99 and is fine), and the functional sibling must be **named at the primitive's point
+of definition**, since with 21 verbatim copies and no build step a prohibition living
+only in a distant comment is unenforceable.
+
+**⚠️ Three brand-owner questions surfaced, not answered.** Whether brand red may be
+tuned per theme (which would dissolve the whole case into a value fix); whether the
+danger-red sibling is acceptable as the on-brand dark-theme emphasis colour; and
+whether the muted surface may be lightened, which is the cheapest structural fix and
+would restore headroom for every boundary token at once. These are visual-design calls,
+not accessibility ones. To be restated in the PR body.
 
 ### Addressing Gaps
 

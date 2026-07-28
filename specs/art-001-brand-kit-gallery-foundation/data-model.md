@@ -178,16 +178,44 @@ Token families inside the block:
   audited to 3:1)
 - `--rc-text`, `--rc-text-muted`, `--rc-link`
 - `--rc-accent` (20% blue, large-text and non-text only),
-  `--rc-brand-red` (10% punctuation-level emphasis, non-text and large text),
+  `--rc-brand-red` (10% punctuation-level emphasis, non-text and large text, and
+  never the sole carrier of meaning per FR-021),
   `--rc-danger-text` (the AA-body-safe red for red body copy)
 - `--rc-font-display`, `--rc-font-body`, `--rc-font-mono` — brand face first,
-  system fallback after
-- focus-visible treatment and reduced-motion handling
+  fallback after. The display and body brand faces are both sans-serif, so their
+  fallback stacks name **different** concrete faces rather than both resolving to
+  the same system face (FR-024). The stacks are a preference list — first
+  *available* face wins — so the brand face must lead or the always-present
+  system face shadows it, which is the reasoning already recorded in
+  `docs-site/src/styles/brand.css`.
+- focus-visible treatment (FR-023) — applied to every interactive element, using
+  `--rc-link`, and never suppressed without an equivalent replacement
+- reduced-motion handling (FR-023) — under `@media (prefers-reduced-motion:
+  reduce)`, animation, transition, and smooth-scroll behavior are reduced to
+  effectively instant, following the pattern already used in
+  `docs-site/src/styles/brand.css`. This covers the cross-theme color
+  transition, which is the shared kit's most likely animation.
+
+**Offline hierarchy.** Even with distinct fallback stacks, the substituted faces
+may be visually closer to each other than the brand faces are. The kit therefore
+does not rely on typeface identity to express hierarchy: heading rank is carried
+by semantic heading level, size, and weight. This is what makes SC-006's "the
+only observable difference is typeface substitution" true rather than
+aspirational — the offline rendering degrades in appearance, never in structure.
 
 Dark values are supplied under `@media (prefers-color-scheme: dark)` and under
 `:root[data-theme="dark"]`, with `:root[data-theme="light"]` forcing light back
-on. `color-scheme: light dark` is declared so form controls and scrollbars
-follow.
+on.
+
+**`color-scheme` must be set per override, not once.** Declaring
+`color-scheme: light dark` on `:root` alone is **not** sufficient: that
+declaration says the page supports both schemes and lets the browser resolve
+which one to use from the *operating-system* preference. It does not observe the
+page's own `data-theme` attribute. A reviewer on a dark OS who forces light
+would get light page tokens and dark native form controls and scrollbars. The
+kit therefore also sets `color-scheme: dark` under `:root[data-theme="dark"]`
+and `color-scheme: light` under `:root[data-theme="light"]`, so the browser's own
+surfaces follow the chosen theme in both directions (FR-004).
 
 ### Audited AA contrast pairings
 
@@ -197,15 +225,20 @@ template port can verify a pairing without re-deriving it.
 
 **Light theme** — surfaces `#F7F6F4` / `#FFFFFF` / `#F1F0EC` / `#E8E5DF`
 
+Every foreground is measured against **all four** surfaces, in both themes
+(FR-005). A single representative surface is not an audit — the two failures
+found late in this feature were both hiding in an unmeasured surface.
+
 | Foreground | Ratio range across the four surfaces | Verdict |
 |------------|--------------------------------------|---------|
 | `--rc-text` `#111827` | 14.11 – 17.74 | AA body |
 | `--rc-text-muted` `#4B5563` | 6.01 – 7.56 | AA body |
 | `--rc-link` `#2A6A99` | 4.61 – 5.80 | AA body |
-| `--rc-accent` `#3C89C6` | 3.30 – 3.76 on surface/raised/sunken | AA large + non-text |
+| `--rc-accent` `#3C89C6` | 3.30 – 3.76 on surface/raised/sunken | AA large + non-text; **prohibited** on muted (2.99) |
 | `--rc-brand-red` `#dc143c` | 3.97 – 4.99 | AA large + non-text |
-| `--rc-danger-text` `#C4102F` | 4.82 – 6.05 | AA body |
-| `--rc-border-strong` `#8A8578` | 3.41 on `--rc-surface` | AA non-text |
+| `--rc-danger-text` `#C4102F` | 4.82 – 6.07 | AA body |
+| `--rc-border-strong` `#847F72` | 3.18 – 3.99 | AA non-text on all four |
+| `--rc-border-subtle` `#E0DED9` | 1.07 – 1.34 | decorative only — **prohibited** for meaning |
 
 **Dark theme** — surfaces `#1A1A1A` / `#1F2937` / `#141414` / `#1E1E1E`
 
@@ -215,20 +248,42 @@ template port can verify a pairing without re-deriving it.
 | `--rc-text-muted` `#9CA3AF` | 5.78 – 7.26 | AA body |
 | `--rc-link` `#7CB3DD` | 6.54 – 8.20 | AA body |
 | `--rc-accent` `#3C89C6` | 3.90 – 4.90 | AA large + non-text |
+| `--rc-brand-red` `#dc143c` | 3.34 – 3.69 on surface/sunken/muted | AA large + non-text; **prohibited** on raised (2.94) |
 | `--rc-danger-text` `#FF6B85` | 5.38 – 6.75 | AA body |
-| `--rc-border-strong` `#6B7280` | 3.60 on `--rc-surface` | AA non-text |
+| `--rc-border-strong` `#6B7280` | 3.04 – 3.81 | AA non-text on all four; 3.04 on raised is the binding minimum |
+| `--rc-border-subtle` `#404040` | 1.42 – 1.78 | decorative only — **prohibited** for meaning |
 
-Two constraints fall out of the audit and are recorded as rules in the CSS
-comment, because they are the only pairings that do not pass:
+Four constraints fall out of the audit and are recorded as rules in the CSS
+comment. Per FR-005 these are the complete set of pairings that do not meet
+their threshold; every one names its replacement, and no failing pairing is left
+without a rule.
 
 1. **`--rc-accent` is never paired with `--rc-surface-muted` in light theme** —
    `#3C89C6` on `#E8E5DF` measures 2.99, just under the 3:1 non-text floor. Use
    `--rc-link` there instead.
-2. **`--rc-border-subtle` is decorative only** — 1.24 (light) and 1.69 (dark)
-   against their surfaces. Any boundary that conveys meaning (form control
+2. **`--rc-border-subtle` is decorative only** — 1.07–1.34 (light) and 1.42–1.78
+   (dark) against the surfaces. Any boundary that conveys meaning (form control
    edges, focus ring) MUST use `--rc-border-strong`.
+3. **`--rc-brand-red` is never paired with `--rc-surface-raised` in dark theme** —
+   `#dc143c` on `#1F2937` measures 2.94, under the 3:1 non-text floor. Use
+   `--rc-danger-text` `#FF6B85` there instead (5.38). This pairing was missed by
+   the first audit, which carried no `--rc-brand-red` row in the dark table at
+   all; the token passes on the other three dark surfaces (3.34–3.69).
+4. **`--rc-border-strong` light is `#847F72`, not `#8A8578`** — the original
+   value measured 2.93 against `--rc-surface-muted`, below the 3:1 floor, which
+   the first audit did not surface because it recorded only the single
+   `--rc-surface` pairing (3.41). Because this token exists precisely to carry
+   boundaries that convey meaning, prohibiting it on a surface would be a trap;
+   the value is darkened one step instead so it clears 3:1 on all four light
+   surfaces (3.18–3.99). Dark `#6B7280` needed no change (3.04–3.81).
 
-Focus ring uses `--rc-link` in both themes: 5.37 light, 7.75 dark.
+Focus ring uses `--rc-link` in both themes and clears the 3:1 non-text floor on
+every surface it can appear on: 5.37 / 5.80 / 5.09 / 4.61 light, 7.75 / 6.54 /
+8.20 / 7.42 dark (FR-023).
+
+All ratios above were recomputed from the token hex values with the WCAG 2.x
+relative-luminance and contrast-ratio formulas and are stated unrounded to two
+decimals. None is rounded up to a threshold.
 
 ## Entity 5 — Theme Toggle Snippet (`theme-toggle.html`)
 
@@ -241,9 +296,32 @@ Contains the control markup plus the inline behavior:
 - Reads a stored override, falling back to the OS signal.
 - Applies `data-theme` to `:root` **before first paint**, so a dark-OS reviewer
   sees no light flash (FR-004, SC-005).
+- Sets the matching `color-scheme` for the chosen theme so the browser's own
+  surfaces follow the override rather than the OS preference (FR-004).
 - Writes the override inside `try` / `catch`; when a browser refuses storage for
   `file://` documents the override still applies for the session and nothing is
   reported as an error (FR-004, Story 3 scenario 3).
+
+### Accessibility obligations fixed in this snippet (FR-022)
+
+These are properties of the **canonical snippet**, not of any port. The snippet
+is embedded verbatim into all 21 artifacts, so each of these is decided once and
+cannot be corrected per template — which is why they are specified here rather
+than left to the ports.
+
+| Obligation | Requirement | Criterion |
+|---|---|---|
+| Keyboard reachable | In the normal focus order, no positive `tabindex` | 2.1.1 (A) |
+| Keyboard activatable | Activates by keyboard without a pointer | 2.1.1 (A) |
+| Native semantics | A real button element, so role and activation come from the platform rather than being reconstructed | 4.1.2 (A) |
+| Accessible name | A stable, human-readable name that does not depend on an icon glyph alone | 4.1.2 (A) |
+| State exposed | The active theme is programmatically determinable, not signalled by icon or color alone | 4.1.2 (A), 1.4.1 (A) |
+| Focus visible | Carries the kit's focus-visible treatment | 2.4.7 (AA) |
+
+The state must be readable by assistive technology in **both** positions. A
+control that toggles appearance but reports the same state in either theme
+satisfies none of this, and neither does one whose only state cue is a sun or
+moon glyph — that is a use-of-color/graphic-only signal under FR-021.
 
 ## Entity 6 — Provenance Record
 

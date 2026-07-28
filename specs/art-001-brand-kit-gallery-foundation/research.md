@@ -198,8 +198,11 @@ rather than assuming caught two real failures in the palette as drafted:
    rule: use `--rc-link` `#2A6A99` (4.61) on muted surfaces.
 2. The subtle border `#E0DED9` measures **1.24** against the light surface, far
    under 3:1. Resolved by splitting the token: `--rc-border-subtle` is
-   decorative-only, and a new `--rc-border-strong` (`#8A8578` light, 3.41;
-   `#6B7280` dark, 3.60) carries every boundary that conveys meaning.
+   decorative-only, and a new `--rc-border-strong` carries every boundary that
+   conveys meaning. **Superseded in part by R13**: the light value was first set
+   to `#8A8578` and audited only against `--rc-surface` (3.41); measured against
+   all four light surfaces it falls to 2.93 on `--rc-surface-muted`, so the value
+   is now `#847F72` (3.18–3.99). Dark `#6B7280` stands (3.04–3.81).
 
 Brand red `#dc143c` passes at 3.97–4.99 across light surfaces, which is AA for
 exactly the punctuation-level, non-text and large-text role FR-001 reserves it
@@ -335,8 +338,9 @@ Reviewability Budget.
 - **The inputs grew.** The 435 came from the scaffold-time estimator
   (`estimate_spec_size`: `stories*25 + files*40 + frs*15`) on 3 stories, 6
   files, 8 FRs. Clarify took the spec to 20 FRs and the plan to 9 authored
-  files. The same formula on current inputs gives **735**, `warn`, suggested
-  slices 2.
+  files; the accessibility checklist added FR-021 through FR-024, taking it to
+  24. The same formula on current inputs gives **795**, `warn`, suggested
+  slices 2 — five points under the 800 block threshold.
 - **The plan-phase estimator measures something different and will report
   zero.** `estimate_reviewable_loc` counts only files where `is_production_file`
   is true — paths under `src/`, `app/`, `lib/`, `scripts/`, or ending
@@ -347,6 +351,85 @@ Reviewability Budget.
   file types, and it must not be read as evidence the slice is small.
 
 All three figures are reported in `plan.md` rather than one flattering one.
+
+## R13 — Accessibility audit: what the first pass missed
+
+**Decision**: FR-021 through FR-024 are added, FR-004, FR-005, and FR-010 are
+amended, and two more contrast failures are resolved. R8's method was right; its
+*coverage* was not.
+
+**Rationale**: R8 established that computing ratios beats asserting them, and
+that finding paid off twice. Re-running the computation across the full token
+matrix — every foreground against every surface, in both themes — found that the
+audit itself had two holes, and a failure was sitting in each one.
+
+1. **The dark table had no `--rc-brand-red` row at all.** The light table
+   audited it; the dark table simply omitted the token, so no reader could tell
+   whether it had passed or been skipped. Measured: 3.49 / **2.94** / 3.69 /
+   3.34 across the four dark surfaces. The pairing with `--rc-surface-raised`
+   `#1F2937` is under the 3:1 non-text floor. Resolved the same way R8 resolved
+   the accent failure — prohibit the pairing, name the replacement
+   (`--rc-danger-text` `#FF6B85`, 5.38).
+2. **`--rc-border-strong` was audited against one surface out of four.** R8
+   recorded "3.41 on `--rc-surface`" where every other row carried a range.
+   Measured across all four light surfaces, `#8A8578` gives 3.41 / 3.68 / 3.23 /
+   **2.93** — under the floor on `--rc-surface-muted`. This one is *not* resolved
+   by prohibition: the token exists precisely to carry boundaries that convey
+   meaning, so a rule forbidding it on one surface would be a trap for exactly
+   the author it is meant to serve. The value is darkened one step to `#847F72`
+   (3.18–3.99 across all four). Dark `#6B7280` was re-measured and stands
+   (3.04–3.81, binding minimum on raised).
+
+Both holes share one shape: **an unmeasured pairing read as a passing one.**
+FR-005 is amended so absence is a defect — the audit must be symmetric across
+themes and complete across surfaces, and every failing pairing must carry a
+usage rule naming its replacement. A rounding error was also corrected
+(`--rc-danger-text` light maximum is 6.07, recorded as 6.05).
+
+**Font loading — verified against the live endpoint, not assumed.** The spec
+said fonts are "loaded as linked web fonts with swap behavior". Swap is not a
+property of the link. Requesting the provider's `css2` stylesheet **without** the
+display parameter returns a stylesheet containing **zero** `font-display`
+declarations, leaving the descriptor at its initial value — a blocking behavior
+with an invisible-text period in the major engines, which is precisely what the
+spec's own edge case forbids. The same request **with** the parameter returns
+`font-display: swap` on every `@font-face`. FR-024 therefore makes the request
+parameter the requirement and check E4 enforces it; nothing else in the check
+inventory would have noticed, because the host allowlist passes either way.
+
+**`color-scheme` does not follow an in-page override.** The design declared
+`color-scheme: light dark` "so form controls and scrollbars follow". That
+declaration states which schemes the page supports and resolves against the
+*operating-system* preference; it does not observe `data-theme`. A reviewer on a
+dark OS who forces light therefore gets light page tokens and dark native
+widgets. Resolved by setting the scheme explicitly under each `data-theme`
+override (FR-004).
+
+**The shared blocks are the leverage point.** The theme toggle and the token
+block are embedded verbatim into all 21 artifacts, so an accessibility defect
+specified into either reaches every template and no port can fix it locally.
+Nothing in the feature previously required the control to be keyboard-operable
+or to expose a name, role, or state — "keyboard", "aria", "role", and
+"accessible name" appeared zero times across every artifact. FR-022 fixes those
+in the canonical snippet; FR-023 does the same for focus visibility and
+reduced motion; check group I asserts each construct actually sits **inside** the
+copied region, since a rule above the start marker looks correct in the
+canonical file and ships to nothing.
+
+**Use of color is a separate obligation from contrast.** The brand-red rule was
+expressed only as "punctuation-level emphasis" plus a size and contrast
+restriction — a rule about how much red is used, not about what red is allowed
+to mean alone. FR-021 adds the missing constraint: red may never be the sole
+visual carrier of information, and the two rules are documented as distinct so
+neither reads as discharging the other.
+
+**Alternatives considered**: Leaving FR-005's absolute "every pairing MUST meet
+AA" wording in place and treating the prohibited pairings as understood —
+rejected, because the requirement then contradicts the accepted design and a
+future reader cannot tell a deliberate prohibition from an oversight, which is
+the exact confusion that let two failures hide. Adding a dark-specific brand-red
+token instead of prohibiting the raised pairing — rejected, it adds a permanent
+token to serve one surface where an existing token already fits.
 
 ---
 

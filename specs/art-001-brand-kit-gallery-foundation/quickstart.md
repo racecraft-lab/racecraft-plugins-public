@@ -122,6 +122,12 @@ The suite drives no browser. These are acceptance evidence for the PR
 | M4 | Activate the control in a browser that refuses `localStorage` for local files | Theme still switches for the session; **no error surfaced** |
 | M5 | Disable the network, reopen | All content, layout, and behavior work; the only difference is typeface substitution |
 | M6 | Follow a provenance or attribution link | Navigates normally — these are not resource loads and must not have been stripped |
+| M7 | Reach the theme control using **only** the keyboard, then activate it without a pointer | Control is reachable in normal focus order, shows a visible focus indicator, and activates; theme switches (FR-022, FR-023, SC-010) |
+| M8 | Inspect the control's reported name and state in an accessibility inspector, in **both** theme positions | A stable human-readable name in both; the active theme is reported as state, and the reported state **changes** between positions (FR-022, SC-010) |
+| M9 | Set the OS to reduce motion, reopen, and switch themes | No cross-theme animation or transition; nothing animates or smooth-scrolls (FR-023) |
+| M10 | On a **dark** OS, force the **light** theme, then inspect a form control and the scrollbar | Both render light, matching the chosen theme rather than the OS (FR-004). This is the check that fails when only `color-scheme: light dark` is declared |
+| M11 | Throttle or block the font host, reload, and watch the first paint | Text is visible in the fallback face immediately; at no point is text rendered invisibly (FR-024, SC-011) |
+| M12 | With fonts unavailable, compare a heading against body copy | The two remain distinguishable — by level, size, and weight even if the substituted faces are similar (FR-024, SC-011) |
 
 ART-001 ships no artifact, so M1–M6 run against the canonical
 `theme-toggle.html` plus `brand-kit.css` composed into a scratch harness page.
@@ -133,7 +139,11 @@ The first port spec re-runs them against a real artifact.
 |---|---|
 | FR-001, FR-005, SC-007 | Audited contrast table in `data-model.md`, restated in `brand-kit.css` |
 | FR-002, FR-003, FR-006, SC-002 | Check group A; step 7 |
-| FR-004, SC-005 | M1, M3, M4 |
+| FR-004, SC-005 | M1, M3, M4, M10; check I3 |
+| FR-021 | `SPA-CONTRACT.md` review — the use-of-color rule stated separately from the punctuation rule |
+| FR-022, SC-010 | M7, M8; check I4 |
+| FR-023 | M7, M9; checks I1, I2; focus-ring ratios in the audited table |
+| FR-024, SC-011 | Check E4 (the request); M11, M12 (the rendering) |
 | FR-007, FR-019, SC-003 | Check group B |
 | FR-008, FR-015, FR-016, FR-017 | Check group C |
 | FR-009 | Check group D |
