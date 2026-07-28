@@ -285,6 +285,15 @@ currently uses neither.
 - **Artifacts are review-visible**: committed under
   `specs/<branch>/artifacts/` (CONTRACT tier), not `.process/` exhaust —
   operators and reviewers consume them.
+- **Verification obligations**: each SPEC's owed test layers and evals are
+  recorded in its roadmap entry's `**Verification:**` line — Layer 1
+  structural for every shipped component, Layer 2 skill-trigger evals wherever
+  a skill description changes, Layer 4 unit/golden-fixture coverage for
+  runner-owned logic, Layer 5 agent verification for new or renamed agents,
+  and Codex parity checks throughout. Prompt-level behavior with no automated
+  eval (feedback-sweep routing, blind-spot pass) is verified through the
+  spec's UAT evidence, never claimed as covered. Fine-grained test tasks are
+  generated per spec at plan/tasks time under the TDD protocol.
 
 ## 6. Open Questions
 

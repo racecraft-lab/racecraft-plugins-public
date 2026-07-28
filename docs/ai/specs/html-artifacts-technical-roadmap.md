@@ -184,6 +184,11 @@ Budget result: within budget
 - Any actual template port (ART-002…005).
 - Workflow wiring (ART-006…011).
 
+**Verification:** Layer 4 unit tests for the manifest schema and the
+external-reference scanner (`tests/speckit-pro/unit/test_artifact_gallery.py`),
+registered in `tests/speckit-pro/suite-manifest.json`; Layer 1 structural pass
+for the new shipped directory; payload/proof regeneration accounted.
+
 **Key Decisions:**
 **Branded derivatives, not pristine vendoring (2026-07-28):** the upstream
 templates are re-skinned with Racecraft brand tokens and become repo-authored,
@@ -233,6 +238,12 @@ Budget result: within budget
 **Out of Scope:**
 - Generation/authoring logic (ART-007).
 
+**Verification:** ART-001's gallery scanner covers all four templates
+automatically; add a Layer 4 fill-region test (stdlib HTML parse asserting
+each documented slot exists); Layer 1 + payload regeneration; manual `file://`
+render/console check recorded as UAT evidence (browser checks stay manual —
+plugin tests are Python-stdlib-only).
+
 **Key Decisions:**
 **Draft-PR artifact set (2026-07-28):** implementation plan + spec explainer
 always; code-approaches + module map conditional — chosen in the PRD interview.
@@ -274,6 +285,10 @@ Budget result: within budget
 - The UAT walkthrough template (ART-009 — it is repo-authored, not an
   upstream port).
 
+**Verification:** gallery scanner covers all three templates; Layer 4
+fill-region test (including the implementation-notes slot); Layer 1 + payload
+regeneration; manual `file://` render check as UAT evidence.
+
 **Key Decisions:**
 **Final-PR artifact set (2026-07-28):** writeup + UAT walkthrough always;
 annotated diff + flowchart conditional — chosen in the PRD interview.
@@ -312,6 +327,10 @@ exceeds the estimate
 
 **Out of Scope:**
 - Workflow-stage routing (none of these are stage-emitted).
+
+**Verification:** gallery scanner + manifest-row coverage for all six
+templates (Layer 4); Layer 1 + payload regeneration; interactive behavior
+(sliders, linked screens) verified manually over `file://` as UAT evidence.
 
 **Key Decisions:**
 **Keep as one spec with recorded warn (2026-07-28):** interview decision — the
@@ -354,6 +373,11 @@ exceeds the estimate
 
 **Out of Scope:**
 - Workflow-stage routing.
+
+**Verification:** gallery scanner + manifest-row coverage for all seven
+templates (Layer 4); Layer 1 + payload regeneration; editor export-back
+buttons verified manually over `file://` as UAT evidence (no browser
+automation in the plugin suite).
 
 **Key Decisions:**
 **Keep as one spec with recorded warn (2026-07-28):** same rationale as
@@ -403,6 +427,11 @@ Budget result: within budget
 - Draft-PR creation (ART-007), feedback sweep (ART-008), scaffold-side chain
   (ART-011).
 
+**Verification:** Layer 4 unit tests + golden fixtures for stage resolution
+and workflow-file stage state; Layer 2 skill-trigger evals re-run for the
+reworded autopilot description; Layer 1 frontmatter/structure; Codex parity
+checks (validate-codex-skills / validate-codex-parity).
+
 **Key Decisions:**
 **Single execution engine (2026-07-28):** stages live in autopilot; scaffold
 chains into the plan stage rather than growing its own phase loop.
@@ -451,6 +480,11 @@ Budget result: within budget
 **Out of Scope:**
 - Reading feedback (ART-008); flipping to ready (ART-010).
 
+**Verification:** Layer 4 golden fixtures for the draft-mode packet path
+(including the fail-open artifact-generation branch); Layer 5 agent
+verification for `artifact-author` on both platforms; Layer 1 + Codex parity
+checks; payload regeneration.
+
 **Key Decisions:**
 **Commit + PR artifact index viewing (2026-07-28):** artifacts are committed
 review-visible under `specs/<branch>/artifacts/` and opened locally over
@@ -496,6 +530,11 @@ Budget result: within budget
 - Post-implementation review remediation (existing `/loop` machinery,
   unchanged).
 
+**Verification:** Layer 4 fixtures for the feedback-comment schema parse and
+the Consensus Resolution Log rows; the sweep's consensus routing is
+prompt-level behavior with no automated eval, so end-to-end evidence lands in
+the spec's UAT; Codex parity checks.
+
 **Key Decisions:**
 **Sweep + amend + re-review (2026-07-28):** amendments always stop for
 re-review — the checkpoint's value is the human confirming plan changes.
@@ -538,6 +577,11 @@ Budget result: within budget
 **Out of Scope:**
 - PR-writeup generation and the ready flip (ART-010).
 
+**Verification:** Layer 5 agent verification for `uat-artifact-author`;
+Layer 4 test for the fixed UAT-results export schema; Layer 1
+task-list-canonical consistency; the gallery scanner covers the template;
+Codex parity checks.
+
 **Key Decisions:**
 **Full replacement, fail-open (2026-07-28):** HTML walkthrough replaces the
 markdown runbook outright (no dual output); the existing fail-open contract
@@ -577,6 +621,10 @@ Budget result: within budget
 
 **Out of Scope:**
 - Review-remediation loop (unchanged).
+
+**Verification:** Layer 4 golden fixtures for the packet update/refresh path;
+the `gh pr ready` flip is exercised in dry-run/integration only; Layer 1 +
+Codex parity checks; payload regeneration.
 
 **Key Decisions:**
 **Update-in-place + flip (2026-07-28):** the draft PR is the one PR; the
@@ -620,6 +668,11 @@ Budget result: within budget
 **Out of Scope:**
 - grill-me internals (unchanged).
 
+**Verification:** Layer 2 skill-trigger evals re-run for the reworded
+scaffold description; Layer 1 structure + Codex parity checks; the blind-spot
+pass and chain hand-off are prompt-level — verified via the spec's UAT
+evidence.
+
 **Key Decisions:**
 **Chain with confirm (2026-07-28):** scaffold auto-continues into the plan
 stage after an explicit confirmation, preserving the interactive/autonomous
@@ -659,6 +712,10 @@ Budget result: within budget
 **Out of Scope:**
 - Writeup generation itself (ART-010).
 
+**Verification:** Layer 4 fixture test for the notes-record format (including
+the explicit "no deviations" entry); dispatch-prompt wording covered by
+Layer 1 + Codex parity checks.
+
 **Key Decisions:**
 **Notes are exhaust (2026-07-28):** the raw record lives under `.process/`;
 its review-visible expression is the writeup's implementation-notes section.
@@ -693,6 +750,11 @@ Budget result: within budget
 
 **Out of Scope:**
 - Generated reference pages (regenerated, not hand-edited).
+
+**Verification:** `pnpm --dir docs-site validate` (link validation,
+generated-reference staleness, Playwright smoke); regenerate
+`reference/tests.md` if the test tree changed; no plugin payload change
+expected.
 
 **Key Decisions:**
 **Dedicated docs spec (2026-07-28):** docs land once, last, against shipped
