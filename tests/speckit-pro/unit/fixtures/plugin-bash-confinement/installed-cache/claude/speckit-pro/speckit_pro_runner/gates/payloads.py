@@ -14,7 +14,7 @@ from typing import Any
 
 from .. import RUNNER_VERSION
 from ..envelope import diagnostic, is_diagnostic, response
-from ..path_utils import find_repo_root, is_relative_to
+from ..path_utils import find_repo_root, is_relative_to, sha256_file
 from .gate_response import gate_base_data
 
 PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
@@ -951,11 +951,3 @@ def repo_relative(path: Path, repo_root: Path) -> str:
 
 def sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(65536), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
