@@ -83,7 +83,7 @@
   `research`, `reports`, `editors` — **and it is a genuinely different axis from
   stage.** The product plan's four-way grouping is port-spec ownership, not a browsing
   taxonomy; adopting it would make category derivable from stage for all eight staged
-  entries. Under the upstream taxonomy four members straddle two stages each, so no
+  entries. Under the upstream taxonomy five members straddle two stages each, so no
   stage-to-category function exists in either direction. Values are kebab-case,
   matching stage.
 - **Q: The 20 ported entries inherit their upstream category. What does the one
@@ -427,22 +427,48 @@ confirm it renders correctly, has no errors, and its theme control works.
 - **Secondary surfaces, if any**: docs/process (the single-file contract and
   brand-voice references); harness/adapter (the validation added to the
   repository's standard suite)
-- **Projected reviewable LOC**: 435 (excludes regenerated payload and proof
-  artifacts, which are declared generated)
-- **Projected production files**: 5 net-new shipped foundation files
-- **Projected total files**: 8 (5 shipped, 1 validation module, 1 suite registry
-  update, plus regenerated payload/proof artifacts)
-- **Budget result**: warning accepted
-- **Split decision**: Remains one spec. The post-interview estimator returned
-  435 projected LOC with status `warn` and suggested 2 slices; the split was
-  declined under the product plan's 1.5x greenfield allowance for net-new-only
-  slices, which sets the warn threshold at 600 for this class of work. The
-  feature is one thin vertical slice — tokens, then catalog, then validation —
-  and most of the volume is declarative token declarations and catalog rows
-  rather than logic. Splitting kit from catalog was rejected because the second
-  slice's validation would import the first slice's marked blocks, so the two
-  would not be independent, and the split would double the wait for the four
-  blocked port specs.
+- **Projected reviewable LOC**: ~1,285 authored lines by honest hand count —
+  ~423 logic (the single validation module), ~460 declarative (design tokens and
+  catalog rows), ~355 prose, ~25 reproduced verbatim. Excludes regenerated payload
+  and proof artifacts, which are declared generated.
+- **Projected production files**: 9 authored (6 net-new shipped foundation files,
+  1 net-new validation module, 2 modified — the suite registry and the payload
+  builder)
+- **Projected total files**: 24 declared entries — 19 new, 5 modified — of which
+  15 are regenerated artifacts excluded from the review surface
+- **Budget result**: warning accepted, on a **different basis than at scaffold**
+- **Split decision**: Remains one spec, but the original justification no longer
+  applies and has been replaced rather than restated.
+
+  **Why the scaffold rationale died.** The split was first declined under the
+  product plan's 1.5x greenfield allowance for net-new-only slices. FR-018 forces
+  a modification to the payload builder, and the estimator computes greenfield as
+  "every declared entry is new or an excluded generated artifact". One
+  non-generated modified entry disqualifies it, so thresholds revert from
+  600/1200 to 400/800. The allowance is unavailable by the estimator's own
+  definition, not by interpretation.
+
+  **The automated estimate is not evidence here.** The plan-phase estimator
+  returns `status: pass` with `projected: 0`, because it counts only paths under
+  conventional source directories with JavaScript, TypeScript, or SQL extensions.
+  Every file in this feature is CSS, HTML, JSON, Markdown, or Python, so none are
+  counted. That zero must not be cited as a size argument in review.
+
+  **The honest position.** On a raw-line reading, ~1,285 exceeds the 800 block
+  threshold. The judgment to proceed rests on composition rather than volume: the
+  modification is two lines, the entire logic surface is one validation module of
+  roughly 420 lines, and two-thirds of the remaining volume is declarative rows
+  and prose that review at a glance. This is a judgment, not a measurement, and it
+  is the part of this spec a reviewer should push on hardest.
+
+  **The original non-independence reason still stands.** Splitting the kit from
+  the catalog was rejected because the second slice's validation would import the
+  first slice's marker blocks, so the slices would not be independent, and the
+  split would double the wait for the four blocked port specs.
+
+  **Fallback if a reviewer rejects the judgment**: split into 1a (brand kit,
+  theme toggle, brand voice, upstream notice, and their validation) and 1b
+  (routing catalog, contract document, catalog validation, payload wiring).
 
 ### PR Review Packet Requirements *(mandatory)*
 

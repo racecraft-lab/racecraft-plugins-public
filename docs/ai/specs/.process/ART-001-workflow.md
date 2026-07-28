@@ -34,8 +34,8 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 14 FR, 9 SC, 3 user stories, 0 markers |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass — 11 questions resolved, 5 via consensus; spec 14 → 20 FR |
-| Plan | `/speckit-plan` | 🔄 In Progress | |
-| Checklist | `/speckit-checklist` | ⏳ Pending | accessibility, data-integrity, security |
+| Plan | `/speckit-plan` | ✅ Complete | G3 pass — 6 artifacts; budget rationale replaced, honest size ~1,285 lines |
+| Checklist | `/speckit-checklist` | 🔄 In Progress | accessibility, data-integrity, security |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -534,11 +534,67 @@ auditable rather than silent.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Manifest row shape, signal vocabulary |
-| `contracts/` | ⏳ | Marker-block + scanner contracts |
-| `quickstart.md` | ⏳ | How a template port consumes the kit |
+| `plan.md` | ✅ | 20/20 FRs planned; 24 declared file entries (19 new / 5 modified) |
+| `research.md` | ✅ | 12/12 Phase-0 unknowns resolved |
+| `data-model.md` | ✅ | Catalog entry shape, signal vocabulary, enums |
+| `contracts/` | ✅ | `routing-catalog-contract.md`, `gallery-validation-contract.md` |
+| `quickstart.md` | ✅ | How a template port consumes the kit |
+
+**Gate G3: ✅ PASS** — `plan.md` exists, 0 unresolved markers, 0 path leaks across
+all six artifacts.
+
+### Plan-phase reviewability budget (advisory — did not block)
+
+`estimate-reviewable-loc` returned `status: pass`, `projected: 0`, `greenfield: false`,
+thresholds 400 warn / 800 block, 24 declared entries (19 new, 5 modified).
+
+**The passing zero is not evidence and must not be cited as one.** The helper's
+`is_production_file` counts only paths under conventional source directories carrying
+JavaScript, TypeScript, or SQL extensions. Every authored file in this feature is CSS,
+HTML, JSON, Markdown, or Python, so the production count is structurally 0 regardless
+of actual size. The executor flagged this itself rather than banking the pass.
+
+**The scaffold budget is dead and was replaced, not restated.** FR-018 forces a
+modification to the payload builder; the estimator computes greenfield as "every
+declared entry is new or an excluded generated artifact", so a single non-generated
+modified entry disqualifies it and thresholds revert from 600/1200 to 400/800. The
+1.5x net-new-only allowance the scaffold relied on is unavailable **by the estimator's
+own definition**. `spec.md`'s Reviewability Budget was rewritten to match.
+
+**Honest size: ~1,285 authored lines** — ~423 logic, ~460 declarative, ~355 prose,
+~25 verbatim. On a raw-line reading that exceeds the 800 block threshold. Proceeding
+is a **judgment based on composition, not volume**: the modification is two lines, the
+whole logic surface is one ~420-line validation module, and two-thirds of the rest is
+declarative rows and prose. Recorded as the item a reviewer should push on hardest,
+with a concrete fallback split (1a kit + 1b catalog) if the judgment is rejected.
+
+### Findings the Plan phase produced by verifying rather than assuming
+
+- **AA contrast was computed, not asserted — and it caught two real failures.** Light
+  accent `#3C89C6` on `#E8E5DF` measures 2.99, under the 3:1 floor for meaningful
+  non-text elements; the subtle border measures 1.24. Both resolved with documented
+  usage rules and a new stronger border token.
+- **FR-018's check must be gallery-scoped, not general.** `speckit-pro/AGENTS.md`,
+  `CLAUDE.md`, and `GEMINI.md` exist in source, ship in neither payload, and the suite
+  is green — so a generalized "all source must ship" check would fail on contact.
+- **Two roadmap upstream references would have been guessed wrong.** "upstream 04
+  (module map)" is `04-code-understanding.html`; "upstream 14" is
+  `14-research-feature-explainer.html`. Fetched rather than inferred.
+- **All 21 seeded entries were checked programmatically** against every count the spec
+  fixes — 21 entries, 4/4/13 stage split, 20+1 origins, 4 always + 4 conditional + 13
+  ad-hoc, FR-007's 4/3/6/7 upstream grouping, and five-signal closure in both
+  directions. All pass.
+- **`UPSTREAM-NOTICE.md` chosen for the notice file.** The `LICENSE` special-case in
+  `infer_payload_source_path` is an exact match, so `artifact-gallery/LICENSE` would
+  not actually collide today — but the ban is enforced by check rather than left to
+  depend on that behavior holding.
+- **One stale rationale sentence corrected in `spec.md`:** Session 2 said "four members
+  straddle two stages"; assigning `uat-walkthrough` to `editors` makes it five. The
+  load-bearing claim holds more strongly at five. Fixed so Analyze does not reopen it.
+
+**`after_plan` hooks.** `speckit.speckit-utils.validate` deferred — it validates
+spec-to-task traceability and `tasks.md` does not exist yet; it runs after Phase 5.
+`speckit.git.commit` skipped — the orchestrator owns commits.
 
 ---
 
