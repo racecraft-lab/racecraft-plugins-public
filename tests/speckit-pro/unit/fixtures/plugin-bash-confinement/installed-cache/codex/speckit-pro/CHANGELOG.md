@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.21.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.21.0...speckit-pro-v2.21.1) (2026-07-28)
+
+
+### Bug Fixes
+
+* **runner:** prefer nested worktree roots ([4fddb79](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4fddb79c1ae5d1cbffda78f3489a0428f0d56768))
+* **runner:** Prefer nested worktree roots ([#397](https://github.com/racecraft-lab/racecraft-plugins-public/issues/397)) ([4fddb79](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4fddb79c1ae5d1cbffda78f3489a0428f0d56768))
+
 ## [2.21.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.20.0...speckit-pro-v2.21.0) (2026-07-28)
 
 
