@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.21.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.20.0...speckit-pro-v2.21.0) (2026-07-28)
+
+
+### Features
+
+* **car-003:** add the evaluation platform that turns capability evidence into qualification evidence ([#385](https://github.com/racecraft-lab/racecraft-plugins-public/issues/385)) ([9fab208](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9fab2083cd74fcaca28cb6589cf8705e0e8ddd3c))
+* **g56r-003:** add evaluation runner scoring ([#386](https://github.com/racecraft-lab/racecraft-plugins-public/issues/386)) ([dcceef8](https://github.com/racecraft-lab/racecraft-plugins-public/commit/dcceef86daed97fe42e81a43c90e82556457dc48))
+
 ## [2.20.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.19.3...speckit-pro-v2.20.0) (2026-07-24)
 
 
