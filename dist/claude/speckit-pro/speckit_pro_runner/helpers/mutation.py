@@ -89,7 +89,7 @@ def mutation_lock_dir() -> Path:
         if stat.S_ISLNK(mode) or not stat.S_ISDIR(mode):
             raise OSError("unsafe mutation lock directory")
         owner = getattr(os, "getuid", lambda: None)()
-        root_stat = root.stat(follow_symlinks=False)
+        root_stat = os.stat(root, follow_symlinks=False)
         if owner is not None and root_stat.st_uid != owner:
             raise OSError("mutation lock directory owner mismatch")
         if stat.S_IMODE(root_stat.st_mode) & 0o077:
