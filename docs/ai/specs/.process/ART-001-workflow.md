@@ -33,8 +33,8 @@ captured during scoping.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 14 FR, 9 SC, 3 user stories, 0 markers |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | Two sessions seeded from Open Questions |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Clarify | `/speckit-clarify` | ✅ Complete | G2 pass — 11 questions resolved, 5 via consensus; spec 14 → 20 FR |
+| Plan | `/speckit-plan` | 🔄 In Progress | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | accessibility, data-integrity, security |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -338,7 +338,30 @@ Layer 4 test; no formal JSON Schema document (stdlib can't validate one anyway).
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
 | 1 | Signal vocabulary | 5 asked, 5 resolved (3 via consensus) | 5-signal closed vocabulary; 2 trigger forms with non-empty rule; stage filters before triggers; vocabulary declared in the catalog with a cardinality oracle in the test. Spec gained FR-015/016/017 + a Clarifications section |
-| 2 | Manifest shape | | |
+| 2 | Manifest shape | 6 asked, 6 resolved (2 via consensus) | 8 `snake_case` per-entry keys with no stored path; 9-member category enum from the upstream taxonomy; `source` as an origin-discriminated object; top level `{schema_version, signals, templates}`; `schema_version: "1.0"`. Spec gained FR-018/019/020 |
+
+**Gate G2: ✅ PASS** — both seeded sessions run, both design-concept Open Questions
+closed, 0 `[NEEDS CLARIFICATION]` markers, spec at 20 FRs.
+
+### Seeded catalog (recorded here because no other artifact carries the full mapping)
+
+| stage | entries | trigger |
+|---|---|---|
+| `draft-pr` | `implementation-plan`, `spec-explainer` | always |
+| `draft-pr` | `code-approaches` | `competing_approaches` |
+| `draft-pr` | `module-map` | `brownfield_change` |
+| `final-pr` | `pr-writeup`, `uat-walkthrough` | always |
+| `final-pr` | `annotated-diff` | `self_review_findings` or `large_diff` |
+| `final-pr` | `flowchart` | `operational_flow_change` |
+| `ad-hoc` | the other 13 | always (suppressed by the stage filter) |
+
+Categories: `exploration-planning` (implementation-plan, code-approaches,
+visual-designs) · `code-review` (module-map, pr-writeup, annotated-diff) · `design`
+(design-system, component-variants) · `prototyping` (animation-prototype,
+interaction-prototype) · `diagrams` (flowchart, svg-illustrations) · `decks`
+(slide-deck) · `research` (spec-explainer, concept-explainer) · `reports`
+(status-report, incident-report) · `editors` (triage-board, feature-flags,
+prompt-tuner, uat-walkthrough).
 
 ### Consensus Resolution Log
 
@@ -391,6 +414,67 @@ catalog it validates. A duplicated list would be a change-detector tax on every
 legitimate vocabulary edit while leaving the hole open to a single two-file commit.
 The cardinality assertion is spec-derived — an oracle independent of the data it
 checks — and closes the typo case in both directions.
+
+| 4 | Clarify | Upstream templates are MIT-licensed; no requirement states an attribution obligation for the 20 ports | `[domain]` + `[codebase]` | 1 | both-agree | **New FR-020** — per-artifact attribution header plus one verbatim notice file in the gallery. | domain-researcher, codebase-analyst |
+| 5 | Clarify | What category does the one repository-authored entry take? | `[spec, domain]` | 1 | high-confidence | **`editors`** — no tenth member minted. | spec-context-analyst |
+
+**Item 4 — the finding that changed the most.** The executor surfaced that the 20
+ported templates come from an MIT-licensed upstream ("Copyright (c) 2026 Anthropic
+PBC") and that **no requirement anywhere states an attribution obligation for them**:
+FR-012's provenance header is scoped to *brand* sources only, and the sole
+template-level obligation was an unstructured catalog field. Both analysts confirmed
+the gap. Two facts decided the shape:
+
+- **The upstream template files carry no per-file notice** — verified by downloading
+  one and grepping it. The notice exists only in the upstream repo-root `LICENSE`. So
+  a template lifted out of that repo carries no trace of its license, and nothing is
+  being *removed* by omission; a notice has to be *added*.
+- **The artifacts are emitted into users' pull requests.** MIT's condition attaches to
+  "all copies", and an emitted artifact is a copy leaving this repository. A notice
+  file sitting in the gallery directory has no path to it. **Only an in-file notice
+  travels** — which is exactly why bundlers preserve `@license` comments by default.
+
+The repo's own precedent supports it: six vendored SpecKit extensions each carry a
+verbatim upstream `LICENSE` plus structured author/repository/license metadata. The
+counter-precedent — eleven vendored upstream files under `.specify/scripts/` and
+`.specify/templates/` with **no attribution at all** — is an unremediated gap, not a
+convention to extend. FR-011 already permits URLs in comments "so provenance and
+attribution links survive", so the header does not collide with the scanner this same
+spec defines.
+
+**⚠️ Flagged for human confirmation before ART-002…005 land ports.** Two things are
+genuinely unresolved by the sources and are not mine to settle: whether these
+specific re-skinned ports clear MIT's undefined "substantial portion" bar, and the
+exact header wording. No authoritative source sets a substantiality threshold. The
+recommendation rests on cost asymmetry — roughly three lines per file against an
+unresolvable argument — not on a published rule. This must be restated in the PR body.
+
+**Item 5 — two of the executor's own worries did not survive checking.** The
+cardinality oracle is scoped to the *signal* vocabulary only and does not cover
+category, so "a tenth member breaks validation" was invalid; and SC-004 fixes that
+ports change only status, so ART-002…005 structurally *cannot* add categories. What
+decided it was Session 1 Item 2's ruling transferring verbatim — a member that
+duplicates an existing required field and that no consumer reads would be permanent
+under the no-removal rule — plus a shipped in-repo contract that keeps kind-of-thing
+and origin as two separate fields.
+
+**Item 6 (no consensus needed) — a blocking implementation gap, verified directly by
+the orchestrator.** The codebase analyst reported that `speckit-pro/artifact-gallery/`
+is absent from the payload builder's per-platform copy lists. Confirmed by reading
+`speckit-pro/speckit_pro_runner/gates/payloads.py`: the Claude list is
+`[.claude-plugin, agents, commands, hooks, skills, scripts, speckit_pro_runner,
+README.md, CHANGELOG.md]`, the Codex list is parallel, and `artifact-gallery` is in
+neither. `copy_optional_xplat008` is `if is_dir() … elif is_file()` with **no else
+branch**, so a missing source copies nothing and reports nothing. The entire
+deliverable would be absent from both built payloads with a green build. Captured as
+**FR-018**. Also confirmed: `infer_payload_source_path` special-cases `rel ==
+"LICENSE"` and maps it to the repository root, so the attribution notice file must
+not be named `LICENSE`.
+
+**Resolved by the orchestrator without consensus.** `title` versus `label` for the
+human-readable name: the executor flagged it undetermined, but FR-007's own wording
+is "a title", and the nearest precedent's `label` names a test layer rather than a
+document. A key name the spec already names does not warrant an analyst round.
 
 **Security-keyword disposition.** The literal keyword rule matches "session" in item
 1's text ("the seeded session prompt"). Assessed as a false positive: the word refers

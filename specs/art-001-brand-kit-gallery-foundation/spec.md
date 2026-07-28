@@ -65,6 +65,63 @@
   vocabulary has five flat members and no families, so namespacing would add
   structure carrying no information.
 
+### Session 2 (2026-07-28) — Manifest field shape
+
+- **Q: What are the per-entry key names, and is the artifact path a stored field?**
+  → **A: Eight `snake_case` keys in FR-007's declaration order — `id`, `category`,
+  `title`, `when_to_use`, `stage`, `trigger`, `source`, `status` — and no path key.**
+  The artifact resolves as `templates/<id>.html` relative to the catalog's own
+  directory, the convention all 21 planned entries already follow. Deriving it makes
+  identifier/filename drift impossible and keeps the catalog portable: it ships inside
+  the plugin payload and is read from a version-scoped install cache, where the
+  repository-relative path style used elsewhere in this repo would not resolve.
+  Identifiers are kebab-case and equal the file stem. `title` rather than `label`,
+  because the value names a document and FR-007's own wording is "a title".
+- **Q: What are the category enum's members, and does category duplicate stage?**
+  → **A: Nine members adopted from the upstream gallery's own index taxonomy** —
+  `exploration-planning`, `code-review`, `design`, `prototyping`, `diagrams`, `decks`,
+  `research`, `reports`, `editors` — **and it is a genuinely different axis from
+  stage.** The product plan's four-way grouping is port-spec ownership, not a browsing
+  taxonomy; adopting it would make category derivable from stage for all eight staged
+  entries. Under the upstream taxonomy four members straddle two stages each, so no
+  stage-to-category function exists in either direction. Values are kebab-case,
+  matching stage.
+- **Q: The 20 ported entries inherit their upstream category. What does the one
+  repository-authored entry, `uat-walkthrough`, take?**
+  → **A: `editors` — no tenth member is minted.** The product plan's own name for the
+  editors group's defining property is the export-back feedback loop, and this entry
+  matches it exactly: per-step pass/fail toggles plus a copy-results-as-markdown export
+  whose fixed schema the feedback sweep parses from a pull-request comment. A tenth
+  member encoding "repository-authored" would restate the source-attribution field
+  every entry already carries, would be read by no consumer, and would be permanent
+  under the no-removal rule. Choosing an inherited member stays reversible by recorded
+  amendment; minting a permanent member does not. The fit is imperfect and no worse
+  than several inherited assignments where the category names purpose rather than
+  surface form.
+- **Q: What shape is per-entry source attribution?**
+  → **A: A two-form object under a single `source` key, discriminated by `origin`** —
+  upstream entries carry the origin plus the exact upstream filename as a string, so
+  numeric prefixes survive intact; the repository-authored entry carries origin alone.
+  This mirrors the trigger field's existing two-form design, so validation reuses one
+  discriminated-shape check. The upstream repository is named once in the contract
+  document rather than repeated across 20 entries.
+- **Q: What is the top-level document shape, and what is the vocabulary key called?**
+  → **A: A top-level object with exactly three keys — `schema_version`, `signals`,
+  `templates` — in that order.** Version-first matches every version-carrying manifest
+  in this repository. `signals` is a flat array of the five names in FR-015's order,
+  carrying membership only: FR-017 puts each signal's meaning and evidence source in
+  the contract document, so a name-to-description map here would create a second
+  editable home for the same prose. Nothing else belongs at top level — no schema
+  pointer (no schema document will exist, and this repository's one such pointer is
+  already dangling) and no description.
+- **Q: Does the catalog carry a `schema_version`, and in what format?**
+  → **A: Yes — `"1.0"`, a `snake_case` key with a string value, first in the
+  document.** This matches the repository's two hand-authored version-carrying
+  manifests, one of which is enforced at that exact key and value by a live gate. It
+  earns its place because the catalog ships inside the plugin payload and is read from
+  an install cache that can lag the repository, so a consumer may read an older shape
+  than current validation expects.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Adopt shared branding with drift caught automatically (Priority: P1)
@@ -240,10 +297,15 @@ confirm it renders correctly, has no errors, and its theme control works.
   seeded with one entry for each of the 21 planned gallery templates — 20
   derived from upstream templates (4 draft-PR, 3 final-PR, 6 design and
   prototyping, 7 knowledge, report and editor) plus 1 repository-authored UAT
-  walkthrough. Each entry MUST carry an identifier unique across the catalog, a
-  category, a title, when-to-use guidance, a workflow stage drawn from
-  `draft-pr`, `final-pr`, or `ad-hoc`, a routing trigger, attribution to its
-  source template, and a shipped status.
+  walkthrough. Each entry MUST carry exactly eight fields, named
+  `id`, `category`, `title`, `when_to_use`, `stage`, `trigger`, `source`, and
+  `status`: an identifier unique across the catalog and equal to its artifact's file
+  stem; a category drawn from `exploration-planning`, `code-review`, `design`,
+  `prototyping`, `diagrams`, `decks`, `research`, `reports`, or `editors`; a title;
+  when-to-use guidance; a workflow stage drawn from `draft-pr`, `final-pr`, or
+  `ad-hoc`; a routing trigger; attribution to its source template; and a shipped
+  status. No entry stores its artifact path — the path is derived from the identifier
+  relative to the catalog's own directory.
 - **FR-008**: Routing triggers MUST be expressed in exactly one of two forms:
   "always applies", or a **non-empty** set of signals drawn from the closed,
   documented vocabulary. The any-one-of relationship is the format's only
@@ -253,9 +315,11 @@ confirm it renders correctly, has no errors, and its theme control works.
   an unrecognized form, naming the offending entry. No expression language,
   operators, or evaluator are to be introduced.
 - **FR-009**: Each catalog entry's status MUST be either `planned` or `shipped`.
-  Automated validation MUST require the named artifact file to exist for
-  `shipped` entries, MUST NOT require it for `planned` entries, and MUST fail if
-  a gallery artifact file exists that no entry claims.
+  Both the existence check and the orphan check MUST resolve the artifact from the
+  entry's identifier relative to the catalog's own directory. Automated validation
+  MUST require that artifact to exist for `shipped` entries, MUST NOT require it for
+  `planned` entries, and MUST fail if a gallery artifact file exists that no entry
+  claims.
 - **FR-010**: The foundation MUST document the single-file contract every
   gallery artifact obeys — all behavior, styling, and data inline in one file;
   correct rendering when opened directly from the filesystem with no errors
@@ -308,7 +372,8 @@ confirm it renders correctly, has no errors, and its theme control works.
   field remains mandatory on those entries so every entry carries a uniform,
   validated shape.
 - **FR-017**: The vocabulary MUST be declared as data inside the routing catalog
-  itself, which is the single authority for membership. Validation MUST NOT hold a
+  itself, under a top-level `signals` key, which is the single authority for
+  membership. Validation MUST NOT hold a
   second copy of the list, because a copy edited in the same change as the catalog
   is not an independent check. Instead, validation MUST assert the member count
   against the count this specification fixes, so that inventing a signal (which
@@ -316,6 +381,35 @@ confirm it renders correctly, has no errors, and its theme control works.
   entries still using the removed signal) both fail. The contract document MUST
   explain each signal's meaning and evidence source and MUST name the catalog as
   the authoritative list rather than restating it as an independent one.
+- **FR-018**: The gallery directory MUST actually reach both shipped platform
+  payloads. The repository's payload builder copies a fixed list of top-level names
+  per platform and silently copies nothing when a named source is absent, so a new
+  shipped directory that is not added to both lists is omitted from the built
+  payload **without any error**. This feature MUST add the gallery to both lists and
+  MUST be verified by an automated check that fails when a gallery artifact is
+  present in the source tree but missing from either built payload. A green build is
+  not evidence that the gallery shipped.
+- **FR-019**: Every catalog entry's declared shape MUST be validated: the eight
+  required keys present with the documented names, `stage` and `category` values
+  within their closed sets, `status` either planned or shipped, `source` matching one
+  of its two forms, and identifiers unique across the catalog and equal to the
+  referenced file stem. Validation MUST name the offending entry and the offending
+  field on failure.
+- **FR-020**: The single-file contract MUST require that every gallery artifact
+  derived from an upstream open-source template carry an attribution header, as an
+  HTML comment near the top of the file, containing: the upstream repository and the
+  upstream file it derives from; the upstream copyright line reproduced verbatim; a
+  license identifier; a link to the full upstream license text; and an explicit
+  statement that the file is a modified derivative rather than the original. The
+  gallery MUST additionally carry one file reproducing the upstream permission notice
+  verbatim, which those headers point at, and that file MUST NOT be named such that
+  the payload builder would mistake it for this repository's own license. Automated
+  validation MUST fail when an entry declaring an upstream origin names an artifact
+  whose header is missing any required element, and MUST fail when an artifact
+  carries an upstream copyright line while its entry declares no upstream origin.
+  The `source` field's origin discriminator is what makes this mechanically
+  checkable.
+
 
 ### Reviewability Notes *(if applicable)*
 
@@ -444,12 +538,21 @@ confirm it renders correctly, has no errors, and its theme control works.
   guidance, not by signals. Ad-hoc entries therefore carry an always-applies
   trigger, are suppressed from automated routing by the stage filter (FR-016), and
   contribute no vocabulary members.
-- Field-level catalog details (exact field names, whether a schema-version field
-  is carried, and the category vocabulary) are deferred to planning. The
-  expectation is that the catalog's shape is documented alongside the
-  single-file contract, because the catalog format cannot carry inline
-  explanation, and that it is enforced by the repository's validation rather
-  than by a separate formal schema document.
+- Field-level catalog details are fixed in Clarifications Session 2. The catalog's
+  shape is documented alongside the single-file contract, because the catalog format
+  cannot carry inline explanation, and it is enforced by the repository's validation
+  rather than by a separate formal schema document.
+- The category vocabulary reserves no slack and adds no member for repository
+  authorship. Origin is already carried by each entry's source-attribution field, so
+  a category member encoding it would duplicate a required field. Category is
+  validated for membership but read by no routing consumer (FR-016), so it is a
+  browsing axis rather than a routing input. The nearest shipped contract in this
+  repository keeps kind-of-thing and origin as two separate fields, which is the
+  shape adopted here.
+- The payload builder's per-platform copy lists are the reason FR-018 exists.
+  Because a missing source is copied silently rather than reported, the gallery's
+  absence from the built payload would otherwise look identical to a successful
+  build. The verification FR-018 requires is what distinguishes them.
 - The catalog is seeded at 21 entries because that is the full planned gallery:
   4 draft-PR, 3 final-PR, 6 design and prototyping, and 7 knowledge, report and
   editor templates derived from upstream sources, plus 1 repository-authored UAT
