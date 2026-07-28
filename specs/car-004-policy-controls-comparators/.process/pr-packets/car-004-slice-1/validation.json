@@ -19,8 +19,8 @@
     "body": {
       "algorithm": "sha256",
       "path": "specs/car-004-policy-controls-comparators/.process/pr-packets/car-004-slice-1/body.md",
-      "sha256": "a6980ce3227d8e355a733275918ba5305219ace39970260eb73f21e58b48d47a",
-      "size_bytes": 10600
+      "sha256": "92ccf714a45940763cc54d275df8ec30903ca27cc62cebf562f14651be7c7b1a",
+      "size_bytes": 11675
     },
     "packet": {
       "algorithm": "sha256",
@@ -35,7 +35,7 @@
     "base_branch": "main",
     "head_branch": "car-004-policy-controls-comparators"
   },
-  "timestamp": "2026-07-28T21:48:50Z",
+  "timestamp": "2026-07-28T21:58:30Z",
   "title_value": "feat(car-004): add the three routing policy controls and their comparison rules",
   "validation_result_path": "specs/car-004-policy-controls-comparators/.process/pr-packets/car-004-slice-1/validation.json"
 }
