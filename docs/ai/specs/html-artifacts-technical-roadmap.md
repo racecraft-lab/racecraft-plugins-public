@@ -122,7 +122,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| ART-001 | Artifact Brand Kit & Gallery Foundation | ⏳ Pending | - | Ready to scaffold |
+| ART-001 | Artifact Brand Kit & Gallery Foundation | 🔄 In Progress | [.process/ART-001-workflow.md](.process/ART-001-workflow.md) | Autopilot: Specify → Analyze |
 | ART-002 | Draft-PR Template Set | ⏳ Pending | - | Blocked by ART-001 |
 | ART-003 | Final-PR Template Set | ⏳ Pending | - | Blocked by ART-001 |
 | ART-004 | Gallery Completion: Design & Prototyping | ⏳ Pending | - | Blocked by ART-001 |
