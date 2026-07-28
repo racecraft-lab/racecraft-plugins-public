@@ -69,7 +69,7 @@ artifacts ported in this feature; 6 shipped foundation files
 **Reviewability Budget**: Primary surface seed/config; plan-phase gate reports
 projected 0 reviewable LOC / 0 production files and passes, but that result comes
 from a language filter that recognizes none of this feature's file types — the
-honest figures are ~1,375 authored lines across 9 authored files, of which ~452
+honest figures are ~1,430 authored lines across 9 authored files, of which ~497
 are logic. Greenfield no longer applies. Budget result: **warning accepted on a
 restated basis**. Full recomputation below.
 
@@ -144,8 +144,8 @@ surface; block above 800 / 8 / 25 / more than one primary surface):
 | Primary surfaces | 1 (seed/config) | >1 warns and blocks | Pass |
 | Authored files | 9 | warn 15, block 25 | Pass |
 | Production files | 7 (6 shipped + `payloads.py`) | warn 6, block 8 | **Warn** |
-| Reviewable LOC — logic only | ~452 | warn 400, block 800 | **Warn** |
-| Reviewable LOC — all authored lines | ~1,375 | warn 400, block 800 | **Over block on this reading** |
+| Reviewable LOC — logic only | ~497 | warn 400, block 800 | **Warn** |
+| Reviewable LOC — all authored lines | ~1,430 | warn 400, block 800 | **Over block on this reading** |
 
 **Split decision**: remains one spec, as ratified in the spec's Reviewability
 Budget — but the justification is restated below, because the original one no
@@ -210,16 +210,16 @@ the file and surface counts are unchanged.
 
 | File | Est. lines | Character |
 |---|---|---|
-| `test-artifact-gallery.py` | ~450 | Logic |
+| `test-artifact-gallery.py` | ~495 | Logic |
 | `payloads.py` (edit) | ~2 | Logic |
 | `manifest.json` | ~275 | Declarative data (21 rows) |
 | `brand-kit.css` | ~200 | Declarative tokens + audited comments |
-| `SPA-CONTRACT.md` | ~260 | Prose contract |
+| `SPA-CONTRACT.md` | ~270 | Prose contract |
 | `brand-voice.md` | ~100 | Prose reference |
 | `theme-toggle.html` | ~60 | Markup + small script |
 | `UPSTREAM-NOTICE.md` | ~25 | Verbatim third-party, not reviewable |
 | `suite-manifest.json` (edit) | ~1 | Registration |
-| **Total authored** | **~1,375** | of which **~452 logic**, ~476 declarative, ~360 prose, ~60 markup, ~25 verbatim |
+| **Total authored** | **~1,430** | of which **~497 logic**, ~476 declarative, ~370 prose, ~60 markup, ~25 verbatim |
 
 **These figures moved during the accessibility checklist, and the movement
 matters.** The additions are E4 plus check group I in the test (~30 lines), the
@@ -227,6 +227,21 @@ focus, reduced-motion, `color-scheme`-override and font-stack rules plus four
 more audited-pairing comment rows in `brand-kit.css` (~15), the accessibility
 obligations section in `SPA-CONTRACT.md` (~30), and the button semantics, name,
 and state in `theme-toggle.html` (~10).
+
+**They moved again during the data-integrity checklist, all inside the test
+(~45 lines) plus ~10 of prose.** The test additions are the identifier format and
+path-containment rule (B9), the `origin` closed set (B10), vocabulary-to-
+documentation closure (C8), the status biconditional and the two sweep bounds
+(D2/D4/D5), Codex content equality and the rewrite-literal ban (F4/F5), branch
+exhaustiveness on the attribution gate (G5), and the reporting changes FR-019 now
+requires — positional naming when the identifier is itself the defect, and
+reporting every offending entry rather than the first. The prose is the normative-
+shape statement and the per-signal documentation set in `SPA-CONTRACT.md`. **No
+new file, no new surface, and no threshold crossed**: logic-only stays a warn
+(~497 against 400/800) and the production-file and primary-surface counts are
+unchanged. The all-authored-lines reading rises from ~1,375 to ~1,430, which was
+already over the 800 block on that reading — the reading that a reviewer may take
+and that this budget flags as its weakest point.
 
 **The line-count trigger on the validation module is retired.** An earlier draft
 said to take the fallback split if `test-artifact-gallery.py` grew materially past
@@ -249,7 +264,7 @@ indivisibility, not size class:
    net-new. Splitting that edit into its own spec would produce a slice whose
    entire diff is two lines plus regenerated payload, and which could not be
    verified independently because nothing would yet exist for it to ship.
-2. **The logic surface is one file.** ~452 of ~1,375 authored lines are code, in a
+2. **The logic surface is one file.** ~497 of ~1,430 authored lines are code, in a
    single test. The remaining two thirds are 21 declarative catalog rows, CSS
    custom properties, prose contract, and a verbatim third-party notice — each
    reviewable by inspection rather than by reasoning about behavior.
@@ -260,7 +275,7 @@ indivisibility, not size class:
    cannot start until the foundation lands; splitting doubles their wait.
 
 **Where this is weakest, stated plainly**: on the raw-authored-lines reading,
-~1,375 exceeds the base block threshold of 800. That reading is defensible, and a
+~1,430 exceeds the base block threshold of 800. That reading is defensible, and a
 reviewer who takes it should require the split rather than accept the warning.
 The judgment recorded here is that raw line count over-weights declarative rows
 and prose — but it is a judgment, not a measurement, and it is the one part of
@@ -321,7 +336,10 @@ speckit-pro/
 │   ├── SPA-CONTRACT.md               # single-file contract, catalog shape, signals
 │   ├── brand-voice.md                # artifact-relevant voice subset
 │   ├── UPSTREAM-NOTICE.md            # verbatim upstream MIT notice (NOT "LICENSE")
-│   └── templates/                    # created empty by ART-002…005, no files here
+│   └── templates/                    # NOT created here — a port creates it with its
+                                  # first artifact; D5 passes on an absent
+                                  # directory, so no placeholder file is needed
+                                  # (and D4 would reject one)
 └── speckit_pro_runner/
     └── gates/
         └── payloads.py               # MODIFIED — add gallery to both allowlists
@@ -367,6 +385,12 @@ Ordered by dependency, matching the PR review order.
    the inherited accessibility obligations required by FR-010 — the audited and
    prohibited pairings, the use-of-color rule, the theme-control obligations,
    focus and motion behavior, and the typography rules) and `brand-voice.md`.
+   Two properties of this file are load-bearing rather than editorial. Its
+   per-signal documentation is one leg of the vocabulary's three-way closure, so
+   C8 fails if it documents a name `signals` does not carry or omits one it does —
+   write all five, named exactly. And it MUST state that the **validated** shape is
+   normative and this document is its explanatory statement (FR-010), so a port
+   author who finds them disagreeing knows which governs.
 5. **Upstream notice** — `UPSTREAM-NOTICE.md`, captured by direct download, never
    retyped.
 6. **Payload allowlist** — add `"artifact-gallery"` to both lists in
@@ -394,7 +418,12 @@ gates step 8. Step 7 depends on 1–6 existing.
 | Flash of light theme on a dark-OS reviewer's first paint | The canonical snippet applies `data-theme` in `<head>` before body parse; this is fixed in the shared snippet, not left to each port |
 | Notice file named `LICENSE` colliding with the repository's own | Named `UPSTREAM-NOTICE.md`; check G1 enforces it |
 | Docs-site reference page going stale — passes locally, fails clean CI | Step 8 regenerates it; `pnpm --dir docs-site install --frozen-lockfile` runs once per worktree first |
-| Codex payload's text rewriter altering a gallery file | Gallery files carry no `../skills/` literal; the rule is recorded in `SPA-CONTRACT.md` and byte-equality (F3) is asserted against the Claude payload only |
+| Codex payload's text rewriter altering a gallery file | The rewriter substitutes only on `(../)+(skills\|codex-skills)/…` and writes back only when the substitution changes the text (`payloads.py:401,430-431`), so on a file free of that literal the Codex build is a verified no-op. F5 enforces the authoring rule and F4 therefore asserts byte-equality on **both** payloads, not Claude alone — a path-set match (F1/F2) cannot see a truncated, stale, or rewritten copy of `manifest.json` |
+| A signal renamed in the catalog and its consuming trigger in one change | Count-plus-trigger-closure cannot see this: the count stays 5 and closure holds both ways. C8 closes the vocabulary against the per-signal documentation FR-015 already requires — closure between two shipped artifacts, not a duplicate list in the test. The residual (a rename carried through the documentation too) is the recorded-amendment path, and FR-017 states the limit rather than implying coverage |
+| The attribution gate silently declining to run | G3/G4 as independent conditionals let an entry with an unrecognized `origin` match neither branch, shipping an upstream artifact with no header check and a green suite. B10 closes `origin` to two members and G5 asserts branch exhaustiveness; green now means the gate ran |
+| An artifact shipping under a `planned` entry | A5 keys the block compare on `shipped`, so a file present under `planned` skipped it entirely — `status` was an opt-out. FR-009 is now biconditional (file exists iff `shipped`), which also makes SC-004's "exactly one catalog value" enforceable instead of aspirational |
+| An identifier composing a path outside the gallery | The path is composed from `id`, and the old "equals the file stem" clause was a tautology under a derived path. B9 validates filename-safe kebab-case — no separator, `..`, whitespace, or dot — which is what the composition actually depends on |
+| Group D erroring on the state this feature ships | ART-001 ports no artifact and version control preserves no empty directory, so `templates/` is absent at merge. D5 makes an absent directory a vacuous pass, and D4 reports a non-HTML file as disallowed rather than as a permanently unclaimable orphan |
 
 ## Complexity Tracking
 

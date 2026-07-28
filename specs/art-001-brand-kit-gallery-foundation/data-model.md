@@ -33,20 +33,34 @@ Nothing else is legal at top level — no `$schema` pointer, no `description`.
 
 ## Entity 2 — Gallery Template Entry
 
-**Exactly eight keys**, in FR-007's declaration order. No ninth key. **No stored
-path** — the artifact resolves as `templates/<id>.html` relative to the
-manifest's own directory (FR-007, FR-009).
+**Exactly eight keys.** No ninth key. **No stored path** — the artifact resolves
+as `templates/<id>.html` relative to the manifest's own directory (FR-007,
+FR-009).
+
+Entries are authored in FR-007's declaration order. That ordering is an
+**authoring convention for readability, not a validated constraint**: check B4
+asserts the key *set*, since JSON object key order carries no meaning to any
+consumer. Stating it as binding while enforcing only the set would leave a rule no
+reviewer or check ever applies.
 
 | Key | Type | Rule |
 |-----|------|------|
-| `id` | string | kebab-case; unique across the catalog; equals the artifact file stem |
+| `id` | string | unique across the catalog; **filename-safe kebab-case** — lowercase alphanumerics in hyphen-separated segments, no leading/trailing/repeated hyphen, no path separator, `..`, whitespace, or dot |
 | `category` | string | one of the nine-member enum below |
-| `title` | string | non-empty; names the document |
-| `when_to_use` | string | non-empty guidance prose |
+| `title` | string | non-empty string; names the document |
+| `when_to_use` | string | non-empty string; guidance prose |
 | `stage` | string | `draft-pr` \| `final-pr` \| `ad-hoc` |
 | `trigger` | object | one of the two forms below |
-| `source` | object | one of the two forms below |
-| `status` | string | `planned` \| `shipped` |
+| `source` | object | one of the two forms below; `origin` is a closed two-member set |
+| `status` | string | `planned` \| `shipped`; the artifact exists **iff** `shipped` |
+
+**Why `id` is validated for form rather than against the file stem.** Earlier
+revisions required the identifier to "equal the artifact file stem". Once the path
+is derived (Session 2) that is true by construction — the stem *is* the id — so it
+can never fail. What the derivation actually depends on is the identifier's
+character set: the path is composed by concatenation, so an id carrying a
+separator or a `..` segment composes a path outside `templates/`, which both the
+existence and orphan checks would follow. The format rule is the real constraint.
 
 ### Category enum (nine members)
 
@@ -97,12 +111,18 @@ minted (Session 2).
 { "origin": "repository" }
 ```
 
-`file` carries the **exact** upstream filename so the numeric prefix survives.
-The upstream repository is named once in `SPA-CONTRACT.md`, not repeated across
-20 entries. `origin` is the discriminator that makes the FR-020 attribution
-check mechanical: an `upstream` entry's artifact must carry the attribution
-header; a `repository` entry's artifact must not carry an upstream copyright
-line.
+`file` carries the **exact** upstream filename so the numeric prefix survives, and
+is **unique across the catalog** — two entries naming one upstream file would have
+two artifacts claiming the same provenance, which FR-020's per-artifact
+attribution cannot express. The upstream repository is named once in
+`SPA-CONTRACT.md`, not repeated across 20 entries.
+
+`origin` is the discriminator that makes the FR-020 attribution check mechanical:
+an `upstream` entry's artifact must carry the attribution header; a `repository`
+entry's artifact must not carry an upstream copyright line. It is a **closed
+two-member set**, and the attribution checks are exhaustive over it — an entry
+matching neither member fails rather than silently skipping both branches, which
+is the difference between a gate that passed and a gate that never ran.
 
 ## Entity 3 — Routing Signal Vocabulary (five members)
 
@@ -153,14 +173,29 @@ always-applies, 4 staged conditional, 13 ad-hoc always-applies.
 no artifact file exists yet and no existence check fires. Each port spec flips
 exactly one value from `planned` to `shipped` (SC-004).
 
-Counts that must hold, and do:
+Counts that must hold, and do — each re-derived from the table above rather than
+carried forward:
 
 - 21 entries total; 20 `origin: upstream` + 1 `origin: repository`
 - 4 `draft-pr` + 4 `final-pr` + 13 `ad-hoc`
-- 4 staged always-applies (#1, #2, #5, #8) + 4 staged conditional (#3, #4, #6, #7)
+- 4 staged always-applies (#1, #2, #5, #8) + 4 staged conditional (#3, #4, #6, #7);
+  all 13 ad-hoc entries always-applies
 - upstream split 4 draft-PR / 3 final-PR / 6 design-and-prototyping / 7
-  knowledge-report-editor, matching FR-007
-- every one of the five signals consumed at least once
+  knowledge-report-editor, matching FR-007. The overall `final-pr` count is 4 while
+  FR-007's upstream count is 3, because `uat-walkthrough` is the one
+  repository-authored entry and it is staged `final-pr`
+- every one of the five signals consumed at least once, and no trigger naming a
+  signal outside the five
+- all 21 ids unique and filename-safe kebab-case
+- all nine category members exercised; none unused
+- the 20 `source.file` values distinct, carrying numeric prefixes `01`–`20`
+  exactly once each
+
+**What this list does and does not cover.** These are the counts and set
+properties the specification fixes, and each is asserted by a check group — the
+enum and uniqueness rules by group B, the signal closure by group C. It is not a
+statement that no other property of the seed matters; anything absent here is
+unasserted, and adding an invariant means adding both a row here and a check.
 
 ## Entity 4 — Brand Token Set (`brand-kit.css`)
 

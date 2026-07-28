@@ -677,8 +677,73 @@ Focus on Artifact Brand Kit & Gallery Foundation requirements:
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
 | accessibility | 34 | 14 found, 14 closed | FR-005 rewritten; FR-010 extended; FR-021…FR-025 added |
-| data-integrity | | | |
+| data-integrity | 43 | 18 found, 18 closed | FR-007/009/010/015/017/018/019/020 amended; FR-026 added; checks 40 → 49 |
 | security | | | |
+
+### data-integrity — what it found
+
+Three of the eighteen were genuine defects, not documentation drift:
+
+- **A path-traversal hole.** FR-009 composes `templates/<id>.html` by concatenation, so
+  an identifier containing a separator or `..` escapes the gallery — and both the
+  existence check and the orphan check would follow it. The rule it replaced ("id equals
+  file stem") was a **tautology** under a derived path and could never fail: a leftover
+  from the pre-Session-2 stored-path shape.
+- **The attribution gate had a bypass.** `source.origin` was never a closed set, and the
+  two attribution checks are independent conditionals — so an entry with any *third*
+  origin value matches neither branch, and an upstream-derived artifact would ship with
+  no attribution header and a green suite. That is FR-020's licensing control failing
+  open. Now a closed set plus required branch exhaustiveness.
+- **`status` was an opt-out from drift checking.** `planned` meant only "file not
+  required", and the embedded-block comparison keys on `shipped` — so a real artifact
+  under a `planned` entry was legal *and* exempt from the byte-compare that makes
+  hand-copying safe. Made biconditional, which also makes SC-004 enforceable.
+
+It walked the signal-oracle failure modes and found the one that survives: a
+**coordinated rename** keeps the count at five and closure intact both ways. Closed with
+a check between the catalog and the per-signal documentation the spec already requires —
+no duplicate list, so FR-017's prohibition still holds.
+
+Two process notes worth keeping: it ran a self-review pass over its own remediation and
+caught **two defects it had just introduced** (one check would have failed the contract
+document for documenting its own rule). And when its first write landed in the main repo
+rather than the worktree, it caught and reverted it — independently verified clean.
+
+| # | Type | Question | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|---|---|---|---|---|---|---|
+| 8 | Gap | Identifier stability across specs is unenforceable — a later spec renaming an id and its derived file passes every check | `[spec, codebase]` | 1 | disagree → orchestrator synthesis | **Both fixes adopted**: guarantee moved into the shipped contract, **and** the seeded identifier set pinned by validation (check B12). | spec-context-analyst, codebase-analyst |
+| 9 | Gap | `schema_version` carries no compatibility contract | `[spec, domain]` | 1 | both-agree | **State the failure posture, defer migration semantics** — captured as FR-026 and the contract's posture paragraph. | spec-context-analyst, domain-researcher |
+
+**Item 8 — a real two-way split, resolved by noticing the analysts were arguing past
+each other.** The spec analyst said a pinned list is exactly what FR-017 prohibits
+("a copy edited in the same change as the catalog is not an independent check") and
+that the real defect is *authority*: the guarantee lives in a planning artifact no port
+author opens, while FR-010 already names the shipped contract as the only place an
+obligation reaches all four ports. The codebase analyst said a pinned tuple is cheap and
+precedented, and that **the threat models differ** — FR-017 addresses a same-commit copy,
+whereas the threat here is a *later spec*, against which a set frozen in this commit is
+genuinely independent.
+
+I verified the precedent directly: `tests/speckit-pro/layer1-structural/validate-curated-set.py:38`
+pins six shipped-manifest identifiers as a literal tuple and asserts them at line 82.
+The two fixes are **orthogonal** — neither blocks the other — so both were taken, and
+FR-007 now states explicitly why the pinned set is not the copy FR-017 forbids.
+
+**Item 9 — agreed on posture, but the second analyst reversed part of the first.** Both
+recommended stating the failure posture and deferring migration. The domain researcher
+then showed that **fail-closed is not direction-neutral**: the convention across
+Terraform, npm, and MCP is *reject newer, tolerate older*, and a flat
+reject-on-any-mismatch would break every already-installed copy the first time the
+version is bumped — the opposite of what the field is for. The posture is therefore
+stated directionally.
+
+Two corrections came out of it. **The field's original justification was unsound**: it
+was justified by install-cache lag, but the catalog and every consumer that reads it
+ship in the same version-scoped payload and cannot skew relative to each other. The
+Clarifications entry is marked superseded rather than rewritten. And **no requirement
+validated the top-level shape at all** — FR-019 covered entries only. Now FR-026.
+Enforcement is placed at the validate boundary, since an agent reading the file as
+context does not branch on a version field.
 | **Total** | | | |
 
 ### accessibility — what it found

@@ -117,10 +117,17 @@
 - **Q: Does the catalog carry a `schema_version`, and in what format?**
   → **A: Yes — `"1.0"`, a `snake_case` key with a string value, first in the
   document.** This matches the repository's two hand-authored version-carrying
-  manifests, one of which is enforced at that exact key and value by a live gate. It
-  earns its place because the catalog ships inside the plugin payload and is read from
-  an install cache that can lag the repository, so a consumer may read an older shape
-  than current validation expects.
+  manifests, one of which is enforced at that exact key and value by a live gate.
+  **The justification recorded in this session was later found unsound and is
+  superseded** — see FR-026. The session argued the field earns its place because an
+  install cache can lag the repository. That skew channel does not exist: the catalog
+  and every consumer that reads it ship in the same version-scoped payload, and this
+  repository's validation only ever reads the source tree. The field is kept because
+  it matches house form and costs one line. Its failure posture is stated in the
+  routing-catalog contract — reject an unrecognized or newer major version, tolerate a
+  recognized one at the same major — following the repository's existing convention
+  and the conventional direction rule, since a flat reject-on-any-mismatch would break
+  every installed copy the first time the version is bumped.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -318,13 +325,32 @@ confirm it renders correctly, has no errors, and its theme control works.
   prototyping, 7 knowledge, report and editor) plus 1 repository-authored UAT
   walkthrough. Each entry MUST carry exactly eight fields, named
   `id`, `category`, `title`, `when_to_use`, `stage`, `trigger`, `source`, and
-  `status`: an identifier unique across the catalog and equal to its artifact's file
-  stem; a category drawn from `exploration-planning`, `code-review`, `design`,
+  `status`: an identifier unique across the catalog and in filename-safe kebab-case
+  (FR-019), which the artifact's file stem then equals by construction rather than
+  by a separate rule; a category drawn from `exploration-planning`, `code-review`, `design`,
   `prototyping`, `diagrams`, `decks`, `research`, `reports`, or `editors`; a title;
   when-to-use guidance; a workflow stage drawn from `draft-pr`, `final-pr`, or
   `ad-hoc`; a routing trigger; attribution to its source template; and a shipped
   status. No entry stores its artifact path — the path is derived from the identifier
   relative to the catalog's own directory.
+
+  Entry identifiers are the catalog's **stable join key**: a port MUST change only an
+  entry's `status`, and MUST NOT rename, add, or remove an identifier. Two things are
+  required to make that guarantee real, because it is currently neither stated where
+  ports will read it nor detectable. First, the guarantee MUST be carried by the
+  shipped contract document (FR-010), which is the only artifact that reaches all four
+  port specs — stating it only in this feature's planning artifacts, which a port
+  author has no reason to open, is how it gets lost. Second, validation MUST assert
+  the seeded identifier set against the catalog, so a rename fails loudly.
+
+  **Why that assertion is not the duplicate list FR-017 prohibits.** FR-017's rule is
+  scoped by its own stated reason: a copy edited *in the same change as the catalog*
+  proves nothing. That applies to the signal vocabulary, which this feature authors
+  alongside its validation. It does not apply here, because the threat is a **later**
+  spec renaming an identifier: defeating a set pinned in this feature's commit would
+  require a port author to edit a validation file outside that port's declared scope,
+  which is exactly the independence FR-017 asks for. This mirrors an existing check in
+  this repository that pins another shipped manifest's identifiers the same way.
 - **FR-008**: Routing triggers MUST be expressed in exactly one of two forms:
   "always applies", or a **non-empty** set of signals drawn from the closed,
   documented vocabulary. The any-one-of relationship is the format's only
@@ -335,16 +361,32 @@ confirm it renders correctly, has no errors, and its theme control works.
   operators, or evaluator are to be introduced.
 - **FR-009**: Each catalog entry's status MUST be either `planned` or `shipped`.
   Both the existence check and the orphan check MUST resolve the artifact from the
-  entry's identifier relative to the catalog's own directory. Automated validation
-  MUST require that artifact to exist for `shipped` entries, MUST NOT require it for
-  `planned` entries, and MUST fail if a gallery artifact file exists that no entry
-  claims.
+  entry's identifier relative to the catalog's own directory. Because that path is
+  **composed** from the identifier rather than stored, the identifier format fixed
+  by FR-019 is what keeps the resolved path inside the gallery; resolution MUST
+  additionally be rejected if it would leave the artifact directory.
+  The relationship between status and file presence MUST be **biconditional**: an
+  artifact file MUST exist for a `shipped` entry, and MUST NOT exist for a
+  `planned` entry. A one-directional rule — requiring the file only for `shipped`
+  and staying silent on `planned` — would let a real artifact ship under a
+  `planned` entry and thereby skip every check keyed on shipped status, including
+  the embedded-block comparison; it would also leave SC-004's "changes exactly one
+  catalog value" unenforceable, since adding the file without flipping the status
+  would pass. Validation MUST fail if a gallery artifact file exists that no entry
+  claims. The orphan sweep MUST cover the artifact directory's whole contents, not
+  only the files the derivation can name: a file whose extension the derivation can
+  never produce is reported as a disallowed file rather than as an unclaimable
+  orphan, so it cannot accumulate and its failure message is actionable. An
+  **absent** artifact directory MUST be treated as zero artifacts and pass, which
+  is the state this feature ships in — no artifact is ported here, and an empty
+  directory is not preserved by version control.
 - **FR-010**: The foundation MUST document the single-file contract every
   gallery artifact obeys — all behavior, styling, and data inline in one file;
   correct rendering when opened directly from the filesystem with no errors
   reported; the shape and field meanings of the routing catalog, since the
   catalog format itself cannot carry explanatory notes; the two trigger forms and
-  the two-step stage-then-trigger routing rule; each routing signal's meaning
+  the two-step stage-then-trigger routing rule; the identifier stability guarantee
+  and the single value a port may change (FR-007); each routing signal's meaning
   and evidence source; and the accessibility obligations every artifact inherits
   — the audited pairings and the prohibited ones (FR-005), the use-of-color rule
   (FR-021), the theme-control obligations (FR-022), focus visibility and
@@ -352,6 +394,14 @@ confirm it renders correctly, has no errors, and its theme control works.
   rules (FR-024). The contract is the only place an obligation reaches all four
   port specs at once; an accessibility duty absent from it is re-decided per
   port or lost entirely.
+  Because the catalog's shape is thereby written down in two places — as prose in
+  the contract document and as assertions in the validation — the requirements MUST
+  name which one governs. The **validated** shape is normative; the contract
+  document is its explanatory statement and MUST say so, so a port author who finds
+  the two disagreeing knows which to follow, and knows the disagreement is a defect
+  to report rather than a choice to make. Only the signal vocabulary's membership is
+  additionally closed between the two by automated means (FR-017); the rest of the
+  prose is held true by review, which is precisely why the authority must be named.
 - **FR-011**: Automated validation MUST scan every gallery artifact for external
   references in resource-loading positions — script, image and frame sources,
   responsive-image source sets, stylesheet and preconnect link targets, style
@@ -382,12 +432,17 @@ confirm it renders correctly, has no errors, and its theme control works.
   adding only new files), `self_review_findings` (the pre-PR self-review recorded
   at least one gap), `large_diff` (the finished change's size reached the
   repository's existing warn or block threshold), and `operational_flow_change`
-  (the change alters a documented multi-step runtime or delivery process). Each
+  (the change alters a documented multi-step runtime or delivery process). Signal
+  names MUST be flat `snake_case` and unique within the vocabulary — the format is
+  stated here rather than left to a design note, because validation checks it and
+  every rule validation enforces belongs to a requirement. Each
   signal MUST be documented with the named workflow evidence a routing consumer
-  reads to decide it is present. A signal MUST NOT be defined unless at least one
-  catalog entry consumes it, and automated validation MUST fail both when an entry
-  names a signal outside the vocabulary and when the vocabulary carries a signal
-  no entry uses.
+  reads to decide it is present, and that documentation obligation MUST itself be
+  validated rather than left to review — an undocumented member, or documentation
+  for a name the vocabulary does not carry, is a failure (FR-017). A signal MUST
+  NOT be defined unless at least one catalog entry consumes it, and automated
+  validation MUST fail both when an entry names a signal outside the vocabulary and
+  when the vocabulary carries a signal no entry uses.
 - **FR-016**: Routing MUST resolve in two independent, ordered steps: first select
   the entries whose stage matches the stage being routed, then evaluate the
   triggers of only those entries. An always-applies trigger therefore means
@@ -406,6 +461,22 @@ confirm it renders correctly, has no errors, and its theme control works.
   entries still using the removed signal) both fail. The contract document MUST
   explain each signal's meaning and evidence source and MUST name the catalog as
   the authoritative list rather than restating it as an independent one.
+  **Count plus trigger-closure alone is not sufficient, and the limit MUST be
+  stated rather than assumed.** A signal renamed in the vocabulary and in its
+  consuming entry within one change — or an addition paired with an equal-sized
+  removal — leaves the count at five and leaves closure intact in both directions,
+  so every one of those checks passes while the vocabulary silently changes
+  underneath its consumers. Validation MUST therefore additionally assert closure
+  between the vocabulary and the per-signal documentation FR-015 already requires:
+  every member of `signals` MUST be documented in the contract document, and every
+  signal documented there MUST be a member. This adds **no** duplicate list to the
+  validation — it is a closure check between two artifacts the feature already
+  ships, exactly like the closure asserted between `signals` and the entries' own
+  triggers, and the documentation is the one place a signal's meaning cannot be
+  renamed without a human writing new prose. The residual limit is that a rename
+  carried through the catalog, the consuming entry, and the documentation together
+  still passes; that is the recorded-amendment path the vocabulary's stability
+  guarantee already prescribes, so it is a deliberate act rather than a silent one.
 - **FR-018**: The gallery directory MUST actually reach both shipped platform
   payloads. The repository's payload builder copies a fixed list of top-level names
   per platform and silently copies nothing when a named source is absent, so a new
@@ -414,12 +485,48 @@ confirm it renders correctly, has no errors, and its theme control works.
   MUST be verified by an automated check that fails when a gallery artifact is
   present in the source tree but missing from either built payload. A green build is
   not evidence that the gallery shipped.
+  Reaching the payload is necessary but not sufficient: what ships MUST also be what
+  was authored. Validation MUST therefore assert that each gallery file in **each**
+  built payload is byte-identical to its source, not merely that the two file lists
+  agree. A path-set comparison alone cannot see a copy that arrived truncated,
+  stale, or rewritten, and the catalog is the file whose silent divergence would be
+  most costly — a consumer reading an install cache would route against a different
+  catalog than the repository declares. Because the Codex build runs a text rewriter
+  over every file in its payload, byte-equality there is conditional on the gallery
+  containing nothing that rewriter matches: no gallery file may carry a relative
+  reference into a skills directory of the form that rewriter rewrites. That
+  authoring rule MUST be enforced by validation rather than only documented, since
+  it is the sole reason the content-equality assertion is safe to make on that
+  platform. The enforcing check MUST be defined by the rewriter's own matching
+  rule rather than by a plain substring search, so that the contract document can
+  state the rule in prose without tripping it — a check that fails the document
+  which records it would be a self-defeating gate.
 - **FR-019**: Every catalog entry's declared shape MUST be validated: the eight
-  required keys present with the documented names, `stage` and `category` values
-  within their closed sets, `status` either planned or shipped, `source` matching one
-  of its two forms, and identifiers unique across the catalog and equal to the
-  referenced file stem. Validation MUST name the offending entry and the offending
-  field on failure.
+  required keys present with the documented names; `title` and `when_to_use`
+  present as **non-empty strings**; `stage` and `category` values within their
+  closed sets; `status` either planned or shipped; `source` matching one of its two
+  forms, with `source.origin` drawn from the closed set `upstream` or `repository`
+  and `source.file` unique across the catalog, since two entries naming one
+  upstream file would put two artifacts under a single provenance that FR-020's
+  per-artifact attribution cannot express; and identifiers unique across the
+  catalog. The identifier MUST additionally match
+  a **filename-safe kebab-case form** — lowercase letters and digits in
+  hyphen-separated segments, with no leading, trailing, or repeated hyphen, and no
+  path separator, parent-directory segment, whitespace, or dot. This format rule is
+  the load-bearing one, because FR-009 composes the artifact path out of this field:
+  an unconstrained identifier composes a path that escapes the artifact directory,
+  and both the existence check and the orphan check would follow it. The
+  earlier formulation of this clause — that an identifier "equals the referenced
+  file stem" — is **not** retained: once the path is derived rather than stored
+  (Clarifications Session 2) that comparison is true by construction and can never
+  fail, so it reads as a check while asserting a tautology. Validating the format
+  is what the derived path actually needs.
+  Validation MUST name the offending entry and the offending field on failure.
+  Where the identifier is itself the defect — missing, duplicated, or malformed —
+  the entry MUST be identified by its **position** in the catalog, because naming
+  it by identifier is circular in exactly the case where entry identity is what
+  broke. Validation MUST report every offending entry rather than stopping at the
+  first, so a seed of 21 rows is corrected in one pass.
 - **FR-020**: The single-file contract MUST require that every gallery artifact
   derived from an upstream open-source template carry an attribution header, as an
   HTML comment near the top of the file, containing: the upstream repository and the
@@ -433,7 +540,17 @@ confirm it renders correctly, has no errors, and its theme control works.
   whose header is missing any required element, and MUST fail when an artifact
   carries an upstream copyright line while its entry declares no upstream origin.
   The `source` field's origin discriminator is what makes this mechanically
-  checkable.
+  checkable, and it MUST therefore be trustworthy as a gate rather than merely
+  present. Two properties are required for that. First, `origin` MUST be validated
+  against the closed two-member set fixed by FR-019. Second, the attribution checks
+  MUST be **exhaustive** over that set — every entry takes exactly one branch, and
+  an entry whose origin is unrecognized MUST fail validation rather than fall
+  through. Expressed as two independent conditionals, one testing for `upstream`
+  and one for `repository`, an entry carrying any third value matches neither: an
+  upstream-derived artifact would then ship with no attribution header, no
+  misattribution check, and a green suite. A licensing gate that silently declines
+  to run is worse than no gate, because the green result is read as evidence the
+  attribution was checked.
 - **FR-021**: Brand red MUST NOT be the sole visual means of conveying
   information, indicating an action, prompting a response, or distinguishing an
   element (WCAG 1.4.1, Level A). Wherever red carries a status or a distinction,
@@ -490,6 +607,12 @@ confirm it renders correctly, has no errors, and its theme control works.
   primitive's point of definition so an author reading one sees the other. Any
   restriction on a brand primitive MUST be stated as narrowly as the measurement
   supports — naming the specific pairing and role that fail, not a blanket ban.
+- **FR-026**: The catalog's **top-level** shape MUST be validated, not only its
+  entries: exactly the three documented keys in the documented order, and
+  `schema_version` carrying the literal value this specification fixes. Validation
+  MUST reject an unrecognized version rather than interpreting the document.
+  Migration between versions is deliberately not specified here and belongs to the
+  first spec that reads the catalog programmatically.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -521,8 +644,8 @@ confirm it renders correctly, has no errors, and its theme control works.
   artifacts are declared generated and excluded.
 
   **Total authored volume is much larger and is disclosed deliberately**: roughly
-  1,375 lines across nine authored files — about 452 in the validation module, 476
-  declarative (design tokens and catalog rows), 360 prose, 60 markup, and 25
+  1,430 lines across nine authored files — about 497 in the validation module, 476
+  declarative (design tokens and catalog rows), 370 prose, 60 markup, and 25
   reproduced verbatim. That figure is **not** the budget metric and must not be
   compared against the budget thresholds, which the contract defines over
   production code only. It is recorded because a reviewer deserves to know the real
@@ -615,8 +738,10 @@ confirm it renders correctly, has no errors, and its theme control works.
   choice is remembered and how it degrades when storage is unavailable.
 - **Gallery Template Entry**: One catalog row describing a single template — its
   unique identifier, category, title, when-to-use guidance, workflow stage,
-  routing trigger, source attribution, shipped status, and the artifact file it
-  refers to. The catalog holds 21 of these; ports change only the status.
+  routing trigger, source attribution, and shipped status. Those eight fields are
+  the whole row: the artifact it refers to is **not** a ninth field but is derived
+  from the identifier (FR-007, FR-009), so an entry cannot disagree with its own
+  file name. The catalog holds 21 of these; ports change only the status.
 - **Routing Signal**: A named condition from a closed vocabulary that an entry's
   trigger may reference to indicate when that artifact should be produced.
 - **Gallery Artifact**: A single self-contained file that embeds the brand token

@@ -40,8 +40,20 @@ start marker without every artifact having to embed them.
 | B6 | `category` ∈ the nine-member enum | unrecognized category; names entry + value |
 | B7 | `status` ∈ {`planned`,`shipped`} | unrecognized status |
 | B8 | `title` and `when_to_use` are non-empty strings | empty required field; names entry + field |
-| B9 | `id` is kebab-case and unique across the catalog | duplicate id (Story 2 scenario 5) |
-| B10 | `source` matches one of its two forms exactly, discriminated by `origin`; `upstream` carries a non-empty `file`, `repository` carries no `file` | malformed attribution |
+| B9 | `id` is unique across the catalog **and** matches filename-safe kebab-case — lowercase alphanumerics in hyphen-separated segments, no leading/trailing/repeated hyphen, no path separator, parent-directory segment, whitespace, or dot | duplicate id (Story 2 scenario 5); an id that would compose a path outside `templates/` (FR-019) |
+| B10 | `source` matches one of its two forms exactly; `source.origin` ∈ {`upstream`,`repository`}; `upstream` carries a non-empty `file`, `repository` carries no `file` | malformed attribution; an unrecognized `origin` — which must fail here rather than fall through group G |
+| B11 | `source.file` is unique across the catalog | two entries claiming one upstream file, which FR-020's per-artifact attribution cannot express |
+| B12 | the catalog's identifier set equals the seeded identifier set pinned in the validation | a later spec renaming an identifier — which every other check misses, because renaming the derived file alongside it leaves the catalog and the artifact directory agreeing with each other |
+
+**On B9 and the derived path.** FR-019 no longer asks whether the id "equals the
+referenced file stem": with the path composed as `templates/<id>.html` that
+comparison is true by construction and can never fail. The format rule replaces it
+because that is what the composition actually depends on — the id is
+concatenated into a path, so its character set is the only thing keeping the
+resolution inside the gallery. **Entries are named by `id` in failure messages,
+except where the id is itself missing, duplicated, or malformed — those are named
+by array position**, since naming by identifier is circular exactly there. All
+offending entries are reported, not just the first.
 
 ## Group C — Triggers and signal closure (FR-008, FR-015, FR-016, FR-017)
 
@@ -54,6 +66,7 @@ start marker without every artifact having to embed them.
 | C5 | Every signal named by any trigger ∈ `signals` | entry names an unknown signal; names entry + signal (Story 2 scenario 2) |
 | C6 | Every member of `signals` is named by ≥ 1 trigger | vocabulary carries an unused signal |
 | C7 | Every entry has a `trigger`, including `ad-hoc` entries | uniform shape broken |
+| C8 | The set of names in `signals` equals the set of signals documented in `SPA-CONTRACT.md` | a member is undocumented, or the document describes a name the vocabulary does not carry — the check that makes a coordinated rename visible (FR-015, FR-017) |
 
 **C1 is the FR-017 mechanism and must not be replaced by a literal list.** The
 test hard-codes the integer `5` and never holds a copy of the five names: a copy
@@ -61,16 +74,54 @@ edited in the same commit as the manifest is not an independent check. C1 catche
 invention (count rises); C5/C6 catch the disguise (removing a real member orphans
 its consumers).
 
+**Why C8 is needed, and why it is not a second copy.** C1 plus C5/C6 do not close
+the space. A signal renamed in `signals` **and** in its consuming trigger within
+one change keeps the count at five and keeps closure intact in both directions, so
+C1, C5, and C6 all pass while the vocabulary changes underneath ART-007/009/010;
+an addition paired with an equal-sized removal behaves the same way. C8 closes
+that by asserting the vocabulary against the per-signal documentation FR-015
+already requires. This is closure between two shipped artifacts — the same shape
+as C5/C6, which close `signals` against the triggers — not a list held inside the
+test, so FR-017's prohibition is untouched. The residual limit is stated in
+FR-017: a rename carried through the catalog, the trigger, and the documented
+meaning together still passes, and that is the recorded-amendment path the
+stability guarantee prescribes.
+
 ## Group D — Artifact existence and orphans (FR-009)
 
 | # | Check | Fails when |
 |---|-------|-----------|
 | D1 | For `status: "shipped"`, `templates/<id>.html` exists | missing or misnamed artifact |
-| D2 | For `status: "planned"`, existence is **not** required | — (must not fail; all 21 are planned in ART-001) |
-| D3 | Every file in `templates/` is claimed by exactly one entry | orphaned artifact accumulating |
+| D2 | For `status: "planned"`, `templates/<id>.html` **does not** exist | an artifact shipped under a `planned` entry — see below (all 21 are planned in ART-001, and no artifact exists, so this passes) |
+| D3 | Every `.html` file in `templates/` is claimed by exactly one entry | orphaned artifact accumulating |
+| D4 | `templates/` contains no non-`.html` file | a file the derivation can never name, reported as disallowed rather than as an unclaimable orphan |
+| D5 | An **absent** `templates/` directory counts as zero artifacts | — (must not fail; this is ART-001's actual shipped state) |
 
 Both D1 and D3 resolve the path from the identifier relative to the manifest's
 own directory — never from a stored path field.
+
+**D2 is a biconditional, not a waiver (FR-009).** The earlier formulation only
+said existence was *not required* for `planned`, which left a real artifact
+legally present under a `planned` entry. That mattered because A5 keys the
+brand-block comparison on `shipped` status: such a file would ship without its
+embedded block ever being compared, making `status` an opt-out from the drift
+check. It also left SC-004 unenforceable — adding an artifact without flipping its
+status would pass, when "changes exactly one catalog value" is the whole claim.
+Tying existence to status in both directions closes both.
+
+**D4 and D5 bound the sweep.** The derived path is always `<id>.html`, so a
+non-HTML file in `templates/` is unclaimable by construction; without D4 it would
+be a permanent, unfixable D3 failure instead of an actionable message. D5 covers
+the state this feature actually ships: no artifact is ported, and version control
+does not preserve an empty directory, so `templates/` is absent at merge and group
+D must pass vacuously rather than error on a missing path.
+
+**D5 is what makes D4 safe, and the two must land together.** Because an absent
+directory passes, there is no reason to track `templates/` with a placeholder
+file — and D4 would reject one, since a placeholder is not an `.html` artifact.
+Shipping D4 without D5 would push an author toward exactly the placeholder D4
+forbids. The rule for a port author is therefore: create `templates/` when you add
+the first artifact to it, never before.
 
 ## Group E — External references (FR-011; SC-008)
 
@@ -114,6 +165,20 @@ library has no parser for them.
 | F1 | The set of paths under `speckit-pro/artifact-gallery/` equals the set under `dist/claude/speckit-pro/artifact-gallery/` | gallery missing from, or stale in, the Claude payload |
 | F2 | The same set equality holds for `dist/codex/speckit-pro/artifact-gallery/` | gallery missing from, or stale in, the Codex payload |
 | F3 | Each source gallery file is byte-identical to its Claude payload copy | truncated or stale copy |
+| F4 | Each source gallery file is byte-identical to its **Codex** payload copy | truncated, stale, or rewritten copy |
+| F5 | No source gallery file contains a **reference the Codex rewriter would match** — that is, `REL_SKILL_PATH_XPLAT008` finds nothing in it | the authoring rule F4 depends on, now enforced rather than only documented |
+
+**F5 must be defined by the rewriter's pattern, not by a substring search.** The
+rewriter requires at least one character after the `skills/` segment drawn from
+`[^\s`)"']` (`payloads.py:401`). A prose mention written in backticks — which is
+exactly how `SPA-CONTRACT.md` records this rule for authors — therefore does
+**not** match, because the next character is a backtick. Verified against the live
+pattern: `` `../skills/` `` and a bare `../skills/` followed by a space both fail
+to match, while `../skills/a/SKILL.md`, `../../codex-skills/foo/SKILL.md`, and a
+markdown link target all match. A substring check for `../skills/` would fail
+`SPA-CONTRACT.md` for documenting its own rule, and would fail it in a way F4
+could not explain. Reuse the rewriter's pattern so the check and the build agree
+by construction.
 
 **Why this group exists.** `build_xplat008_payloads` copies a fixed list of
 top-level names per platform (`payloads.py:298-308` Claude, `:316-324` Codex) via
@@ -131,12 +196,25 @@ self-consistently absent and passes.
 generalized "every source file must ship" check would immediately fail on the
 agent-instruction files above, which are intentionally not shipped.
 
-**F3 is Claude-only by design.** The Codex build runs
-`rewrite_payload_skill_paths_xplat008` over every file in its payload, rewriting
-any literal matching `(../)+(skills|codex-skills)/...`. Gallery files contain no
-such literal, but pinning byte-equality against a text-rewriting build would be
-brittle. `SPA-CONTRACT.md` records the corresponding authoring rule: gallery files
-must not contain a `../skills/` or `../codex-skills/` literal.
+**Content equality now covers both platforms (FR-018).** F1/F2 compare path sets
+only, and a path set cannot see a copy that arrived truncated, stale, or
+rewritten — least of all `manifest.json`, whose silent divergence would have a
+consumer routing against a different catalog than the repository declares.
+
+An earlier revision scoped byte-equality to Claude, on the grounds that pinning it
+against a text-rewriting build would be brittle: the Codex build runs
+`rewrite_payload_skill_paths_xplat008` over every file in its payload. Reading
+that rewriter settles the question rather than leaving it to judgment. It
+substitutes on `REL_SKILL_PATH_XPLAT008 = (?:\.\./)+(?:skills|codex-skills)/…`
+(`payloads.py:401`) and writes the file back **only if the substitution changed
+it** (`:430-431`). So on a file containing no such literal the Codex build is a
+verified no-op, and F4 is exactly as stable as F3.
+
+That makes the authoring rule load-bearing rather than advisory, which is why F5
+enforces it. `SPA-CONTRACT.md` still records it for authors, but a rule that only
+a document carries is one a port author can break while every check stays green —
+and breaking it is precisely what would make F4 fail confusingly instead of
+failing at the real cause.
 
 ## Group G — Upstream attribution (FR-020)
 
@@ -146,6 +224,16 @@ must not contain a `../skills/` or `../codex-skills/` literal.
 | G2 | The notice reproduces the upstream permission notice verbatim, including `Copyright (c) 2026 Anthropic PBC` | notice altered or truncated |
 | G3 | For each entry with `source.origin == "upstream"` whose artifact exists: the artifact carries an attribution header containing upstream repository, upstream file, verbatim copyright line, license identifier, link to full license text, and an explicit modified-derivative statement | any required element missing; names artifact + element |
 | G4 | For each entry with `source.origin == "repository"` whose artifact exists: the artifact carries **no** upstream copyright line | misattributed repository-authored file |
+| G5 | Every entry takes exactly one of the G3/G4 branches | an `origin` matching neither — the fail-open case (FR-020) |
+
+**On G5 — the discriminator must be exhaustive, not merely present.** G3 and G4
+as written are two independent conditionals. An entry whose `origin` is neither
+literal matches neither branch, so an upstream-derived artifact would ship with no
+attribution header, no misattribution check, and a green suite. B10 now rejects an
+unrecognized `origin` at the shape layer and G5 asserts branch exhaustiveness at
+the attribution layer; either alone would leave the gate readable as passing when
+it never ran. A licensing gate that silently declines to run is worse than no gate,
+because green is read as evidence the attribution was checked.
 
 **On G1**: `infer_payload_source_path` special-cases the exact relative path
 `LICENSE` and maps it to the repository root (`payloads.py:631-632`), and
