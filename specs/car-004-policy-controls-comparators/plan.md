@@ -35,7 +35,44 @@ modules — `canonical_json` and `record_digest` from `lib/claude_successor_free
 `build_partition_registry_entry` / `register_partitions` /
 `objective_set_digest` from `lib/claude_experiment_policy.py`. Frozen enums are
 read live from `contracts-claude/score-bundle.schema.json` rather than restated
-in Python, so a mirrored enum and a CAR-004 check can never drift apart silently.
+in Python, so a mirrored enum and a CAR-004 check can never drift apart silently;
+FR-010a makes that live read fail closed on a membership change instead of
+absorbing it. The two frozen derivations FR-010c checks against — the
+failure-code-to-plane mapping and the candidate-plane terminal-state pairing —
+are likewise imported read-only from `lib/claude_score_bundle.py`, which already
+derives the plane from the code rather than authoring it beside the code, so the
+consistency check reads the same source the contract does instead of a second
+transcription of it. `service_reroute` and its non-scorable disposition reason
+(FR-015a) come from that module's frozen constants for the same reason.
+Both partition entries are produced by the frozen builder and
+registered through `register_partitions`, so FR-025a's closed type set and
+FR-025b's disjointness are enforced by the machinery CAR-003 already uses rather
+than by a parallel check. Every `{id, digest}` binding into a frozen CAR-003
+document is re-verified by recomputing that document's digest from its committed
+bytes (FR-005a), which is what turns FR-005 from a review convention into a
+suite failure.
+
+The live-integration requirements add no dependency but do pin four further
+frozen surfaces, all read live from their committed schema documents rather than
+restated in Python for the same anti-drift reason: the cache diagnostic's
+`observed_cache_isolation` object and its closed status set (FR-032a), the
+configured-route proof's served `model`, `effort`, and `candidate_route_id`
+(FR-031a), the environment contract's pinned parent session and its
+`claude_code_subagent_model_unset` observation (FR-031a), and the shared trace's
+`raw_token_vector`, `wall_time_ms`, and `parent_child_graph` (FR-016d, FR-016e,
+FR-031a). The `parent_child_graph` is a member of the shared treatment-record
+contract that the frozen Claude-side CAR-003 runner already binds, not of the
+CAR-002 Claude trace contract, which carries only a nullable parent-session
+configuration string; FR-016d keeps the two apart and the CAR-004 unit boundary
+is checked for agreement against the shared graph alone. Because `wall_time_ms`
+is declared as a bare nullable integer, FR-031a's parallel observable does not
+infer its meaning: the orchestration control's frozen child shape declares that
+every unit member's wall time is its full elapsed window, and a null anywhere in
+the compared set records the demonstration as not made rather than as passed.
+The `authentication_mode` member is read from the Claude-side contract whose
+enumeration is `subscription | api_key`, never from the shared environment
+contract whose enumeration is `chatgpt_subscription | api_key`; FR-030c pins
+which one, and the FR-010a set-equality discipline covers it.
 
 **Storage**: JSON documents on disk. Schemas in
 `tests/speckit-pro/layer6-efficiency/contracts-claude/`; frozen instances and
@@ -67,7 +104,37 @@ does not scale with accumulated evidence.
 **Constraints**: Additive-only against the frozen CAR-003 contract set; no new
 telemetry field; no `$ref` outside a document's own `#/$defs/`; no script or test
 filename coupled to the spec ID; no new Bash or `jq` dependency; live smoke must
-run on the subscription authentication path and must never require an API key.
+run on the subscription authentication path, must never require an API key, and
+is refused as evidence when the observed mode is `api_key` rather than merely
+noted and kept — the observed mode is still recorded on the refused record, so
+a refusal stays auditable and the remedy is a re-run rather than a relabel
+(FR-030c).
+One preimage rule governs every digest this feature records — the frozen
+`record_digest` over canonical JSON with the record's own digest member excluded
+(FR-002a) — and no second rule may be coined. Every value inside a hash-relevant
+object is frozen in the spec, so Implement chooses no numeric (FR-030a). The
+error-handling decision semantics are frozen in the spec for the same reason,
+because two conforming implementations must fold identical evidence to the same
+verdict: the row-resolution precedence and the two map-consistency rules
+(FR-010b, FR-010c), the clean-pass streak accounting (FR-012a), the bound scope
+and the terminal state each bound breach records (FR-014a), the reroute
+observable (FR-015a), and the aggregation unit's membership (FR-016d). Implement
+serializes them; it decides none of them, and each is an FR-034 category 7
+handoff entry.
+
+The live-integration decision semantics are frozen on the same terms, because
+they decide what counts as evidence that a control ran at all: the raw-token
+member set and the parent-plus-children rule for the reasoning member and the
+two cache-diagnostic quantities, with the unobserved-rather-than-zero
+disposition (FR-016e); the scope each smoke bound is counted over, the
+elapsed-versus-additive reading of the wall clock, and the rule that a child
+dispatch consumes no attempt (FR-030b); the identified frozen
+`authentication_mode` member and its constraining reading (FR-030c); the
+read-back rule and the three exact-treatment observables, plus the frozen
+no-subagent-override precondition (FR-031a); and the frozen cache-isolation
+observable with its pairwise scope and three dispositions (FR-032a). Each is
+likewise an FR-034 category 7 entry, and none of them adds a member to a frozen
+CAR-003 document.
 
 **Scale/Scope**: Two contract documents, three frozen controls, one comparison
 contract, two partition registry entries, one replay fixture set, three unit
@@ -139,9 +206,13 @@ IDs are created.
 
 ### Review load (informational, not a budget figure)
 
-A reviewer should expect roughly 2,000–2,400 changed lines across the fifteen
+A reviewer should expect roughly 2,200–2,700 changed lines across the fifteen
 entries, dominated by declarative JSON — two schema documents and four frozen
-instances — plus three unit test modules. That volume is genuine and is called
+instances — plus three unit test modules. The upper end moved after the
+llm-integration checklist closed its gaps into FR-016e, FR-030b, FR-030c,
+FR-031a, and FR-032a: those add validator branches and smoke-record members but
+no new file, so the declared file operations and the zero-production-file
+estimator reading are unchanged. That volume is genuine and is called
 out here so nobody is surprised at PR time; it is not reviewable production LOC
 under this repository's convention, and the PR-time diff-mode reviewability gate
 is the authoritative check on it. The recommended review order is in the PR

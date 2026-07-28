@@ -114,10 +114,13 @@ python3 tests/speckit-pro/layer6-efficiency/run-control-smoke.py \
 ```
 
 - `--plan` prints the bounded command set for one control and exits without
-  running anything.
+  running anything. Its objective list is derived from the registered CAR-004
+  smoke partition, and it refuses to emit any objective the frozen consumption
+  path does not admit, so a reserved objective never reaches an operator.
+  [FR-026a]
 - `--seal` validates a produced record through
   `claude_policy_controls.validate_smoke_record` and writes it under the
   git-ignored `results/` directory.
 - The script refuses to seal a record whose `authentication_mode` is `api_key`,
-  whose `scored` is not `false`, or whose consumed budget exceeds any frozen
-  bound. [FR-030, FR-033]
+  whose `scored` is not `false`, whose rows reference a reserved objective, or
+  whose consumed budget exceeds any frozen bound. [FR-026a, FR-030, FR-033]

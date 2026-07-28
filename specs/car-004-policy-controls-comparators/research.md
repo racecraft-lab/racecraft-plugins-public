@@ -122,7 +122,7 @@ and committed together in `fixtures-controls/partition-registry-entries.json`:
 
 1. **Reserved CAR-011 comparison partition** — `partition_type:
    "integrated_confirmation"`, `qualification_eligible: true`, `owning_spec:
-   "CAR-011"`. Untouched by CAR-004.
+   "CAR-004"`. Untouched by CAR-004 and held for CAR-011.
 2. **CAR-004 smoke partition** — `partition_type: "calibration"`,
    `qualification_eligible: false`, `owning_spec: "CAR-004"`, carrying the at
    most five non-reserved objectives the live smokes use.
@@ -142,6 +142,15 @@ incapable of carrying qualification-bearing evidence. FR-027's "no
 outcome-bearing scored evidence" therefore holds by construction rather than by
 reviewer vigilance, and it holds in the frozen code rather than in anything
 CAR-004 authors.
+
+Registering a qualification-eligible partition CAR-004 may never consume follows
+the pilot exactly: `run-calibration-pilot.py:395-425` registers screening,
+selection, cohort-lock, and integrated-confirmation entries that CAR-003 never
+consumes, "so the refusal is provable, not asserted", each under `owning_spec:
+"CAR-003"`. CAR-004 records `owning_spec: "CAR-004"` on both entries for the same
+reason — the field is provenance for the spec that froze the entry, is read by no
+frozen admission rule, and naming an unstarted spec would claim an ownership
+CAR-004 cannot confer.
 
 **Disjointness is proven, not declared.** The CAR-004 smoke partition registers
 its own five objective identities. It does not reuse CAR-003's calibration

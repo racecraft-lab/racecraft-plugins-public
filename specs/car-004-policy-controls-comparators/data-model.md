@@ -166,12 +166,19 @@ document only.
 | `max_input_tokens` | 800000 | yes | FR-030 |
 | `max_cache_read_tokens` | 150000 | yes | FR-030 |
 | `max_output_tokens` | 50000 | yes | FR-030 |
-| `max_cache_write_tokens_by_ttl_class` | `{ephemeral_5m, ephemeral_1h}` | no — diagnostic only | FR-030 |
+| `raw_token_ceiling` | 1000000 | n/a — it is the identity's right-hand side | FR-030a |
+| `max_cache_write_tokens_by_ttl_class` | `{ephemeral_5m: 160000, ephemeral_1h: 40000}` | no — diagnostic only; just under 2x the frozen CAR-003 campaign budget's per-attempt allowance over five attempts, keeping that budget's 4:1 ratio between the classes | FR-030, FR-030a |
 | `authentication_mode` | `const "subscription"` | — | FR-030 |
 | `scored` | `const false` | — | FR-027, FR-030 |
 
 **Machine-checked identity**: `max_input_tokens + max_cache_read_tokens +
-max_output_tokens == 1000000`. [SC-017]
+max_output_tokens == raw_token_ceiling`, with `raw_token_ceiling` frozen at
+1,000,000 so FR-034 category 6 derives the ceiling from committed bytes rather
+than transcribing it. Each cache-write TTL class is separately checked to be
+present at its frozen value and to stay outside the identity. Neither is checked
+against `max_input_tokens`: cache write is not bounded by input, as the frozen
+calibration-pilot envelope shows by declaring cache-write ceilings well above its
+own input ceiling. [SC-017, FR-030a]
 
 Every numeric in this object carries its unit and comparison direction, following
 the frozen guardrail-method precedent, so twin-handoff category 6 is derived from
@@ -210,6 +217,8 @@ Top-level object, `additionalProperties: false`.
 | `reliability_guardrail_breach_result` | `const "no_qualification"` | FR-019 |
 | `availability_gate_required` | `const true` | FR-019 |
 | `verdict_when_floor_unmet` | `const "no_verdict"` | FR-019 |
+| `claim_class_when_floor_unmet` | `const "no_comparative_claim"` | FR-024a |
+| `messaging_restriction_when_floor_unmet` | `const false` | FR-024a |
 
 A control that has not cleared every floor yields no verdict whatever its
 resource numbers say. [FR-019]
@@ -286,7 +295,7 @@ No new schema is authored; the record kind already exists.
 
 | Entry | `partition_type` | `qualification_eligible` | `owning_spec` | Purpose |
 |---|---|---|---|---|
-| Reserved CAR-011 comparison partition | `integrated_confirmation` | `true` | `CAR-011` | held untouched; never referenced by any CAR-004 row |
+| Reserved CAR-011 comparison partition | `integrated_confirmation` | `true` | `CAR-004` | held untouched for CAR-011; never referenced by any CAR-004 row |
 | CAR-004 smoke partition | `calibration` | `false` | `CAR-004` | the at most five non-reserved objectives the smokes use |
 
 Fields on each entry (all set by the frozen builder): `schema_version`,
@@ -302,9 +311,15 @@ Fields on each entry (all set by the frozen builder): `schema_version`,
 - `register_partitions([reserved, smoke])` fails closed on a duplicate partition
   id or any shared objective, proving disjointness with the same machinery
   CAR-003 uses. [FR-025]
+- `owning_spec` is `CAR-004` on both entries — the spec that freezes them, as in
+  the four reserved entries `run-calibration-pilot.py` registers under
+  `owning_spec: "CAR-003"` and never consumes. No frozen admission rule reads the
+  field; the reservation's beneficiary is carried by the partition id and the
+  comparison contract's binding. [FR-025d, FR-025c]
 - The guard fails if any replay row or smoke row references a member of the
-  reserved objective set, and passes on the delivered evidence set. [FR-026,
-  SC-007]
+  reserved objective set, and passes on the delivered evidence set. The smoke half
+  runs at two points: the plan refuses to emit a reserved objective, and the seal
+  refuses a record that references one. [FR-026, FR-026a, SC-007]
 
 ---
 

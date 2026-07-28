@@ -106,6 +106,9 @@ clock — and each must demonstrate its own behavior:
 | `adaptive` | a real dispatch-time escalation to the next-higher ladder entry |
 | `orchestration-changing` | a real parallel dispatch with child aggregation |
 
+The plan step derives its objectives from the registered CAR-004 smoke partition
+and refuses to print any objective the frozen consumption path does not admit, so
+a reserved objective never reaches you in the first place.
 The seal step refuses a record whose `authentication_mode` is `api_key`, whose
 `scored` is not `false`, whose objectives touch the reserved partition, or whose
 consumed budget exceeds any frozen bound. A run that reaches a bound stops there
