@@ -235,7 +235,7 @@
     },
     {
       "attribution_level": "policy",
-      "control_digest": "sha256:3374bebb3fddd982ed1ac44cb0421362433b5e2d289301579d95c69c4a0ffdf1",
+      "control_digest": "sha256:42e481b7447566a817a01b719db1703414d5694f4cf79ad62ea10309c6e12af5",
       "control_id": "g56r-004-justified-high-effort-control",
       "control_kind": "justified_high_effort",
       "evidence_requirements": [
@@ -293,12 +293,25 @@
             "ephemeral_5m": "sum"
           }
         },
+        "dynamic_route_discovery": false,
+        "effort": "xhigh",
+        "eligibility_predicate": {
+          "predicate_id": "required_core_workspace_write_phase_executor",
+          "result": true,
+          "source": "frozen_g56r_003_successor_evidence"
+        },
+        "eligibility_rationale": "Frozen G56R-003 evidence admits the required-core workspace-write phase-executor route at gpt-5.5 xhigh before any G56R-011 outcome.",
+        "fallback_route_id": null,
+        "model": "gpt-5.5",
         "raw_token_aggregation": {
           "cached_input_tokens": "sum",
           "input_tokens": "sum",
           "output_tokens": "sum",
           "reasoning_output_tokens": "sum"
         },
+        "route_evidence_digest": "sha256:f01ff64ca3d17b40db8ca802dd6501e62d91c4c161d01a94879c156f90eb09e4",
+        "route_id": "g56r-003-route-phase-executor",
+        "successor_freeze_digest": "sha256:734672cea5a83e5b8f296ee604f7cb8d93e0a5296a3f864b873fe78bfe518f1e",
         "terminal_state_severity": [
           "completed",
           "failed",
@@ -321,7 +334,7 @@
     }
   ],
   "frozen_at": "2026-07-27T00:00:00Z",
-  "registry_digest": "sha256:3821df1ffa0d7b701b41fbc0fbf2426a1bc55704ff4b74a493574a55137ee96e",
+  "registry_digest": "sha256:818f727ef96dd4a03d0949721d1411a09f57e0236bc142d954e8e69b45a4b086",
   "registry_id": "g56r-004-policy-control-registry",
   "schema_version": "1.0.0",
   "smoke_bounds": {

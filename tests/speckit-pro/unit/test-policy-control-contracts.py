@@ -84,6 +84,7 @@ REGISTRY_SCHEMA_PATH = CONTRACT_ROOT / "policy-control-registry.schema.json"
 REGISTRY_SCHEMA_ID = "https://racecraft.dev/schemas/car-004/policy-control-registry.schema.json"
 CODEX_REGISTRY_SCHEMA_PATH = CODEX_CONTRACT_ROOT / "policy-control-registry.schema.json"
 CODEX_REGISTRY_FIXTURE_PATH = CODEX_FIXTURE_ROOT / "policy-control-registry.json"
+CODEX_REPLAY_CASES_PATH = CODEX_FIXTURE_ROOT / "replay-cases.json"
 CODEX_REGISTRY_SCHEMA_ID = "https://racecraft.dev/schemas/g56r-004/policy-control-registry.schema.json"
 CODEX_REGISTRY_ID = "g56r-004-policy-control-registry"
 CODEX_CONTROL_IDS_BY_KIND = {
@@ -105,6 +106,9 @@ CODEX_G56R003_SUCCESSOR_FREEZE_ID = (
 CODEX_G56R003_ROUTE_EVIDENCE_DIGEST = (
     "sha256:f01ff64ca3d17b40db8ca802dd6501e62d91c4c161d01a94879c156f90eb09e4"
 )
+CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID = "g56r-003-route-phase-executor"
+CODEX_JUSTIFIED_HIGH_EFFORT_MODEL = "gpt-5.5"
+CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT = "xhigh"
 JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
 
 # FR-004 and SC-017: a reference that leaves the owning document is refused, so
@@ -1475,6 +1479,253 @@ class CodexAdaptiveMovementAndBreachTests(unittest.TestCase):
         self.assertTrue(classified["unit_non_scorable"])
         self.assertEqual(classified["failure_plane"], failure_plane_for("service_reroute"))
         self.assertEqual(classified["disposition_reason"], SERVICE_REROUTE_DISPOSITION_REASON)
+
+
+class CodexJustifiedHighEffortControlTests(unittest.TestCase):
+    """G56R-004 FR-018, FR-019, FR-023, SC-008, and SC-015: fixed high-effort route."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.control = control_of_kind(self.registry, "justified_high_effort")
+
+    def validate_control(self, control: dict[str, object]) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.module, "validate_justified_high_effort_control"),
+            "T017 must expose validate_justified_high_effort_control for Codex high effort",
+        )
+        return self.module.validate_justified_high_effort_control(control)
+
+    def validate_exact_treatment(self, evidence: dict[str, object]) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.module, "validate_justified_high_effort_exact_treatment"),
+            "T017 must read justified-high-effort exact treatment from produced evidence",
+        )
+        return self.module.validate_justified_high_effort_exact_treatment(
+            self.control, evidence
+        )
+
+    def exact_treatment_evidence(self, **overrides: object) -> dict[str, object]:
+        evidence: dict[str, object] = {
+            "read_back_from": "produced_evidence",
+            "dispatch_request": {
+                "route_id": CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID,
+                "model": CODEX_JUSTIFIED_HIGH_EFFORT_MODEL,
+                "effort": CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT,
+            },
+            "produced_evidence": {
+                "served_route_id": CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID,
+                "served_model": CODEX_JUSTIFIED_HIGH_EFFORT_MODEL,
+                "served_effort": CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT,
+                "successor_freeze_digest": CODEX_G56R003_SUCCESSOR_FREEZE_ID,
+                "route_evidence_digest": CODEX_G56R003_ROUTE_EVIDENCE_DIGEST,
+                "eligibility_predicate_result": True,
+                "eligibility_rationale_binding": "required_core_workspace_write_phase_executor",
+                "fallback_route_id": None,
+                "dynamic_route_discovery": False,
+                "parent_plus_child_aggregate": {
+                    "input_tokens": 1,
+                    "cached_input_tokens": 0,
+                    "output_tokens": 1,
+                    "duration_ms": 1,
+                    "retries": 0,
+                    "compactions": 0,
+                    "terminal_state": "completed",
+                    "acceptance": 1,
+                },
+            },
+        }
+        evidence.update(overrides)
+        return evidence
+
+    def test_the_control_binds_one_frozen_g56r003_phase_executor_route(self) -> None:
+        binding = self.validate_control(self.control)
+        self.assertEqual(binding["route_id"], CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID)
+        self.assertEqual(binding["model"], CODEX_JUSTIFIED_HIGH_EFFORT_MODEL)
+        self.assertEqual(binding["effort"], CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT)
+        self.assertEqual(binding["successor_freeze_digest"], CODEX_G56R003_SUCCESSOR_FREEZE_ID)
+        self.assertEqual(binding["route_evidence_digest"], CODEX_G56R003_ROUTE_EVIDENCE_DIGEST)
+
+    def test_eligibility_predicate_rationale_and_no_fallback_are_declared(self) -> None:
+        binding = self.validate_control(self.control)
+        self.assertIs(binding["eligibility_predicate"]["result"], True)
+        self.assertIn("required_core", binding["eligibility_predicate"]["predicate_id"])
+        self.assertIn("workspace_write", binding["eligibility_predicate"]["predicate_id"])
+        self.assertTrue(binding["eligibility_rationale"].strip())
+        self.assertIsNone(binding["fallback_route_id"])
+        self.assertIs(binding["dynamic_route_discovery"], False)
+
+    def test_ineligible_or_fallback_seeded_controls_are_refused(self) -> None:
+        self.assertIsNotNone(self.validate_control(self.control))
+        seeded_cases = (
+            ("predicate_false", {"eligibility_predicate": {"result": False}}),
+            ("empty_rationale", {"eligibility_rationale": ""}),
+            ("fallback_route", {"fallback_route_id": "g56r-003-route-fallback"}),
+            ("dynamic_discovery", {"dynamic_route_discovery": True}),
+        )
+        for label, seeded in seeded_cases:
+            with self.subTest(case=label):
+                control = copy.deepcopy(self.control)
+                control["justified_high_effort"].update(seeded)
+                with self.assertRaises(self.error):
+                    self.validate_control(control)
+
+    def test_exact_treatment_is_read_back_from_produced_evidence(self) -> None:
+        observed = self.validate_exact_treatment(self.exact_treatment_evidence())
+        self.assertEqual(observed["read_back_from"], "produced_evidence")
+        self.assertEqual(observed["served_route_id"], CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID)
+        self.assertEqual(observed["served_model"], CODEX_JUSTIFIED_HIGH_EFFORT_MODEL)
+        self.assertEqual(observed["served_effort"], CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT)
+        self.assertIs(observed["eligibility_predicate_result"], True)
+        self.assertEqual(
+            observed["route_evidence_digest"], CODEX_G56R003_ROUTE_EVIDENCE_DIGEST
+        )
+        self.assertIn("parent_plus_child_aggregate", observed)
+
+        request_only = self.exact_treatment_evidence(read_back_from="dispatch_request")
+        with self.assertRaises(self.error):
+            self.validate_exact_treatment(request_only)
+
+
+def codex_unit_member(
+    row_id: str,
+    spawned_by: str | None = None,
+    *,
+    cost: int = 10,
+    terminal_state: str = "completed",
+    acceptance: float | None = 1.0,
+    raw: tuple[int, int, int, int | None] = (100, 20, 30, 5),
+    cache: tuple[int, int, int] | None = (7, 3, 40),
+) -> dict[str, object]:
+    member: dict[str, object] = {
+        "row_id": row_id,
+        "spawned_by": spawned_by,
+        "resource_vector": {
+            "input_tokens": cost,
+            "cached_input_tokens": cost,
+            "output_tokens": cost,
+            "duration_ms": cost,
+            "retries": cost,
+            "compactions": cost,
+            "terminal_state": terminal_state,
+            "acceptance": acceptance,
+        },
+        "raw_token_vector": {
+            "input_tokens": raw[0],
+            "output_tokens": raw[1],
+            "cached_input_tokens": raw[2],
+            "reasoning_output_tokens": raw[3],
+        },
+    }
+    if cache is not None:
+        member["cache_diagnostic"] = {
+            "cache_write_tokens_by_ttl_class": {
+                "ephemeral_5m": cache[0],
+                "ephemeral_1h": cache[1],
+            },
+            "cache_read_tokens": cache[2],
+        }
+    return member
+
+
+class CodexParentPlusChildrenAggregationTests(unittest.TestCase):
+    """G56R-004 FR-020 through FR-022 and SC-009: governed unit aggregation."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.control = control_of_kind(self.registry, "justified_high_effort")
+
+    def aggregate(self, members: list[dict[str, object]]) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.module, "aggregate_parent_plus_children"),
+            "T019 must expose aggregate_parent_plus_children for Codex governed evidence",
+        )
+        return self.module.aggregate_parent_plus_children(self.control, members)
+
+    def test_children_are_included_across_all_eight_decision_dimensions(self) -> None:
+        aggregate = self.aggregate([
+            codex_unit_member("parent", cost=10, acceptance=0.92),
+            codex_unit_member("child-1", "parent", cost=3),
+            codex_unit_member("child-2", "parent", cost=5),
+        ])
+        self.assertEqual(aggregate["unit_member_ids"], ["parent", "child-1", "child-2"])
+        for dimension in (
+            "input_tokens",
+            "cached_input_tokens",
+            "output_tokens",
+            "duration_ms",
+            "retries",
+            "compactions",
+        ):
+            with self.subTest(dimension=dimension):
+                self.assertEqual(aggregate["decision_dimensions"][dimension], 18)
+        self.assertEqual(aggregate["decision_dimensions"]["terminal_state"], "completed")
+        self.assertEqual(aggregate["decision_dimensions"]["acceptance"], 0.92)
+
+    def test_null_acceptance_floor_and_missing_terminal_state_are_handled_explicitly(self) -> None:
+        completed_gap = self.aggregate([
+            codex_unit_member("parent", acceptance=None),
+            codex_unit_member("child-1", "parent"),
+        ])
+        self.assertIsNone(completed_gap["decision_dimensions"]["acceptance"])
+
+        failed = self.aggregate([
+            codex_unit_member("parent", acceptance=None),
+            codex_unit_member("child-1", "parent", terminal_state="failed"),
+        ])
+        self.assertEqual(failed["decision_dimensions"]["terminal_state"], "failed")
+        self.assertEqual(failed["decision_dimensions"]["acceptance"], 0)
+
+        malformed = codex_unit_member("child-2", "parent")
+        del malformed["resource_vector"]["terminal_state"]
+        with self.assertRaises(self.error):
+            self.aggregate([codex_unit_member("parent"), malformed])
+
+    def test_raw_tokens_and_cache_diagnostics_preserve_their_member_sets(self) -> None:
+        aggregate = self.aggregate([
+            codex_unit_member("parent"),
+            codex_unit_member("child-1", "parent", raw=(200, 40, 60, 11), cache=(13, 5, 80)),
+        ])
+        self.assertEqual(
+            aggregate["raw_tokens"],
+            {
+                "input_tokens": 300,
+                "output_tokens": 60,
+                "cached_input_tokens": 90,
+                "reasoning_output_tokens": 16,
+            },
+        )
+        self.assertEqual(
+            aggregate["cache_write_tokens_by_ttl_class"],
+            {"ephemeral_5m": 20, "ephemeral_1h": 8},
+        )
+        self.assertEqual(aggregate["cache_read_tokens"], 120)
+        replay_case = load_json(CODEX_REPLAY_CASES_PATH)["aggregation_cases"][0]
+        self.assertEqual(self.aggregate(replay_case["members"]), replay_case["expected"])
+
+    def test_missing_or_null_cache_diagnostics_remain_unobserved_not_zero(self) -> None:
+        no_cache = self.aggregate([
+            codex_unit_member("parent"),
+            codex_unit_member("child-1", "parent", cache=None),
+        ])
+        self.assertIsNone(no_cache["cache_read_tokens"])
+        self.assertIsNone(no_cache["cache_write_tokens_by_ttl_class"])
+        self.assertEqual(
+            sorted(no_cache["unobserved"]),
+            ["max_cache_read_tokens", "max_cache_write_tokens_by_ttl_class"],
+        )
+
+        null_cache = codex_unit_member("child-2", "parent")
+        null_cache["cache_diagnostic"]["cache_read_tokens"] = None
+        aggregate = self.aggregate([codex_unit_member("parent"), null_cache])
+        self.assertIsNone(aggregate["cache_read_tokens"])
+        self.assertIn("max_cache_read_tokens", aggregate["unobserved"])
+        self.assertNotEqual(aggregate["cache_read_tokens"], 0)
 
 
 class UnpinnedControlTests(unittest.TestCase):
@@ -4232,6 +4483,8 @@ TEST_CASES = (
     CodexAdaptiveLadderTests,
     CodexAdaptiveSignalResolutionTests,
     CodexAdaptiveMovementAndBreachTests,
+    CodexJustifiedHighEffortControlTests,
+    CodexParentPlusChildrenAggregationTests,
     UnpinnedControlTests,
     AdaptiveSignalMapTests,
     AdaptiveRowResolutionTests,

@@ -54,6 +54,26 @@ _AUTHENTICATION_MODE = "chatgpt_subscription"
 _CODEX_SUCCESSOR_FREEZE_ID = (
     "sha256:734672cea5a83e5b8f296ee604f7cb8d93e0a5296a3f864b873fe78bfe518f1e"
 )
+_CODEX_ROUTE_EVIDENCE_DIGEST = (
+    "sha256:f01ff64ca3d17b40db8ca802dd6501e62d91c4c161d01a94879c156f90eb09e4"
+)
+_CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID = "g56r-003-route-phase-executor"
+_CODEX_JUSTIFIED_HIGH_EFFORT_MODEL = "gpt-5.5"
+_CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT = "xhigh"
+_CODEX_JUSTIFIED_ELIGIBILITY_PREDICATE_ID = (
+    "required_core_workspace_write_phase_executor"
+)
+_CODEX_ONLY_JUSTIFIED_HIGH_EFFORT_FIELDS = {
+    "dynamic_route_discovery",
+    "effort",
+    "eligibility_predicate",
+    "eligibility_rationale",
+    "fallback_route_id",
+    "model",
+    "route_evidence_digest",
+    "route_id",
+    "successor_freeze_digest",
+}
 _CAR_SYNTHETIC_SUCCESSOR_FREEZE_ID = (
     "sha256:efccacf2bb277b2d87bf04f14bb542d941049d9456c94d55999ce8a311b4f392"
 )
@@ -84,8 +104,40 @@ _SCORE_BUNDLE_SCHEMA = _load_json(
 _FROZEN_TERMINAL_STATES = tuple(
     _SCORE_BUNDLE_SCHEMA["properties"]["resource_vector"]["properties"]["terminal_state"]["enum"]
 )
+_FROZEN_PARETO_DIMENSIONS = tuple(
+    _SCORE_BUNDLE_SCHEMA["properties"]["resource_vector"]["required"]
+)
 _FROZEN_FAILURE_PLANES = tuple(_SCORE_BUNDLE_SCHEMA["properties"]["failure_plane"]["enum"])
 _FROZEN_FAILURE_CODES = tuple(_SCORE_BUNDLE_SCHEMA["properties"]["failure_code"]["enum"])
+_TREATMENT_RECORD_SCHEMA = _load_json(
+    _LAYER6_ROOT / "contracts" / "treatment-record.schema.json"
+)
+_FROZEN_RAW_TOKEN_MEMBERS = tuple(
+    _TREATMENT_RECORD_SCHEMA["$defs"]["rawTokenVector"]["required"]
+)
+_UNBOUNDED_RAW_TOKEN_MEMBER = "reasoning_output_tokens"
+_RAW_TOKEN_CEILING_QUANTITY_MEMBERS = tuple(
+    member for member in _FROZEN_RAW_TOKEN_MEMBERS if member != _UNBOUNDED_RAW_TOKEN_MEMBER
+)
+_ADDITIVE_RECORDS_SCHEMA = _load_json(
+    _LAYER6_ROOT / "contracts-claude" / "car-003-additive-records.schema.json"
+)
+_CACHE_DIAGNOSTIC_SCHEMA = _ADDITIVE_RECORDS_SCHEMA["$defs"]["cacheDiagnosticRecord"]
+_FROZEN_CACHE_TTL_CLASSES = tuple(
+    _CACHE_DIAGNOSTIC_SCHEMA["properties"]["cache_write_tokens_by_ttl_class"][
+        "propertyNames"
+    ]["enum"]
+)
+_CACHE_QUANTITY_CEILINGS = {
+    "cache_write_tokens_by_ttl_class": "max_cache_write_tokens_by_ttl_class",
+    "cache_read_tokens": "max_cache_read_tokens",
+}
+_RAW_TOKEN_MEMBER_CEILINGS = {
+    "input_tokens": "max_input_tokens",
+    "output_tokens": "max_output_tokens",
+    "cached_input_tokens": "max_cached_input_tokens",
+    _UNBOUNDED_RAW_TOKEN_MEMBER: None,
+}
 _POLICY_RESPONSES = ("escalate", "hold", "non_scorable")
 _SIGNAL_SOURCES = (
     "failure_code",
@@ -104,6 +156,9 @@ _SIGNAL_MAP_ENUMS = (
     ("failure_plane_response", _FROZEN_FAILURE_PLANES),
     ("failure_code_response", _FROZEN_FAILURE_CODES),
 )
+_ADDITIVE_RULE = "sum"
+_SEVERITY_FOLD_RULE = "worst_wins_by_severity"
+_PARENT_ORACLE_RULE = "parent_objective_oracle"
 
 
 def _record_digest(record: dict[str, Any], digest_field: str) -> str:
@@ -119,11 +174,13 @@ def _record_digest(record: dict[str, Any], digest_field: str) -> str:
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
-def _normalize_platform_value(value: Any) -> Any:
+def _normalize_platform_value(value: Any, *, drop_jhe_fields: bool = False) -> Any:
     if isinstance(value, dict):
         normalized: dict[str, Any] = {}
         for key, member in value.items():
             if key in _CODEX_ONLY_UNPINNED_FIELDS:
+                continue
+            if drop_jhe_fields and key in _CODEX_ONLY_JUSTIFIED_HIGH_EFFORT_FIELDS:
                 continue
             normalized_key = (
                 "orchestration_changing" if key == "justified_high_effort" else key
@@ -135,10 +192,16 @@ def _normalize_platform_value(value: Any) -> Any:
             ):
                 normalized[normalized_key] = "<content-address>"
             else:
-                normalized[normalized_key] = _normalize_platform_value(member)
+                normalized[normalized_key] = _normalize_platform_value(
+                    member,
+                    drop_jhe_fields=drop_jhe_fields or key == "justified_high_effort",
+                )
         return normalized
     if isinstance(value, list):
-        return [_normalize_platform_value(member) for member in value]
+        return [
+            _normalize_platform_value(member, drop_jhe_fields=drop_jhe_fields)
+            for member in value
+        ]
     if value == _CODEX_SCHEMA_ID:
         return _CAR_SCHEMA_ID
     if value == "G56R-004 Policy Control Registry":
@@ -795,6 +858,311 @@ def validate_unpinned_exact_treatment(
         "observed_absent_overrides": {
             member: absent[member] for member in _REQUIRED_ABSENT_OVERRIDES
         },
+    }
+
+
+def _justified_high_effort(control: dict[str, Any]) -> dict[str, Any]:
+    if control.get("control_kind") != "justified_high_effort":
+        raise ControlContractError("expected a justified-high-effort control")
+    return _require_mapping(control.get("justified_high_effort"), "justified_high_effort")
+
+
+def validate_justified_high_effort_control(control: dict[str, Any]) -> dict[str, Any]:
+    """Validate the frozen Codex justified-high-effort route binding."""
+
+    if control.get("control_digest") != _record_digest(control, "control_digest"):
+        raise ControlContractError("justified-high-effort control digest drift")
+    binding = _justified_high_effort(control)
+    expected = {
+        "route_id": _CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID,
+        "model": _CODEX_JUSTIFIED_HIGH_EFFORT_MODEL,
+        "effort": _CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT,
+        "successor_freeze_digest": _CODEX_SUCCESSOR_FREEZE_ID,
+        "route_evidence_digest": _CODEX_ROUTE_EVIDENCE_DIGEST,
+    }
+    for member, value in expected.items():
+        if binding.get(member) != value:
+            raise ControlContractError(f"justified-high-effort {member} drift")
+
+    predicate = _require_mapping(
+        binding.get("eligibility_predicate"), "eligibility_predicate"
+    )
+    if predicate.get("predicate_id") != _CODEX_JUSTIFIED_ELIGIBILITY_PREDICATE_ID:
+        raise ControlContractError("justified-high-effort predicate identity drift")
+    if predicate.get("result") is not True:
+        raise ControlContractError("justified-high-effort route is not eligible")
+    _require_nonempty_string(predicate.get("source"), "eligibility_predicate.source")
+    _require_nonempty_string(binding.get("eligibility_rationale"), "eligibility_rationale")
+    if binding.get("fallback_route_id") is not None:
+        raise ControlContractError("justified-high-effort must not declare a fallback route")
+    if binding.get("dynamic_route_discovery") is not False:
+        raise ControlContractError("justified-high-effort must not use dynamic discovery")
+    return copy.deepcopy(binding)
+
+
+def validate_justified_high_effort_exact_treatment(
+    control: dict[str, Any], evidence: dict[str, Any]
+) -> dict[str, Any]:
+    """Read justified-high-effort exact treatment from produced evidence."""
+
+    binding = validate_justified_high_effort_control(control)
+    if evidence.get("read_back_from") != "produced_evidence":
+        raise ControlContractError("justified-high-effort exact treatment must read produced evidence")
+    produced = _require_mapping(evidence.get("produced_evidence"), "produced_evidence")
+    comparisons = {
+        "served_route_id": binding["route_id"],
+        "served_model": binding["model"],
+        "served_effort": binding["effort"],
+        "successor_freeze_digest": binding["successor_freeze_digest"],
+        "route_evidence_digest": binding["route_evidence_digest"],
+        "fallback_route_id": None,
+        "dynamic_route_discovery": False,
+    }
+    for member, expected in comparisons.items():
+        if produced.get(member) != expected:
+            raise ControlContractError(
+                f"produced evidence {member} does not match the frozen high-effort binding"
+            )
+    if produced.get("eligibility_predicate_result") is not True:
+        raise ControlContractError("produced evidence does not reproduce eligibility")
+    if (
+        produced.get("eligibility_rationale_binding")
+        != binding["eligibility_predicate"]["predicate_id"]
+    ):
+        raise ControlContractError("produced evidence does not bind the eligibility rationale")
+    aggregate = _require_mapping(
+        produced.get("parent_plus_child_aggregate"), "parent_plus_child_aggregate"
+    )
+    return {
+        "read_back_from": "produced_evidence",
+        "served_route_id": produced["served_route_id"],
+        "served_model": produced["served_model"],
+        "served_effort": produced["served_effort"],
+        "successor_freeze_digest": produced["successor_freeze_digest"],
+        "route_evidence_digest": produced["route_evidence_digest"],
+        "eligibility_predicate_result": produced["eligibility_predicate_result"],
+        "eligibility_rationale_binding": produced["eligibility_rationale_binding"],
+        "parent_plus_child_aggregate": copy.deepcopy(aggregate),
+    }
+
+
+def _validate_aggregation_declarations(control: dict[str, Any]) -> dict[str, Any]:
+    validate_justified_high_effort_control(control)
+    specialization = _justified_high_effort(control)
+    if control.get("attribution_level") != "policy":
+        raise ControlContractError("parent-plus-children aggregation is policy-level only")
+
+    rule = _require_mapping(specialization.get("aggregation_rule"), "aggregation_rule")
+    if sorted(rule) != sorted(_FROZEN_PARETO_DIMENSIONS):
+        raise ControlContractError(
+            "aggregation_rule must cover the frozen eight decision dimensions"
+        )
+    if rule.get("terminal_state") != _SEVERITY_FOLD_RULE:
+        raise ControlContractError("terminal_state must fold by worst-wins severity")
+    if rule.get("acceptance") != _PARENT_ORACLE_RULE:
+        raise ControlContractError("acceptance must be read from the parent oracle")
+    for dimension, combining in rule.items():
+        if combining not in (_ADDITIVE_RULE, _SEVERITY_FOLD_RULE, _PARENT_ORACLE_RULE):
+            raise ControlContractError(
+                f"aggregation_rule[{dimension!r}] declares unknown combining rule"
+            )
+
+    severity = _require_sequence(
+        specialization.get("terminal_state_severity"), "terminal_state_severity"
+    )
+    if sorted(severity) != sorted(_FROZEN_TERMINAL_STATES):
+        raise ControlContractError("terminal_state_severity must match the frozen enum")
+    if specialization.get("acceptance_rule") != _PARENT_ORACLE_RULE:
+        raise ControlContractError("acceptance_rule must match the parent oracle rule")
+    if specialization.get("acceptance_floor_on_non_completed") != 0:
+        raise ControlContractError("non-completed acceptance must floor to zero")
+
+    raw_rule = _require_mapping(
+        specialization.get("raw_token_aggregation"), "raw_token_aggregation"
+    )
+    if sorted(raw_rule) != sorted(_FROZEN_RAW_TOKEN_MEMBERS):
+        raise ControlContractError("raw_token_aggregation must cover the frozen raw-token vector")
+    if any(combining != _ADDITIVE_RULE for combining in raw_rule.values()):
+        raise ControlContractError("raw token members must aggregate additively")
+
+    cache_rule = _require_mapping(
+        specialization.get("cache_aggregation"), "cache_aggregation"
+    )
+    if sorted(cache_rule) != sorted(_CACHE_QUANTITY_CEILINGS):
+        raise ControlContractError("cache_aggregation must declare the two cache diagnostics")
+    write_rule = _require_mapping(
+        cache_rule.get("cache_write_tokens_by_ttl_class"),
+        "cache_write_tokens_by_ttl_class",
+    )
+    if sorted(write_rule) != sorted(_FROZEN_CACHE_TTL_CLASSES):
+        raise ControlContractError("cache write aggregation must use the frozen TTL classes")
+    if any(combining != _ADDITIVE_RULE for combining in write_rule.values()):
+        raise ControlContractError("cache write TTL classes must aggregate additively")
+    if cache_rule.get("cache_read_tokens") != _ADDITIVE_RULE:
+        raise ControlContractError("cache_read_tokens must aggregate additively")
+    if specialization.get("unrecorded_quantity_disposition") != "unobserved":
+        raise ControlContractError("missing diagnostics must stay unobserved")
+    return specialization
+
+
+def _resource_vector(member: dict[str, Any]) -> dict[str, Any]:
+    return _require_mapping(member.get("resource_vector"), "resource_vector")
+
+
+def _raw_token_vector(member: dict[str, Any]) -> dict[str, Any]:
+    return _require_mapping(member.get("raw_token_vector"), "raw_token_vector")
+
+
+def _sum_or_unobserved(values: list[Any], label: str) -> int | None:
+    if any(value is None for value in values):
+        return None
+    return sum(_whole_number(value, label) for value in values)
+
+
+def _unit_members(
+    members: Any, specialization: dict[str, Any]
+) -> list[dict[str, Any]]:
+    if not isinstance(members, list) or not members:
+        raise ControlContractError("parent-plus-children aggregation requires a non-empty unit")
+
+    observed: list[dict[str, Any]] = []
+    member_ids: list[str] = []
+    for index, raw_member in enumerate(members):
+        member = _require_mapping(raw_member, f"members[{index}]")
+        row_id = _require_nonempty_string(member.get("row_id"), f"members[{index}].row_id")
+        if row_id in member_ids:
+            raise ControlContractError(f"unit member repeats row_id {row_id!r}")
+        if "spawned_by" not in member:
+            raise ControlContractError(f"{row_id!r} records no spawned_by boundary")
+        if index == 0 and member["spawned_by"] is not None:
+            raise ControlContractError("the first unit member must be the parent row")
+        if index > 0 and member["spawned_by"] is None:
+            raise ControlContractError(f"{row_id!r} is a second parent row")
+
+        vector = _resource_vector(member)
+        if "terminal_state" not in vector or vector.get("terminal_state") is None:
+            raise ControlContractError(f"{row_id!r} records no terminal_state")
+        member_ids.append(row_id)
+        observed.append(member)
+
+    known = set(member_ids)
+    for member in observed[1:]:
+        if member["spawned_by"] not in known:
+            raise ControlContractError(
+                f"{member['row_id']!r} records a spawned_by value outside the unit"
+            )
+
+    fan_out = _require_mapping(
+        specialization.get("topology_descriptor"), "topology_descriptor"
+    ).get("fan_out")
+    if not isinstance(fan_out, int) or isinstance(fan_out, bool) or fan_out < 0:
+        raise ControlContractError("topology_descriptor.fan_out must be a non-negative integer")
+    if len(observed) - 1 > fan_out:
+        raise ControlContractError("parent-plus-children unit exceeds the declared fan-out")
+    return observed
+
+
+def _worst_terminal_state(states: list[Any], severity_order: list[Any]) -> str:
+    worst = None
+    rank = -1
+    for state in states:
+        if state not in severity_order:
+            raise ControlContractError(f"{state!r} is outside terminal_state_severity")
+        position = severity_order.index(state)
+        if position > rank:
+            worst = state
+            rank = position
+    if worst is None:
+        raise ControlContractError("the unit has no terminal_state to fold")
+    return str(worst)
+
+
+def aggregate_parent_plus_children(
+    control: dict[str, Any], members: Any
+) -> dict[str, Any]:
+    """Aggregate a Codex justified-high-effort parent plus every spawned child."""
+
+    specialization = _validate_aggregation_declarations(control)
+    unit = _unit_members(members, specialization)
+    decision_dimensions: dict[str, Any] = {}
+    for dimension, combining in specialization["aggregation_rule"].items():
+        if combining == _ADDITIVE_RULE:
+            decision_dimensions[dimension] = sum(
+                _whole_number(
+                    _resource_vector(member).get(dimension),
+                    f"{member.get('row_id')}.{dimension}",
+                )
+                for member in unit
+            )
+
+    states = [_resource_vector(member).get("terminal_state") for member in unit]
+    decision_dimensions["terminal_state"] = _worst_terminal_state(
+        states, list(specialization["terminal_state_severity"])
+    )
+    parent_acceptance = _resource_vector(unit[0]).get("acceptance")
+    if parent_acceptance is not None and (
+        isinstance(parent_acceptance, bool)
+        or not isinstance(parent_acceptance, (int, float))
+    ):
+        raise ControlContractError("parent acceptance must be numeric or null")
+    if decision_dimensions["terminal_state"] != _CLEAN_TERMINAL_STATE:
+        parent_acceptance = specialization["acceptance_floor_on_non_completed"]
+    decision_dimensions["acceptance"] = parent_acceptance
+
+    raw_tokens = {
+        member: _sum_or_unobserved(
+            [_raw_token_vector(row).get(member) for row in unit], member
+        )
+        for member in specialization["raw_token_aggregation"]
+    }
+    raw_token_ceiling_quantity = _sum_or_unobserved(
+        [raw_tokens[member] for member in _RAW_TOKEN_CEILING_QUANTITY_MEMBERS],
+        "raw_token_ceiling",
+    )
+
+    unobserved: list[str] = []
+    diagnostics = [row.get("cache_diagnostic") for row in unit]
+    if any(diagnostic is None for diagnostic in diagnostics):
+        cache_write = None
+        cache_read = None
+        unobserved.extend(_CACHE_QUANTITY_CEILINGS.values())
+    else:
+        for diagnostic in diagnostics:
+            if not isinstance(diagnostic, dict):
+                raise ControlContractError("cache_diagnostic must be an object or absent")
+        cache_read = _sum_or_unobserved(
+            [diagnostic.get("cache_read_tokens") for diagnostic in diagnostics],
+            "cache_read_tokens",
+        )
+        if cache_read is None:
+            unobserved.append(_CACHE_QUANTITY_CEILINGS["cache_read_tokens"])
+        per_class = {
+            ttl_class: _sum_or_unobserved(
+                [
+                    diagnostic.get("cache_write_tokens_by_ttl_class", {}).get(ttl_class)
+                    for diagnostic in diagnostics
+                ],
+                f"cache_write_tokens_by_ttl_class.{ttl_class}",
+            )
+            for ttl_class in _FROZEN_CACHE_TTL_CLASSES
+        }
+        if any(value is None for value in per_class.values()):
+            cache_write = None
+            unobserved.append(_CACHE_QUANTITY_CEILINGS["cache_write_tokens_by_ttl_class"])
+        else:
+            cache_write = per_class
+
+    return {
+        "unit_member_ids": [member["row_id"] for member in unit],
+        "decision_dimensions": decision_dimensions,
+        "raw_tokens": raw_tokens,
+        "raw_token_ceiling_members": list(_RAW_TOKEN_CEILING_QUANTITY_MEMBERS),
+        "raw_token_ceiling_quantity": raw_token_ceiling_quantity,
+        "cache_write_tokens_by_ttl_class": cache_write,
+        "cache_read_tokens": cache_read,
+        "bounded_by": {**_RAW_TOKEN_MEMBER_CEILINGS, **_CACHE_QUANTITY_CEILINGS},
+        "unobserved": sorted(set(unobserved)),
+        "member_count": len(unit),
     }
 
 
