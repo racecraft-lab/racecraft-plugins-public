@@ -88,6 +88,12 @@ _SANCTIONED_DIVERGENCE = {
     "codex_value": "justified_high_effort",
     "unchanged_values": ["adaptive", "unpinned"],
 }
+_CODEX_CONTROL_IDS_BY_KIND = {
+    "unpinned": "g56r-004-unpinned-control",
+    "adaptive": "g56r-004-adaptive-control",
+    "justified_high_effort": "g56r-004-justified-high-effort-control",
+}
+_CODEX_CONTROL_KINDS = tuple(_CODEX_CONTROL_IDS_BY_KIND)
 
 
 def _load_json(path: Path) -> Any:
@@ -98,6 +104,9 @@ def _load_json(path: Path) -> Any:
 
 
 _LAYER6_ROOT = Path(__file__).resolve().parent.parent
+_FROZEN_CODEX_PARTITION_ENTRIES_PATH = (
+    _LAYER6_ROOT / "fixtures-codex-controls" / "partition-registry-entries.json"
+)
 _SCORE_BUNDLE_SCHEMA = _load_json(
     _LAYER6_ROOT / "contracts-codex-specification" / "score-bundle.schema.json"
 )
@@ -1241,3 +1250,295 @@ def validate_car_004_twin_mirror(
             },
         },
     }
+
+
+def _objective_set_digest(objective_ids: Any) -> str:
+    if not isinstance(objective_ids, list) or not objective_ids:
+        raise ControlContractError("a partition must register at least one objective")
+    if any(not isinstance(objective, str) or not objective for objective in objective_ids):
+        raise ControlContractError("partition objective ids must be non-empty strings")
+    payload = sorted(set(objective_ids))
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
+def load_partition_entries(path: Path) -> list[dict[str, Any]]:
+    """Load and validate the two Codex partition registry entries."""
+
+    fixture = _load_json(path)
+    if (
+        not isinstance(fixture, dict)
+        or fixture.get("schema_version") != "1.0.0"
+        or fixture.get("fixture_kind") != "policy_control_partition_registry"
+    ):
+        raise ControlContractError("partition fixture identity drift")
+    entries = fixture.get("entries")
+    if not isinstance(entries, list) or len(entries) != 2:
+        raise ControlContractError("partition fixture must contain exactly two entries")
+
+    observed_ids: set[str] = set()
+    observed_objectives: set[str] = set()
+    validated: list[dict[str, Any]] = []
+    for index, raw_entry in enumerate(entries):
+        entry = _require_mapping(raw_entry, f"entries[{index}]")
+        required = {
+            "frozen_at",
+            "objective_ids",
+            "objective_set_digest",
+            "owning_spec",
+            "partition_id",
+            "partition_type",
+            "qualification_eligible",
+            "record_kind",
+            "schema_version",
+        }
+        if set(entry) != required:
+            raise ControlContractError(f"entries[{index}] member-set drift")
+        partition_id = _require_nonempty_string(
+            entry.get("partition_id"), f"entries[{index}].partition_id"
+        )
+        if partition_id in observed_ids:
+            raise ControlContractError(f"duplicate partition_id {partition_id!r}")
+        observed_ids.add(partition_id)
+        objectives = entry.get("objective_ids")
+        if not isinstance(objectives, list) or objectives != sorted(set(objectives)):
+            raise ControlContractError(f"{partition_id!r} objective ids are not sorted unique")
+        if entry.get("objective_set_digest") != _objective_set_digest(objectives):
+            raise ControlContractError(f"{partition_id!r} objective_set_digest drift")
+        overlap = observed_objectives & set(objectives)
+        if overlap:
+            raise ControlContractError(
+                f"partition objective overlap: {sorted(overlap)}"
+            )
+        observed_objectives.update(objectives)
+        if entry.get("owning_spec") != "G56R-004":
+            raise ControlContractError(f"{partition_id!r} owner drift")
+        if entry.get("schema_version") != "1.0.0":
+            raise ControlContractError(f"{partition_id!r} schema_version drift")
+        if entry.get("record_kind") != "partition_registry_entry":
+            raise ControlContractError(f"{partition_id!r} record_kind drift")
+        validated.append(copy.deepcopy(entry))
+
+    expected = {
+        "G56R-011-RESERVED-COMPARISON": ("integrated_confirmation", True),
+        "G56R-004-SMOKE": ("calibration", False),
+    }
+    if observed_ids != set(expected):
+        raise ControlContractError("partition identifier set drift")
+    for entry in validated:
+        expected_type, expected_eligibility = expected[entry["partition_id"]]
+        if (
+            entry.get("partition_type") != expected_type
+            or entry.get("qualification_eligible") is not expected_eligibility
+        ):
+            raise ControlContractError(
+                f"{entry['partition_id']!r} type or eligibility drift"
+            )
+    return validated
+
+
+def reserved_partition_entry(entries: Any) -> dict[str, Any]:
+    if not isinstance(entries, list):
+        raise ControlContractError("partition entries must be an array")
+    reserved = [
+        entry
+        for entry in entries
+        if isinstance(entry, dict) and entry.get("qualification_eligible") is True
+    ]
+    if len(reserved) != 1:
+        raise ControlContractError("exactly one qualification-eligible partition is required")
+    return copy.deepcopy(reserved[0])
+
+
+def _row_objective_ids(row: dict[str, Any], label: str) -> list[str]:
+    objective_ids: list[str] = []
+    if row.get("objective_id") is not None:
+        objective_ids.append(str(row["objective_id"]))
+    many = row.get("objective_ids")
+    if many is not None:
+        if not isinstance(many, list):
+            raise ControlContractError(f"row {label}: objective_ids must be an array")
+        objective_ids.extend(str(objective) for objective in many)
+    return objective_ids
+
+
+def assert_reserved_partition_untouched(
+    rows: Any, reserved_entry: dict[str, Any]
+) -> None:
+    """Reject replay or smoke evidence that consumes the G56R-011 reservation."""
+
+    if not isinstance(rows, list):
+        raise ControlContractError("evidence rows must be an array")
+    reserved_id = _require_nonempty_string(
+        reserved_entry.get("partition_id"), "reserved partition_id"
+    )
+    objectives = reserved_entry.get("objective_ids")
+    if not isinstance(objectives, list) or not objectives:
+        raise ControlContractError("the reserved partition declares no objective")
+    reserved_objectives = set(objectives)
+    for index, raw_row in enumerate(rows):
+        row = _require_mapping(raw_row, f"rows[{index}]")
+        label = str(row.get("row_id") or index)
+        if row.get("partition_id") == reserved_id:
+            raise ControlContractError(
+                f"row {label!r} names reserved partition {reserved_id!r}"
+            )
+        overlap = reserved_objectives & set(_row_objective_ids(row, label))
+        if overlap:
+            raise ControlContractError(
+                f"row {label!r} consumes reserved objectives {sorted(overlap)}"
+            )
+
+
+def partition_owned_mirror_members(
+    *, handoff_path: Path, fixture_path: Path
+) -> dict[str, Any]:
+    """Report the partition-owned category 1-6 subset after validating its source."""
+
+    entries = load_partition_entries(fixture_path)
+    try:
+        handoff = handoff_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ControlContractError(f"cannot load {handoff_path}: {exc}") from exc
+    required_car_ids = {"CAR-004-SMOKE", "CAR-011-RESERVED-COMPARISON"}
+    observed_car_ids: set[str] = set()
+    for raw_line in handoff.splitlines():
+        line = raw_line.rstrip(",")
+        if not line.startswith("{") or '"kind": "partition_id"' not in line:
+            continue
+        try:
+            record = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if record.get("category") == 4 and record.get("mirror_obligation") == "car_owned":
+            observed_car_ids.add(str(record.get("member_id")))
+    if observed_car_ids != required_car_ids:
+        raise ControlContractError("CAR-004 partition identity evidence drift")
+    return {
+        "categories_present": [4],
+        "partition_ids": sorted(entry["partition_id"] for entry in entries),
+        "missing": [],
+        "extra": [],
+        "drifted": [],
+    }
+
+
+def _sha256_digest(value: Any) -> str:
+    encoded = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+
+def _smoke_partition_entry(entries: list[dict[str, Any]]) -> dict[str, Any]:
+    smoke = [
+        entry
+        for entry in entries
+        if entry.get("partition_type") == "calibration"
+        and entry.get("qualification_eligible") is False
+    ]
+    if len(smoke) != 1:
+        raise ControlContractError(
+            "exactly one G56R-004 smoke calibration partition is required"
+        )
+    return smoke[0]
+
+
+def replay_codex_controls(path: Path) -> list[dict[str, Any]]:
+    """Replay committed non-live Codex control rows with governed evidence."""
+
+    fixture = _load_json(path)
+    if not isinstance(fixture, dict):
+        raise ControlContractError("Codex replay fixture must be an object")
+    cases = fixture.get("control_replay_cases")
+    if not isinstance(cases, list):
+        raise ControlContractError("control_replay_cases must be an array")
+    entries = load_partition_entries(_FROZEN_CODEX_PARTITION_ENTRIES_PATH)
+    reserved = reserved_partition_entry(entries)
+    smoke = _smoke_partition_entry(entries)
+    admitted_objectives = set(smoke["objective_ids"])
+
+    observed_kinds: set[str] = set()
+    observed_ids: set[str] = set()
+    replayed: list[dict[str, Any]] = []
+    for index, raw_case in enumerate(cases):
+        case = _require_mapping(raw_case, f"control_replay_cases[{index}]")
+        expected_members = {
+            "case_id",
+            "control_id",
+            "control_kind",
+            "objective_id",
+            "outcome_bearing",
+            "partition_id",
+            "partition_type",
+            "scored",
+        }
+        if set(case) != expected_members:
+            raise ControlContractError(f"control_replay_cases[{index}] member-set drift")
+        case_id = _require_nonempty_string(case.get("case_id"), f"case {index} id")
+        control_kind = _require_nonempty_string(
+            case.get("control_kind"), f"{case_id}.control_kind"
+        )
+        if control_kind not in _CODEX_CONTROL_IDS_BY_KIND:
+            raise ControlContractError(f"{control_kind!r} is not a Codex control kind")
+        control_id = _require_nonempty_string(
+            case.get("control_id"), f"{case_id}.control_id"
+        )
+        if control_id != _CODEX_CONTROL_IDS_BY_KIND[control_kind]:
+            raise ControlContractError(f"{case_id} control_id drift")
+        if case.get("partition_id") != smoke["partition_id"]:
+            raise ControlContractError(f"{case_id} partition_id drift")
+        if case.get("partition_type") != "calibration":
+            raise ControlContractError(f"{case_id} is not a calibration replay row")
+        if case.get("scored") is not False:
+            raise ControlContractError(f"{case_id} replay row must be non-scored")
+        if case.get("outcome_bearing") is not False:
+            raise ControlContractError(
+                f"{case_id} replay row must be non-outcome-bearing"
+            )
+        objective_id = _require_nonempty_string(
+            case.get("objective_id"), f"{case_id}.objective_id"
+        )
+        if objective_id not in admitted_objectives:
+            raise ControlContractError(
+                f"{case_id} objective is outside the smoke partition"
+            )
+        assert_reserved_partition_untouched([case], reserved)
+        if control_kind in observed_kinds or control_id in observed_ids:
+            raise ControlContractError("duplicate Codex control replay case")
+        observed_kinds.add(control_kind)
+        observed_ids.add(control_id)
+
+        governed_evidence = {
+            "digest": _sha256_digest(case),
+            "source": "committed_fixture",
+        }
+        replayed.append(
+            {
+                "case_id": case_id,
+                "control_id": control_id,
+                "control_kind": control_kind,
+                "governed_evidence": governed_evidence,
+                "objective_id": objective_id,
+                "outcome_bearing": False,
+                "partition_id": smoke["partition_id"],
+                "partition_type": "calibration",
+                "scored": False,
+            }
+        )
+
+    if observed_kinds != set(_CODEX_CONTROL_KINDS):
+        raise ControlContractError("Codex replay cases do not cover every control kind")
+    if observed_ids != set(_CODEX_CONTROL_IDS_BY_KIND.values()):
+        raise ControlContractError("Codex replay cases do not cover every control id")
+    return replayed

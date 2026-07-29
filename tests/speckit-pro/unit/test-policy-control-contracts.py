@@ -74,6 +74,11 @@ try:  # G56R-004 deliverable — extended as Codex control validation lands.
 except ImportError:  # pragma: no cover - exercised only before the module lands
     codex_policy_controls = None  # type: ignore[assignment]
 
+try:  # G56R-004 T025 deliverable — absent until the partition guards land.
+    import codex_control_smoke  # type: ignore[import-not-found]  # noqa: E402
+except ImportError:  # pragma: no cover - exercised only during the T024 RED state
+    codex_control_smoke = None  # type: ignore[assignment]
+
 
 CONTRACT_ROOT = TEST_ROOT / "layer6-efficiency" / "contracts-claude"
 FIXTURE_ROOT = TEST_ROOT / "layer6-efficiency" / "fixtures-controls"
@@ -85,6 +90,7 @@ REGISTRY_SCHEMA_ID = "https://racecraft.dev/schemas/car-004/policy-control-regis
 CODEX_REGISTRY_SCHEMA_PATH = CODEX_CONTRACT_ROOT / "policy-control-registry.schema.json"
 CODEX_REGISTRY_FIXTURE_PATH = CODEX_FIXTURE_ROOT / "policy-control-registry.json"
 CODEX_REPLAY_CASES_PATH = CODEX_FIXTURE_ROOT / "replay-cases.json"
+CODEX_PARTITION_FIXTURE_PATH = CODEX_FIXTURE_ROOT / "partition-registry-entries.json"
 CODEX_REGISTRY_SCHEMA_ID = "https://racecraft.dev/schemas/g56r-004/policy-control-registry.schema.json"
 CODEX_REGISTRY_ID = "g56r-004-policy-control-registry"
 CODEX_CONTROL_IDS_BY_KIND = {
@@ -1726,6 +1732,211 @@ class CodexParentPlusChildrenAggregationTests(unittest.TestCase):
         self.assertIsNone(aggregate["cache_read_tokens"])
         self.assertIn("max_cache_read_tokens", aggregate["unobserved"])
         self.assertNotEqual(aggregate["cache_read_tokens"], 0)
+
+
+class CodexReservedPartitionArtifactTests(unittest.TestCase):
+    """T024 RED: the partition fixture and its smoke guard must be published."""
+
+    def test_the_codex_partition_fixture_and_smoke_guard_are_present(self) -> None:
+        self.assertTrue(
+            CODEX_PARTITION_FIXTURE_PATH.is_file(),
+            f"{CODEX_PARTITION_FIXTURE_PATH} is missing; T025 must publish it",
+        )
+        self.assertIsNotNone(
+            codex_control_smoke,
+            "codex_control_smoke is not importable; T025 must implement it",
+        )
+
+
+class CodexReservedPartitionTests(unittest.TestCase):
+    """G56R-004 FR-031 through FR-033 and SC-012: reserved-objective refusal."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.assertIsNotNone(
+            codex_control_smoke,
+            "codex_control_smoke is not importable; T025 must implement it",
+        )
+        self.module = codex_policy_controls
+        self.smoke_module = codex_control_smoke
+        self.error = self.module.ControlContractError
+        fixture = load_json(CODEX_PARTITION_FIXTURE_PATH)
+        self.entries = fixture["entries"]
+        self.reserved = next(
+            entry for entry in self.entries if entry["qualification_eligible"]
+        )
+        self.smoke = next(
+            entry for entry in self.entries if not entry["qualification_eligible"]
+        )
+
+    def test_both_entries_are_content_addressed_by_the_frozen_partition_builder(self) -> None:
+        self.assertEqual(
+            [entry["partition_id"] for entry in self.entries],
+            ["G56R-011-RESERVED-COMPARISON", "G56R-004-SMOKE"],
+        )
+        for entry in self.entries:
+            with self.subTest(partition=entry["partition_id"]):
+                rebuilt = build_partition_registry_entry(
+                    partition_id=entry["partition_id"],
+                    partition_type=entry["partition_type"],
+                    qualification_eligible=entry["qualification_eligible"],
+                    objective_ids=entry["objective_ids"],
+                    frozen_at=entry["frozen_at"],
+                    owning_spec=entry["owning_spec"],
+                )
+                self.assertEqual(entry, rebuilt)
+                self.assertEqual(entry["owning_spec"], "G56R-004")
+
+    def test_the_entries_register_clean_and_are_mutually_disjoint(self) -> None:
+        verdict = register_partitions(self.entries)
+        self.assertTrue(verdict.ok, verdict.findings)
+        self.assertFalse(
+            set(self.reserved["objective_ids"]) & set(self.smoke["objective_ids"])
+        )
+        intruder = build_partition_registry_entry(
+            partition_id="G56R-004-SEEDED-OVERLAP",
+            partition_type="calibration",
+            qualification_eligible=False,
+            objective_ids=[self.reserved["objective_ids"][0]],
+            frozen_at=self.smoke["frozen_at"],
+            owning_spec="G56R-004",
+        )
+        self.assertFalse(register_partitions([*self.entries, intruder]).ok)
+
+    def test_partition_owned_category_one_to_six_members_are_reported(self) -> None:
+        report = self.module.partition_owned_mirror_members(
+            handoff_path=REPO_ROOT
+            / "docs"
+            / "ai"
+            / "specs"
+            / ".process"
+            / "CAR-004-twin-handoff.md",
+            fixture_path=CODEX_PARTITION_FIXTURE_PATH,
+        )
+        self.assertEqual(report["categories_present"], [4])
+        self.assertEqual(
+            report["partition_ids"],
+            ["G56R-004-SMOKE", "G56R-011-RESERVED-COMPARISON"],
+        )
+        self.assertEqual(report["missing"], [])
+        self.assertEqual(report["extra"], [])
+        self.assertEqual(report["drifted"], [])
+
+    def test_replay_guard_refuses_a_reserved_objective(self) -> None:
+        clean = {
+            "row_id": "replay-clean",
+            "objective_id": self.smoke["objective_ids"][0],
+            "outcome_bearing": False,
+            "partition_type": "calibration",
+            "scored": False,
+        }
+        self.assertIsNone(
+            self.module.assert_reserved_partition_untouched([clean], self.reserved)
+        )
+        seeded = dict(clean, objective_id=self.reserved["objective_ids"][0])
+        with self.assertRaises(self.error):
+            self.module.assert_reserved_partition_untouched([seeded], self.reserved)
+
+    def test_smoke_plan_uses_only_non_scored_calibration_objectives(self) -> None:
+        planned = self.smoke_module.plan_objectives(self.entries)
+        self.assertEqual(planned, tuple(sorted(self.smoke["objective_ids"])))
+        self.assertFalse(set(planned) & set(self.reserved["objective_ids"]))
+        with self.assertRaises(self.error):
+            self.smoke_module.guard_plan_objectives(
+                [*planned, self.reserved["objective_ids"][0]],
+                self.entries,
+            )
+
+    def test_smoke_seal_refuses_reserved_scored_selection_and_cohort_consumption(self) -> None:
+        clean = {
+            "objective_ids": [self.smoke["objective_ids"][0]],
+            "outcome_bearing": False,
+            "partition_id": self.smoke["partition_id"],
+            "partition_type": "calibration",
+            "scored": False,
+        }
+        self.assertIsNone(self.smoke_module.guard_smoke_record(clean, self.entries))
+        seeded_cases = (
+            dict(clean, objective_ids=[self.reserved["objective_ids"][0]]),
+            dict(clean, scored=True),
+            dict(clean, outcome_bearing=True),
+            dict(clean, partition_type="selection"),
+            dict(clean, partition_type="cohort_lock"),
+        )
+        for seeded in seeded_cases:
+            with self.subTest(seeded=seeded):
+                with self.assertRaises(self.error):
+                    self.smoke_module.guard_smoke_record(seeded, self.entries)
+
+
+class CodexDeterministicReplayTests(unittest.TestCase):
+    """T026 RED: all three Codex controls must replay from governed fixture rows."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.replay_fixture = load_json(CODEX_REPLAY_CASES_PATH)
+
+    def replay(self) -> list[dict[str, object]]:
+        self.assertTrue(
+            hasattr(self.module, "replay_codex_controls"),
+            "T027 must expose replay_codex_controls for deterministic G56R-004 replay",
+        )
+        return self.module.replay_codex_controls(CODEX_REPLAY_CASES_PATH)
+
+    def replay_api(self) -> object:
+        self.assertTrue(
+            hasattr(self.module, "replay_codex_controls"),
+            "T027 must expose replay_codex_controls for deterministic G56R-004 replay",
+        )
+        return self.module.replay_codex_controls
+
+    def test_replay_fixture_declares_a_case_for_every_codex_control_kind(self) -> None:
+        cases = self.replay_fixture.get("control_replay_cases", [])
+        self.assertEqual(
+            sorted(case["control_kind"] for case in cases),
+            sorted(CODEX_CONTROL_KINDS),
+        )
+        self.assertEqual(
+            sorted(case["control_id"] for case in cases),
+            sorted(CODEX_CONTROL_IDS_BY_KIND.values()),
+        )
+
+    def test_two_replays_of_the_committed_fixture_are_byte_identical(self) -> None:
+        first = self.replay()
+        second = self.replay()
+        self.assertEqual(canonical_json(first), canonical_json(second))
+        self.assertEqual(record_digest({"replay": first}), record_digest({"replay": second}))
+
+    def test_every_replayed_row_is_governed_non_scored_and_not_outcome_bearing(self) -> None:
+        for outcome in self.replay():
+            with self.subTest(case_id=outcome["case_id"]):
+                self.assertIn(outcome["control_kind"], CODEX_CONTROL_KINDS)
+                self.assertEqual(outcome["control_id"], CODEX_CONTROL_IDS_BY_KIND[outcome["control_kind"]])
+                self.assertEqual(outcome["partition_type"], "calibration")
+                self.assertFalse(outcome["scored"])
+                self.assertFalse(outcome["outcome_bearing"])
+                self.assertTrue(outcome["governed_evidence"])
+                self.assertEqual(outcome["governed_evidence"]["source"], "committed_fixture")
+                self.assertTrue(str(outcome["governed_evidence"]["digest"]).startswith("sha256:"))
+
+    def test_seeded_outcome_bearing_or_scored_rows_fail_replay_closed(self) -> None:
+        replay = self.replay_api()
+        cases = copy.deepcopy(self.replay_fixture)
+        cases.setdefault("control_replay_cases", [{}])
+        for field in ("outcome_bearing", "scored"):
+            with self.subTest(field=field):
+                mutated = copy.deepcopy(cases)
+                mutated["control_replay_cases"][0][field] = True
+                with tempfile.TemporaryDirectory() as directory:
+                    seeded_path = Path(directory) / "replay-cases.json"
+                    seeded_path.write_text(
+                        json.dumps(mutated, sort_keys=True, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                    with self.assertRaises(self.error):
+                        replay(seeded_path)
 
 
 class UnpinnedControlTests(unittest.TestCase):
@@ -4485,6 +4696,9 @@ TEST_CASES = (
     CodexAdaptiveMovementAndBreachTests,
     CodexJustifiedHighEffortControlTests,
     CodexParentPlusChildrenAggregationTests,
+    CodexReservedPartitionArtifactTests,
+    CodexReservedPartitionTests,
+    CodexDeterministicReplayTests,
     UnpinnedControlTests,
     AdaptiveSignalMapTests,
     AdaptiveRowResolutionTests,

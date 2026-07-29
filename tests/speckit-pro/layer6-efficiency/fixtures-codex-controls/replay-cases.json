@@ -1,5 +1,37 @@
 {
   "case_set_id": "g56r-004-adaptive-signal-resolution",
+  "control_replay_cases": [
+    {
+      "case_id": "unpinned-non-live-control-replay",
+      "control_id": "g56r-004-unpinned-control",
+      "control_kind": "unpinned",
+      "objective_id": "G56R-004-SMOKE-OBJ-01",
+      "outcome_bearing": false,
+      "partition_id": "G56R-004-SMOKE",
+      "partition_type": "calibration",
+      "scored": false
+    },
+    {
+      "case_id": "adaptive-non-live-control-replay",
+      "control_id": "g56r-004-adaptive-control",
+      "control_kind": "adaptive",
+      "objective_id": "G56R-004-SMOKE-OBJ-02",
+      "outcome_bearing": false,
+      "partition_id": "G56R-004-SMOKE",
+      "partition_type": "calibration",
+      "scored": false
+    },
+    {
+      "case_id": "justified-high-effort-non-live-control-replay",
+      "control_id": "g56r-004-justified-high-effort-control",
+      "control_kind": "justified_high_effort",
+      "objective_id": "G56R-004-SMOKE-OBJ-03",
+      "outcome_bearing": false,
+      "partition_id": "G56R-004-SMOKE",
+      "partition_type": "calibration",
+      "scored": false
+    }
+  ],
   "cases": [
     {
       "case_id": "terminal-state-hold",
