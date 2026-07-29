@@ -858,15 +858,65 @@ For every behavior task:
 | Post: Verify Tasks Phantom Check | Completed | 38/38 tasks verified, zero flagged, zero missing task-referenced paths; report at `specs/g56r-004-policy-controls-adaptive-comparators/verify-tasks-report.md` |
 | Post: Code Review | Completed | Fourteen completed independent passes found and remediated 24 Important correctness/privacy gaps with strict RED→GREEN coverage; the final pass returned `NO FINDINGS` |
 | Post: Integration Suite | Completed | 5194/5194 passed: Layer 1 1428/1428, Layer 4 3580/3580, Layer 5 186/186; privacy 10/10 |
-| Post: Reviewability Diff Gate | Pending | Evaluate current committed reviewability evidence |
-| Post: Self-Review | Pending | Record the four-question audit |
-| Post: UAT Runbook Generation | Pending | Reuse or fail-open under the deferred helper contract |
-| Post: Final Reviewability Backstop | Pending | Enforce the stop-before-PR boundary |
+| Post: Reviewability Diff Gate | Completed | Current committed plan evidence passes with 12 declared implementation operations, zero production-runtime paths, one vertical slice, and no marker plan; installed helper supports setup mode only |
+| Post: Self-Review | Completed | Four-question audit recorded below with current test, edge-case, FR/task, and tidiness evidence; zero orphan findings |
+| Post: UAT Runbook Generation | Skipped | `generate-uat-skeleton` is deferred and no committed feature-local UAT runbook exists; UAT validation is unavailable |
+| Post: Final Reviewability Backstop | Completed | Proceed on current committed pass evidence at `8fc3bc74`; single-PR route remains authoritative and no PR marker plan exists |
 | Post: PR Packet/Body Generation | Pending | Emit and validate a current feature-local packet |
 | Post: PR Body Generation | Pending | Verify packet-owned public prose |
 | Post: PR Creation | Pending | Create only from validated packet fields |
 | Post: Review Remediation | Pending | Resolve actionable review feedback |
 | Post: Retrospective | Pending | Final canonical Post item |
+
+---
+
+### Self-Review — 2026-07-29T12:12:01Z
+
+1. **Tests executed?** `BUILD`, `TYPECHECK`, and `INTEGRATION_TEST` are `N/A`
+   in `PROJECT_COMMANDS`. `LINT` and `UNIT_TEST` both ran through
+   `python3 -u tests/speckit-pro/run-all.py` immediately before this evidence
+   was recorded and passed 5194/5194 (L1 1428/1428, L4 3580/3580, L5
+   186/186). Focused owners also passed 730/730, 172/172, and 50/50; privacy
+   passed 10/10 and docs references are current.
+2. **Edge cases?** All 18 acceptance scenarios have non-happy-path evidence.
+   Scenarios 1-4 are covered by closure, authority, digest, timestamp, and
+   bidirectional drift controls (`test-policy-control-contracts.py:791`,
+   `test-policy-control-contracts.py:852`,
+   `test-twin-handoff-completeness.py:789`,
+   `test-twin-handoff-completeness.py:914`). Scenarios 5-10 are covered by
+   parent identity, ladder boundary, non-scorable, ineligible route, and
+   parent-plus-children controls (`test-policy-control-contracts.py:1035`,
+   `test-policy-control-contracts.py:1369`,
+   `test-policy-control-contracts.py:1399`,
+   `test-policy-control-contracts.py:1566`,
+   `test-policy-control-contracts.py:1676`). Scenarios 11-13 are covered by
+   ineligible, mixed/null, zero-denominator, and forbidden-claim controls
+   (`test-control-comparison-dominance.py:770`,
+   `test-control-comparison-dominance.py:684`,
+   `test-control-comparison-dominance.py:733`,
+   `test-control-comparison-dominance.py:878`). Scenarios 14-16 are covered by
+   reserved-partition, outcome-bearing replay, authorization-withheld, cache,
+   and raw-capture controls (`test-policy-control-contracts.py:1825`,
+   `test-policy-control-contracts.py:1924`,
+   `test-policy-control-contracts.py:2182`,
+   `test-policy-control-contracts.py:2298`,
+   `test-policy-control-contracts.py:2635`). Scenarios 17-18 are covered by
+   declined-member, exact artifact derivation, and the completed PR traceability
+   packet (`test-twin-handoff-completeness.py:812`,
+   `test-twin-handoff-completeness.py:864`,
+   `specs/g56r-004-policy-controls-adaptive-comparators/.process/pr-review-traceability.md`).
+   No `[edge-case-gap]` remains.
+3. **Requirements matched?** The `tasks.md` coverage matrix maps FR-001 through
+   FR-042 and SC-001 through SC-019 to completed tasks. Verify-Tasks reports
+   38/38 verified with zero missing paths. Task-group evidence is committed in
+   `8bb3684f` through `5f9b835a`; Post review regressions and their passing
+   controls are committed in `8fc3bc74`. There are zero orphan FRs, tasks, or
+   implementation paths.
+4. **Follow-up and tidiness?** Scans of `spec.md`, `plan.md`, `tasks.md`, commit
+   messages, and changed Python/tests found no `[TODO]`, `[DEFERRED]`,
+   `[OUT-OF-SCOPE]`, debug prints, breakpoints, or temporary scaffolding. The
+   operator-only live smoke remains an explicit Known Gap in the review packet,
+   not a silent deferral; no live or off-box execution is claimed.
 
 ---
 

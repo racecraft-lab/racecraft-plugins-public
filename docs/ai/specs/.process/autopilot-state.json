@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T12:00:37Z",
-  "active_step": "Post: Reviewability Diff Gate",
+  "updated_at": "2026-07-29T12:12:01Z",
+  "active_step": "Post: PR Packet/Body Generation",
   "status": "in_progress",
   "worktree_binding": {
     "mode": "operator_authorized_in_session_workdir",
@@ -232,19 +232,26 @@
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed",
+      "result": "pass_current_committed_one_vertical_slice",
+      "evidence_commit": "8fc3bc74",
+      "marker_plan": "absent"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed",
+      "result": "pass_zero_orphans_zero_edge_case_gaps"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "skipped",
+      "result": "generate-uat-skeleton deferred; no committed runbook; validation unavailable"
     },
     {
       "step": "Post: Final Reviewability Backstop",
-      "status": "pending"
+      "status": "completed",
+      "result": "proceed_single_pr_current_committed_evidence",
+      "evidence_commit": "8fc3bc74"
     },
     {
       "step": "Post: PR Packet/Body Generation",
