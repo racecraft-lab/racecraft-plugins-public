@@ -33,8 +33,8 @@ not part of the autonomous phase loop.
 | Plan | `/speckit-plan` | ✅ Complete | Seven artifacts; 12 declared implementation paths; estimator passed; G3 passed |
 | Checklist | `/speckit-checklist` | ✅ Complete | 121 items; 13 gaps remediated to zero; G4 passed |
 | Tasks | `/speckit-tasks` | ✅ Complete | 38 tasks; 15 RED→GREEN pairs; full 42-FR/19-SC coverage; G5 passed |
-| Analyze | `/speckit-analyze` | ⏳ Pending | Check CAR-003/CAR-004 alignment and cross-artifact drift |
-| Confidence Gate | G6.5 | ⏳ Pending | Advisory pre-Implement confidence check at threshold 0.90 |
+| Analyze | `/speckit-analyze` | ✅ Complete | One MEDIUM docs-command omission remediated; final findings zero; G6 passed |
+| Confidence Gate | G6.5 | 🔄 In Progress | Advisory pre-Implement confidence check at threshold 0.90 |
 | Implement | `/speckit-implement` | ⏳ Pending | TDD implementation; do not run live smokes without operator authorization |
 | Post | Post-Implementation | ⏳ Pending | Verification, reviewability, PR, remediation, and retrospective |
 
@@ -722,9 +722,29 @@ blocking issue unless a dated, human-approved revision records the change.
 
 | ID | Severity | Finding | Resolution |
 |----|----------|---------|------------|
-| | | | |
+| A-001 | MEDIUM | `quickstart.md` named docs reference generation but omitted the required reference check command. | Added `pnpm --dir docs-site reference:check`; final semantic and marker findings are zero. |
 
-**G6 requirement:** zero CRITICAL/HIGH findings.
+**Coverage verification:** 42 of 42 functional requirements and 19 of 19
+success criteria have task coverage.
+
+**Analyze consensus:** CLEAN PASS. The independent confidence synthesizer
+confirmed the quickstart remediation, artifact and gate alignment, frozen
+CAR-003/CAR-004 decision coverage, and zero unresolved consensus defects.
+Operator-only smoke status and FR-041 remain explicit conditional
+implementation gates rather than analysis defects.
+
+```text
+📊 Confidence: 0.98
+Task understanding: 0.99
+Approach clarity: 0.98
+Requirements alignment: 0.99
+Risk assessment: 0.96
+Completeness: 0.99
+Unresolved/error status: None.
+```
+
+**G6 Result:** ✅ Passed. Final consistency findings contain zero CRITICAL or
+HIGH items, and the authoritative marker count is zero.
 
 ---
 

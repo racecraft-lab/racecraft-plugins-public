@@ -59,6 +59,7 @@ installing docs dependencies for the worktree:
 ```bash
 pnpm --dir docs-site install --frozen-lockfile
 pnpm --dir docs-site reference:generate
+pnpm --dir docs-site reference:check
 ```
 
 Expected result: generated reference output is current and no generated drift is
