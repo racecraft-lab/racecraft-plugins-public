@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T12:17:20Z",
-  "active_step": "Post: PR Packet/Body Generation",
+  "updated_at": "2026-07-29T12:19:00Z",
+  "active_step": "Post: PR Creation",
   "status": "in_progress",
   "worktree_binding": {
     "mode": "operator_authorized_in_session_workdir",
@@ -255,15 +255,19 @@
     },
     {
       "step": "Post: PR Packet/Body Generation",
-      "status": "in_progress",
-      "result": "emitted_and_read_only_validated_awaiting_persisted_validation",
+      "status": "completed",
+      "result": "emitted_refined_validated_and_persisted",
       "packet_path": "specs/g56r-004-policy-controls-adaptive-comparators/.process/pr-packets/g56r-004.json",
       "body_file": "specs/g56r-004-policy-controls-adaptive-comparators/.process/pr-packets/g56r-004/body.md",
+      "validation_result_path": "specs/g56r-004-policy-controls-adaptive-comparators/.process/pr-packets/g56r-004/validation.json",
       "read_only_validation": {
         "status": "passed",
         "pr_blocked": false,
         "writes_state": false
-      }
+      },
+      "persisted_validation": "passed",
+      "workflow_contract": "passed",
+      "release_readiness_title_gate": "passed"
     },
     {
       "step": "Post: PR Body Generation",
@@ -272,7 +276,8 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "in_progress",
+      "result": "validation_checkpoint_pending_push_and_create"
     },
     {
       "step": "Post: Review Remediation",

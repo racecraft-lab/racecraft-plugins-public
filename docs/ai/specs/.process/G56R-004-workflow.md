@@ -862,9 +862,9 @@ For every behavior task:
 | Post: Self-Review | Completed | Four-question audit recorded below with current test, edge-case, FR/task, and tidiness evidence; zero orphan findings |
 | Post: UAT Runbook Generation | Skipped | `generate-uat-skeleton` is deferred and no committed feature-local UAT runbook exists; UAT validation is unavailable |
 | Post: Final Reviewability Backstop | Completed | Proceed on current committed pass evidence at `8fc3bc74`; single-PR route remains authoritative and no PR marker plan exists |
-| Post: PR Packet/Body Generation | In Progress | `pr-packet-output` dry-run and apply emitted the current feature-local packet/body; refined packet passed fresh read-only validation with `pr_blocked=false` and outer `writes_state=false`; clean-worktree validation persistence remains |
+| Post: PR Packet/Body Generation | Completed | `pr-packet-output` dry-run/apply emitted the current feature-local packet/body; refined packet passed read-only validation (`pr_blocked=false`, outer `writes_state=false`), clean-worktree validation was persisted, and the PR workflow contract passed |
 | Post: PR Body Generation | Completed | Refined only the three packet-sanctioned editable prose regions for public readability; protected sections remained unchanged and fresh validation passed |
-| Post: PR Creation | Pending | Create only from validated packet fields |
+| Post: PR Creation | In Progress | Exact packet title passed the live-context release-readiness gate; checkpoint validation evidence, push packet-owned head, then create from packet-owned fields |
 | Post: Review Remediation | Pending | Resolve actionable review feedback |
 | Post: Retrospective | Pending | Final canonical Post item |
 
@@ -932,7 +932,7 @@ For every behavior task:
 - [x] Reserved G56R-011 partition is mechanically untouched
 - [x] No raw live model/prompt captures committed
 - [x] Unrun live smokes and affected success criteria are named honestly
-- [ ] PR title passes the live release-readiness gate format
+- [x] PR title passes the live release-readiness gate format
 - [ ] PR created, reviewed, and merged through normal branch protection
 
 ---
