@@ -32,7 +32,7 @@ not part of the autonomous phase loop.
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions; 14 questions; G2 passed with 0 markers; smoke consensus accepted with cache/auth precision |
 | Plan | `/speckit-plan` | ✅ Complete | Seven artifacts; 12 declared implementation paths; estimator passed; G3 passed |
 | Checklist | `/speckit-checklist` | ✅ Complete | 121 items; 13 gaps remediated to zero; G4 passed |
-| Tasks | `/speckit-tasks` | ⏳ Pending | One vertical slice, strict RED→GREEN ordering |
+| Tasks | `/speckit-tasks` | ✅ Complete | 38 tasks; 15 RED→GREEN pairs; full 42-FR/19-SC coverage; G5 passed |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Check CAR-003/CAR-004 alignment and cross-artifact drift |
 | Confidence Gate | G6.5 | ⏳ Pending | Advisory pre-Implement confidence check at threshold 0.90 |
 | Implement | `/speckit-implement` | ⏳ Pending | TDD implementation; do not run live smokes without operator authorization |
@@ -647,10 +647,21 @@ docs/ai/specs/.process/G56R-004-design-concept.md.
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | |
-| RED→GREEN pairs | |
-| Parallel-safe tasks | |
-| User stories covered | |
+| Total Tasks | 38 |
+| RED→GREEN pairs | 15 |
+| Parallel-safe tasks | 3 |
+| User stories covered | 1 of 1 |
+| FR coverage | 42 of 42 |
+| Success-criteria coverage | 19 of 19 |
+
+**G5 Result:** ✅ Passed. The authoritative gate found 38 tasks and zero
+markers. All tasks cite `spec.md`, `plan.md`, and the selected decisions in
+`docs/ai/specs/.process/G56R-004-design-concept.md`.
+
+**Task-mode reviewability:** deferred. The installed `reviewability-gate`
+runner helper supports setup mode only, so no unsupported tasks-mode invocation
+was made. The concrete plan estimator remains `pass`, and the atomicity router
+below independently confirms a releasable single-PR route.
 
 ---
 
@@ -664,10 +675,10 @@ runner helper atomicity-route specs/g56r-004-policy-controls-adaptive-comparator
 
 | Field | Value |
 |-------|-------|
-| Route | |
-| Releasable | |
-| Signals | |
-| Warnings | |
+| Route | `one-navigable-PR` |
+| Releasable | `true` |
+| Signals | `change-shape:modify-heavy` |
+| Warnings | none |
 
 Do not infer the route from the scaffold's one-slice estimate; the classifier
 uses the concrete tasks and plan.

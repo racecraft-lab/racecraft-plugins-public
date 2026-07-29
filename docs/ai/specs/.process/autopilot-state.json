@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T04:36:20Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-07-29T04:57:29Z",
+  "active_step": "Phase 6: Analyze",
   "status": "in_progress",
   "worktree_binding": {
     "mode": "operator_authorized_in_session_workdir",
@@ -143,11 +143,11 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -158,7 +158,39 @@
       "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
+      "step": "Phase 7: Implement - Baseline and guardrails (T001-T003)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Contracts and mirror (T004-T007)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Unpinned and adaptive (T008-T015)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - High effort and aggregation (T016-T019)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Comparison and claims (T020-T023)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Partitions and replay (T024-T027)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Smoke and capture boundary (T028-T031)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Twin reconciliation (T032-T033)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Verification and review evidence (T034-T038)",
       "status": "pending"
     },
     {
@@ -347,6 +379,32 @@
           "consensus": "skipped_zero_unresolved"
         }
       ]
+    },
+    "tasks": {
+      "status": "completed",
+      "gate": "G5",
+      "gate_status": "pass",
+      "gate_reason": "38 tasks found",
+      "artifact": "specs/g56r-004-policy-controls-adaptive-comparators/tasks.md",
+      "total_tasks": 38,
+      "red_green_pairs": 15,
+      "parallel_safe_tasks": 3,
+      "functional_requirements_covered": "42/42",
+      "success_criteria_covered": "19/19",
+      "design_concept_citations": 39,
+      "reviewability": {
+        "mode": "tasks",
+        "status": "deferred",
+        "reason": "installed reviewability-gate helper supports setup mode only"
+      },
+      "atomicity_route": {
+        "route": "one-navigable-PR",
+        "releasable": true,
+        "signals": [
+          "change-shape:modify-heavy"
+        ],
+        "warnings": []
+      }
     }
   },
   "agent_dispatches": [
@@ -433,6 +491,18 @@
       "agent": "checklist-executor",
       "result": "consumed",
       "artifact": "specs/g56r-004-policy-controls-adaptive-comparators/checklists/performance.md"
+    },
+    {
+      "task": "Phase 5: Tasks",
+      "agent": "phase-executor",
+      "result": "interrupted_no_result",
+      "artifact": null
+    },
+    {
+      "task": "Phase 5: Tasks bounded retry",
+      "agent": "phase-executor",
+      "result": "consumed",
+      "artifact": "specs/g56r-004-policy-controls-adaptive-comparators/tasks.md"
     }
   ]
 }
