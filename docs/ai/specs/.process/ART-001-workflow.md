@@ -1240,15 +1240,61 @@ single validation module, so Phases 3–6 are necessarily sequential there.
 
 ### What Worked Well
 
--
+- **Mutation proof as the standard for "is this check real".** Neutralize each check to
+  return nothing and require a failure. Introduced by the catalog batch, then carried
+  forward: 25/25 non-vacuous there, 20/20 in the scanner groups. It is the difference
+  between "checks written" and "checks that would notice", and it caught genuine weakness
+  twice.
+- **Executing evasions instead of reasoning about them.** Every scanner evasion was run
+  as a fixture. That is how the case-folding hole surfaced — no amount of re-reading the
+  requirement would have found it.
+- **Verifying subagent claims rather than banking them.** Two reports contained real
+  errors: a scaffold claimed a signature harness it had not built, and a plan justified a
+  file count against a threshold that does not govern it. Both were caught by checking.
+- **Negative controls.** The head-block design was proved by building the *forbidden*
+  variant and observing the marker land in the body, rather than asserting the rule.
 
 ### Challenges Encountered
 
--
+- **The orchestrator stalled twice**, in the identical shape: finish batch → verify →
+  commit → narrate → end turn with nothing dispatched. Both times the next batch was
+  ready. See the plugin gap below — this is not purely an operator-attention problem.
+- **Reasoning about gates instead of running them, three times.** A production-file count
+  written at 9 against a block threshold of 8; an estimator's 795 compared against an 800
+  belonging to a different instrument; a plan justifying a third file against the wrong
+  dimension entirely. The rule that emerged: **run the gate, do not reason about it.**
+- **Payload/proof staleness is unavoidable and must be sequenced, not avoided.** Touching
+  any runner file reds the same eight tests. Regeneration was pulled forward from its
+  planned position so that later failures stayed diagnosable.
+- **A false positive from this feature's own security documentation.** Writing the
+  userinfo attack as a literal tripped the tree-wide privacy scan, which cannot
+  distinguish it from an email address.
 
 ### Patterns to Reuse
 
--
+- **Batch same-file tasks into one agent.** The nine check groups were dispatched as four
+  batches rather than nine, cutting latency and turn boundaries.
+- **Tell the agent that a failing evasion is the deliverable.** "If it passes, that is the
+  finding — surface it, do not work around it" produced the run's most valuable result.
+- **Record why a defensive clause exists, in a test.** The repertoire restriction is
+  asserted *together with* proof that the other two checks alone admit the attack, so it
+  cannot be deleted as redundant tidying.
+- **State a constraint where it will be read, not where it was decided.** Repeatedly the
+  real defect was placement — an obligation living in a planning artifact no port author
+  opens.
+
+### Raised against speckit-pro (not ART-001 scope)
+
+- **The autopilot skill permits a correct-but-halted turn.** Its loop is written as a
+  procedure and its post-implementation list is a separate section, so nothing states
+  that a turn must not end while phases remain. A rule such as *"never emit a
+  user-facing turn while work remains unless an agent is live"* would close it.
+- **A subagent can create an agent team and leave a teammate running.** One did; it
+  outlived its parent by roughly an hour and three-quarters, and only the main session
+  could reap it. Executors that form teams need an explicit teardown obligation.
+- **The gap-counting helper matches `[Gap]` literally.** Markers written as
+  `[Gap, <ref>]` — the style the skill's own example uses — under-report silently. One
+  domain reported 1 marker against 20 real ones until rewritten.
 
 ---
 

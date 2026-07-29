@@ -362,11 +362,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 26351,
+              "byte_count": 27295,
               "kind": "docs",
               "path": "artifact-gallery/SPA-CONTRACT.md",
               "required": true,
-              "sha256": "55e2b5fae8a79562ec50f29ca1c1af4dff609dd98996d5c3c552cc8ce2c4758a",
+              "sha256": "f20be5d5e559a6c0dc3f01ffedf998be4aac665089cc9eefc507612beaf2ad39",
               "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
               "transform": "none"
             },
@@ -1336,11 +1336,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 26351,
+              "byte_count": 27295,
               "kind": "docs",
               "path": "artifact-gallery/SPA-CONTRACT.md",
               "required": true,
-              "sha256": "55e2b5fae8a79562ec50f29ca1c1af4dff609dd98996d5c3c552cc8ce2c4758a",
+              "sha256": "f20be5d5e559a6c0dc3f01ffedf998be4aac665089cc9eefc507612beaf2ad39",
               "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
               "transform": "none"
             },
@@ -2174,7 +2174,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "95e3729eab858247043759ea4130a3773dc0c7d210057422f76a2a5393c3be17",
+          "file_tree_hash": "a5a713f4c703d11e96b3f20e67700a174c8291798f7c1dd8b819fd52b9c59757",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2223,11 +2223,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 26351,
+              "byte_count": 27295,
               "kind": "docs",
               "path": "artifact-gallery/SPA-CONTRACT.md",
               "required": true,
-              "sha256": "55e2b5fae8a79562ec50f29ca1c1af4dff609dd98996d5c3c552cc8ce2c4758a",
+              "sha256": "f20be5d5e559a6c0dc3f01ffedf998be4aac665089cc9eefc507612beaf2ad39",
               "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
               "transform": "none"
             },
@@ -3350,11 +3350,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 26351,
+              "byte_count": 27295,
               "kind": "docs",
               "path": "artifact-gallery/SPA-CONTRACT.md",
               "required": true,
-              "sha256": "55e2b5fae8a79562ec50f29ca1c1af4dff609dd98996d5c3c552cc8ce2c4758a",
+              "sha256": "f20be5d5e559a6c0dc3f01ffedf998be4aac665089cc9eefc507612beaf2ad39",
               "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
               "transform": "none"
             },
@@ -4440,7 +4440,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "52f360864beeb5767dcbf0c3b0290dd8f92e0824176b5410fdfc35d6b7893274",
+          "file_tree_hash": "aa6c6e3b2e276f762c9780e5f9ab3feb2db203c1908c4cbe7bd8d0af2f66da48",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

@@ -56,20 +56,23 @@ from urllib.parse import SplitResult, parse_qs, urlsplit
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-GALLERY_ROOT = REPO_ROOT / "speckit-pro" / "artifact-gallery"
+PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
+GALLERY_ROOT = PLUGIN_ROOT / "artifact-gallery"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 
 # Group E reuses two hardened comparisons this repository already owns rather
-# than writing a third. Both live outside this tree, so both directories join
-# the import path here.
+# than writing a third, and group F reuses the payload build's own rewriter
+# pattern. All three live outside this tree, so their directories join the
+# import path here.
 SCRIPTS_DIR = REPO_ROOT / "scripts"
 CAPABILITY_LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "layer6-efficiency" / "lib"
-for _import_path in (LIB_DIR, SCRIPTS_DIR, CAPABILITY_LIB_DIR):
+for _import_path in (LIB_DIR, SCRIPTS_DIR, CAPABILITY_LIB_DIR, PLUGIN_ROOT):
     if str(_import_path) not in sys.path:
         sys.path.insert(0, str(_import_path))
 
 import codex_capability_contract  # noqa: E402
 import release_note_policy  # noqa: E402
+from speckit_pro_runner.gates.payloads import REL_SKILL_PATH_XPLAT008  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
 # ``_validated_http_url`` rejects control, whitespace, and delimiter characters
@@ -4648,6 +4651,1060 @@ class ProhibitedConstructFixtureTests(ProhibitedConstructFixtureCase):
                 self.assertReports(check_j10(self.gallery), FIXTURE_ARTIFACT_LABEL, directive.split()[0])
 
 
+# ---------------------------------------------------------------------------
+# Group G — upstream attribution (FR-020)
+# ---------------------------------------------------------------------------
+
+UPSTREAM_NOTICE_FILE = "UPSTREAM-NOTICE.md"
+
+# The one name the notice must never take. ``infer_payload_source_path``
+# special-cases the exact relative path ``LICENSE`` and maps it back to this
+# repository's own root license, and ``payload_file_kind`` classifies that exact
+# path as version metadata. A gallery file at ``artifact-gallery/LICENSE`` matches
+# neither exact comparison today; G1 is what keeps the gallery from depending on
+# that detail continuing to hold. Compared case-folded, because on a
+# case-insensitive filesystem ``license`` and ``LICENSE`` are one file.
+FORBIDDEN_NOTICE_NAME = "LICENSE"
+
+# The single upstream this gallery derives from, named once here exactly as
+# ``SPA-CONTRACT.md`` names it once for authors. G7 is what joins the two.
+UPSTREAM_REPOSITORY = "anthropics/html-effectiveness"
+UPSTREAM_LICENSE_URL = "https://github.com/anthropics/html-effectiveness/blob/main/LICENSE"
+
+# The permission notice, pinned as a literal rather than read back out of the
+# file under validation — a comparison against text derived from that same file
+# asserts only that the file equals itself.
+UPSTREAM_PERMISSION_NOTICE = """\
+MIT License
+
+Copyright (c) 2026 Anthropic PBC
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# Read back out of the notice above rather than written a second time. The
+# copyright line G2 requires verbatim in the notice and the one G3 requires
+# verbatim in every ported artifact are the same line, and two literals drift.
+UPSTREAM_COPYRIGHT = UPSTREAM_PERMISSION_NOTICE.split("\n\n")[1]
+
+# The attribution header's machine-readable shape. FR-020 fixes the header's
+# *contents* and ``SPA-CONTRACT.md`` records it for authors as an HTML comment
+# near the top of the file; the labels below are what make G6 and G7 possible at
+# all, because a value that cannot be located cannot be compared to the entry
+# that declares it. ART-002…005 inherit this shape along with the checks.
+REPOSITORY_LABEL = "Upstream repository:"
+UPSTREAM_FILE_LABEL = "Upstream file:"
+LICENSE_LABEL = "License:"
+LICENSE_TEXT_LABEL = "License text:"
+DERIVATIVE_LABEL = "Modified derivative:"
+
+
+class _AttributionElement(NamedTuple):
+    """One required header element, and how each branch recognizes it.
+
+    ``label`` is what G3 requires, with a non-empty value after it. ``literals``
+    are the canonical strings G4 additionally refuses even unlabelled, so
+    stripping the labels off a copied header does not launder it.
+    """
+
+    name: str
+    label: str | None
+    literals: tuple[str, ...]
+
+
+# The six elements FR-020 enumerates. G3 requires every one of them and G4
+# refuses every one of them, off this single table — which is what makes the two
+# branches opposite directions on one claim rather than a claim on one side and
+# a symptom on the other.
+ATTRIBUTION_ELEMENTS: tuple[_AttributionElement, ...] = (
+    _AttributionElement("upstream repository", REPOSITORY_LABEL, (UPSTREAM_REPOSITORY,)),
+    _AttributionElement("upstream file", UPSTREAM_FILE_LABEL, ()),
+    _AttributionElement("verbatim copyright line", None, (UPSTREAM_COPYRIGHT,)),
+    _AttributionElement("license identifier", LICENSE_LABEL, ()),
+    _AttributionElement("link to the full license text", LICENSE_TEXT_LABEL, (UPSTREAM_LICENSE_URL,)),
+    _AttributionElement("modified-derivative statement", DERIVATIVE_LABEL, ()),
+)
+
+# The branch each ``origin`` takes. G5 asserts membership is a function onto
+# exactly one of these, so a third value fails rather than matching neither.
+ATTRIBUTION_BRANCHES: dict[str, str] = {UPSTREAM: "G3", REPOSITORY: "G4"}
+
+
+class _CommentCollector(HTMLParser):
+    """Every parser-recognized comment, in document order.
+
+    Parser-recognized is the operative word, and it is the same distinction E3
+    turns on: comment-shaped raw text inside a ``script`` element is not a
+    comment, and an attribution header written there is not one either.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.comments: list[str] = []
+
+    def handle_comment(self, data: str) -> None:
+        self.comments.append(data)
+
+
+def _comments(text: str) -> list[str]:
+    collector = _CommentCollector()
+    collector.feed(text)
+    collector.close()
+    return collector.comments
+
+
+def _labelled_value(text: str, label: str) -> str | None:
+    """The text following ``label`` on the first line carrying it, or ``None``."""
+    for line in text.splitlines():
+        position = line.find(label)
+        if position != -1:
+            return line[position + len(label) :].strip()
+    return None
+
+
+def _carried(header: str, element: _AttributionElement) -> bool:
+    """G3's direction — the element is present **and** carries a value."""
+    if element.label is None:
+        return all(literal in header for literal in element.literals)
+    return bool(_labelled_value(header, element.label))
+
+
+def _attribution_evidence(text: str) -> list[tuple[str, str]]:
+    """G4's direction — every upstream attribution element the text carries."""
+    found: list[tuple[str, str]] = []
+    for element in ATTRIBUTION_ELEMENTS:
+        labels = (element.label,) if element.label is not None else ()
+        for marker in labels + element.literals:
+            if marker in text:
+                found.append((element.name, marker))
+                break
+    return found
+
+
+def _attribution_header(text: str) -> str | None:
+    """The comment carrying the attribution header, or ``None``.
+
+    The first parser-recognized comment carrying any element. A header split
+    across two comments is therefore not a header: FR-020 requires the elements
+    in one, and a reader relying on the licensing claim reads one block.
+    """
+    for comment in _comments(text):
+        if _attribution_evidence(comment):
+            return comment
+    return None
+
+
+def _attributable(gallery_root: Path, origin: str) -> list[tuple[str, str, dict, Path]]:
+    """Every entry at one ``source.origin`` **whose artifact exists**.
+
+    Returns the entry's designation, its artifact's label, the entry, and the
+    artifact path. An entry whose origin is neither branch is invisible here by
+    construction, which is exactly the fail-open case G5 exists to close.
+    """
+    entries = _entries(gallery_root)
+    if entries is None:
+        return []
+    designations = _designations(entries)
+    found: list[tuple[str, str, dict, Path]] = []
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            continue  # B4 owns a non-object entry
+        source = entry.get("source")
+        if not isinstance(source, dict) or source.get("origin") != origin:
+            continue  # B10 owns a malformed source, G5 an unrecognized origin
+        identifier = entry.get("id")
+        if not isinstance(identifier, str) or not identifier:
+            continue  # B9 owns an unusable identifier
+        artifact = _artifact_path(gallery_root, identifier)
+        if artifact is None or not artifact.is_file():
+            continue  # D1 and D2 own artifact existence
+        found.append((designations[index], _artifact_label(identifier), entry, artifact))
+    return found
+
+
+def check_g1(gallery_root: Path) -> list[str]:
+    """G1 — the notice exists and no gallery file is named ``LICENSE``."""
+    failures: list[str] = []
+    if not (gallery_root / UPSTREAM_NOTICE_FILE).is_file():
+        failures.append(
+            f"{UPSTREAM_NOTICE_FILE}: the upstream permission notice is missing, so every attribution "
+            "header's link to the full license text points at nothing"
+        )
+    failures.extend(
+        f"{_label(gallery_root, path)}: named '{FORBIDDEN_NOTICE_NAME}', which the payload builder maps "
+        f"back to this repository's own license — the upstream notice is '{UPSTREAM_NOTICE_FILE}'"
+        for path in _gallery_files(gallery_root)
+        if path.name.casefold() == FORBIDDEN_NOTICE_NAME.casefold()
+    )
+    return failures
+
+
+def check_g2(gallery_root: Path) -> list[str]:
+    """G2 — the notice reproduces the upstream permission notice verbatim.
+
+    Paragraph by paragraph first, so a failure names the part that changed, and
+    then contiguously — every paragraph present but reordered or interleaved is
+    not a reproduction of the notice.
+    """
+    notice = gallery_root / UPSTREAM_NOTICE_FILE
+    if not notice.is_file():
+        return []  # G1 owns the missing file
+    text = _read_exact(notice)
+    failures = [
+        f"{UPSTREAM_NOTICE_FILE}: the permission notice is altered or truncated at "
+        f"'{paragraph.splitlines()[0]}'"
+        for paragraph in UPSTREAM_PERMISSION_NOTICE.split("\n\n")
+        if paragraph not in text
+    ]
+    if not failures and UPSTREAM_PERMISSION_NOTICE not in text:
+        failures.append(
+            f"{UPSTREAM_NOTICE_FILE}: every paragraph of the permission notice is present but not "
+            "contiguous and in order, so the notice is not reproduced verbatim"
+        )
+    return failures
+
+
+def check_g3(gallery_root: Path) -> list[str]:
+    """G3 — an ``upstream`` entry's artifact carries every header element."""
+    failures: list[str] = []
+    for where, label, _entry, artifact in _attributable(gallery_root, UPSTREAM):
+        header = _attribution_header(_document_text(artifact))
+        if header is None:
+            failures.append(
+                f"{label}: {where}: field 'source': origin '{UPSTREAM}', but the artifact carries no "
+                "attribution header — FR-020 requires one as an HTML comment near the top of the file"
+            )
+            continue
+        failures.extend(
+            f"{label}: {where}: the attribution header is missing its {element.name}"
+            for element in ATTRIBUTION_ELEMENTS
+            if not _carried(header, element)
+        )
+    return failures
+
+
+def check_g4(gallery_root: Path) -> list[str]:
+    """G4 — a ``repository`` entry's artifact carries **no** header element.
+
+    Every element G3 requires, refused here — not the copyright line alone. An
+    artifact carrying repository, filename, license identifier, and license link
+    while avoiding that one line is a misattribution wearing a convincing header.
+    """
+    failures: list[str] = []
+    for where, label, _entry, artifact in _attributable(gallery_root, REPOSITORY):
+        failures.extend(
+            f"{label}: {where}: field 'source': origin '{REPOSITORY}', but the artifact carries an upstream "
+            f"attribution element — {name}: '{evidence}'"
+            for name, evidence in _attribution_evidence(_document_text(artifact))
+        )
+    return failures
+
+
+def check_g5(gallery_root: Path) -> list[str]:
+    """G5 — every entry takes exactly one of the G3/G4 branches.
+
+    Counted over the branch set rather than tested as two independent
+    conditionals. An ``origin`` matching neither is invisible to both branches,
+    so an upstream-derived artifact would ship with no attribution header, no
+    misattribution check, and a green suite.
+    """
+    entries = _entries(gallery_root)
+    if entries is None:
+        return []  # B1 and B3 own a catalog that names nothing
+    designations = _designations(entries)
+    failures: list[str] = []
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            continue  # B4 owns a non-object entry
+        source = entry.get("source")
+        origin = source.get("origin") if isinstance(source, dict) else None
+        taken = [check for branch, check in ATTRIBUTION_BRANCHES.items() if origin == branch]
+        if len(taken) != 1:
+            failures.append(
+                _catalog_failure(
+                    designations[index],
+                    f"field 'source': key 'origin': {origin!r} takes {len(taken)} of the "
+                    f"{len(ATTRIBUTION_BRANCHES)} attribution branches "
+                    f"({', '.join(ATTRIBUTION_BRANCHES.values())}) rather than exactly one, so the "
+                    "attribution gate does not run for this entry",
+                )
+            )
+    return failures
+
+
+def _agreement_failures(gallery_root: Path, label_text: str, expected: Callable[[dict], object]) -> list[str]:
+    """The shared body of G6 and G7 — one header value against its declaration."""
+    failures: list[str] = []
+    for where, label, entry, artifact in _attributable(gallery_root, UPSTREAM):
+        header = _attribution_header(_document_text(artifact))
+        if header is None:
+            continue  # G3 owns an absent header
+        named = _labelled_value(header, label_text)
+        if not named:
+            continue  # G3 owns the missing element
+        declared = expected(entry)
+        if not isinstance(declared, str):
+            continue  # B10 owns a source that declares nothing comparable
+        if named != declared:
+            failures.append(
+                f"{label}: {where}: the attribution header names '{label_text} {named}', but "
+                f"'{declared}' is what it must agree with — a header can be well-formed and false at once"
+            )
+    return failures
+
+
+def check_g6(gallery_root: Path) -> list[str]:
+    """G6 — the header's upstream file equals the entry's ``source.file``.
+
+    What a header copy-pasted from a neighbouring artifact produces: every
+    element present, G3 satisfied exactly, and the provenance claim false.
+    """
+    return _agreement_failures(
+        gallery_root,
+        UPSTREAM_FILE_LABEL,
+        lambda entry: entry.get("source", {}).get("file"),
+    )
+
+
+def check_g7(gallery_root: Path) -> list[str]:
+    """G7 — the header's upstream repository equals the one named here."""
+    return _agreement_failures(gallery_root, REPOSITORY_LABEL, lambda _entry: UPSTREAM_REPOSITORY)
+
+
+GROUP_G_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("G1", check_g1),
+    ("G2", check_g2),
+    ("G3", check_g3),
+    ("G4", check_g4),
+    ("G5", check_g5),
+    ("G6", check_g6),
+    ("G7", check_g7),
+)
+
+
+class UpstreamAttributionTests(unittest.TestCase):
+    """Group G against the shipped gallery, where it is half vacuous.
+
+    G1, G2, and G5 read files this feature actually ships and are asserted
+    non-vacuous below. G3, G4, G6, and G7 sweep an empty set — ART-001 ports no
+    artifact, so no entry is paired with one — and that vacuity is asserted
+    rather than left implied, because a green attribution gate that never ran
+    reads exactly like one that did.
+    """
+
+    def test_group_g_passes_against_the_shipped_gallery(self) -> None:
+        for name, check in GROUP_G_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+    def test_g1_and_g2_read_a_notice_that_is_actually_shipped(self) -> None:
+        """Non-vacuity: the comparison runs against a real file, not an absent one."""
+        notice = GALLERY_ROOT / UPSTREAM_NOTICE_FILE
+        self.assertTrue(notice.is_file(), f"{UPSTREAM_NOTICE_FILE} is absent, so G2 asserts nothing")
+        self.assertIn(UPSTREAM_COPYRIGHT, _read_exact(notice))
+
+    def test_g5_sweeps_every_seeded_entry(self) -> None:
+        """Non-vacuity: the branch discriminator runs over all 21 rows."""
+        entries = _entries(GALLERY_ROOT)
+        self.assertIsNotNone(entries)
+        self.assertEqual(len(entries), SEEDED_ENTRY_COUNT)
+
+    def test_the_shipped_gallery_pairs_no_entry_with_an_artifact(self) -> None:
+        """G3, G4, G6, and G7 are vacuous here — stated, not implied."""
+        for origin in ORIGINS:
+            with self.subTest(msg=origin):
+                self.assertEqual(_attributable(GALLERY_ROOT, origin), [])
+
+    def test_every_shipped_upstream_entry_is_planned(self) -> None:
+        """The reason the pairing above is empty: nothing is ported yet."""
+        entries = _entries(GALLERY_ROOT)
+        upstream = [entry for entry in entries if entry["source"]["origin"] == UPSTREAM]
+        self.assertTrue(upstream, "no upstream entry at all — G3 would be vacuous for a second reason")
+        self.assertEqual({entry["status"] for entry in upstream}, {PLANNED})
+
+
+# --- Group G fixtures ------------------------------------------------------
+
+# The upstream filename the fixture entry declares. Read from the same builder
+# the catalog fixture uses, so a header that agrees with its entry agrees by
+# construction rather than by a literal repeated in two places.
+FIXTURE_ATTRIBUTED_ID = FIXTURE_ENTRY_ID
+FIXTURE_ATTRIBUTED_LABEL = _artifact_label(FIXTURE_ATTRIBUTED_ID)
+FIXTURE_NEIGHBOUR_FILE = "07-neighbour.html"
+FIXTURE_FOREIGN_REPOSITORY = "someone-else/other-templates"
+
+
+class UpstreamAttributionFixtureCase(CatalogFixtureCase):
+    """A synthetic gallery pairing one entry with one artifact.
+
+    Every case ships exactly one artifact under exactly one entry, then breaks
+    one element of the header or one field of the entry — so the failure names
+    the defect the case introduced.
+    """
+
+    def attribution_lines(
+        self,
+        *,
+        upstream_file: str | None = None,
+        repository: str = UPSTREAM_REPOSITORY,
+    ) -> dict[str, str]:
+        """One header line per element, keyed by the name G3 reports it under."""
+        declared = self.entry(SEEDED_IDS.index(FIXTURE_ATTRIBUTED_ID), FIXTURE_ATTRIBUTED_ID)["source"]["file"]
+        return {
+            "upstream repository": f"{REPOSITORY_LABEL} {repository}",
+            "upstream file": f"{UPSTREAM_FILE_LABEL} {upstream_file or declared}",
+            "verbatim copyright line": UPSTREAM_COPYRIGHT,
+            "license identifier": f"{LICENSE_LABEL} MIT",
+            "link to the full license text": f"{LICENSE_TEXT_LABEL} {UPSTREAM_LICENSE_URL}",
+            "modified-derivative statement": (
+                f"{DERIVATIVE_LABEL} modified from the upstream original, not the original itself"
+            ),
+        }
+
+    def header(self, lines: dict[str, str]) -> str:
+        return "<!--\n" + "\n".join(lines.values()) + "\n-->\n"
+
+    def ship(
+        self,
+        *,
+        header: str = "",
+        origin: str = UPSTREAM,
+        upstream_file: str | None = None,
+        body: str = "",
+    ) -> None:
+        """One entry at ``origin``, and the artifact its identifier derives."""
+        catalog = self.catalog()
+        entry = self.entry_at(catalog, FIXTURE_ATTRIBUTED_ID)
+        entry["status"] = SHIPPED
+        if origin == UPSTREAM:
+            entry["source"] = {"origin": origin, "file": upstream_file or entry["source"]["file"]}
+        else:
+            entry["source"] = {"origin": origin}
+        self.write_manifest(catalog)
+        self.write(
+            f"{TEMPLATES_DIR}/{FIXTURE_ATTRIBUTED_ID}.html",
+            f"<!doctype html>\n<html lang=\"en\">\n{header}<head></head>\n<body>{body}</body>\n</html>\n",
+        )
+
+    def write_notice(self, text: str = UPSTREAM_PERMISSION_NOTICE, *, name: str = UPSTREAM_NOTICE_FILE) -> Path:
+        return self.write(name, f"# Upstream Permission Notice\n\n```text\n{text}```\n")
+
+
+class UpstreamAttributionFixtureTests(UpstreamAttributionFixtureCase):
+    """Group G against synthetic galleries built in a temporary directory."""
+
+    # -- the conforming baseline, so every rejection below is attributable --
+
+    def test_a_conforming_gallery_passes_every_check(self) -> None:
+        self.write_notice()
+        self.ship(header=self.header(self.attribution_lines()))
+
+        self.assertEqual([failure for _, check in GROUP_G_CHECKS for failure in check(self.gallery)], [])
+
+    # -- G1: the notice exists, under a name the payload builder cannot claim --
+
+    def test_g1_rejects_an_absent_notice(self) -> None:
+        self.assertReports(check_g1(self.gallery), UPSTREAM_NOTICE_FILE)
+
+    def test_g1_rejects_a_notice_named_license(self) -> None:
+        self.write_notice(name=FORBIDDEN_NOTICE_NAME)
+
+        self.assertReports(check_g1(self.gallery), FORBIDDEN_NOTICE_NAME)
+
+    def test_g1_rejects_the_forbidden_name_case_folded(self) -> None:
+        self.write_notice()
+        self.write(FORBIDDEN_NOTICE_NAME.lower(), "not this repository's license\n")
+
+        self.assertReports(check_g1(self.gallery), FORBIDDEN_NOTICE_NAME.lower())
+
+    # -- G2: verbatim, which is the only thing reproducing a notice can mean --
+
+    def test_g2_rejects_a_truncated_notice(self) -> None:
+        self.write_notice(UPSTREAM_PERMISSION_NOTICE.split("\n\n")[0] + "\n")
+
+        self.assertReports(check_g2(self.gallery), UPSTREAM_NOTICE_FILE, UPSTREAM_COPYRIGHT)
+
+    def test_g2_rejects_an_altered_copyright_line(self) -> None:
+        self.write_notice(UPSTREAM_PERMISSION_NOTICE.replace("2026", "2025"))
+
+        self.assertReports(check_g2(self.gallery), UPSTREAM_NOTICE_FILE, UPSTREAM_COPYRIGHT)
+
+    def test_g2_rejects_a_notice_whose_paragraphs_are_all_present_but_reordered(self) -> None:
+        paragraphs = UPSTREAM_PERMISSION_NOTICE.split("\n\n")
+        self.write_notice("\n\n".join(paragraphs[1:] + paragraphs[:1]))
+
+        self.assertReports(check_g2(self.gallery), UPSTREAM_NOTICE_FILE)
+
+    def test_g2_defers_an_absent_notice_to_g1(self) -> None:
+        self.assertEqual(check_g2(self.gallery), [])
+
+    # -- G3: every element, named individually when it is the one missing --
+
+    def test_g3_rejects_an_artifact_with_no_attribution_header(self) -> None:
+        self.ship()
+
+        self.assertReports(check_g3(self.gallery), FIXTURE_ATTRIBUTED_LABEL)
+
+    def test_g3_reports_each_missing_element_by_name(self) -> None:
+        for element in ATTRIBUTION_ELEMENTS:
+            with self.subTest(msg=element.name):
+                self.setUp()
+                lines = self.attribution_lines()
+                del lines[element.name]
+                self.ship(header=self.header(lines))
+
+                self.assertReports(check_g3(self.gallery), FIXTURE_ATTRIBUTED_LABEL, element.name)
+
+    def test_g3_rejects_a_label_with_no_value_after_it(self) -> None:
+        lines = self.attribution_lines()
+        lines["upstream file"] = UPSTREAM_FILE_LABEL
+        self.ship(header=self.header(lines))
+
+        self.assertReports(check_g3(self.gallery), FIXTURE_ATTRIBUTED_LABEL, "upstream file")
+
+    def test_g3_rejects_a_header_that_is_not_a_parser_recognized_comment(self) -> None:
+        """A header inside script content is raw text, not a comment (E3's distinction)."""
+        lines = self.attribution_lines()
+        self.ship(body=f"<script>\n{chr(10).join(lines.values())}\n</script>")
+
+        self.assertReports(check_g3(self.gallery), FIXTURE_ATTRIBUTED_LABEL)
+
+    def test_g3_rejects_a_header_split_across_two_comments(self) -> None:
+        lines = self.attribution_lines()
+        first = dict(list(lines.items())[:3])
+        second = dict(list(lines.items())[3:])
+        self.ship(header=self.header(first) + self.header(second))
+
+        self.assertReports(check_g3(self.gallery), FIXTURE_ATTRIBUTED_LABEL)
+
+    # -- G4: the same six elements, refused from the other direction --
+
+    def test_g4_rejects_a_repository_artifact_carrying_the_copyright_line(self) -> None:
+        self.ship(origin=REPOSITORY, header=f"<!--\n{UPSTREAM_COPYRIGHT}\n-->\n")
+
+        self.assertReports(check_g4(self.gallery), FIXTURE_ATTRIBUTED_LABEL, "verbatim copyright line")
+
+    def test_g4_rejects_each_element_on_its_own(self) -> None:
+        lines = self.attribution_lines()
+        for element in ATTRIBUTION_ELEMENTS:
+            with self.subTest(msg=element.name):
+                self.setUp()
+                self.ship(origin=REPOSITORY, header=f"<!--\n{lines[element.name]}\n-->\n")
+
+                self.assertReports(check_g4(self.gallery), FIXTURE_ATTRIBUTED_LABEL, element.name)
+
+    def test_g4_rejects_a_complete_header_that_omits_only_the_copyright_line(self) -> None:
+        """The case the earlier copyright-line-only formulation let through."""
+        lines = self.attribution_lines()
+        del lines["verbatim copyright line"]
+        self.ship(origin=REPOSITORY, header=self.header(lines))
+
+        self.assertReports(check_g4(self.gallery), FIXTURE_ATTRIBUTED_LABEL, "upstream repository")
+
+    def test_g4_rejects_an_unlabelled_upstream_repository_name(self) -> None:
+        self.ship(origin=REPOSITORY, body=f"<p>Adapted from {UPSTREAM_REPOSITORY}.</p>")
+
+        self.assertReports(check_g4(self.gallery), FIXTURE_ATTRIBUTED_LABEL, "upstream repository")
+
+    def test_g4_accepts_a_repository_artifact_carrying_no_element(self) -> None:
+        self.ship(origin=REPOSITORY, body="<h1>Repository-authored</h1>")
+
+        self.assertEqual(check_g4(self.gallery), [])
+
+    # -- G5: exhaustiveness, which is what makes green mean the gate ran --
+
+    def test_g5_rejects_an_origin_matching_neither_branch(self) -> None:
+        catalog = self.catalog()
+        self.entry_at(catalog, FIXTURE_ATTRIBUTED_ID)["source"] = {"origin": "vendor", "file": "x.html"}
+        self.write_manifest(catalog)
+
+        self.assertReports(check_g5(self.gallery), FIXTURE_ATTRIBUTED_ID, "vendor")
+
+    def test_g5_rejects_a_missing_source(self) -> None:
+        catalog = self.catalog()
+        del self.entry_at(catalog, FIXTURE_ATTRIBUTED_ID)["source"]
+        self.write_manifest(catalog)
+
+        self.assertReports(check_g5(self.gallery), FIXTURE_ATTRIBUTED_ID)
+
+    def test_an_unrecognized_origin_is_invisible_to_g3_and_g4(self) -> None:
+        """Why G5 exists: neither branch reports the entry it fails to claim."""
+        self.write_notice()
+        catalog = self.catalog()
+        entry = self.entry_at(catalog, FIXTURE_ATTRIBUTED_ID)
+        entry["status"] = SHIPPED
+        entry["source"] = {"origin": "vendor", "file": FIXTURE_NEIGHBOUR_FILE}
+        self.write_manifest(catalog)
+        self.write(f"{TEMPLATES_DIR}/{FIXTURE_ATTRIBUTED_ID}.html", "<!doctype html>\n<html></html>\n")
+
+        self.assertEqual(check_g3(self.gallery), [])
+        self.assertEqual(check_g4(self.gallery), [])
+        self.assertReports(check_g5(self.gallery), FIXTURE_ATTRIBUTED_ID)
+
+    # -- G6/G7: agreement, because presence is not provenance --
+
+    def test_g6_rejects_a_header_naming_a_different_upstream_file(self) -> None:
+        """A header copy-pasted from a neighbouring artifact — well-formed and false."""
+        self.ship(header=self.header(self.attribution_lines(upstream_file=FIXTURE_NEIGHBOUR_FILE)))
+
+        self.assertEqual(check_g3(self.gallery), [])
+        self.assertReports(check_g6(self.gallery), FIXTURE_ATTRIBUTED_LABEL, FIXTURE_NEIGHBOUR_FILE)
+
+    def test_g7_rejects_a_header_naming_a_different_upstream_repository(self) -> None:
+        self.ship(header=self.header(self.attribution_lines(repository=FIXTURE_FOREIGN_REPOSITORY)))
+
+        self.assertEqual(check_g3(self.gallery), [])
+        self.assertReports(check_g7(self.gallery), FIXTURE_ATTRIBUTED_LABEL, FIXTURE_FOREIGN_REPOSITORY)
+
+    def test_g6_and_g7_defer_an_absent_header_to_g3(self) -> None:
+        self.ship()
+
+        self.assertEqual(check_g6(self.gallery), [])
+        self.assertEqual(check_g7(self.gallery), [])
+
+
+# ---------------------------------------------------------------------------
+# Group F — payload reach (FR-018) — BLOCKING
+# ---------------------------------------------------------------------------
+
+DIST_ROOT = REPO_ROOT / "dist"
+CLAUDE = "claude"
+CODEX = "codex"
+PAYLOAD_PLATFORMS: tuple[str, ...] = (CLAUDE, CODEX)
+
+
+def _payload_gallery(dist_root: Path, platform: str) -> Path:
+    """One platform's payload copy of the gallery.
+
+    Composed from the source roots rather than from two path literals, so the
+    payload location cannot drift from the source location it mirrors.
+    """
+    return dist_root / platform / PLUGIN_ROOT.name / GALLERY_ROOT.name
+
+
+def _relative_files(root: Path) -> set[str]:
+    """Every file under a root, relative and posix; an absent root is empty."""
+    if not root.is_dir():
+        return set()
+    return {path.relative_to(root).as_posix() for path in root.rglob("*") if path.is_file()}
+
+
+def _path_set_failures(gallery_root: Path, dist_root: Path, platform: str) -> list[str]:
+    """The two directions of set equality, each naming the offending path."""
+    payload = _relative_files(_payload_gallery(dist_root, platform))
+    source = _relative_files(gallery_root)
+    return [
+        f"{relative}: under the gallery source but absent from the {platform} payload — "
+        "'copy_optional_xplat008' is fail-silent, so an absent name produces no build error"
+        for relative in sorted(source - payload)
+    ] + [
+        f"{relative}: under the {platform} payload but absent from the gallery source — a stale copy the "
+        "build left behind"
+        for relative in sorted(payload - source)
+    ]
+
+
+def _content_failures(gallery_root: Path, dist_root: Path, platform: str) -> list[str]:
+    """Byte equality over the paths both sides carry; F1/F2 own the rest."""
+    payload_root = _payload_gallery(dist_root, platform)
+    failures: list[str] = []
+    for relative in sorted(_relative_files(gallery_root) & _relative_files(payload_root)):
+        source_bytes = (gallery_root / relative).read_bytes()
+        payload_bytes = (payload_root / relative).read_bytes()
+        if source_bytes != payload_bytes:
+            failures.append(
+                f"{relative}: differs from its {platform} payload copy ({len(source_bytes)} source bytes, "
+                f"{len(payload_bytes)} payload bytes) — truncated, stale, or rewritten"
+            )
+    return failures
+
+
+def check_f1(gallery_root: Path, dist_root: Path = DIST_ROOT) -> list[str]:
+    """F1 — the Claude payload's gallery path set equals the source's.
+
+    ``dist_root`` defaults to the committed payload root and is a parameter for
+    the same reason ``gallery_root`` is: a check that reads the constant cannot
+    be pointed at a fixture, and both sides of this comparison need pointing.
+    """
+    return _path_set_failures(gallery_root, dist_root, CLAUDE)
+
+
+def check_f2(gallery_root: Path, dist_root: Path = DIST_ROOT) -> list[str]:
+    """F2 — the Codex payload's gallery path set equals the source's."""
+    return _path_set_failures(gallery_root, dist_root, CODEX)
+
+
+def check_f3(gallery_root: Path, dist_root: Path = DIST_ROOT) -> list[str]:
+    """F3 — each source file is byte-identical to its Claude payload copy.
+
+    A path set cannot see a copy that arrived truncated or stale — least of all
+    ``manifest.json``, whose silent divergence would leave a consumer routing
+    against a different catalog than the repository declares.
+    """
+    return _content_failures(gallery_root, dist_root, CLAUDE)
+
+
+def check_f4(gallery_root: Path, dist_root: Path = DIST_ROOT) -> list[str]:
+    """F4 — each source file is byte-identical to its **Codex** payload copy.
+
+    Safe only because F5 holds. The Codex build runs
+    ``rewrite_payload_skill_paths_xplat008`` over every file in its payload and
+    writes the file back only if the substitution changed it, so on a file
+    carrying no matching literal the rewrite is a verified no-op and this check
+    is exactly as stable as F3.
+    """
+    return _content_failures(gallery_root, dist_root, CODEX)
+
+
+def check_f5(gallery_root: Path) -> list[str]:
+    """F5 — no source gallery file carries a reference the rewriter would match.
+
+    Defined by ``REL_SKILL_PATH_XPLAT008`` itself, imported from the build
+    rather than restated here, so the check and the build agree by construction.
+    A substring search for the same path prefix would fail ``SPA-CONTRACT.md``
+    for documenting this very rule to authors: the rewriter requires at least
+    one character after the ``skills/`` segment drawn from a class that excludes
+    the backtick, so a backticked prose mention does not match.
+
+    A file the rewriter cannot decode is skipped here for the reason the
+    rewriter skips it: it returns early on a ``UnicodeDecodeError`` and rewrites
+    nothing.
+    """
+    failures: list[str] = []
+    for path in _gallery_files(gallery_root):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        match = REL_SKILL_PATH_XPLAT008.search(text)
+        if match is not None:
+            failures.append(
+                f"{_label(gallery_root, path)}: contains '{match.group(0)}', which the Codex payload build "
+                "rewrites, so this file's Codex copy would not be byte-identical to its source (F4)"
+            )
+    return failures
+
+
+GROUP_F_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("F1", check_f1),
+    ("F2", check_f2),
+    ("F3", check_f3),
+    ("F4", check_f4),
+    ("F5", check_f5),
+)
+
+
+class PayloadReachTests(unittest.TestCase):
+    """Group F against the shipped gallery and the committed payloads.
+
+    This is the one group whose real-gallery case is the whole point. The
+    existing payload gates compare a fresh build against committed ``dist/``,
+    both sides scanned from payload roots — a directory absent from both is
+    self-consistently absent and passes. Which is why the non-vacuity case below
+    is not decoration: two empty path sets are equal.
+    """
+
+    def test_group_f_passes_against_the_shipped_gallery(self) -> None:
+        for name, check in GROUP_F_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+    def test_both_sides_are_non_empty_so_set_equality_means_something(self) -> None:
+        self.assertTrue(_relative_files(GALLERY_ROOT), "the gallery source is empty — F1/F2 assert nothing")
+        for platform in PAYLOAD_PLATFORMS:
+            with self.subTest(msg=platform):
+                self.assertTrue(
+                    _relative_files(_payload_gallery(DIST_ROOT, platform)),
+                    f"the {platform} payload carries no gallery — the FR-018 failure this group exists for",
+                )
+
+    def test_f5_does_not_fire_on_the_contract_document_that_records_the_rule(self) -> None:
+        """The proof F5 is the rewriter's pattern and not a substring search."""
+        contract = _document_text(GALLERY_ROOT / SPA_CONTRACT_FILE)
+        self.assertIn(f"..{chr(47)}skills{chr(47)}", contract, "the authoring rule is no longer documented")
+        self.assertEqual(check_f5(GALLERY_ROOT), [])
+
+    def test_the_rewriter_pattern_is_the_live_one(self) -> None:
+        """Non-vacuity: an unmatchable pattern would make F5 pass on anything."""
+        self.assertIsNotNone(REL_SKILL_PATH_XPLAT008.search("../skills/a/SKILL.md"))
+
+
+# --- Group F fixtures ------------------------------------------------------
+
+FIXTURE_PAYLOAD_FILE = "brand-kit.css"
+FIXTURE_PAYLOAD_TEXT = ":root {\n  --rc-surface: #faf9f7;\n}\n"
+FIXTURE_REWRITTEN_REFERENCE = "../skills/speckit-autopilot/SKILL.md"
+
+
+class PayloadReachFixtureCase(GalleryFixtureCase):
+    """A synthetic gallery and a synthetic pair of payload roots beside it."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.dist = Path(self._tmp.name).resolve() / "dist"
+
+    def write_payload(self, platform: str, relative: str, text: str) -> Path:
+        path = _payload_gallery(self.dist, platform) / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8", newline="") as handle:
+            handle.write(text)
+        return path
+
+    def ship(self, relative: str = FIXTURE_PAYLOAD_FILE, text: str = FIXTURE_PAYLOAD_TEXT) -> None:
+        """One file in the source and an identical copy in both payloads."""
+        self.write(relative, text)
+        for platform in PAYLOAD_PLATFORMS:
+            self.write_payload(platform, relative, text)
+
+    def failures(self) -> list[str]:
+        return [
+            failure
+            for check in (check_f1, check_f2, check_f3, check_f4)
+            for failure in check(self.gallery, self.dist)
+        ] + check_f5(self.gallery)
+
+
+class PayloadReachFixtureTests(PayloadReachFixtureCase):
+    """Group F against a synthetic source tree and synthetic payload roots."""
+
+    def test_a_gallery_copied_intact_to_both_payloads_passes(self) -> None:
+        self.ship()
+
+        self.assertEqual(self.failures(), [])
+
+    # -- F1/F2: the set equality, in both directions, on both platforms --
+
+    def test_f1_and_f2_reject_a_gallery_absent_from_a_payload(self) -> None:
+        """The standing FR-018 failure: fail-silent copy, no build error, green suite."""
+        for platform, check in ((CLAUDE, check_f1), (CODEX, check_f2)):
+            with self.subTest(msg=platform):
+                self.setUp()
+                self.write(FIXTURE_PAYLOAD_FILE, FIXTURE_PAYLOAD_TEXT)
+                other = CODEX if platform == CLAUDE else CLAUDE
+                self.write_payload(other, FIXTURE_PAYLOAD_FILE, FIXTURE_PAYLOAD_TEXT)
+
+                self.assertReports(check(self.gallery, self.dist), FIXTURE_PAYLOAD_FILE, platform)
+
+    def test_f1_and_f2_reject_a_file_the_payload_carries_and_the_source_does_not(self) -> None:
+        for platform, check in ((CLAUDE, check_f1), (CODEX, check_f2)):
+            with self.subTest(msg=platform):
+                self.setUp()
+                self.ship()
+                self.write_payload(platform, "templates/stale.html", "<!doctype html>\n")
+
+                self.assertReports(check(self.gallery, self.dist), "templates/stale.html", platform)
+
+    def test_f1_and_f2_reject_a_nested_file_missing_from_a_payload(self) -> None:
+        for platform, check in ((CLAUDE, check_f1), (CODEX, check_f2)):
+            with self.subTest(msg=platform):
+                self.setUp()
+                self.ship()
+                self.write("templates/sample.html", "<!doctype html>\n")
+                other = CODEX if platform == CLAUDE else CLAUDE
+                self.write_payload(other, "templates/sample.html", "<!doctype html>\n")
+
+                self.assertReports(check(self.gallery, self.dist), "templates/sample.html", platform)
+
+    # -- F3/F4: byte equality, which a path set cannot see --
+
+    def test_f3_and_f4_reject_a_payload_copy_that_differs_by_one_byte(self) -> None:
+        for platform, check in ((CLAUDE, check_f3), (CODEX, check_f4)):
+            with self.subTest(msg=platform):
+                self.setUp()
+                self.ship()
+                self.write_payload(platform, FIXTURE_PAYLOAD_FILE, FIXTURE_PAYLOAD_TEXT.replace("#faf", "#fbf"))
+
+                self.assertReports(check(self.gallery, self.dist), FIXTURE_PAYLOAD_FILE, platform)
+
+    def test_f3_and_f4_reject_a_truncated_payload_copy(self) -> None:
+        for platform, check in ((CLAUDE, check_f3), (CODEX, check_f4)):
+            with self.subTest(msg=platform):
+                self.setUp()
+                self.ship(relative=MANIFEST_FILE, text='{"schema_version": "1.0"}\n')
+                self.write_payload(platform, MANIFEST_FILE, '{"schema_version": "1.0"}')
+
+                self.assertReports(check(self.gallery, self.dist), MANIFEST_FILE, platform)
+
+    def test_f3_and_f4_see_a_line_ending_that_a_path_set_cannot(self) -> None:
+        for platform, check in ((CLAUDE, check_f3), (CODEX, check_f4)):
+            with self.subTest(msg=platform):
+                self.setUp()
+                self.ship()
+                self.write_payload(platform, FIXTURE_PAYLOAD_FILE, FIXTURE_PAYLOAD_TEXT.replace("\n", "\r\n"))
+
+                self.assertEqual(check_f1(self.gallery, self.dist), [])
+                self.assertReports(check(self.gallery, self.dist), FIXTURE_PAYLOAD_FILE, platform)
+
+    # -- F5: the authoring rule F4 depends on, by the rewriter's own pattern --
+
+    def test_f5_rejects_a_reference_the_codex_rewriter_would_match(self) -> None:
+        self.write(FIXTURE_PAYLOAD_FILE, f"/* see {FIXTURE_REWRITTEN_REFERENCE} */\n")
+
+        self.assertReports(check_f5(self.gallery), FIXTURE_PAYLOAD_FILE, FIXTURE_REWRITTEN_REFERENCE)
+
+    def test_f5_rejects_a_reference_in_any_gallery_file_not_only_an_artifact(self) -> None:
+        self.write("SPA-CONTRACT.md", f"[autopilot]({FIXTURE_REWRITTEN_REFERENCE})\n")
+
+        self.assertReports(check_f5(self.gallery), "SPA-CONTRACT.md")
+
+    def test_f5_accepts_the_backticked_mention_a_substring_check_would_reject(self) -> None:
+        mention = f"`..{chr(47)}skills{chr(47)}`"
+        self.write("SPA-CONTRACT.md", f"Refer to a skill by a path under {mention}, followed by a file.\n")
+
+        self.assertIn(f"..{chr(47)}skills{chr(47)}", _document_text(self.gallery / "SPA-CONTRACT.md"))
+        self.assertEqual(check_f5(self.gallery), [])
+
+
+# ---------------------------------------------------------------------------
+# Group H — suite integration (FR-014)
+# ---------------------------------------------------------------------------
+
+SUITE_MANIFEST = REPO_ROOT / "tests" / "speckit-pro" / "suite-manifest.json"
+UNIT_LAYER_ID = "4"
+REGISTERED_TEST = "tests/speckit-pro/unit/test-artifact-gallery.py"
+
+
+def check_h1(gallery_root: Path, manifest_path: Path = SUITE_MANIFEST) -> list[str]:
+    """H1 — this test is registered in the Layer 4 ``scripts`` array.
+
+    ``gallery_root`` is unused: H1 reads the suite manifest, not the gallery.
+    The parameter is taken anyway because ``CheckSignatureTests`` enforces the
+    rule module-wide, and one check quietly opting out of a rule is the first
+    step of the drift the rule exists to stop.
+    """
+    label = manifest_path.name
+    if not manifest_path.is_file():
+        return [f"{label}: the suite manifest is missing, so '{REGISTERED_TEST}' has nothing to register in"]
+    try:
+        manifest = json.loads(_read_exact(manifest_path))
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        return [f"{label}: the suite manifest is unreadable, so registration cannot be checked: {error}"]
+    layers = manifest.get("layers") if isinstance(manifest, dict) else None
+    if not isinstance(layers, list):
+        return [
+            f"{label}: key 'layers': expected an array, so layer '{UNIT_LAYER_ID}' cannot be located and "
+            f"'{REGISTERED_TEST}' cannot be found registered in it"
+        ]
+    layer = next((item for item in layers if isinstance(item, dict) and item.get("id") == UNIT_LAYER_ID), None)
+    if layer is None:
+        return [f"{label}: no layer carries id '{UNIT_LAYER_ID}', so '{REGISTERED_TEST}' has no layer to run in"]
+    scripts = layer.get("scripts")
+    if not isinstance(scripts, list):
+        return [
+            f"{label}: layer '{UNIT_LAYER_ID}': key 'scripts': expected an array, so '{REGISTERED_TEST}' "
+            "cannot be registered"
+        ]
+    registered = {entry.get("path") for entry in scripts if isinstance(entry, dict)}
+    if REGISTERED_TEST not in registered:
+        return [
+            f"{label}: layer '{UNIT_LAYER_ID}': '{REGISTERED_TEST}' is absent from the 'scripts' array, so a "
+            "plain suite run never executes it and every check in this file is unreached"
+        ]
+    return []
+
+
+GROUP_H_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (("H1", check_h1),)
+
+
+class SuiteRegistrationTests(unittest.TestCase):
+    """Group H against the committed suite manifest."""
+
+    def test_group_h_passes_against_the_committed_manifest(self) -> None:
+        for name, check in GROUP_H_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+    def test_the_registered_path_is_this_file(self) -> None:
+        """Non-vacuity: a registered path naming some other file proves nothing."""
+        self.assertEqual((REPO_ROOT / REGISTERED_TEST).resolve(), Path(__file__).resolve())
+
+
+# --- Group H fixtures ------------------------------------------------------
+
+
+class SuiteRegistrationFixtureCase(GalleryFixtureCase):
+    """A synthetic suite manifest, so every way registration fails is exercised."""
+
+    def write_suite_manifest(self, manifest: object, *, name: str = "suite-manifest.json") -> Path:
+        path = self.gallery / name
+        with path.open("w", encoding="utf-8", newline="") as handle:
+            handle.write(json.dumps(manifest, indent=2))
+        return path
+
+    def manifest(self, *, scripts: list[dict] | None = None, layer_id: str = UNIT_LAYER_ID) -> dict:
+        registered = [{"path": REGISTERED_TEST, "label": "test-artifact-gallery", "baseline": None}]
+        return {
+            "schema_version": "1.0",
+            "layers": [
+                {"id": "1", "label": "Structural Validation", "scripts": []},
+                {"id": layer_id, "label": "Unit Tests", "scripts": registered if scripts is None else scripts},
+            ],
+        }
+
+
+class SuiteRegistrationFixtureTests(SuiteRegistrationFixtureCase):
+    """H1 against synthetic manifests built in a temporary directory."""
+
+    def test_a_registered_test_passes(self) -> None:
+        path = self.write_suite_manifest(self.manifest())
+
+        self.assertEqual(check_h1(self.gallery, path), [])
+
+    def test_h1_rejects_a_manifest_that_does_not_register_the_test(self) -> None:
+        path = self.write_suite_manifest(self.manifest(scripts=[]))
+
+        self.assertReports(check_h1(self.gallery, path), REGISTERED_TEST, UNIT_LAYER_ID)
+
+    def test_h1_rejects_a_registration_in_some_other_layer(self) -> None:
+        path = self.write_suite_manifest(self.manifest(layer_id="7"))
+
+        self.assertReports(check_h1(self.gallery, path), UNIT_LAYER_ID)
+
+    def test_h1_rejects_a_registration_naming_a_different_test(self) -> None:
+        other = [{"path": "tests/speckit-pro/unit/test-docs-artifact.py", "label": "other", "baseline": None}]
+        path = self.write_suite_manifest(self.manifest(scripts=other))
+
+        self.assertReports(check_h1(self.gallery, path), REGISTERED_TEST)
+
+    def test_h1_rejects_a_missing_manifest(self) -> None:
+        self.assertReports(check_h1(self.gallery, self.gallery / "absent.json"), "absent.json")
+
+    def test_h1_rejects_an_unreadable_manifest(self) -> None:
+        path = self.gallery / "suite-manifest.json"
+        with path.open("w", encoding="utf-8", newline="") as handle:
+            handle.write("{not json")
+
+        self.assertReports(check_h1(self.gallery, path), "suite-manifest.json")
+
+    def test_h1_rejects_a_manifest_carrying_no_layers_array(self) -> None:
+        path = self.write_suite_manifest({"schema_version": "1.0"})
+
+        self.assertReports(check_h1(self.gallery, path), "layers")
+
+    def test_h1_rejects_a_layer_carrying_no_scripts_array(self) -> None:
+        path = self.write_suite_manifest(
+            {"schema_version": "1.0", "layers": [{"id": UNIT_LAYER_ID, "label": "Unit Tests"}]}
+        )
+
+        self.assertReports(check_h1(self.gallery, path), "scripts")
+
+
 class CheckSignatureTests(unittest.TestCase):
     """Enforce the rule the rest of this module depends on.
 
@@ -4702,6 +5759,12 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     ExternalReferenceFixtureTests,
     ProhibitedConstructTests,
     ProhibitedConstructFixtureTests,
+    UpstreamAttributionTests,
+    UpstreamAttributionFixtureTests,
+    PayloadReachTests,
+    PayloadReachFixtureTests,
+    SuiteRegistrationTests,
+    SuiteRegistrationFixtureTests,
 )
 
 

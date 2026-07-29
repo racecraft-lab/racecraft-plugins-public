@@ -160,6 +160,27 @@ existence check and the orphan sweep would follow it there.
 - The upstream repository is named once — here — rather than repeated in every
   entry: `anthropics/html-effectiveness`. Its permission notice is reproduced
   verbatim in `UPSTREAM-NOTICE.md` beside this document.
+**The header's labels are exact, and validation compares against them.** Write the
+header with these five labels spelled as shown — the check locates each value by its
+label, so a reworded label means the value cannot be found and the artifact fails:
+
+```html
+<!--
+  Upstream repository: anthropics/html-effectiveness
+  Upstream file: 16-implementation-plan.html
+  License: MIT
+  License text: UPSTREAM-NOTICE.md
+  Modified derivative: yes — re-skinned with Racecraft brand tokens; not the upstream original
+  Copyright (c) 2026 Anthropic PBC
+-->
+```
+
+Two of those values are checked for **agreement with your catalog entry**, not merely
+for presence: the upstream repository, and the upstream file. A header can be perfectly
+well formed and still assert the wrong provenance, and a green result on a
+presence-only check would read as evidence the provenance was verified. So the file you
+name here must be the `file` your entry declares.
+
 - An artifact whose entry declares `origin: "upstream"` carries an attribution
   header as an HTML comment near the top of the file, naming the upstream
   repository and the upstream file it derives from, reproducing the upstream
