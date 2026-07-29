@@ -28,13 +28,15 @@ not part of the autonomous phase loop.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | Encode the complete mirror and policy boundary |
+| Specify | `/speckit-specify` | ✅ Complete | 1 P1 story, 42 FRs, 18 scenarios, 19 success criteria; G1 passed with 0 markers |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Resolve exact Codex IDs, route binding, and any concrete mirror mismatch |
 | Plan | `/speckit-plan` | ⏳ Pending | Design additive contracts, validators, replay, and smoke proof |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run four enriched requirement-quality domains |
 | Tasks | `/speckit-tasks` | ⏳ Pending | One vertical slice, strict RED→GREEN ordering |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Check CAR-003/CAR-004 alignment and cross-artifact drift |
+| Confidence Gate | G6.5 | ⏳ Pending | Advisory pre-Implement confidence check at threshold 0.90 |
 | Implement | `/speckit-implement` | ⏳ Pending | TDD implementation; do not run live smokes without operator authorization |
+| Post | Post-Implementation | ⏳ Pending | Verification, reviewability, PR, remediation, and retrospective |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -48,6 +50,7 @@ not part of the autonomous phase loop.
 | G4 | After Checklist | Every `[Gap]` resolved or explicitly scoped out |
 | G5 | After Tasks | Complete FR coverage, dependency order, and TDD pairs verified |
 | G6 | After Analyze | No CRITICAL/HIGH consistency or parity findings remain |
+| G6.5 | Before Implement | Latest confidence emit evaluated in advisory mode at threshold 0.90 |
 | G7 | After each implementation group | Relevant tests pass and evidence is recorded |
 
 ---
@@ -56,8 +59,9 @@ not part of the autonomous phase loop.
 
 ### Worktree and Branch
 
-- Worktree root:
-  `/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/g56r-004-policy-controls-adaptive-comparators`
+- Worktree root: the current checkout returned by
+  `git rev-parse --show-toplevel`; it MUST be the registered worktree for the
+  branch below and contain this workflow file.
 - Branch: `g56r-004-policy-controls-adaptive-comparators`
 - Base at scaffold: `origin/main` commit `8b224ce8` (CAR-004 PR #401 merge)
 - Remote: `origin`
@@ -73,6 +77,43 @@ repository test suite needs no bootstrap and runs directly with
 `tests/speckit-pro/` and therefore needs a docs reference command, first obtain
 operator approval and run the documented
 `pnpm --dir docs-site install --frozen-lockfile` once in this worktree.
+
+### Archive Sweep
+
+- Status: eligible prior candidate found; no mutation performed.
+- Current target excluded:
+  `specs/g56r-004-policy-controls-adaptive-comparators`.
+- Prior candidate: `specs/car-004-policy-controls-comparators`; live PR #401
+  is merged at `8b224ce8`, and archival is already isolated in open PR #402.
+- Cleanup mode: report-only. This feature worktree is not an integration
+  branch, no `--apply-cleanup` authorization was supplied, and
+  `safeToApplyCleanup=false`.
+- Execution path: archive extension command contract with Codex-native
+  worktree binding.
+
+### Runtime and Capability Context
+
+- Installed runner: Python 3.11 direct module invocation; prerequisite helper
+  returned `all_pass=true`.
+- Branch authority: `git branch --show-current` returned
+  `g56r-004-policy-controls-adaptive-comparators`. The read-only prerequisite
+  helper returned an empty branch field for this linked worktree, so Git is
+  the recorded branch authority.
+- Confidence gate mode: `advisory`.
+- Settings: `consensus-mode=moderate`, `gate-failure=stop`,
+  `auto-commit=per-phase`.
+- Installed Codex agents: dry-run comparison returned `mutation_status=no_op`
+  for all ten required agent files using the `gpt-5.5` templates.
+- Preset: `speckit-pro-reviewability` v1.0.0. It requires an explicit
+  reviewability budget, declared file operations, PR review packet evidence,
+  dependency-ordered tasks, and TDD-first test tasks.
+- Project commands: root `AGENTS.md` overrides generic stack detection with
+  Layer 1 (`python3 tests/speckit-pro/run-all.py --layer 1`), Layer 4
+  (`python3 tests/speckit-pro/run-all.py --layer 4`), and full-suite
+  (`python3 tests/speckit-pro/run-all.py`) verification.
+- Capability path: repository/spec context uses local file and Git evidence;
+  live PR provenance uses GitHub CLI. Confidence is high because both are
+  direct sources. No external library documentation is required by this spec.
 
 ### Grounded Source Truth
 
@@ -100,12 +141,18 @@ in Design Concept Q13.
 
 | Principle | Requirement | Verification |
 |-----------|-------------|--------------|
-| I. Plugin Structure Compliance | Keep repository-only tests under `tests/speckit-pro/`; do not add install-facing plugin files | Changed-path review and Layer 1 |
-| II. Cross-Platform Runtime & Script Safety | Python 3.11+ standard library; structured JSON; no active Bash or `jq` | Import/path review and Layer 4 |
-| IV. Test Coverage Before Merge | Register every new unit path through `tests/speckit-pro/suite-manifest.json` and pass the Python-authoritative suite | Relevant unit files, then `python3 tests/speckit-pro/run-all.py` |
-| VI. KISS, Simplicity & YAGNI | Add only the two contracts and minimum validation/replay/smoke machinery needed for the closed three-control surface | Plan review against Design Concept Non-goals |
+| I. Plugin Structure Compliance | Keep repository-only tests under `tests/speckit-pro/`; do not add install-facing plugin files | ✅ Layer 1 baseline `1428/1428` |
+| II. Cross-Platform Runtime & Script Safety | Python 3.11+ standard library; structured JSON; no active Bash or `jq` | ✅ Layer 4 baseline `3334/3334` |
+| III. Semantic Versioning | Do not edit plugin versions for repository-only evaluation work | ✅ No manifest/version path in scope |
+| IV. Test Coverage Before Merge | Register every new unit path through `tests/speckit-pro/suite-manifest.json` and pass the Python-authoritative suite | ✅ Baseline recorded; full suite required after implementation |
+| V. Conventional Commits | Use repository-valid scoped commits and PR title | ✅ Per-phase commit policy recorded |
+| VI. KISS, Simplicity & YAGNI | Add only the two contracts and minimum validation/replay/smoke machinery needed for the closed three-control surface | ✅ Design Concept non-goals bound; re-check in Plan and Implement |
 
-**Constitution Check:** pending phase execution; no scaffold conflict found.
+**Constitution Check:** ✅ Verified for Phase 0. The initial Layer 4 attempt
+exposed one scaffold-local privacy leak: this workflow committed an absolute
+home path. Replacing it with a portable Git worktree identity restored the
+focused privacy scan (`10/10`) and Layer 4 (`3334/3334`) without changing
+feature scope.
 
 ---
 
@@ -282,13 +329,20 @@ reproducible, content-addressed, and aligned with CAR-003/CAR-004.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | 42 |
+| User Stories | 1 |
+| Acceptance Criteria | 18 scenarios |
+| Success Criteria | 19 |
+| G1 | Passed — `spec.md` exists with 0 clarification markers |
 
 ### Files Generated
 
-- [ ] `specs/g56r-004-policy-controls-adaptive-comparators/spec.md`
+- [x] `specs/g56r-004-policy-controls-adaptive-comparators/spec.md`
+
+Phase 1 deliberately leaves three evidence questions to the required Clarify
+sessions without inserting vague markers: the exact Codex-owned IDs and
+qualified high-effort route, any concrete unrepresentable CAR-004 member, and
+the operator-authorized live-smoke disposition.
 
 ### Required Traceability Markers
 
@@ -643,6 +697,21 @@ blocking issue unless a dated, human-approved revision records the change.
 
 ---
 
+## Phase 6.5: Confidence Gate
+
+**When to run:** After Analyze and its mandatory consensus item, before any
+implementation task. Use the `advisory` mode resolved during Phase 0 and the
+latest workflow confidence emit.
+
+| Field | Value |
+|-------|-------|
+| Mode | Advisory |
+| Threshold | 0.90 |
+| Status | ⏳ Pending |
+| Bounded remediation | Up to three focused iterations on the lowest-scoring criterion |
+
+---
+
 ## Phase 7: Implement
 
 **When to run:** After G6 passes.
@@ -706,6 +775,27 @@ For every behavior task:
 | Policy behavior and replay | | | |
 | Comparison, partition, parity | | | |
 | Integration and operator evidence | | | |
+
+---
+
+## Post
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Post: Doctor Extension Check | Pending | Run when the optional doctor command is callable; otherwise record the installed-extension gap |
+| Post: Verify Implementation | Pending | Run the installed verify extension |
+| Post: Verify Tasks Phantom Check | Pending | Run the configured verify-tasks hook |
+| Post: Code Review | Pending | Independent review of `origin/main...HEAD` |
+| Post: Integration Suite | Pending | Run the Python-authoritative full suite |
+| Post: Reviewability Diff Gate | Pending | Evaluate current committed reviewability evidence |
+| Post: Self-Review | Pending | Record the four-question audit |
+| Post: UAT Runbook Generation | Pending | Reuse or fail-open under the deferred helper contract |
+| Post: Final Reviewability Backstop | Pending | Enforce the stop-before-PR boundary |
+| Post: PR Packet/Body Generation | Pending | Emit and validate a current feature-local packet |
+| Post: PR Body Generation | Pending | Verify packet-owned public prose |
+| Post: PR Creation | Pending | Create only from validated packet fields |
+| Post: Review Remediation | Pending | Resolve actionable review feedback |
+| Post: Retrospective | Pending | Final canonical Post item |
 
 ---
 

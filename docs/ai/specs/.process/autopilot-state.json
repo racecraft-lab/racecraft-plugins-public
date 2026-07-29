@@ -1,11 +1,16 @@
 {
-  "workflow_file": "docs/ai/specs/.process/G56R-003-workflow.md",
-  "spec_id": "G56R-003",
-  "feature_dir": "specs/g56r-003-evaluation-runner-scoring",
-  "updated_at": "2026-07-27T00:00:00Z",
-  "active_step": "Archived: post-merge cleanup applied for CAR-003 and G56R-003",
-  "status": "completed_archived",
-  "prior_run_note": "Detailed implementation and review state remains in the preserved CAR-003 and G56R-003 workflow files and git history.",
+  "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
+  "spec_id": "G56R-004",
+  "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
+  "updated_at": "2026-07-29T03:06:25Z",
+  "active_step": "Phase 2: Clarify - Codex identifiers and high-effort route binding",
+  "status": "in_progress",
+  "worktree_binding": {
+    "mode": "operator_authorized_in_session_workdir",
+    "branch": "g56r-004-policy-controls-adaptive-comparators",
+    "base_commit": "8b224ce8d1fbaba89606772a4d51401ac754a70b",
+    "workflow_present": true
+  },
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
@@ -13,31 +18,232 @@
     "gate_failure": "stop"
   },
   "archive_sweep": {
-    "status": "applied",
-    "cleanup_branch": "chore/archive-merged-specs-20260727",
-    "archived_specs": [
+    "status": "eligible_candidate_reported",
+    "execution_path": "extension_contract",
+    "invocation_available": true,
+    "prerequisite_available": true,
+    "prerequisite_mode": "codex_native_worktree_binding",
+    "archive_extension_installed": true,
+    "eligible_previous_specs": [
       {
-        "spec_id": "CAR-003",
-        "pull_requests": [
-          385
-        ],
-        "merge_commit": "9fab2083cd74fcaca28cb6589cf8705e0e8ddd3c",
-        "report": ".specify/memory/archive-reports/2026-07-27-car-003-post-merge-hygiene.md"
-      },
-      {
-        "spec_id": "G56R-003",
-        "pull_requests": [
-          386
-        ],
-        "merge_commit": "dcceef86daed97fe42e81a43c90e82556457dc48",
-        "report": ".specify/memory/archive-reports/2026-07-27-g56r-003-post-merge-hygiene.md"
+        "spec_dir": "specs/car-004-policy-controls-comparators",
+        "merged_pr": 401,
+        "merge_commit": "8b224ce8d1fbaba89606772a4d51401ac754a70b",
+        "archive_pr": 402,
+        "archive_pr_state": "OPEN"
       }
-    ]
+    ],
+    "excluded_current_spec": "specs/g56r-004-policy-controls-adaptive-comparators",
+    "cleanup_mode": "report_only",
+    "safeToApplyCleanup": false
+  },
+  "prerequisites": {
+    "runner_all_pass": true,
+    "runner_branch_field": "",
+    "branch_authority": "git branch --show-current",
+    "agent_install_dry_run": "no_op",
+    "layer_1": "1428/1428",
+    "layer_4": "3334/3334",
+    "privacy_scan": "10/10"
   },
   "project_commands": {
-    "spec_index_write": "generate-spec-index-write",
-    "spec_index_check": "generate-spec-index-check",
-    "structural_suite": "python3 tests/speckit-pro/run-all.py --layer 1",
-    "full_suite": "python3 tests/speckit-pro/run-all.py"
-  }
+    "BUILD": "N/A",
+    "TYPECHECK": "N/A",
+    "LINT": "python3 tests/speckit-pro/run-all.py --layer 1",
+    "LINT_FIX": "N/A",
+    "UNIT_TEST": "python3 tests/speckit-pro/run-all.py --layer 4",
+    "INTEGRATION_TEST": "N/A",
+    "SINGLE_FILE_TEST": "python3 <test-file>",
+    "SINGLE_FILE_INTEGRATION": "N/A",
+    "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py"
+  },
+  "preset_conventions": {
+    "name": "speckit-pro-reviewability",
+    "version": "1.0.0",
+    "requirements": [
+      "explicit reviewability budget",
+      "declared file operations",
+      "PR review packet evidence",
+      "dependency-ordered tasks",
+      "TDD-first test tasks"
+    ]
+  },
+  "plan": [
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Codex identifiers and high-effort route binding",
+      "status": "in_progress"
+    },
+    {
+      "step": "Phase 2: Clarify - Codex identifiers and high-effort route binding Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Twin completeness and reconciliation boundary",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Twin completeness and reconciliation boundary Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Smoke execution and evidence disposition",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Smoke execution and evidence disposition Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Data Integrity",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Data Integrity Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - LLM Integration",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - LLM Integration Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Performance",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Performance Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Pending task decomposition",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Final Reviewability Backstop",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Packet/Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "pending"
+    }
+  ],
+  "phase_results": {
+    "specify": {
+      "status": "completed",
+      "gate": "G1",
+      "gate_status": "pass",
+      "artifact": "specs/g56r-004-policy-controls-adaptive-comparators/spec.md",
+      "user_stories": 1,
+      "functional_requirements": 42,
+      "acceptance_scenarios": 18,
+      "success_criteria": 19,
+      "markers": {
+        "clarifications": 0,
+        "gaps": 0,
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      }
+    }
+  },
+  "agent_dispatches": [
+    {
+      "task": "Phase 1: Specify",
+      "agent": "phase-executor",
+      "result": "consumed",
+      "artifact": "specs/g56r-004-policy-controls-adaptive-comparators/spec.md"
+    }
+  ]
 }
