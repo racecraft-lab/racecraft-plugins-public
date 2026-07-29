@@ -8,9 +8,7 @@ import hashlib
 import importlib.machinery
 import importlib.util
 import json
-import os
 import re
-import subprocess
 import sys
 import tempfile
 import tomllib
@@ -24,6 +22,7 @@ ROOT = Path(__file__).resolve().parents[3]
 LIB_DIR = ROOT / "tests/speckit-pro/lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from qualification_cli_test_helpers import run_qualification_cli  # noqa: E402
 from treatment_fixture_helpers import single_treatment_case  # noqa: E402
 
 QUALIFICATION_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/qualification_contracts.py"
@@ -533,21 +532,6 @@ def canonical_json(value: object) -> str:
 
 def write_canonical_json(path: Path, value: object) -> None:
     path.write_text(canonical_json(value), encoding="utf-8")
-
-
-def run_qualification_cli(*args: str) -> subprocess.CompletedProcess[str]:
-    env = os.environ.copy()
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    return subprocess.run(
-        [sys.executable, str(QUALIFICATION_RUNNER_PATH), *args],
-        cwd=ROOT,
-        text=True,
-        encoding="utf-8",
-        capture_output=True,
-        env=env,
-        shell=False,
-        check=False,
-    )
 
 
 def phase_policy_for_trace(trace: dict) -> str:

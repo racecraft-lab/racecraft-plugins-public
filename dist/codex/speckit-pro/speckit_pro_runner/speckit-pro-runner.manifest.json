@@ -3,7 +3,7 @@
   "runner_contract_id": "speckit-pro-runner",
   "selected_runtime_name": "python-stdlib-runner",
   "contract_version": "1.0",
-  "plugin_version": "2.21.0",
+  "plugin_version": "2.21.1",
   "runner_version": "0.1.0",
   "source_revision": "unknown",
   "python_minimum_version": "3.11",
@@ -72,7 +72,7 @@
         "value": "speckit_pro_runner/gates/payloads.py",
         "display": "speckit_pro_runner/gates/payloads.py"
       },
-      "sha256": "5e60c108e0ac0e18e4026a0841b475307401fc30256ed3809a1bdb3d241873c3"
+      "sha256": "4cc24c1460812eb755362a4b020ea3f4942cb0354dcda1bbece0b5372b20995e"
     },
     {
       "path": {
@@ -120,7 +120,7 @@
         "value": "speckit_pro_runner/helpers/mutation.py",
         "display": "speckit_pro_runner/helpers/mutation.py"
       },
-      "sha256": "2c2e5e5995798fd7f8bcc5ac22a48209f6eaa8031d0b6ceeec5b0c2424502656"
+      "sha256": "6f83596584838611409c0a33c35175119bd51aec2e240f93fa0e9996f5e433e3"
     },
     {
       "path": {
@@ -144,7 +144,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "bc2ed940cb710cc20349feb7d8f1f37b6aa1f041a903f4419a3c25eb14abafdf"
+      "sha256": "a71481cf0639ae48ccaa000cc15ea398a085c7bd0170e9c909ce696d4caea72e"
     },
     {
       "path": {
@@ -176,7 +176,7 @@
         "value": "speckit_pro_runner/path_utils.py",
         "display": "speckit_pro_runner/path_utils.py"
       },
-      "sha256": "a1adeed413e74af9aa860a9873e236a74ae0fbd434ca5c636a8cc9be0dd198e9"
+      "sha256": "e25a52bcb82c63a021195c98283e96419f00ce6af9bf95f446c0f12059d84f03"
     },
     {
       "path": {
@@ -184,7 +184,7 @@
         "value": "speckit_pro_runner/runtime.py",
         "display": "speckit_pro_runner/runtime.py"
       },
-      "sha256": "8e538c5b37ffa43f81fac9beac4fbdc5d87d774bd4d69f9700b2859a1870a29b"
+      "sha256": "3cb545c1b202376945f820e039db5e30f80ef411786089901230caf406f1dc91"
     }
   ]
 }
