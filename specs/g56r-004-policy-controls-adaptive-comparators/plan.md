@@ -204,9 +204,15 @@ agreement.
 | Test owner | Planned responsibility | Suite layer |
 |------------|------------------------|-------------|
 | `tests/speckit-pro/unit/test-policy-control-contracts.py` | Codex registry schema/fixture validation, content-address preimage, exact three controls, adaptive replay including unknown closed-domain refusal, no-wrap floor/ceiling streak accounting, retry/cancellation breach pairings, budget-trigger response distinction, reserved partition guard, raw-token ceiling arithmetic, distinct cache read/write ceilings, unobserved-rather-than-zero cache diagnostics, elapsed wall-clock scope, child-dispatch attempt exclusion, all three unordered cache-isolation pairs, and smoke plan/seal refusal cases | Layer 4 |
-| `tests/speckit-pro/unit/test-control-comparison-dominance.py` | Eligibility floors, eight dimensions, direction rules, 10% margin behavior, zero denominator, confidence/multiplicity, verdict-to-claim mapping | Layer 4 |
-| `tests/speckit-pro/unit/test-twin-handoff-completeness.py` | Bidirectional CAR-004/G56R-004 category 1-6 derivation, category 7/8 executable checks, and single sanctioned divergence enforcement | Layer 4 |
+| `tests/speckit-pro/unit/test-control-comparison-dominance.py` | Eligibility floors, eight dimensions, direction rules, 10% margin behavior, zero denominator, confidence/multiplicity, verdict-to-claim mapping, and comparison-owned category 1-6 mirror members including exact null preservation | Layer 4 |
+| `tests/speckit-pro/unit/test-twin-handoff-completeness.py` | Registry-subset mirror RED at T006, then final composed bidirectional CAR-004/G56R-004 category 1-6 derivation after registry, comparison, and partition artifacts exist; category 7/8 executable checks and single sanctioned divergence enforcement | Layer 4 |
 | `tests/speckit-pro/suite-manifest.json` | Existing unchanged authority already registering all three durable test owners; implementation verifies the entries remain present | Layers 1/4 |
+
+Mirror evidence is dependency-ordered rather than prematurely attested:
+T006-T007 prove the registry-owned category 1-6 subset, T020-T021 add the
+comparison-owned subset including null-valued margins, T024-T025 add the
+partition-owned subset, and T032-T033 compose all three into the final
+bidirectional completeness proof required by FR-006 and FR-007.
 
 ## Reviewability Budget
 

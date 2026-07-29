@@ -39,6 +39,11 @@ for _path in (LIB_DIR, LAYER6_LIB_DIR):
 
 from test_result import run_counted  # noqa: E402
 
+try:  # G56R-004 T007 deliverable — absent until the Codex mirror helpers land.
+    import codex_policy_controls  # type: ignore[import-not-found]  # noqa: E402
+except ImportError:  # pragma: no cover - exercised only during the T006 RED phase
+    codex_policy_controls = None  # type: ignore[assignment]
+
 
 PROCESS_ROOT = REPO_ROOT / "docs" / "ai" / "specs" / ".process"
 
@@ -49,6 +54,12 @@ COMPARISON_SCHEMA = CONTRACTS_DIR / "control-comparison.schema.json"
 REGISTRY_INSTANCE = FIXTURES_DIR / "policy-control-registry.json"
 COMPARISON_INSTANCE = FIXTURES_DIR / "control-comparison.json"
 PARTITION_INSTANCE = FIXTURES_DIR / "partition-registry-entries.json"
+
+CAR_004_HANDOFF = PROCESS_ROOT / "CAR-004-twin-handoff.md"
+G56R_CONTRACTS_DIR = TEST_ROOT / "layer6-efficiency" / "contracts-codex-specification"
+G56R_FIXTURES_DIR = TEST_ROOT / "layer6-efficiency" / "fixtures-codex-controls"
+G56R_REGISTRY_SCHEMA = G56R_CONTRACTS_DIR / "policy-control-registry.schema.json"
+G56R_REGISTRY_INSTANCE = G56R_FIXTURES_DIR / "policy-control-registry.json"
 
 CAR_003_ID_PREFIX = "https://racecraft.dev/schemas/car-003/"
 CAR_003_ADDITIVE_RECORDS_ID = f"{CAR_003_ID_PREFIX}car-003-additive-records.schema.json"
@@ -619,6 +630,54 @@ def publication_errors(text: str, entries: list[dict[str, Any]]) -> list[str]:
     return errors
 
 
+class G56R004TwinMirrorTests(unittest.TestCase):
+    """T006 RED: the Codex registry subset mirrors CAR-004 with one divergence."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(
+            codex_policy_controls,
+            "codex_policy_controls is not importable; T007 must implement G56R-004 mirror helpers",
+        )
+        self.module = codex_policy_controls
+
+    def mirror_report(self) -> dict[str, Any]:
+        return self.module.validate_car_004_twin_mirror(
+            car_handoff_path=CAR_004_HANDOFF,
+            codex_registry_schema_path=G56R_REGISTRY_SCHEMA,
+            codex_registry_instance_path=G56R_REGISTRY_INSTANCE,
+        )
+
+    def test_categories_one_through_six_match_car_004_in_both_directions(self) -> None:
+        report = self.mirror_report()
+        self.assertEqual(report["compared_categories"], list(DERIVED_CATEGORIES))
+        self.assertEqual(report["differences"], EMPTY_DIFFERENCES)
+
+    def test_the_only_sanctioned_divergence_is_justified_high_effort(self) -> None:
+        report = self.mirror_report()
+        self.assertEqual(
+            report["sanctioned_divergences"],
+            [
+                {
+                    "category": 3,
+                    "car_value": "orchestration_changing",
+                    "codex_value": "justified_high_effort",
+                    "unchanged_values": ["adaptive", "unpinned"],
+                }
+            ],
+        )
+
+    def test_registry_zeros_units_enums_and_numerics_are_preserved(self) -> None:
+        report = self.mirror_report()
+        preserved = report["preserved_literals"]
+        for literal_group in ("zeros", "units", "enums", "numerics"):
+            with self.subTest(literal_group=literal_group):
+                self.assertTrue(preserved[literal_group])
+        self.assertEqual(preserved["zeros"]["max_confirmation_entries"], 0)
+        self.assertEqual(preserved["units"]["raw_token_ceiling"], "tokens")
+        self.assertIn("justified_high_effort", preserved["enums"]["control_kind"])
+        self.assertEqual(preserved["numerics"]["raw_token_ceiling"], 1000000)
+
+
 class TwinHandoffCompletenessTests(unittest.TestCase):
     def setUp(self) -> None:
         if RECORD_PATH is None:
@@ -840,5 +899,7 @@ class TwinHandoffCompletenessTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(TwinHandoffCompletenessTests)
+    suite = unittest.TestSuite()
+    for case in (G56R004TwinMirrorTests, TwinHandoffCompletenessTests):
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
     raise SystemExit(run_counted(suite, label="test-twin-handoff-completeness"))

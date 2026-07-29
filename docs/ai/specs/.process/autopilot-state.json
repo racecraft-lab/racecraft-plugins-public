@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T05:25:00Z",
-  "active_step": "Phase 7: Implement - Contracts and mirror (T004-T007)",
+  "updated_at": "2026-07-29T06:07:30Z",
+  "active_step": "Phase 7: Implement - Unpinned and adaptive (T008-T015)",
   "status": "in_progress",
   "worktree_binding": {
     "mode": "operator_authorized_in_session_workdir",
@@ -163,11 +163,11 @@
     },
     {
       "step": "Phase 7: Implement - Contracts and mirror (T004-T007)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Unpinned and adaptive (T008-T015)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - High effort and aggregation (T016-T019)",
@@ -430,11 +430,21 @@
       "confidence": {
         "overall": 0.98,
         "task_understanding": 0.99,
-        "approach_clarity": 0.98,
+        "approach_clarity": 0.99,
         "requirements_alignment": 0.99,
         "risk_assessment": 0.96,
-        "completeness": 0.99,
+        "completeness": 0.97,
         "unresolved_error_status": "none"
+      },
+      "implementation_remediation": {
+        "finding_id": "A-002",
+        "initial_severity": "high",
+        "status": "resolved",
+        "resolution": "dependency-ordered registry, comparison, partition, and final composed mirror proof",
+        "gate_g5": "pass",
+        "gate_g6": "pass",
+        "consensus": "clean_pass",
+        "confidence": 0.98
       }
     },
     "confidence_gate": {
@@ -449,11 +459,15 @@
     },
     "implement": {
       "status": "in_progress",
-      "active_group": "contracts_and_mirror",
+      "active_group": "unpinned_and_adaptive",
       "completed_tasks": [
         "T001",
         "T002",
-        "T003"
+        "T003",
+        "T004",
+        "T005",
+        "T006",
+        "T007"
       ],
       "groups": {
         "baseline_and_guardrails": {
@@ -466,6 +480,15 @@
           },
           "allowed_implementation_paths": 12,
           "live_smoke": "operator_only_unrun"
+        },
+        "contracts_and_mirror": {
+          "status": "completed",
+          "tasks": "T004-T007",
+          "registry_red": "545/547",
+          "registry_green": "549/549",
+          "mirror_red": "26/29",
+          "mirror_green": "32/32",
+          "dependency_remediation": "A-002 resolved"
         }
       }
     }
@@ -596,6 +619,42 @@
       "agent": "implement-executor",
       "result": "consumed",
       "artifact": null
+    },
+    {
+      "task": "T004",
+      "agent": "implement-executor",
+      "result": "consumed",
+      "artifact": "tests/speckit-pro/unit/test-policy-control-contracts.py"
+    },
+    {
+      "task": "T005",
+      "agent": "implement-executor",
+      "result": "consumed",
+      "artifact": "tests/speckit-pro/layer6-efficiency/fixtures-codex-controls/policy-control-registry.json"
+    },
+    {
+      "task": "T006",
+      "agent": "implement-executor",
+      "result": "consumed_after_dependency_remediation",
+      "artifact": "tests/speckit-pro/unit/test-twin-handoff-completeness.py"
+    },
+    {
+      "task": "T007",
+      "agent": "implement-executor",
+      "result": "bounded_retries_interrupted_parent_completed_and_verified",
+      "artifact": "tests/speckit-pro/layer6-efficiency/lib/codex_policy_controls.py"
+    },
+    {
+      "task": "A-002 dependency remediation",
+      "agent": "analyze-executor",
+      "result": "interrupted_after_planning_artifact_remediation",
+      "artifact": "specs/g56r-004-policy-controls-adaptive-comparators/tasks.md"
+    },
+    {
+      "task": "A-002 post-remediation confidence",
+      "agent": "default",
+      "result": "consumed",
+      "artifact": "docs/ai/specs/.process/G56R-004-workflow.md"
     }
   ]
 }

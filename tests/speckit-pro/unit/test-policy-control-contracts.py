@@ -72,9 +72,21 @@ except ImportError:  # pragma: no cover - exercised only before the module lands
 
 CONTRACT_ROOT = TEST_ROOT / "layer6-efficiency" / "contracts-claude"
 FIXTURE_ROOT = TEST_ROOT / "layer6-efficiency" / "fixtures-controls"
+CODEX_CONTRACT_ROOT = TEST_ROOT / "layer6-efficiency" / "contracts-codex-specification"
+CODEX_FIXTURE_ROOT = TEST_ROOT / "layer6-efficiency" / "fixtures-codex-controls"
 
 REGISTRY_SCHEMA_PATH = CONTRACT_ROOT / "policy-control-registry.schema.json"
 REGISTRY_SCHEMA_ID = "https://racecraft.dev/schemas/car-004/policy-control-registry.schema.json"
+CODEX_REGISTRY_SCHEMA_PATH = CODEX_CONTRACT_ROOT / "policy-control-registry.schema.json"
+CODEX_REGISTRY_FIXTURE_PATH = CODEX_FIXTURE_ROOT / "policy-control-registry.json"
+CODEX_REGISTRY_SCHEMA_ID = "https://racecraft.dev/schemas/g56r-004/policy-control-registry.schema.json"
+CODEX_REGISTRY_ID = "g56r-004-policy-control-registry"
+CODEX_CONTROL_IDS_BY_KIND = {
+    "unpinned": "g56r-004-unpinned-control",
+    "adaptive": "g56r-004-adaptive-control",
+    "justified_high_effort": "g56r-004-justified-high-effort-control",
+}
+CODEX_CONTROL_KINDS = tuple(CODEX_CONTROL_IDS_BY_KIND)
 JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
 
 # FR-004 and SC-017: a reference that leaves the owning document is refused, so
@@ -852,6 +864,69 @@ class Car003BindingTests(unittest.TestCase):
         for binding in self.document["car_003_bindings"]:
             with self.subTest(binding=binding["id"]):
                 self.assertEqual(sorted(binding), ["digest", "id"])
+
+
+class CodexRegistryFixtureTests(unittest.TestCase):
+    """G56R-004 FR-001..FR-004: the Codex registry freezes IDs and digests."""
+
+    def test_committed_codex_registry_schema_uses_the_g56r_namespace(self) -> None:
+        self.assertTrue(
+            CODEX_REGISTRY_SCHEMA_PATH.exists(),
+            f"missing {CODEX_REGISTRY_SCHEMA_PATH.relative_to(REPO_ROOT)}",
+        )
+        schema = load_json(CODEX_REGISTRY_SCHEMA_PATH)
+        self.assertEqual(schema["$schema"], JSON_SCHEMA_DIALECT)
+        self.assertEqual(schema["$id"], CODEX_REGISTRY_SCHEMA_ID)
+
+    def test_committed_codex_registry_fixture_freezes_ids_preimages_and_binding_drift(self) -> None:
+        self.assertTrue(
+            CODEX_REGISTRY_FIXTURE_PATH.exists(),
+            f"missing {CODEX_REGISTRY_FIXTURE_PATH.relative_to(REPO_ROOT)}",
+        )
+        registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.assertEqual(registry["registry_id"], CODEX_REGISTRY_ID)
+
+        controls = registry["controls"]
+        self.assertEqual(len(controls), 3)
+        kinds = [control["control_kind"] for control in controls]
+        self.assertEqual(sorted(kinds), sorted(CODEX_CONTROL_KINDS))
+        self.assertEqual(len(set(kinds)), len(kinds))
+        self.assertNotIn("orchestration_changing", kinds)
+
+        for control in controls:
+            with self.subTest(control_kind=control["control_kind"]):
+                self.assertEqual(
+                    control["control_id"],
+                    CODEX_CONTROL_IDS_BY_KIND[control["control_kind"]],
+                )
+                self.assertEqual(
+                    control["control_digest"],
+                    record_digest(control, digest_field="control_digest"),
+                )
+                reissued = copy.deepcopy(control)
+                reissued["frozen_at"] = "2026-07-29T00:00:00Z"
+                self.assertNotEqual(
+                    record_digest(reissued, digest_field="control_digest"),
+                    control["control_digest"],
+                )
+
+        self.assertEqual(
+            registry["registry_digest"],
+            record_digest(registry, digest_field="registry_digest"),
+        )
+        self.assertGreater(len(registry["car_003_bindings"]), 0)
+
+        drifted = copy.deepcopy(registry)
+        first_binding = drifted["car_003_bindings"][0]
+        original_digest = first_binding["digest"]
+        drifted_digest = "sha256:" + "0" * 64
+        if original_digest == drifted_digest:
+            drifted_digest = "sha256:" + "1" * 64
+        first_binding["digest"] = drifted_digest
+        self.assertNotEqual(
+            record_digest(drifted, digest_field="registry_digest"),
+            registry["registry_digest"],
+        )
 
 
 class UnpinnedControlTests(unittest.TestCase):
@@ -3604,6 +3679,7 @@ TEST_CASES = (
     SmokeDriverRefusalDurabilityTests,
     RegistryIdentityAndClosureTests,
     Car003BindingTests,
+    CodexRegistryFixtureTests,
     UnpinnedControlTests,
     AdaptiveSignalMapTests,
     AdaptiveRowResolutionTests,

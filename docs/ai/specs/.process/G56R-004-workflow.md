@@ -33,7 +33,7 @@ not part of the autonomous phase loop.
 | Plan | `/speckit-plan` | ✅ Complete | Seven artifacts; 12 declared implementation paths; estimator passed; G3 passed |
 | Checklist | `/speckit-checklist` | ✅ Complete | 121 items; 13 gaps remediated to zero; G4 passed |
 | Tasks | `/speckit-tasks` | ✅ Complete | 38 tasks; 15 RED→GREEN pairs; full 42-FR/19-SC coverage; G5 passed |
-| Analyze | `/speckit-analyze` | ✅ Complete | One MEDIUM docs-command omission remediated; final findings zero; G6 passed |
+| Analyze | `/speckit-analyze` | ✅ Complete | One MEDIUM and one implementation-discovered HIGH dependency finding remediated; final findings zero; G6 passed |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory gate passed: composite 0.98 ≥ threshold 0.90; proceed |
 | Implement | `/speckit-implement` | 🔄 In Progress | TDD implementation; do not run live smokes without operator authorization |
 | Post | Post-Implementation | ⏳ Pending | Verification, reviewability, PR, remediation, and retrospective |
@@ -723,6 +723,7 @@ blocking issue unless a dated, human-approved revision records the change.
 | ID | Severity | Finding | Resolution |
 |----|----------|---------|------------|
 | A-001 | MEDIUM | `quickstart.md` named docs reference generation but omitted the required reference check command. | Added `pnpm --dir docs-site reference:check`; final semantic and marker findings are zero. |
+| A-002 | HIGH | Implementation exposed that T006 required comparison-owned null evidence before the T021 comparison fixture and partition-owned evidence before T025. | Dependency-ordered mirror proof by artifact availability: registry T006-T007, comparison T020-T021, partition T024-T025, and final composed bidirectional proof T032-T033. FR-006/FR-007 remain unchanged and final findings return to zero. |
 
 **Coverage verification:** 42 of 42 functional requirements and 19 of 19
 success criteria have task coverage.
@@ -740,6 +741,20 @@ Approach clarity: 0.98
 Requirements alignment: 0.99
 Risk assessment: 0.96
 Completeness: 0.99
+Unresolved/error status: None.
+```
+
+**Post-remediation consensus:** CLEAN PASS. The dependency-ordered registry,
+comparison, partition, and final-composition tasks preserve FR-006, FR-007, and
+SC-004 without claiming unavailable evidence.
+
+```text
+📊 Confidence: 0.98
+Task understanding: 0.99
+Approach clarity: 0.99
+Requirements alignment: 0.99
+Risk assessment: 0.96
+Completeness: 0.97
 Unresolved/error status: None.
 ```
 
@@ -823,7 +838,7 @@ For every behavior task:
 | Group | Tasks | Completed | Evidence |
 |-------|-------|-----------|----------|
 | Baseline and guardrails | T001-T003 | 3 of 3 | Owner baselines 545/545, 135/135, and 26/26; exact 12-path boundary confirmed; live smoke remains operator-only and unrun |
-| Contract freeze | | | |
+| Contract freeze | T004-T007 | 4 of 4 | Registry RED 545/547 → GREEN 549/549; registry-mirror RED 26/29 → GREEN 32/32; A-002 dependency ordering remediated and revalidated |
 | Policy behavior and replay | | | |
 | Comparison, partition, parity | | | |
 | Integration and operator evidence | | | |
