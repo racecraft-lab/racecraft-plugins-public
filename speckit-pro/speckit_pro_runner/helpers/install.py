@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import copy
-import hashlib
 import json
 import os
 import platform as platform_module
@@ -18,7 +17,7 @@ from typing import Any
 
 from ..envelope import diagnostic, is_diagnostic, response
 from ..merge_utils import deep_merge
-from ..path_utils import resolves_to_current_python
+from ..path_utils import resolves_to_current_python, sha256_text
 from .mutation import empty_mutation, operation_record, resolve_candidate_path, run_mutation_helper, validate_target_path
 from .read_only import find_repo_root, is_relative_to, repo_relative
 
@@ -1466,7 +1465,3 @@ def doctor_report(install_root: Path, inventory: dict[str, Any], repo_root: Path
         "blocked": bool((missing or mismatches) and not fake_home),
         "inventory_file_count": len(inventory["files"]),
     }
-
-
-def sha256_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()

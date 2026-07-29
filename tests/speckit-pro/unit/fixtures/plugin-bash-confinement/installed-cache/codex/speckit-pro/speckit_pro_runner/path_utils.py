@@ -33,6 +33,10 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def sha256_text(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def resolves_to_current_python(executable: str, *, relative_to: Path | None = None) -> bool:
     if executable == sys.executable:
         return True
