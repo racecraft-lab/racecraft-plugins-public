@@ -1186,10 +1186,40 @@ Before starting any task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation (SPA-CONTRACT) | | | |
-| 2 - Brand kit + toggle + voice | | | |
-| 3 - Manifest rows | | | |
-| 4 - Validation + payload regen | | | |
+| 1 - Setup | T001–T002 | 2/2 | Baseline caught a regression — see below |
+| 2 - Foundational | T003–T009 | in flight | Payload wiring, contract, notice, test scaffold |
+| 3 - US1 brand kit | T010–T015 | in flight | |
+| 4 - US2 catalog | T016–T020 | in flight | |
+| 5 - US3 render + scan | T021–T027 | pending | T026/T027 are **manual** |
+| 6 - Polish + regen | T028–T034 | pending | |
+
+**The pre-implementation baseline earned its place.** It came back **4239/4240** against a
+clean tree where G0 had been 4240/4240. `test-privacy-scan` was failing on a literal in
+two spec files — the security checklist's documentation of the **userinfo host-spoofing
+attack**, which a pattern matcher cannot distinguish from an email address. Both
+occurrences now describe the case in words; the attack and the rule are unchanged, and a
+note in the contract records why the notation avoids a literal so nobody restores it.
+Starting implementation on a red suite would have made every later failure ambiguous.
+
+**Payload/proof regeneration was pulled forward from T031, deliberately.** Editing
+`payloads.py` reds eight tests — three payload-completeness, three release-readiness, one
+zero-Bash-guard, and `test_manifest_and_checksum_cover_runner_sources`, which is the
+direct proof: the committed runner manifest and checksum hash every runner `.py`. The
+task executor established this with a 2×2 over three pristine `git archive HEAD` trees
+rather than guessing, and pointed out the consequence — **every task in this feature that
+touches a runner file reds the same eight**, so without regeneration a new defect would
+be indistinguishable from known staleness. Regenerated, back to **4240/4240**. T031 runs
+again over the complete gallery; the operation is idempotent, so this costs nothing.
+
+**FR-018 is verified working, not merely implemented.** `SPA-CONTRACT.md` and
+`UPSTREAM-NOTICE.md` are present in both `dist/claude/` and `dist/codex/` under
+`artifact-gallery/`, at their own relative path rather than remapped to the payload root
+— which is the misattribution the `LICENSE` naming rule guards against.
+
+**Parallel dispatch.** `[P]` groups were dispatched as batched subagents in one message,
+one file per agent, since the orchestrator has no team capability. Six agents ran
+concurrently at peak across six distinct files. The remaining check groups all write the
+single validation module, so Phases 3–6 are necessarily sequential there.
 
 ---
 

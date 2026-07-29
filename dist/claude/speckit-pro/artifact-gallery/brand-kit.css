@@ -1,0 +1,392 @@
+/* ==========================================================================
+ * Racecraft artifact gallery — canonical brand token set
+ * ==========================================================================
+ *
+ * Everything between the two markers below is embedded verbatim into every
+ * gallery artifact. Everything above the start marker is the audit record and
+ * ships to no artifact — that separation is deliberate, and it is why the
+ * usage rules an author must obey are restated inside the block at each
+ * token's point of definition rather than left here.
+ *
+ *
+ * PROVENANCE (FR-012)
+ * --------------------------------------------------------------------------
+ * Upstream brand source
+ *   repository   racecraft-lab/racecraft
+ *   path         docs/brand/*
+ *   revision     30237cceaeb398e9fc08d8570714f24ff661c867
+ *   captured     2026-07-04
+ *
+ *   That repository is private and is named here by repository, path,
+ *   revision, and capture date only. No prose, copy, or wording from it is
+ *   reproduced in this file or in any artifact that embeds the block below.
+ *   What crossed the boundary is colour and typeface identity, nothing else.
+ *
+ * In-repository token source
+ *   path         docs-site/src/styles/brand.css
+ *   revision     tracked in this repository, so it moves with this file; the
+ *                commit that introduces this file is its capture point.
+ *
+ *   That file is the public expression of the same palette. The values below
+ *   were reconciled against it; where the two differ, the difference is
+ *   deliberate and recorded in the corrections at the end of this header.
+ *
+ * Keeping this kit in step with those two sources is a deliberate human
+ * action. No automated cross-repository comparison exists, and this feature
+ * introduces none.
+ *
+ *
+ * AUDITED CONTRAST (FR-005, SC-007)
+ * --------------------------------------------------------------------------
+ * Computed with the WCAG 2.x relative-luminance and contrast-ratio formulas
+ * from the token values defined inside the block below, each theme audited
+ * independently rather than inferred from the other.
+ *
+ * Floors:  4.5:1  normal text (WCAG 1.4.3)
+ *          3.0:1  large text — at least 24px, or at least 18.66px when bold —
+ *                 and user-interface components and meaningful graphics
+ *                 (WCAG 1.4.11)
+ *
+ * Ratios are stated to two decimals and no value is rounded up across a
+ * floor. Every foreground is measured against ALL FOUR surfaces in BOTH
+ * themes, and every token named here is defined in both themes, so each ratio
+ * is independently reproducible from this file alone. A missing row is a
+ * defect, not an implied pass: a pairing that misses its floor carries a
+ * numbered rule below instead of being dropped from the table.
+ *
+ * LIGHT theme — surfaces  --rc-surface #F7F6F4   --rc-surface-raised #FFFFFF
+ *                         --rc-surface-sunken #F1F0EC
+ *                         --rc-surface-muted #E8E5DF
+ *
+ *   foreground                 surf.   raisd   sunkn   muted   verdict
+ *   --rc-text          #111827 | 16.42 | 17.74 | 15.56 | 14.11 | AA body on all four
+ *   --rc-text-muted    #4B5563 |  7.00 |  7.56 |  6.63 |  6.01 | AA body on all four
+ *   --rc-link          #2A6A99 |  5.37 |  5.80 |  5.09 |  4.61 | AA body on all four
+ *   --rc-accent        #3C89C6 |  3.48 |  3.76 |  3.30 |  2.99 | large text + non-text; PROHIBITED on muted (rule 1)
+ *   --rc-brand-red     #dc143c |  4.62 |  4.99 |  4.38 |  3.97 | large text + non-text on all four
+ *   --rc-danger-text   #C4102F |  5.62 |  6.07 |  5.32 |  4.82 | AA body on all four
+ *   --rc-border-strong #847F72 |  3.70 |  3.99 |  3.50 |  3.18 | meaningful non-text on all four
+ *   --rc-border-subtle #E0DED9 |  1.24 |  1.34 |  1.18 |  1.07 | decorative only; PROHIBITED for meaning (rule 2)
+ *
+ * DARK theme — surfaces   --rc-surface #1A1A1A   --rc-surface-raised #1F2937
+ *                         --rc-surface-sunken #141414
+ *                         --rc-surface-muted #1E1E1E
+ *
+ *   foreground                 surf.   raisd   sunkn   muted   verdict
+ *   --rc-text          #E6E6E6 | 13.94 | 11.76 | 14.76 | 13.36 | AA body on all four
+ *   --rc-text-muted    #9CA3AF |  6.86 |  5.78 |  7.26 |  6.57 | AA body on all four
+ *   --rc-link          #7CB3DD |  7.75 |  6.54 |  8.20 |  7.42 | AA body on all four
+ *   --rc-accent        #3C89C6 |  4.63 |  3.90 |  4.90 |  4.43 | large text + non-text on all four
+ *   --rc-brand-red     #dc143c |  3.49 |  2.94 |  3.69 |  3.34 | large text + non-text; PROHIBITED on raised (rule 3)
+ *   --rc-danger-text   #FF6B85 |  6.38 |  5.38 |  6.75 |  6.11 | AA body on all four
+ *   --rc-border-strong #6B7280 |  3.60 |  3.04 |  3.81 |  3.45 | meaningful non-text on all four; 3.04 is the binding minimum
+ *   --rc-border-subtle #404040 |  1.68 |  1.42 |  1.78 |  1.61 | decorative only; PROHIBITED for meaning (rule 2)
+ *
+ * Focus ring. The indicator is --rc-link in both themes and clears the 3:1
+ * non-text floor on every surface it can appear on — 5.37 / 5.80 / 5.09 /
+ * 4.61 light and 7.75 / 6.54 / 8.20 / 7.42 dark, reading surface / raised /
+ * sunken / muted (FR-023).
+ *
+ *
+ * PROHIBITIONS AND CORRECTIONS
+ * --------------------------------------------------------------------------
+ * These are the complete set of pairings above that miss their floor. Each
+ * names the token to use instead; none is left to judgement.
+ *
+ * 1. --rc-accent is PROHIBITED on --rc-surface-muted in the light theme.
+ *    #3C89C6 on #E8E5DF measures 2.99, just under the 3:1 non-text floor.
+ *    Use --rc-link there instead (4.61 on that surface).
+ *
+ * 2. --rc-border-subtle is PROHIBITED wherever a boundary conveys meaning, in
+ *    both themes. It measures 1.07–1.34 light and 1.42–1.78 dark against the
+ *    surfaces, so it is decorative only. Use --rc-border-strong for any
+ *    boundary that carries meaning — form-control edges, state borders, and
+ *    the focus indicator.
+ *
+ * 3. --rc-brand-red is PROHIBITED as a foreground on --rc-surface-raised in
+ *    the dark theme. #dc143c on #1F2937 measures 2.94, under the 3:1 non-text
+ *    floor. Use --rc-danger-text (#FF6B85, 5.38 on that surface) instead.
+ *    The prohibition is exactly that narrow — that pairing, in that role, in
+ *    that theme. Brand red passes on the other three dark surfaces
+ *    (3.34–3.69), and brand red as a BACKGROUND carrying #FFFFFF text
+ *    measures 4.99 and stays available in both themes.
+ *
+ * 4. --rc-border-strong in the light theme is #847F72, corrected from
+ *    #8A8578. The earlier value measured 2.93 against --rc-surface-muted —
+ *    below the 3:1 floor — which an audit against --rc-surface alone (3.41)
+ *    did not surface. This token exists to carry boundaries that convey
+ *    meaning, so prohibiting it on a surface would be a trap; it is darkened
+ *    one step instead and clears 3:1 on all four light surfaces (3.18–3.99).
+ *    The dark value #6B7280 needed no change (3.04–3.81).
+ *
+ * Rules 3 and 4 are the two classes of FR-025 resolution side by side, and
+ * the difference between them is the whole rule: a functional token that
+ * misses its floor is re-valued (4); a brand primitive is not, so the need it
+ * cannot serve is routed to a functional sibling (3). That rule is restated
+ * inside the block, at the point of definition, because this header does not
+ * ship.
+ *
+ * This file makes no external reference of any kind — no font import, no
+ * remote asset, no network position. The brand typeface request belongs in
+ * the artifact's head block, not here.
+ * ========================================================================== */
+
+/* BRAND-KIT:START */
+:root {
+  /* Declares support for both schemes so the browser's own surfaces — form
+   * controls, scrollbars, the default canvas — start from the reader's
+   * operating-system preference. This is NOT sufficient on its own: it
+   * resolves against the OS, not against this document's data-theme. The two
+   * data-theme blocks below therefore set color-scheme explicitly in each
+   * direction (FR-004). */
+  color-scheme: light dark;
+
+  /* ---- Surfaces — the 70% warm neutral, dominant by area ---------------- */
+  --rc-surface: #F7F6F4;
+  --rc-surface-raised: #FFFFFF;
+  --rc-surface-sunken: #F1F0EC;
+  --rc-surface-muted: #E8E5DF;
+
+  /* ---- Borders --------------------------------------------------------- */
+  /* Decorative only. Measures 1.07–1.34 here and 1.42–1.78 dark, so it never
+   * carries meaning — see prohibition rule 2. */
+  --rc-border-subtle: #E0DED9;
+  /* Meaningful non-text: form-control edges, state borders, the focus ring.
+   * Audited to at least 3:1 on all four surfaces in both themes. */
+  --rc-border-strong: #847F72;
+
+  /* ---- Text ------------------------------------------------------------ */
+  --rc-text: #111827;
+  --rc-text-muted: #4B5563;
+  --rc-link: #2A6A99;
+
+  /* ---- TOKEN CLASSES (FR-025) ------------------------------------------
+   * A FUNCTIONAL token exists to serve a stated purpose, and must clear its
+   * contrast floor against every surface it may pair with. When it does not,
+   * its value is corrected: --rc-border-strong above was #8A8578 and measured
+   * 2.93 on the muted surface, so it was re-valued to #847F72.
+   *
+   * A BRAND PRIMITIVE is not re-valued by engineering to resolve a contrast
+   * failure. The need it cannot serve is routed instead to a functional
+   * sibling that can, and that sibling is named here beside it so an author
+   * reading one sees the other. Any restriction on a primitive is stated as
+   * narrowly as the measurement supports — the failing pairing, in the
+   * failing role, in the failing theme — never as a blanket ban.
+   * -------------------------------------------------------------------- */
+
+  /* Brand primitive. 20% of the palette. Role: large text (at least 24px, or
+   * at least 18.66px bold) and meaningful non-text only — it is not body-safe
+   * in either theme. PROHIBITED on --rc-surface-muted in this theme (2.99);
+   * use --rc-link there. */
+  --rc-accent: #3C89C6;
+
+  /* Brand primitive. 10% of the palette, punctuation-level emphasis. Role:
+   * large text and meaningful non-text only.
+   *
+   * PROHIBITED as a foreground on --rc-surface-raised in the dark theme,
+   * where it measures 2.94 against #1F2937. Its functional sibling
+   * --rc-danger-text (#FF6B85 dark, 5.38 there) carries that need instead.
+   * The restriction is that pairing in that role only: brand red as a
+   * BACKGROUND carrying #FFFFFF text measures 4.99 and is available in both
+   * themes, and it passes on the other three dark surfaces (3.34–3.69). */
+  --rc-brand-red: #dc143c;
+
+  /* Functional sibling of --rc-brand-red: the AA-body-safe red, for red text
+   * at body size and for anywhere brand red cannot go. Re-valued per theme —
+   * that is what makes it functional rather than a primitive. */
+  --rc-danger-text: #C4102F;
+
+  /* ---- USE OF COLOUR (FR-021) ------------------------------------------
+   * A separate obligation from contrast and from the punctuation-level
+   * reservation above, and neither of those discharges it.
+   *
+   * Brand red must never be the SOLE visual means of conveying information,
+   * indicating an action, prompting a response, or distinguishing an element.
+   * Wherever red carries a status or a distinction, that meaning must also be
+   * available without colour — as text, a shape, a glyph, or a position — so
+   * it survives for a reader who cannot perceive the hue and in a monochrome
+   * print or screenshot. A red that clears its ratio still fails this rule if
+   * colour is the only thing setting the element apart.
+   *
+   * The reservation is a rule about HOW MUCH red is used and at what sizes.
+   * This is a rule about what red is allowed to MEAN on its own. Satisfying
+   * one says nothing about the other.
+   * -------------------------------------------------------------------- */
+
+  /* ---- Typefaces (FR-024) ----------------------------------------------
+   * The brand face leads every stack. font-family is a preference list and
+   * the first AVAILABLE face wins, so a system face placed first would shadow
+   * the brand face permanently.
+   *
+   * The display and body brand faces are both sans-serif, so their fallback
+   * stacks name DIFFERENT concrete faces rather than both collapsing onto the
+   * same system face. Where a platform has neither named fallback, hierarchy
+   * still holds: it is carried by semantic heading level, size, and weight
+   * below, never by typeface identity. Offline the rendering degrades in
+   * appearance only, never in structure.
+   * -------------------------------------------------------------------- */
+  --rc-font-display: 'Space Grotesk', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+  --rc-font-body: 'Geist', 'Helvetica Neue', Arial, system-ui, sans-serif;
+  --rc-font-mono: 'Fira Code', ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* Dark values follow the reader's operating-system preference by default. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rc-surface: #1A1A1A;
+    --rc-surface-raised: #1F2937;
+    --rc-surface-sunken: #141414;
+    --rc-surface-muted: #1E1E1E;
+
+    --rc-border-subtle: #404040;
+    --rc-border-strong: #6B7280;
+
+    --rc-text: #E6E6E6;
+    --rc-text-muted: #9CA3AF;
+    --rc-link: #7CB3DD;
+
+    --rc-accent: #3C89C6;
+
+    /* Brand primitive, identical in both themes — a primitive is not
+     * re-valued. PROHIBITED as a foreground on --rc-surface-raised here
+     * (2.94); use --rc-danger-text (#FF6B85, 5.38) for that. As a background
+     * with #FFFFFF text it is unaffected. */
+    --rc-brand-red: #dc143c;
+
+    /* Functional token, re-valued for this theme. */
+    --rc-danger-text: #FF6B85;
+  }
+}
+
+/* An explicit reader choice wins over the operating-system preference, and
+ * sets the browser's own scheme with it so native controls follow (FR-004). */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --rc-surface: #1A1A1A;
+  --rc-surface-raised: #1F2937;
+  --rc-surface-sunken: #141414;
+  --rc-surface-muted: #1E1E1E;
+
+  --rc-border-subtle: #404040;
+  --rc-border-strong: #6B7280;
+
+  --rc-text: #E6E6E6;
+  --rc-text-muted: #9CA3AF;
+  --rc-link: #7CB3DD;
+
+  --rc-accent: #3C89C6;
+
+  /* Brand primitive, identical in both themes. PROHIBITED as a foreground on
+   * --rc-surface-raised here (2.94); use --rc-danger-text (#FF6B85, 5.38). */
+  --rc-brand-red: #dc143c;
+
+  --rc-danger-text: #FF6B85;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --rc-surface: #F7F6F4;
+  --rc-surface-raised: #FFFFFF;
+  --rc-surface-sunken: #F1F0EC;
+  --rc-surface-muted: #E8E5DF;
+
+  --rc-border-subtle: #E0DED9;
+  --rc-border-strong: #847F72;
+
+  --rc-text: #111827;
+  --rc-text-muted: #4B5563;
+  --rc-link: #2A6A99;
+
+  --rc-accent: #3C89C6;
+  --rc-brand-red: #dc143c;
+  --rc-danger-text: #C4102F;
+}
+
+/* Hierarchy is carried by level, size, and weight so it survives the brand
+ * faces being unavailable (FR-024). */
+body {
+  background-color: var(--rc-surface);
+  color: var(--rc-text);
+  font-family: var(--rc-font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  /* The cross-theme colour change — the kit's one animation, and what the
+   * reduced-motion block below exists to neutralise. */
+  transition: background-color 160ms linear, color 160ms linear;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--rc-font-display);
+  line-height: 1.25;
+}
+
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+h4,
+h5,
+h6 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--rc-font-mono);
+  font-size: 0.9375rem;
+}
+
+a {
+  color: var(--rc-link);
+}
+
+/* Every interactive element carries a visible keyboard focus indicator, and
+ * the indicator is never suppressed without an equivalent replacement
+ * (FR-023, WCAG 2.4.7). --rc-link clears the 3:1 non-text floor on every
+ * surface it can appear on in both themes. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+details:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--rc-link);
+  outline-offset: 2px;
+}
+
+/* A reader who asks for reduced motion gets none, including the cross-theme
+ * colour transition above (FR-023). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* BRAND-KIT:END */

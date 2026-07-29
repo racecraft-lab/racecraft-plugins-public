@@ -118,7 +118,8 @@
         { "path": "tests/speckit-pro/unit/test-efficiency-runner-portability.py", "label": "test-efficiency-runner-portability", "baseline": "tests/speckit-pro/parity/bash-to-python/test-efficiency-runner-portability-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-parity-extractors.py", "label": "test-parity-extractors", "baseline": "tests/speckit-pro/parity/bash-to-python/test-parity-extractors-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-parity-judge.py", "label": "test-parity-judge", "baseline": "tests/speckit-pro/parity/bash-to-python/test-parity-judge-baseline.txt" },
-        { "path": "tests/speckit-pro/unit/test-moc-lint-exit-codes.py", "label": "test-moc-lint-exit-codes", "baseline": "tests/speckit-pro/parity/bash-to-python/test-moc-lint-exit-codes-baseline.txt" }
+        { "path": "tests/speckit-pro/unit/test-moc-lint-exit-codes.py", "label": "test-moc-lint-exit-codes", "baseline": "tests/speckit-pro/parity/bash-to-python/test-moc-lint-exit-codes-baseline.txt" },
+        { "path": "tests/speckit-pro/unit/test-artifact-gallery.py", "label": "test-artifact-gallery", "baseline": null }
       ]
     },
     {

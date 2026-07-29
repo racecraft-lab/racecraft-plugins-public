@@ -276,6 +276,222 @@ its declared review surfaces. Present when the change touches a file that
 documents or drives a multi-step process — a workflow definition, a runbook, an
 install or release procedure — rather than only the code that process runs.
 
+## Accessibility obligations you inherit
+
+The two canonical blocks carry most of this for you. What follows is the part
+that stays yours once they are embedded, plus the rules that decide whether the
+blocks keep working after your own markup lands.
+
+### Color pairings: audited, and three that are prohibited
+
+Every foreground/background pairing the kit permits meets WCAG AA — at least
+4.5:1 for normal text (1.4.3), and at least 3:1 for large text and for non-text
+things that carry meaning, such as borders, icons, chart strokes, and the focus
+ring (1.4.11). Large text means at least 24px, or at least 18.66px when bold.
+
+The audit itself lives in `brand-kit.css`, above the start marker: every token
+measured against all four surfaces, in both themes, with each ratio written out
+unrounded. Look a pairing up there rather than re-deriving it. The table is not
+repeated here — there is one audit, and a second copy would only drift from it.
+
+Three pairings do not meet their floor and are prohibited. Each names what to
+use instead:
+
+| Prohibited | Measured | Use instead |
+|---|---|---|
+| `--rc-accent` on `--rc-surface-muted`, light theme | 2.99 | `--rc-link` |
+| `--rc-brand-red` on `--rc-surface-raised`, dark theme | 2.94 | `--rc-danger-text` |
+| `--rc-border-subtle` for any boundary that conveys meaning, either theme | 1.07–1.78 | `--rc-border-strong` |
+
+For red body copy use `--rc-danger-text` in either theme; `--rc-brand-red` is
+audited for large text and non-text use only.
+
+**Why a prohibition rather than a corrected value.** The kit distinguishes two
+token classes at their point of definition. A **functional token** exists to
+serve a stated purpose, so when it misses its floor its value is corrected. A
+**brand primitive** is not re-valued to resolve a contrast failure; the need it
+cannot serve is routed to a functional sibling named beside it, which is why
+`--rc-brand-red` keeps its value and `--rc-danger-text` exists. Prohibitions are
+written as narrowly as the measurement supports — one pairing in one theme,
+never a blanket ban on a token.
+
+A pairing that neither meets its floor nor carries a prohibition naming its
+replacement is a defect in the kit. Report it rather than working around it
+locally. Colors you introduce outside the marked block are outside the audit:
+reuse a token, or measure the new pairing the same way before relying on it.
+
+### Color is never the only carrier of meaning
+
+Wherever red — or any color — marks a status, an action, or a distinction, that
+meaning is also available without color: as text, a shape, a glyph, or a
+position (WCAG 1.4.1, Level A). It has to survive for a reader who cannot
+perceive the hue, and in a monochrome print or screenshot.
+
+This is a separate rule from the two it gets confused with, and neither of them
+discharges it:
+
+- The kit's punctuation-level reservation for brand red governs **how much** red
+  is used and at what sizes.
+- The contrast audit governs **legibility**. A red that clears 7:1 still fails
+  this rule if the color is the only thing saying "this one is the problem".
+
+### The theme control
+
+The control ships inside the head block and is created from there at run time.
+You do not author it, replace it, or wrap it. Embedding the block is what gives
+your artifact a control that:
+
+- is reachable in the normal focus order and activatable by keyboard alone
+  (WCAG 2.1.1, Level A) — so add no positive `tabindex` anywhere in your
+  template, and trap no focus;
+- is a real `button` carrying a stable, human-readable name that does not depend
+  on an icon glyph, plus a state that says which theme is active and **changes**
+  between the two positions (WCAG 4.1.2, Level A);
+- keeps working when the browser refuses storage for a local file: the switch
+  still applies for the session and nothing is reported as an error. Persistence
+  is what degrades there, never the control.
+
+The stored theme value is untrusted input. The block validates it against the
+two theme names on read, applies a literal from that set rather than the string
+it read back, and discards anything else in favor of the operating-system
+signal. If your template needs to know the current theme, read the `data-theme`
+attribute on the root element — never read storage yourself, and never place a
+stored value into markup, into a selector, or into any other executable
+position. A second reader re-opens the hole the block closes.
+
+### Focus and motion
+
+Every interactive element in your artifact carries the kit's focus-visible
+treatment (WCAG 2.4.7, Level AA). Suppressing the indicator without an
+equivalent replacement is prohibited — a removed outline with nothing in its
+place is a failure, not a style choice. The indicator's own contrast is audited
+like any other non-text pairing; it uses `--rc-link` and clears 3:1 on every
+surface in both themes.
+
+A reader who asks for reduced motion gets none: no animation, no transition, and
+no smooth scrolling, including the cross-theme color transition. The kit's rule
+covers what the kit declares. Motion your template adds is yours to suppress
+under the same preference.
+
+### Typefaces
+
+The font request in the head block carries the parameter that produces swap
+behavior. Do not drop it and do not tidy the request: without that parameter the
+provider serves a blocking default, and there is then a period during which text
+is rendered invisibly while the face loads. Validation fails a request missing
+it.
+
+Three roles — display, body, and mono — each declare a fallback stack naming a
+different concrete face, so the three stay distinguishable when the brand faces
+are unavailable. The brand face leads each stack, because a stack is a
+first-available list and a system face placed first shadows the brand one.
+
+Do not carry hierarchy on typeface identity. Heading rank rides on semantic
+heading level, size, and weight, which is what keeps an offline rendering
+degraded in appearance and never in structure.
+
+## Security obligations you inherit
+
+A gallery artifact is an executable document: it carries inline behavior and a
+human opens it straight from a filesystem. Two controls keep that honest, and
+they are not equal — the prohibitions below are the primary control, and the
+declared policy is the backstop.
+
+### Constructs no artifact may contain
+
+| Prohibited | Why |
+|---|---|
+| A `base` element | It redefines what every relative reference in the document resolves to. All-relative references plus one base element pointing elsewhere leaves no foreign host in any scanned position while the browser loads everything from that host — the one construct that defeats the external-reference scan completely. A single-file artifact has no use for it. |
+| A reference beginning with two slashes and no scheme | It resolves against the document's own scheme, which here is the local-file scheme rather than a network one, and it names a foreign host in a form no pattern keyed on an explicit scheme matches. |
+| An `on*` event-handler attribute | Executable content in a position no resource-load scan reads. It can hold a network destination while the element's own source attribute stays innocuous. |
+| A `srcdoc` attribute | A complete nested document, carrying its own behavior, inside an attribute value. |
+| A `form` element with a submission target | Sends rather than fetches. |
+| A `ping` attribute on any element | Sends rather than fetches, and it rides the anchor element the navigation exemption waves through — so the one element deliberately exempted would otherwise carry a pure network beacon. |
+
+None of these is a judgment call: validation fails an artifact carrying any of
+them and names it. If the template you are porting uses one, the port drops it —
+a construct on this list is never ported and never reintroduced.
+
+These prohibitions do not touch the attribution header described under
+**Source attribution** above: it is an HTML comment, and comments and visible
+text are not resource-loading positions.
+
+### The policy declaration in the head block
+
+Every artifact carries an in-document policy declaration, and it ships inside
+the canonical head block — embedding the block is what satisfies this. Do not
+write your own, and do not move it.
+
+- **What it restricts**: base URI, form submission, embedded objects, nested
+  documents, and outbound connections. Artifacts run with no server, so no
+  response header can reach them and an in-document declaration is the only
+  policy channel available.
+- **It names `'none'` for each restricted directive, never `'self'`.** A
+  document opened from a filesystem has an implementation-defined and usually
+  opaque origin, so `'self'` resolves inconsistently between browsers. Explicit
+  scheme tokens are permitted where an artifact genuinely needs one.
+- **It names none of the three directives that in-document delivery strips** —
+  reporting endpoint, frame ancestry, and sandbox. They are discarded silently
+  when delivered this way, so naming one marks an author relying on protection
+  that was removed.
+- **It sits as a direct child of the head element with nothing content-bearing
+  before it**; only a character-encoding declaration may precede it. Anywhere
+  else the whole policy is discarded at parse, and after content it does not
+  cover the content that came first.
+
+Every one of those conditions is validated, because the realistic failure here
+is an authoring mistake rather than a browser refusing the policy — and each
+mistake leaves an artifact that reads as protected and is not, with no visible
+symptom beyond a console message at most.
+
+The directive set is deliberately narrow. An in-document declaration cannot
+carry framing or sandbox restrictions at all, and the artifacts' own inline
+behavior means it cannot meaningfully restrict script. The set is chosen so that
+nothing the gallery legitimately does is restricted by it.
+
+**Why this is the secondary control.** A prohibition enforced by validation
+holds in every consumer that ever opens the file — preview panes, webviews,
+converters, diff viewers — because the offending construct is simply not in the
+document. A declared policy takes effect only where a full browser engine parses
+the document. The prohibitions guarantee the property; the declaration covers
+the residue.
+
+### Artifacts generated from repository content
+
+**Read this part if your spec generates artifacts rather than porting them.**
+The external-reference scan reads the gallery's own source files in this
+repository. It does not reach an artifact an authoring agent writes at run time,
+and nothing else will either. Whatever safety a generated artifact has is what
+its generator put there, so the obligation below is not discharged by anything
+upstream of you.
+
+Values drawn from repository or pull-request material — a title, a branch name,
+a self-review finding, a commit message, diff content, a path — are **untrusted
+input to an executable document**. That they came from your own repository
+changes nothing: none of it was written to be safe inside a file that carries
+inline behavior.
+
+Four contexts an interpolated value may **never** enter:
+
+- a script body,
+- a style body,
+- a URL-valued attribute,
+- an event-handler attribute (prohibited outright in any case).
+
+There is no escaping rule for those four; the value goes somewhere else. Put it
+in a text position — a text node, or a plain data attribute — and have the
+inline behavior read it back from the document. Everywhere else, escape it for
+the context it actually lands in.
+
+The flat prohibition is deliberate, and it is both simpler and stronger than a
+per-context escaping rule. The common failure is not missing escaping — it is
+escaping for the wrong context. A value escaped for HTML text and then written
+into a script body is not protected at all, and it looks handled.
+
+The prohibitions and the declared policy above apply to a generated artifact
+exactly as they do to a ported one, and a generator satisfies them when it
+writes the file, because nothing checks it afterwards.
+
 ## One authoring rule that keeps the shipped copies honest
 
 No gallery file may contain a relative reference into a skills directory of the
