@@ -2,7 +2,7 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T12:12:01Z",
+  "updated_at": "2026-07-29T12:17:20Z",
   "active_step": "Post: PR Packet/Body Generation",
   "status": "in_progress",
   "worktree_binding": {
@@ -255,11 +255,20 @@
     },
     {
       "step": "Post: PR Packet/Body Generation",
-      "status": "pending"
+      "status": "in_progress",
+      "result": "emitted_and_read_only_validated_awaiting_persisted_validation",
+      "packet_path": "specs/g56r-004-policy-controls-adaptive-comparators/.process/pr-packets/g56r-004.json",
+      "body_file": "specs/g56r-004-policy-controls-adaptive-comparators/.process/pr-packets/g56r-004/body.md",
+      "read_only_validation": {
+        "status": "passed",
+        "pr_blocked": false,
+        "writes_state": false
+      }
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed",
+      "result": "public_prose_refined_protected_sections_unchanged_validation_passed"
     },
     {
       "step": "Post: PR Creation",

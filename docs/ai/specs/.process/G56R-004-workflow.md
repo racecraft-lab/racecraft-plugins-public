@@ -862,8 +862,8 @@ For every behavior task:
 | Post: Self-Review | Completed | Four-question audit recorded below with current test, edge-case, FR/task, and tidiness evidence; zero orphan findings |
 | Post: UAT Runbook Generation | Skipped | `generate-uat-skeleton` is deferred and no committed feature-local UAT runbook exists; UAT validation is unavailable |
 | Post: Final Reviewability Backstop | Completed | Proceed on current committed pass evidence at `8fc3bc74`; single-PR route remains authoritative and no PR marker plan exists |
-| Post: PR Packet/Body Generation | Pending | Emit and validate a current feature-local packet |
-| Post: PR Body Generation | Pending | Verify packet-owned public prose |
+| Post: PR Packet/Body Generation | In Progress | `pr-packet-output` dry-run and apply emitted the current feature-local packet/body; refined packet passed fresh read-only validation with `pr_blocked=false` and outer `writes_state=false`; clean-worktree validation persistence remains |
+| Post: PR Body Generation | Completed | Refined only the three packet-sanctioned editable prose regions for public readability; protected sections remained unchanged and fresh validation passed |
 | Post: PR Creation | Pending | Create only from validated packet fields |
 | Post: Review Remediation | Pending | Resolve actionable review feedback |
 | Post: Retrospective | Pending | Final canonical Post item |
