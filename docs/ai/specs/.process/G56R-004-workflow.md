@@ -36,7 +36,7 @@ not part of the autonomous phase loop.
 | Analyze | `/speckit-analyze` | ✅ Complete | One MEDIUM and one implementation-discovered HIGH dependency finding remediated; final findings zero; G6 passed |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory gate passed: composite 0.98 ≥ threshold 0.90; proceed |
 | Implement | `/speckit-implement` | 🔄 In Progress | TDD implementation; do not run live smokes without operator authorization |
-| Post | Post-Implementation | ⏳ Pending | Verification, reviewability, PR, remediation, and retrospective |
+| Post | Post-Implementation | 🔄 In Progress | Verification and code review complete; reviewability, PR, remediation, and retrospective remain |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -853,11 +853,11 @@ For every behavior task:
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Post: Doctor Extension Check | Pending | Run when the optional doctor command is callable; otherwise record the installed-extension gap |
-| Post: Verify Implementation | Pending | Run the installed verify extension |
-| Post: Verify Tasks Phantom Check | Pending | Run the configured verify-tasks hook |
-| Post: Code Review | Pending | Independent review of `origin/main...HEAD` |
-| Post: Integration Suite | Pending | Run the Python-authoritative full suite |
+| Post: Doctor Extension Check | Completed | Passed with 5/5 templates, agent config, Python runner, constitution, and 2/2 feature checks; two non-blocking warnings: legacy Claude command files absent and extensions.yml omits the registry-enabled speckit-utils entry |
+| Post: Verify Implementation | Completed | Verify extension passed with zero findings after resolving the dedicated feature directory explicitly |
+| Post: Verify Tasks Phantom Check | Completed | 38/38 tasks verified, zero flagged, zero missing task-referenced paths; report at `specs/g56r-004-policy-controls-adaptive-comparators/verify-tasks-report.md` |
+| Post: Code Review | Completed | Fourteen completed independent passes found and remediated 24 Important correctness/privacy gaps with strict RED→GREEN coverage; the final pass returned `NO FINDINGS` |
+| Post: Integration Suite | Completed | 5194/5194 passed: Layer 1 1428/1428, Layer 4 3580/3580, Layer 5 186/186; privacy 10/10 |
 | Post: Reviewability Diff Gate | Pending | Evaluate current committed reviewability evidence |
 | Post: Self-Review | Pending | Record the four-question audit |
 | Post: UAT Runbook Generation | Pending | Reuse or fail-open under the deferred helper contract |
@@ -872,16 +872,16 @@ For every behavior task:
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks complete or operator-only gaps explicitly identified
-- [ ] Full repository suite passes with exact counts recorded
-- [ ] New tests are declared in `tests/speckit-pro/suite-manifest.json`
-- [ ] Required docs reference generation/check passes
-- [ ] Zero frozen G56R-003/CAR-003 contract modifications
-- [ ] CAR-004 twin completeness passes in both directions
-- [ ] Exactly one sanctioned platform divergence remains
-- [ ] Reserved G56R-011 partition is mechanically untouched
-- [ ] No raw live model/prompt captures committed
-- [ ] Unrun live smokes and affected success criteria are named honestly
+- [x] All tasks complete or operator-only gaps explicitly identified
+- [x] Full repository suite passes with exact counts recorded
+- [x] Existing test owners remain declared in `tests/speckit-pro/suite-manifest.json`; no manifest edit was required
+- [x] Required docs reference generation/check passes
+- [x] Zero frozen G56R-003/CAR-003 contract modifications
+- [x] CAR-004 twin completeness passes in both directions
+- [x] Exactly one sanctioned platform divergence remains
+- [x] Reserved G56R-011 partition is mechanically untouched
+- [x] No raw live model/prompt captures committed
+- [x] Unrun live smokes and affected success criteria are named honestly
 - [ ] PR title passes the live release-readiness gate format
 - [ ] PR created, reviewed, and merged through normal branch protection
 

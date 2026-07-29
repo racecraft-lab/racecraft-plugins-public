@@ -70,16 +70,18 @@ The canonical task-level mapping is retained in the `tasks.md` Coverage Matrix.
 
 ## Verification Evidence
 
-- Policy owner: 689/689 assertions passed at the T033 boundary.
-- Comparison owner: 170/170 assertions passed at the T033 boundary.
-- Twin handoff owner: 41/41 assertions passed at the T033 boundary.
+- Policy owner: 730/730 assertions passed after Post review remediation.
+- Comparison owner: 172/172 assertions passed after Post review remediation.
+- Twin handoff owner: 50/50 assertions passed after Post review remediation.
 - Deterministic replay fixture: 18/18 cases passed.
 - Privacy scan: 10/10 assertions passed after the raw-capture exclusion fix.
+- Fourteen completed independent review passes remediated 24 Important findings;
+  the final pass returned `NO FINDINGS`.
 - Final narrow verification passed at the same counts above.
 - Docs reference generation produced 7 pages and the subsequent reference check
   reported the pages current.
-- The authoritative default repository suite passed 5142/5142: Layer 1
-  1428/1428, Layer 4 3528/3528, and Layer 5 186/186.
+- The authoritative default repository suite passed 5194/5194: Layer 1
+  1428/1428, Layer 4 3580/3580, and Layer 5 186/186.
 
 ## Known Gaps
 

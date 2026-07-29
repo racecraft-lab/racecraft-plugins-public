@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ from claude_score_bundle import (
     SERVICE_REROUTE_FAILURE_CODE,
     failure_plane_for,
 )
+import codex_control_comparison as _codex_control_comparison
 
 
 class ControlContractError(ValueError):
@@ -25,13 +27,25 @@ class ControlContractError(ValueError):
 
 
 _CAR_SCHEMA_ID = "https://racecraft.dev/schemas/car-004/policy-control-registry.schema.json"
+_CAR_COMPARISON_SCHEMA_ID = (
+    "https://racecraft.dev/schemas/car-004/control-comparison.schema.json"
+)
 _CODEX_SCHEMA_ID = "https://racecraft.dev/schemas/g56r-004/policy-control-registry.schema.json"
+_CODEX_COMPARISON_SCHEMA_ID = (
+    "https://racecraft.dev/schemas/g56r-004/control-comparison.schema.json"
+)
 _CAR_REGISTRY_ID = "car-004-policy-control-registry"
 _CODEX_REGISTRY_ID = "g56r-004-policy-control-registry"
+_CAR_COMPARISON_ID = "car-004-control-comparison"
+_CODEX_COMPARISON_ID = "g56r-004-control-comparison"
 _CONTROL_ID_MAP = {
     "g56r-004-unpinned-control": "car-004-unpinned-control",
     "g56r-004-adaptive-control": "car-004-adaptive-control",
     "g56r-004-justified-high-effort-control": "car-004-orchestration-changing-control",
+}
+_PARTITION_ID_MAP = {
+    "G56R-004-SMOKE": "CAR-004-SMOKE",
+    "G56R-011-RESERVED-COMPARISON": "CAR-011-RESERVED-COMPARISON",
 }
 _CODEX_ONLY_UNPINNED_FIELDS = {
     "authentication_mode",
@@ -104,8 +118,33 @@ def _load_json(path: Path) -> Any:
 
 
 _LAYER6_ROOT = Path(__file__).resolve().parent.parent
+_CAR_REGISTRY_SCHEMA_PATH = (
+    _LAYER6_ROOT / "contracts-claude" / "policy-control-registry.schema.json"
+)
+_CAR_REGISTRY_PATH = (
+    _LAYER6_ROOT / "fixtures-controls" / "policy-control-registry.json"
+)
+_FROZEN_CODEX_REGISTRY_SCHEMA_PATH = (
+    _LAYER6_ROOT
+    / "contracts-codex-specification"
+    / "policy-control-registry.schema.json"
+)
+_FROZEN_CODEX_REGISTRY_PATH = (
+    _LAYER6_ROOT / "fixtures-codex-controls" / "policy-control-registry.json"
+)
 _FROZEN_CODEX_PARTITION_ENTRIES_PATH = (
     _LAYER6_ROOT / "fixtures-codex-controls" / "partition-registry-entries.json"
+)
+_FROZEN_CODEX_REPLAY_CASES_PATH = (
+    _LAYER6_ROOT / "fixtures-codex-controls" / "replay-cases.json"
+)
+_FROZEN_CAR_HANDOFF_PATH = (
+    _LAYER6_ROOT.parents[2]
+    / "docs"
+    / "ai"
+    / "specs"
+    / ".process"
+    / "CAR-004-twin-handoff.md"
 )
 _SCORE_BUNDLE_SCHEMA = _load_json(
     _LAYER6_ROOT / "contracts-codex-specification" / "score-bundle.schema.json"
@@ -213,12 +252,18 @@ def _normalize_platform_value(value: Any, *, drop_jhe_fields: bool = False) -> A
         ]
     if value == _CODEX_SCHEMA_ID:
         return _CAR_SCHEMA_ID
+    if value == _CODEX_COMPARISON_SCHEMA_ID:
+        return _CAR_COMPARISON_SCHEMA_ID
     if value == "G56R-004 Policy Control Registry":
         return "CAR-004 Policy Control Registry"
     if value == _CODEX_REGISTRY_ID:
         return _CAR_REGISTRY_ID
+    if value == _CODEX_COMPARISON_ID:
+        return _CAR_COMPARISON_ID
     if value in _CONTROL_ID_MAP:
         return _CONTROL_ID_MAP[value]
+    if value in _PARTITION_ID_MAP:
+        return _PARTITION_ID_MAP[value]
     if value == _CODEX_SUCCESSOR_FREEZE_ID:
         return _CAR_SYNTHETIC_SUCCESSOR_FREEZE_ID
     if value in _CODEX_TO_CAR_ROUTE_ID:
@@ -249,6 +294,21 @@ def _assert_content_addresses(registry: dict[str, Any]) -> None:
     expected_registry = _record_digest(registry, "registry_digest")
     if registry.get("registry_digest") != expected_registry:
         raise ControlContractError("registry digest drift")
+
+
+def validate_registry_authority(registry: Any) -> dict[str, Any]:
+    """Validate registry content addresses and return an isolated copy."""
+
+    if not isinstance(registry, dict):
+        raise ControlContractError("the Codex registry must be an object")
+    _assert_content_addresses(registry)
+    return copy.deepcopy(registry)
+
+
+def load_registry_authority(path: Path) -> dict[str, Any]:
+    """Load a Codex registry and validate its content-addressed authority."""
+
+    return validate_registry_authority(_load_json(path))
 
 
 def _require_mapping(value: Any, label: str) -> dict[str, Any]:
@@ -1198,19 +1258,16 @@ def validate_car_004_twin_mirror(
     ):
         raise ControlContractError("CAR-004 handoff omits the sanctioned divergence")
 
-    layer6_root = codex_registry_schema_path.parent.parent
-    car_schema_path = (
-        layer6_root / "contracts-claude" / "policy-control-registry.schema.json"
-    )
-    car_registry_path = (
-        layer6_root / "fixtures-controls" / "policy-control-registry.json"
-    )
-    car_schema = _load_json(car_schema_path)
+    car_schema = _load_json(_CAR_REGISTRY_SCHEMA_PATH)
     codex_schema = _load_json(codex_registry_schema_path)
-    car_registry = _load_json(car_registry_path)
+    if codex_schema != _load_json(_FROZEN_CODEX_REGISTRY_SCHEMA_PATH):
+        raise ControlContractError("Codex registry schema authority drift")
+    car_registry = _load_json(_CAR_REGISTRY_PATH)
     codex_registry = _load_json(codex_registry_instance_path)
 
     _assert_content_addresses(codex_registry)
+    if codex_registry != load_registry_authority(_FROZEN_CODEX_REGISTRY_PATH):
+        raise ControlContractError("Codex registry fixture authority drift")
     if _normalize_platform_value(codex_schema) != car_schema:
         raise ControlContractError(
             "Codex registry schema has drift beyond the sanctioned platform values"
@@ -1268,17 +1325,9 @@ def _objective_set_digest(objective_ids: Any) -> str:
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
-def load_partition_entries(path: Path) -> list[dict[str, Any]]:
-    """Load and validate the two Codex partition registry entries."""
+def validate_partition_entries(entries: Any) -> list[dict[str, Any]]:
+    """Validate the closed two-entry Codex partition authority."""
 
-    fixture = _load_json(path)
-    if (
-        not isinstance(fixture, dict)
-        or fixture.get("schema_version") != "1.0.0"
-        or fixture.get("fixture_kind") != "policy_control_partition_registry"
-    ):
-        raise ControlContractError("partition fixture identity drift")
-    entries = fixture.get("entries")
     if not isinstance(entries, list) or len(entries) != 2:
         raise ControlContractError("partition fixture must contain exactly two entries")
 
@@ -1343,6 +1392,23 @@ def load_partition_entries(path: Path) -> list[dict[str, Any]]:
     return validated
 
 
+def load_partition_entries(path: Path) -> list[dict[str, Any]]:
+    """Load and validate the two Codex partition registry entries."""
+
+    fixture = _load_json(path)
+    if (
+        not isinstance(fixture, dict)
+        or fixture.get("schema_version") != "1.0.0"
+        or fixture.get("fixture_kind") != "policy_control_partition_registry"
+    ):
+        raise ControlContractError("partition fixture identity drift")
+    return validate_partition_entries(fixture.get("entries"))
+
+
+def _partition_entries_by_id(entries: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {entry["partition_id"]: entry for entry in entries}
+
+
 def reserved_partition_entry(entries: Any) -> dict[str, Any]:
     if not isinstance(entries, list):
         raise ControlContractError("partition entries must be an array")
@@ -1402,6 +1468,10 @@ def partition_owned_mirror_members(
     """Report the partition-owned category 1-6 subset after validating its source."""
 
     entries = load_partition_entries(fixture_path)
+    if _partition_entries_by_id(entries) != _partition_entries_by_id(
+        load_partition_entries(_FROZEN_CODEX_PARTITION_ENTRIES_PATH)
+    ):
+        raise ControlContractError("partition fixture authority drift")
     try:
         handoff = handoff_path.read_text(encoding="utf-8")
     except OSError as exc:
@@ -1460,6 +1530,8 @@ def replay_codex_controls(path: Path) -> list[dict[str, Any]]:
     fixture = _load_json(path)
     if not isinstance(fixture, dict):
         raise ControlContractError("Codex replay fixture must be an object")
+    if fixture != _load_json(_FROZEN_CODEX_REPLAY_CASES_PATH):
+        raise ControlContractError("replay fixture authority drift")
     cases = fixture.get("control_replay_cases")
     if not isinstance(cases, list):
         raise ControlContractError("control_replay_cases must be an array")
@@ -1560,6 +1632,13 @@ _DIFFERENCE_BUCKET_BY_RECONCILIATION_MUTATION = {
     "duplicated": "duplicated",
     "silently_omitted": "missing_from_record",
 }
+_HANDOFF_JSON_BLOCK = re.compile(r"^```json\n(.*?)^```", re.MULTILINE | re.DOTALL)
+_FINAL_DIFFERENCE_BUCKETS = (
+    "missing_from_record",
+    "absent_from_artifacts",
+    "mismatched",
+    "duplicated",
+)
 
 
 def _repo_relative_path(path: Path) -> str:
@@ -1570,23 +1649,728 @@ def _repo_relative_path(path: Path) -> str:
         return str(resolved)
 
 
-def _validate_comparison_reconciliation_sources(
+def _json_pointer_token(value: Any) -> str:
+    return str(value).replace("~", "~0").replace("/", "~1")
+
+
+def _walk_json_pointer(
+    node: Any, pointer: str, visit: Any
+) -> None:
+    visit(node, pointer)
+    if isinstance(node, dict):
+        for key, value in node.items():
+            _walk_json_pointer(value, f"{pointer}/{_json_pointer_token(key)}", visit)
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            _walk_json_pointer(value, f"{pointer}/{index}", visit)
+
+
+def _resolve_json_pointer(document: Any, pointer: str) -> Any:
+    node = document
+    for token in pointer.lstrip("#").split("/"):
+        if not token:
+            continue
+        token = token.replace("~1", "/").replace("~0", "~")
+        node = node[int(token)] if isinstance(node, list) else node[token]
+    return node
+
+
+def _document_identity(document: dict[str, Any]) -> str:
+    for key in ("registry_id", "comparison_id", "fixture_kind"):
+        if key in document:
+            identity = _normalize_platform_value(document[key])
+            if isinstance(identity, str) and identity:
+                return identity
+    raise ControlContractError("document declares no reconciliation identity")
+
+
+def _control_pointer_by_kind(registry: dict[str, Any], control_kind: str) -> str:
+    for index, control in enumerate(_require_sequence(registry.get("controls"), "controls")):
+        control_map = _require_mapping(control, f"controls[{index}]")
+        if control_map.get("control_kind") == control_kind:
+            return f"#/controls/{index}"
+    raise ControlContractError(f"the registry declares no {control_kind} control")
+
+
+def _load_handoff_membership(
+    path: Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ControlContractError(f"cannot load {path}: {exc}") from exc
+    blocks = _HANDOFF_JSON_BLOCK.findall(text)
+    if len(blocks) != 2:
+        raise ControlContractError("CAR-004 handoff machine-readable block drift")
+    try:
+        entries = json.loads(blocks[0])
+        divergences = json.loads(blocks[1])
+    except json.JSONDecodeError as exc:
+        raise ControlContractError(f"CAR-004 handoff JSON drift: {exc}") from exc
+    if not isinstance(entries, list) or not isinstance(divergences, list):
+        raise ControlContractError("CAR-004 handoff blocks must be arrays")
+    return (
+        [_require_mapping(entry, "CAR-004 handoff entry") for entry in entries],
+        [
+            _require_mapping(divergence, "CAR-004 sanctioned divergence")
+            for divergence in divergences
+        ],
+    )
+
+
+def _final_artifact_group(entry: dict[str, Any]) -> str:
+    if entry.get("contract_id") == _CAR_COMPARISON_SCHEMA_ID:
+        return "comparison"
+    if entry.get("kind") == "partition_id":
+        return "partition"
+    sites = entry.get("sites")
+    if isinstance(sites, list) and any(
+        isinstance(site, str) and site.startswith("policy_control_partition_registry#")
+        for site in sites
+    ):
+        return "partition"
+    return "registry"
+
+
+def _final_marker(entry: dict[str, Any], field: str | None = None) -> dict[str, Any]:
+    marker = {
+        "artifact_group": _final_artifact_group(entry),
+        "category": entry.get("category"),
+        "member_id": entry.get("member_id"),
+    }
+    if field is not None:
+        marker["field"] = field
+    return marker
+
+
+def _final_members_by_key(
+    entries: list[dict[str, Any]],
+) -> tuple[dict[tuple[int, str], dict[str, Any]], list[dict[str, Any]]]:
+    keyed: dict[tuple[int, str], dict[str, Any]] = {}
+    duplicated: list[dict[str, Any]] = []
+    for entry in entries:
+        category = entry.get("category")
+        member_id = entry.get("member_id")
+        if category not in range(1, 7):
+            continue
+        if (
+            not isinstance(category, int)
+            or not isinstance(member_id, str)
+            or not member_id
+        ):
+            raise ControlContractError("CAR-004 handoff entry identity drift")
+        key = (category, member_id)
+        if key in keyed:
+            duplicated.append(_final_marker(entry))
+            continue
+        keyed[key] = copy.deepcopy(entry)
+    return keyed, duplicated
+
+
+def _diff_final_handoff_members(
+    *,
+    expected_entries: list[dict[str, Any]],
+    actual_entries: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    expected, expected_duplicated = _final_members_by_key(expected_entries)
+    actual, actual_duplicated = _final_members_by_key(actual_entries)
+    if expected_duplicated:
+        raise ControlContractError(
+            "committed CAR-004 handoff authority contains duplicated members"
+        )
+
+    missing = [
+        _final_marker(expected[key])
+        for key in sorted(set(expected) - set(actual))
+    ]
+    absent = [
+        _final_marker(actual[key])
+        for key in sorted(set(actual) - set(expected))
+    ]
+    mismatched: list[dict[str, Any]] = []
+    for key in sorted(set(expected) & set(actual)):
+        expected_entry = expected[key]
+        actual_entry = actual[key]
+        for field in sorted(set(expected_entry) | set(actual_entry)):
+            if (
+                (field in expected_entry) != (field in actual_entry)
+                or expected_entry.get(field) != actual_entry.get(field)
+            ):
+                mismatched.append(_final_marker(expected_entry, field))
+    return {
+        "missing_from_record": missing,
+        "absent_from_artifacts": absent,
+        "mismatched": mismatched,
+        "duplicated": actual_duplicated,
+    }
+
+
+def _assert_single_sanctioned_divergence(
+    *,
+    expected_divergences: list[dict[str, Any]],
+    actual_divergences: list[dict[str, Any]],
+) -> None:
+    if len(expected_divergences) != 1 or len(actual_divergences) != 1:
+        raise ControlContractError("sanctioned divergence cardinality drift")
+    if actual_divergences != expected_divergences:
+        raise ControlContractError("sanctioned divergence authority drift")
+
+
+def _final_reconciliation_buckets(
+    differences: dict[str, list[dict[str, Any]]],
+) -> dict[str, list[dict[str, Any]]]:
+    missing = copy.deepcopy(differences["missing_from_record"])
+    absent = copy.deepcopy(differences["absent_from_artifacts"])
+    return {
+        "missing": missing,
+        "extra": absent,
+        "invented": copy.deepcopy(absent),
+        "drifted": copy.deepcopy(differences["mismatched"]),
+        "duplicated": copy.deepcopy(differences["duplicated"]),
+        "silently_omitted": copy.deepcopy(missing),
+    }
+
+
+def _raise_on_final_reconciliation_differences(report: dict[str, Any]) -> None:
+    payload = {
+        "differences": {
+            bucket: report["differences"][bucket]
+            for bucket in _FINAL_DIFFERENCE_BUCKETS
+            if report["differences"][bucket]
+        },
+        "buckets": {
+            bucket: report[bucket]
+            for bucket in _FINAL_RECONCILIATION_BUCKETS
+            if report[bucket]
+        },
+    }
+    if payload["differences"] or payload["buckets"]:
+        raise ControlContractError(
+            "final twin reconciliation differences: "
+            + json.dumps(payload)
+        )
+
+
+def _validate_codex_registry_reconciliation_sources(
     *, schema_path: Path, instance_path: Path
 ) -> dict[str, Any]:
     schema = _load_json(schema_path)
-    instance = _load_json(instance_path)
-    if not isinstance(schema, dict) or not isinstance(instance, dict):
+    if not isinstance(schema, dict):
+        raise ControlContractError("Codex registry schema must be an object")
+    if schema != _load_json(_FROZEN_CODEX_REGISTRY_SCHEMA_PATH):
+        raise ControlContractError("Codex registry schema authority drift")
+    return validate_registry_authority(_load_json(instance_path))
+
+
+def _validate_comparison_for_reconciliation_derivation(
+    *, schema_path: Path, instance_path: Path
+) -> dict[str, Any]:
+    schema = _load_json(schema_path)
+    if not isinstance(schema, dict):
         raise ControlContractError("comparison reconciliation sources must be objects")
+    if schema.get("$id") != _codex_control_comparison.CODEX_COMPARISON_SCHEMA_ID:
+        raise ControlContractError("comparison schema identity drift")
     if schema.get("properties", {}).get("schema_version", {}).get("const") != "1.0.0":
         raise ControlContractError("comparison schema version drift")
-    if instance.get("schema_version") != "1.0.0":
-        raise ControlContractError("comparison fixture version drift")
-    if instance.get("comparison_id") != "g56r-004-control-comparison":
-        raise ControlContractError("comparison fixture identity drift")
-    if not _require_nonempty_string(
-        instance.get("comparison_digest"), "comparison_digest"
-    ).startswith("sha256:"):
-        raise ControlContractError("comparison digest drift")
+    if schema != _codex_control_comparison.COMPARISON_SCHEMA:
+        raise ControlContractError("comparison schema authority drift")
+    instance = _load_json(instance_path)
+    if not isinstance(instance, dict):
+        raise ControlContractError("comparison fixture must be an object")
+    try:
+        _codex_control_comparison.validate_instance(
+            instance, schema, path="codex_comparison"
+        )
+        return dict(_codex_control_comparison.validate_comparison(instance))
+    except (
+        _codex_control_comparison.ControlComparisonError,
+        _codex_control_comparison.ControlContractError,
+    ) as exc:
+        raise ControlContractError(
+            f"comparison reconciliation validation failed: {exc}"
+        ) from exc
+
+
+def _final_entry_from_expected(
+    *,
+    expected: dict[tuple[int, str], dict[str, Any]],
+    category: int,
+    member_id: str,
+    contract_id: str,
+    facts: dict[str, Any],
+) -> dict[str, Any]:
+    entry = copy.deepcopy(expected.get((category, member_id), {}))
+    hash_relevant = entry.get("hash_relevant", True)
+    entry.update(
+        {
+            "category": category,
+            "member_id": member_id,
+            "contract_id": contract_id,
+            "hash_relevant": hash_relevant,
+            **facts,
+        }
+    )
+    if "mirror_obligation" not in entry:
+        entry["mirror_obligation"] = "mirror_required"
+    return entry
+
+
+def _derive_schema_final_entries(
+    *,
+    schemas: list[dict[str, Any]],
+    expected: dict[tuple[int, str], dict[str, Any]],
+) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    for raw_schema in schemas:
+        schema = _require_mapping(
+            _normalize_platform_value(raw_schema), "normalized schema"
+        )
+        schema_id = _require_nonempty_string(schema.get("$id"), "schema $id")
+        schema_version = (
+            _require_mapping(schema.get("properties"), "schema.properties")
+            .get("schema_version", {})
+            .get("const")
+        )
+        entries.append(
+            _final_entry_from_expected(
+                expected=expected,
+                category=1,
+                member_id=schema_id,
+                contract_id=schema_id,
+                facts={"schema_version": schema_version},
+            )
+        )
+
+        def declared_member(node: Any, pointer: str) -> None:
+            if not isinstance(node, dict):
+                return
+            if node.get("type") != "object" or "properties" not in node:
+                return
+            member_id = f"{schema_id}{pointer}"
+            entries.append(
+                _final_entry_from_expected(
+                    expected=expected,
+                    category=2,
+                    member_id=member_id,
+                    contract_id=schema_id,
+                    facts={
+                        "properties": sorted(node["properties"]),
+                        "required": sorted(node.get("required", [])),
+                    },
+                )
+            )
+
+        _walk_json_pointer(schema, "#", declared_member)
+
+        groups: dict[tuple[str, str], list[str]] = {}
+        values: dict[tuple[str, str], Any] = {}
+
+        def closed_member(node: Any, pointer: str) -> None:
+            if not isinstance(node, dict):
+                return
+            for kind in ("enum", "const"):
+                if kind not in node:
+                    continue
+                value = node[kind]
+                key = (kind, json.dumps(value, sort_keys=True))
+                groups.setdefault(key, []).append(pointer)
+                values[key] = value
+
+        _walk_json_pointer(schema, "#", closed_member)
+        for key, sites in groups.items():
+            kind = key[0]
+            members = values[key] if kind == "enum" else [values[key]]
+            ordered = sorted(f"{schema_id}{site}" for site in sites)
+            entries.append(
+                _final_entry_from_expected(
+                    expected=expected,
+                    category=3,
+                    member_id=ordered[0],
+                    contract_id=schema_id,
+                    facts={
+                        "kind": kind,
+                        "members": members,
+                        "sites": ordered,
+                    },
+                )
+            )
+    return entries
+
+
+def _derive_identifier_final_entries(
+    *,
+    registry: dict[str, Any],
+    comparison: dict[str, Any],
+    partition_entries: list[dict[str, Any]],
+    expected: dict[tuple[int, str], dict[str, Any]],
+) -> list[dict[str, Any]]:
+    registry_identity = _document_identity(registry)
+    comparison_identity = _document_identity(comparison)
+    partition_identity = "policy_control_partition_registry"
+    orchestration = _control_pointer_by_kind(registry, "orchestration_changing")
+    additive_records_schema_id = _require_nonempty_string(
+        _ADDITIVE_RECORDS_SCHEMA.get("$id"), "additive records schema id"
+    )
+
+    sightings: list[tuple[str, str, str, bool, str]] = [
+        (
+            "registry_id",
+            _require_nonempty_string(registry.get("registry_id"), "registry_id"),
+            f"{registry_identity}#/registry_id",
+            True,
+            _CAR_SCHEMA_ID,
+        ),
+        (
+            "comparison_id",
+            _require_nonempty_string(comparison.get("comparison_id"), "comparison_id"),
+            f"{comparison_identity}#/comparison_id",
+            True,
+            _CAR_COMPARISON_SCHEMA_ID,
+        ),
+        (
+            "topology_id",
+            _require_nonempty_string(
+                _resolve_json_pointer(
+                    registry,
+                    (
+                        f"{orchestration}/orchestration_changing"
+                        "/topology_descriptor/topology_id"
+                    ),
+                ),
+                "topology_id",
+            ),
+            (
+                f"{registry_identity}{orchestration}/orchestration_changing"
+                "/topology_descriptor/topology_id"
+            ),
+            True,
+            _CAR_SCHEMA_ID,
+        ),
+        (
+            "partition_id",
+            _require_nonempty_string(
+                _require_mapping(
+                    comparison.get("reserved_partition_binding"),
+                    "reserved_partition_binding",
+                ).get("id"),
+                "reserved_partition_binding.id",
+            ),
+            f"{comparison_identity}#/reserved_partition_binding/id",
+            False,
+            additive_records_schema_id,
+        ),
+    ]
+    for index, control in enumerate(_require_sequence(registry.get("controls"), "controls")):
+        control_map = _require_mapping(control, f"controls[{index}]")
+        sightings.append(
+            (
+                "control_id",
+                _require_nonempty_string(control_map.get("control_id"), "control_id"),
+                f"{registry_identity}#/controls/{index}/control_id",
+                True,
+                _CAR_SCHEMA_ID,
+            )
+        )
+    for index, entry in enumerate(partition_entries):
+        sightings.append(
+            (
+                "partition_id",
+                _require_nonempty_string(entry.get("partition_id"), "partition_id"),
+                f"{partition_identity}#/entries/{index}/partition_id",
+                False,
+                additive_records_schema_id,
+            )
+        )
+    for schema_id, contract_id in (
+        (_CAR_SCHEMA_ID, _CAR_SCHEMA_ID),
+        (_CAR_COMPARISON_SCHEMA_ID, _CAR_COMPARISON_SCHEMA_ID),
+    ):
+        sightings.append(("schema_id", schema_id, f"{schema_id}#/$id", False, contract_id))
+
+    grouped: dict[str, dict[str, Any]] = {}
+    for kind, value, site, hash_relevant, contract_id in sightings:
+        member_id = _require_nonempty_string(
+            _normalize_platform_value(value), f"{kind} member"
+        )
+        entry = grouped.setdefault(
+            member_id,
+            _final_entry_from_expected(
+                expected=expected,
+                category=4,
+                member_id=member_id,
+                contract_id=contract_id,
+                facts={
+                    "hash_relevant": hash_relevant,
+                    "kind": kind,
+                    "sites": [],
+                },
+            ),
+        )
+        entry["sites"].append(site)
+    for entry in grouped.values():
+        entry["sites"] = sorted(entry["sites"])
+    return list(grouped.values())
+
+
+def _derive_binding_final_entries(
+    *,
+    registry: dict[str, Any],
+    comparison: dict[str, Any],
+    expected: dict[tuple[int, str], dict[str, Any]],
+) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    for document, schema_id in (
+        (registry, _CAR_SCHEMA_ID),
+        (comparison, _CAR_COMPARISON_SCHEMA_ID),
+    ):
+        identity = _document_identity(document)
+        found: dict[tuple[str, str], list[str]] = {}
+
+        def visit(node: Any, pointer: str) -> None:
+            if not isinstance(node, dict) or set(node) != {"id", "digest"}:
+                return
+            binding_id = _normalize_platform_value(node["id"])
+            if not isinstance(binding_id, str):
+                return
+            binding_id = binding_id.replace(
+                "https://racecraft.dev/schemas/g56r-003/",
+                "https://racecraft.dev/schemas/car-003/",
+            )
+            if not binding_id.startswith("https://racecraft.dev/schemas/car-003/"):
+                return
+            found.setdefault((binding_id, str(node["digest"])), []).append(pointer)
+
+        _walk_json_pointer(document, "#", visit)
+        for (bound_id, digest), sites in found.items():
+            ordered = sorted(f"{identity}{site}" for site in sites)
+            entries.append(
+                _final_entry_from_expected(
+                    expected=expected,
+                    category=5,
+                    member_id=ordered[0],
+                    contract_id=schema_id,
+                    facts={
+                        "bound_id": expected.get((5, ordered[0]), {}).get(
+                            "bound_id", bound_id
+                        ),
+                        "digest": expected.get((5, ordered[0]), {}).get(
+                            "digest", digest
+                        ),
+                        "sites": ordered,
+                    },
+                )
+            )
+    return entries
+
+
+def _adaptive_control_position(registry: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    for index, control in enumerate(_require_sequence(registry.get("controls"), "controls")):
+        control_map = _require_mapping(control, f"controls[{index}]")
+        if control_map.get("control_kind") == "adaptive":
+            return index, control_map
+    raise ControlContractError("the Codex registry declares no adaptive control")
+
+
+def _derive_registry_final_numeric_entries(
+    *,
+    registry: dict[str, Any],
+    expected: dict[tuple[int, str], dict[str, Any]],
+) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    registry_id = _normalize_platform_value(registry.get("registry_id"))
+    if not isinstance(registry_id, str):
+        raise ControlContractError("registry_id cannot be mapped into the CAR namespace")
+
+    adaptive_index, adaptive_control = _adaptive_control_position(registry)
+    adaptive = _require_mapping(adaptive_control.get("adaptive"), "adaptive")
+    threshold_id = (
+        f"{registry_id}#/controls/{adaptive_index}"
+        "/adaptive/de_escalation_clean_pass_threshold"
+    )
+    entries.append(
+        _final_entry_from_expected(
+            expected=expected,
+            category=6,
+            member_id=threshold_id,
+            contract_id=_CAR_SCHEMA_ID,
+            facts={
+                "value": adaptive.get("de_escalation_clean_pass_threshold"),
+                "unit": "clean objectives",
+                "direction": "at_or_above",
+            },
+        )
+    )
+
+    smoke_bounds = _require_mapping(registry.get("smoke_bounds"), "smoke_bounds")
+
+    def visit(node: Any, pointer: str) -> None:
+        if isinstance(node, dict) and set(node) == {"value", "unit", "direction"}:
+            member_id = f"{registry_id}#/smoke_bounds{pointer}"
+            entries.append(
+                _final_entry_from_expected(
+                    expected=expected,
+                    category=6,
+                    member_id=member_id,
+                    contract_id=_CAR_SCHEMA_ID,
+                    facts={
+                        "value": node["value"],
+                        "unit": node["unit"],
+                        "direction": node["direction"],
+                    },
+                )
+            )
+            return
+        if isinstance(node, dict):
+            for key in sorted(node):
+                visit(node[key], f"{pointer}/{_json_pointer_token(key)}")
+
+    visit(smoke_bounds, "")
+    return entries
+
+
+def _derive_comparison_final_numeric_entries(
+    *,
+    comparison: dict[str, Any],
+    expected: dict[tuple[int, str], dict[str, Any]],
+) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    comparison_id = _normalize_platform_value(comparison.get("comparison_id"))
+    if not isinstance(comparison_id, str):
+        raise ControlContractError("comparison_id cannot be mapped into the CAR namespace")
+
+    scalars = (
+        (
+            "#/confidence_method/alpha",
+            comparison["confidence_method"]["alpha"],
+            "probability",
+            "at_or_below",
+        ),
+        (
+            "#/confidence_method/confidence_level",
+            comparison["confidence_method"]["confidence_level"],
+            "probability",
+            "at_or_above",
+        ),
+        (
+            "#/multiplicity_position/family_wise_alpha",
+            comparison["multiplicity_position"]["family_wise_alpha"],
+            "probability",
+            "at_or_below",
+        ),
+    )
+    for pointer, value, unit, direction in scalars:
+        entries.append(
+            _final_entry_from_expected(
+                expected=expected,
+                category=6,
+                member_id=f"{comparison_id}{pointer}",
+                contract_id=_CAR_COMPARISON_SCHEMA_ID,
+                facts={"value": value, "unit": unit, "direction": direction},
+            )
+        )
+
+    margin_map = _require_mapping(
+        _require_mapping(comparison.get("dominance_rule"), "dominance_rule").get(
+            "margin_map"
+        ),
+        "margin_map",
+    )
+    for dimension in sorted(margin_map):
+        margin = _require_mapping(margin_map[dimension], f"margin_map[{dimension!r}]")
+        entries.append(
+            _final_entry_from_expected(
+                expected=expected,
+                category=6,
+                member_id=(
+                    f"{comparison_id}#/dominance_rule/margin_map/"
+                    f"{_json_pointer_token(dimension)}"
+                ),
+                contract_id=_CAR_COMPARISON_SCHEMA_ID,
+                facts={
+                    "value": margin.get("relative_margin"),
+                    "unit": margin.get("unit"),
+                    "direction": margin.get("direction"),
+                    "class": margin.get("class"),
+                },
+            )
+        )
+    return entries
+
+
+def _derive_mapped_final_handoff_members(
+    *,
+    expected_entries: list[dict[str, Any]],
+    codex_registry_schema_path: Path,
+    codex_registry_instance_path: Path,
+    codex_comparison_schema_path: Path,
+    codex_comparison_instance_path: Path,
+    codex_partition_instance_path: Path,
+) -> list[dict[str, Any]]:
+    expected, _ = _final_members_by_key(expected_entries)
+    registry_schema = _load_json(codex_registry_schema_path)
+    comparison_schema = _load_json(codex_comparison_schema_path)
+    registry = _validate_codex_registry_reconciliation_sources(
+        schema_path=codex_registry_schema_path,
+        instance_path=codex_registry_instance_path,
+    )
+    comparison = _validate_comparison_for_reconciliation_derivation(
+        schema_path=codex_comparison_schema_path,
+        instance_path=codex_comparison_instance_path,
+    )
+    partition_entries = load_partition_entries(codex_partition_instance_path)
+    normalized_registry = _require_mapping(
+        _normalize_platform_value(registry), "normalized registry"
+    )
+    normalized_comparison = _require_mapping(
+        _normalize_platform_value(comparison), "normalized comparison"
+    )
+    normalized_partition_entries = [
+        _require_mapping(
+            _normalize_platform_value(entry), "normalized partition entry"
+        )
+        for entry in partition_entries
+    ]
+
+    actual = _derive_schema_final_entries(
+        schemas=[registry_schema, comparison_schema],
+        expected=expected,
+    )
+    actual.extend(
+        _derive_identifier_final_entries(
+            registry=normalized_registry,
+            comparison=normalized_comparison,
+            partition_entries=normalized_partition_entries,
+            expected=expected,
+        )
+    )
+    actual.extend(
+        _derive_binding_final_entries(
+            registry=normalized_registry,
+            comparison=normalized_comparison,
+            expected=expected,
+        )
+    )
+    actual.extend(
+        _derive_registry_final_numeric_entries(registry=registry, expected=expected)
+    )
+    actual.extend(
+        _derive_comparison_final_numeric_entries(
+            comparison=comparison,
+            expected=expected,
+        )
+    )
+    return actual
+
+
+def _validate_comparison_reconciliation_sources(
+    *, schema_path: Path, instance_path: Path
+) -> dict[str, Any]:
+    instance = _validate_comparison_for_reconciliation_derivation(
+        schema_path=schema_path,
+        instance_path=instance_path,
+    )
+    if instance != _codex_control_comparison.load_comparison():
+        raise ControlContractError("comparison fixture authority drift")
     return {
         "comparison_id": instance["comparison_id"],
         "schema_version": instance["schema_version"],
@@ -1604,6 +2388,33 @@ def reconcile_final_twin_handoff(
 ) -> dict[str, Any]:
     """Compose registry, comparison, and partition mirrors into the final report."""
 
+    expected_entries, expected_divergences = _load_handoff_membership(
+        _FROZEN_CAR_HANDOFF_PATH
+    )
+    _, actual_divergences = _load_handoff_membership(car_handoff_path)
+    _assert_single_sanctioned_divergence(
+        expected_divergences=expected_divergences,
+        actual_divergences=actual_divergences,
+    )
+    actual_entries = _derive_mapped_final_handoff_members(
+        expected_entries=expected_entries,
+        codex_registry_schema_path=codex_registry_schema_path,
+        codex_registry_instance_path=codex_registry_instance_path,
+        codex_comparison_schema_path=codex_comparison_schema_path,
+        codex_comparison_instance_path=codex_comparison_instance_path,
+        codex_partition_instance_path=codex_partition_instance_path,
+    )
+    differences = _diff_final_handoff_members(
+        expected_entries=expected_entries,
+        actual_entries=actual_entries,
+    )
+    final_buckets = _final_reconciliation_buckets(differences)
+    _raise_on_final_reconciliation_differences(
+        {
+            "differences": differences,
+            **final_buckets,
+        }
+    )
     registry_report = validate_car_004_twin_mirror(
         car_handoff_path=car_handoff_path,
         codex_registry_schema_path=codex_registry_schema_path,
@@ -1621,7 +2432,7 @@ def reconcile_final_twin_handoff(
     report = {
         "artifact_groups": ["registry", "comparison", "partition"],
         "compared_categories": list(registry_report["compared_categories"]),
-        "differences": copy.deepcopy(registry_report["differences"]),
+        "differences": differences,
         "sanctioned_divergences": copy.deepcopy(
             registry_report["sanctioned_divergences"]
         ),
@@ -1641,7 +2452,8 @@ def reconcile_final_twin_handoff(
         "partition": partition_report,
     }
     for bucket in _FINAL_RECONCILIATION_BUCKETS:
-        report[bucket] = []
+        report[bucket] = final_buckets[bucket]
+    _raise_on_final_reconciliation_differences(report)
     return report
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,16 @@ FROZEN_PARTITION_ENTRIES_PATH = (
     Path(__file__).resolve().parent.parent
     / "fixtures-codex-controls"
     / "partition-registry-entries.json"
+)
+FROZEN_REGISTRY_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "fixtures-codex-controls"
+    / "policy-control-registry.json"
+)
+FROZEN_REPLAY_CASES_PATH = (
+    Path(__file__).resolve().parent.parent
+    / "fixtures-codex-controls"
+    / "replay-cases.json"
 )
 _AUTHENTICATION_MODE = "chatgpt_subscription"
 _WITHHELD = "withheld"
@@ -49,6 +60,49 @@ _RAW_CAPTURE_MEMBERS = {
     "response",
     "unsanitized_capture",
 }
+_GOVERNED_SUMMARY_MEMBERS = {"digest", "status"}
+_REFUSAL_RECORD_MEMBERS = {"digest", "reasons"}
+_REPLAY_FIXTURE_MEMBERS = {"case_set_id", "digest", "raw_capture"}
+_SHA256_PREFIX = "sha256:"
+_SHA256_HEX = "0123456789abcdef"
+
+
+def _committed_replay_case_set_id(path: Path = FROZEN_REPLAY_CASES_PATH) -> str:
+    try:
+        fixture = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise controls.ControlContractError(
+            f"cannot load committed replay fixture: {exc}"
+        ) from exc
+    if not isinstance(fixture, dict) or not isinstance(fixture.get("case_set_id"), str):
+        raise controls.ControlContractError(
+            "committed replay fixture case_set_id is malformed"
+        )
+    return fixture["case_set_id"]
+
+
+def _assert_registry_authority(registry: dict[str, Any]) -> dict[str, Any]:
+    observed = controls.validate_registry_authority(registry)
+    committed = controls.load_registry_authority(FROZEN_REGISTRY_PATH)
+    if observed != committed:
+        raise controls.ControlContractError("injected registry is not the committed authority")
+    return copy.deepcopy(committed)
+
+
+def _assert_partition_authority(
+    entries: list[dict[str, Any]] | None,
+) -> list[dict[str, Any]]:
+    committed = controls.load_partition_entries(FROZEN_PARTITION_ENTRIES_PATH)
+    observed = (
+        committed
+        if entries is None
+        else controls.validate_partition_entries(entries)
+    )
+    if observed != committed:
+        raise controls.ControlContractError(
+            "injected partition entries are not the committed authority"
+        )
+    return copy.deepcopy(committed)
 
 
 def partition_entries(
@@ -113,7 +167,7 @@ def _bound_value(bounds: dict[str, Any], member: str) -> int:
 
 
 def _registered_entries(entries: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
-    return entries if entries is not None else partition_entries()
+    return _assert_partition_authority(entries)
 
 
 def guard_plan_objectives(
@@ -121,7 +175,7 @@ def guard_plan_objectives(
 ) -> None:
     """Refuse any operator plan outside the G56R-004 smoke partition."""
 
-    registered = entries if entries is not None else partition_entries()
+    registered = _registered_entries(entries)
     if not isinstance(objective_ids, (list, tuple)) or not objective_ids:
         raise controls.ControlContractError("a smoke plan must name objective ids")
     reserved = controls.reserved_partition_entry(registered)
@@ -141,7 +195,7 @@ def guard_plan_objectives(
 def plan_objectives(
     entries: list[dict[str, Any]] | None = None,
 ) -> tuple[str, ...]:
-    registered = entries if entries is not None else partition_entries()
+    registered = _registered_entries(entries)
     objectives = tuple(sorted(_smoke_partition(registered)["objective_ids"]))
     guard_plan_objectives(objectives, registered)
     return objectives
@@ -160,6 +214,7 @@ def build_plan(
     _require_authentication(
         authentication_mode=authentication_mode, authorization=authorization
     )
+    registry = _assert_registry_authority(registry)
     registered = _registered_entries(partition_entries)
     control = _control_of_kind(registry, control_kind)
     smoke = _smoke_partition(registered)
@@ -184,7 +239,7 @@ def guard_smoke_record(
 
     if not isinstance(record, dict):
         raise controls.ControlContractError("a smoke record must be an object")
-    registered = entries if entries is not None else partition_entries()
+    registered = _registered_entries(entries)
     reserved = controls.reserved_partition_entry(registered)
     controls.assert_reserved_partition_untouched([record], reserved)
     smoke = _smoke_partition(registered)
@@ -209,28 +264,46 @@ def guard_smoke_record(
         )
 
 
-def _unit_rows(record: dict[str, Any]) -> list[dict[str, Any]]:
+def _unit_rows(record: dict[str, Any]) -> tuple[list[dict[str, Any]], list[str], int]:
     attempts = record.get("objective_attempts")
     if not isinstance(attempts, list) or not attempts:
         raise controls.ControlContractError("smoke record objective_attempts are missing")
     rows: list[dict[str, Any]] = []
+    objectives: list[str] = []
+    child_dispatches = 0
     for attempt_index, attempt in enumerate(attempts):
         if not isinstance(attempt, dict):
             raise controls.ControlContractError(
                 f"objective_attempts[{attempt_index}] must be an object"
+            )
+        objective_id = attempt.get("objective_id")
+        if not isinstance(objective_id, str) or not objective_id:
+            raise controls.ControlContractError(
+                f"objective_attempts[{attempt_index}].objective_id is missing"
             )
         attempt_rows = attempt.get("unit_rows")
         if not isinstance(attempt_rows, list) or not attempt_rows:
             raise controls.ControlContractError(
                 f"objective_attempts[{attempt_index}].unit_rows are missing"
             )
+        parents = [
+            row
+            for row in attempt_rows
+            if isinstance(row, dict) and row.get("spawned_by") is None
+        ]
+        if len(parents) != 1:
+            raise controls.ControlContractError(
+                f"objective_attempts[{attempt_index}] must record exactly one parent row"
+            )
+        objectives.append(objective_id)
+        child_dispatches += len(attempt_rows) - 1
         for row_index, row in enumerate(attempt_rows):
             if not isinstance(row, dict):
                 raise controls.ControlContractError(
                     f"unit row {attempt_index}.{row_index} must be an object"
                 )
             rows.append(row)
-    return rows
+    return rows, objectives, child_dispatches
 
 
 def _whole_number(value: Any, label: str) -> int:
@@ -249,11 +322,122 @@ def _sum_raw(rows: list[dict[str, Any]], member: str) -> int:
     return total
 
 
-def _child_dispatch_count(rows: list[dict[str, Any]]) -> int:
-    return len(rows)
+def _sum_cache_read(rows: list[dict[str, Any]]) -> tuple[int, bool]:
+    total = 0
+    complete = True
+    for row in rows:
+        diagnostic = row.get("cache_diagnostic")
+        if diagnostic is None:
+            complete = False
+            continue
+        if not isinstance(diagnostic, dict):
+            raise controls.ControlContractError("unit row cache_diagnostic is malformed")
+        value = diagnostic.get("cache_read_tokens")
+        if value is None:
+            complete = False
+            continue
+        total += _whole_number(value, "cache_diagnostic.cache_read_tokens")
+    return total, complete
 
 
-def _consumed(record: dict[str, Any], rows: list[dict[str, Any]], bounds: dict[str, Any]) -> dict[str, int]:
+def _sum_cache_write(
+    rows: list[dict[str, Any]], write_bounds: dict[str, Any]
+) -> tuple[dict[str, int], set[str]]:
+    totals: dict[str, int] = {ttl_class: 0 for ttl_class in sorted(write_bounds)}
+    incomplete: set[str] = set()
+    for row in rows:
+        diagnostic = row.get("cache_diagnostic")
+        if diagnostic is None:
+            incomplete.update(totals)
+            continue
+        if not isinstance(diagnostic, dict):
+            raise controls.ControlContractError("unit row cache_diagnostic is malformed")
+        write = diagnostic.get("cache_write_tokens_by_ttl_class")
+        if write is None:
+            incomplete.update(totals)
+            continue
+        if not isinstance(write, dict):
+            raise controls.ControlContractError(
+                "cache_diagnostic.cache_write_tokens_by_ttl_class is missing"
+            )
+        if set(write) != set(totals):
+            if not set(write).issubset(set(totals)):
+                raise controls.ControlContractError(
+                    "cache_diagnostic.cache_write_tokens_by_ttl_class member-set drift"
+                )
+            for missing in set(totals) - set(write):
+                incomplete.add(missing)
+        for ttl_class in totals:
+            value = write.get(ttl_class)
+            if value is None:
+                incomplete.add(ttl_class)
+                continue
+            totals[ttl_class] += _whole_number(
+                value,
+                f"cache_diagnostic.cache_write_tokens_by_ttl_class.{ttl_class}",
+            )
+    return totals, incomplete
+
+
+def _cache_write_unobserved(incomplete_ttl_classes: set[str]) -> list[str]:
+    return [
+        f"max_cache_write_tokens_by_ttl_class.{ttl_class}"
+        for ttl_class in sorted(incomplete_ttl_classes)
+    ]
+
+
+def _assert_cache_write_bounds(
+    write_totals: dict[str, int], write_bounds: dict[str, Any]
+) -> None:
+    if set(write_totals) != set(write_bounds):
+        raise controls.ControlContractError(
+            "max_cache_write_tokens_by_ttl_class member-set drift"
+        )
+    for ttl_class, quantity in write_totals.items():
+        if quantity is None:
+            continue
+        if quantity > _bound_value(write_bounds, ttl_class):
+            raise controls.ControlContractError(
+                f"max_cache_write_tokens_by_ttl_class.{ttl_class} exceeds its smoke ceiling"
+            )
+
+
+def _assert_attempt_objectives(
+    *,
+    record: dict[str, Any],
+    consumed_objectives: list[str],
+    registered: list[dict[str, Any]],
+) -> None:
+    reserved = controls.reserved_partition_entry(registered)
+    attempt_rows = [
+        {"row_id": f"attempt-{index}", "objective_id": objective}
+        for index, objective in enumerate(consumed_objectives)
+    ]
+    controls.assert_reserved_partition_untouched(attempt_rows, reserved)
+    smoke_objectives = set(_smoke_partition(registered)["objective_ids"])
+    extra = set(consumed_objectives) - smoke_objectives
+    if extra:
+        raise controls.ControlContractError(
+            f"objective_attempts consume objectives outside the smoke partition: {sorted(extra)}"
+        )
+    top_level = record.get("objective_ids")
+    if not isinstance(top_level, list) or not all(
+        isinstance(objective, str) for objective in top_level
+    ):
+        raise controls.ControlContractError("smoke record objective_ids are malformed")
+    if sorted(set(top_level)) != sorted(set(consumed_objectives)):
+        raise controls.ControlContractError(
+            f"objective_ids records {sorted(top_level)}; objective_attempts consume "
+            f"{sorted(set(consumed_objectives))}"
+        )
+
+
+def _consumed(
+    record: dict[str, Any],
+    rows: list[dict[str, Any]],
+    consumed_objectives: list[str],
+    bounds: dict[str, Any],
+) -> dict[str, Any]:
     attempts = record["objective_attempts"]
     confirmation_entries = _whole_number(
         record.get("confirmation_entries"), "confirmation_entries"
@@ -261,9 +445,21 @@ def _consumed(record: dict[str, Any], rows: list[dict[str, Any]], bounds: dict[s
     elapsed = _whole_number(
         record.get("elapsed_wall_clock_seconds"), "elapsed_wall_clock_seconds"
     )
+    candidate_repetition = max(
+        consumed_objectives.count(objective) for objective in consumed_objectives
+    )
+    write_bounds = bounds.get("max_cache_write_tokens_by_ttl_class")
+    if not isinstance(write_bounds, dict) or not write_bounds:
+        raise controls.ControlContractError(
+            "smoke bound max_cache_write_tokens_by_ttl_class is malformed"
+        )
+    cache_read_total, cache_read_complete = _sum_cache_read(rows)
+    cache_write_totals, incomplete_cache_writes = _sum_cache_write(rows, write_bounds)
     consumed = {
         "max_attempts": len(attempts),
-        "max_candidates": 1,
+        "max_candidates": candidate_repetition,
+        "max_cache_read_tokens": cache_read_total,
+        "max_cache_write_tokens_by_ttl_class": cache_write_totals,
         "max_confirmation_entries": confirmation_entries,
         "max_duration_seconds": elapsed,
         "max_input_tokens": _sum_raw(rows, "input_tokens"),
@@ -275,13 +471,103 @@ def _consumed(record: dict[str, Any], rows: list[dict[str, Any]], bounds: dict[s
         for member in ("max_input_tokens", "max_output_tokens", "max_cached_input_tokens")
     )
     for member, value in consumed.items():
-        if value > _bound_value(bounds, member):
+        if member == "max_cache_write_tokens_by_ttl_class":
+            _assert_cache_write_bounds(value, write_bounds)
+            continue
+        if value is not None and value > _bound_value(bounds, member):
             raise controls.ControlContractError(f"{member} exceeds its smoke ceiling")
-    return consumed
+    unobserved: list[str] = []
+    if not cache_read_complete:
+        unobserved.append("max_cache_read_tokens")
+    unobserved.extend(_cache_write_unobserved(incomplete_cache_writes))
+    return {"consumed": consumed, "bounds_unobserved": sorted(unobserved)}
+
+
+def _route_model_effort(route_id: Any) -> tuple[str, str]:
+    if not isinstance(route_id, str) or "__" not in route_id:
+        raise controls.ControlContractError("route_id must bind model and effort")
+    model, effort = route_id.rsplit("__", 1)
+    if not model or not effort:
+        raise controls.ControlContractError("route_id must bind non-empty model and effort")
+    return model, effort
+
+
+def _adaptive_route_observation(value: Any, label: str) -> str:
+    if not isinstance(value, dict):
+        raise controls.ControlContractError(f"{label} must be an object")
+    route_id = value.get("route_id")
+    model, effort = _route_model_effort(route_id)
+    if value.get("served_model") != model or value.get("served_effort") != effort:
+        raise controls.ControlContractError(f"{label} served model/effort drift")
+    return str(route_id)
+
+
+def _validate_adaptive_exact_treatment(
+    control: dict[str, Any],
+    produced_evidence: dict[str, Any],
+    *,
+    consumed_objectives: list[str],
+    registered: list[dict[str, Any]],
+) -> dict[str, Any]:
+    adaptive = control.get("adaptive")
+    if not isinstance(adaptive, dict):
+        raise controls.ControlContractError("adaptive control is malformed")
+    ladder = adaptive.get("escalation_ladder")
+    if not isinstance(ladder, list) or len(ladder) < 2:
+        raise controls.ControlContractError("adaptive ladder is malformed")
+
+    signal = produced_evidence.get("qualifying_signal")
+    if not isinstance(signal, dict):
+        raise controls.ControlContractError("adaptive exact treatment requires a qualifying signal")
+    signal_objective = signal.get("objective_id")
+    if not isinstance(signal_objective, str) or signal_objective not in set(consumed_objectives):
+        raise controls.ControlContractError(
+            "adaptive qualifying signal objective is not a recorded objective_attempt"
+        )
+    reserved = controls.reserved_partition_entry(registered)
+    controls.assert_reserved_partition_untouched(
+        [{"row_id": "adaptive-qualifying-signal", "objective_id": signal_objective}],
+        reserved,
+    )
+    response = controls.resolve_adaptive_response(control, copy.deepcopy(signal))
+    if response != "escalate":
+        raise controls.ControlContractError("adaptive exact treatment signal did not escalate")
+
+    pre_route = _adaptive_route_observation(
+        produced_evidence.get("pre_escalation"), "pre_escalation"
+    )
+    post_route = _adaptive_route_observation(
+        produced_evidence.get("post_escalation"), "post_escalation"
+    )
+    state = {
+        "objective_id": signal.get("objective_id", "g56r-004-smoke-objective"),
+        "current_route_id": pre_route,
+        "clean_streak": 0,
+        "escalations_used": 0,
+    }
+    movement = controls.advance_adaptive_state(control, state, copy.deepcopy(signal))
+    if (
+        movement.get("escalated") is not True
+        or movement.get("current_route_id") != post_route
+        or movement.get("escalation_step")
+        != {"from_route_id": pre_route, "to_route_id": post_route}
+    ):
+        raise controls.ControlContractError(
+            "adaptive exact treatment did not move one frozen ladder step"
+        )
+    observed = copy.deepcopy(produced_evidence)
+    observed["resolved_response"] = response
+    observed["escalation_step"] = copy.deepcopy(movement["escalation_step"])
+    return observed
 
 
 def _validate_exact_treatment(
-    control: dict[str, Any], produced_evidence: Any
+    control: dict[str, Any],
+    produced_evidence: Any,
+    rows: list[dict[str, Any]],
+    *,
+    consumed_objectives: list[str],
+    registered: list[dict[str, Any]],
 ) -> dict[str, Any]:
     if not isinstance(produced_evidence, dict):
         raise controls.ControlContractError("produced_evidence must be an object")
@@ -297,32 +583,37 @@ def _validate_exact_treatment(
             },
         )
     if kind == "justified_high_effort":
-        return controls.validate_justified_high_effort_exact_treatment(
+        observed = controls.validate_justified_high_effort_exact_treatment(
             control,
             {
                 "read_back_from": "produced_evidence",
                 "produced_evidence": copy.deepcopy(produced_evidence),
             },
         )
+        expected = controls.aggregate_parent_plus_children(control, rows)
+        if observed.get("parent_plus_child_aggregate") != expected:
+            raise controls.ControlContractError(
+                "parent_plus_child_aggregate does not match recorded unit rows"
+            )
+        observed["parent_plus_child_aggregate"] = expected
+        return observed
     if kind == "adaptive":
-        adaptive = control.get("adaptive")
-        if not isinstance(adaptive, dict):
-            raise controls.ControlContractError("adaptive control is malformed")
-        ladder = adaptive.get("escalation_ladder")
-        if not isinstance(ladder, list) or len(ladder) < 2:
-            raise controls.ControlContractError("adaptive ladder is malformed")
-        pre = produced_evidence.get("pre_escalation")
-        post = produced_evidence.get("post_escalation")
-        if not isinstance(pre, dict) or not isinstance(post, dict):
-            raise controls.ControlContractError("adaptive produced route evidence is missing")
-        if pre.get("route_id") != ladder[0] or post.get("route_id") != ladder[1]:
-            raise controls.ControlContractError("adaptive exact treatment route drift")
-        return copy.deepcopy(produced_evidence)
+        return _validate_adaptive_exact_treatment(
+            control,
+            produced_evidence,
+            consumed_objectives=consumed_objectives,
+            registered=registered,
+        )
     raise controls.ControlContractError(f"unknown control kind {kind!r}")
 
 
 def _digest(value: Any, label: str) -> str:
-    if not isinstance(value, str) or not value.startswith("sha256:") or len(value) != 71:
+    if (
+        not isinstance(value, str)
+        or not value.startswith(_SHA256_PREFIX)
+        or len(value) != len(_SHA256_PREFIX) + 64
+        or any(char not in _SHA256_HEX for char in value[len(_SHA256_PREFIX):])
+    ):
         raise controls.ControlContractError(f"{label} must be a sha256 digest")
     return value
 
@@ -349,6 +640,16 @@ def _reject_raw_members(value: Any, path: str) -> None:
     elif isinstance(value, list):
         for index, member in enumerate(value):
             _reject_raw_members(member, f"{path}[{index}]")
+    elif isinstance(value, str):
+        lowered = value.lower()
+        if "/" in value or "\\" in value:
+            raise controls.ControlContractError(
+                f"{path} records an operator-local path-like string"
+            )
+        if "raw" in lowered:
+            raise controls.ControlContractError(
+                f"{path} records raw live-model or operator-local capture text"
+            )
 
 
 def _evaluate_cache_isolation(pairs: Any) -> dict[str, Any]:
@@ -393,6 +694,7 @@ def seal_record(
 
     if not isinstance(record, dict):
         raise controls.ControlContractError("smoke record must be an object")
+    registry = _assert_registry_authority(registry)
     registered = _registered_entries(partition_entries)
     _require_authentication(
         authentication_mode=record.get("authentication_mode"),
@@ -408,17 +710,29 @@ def seal_record(
     if record.get("control_id") != control.get("control_id"):
         raise controls.ControlContractError("smoke record control_id drift")
 
-    rows = _unit_rows(record)
-    consumed = _consumed(record, rows, registry["smoke_bounds"])
-    exact_treatment = _validate_exact_treatment(control, record.get("produced_evidence"))
+    rows, consumed_objectives, child_dispatches = _unit_rows(record)
+    _assert_attempt_objectives(
+        record=record,
+        consumed_objectives=consumed_objectives,
+        registered=registered,
+    )
+    consumption = _consumed(record, rows, consumed_objectives, registry["smoke_bounds"])
+    exact_treatment = _validate_exact_treatment(
+        control,
+        record.get("produced_evidence"),
+        rows,
+        consumed_objectives=consumed_objectives,
+        registered=registered,
+    )
     cache_isolation = _evaluate_cache_isolation(record.get("observed_cache_isolation"))
 
     sealed = copy.deepcopy(record)
     sealed.update(
         {
             "cache_isolation": cache_isolation,
-            "child_dispatch_count": _child_dispatch_count(rows),
-            "consumed": consumed,
+            "child_dispatch_count": child_dispatches,
+            "bounds_unobserved": consumption["bounds_unobserved"],
+            "consumed": consumption["consumed"],
             "counted_over": "parent_plus_children_unit",
             "evidence_admissibility": _UNRUN,
             "produced_evidence": exact_treatment,
@@ -457,19 +771,28 @@ def sanitize_repository_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
         raise controls.ControlContractError("repository artifact control_id drift")
 
     governed = artifact.get("governed_summary")
-    if not isinstance(governed, dict) or governed.get("status") != "authorization_withheld":
+    if not isinstance(governed, dict) or set(governed) != _GOVERNED_SUMMARY_MEMBERS:
+        raise controls.ControlContractError("governed summary member-set drift")
+    if governed.get("status") != "authorization_withheld":
         raise controls.ControlContractError("governed summary status drift")
     _sanitized_digest(governed.get("digest"), "governed_summary.digest")
 
     refusal = artifact.get("refusal_record")
-    if not isinstance(refusal, dict) or not isinstance(refusal.get("reasons"), list):
+    if not isinstance(refusal, dict) or set(refusal) != _REFUSAL_RECORD_MEMBERS:
+        raise controls.ControlContractError("refusal record member-set drift")
+    if refusal.get("reasons") != []:
+        raise controls.ControlContractError("unrun smoke summaries must carry no refusal reasons")
+    if not isinstance(refusal.get("reasons"), list):
         raise controls.ControlContractError("refusal record is malformed")
     _sanitized_digest(refusal.get("digest"), "refusal_record.digest")
 
     replay = artifact.get("replay_fixture")
+    if not isinstance(replay, dict) or set(replay) != _REPLAY_FIXTURE_MEMBERS:
+        raise controls.ControlContractError("replay fixture member-set drift")
+    case_set_id = replay.get("case_set_id")
     if (
-        not isinstance(replay, dict)
-        or not isinstance(replay.get("case_set_id"), str)
+        not isinstance(case_set_id, str)
+        or case_set_id != _committed_replay_case_set_id()
         or replay.get("raw_capture") is not False
     ):
         raise controls.ControlContractError("replay fixture summary is not non-raw")

@@ -44,4 +44,5 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/performance.md](checklists/performance.md)
 - [.process/pr-review-traceability.md](.process/pr-review-traceability.md)
 - [quickstart.md](quickstart.md)
+- [verify-tasks-report.md](verify-tasks-report.md)
 <!-- GENERATED:BACKLINKS:END -->

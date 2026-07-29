@@ -127,6 +127,8 @@ def comparison_owned_mirror_members(
     schema = load_contract(codex_schema_path)
     contract = load_comparison(codex_instance_path)
     _require(schema.get("$id") == CODEX_COMPARISON_SCHEMA_ID, "schema_id drifted")
+    _require(schema == COMPARISON_SCHEMA, "comparison schema authority drift")
+    _require(contract == load_comparison(), "comparison fixture authority drift")
 
     entries: list[dict[str, Any]] = []
     for raw in handoff_path.read_text(encoding="utf-8").splitlines():

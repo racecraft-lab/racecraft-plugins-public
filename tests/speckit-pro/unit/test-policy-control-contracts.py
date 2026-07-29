@@ -1938,6 +1938,23 @@ class CodexDeterministicReplayTests(unittest.TestCase):
                     with self.assertRaises(self.error):
                         replay(seeded_path)
 
+    def test_replay_refuses_self_consistent_copy_with_changed_case_id_and_objective(self) -> None:
+        replay = self.replay_api()
+        mutated = copy.deepcopy(self.replay_fixture)
+        mutated["control_replay_cases"][0]["case_id"] = (
+            "unpinned-non-live-control-replay-copy"
+        )
+        mutated["control_replay_cases"][0]["objective_id"] = "G56R-004-SMOKE-OBJ-04"
+
+        with tempfile.TemporaryDirectory() as directory:
+            seeded_path = Path(directory) / "replay-cases.json"
+            seeded_path.write_text(
+                json.dumps(mutated, sort_keys=True, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(self.error, "replay fixture"):
+                replay(seeded_path)
+
 
 class CodexControlSmokePlanAndSealTests(unittest.TestCase):
     """T028 RED: non-live Codex smoke plan and seal semantics."""
@@ -1995,6 +2012,16 @@ class CodexControlSmokePlanAndSealTests(unittest.TestCase):
             "row_id": row_id,
             "spawned_by": spawned_by,
             "duration_ms": duration_ms,
+            "resource_vector": {
+                "input_tokens": raw[0],
+                "cached_input_tokens": raw[2],
+                "output_tokens": raw[1],
+                "duration_ms": duration_ms,
+                "retries": 0,
+                "compactions": 0,
+                "terminal_state": "completed",
+                "acceptance": 1.0,
+            },
             "raw_token_vector": {
                 "input_tokens": raw[0],
                 "output_tokens": raw[1],
@@ -2015,6 +2042,15 @@ class CodexControlSmokePlanAndSealTests(unittest.TestCase):
     def smoke_record(self, control_kind: str, **overrides: object) -> dict[str, object]:
         control = control_of_kind(self.registry, control_kind)
         objective = self.smoke_partition["objective_ids"][0]
+        default_attempts = [
+            {
+                "objective_id": objective,
+                "unit_rows": [
+                    self.unit_member("parent"),
+                    self.unit_member("child-1", "parent"),
+                ],
+            }
+        ]
         record: dict[str, object] = {
             "record_kind": "codex_control_smoke",
             "schema_version": "1.0.0",
@@ -2031,16 +2067,7 @@ class CodexControlSmokePlanAndSealTests(unittest.TestCase):
             "objective_ids": [objective],
             "confirmation_entries": 0,
             "elapsed_wall_clock_seconds": 600,
-            "objective_attempts": [
-                {
-                    "objective_id": objective,
-                    "unit_rows": [
-                        self.unit_member("parent"),
-                        self.unit_member("child-1", "parent"),
-                    ],
-                }
-            ],
-            "produced_evidence": self.produced_evidence(control_kind),
+            "objective_attempts": default_attempts,
             "observed_cache_isolation": [
                 self.isolation_pair("unpinned", "adaptive"),
                 self.isolation_pair("unpinned", "justified_high_effort"),
@@ -2048,9 +2075,24 @@ class CodexControlSmokePlanAndSealTests(unittest.TestCase):
             ],
         }
         record.update(overrides)
+        if "produced_evidence" not in overrides:
+            record["produced_evidence"] = self.produced_evidence(
+                control_kind, self.record_unit_rows(record)
+            )
         return record
 
-    def produced_evidence(self, control_kind: str) -> dict[str, object]:
+    def record_unit_rows(self, record: dict[str, object]) -> list[dict[str, object]]:
+        return [
+            row
+            for attempt in record["objective_attempts"]
+            for row in attempt["unit_rows"]
+        ]
+
+    def produced_evidence(
+        self,
+        control_kind: str,
+        unit_rows: list[dict[str, object]] | None = None,
+    ) -> dict[str, object]:
         control = control_of_kind(self.registry, control_kind)
         if control_kind == "unpinned":
             return {
@@ -2063,11 +2105,31 @@ class CodexControlSmokePlanAndSealTests(unittest.TestCase):
             }
         if control_kind == "adaptive":
             ladder = control["adaptive"]["escalation_ladder"]
+            pre_model, pre_effort = ladder[0].rsplit("__", 1)
+            post_model, post_effort = ladder[1].rsplit("__", 1)
             return {
                 "read_back_from": "produced_evidence",
-                "pre_escalation": {"route_id": ladder[0]},
-                "post_escalation": {"route_id": ladder[1]},
+                "qualifying_signal": {
+                    "objective_id": self.smoke_partition["objective_ids"][0],
+                    "failure_code": "candidate_failed",
+                    "failure_plane": "candidate",
+                    "terminal_state": "failed",
+                    "retries": 0,
+                    "budget_observations": {},
+                },
+                "pre_escalation": {
+                    "route_id": ladder[0],
+                    "served_model": pre_model,
+                    "served_effort": pre_effort,
+                },
+                "post_escalation": {
+                    "route_id": ladder[1],
+                    "served_model": post_model,
+                    "served_effort": post_effort,
+                },
             }
+        if unit_rows is None:
+            unit_rows = [self.unit_member("parent"), self.unit_member("child-1", "parent")]
         return {
             "read_back_from": "produced_evidence",
             "served_route_id": CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID,
@@ -2079,7 +2141,9 @@ class CodexControlSmokePlanAndSealTests(unittest.TestCase):
             "eligibility_rationale_binding": "required_core_workspace_write_phase_executor",
             "fallback_route_id": None,
             "dynamic_route_discovery": False,
-            "parent_plus_child_aggregate": {"terminal_state": "completed"},
+            "parent_plus_child_aggregate": self.controls.aggregate_parent_plus_children(
+                control, unit_rows
+            ),
         }
 
     def isolation_pair(self, left: str, right: str, status: str = "observed_disjoint") -> dict[str, object]:
@@ -2156,6 +2220,331 @@ class CodexControlSmokePlanAndSealTests(unittest.TestCase):
             with self.subTest(member=member):
                 self.assertIn(member, sealed["consumed"])
 
+    def test_nested_attempt_objectives_must_match_top_level_smoke_partition(self) -> None:
+        admitted = self.smoke_partition["objective_ids"]
+        reserved = next(
+            entry for entry in self.partition_entries if entry["qualification_eligible"]
+        )["objective_ids"][0]
+        seeded_cases = (
+            ("reserved_objective", reserved),
+            ("outside_smoke_partition", "G56R-004-OUTSIDE-SMOKE-OBJ"),
+            ("top_level_mismatch", admitted[1]),
+        )
+        for label, nested_objective in seeded_cases:
+            with self.subTest(case=label):
+                record = self.smoke_record("unpinned")
+                record["objective_attempts"][0]["objective_id"] = nested_objective
+                with self.assertRaises(self.error):
+                    self.seal(record)
+
+    def test_candidate_repetition_cache_diagnostics_and_child_count_follow_frozen_accounting(self) -> None:
+        objectives = self.smoke_partition["objective_ids"]
+        rows_one = [
+            self.unit_member("objective-1-parent", raw=(10, 10, 10, 0), cache=(70, 30, 400)),
+            self.unit_member("objective-1-child-1", "objective-1-parent", raw=(20, 20, 20, 0), cache=(7, 3, 40)),
+            self.unit_member("objective-1-child-2", "objective-1-parent", raw=(30, 30, 30, 0), cache=(13, 5, 80)),
+        ]
+        rows_two = [
+            self.unit_member("objective-2-parent", raw=(40, 40, 40, 0), cache=(17, 11, 120)),
+            self.unit_member("objective-2-child-1", "objective-2-parent", raw=(50, 50, 50, 0), cache=(19, 13, 160)),
+        ]
+        sealed = self.seal(
+            self.smoke_record(
+                "adaptive",
+                objective_ids=objectives[:2],
+                objective_attempts=[
+                    {"objective_id": objectives[0], "unit_rows": rows_one},
+                    {"objective_id": objectives[1], "unit_rows": rows_two},
+                ],
+            )
+        )
+        self.assertEqual(sealed["consumed"]["max_attempts"], 2)
+        self.assertEqual(sealed["consumed"]["max_candidates"], 1)
+        self.assertEqual(sealed["child_dispatch_count"], 3)
+        self.assertEqual(sealed["consumed"]["max_cache_read_tokens"], 800)
+        self.assertEqual(
+            sealed["consumed"]["max_cache_write_tokens_by_ttl_class"],
+            {"ephemeral_5m": 126, "ephemeral_1h": 62},
+        )
+
+    def test_partial_cache_diagnostics_preserve_the_observed_ceiling(self) -> None:
+        missing_read = self.smoke_record("adaptive")
+        del missing_read["objective_attempts"][0]["unit_rows"][0]["cache_diagnostic"][
+            "cache_read_tokens"
+        ]
+        read_sealed = self.seal(missing_read)
+        self.assertEqual(read_sealed["consumed"]["max_cache_read_tokens"], 400)
+        self.assertEqual(
+            read_sealed["consumed"]["max_cache_write_tokens_by_ttl_class"],
+            {"ephemeral_5m": 140, "ephemeral_1h": 60},
+        )
+        self.assertEqual(read_sealed["bounds_unobserved"], ["max_cache_read_tokens"])
+
+        missing_ttl = self.smoke_record("adaptive")
+        del missing_ttl["objective_attempts"][0]["unit_rows"][0]["cache_diagnostic"][
+            "cache_write_tokens_by_ttl_class"
+        ]["ephemeral_1h"]
+        ttl_sealed = self.seal(missing_ttl)
+        self.assertEqual(ttl_sealed["consumed"]["max_cache_read_tokens"], 800)
+        self.assertEqual(
+            ttl_sealed["consumed"]["max_cache_write_tokens_by_ttl_class"],
+            {"ephemeral_5m": 140, "ephemeral_1h": 30},
+        )
+        self.assertEqual(
+            ttl_sealed["bounds_unobserved"],
+            ["max_cache_write_tokens_by_ttl_class.ephemeral_1h"],
+        )
+
+    def test_missing_child_cache_diagnostic_does_not_erase_observed_parent_breaches(self) -> None:
+        record = self.smoke_record(
+            "adaptive",
+            objective_attempts=[
+                {
+                    "objective_id": self.smoke_partition["objective_ids"][0],
+                    "unit_rows": [
+                        self.unit_member(
+                            "parent",
+                            cache=(160_001, 40_001, 1_200_001),
+                        ),
+                        self.unit_member("child", "parent", cache=None),
+                    ],
+                }
+            ],
+        )
+        with self.assertRaises(self.error):
+            self.seal(record)
+
+    def test_missing_child_cache_diagnostic_preserves_observed_subtotals_and_incompleteness(self) -> None:
+        record = self.smoke_record(
+            "adaptive",
+            objective_attempts=[
+                {
+                    "objective_id": self.smoke_partition["objective_ids"][0],
+                    "unit_rows": [
+                        self.unit_member("parent", cache=(70, 30, 400)),
+                        self.unit_member("child", "parent", cache=None),
+                    ],
+                }
+            ],
+        )
+        sealed = self.seal(record)
+        self.assertEqual(sealed["consumed"]["max_cache_read_tokens"], 400)
+        self.assertEqual(
+            sealed["consumed"]["max_cache_write_tokens_by_ttl_class"],
+            {"ephemeral_5m": 70, "ephemeral_1h": 30},
+        )
+        self.assertEqual(
+            sealed["bounds_unobserved"],
+            [
+                "max_cache_read_tokens",
+                "max_cache_write_tokens_by_ttl_class.ephemeral_1h",
+                "max_cache_write_tokens_by_ttl_class.ephemeral_5m",
+            ],
+        )
+
+    def test_partial_cache_write_still_enforces_observed_ttl_breaches(self) -> None:
+        record = self.smoke_record("adaptive")
+        record["objective_attempts"][0]["unit_rows"][0]["cache_diagnostic"][
+            "cache_write_tokens_by_ttl_class"
+        ]["ephemeral_5m"] = 160_001
+        del record["objective_attempts"][0]["unit_rows"][0]["cache_diagnostic"][
+            "cache_write_tokens_by_ttl_class"
+        ]["ephemeral_1h"]
+        with self.assertRaises(self.error):
+            self.seal(record)
+
+    def test_adaptive_qualifying_signal_objective_is_bound_to_the_demonstrated_attempt(self) -> None:
+        reserved = next(
+            entry for entry in self.partition_entries if entry["qualification_eligible"]
+        )["objective_ids"][0]
+        for label, objective in (
+            ("outside_attempts", self.smoke_partition["objective_ids"][1]),
+            ("reserved", reserved),
+        ):
+            with self.subTest(case=label):
+                evidence = copy.deepcopy(self.produced_evidence("adaptive"))
+                evidence["qualifying_signal"]["objective_id"] = objective
+                with self.assertRaises(self.error):
+                    self.seal(
+                        self.smoke_record("adaptive", produced_evidence=evidence)
+                    )
+
+    def test_public_smoke_apis_bind_injected_inputs_to_the_committed_authority(self) -> None:
+        stale_registry = copy.deepcopy(self.registry)
+        stale_registry["controls"][0]["control_digest"] = "sha256:" + "9" * 64
+
+        altered_bounds = copy.deepcopy(self.registry)
+        altered_bounds["smoke_bounds"]["max_attempts"]["value"] = 500
+
+        stale_partition_digest = copy.deepcopy(self.partition_entries)
+        stale_partition_digest[1]["objective_set_digest"] = "sha256:" + "8" * 64
+
+        changed_reserved_membership = copy.deepcopy(self.partition_entries)
+        changed_reserved_membership[0]["objective_ids"] = [
+            "G56R-011-RESERVED-OBJ-COMPARISON-DRIFTED"
+        ]
+
+        cases = (
+            ("stale_control_digest", stale_registry, self.partition_entries),
+            ("altered_bounds", altered_bounds, self.partition_entries),
+            ("stale_objective_set_digest", self.registry, stale_partition_digest),
+            ("changed_reserved_membership", self.registry, changed_reserved_membership),
+        )
+        for label, registry, entries in cases:
+            with self.subTest(api="build_plan", case=label):
+                with self.assertRaises(self.error):
+                    self.smoke_module.build_plan(
+                        "adaptive",
+                        registry=registry,
+                        partition_entries=entries,
+                        authorization="withheld",
+                    )
+            with self.subTest(api="seal_record", case=label):
+                with self.assertRaises(self.error):
+                    self.smoke_module.seal_record(
+                        self.smoke_record("adaptive"),
+                        registry=registry,
+                        partition_entries=entries,
+                    )
+
+    def test_exported_partition_helpers_bind_injected_entries_to_committed_authority(self) -> None:
+        stale_partition_digest = copy.deepcopy(self.partition_entries)
+        stale_partition_digest[1]["objective_set_digest"] = "sha256:" + "8" * 64
+
+        changed_reserved_membership = copy.deepcopy(self.partition_entries)
+        changed_reserved_membership[0]["objective_ids"] = [
+            "G56R-011-RESERVED-OBJ-COMPARISON-DRIFTED"
+        ]
+
+        clean_record = {
+            "objective_ids": [self.smoke_partition["objective_ids"][0]],
+            "outcome_bearing": False,
+            "partition_id": self.smoke_partition["partition_id"],
+            "partition_type": "calibration",
+            "scored": False,
+        }
+
+        cases = (
+            ("stale_objective_set_digest", stale_partition_digest),
+            ("changed_reserved_membership", changed_reserved_membership),
+        )
+        for label, entries in cases:
+            with self.subTest(helper="guard_plan_objectives", case=label):
+                with self.assertRaises(self.error):
+                    self.smoke_module.guard_plan_objectives(
+                        [self.smoke_partition["objective_ids"][0]], entries
+                    )
+            with self.subTest(helper="plan_objectives", case=label):
+                with self.assertRaises(self.error):
+                    self.smoke_module.plan_objectives(entries)
+            with self.subTest(helper="guard_smoke_record", case=label):
+                with self.assertRaises(self.error):
+                    self.smoke_module.guard_smoke_record(clean_record, entries)
+
+    def test_repeating_one_candidate_objective_breaches_candidate_ceiling(self) -> None:
+        objective = self.smoke_partition["objective_ids"][0]
+        record = self.smoke_record(
+            "adaptive",
+            objective_ids=[objective],
+            objective_attempts=[
+                {"objective_id": objective, "unit_rows": [self.unit_member("parent-1")]},
+                {"objective_id": objective, "unit_rows": [self.unit_member("parent-2")]},
+            ],
+        )
+        with self.assertRaises(self.error):
+            self.seal(record)
+
+    def test_cache_read_and_write_ceilings_are_refused_independently(self) -> None:
+        objective = self.smoke_partition["objective_ids"][0]
+        seeded_cases = (
+            ("cache_read", (1, 1, 1_200_001)),
+            ("cache_write_5m", (160_001, 1, 1)),
+            ("cache_write_1h", (1, 40_001, 1)),
+        )
+        for label, cache in seeded_cases:
+            with self.subTest(case=label):
+                record = self.smoke_record(
+                    "justified_high_effort",
+                    objective_attempts=[
+                        {
+                            "objective_id": objective,
+                            "unit_rows": [
+                                self.unit_member(
+                                    "parent",
+                                    raw=(1, 1, 1, 0),
+                                    cache=cache,
+                                )
+                            ],
+                        }
+                    ],
+                )
+                with self.assertRaises(self.error):
+                    self.seal(record)
+
+    def test_adaptive_exact_treatment_requires_signal_and_served_route_movement(self) -> None:
+        control = control_of_kind(self.registry, "adaptive")
+        ladder = control["adaptive"]["escalation_ladder"]
+        sealed = self.seal(self.smoke_record("adaptive"))
+        self.assertEqual(
+            sealed["produced_evidence"]["pre_escalation"]["route_id"],
+            ladder[0],
+        )
+        self.assertEqual(
+            sealed["produced_evidence"]["post_escalation"]["route_id"],
+            ladder[1],
+        )
+
+        route_only = {
+            "read_back_from": "produced_evidence",
+            "pre_escalation": {"route_id": ladder[0]},
+            "post_escalation": {"route_id": ladder[1]},
+        }
+        missing_signal = copy.deepcopy(self.produced_evidence("adaptive"))
+        del missing_signal["qualifying_signal"]
+        mismatched_metadata = copy.deepcopy(self.produced_evidence("adaptive"))
+        mismatched_metadata["pre_escalation"]["served_effort"] = "xhigh"
+        non_qualifying_signal = copy.deepcopy(self.produced_evidence("adaptive"))
+        non_qualifying_signal["qualifying_signal"].update({
+            "failure_code": "none",
+            "failure_plane": "none",
+            "terminal_state": "completed",
+        })
+        for label, evidence in (
+            ("route_only", route_only),
+            ("missing_signal", missing_signal),
+            ("mismatched_metadata", mismatched_metadata),
+            ("non_qualifying_signal", non_qualifying_signal),
+        ):
+            with self.subTest(case=label):
+                with self.assertRaises(self.error):
+                    self.seal(self.smoke_record("adaptive", produced_evidence=evidence))
+
+    def test_high_effort_exact_treatment_recomputes_the_recorded_unit_aggregate(self) -> None:
+        control = control_of_kind(self.registry, "justified_high_effort")
+        record = self.smoke_record("justified_high_effort")
+        expected = self.controls.aggregate_parent_plus_children(
+            control, self.record_unit_rows(record)
+        )
+        sealed = self.seal(record)
+        self.assertEqual(
+            sealed["produced_evidence"]["parent_plus_child_aggregate"],
+            expected,
+        )
+
+        invented = self.smoke_record("justified_high_effort")
+        invented["produced_evidence"]["parent_plus_child_aggregate"] = {
+            "terminal_state": "completed"
+        }
+        with self.assertRaises(self.error):
+            self.seal(invented)
+
+        mismatched = self.smoke_record("justified_high_effort")
+        mismatched["objective_attempts"][0]["unit_rows"].append(
+            self.unit_member("child-2", "parent", raw=(2, 2, 2, 0), cache=(2, 2, 2))
+        )
+        with self.assertRaises(self.error):
+            self.seal(mismatched)
+
     def test_child_dispatches_do_not_consume_objective_attempts(self) -> None:
         record = self.smoke_record("adaptive")
         record["objective_attempts"][0]["unit_rows"].extend([
@@ -2164,7 +2553,7 @@ class CodexControlSmokePlanAndSealTests(unittest.TestCase):
         ])
         sealed = self.seal(record)
         self.assertEqual(sealed["consumed"]["max_attempts"], 1)
-        self.assertEqual(sealed["child_dispatch_count"], 4)
+        self.assertEqual(sealed["child_dispatch_count"], 3)
 
     def test_exact_treatment_is_read_back_from_produced_evidence(self) -> None:
         for kind in CODEX_CONTROL_KINDS:
@@ -2271,6 +2660,87 @@ class CodexRawCaptureExclusionTests(unittest.TestCase):
                     }
                 ]
             },
+        )
+        for seeded in raw_cases:
+            with self.subTest(seeded=seeded):
+                with self.assertRaises(self.error):
+                    self.sanitize(self.governed_summary(**seeded))
+
+    def test_repository_summary_nested_member_sets_are_exact(self) -> None:
+        raw_cases = (
+            {
+                "governed_summary": {
+                    "status": "authorization_withheld",
+                    "digest": "sha256:" + "3" * 64,
+                    "raw_output_digest": "sha256:" + "6" * 64,
+                }
+            },
+            {
+                "refusal_record": {
+                    "reasons": [],
+                    "digest": "sha256:" + "4" * 64,
+                    "raw_reason_digest": "sha256:" + "7" * 64,
+                }
+            },
+            {
+                "replay_fixture": {
+                    "case_set_id": "g56r-004-adaptive-signal-resolution",
+                    "digest": "sha256:" + "5" * 64,
+                    "raw_capture": False,
+                    "response_digest": "sha256:" + "8" * 64,
+                }
+            },
+        )
+        for seeded in raw_cases:
+            with self.subTest(seeded=seeded):
+                with self.assertRaises(self.error):
+                    self.sanitize(self.governed_summary(**seeded))
+
+    def test_repository_summary_replay_case_set_id_is_bound_to_the_committed_fixture(self) -> None:
+        artifact = self.governed_summary(
+            replay_fixture={
+                "case_set_id": "Summarize the smoke plan in prose for the next reviewer",
+                "digest": "sha256:" + "5" * 64,
+                "raw_capture": False,
+            }
+        )
+        with self.assertRaises(self.error):
+            self.sanitize(artifact)
+
+    def test_repository_summary_digest_rejects_prose_payload_with_sha256_prefix(self) -> None:
+        valid_digest = "sha256:" + "abcdef0123456789" * 4
+        valid = self.sanitize(
+            self.governed_summary(
+                governed_summary={
+                    "status": "authorization_withheld",
+                    "digest": valid_digest,
+                }
+            )
+        )
+        self.assertEqual(valid["governed_summary"]["digest"], valid_digest)
+
+        prose_payload = "nothexprompttext" * 4
+        self.assertEqual(len(prose_payload), 64)
+        artifact = self.governed_summary(
+            governed_summary={
+                "status": "authorization_withheld",
+                "digest": "sha256:" + prose_payload,
+            }
+        )
+        with self.assertRaises(self.error):
+            self.sanitize(artifact)
+
+    def test_repository_summary_rejects_path_strings_and_unrun_refusal_reasons(self) -> None:
+        raw_cases = (
+            {"replay_fixture": {
+                "case_set_id": "/private/tmp/raw-smoke.json",
+                "digest": "sha256:" + "5" * 64,
+                "raw_capture": False,
+            }},
+            {"refusal_record": {
+                "reasons": ["operator refused from /private/tmp/raw-smoke.json"],
+                "digest": "sha256:" + "4" * 64,
+            }},
         )
         for seeded in raw_cases:
             with self.subTest(seeded=seeded):

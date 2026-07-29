@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T09:10:13Z",
-  "active_step": "Post: Doctor Extension Check",
+  "updated_at": "2026-07-29T12:00:37Z",
+  "active_step": "Post: Reviewability Diff Gate",
   "status": "in_progress",
   "worktree_binding": {
     "mode": "operator_authorized_in_session_workdir",
@@ -195,23 +195,40 @@
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "completed",
+      "result": "pass_with_warnings",
+      "warnings": [
+        "legacy .claude/commands files absent while skills are registered",
+        ".specify/extensions.yml omits registry-enabled speckit-utils"
+      ]
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed",
+      "result": "pass_zero_findings"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed",
+      "result": "pass_38_of_38_zero_flagged",
+      "report": "specs/g56r-004-policy-controls-adaptive-comparators/verify-tasks-report.md"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed",
+      "result": "pass_final_no_findings",
+      "review_rounds": 14,
+      "important_findings_remediated": 24
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed",
+      "result": "5194/5194",
+      "layers": {
+        "layer_1": "1428/1428",
+        "layer_4": "3580/3580",
+        "layer_5": "186/186"
+      }
     },
     {
       "step": "Post: Reviewability Diff Gate",

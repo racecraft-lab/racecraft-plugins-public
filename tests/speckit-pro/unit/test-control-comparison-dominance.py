@@ -1318,6 +1318,49 @@ class CodexComparisonContractTests(CodexComparisonModuleTestCase):
         )
         self.assertIn(G56R_003_ANALYSIS_PLAN_ID, report["bound_ids"])
 
+    def test_comparison_owned_report_refuses_schema_semantic_drift(self) -> None:
+        drifted_schema = load_json(CODEX_COMPARISON_SCHEMA_PATH)
+        drifted_schema["required"].remove("comparison_digest")
+
+        with tempfile.TemporaryDirectory() as directory:
+            seeded_schema = Path(directory) / "control-comparison.schema.json"
+            seeded_schema.write_text(json.dumps(drifted_schema), encoding="utf-8")
+            with self.assertRaisesRegex(self.error, "comparison schema authority drift"):
+                self.module.comparison_owned_mirror_members(
+                    handoff_path=REPO_ROOT
+                    / "docs"
+                    / "ai"
+                    / "specs"
+                    / ".process"
+                    / "CAR-004-twin-handoff.md",
+                    codex_schema_path=seeded_schema,
+                    codex_instance_path=CODEX_COMPARISON_INSTANCE_PATH,
+                )
+
+    def test_comparison_owned_report_refuses_recomputed_semantic_drift(self) -> None:
+        drifted = load_json(CODEX_COMPARISON_INSTANCE_PATH)
+        for entry in drifted["dominance_rule"]["margin_map"].values():
+            if entry["class"] == "margin_eligible":
+                entry["relative_margin"] = 0.20
+        drifted["comparison_digest"] = record_digest(
+            drifted, digest_field="comparison_digest"
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            seeded = Path(directory) / "control-comparison.json"
+            seeded.write_text(json.dumps(drifted), encoding="utf-8")
+            with self.assertRaisesRegex(self.error, "comparison fixture authority drift"):
+                self.module.comparison_owned_mirror_members(
+                    handoff_path=REPO_ROOT
+                    / "docs"
+                    / "ai"
+                    / "specs"
+                    / ".process"
+                    / "CAR-004-twin-handoff.md",
+                    codex_schema_path=CODEX_COMPARISON_SCHEMA_PATH,
+                    codex_instance_path=seeded,
+                )
+
 
 class CodexReleaseClaimPolicyTests(CodexComparisonModuleTestCase):
     """T022 RED: release messaging is explicit and cannot conclude G56R-011."""
