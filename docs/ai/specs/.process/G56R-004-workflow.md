@@ -864,9 +864,9 @@ For every behavior task:
 | Post: Final Reviewability Backstop | Completed | Proceed on current committed pass evidence at `8fc3bc74`; single-PR route remains authoritative and no PR marker plan exists |
 | Post: PR Packet/Body Generation | Completed | `pr-packet-output` dry-run/apply emitted the current feature-local packet/body; refined packet passed read-only validation (`pr_blocked=false`, outer `writes_state=false`), clean-worktree validation was persisted, and the PR workflow contract passed |
 | Post: PR Body Generation | Completed | Refined only the three packet-sanctioned editable prose regions for public readability; protected sections remained unchanged and fresh validation passed |
-| Post: PR Creation | In Progress | Exact packet title passed the live-context release-readiness gate; checkpoint validation evidence, push packet-owned head, then create from packet-owned fields |
-| Post: Review Remediation | Pending | Resolve actionable review feedback |
-| Post: Retrospective | Pending | Final canonical Post item |
+| Post: PR Creation | Completed | Pushed packet-owned head and created draft PR [#403](https://github.com/racecraft-lab/racecraft-plugins-public/pull/403) against `main` with the validated packet-owned title/body |
+| Post: Review Remediation | Completed | Initial PR audit found zero reviews, comments, or review threads; no actionable remediation was required; CI was queued on the newly created draft |
+| Post: Retrospective | In Progress | Run `$speckit-retrospective-analyze` as the final canonical Post item |
 
 ---
 

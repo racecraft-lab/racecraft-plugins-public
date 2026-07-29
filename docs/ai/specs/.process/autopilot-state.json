@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T12:19:00Z",
-  "active_step": "Post: PR Creation",
+  "updated_at": "2026-07-29T12:21:27Z",
+  "active_step": "Post: Retrospective",
   "status": "in_progress",
   "worktree_binding": {
     "mode": "operator_authorized_in_session_workdir",
@@ -276,16 +276,26 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "in_progress",
-      "result": "validation_checkpoint_pending_push_and_create"
+      "status": "completed",
+      "result": "draft_pr_created",
+      "pr_number": 403,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/403",
+      "is_draft": true,
+      "base_branch": "main",
+      "head_branch": "g56r-004-policy-controls-adaptive-comparators",
+      "head_sha": "37432e23c9d2443ca6dac2f858f92df1842559a8"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "completed",
+      "result": "no_actionable_feedback",
+      "reviews": 0,
+      "comments": 0,
+      "review_threads": 0
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "in_progress"
     }
   ],
   "phase_results": {
