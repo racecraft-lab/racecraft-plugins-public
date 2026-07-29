@@ -1,0 +1,108 @@
+<!--
+  Racecraft artifact gallery, canonical head block.
+
+  Copy the region between the two markers, including the markers, into the
+  artifact's head element, directly after the character encoding declaration and
+  before anything else. Validation compares the region byte for byte. Amend this
+  file in its own change, never the copy inside an artifact.
+
+  The region stays inside the head element and carries only metadata content, so
+  the theme control is created at run time instead of being written as markup
+  here. The head element admits only metadata content, so a parser meeting a
+  button there closes the head and opens the body, which silently relocates the
+  whole region and voids the policy declaration for every artifact embedding it.
+  With scripting unavailable the reader still gets the operating system theme
+  from the kit's media query and loses only the ability to override it, the same
+  degradation the storage unavailable path already accepts.
+
+  Everything else an artifact needs, the brand typeface request included, is the
+  artifact's own and belongs outside this region.
+-->
+<!-- GALLERY-HEAD:START -->
+<meta http-equiv="Content-Security-Policy" content="base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&amp;family=Geist:wght@400;500&amp;family=Fira+Code:wght@400&amp;display=swap">
+<script>
+(function () {
+  'use strict';
+
+  var LIGHT = 'light';
+  var DARK = 'dark';
+  var STORAGE_KEY = 'speckit-pro:artifact-gallery:theme';
+  var LABEL = 'Dark theme';
+  var root = document.documentElement;
+
+  /* The read is wrapped because a browser may refuse storage to a local file and
+     throw. That catch covers the throw only: the closed set comparison below is
+     what validates the value, so a value written by some other local document is
+     discarded rather than swallowed. */
+  function storedTheme() {
+    var raw = null;
+    try {
+      raw = window.localStorage.getItem(STORAGE_KEY);
+    } catch (unavailable) {
+      raw = null;
+    }
+    if (raw === DARK) {
+      return DARK;
+    }
+    if (raw === LIGHT) {
+      return LIGHT;
+    }
+    return null;
+  }
+
+  function systemTheme() {
+    return window.matchMedia
+      && window.matchMedia('(prefers-color-scheme: dark)').matches ? DARK : LIGHT;
+  }
+
+  /* theme is always one of the two literals above, never the string read back.
+     The scheme is set alongside the attribute so the browser's own surfaces,
+     form widgets and scrollbars, follow the chosen theme rather than the
+     operating system preference. */
+  function applyTheme(theme) {
+    root.setAttribute('data-theme', theme);
+    root.style.setProperty('color-scheme', theme);
+  }
+
+  function rememberTheme(theme) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, theme);
+    } catch (unavailable) {
+      /* Storage refused: the override still applies for this session and
+         nothing is surfaced to the reader as an error. */
+    }
+  }
+
+  /* Runs while the head is parsing, so an override is on the root element
+     before first paint and a dark theme reader sees no flash of light. With no
+     stored override nothing is written and the kit's media query decides. */
+  var active = storedTheme();
+  if (active) {
+    applyTheme(active);
+  } else {
+    active = systemTheme();
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var control = document.createElement('button');
+    control.type = 'button';
+    control.className = 'rc-theme-toggle';
+    /* The name is carried both as the visible label and as an explicit
+       accessible name, identical to each other, so it is stable across theme
+       positions and never derived from an icon glyph. The pressed state is what
+       changes between positions. */
+    control.textContent = LABEL;
+    control.setAttribute('aria-label', LABEL);
+    control.setAttribute('aria-pressed', active === DARK ? 'true' : 'false');
+    control.addEventListener('click', function () {
+      active = active === DARK ? LIGHT : DARK;
+      applyTheme(active);
+      rememberTheme(active);
+      control.setAttribute('aria-pressed', active === DARK ? 'true' : 'false');
+    });
+    document.body.insertBefore(control, document.body.firstChild);
+  });
+})();
+</script>
+<!-- GALLERY-HEAD:END -->
