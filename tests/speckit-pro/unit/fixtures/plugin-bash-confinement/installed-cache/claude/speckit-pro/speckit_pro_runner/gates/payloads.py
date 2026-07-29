@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import re
@@ -14,7 +13,7 @@ from typing import Any
 
 from .. import RUNNER_VERSION
 from ..envelope import diagnostic, is_diagnostic, response
-from ..path_utils import find_repo_root, is_relative_to, sha256_file
+from ..path_utils import find_repo_root, is_relative_to, sha256_file, sha256_text
 from .gate_response import gate_base_data
 
 PROMOTION_RECORD = "tests/speckit-pro/unit/fixtures/runner-gates/promotion-records.json"
@@ -947,7 +946,3 @@ def normalize_posix_path(raw: str) -> str:
 
 def repo_relative(path: Path, repo_root: Path) -> str:
     return path.resolve(strict=False).relative_to(repo_root.resolve(strict=False)).as_posix()
-
-
-def sha256_text(text: str) -> str:
-    return hashlib.sha256(text.encode("utf-8")).hexdigest()
