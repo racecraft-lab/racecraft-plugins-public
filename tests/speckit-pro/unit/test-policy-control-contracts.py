@@ -1939,6 +1939,345 @@ class CodexDeterministicReplayTests(unittest.TestCase):
                         replay(seeded_path)
 
 
+class CodexControlSmokePlanAndSealTests(unittest.TestCase):
+    """T028 RED: non-live Codex smoke plan and seal semantics."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.assertIsNotNone(codex_control_smoke, "codex_control_smoke is not importable")
+        self.controls = codex_policy_controls
+        self.smoke_module = codex_control_smoke
+        self.error = self.controls.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.partition_entries = load_json(CODEX_PARTITION_FIXTURE_PATH)["entries"]
+        self.smoke_partition = next(
+            entry for entry in self.partition_entries if not entry["qualification_eligible"]
+        )
+
+    def build_plan(self, control_kind: str) -> dict[str, object]:
+        return self.build_plan_with(control_kind, authorization="withheld")
+
+    def build_plan_with(self, control_kind: str, **kwargs: object) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.smoke_module, "build_plan"),
+            "T029 must expose build_plan for Codex ChatGPT-sign-in control smokes",
+        )
+        options: dict[str, object] = {"authorization": "withheld"}
+        options.update(kwargs)
+        return self.smoke_module.build_plan(
+            control_kind,
+            registry=self.registry,
+            partition_entries=self.partition_entries,
+            **options,
+        )
+
+    def seal(self, record: dict[str, object]) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.smoke_module, "seal_record"),
+            "T029 must expose seal_record for non-live Codex smoke records",
+        )
+        return self.smoke_module.seal_record(
+            record,
+            registry=self.registry,
+            partition_entries=self.partition_entries,
+        )
+
+    def unit_member(
+        self,
+        row_id: str,
+        spawned_by: str | None = None,
+        *,
+        duration_ms: int = 60000,
+        raw: tuple[int, int, int, int | None] = (1000, 200, 300, 50),
+        cache: tuple[int, int, int] | None = (70, 30, 400),
+    ) -> dict[str, object]:
+        row: dict[str, object] = {
+            "row_id": row_id,
+            "spawned_by": spawned_by,
+            "duration_ms": duration_ms,
+            "raw_token_vector": {
+                "input_tokens": raw[0],
+                "output_tokens": raw[1],
+                "cached_input_tokens": raw[2],
+                "reasoning_output_tokens": raw[3],
+            },
+        }
+        if cache is not None:
+            row["cache_diagnostic"] = {
+                "cache_read_tokens": cache[2],
+                "cache_write_tokens_by_ttl_class": {
+                    "ephemeral_5m": cache[0],
+                    "ephemeral_1h": cache[1],
+                },
+            }
+        return row
+
+    def smoke_record(self, control_kind: str, **overrides: object) -> dict[str, object]:
+        control = control_of_kind(self.registry, control_kind)
+        objective = self.smoke_partition["objective_ids"][0]
+        record: dict[str, object] = {
+            "record_kind": "codex_control_smoke",
+            "schema_version": "1.0.0",
+            "smoke_id": f"g56r-004-smoke-{control_kind}",
+            "control_id": control["control_id"],
+            "control_kind": control_kind,
+            "authentication_mode": "chatgpt_subscription",
+            "authorization": "withheld",
+            "run_state": "unrun",
+            "scored": False,
+            "outcome_bearing": False,
+            "partition_id": self.smoke_partition["partition_id"],
+            "partition_type": "calibration",
+            "objective_ids": [objective],
+            "confirmation_entries": 0,
+            "elapsed_wall_clock_seconds": 600,
+            "objective_attempts": [
+                {
+                    "objective_id": objective,
+                    "unit_rows": [
+                        self.unit_member("parent"),
+                        self.unit_member("child-1", "parent"),
+                    ],
+                }
+            ],
+            "produced_evidence": self.produced_evidence(control_kind),
+            "observed_cache_isolation": [
+                self.isolation_pair("unpinned", "adaptive"),
+                self.isolation_pair("unpinned", "justified_high_effort"),
+                self.isolation_pair("adaptive", "justified_high_effort"),
+            ],
+        }
+        record.update(overrides)
+        return record
+
+    def produced_evidence(self, control_kind: str) -> dict[str, object]:
+        control = control_of_kind(self.registry, control_kind)
+        if control_kind == "unpinned":
+            return {
+                "read_back_from": "produced_evidence",
+                "served_model": control["unpinned"]["pinned_parent_model"],
+                "served_effort": control["unpinned"]["pinned_parent_effort"],
+                "observed_absent_overrides": {
+                    member: True for member in CODEX_REQUIRED_ABSENT_OVERRIDES
+                },
+            }
+        if control_kind == "adaptive":
+            ladder = control["adaptive"]["escalation_ladder"]
+            return {
+                "read_back_from": "produced_evidence",
+                "pre_escalation": {"route_id": ladder[0]},
+                "post_escalation": {"route_id": ladder[1]},
+            }
+        return {
+            "read_back_from": "produced_evidence",
+            "served_route_id": CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID,
+            "served_model": CODEX_JUSTIFIED_HIGH_EFFORT_MODEL,
+            "served_effort": CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT,
+            "successor_freeze_digest": CODEX_G56R003_SUCCESSOR_FREEZE_ID,
+            "route_evidence_digest": CODEX_G56R003_ROUTE_EVIDENCE_DIGEST,
+            "eligibility_predicate_result": True,
+            "eligibility_rationale_binding": "required_core_workspace_write_phase_executor",
+            "fallback_route_id": None,
+            "dynamic_route_discovery": False,
+            "parent_plus_child_aggregate": {"terminal_state": "completed"},
+        }
+
+    def isolation_pair(self, left: str, right: str, status: str = "observed_disjoint") -> dict[str, object]:
+        return {
+            "arm_pair": sorted([
+                CODEX_CONTROL_IDS_BY_KIND[left],
+                CODEX_CONTROL_IDS_BY_KIND[right],
+            ]),
+            "status": status,
+            "arm_cache_root_digest": "sha256:" + "1" * 64,
+            "paired_arm_cache_root_digest": "sha256:" + "2" * 64,
+            "roots_disjoint": status == "observed_disjoint",
+        }
+
+    def test_plan_names_exactly_one_chatgpt_sign_in_smoke_per_control(self) -> None:
+        for kind in CODEX_CONTROL_KINDS:
+            with self.subTest(control_kind=kind):
+                plan = self.build_plan(kind)
+                self.assertEqual(plan["control_kind"], kind)
+                self.assertEqual(plan["control_id"], CODEX_CONTROL_IDS_BY_KIND[kind])
+                self.assertEqual(plan["authentication_mode"], "chatgpt_subscription")
+                self.assertEqual(plan["run_state"], "unrun")
+                self.assertEqual(plan["authorization"], "withheld")
+                self.assertEqual(plan["objective_ids"], [self.smoke_partition["objective_ids"][0]])
+
+    def test_plan_refuses_api_key_and_ambiguous_authorization(self) -> None:
+        for kwargs in (
+            {"authentication_mode": "api_key"},
+            {"authorization": "unknown"},
+            {"authorization": "granted"},
+        ):
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(self.error):
+                    self.build_plan_with("unpinned", **kwargs)
+
+    def test_seal_keeps_authorization_withheld_as_unrun_not_refused(self) -> None:
+        sealed = self.seal(self.smoke_record("unpinned"))
+        self.assertEqual(sealed["run_state"], "unrun")
+        self.assertEqual(sealed["evidence_admissibility"], "unrun")
+        self.assertEqual(sealed["authorization"], "withheld")
+        self.assertEqual(sealed["refusal_reasons"], [])
+
+    def test_seal_refuses_api_key_ambiguous_auth_scored_and_outcome_rows(self) -> None:
+        cases = (
+            {"authentication_mode": "api_key"},
+            {"authorization": "unknown"},
+            {"scored": True},
+            {"outcome_bearing": True},
+        )
+        for overrides in cases:
+            with self.subTest(overrides=overrides):
+                with self.assertRaises(self.error):
+                    self.seal(self.smoke_record("adaptive", **overrides))
+
+    def test_all_mirrored_ceilings_raw_identity_and_elapsed_scope_are_reported(self) -> None:
+        sealed = self.seal(self.smoke_record("justified_high_effort"))
+        self.assertEqual(sealed["counted_over"], "parent_plus_children_unit")
+        self.assertEqual(sealed["consumed"]["max_duration_seconds"], 600)
+        self.assertEqual(sealed["raw_token_ceiling_members"], [
+            "input_tokens",
+            "output_tokens",
+            "cached_input_tokens",
+        ])
+        for member in (
+            "max_attempts",
+            "max_candidates",
+            "max_confirmation_entries",
+            "max_duration_seconds",
+            "max_input_tokens",
+            "max_output_tokens",
+            "max_cached_input_tokens",
+            "raw_token_ceiling",
+        ):
+            with self.subTest(member=member):
+                self.assertIn(member, sealed["consumed"])
+
+    def test_child_dispatches_do_not_consume_objective_attempts(self) -> None:
+        record = self.smoke_record("adaptive")
+        record["objective_attempts"][0]["unit_rows"].extend([
+            self.unit_member("child-2", "parent"),
+            self.unit_member("child-3", "parent"),
+        ])
+        sealed = self.seal(record)
+        self.assertEqual(sealed["consumed"]["max_attempts"], 1)
+        self.assertEqual(sealed["child_dispatch_count"], 4)
+
+    def test_exact_treatment_is_read_back_from_produced_evidence(self) -> None:
+        for kind in CODEX_CONTROL_KINDS:
+            with self.subTest(control_kind=kind):
+                sealed = self.seal(self.smoke_record(kind))
+                self.assertEqual(
+                    sealed["produced_evidence"]["read_back_from"], "produced_evidence"
+                )
+                request_only = self.smoke_record(
+                    kind,
+                    produced_evidence=dict(
+                        self.produced_evidence(kind),
+                        read_back_from="dispatch_request",
+                    ),
+                )
+                with self.assertRaises(self.error):
+                    self.seal(request_only)
+
+    def test_all_three_unordered_cache_isolation_pairs_are_required(self) -> None:
+        sealed = self.seal(self.smoke_record("unpinned"))
+        self.assertEqual(len(sealed["cache_isolation"]["pairs"]), 3)
+        self.assertTrue(sealed["cache_isolation"]["all_pairs_disjoint"])
+
+        missing = self.smoke_record("unpinned")
+        missing["observed_cache_isolation"] = missing["observed_cache_isolation"][:2]
+        with self.assertRaises(self.error):
+            self.seal(missing)
+
+
+class CodexRawCaptureExclusionTests(unittest.TestCase):
+    """T030 RED: committed smoke artifacts must contain summaries, never raw runs."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.assertIsNotNone(codex_control_smoke, "codex_control_smoke is not importable")
+        self.controls = codex_policy_controls
+        self.smoke_module = codex_control_smoke
+        self.error = self.controls.ControlContractError
+
+    def sanitize(self, artifact: dict[str, object]) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.smoke_module, "sanitize_repository_artifact"),
+            "T031 must expose sanitize_repository_artifact for repository-safe smoke output",
+        )
+        return self.smoke_module.sanitize_repository_artifact(artifact)
+
+    def governed_summary(self, **overrides: object) -> dict[str, object]:
+        artifact: dict[str, object] = {
+            "artifact_kind": "codex_control_smoke_summary",
+            "schema_version": "1.0.0",
+            "control_id": CODEX_CONTROL_IDS_BY_KIND["adaptive"],
+            "run_state": "unrun",
+            "evidence_admissibility": "unrun",
+            "governed_summary": {
+                "status": "authorization_withheld",
+                "digest": "sha256:" + "3" * 64,
+            },
+            "refusal_record": {
+                "reasons": [],
+                "digest": "sha256:" + "4" * 64,
+            },
+            "replay_fixture": {
+                "case_set_id": "g56r-004-adaptive-signal-resolution",
+                "digest": "sha256:" + "5" * 64,
+                "raw_capture": False,
+            },
+        }
+        artifact.update(overrides)
+        return artifact
+
+    def test_governed_summaries_digests_refusals_and_non_raw_replay_are_admitted(self) -> None:
+        sanitized = self.sanitize(self.governed_summary())
+        self.assertEqual(sanitized["artifact_kind"], "codex_control_smoke_summary")
+        self.assertEqual(sanitized["run_state"], "unrun")
+        self.assertEqual(sanitized["governed_summary"]["status"], "authorization_withheld")
+        self.assertEqual(sanitized["refusal_record"]["reasons"], [])
+        self.assertFalse(sanitized["replay_fixture"]["raw_capture"])
+
+    def test_raw_live_model_text_prompts_and_responses_are_refused(self) -> None:
+        raw_cases = (
+            {"live_model_text": "assistant raw response"},
+            {"prompt": "score this candidate with private context"},
+            {"response": "raw model output"},
+            {"messages": [{"role": "user", "content": "raw prompt"}]},
+        )
+        for seeded in raw_cases:
+            with self.subTest(seeded=seeded):
+                with self.assertRaises(self.error):
+                    self.sanitize(self.governed_summary(**seeded))
+
+    def test_operator_local_paths_unsanitized_captures_and_path_cache_roots_are_refused(self) -> None:
+        raw_cases = (
+            {"operator_local_path": "/local/operator/raw-smoke.json"},
+            {"unsanitized_capture": {"path": "/private/tmp/raw.json"}},
+            {
+                "observed_cache_isolation": [
+                    {
+                        "arm_pair": sorted([
+                            CODEX_CONTROL_IDS_BY_KIND["unpinned"],
+                            CODEX_CONTROL_IDS_BY_KIND["adaptive"],
+                        ]),
+                        "arm_cache_root_digest": "/tmp/codex-cache-a",
+                        "paired_arm_cache_root_digest": "sha256:" + "6" * 64,
+                    }
+                ]
+            },
+        )
+        for seeded in raw_cases:
+            with self.subTest(seeded=seeded):
+                with self.assertRaises(self.error):
+                    self.sanitize(self.governed_summary(**seeded))
+
+
 class UnpinnedControlTests(unittest.TestCase):
     """FR-006 and FR-007: one arm, riding the pinned parent, re-frozen on a re-pin."""
 
@@ -4699,6 +5038,8 @@ TEST_CASES = (
     CodexReservedPartitionArtifactTests,
     CodexReservedPartitionTests,
     CodexDeterministicReplayTests,
+    CodexControlSmokePlanAndSealTests,
+    CodexRawCaptureExclusionTests,
     UnpinnedControlTests,
     AdaptiveSignalMapTests,
     AdaptiveRowResolutionTests,

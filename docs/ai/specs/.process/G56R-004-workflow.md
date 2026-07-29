@@ -843,7 +843,8 @@ For every behavior task:
 | High effort and aggregation | T016-T019 | 4 of 4 | High-effort RED 622/626 → GREEN 629/629; aggregation RED 629/633 → GREEN 638/638; deterministic aggregation replay fixture verified; twin owner 32/32 |
 | Comparison and claims | T020-T023 | 4 of 4 | Comparison RED 135/147 → GREEN 159/159; claim-policy RED 159/167 → GREEN 170/170; final owners policy 638/638, comparison 170/170, twin 32/32 |
 | Partition, replay, and parity | T024-T027 | 4 of 4 | Partition RED 638/645 → GREEN 650/650; deterministic replay RED 650/654 → GREEN 657/657; final owners policy 657/657, comparison 170/170, twin 32/32 |
-| Integration and operator evidence | | | |
+| Smoke and capture boundary | T028-T031 | 4 of 4 | Smoke plan/seal RED 657/674 → GREEN 681/681; raw-capture exclusion RED 681/689 → GREEN 689/689; live smoke remains operator-only and unrun |
+| Twin reconciliation and review evidence | | | |
 
 ---
 

@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T08:13:13Z",
-  "active_step": "Phase 7: Implement - Smoke and capture boundary (T028-T031)",
+  "updated_at": "2026-07-29T08:25:12Z",
+  "active_step": "Phase 7: Implement - Twin reconciliation (T032-T033)",
   "status": "in_progress",
   "worktree_binding": {
     "mode": "operator_authorized_in_session_workdir",
@@ -183,11 +183,11 @@
     },
     {
       "step": "Phase 7: Implement - Smoke and capture boundary (T028-T031)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Twin reconciliation (T032-T033)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - Verification and review evidence (T034-T038)",
@@ -459,7 +459,7 @@
     },
     "implement": {
       "status": "in_progress",
-      "active_group": "smoke_and_capture_boundary",
+      "active_group": "twin_reconciliation",
       "completed_tasks": [
         "T001",
         "T002",
@@ -487,7 +487,11 @@
         "T024",
         "T025",
         "T026",
-        "T027"
+        "T027",
+        "T028",
+        "T029",
+        "T030",
+        "T031"
       ],
       "groups": {
         "baseline_and_guardrails": {
@@ -546,6 +550,15 @@
           "deterministic_replay_green": "657/657",
           "comparison_owner": "170/170",
           "twin_owner": "32/32"
+        },
+        "smoke_and_capture_boundary": {
+          "status": "completed",
+          "tasks": "T028-T031",
+          "smoke_plan_seal_red": "657/674",
+          "smoke_plan_seal_green": "681/681",
+          "raw_capture_red": "681/689",
+          "raw_capture_green": "689/689",
+          "live_smoke": "operator_only_unrun"
         }
       }
     }
@@ -736,6 +749,12 @@
       "agent": "implement-executor",
       "result": "partial_results_consumed_parent_completed_and_verified",
       "artifact": "tests/speckit-pro/layer6-efficiency/lib/codex_policy_controls.py"
+    },
+    {
+      "task": "T028-T031",
+      "agent": "implement-executor",
+      "result": "consumed",
+      "artifact": "tests/speckit-pro/layer6-efficiency/lib/codex_control_smoke.py"
     }
   ]
 }
