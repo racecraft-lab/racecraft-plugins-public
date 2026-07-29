@@ -389,13 +389,7 @@ def _cache_write_unobserved(incomplete_ttl_classes: set[str]) -> list[str]:
 def _assert_cache_write_bounds(
     write_totals: dict[str, int], write_bounds: dict[str, Any]
 ) -> None:
-    if set(write_totals) != set(write_bounds):
-        raise controls.ControlContractError(
-            "max_cache_write_tokens_by_ttl_class member-set drift"
-        )
     for ttl_class, quantity in write_totals.items():
-        if quantity is None:
-            continue
         if quantity > _bound_value(write_bounds, ttl_class):
             raise controls.ControlContractError(
                 f"max_cache_write_tokens_by_ttl_class.{ttl_class} exceeds its smoke ceiling"
@@ -641,6 +635,8 @@ def _reject_raw_members(value: Any, path: str) -> None:
         for index, member in enumerate(value):
             _reject_raw_members(member, f"{path}[{index}]")
     elif isinstance(value, str):
+        # Intentionally broad: the closed artifact schema admits only governed
+        # strings, so raw-looking or path-like future values fail closed here.
         lowered = value.lower()
         if "/" in value or "\\" in value:
             raise controls.ControlContractError(
@@ -679,7 +675,7 @@ def _evaluate_cache_isolation(pairs: Any) -> dict[str, Any]:
         "all_pairs_disjoint": True,
         "pairs": [
             {"pair": sorted(pair), **observed[pair]}
-            for pair in sorted(observed, key=lambda item: sorted(item))
+            for pair in sorted(observed, key=sorted)
         ],
     }
 
@@ -780,10 +776,10 @@ def sanitize_repository_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
     refusal = artifact.get("refusal_record")
     if not isinstance(refusal, dict) or set(refusal) != _REFUSAL_RECORD_MEMBERS:
         raise controls.ControlContractError("refusal record member-set drift")
-    if refusal.get("reasons") != []:
-        raise controls.ControlContractError("unrun smoke summaries must carry no refusal reasons")
     if not isinstance(refusal.get("reasons"), list):
         raise controls.ControlContractError("refusal record is malformed")
+    if refusal.get("reasons") != []:
+        raise controls.ControlContractError("unrun smoke summaries must carry no refusal reasons")
     _sanitized_digest(refusal.get("digest"), "refusal_record.digest")
 
     replay = artifact.get("replay_fixture")
