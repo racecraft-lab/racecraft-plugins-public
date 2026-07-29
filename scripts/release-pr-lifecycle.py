@@ -24,7 +24,7 @@ class LifecycleError(RuntimeError):
 
 
 class CommandRunner:
-    def output(self, argv: Sequence[str]) -> str:
+    def _execute(self, argv: Sequence[str]) -> subprocess.CompletedProcess[str]:
         if not argv or argv[0] != "gh":
             raise LifecycleError("release PR lifecycle only supports gh commands")
         completed = subprocess.run(
@@ -37,21 +37,13 @@ class CommandRunner:
         if completed.returncode != 0:
             detail = (completed.stderr or completed.stdout or "").strip()
             raise LifecycleError(detail or f"command failed ({completed.returncode}): {' '.join(argv)}")
-        return completed.stdout.strip()
+        return completed
+
+    def output(self, argv: Sequence[str]) -> str:
+        return self._execute(argv).stdout.strip()
 
     def run(self, argv: Sequence[str]) -> None:
-        if not argv or argv[0] != "gh":
-            raise LifecycleError("release PR lifecycle only supports gh commands")
-        completed = subprocess.run(
-            ["gh", *argv[1:]],
-            text=True,
-            capture_output=True,
-            shell=False,
-            check=False,
-        )
-        if completed.returncode != 0:
-            detail = (completed.stderr or completed.stdout or "").strip()
-            raise LifecycleError(detail or f"command failed ({completed.returncode}): {' '.join(argv)}")
+        self._execute(argv)
 
 
 def lifecycle_targets(
