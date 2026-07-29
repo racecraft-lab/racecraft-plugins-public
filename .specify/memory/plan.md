@@ -1750,3 +1750,37 @@ SpecKit index and docs reference pages, validates project state JSON, and runs
 the structural and full deterministic suites. CAR-005 may now scaffold against
 the canonical shipped evidence. CAR-012 remains open as the cross-platform
 reconciliation joint change with G56R-012.
+
+## Revision 2026-07-29 - G56R-004 Post-Merge Architecture
+
+### Where G56R-004 Lives Now
+
+- The two closed Codex specification schemas live under
+  `tests/speckit-pro/layer6-efficiency/contracts-codex-specification/`.
+- The registry, comparison, partition, and replay fixtures live under
+  `tests/speckit-pro/layer6-efficiency/fixtures-codex-controls/`.
+- `codex_policy_controls.py`, `codex_control_comparison.py`, and
+  `codex_control_smoke.py` own fail-closed validation, comparison, deterministic
+  replay, bounded non-live smoke planning/sealing, and evidence-derived twin
+  reconciliation.
+- The existing durable Layer 4 owners remain authoritative:
+  `test-policy-control-contracts.py`,
+  `test-control-comparison-dominance.py`, and
+  `test-twin-handoff-completeness.py`. No suite-manifest change was required.
+
+### Why The Archive Is Safe
+
+All machine-enforced artifacts were authored directly into the test tree.
+Nothing in live code or tests reads
+`specs/g56r-004-policy-controls-adaptive-comparators`, so the active folder can
+be removed without relocating contracts or changing behavior. The one
+forward-looking document was its operator-only smoke procedure; that procedure
+now lives at `docs/ai/specs/.process/G56R-004-live-smoke-runbook.md`.
+
+### Testing and Cleanup
+
+The cleanup removes only the merged G56R-004 active spec, marks both project
+state files completed/archived, regenerates and checks the SpecKit index,
+validates JSON and diff hygiene, and runs structural plus full deterministic
+suites. G56R-005 may now scaffold against the canonical shipped evidence.
+G56R-012 remains the separate paired reconciliation with CAR-012.
