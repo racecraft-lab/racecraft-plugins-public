@@ -34,8 +34,8 @@ not part of the autonomous phase loop.
 | Checklist | `/speckit-checklist` | ✅ Complete | 121 items; 13 gaps remediated to zero; G4 passed |
 | Tasks | `/speckit-tasks` | ✅ Complete | 38 tasks; 15 RED→GREEN pairs; full 42-FR/19-SC coverage; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | One MEDIUM docs-command omission remediated; final findings zero; G6 passed |
-| Confidence Gate | G6.5 | 🔄 In Progress | Advisory pre-Implement confidence check at threshold 0.90 |
-| Implement | `/speckit-implement` | ⏳ Pending | TDD implementation; do not run live smokes without operator authorization |
+| Confidence Gate | G6.5 | ✅ Complete | Advisory gate passed: composite 0.98 ≥ threshold 0.90; proceed |
+| Implement | `/speckit-implement` | 🔄 In Progress | TDD implementation; do not run live smokes without operator authorization |
 | Post | Post-Implementation | ⏳ Pending | Verification, reviewability, PR, remediation, and retrospective |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -758,8 +758,8 @@ latest workflow confidence emit.
 |-------|-------|
 | Mode | Advisory |
 | Threshold | 0.90 |
-| Status | ⏳ Pending |
-| Bounded remediation | Up to three focused iterations on the lowest-scoring criterion |
+| Status | ✅ Passed — composite 0.98; recommended action `proceed` |
+| Bounded remediation | Not required |
 
 ---
 

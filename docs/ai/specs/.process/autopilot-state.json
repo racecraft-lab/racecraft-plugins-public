@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T05:11:45Z",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "updated_at": "2026-07-29T05:15:00Z",
+  "active_step": "Phase 7: Implement - Baseline and guardrails (T001-T003)",
   "status": "in_progress",
   "worktree_binding": {
     "mode": "operator_authorized_in_session_workdir",
@@ -155,11 +155,11 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Baseline and guardrails (T001-T003)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - Contracts and mirror (T004-T007)",
@@ -436,6 +436,16 @@
         "completeness": 0.99,
         "unresolved_error_status": "none"
       }
+    },
+    "confidence_gate": {
+      "status": "completed",
+      "gate": "G6.5",
+      "gate_status": "pass",
+      "mode": "advisory",
+      "threshold": 0.9,
+      "composite": 0.98,
+      "recommended_action": "proceed",
+      "bounded_remediation_iterations": 0
     }
   },
   "agent_dispatches": [
