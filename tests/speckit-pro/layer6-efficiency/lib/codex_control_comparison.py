@@ -10,6 +10,7 @@ CAR-004 helper so the twin does not author a second decision procedure.
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -36,6 +37,7 @@ CODEX_COMPARISON_SCHEMA_ID = (
 )
 CODEX_COMPARISON_ID = "g56r-004-control-comparison"
 CAR_COMPARISON_SCHEMA_ID = "https://racecraft.dev/schemas/car-004/control-comparison.schema.json"
+_HANDOFF_JSON_BLOCK = re.compile(r"^```json\n(.*?)^```", re.MULTILINE | re.DOTALL)
 
 
 ControlComparisonError = _car.ControlComparisonError
@@ -117,6 +119,28 @@ def load_comparison(path: Path = FROZEN_COMPARISON_PATH) -> dict[str, Any]:
     return contract
 
 
+def _load_handoff_entries(path: Path) -> list[Mapping[str, Any]]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ControlComparisonError(f"cannot load {path}: {exc}") from exc
+    blocks = _HANDOFF_JSON_BLOCK.findall(text)
+    _require(len(blocks) == 2, "CAR-004 handoff machine-readable block drift")
+    try:
+        entries = json.loads(blocks[0])
+    except json.JSONDecodeError as exc:
+        raise ControlComparisonError(f"CAR-004 handoff JSON drift: {exc}") from exc
+    _require(isinstance(entries, list) and bool(entries), "CAR-004 handoff entries are empty")
+    parsed: list[Mapping[str, Any]] = []
+    for position, entry in enumerate(entries):
+        _require(
+            isinstance(entry, Mapping),
+            f"CAR-004 handoff entries[{position}] is not an object",
+        )
+        parsed.append(entry)
+    return parsed
+
+
 def comparison_owned_mirror_members(
     *,
     handoff_path: Path,
@@ -131,16 +155,15 @@ def comparison_owned_mirror_members(
     _require(contract == load_comparison(), "comparison fixture authority drift")
 
     entries: list[dict[str, Any]] = []
-    for raw in handoff_path.read_text(encoding="utf-8").splitlines():
-        stripped = raw.rstrip(",")
-        if not stripped.startswith("{") or CAR_COMPARISON_SCHEMA_ID not in stripped:
+    for entry in _load_handoff_entries(handoff_path):
+        if entry.get("contract_id") != CAR_COMPARISON_SCHEMA_ID:
             continue
-        try:
-            entry = json.loads(stripped)
-        except json.JSONDecodeError:
-            continue
-        if entry.get("mirror_obligation") == "mirror_required" and entry.get("category") in range(1, 7):
-            entries.append(entry)
+        if (
+            entry.get("mirror_obligation") == "mirror_required"
+            and entry.get("category") in range(1, 7)
+        ):
+            entries.append(dict(entry))
+    _require(entries, "CAR-004 handoff contains no comparison-owned mirror entries")
 
     categories = sorted({entry["category"] for entry in entries})
     margin_map = contract["dominance_rule"]["margin_map"]
