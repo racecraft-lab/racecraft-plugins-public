@@ -1102,6 +1102,36 @@ regeneration → docs reference).
 five-signal vocabulary, the superseded `schema_version` justification, the replaced
 greenfield rationale, the marker rename, and FR-011's default-deny inversion.
 
+### Pre-Implement Confidence (end of Phase 6)
+
+📊 Confidence: 0.95
+
+- Task understanding: 0.96
+- Approach clarity: 0.94
+- Requirements alignment: 0.95
+- Risk assessment: 0.97
+- Completeness: 0.93
+
+**What the emit found that the clean-pass framing had hidden.** Two data-integrity
+checklist items — CHK010 (identifier stability) and CHK040 (`schema_version`
+compatibility) — were still marked `[ ]` **"Deferred to consensus"**. Consensus items 8
+and 9 had in fact resolved both, and their fixes were already in the spec and contracts
+(FR-007's stability clause plus check B12; FR-026 plus the directional failure posture).
+Only the checklist bookkeeping was stale — which would have read to a reviewer as two
+genuinely open items on a spec claiming a clean pass. Both are now closed with their
+resolutions recorded inline. **No checklist item remains unchecked in any of the four
+domains.**
+
+Scores below 0.95 are deliberate and each names a real residual: *approach clarity 0.94*
+because the reviewability position is a composition judgment rather than a measurement,
+in a budget section that already had to correct how it reported gate figures;
+*completeness 0.93* because roughly half the 71 checks are vacuous against a
+zero-artifact gallery — mitigated by design, since every check function takes the gallery
+root as a parameter so the vacuous groups run against synthetic fixtures, but that
+mitigation is specified and not yet executed. The unexecuted browser check of the
+in-document policy was deliberately **not** penalized: it is named, sourced to engine
+behaviour, and cannot run in a feature that ships zero artifacts.
+
 **Orchestrator verification.** Independently re-ran the reviewability gate with the
 correct input key: `status: warn`, **62 / 2 / 24, blockers `[]`**, one warning (total
 files 24 exceeds the warn threshold of 15). Layer 1 1428/1428. Two `NEEDS CLARIFICATION`
