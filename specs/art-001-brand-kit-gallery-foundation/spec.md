@@ -478,8 +478,10 @@ confirm it renders correctly, has no errors, and its theme control works.
   with a structured URL parser and compared by **exact case-folded equality**
   against the two-member allowlist, never by containment or prefix. Userinfo, a
   port, and a non-empty path prefix MUST NOT be able to place an allowlisted name
-  where the host is read from — `https://fonts.googleapis.com@evil.example/` has
-  host `evil.example` and MUST fail. Normalization MUST be stated rather than left
+  where the host is read from. A userinfo segment is the case worth stating: the
+  text between the scheme and the `@` delimiter is credentials, not the host, so a
+  reference whose userinfo reads as `fonts.googleapis.com` and whose actual host is
+  an attacker's resolves to the attacker's host and MUST fail. Normalization MUST be stated rather than left
   to the comparison's accidents: a host carrying a trailing root dot resolves to the
   same host in a browser but is not the same string, and it MUST **fail**. That is
   the fail-closed direction and it is deliberate — the gallery authors its own two

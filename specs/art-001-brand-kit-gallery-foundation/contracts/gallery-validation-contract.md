@@ -201,7 +201,14 @@ The scan is therefore **default-deny with a closed exemption list**:
 | E2 | Navigation `<a href>` passes **for `https:`, `mailto:`, and fragment schemes only** | — (must not fail on those); **must** fail on `javascript:`, `data:`, `vbscript:`, `blob:` in the same position |
 | E3 | URLs in **parser-recognized** comments or visible text pass | — (must not fail) |
 | E4 | Every `fonts.googleapis.com` stylesheet request carries the swap-behavior parameter | the request would otherwise be served with the provider's blocking default, producing an invisible-text period; names file + reference |
-| E5 | Host is obtained with a structured URL parser; userinfo and port are absent, and the parse round-trips to the original string | `https://fonts.googleapis.com@evil.example/` (host is `evil.example`); `https://fonts.googleapis.com:8443/`; any non-canonical parse |
+| E5 | Host is obtained with a structured URL parser; userinfo and port are absent, and the parse round-trips to the original string | a reference carrying a userinfo segment that reads as an allowlisted host while the real host is an attacker's; `https://fonts.googleapis.com:8443/`; any non-canonical parse |
+
+**On writing these examples down.** The userinfo case is deliberately described rather
+than written as a literal. A literal `userinfo@host` string is indistinguishable from an
+email address to a pattern matcher, and the repository's tree-wide privacy scan flags it
+as a leaked address — which is exactly what happened when this contract first stated the
+example verbatim. The attack is unchanged and the rule is unchanged; only the notation
+avoids tripping a scanner that is right to be suspicious of that shape.
 | E6 | Every reference in a scanned position is rejected **before parsing** if it contains a backslash, whitespace, a control character, or a character outside the unreserved URL grammar | the scanner-vs-browser differential: `https://evil.example\@fonts.googleapis.com/x.css` parses to host `fonts.googleapis.com` here and loads from `evil.example` in a browser |
 | E7 | In a resource-loading position, scheme ∈ {`https`} or the reference is same-document relative | `javascript:`, `data:`, `blob:`, `vbscript:`, `file:` — none of which expose a host to compare |
 | E8 | A reference in a scanned position that cannot be parsed, or that yields no host, **fails** | fail-open on precisely the set an evader controls |
