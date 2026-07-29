@@ -35,5 +35,6 @@ the slice artifacts in the body below.
 - [checklists/accessibility.md](checklists/accessibility.md)
 - [checklists/data-integrity.md](checklists/data-integrity.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/security.md](checklists/security.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

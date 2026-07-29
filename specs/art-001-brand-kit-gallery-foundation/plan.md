@@ -56,9 +56,14 @@ repository-only validation
 sub-second file scan.
 
 **Constraints**: Renders from `file://` with no console errors; `fonts.googleapis.com`
-and `fonts.gstatic.com` are the only permitted external hosts, and only in
-resource-loading positions; WCAG AA audited per theme independently and complete
-across every surface pairing; no new Bash
+and `fonts.gstatic.com` are the only permitted external hosts, matched by exact
+case-folded equality, and only in resource-loading positions, which are scanned
+**default-deny** over every URL-valued attribute rather than by enumeration
+(FR-011); artifacts carry none of the FR-027 prohibited constructs — no `base`
+element, no scheme-relative reference, no event-handler attribute, no `srcdoc`, no
+form target or `ping` — and each carries the in-document policy declaration, since
+running without a server means no response header can reach them; WCAG AA audited
+per theme independently and complete across every surface pairing; no new Bash
 or `jq` surface; the gallery must contain no `.sh`, `.bash`, or shell-shebang
 file, because the zero-Bash guard's scan roots include the whole `speckit-pro`
 source tree
@@ -69,7 +74,7 @@ artifacts ported in this feature; 6 shipped foundation files
 **Reviewability Budget**: Primary surface seed/config; plan-phase gate reports
 projected 0 reviewable LOC / 0 production files and passes, but that result comes
 from a language filter that recognizes none of this feature's file types — the
-honest figures are ~1,430 authored lines across 9 authored files, of which ~497
+honest figures are ~1,530 authored lines across 9 authored files, of which ~580
 are logic. Greenfield no longer applies. Budget result: **warning accepted on a
 restated basis**. Full recomputation below.
 
@@ -124,7 +129,7 @@ unchanged — pass, no violations.*
 | Principle | Assessment |
 |---|---|
 | **I. Plugin Structure Compliance** | Pass. `artifact-gallery/` is additive shipped data alongside the existing non-listed `scripts/` and `speckit_pro_runner/`; no manifest, command, agent, skill, or hook shape changes. Repository-only validation lives under `tests/speckit-pro/`, outside the install-facing directory. |
-| **II. Cross-Platform Runtime & Script Safety** | Pass. Validation is Python 3.11+ standard library only — `json`, `pathlib`, `html.parser`, `re`, `unittest`. No Bash, no `jq`, no PowerShell, no package install. The gallery ships only `.css`, `.html`, `.json`, and `.md`, so the zero-Bash guard (whose scan roots include `speckit-pro`) stays clean. |
+| **II. Cross-Platform Runtime & Script Safety** | Pass, with one **recorded deviation**. Validation is Python 3.11+ standard library only — `json`, `pathlib`, `html.parser`, `urllib.parse`, `re`, `unittest`. No Bash, no `jq`, no PowerShell, no package install. The gallery ships only `.css`, `.html`, `.json`, and `.md`, so the zero-Bash guard (whose scan roots include `speckit-pro`) stays clean. **The deviation**: the principle requires structured parsers, and the element and URL positions comply (`html.parser`, `urllib.parse`). The style and network-call positions have no standard-library parser and are matched by targeted expressions. This is why FR-011 constrains those positions by **prohibition** — any escape sequence in a URL position fails outright (E10), scheme-relative forms are banned (E12/J2) — rather than by reproducing a browser's decoding in a regular expression. The deviation is named rather than silent, and a regex-scanned position is not presented as carrying the same strength as a parsed one. |
 | **III. Semantic Versioning** | Pass. No hand-edited version field. Release-please owns the bump; `refresh-release-artifacts.py` syncs `marketplace.json` from `plugin.json`. |
 | **IV. Test Coverage Before Merge** | Pass. New Layer 4 unit coverage under `tests/speckit-pro/unit/`, declared in the suite manifest so a plain suite run picks it up. New shipped payload passes Layer 1. |
 | **V. Conventional Commits** | Pass. PR title shape `feat(speckit-pro): <plain English description>`, validated against the release-readiness gate before the PR is marked ready. |
@@ -144,8 +149,8 @@ surface; block above 800 / 8 / 25 / more than one primary surface):
 | Primary surfaces | 1 (seed/config) | >1 warns and blocks | Pass |
 | Authored files | 9 | warn 15, block 25 | Pass |
 | Production files | 7 (6 shipped + `payloads.py`) | warn 6, block 8 | **Warn** |
-| Reviewable LOC — logic only | ~497 | warn 400, block 800 | **Warn** |
-| Reviewable LOC — all authored lines | ~1,430 | warn 400, block 800 | **Over block on this reading** |
+| Reviewable LOC — logic only | ~580 | warn 400, block 800 | **Warn** |
+| Reviewable LOC — all authored lines | ~1,530 | warn 400, block 800 | **Over block on this reading** |
 
 **Split decision**: remains one spec, as ratified in the spec's Reviewability
 Budget — but the justification is restated below, because the original one no
@@ -188,10 +193,13 @@ entirely on that allowance — is no longer available.
 
 **Re-running the scaffold-time formula on current inputs**: the 435 came from
 `stories*25 + files*40 + frs*15` at 3 stories, 6 files, 8 FRs. Clarify took the
-spec to 20 FRs and the plan to 9 authored files; the accessibility checklist then
-added FR-021 through FR-024, taking it to 24: `3*25 + 9*40 + 24*15` = **795**,
+spec to 20 FRs and the plan to 9 authored files; the accessibility checklist added
+FR-021 through FR-024, the data-integrity checklist added FR-025 and FR-026, and
+the security checklist added FR-027 — 27 FRs: `3*25 + 9*40 + 27*15` = **840**,
 `status: warn`, `suggested_slices: 2`. Against the base 400 ceiling that is a
-warn, not a pass.
+warn, not a pass. The figure rose from 795 as requirements were added, and the
+correction immediately below is why that movement carries no threshold
+consequence.
 
 **Correction — an earlier draft of this section compared 795 against an 800 block
 threshold and concluded the feature was five points from being blocked. That
@@ -210,7 +218,7 @@ the file and surface counts are unchanged.
 
 | File | Est. lines | Character |
 |---|---|---|
-| `test-artifact-gallery.py` | ~495 | Logic |
+| `test-artifact-gallery.py` | ~580 | Logic |
 | `payloads.py` (edit) | ~2 | Logic |
 | `manifest.json` | ~275 | Declarative data (21 rows) |
 | `brand-kit.css` | ~200 | Declarative tokens + audited comments |
@@ -219,7 +227,7 @@ the file and surface counts are unchanged.
 | `theme-toggle.html` | ~60 | Markup + small script |
 | `UPSTREAM-NOTICE.md` | ~25 | Verbatim third-party, not reviewable |
 | `suite-manifest.json` (edit) | ~1 | Registration |
-| **Total authored** | **~1,430** | of which **~497 logic**, ~476 declarative, ~370 prose, ~60 markup, ~25 verbatim |
+| **Total authored** | **~1,530** | of which **~580 logic**, ~476 declarative, ~415 prose, ~70 markup, ~25 verbatim |
 
 **These figures moved during the accessibility checklist, and the movement
 matters.** The additions are E4 plus check group I in the test (~30 lines), the
@@ -243,6 +251,31 @@ unchanged. The all-authored-lines reading rises from ~1,375 to ~1,430, which was
 already over the 800 block on that reading — the reading that a reviewer may take
 and that this budget flags as its weakest point.
 
+**They moved a third time during the security checklist, and this movement is the
+largest of the three (~85 lines in the test, ~10 of markup, ~45 of prose).** The
+test additions are group E's inversion from an enumerated position list to
+default-deny over URL-valued attributes, the eight new E checks (exact-equality
+host matching, canonical-round-trip parsing, pre-parse character rejection, the
+scheme rule, fail-closed on unparseable, both `@import` forms, the escape
+prohibition, and standard-algorithm `srcset` splitting), the six group J construct
+prohibitions, two attribution-agreement checks (G6/G7), and two canonical-block
+storage assertions (I5/I6). The markup is the FR-027 policy declaration. The prose
+is FR-011's rewrite, FR-027, and the contract sections carrying them.
+
+**This does not change the budget's shape, and the reason is worth stating.** Three
+of the four largest additions are **reuse rather than new logic** — FR-011 directs
+E5, E6, and E7 at URL-validation helpers and an unsafe-scheme corpus this
+repository already maintains and tests, so the marginal code is a call and an
+assertion rather than a parser. No new file, no new surface, and the
+production-file count is unchanged: the policy declaration lands inside an
+existing canonical block (or one new markup file, if the placement decision above
+goes that way, which would take authored files from 9 to 10 — still under the warn
+threshold of 15). Logic-only rises to ~580 against 400/800: still a warn, still not
+a block, and now further from the ceiling in the reading the contract binds than
+the all-authored-lines reading has been since Clarify. **The weakest point is
+unchanged and is not this**: it remains that ~1,530 raw authored lines exceeds 800
+on a reading the contract excludes but a reviewer may still take.
+
 **The line-count trigger on the validation module is retired.** An earlier draft
 said to take the fallback split if `test-artifact-gallery.py` grew materially past
 ~450 lines. That trigger measures a **test**, which the product plan's
@@ -264,7 +297,7 @@ indivisibility, not size class:
    net-new. Splitting that edit into its own spec would produce a slice whose
    entire diff is two lines plus regenerated payload, and which could not be
    verified independently because nothing would yet exist for it to ship.
-2. **The logic surface is one file.** ~497 of ~1,430 authored lines are code, in a
+2. **The logic surface is one file.** ~580 of ~1,530 authored lines are code, in a
    single test. The remaining two thirds are 21 declarative catalog rows, CSS
    custom properties, prose contract, and a verbatim third-party notice — each
    reviewable by inspection rather than by reasoning about behavior.
@@ -275,7 +308,7 @@ indivisibility, not size class:
    cannot start until the foundation lands; splitting doubles their wait.
 
 **Where this is weakest, stated plainly**: on the raw-authored-lines reading,
-~1,430 exceeds the base block threshold of 800. That reading is defensible, and a
+~1,530 exceeds the base block threshold of 800. That reading is defensible, and a
 reviewer who takes it should require the split rather than accept the warning.
 The judgment recorded here is that raw line count over-weights declarative rows
 and prose — but it is a judgment, not a measurement, and it is the one part of
@@ -375,8 +408,25 @@ Ordered by dependency, matching the PR review order.
    application, the matching `color-scheme` set for the chosen theme, and the
    `try`/`catch` storage write. The control is a real button, keyboard-reachable
    and keyboard-activatable, carrying an accessible name and an exposed state
-   that changes between theme positions (FR-022). These are decided once here for
-   all 21 artifacts.
+   that changes between theme positions (FR-022). The storage **read** validates
+   the persisted value against the closed set of theme names, applies a literal
+   from that set rather than the string it read, and uses a gallery-namespaced key
+   (FR-004). These are decided once here for all 21 artifacts, and the storage path
+   is the one place in the shared snippet that handles a value the artifact did not
+   author.
+
+   **Open placement decision — where the FR-027 policy declaration lives.** J6
+   requires an in-document policy declaration in every artifact. It must be a
+   `<meta>` in `<head>`, and the two candidate homes each cost something. Putting it
+   in the theme-toggle block reuses an existing marked region that already spans
+   head content, at the cost of a block whose name no longer describes its contents.
+   A third canonical block names itself honestly, at the cost of a third
+   marker pair and a third byte-compare for every port to copy — **and, concretely,
+   a third canonical-file check alongside A1 and A2**, since group A asserts each
+   canonical file holds exactly one well-ordered marker pair. That consequence is
+   named because it is the part a port author would otherwise discover only when
+   the suite failed. This plan does not decide the placement; either choice
+   satisfies FR-027.
 3. **Routing catalog** — `manifest.json`, all 21 entries at `status: "planned"`,
    per `data-model.md`.
 4. **Contract and voice** — `SPA-CONTRACT.md` (catalog shape, both trigger forms,
@@ -396,8 +446,15 @@ Ordered by dependency, matching the PR review order.
 6. **Payload allowlist** — add `"artifact-gallery"` to both lists in
    `payloads.py`. **Do this before the first payload regeneration**, or the
    regeneration silently produces nothing and the omission looks like success.
-7. **Validation** — `test-artifact-gallery.py` implementing check groups A–I, and
-   its suite-manifest registration.
+7. **Validation** — `test-artifact-gallery.py` implementing check groups A–J, and
+   its suite-manifest registration. Group E and group J are the security surface
+   and are **not** written from scratch: FR-011 directs reuse of the URL-validation
+   conjunction already in
+   `tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py`
+   (canonical round-trip, no userinfo, no port), the pre-parse character rejection
+   in `scripts/release_note_policy.py`, and the unsafe-scheme corpus in
+   `tests/speckit-pro/unit/test-release-note-policy.py`. Assembling a second,
+   parallel implementation of any of the three is how they drift apart.
 8. **Regeneration** — `refresh-release-artifacts.py`, then
    `pnpm --dir docs-site reference:generate`.
 
@@ -424,6 +481,14 @@ gates step 8. Step 7 depends on 1–6 existing.
 | An artifact shipping under a `planned` entry | A5 keys the block compare on `shipped`, so a file present under `planned` skipped it entirely — `status` was an opt-out. FR-009 is now biconditional (file exists iff `shipped`), which also makes SC-004's "exactly one catalog value" enforceable instead of aspirational |
 | An identifier composing a path outside the gallery | The path is composed from `id`, and the old "equals the file stem" clause was a tautology under a derived path. B9 validates filename-safe kebab-case — no separator, `..`, whitespace, or dot — which is what the composition actually depends on |
 | Group D erroring on the state this feature ships | ART-001 ports no artifact and version control preserves no empty directory, so `templates/` is absent at merge. D5 makes an absent directory a vacuous pass, and D4 reports a non-HTML file as disallowed rather than as a permanently unclaimable orphan |
+| **A `<base>` element silently voiding the entire external-reference control** | Group E checks *hosts*; a base element carries none and instead redefines what every relative reference resolves to, so an artifact with all-relative references plus one base tag passes every host check while loading from an attacker's host. No host-based check can see this. J1 prohibits the construct outright (FR-027) — the only form of fix available |
+| The position enumeration being read as complete | It was a denylist: re-derived against the parser it omitted `source`, `video`, `audio`, `track`, `object`, `embed`, image inputs, SVG `image`/`use`, seven fetching `link` relations, `form action`, `a ping`, and `meta refresh`. FR-011 inverts it to **default-deny over every URL-valued attribute** with a closed exemption list, so an unanticipated position fails instead of passing |
+| The host allowlist admitting a lookalike, or the scanner and the browser disagreeing | E1 pins exact case-folded equality; E5 reuses the repo's existing canonical-round-trip conjunction, which rejects userinfo and port. E6 is the subtle one: `https://evil.example\@fonts.googleapis.com/x` parses to host `fonts.googleapis.com` in Python and loads from `evil.example` in a browser, so a *correct* structured-parser check still admits it. Pre-parse character rejection — the repo's existing helper already does this — is what closes it |
+| The regex-scanned style positions being trusted like the parsed ones | Verified: the bare `@import "…"` string form matches no `@import url(...)` pattern, and a hex escape (`\68 ttps://…`) matches nothing at all, not even a generic host scan. E9 covers both import forms and E10 makes any escape in a URL position a **failure** rather than attempting to reproduce the browser's decoding — a prohibition is both simpler and stronger than a decoder |
+| The exemptions becoming the evasion path | E2 exempted `<a href>` "to any host", which literally admits `javascript:` and `data:`. It is now scheme-bounded. E3's "comment" now means parser-recognized, because content inside a `script` element is raw text even when written as `<!-- … -->`, so a pattern-stripping implementation would blind itself to live script |
+| An attribution header asserting a provenance the catalog contradicts | G3 checked each element for **presence** only, so a header naming a different upstream file than its own entry passed. G6/G7 join the header to the entry's `source.file` and to the single named repository; G4 now fails on any upstream attribution element rather than on the copyright line alone, so both branches test the claim instead of one testing a symptom |
+| A hostile persisted theme value reaching all 21 artifacts | Local storage for local files is not partitioned per file in every browser, so the value read back is untrusted input to a snippet embedded verbatim everywhere and fixable in no single template. FR-004 requires closed-set validation on read, application of a literal from that set rather than the string read back, a namespaced key, and states that the existing `try`/`catch` must not be what satisfies this. I5/I6 assert both sit inside the copied region |
+| The generated-artifact gap being masked by a guarantee that does not cover it | FR-011 scans six static source files; a later spec's authoring agent interpolates pull-request material into executable documents that nothing scans. SC-008 read as covering "the entire gallery" would have a workflow-spec author relying on a guarantee never made. The scope limit is now stated in FR-011, SC-008, and the contract, and FR-027 puts the untrusted-input rule where all four port specs and the workflow specs read it |
 
 ## Complexity Tracking
 

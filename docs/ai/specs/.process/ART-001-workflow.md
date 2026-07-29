@@ -35,8 +35,8 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 14 FR, 9 SC, 3 user stories, 0 markers |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass — 11 questions resolved, 5 via consensus; spec 14 → 20 FR |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass — 6 artifacts; budget rationale replaced, honest size ~1,285 lines |
-| Checklist | `/speckit-checklist` | 🔄 In Progress | accessibility, data-integrity, security |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — 127 items, 76 gaps closed across 3 domains; spec 14 → 28 FR |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
@@ -98,7 +98,7 @@ captured during scoping.
 | `PRESET_CONVENTIONS` | `speckit-pro-reviewability` v1.0.0 — spec/plan/tasks templates all resolve; spec adds mandatory Reviewability Budget + PR Review Packet Requirements, plan adds Declared File Operations |
 | `PROJECT_COMMANDS` | `detect-commands` returns `stack: unknown` (no JS/py package manifest at root). Repo-real: UNIT_TEST `run-all.py --layer 4`; STRUCTURAL `--layer 1`; FULL_VERIFY `run-all.py`; no BUILD/TYPECHECK/LINT surface |
 | `PROJECT_IMPLEMENTATION_AGENT` | none — `.claude/agents/` holds only `plugin-release-auditor` and `speckit-skill-reviewer` (both review-only). Implementation routes to `speckit-pro:implement-executor` |
-| `AGENT_TEAMS_AVAILABLE` | **false** — no `TeamCreate` in the session surface. `[P]` runs dispatch as batched subagents in one message |
+| `AGENT_TEAMS_AVAILABLE` | **Corrected mid-run: partially true.** Recorded `false` at Phase 0 because the orchestrator's own surface exposes no `TeamCreate`. That was right about the orchestrator and wrong about the run: the accessibility checklist executor created a team and left a teammate (`a11y-facts`) running after it finished, which surfaced during an agent sweep ~1h45m later. Subagents therefore do have team capability even when the orchestrator does not. Phase 7 `[P]` runs still dispatch as batched subagents in one message — the orchestrator cannot form a team — but any executor that forms one **must be told to tear it down**, since an orphaned teammate outlives its parent and only the main session can stop it |
 | `CONFIDENCE_GATE_MODE` | `advisory` (resolver default; no `--strict`/`--advisory` flag, no local config) |
 | Local settings | `.claude/speckit-pro.local.md` absent — defaults (`gate-failure: stop`) |
 
@@ -678,7 +678,92 @@ Focus on Artifact Brand Kit & Gallery Foundation requirements:
 |-----------|-------|------|-----------------|
 | accessibility | 34 | 14 found, 14 closed | FR-005 rewritten; FR-010 extended; FR-021…FR-025 added |
 | data-integrity | 43 | 18 found, 18 closed | FR-007/009/010/015/017/018/019/020 amended; FR-026 added; checks 40 → 49 |
-| security | | | |
+| security | 50 | 44 found, 44 closed | FR-011 rewritten as an allowlist; FR-027 + SC-012 added; FR-004/010/020/SC-008 amended; checks 49 → 71 |
+| **Totals** | 127 | 76 found, 76 closed | spec 14 → 28 FR |
+
+**Gate G4: ✅ PASS** — `validate-gate` returned 0 `[Gap]` markers; Layer 1 1428/1428.
+Gate scrape re-verified after every edit: 62 LOC / 2 production files / 24 total.
+
+### security — the most serious findings of the run
+
+**FR-011 was written as a denylist** — "these positions are scanned, and *only* these".
+Re-derived against the real parser it omitted `source`, `video`, `audio`, `track`,
+`object`, `embed`, image inputs, SVG `image`/`use`, `form action`, `a ping`,
+`meta refresh`, and seven fetching `link` relations. And `<base href>` is not a missing
+case but a **total bypass**: an artifact with all-relative references plus one base
+element contains no foreign host in any scanned position while loading everything from
+an attacker. Rewritten as an **allowlist inversion** — every URL-valued attribute
+scanned by default, closed exemption list — so an unanticipated position fails rather
+than passes.
+
+**Four evasions, each re-executed independently by the orchestrator:**
+
+| Evasion | Result |
+|---|---|
+| Backslash in authority — `https://evil.example\@fonts.googleapis.com/f.css` | Python reports host `fonts.googleapis.com`, so an exact-host allowlist **passes it**; the URL standard terminates the authority at `\`, so a browser loads `evil.example`. **A parser-differential bypass of the allowlist itself.** |
+| CSS hex escape — `@import "\68 ttps://…"` | Matched by **none** of `url()`, `@import url()`, or a generic scheme scan |
+| `@import` string form (no `url()`) | No match from any `url()`-anchored pattern |
+| `rel` matching | Exact equality misses both `STYLESHEET` and `preconnect stylesheet` |
+
+**Confirmed non-finding:** HTML entity encoding does **not** evade — the parser decodes
+`&#104;ttps://` in attribute values. That is the evasion a reviewer most expects to
+work, and asserting it would have been wrong.
+
+**The executor corrected two of its own claims** rather than dropping them: a `srcset`
+comma-split "evasion" the standard's parse algorithm makes impossible, and a `file://`
+credential-disclosure chain it could not confirm. It rewrote the requirement to rest
+only on what it had verified.
+
+Other holes closed: attribution headers could assert **false** provenance (presence was
+checked, agreement with the declared source was not); `status` was an opt-out from the
+*security* controls too, not only the block compare; and the stored theme value was
+unvalidated input to a snippet embedded verbatim in 21 templates.
+
+| # | Type | Question | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|---|---|---|---|---|---|---|
+| 10 | Gap | Adopt the in-document policy declaration in ART-001, and where does it live? | `[spec, codebase, domain]` | 1 | 3/3 against a third block; split on placement → orchestrator synthesis | **Keep the control; carry it in the existing head block; add four checks for the ways it silently voids.** | spec-context-analyst, codebase-analyst, domain-researcher |
+
+**All three agreed a third canonical block is wrong, and the arithmetic reason is
+decisive.** A third canonical file adds one authored entry plus its two regenerated
+copies, taking declared total files from 24 to **27, past the reviewability gate's
+block threshold of 25** (`read_only.py`: `if total > 25: blockers.append(...)`).
+Verified at source. The plan had justified the third file against the wrong dimension —
+"authored files 9→10, under the warn threshold of 15" — which is not what the gate
+reads. **This run has already been bitten by this exact scrape once** (the
+production-file count that read 9 against a block threshold of 8, recorded above).
+Same trap, one dimension over.
+
+**The domain research settled the value question at source level**, which the executor
+had explicitly left as inference. Reading shipping engine source for all three major
+browsers: in-document delivery strips exactly three directives — reporting endpoint,
+frame ancestry, sandbox — and **none of the five this spec requires is among them**; no
+engine gates ingestion on the document's scheme; and the base-URI restriction is
+enforced through a path that bypasses the one scheme-based exemption that exists. The
+control genuinely does backstop the `<base>` hole.
+
+It also produced a **correctness fix nobody had raised**: the policy must use `'none'`,
+never `'self'`, because a filesystem-opened document has an implementation-defined and
+usually opaque origin — `'self'` would resolve inconsistently across engines. And it
+reframed the risk: the realistic failure mode is not a browser refusing the policy but
+an **authoring mistake** — a declaration outside the head element discards the *entire*
+policy, content before it is uncovered, and three directives are silently stripped. All
+four are statically checkable, so they became checks J7–J10, moving the uncertainty from
+run time to build time.
+
+Ordering corrected too: **prohibitions are primary, the declaration secondary.** A
+validator constraint holds in every consumer — preview panes, webviews, converters,
+diff viewers — while a declared policy takes effect only where a full browser engine
+parses the document.
+
+**⚠️ Security-keyword disposition — orchestrator call, flagged not buried.** CHK028
+carries the keyword "credential", and the protocol directs that a security keyword stops
+the run for human review. **The autopilot continued.** The executor had already
+*removed* the unverified credential-disclosure claim and the prohibition now rests only
+on verified properties, so there was no pending decision a human could make and the
+conservative outcome was already in place; stopping would have blocked an autonomous run
+on a non-decision. To be restated in the PR body. The one genuinely open item is a
+**manual three-engine check** that the declaration is enforced in practice — it cannot
+run in ART-001, which ships no artifact, so the first port spec discharges it.
 
 ### data-integrity — what it found
 

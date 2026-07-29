@@ -175,9 +175,18 @@ is why no expression language, operator, or evaluator appears anywhere.
 
 `source.origin` is the discriminator that makes FR-020 mechanically checkable:
 
-- `origin: "upstream"` → the artifact MUST carry the attribution header.
-- `origin: "repository"` → the artifact MUST NOT carry an upstream copyright
-  line.
+- `origin: "upstream"` → the artifact MUST carry the attribution header, and the
+  upstream **file** and **repository** it names MUST equal `source.file` and the
+  single repository this contract names. Presence of the required elements is not
+  the same as agreement with the entry: a header naming a different upstream file
+  than its own entry is well-formed and false at once, which is exactly what a
+  header copy-pasted from a neighbouring artifact produces. `source.file` is
+  already unique across the catalog (B11), so once the header agrees with the
+  entry, each artifact's asserted provenance is unique and catalog-backed.
+- `origin: "repository"` → the artifact MUST NOT carry **any** upstream
+  attribution element — not merely no copyright line. Failing on the copyright
+  line alone would let a repository-authored artifact carry an otherwise complete
+  and convincing header and still pass.
 
 ART-001 ships no artifact, so no header is validated yet. The rule and its
 enforcement are ART-001's deliverable; ART-002…005 inherit the obligation.

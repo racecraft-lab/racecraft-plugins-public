@@ -11,6 +11,16 @@ satisfy FR-006, FR-008, or FR-019.
 under `dist/` are never scanned as gallery artifacts; they are only compared
 against source by group F.
 
+**Artifacts generated at run time are outside every check in this document, and
+that limit is load-bearing.** Nothing here scans what a later spec's authoring
+agent emits, and nothing in this feature ever will. It is stated in the contract
+because SC-008's reach ("across the gallery") is otherwise readable as covering
+generated output, and a workflow-spec author who reads it that way would be relying
+on a guarantee that was never made. What governs generated artifacts is the
+untrusted-input obligation FR-027 places in `SPA-CONTRACT.md` — the four contexts
+an interpolated value may never enter, and context-correct escaping for the rest.
+That obligation exists precisely because group E cannot reach that far.
+
 ## Group A — Marker-block drift (FR-002, FR-003, FR-006; SC-002)
 
 | # | Check | Fails when |
@@ -125,20 +135,122 @@ the first artifact to it, never before.
 
 ## Group E — External references (FR-011; SC-008)
 
-Positions scanned, and **only** these:
+**Positions scanned: every URL-valued attribute, by default.** The earlier
+formulation enumerated five position families and said "and **only** these",
+which made the scan a denylist — anything unenumerated was permitted by
+construction. Re-derived against the parser, that enumeration omitted `source`
+(`src` and `srcset`), `video` (`src`, `poster`), `audio`, `track`, `object`
+(`data`), `embed`, `input type="image"`, SVG `image`/`use` (`href`), `form`
+(`action`), `a` (`ping`), and `meta http-equiv="refresh"` — and omitted `base`
+(`href`) entirely, which is not a missing case but a total bypass (group J). On
+`link` it named two relations, which are not the fetching set: `stylesheet`,
+`preload`, `modulepreload`, `prefetch`, `icon`, and `manifest` each fetch, and
+`preload`/`modulepreload` fetch **and execute**. `preconnect` and `dns-prefetch`
+fetch nothing but do contact the host — which is why `preconnect` was in the
+original list and why a fetch-only reading would not serve the privacy property
+FR-011 protects.
 
-- `src` on `script`, `img`, `iframe`
-- `srcset`
-- `href` on `link` where `rel` is a stylesheet or preconnect relation
-- CSS `url()` and `@import`
-- `fetch(...)`, `XMLHttpRequest.open(...)`, `new WebSocket(...)` string literals
+**Which files group E scans, and why this is not vacuous in ART-001.** FR-011 says
+"every gallery artifact", and an artifact (data-model Entity 8) is a self-contained
+HTML file under `templates/` — of which this feature ships **zero**. Read that way
+the whole group would be vacuous at merge. It is not, and must not be: group E
+scans **every file under the gallery directory**, including the canonical
+`brand-kit.css` and `theme-toggle.html`. That is the reading the propagation
+argument demands — those two files are embedded **verbatim into all 21 artifacts**,
+so a bad `@import` or a foreign `src` in a canonical block reaches every artifact
+and is fixable in none of them. Scanning them is the only part of group E that can
+fire in ART-001, and it is the part guarding the highest-leverage surface.
+
+The scan is therefore **default-deny with a closed exemption list**:
+
+- **Exempt**: `href` on `a`; addresses inside parser-recognized comments; visible
+  text.
+- **Scanned**: every other URL-valued attribute, plus style `url()` and both
+  `@import` forms, plus `fetch(...)`, `XMLHttpRequest.open(...)`,
+  `new WebSocket(...)`, `navigator.sendBeacon(...)`, `new Worker(...)`,
+  `new EventSource(...)`, `importScripts(...)`, and dynamic `import(...)` string
+  literals **anywhere in the document text, including attribute values** — which is
+  what catches a network destination hidden in an event-handler attribute whose
+  element's own `src` is innocuous.
+- **Unrecognized attribute carrying a URL-shaped value**: fails. A position nobody
+  anticipated is reported rather than admitted.
 
 | # | Check | Fails when |
 |---|-------|-----------|
-| E1 | Every host in a scanned position ∈ {`fonts.googleapis.com`, `fonts.gstatic.com`} | any other external host; names file + reference |
-| E2 | Navigation `<a href>` to any host passes | — (must not fail) |
-| E3 | URLs in comments or visible text pass | — (must not fail) |
+| E1 | Every host resolved from a scanned position ∈ {`fonts.googleapis.com`, `fonts.gstatic.com`}, by **exact case-folded equality**; a trailing root dot fails | any other host; a substring or prefix match that would admit `fonts.googleapis.com.evil.example`; `fonts.googleapis.com.` (fails closed, deliberately — see below); names file + reference |
+| E2 | Navigation `<a href>` passes **for `https:`, `mailto:`, and fragment schemes only** | — (must not fail on those); **must** fail on `javascript:`, `data:`, `vbscript:`, `blob:` in the same position |
+| E3 | URLs in **parser-recognized** comments or visible text pass | — (must not fail) |
 | E4 | Every `fonts.googleapis.com` stylesheet request carries the swap-behavior parameter | the request would otherwise be served with the provider's blocking default, producing an invisible-text period; names file + reference |
+| E5 | Host is obtained with a structured URL parser; userinfo and port are absent, and the parse round-trips to the original string | `https://fonts.googleapis.com@evil.example/` (host is `evil.example`); `https://fonts.googleapis.com:8443/`; any non-canonical parse |
+| E6 | Every reference in a scanned position is rejected **before parsing** if it contains a backslash, whitespace, a control character, or a character outside the unreserved URL grammar | the scanner-vs-browser differential: `https://evil.example\@fonts.googleapis.com/x.css` parses to host `fonts.googleapis.com` here and loads from `evil.example` in a browser |
+| E7 | In a resource-loading position, scheme ∈ {`https`} or the reference is same-document relative | `javascript:`, `data:`, `blob:`, `vbscript:`, `file:` — none of which expose a host to compare |
+| E8 | A reference in a scanned position that cannot be parsed, or that yields no host, **fails** | fail-open on precisely the set an evader controls |
+| E9 | Both `@import` forms are recognized — the URL-token form and the **bare string** form | `@import "https://evil.example/a.css";` matches no pattern written for `@import url(...)` |
+| E10 | Any escape sequence inside a style `url()` or `@import` reference **fails** | `@import "\68 ttps://evil.example/a.css";` — no host appears in the text at all, and the browser decodes and fetches it |
+| E11 | `srcset` is split by the documented algorithm — each candidate's URL is a run up to the next whitespace, so an embedded comma is **not** a separator — and **every** candidate is scanned | scanning only the first candidate; or naive comma splitting, which fragments `https://h/x,y.png 1x` into tokens matching no real candidate |
+| E12 | No scheme-relative (`//host/…`) reference in any scanned position | invisible to any pattern keyed on an explicit scheme, and resolves against `file:` rather than a network scheme (group J) |
+
+**On E1/E5/E6 — reuse, do not reinvent.** This repository already owns the
+hardened form of this comparison, and the requirement (FR-011) directs validation
+to reuse it. `_openai_url` in
+`tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py` asserts a
+conjunction that includes `parsed.geturl() == value` (canonical round-trip),
+`username is None`, `password is None`, `port is None`, and
+`parsed.netloc.lower() == host` — which is E5 exactly. `_validated_http_url` in
+`scripts/release_note_policy.py` rejects control, whitespace, and delimiter
+characters *before* `urlsplit`, which is E6 exactly. Neither was written for this
+feature; both were written for the same class of problem.
+
+**On the style positions' scan scope and surface forms.** The `url()` and
+`@import` patterns run over the **whole document text**, not only within a `style`
+element or attribute — which is what makes E10's escape prohibition and E12's
+scheme-relative ban prohibitions rather than parses, since neither has a
+standard-library parser to be scoped by. Two consequences are recorded so neither
+reads as an oversight. A URL written inside a **CSS** comment is scanned and will
+fail; this is over-strict rather than unsafe, and an author needing a prose URL
+writes it in an HTML comment, which E3 exempts. And `@namespace "https://…"` is
+matched while initiating no fetch — a false positive in the same direction. On
+surface forms, the `url()` pattern MUST be case-insensitive and MUST tolerate
+whitespace and newlines between the token and its argument, with or without
+quotes: executed against a straightforward case-insensitive pattern, the quoted,
+unquoted, uppercase `URL(`, internal-whitespace, and embedded-newline forms are all
+matched, so this is a statement of what the pattern must be rather than a defect
+found — but it is stated because a pattern written without those tolerances would
+silently miss ordinary CSS.
+
+**On E11 — stated as a correctness rule, not as a closed bypass.** Naive comma
+splitting was executed and does fragment comma-bearing and `data:` URLs, but in the
+cases tried it still surfaced the foreign host rather than hiding it. The defect it
+demonstrates is an unreliable candidate list in a position that can carry several
+references, which is why the rule fixes the algorithm and requires every candidate
+be scanned rather than claiming an evasion that was not reproduced.
+
+**On E7 — the negative corpus already exists.**
+`tests/speckit-pro/unit/test-release-note-policy.py` maintains a table-driven
+corpus of unsafe destinations covering `javascript:`, mixed-case `JaVaScRiPt:`,
+`data:text/html`, `vbscript:`, the scheme-relative form, and the backslash form.
+Reuse it rather than assembling a second one that will drift from it.
+
+**On E2 and E3 — the exemptions are the attack surface.** They remain
+**negative controls** and are still asserted explicitly, because a scanner that
+fails them would reject the provenance and attribution links FR-012 and FR-020
+require. But E2 is now bounded by scheme: "navigation to any host" taken literally
+exempted `javascript:` and `data:`, which are not navigation to a host at all.
+And E3's "comment" means a construct **the parser classifies** as a comment. That
+distinction is load-bearing in both directions — content inside a `script` element
+is raw text rather than a comment even when written as `<!-- … -->`, so an
+implementation that strips comment-shaped regions with a pattern *before* parsing
+would blind itself to live script, while a parser-driven one does not.
+
+**Parsing strength is not uniform, and the contract says so.** Element positions
+are parsed with `html.parser`, which satisfies the constitution's structured-parser
+requirement and — verified by execution — decodes character references in attribute
+values, so `<img src="&#104;ttps://evil.example/x">` yields a fully decoded URL and
+entity encoding is **not** an evasion there. The style and network-call positions
+have no standard-library parser and are matched by targeted expressions: a recorded
+deviation, which is why E10 and E12 constrain those positions by **prohibition**
+rather than by decoding. A regex-scanned position must not be presented as carrying
+the same strength as a parsed one.
 
 **On E4 (FR-024).** This is a host-allowlist scanner extended by one property of
 the request, because the allowlist alone cannot see the defect. The font
@@ -223,8 +335,25 @@ failing at the real cause.
 | G1 | The upstream notice file exists and is **not** named `LICENSE` | a file named `LICENSE` would be mistaken for this repository's own license |
 | G2 | The notice reproduces the upstream permission notice verbatim, including `Copyright (c) 2026 Anthropic PBC` | notice altered or truncated |
 | G3 | For each entry with `source.origin == "upstream"` whose artifact exists: the artifact carries an attribution header containing upstream repository, upstream file, verbatim copyright line, license identifier, link to full license text, and an explicit modified-derivative statement | any required element missing; names artifact + element |
-| G4 | For each entry with `source.origin == "repository"` whose artifact exists: the artifact carries **no** upstream copyright line | misattributed repository-authored file |
+| G4 | For each entry with `source.origin == "repository"` whose artifact exists: the artifact carries **no upstream attribution element at all** — not merely no copyright line | misattributed repository-authored file, including one carrying a complete header that happens to omit the copyright line |
 | G5 | Every entry takes exactly one of the G3/G4 branches | an `origin` matching neither — the fail-open case (FR-020) |
+| G6 | The upstream **file** named in an artifact's header equals its entry's `source.file` | a header asserting a different provenance than the catalog declares — what a header copy-pasted from a neighbouring artifact produces |
+| G7 | The upstream **repository** named in an artifact's header equals the single repository this contract names | a header asserting an upstream this gallery does not derive from |
+
+**On G6/G7 — presence is not provenance.** G3 checks each required element for
+presence and nothing more, so a header naming a different upstream file than its
+own entry satisfies it exactly. The catalog and the header are the only two places
+provenance is asserted and nothing joined them, which means the attribution header
+— a licensing claim a downstream reader relies on — could be well-formed and false
+at the same time. B11 already makes `source.file` unique across the catalog, so
+once G6 holds, each artifact's asserted provenance is unique and catalog-backed.
+
+**On G4 — test the claim, not one symptom of it.** The earlier formulation failed
+only on an upstream *copyright line*, which let a repository-authored artifact
+carry an otherwise complete and convincing attribution header — repository,
+filename, license identifier, license link — and still pass by avoiding that one
+line. G3 and G4 now test the same claim from opposite directions instead of
+testing a claim on one side and a symptom on the other.
 
 **On G5 — the discriminator must be exhaustive, not merely present.** G3 and G4
 as written are two independent conditionals. An entry whose `origin` is neither
@@ -260,6 +389,8 @@ the manual scenarios.
 | I2 | The marked region contains a `:focus-visible` rule | focus treatment absent or outside the copied region (FR-023) |
 | I3 | The marked region sets `color-scheme` under **both** `[data-theme="dark"]` and `[data-theme="light"]` | only the `light dark` declaration is present, so native UI would follow the OS rather than the override (FR-004) |
 | I4 | The `theme-toggle.html` marked region contains a `button` element carrying both an accessible-name source and a state attribute | control unnamed or stateless (FR-022) |
+| I5 | The marked region validates the stored override against the closed set of theme names before applying it, and the value written to `data-theme` is a literal from that set rather than the string read back | an unvalidated persisted value reaching all 21 artifacts (FR-004) |
+| I6 | The storage key in the marked region is namespaced to this gallery | an unnamespaced key such as `theme`, which collides in both directions with any other local document sharing the storage partition (FR-004) |
 
 **Why these are automated at all**, given that browser behavior is not: the
 failure mode here is *omission from the copied region*, which is a static
@@ -273,6 +404,65 @@ the same as "every artifact has it".
 contains a `:focus-visible` rule does not prove every interactive element is
 reachable, and that a `button` carries a state attribute does not prove the
 state is correct in both positions. Those remain manual (M7, M8).
+
+I5 and I6 are the same *kind* of assertion applied to the storage path: whether
+the closed-set validation and the namespaced key sit **inside the copied region**.
+A validation written above the start marker looks correct in `theme-toggle.html`
+and reaches no artifact — the identical failure mode I1–I4 exist to catch.
+
+## Group J — Prohibited constructs (FR-027)
+
+Artifact-level prohibitions. These are checks on the **artifact**, not on the
+scanner, because each names a construct that changes what the scanner is reading
+or that gives the document reach it has no reason to have. All are vacuously true
+in ART-001, which ships no artifact; they are the contract ART-002…005 inherit.
+
+| # | Check | Fails when |
+|---|-------|-----------|
+| J1 | No `base` element | the one construct that defeats group E **completely** — every reference relative, one `<base href="https://attacker.example/">`, and no foreign host in any scanned position while the browser loads everything from that host |
+| J2 | No scheme-relative (`//host/…`) reference anywhere | resolves against `file:` rather than a network scheme, composing a Windows network-share path and an authenticated connection to an attacker-named host; also invisible to any explicit-scheme pattern |
+| J3 | No `on*` event-handler attribute | executable content in a position no resource-load scan reads; can hold a network destination while the element's own `src` stays innocuous |
+| J4 | No `srcdoc` attribute | a complete nested document, with its own script, carried in an attribute value |
+| J5 | No `form` element with an `action`, and no `ping` attribute on any element | both send rather than fetch; `ping` is the sharper case because it rides the `a` element E2 exempts |
+| J6 | Every artifact carries an in-document policy declaration restricting at minimum base URI, form submission, embedded objects, nested documents, and outbound connections | the only control covering the positions a static scan provably cannot see is absent |
+| J7 | The declaration is a **direct child of the head element** | the whole policy is discarded at parse and the artifact looks protected while carrying nothing |
+| J8 | **No content-bearing element precedes it** — only a character-encoding declaration may | content before the declaration is outside its coverage, so the artifact is partly unprotected in a way nothing else reveals |
+| J9 | The declaration names **`'none'`** for each restricted directive and never `'self'` | a filesystem-opened document has an implementation-defined, usually opaque origin, so `'self'` resolves inconsistently across engines |
+| J10 | The declaration names **none of** the reporting-endpoint, frame-ancestry, or sandbox directives | those three are silently stripped from an in-document declaration; their presence marks an author relying on protection that was removed |
+
+**J7–J10 exist because a declaration's realistic failure mode is an authoring
+mistake, not a browser refusing it.** Each of those four conditions produces an
+artifact that reads as protected and is not, with no visible symptom — a console
+message at most. They are all statically checkable, so the uncertainty that would
+otherwise attach to this control is moved from run time to build time.
+
+**Enforcement over the local-file scheme was researched to source level, not
+assumed.** The in-document delivery algorithm strips exactly three directives —
+reporting endpoint, frame ancestry, and sandbox — and none of the five this contract
+requires is among them. None of the three major engines gates in-document policy
+ingestion on the document's scheme, and the base-URI restriction in particular is
+enforced through a path that bypasses the one scheme-based exemption that exists.
+This is confirmed against shipping engine source rather than executed in a browser,
+so a single manual three-engine check remains a verification item the first port spec
+discharges — it cannot run here, where no artifact exists.
+
+**Why J1 is separated from group E rather than added to it.** Group E asks "is
+this host allowed". A base element carries no disallowed host — it changes what
+every *other* reference resolves to. No amount of host checking sees it, so it has
+to be a prohibition on the construct.
+
+**Why J6 is narrow, and what it does not buy.** Because the artifacts run with no
+server, no response header reaches them and an in-document declaration is the only
+policy channel available. That channel cannot carry the framing, sandbox, or
+reporting directives a header can — those are specified as ignored when delivered
+in-document — and the artifacts' own inline behavior means it cannot
+meaningfully restrict script without a per-artifact digest — which the
+embed-verbatim model does not admit, since each template adds its own inline
+behavior on top of the shared snippet. The directive set is therefore restricted to
+the five above, all of which the gallery legitimately needs none of, so nothing
+breaks. It is **defense in depth layered behind group E**, not a replacement for
+it: J1–J5 and E1–E12 each fail independently, so neither being weakened silently
+disarms the other.
 
 ## Group H — Suite integration (FR-014)
 
@@ -301,5 +491,20 @@ evidence (SC-001, SC-005, SC-006):
 - Reduced-motion behavior, including the cross-theme transition (FR-023)
 - Native form controls and scrollbars following a **manual** theme override
   rather than the operating-system preference (FR-004)
+- Theme-override **behavior** when the stored value is outside the closed set
+  (FR-004) — I5 proves the validation is inside the copied region, not that the
+  artifact falls back correctly when a hostile value is present. Seed the storage
+  key with an arbitrary string and confirm the artifact renders in the
+  operating-system theme and reports no error.
+- That the in-document policy declaration (FR-027, J6) is **enforced** and does not
+  break any legitimate gallery behavior — J6 proves the declaration is present with
+  the required directives, not that a browser honors it over the local-file scheme
+  nor that the artifact still works under it. Both halves are manual, and the
+  enforcement half is the one carrying real uncertainty: in-document delivery is
+  specified without a scheme restriction, but that is an inference from the
+  processing model rather than a stated guarantee for local files. Confirm in each
+  target browser that fonts still load, the theme control still operates, and a
+  deliberately-added violating reference is actually blocked — a policy that is
+  present but unenforced is the failure this item exists to catch.
 - Absence of an invisible-text period during font loading (FR-024, SC-011) —
   E4 proves the request is correct, not that the rendering is

@@ -336,6 +336,22 @@ Contains the control markup plus the inline behavior:
 - Writes the override inside `try` / `catch`; when a browser refuses storage for
   `file://` documents the override still applies for the session and nothing is
   reported as an error (FR-004, Story 3 scenario 3).
+- **Validates the stored value against the closed set of theme names on read**, and
+  applies a literal from that set rather than the string it read back. Anything
+  else is discarded and the operating-system signal is used as though no override
+  existed. The value never reaches a markup, selector, or other executable context.
+  The storage key is namespaced to this gallery (FR-004).
+
+**Why the storage path is specified here rather than left to implementation.**
+Local storage for local files is not partitioned per file in every browser, so the
+value read back was not necessarily written by a gallery artifact. Independent of
+that, a persisted value is attacker-influenceable input to a snippet embedded
+**verbatim into all 21 artifacts** — the same propagation argument that governs the
+accessibility obligations below. The `try` / `catch` above must not be what
+satisfies the validation: a `catch` written only to keep an error from surfacing
+would swallow it. Checks I5 and I6 assert both the closed-set validation and the
+namespaced key sit **inside the copied region**, since either sitting above the
+start marker would look correct here and reach no artifact.
 
 ### Accessibility obligations fixed in this snippet (FR-022)
 
@@ -387,4 +403,16 @@ ART-001 ships **zero** artifacts. The entity is defined here because the
 validation and the contract that ART-002…005 inherit are ART-001's deliverable:
 a single self-contained file that embeds both marked blocks verbatim, renders
 from `file://`, loads nothing external except the two font hosts, and — when
-`source.origin` is `upstream` — carries the FR-020 attribution header.
+`source.origin` is `upstream` — carries the FR-020 attribution header whose named
+upstream file and repository **equal** those its catalog entry declares (G6/G7);
+presence of the elements is not the same as agreement with the entry.
+
+**Prohibited constructs (FR-027, check group J).** An artifact carries no `base`
+element, no scheme-relative reference, no event-handler attribute, no `srcdoc`, no
+form target, and no `ping` attribute; and it carries the in-document policy
+declaration restricting base URI, form submission, embedded objects, nested
+documents, and outbound connections. The `base` prohibition is the one that is not
+merely defense in depth: a base element carries no disallowed host and instead
+redefines what every relative reference resolves to, so no host-based check can
+see it and an artifact with all-relative references plus one base tag would pass
+the entire external-reference scan while loading from an attacker's host.

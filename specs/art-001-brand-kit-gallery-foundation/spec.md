@@ -299,6 +299,25 @@ confirm it renders correctly, has no errors, and its theme control works.
   operating-system preference; the override MUST set the applicable scheme
   explicitly in each direction, or an overriding reader gets page colors from
   one theme and native widgets from the other.
+
+  **The stored override is untrusted input and MUST be treated as such.** Local
+  storage for local files is not partitioned per file in every browser, so a value
+  a gallery artifact reads back was not necessarily written by a gallery artifact —
+  an unrelated document the reader opened from disk can share the same storage
+  partition. Independently of that, a persisted value is attacker-influenced input
+  to a snippet embedded **verbatim into all 21 artifacts**, where a defect has no
+  per-template fix. The canonical snippet MUST therefore validate the stored value
+  against the closed two-member set of theme names on **read**, and MUST discard
+  anything else and fall back to the operating-system signal as though no override
+  existed. The value MUST NOT be interpolated into markup, into a selector, or into
+  any other executable context; applying it as a known-good attribute value chosen
+  from the closed set — rather than writing back the string that was read — is what
+  makes the closed set enforcing rather than decorative. The storage key MUST be
+  namespaced to this gallery so an artifact neither inherits nor overwrites an
+  unrelated local document's value. The `try`/`catch` that FR-004 already requires
+  MUST NOT be the mechanism that satisfies this: a `catch` written only to keep an
+  error from surfacing would also swallow the read-side validation, so the two
+  obligations are stated separately and both apply.
 - **FR-005**: Every foreground/background token pairing the kit **permits** MUST
   meet WCAG AA contrast — at least 4.5:1 for normal text (WCAG 1.4.3), and at
   least 3:1 for large text and for user-interface components and meaningful
@@ -391,9 +410,15 @@ confirm it renders correctly, has no errors, and its theme control works.
   — the audited pairings and the prohibited ones (FR-005), the use-of-color rule
   (FR-021), the theme-control obligations (FR-022), focus visibility and
   reduced-motion behavior (FR-023), and the typography loading and fallback
-  rules (FR-024). The contract is the only place an obligation reaches all four
-  port specs at once; an accessibility duty absent from it is re-decided per
-  port or lost entirely.
+  rules (FR-024); and the security obligations every artifact inherits — the
+  prohibited constructs and the declared policy (FR-027), the untrusted-input
+  and output-context rules for generated artifacts (FR-027), and the explicit
+  statement that FR-011's external-reference guarantee covers the gallery's own
+  source files and **not** artifacts generated at run time. The contract is the
+  only place an obligation reaches all four port specs at once; an accessibility
+  or security duty absent from it is re-decided per port or lost entirely, and
+  the untrusted-input rule in particular reaches consumers — the workflow specs
+  that generate artifacts — that no other artifact of this feature touches.
   Because the catalog's shape is thereby written down in two places — as prose in
   the contract document and as assertions in the validation — the requirements MUST
   name which one governs. The **validated** shape is normative; the contract
@@ -403,13 +428,141 @@ confirm it renders correctly, has no errors, and its theme control works.
   additionally closed between the two by automated means (FR-017); the rest of the
   prose is held true by review, which is precisely why the authority must be named.
 - **FR-011**: Automated validation MUST scan every gallery artifact for external
-  references in resource-loading positions — script, image and frame sources,
-  responsive-image source sets, stylesheet and preconnect link targets, style
-  resource and import references, and network-request destinations written into
-  the file — and MUST fail on any host other than `fonts.googleapis.com` and
-  `fonts.gstatic.com`. References that a reader clicks to navigate, and
-  addresses appearing in comments or in visible text, MUST remain permitted so
-  provenance and attribution links survive.
+  references in resource-loading positions and MUST fail on any host other than
+  `fonts.googleapis.com` and `fonts.gstatic.com`. References that a reader clicks
+  to navigate, and addresses appearing in comments or in visible text, MUST remain
+  permitted so provenance and attribution links survive.
+
+  **What this defends, and what it does not.** The requirement protects two
+  distinct properties, and they demand different strengths, so the specification
+  states which is claimed. The first is **offline readability and review privacy**:
+  an artifact must render completely with no network, and opening one must not
+  disclose to a third party that a review happened. The second is **resistance to a
+  reference deliberately written to pass the scan and still load**. Only the first
+  is claimed as a guarantee. The second is pursued as far as a static check
+  reasonably reaches, and the residual is recorded rather than implied — a
+  determined author with commit access can defeat any check in this repository, and
+  the control that actually binds them is review.
+
+  **Scope is the source tree, and this MUST be stated where a consumer reads it.**
+  Validation scans the gallery's own files under the shipped gallery directory. It
+  does **not** scan, and nothing in this feature ever scans, an artifact an
+  authoring agent generates at run time. The distinction matters because a later
+  spec's author can otherwise read SC-008's "across the entire gallery" as covering
+  the artifacts their workflow emits, and would then be relying on a guarantee that
+  was never made. The obligation on generated output is a separate one, carried by
+  the contract document under FR-027.
+
+  **The position list MUST be default-deny, not an enumeration.** An enumeration of
+  scanned positions is a denylist: anything not named is permitted by construction,
+  and the set of URL-bearing positions in HTML is both large and open to growth.
+  Validation MUST therefore treat **every URL-valued attribute in the document** as
+  a scanned position, and MUST carry instead a **closed list of exemptions** —
+  `href` on an anchor, and addresses inside parser-recognized comments or visible
+  text. An attribute the scanner does not recognize MUST fail rather than pass, so
+  that a position nobody anticipated is reported instead of admitted. This
+  inversion is the load-bearing change: enumerating positions was found to omit at
+  least `source`, `video`, `audio`, `track`, `object`, `embed`, image-typed inputs,
+  SVG image and use references, form targets, anchor `ping` beacons, and meta
+  refresh — and to omit `base` entirely, which is a total bypass rather than a
+  missing case (FR-027). On `link`, the two named relations are not the fetching
+  set: `stylesheet`, `preload`, `modulepreload`, `prefetch`, `icon`, and `manifest`
+  each fetch a resource, and `preload`/`modulepreload` fetch **and execute**;
+  `preconnect` and `dns-prefetch` fetch nothing but still contact the host, which is
+  why the original list carried `preconnect` and why the privacy property this
+  requirement protects is not served by a fetch-only reading.
+
+  **Host comparison MUST be exact, and the extraction method MUST be pinned.**
+  "Fails on any host other than the two" is satisfiable by a substring test, which
+  admits `fonts.googleapis.com.evil.example`. The host MUST therefore be obtained
+  with a structured URL parser and compared by **exact case-folded equality**
+  against the two-member allowlist, never by containment or prefix. Userinfo, a
+  port, and a non-empty path prefix MUST NOT be able to place an allowlisted name
+  where the host is read from — `https://fonts.googleapis.com@evil.example/` has
+  host `evil.example` and MUST fail. Normalization MUST be stated rather than left
+  to the comparison's accidents: a host carrying a trailing root dot resolves to the
+  same host in a browser but is not the same string, and it MUST **fail**. That is
+  the fail-closed direction and it is deliberate — the gallery authors its own two
+  font references and has no reason to write one — but it is recorded because an
+  implementer meeting this as a false positive might otherwise loosen the comparison
+  to admit it, which is precisely how an exact match becomes a suffix match. This repository already owns the hardened form
+  of this comparison and validation MUST reuse it rather than reinvent it: the
+  round-trip conjunction in `tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py`
+  requires the parse to be canonical and rejects userinfo and port outright, and
+  `scripts/release_note_policy.py` rejects a control, whitespace, or delimiter
+  character before parsing at all.
+
+  **The checking parser and the executing parser can disagree, and the requirement
+  MUST NOT assume otherwise.** A reference whose authority contains a backslash
+  parses one way in this repository's runtime and another in a browser, because the
+  URL standard treats a backslash as an authority terminator and the runtime does
+  not. Relying on the parser alone therefore leaves a reference that passes the
+  check and loads from a different host than the check believed. Validation MUST
+  reject, before parsing, any reference in a scanned position containing a
+  backslash, whitespace, a control character, or any character outside the
+  unreserved URL grammar — which is the pre-parse rejection the repository's
+  existing helper already performs, applied here for the reason that makes it
+  load-bearing rather than decorative.
+
+  **A scheme rule is required, because a host allowlist cannot see a URL with no
+  host.** `javascript:`, `data:`, `blob:`, `vbscript:`, and `file:` references
+  expose no host to compare, so a host-only rule either skips them silently or
+  fails them by accident depending on an implementation detail the requirement did
+  not fix. In a resource-loading position only `https:` and same-document relative
+  references are permitted. `javascript:` and `data:` MUST additionally be
+  prohibited in the **exempted** anchor position, because the exemption exists to
+  keep ordinary provenance links passing and nothing about that purpose requires
+  admitting script execution or document injection. This repository already
+  maintains the corresponding negative corpus —
+  `tests/speckit-pro/unit/test-release-note-policy.py` tests exactly these schemes
+  in mixed case, plus the protocol-relative and backslash forms — and validation
+  MUST reuse it rather than assemble a new one.
+
+  **Failure MUST be the default on anything not understood.** A reference in a
+  scanned position that cannot be parsed, or that yields no host, MUST fail. A
+  scanner that iterates over the hosts it successfully extracted silently skips
+  precisely the set an evader controls.
+
+  **The style positions MUST name both import forms and MUST address escaping.**
+  The at-rule accepts a bare string as well as a URL token, and only one of the two
+  is caught by a pattern written for the URL token. Separately, the style syntax
+  permits a hex escape inside both a string and a URL token, so a reference can be
+  written such that no host appears in the file's text at all while a browser
+  decodes and fetches it. Validation MUST recognize both import forms, and MUST
+  treat **any escape sequence inside a style resource or import reference as a
+  failure** rather than attempting to decode it — a gallery artifact has no
+  legitimate reason to escape a URL, so rejecting the construct is both simpler and
+  stronger than reproducing the browser's decoding.
+
+  **Responsive source sets MUST be split by the documented algorithm, and every
+  candidate MUST be scanned.** The algorithm collects each candidate's URL as a run
+  of characters up to the next whitespace, so a comma **inside** a URL is not a
+  separator; only a trailing comma immediately before whitespace is consumed as
+  one. Splitting on commas alone therefore fragments such a URL into tokens that
+  correspond to no real candidate — which is a correctness defect rather than a
+  demonstrated bypass, but it makes the scanner's output unreliable in exactly the
+  position where a second and third candidate can hide. The requirement is that the
+  documented algorithm is used and that **every** candidate is scanned, not the
+  first.
+
+  **The exemptions are part of the attack surface and MUST be scoped as such.** The
+  navigation and comment exemptions are necessary — without them the rule set would
+  reject the provenance and attribution references FR-012 and FR-020 *require* — but
+  an exemption inside a security control is also where an evader will aim. "In a
+  comment" MUST mean a construct the **parser** classifies as a comment, not a
+  region a pattern removed before parsing: content inside a script element is raw
+  text rather than a comment even when it is written to look like one, so a
+  pattern-stripping implementation would blind itself to live script while a
+  parser-driven one would not.
+
+  **Where this deviates from the structured-parser principle, it MUST say so.** The
+  constitution requires structured parsers over chained text substitution. The
+  element positions satisfy this directly. The style and network-call positions have
+  no standard-library parser, so they are matched by targeted expressions — a
+  deliberate, recorded deviation rather than an oversight, and the reason the
+  preceding two paragraphs constrain those positions by prohibition rather than by
+  parsing. Validation MUST NOT present a regex-scanned position as carrying the same
+  strength as a parsed one.
 - **FR-012**: The brand kit MUST carry a provenance header naming each upstream
   brand source by repository and path, the exact source revision it was taken
   from, and the date of that capture. No prose from a private source may be
@@ -539,6 +692,30 @@ confirm it renders correctly, has no errors, and its theme control works.
   validation MUST fail when an entry declaring an upstream origin names an artifact
   whose header is missing any required element, and MUST fail when an artifact
   carries an upstream copyright line while its entry declares no upstream origin.
+
+  **Presence is not provenance: the header MUST agree with the entry that declares
+  it.** Checking each required element for presence leaves the header free to assert
+  something false and still pass — a header naming a different upstream file than
+  its entry's `source.file`, or a different upstream repository than the one this
+  contract names, satisfies an element-by-element presence check exactly. The
+  catalog and the header are the only two places provenance is asserted, and
+  nothing joined them. Validation MUST therefore compare them: the upstream file
+  named in an artifact's header MUST **equal** its entry's `source.file`, and the
+  upstream repository named there MUST equal the single repository the contract
+  document names. Attribution is a licensing claim a downstream reader relies on;
+  a claim that is merely well-formed is not the same as one that is true, and the
+  mismatch is exactly what a copy-pasted header from a neighbouring artifact
+  produces.
+
+  **The repository-origin branch MUST test the claim, not one symptom of it.**
+  Failing only when a repository-authored artifact "carries an upstream copyright
+  line" lets such an artifact carry an otherwise complete and convincing attribution
+  header — upstream repository, upstream filename, license identifier, license link
+  — while passing, because it avoids the single matched line. That branch MUST fail
+  on **any** upstream attribution element, not on the copyright line alone, so the
+  two branches test the same claim from opposite directions rather than testing a
+  claim on one side and a symptom on the other.
+
   The `source` field's origin discriminator is what makes this mechanically
   checkable, and it MUST therefore be trustworthy as a gate rather than merely
   present. Two properties are required for that. First, `origin` MUST be validated
@@ -613,6 +790,97 @@ confirm it renders correctly, has no errors, and its theme control works.
   MUST reject an unrecognized version rather than interpreting the document.
   Migration between versions is deliberately not specified here and belongs to the
   first spec that reads the catalog programmatically.
+- **FR-027**: A gallery artifact is an **executable document** — it carries inline
+  behavior and is opened directly from a filesystem by a human — so the contract
+  MUST prohibit the constructs that make the FR-011 scan unenforceable or that give
+  the document reach it has no reason to have. Each prohibition below is stated as a
+  property of the **artifact**, enforced by validation, because a scanner cannot
+  reason about a construct that redefines what the scanner is reading.
+
+  - **No base element.** A base element redefines resolution for every relative
+    reference in the document. An artifact whose references are all relative — the
+    shape the single-file contract actively encourages — plus one base element
+    pointing at a foreign host contains **no foreign host in any scanned position**
+    while loading everything from that host. This is the one construct that defeats
+    FR-011 completely rather than partially, and a single-file artifact has no use
+    for it.
+  - **No protocol-relative references.** A scheme-relative reference resolves
+    against the document's own scheme, which for these artifacts is the local-file
+    scheme rather than a network one, and the resolved URL carries the referenced
+    authority as a real host component — the network-share form. Whether a
+    particular browser and version then attempts an authenticated connection to that
+    attacker-named host is **not** asserted here: the resolution is documented
+    behavior, the credential-disclosure outcome is a known class of issue for that
+    URL shape but was not confirmed end-to-end for an unsaved, locally-opened
+    document, and the prohibition does not depend on it. Two verified properties are
+    sufficient on their own — the form names a foreign host that the document will
+    resolve against, and it is invisible to any pattern keyed on an explicit scheme.
+    It has no legitimate use in a self-contained file.
+  - **No event-handler attributes and no inline frame document attribute.** Both
+    carry executable content in a position no resource-load scan reads; an
+    event-handler attribute can hold a network destination while the element's own
+    source attribute stays innocuous.
+  - **No form targets and no anchor ping attribute.** Both send rather than fetch.
+    The ping attribute is the sharper case because it lives on the anchor element
+    the navigation exemption waves through, so the one element deliberately exempted
+    would otherwise carry a pure network beacon.
+  - **A declared policy MUST accompany the artifact.** Because the artifacts run
+    with no server, no response header can reach them, and the only policy channel
+    available is an in-document declaration. Every gallery artifact MUST carry one
+    restricting at minimum the base URI, form submission, embedded objects, nested
+    documents, and outbound connections. This is the only control that covers the
+    positions a static scan provably cannot see, and it costs one line of markup.
+
+    **It is carried in the existing canonical head block, not in a third one.** A
+    third canonical block is prohibited: it would add a third marker pair, a third
+    per-artifact presence check, a third inside-the-marked-region assertion, and a
+    third canonical-file check — and, decisively, it would add one authored file plus
+    its two regenerated copies, taking declared total files from 24 to 27 and past
+    the reviewability gate's block threshold of 25. Since the block already carries
+    pre-first-paint theme application and colour-scheme selection, its marker name
+    MUST describe the head region it actually is rather than the toggle alone. That
+    rename is free now and costs 21 files once ports land.
+
+    **The declaration MUST use `'none'`, never `'self'`.** A document opened from the
+    filesystem has an implementation-defined and usually opaque origin, so `'self'`
+    behaves inconsistently across browsers and cannot be relied on. Explicit scheme
+    tokens are permitted where an artifact genuinely needs them.
+
+    **Validation MUST additionally assert the conditions under which a declaration is
+    silently void**, because each of them leaves an artifact that looks protected and
+    is not: the declaration is a direct child of the head element (otherwise the
+    entire policy is discarded); no content-bearing element precedes it (a policy does
+    not apply to content that precedes it); and it names none of the three directives
+    that are silently stripped from an in-document declaration — reporting endpoint,
+    frame ancestry, and sandbox — since their presence signals an author who believes
+    they are getting protection they are not.
+
+    It is **defense in depth and not a substitute** for FR-011 or for the prohibitions
+    above, and it is the **secondary** control of the two. A prohibition enforced by
+    validation holds in every consumer — preview panes, webviews, converters, diff
+    viewers — whereas a declared policy takes effect only where a full browser engine
+    parses the document. The prohibitions are what guarantee the property; the
+    declaration is what covers the residue. An in-document declaration also cannot
+    carry the framing and sandbox directives a response header can, and the artifacts'
+    own inline behavior means it cannot meaningfully restrict script without a
+    per-artifact digest the embed-verbatim model does not admit. The directive set is
+    therefore deliberately narrow and chosen so that nothing the gallery legitimately
+    does is restricted by it.
+
+  **Generated artifacts and untrusted input.** The contract document (FR-010) MUST
+  additionally carry the obligation that governs artifacts a later spec's authoring
+  agent produces, because FR-011 does not reach them (its scope limit is stated
+  there) and because the contract is the only artifact that reaches all four port
+  specs and the workflow specs at once. Artifact content derived from repository or
+  pull-request material — a title, a branch name, a self-review finding, diff
+  content — is **untrusted input to an executable document**. The contract MUST
+  state that such values are escaped for the context they are placed in, and MUST
+  enumerate the contexts they may **not** be placed in at all: script bodies, style
+  bodies, URL-valued attributes, and event-handler attributes. A flat prohibition on
+  those four is both simpler and stronger than a per-context escaping rule, because
+  the common failure is not the absence of escaping but escaping for the wrong
+  context — a value escaped for HTML text and then written into a script body is not
+  protected at all.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -644,7 +912,7 @@ confirm it renders correctly, has no errors, and its theme control works.
   artifacts are declared generated and excluded.
 
   **Total authored volume is much larger and is disclosed deliberately**: roughly
-  1,430 lines across nine authored files — about 497 in the validation module, 476
+  1,530 lines across nine authored files — about 580 in the validation module, 476
   declarative (design tokens and catalog rows), 370 prose, 60 markup, and 25
   reproduced verbatim. That figure is **not** the budget metric and must not be
   compared against the budget thresholds, which the contract defines over
@@ -746,7 +1014,13 @@ confirm it renders correctly, has no errors, and its theme control works.
   trigger may reference to indicate when that artifact should be produced.
 - **Gallery Artifact**: A single self-contained file that embeds the brand token
   set and, where interactive, the theme-toggle snippet; renders from the
-  filesystem alone; and loads nothing external except brand fonts.
+  filesystem alone; and loads nothing external except brand fonts. It is an
+  **executable document**: it carries inline behavior and is opened directly by a
+  human, so it carries none of the FR-027 prohibited constructs and carries the
+  in-document policy declaration. Where a later spec generates one from repository
+  or pull-request material, that material is untrusted input and the contract's
+  output-context rules govern it — this feature's external-reference scan does not
+  reach a generated artifact.
 - **Provenance Record**: The recorded identity of each upstream brand source —
   repository, path, exact revision, and capture date — that makes deliberate
   re-sync possible without reproducing private material.
@@ -783,9 +1057,18 @@ confirm it renders correctly, has no errors, and its theme control works.
   prohibited with a stated replacement; zero pairings are left neither passing
   nor prohibited, and zero recorded ratios are unreproducible from the token
   values the artifacts define.
-- **SC-008**: Zero external hosts other than the two permitted font hosts appear
-  in a resource-loading position across the entire gallery, while links a reader
-  can click and addresses in comments or visible text continue to pass.
+- **SC-008**: Zero external hosts other than the two permitted font hosts are
+  **resolved** from a resource-loading position across the gallery's own source
+  files, while links a reader can click and addresses in comments or visible text
+  continue to pass. The criterion is stated over the **resolved** reference — the
+  host a browser would actually contact — rather than over the host that appears in
+  the file's text, because the two differ in exactly the cases that matter: a
+  reference carrying a style-syntax escape, a scheme-relative reference, and a
+  relative reference re-pointed by a base element each present no foreign host in
+  the text while loading from one. Measured over the text, this criterion is
+  satisfied by artifacts that violate it. The criterion covers the gallery's own
+  source files only; artifacts generated at run time by a later spec are outside it
+  (FR-011), and no criterion in this feature asserts anything about them.
 - **SC-009**: The four blocked template-port specs can begin work using only the
   artifacts this feature delivers, with no additional foundation decisions
   required of them.
@@ -796,6 +1079,13 @@ confirm it renders correctly, has no errors, and its theme control works.
 - **SC-011**: No gallery artifact renders text invisibly at any point during
   font loading, and with the brand faces unavailable the heading, body, and
   monospace roles remain distinguishable from one another.
+- **SC-012**: The single-file contract states the untrusted-input obligation for
+  generated artifacts — the four contexts interpolated values may never enter, and
+  the requirement that values are escaped for the context they do enter — so that a
+  workflow spec's authoring agent inherits the rule rather than re-deriving it. The
+  contract also states, in the same place, that FR-011's external-reference
+  guarantee does not extend to what that agent emits, so the obligation cannot be
+  read as already discharged.
 
 ## Assumptions
 
@@ -863,6 +1153,29 @@ confirm it renders correctly, has no errors, and its theme control works.
   conformance floor, not an AA obligation.
 - `fonts.googleapis.com` and `fonts.gstatic.com` are the only external hosts any
   gallery artifact may load from, and only in resource-loading positions.
+- **A gallery artifact is an executable document, and the local-file scheme is a
+  privilege context rather than only a rendering constraint.** The rest of this
+  specification treats `file://` as something artifacts must *work under*; the
+  security requirements treat it as something artifacts *run with*. Three
+  consequences follow and are assumed throughout. No response header can reach the
+  document, so every header-delivered control is unavailable and an in-document
+  declaration is the only policy channel (FR-027) — and that channel cannot carry
+  framing, sandbox, or reporting directives, which a header can. A scheme-relative
+  reference resolves against the local-file scheme rather than a network one,
+  producing the network-share URL form with an attacker-named host as a real host
+  component; the credential-disclosure outcome associated with that shape is a known
+  class of issue but is **not** asserted end-to-end here, and FR-027's prohibition
+  does not rest on it. And local storage for local files is not partitioned per file
+  in every browser — one scopes it by containing directory, so a document sitting
+  beside an artifact shares its storage — so a persisted value is not necessarily
+  one a gallery artifact wrote (FR-004).
+- **FR-011's guarantee covers the gallery's own source files, not artifacts
+  generated at run time.** Nothing in this feature scans what a later spec's
+  authoring agent emits. The obligation that governs generated artifacts is the
+  untrusted-input rule FR-027 places in the shipped contract document, and it is
+  stated there because the contract is the only artifact the workflow specs read.
+  This limit is assumed rather than hidden: reading SC-008 as covering generated
+  output would be relying on a guarantee that was never made.
 - Upstream brand sources are the private `racecraft-lab/racecraft` repository's
   brand documentation and this repository's own documentation-site brand
   stylesheet. The private source is cited by repository, path, revision, and
