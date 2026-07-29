@@ -313,19 +313,36 @@ supported ChatGPT sign-in path and do not produce qualification evidence.
   `failure_code > failure_plane > retry_count > budget_threshold >
   terminal_state`. The failure-plane map MUST agree with the failure-code map
   under the frozen plane derivation, and terminal-state responses MUST agree
-  with the paired candidate-plane failure codes.
-- **FR-014**: The adaptive control MUST permit at most one escalation per
-  objective, only to the next higher ladder entry. De-escalation MUST be decided
-  only between objectives after exactly three consecutive clean passes, never
-  mid-objective, and never by wrapping at the ladder floor or ceiling. A clean
-  pass is `completed`, failure code `none`, zero retries, and no declared budget
-  trigger met; an escalating objective is never clean; a non-scorable objective
-  neither advances nor resets the streak.
+  with the paired candidate-plane failure codes. An observed value outside a
+  frozen source domain, a response outside the closed response set, or a source
+  admitted by FR-012 but omitted from the precedence array MUST fail closed
+  before any adaptive response is emitted.
+- **FR-014**: The adaptive control MUST permit at most one dispatch-time
+  escalation per objective, only to the next higher ladder entry. The escalation
+  step MUST name the route/model/effort selection boundary that is exercised for
+  the objective; abstract ladder movement without produced-evidence read-back of
+  the served route, model, and effort is not a demonstrated escalation.
+  De-escalation MUST be decided only between objectives after exactly three
+  consecutive clean passes, never mid-objective, and never by wrapping at the
+  ladder floor or ceiling. A clean pass is `completed`, failure code `none`, zero
+  retries, and no declared budget trigger met; an escalating objective is never
+  clean; a non-scorable objective neither advances nor resets the streak and
+  this exclusion outranks any reset-on-non-clean rule. At the ladder ceiling, an
+  `escalate` response records no ladder step and no wrap; at the ladder floor, a
+  due de-escalation records no ladder step and no wrap. Whenever the
+  three-clean-pass de-escalation boundary is evaluated, the clean-pass counter
+  resets whether or not a ladder step occurs.
 - **FR-015**: Retry and cancellation bounds MUST declare their scope and breach
   outcome. Escalation MUST NOT reset either bound. A retry-bound breach records
   the frozen failed/candidate-failed pairing; a cancellation-bound breach records
-  the frozen cancelled/candidate-cancelled pairing. Replay MUST exercise both
-  respected and breached paths.
+  the frozen cancelled/candidate-cancelled pairing. Those are the only
+  retry/cancellation `on_breach` terminal-state and failure-code pairings.
+  Raw-token and duration budget thresholds are adaptive signal triggers with
+  declared responses under FR-013, not additional `on_breach` pairings; a smoke
+  bound breach is sealed as refused under FR-035 and FR-036 rather than
+  fabricating a terminal-state/failure-code record. Replay MUST exercise both
+  respected and breached retry and cancellation paths, plus the budget-trigger
+  response path.
 - **FR-016**: A platform-initiated route change MUST be identified by the frozen
   `service_reroute` failure code. It resolves to `non_scorable`, consumes no
   escalation allowance, changes no ladder position, neither advances nor resets
@@ -355,10 +372,11 @@ supported ChatGPT sign-in path and do not produce qualification evidence.
   missing, or not reproducible from frozen evidence, the control is ineligible
   and no dominance verdict or comparative claim may be produced for it. No
   fallback route or dynamic route discovery is permitted.
-- **FR-020**: Any automatically spawned child work under the
-  justified-high-effort control MUST be included in the governed evidence as part
-  of the same parent-plus-children unit. The control MUST NOT discard spawned
-  work, report parent-only cost, or register child work as a separate policy arm.
+- **FR-020**: Any automatically spawned child work under any G56R-004 control,
+  including the justified-high-effort control, MUST be included in the governed
+  evidence as part of the same parent-plus-children unit. The control MUST NOT
+  discard spawned work, report parent-only cost, or register child work as a
+  separate policy arm.
 - **FR-021**: Parent-plus-children aggregation MUST be defined for every
   decision-bearing dimension. Input tokens, cached input tokens, output tokens,
   duration, retries, and compactions sum across the parent and every child. The
@@ -446,13 +464,26 @@ supported ChatGPT sign-in path and do not produce qualification evidence.
   mode MUST be sealed as refused with the observation and refusal reasons
   retained; it MUST NOT be discarded or relabeled. If authorization is absent,
   the affected smoke evidence and success criteria remain honestly `unrun`.
+  Non-scored smoke evidence may support only the operator-only smoke status; it
+  MUST NOT qualify a route or control, support a dominance verdict, or support a
+  comparative qualification claim.
 - **FR-036**: Smoke bounds MUST mirror CAR-004: at most five non-reserved
   objectives, one repetition, zero reserved confirmation entries, 1,000,000 raw
   tokens, and 30 minutes elapsed wall clock per control. The component ceilings
   are 800,000 input tokens, 150,000 cached input tokens, 50,000 output tokens,
   1,200,000 cache-read tokens, 160,000 five-minute cache-write tokens, and
   40,000 one-hour cache-write tokens. Every bound MUST declare unit, direction,
-  and parent-plus-children scope.
+  parent-plus-children scope, and breach disposition. A breach of any objective,
+  repetition, confirmation, elapsed-time, raw-token, component-token, cache-read,
+  or cache-write ceiling MUST seal the smoke as refused with the breached member
+  and observed value retained; it MUST NOT produce scored evidence or an
+  `on_breach` terminal-state/failure-code record. The 1,000,000 raw-token ceiling
+  MUST be checked as
+  `800,000 input + 150,000 cached input + 50,000 output == 1,000,000`, excluding
+  reasoning output tokens and cache diagnostic ceilings. The 30-minute
+  (1,800-second) bound MUST be elapsed wall clock measured once from parent
+  dispatch to the last child completion over the parent-plus-children unit, not
+  additive duration, and child dispatches MUST NOT consume objective attempts.
 - **FR-037**: Smoke records MUST be non-scored and must read exact-treatment
   observables from produced evidence, never from dispatch requests. The unpinned
   smoke proves served model and effort equal the pinned parent and the required
@@ -577,10 +608,14 @@ supported ChatGPT sign-in path and do not produce qualification evidence.
   unqualified entries. [FR-010] [FR-011]
 - **SC-006**: 100% of adaptive observable signal values map to exactly one
   response, with precedence, plane/code consistency, terminal/code consistency,
-  and budget/retry ranks exercised by deterministic replay. [FR-012] [FR-013]
+  unknown closed-domain values, and budget/retry ranks exercised by
+  deterministic replay. [FR-012] [FR-013]
 - **SC-007**: Replay proves one-escalation-per-objective, no wrap at ladder
   floor or ceiling, three-clean-pass de-escalation, non-scorable exclusion, and
-  retry/cancellation breach outcomes. [FR-014] [FR-015] [FR-016]
+  retry/cancellation breach outcomes, including the reset/no-step outcome when a
+  de-escalation boundary is evaluated at the floor and the distinction between
+  retry/cancellation `on_breach` records and budget-trigger responses. [FR-014]
+  [FR-015] [FR-016]
 - **SC-008**: The justified-high-effort control binds exactly one qualified
   high-effort route and rejects a missing, unqualified, dynamically discovered,
   or predicate-failing route. [FR-018] [FR-019]
@@ -603,9 +638,15 @@ supported ChatGPT sign-in path and do not produce qualification evidence.
 - **SC-013**: Replaying every control fixture twice yields byte-identical
   governed evidence and zero outcome-bearing scored rows. [FR-034]
 - **SC-014**: Each authorized live smoke, when run, stays within 5 non-reserved
-  objectives, 1 repetition, 1,000,000 raw tokens, 30 minutes elapsed wall clock,
-  and all component/cache ceilings; any unrun smoke is reported as unrun rather
-  than passed. [FR-035] [FR-036]
+  objective attempts, 1 repetition, 0 confirmation entries, the
+  machine-checked raw-token identity
+  `800,000 input + 150,000 cached input + 50,000 output == 1,000,000`, 1,800
+  seconds elapsed wall clock over the parent-plus-children unit, and the distinct
+  cache-read and cache-write ceilings; child dispatches consume no objective
+  attempt. Cache diagnostics missing from produced evidence remain `unobserved`
+  rather than zero, any bound breach seals a refused smoke with the breached
+  member and observed value retained, and any unrun smoke is reported as unrun
+  rather than passed. [FR-035] [FR-036] [FR-038]
 - **SC-015**: Smoke records prove exact treatment from produced evidence for
   unpinned inheritance, adaptive escalation, and justified-high-effort
   eligibility/aggregation; request-only proof is rejected. [FR-037]

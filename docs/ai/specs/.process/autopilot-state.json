@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T03:56:00Z",
-  "active_step": "Phase 4: Checklist - Data Integrity",
+  "updated_at": "2026-07-29T04:36:20Z",
+  "active_step": "Phase 5: Tasks",
   "status": "in_progress",
   "worktree_binding": {
     "mode": "operator_authorized_in_session_workdir",
@@ -111,39 +111,39 @@
     },
     {
       "step": "Phase 4: Checklist - Data Integrity",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Data Integrity Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Error Handling",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Error Handling Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - LLM Integration",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - LLM Integration Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Performance",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Performance Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",
@@ -295,6 +295,58 @@
       "constitution": "pass_pre_and_post_design",
       "unresolved_items": 0,
       "consensus": "skipped_zero_unresolved"
+    },
+    "checklists": {
+      "status": "completed",
+      "gate": "G4",
+      "gate_status": "pass",
+      "gate_reason": "0 [Gap] markers",
+      "total_items": 121,
+      "total_initial_gaps": 13,
+      "total_resolved_gaps": 13,
+      "total_final_gaps": 0,
+      "domains": [
+        {
+          "domain": "data-integrity",
+          "status": "completed",
+          "items": 31,
+          "initial_gaps": 0,
+          "resolved_gaps": 0,
+          "final_gaps": 0,
+          "unresolved_items": 0,
+          "consensus": "skipped_zero_unresolved"
+        },
+        {
+          "domain": "error-handling",
+          "status": "completed",
+          "items": 35,
+          "initial_gaps": 3,
+          "resolved_gaps": 3,
+          "final_gaps": 0,
+          "unresolved_items": 0,
+          "consensus": "skipped_zero_unresolved"
+        },
+        {
+          "domain": "llm-integration",
+          "status": "completed",
+          "items": 27,
+          "initial_gaps": 4,
+          "resolved_gaps": 4,
+          "final_gaps": 0,
+          "unresolved_items": 0,
+          "consensus": "skipped_zero_unresolved"
+        },
+        {
+          "domain": "performance",
+          "status": "completed",
+          "items": 28,
+          "initial_gaps": 6,
+          "resolved_gaps": 6,
+          "final_gaps": 0,
+          "unresolved_items": 0,
+          "consensus": "skipped_zero_unresolved"
+        }
+      ]
     }
   },
   "agent_dispatches": [
@@ -357,6 +409,30 @@
       "agent": "phase-executor",
       "result": "consumed",
       "artifact": "specs/g56r-004-policy-controls-adaptive-comparators/plan.md"
+    },
+    {
+      "task": "Phase 4: Checklist - Data Integrity",
+      "agent": "checklist-executor",
+      "result": "consumed",
+      "artifact": "specs/g56r-004-policy-controls-adaptive-comparators/checklists/data-integrity.md"
+    },
+    {
+      "task": "Phase 4: Checklist - Error Handling",
+      "agent": "checklist-executor",
+      "result": "consumed",
+      "artifact": "specs/g56r-004-policy-controls-adaptive-comparators/checklists/error-handling.md"
+    },
+    {
+      "task": "Phase 4: Checklist - LLM Integration",
+      "agent": "checklist-executor",
+      "result": "consumed",
+      "artifact": "specs/g56r-004-policy-controls-adaptive-comparators/checklists/llm-integration.md"
+    },
+    {
+      "task": "Phase 4: Checklist - Performance",
+      "agent": "checklist-executor",
+      "result": "consumed",
+      "artifact": "specs/g56r-004-policy-controls-adaptive-comparators/checklists/performance.md"
     }
   ]
 }

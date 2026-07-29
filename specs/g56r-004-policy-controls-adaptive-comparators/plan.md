@@ -44,9 +44,11 @@ shape:
 helpers. No Bash, `jq`, package installation, or network dependency.
 
 **Storage**: Committed JSON Schema documents, committed deterministic JSON
-fixtures, feature-local Markdown artifacts, and git-ignored per-run smoke output
-under `tests/speckit-pro/layer6-efficiency/results-codex/`. Raw model, prompt,
-response, local path, and operator captures stay off-repository.
+fixtures, feature-local Markdown artifacts, and git-ignored governed smoke
+summaries or refusal records under
+`tests/speckit-pro/layer6-efficiency/results-codex/`. Raw model, prompt,
+response, local path, and operator captures stay off-repository and are never
+written under `results-codex/`.
 
 **Testing**: Layer 4 unit tests own behavior coverage. Layer 1 confirms
 structural/plugin invariants after suite-manifest edits. The full default suite
@@ -62,8 +64,11 @@ surface.
 
 **Performance Goals**: Deterministic replay fixtures produce byte-identical
 governed results across repeated runs. Live smoke plans, when authorized later,
-enforce five non-reserved objectives, one repetition, 1,800 seconds elapsed wall
-clock, and the CAR-004 raw-token/component/cache ceilings.
+enforce five non-reserved objective attempts, one repetition, zero confirmation
+entries, the CAR-004 raw-token arithmetic identity, distinct cache read/write
+ceilings, unobserved-rather-than-zero cache diagnostics, 1,800 seconds elapsed
+wall clock over the parent-plus-children unit, and child dispatches that consume
+no objective attempts.
 
 **Constraints**: Frozen G56R-003/CAR-003 contracts, fixtures, traces, score
 bundles, partitions, and evidence records are read-only. G56R-012 reconciliation
@@ -198,7 +203,7 @@ agreement.
 
 | Test owner | Planned responsibility | Suite layer |
 |------------|------------------------|-------------|
-| `tests/speckit-pro/unit/test-policy-control-contracts.py` | Codex registry schema/fixture validation, content-address preimage, exact three controls, adaptive replay, reserved partition guard, smoke plan/seal refusal cases | Layer 4 |
+| `tests/speckit-pro/unit/test-policy-control-contracts.py` | Codex registry schema/fixture validation, content-address preimage, exact three controls, adaptive replay including unknown closed-domain refusal, no-wrap floor/ceiling streak accounting, retry/cancellation breach pairings, budget-trigger response distinction, reserved partition guard, raw-token ceiling arithmetic, distinct cache read/write ceilings, unobserved-rather-than-zero cache diagnostics, elapsed wall-clock scope, child-dispatch attempt exclusion, all three unordered cache-isolation pairs, and smoke plan/seal refusal cases | Layer 4 |
 | `tests/speckit-pro/unit/test-control-comparison-dominance.py` | Eligibility floors, eight dimensions, direction rules, 10% margin behavior, zero denominator, confidence/multiplicity, verdict-to-claim mapping | Layer 4 |
 | `tests/speckit-pro/unit/test-twin-handoff-completeness.py` | Bidirectional CAR-004/G56R-004 category 1-6 derivation, category 7/8 executable checks, and single sanctioned divergence enforcement | Layer 4 |
 | `tests/speckit-pro/suite-manifest.json` | Existing unchanged authority already registering all three durable test owners; implementation verifies the entries remain present | Layers 1/4 |

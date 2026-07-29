@@ -37,5 +37,9 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [contracts/control-comparison.md](contracts/control-comparison.md)
 - [contracts/policy-control-registry.md](contracts/policy-control-registry.md)
 - [contracts/smoke-replay.md](contracts/smoke-replay.md)
+- [checklists/data-integrity.md](checklists/data-integrity.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
+- [checklists/llm-integration.md](checklists/llm-integration.md)
+- [checklists/performance.md](checklists/performance.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->
