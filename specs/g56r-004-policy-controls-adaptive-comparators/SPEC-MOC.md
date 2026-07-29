@@ -42,7 +42,11 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/llm-integration.md](checklists/llm-integration.md)
 - [checklists/performance.md](checklists/performance.md)
+- [.process/pr-packets/g56r-004.json](.process/pr-packets/g56r-004.json)
+- [.process/pr-packets/g56r-004/body.md](.process/pr-packets/g56r-004/body.md)
+- [.process/pr-packets/g56r-004/validation.json](.process/pr-packets/g56r-004/validation.json)
 - [.process/pr-review-traceability.md](.process/pr-review-traceability.md)
 - [quickstart.md](quickstart.md)
+- [retrospective.md](retrospective.md)
 - [verify-tasks-report.md](verify-tasks-report.md)
 <!-- GENERATED:BACKLINKS:END -->

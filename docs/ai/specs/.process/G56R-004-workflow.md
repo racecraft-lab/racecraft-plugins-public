@@ -35,8 +35,8 @@ not part of the autonomous phase loop.
 | Tasks | `/speckit-tasks` | ✅ Complete | 38 tasks; 15 RED→GREEN pairs; full 42-FR/19-SC coverage; G5 passed |
 | Analyze | `/speckit-analyze` | ✅ Complete | One MEDIUM and one implementation-discovered HIGH dependency finding remediated; final findings zero; G6 passed |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory gate passed: composite 0.98 ≥ threshold 0.90; proceed |
-| Implement | `/speckit-implement` | 🔄 In Progress | TDD implementation; do not run live smokes without operator authorization |
-| Post | Post-Implementation | 🔄 In Progress | Verification and code review complete; reviewability, PR, remediation, and retrospective remain |
+| Implement | `/speckit-implement` | ✅ Complete | 38/38 tasks complete; final suite 5194/5194; live smoke remained operator-only and unrun |
+| Post | Post-Implementation | ✅ Complete | All 14 canonical items completed or explicitly skipped; draft PR #403 open; retrospective finalized |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -866,7 +866,7 @@ For every behavior task:
 | Post: PR Body Generation | Completed | Refined only the three packet-sanctioned editable prose regions for public readability; protected sections remained unchanged and fresh validation passed |
 | Post: PR Creation | Completed | Pushed packet-owned head and created draft PR [#403](https://github.com/racecraft-lab/racecraft-plugins-public/pull/403) against `main` with the validated packet-owned title/body |
 | Post: Review Remediation | Completed | Initial PR audit found zero reviews, comments, or review threads; no actionable remediation was required; CI was queued on the newly created draft |
-| Post: Retrospective | In Progress | Run `$speckit-retrospective-analyze` as the final canonical Post item |
+| Post: Retrospective | Completed | Final report at `specs/g56r-004-policy-controls-adaptive-comparators/retrospective.md`: 38/38 tasks, 97.5% spec adherence, zero critical/significant findings, and one accepted minor live-observation limitation |
 
 ---
 
@@ -935,21 +935,36 @@ For every behavior task:
 - [x] PR title passes the live release-readiness gate format
 - [ ] PR created, reviewed, and merged through normal branch protection
 
+Draft PR #403 is created and awaiting the normal external review, CI, and merge
+path; the unchecked item does not block completion of this local autopilot run.
+
 ---
 
 ## Lessons Learned
 
 ### What Worked Well
 
--
+- Dependency-ordered registry, comparison, partition, and final composed mirror
+  proofs kept the cross-platform evidence honest as each artifact became
+  available.
+- Fourteen independent review passes converted 24 Important findings into
+  regression coverage and ended with `NO FINDINGS`.
 
 ### Challenges Encountered
 
--
+- Operator authorization was not available for the live ChatGPT sign-in smoke,
+  so SC-014 through SC-016 correctly remain partial for live observation while
+  deterministic planning, refusal, sealing, exact-treatment, and cache checks
+  pass.
+- The initial mirror-proof task order expected later-owned artifacts too early;
+  Analyze remediation staged the proof without changing feature scope.
 
 ### Patterns to Reuse
 
--
+- Model operator-only evidence as explicit `unrun` or refused state instead of
+  fabricating a live outcome.
+- Keep raw-capture and produced-evidence boundaries under dedicated tests, and
+  keep PR traceability grouped by requirement family and verification owner.
 
 ---
 
