@@ -5,7 +5,7 @@
   "branch": "car-004-policy-controls-comparators",
   "status": "completed_archived",
   "active_step": "Archived: post-merge cleanup applied for CAR-004",
-  "updated_at": "2026-07-28T00:00:00Z",
+  "updated_at": "2026-07-29T01:17:34Z",
   "prior_run_note": "The full CAR-004 run record - atomicity route, marker plan, reviewability evidence, and the pre-merge review remediation - remains in the preserved workflow file, the twin-handoff record at docs/ai/specs/.process/CAR-004-twin-handoff.md, and git history at merge commit 8b224ce8d1fbaba89606772a4d51401ac754a70b. Task T062, the three bounded developer-local live smokes, was never run; SC-009, SC-026, SC-027, SC-029, SC-030 and SC-031 remain unevidenced and the operator runbook that closes them is preserved at docs/ai/specs/.process/CAR-004-live-smoke-runbook.md.",
   "atomicity_route": {
     "route": "one-navigable-PR",
