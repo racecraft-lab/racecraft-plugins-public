@@ -15,6 +15,8 @@ Freezes the three AC-2.17 policy controls — unpinned, adaptive, and orchestrat
 - A bounded live-smoke driver that prints a plan and seals a record, refusing API-key authentication, scored rows, reserved-partition references, and budget breaches.
 - Three durable-named unit test modules registered at Layer 4 in `suite-manifest.json`.
 - A twin-handoff record under `docs/ai/specs/.process/` whose first six categories re-derive from the committed artifacts in both directions.
+
+A max-effort review of this branch reproduced fourteen defects by execution; all are fixed here, each with a regression test. The three that mattered most: the shared fail-closed schema engine silently ignored six JSON Schema keywords that sibling frozen contracts use, the FR-005a byte-drift guard was never called from any consumer path, and a smoke record that relabelled an unevidenced run still sealed as admitted. A fifteenth report was a documentation defect — `data-model.md` described the fan-out ceiling as per-node where `spec.md` FR-017a reads it over the whole unit — and the prose now matches the spec the code implements.
 <!-- speckit-pro-editable:what_changed:end -->
 
 ## Why It Matters
@@ -93,9 +95,10 @@ Walk `specs/car-004-policy-controls-comparators/quickstart.md` sections 1 throug
 
 ## Verification
 
-- `python3 tests/speckit-pro/run-all.py` — 4909 of 4909 passed on the committed tree: L1 1428, L4 3295, L5 186. Zero live model calls. The branch adds 669 assertions across three new Layer 4 modules.
+- `python3 tests/speckit-pro/run-all.py` — 4946 of 4946 passed on the committed tree: L1 1428, L4 3332, L5 186. Zero live model calls. The branch adds 706 assertions across three new Layer 4 modules.
 - `python3 tests/speckit-pro/run-all.py --layer 1` — 1428 of 1428 structural checks pass with the two new contract documents and the new fixtures-controls directory in place. This is quickstart sections 1 and 2.
-- `python3 tests/speckit-pro/run-all.py --layer 4` — 3295 of 3295 pass. Every row of the quickstart section 3 expected-outcome table maps to a named test in one of the three new modules.
+- `python3 tests/speckit-pro/run-all.py --layer 4` — 3332 of 3332 pass. Every row of the quickstart section 3 expected-outcome table maps to a named test in one of the three new modules.
+- `python3 tests/speckit-pro/run-all.py --layer 7` and `python3 tests/speckit-pro/layer8-parity/run-parity-fixtures.py` — 257 of 257 and 12 of 12. Neither layer runs by default; both are clean on the committed tree.
 - `git diff --name-status origin/main...HEAD -- tests/speckit-pro/layer6-efficiency/contracts-claude/ and .../lib/` — Two added lines and zero modified lines under contracts-claude, two added and zero modified under lib. No frozen CAR-003 schema or module is edited. This is quickstart section 4.
 - `pnpm --dir docs-site reference:generate then reference:check` — Reference pages are current. This gate is not covered by the test suite and fails only in clean continuous integration.
 - `git status --porcelain tests/speckit-pro/layer6-efficiency/results/` — No output. Per-run smoke evidence stays operator-only under the existing layer6 gitignore and nothing from it is committed.
