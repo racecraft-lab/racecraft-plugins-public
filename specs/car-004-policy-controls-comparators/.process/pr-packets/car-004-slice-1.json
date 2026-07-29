@@ -1,0 +1,171 @@
+{
+  "body_file": "specs/car-004-policy-controls-comparators/.process/pr-packets/car-004-slice-1/body.md",
+  "editable_fields": [
+    {
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->",
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->",
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->",
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->"
+    }
+  ],
+  "generated_title": {
+    "description": "add the three routing policy controls and their comparison rules",
+    "rejected_candidates": [
+      {
+        "reason": "The speckit-pro scope reads as a plugin-runtime change; nothing under speckit-pro/ moves, and the CAR spec scope is what the other CAR pull requests use.",
+        "value": "feat(speckit-pro): add the three routing policy controls and their comparison rules"
+      },
+      {
+        "reason": "Spec identifiers and internal jargon are not plain English for a public reader.",
+        "value": "feat(car-004): freeze the CAR-004 policy control registry and the CAR-011 comparator"
+      }
+    ],
+    "scope": "car-004",
+    "source_evidence": {
+      "kind": "plan",
+      "source": "specs/car-004-policy-controls-comparators/plan.md",
+      "summary": "Title derived from the plan Summary and the PR review packet source table."
+    },
+    "type": "feat",
+    "value": "feat(car-004): add the three routing policy controls and their comparison rules"
+  },
+  "mode": "single",
+  "packet_id": "car-004-slice-1",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ],
+    "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "value": "1491ee4867c70fc1c4883ff5592806d4d3c2db90d99d8881818c1ef5795d0ec5"
+  },
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "schema_version": "1.0.0",
+  "scope_evidence": {
+    "budget_result": "within_budget",
+    "changed_files": [
+      "docs-site/src/content/docs/reference/tests.md",
+      "docs/ai/specs/.process/CAR-004-design-concept.md",
+      "docs/ai/specs/.process/CAR-004-twin-handoff.md",
+      "docs/ai/specs/.process/CAR-004-workflow.md",
+      "docs/ai/specs/claude-agent-routing-roadmap-MOC.md",
+      "docs/ai/specs/claude-agent-routing-technical-roadmap.md",
+      "specs/car-004-policy-controls-comparators/SPEC-MOC.md",
+      "specs/car-004-policy-controls-comparators/checklists/data-integrity.md",
+      "specs/car-004-policy-controls-comparators/checklists/error-handling.md",
+      "specs/car-004-policy-controls-comparators/checklists/llm-integration.md",
+      "specs/car-004-policy-controls-comparators/checklists/requirements.md",
+      "specs/car-004-policy-controls-comparators/contracts/control-comparison.md",
+      "specs/car-004-policy-controls-comparators/contracts/policy-control-registry.md",
+      "specs/car-004-policy-controls-comparators/contracts/validator-api.md",
+      "specs/car-004-policy-controls-comparators/data-model.md",
+      "specs/car-004-policy-controls-comparators/plan.md",
+      "specs/car-004-policy-controls-comparators/quickstart.md",
+      "specs/car-004-policy-controls-comparators/research.md",
+      "specs/car-004-policy-controls-comparators/spec.md",
+      "specs/car-004-policy-controls-comparators/tasks.md",
+      "tests/speckit-pro/layer6-efficiency/contracts-claude/control-comparison.schema.json",
+      "tests/speckit-pro/layer6-efficiency/contracts-claude/policy-control-registry.schema.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-controls/control-comparison.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-controls/control-replay.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-controls/partition-registry-entries.json",
+      "tests/speckit-pro/layer6-efficiency/fixtures-controls/policy-control-registry.json",
+      "tests/speckit-pro/layer6-efficiency/lib/claude_control_comparison.py",
+      "tests/speckit-pro/layer6-efficiency/lib/claude_policy_controls.py",
+      "tests/speckit-pro/layer6-efficiency/run-control-smoke.py",
+      "tests/speckit-pro/suite-manifest.json",
+      "tests/speckit-pro/unit/test-control-comparison-dominance.py",
+      "tests/speckit-pro/unit/test-policy-control-contracts.py",
+      "tests/speckit-pro/unit/test-twin-handoff-completeness.py"
+    ],
+    "non_goals": [
+      "No CAR-004 artifact states or implies which side wins; CAR-011 owns the comparison and the answer.",
+      "No production adaptive-routing or orchestration feature changes; nothing under speckit-pro/ is touched.",
+      "No frozen CAR-003 schema is edited. Additive-only, without exception.",
+      "No new telemetry field is introduced; every adaptive signal binds an already-stable frozen member.",
+      "No unpinned-control matrix over multiple parent sessions; one arm, one pinned parent.",
+      "No scored smoke row and no scored mini-campaign. No supported path requires an API key."
+    ],
+    "production_files": 0,
+    "reviewable_loc": 0,
+    "total_files": 33
+  },
+  "source_feature_dir": "specs/car-004-policy-controls-comparators",
+  "source_markers": [
+    {
+      "marker_id": "car-004-slice-1",
+      "rendered_text": "feat(car-004): add the three routing policy controls and their comparison rules",
+      "source": "specs/car-004-policy-controls-comparators"
+    }
+  ],
+  "target": {
+    "base_branch": "main",
+    "head_branch": "car-004-policy-controls-comparators"
+  },
+  "uat": {
+    "how_to_uat": "Walk quickstart.md sections 1 through 4; section 5 is the developer-local bounded smoke and is still outstanding.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "specs/car-004-policy-controls-comparators/quickstart.md"
+  },
+  "validation_result_path": "specs/car-004-policy-controls-comparators/.process/pr-packets/car-004-slice-1/validation.json",
+  "verification_evidence": [
+    {
+      "kind": "test-suite",
+      "source": "python3 tests/speckit-pro/run-all.py",
+      "summary": "4909 of 4909 passed on the committed tree: L1 1428, L4 3295, L5 186. Zero live model calls. The branch adds 669 assertions across three new Layer 4 modules."
+    },
+    {
+      "kind": "test-suite",
+      "source": "python3 tests/speckit-pro/run-all.py --layer 1",
+      "summary": "1428 of 1428 structural checks pass with the two new contract documents and the new fixtures-controls directory in place. This is quickstart sections 1 and 2."
+    },
+    {
+      "kind": "test-suite",
+      "source": "python3 tests/speckit-pro/run-all.py --layer 4",
+      "summary": "3295 of 3295 pass. Every row of the quickstart section 3 expected-outcome table maps to a named test in one of the three new modules."
+    },
+    {
+      "kind": "additive-only-diff",
+      "source": "git diff --name-status origin/main...HEAD -- tests/speckit-pro/layer6-efficiency/contracts-claude/ and .../lib/",
+      "summary": "Two added lines and zero modified lines under contracts-claude, two added and zero modified under lib. No frozen CAR-003 schema or module is edited. This is quickstart section 4."
+    },
+    {
+      "kind": "generated-docs",
+      "source": "pnpm --dir docs-site reference:generate then reference:check",
+      "summary": "Reference pages are current. This gate is not covered by the test suite and fails only in clean continuous integration."
+    },
+    {
+      "kind": "untracked-smoke-output",
+      "source": "git status --porcelain tests/speckit-pro/layer6-efficiency/results/",
+      "summary": "No output. Per-run smoke evidence stays operator-only under the existing layer6 gitignore and nothing from it is committed."
+    },
+    {
+      "kind": "live-smoke",
+      "source": "tests/speckit-pro/layer6-efficiency/run-control-smoke.py",
+      "summary": "OUTSTANDING. The three bounded live smokes are developer-local, subscription-authenticated, and executed by hand; they have not been run on this branch. The deterministic plan step prints cleanly for all three controls."
+    }
+  ]
+}
