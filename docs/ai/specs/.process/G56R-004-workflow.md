@@ -29,7 +29,7 @@ not part of the autonomous phase loop.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 1 P1 story, 42 FRs, 18 scenarios, 19 success criteria; G1 passed with 0 markers |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Resolve exact Codex IDs, route binding, and any concrete mirror mismatch |
+| Clarify | `/speckit-clarify` | ✅ Complete | Three sessions; 14 questions; G2 passed with 0 markers; smoke consensus accepted with cache/auth precision |
 | Plan | `/speckit-plan` | ⏳ Pending | Design additive contracts, validators, replay, and smoke proof |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run four enriched requirement-quality domains |
 | Tasks | `/speckit-tasks` | ⏳ Pending | One vertical slice, strict RED→GREEN ordering |
@@ -400,9 +400,13 @@ operator does not authorize or complete a smoke.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | IDs and route binding | | |
-| 2 | Twin completeness | | |
-| 3 | Smoke evidence | | |
+| 1 | IDs and route binding | 4 | Fixed the five Codex-owned IDs and schema namespace; bound the qualified `g56r-003-route-phase-executor` `gpt-5.5`/`xhigh` tuple to its successor-freeze and route digests; made adaptive ladder membership/order hash-relevant and fail-closed; prohibited fallback, discovery, or comparative claims for an ineligible high-effort control. Consensus skipped because the executor reported zero unresolved items. |
+| 2 | Twin completeness | 5 | Categories 1–6 are derived from Codex artifacts and diffed bidirectionally; all 19 category-7 semantics and both category-8 guards require executable checks; the only divergence is `justified_high_effort` replacing `orchestration_changing`; zero concrete reconciliation candidates were identified, with Q13 retained as the fail-closed path. |
+| 3 | Smoke evidence | 5 | Fixed the three produced-evidence observables; required the Codex-owned observed ChatGPT subscription auth value with retained refusal records; preserved all mirrored component/cache/time/attempt ceilings over the parent-plus-children unit; kept raw captures off-repository; and required the PR to report unauthorized, refused, or incomplete live smokes honestly rather than claim success. Consensus accepted all four routed security/evidence answers, clarifying that missing cache quantities are `unobserved` while missing/shared isolation roots invalidate the smoke. |
+
+**G2 Result:** ✅ Passed. The authoritative gate reported
+`0 [NEEDS CLARIFICATION] markers`; the all-marker check also reported zero
+clarifications, gaps, and severity findings.
 
 ---
 

@@ -140,6 +140,97 @@ supported ChatGPT sign-in path and do not produce qualification evidence.
   gate, and any live-smoke success criterion depending on operator execution is
   reported as unrun rather than fabricated. [FR-035]
 
+## Clarifications
+
+### Session 1 — 2026-07-28
+
+- **Codex-owned identifiers**: The registry ID is
+  `g56r-004-policy-control-registry`; the comparison ID is
+  `g56r-004-control-comparison`; the three control IDs are
+  `g56r-004-unpinned-control`, `g56r-004-adaptive-control`, and
+  `g56r-004-justified-high-effort-control`. Their schema `$id` values use the
+  `https://racecraft.dev/schemas/g56r-004/` namespace.
+- **Justified-high-effort route binding**: Bind
+  `g56r-003-route-phase-executor` at model `gpt-5.5`, effort `xhigh`, successor
+  freeze `sha256:734672cea5a83e5b8f296ee604f7cb8d93e0a5296a3f864b873fe78bfe518f1e`,
+  and route-evidence digest
+  `sha256:f01ff64ca3d17b40db8ca802dd6501e62d91c4c161d01a94879c156f90eb09e4`.
+  It is eligible because the frozen fixture admits this required-core,
+  workspace-write phase route and the installed route contract declares the
+  same model and high-effort setting.
+- **Adaptive ladder source and invalidation**: The ladder is a hash-relevant
+  ordered array containing only admitted G56R-003 `candidate_route_id` values
+  from the bound successor freeze. It is never assembled by runtime discovery.
+  Empty ladders, missing routes, duplicates, omitted admitted routes,
+  unqualified entries, digest drift, and effort-order contradictions fail
+  closed.
+- **Ineligible high-effort behavior**: A false, missing, or unreproducible
+  eligibility predicate makes the control ineligible. No fallback route,
+  dynamic discovery, or comparative claim is permitted.
+
+### Session 2 — 2026-07-28
+
+- **Derived mirror surface**: Categories 1–6 MUST be re-derived from committed
+  Codex schema documents, frozen instances, and partition-registry entries and
+  compared with the CAR-004 handoff in both directions. Schema members use
+  Codex `$id` plus JSON Pointer; instance members use their stable document
+  identity plus JSON Pointer. CAR-owned category-4 literals are reminted under
+  G56R-004, while the required identifier-bearing shapes remain mirrored.
+- **Executable decision semantics**: All 19 category-7 decisions MUST be
+  exercised by executable validation, not copied as prose. The checks cover
+  adaptive totality, precedence, consistency, ordered movement, streaks,
+  bounds, reroutes, unit membership and aggregation; smoke bounds, read-back,
+  authentication, and cache isolation; and comparison floors, margins, and
+  verdict-to-claim mapping.
+- **Executable guards**: The two category-8 guards MUST share the enforced
+  behavior described by the handoff: one admission entry point rejects any
+  replay or smoke row for a reserved objective, and registry validation rejects
+  any control count other than three or any duplicate `control_kind`.
+- **Only sanctioned divergence**: The sole difference is the category-3
+  `control_kind` value `justified_high_effort` replacing Claude's
+  `orchestration_changing`. Shapes, required sets, names, numerics, decision
+  semantics, guards, and the other enum values remain mirror-identical; a
+  fourth arm or second divergence fails closed.
+- **Reconciliation disposition**: The current handoff yields zero concrete
+  reconciliation candidates for Codex. Q13 activates only if implementation
+  proves a named `mirror_required` member genuinely unrepresentable; that member
+  remains enforced on the CAR side and receives a paired CAR/G56R roadmap item
+  before implementation may continue.
+
+### Session 3 — 2026-07-28
+
+- **Produced-evidence observables**: The unpinned smoke reads back a served model
+  and effort equal to the pinned parent plus the required absent local
+  overrides. The adaptive smoke reads back the qualifying signal and served
+  route, model, and effort moving from declared ladder index `i` to `i + 1`.
+  The justified-high-effort smoke reads back the frozen route/model/effort,
+  a true eligibility result, and a complete parent-plus-children aggregate for
+  every child actually spawned. Dispatch requests are never proof.
+- **ChatGPT authentication and refusal**: An admissible smoke MUST observe
+  the Codex-owned `authentication_mode: chatgpt_subscription` value and the
+  frozen API-key-override absence assertion. An observed `api_key`, missing
+  observation, or ambiguous mode produces a sealed refused record retaining the
+  observed value and refusal reasons. It is not discarded or relabeled; the
+  remedy is a rerun.
+- **Frozen bounds**: Each control is limited to five non-reserved objective
+  attempts, one candidate/repetition, zero confirmation entries, 1,800 seconds
+  elapsed wall clock, and 1,000,000 bounded raw tokens:
+  800,000 input + 150,000 cached input + 50,000 output. Diagnostic ceilings are
+  1,200,000 cache-read tokens, 160,000 five-minute cache-write tokens, and
+  40,000 one-hour cache-write tokens. Bounds cover the whole
+  parent-plus-children unit; children do not consume objective attempts. A
+  missing cache quantity is `unobserved`, never zero, while a missing,
+  unobserved, or shared cache-isolation root invalidates the affected smoke.
+- **Capture retention**: Raw prompts, model responses, conversation captures,
+  and local paths remain off-repository. Only governed summaries, content
+  digests, refusal records, and non-raw deterministic replay fixtures may be
+  committed.
+- **Unrun reporting**: Operator authorization is not supplied by this
+  clarification. Deterministic replay remains mandatory, while each live-smoke
+  result and dependent success criterion MUST be reported `unrun` in the PR,
+  never passed, waived, or inferred. A refused or incomplete run is reported
+  separately from a run that never started.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -155,7 +246,12 @@ supported ChatGPT sign-in path and do not produce qualification evidence.
   control-comparison contracts with Codex-owned identifiers. Those contracts
   MUST mirror CAR-004's complete record shapes, required-member sets, closed
   enums, frozen numerics, decision semantics, and enforcement guards, except for
-  the one sanctioned platform-value divergence in FR-001.
+  the one sanctioned platform-value divergence in FR-001. The registry ID MUST
+  be `g56r-004-policy-control-registry`, the comparison ID MUST be
+  `g56r-004-control-comparison`, and the control IDs MUST be
+  `g56r-004-unpinned-control`, `g56r-004-adaptive-control`, and
+  `g56r-004-justified-high-effort-control`; schema `$id` values MUST use the
+  `https://racecraft.dev/schemas/g56r-004/` namespace.
 - **FR-003**: Every control, the control-registry document, and the comparison
   document MUST carry a content address computed over the complete frozen
   definition by one canonical preimage rule: SHA-256 over canonical JSON with
@@ -174,8 +270,10 @@ supported ChatGPT sign-in path and do not produce qualification evidence.
   member absent from the mirror record, a recorded member absent from Codex
   artifacts, an invented member, an enum or numeric drift, a digest mismatch, a
   missing mirror obligation, or more than one mirror obligation on an entry MUST
-  fail closed. The only sanctioned divergence is the third control value named
-  in FR-001.
+  fail closed. The only sanctioned divergence is the category-3 `control_kind`
+  value `justified_high_effort` in place of `orchestration_changing`; it MUST
+  NOT alter a shape, required set, member name, numeric, decision semantic,
+  guard, another enum value, or the closed three-control cardinality.
 - **FR-007**: Nulls, zeros, units, comparison directions, closed enum members,
   and frozen numeric values inherited from CAR-004 or the frozen G56R-003/CAR-003
   surface MUST be preserved exactly. No validation path may normalize missing
@@ -196,9 +294,11 @@ supported ChatGPT sign-in path and do not produce qualification evidence.
 #### Adaptive Control
 
 - **FR-010**: The adaptive ladder MUST derive only from ordered, admitted
-  G56R-003 successor-capability tuples. Every ladder entry MUST resolve to one
-  admitted `candidate_route_id`; no unqualified route, hidden route, or
-  dynamically discovered route may be selected after the control is frozen.
+  G56R-003 successor-capability tuples in the bound successor freeze. It MUST be
+  a declared, hash-relevant ordered array in which every entry resolves to one
+  admitted `candidate_route_id`; an empty ladder, missing route, duplicate,
+  omission of an admitted route, unqualified entry, or dynamically discovered
+  route MUST fail closed.
 - **FR-011**: Ladder order MUST be hash-relevant and declared. Within one model,
   route order MUST agree with the frozen Codex ordinary-effort ladder
   `low -> medium -> high -> xhigh -> max`. Cross-model steps MUST carry a
@@ -234,19 +334,27 @@ supported ChatGPT sign-in path and do not produce qualification evidence.
 - **FR-017**: An adaptive control version MUST become invalid rather than
   self-repair when the bound successor-capability freeze changes, an admitted
   tuple disappears, a new admitted tuple is present but absent from the ladder,
-  or the frozen effort-order evidence no longer supports the declared order.
+  an entry or bound digest drifts, or the frozen effort-order evidence no longer
+  supports the declared order. Duplicate routes and contradictions between the
+  declared order and frozen effort-order evidence MUST also invalidate the
+  version.
 
 #### Justified-High-Effort Control
 
-- **FR-018**: The justified-high-effort control MUST bind one already-qualified
-  high-effort route from frozen G56R-003 evidence. The binding MUST record the
-  route ID, model, effort, successor-freeze ID, freeze digest, route-evidence
-  digest, and the reason the route is eligible before any G56R-011 outcomes
-  exist.
+- **FR-018**: The justified-high-effort control MUST bind the already-qualified
+  route `g56r-003-route-phase-executor` at model `gpt-5.5` and effort `xhigh`
+  from frozen G56R-003 evidence. The binding MUST record the digest-qualified
+  successor-freeze ID
+  `sha256:734672cea5a83e5b8f296ee604f7cb8d93e0a5296a3f864b873fe78bfe518f1e`,
+  route-evidence digest
+  `sha256:f01ff64ca3d17b40db8ca802dd6501e62d91c4c161d01a94879c156f90eb09e4`,
+  and the reason the required-core, workspace-write phase route is eligible
+  before any G56R-011 outcomes exist.
 - **FR-019**: The justified-high-effort control MUST carry an explicit
   eligibility predicate and human-readable rationale. If the predicate is false,
   missing, or not reproducible from frozen evidence, the control is ineligible
-  and no dominance verdict may be produced for it.
+  and no dominance verdict or comparative claim may be produced for it. No
+  fallback route or dynamic route discovery is permitted.
 - **FR-020**: Any automatically spawned child work under the
   justified-high-effort control MUST be included in the governed evidence as part
   of the same parent-plus-children unit. The control MUST NOT discard spawned
@@ -332,8 +440,12 @@ supported ChatGPT sign-in path and do not produce qualification evidence.
 - **FR-035**: Each control MUST have exactly one bounded live smoke requirement
   on the supported ChatGPT sign-in path. Live smoke execution requires explicit
   operator authorization, must not run in default CI, and cannot be replaced by
-  API-key smoke. If authorization is absent, the affected smoke evidence and
-  success criteria remain honestly unrun.
+  API-key smoke. An admissible run MUST observe
+  `authentication_mode: chatgpt_subscription` and the frozen API-key-override
+  absence assertion. An observed `api_key`, missing observation, or ambiguous
+  mode MUST be sealed as refused with the observation and refusal reasons
+  retained; it MUST NOT be discarded or relabeled. If authorization is absent,
+  the affected smoke evidence and success criteria remain honestly `unrun`.
 - **FR-036**: Smoke bounds MUST mirror CAR-004: at most five non-reserved
   objectives, one repetition, zero reserved confirmation entries, 1,000,000 raw
   tokens, and 30 minutes elapsed wall clock per control. The component ceilings
@@ -343,10 +455,12 @@ supported ChatGPT sign-in path and do not produce qualification evidence.
   and parent-plus-children scope.
 - **FR-037**: Smoke records MUST be non-scored and must read exact-treatment
   observables from produced evidence, never from dispatch requests. The unpinned
-  smoke proves parent inheritance, the adaptive smoke proves served model,
-  effort, and route movement from ladder index `i` to `i + 1`, and the
-  justified-high-effort smoke proves the frozen eligible high-effort route and
-  governed parent-plus-child aggregation.
+  smoke proves served model and effort equal the pinned parent and the required
+  local overrides absent; the adaptive smoke proves the qualifying signal and
+  served model, effort, and route movement from ladder index `i` to `i + 1`;
+  and the justified-high-effort smoke proves the frozen route/model/effort, a
+  true eligibility result, and governed aggregation over the parent plus every
+  child actually spawned.
 - **FR-038**: Smoke cache isolation MUST be proven for all three unordered
   control pairs. `observed_disjoint` with both root digests present is the only
   accepted status; shared or unobserved cache roots invalidate the affected
@@ -362,7 +476,14 @@ supported ChatGPT sign-in path and do not produce qualification evidence.
 - **FR-040**: G56R-004 MUST treat the CAR-004 twin handoff as the complete mirror
   authority applied to the frozen G56R-003/CAR-003 surface. Codex-owned IDs,
   paths, and route tuples replace CAR-owned literals, but mirror-required
-  semantics and guards remain intact.
+  semantics and guards remain intact. Categories 1–6 MUST be re-derived from
+  the committed Codex schemas, frozen instances, and partition-registry entries
+  using document identity plus JSON Pointer and compared with the handoff in
+  both directions. All 19 category-7 decisions MUST map to executable checks
+  across adaptive resolution, unit aggregation, smoke evidence, and comparison
+  behavior. Both category-8 guards MUST be executable: one admission path
+  rejects reserved replay or smoke objectives, and registry validation rejects
+  non-three or duplicate-kind control sets.
 - **FR-041**: If implementation finds a mirror-required member Codex genuinely
   cannot represent, G56R-004 MUST name that member, keep the CAR-004 obligation
   unweakened, record the declined disposition, and raise the paired CAR/G56R
