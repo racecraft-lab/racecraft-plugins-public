@@ -475,7 +475,16 @@ confirm it renders correctly, has no errors, and its theme control works.
   **Host comparison MUST be exact, and the extraction method MUST be pinned.**
   "Fails on any host other than the two" is satisfiable by a substring test, which
   admits `fonts.googleapis.com.evil.example`. The host MUST therefore be obtained
-  with a structured URL parser and compared by **exact case-folded equality**
+  with a structured URL parser and compared by **exact case-folded equality over an
+  ASCII-only host**. The ASCII restriction is not incidental and MUST NOT be dropped
+  as redundant: case folding is a lossy many-to-one mapping, so a host carrying a
+  non-ASCII character that folds onto an allowlisted character compares equal to an
+  allowlisted host while resolving somewhere else entirely. Validation MUST therefore
+  reject any character outside the URL grammar in a reference **before** the host
+  comparison runs, and that rejection is what makes the comparison safe rather than a
+  second opinion about it. Comparison by lowercasing alone does not have this
+  property, which is precisely why the rule is stated as folding plus a repertoire
+  restriction rather than either one on its own,
   against the two-member allowlist, never by containment or prefix. Userinfo, a
   port, and a non-empty path prefix MUST NOT be able to place an allowlisted name
   where the host is read from. A userinfo segment is the case worth stating: the

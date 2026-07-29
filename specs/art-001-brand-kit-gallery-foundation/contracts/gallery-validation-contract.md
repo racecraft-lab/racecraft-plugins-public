@@ -198,6 +198,22 @@ The scan is therefore **default-deny with a closed exemption list**:
 | # | Check | Fails when |
 |---|-------|-----------|
 | E1 | Every host resolved from a scanned position ∈ {`fonts.googleapis.com`, `fonts.gstatic.com`}, by **exact case-folded equality**; a trailing root dot fails | any other host; a substring or prefix match that would admit `fonts.googleapis.com.evil.example`; `fonts.googleapis.com.` (fails closed, deliberately — see below); names file + reference |
+
+**E1 is only safe because E6 runs first — this was found by executing it, not by
+reading it.** Case folding is a lossy many-to-one mapping. A host carrying the Latin
+small letter long s folds onto an allowlisted host exactly: it compares **equal** to
+`fonts.gstatic.com` under `casefold`, while resolving to a domain an attacker controls.
+Executed against the checks as first written, that reference was admitted by E1 (it
+compares equal), admitted by E5 (it round-trips, carries no userinfo and no port), and
+admitted by E6 until E6's repertoire was closed. Lowercasing would not have collided —
+folding is what creates the hole, and folding is what the requirement asks for, so the
+repertoire restriction is the half that makes it correct.
+
+E6 therefore rejects on a closed grammar repertoire and refuses every non-ASCII
+character **before** any host comparison happens. The test asserts both halves — that
+E1 and E5 alone still admit the folded host, and that E6 rejects it — so the reason
+this clause exists cannot be refactored away by someone who reads E6 as redundant
+tidying.
 | E2 | Navigation `<a href>` passes **for `https:`, `mailto:`, and fragment schemes only** | — (must not fail on those); **must** fail on `javascript:`, `data:`, `vbscript:`, `blob:` in the same position |
 | E3 | URLs in **parser-recognized** comments or visible text pass | — (must not fail) |
 | E4 | Every `fonts.googleapis.com` stylesheet request carries the swap-behavior parameter | the request would otherwise be served with the provider's blocking default, producing an invisible-text period; names file + reference |
