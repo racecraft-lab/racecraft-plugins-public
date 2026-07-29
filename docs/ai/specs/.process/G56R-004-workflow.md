@@ -822,6 +822,7 @@ For every behavior task:
 
 | Group | Tasks | Completed | Evidence |
 |-------|-------|-----------|----------|
+| Baseline and guardrails | T001-T003 | 3 of 3 | Owner baselines 545/545, 135/135, and 26/26; exact 12-path boundary confirmed; live smoke remains operator-only and unrun |
 | Contract freeze | | | |
 | Policy behavior and replay | | | |
 | Comparison, partition, parity | | | |

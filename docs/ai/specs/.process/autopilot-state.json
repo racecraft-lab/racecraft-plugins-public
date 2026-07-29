@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T05:15:00Z",
-  "active_step": "Phase 7: Implement - Baseline and guardrails (T001-T003)",
+  "updated_at": "2026-07-29T05:25:00Z",
+  "active_step": "Phase 7: Implement - Contracts and mirror (T004-T007)",
   "status": "in_progress",
   "worktree_binding": {
     "mode": "operator_authorized_in_session_workdir",
@@ -159,11 +159,11 @@
     },
     {
       "step": "Phase 7: Implement - Baseline and guardrails (T001-T003)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Contracts and mirror (T004-T007)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - Unpinned and adaptive (T008-T015)",
@@ -446,6 +446,28 @@
       "composite": 0.98,
       "recommended_action": "proceed",
       "bounded_remediation_iterations": 0
+    },
+    "implement": {
+      "status": "in_progress",
+      "active_group": "contracts_and_mirror",
+      "completed_tasks": [
+        "T001",
+        "T002",
+        "T003"
+      ],
+      "groups": {
+        "baseline_and_guardrails": {
+          "status": "completed",
+          "tasks": "T001-T003",
+          "owner_baselines": {
+            "test-policy-control-contracts": "545/545",
+            "test-control-comparison-dominance": "135/135",
+            "test-twin-handoff-completeness": "26/26"
+          },
+          "allowed_implementation_paths": 12,
+          "live_smoke": "operator_only_unrun"
+        }
+      }
     }
   },
   "agent_dispatches": [
@@ -556,6 +578,24 @@
       "agent": "default",
       "result": "consumed",
       "artifact": "docs/ai/specs/.process/G56R-004-workflow.md"
+    },
+    {
+      "task": "T001",
+      "agent": "implement-executor",
+      "result": "consumed",
+      "artifact": null
+    },
+    {
+      "task": "T002",
+      "agent": "implement-executor",
+      "result": "consumed",
+      "artifact": null
+    },
+    {
+      "task": "T003",
+      "agent": "implement-executor",
+      "result": "consumed",
+      "artifact": null
     }
   ]
 }
