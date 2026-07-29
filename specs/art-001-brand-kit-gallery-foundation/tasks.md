@@ -19,10 +19,14 @@ the contract before the asset that satisfies it exists, then turned GREEN.
 
 **Reviewability**: Task generation adds no file and no surface beyond the plan's
 Declared File Operations — 9 authored files, 24 total, 1 primary surface
-(seed/config). The plan records **warn** on two dimensions (7 production files
-against a warn of 6; ~580 logic LOC against a warn of 400) and **no block**.
-T009 is the explicit pre-implementation reviewability checkpoint the template
-requires at that level.
+(seed/config). The binding figures are the ones `spec.md` declares and the
+setup-mode gate scrapes: **62 reviewable LOC, 2 production files, 24 total
+files**, one primary surface. The gate returns **warn** on exactly one dimension
+— total files 24 against a warn of 15 — and **no block**. The plan's broader
+hand estimate (7 files of any character, ~580 logic LOC) is disclosure, not the
+gate's input, and must not be compared against the gate thresholds. T009 is the
+explicit pre-implementation reviewability checkpoint the template requires at
+that level.
 
 **Organization**: Tasks are grouped by user story so each can be implemented and
 tested independently.
@@ -66,9 +70,12 @@ each one is cheap now and expensive after a port lands.
    `<!-- GALLERY-HEAD:START -->` … `<!-- GALLERY-HEAD:END -->`, per FR-027: the
    block carries the policy declaration, the font request, pre-first-paint theme
    application, and `color-scheme` selection, so its name must describe the head
-   region it is rather than the toggle alone. FR-027 requires this rename; the
-   check inventory and `data-model.md` still spell the old literal, and the
-   requirement governs. The **file name** `theme-toggle.html` is unchanged — the
+   region it is rather than the toggle alone. FR-027 requires this rename, and it
+   is already carried through every downstream artifact — `data-model.md`,
+   `research.md`, `plan.md`, and check A2 in the validation contract all spell
+   `GALLERY-HEAD`. The only remaining mention of the old literal in this feature's
+   artifacts is the description of the rename itself, immediately above. The
+   **file name** `theme-toggle.html` is unchanged — the
    plan's Declared File Operations and the payload declarations depend on it, and
    FR-027 constrains only the marker pair.
 2. **No third canonical block, and no third canonical file.** FR-027 places the
@@ -116,7 +123,7 @@ feature builds green and ships nothing.
 - [ ] T006 [P] Create `speckit-pro/artifact-gallery/UPSTREAM-NOTICE.md` by downloading the `anthropics/html-effectiveness` MIT license text verbatim and never retyping it, preserving `Copyright (c) 2026 Anthropic PBC` exactly (FR-020). The file MUST NOT be named `LICENSE` — the payload builder special-cases that exact relative path and maps it to this repository's own root license
 - [ ] T007 Register the test as the last entry in the Layer 4 `scripts` array of `tests/speckit-pro/suite-manifest.json` as `{ "path": "tests/speckit-pro/unit/test-artifact-gallery.py", "label": "test-artifact-gallery", "baseline": null }`, adding a comma to the current last line — the array is append-ordered, not sorted (FR-014). Depends on T004; must never be committed without it
 - [ ] T008 Extend `speckit-pro/artifact-gallery/SPA-CONTRACT.md` with the inherited obligations (FR-010, FR-027, SC-012): the accessibility duties — audited and **prohibited** token pairings with their named replacements (FR-005), the use-of-color rule stated as a rule distinct from the punctuation-level reservation (FR-021), the theme-control keyboard/name/role/state obligations (FR-022), focus visibility and reduced-motion behavior (FR-023), typography loading and fallback rules (FR-024); the security duties — the six prohibited constructs and the in-document policy declaration (FR-027); and the untrusted-input rule for **generated** artifacts naming the four contexts an interpolated value may never enter (script bodies, style bodies, URL-valued attributes, event-handler attributes) plus the explicit statement that FR-011's external-reference guarantee covers the gallery's own source files and **not** artifacts generated at run time. Depends on T005 (same file)
-- [ ] T009 Verify the reviewability budget against this task list before implementation and record the result in `specs/art-001-brand-kit-gallery-foundation/plan.md` working notes: 1 primary surface, 9 authored files, 24 total files, 7 production files (warn), ~580 logic LOC (warn), no block dimension crossed, no new file or surface introduced by task generation. Confirm the recorded split decision still stands or invoke the plan's fallback cut
+- [ ] T009 Verify the reviewability budget against this task list before implementation and record the result in `specs/art-001-brand-kit-gallery-foundation/plan.md` working notes. Record the **binding** figures — the ones `spec.md` declares and the setup-mode gate scrapes: 1 primary surface, 62 reviewable LOC, 2 production files, 24 total files, which the gate returns as **warn on total files only** (24 against a warn of 15) with no block dimension crossed. Record the plan's broader hand estimate (9 authored files, 7 files of any character, ~580 logic LOC, ~1,570 authored lines) separately and explicitly as disclosure, never as a second gate reading — reporting it in the gate's threshold columns is the error the plan's budget section already had to correct once. Confirm task generation introduced no new file or surface, and that the recorded split decision still stands or invoke the plan's fallback cut
 
 **Checkpoint**: The gallery reaches both payload allowlists, the test runs and
 reports 0/0, the contract document exists. User story work can begin.
@@ -227,7 +234,7 @@ payload reach, suite integration, and the generated-artifact contract.
 - [ ] T031 Regenerate the shipped payload and its proofs by running `python3 tests/speckit-pro/check-toolchain.py --mode tests` then `PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py`, confirm both `dist/claude/speckit-pro/artifact-gallery/` and `dist/codex/speckit-pro/artifact-gallery/` list all six gallery files, re-run `python3 tests/speckit-pro/unit/test-artifact-gallery.py` and confirm group F flips to GREEN, then run `python3 tests/speckit-pro/run-all.py --layer 1`. Hand-editing any regenerated file is forbidden. **The build exits 0 even when the gallery is absent from the payload** — an empty or missing `dist/` gallery directory means T003 did not land (FR-018)
 - [ ] T032 Regenerate the docs-site test reference with `pnpm --dir docs-site reference:generate` and commit the resulting `docs-site/src/content/docs/reference/tests.md` diff — the generator enumerates every `.md`, `.py`, and `.sh` under `tests/speckit-pro`, so the new unit test staleness-fails the committed page, which passes locally and fails clean CI if skipped
 - [ ] T033 Run full verification from the repository root — `python3 tests/speckit-pro/run-all.py`, `python3 tests/speckit-pro/check-toolchain.py --mode docs`, `pnpm --dir docs-site reference:check`, and `PYTHONDONTWRITEBYTECODE=1 python3 scripts/refresh-release-artifacts.py --check` — and confirm all 71 checks in `specs/art-001-brand-kit-gallery-foundation/contracts/gallery-validation-contract.md` are implemented and passing, with the test reporting `test-artifact-gallery: <N>/<N> passed`. Then confirm the deliverable set is complete enough for ART-002…005 to begin with no further foundation decisions required of them — both canonical blocks, the seeded catalog, the contract document, the voice reference, and the upstream notice all present and shipped to both payloads (SC-009)
-- [ ] T034 Generate the PR review packet per the PR Review Packet Requirements in `specs/art-001-brand-kit-gallery-foundation/spec.md` — what changed, why, non-goals, review order (token set → head block → routing catalog → contract and voice references → validation), scope budget, traceability mapping each requirement to changed files and evidence, verification evidence including the automated suite result **and** the manually captured `file://` evidence from T026 and T027, known gaps, and rollback notes. Restate the accepted budget warning and the plan's replacement composition-and-indivisibility rationale, and disclose the ~1,530 raw authored lines alongside the ~580 logic lines the contract's metric counts
+- [ ] T034 Generate the PR review packet per the PR Review Packet Requirements in `specs/art-001-brand-kit-gallery-foundation/spec.md` — what changed, why, non-goals, review order (token set → head block → routing catalog → contract and voice references → validation), scope budget, traceability mapping each requirement to changed files and evidence, verification evidence including the automated suite result **and** the manually captured `file://` evidence from T026 and T027, known gaps, and rollback notes. Restate the accepted budget warning and the plan's replacement composition-and-indivisibility rationale, and disclose the ~1,570 raw authored lines alongside the ~580 logic lines the contract's metric counts
 
 ---
 

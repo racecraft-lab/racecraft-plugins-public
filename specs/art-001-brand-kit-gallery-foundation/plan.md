@@ -74,7 +74,7 @@ artifacts ported in this feature; 6 shipped foundation files
 **Reviewability Budget**: Primary surface seed/config; plan-phase gate reports
 projected 0 reviewable LOC / 0 production files and passes, but that result comes
 from a language filter that recognizes none of this feature's file types — the
-honest figures are ~1,530 authored lines across 9 authored files, of which ~580
+honest figures are ~1,570 authored lines across 9 authored files, of which ~580
 are logic. Greenfield no longer applies. Budget result: **warning accepted on a
 restated basis**. Full recomputation below.
 
@@ -124,7 +124,8 @@ The refresh additionally rewrites the installed-cache fixtures under
 ## Constitution Check
 
 *GATE: evaluated before Phase 0 and re-evaluated after Phase 1 design. Result
-unchanged — pass, no violations.*
+unchanged — pass, with one recorded Principle II deviation (structured parsers)
+that is justified and tabled under Complexity Tracking below.*
 
 | Principle | Assessment |
 |---|---|
@@ -140,17 +141,52 @@ unchanged — pass, no violations.*
 `UPSTREAM-NOTICE.md`); harness/adapter (the Layer 4 test and its suite
 registration).
 
-**Budget position against the constitution thresholds** (warn above 400
-reviewable LOC / 6 production files / 15 total files / more than one primary
-surface; block above 800 / 8 / 25 / more than one primary surface):
+**Budget position against the constitution thresholds.** The thresholds are: warn
+above 400 reviewable LOC / 6 production files / 15 total files / more than one
+primary surface; block above 800 / 8 / 25 / more than one primary surface.
 
-| Dimension | Value | Threshold | Result |
+**What the gate actually reads, and what it returns.** The setup-mode
+reviewability gate scrapes three declared figures out of `spec.md` — it does not
+read this plan, and it does not recompute them. Those declared figures are 62
+reviewable LOC, 2 production files, 24 total files, one primary surface, and the
+gate returns `status: warn`, `pass: true`, with a single warning (total files 24
+above the warn threshold of 15) and **no blockers**. That is the binding result,
+and the table below leads with it so this plan cannot be read as reporting a
+different one.
+
+| Dimension | Binding figure (gate) | Threshold | Gate result |
 |---|---|---|---|
 | Primary surfaces | 1 (seed/config) | >1 warns and blocks | Pass |
-| Authored files | 9 | warn 15, block 25 | Pass |
-| Production files | 7 (6 shipped + `payloads.py`) | warn 6, block 8 | **Warn** |
-| Reviewable LOC — logic only | ~580 | warn 400, block 800 | **Warn** |
-| Reviewable LOC — all authored lines | ~1,530 | warn 400, block 800 | **Over block on this reading** |
+| Production files | 2 | warn 6, block 8 | Pass |
+| Reviewable LOC | 62 | warn 400, block 800 | Pass |
+| Total files | 24 | warn 15, block 25 | **Warn** |
+
+The binding metric is the product plan's Reviewability Contract definition —
+**production code only; documentation, tests, and configuration do not
+contribute**. Under it the production surface is `theme-toggle.html`'s inline
+behaviour (~60 lines) plus the `payloads.py` edit (~2), which is where 2 files and
+62 LOC come from. The design tokens and the routing catalog are configuration; the
+contract document, voice reference, and upstream notice are documentation; the
+validation module is a test.
+
+**The hand estimate below is disclosure, not a second gate reading.** Its figures
+are deliberately broader and must not be compared against the thresholds above —
+each counts things the contract excludes:
+
+| Disclosure dimension | Value | Why it is not the gate figure |
+|---|---|---|
+| Authored files | 9 | Counts docs, config, and the test |
+| Files touched incl. generated | 24 | Matches the gate's total-files figure |
+| All authored files, any character | 7 (6 shipped + `payloads.py`) | Counts docs and config as production |
+| Authored lines — logic only | ~580 | Dominated by the test, which the contract excludes |
+| Authored lines — all authored | ~1,570 | The weakest point; see the closing paragraph |
+
+**An earlier revision of this table reported the disclosure figures in the gate's
+own threshold columns** — 7 production files against a warn of 6, ~580 LOC against
+a warn of 400, and authored files 9 scored against the total-files thresholds. All
+three were the wrong instrument: the gate reads 2, 62, and 24. That revision also
+recorded "Pass" on the one dimension that genuinely warns (total files 24 above
+15) because it scored authored files there instead. The corrected reading is above.
 
 **Split decision**: remains one spec, as ratified in the spec's Reviewability
 Budget — but the justification is restated below, because the original one no
@@ -222,12 +258,18 @@ the file and surface counts are unchanged.
 | `payloads.py` (edit) | ~2 | Logic |
 | `manifest.json` | ~275 | Declarative data (21 rows) |
 | `brand-kit.css` | ~200 | Declarative tokens + audited comments |
-| `SPA-CONTRACT.md` | ~270 | Prose contract |
+| `SPA-CONTRACT.md` | ~315 | Prose contract |
 | `brand-voice.md` | ~100 | Prose reference |
-| `theme-toggle.html` | ~60 | Markup + small script |
+| `theme-toggle.html` | ~70 | Markup + small script |
 | `UPSTREAM-NOTICE.md` | ~25 | Verbatim third-party, not reviewable |
 | `suite-manifest.json` (edit) | ~1 | Registration |
-| **Total authored** | **~1,530** | of which **~580 logic**, ~476 declarative, ~415 prose, ~70 markup, ~25 verbatim |
+| **Total authored** | **~1,570** | of which **~580 logic**, ~476 declarative, ~415 prose, ~70 markup, ~25 verbatim |
+
+The per-file rows and the breakdown now reconcile: the rows sum to ~1,568 and the
+breakdown to the same figure. An earlier revision left `SPA-CONTRACT.md` at ~270
+and `theme-toggle.html` at ~60 after the security checklist had already added ~45
+of prose and ~10 of markup to the breakdown, so the table disagreed with its own
+total line and with `spec.md`'s disclosure by about forty lines.
 
 **These figures moved during the accessibility checklist, and the movement
 matters.** The additions are E4 plus check group I in the test (~30 lines), the
@@ -267,13 +309,15 @@ of the four largest additions are **reuse rather than new logic** — FR-011 dir
 E5, E6, and E7 at URL-validation helpers and an unsafe-scheme corpus this
 repository already maintains and tests, so the marginal code is a call and an
 assertion rather than a parser. No new file, no new surface, and the
-production-file count is unchanged: the policy declaration lands inside an
-existing canonical block (or one new markup file, if the placement decision above
-goes that way, which would take authored files from 9 to 10 — still under the warn
-threshold of 15). Logic-only rises to ~580 against 400/800: still a warn, still not
+production-file count is unchanged: the policy declaration lands inside the
+existing canonical head block, which is the only placement FR-027 permits. The
+third-block alternative is not costed here as a live option, because it is
+prohibited — and its cost was previously understated as authored files 9 to 10
+against a warn of 15, when the binding consequence is declared **total** files 24
+to 27, past the block threshold of 25. Logic-only rises to ~580 against 400/800: still a warn, still not
 a block, and now further from the ceiling in the reading the contract binds than
 the all-authored-lines reading has been since Clarify. **The weakest point is
-unchanged and is not this**: it remains that ~1,530 raw authored lines exceeds 800
+unchanged and is not this**: it remains that ~1,570 raw authored lines exceeds 800
 on a reading the contract excludes but a reviewer may still take.
 
 **The line-count trigger on the validation module is retired.** An earlier draft
@@ -297,7 +341,7 @@ indivisibility, not size class:
    net-new. Splitting that edit into its own spec would produce a slice whose
    entire diff is two lines plus regenerated payload, and which could not be
    verified independently because nothing would yet exist for it to ship.
-2. **The logic surface is one file.** ~580 of ~1,530 authored lines are code, in a
+2. **The logic surface is one file.** ~580 of ~1,570 authored lines are code, in a
    single test. The remaining two thirds are 21 declarative catalog rows, CSS
    custom properties, prose contract, and a verbatim third-party notice — each
    reviewable by inspection rather than by reasoning about behavior.
@@ -308,7 +352,7 @@ indivisibility, not size class:
    cannot start until the foundation lands; splitting doubles their wait.
 
 **Where this is weakest, stated plainly**: on the raw-authored-lines reading,
-~1,530 exceeds the base block threshold of 800. That reading is defensible, and a
+~1,570 exceeds the base block threshold of 800. That reading is defensible, and a
 reviewer who takes it should require the split rather than accept the warning.
 The judgment recorded here is that raw line count over-weights declarative rows
 and prose — but it is a judgment, not a measurement, and it is the one part of
@@ -415,18 +459,25 @@ Ordered by dependency, matching the PR review order.
    is the one place in the shared snippet that handles a value the artifact did not
    author.
 
-   **Open placement decision — where the FR-027 policy declaration lives.** J6
-   requires an in-document policy declaration in every artifact. It must be a
-   `<meta>` in `<head>`, and the two candidate homes each cost something. Putting it
-   in the theme-toggle block reuses an existing marked region that already spans
-   head content, at the cost of a block whose name no longer describes its contents.
-   A third canonical block names itself honestly, at the cost of a third
-   marker pair and a third byte-compare for every port to copy — **and, concretely,
-   a third canonical-file check alongside A1 and A2**, since group A asserts each
-   canonical file holds exactly one well-ordered marker pair. That consequence is
-   named because it is the part a port author would otherwise discover only when
-   the suite failed. This plan does not decide the placement; either choice
-   satisfies FR-027.
+   **Placement of the FR-027 policy declaration — decided, not open.** J6 requires
+   an in-document policy declaration in every artifact, and it must be a `<meta>` in
+   `<head>`. An earlier draft of this plan left the home open between the existing
+   marked region and a third canonical block. **FR-027 has since closed it: the
+   declaration is carried in the existing canonical head block, and a third
+   canonical block is prohibited.** This plan no longer presents the two as
+   equivalent, because only one of them is now permitted.
+
+   The prohibition is not stylistic. A third block would add a third marker pair, a
+   third per-artifact presence check, a third inside-the-marked-region assertion,
+   and a third canonical-file check alongside A1 and A2 — and, decisively, one
+   authored file plus its two regenerated payload copies, taking **declared total
+   files from 24 to 27 and past the reviewability gate's block threshold of 25**.
+   That is a blocking consequence, not the benign one an earlier draft recorded.
+   Because the block now carries the policy declaration, the font request,
+   pre-first-paint theme application, and `color-scheme` selection, its marker pair
+   is named `GALLERY-HEAD:START`/`END` for the region it is rather than the toggle
+   alone. The canonical **filename** `theme-toggle.html` is unchanged, since the
+   Declared File Operations and both payload declarations depend on it.
 3. **Routing catalog** — `manifest.json`, all 21 entries at `status: "planned"`,
    per `data-model.md`.
 4. **Contract and voice** — `SPA-CONTRACT.md` (catalog shape, both trigger forms,
@@ -492,11 +543,18 @@ gates step 8. Step 7 depends on 1–6 existing.
 
 ## Complexity Tracking
 
-No constitution principle is violated, so no justification is required. The
-reviewability warning is recorded and argued in the Reviewability Budget section
-above; it is a budget warning, not a principle violation, and the spec claims no
-typed reviewability exception for it.
+One deviation is carried, and it is tabled here rather than only in the
+Constitution Check. The constitution's governance clause is explicit — "when a
+principle violation is justified, document it in the plan's Complexity Tracking
+table with the violation, rationale, and why the simpler alternative was
+rejected" — so a deviation named in prose and absent from the table is recorded in
+the wrong place. An earlier revision of this section asserted that no principle was
+deviated from, which contradicted the Principle II row above.
+
+The reviewability warning is **not** in this table: it is recorded and argued in
+the Reviewability Budget section, it is a budget warning rather than a principle
+violation, and the spec claims no typed reviewability exception for it.
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|-------------------------------------|
-| *(none)* | — | — |
+| **Principle II** — structured parsers. Group E's style positions (`url()`, both `@import` forms) and its network-call positions (`fetch`, `XMLHttpRequest.open`, `WebSocket`, `sendBeacon`, `Worker`, `EventSource`, `importScripts`, dynamic `import`) are matched by targeted regular expressions rather than parsed. | The standard library ships no CSS parser and no JavaScript parser, and FR-014 forbids any dependency beyond the standard runtime. The element positions **do** comply — they are parsed with `html.parser` — and the URL positions with `urllib.parse`, so the deviation is confined to the two position families that have no parser available. | Writing a CSS or JavaScript parser is far more machinery than the KISS principle admits for a validation module, and a partial hand-rolled parser would carry more risk than the prohibitions do. The deviation is therefore **narrowed by prohibition instead of widened by parsing**: E10 fails any escape sequence in a style URL position rather than reproducing the browser's decoding, and E12/J2 ban scheme-relative references outright. Both are stronger than the decoder they replace. The module docstring must record that a regex-scanned position does not carry the same strength as a parsed one (T023), so the deviation stays visible to every future reader rather than fading into the code. |

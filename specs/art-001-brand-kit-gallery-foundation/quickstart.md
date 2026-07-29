@@ -144,7 +144,9 @@ The first port spec re-runs them against a real artifact.
 | FR-022, SC-010 | M7, M8; check I4 |
 | FR-023 | M7, M9; checks I1, I2; focus-ring ratios in the audited table |
 | FR-024, SC-011 | Check E4 (the request); M11, M12 (the rendering) |
+| FR-025 | `brand-kit.css` review — a functional token is re-valued when it misses its floor; a brand primitive is not, and its unservable need is routed to a named functional sibling defined alongside it. Grounded in the audited table in `data-model.md` |
 | FR-007, FR-019, SC-003 | Check group B |
+| FR-026 | Checks B1 and B2 — exactly the three documented top-level keys in order, `schema_version` at the literal this spec fixes |
 | FR-008, FR-015, FR-016, FR-017 | Check group C |
 | FR-009 | Check group D |
 | FR-010, FR-013 | `SPA-CONTRACT.md` and `brand-voice.md` review |
@@ -153,6 +155,8 @@ The first port spec re-runs them against a real artifact.
 | FR-014 | Check H1; steps 2 and 6 |
 | FR-018 | Check group F; step 4 |
 | FR-020 | Check group G |
+| FR-027 | Check group J (J1–J10) against synthetic fixtures; the security obligations section of `SPA-CONTRACT.md`. J6 proves the declaration is present and well-formed — that a browser **enforces** it over `file://` is the manual item the first port spec discharges |
 | SC-001, SC-006 | M1, M2, M5 |
 | SC-004 | Contract review — a port changes exactly one `status` value |
 | SC-009 | ART-002 can begin using only ART-001's outputs |
+| SC-012 | `SPA-CONTRACT.md` review — the untrusted-input rule for **generated** artifacts, naming the four contexts an interpolated value may never enter, stated in the same place as the explicit limit that FR-011's external-reference guarantee does not reach them |

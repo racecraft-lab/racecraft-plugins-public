@@ -37,8 +37,8 @@ captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass — 6 artifacts; budget rationale replaced against the binding metric |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — 127 items, 76 gaps closed across 3 domains; spec 14 → 28 FR |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 34 tasks, 6 phases, 9 [P]; all 71 checks / 27 FR / 12 SC covered |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ✅ Complete | G6 pass — 8 findings (0 critical), all remediated, 0 unresolved |
+| Implement | `/speckit-implement` | 🔄 In Progress | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -1063,9 +1063,51 @@ Focus on:
 
 ### Analysis Results
 
+**Gate G6: ✅ PASS** — `validate-gate` returned 0 CRITICAL/HIGH findings. 8 findings
+raised, 8 remediated in one loop, **zero unresolved for consensus** — so the paired
+Analyze consensus round was correctly skipped rather than run for form.
+
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| F1 | HIGH | `plan.md` still left the policy-declaration placement open after FR-027 had closed it and prohibited a third canonical block — and costed the prohibited option as benign against the **wrong threshold** ("authored files 9→10, under warn 15") | Replaced the open decision with the ratified one; corrected the threshold parenthetical. The binding consequence is total files 24→27, past the block threshold of 25 |
+| F2 | HIGH | `plan.md`'s budget table reported the **disclosure** figures in the **gate's own threshold columns**, contradicting the gate on all three dimensions and scoring "Pass" on the one that genuinely warns | Ran the gate rather than trusting the table; `plan.md` now leads with binding figures matching it, disclosure separated below |
+| F3 | MEDIUM | `tasks.md` header and T009 restated the non-binding figures, so the implementer would have recorded numbers contradicting the spec | Both corrected to the binding figures |
+| F4 | MEDIUM | `tasks.md` claimed the contract and data model "still spell the old marker literal" — verified false | Corrected the sentence |
+| F5 | MEDIUM | `data-model.md` said the head region "contains the control markup", contradicting the contract's script-created resolution | Aligned, with the reasoning carried across |
+| F6 | MEDIUM | `quickstart.md`'s coverage map omitted FR-025, FR-026, FR-027, SC-012 | Added; the map now closes over every FR and SC |
+| F7 | MEDIUM | `plan.md` named a "recorded deviation" from Principle II while Complexity Tracking said no principle is violated, with an empty table — the constitution requires a justified deviation to be tabled | Populated the table; corrected the Constitution Check summary |
+| F8 | LOW | The authored-volume breakdown disagreed three ways; the per-file rows never absorbed the security checklist's additions | Reconciled to ~1,570 across spec, plan, and tasks |
+
+**F1 and F2 are the same class of error the orchestrator hit earlier in this run** —
+reasoning about the reviewability budget against a threshold that does not govern the
+number being compared. It has now appeared three times: the production-file count
+written at 9 against a block threshold of 8; the estimator's 795 compared to an 800 that
+belongs to a different instrument; and here, an authored-file count compared to the
+total-file warn threshold. **The lesson worth carrying forward is procedural: run the
+gate, do not reason about it.** The executor did exactly that, which is how F2 was found.
+
+It also re-ran the gate *after* editing `spec.md` specifically because the scrape takes
+the **last** regex match in the file — an added figure could silently change the scraped
+value. That is the same trap that produced the earlier defect, caught proactively.
+
+**Verified clean, with no finding manufactured:** all 27 FRs and 12 SCs trace to tasks;
+checks A1–J10 carry no duplicate or skipped identifier and close in both directions
+against `tasks.md`; the 21-entry seed re-derives on every count (stages 4/4/13, origins
+20/1, nine categories exercised, five signals consumed, upstream prefixes 01–20 exactly
+once each); synthetic-fixture exercises are genuinely present for all five vacuous check
+groups; and the payload contract is covered end to end (allowlist edit → group F →
+regeneration → docs reference).
+
+**No design-concept drift.** Each divergence carries an explicit recorded revision — the
+five-signal vocabulary, the superseded `schema_version` justification, the replaced
+greenfield rationale, the marker rename, and FR-011's default-deny inversion.
+
+**Orchestrator verification.** Independently re-ran the reviewability gate with the
+correct input key: `status: warn`, **62 / 2 / 24, blockers `[]`**, one warning (total
+files 24 exceeds the warn threshold of 15). Layer 1 1428/1428. Two `NEEDS CLARIFICATION`
+strings remain in `checklists/requirements.md` — both are *references* to the marker (a
+checked item reading "No [NEEDS CLARIFICATION] markers remain", and prose explaining why
+two questions were routed to Assumptions), not markers. Not a defect.
 
 ---
 

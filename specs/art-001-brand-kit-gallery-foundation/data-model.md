@@ -326,7 +326,22 @@ Canonical file delimited by `<!-- GALLERY-HEAD:START -->` …
 `<!-- GALLERY-HEAD:END -->`, byte-compared by the same mechanism as the CSS
 block (FR-003, FR-006).
 
-Contains the control markup plus the inline behavior:
+The marked region is a **head** region and stays entirely within `<head>`: it
+carries the FR-027 policy declaration, the font request, the pre-first-paint theme
+application, the `color-scheme` selection, and the inline behavior. It therefore
+**creates the theme control at run time rather than containing markup for it**.
+That is forced, not stylistic — J7 and J8 require the policy declaration to be a
+direct child of `<head>` with no content-bearing element before it, while I4
+requires the control's accessible name and state to live inside the same marked
+region. A literal `button` in the region would satisfy neither: `<head>` admits
+only metadata content, so a parser meeting a `button` there closes the head and
+opens the body, silently relocating the region and voiding J7 for every artifact
+that embeds it. The consequence is deliberate and consistent with FR-004 — with
+scripting unavailable the reader still gets their operating-system theme through
+the media query and loses only the ability to override it, the same degradation the
+storage-unavailable path already accepts.
+
+The region carries:
 
 - Reads a stored override, falling back to the OS signal.
 - Applies `data-theme` to `:root` **before first paint**, so a dark-OS reviewer
@@ -364,7 +379,7 @@ than left to the ports.
 |---|---|---|
 | Keyboard reachable | In the normal focus order, no positive `tabindex` | 2.1.1 (A) |
 | Keyboard activatable | Activates by keyboard without a pointer | 2.1.1 (A) |
-| Native semantics | A real button element, so role and activation come from the platform rather than being reconstructed | 4.1.2 (A) |
+| Native semantics | Created as a real `button` element, so role and activation come from the platform rather than being reconstructed on a generic element | 4.1.2 (A) |
 | Accessible name | A stable, human-readable name that does not depend on an icon glyph alone | 4.1.2 (A) |
 | State exposed | The active theme is programmatically determinable, not signalled by icon or color alone | 4.1.2 (A), 1.4.1 (A) |
 | Focus visible | Carries the kit's focus-visible treatment | 2.4.7 (AA) |

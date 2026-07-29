@@ -912,8 +912,8 @@ confirm it renders correctly, has no errors, and its theme control works.
   artifacts are declared generated and excluded.
 
   **Total authored volume is much larger and is disclosed deliberately**: roughly
-  1,530 lines across nine authored files — about 580 in the validation module, 476
-  declarative (design tokens and catalog rows), 370 prose, 60 markup, and 25
+  1,570 lines across nine authored files — about 580 in the validation module, 476
+  declarative (design tokens and catalog rows), 415 prose, 70 markup, and 25
   reproduced verbatim. That figure is **not** the budget metric and must not be
   compared against the budget thresholds, which the contract defines over
   production code only. It is recorded because a reviewer deserves to know the real
