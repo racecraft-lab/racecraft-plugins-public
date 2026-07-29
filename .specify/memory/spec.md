@@ -2249,3 +2249,52 @@ the test tree first. No enforced contract was dropped and no behavior changed;
 only the paths did. Detailed provenance, canonical artifact locations, the
 per-lane relocation record, and recovery commands live in the dated CAR-003 and
 G56R-003 archive reports.
+
+## Revision 2026-07-28 - CAR-004 Policy Controls and Comparators Archived
+
+### Shipped Behavior Preserved
+
+- CAR-004 shipped through merged PR #401 the three frozen AC-2.17 policy
+  controls — `unpinned`, `adaptive`, and `orchestration-changing` — together
+  with the comparison rule CAR-011 will apply to them: two additive
+  content-addressed JSON Schema contracts, four committed frozen instances,
+  two standard-library validators sharing one fail-closed schema engine, a
+  bounded live-smoke driver, a reserved-partition guard, and a machine-verified
+  twin-handoff record.
+- The freeze ordering is the point. The comparison rule is fixed before any
+  result exists to measure, so the yardstick cannot be authored once the answer
+  is visible. No CAR-004 artifact states or implies which side wins; CAR-011
+  owns the comparison and the verdict, and the reserved partition is guarded so
+  that comparison cannot reuse workload selection already saw.
+- The comparison procedure runs three ordered stages — eligibility floors,
+  Pareto dominance over eight frozen dimensions, then a materiality margin
+  evaluated in exact decimal rather than binary floating point.
+- Zero production files. Nothing under `speckit-pro/` was touched, no shipped
+  default or generated payload changed, and no supported path requires an API
+  key.
+- CAR-005 is ready; its dependency on CAR-004 is satisfied by canonical
+  contract, fixture, and validator paths under `tests/speckit-pro/`.
+
+### Known Gap Carried Forward
+
+CAR-004 merged with task T062 unrun. The three bounded live smokes are
+developer-local and subscription-authenticated, so six success criteria —
+SC-009, SC-026, SC-027, SC-029, SC-030, and SC-031 — ship with no evidence
+behind them, automated or manual. The gap was named in the PR body before merge
+and is restated in the archive report so archiving does not bury it.
+
+### Cleanup Note
+
+The active CAR-004 folder was removed after merge provenance was confirmed.
+Historical workflow, design-concept, and twin-handoff evidence remains under
+`docs/ai/specs/.process/`.
+
+Removal was not purely mechanical. The folder held one forward-looking artifact
+rather than pure exhaust: `CAR-004-live-smoke-runbook.md` is the only operator
+instruction set that closes the six unevidenced criteria, and the preserved
+workflow file pointed at it. It was moved to `docs/ai/specs/.process/` and its
+three archived-path references were repointed at git provenance. Unlike CAR-003,
+no contract schema needed relocating — CAR-004 authored both schemas directly
+into the test tree, and a tree-wide search found zero readers of the spec folder
+outside `specs/**`. Detailed provenance, canonical artifact locations, and
+recovery commands live in the dated CAR-004 archive report.

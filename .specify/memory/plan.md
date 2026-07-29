@@ -1708,3 +1708,45 @@ reference pages, validates project state JSON, and runs structural plus full
 deterministic suites. CAR-004 and G56R-004 may now scaffold against the
 canonical shipped evidence. The mirrored-contract corrections that each twin
 identified remain open as the CAR-012 and G56R-012 joint change.
+
+## Revision 2026-07-28 - CAR-004 Post-Merge Architecture
+
+### Where CAR-004 Lives Now
+
+- Both frozen contracts sit beside the CAR-003 set in
+  `tests/speckit-pro/layer6-efficiency/contracts-claude/`:
+  `policy-control-registry.schema.json` and `control-comparison.schema.json`.
+  Each is content-addressed and resolves references only through local
+  `#/$defs/`, so neither reaches outside its own document.
+- The four frozen instances live in a new
+  `tests/speckit-pro/layer6-efficiency/fixtures-controls/` directory: the
+  registry, the comparison rule, the reserved-partition entries, and the
+  deterministic replay cases.
+- Validation is two Layer 6 modules, `claude_policy_controls.py` and
+  `claude_control_comparison.py`, sharing one fail-closed schema engine. The
+  engine implements the JSON Schema subset the committed corpus actually uses
+  and refuses any keyword it cannot enforce, rather than ignoring it.
+- `run-control-smoke.py` is the bounded operator driver. It never runs in CI, is
+  registered nowhere in the suite manifest, and writes only into the already
+  gitignored `layer6-efficiency/results/`.
+- Three durable-named unit modules are registered at Layer 4 in
+  `suite-manifest.json`; none couples its filename to the spec ID.
+
+### Why The Archive Was Simple Here
+
+CAR-003's archive had to move eighteen contract schemas out of two spec folders
+before either could be removed. CAR-004 needed none of that: its schemas were
+authored into the test tree from the start, and the spec-folder `contracts/`
+directory held only three Markdown design documents with no readers. The one
+genuine relocation was the operator runbook, moved from the feature's `.process/`
+directory to `docs/ai/specs/.process/` because it is forward-looking evidence
+that outlives the spec folder, not exhaust.
+
+### Testing and Cleanup
+
+The cleanup removes the merged active spec folder, moves the Claude lane state to
+CAR-004 archived, regenerates the
+SpecKit index and docs reference pages, validates project state JSON, and runs
+the structural and full deterministic suites. CAR-005 may now scaffold against
+the canonical shipped evidence. CAR-012 remains open as the cross-platform
+reconciliation joint change with G56R-012.

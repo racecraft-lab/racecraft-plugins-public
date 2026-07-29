@@ -673,7 +673,7 @@ subscription-only authentication path and the no-API-key guarantee up front.
 **Plus one addition made in this step.** CAR-004 carries exactly one genuinely
 manual task, T062 — the three bounded live smokes, developer-local and never CI —
 so a short plain-English operator runbook was written for it at
-`specs/car-004-policy-controls-comparators/.process/CAR-004-live-smoke-runbook.md`.
+`docs/ai/specs/.process/CAR-004-live-smoke-runbook.md`.
 It is written for someone who did not build the feature: numbered steps with
 observable expected results, the supported subscription path (never an API key),
 the four bounds each run must stay inside (at most 5 non-reserved objectives, 1

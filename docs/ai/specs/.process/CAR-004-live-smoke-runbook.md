@@ -27,9 +27,10 @@ runs are for: one short, bounded, real run per control.
 
 1. **Python 3.11 or newer** on `PATH`. Nothing to install — no packages, no
    virtualenv, no `jq`.
-2. **This worktree, on the `car-004-policy-controls-comparators` branch.** Never
-   run this from `main`. All commands below are run from the worktree root and
-   all paths are relative to it.
+2. **A checkout that contains CAR-004.** It merged to `main` as PR #401, so any
+   worktree on `main` at or after commit `8b224ce8` carries everything these
+   steps need. All commands below are run from the repository root and all
+   paths are relative to it.
 3. **An authenticated Claude subscription session.** This is the only supported
    authentication path.
 4. **No API key anywhere in the environment.** Unset `ANTHROPIC_API_KEY` (and any
@@ -291,11 +292,12 @@ git status --porcelain tests/speckit-pro/layer6-efficiency/results/
 
 ### 12. Close the task
 
-Tick `T062` in `specs/car-004-policy-controls-comparators/tasks.md` and note the
-run date. If you are merging **without** running these smokes, say so plainly in
-the PR body and name the success criteria that stay unevidenced (SC-009, SC-026,
-SC-027, SC-029, SC-030, SC-031). An unrun smoke is an honest gap; a fabricated
-one is not.
+CAR-004 merged without these runs, so the six criteria they cover (SC-009,
+SC-026, SC-027, SC-029, SC-030, SC-031) are recorded as unevidenced in
+`.specify/memory/archive-reports/2026-07-28-car-004-post-merge-hygiene.md`.
+Note the run date there when you complete them. The original task list is
+`git show 8b224ce8d1fbaba89606772a4d51401ac754a70b:specs/car-004-policy-controls-comparators/tasks.md`.
+An unrun smoke is an honest gap; a fabricated one is not.
 
 ## If something goes wrong
 
@@ -308,5 +310,6 @@ one is not.
 | `route_did_not_advance_one_ladder_entry` | The adaptive run did not step exactly one rung. Two rungs, no rung, or a wrap-around all fail. |
 | A digest mismatch on `unpinned` | The pinned parent binding is wrong. Two frozen documents answer to "environment contract"; the right one is the Claude-side `environment_contract` object in `tests/speckit-pro/layer6-efficiency/contracts-claude/experiment-assignment.schema.json`. |
 
-Deeper background, including the full section 5 verification table, lives in
-`specs/car-004-policy-controls-comparators/quickstart.md`.
+Deeper background, including the full section 5 verification table, is in the
+archived quickstart:
+`git show 8b224ce8d1fbaba89606772a4d51401ac754a70b:specs/car-004-policy-controls-comparators/quickstart.md`.
