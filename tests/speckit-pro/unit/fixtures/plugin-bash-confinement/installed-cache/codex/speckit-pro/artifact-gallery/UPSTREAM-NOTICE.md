@@ -12,7 +12,7 @@ it contains no upstream-derived work. The notice is in place ahead of the
 first port so the attribution headers have a target that already exists; its
 presence is not evidence that the gallery currently carries upstream code.
 
-- Upstream repository: `github.com/anthropics/html-effectiveness`
+- Upstream repository: anthropics/html-effectiveness
 - License: MIT (SPDX identifier `MIT`)
 - Canonical text: `https://github.com/anthropics/html-effectiveness/blob/main/LICENSE`
 

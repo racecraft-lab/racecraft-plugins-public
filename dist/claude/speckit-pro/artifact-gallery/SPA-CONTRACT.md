@@ -194,6 +194,29 @@ name here must be the `file` your entry declares.
   attribution element at all — not a copyright line, not a license identifier,
   not an upstream filename.
 
+### The typeface tokens, by name
+
+The kit already applies these to `body` and to `h1`–`h6`, so a port that writes ordinary
+headings and paragraphs gets them for free. Name them explicitly only when styling
+something the kit does not reach:
+
+| Token | Stack |
+|---|---|
+| `--rc-font-display` | `'Space Grotesk'`, then `'Trebuchet MS'`, `'Segoe UI'`, `system-ui`, `sans-serif` |
+| `--rc-font-body` | `'Geist'`, then `'Helvetica Neue'`, `Arial`, `system-ui`, `sans-serif` |
+| `--rc-font-mono` | `'Fira Code'`, then `ui-monospace`, `Menlo`, `Consolas`, `monospace` |
+
+**The heading token is `--rc-font-display`, not `--rc-font-heading`.** The name is worth
+stating because the surrounding documentation describes it as the *heading* face, so
+`--rc-font-heading` is the natural guess — and an undefined custom property fails
+silently, falling through to whatever your own declaration named as a fallback. That is a
+mistake made once already while building this feature, which is why the names are written
+down here rather than left in the stylesheet.
+
+Every stack ends in a generic family, so text stays readable with the brand faces
+unavailable, and hierarchy is carried by level, size, and weight rather than by typeface
+identity.
+
 ## Routing: stage first, then trigger
 
 Routing resolves in two ordered, independent steps.

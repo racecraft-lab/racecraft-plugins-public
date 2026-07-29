@@ -5705,6 +5705,543 @@ class SuiteRegistrationFixtureTests(SuiteRegistrationFixtureCase):
         self.assertReports(check_h1(self.gallery, path), "scripts")
 
 
+# ---------------------------------------------------------------------------
+# Group K — Canonical-block cross-file agreement (FR-022, FR-024)
+# ---------------------------------------------------------------------------
+#
+# Both rows here are closure between the **two canonical files**, the same shape
+# as C8 closing the catalog's vocabulary against the contract document's prose.
+# Each names a value one file writes and the other consumes with nothing binding
+# them, so the value is extracted from each file and compared — and a rename in
+# either file fails rather than silently reverting the behaviour.
+#
+# This is the group's whole reason to exist. Group A catches drift between a
+# canonical region and an artifact's copy of it; group I catches a construct
+# omitted from a copied region. Neither can see two regions that are each
+# internally correct and disagree with each other, which is a third failure mode
+# and the one that has actually shipped: the theme control went out unstyled and
+# was caught in a browser screenshot rather than here, because I4 asserts a
+# button carrying a name and a state and says nothing about the class the kit
+# styles it by.
+#
+# Nothing here holds a copy of an agreed value. What it holds is a **locator**
+# for each side — how a class is set, how a typeface stack is spelled, which
+# query parameter names a family — which is the distinction C8 already records
+# for naming a section heading without restating the vocabulary under it.
+
+# Every spelling that puts a class on an element, each with exactly two groups:
+# the element the class is set on, where the spelling names one, and the class
+# expression. The tolerance mirrors I4's — the assertion is about the class an
+# element carries, not about how the region spells the assignment. The markup
+# form is matched here rather than through group E's parser because a class
+# written inside a script string is not markup any parser sees: script content is
+# raw text, so ``innerHTML = '<svg class="…">'`` reaches no element collector.
+_CLASS_SETTER_RES: tuple[re.Pattern[str], ...] = (
+    re.compile(r"""(?:([\w$]+)\s*\.\s*)?className\s*=(?!=)\s*([^;\n]+)"""),
+    re.compile(r"""(?:([\w$]+)\s*\.\s*)?classList\s*\.\s*add\(([^)]*)\)"""),
+    re.compile(r"""(?:([\w$]+)\s*\.\s*)?setAttribute\(\s*['"]class['"]\s*,\s*([^)]*)\)"""),
+    re.compile(r"""()<[^<>]*?\sclass\s*=\s*("[^"]*"|'[^']*')"""),
+)
+
+# The identifier a script-created button is bound to. The control's own class is
+# asserted through this binding rather than through whatever classes the region
+# happens to set, because "the control carries no class" is exactly what I4
+# admits and exactly what shipped — and any other styled class in the region
+# would satisfy a check that only compared the region's class names in bulk.
+_CONTROL_BINDING_RE = re.compile(r"""([\w$]+)\s*=\s*[^;\n]*createElement\(\s*['"]button['"]""")
+
+# A class in **selector** position. Applied to rule preludes only, so a class
+# name written in a declaration value styles nothing and counts for nothing.
+_CLASS_SELECTOR_RE = re.compile(r"\.(-?[A-Za-z_][\w-]*)")
+
+
+def _class_assignments(region: str) -> list[tuple[str, str]]:
+    """``(element, class expression)`` for every class the region sets.
+
+    The element is the empty string for the markup form, which names none. A
+    comma-separated argument list is split, so ``classList.add(a, b)`` is two
+    assignments rather than one unparsable expression.
+    """
+    return [
+        (match.group(1) or "", argument.strip())
+        for pattern in _CLASS_SETTER_RES
+        for match in pattern.finditer(region)
+        for argument in match.group(2).split(",")
+        if argument.strip()
+    ]
+
+
+def _resolved_classes(region: str, assignments: list[tuple[str, str]]) -> tuple[set[str], list[str]]:
+    """The class names those assignments resolve to, and the ones resolving to none.
+
+    Resolution is I6's ``_key_literal``: a quoted literal, or an identifier bound
+    to one **inside the region**. An identifier bound above the start marker
+    resolves to nothing and is reported, which is the same containment failure
+    I6 reports for a storage key rather than an inconvenience.
+    """
+    names: set[str] = set()
+    unresolved: list[str] = []
+    for _, expression in assignments:
+        literal = _key_literal(region, expression)
+        if literal is None:
+            unresolved.append(expression)
+        else:
+            names.update(literal.split())
+    return names, unresolved
+
+
+def _styled_classes(region: str) -> set[str]:
+    """Every class the brand region carries a rule for."""
+    return {
+        name for prelude, _ in _RULE_RE.findall(region) for name in _CLASS_SELECTOR_RE.findall(prelude)
+    }
+
+
+def check_k1(gallery_root: Path) -> list[str]:
+    """K1 — the class the head block sets is a class the brand kit styles.
+
+    Two clauses, and the second does not imply the first. The control the region
+    builds must carry a class **at all** — I4 admits a button with none, and a
+    button with none is what shipped, caught in a browser screenshot rather than
+    here — and every class the region sets must have a rule inside the brand
+    region, which is what makes a rename in *either* file fail rather than
+    silently returning the control to a browser default in all 21 artifacts.
+
+    Both sides are read from inside the marked regions, because the regions are
+    what the artifacts carry: a rule above the brand start marker reads as
+    correct in ``brand-kit.css`` and styles nothing anywhere, the same
+    inside-versus-outside distinction the rest of this file's canonical-block
+    checks turn on.
+
+    Only one direction is asserted. A class the kit styles and the head block
+    never sets is not a defect — the kit legitimately carries rules a template
+    opts into — while a class the head block sets and the kit never styles is the
+    unstyled ship. Both one-sided renames are caught by that single direction,
+    since each leaves the head block naming a class no rule matches.
+    """
+    head, unreadable = _shared_region(gallery_root, HEAD_BLOCK, "the theme control's class")
+    if head is None:
+        return unreadable
+    kit, kit_unreadable = _shared_region(gallery_root, BRAND_BLOCK, "the rule styling the theme control")
+    if kit is None:
+        return kit_unreadable
+    head_name = CANONICAL_FILES[HEAD_BLOCK]
+    kit_name = CANONICAL_FILES[BRAND_BLOCK]
+    assignments = _class_assignments(head)
+    names, unresolved = _resolved_classes(head, assignments)
+    failures = [
+        f"{head_name}: block {HEAD_BLOCK}: the class expression '{expression}' resolves to no string literal "
+        f"inside the marked region, so whatever it is bound to above the start marker reaches no artifact and "
+        f"nothing in {kit_name} can be compared against it"
+        for expression in unresolved
+    ]
+    controls = set(_CONTROL_BINDING_RE.findall(head))
+    if controls and not any(element in controls for element, _ in assignments):
+        failures.append(
+            f"{head_name}: block {HEAD_BLOCK}: builds the theme control and puts no class on it, so "
+            f"{kit_name}: block {BRAND_BLOCK}: has no selector to reach it and the control renders as a "
+            "browser default in every artifact — which I4 passes, because it asks for a button with a name "
+            "and a state and not for the class the kit styles it by"
+        )
+    failures.extend(
+        f"{head_name}: block {HEAD_BLOCK}: sets class '{name}', and {kit_name}: block {BRAND_BLOCK}: carries "
+        f"no '.{name}' rule inside its marked region — the two files hold that name independently, so a "
+        "rename in either ships the element unstyled to every artifact"
+        for name in sorted(names.difference(_styled_classes(kit)))
+    )
+    return failures
+
+
+# The generic families CSS itself defines. A declaration naming one of these is a
+# typeface stack, whatever the property is called — which is what keeps this off
+# the kit's own naming convention, so a stack added under a property name nobody
+# anticipated is still read. And a stack whose *first* component is one of them
+# asks the provider for nothing, so it names no family to agree about.
+CSS_GENERIC_FAMILIES: frozenset[str] = frozenset(
+    {
+        "serif",
+        "sans-serif",
+        "monospace",
+        "cursive",
+        "fantasy",
+        "math",
+        "system-ui",
+        "ui-serif",
+        "ui-sans-serif",
+        "ui-monospace",
+        "ui-rounded",
+    }
+)
+
+# The provider's parameter naming one family, and the separator between a family
+# and the axis values requested for it. Weight coverage is deliberately out of
+# scope: K2 is about which families are requested at all, since an unrequested
+# family falls through to a fallback while an unrequested weight is synthesised.
+FONT_FAMILY_PARAMETER = "family"
+FONT_AXIS_SEPARATOR = ":"
+
+_QUOTED_RE = re.compile(r"""['"](.*)['"]""")
+
+
+def _unquoted(component: str) -> str:
+    """A stack component with its optional quoting removed."""
+    match = _QUOTED_RE.fullmatch(component.strip())
+    return match.group(1).strip() if match else component.strip()
+
+
+def _led_families(text: str) -> set[str]:
+    """The families named **first** in the kit's typeface stacks.
+
+    A font stack is located by naming a CSS generic family; its lead component is
+    the face the provider has to serve, since ``font-family`` is a preference
+    list and the first available face wins. A lead that is itself a generic
+    family names no provider face and is skipped. A lead that is some other
+    system face is *not* skipped: the kit's own rule is that the brand face leads
+    every stack, so a stack led by a system face is a defect either way.
+    """
+    families: set[str] = set()
+    for _, body in _RULE_RE.findall(_strip_comments(text)):
+        for declaration in body.split(";"):
+            _, separator, value = declaration.partition(":")
+            if not separator:
+                continue
+            components = [component.strip() for component in value.split(",") if component.strip()]
+            if not any(component.casefold() in CSS_GENERIC_FAMILIES for component in components):
+                continue
+            lead = _unquoted(components[0])
+            if lead and lead.casefold() not in CSS_GENERIC_FAMILIES:
+                families.add(lead)
+    return families
+
+
+def _requested_families(gallery_root: Path) -> set[str]:
+    """The families the canonical head file asks the font provider for.
+
+    Read through group E's collector rather than off the file text, so what is
+    compared is the request a parser sees: the shipped file writes the parameter
+    separator as a character reference, and a text scan would read the whole
+    family list as one parameter and compare the wrong set.
+    """
+    families: set[str] = set()
+    for reference in _resource_references(gallery_root):
+        if reference.label != CANONICAL_FILES[HEAD_BLOCK] or STYLESHEET_RELATION not in reference.relations:
+            continue
+        parsed = _parsed(reference.value)
+        if parsed is None or (parsed.hostname or "").casefold() != FONT_STYLESHEET_HOST:
+            continue
+        for requested in parse_qs(parsed.query).get(FONT_FAMILY_PARAMETER, []):
+            family = requested.split(FONT_AXIS_SEPARATOR)[0].strip()
+            if family:
+                families.add(family)
+    return families
+
+
+def check_k2(gallery_root: Path) -> list[str]:
+    """K2 — the kit's typeface stacks and the head block's font request agree.
+
+    Set equality in both directions, on **families only**. A family the kit leads
+    a stack with and the request omits is the silent one: ``font-family`` is a
+    preference list, so every artifact falls through to the next face in the
+    stack, renders plausibly, and reports nothing — E4 cannot see it, because the
+    request it validates is well formed. A family the request names and no stack
+    leads with is the mirror, and costs every artifact a fetch nothing uses.
+
+    Weight coverage is out of scope by decision, not by omission: an unrequested
+    axis value is synthesised by the engine, while an unrequested family is not
+    served at all. Comparing the axis values would make this check fail on every
+    ordinary weight change and teach a reader to edit it rather than read it.
+
+    Both sides are read from the **files** rather than from the marked regions.
+    The head block declares the typeface request to be the artifact's own, so
+    nothing fixes it inside the region and a region-scoped read would be looking
+    where the contract makes no promise.
+
+    Absence needs no clause of its own. A missing file, a moved request, or a
+    deleted stack empties one side, and every member of the other side is then
+    reported by name — louder than a skip, and it names the file that lost the
+    value.
+    """
+    kit_path = gallery_root / CANONICAL_FILES[BRAND_BLOCK]
+    head_name = CANONICAL_FILES[HEAD_BLOCK]
+    kit_name = CANONICAL_FILES[BRAND_BLOCK]
+    named = _led_families(_document_text(kit_path)) if kit_path.is_file() else set()
+    requested = _requested_families(gallery_root)
+    return [
+        f"{kit_name}: leads a typeface stack with '{name}', and {head_name}: names it in no "
+        f"'{FONT_FAMILY_PARAMETER}' parameter of its {FONT_STYLESHEET_HOST} request, so every artifact falls "
+        "through to the next face in the stack and nothing reports it"
+        for name in sorted(named.difference(requested))
+    ] + [
+        f"{head_name}: requests '{name}' from {FONT_STYLESHEET_HOST}, and {kit_name}: leads no typeface stack "
+        "with it, so every artifact fetches a face nothing uses"
+        for name in sorted(requested.difference(named))
+    ]
+
+
+GROUP_K_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("K1", check_k1),
+    ("K2", check_k2),
+)
+
+
+class CanonicalBlockAgreementTests(unittest.TestCase):
+    """Group K against the two shipped canonical files."""
+
+    def test_group_k_passes_against_the_shipped_gallery(self) -> None:
+        for name, check in GROUP_K_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+    def test_the_shipped_files_carry_both_sides_of_each_agreement(self) -> None:
+        """Non-vacuity: an equality between two empty sets passes and proves nothing.
+
+        K1 reports a region that sets no class, so its own emptiness is a
+        failure. K2's set comparison has no such floor — two absent sides agree —
+        so the sides are asserted non-empty here rather than left to be discovered
+        the next time a request or a stack is moved.
+        """
+        head = _shared_region(GALLERY_ROOT, HEAD_BLOCK, "the theme control's class")[0] or ""
+        kit_text = _document_text(GALLERY_ROOT / CANONICAL_FILES[BRAND_BLOCK])
+
+        self.assertTrue(_resolved_classes(head, _class_assignments(head))[0], "the head region sets no class")
+        self.assertTrue(_styled_classes(_strip_comments(kit_text)), "the kit styles no class")
+        self.assertTrue(_led_families(kit_text), "the kit names no typeface stack")
+        self.assertTrue(_requested_families(GALLERY_ROOT), "the head file requests no family")
+
+
+# --- Group K fixtures ------------------------------------------------------
+#
+# The fixtures name synthetic classes and synthetic typefaces throughout. That is
+# the evidence that neither check holds the shipped value: a check carrying
+# ``rc-theme-toggle`` or a real family name would fail every case below.
+
+FIXTURE_CONTROL_CLASS = "rc-fixture-toggle"
+FIXTURE_MARK_CLASS = "rc-fixture-mark"
+FIXTURE_RENAMED_CLASS = "rc-fixture-switch"
+FIXTURE_DISPLAY_FAMILY = "Fixture Display"
+FIXTURE_BODY_FAMILY = "Fixture Body"
+FIXTURE_ADDED_FAMILY = "Fixture Serif"
+
+# Written the way the shipped file writes it: the parameter separator is a
+# character reference, so a fixture that spelled it ``&`` would let a text scan
+# pass and would stop proving that the parse is what is compared.
+FIXTURE_FONT_REQUEST = (
+    "https://fonts.googleapis.com/css2"
+    "?family=Fixture+Display:wght@400;700"
+    "&amp;family=Fixture+Body:wght@400;500"
+    "&amp;display=swap"
+)
+
+FIXTURE_DISPLAY_STACK = f"  --rc-font-display: '{FIXTURE_DISPLAY_FAMILY}', 'Trebuchet MS', system-ui, sans-serif;\n"
+FIXTURE_BODY_STACK = f"  --rc-font-body: '{FIXTURE_BODY_FAMILY}', Arial, system-ui, sans-serif;\n"
+FIXTURE_CONTROL_RULE = f".{FIXTURE_CONTROL_CLASS} {{\n  position: fixed;\n  top: 1rem;\n}}"
+FIXTURE_MARK_RULE = f".{FIXTURE_MARK_CLASS} {{\n  height: 2rem;\n}}"
+
+FIXTURE_AGREEING_KIT = (
+    f":root {{\n{FIXTURE_DISPLAY_STACK}{FIXTURE_BODY_STACK}}}\n\n"
+    f"{FIXTURE_CONTROL_RULE}\n\n"
+    f"{FIXTURE_MARK_RULE}"
+)
+
+FIXTURE_CLASS_ASSIGNMENT = f"    control.className = '{FIXTURE_CONTROL_CLASS}';\n"
+FIXTURE_MARK_MARKUP = f"""      host.innerHTML = '<svg class="{FIXTURE_MARK_CLASS}" aria-hidden="true"></svg>';\n"""
+
+FIXTURE_AGREEING_HEAD = (
+    f'<link rel="stylesheet" href="{FIXTURE_FONT_REQUEST}">\n'
+    "<script>\n"
+    "(function () {\n"
+    "  document.addEventListener('DOMContentLoaded', function () {\n"
+    "    var control = document.createElement('button');\n"
+    f"{FIXTURE_CLASS_ASSIGNMENT}"
+    "    document.body.insertBefore(control, document.body.firstChild);\n"
+    "    var host = document.querySelector('[data-rc-fixture-mark]');\n"
+    "    if (host) {\n"
+    f"{FIXTURE_MARK_MARKUP}"
+    "    }\n"
+    "  });\n"
+    "})();\n"
+    "</script>"
+)
+
+
+class CanonicalBlockAgreementFixtureCase(GalleryFixtureCase):
+    """A synthetic pair of canonical files that agree with each other.
+
+    Every rejection below edits **one** of the two, which is the failure mode: a
+    coordinated edit is a working change, and a one-sided edit is the silent
+    revert neither group A nor group I can see.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.write_kit()
+        self.write_head()
+
+    def write_kit(self, *, body: str = FIXTURE_AGREEING_KIT, above: str = "") -> None:
+        self.write(CANONICAL_FILES[BRAND_BLOCK], above + _marked(BRAND_BLOCK, body) + "\n")
+
+    def write_head(self, *, body: str = FIXTURE_AGREEING_HEAD, above: str = "") -> None:
+        self.write(CANONICAL_FILES[HEAD_BLOCK], above + _marked(HEAD_BLOCK, body) + "\n")
+
+    def assertPairReports(self, failures: list[str], *fragments: str) -> None:
+        """One failure naming **both** files and the disagreeing value.
+
+        Naming one file is not enough for this group: the reader has to be told
+        which two things disagree, or the message sends them to edit the file
+        that was already right.
+        """
+        self.assertReports(
+            failures, CANONICAL_FILES[HEAD_BLOCK], CANONICAL_FILES[BRAND_BLOCK], *fragments
+        )
+
+
+class CanonicalBlockAgreementFixtureTests(CanonicalBlockAgreementFixtureCase):
+    """Group K against synthetic canonical pairs built in a temporary directory."""
+
+    # -- K1: the class one file sets and the other styles --
+
+    def test_k1_accepts_a_class_the_kit_styles(self) -> None:
+        self.assertEqual(check_k1(self.gallery), [])
+
+    def test_k1_rejects_a_class_renamed_in_the_head_block_only(self) -> None:
+        self.write_head(
+            body=FIXTURE_AGREEING_HEAD.replace(FIXTURE_CONTROL_CLASS, FIXTURE_RENAMED_CLASS)
+        )
+
+        self.assertPairReports(check_k1(self.gallery), FIXTURE_RENAMED_CLASS)
+
+    def test_k1_rejects_a_class_renamed_in_the_kit_only(self) -> None:
+        self.write_kit(body=FIXTURE_AGREEING_KIT.replace(FIXTURE_CONTROL_CLASS, FIXTURE_RENAMED_CLASS))
+
+        self.assertPairReports(check_k1(self.gallery), FIXTURE_CONTROL_CLASS)
+
+    def test_k1_rejects_a_control_carrying_no_class_at_all(self) -> None:
+        """The state that shipped: I4 passes a button with no class on it."""
+        self.write_head(body=_without(FIXTURE_AGREEING_HEAD, FIXTURE_CLASS_ASSIGNMENT))
+
+        self.assertPairReports(check_k1(self.gallery), "no class")
+
+    def test_k1_rejects_a_control_class_the_kit_only_mentions_in_a_comment(self) -> None:
+        """Commentary is not a rule — a described class styles nothing."""
+        self.write_kit(
+            body=_without(FIXTURE_AGREEING_KIT, FIXTURE_CONTROL_RULE) + f"\n/* Ports own:\n{FIXTURE_CONTROL_RULE} */"
+        )
+
+        self.assertPairReports(check_k1(self.gallery), FIXTURE_CONTROL_CLASS)
+
+    def test_k1_rejects_a_rule_placed_above_the_kit_start_marker(self) -> None:
+        """A rule outside the copied region reaches none of the 21 artifacts."""
+        self.write_kit(
+            body=_without(FIXTURE_AGREEING_KIT, FIXTURE_CONTROL_RULE),
+            above=FIXTURE_CONTROL_RULE + "\n",
+        )
+
+        self.assertPairReports(check_k1(self.gallery), FIXTURE_CONTROL_CLASS)
+
+    def test_k1_rejects_a_class_named_only_in_a_declaration_value(self) -> None:
+        """A class name in a value is not a selector, so it styles nothing."""
+        self.write_kit(
+            body=FIXTURE_AGREEING_KIT.replace(
+                FIXTURE_CONTROL_RULE, f"[data-rc]::after {{\n  content: '.{FIXTURE_CONTROL_CLASS}';\n}}"
+            )
+        )
+
+        self.assertPairReports(check_k1(self.gallery), FIXTURE_CONTROL_CLASS)
+
+    def test_k1_reads_a_class_set_as_markup_inside_a_script_string(self) -> None:
+        """The mark's class: script content is raw text, so no parser sees this one."""
+        self.write_kit(body=_without(FIXTURE_AGREEING_KIT, FIXTURE_MARK_RULE))
+
+        self.assertPairReports(check_k1(self.gallery), FIXTURE_MARK_CLASS)
+
+    def test_k1_rejects_a_class_bound_above_the_start_marker(self) -> None:
+        binding = f"  var CONTROL_CLASS = '{FIXTURE_CONTROL_CLASS}';\n"
+        self.write_head(
+            body=FIXTURE_AGREEING_HEAD.replace(FIXTURE_CLASS_ASSIGNMENT, "    control.className = CONTROL_CLASS;\n"),
+            above=f"<script>\n{binding}</script>\n",
+        )
+
+        self.assertPairReports(check_k1(self.gallery), "CONTROL_CLASS")
+
+    def test_k1_accepts_a_class_bound_inside_the_region(self) -> None:
+        self.write_head(
+            body=FIXTURE_AGREEING_HEAD.replace(
+                FIXTURE_CLASS_ASSIGNMENT,
+                f"    var CONTROL_CLASS = '{FIXTURE_CONTROL_CLASS}';\n    control.className = CONTROL_CLASS;\n",
+            )
+        )
+
+        self.assertEqual(check_k1(self.gallery), [])
+
+    # -- K2: the families one file requests and the other leads its stacks with --
+
+    def test_k2_accepts_a_request_naming_every_led_family(self) -> None:
+        self.assertEqual(check_k2(self.gallery), [])
+
+    def test_k2_rejects_a_family_renamed_in_the_kit_only(self) -> None:
+        self.write_kit(body=FIXTURE_AGREEING_KIT.replace(FIXTURE_BODY_FAMILY, FIXTURE_ADDED_FAMILY))
+
+        self.assertPairReports(check_k2(self.gallery), FIXTURE_ADDED_FAMILY)
+        self.assertPairReports(check_k2(self.gallery), FIXTURE_BODY_FAMILY)
+
+    def test_k2_rejects_a_family_renamed_in_the_request_only(self) -> None:
+        self.write_head(
+            body=FIXTURE_AGREEING_HEAD.replace(FIXTURE_BODY_FAMILY.replace(" ", "+"), "Fixture+Serif")
+        )
+
+        self.assertPairReports(check_k2(self.gallery), FIXTURE_BODY_FAMILY)
+
+    def test_k2_rejects_a_stack_added_without_the_request(self) -> None:
+        """The stated failure mode: every artifact falls through to the fallback."""
+        self.write_kit(
+            body=FIXTURE_AGREEING_KIT.replace(
+                FIXTURE_BODY_STACK,
+                FIXTURE_BODY_STACK + f"  --rc-font-serif: '{FIXTURE_ADDED_FAMILY}', Georgia, serif;\n",
+            )
+        )
+
+        self.assertPairReports(check_k2(self.gallery), FIXTURE_ADDED_FAMILY)
+
+    def test_k2_rejects_a_request_for_a_family_no_stack_leads_with(self) -> None:
+        self.write_head(
+            body=FIXTURE_AGREEING_HEAD.replace(
+                "&amp;display=swap", "&amp;family=Fixture+Serif:wght@400&amp;display=swap"
+            )
+        )
+
+        self.assertPairReports(check_k2(self.gallery), FIXTURE_ADDED_FAMILY)
+
+    def test_k2_rejects_a_request_the_head_file_does_not_carry_at_all(self) -> None:
+        self.write_head(body=_without(FIXTURE_AGREEING_HEAD, f'<link rel="stylesheet" href="{FIXTURE_FONT_REQUEST}">\n'))
+
+        self.assertPairReports(check_k2(self.gallery), FIXTURE_DISPLAY_FAMILY)
+
+    def test_k2_ignores_the_axis_values_a_family_is_requested_with(self) -> None:
+        """Families only. An unrequested weight is synthesised; an unrequested face is not."""
+        self.write_head(body=FIXTURE_AGREEING_HEAD.replace(":wght@400;700", "").replace(":wght@400;500", ""))
+
+        self.assertEqual(check_k2(self.gallery), [])
+
+    def test_k2_ignores_a_stack_that_asks_the_provider_for_nothing(self) -> None:
+        """A stack led by a generic family names no face the provider has to serve."""
+        self.write_kit(
+            body=FIXTURE_AGREEING_KIT.replace(
+                FIXTURE_BODY_STACK, FIXTURE_BODY_STACK + "  --rc-font-native: system-ui, sans-serif;\n"
+            )
+        )
+
+        self.assertEqual(check_k2(self.gallery), [])
+
+    def test_k2_ignores_a_declaration_that_is_not_a_typeface_stack(self) -> None:
+        self.write_kit(
+            body=FIXTURE_AGREEING_KIT.replace(
+                FIXTURE_BODY_STACK, FIXTURE_BODY_STACK + "  --rc-font-weight-strong: 600;\n"
+            )
+        )
+
+        self.assertEqual(check_k2(self.gallery), [])
+
+
 class CheckSignatureTests(unittest.TestCase):
     """Enforce the rule the rest of this module depends on.
 
@@ -5765,6 +6302,8 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     PayloadReachFixtureTests,
     SuiteRegistrationTests,
     SuiteRegistrationFixtureTests,
+    CanonicalBlockAgreementTests,
+    CanonicalBlockAgreementFixtureTests,
 )
 
 
