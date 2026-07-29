@@ -26,7 +26,27 @@ That obligation exists precisely because group E cannot reach that far.
 | # | Check | Fails when |
 |---|-------|-----------|
 | A1 | `brand-kit.css` contains exactly one `BRAND-KIT:START` and one `BRAND-KIT:END`, start before end | canonical file malformed |
-| A2 | `theme-toggle.html` contains exactly one `THEME-TOGGLE:START` / `THEME-TOGGLE:END` pair, ordered | canonical file malformed |
+| A2 | `theme-toggle.html` contains exactly one `GALLERY-HEAD:START` / `GALLERY-HEAD:END` pair, ordered | canonical file malformed |
+
+**The head block's marker pair is named for the region, not the control.** It carries
+the policy declaration, the pre-first-paint theme application, the colour-scheme
+selection, and the theme control's behaviour — so naming it after the toggle alone
+mislabels it. The rename is done now, while zero artifacts exist; after the ports land
+it would cost 21 files. The canonical **filename** is unchanged, because the plan's
+declared file operations and both payload declarations depend on it.
+
+**Why the block emits its control from script rather than containing markup for it.**
+J7 and J8 require the policy declaration to be a direct child of the head element with
+no content-bearing element before it, while I4 requires the theme control's accessible
+name and state to live inside the same marked region. Those cannot both be satisfied by
+a region containing a `button` element: the head element admits only metadata content,
+so a parser encountering a `button` there closes the head and opens the body, which
+silently relocates the region and voids J7 for every artifact that embeds it. The region
+therefore stays entirely within the head and creates the control at run time. The
+consequence is deliberate and consistent with FR-004: with scripting unavailable the
+reader still gets their operating-system theme through the media query, and loses only
+the ability to override it — the same degradation the storage-unavailable path already
+accepts.
 | A3 | For every gallery HTML artifact: each marker pair it uses appears exactly once, with a matching end | duplicated or unbalanced markers |
 | A4 | For every gallery HTML artifact embedding a block: the region between its markers equals the canonical region **byte for byte** | any single-character drift; message names artifact + block |
 | A5 | Every `shipped` entry's artifact embeds the brand block | shipped artifact omits the block (no pass-by-absence) |

@@ -34,10 +34,10 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 14 FR, 9 SC, 3 user stories, 0 markers |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass — 11 questions resolved, 5 via consensus; spec 14 → 20 FR |
-| Plan | `/speckit-plan` | ✅ Complete | G3 pass — 6 artifacts; budget rationale replaced, honest size ~1,285 lines |
+| Plan | `/speckit-plan` | ✅ Complete | G3 pass — 6 artifacts; budget rationale replaced against the binding metric |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — 127 items, 76 gaps closed across 3 domains; spec 14 → 28 FR |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 34 tasks, 6 phases, 9 [P]; all 71 checks / 27 FR / 12 SC covered |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -985,10 +985,41 @@ the read-only atomicity classifier and records its decision here. This is a
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change. |
-| **Signals** | | The decisive detector findings behind the route (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no risk). |
+| **Route** | `one-navigable-PR` | One PR, ordered for a reader. No split. |
+| **Releasable** | `true` | No destructive migration, no concurrency-sensitive change. |
+| **Signals** | `change-shape:modify-heavy` | Many tasks converge on the single validation module. |
+| **Warnings** | *(none)* | No release-safety risk attached. |
+
+**This independently corroborates the split decision.** The classifier reads the task
+structure, not the spec prose, and reached `one-navigable-PR` without knowing that
+consensus had already declined a split on separate grounds. The `modify-heavy` signal is
+not a contradiction of the feature's net-new character — it reflects that most tasks
+converge on one file, the validation module, which is exactly the composition argument
+the reviewability budget rests on.
+
+**Layer plan: `skipped`.** The planner runs only for route `split-PR`. Recorded per the
+non-split path; no layer-plan envelope was requested and none is required.
+
+### Tasks-phase reviewability boundary (deferred helper — fallback evidence used)
+
+`reviewability-gate` is registered for `tasks` mode but **deferred on the installed
+runner**, so it was not invoked. Diagnostics recorded per contract: helper
+`reviewability-gate`, requested mode `tasks`, deferral reason — mode unavailable on the
+installed runner; setup mode is the only active mode.
+
+The fallback evidence chain is current and complete:
+- **Setup-mode gate at scaffold**: `warn`, accepted, recorded at Phase 0.
+- **Plan-phase `estimate-reviewable-loc`**: `status: pass`, `projected: 0`,
+  `greenfield: false`, thresholds 400/800 — with the recorded caveat that the zero is an
+  artifact of a language filter recognizing none of this feature's file types.
+- **Operator-ratified split decision**: recorded in `spec.md`'s Reviewability Budget and
+  re-ratified through consensus item 6 after the scope grew.
+- **Declared figures re-scraped after every edit**: 62 reviewable LOC / 2 production
+  files / 24 total files, each under its block threshold.
+
+No size-only block, no correctness stop, no marker plan required. `pr_marker_plan` is
+therefore not created — the marker-planning path is entered only from a reviewability
+result that requires it, and none of the current evidence does.
 
 To produce the decision, run the classifier against the feature directory:
 

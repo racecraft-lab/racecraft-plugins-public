@@ -322,8 +322,8 @@ decimals. None is rounded up to a threshold.
 
 ## Entity 5 — Theme Toggle Snippet (`theme-toggle.html`)
 
-Canonical file delimited by `<!-- THEME-TOGGLE:START -->` …
-`<!-- THEME-TOGGLE:END -->`, byte-compared by the same mechanism as the CSS
+Canonical file delimited by `<!-- GALLERY-HEAD:START -->` …
+`<!-- GALLERY-HEAD:END -->`, byte-compared by the same mechanism as the CSS
 block (FR-003, FR-006).
 
 Contains the control markup plus the inline behavior:

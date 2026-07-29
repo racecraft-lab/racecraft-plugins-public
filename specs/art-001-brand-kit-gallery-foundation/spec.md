@@ -1169,8 +1169,8 @@ confirm it renders correctly, has no errors, and its theme control works.
   in every browser — one scopes it by containing directory, so a document sitting
   beside an artifact shares its storage — so a persisted value is not necessarily
   one a gallery artifact wrote (FR-004).
-- **FR-011's guarantee covers the gallery's own source files, not artifacts
-  generated at run time.** Nothing in this feature scans what a later spec's
+- **Scan scope is the gallery's own source files, not artifacts generated at run
+  time** (FR-011). Nothing in this feature scans what a later spec's
   authoring agent emits. The obligation that governs generated artifacts is the
   untrusted-input rule FR-027 places in the shipped contract document, and it is
   stated there because the contract is the only artifact the workflow specs read.

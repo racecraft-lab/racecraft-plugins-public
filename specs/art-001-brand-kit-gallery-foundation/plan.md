@@ -364,7 +364,7 @@ specs/art-001-brand-kit-gallery-foundation/
 speckit-pro/
 ├── artifact-gallery/                 # NEW — shipped plugin payload
 │   ├── brand-kit.css                 # canonical BRAND-KIT:START/END block
-│   ├── theme-toggle.html             # canonical THEME-TOGGLE:START/END block
+│   ├── theme-toggle.html             # canonical GALLERY-HEAD:START/END block
 │   ├── manifest.json                 # 21-entry routing catalog + signals
 │   ├── SPA-CONTRACT.md               # single-file contract, catalog shape, signals
 │   ├── brand-voice.md                # artifact-relevant voice subset

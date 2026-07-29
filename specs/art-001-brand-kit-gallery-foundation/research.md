@@ -114,7 +114,7 @@ already dangling.
 ## R5 — Marker-block drift check
 
 **Decision**: `brand-kit.css` carries `/* BRAND-KIT:START */` … `/* BRAND-KIT:END */`;
-`theme-toggle.html` carries `<!-- THEME-TOGGLE:START -->` … `<!-- THEME-TOGGLE:END -->`.
+`theme-toggle.html` carries `<!-- GALLERY-HEAD:START -->` … `<!-- GALLERY-HEAD:END -->`.
 The test extracts the region between the markers from every gallery HTML file and
 compares it byte-for-byte against the canonical file's own region.
 
