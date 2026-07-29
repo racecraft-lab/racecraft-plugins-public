@@ -1,0 +1,37 @@
+{
+  "description": "The two G56R-004 partition entries, built through the frozen G56R-003 partition semantics and registered together so objective-level disjointness is enforced. The integrated-confirmation entry remains untouched for G56R-011; the calibration entry supplies five non-scored G56R-004 smoke objectives.",
+  "entries": [
+    {
+      "frozen_at": "2026-07-27T00:00:00Z",
+      "objective_ids": [
+        "G56R-011-RESERVED-OBJ-COMPARISON"
+      ],
+      "objective_set_digest": "sha256:50c554dd479ff6aeabbe3af2c9ff69b356b53f49db2c5c428bd4d94989460955",
+      "owning_spec": "G56R-004",
+      "partition_id": "G56R-011-RESERVED-COMPARISON",
+      "partition_type": "integrated_confirmation",
+      "qualification_eligible": true,
+      "record_kind": "partition_registry_entry",
+      "schema_version": "1.0.0"
+    },
+    {
+      "frozen_at": "2026-07-27T00:00:00Z",
+      "objective_ids": [
+        "G56R-004-SMOKE-OBJ-01",
+        "G56R-004-SMOKE-OBJ-02",
+        "G56R-004-SMOKE-OBJ-03",
+        "G56R-004-SMOKE-OBJ-04",
+        "G56R-004-SMOKE-OBJ-05"
+      ],
+      "objective_set_digest": "sha256:318044f41cab06845225554354f7de1605ed26c87276ee48fcb1774b9a47dc81",
+      "owning_spec": "G56R-004",
+      "partition_id": "G56R-004-SMOKE",
+      "partition_type": "calibration",
+      "qualification_eligible": false,
+      "record_kind": "partition_registry_entry",
+      "schema_version": "1.0.0"
+    }
+  ],
+  "fixture_kind": "policy_control_partition_registry",
+  "schema_version": "1.0.0"
+}

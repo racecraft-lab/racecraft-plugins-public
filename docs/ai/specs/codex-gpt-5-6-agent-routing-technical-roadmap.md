@@ -222,7 +222,7 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 | G56R-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | PR #360 merged; canonical evidence lives under `docs/ai/research/` |
 | G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Complete / Archived | [.process/G56R-002-workflow.md](.process/G56R-002-workflow.md) | PRs #366-#368 merged; canonical evidence, contracts, replay fixtures, and validators live outside `specs/**` |
 | G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Complete / Archived | [.process/G56R-003-workflow.md](.process/G56R-003-workflow.md) | PR #386 merged; canonical materialization module, contracts, corpus fixtures, and validators live outside `specs/**` |
-| G56R-004 | Policy Controls and Adaptive Comparators | Ready | - | G56R-003 dependency satisfied by PR #386 |
+| G56R-004 | Policy Controls and Adaptive Comparators | In Progress | [.process/G56R-004-workflow.md](.process/G56R-004-workflow.md) | Scaffold complete; run Specify via autopilot |
 | G56R-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by G56R-004 |
 | G56R-006 | Capability-aware Resolver, Materializer, Installer, and Strict Override | Pending | - | Blocked by G56R-005 |
 | G56R-007 | Quality-critical Executor Routing | Pending | - | Blocked by G56R-006 |

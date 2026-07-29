@@ -69,12 +69,52 @@ try:  # CAR-004 deliverable — absent until the policy-control module is implem
 except ImportError:  # pragma: no cover - exercised only before the module lands
     claude_policy_controls = None  # type: ignore[assignment]
 
+try:  # G56R-004 deliverable — extended as Codex control validation lands.
+    import codex_policy_controls  # type: ignore[import-not-found]  # noqa: E402
+except ImportError:  # pragma: no cover - exercised only before the module lands
+    codex_policy_controls = None  # type: ignore[assignment]
+
+try:  # G56R-004 T025 deliverable — absent until the partition guards land.
+    import codex_control_smoke  # type: ignore[import-not-found]  # noqa: E402
+except ImportError:  # pragma: no cover - exercised only during the T024 RED state
+    codex_control_smoke = None  # type: ignore[assignment]
+
 
 CONTRACT_ROOT = TEST_ROOT / "layer6-efficiency" / "contracts-claude"
 FIXTURE_ROOT = TEST_ROOT / "layer6-efficiency" / "fixtures-controls"
+CODEX_CONTRACT_ROOT = TEST_ROOT / "layer6-efficiency" / "contracts-codex-specification"
+CODEX_FIXTURE_ROOT = TEST_ROOT / "layer6-efficiency" / "fixtures-codex-controls"
 
 REGISTRY_SCHEMA_PATH = CONTRACT_ROOT / "policy-control-registry.schema.json"
 REGISTRY_SCHEMA_ID = "https://racecraft.dev/schemas/car-004/policy-control-registry.schema.json"
+CODEX_REGISTRY_SCHEMA_PATH = CODEX_CONTRACT_ROOT / "policy-control-registry.schema.json"
+CODEX_REGISTRY_FIXTURE_PATH = CODEX_FIXTURE_ROOT / "policy-control-registry.json"
+CODEX_REPLAY_CASES_PATH = CODEX_FIXTURE_ROOT / "replay-cases.json"
+CODEX_PARTITION_FIXTURE_PATH = CODEX_FIXTURE_ROOT / "partition-registry-entries.json"
+CODEX_REGISTRY_SCHEMA_ID = "https://racecraft.dev/schemas/g56r-004/policy-control-registry.schema.json"
+CODEX_REGISTRY_ID = "g56r-004-policy-control-registry"
+CODEX_CONTROL_IDS_BY_KIND = {
+    "unpinned": "g56r-004-unpinned-control",
+    "adaptive": "g56r-004-adaptive-control",
+    "justified_high_effort": "g56r-004-justified-high-effort-control",
+}
+CODEX_CONTROL_KINDS = tuple(CODEX_CONTROL_IDS_BY_KIND)
+CODEX_REQUIRED_ABSENT_OVERRIDES = (
+    "api_key",
+    "effort",
+    "model",
+    "provider",
+    "service_tier",
+)
+CODEX_G56R003_SUCCESSOR_FREEZE_ID = (
+    "sha256:734672cea5a83e5b8f296ee604f7cb8d93e0a5296a3f864b873fe78bfe518f1e"
+)
+CODEX_G56R003_ROUTE_EVIDENCE_DIGEST = (
+    "sha256:f01ff64ca3d17b40db8ca802dd6501e62d91c4c161d01a94879c156f90eb09e4"
+)
+CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID = "g56r-003-route-phase-executor"
+CODEX_JUSTIFIED_HIGH_EFFORT_MODEL = "gpt-5.5"
+CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT = "xhigh"
 JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
 
 # FR-004 and SC-017: a reference that leaves the owning document is refused, so
@@ -852,6 +892,1860 @@ class Car003BindingTests(unittest.TestCase):
         for binding in self.document["car_003_bindings"]:
             with self.subTest(binding=binding["id"]):
                 self.assertEqual(sorted(binding), ["digest", "id"])
+
+
+class CodexRegistryFixtureTests(unittest.TestCase):
+    """G56R-004 FR-001..FR-004: the Codex registry freezes IDs and digests."""
+
+    def test_committed_codex_registry_schema_uses_the_g56r_namespace(self) -> None:
+        self.assertTrue(
+            CODEX_REGISTRY_SCHEMA_PATH.exists(),
+            f"missing {CODEX_REGISTRY_SCHEMA_PATH.relative_to(REPO_ROOT)}",
+        )
+        schema = load_json(CODEX_REGISTRY_SCHEMA_PATH)
+        self.assertEqual(schema["$schema"], JSON_SCHEMA_DIALECT)
+        self.assertEqual(schema["$id"], CODEX_REGISTRY_SCHEMA_ID)
+
+    def test_committed_codex_registry_fixture_freezes_ids_preimages_and_binding_drift(self) -> None:
+        self.assertTrue(
+            CODEX_REGISTRY_FIXTURE_PATH.exists(),
+            f"missing {CODEX_REGISTRY_FIXTURE_PATH.relative_to(REPO_ROOT)}",
+        )
+        registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.assertEqual(registry["registry_id"], CODEX_REGISTRY_ID)
+
+        controls = registry["controls"]
+        self.assertEqual(len(controls), 3)
+        kinds = [control["control_kind"] for control in controls]
+        self.assertEqual(sorted(kinds), sorted(CODEX_CONTROL_KINDS))
+        self.assertEqual(len(set(kinds)), len(kinds))
+        self.assertNotIn("orchestration_changing", kinds)
+
+        for control in controls:
+            with self.subTest(control_kind=control["control_kind"]):
+                self.assertEqual(
+                    control["control_id"],
+                    CODEX_CONTROL_IDS_BY_KIND[control["control_kind"]],
+                )
+                self.assertEqual(
+                    control["control_digest"],
+                    record_digest(control, digest_field="control_digest"),
+                )
+                reissued = copy.deepcopy(control)
+                reissued["frozen_at"] = "2026-07-29T00:00:00Z"
+                self.assertNotEqual(
+                    record_digest(reissued, digest_field="control_digest"),
+                    control["control_digest"],
+                )
+
+        self.assertEqual(
+            registry["registry_digest"],
+            record_digest(registry, digest_field="registry_digest"),
+        )
+        self.assertGreater(len(registry["car_003_bindings"]), 0)
+
+        drifted = copy.deepcopy(registry)
+        first_binding = drifted["car_003_bindings"][0]
+        original_digest = first_binding["digest"]
+        drifted_digest = "sha256:" + "0" * 64
+        if original_digest == drifted_digest:
+            drifted_digest = "sha256:" + "1" * 64
+        first_binding["digest"] = drifted_digest
+        self.assertNotEqual(
+            record_digest(drifted, digest_field="registry_digest"),
+            registry["registry_digest"],
+        )
+
+
+class CodexUnpinnedControlTests(unittest.TestCase):
+    """G56R-004 FR-008, FR-009, FR-037, and SC-015: inherited exact treatment."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.control = control_of_kind(self.registry, "unpinned")
+        self.unpinned = self.control["unpinned"]
+
+    def validate_control(self, control: dict[str, object]) -> object:
+        self.assertTrue(
+            hasattr(self.module, "validate_unpinned_control"),
+            "T009 must expose validate_unpinned_control for Codex unpinned controls",
+        )
+        return self.module.validate_unpinned_control(control)
+
+    def validate_exact_treatment(self, evidence: dict[str, object]) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.module, "validate_unpinned_exact_treatment"),
+            "T009 must read Codex unpinned exact treatment from produced evidence",
+        )
+        return self.module.validate_unpinned_exact_treatment(self.control, evidence)
+
+    def exact_treatment_evidence(self, **overrides: object) -> dict[str, object]:
+        evidence: dict[str, object] = {
+            "read_back_from": "produced_evidence",
+            "dispatch_intent": {"model_resolution": "inherit"},
+            "produced_evidence": {
+                "served_model": self.unpinned["pinned_parent_model"],
+                "served_effort": self.unpinned["pinned_parent_effort"],
+                "observed_absent_overrides": {
+                    member: True for member in CODEX_REQUIRED_ABSENT_OVERRIDES
+                },
+            },
+        }
+        evidence.update(overrides)
+        return evidence
+
+    def test_the_unpinned_control_freezes_one_inherited_parent_arm(self) -> None:
+        self.assertEqual(self.unpinned["arm_count"], 1)
+        self.assertEqual(self.unpinned["model_resolution"], "inherit")
+        self.assertEqual(
+            self.control["execution_contract"]["dispatch_parameters"],
+            {"model_resolution": "inherit"},
+        )
+        self.assertIsNone(self.validate_control(self.control))
+
+        for arm_count in (0, 2):
+            with self.subTest(arm_count=arm_count):
+                control = copy.deepcopy(self.control)
+                control["unpinned"]["arm_count"] = arm_count
+                with self.assertRaises(self.error):
+                    self.validate_control(control)
+
+    def test_parent_context_identity_includes_every_frozen_parent_member(self) -> None:
+        self.assertIsNone(self.validate_control(self.control))
+        for member in (
+            "pinned_parent_model",
+            "pinned_parent_effort",
+            "authentication_mode",
+            "environment_boundary",
+        ):
+            with self.subTest(member=member):
+                self.assertIn(member, self.unpinned)
+        self.assertEqual(self.unpinned["authentication_mode"], "chatgpt_subscription")
+        self.assertIn("client_version", self.unpinned["environment_boundary"])
+
+        changed = copy.deepcopy(self.control)
+        changed["unpinned"]["environment_boundary"]["client_version"] = "codex-client-repin"
+        changed["control_digest"] = record_digest(changed, digest_field="control_digest")
+        self.assertNotEqual(changed["control_digest"], self.control["control_digest"])
+        self.assertIsNone(self.validate_control(changed))
+
+    def test_required_local_overrides_are_closed_and_observed_absent(self) -> None:
+        self.assertIsNone(self.validate_control(self.control))
+        self.assertEqual(
+            tuple(sorted(self.unpinned["required_absent_overrides"])),
+            CODEX_REQUIRED_ABSENT_OVERRIDES,
+        )
+        evidence = self.exact_treatment_evidence()
+        for override in CODEX_REQUIRED_ABSENT_OVERRIDES:
+            with self.subTest(override=override):
+                seeded = copy.deepcopy(evidence)
+                seeded["produced_evidence"]["observed_absent_overrides"][override] = False
+                with self.assertRaises(self.error):
+                    self.validate_exact_treatment(seeded)
+
+    def test_exact_treatment_is_read_back_from_produced_evidence(self) -> None:
+        observed = self.validate_exact_treatment(self.exact_treatment_evidence())
+        self.assertEqual(observed["read_back_from"], "produced_evidence")
+        self.assertEqual(observed["served_model"], self.unpinned["pinned_parent_model"])
+        self.assertEqual(observed["served_effort"], self.unpinned["pinned_parent_effort"])
+
+        request_only = self.exact_treatment_evidence(read_back_from="dispatch_intent")
+        with self.assertRaises(self.error):
+            self.validate_exact_treatment(request_only)
+
+
+class CodexAdaptiveLadderTests(unittest.TestCase):
+    """G56R-004 FR-010, FR-011, FR-017, and SC-005: frozen Codex ladder."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.control = control_of_kind(self.registry, "adaptive")
+        self.adaptive = self.control["adaptive"]
+        self.freeze = self.successor_freeze()
+
+    def validate_ladder(
+        self, control: dict[str, object], freeze: dict[str, object]
+    ) -> object:
+        self.assertTrue(
+            hasattr(self.module, "validate_adaptive_ladder"),
+            "T011 must expose validate_adaptive_ladder for Codex adaptive controls",
+        )
+        return self.module.validate_adaptive_ladder(control, freeze)
+
+    def successor_freeze(self, **overrides: object) -> dict[str, object]:
+        ladder = list(self.adaptive["escalation_ladder"])
+        tuples = [
+            (ladder[0], "gpt-5.5", "medium"),
+            (ladder[1], "gpt-5.5", "high"),
+            (ladder[2], "gpt-5.6-terra", "high"),
+        ]
+        freeze: dict[str, object] = {
+            "candidate_freeze_id": CODEX_G56R003_SUCCESSOR_FREEZE_ID,
+            "freeze_digest": self.adaptive["freeze_digest"],
+            "admitted_tuples": [
+                {
+                    "source_spec_id": "G56R-003",
+                    "candidate_route_id": route_id,
+                    "model": model,
+                    "effort": effort,
+                    "source_evidence_digest": CODEX_G56R003_ROUTE_EVIDENCE_DIGEST,
+                    "runtime_evidence_digest": CODEX_G56R003_ROUTE_EVIDENCE_DIGEST,
+                }
+                for route_id, model, effort in tuples
+            ],
+            "excluded_tuples": [],
+        }
+        freeze.update(overrides)
+        return freeze
+
+    def test_the_adaptive_ladder_is_the_ordered_g56r003_successor_tuple_set(self) -> None:
+        self.assertEqual(self.adaptive["candidate_freeze_id"], CODEX_G56R003_SUCCESSOR_FREEZE_ID)
+        self.assertEqual(
+            self.adaptive["escalation_ladder"],
+            [tuple_["candidate_route_id"] for tuple_ in self.freeze["admitted_tuples"]],
+        )
+        self.assertTrue(
+            all(tuple_["source_spec_id"] == "G56R-003" for tuple_ in self.freeze["admitted_tuples"])
+        )
+        self.assertIsNone(self.validate_ladder(self.control, self.freeze))
+
+    def test_ladder_order_is_hash_relevant_and_declared(self) -> None:
+        self.assertIsNone(self.validate_ladder(self.control, self.freeze))
+        reordered = copy.deepcopy(self.control)
+        first, second, third = reordered["adaptive"]["escalation_ladder"]
+        reordered["adaptive"]["escalation_ladder"] = [second, first, third]
+        reordered["control_digest"] = record_digest(reordered, digest_field="control_digest")
+        self.assertNotEqual(reordered["control_digest"], self.control["control_digest"])
+        with self.assertRaises(self.error):
+            self.validate_ladder(reordered, self.freeze)
+
+    def test_cross_model_steps_have_rationales_and_duplicate_or_omitted_routes_fail(self) -> None:
+        self.assertIsNone(self.validate_ladder(self.control, self.freeze))
+        rationale = self.adaptive["escalation_ladder_rationales"][0]
+        self.assertEqual(
+            (rationale["from_route"], rationale["to_route"]),
+            (self.adaptive["escalation_ladder"][1], self.adaptive["escalation_ladder"][2]),
+        )
+        self.assertTrue(rationale["rationale"])
+
+        for label, ladder in {
+            "duplicate": [
+                self.adaptive["escalation_ladder"][0],
+                self.adaptive["escalation_ladder"][0],
+                self.adaptive["escalation_ladder"][2],
+            ],
+            "omission": self.adaptive["escalation_ladder"][:-1],
+        }.items():
+            with self.subTest(case=label):
+                control = copy.deepcopy(self.control)
+                control["adaptive"]["escalation_ladder"] = list(ladder)
+                with self.assertRaises(self.error):
+                    self.validate_ladder(control, self.freeze)
+
+    def test_successor_freeze_and_route_evidence_drift_invalidate_the_control(self) -> None:
+        self.assertIsNone(self.validate_ladder(self.control, self.freeze))
+        drifted_freeze = copy.deepcopy(self.freeze)
+        drifted_freeze["freeze_digest"] = "sha256:" + "0" * 64
+        with self.assertRaises(self.error):
+            self.validate_ladder(self.control, drifted_freeze)
+
+        drifted_route = copy.deepcopy(self.freeze)
+        drifted_route["admitted_tuples"][0]["runtime_evidence_digest"] = "sha256:" + "1" * 64
+        with self.assertRaises(self.error):
+            self.validate_ladder(self.control, drifted_route)
+
+
+class CodexAdaptiveSignalResolutionTests(unittest.TestCase):
+    """G56R-004 FR-012, FR-013, and SC-006: Codex adaptive signal resolution."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.control = control_of_kind(self.registry, "adaptive")
+        self.adaptive = self.control["adaptive"]
+
+    def signal_validator(self) -> object:
+        self.assertTrue(
+            hasattr(self.module, "validate_adaptive_signal_maps"),
+            "T013 must expose validate_adaptive_signal_maps for Codex adaptive controls",
+        )
+        return self.module.validate_adaptive_signal_maps
+
+    def response_resolver(self) -> object:
+        self.assertTrue(
+            hasattr(self.module, "resolve_adaptive_response"),
+            "T013 must expose resolve_adaptive_response for Codex adaptive rows",
+        )
+        return self.module.resolve_adaptive_response
+
+    def clean_row(self, **overrides: object) -> dict[str, object]:
+        row: dict[str, object] = {
+            "terminal_state": "completed",
+            "failure_plane": "none",
+            "failure_code": "none",
+            "retries": 0,
+            "budget_observations": {"max_duration_seconds": 100},
+        }
+        row.update(overrides)
+        return row
+
+    def test_signal_sources_are_the_closed_frozen_observed_set(self) -> None:
+        self.assertEqual(self.adaptive["signal_precedence"], list(SIGNAL_SOURCES))
+        self.assertEqual(
+            sorted(self.control["execution_contract"]["observed_signals"]),
+            ["failure_code", "failure_plane", "retries", "terminal_state"],
+        )
+        self.assertEqual(
+            [trigger["member"] for trigger in self.adaptive["budget_triggers"]],
+            ["max_duration_seconds"],
+        )
+        self.assertIsNone(self.signal_validator()(self.control))
+
+    def test_response_maps_are_total_single_valued_and_closed(self) -> None:
+        cases = {
+            "terminal_state_response": frozen_terminal_states(),
+            "failure_plane_response": frozen_failure_planes(),
+            "failure_code_response": frozen_failure_codes(),
+        }
+        for member, enum in cases.items():
+            with self.subTest(map=member):
+                self.assertEqual(sorted(self.adaptive[member]), sorted(enum))
+                self.assertTrue(
+                    all(response in POLICY_RESPONSES for response in self.adaptive[member].values())
+                )
+        self.assertIsNone(self.signal_validator()(self.control))
+
+    def test_resolution_uses_the_declared_precedence_order(self) -> None:
+        resolver = self.response_resolver()
+        row = self.clean_row(
+            failure_code="candidate_failed",
+            failure_plane="candidate",
+            retries=3,
+            budget_observations={"max_duration_seconds": 1800},
+        )
+        self.assertEqual(resolver(self.control, row), "escalate")
+
+        lower_source = self.clean_row(failure_plane="candidate")
+        self.assertEqual(resolver(self.control, lower_source), "escalate")
+
+    def test_failure_plane_and_code_responses_stay_consistent(self) -> None:
+        for code in frozen_failure_codes():
+            with self.subTest(failure_code=code):
+                self.assertEqual(
+                    self.adaptive["failure_plane_response"][failure_plane_for(code)],
+                    self.adaptive["failure_code_response"][code],
+                )
+        self.assertIsNone(self.signal_validator()(self.control))
+
+    def test_terminal_states_match_their_candidate_failure_codes(self) -> None:
+        codes = frozen_failure_codes()
+        for state in frozen_terminal_states():
+            if state == "completed":
+                continue
+            with self.subTest(terminal_state=state):
+                paired = f"candidate_{state}"
+                self.assertIn(paired, codes)
+                self.assertEqual(
+                    self.adaptive["terminal_state_response"][state],
+                    self.adaptive["failure_code_response"][paired],
+                )
+        self.assertIsNone(self.signal_validator()(self.control))
+
+    def test_unknown_closed_domain_values_fail_before_resolution(self) -> None:
+        resolver = self.response_resolver()
+        cases = (
+            {"failure_code": "route_repointed"},
+            {"failure_plane": "routing"},
+            {"terminal_state": "quiesced"},
+        )
+        for seeded in cases:
+            with self.subTest(**seeded):
+                with self.assertRaises(self.error):
+                    resolver(self.control, self.clean_row(**seeded))
+
+
+class CodexAdaptiveMovementAndBreachTests(unittest.TestCase):
+    """G56R-004 FR-014 through FR-016 and SC-007: Codex adaptive replay semantics."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.control = control_of_kind(self.registry, "adaptive")
+        self.adaptive = self.control["adaptive"]
+        self.ladder = list(self.adaptive["escalation_ladder"])
+
+    def state(
+        self, route_index: int = 0, clean_streak: int = 0, escalations_used: int = 0
+    ) -> dict[str, object]:
+        return {
+            "objective_id": "g56r-004-objective-1",
+            "current_route_id": self.ladder[route_index],
+            "clean_streak": clean_streak,
+            "escalations_used": escalations_used,
+        }
+
+    def row(self, **overrides: object) -> dict[str, object]:
+        row: dict[str, object] = {
+            "objective_id": "g56r-004-objective-1",
+            "terminal_state": "completed",
+            "failure_plane": "none",
+            "failure_code": "none",
+            "retries": 0,
+            "budget_observations": {"max_duration_seconds": 100},
+        }
+        row.update(overrides)
+        return row
+
+    def attempt(self, route_id: str, retries: int, duration_ms: int) -> dict[str, object]:
+        return {
+            "attempt_id": f"{route_id}-{retries}-{duration_ms}",
+            "route_id": route_id,
+            "retries": retries,
+            "duration_ms": duration_ms,
+        }
+
+    def bounded_objective(
+        self,
+        attempts: list[dict[str, object]],
+        **overrides: object,
+    ) -> dict[str, object]:
+        row: dict[str, object] = {
+            "objective_id": "g56r-004-objective-1",
+            "counted_over": self.control["execution_contract"]["retry_bounds"]["counted_over"],
+            "attempts": attempts,
+            "budget_observations": {"max_duration_seconds": 100},
+        }
+        row.update(overrides)
+        return row
+
+    def state_advancer(self) -> object:
+        self.assertTrue(
+            hasattr(self.module, "advance_adaptive_state"),
+            "T015 must expose advance_adaptive_state for Codex adaptive movement replay",
+        )
+        return self.module.advance_adaptive_state
+
+    def bounds_evaluator(self) -> object:
+        self.assertTrue(
+            hasattr(self.module, "evaluate_adaptive_bounds"),
+            "T015 must expose evaluate_adaptive_bounds for Codex retry and cancellation replay",
+        )
+        return self.module.evaluate_adaptive_bounds
+
+    def reroute_classifier(self) -> object:
+        self.assertTrue(
+            hasattr(self.module, "classify_adaptive_service_reroute"),
+            "T015 must expose classify_adaptive_service_reroute for Codex platform reroutes",
+        )
+        return self.module.classify_adaptive_service_reroute
+
+    def test_at_most_one_escalation_is_spent_per_objective(self) -> None:
+        advance = self.state_advancer()
+        failure = self.row(failure_code="candidate_failed", failure_plane="candidate")
+        first = advance(self.control, self.state(route_index=0), failure)
+        self.assertTrue(first["escalated"])
+        self.assertEqual(first["current_route_id"], self.ladder[1])
+        self.assertEqual(first["escalations_used"], 1)
+        self.assertEqual(
+            first["escalation_step"],
+            {"from_route_id": self.ladder[0], "to_route_id": self.ladder[1]},
+        )
+
+        second = advance(self.control, first, failure)
+        self.assertFalse(second["escalated"])
+        self.assertEqual(second["current_route_id"], self.ladder[1])
+        self.assertEqual(second["escalations_used"], 1)
+
+    def test_floor_and_ceiling_do_not_wrap_when_movement_is_due(self) -> None:
+        advance = self.state_advancer()
+        ceiling = advance(
+            self.control,
+            self.state(route_index=len(self.ladder) - 1),
+            self.row(failure_code="candidate_failed", failure_plane="candidate"),
+        )
+        self.assertFalse(ceiling["escalated"])
+        self.assertEqual(ceiling["current_route_id"], self.ladder[-1])
+        self.assertNotEqual(ceiling["current_route_id"], self.ladder[0])
+
+        floor = advance(self.control, self.state(route_index=0, clean_streak=2), self.row())
+        self.assertTrue(floor["de_escalation_evaluated"])
+        self.assertFalse(floor["de_escalated"])
+        self.assertEqual(floor["current_route_id"], self.ladder[0])
+        self.assertEqual(floor["clean_streak"], 0)
+        self.assertNotEqual(floor["current_route_id"], self.ladder[-1])
+
+    def test_three_clean_passes_de_escalate_between_objectives(self) -> None:
+        advance = self.state_advancer()
+        carried = self.state(route_index=1)
+        for _ in range(2):
+            carried = advance(self.control, carried, self.row())
+            self.assertFalse(carried["de_escalated"])
+        carried = advance(self.control, carried, self.row())
+        self.assertTrue(carried["de_escalation_evaluated"])
+        self.assertTrue(carried["de_escalated"])
+        self.assertEqual(carried["current_route_id"], self.ladder[0])
+        self.assertEqual(carried["clean_streak"], 0)
+
+    def test_non_scorable_rows_do_not_advance_or_reset_the_clean_streak(self) -> None:
+        advance = self.state_advancer()
+        reroute = self.row(
+            terminal_state="failed",
+            failure_code="service_reroute",
+            failure_plane="treatment",
+            retries=3,
+        )
+        carried = advance(self.control, self.state(route_index=1, clean_streak=2), reroute)
+        self.assertTrue(carried["excluded"])
+        self.assertFalse(carried["clean_pass"])
+        self.assertEqual(carried["clean_streak"], 2)
+        self.assertEqual(carried["current_route_id"], self.ladder[1])
+
+        final = advance(self.control, carried, self.row())
+        self.assertTrue(final["de_escalated"])
+        self.assertEqual(final["current_route_id"], self.ladder[0])
+
+    def test_retry_and_cancellation_breaches_record_only_their_declared_pairings(self) -> None:
+        evaluate = self.bounds_evaluator()
+        retry_bounds = self.control["execution_contract"]["retry_bounds"]
+        cancellation_bounds = self.control["execution_contract"]["cancellation_bounds"]
+
+        respected = evaluate(
+            self.control,
+            self.bounded_objective([
+                self.attempt(self.ladder[0], retry_bounds["max_retries"], 1000)
+            ]),
+        )
+        self.assertFalse(respected["retry_bound_breached"])
+        self.assertFalse(respected["cancellation_bound_breached"])
+        self.assertIsNone(respected["terminal_state"])
+        self.assertIsNone(respected["failure_code"])
+
+        retry_breach = evaluate(
+            self.control,
+            self.bounded_objective([
+                self.attempt(self.ladder[0], retry_bounds["max_retries"] + 1, 1000)
+            ]),
+        )
+        self.assertTrue(retry_breach["retry_bound_breached"])
+        self.assertEqual(retry_breach["terminal_state"], "failed")
+        self.assertEqual(retry_breach["failure_code"], "candidate_failed")
+
+        cancellation_breach = evaluate(
+            self.control,
+            self.bounded_objective([
+                self.attempt(self.ladder[0], 0, cancellation_bounds["max_duration_ms"] + 1)
+            ]),
+        )
+        self.assertTrue(cancellation_breach["cancellation_bound_breached"])
+        self.assertEqual(cancellation_breach["terminal_state"], "cancelled")
+        self.assertEqual(cancellation_breach["failure_code"], "candidate_cancelled")
+
+    def test_budget_triggers_resolve_by_response_not_on_breach_pairing(self) -> None:
+        evaluate = self.bounds_evaluator()
+        trigger = self.adaptive["budget_triggers"][0]
+        reading = evaluate(
+            self.control,
+            self.bounded_objective(
+                [self.attempt(self.ladder[0], 0, 1000)],
+                budget_observations={trigger["member"]: trigger["threshold"]},
+            ),
+        )
+        self.assertTrue(reading["budget_trigger_met"])
+        self.assertEqual(reading["budget_response"], trigger["response"])
+        self.assertFalse(reading["retry_bound_breached"])
+        self.assertFalse(reading["cancellation_bound_breached"])
+        self.assertIsNone(reading["terminal_state"])
+        self.assertIsNone(reading["failure_code"])
+
+    def test_service_reroute_is_non_scorable_without_spending_movement(self) -> None:
+        from claude_score_bundle import SERVICE_REROUTE_DISPOSITION_REASON
+
+        classify = self.reroute_classifier()
+        classified = classify(
+            self.control,
+            self.state(route_index=1, clean_streak=2),
+            self.row(failure_code="service_reroute", failure_plane="treatment"),
+        )
+        self.assertTrue(classified["service_reroute"])
+        self.assertEqual(classified["response"], "non_scorable")
+        self.assertFalse(classified["escalation_allowance_spent"])
+        self.assertFalse(classified["ladder_position_changed"])
+        self.assertEqual(classified["current_route_id"], self.ladder[1])
+        self.assertEqual(classified["clean_streak"], 2)
+        self.assertTrue(classified["unit_non_scorable"])
+        self.assertEqual(classified["failure_plane"], failure_plane_for("service_reroute"))
+        self.assertEqual(classified["disposition_reason"], SERVICE_REROUTE_DISPOSITION_REASON)
+
+
+class CodexJustifiedHighEffortControlTests(unittest.TestCase):
+    """G56R-004 FR-018, FR-019, FR-023, SC-008, and SC-015: fixed high-effort route."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.control = control_of_kind(self.registry, "justified_high_effort")
+
+    def validate_control(self, control: dict[str, object]) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.module, "validate_justified_high_effort_control"),
+            "T017 must expose validate_justified_high_effort_control for Codex high effort",
+        )
+        return self.module.validate_justified_high_effort_control(control)
+
+    def validate_exact_treatment(self, evidence: dict[str, object]) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.module, "validate_justified_high_effort_exact_treatment"),
+            "T017 must read justified-high-effort exact treatment from produced evidence",
+        )
+        return self.module.validate_justified_high_effort_exact_treatment(
+            self.control, evidence
+        )
+
+    def exact_treatment_evidence(self, **overrides: object) -> dict[str, object]:
+        evidence: dict[str, object] = {
+            "read_back_from": "produced_evidence",
+            "dispatch_request": {
+                "route_id": CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID,
+                "model": CODEX_JUSTIFIED_HIGH_EFFORT_MODEL,
+                "effort": CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT,
+            },
+            "produced_evidence": {
+                "served_route_id": CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID,
+                "served_model": CODEX_JUSTIFIED_HIGH_EFFORT_MODEL,
+                "served_effort": CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT,
+                "successor_freeze_digest": CODEX_G56R003_SUCCESSOR_FREEZE_ID,
+                "route_evidence_digest": CODEX_G56R003_ROUTE_EVIDENCE_DIGEST,
+                "eligibility_predicate_result": True,
+                "eligibility_rationale_binding": "required_core_workspace_write_phase_executor",
+                "fallback_route_id": None,
+                "dynamic_route_discovery": False,
+                "parent_plus_child_aggregate": {
+                    "input_tokens": 1,
+                    "cached_input_tokens": 0,
+                    "output_tokens": 1,
+                    "duration_ms": 1,
+                    "retries": 0,
+                    "compactions": 0,
+                    "terminal_state": "completed",
+                    "acceptance": 1,
+                },
+            },
+        }
+        evidence.update(overrides)
+        return evidence
+
+    def test_the_control_binds_one_frozen_g56r003_phase_executor_route(self) -> None:
+        binding = self.validate_control(self.control)
+        self.assertEqual(binding["route_id"], CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID)
+        self.assertEqual(binding["model"], CODEX_JUSTIFIED_HIGH_EFFORT_MODEL)
+        self.assertEqual(binding["effort"], CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT)
+        self.assertEqual(binding["successor_freeze_digest"], CODEX_G56R003_SUCCESSOR_FREEZE_ID)
+        self.assertEqual(binding["route_evidence_digest"], CODEX_G56R003_ROUTE_EVIDENCE_DIGEST)
+
+    def test_eligibility_predicate_rationale_and_no_fallback_are_declared(self) -> None:
+        binding = self.validate_control(self.control)
+        self.assertIs(binding["eligibility_predicate"]["result"], True)
+        self.assertIn("required_core", binding["eligibility_predicate"]["predicate_id"])
+        self.assertIn("workspace_write", binding["eligibility_predicate"]["predicate_id"])
+        self.assertTrue(binding["eligibility_rationale"].strip())
+        self.assertIsNone(binding["fallback_route_id"])
+        self.assertIs(binding["dynamic_route_discovery"], False)
+
+    def test_ineligible_or_fallback_seeded_controls_are_refused(self) -> None:
+        self.assertIsNotNone(self.validate_control(self.control))
+        seeded_cases = (
+            ("predicate_false", {"eligibility_predicate": {"result": False}}),
+            ("empty_rationale", {"eligibility_rationale": ""}),
+            ("fallback_route", {"fallback_route_id": "g56r-003-route-fallback"}),
+            ("dynamic_discovery", {"dynamic_route_discovery": True}),
+        )
+        for label, seeded in seeded_cases:
+            with self.subTest(case=label):
+                control = copy.deepcopy(self.control)
+                control["justified_high_effort"].update(seeded)
+                with self.assertRaises(self.error):
+                    self.validate_control(control)
+
+    def test_exact_treatment_is_read_back_from_produced_evidence(self) -> None:
+        observed = self.validate_exact_treatment(self.exact_treatment_evidence())
+        self.assertEqual(observed["read_back_from"], "produced_evidence")
+        self.assertEqual(observed["served_route_id"], CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID)
+        self.assertEqual(observed["served_model"], CODEX_JUSTIFIED_HIGH_EFFORT_MODEL)
+        self.assertEqual(observed["served_effort"], CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT)
+        self.assertIs(observed["eligibility_predicate_result"], True)
+        self.assertEqual(
+            observed["route_evidence_digest"], CODEX_G56R003_ROUTE_EVIDENCE_DIGEST
+        )
+        self.assertIn("parent_plus_child_aggregate", observed)
+
+        request_only = self.exact_treatment_evidence(read_back_from="dispatch_request")
+        with self.assertRaises(self.error):
+            self.validate_exact_treatment(request_only)
+
+
+def codex_unit_member(
+    row_id: str,
+    spawned_by: str | None = None,
+    *,
+    cost: int = 10,
+    terminal_state: str = "completed",
+    acceptance: float | None = 1.0,
+    raw: tuple[int, int, int, int | None] = (100, 20, 30, 5),
+    cache: tuple[int, int, int] | None = (7, 3, 40),
+) -> dict[str, object]:
+    member: dict[str, object] = {
+        "row_id": row_id,
+        "spawned_by": spawned_by,
+        "resource_vector": {
+            "input_tokens": cost,
+            "cached_input_tokens": cost,
+            "output_tokens": cost,
+            "duration_ms": cost,
+            "retries": cost,
+            "compactions": cost,
+            "terminal_state": terminal_state,
+            "acceptance": acceptance,
+        },
+        "raw_token_vector": {
+            "input_tokens": raw[0],
+            "output_tokens": raw[1],
+            "cached_input_tokens": raw[2],
+            "reasoning_output_tokens": raw[3],
+        },
+    }
+    if cache is not None:
+        member["cache_diagnostic"] = {
+            "cache_write_tokens_by_ttl_class": {
+                "ephemeral_5m": cache[0],
+                "ephemeral_1h": cache[1],
+            },
+            "cache_read_tokens": cache[2],
+        }
+    return member
+
+
+class CodexParentPlusChildrenAggregationTests(unittest.TestCase):
+    """G56R-004 FR-020 through FR-022 and SC-009: governed unit aggregation."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.control = control_of_kind(self.registry, "justified_high_effort")
+
+    def aggregate(self, members: list[dict[str, object]]) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.module, "aggregate_parent_plus_children"),
+            "T019 must expose aggregate_parent_plus_children for Codex governed evidence",
+        )
+        return self.module.aggregate_parent_plus_children(self.control, members)
+
+    def test_children_are_included_across_all_eight_decision_dimensions(self) -> None:
+        aggregate = self.aggregate([
+            codex_unit_member("parent", cost=10, acceptance=0.92),
+            codex_unit_member("child-1", "parent", cost=3),
+            codex_unit_member("child-2", "parent", cost=5),
+        ])
+        self.assertEqual(aggregate["unit_member_ids"], ["parent", "child-1", "child-2"])
+        for dimension in (
+            "input_tokens",
+            "cached_input_tokens",
+            "output_tokens",
+            "duration_ms",
+            "retries",
+            "compactions",
+        ):
+            with self.subTest(dimension=dimension):
+                self.assertEqual(aggregate["decision_dimensions"][dimension], 18)
+        self.assertEqual(aggregate["decision_dimensions"]["terminal_state"], "completed")
+        self.assertEqual(aggregate["decision_dimensions"]["acceptance"], 0.92)
+
+    def test_null_acceptance_floor_and_missing_terminal_state_are_handled_explicitly(self) -> None:
+        completed_gap = self.aggregate([
+            codex_unit_member("parent", acceptance=None),
+            codex_unit_member("child-1", "parent"),
+        ])
+        self.assertIsNone(completed_gap["decision_dimensions"]["acceptance"])
+
+        failed = self.aggregate([
+            codex_unit_member("parent", acceptance=None),
+            codex_unit_member("child-1", "parent", terminal_state="failed"),
+        ])
+        self.assertEqual(failed["decision_dimensions"]["terminal_state"], "failed")
+        self.assertEqual(failed["decision_dimensions"]["acceptance"], 0)
+
+        malformed = codex_unit_member("child-2", "parent")
+        del malformed["resource_vector"]["terminal_state"]
+        with self.assertRaises(self.error):
+            self.aggregate([codex_unit_member("parent"), malformed])
+
+    def test_raw_tokens_and_cache_diagnostics_preserve_their_member_sets(self) -> None:
+        aggregate = self.aggregate([
+            codex_unit_member("parent"),
+            codex_unit_member("child-1", "parent", raw=(200, 40, 60, 11), cache=(13, 5, 80)),
+        ])
+        self.assertEqual(
+            aggregate["raw_tokens"],
+            {
+                "input_tokens": 300,
+                "output_tokens": 60,
+                "cached_input_tokens": 90,
+                "reasoning_output_tokens": 16,
+            },
+        )
+        self.assertEqual(
+            aggregate["cache_write_tokens_by_ttl_class"],
+            {"ephemeral_5m": 20, "ephemeral_1h": 8},
+        )
+        self.assertEqual(aggregate["cache_read_tokens"], 120)
+        replay_case = load_json(CODEX_REPLAY_CASES_PATH)["aggregation_cases"][0]
+        self.assertEqual(self.aggregate(replay_case["members"]), replay_case["expected"])
+
+    def test_missing_or_null_cache_diagnostics_remain_unobserved_not_zero(self) -> None:
+        no_cache = self.aggregate([
+            codex_unit_member("parent"),
+            codex_unit_member("child-1", "parent", cache=None),
+        ])
+        self.assertIsNone(no_cache["cache_read_tokens"])
+        self.assertIsNone(no_cache["cache_write_tokens_by_ttl_class"])
+        self.assertEqual(
+            sorted(no_cache["unobserved"]),
+            ["max_cache_read_tokens", "max_cache_write_tokens_by_ttl_class"],
+        )
+
+        null_cache = codex_unit_member("child-2", "parent")
+        null_cache["cache_diagnostic"]["cache_read_tokens"] = None
+        aggregate = self.aggregate([codex_unit_member("parent"), null_cache])
+        self.assertIsNone(aggregate["cache_read_tokens"])
+        self.assertIn("max_cache_read_tokens", aggregate["unobserved"])
+        self.assertNotEqual(aggregate["cache_read_tokens"], 0)
+
+
+class CodexReservedPartitionArtifactTests(unittest.TestCase):
+    """T024 RED: the partition fixture and its smoke guard must be published."""
+
+    def test_the_codex_partition_fixture_and_smoke_guard_are_present(self) -> None:
+        self.assertTrue(
+            CODEX_PARTITION_FIXTURE_PATH.is_file(),
+            f"{CODEX_PARTITION_FIXTURE_PATH} is missing; T025 must publish it",
+        )
+        self.assertIsNotNone(
+            codex_control_smoke,
+            "codex_control_smoke is not importable; T025 must implement it",
+        )
+
+
+class CodexReservedPartitionTests(unittest.TestCase):
+    """G56R-004 FR-031 through FR-033 and SC-012: reserved-objective refusal."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.assertIsNotNone(
+            codex_control_smoke,
+            "codex_control_smoke is not importable; T025 must implement it",
+        )
+        self.module = codex_policy_controls
+        self.smoke_module = codex_control_smoke
+        self.error = self.module.ControlContractError
+        fixture = load_json(CODEX_PARTITION_FIXTURE_PATH)
+        self.entries = fixture["entries"]
+        self.reserved = next(
+            entry for entry in self.entries if entry["qualification_eligible"]
+        )
+        self.smoke = next(
+            entry for entry in self.entries if not entry["qualification_eligible"]
+        )
+
+    def test_both_entries_are_content_addressed_by_the_frozen_partition_builder(self) -> None:
+        self.assertEqual(
+            [entry["partition_id"] for entry in self.entries],
+            ["G56R-011-RESERVED-COMPARISON", "G56R-004-SMOKE"],
+        )
+        for entry in self.entries:
+            with self.subTest(partition=entry["partition_id"]):
+                rebuilt = build_partition_registry_entry(
+                    partition_id=entry["partition_id"],
+                    partition_type=entry["partition_type"],
+                    qualification_eligible=entry["qualification_eligible"],
+                    objective_ids=entry["objective_ids"],
+                    frozen_at=entry["frozen_at"],
+                    owning_spec=entry["owning_spec"],
+                )
+                self.assertEqual(entry, rebuilt)
+                self.assertEqual(entry["owning_spec"], "G56R-004")
+
+    def test_the_entries_register_clean_and_are_mutually_disjoint(self) -> None:
+        verdict = register_partitions(self.entries)
+        self.assertTrue(verdict.ok, verdict.findings)
+        self.assertFalse(
+            set(self.reserved["objective_ids"]) & set(self.smoke["objective_ids"])
+        )
+        intruder = build_partition_registry_entry(
+            partition_id="G56R-004-SEEDED-OVERLAP",
+            partition_type="calibration",
+            qualification_eligible=False,
+            objective_ids=[self.reserved["objective_ids"][0]],
+            frozen_at=self.smoke["frozen_at"],
+            owning_spec="G56R-004",
+        )
+        self.assertFalse(register_partitions([*self.entries, intruder]).ok)
+
+    def test_partition_owned_category_one_to_six_members_are_reported(self) -> None:
+        report = self.module.partition_owned_mirror_members(
+            handoff_path=REPO_ROOT
+            / "docs"
+            / "ai"
+            / "specs"
+            / ".process"
+            / "CAR-004-twin-handoff.md",
+            fixture_path=CODEX_PARTITION_FIXTURE_PATH,
+        )
+        self.assertEqual(report["categories_present"], [4])
+        self.assertEqual(
+            report["partition_ids"],
+            ["G56R-004-SMOKE", "G56R-011-RESERVED-COMPARISON"],
+        )
+        self.assertEqual(report["missing"], [])
+        self.assertEqual(report["extra"], [])
+        self.assertEqual(report["drifted"], [])
+
+    def test_replay_guard_refuses_a_reserved_objective(self) -> None:
+        clean = {
+            "row_id": "replay-clean",
+            "objective_id": self.smoke["objective_ids"][0],
+            "outcome_bearing": False,
+            "partition_type": "calibration",
+            "scored": False,
+        }
+        self.assertIsNone(
+            self.module.assert_reserved_partition_untouched([clean], self.reserved)
+        )
+        seeded = dict(clean, objective_id=self.reserved["objective_ids"][0])
+        with self.assertRaises(self.error):
+            self.module.assert_reserved_partition_untouched([seeded], self.reserved)
+
+    def test_smoke_plan_uses_only_non_scored_calibration_objectives(self) -> None:
+        planned = self.smoke_module.plan_objectives(self.entries)
+        self.assertEqual(planned, tuple(sorted(self.smoke["objective_ids"])))
+        self.assertFalse(set(planned) & set(self.reserved["objective_ids"]))
+        with self.assertRaises(self.error):
+            self.smoke_module.guard_plan_objectives(
+                [*planned, self.reserved["objective_ids"][0]],
+                self.entries,
+            )
+
+    def test_smoke_seal_refuses_reserved_scored_selection_and_cohort_consumption(self) -> None:
+        clean = {
+            "objective_ids": [self.smoke["objective_ids"][0]],
+            "outcome_bearing": False,
+            "partition_id": self.smoke["partition_id"],
+            "partition_type": "calibration",
+            "scored": False,
+        }
+        self.assertIsNone(self.smoke_module.guard_smoke_record(clean, self.entries))
+        seeded_cases = (
+            dict(clean, objective_ids=[self.reserved["objective_ids"][0]]),
+            dict(clean, scored=True),
+            dict(clean, outcome_bearing=True),
+            dict(clean, partition_type="selection"),
+            dict(clean, partition_type="cohort_lock"),
+        )
+        for seeded in seeded_cases:
+            with self.subTest(seeded=seeded):
+                with self.assertRaises(self.error):
+                    self.smoke_module.guard_smoke_record(seeded, self.entries)
+
+
+class CodexDeterministicReplayTests(unittest.TestCase):
+    """T026 RED: all three Codex controls must replay from governed fixture rows."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.replay_fixture = load_json(CODEX_REPLAY_CASES_PATH)
+
+    def replay(self) -> list[dict[str, object]]:
+        self.assertTrue(
+            hasattr(self.module, "replay_codex_controls"),
+            "T027 must expose replay_codex_controls for deterministic G56R-004 replay",
+        )
+        return self.module.replay_codex_controls(CODEX_REPLAY_CASES_PATH)
+
+    def replay_api(self) -> object:
+        self.assertTrue(
+            hasattr(self.module, "replay_codex_controls"),
+            "T027 must expose replay_codex_controls for deterministic G56R-004 replay",
+        )
+        return self.module.replay_codex_controls
+
+    def test_replay_fixture_declares_a_case_for_every_codex_control_kind(self) -> None:
+        cases = self.replay_fixture.get("control_replay_cases", [])
+        self.assertEqual(
+            sorted(case["control_kind"] for case in cases),
+            sorted(CODEX_CONTROL_KINDS),
+        )
+        self.assertEqual(
+            sorted(case["control_id"] for case in cases),
+            sorted(CODEX_CONTROL_IDS_BY_KIND.values()),
+        )
+
+    def test_two_replays_of_the_committed_fixture_are_byte_identical(self) -> None:
+        first = self.replay()
+        second = self.replay()
+        self.assertEqual(canonical_json(first), canonical_json(second))
+        self.assertEqual(record_digest({"replay": first}), record_digest({"replay": second}))
+
+    def test_every_replayed_row_is_governed_non_scored_and_not_outcome_bearing(self) -> None:
+        for outcome in self.replay():
+            with self.subTest(case_id=outcome["case_id"]):
+                self.assertIn(outcome["control_kind"], CODEX_CONTROL_KINDS)
+                self.assertEqual(outcome["control_id"], CODEX_CONTROL_IDS_BY_KIND[outcome["control_kind"]])
+                self.assertEqual(outcome["partition_type"], "calibration")
+                self.assertFalse(outcome["scored"])
+                self.assertFalse(outcome["outcome_bearing"])
+                self.assertTrue(outcome["governed_evidence"])
+                self.assertEqual(outcome["governed_evidence"]["source"], "committed_fixture")
+                self.assertTrue(str(outcome["governed_evidence"]["digest"]).startswith("sha256:"))
+
+    def test_seeded_outcome_bearing_or_scored_rows_fail_replay_closed(self) -> None:
+        replay = self.replay_api()
+        cases = copy.deepcopy(self.replay_fixture)
+        cases.setdefault("control_replay_cases", [{}])
+        for field in ("outcome_bearing", "scored"):
+            with self.subTest(field=field):
+                mutated = copy.deepcopy(cases)
+                mutated["control_replay_cases"][0][field] = True
+                with tempfile.TemporaryDirectory() as directory:
+                    seeded_path = Path(directory) / "replay-cases.json"
+                    seeded_path.write_text(
+                        json.dumps(mutated, sort_keys=True, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                    with self.assertRaises(self.error):
+                        replay(seeded_path)
+
+    def test_replay_refuses_self_consistent_copy_with_changed_case_id_and_objective(self) -> None:
+        replay = self.replay_api()
+        mutated = copy.deepcopy(self.replay_fixture)
+        mutated["control_replay_cases"][0]["case_id"] = (
+            "unpinned-non-live-control-replay-copy"
+        )
+        mutated["control_replay_cases"][0]["objective_id"] = "G56R-004-SMOKE-OBJ-04"
+
+        with tempfile.TemporaryDirectory() as directory:
+            seeded_path = Path(directory) / "replay-cases.json"
+            seeded_path.write_text(
+                json.dumps(mutated, sort_keys=True, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(self.error, "replay fixture"):
+                replay(seeded_path)
+
+
+class CodexControlSmokePlanAndSealTests(unittest.TestCase):
+    """T028 RED: non-live Codex smoke plan and seal semantics."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.assertIsNotNone(codex_control_smoke, "codex_control_smoke is not importable")
+        self.controls = codex_policy_controls
+        self.smoke_module = codex_control_smoke
+        self.error = self.controls.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.partition_entries = load_json(CODEX_PARTITION_FIXTURE_PATH)["entries"]
+        self.smoke_partition = next(
+            entry for entry in self.partition_entries if not entry["qualification_eligible"]
+        )
+
+    def build_plan(self, control_kind: str) -> dict[str, object]:
+        return self.build_plan_with(control_kind, authorization="withheld")
+
+    def build_plan_with(self, control_kind: str, **kwargs: object) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.smoke_module, "build_plan"),
+            "T029 must expose build_plan for Codex ChatGPT-sign-in control smokes",
+        )
+        options: dict[str, object] = {"authorization": "withheld"}
+        options.update(kwargs)
+        return self.smoke_module.build_plan(
+            control_kind,
+            registry=self.registry,
+            partition_entries=self.partition_entries,
+            **options,
+        )
+
+    def seal(self, record: dict[str, object]) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.smoke_module, "seal_record"),
+            "T029 must expose seal_record for non-live Codex smoke records",
+        )
+        return self.smoke_module.seal_record(
+            record,
+            registry=self.registry,
+            partition_entries=self.partition_entries,
+        )
+
+    def unit_member(
+        self,
+        row_id: str,
+        spawned_by: str | None = None,
+        *,
+        duration_ms: int = 60000,
+        raw: tuple[int, int, int, int | None] = (1000, 200, 300, 50),
+        cache: tuple[int, int, int] | None = (70, 30, 400),
+    ) -> dict[str, object]:
+        row: dict[str, object] = {
+            "row_id": row_id,
+            "spawned_by": spawned_by,
+            "duration_ms": duration_ms,
+            "resource_vector": {
+                "input_tokens": raw[0],
+                "cached_input_tokens": raw[2],
+                "output_tokens": raw[1],
+                "duration_ms": duration_ms,
+                "retries": 0,
+                "compactions": 0,
+                "terminal_state": "completed",
+                "acceptance": 1.0,
+            },
+            "raw_token_vector": {
+                "input_tokens": raw[0],
+                "output_tokens": raw[1],
+                "cached_input_tokens": raw[2],
+                "reasoning_output_tokens": raw[3],
+            },
+        }
+        if cache is not None:
+            row["cache_diagnostic"] = {
+                "cache_read_tokens": cache[2],
+                "cache_write_tokens_by_ttl_class": {
+                    "ephemeral_5m": cache[0],
+                    "ephemeral_1h": cache[1],
+                },
+            }
+        return row
+
+    def smoke_record(self, control_kind: str, **overrides: object) -> dict[str, object]:
+        control = control_of_kind(self.registry, control_kind)
+        objective = self.smoke_partition["objective_ids"][0]
+        default_attempts = [
+            {
+                "objective_id": objective,
+                "unit_rows": [
+                    self.unit_member("parent"),
+                    self.unit_member("child-1", "parent"),
+                ],
+            }
+        ]
+        record: dict[str, object] = {
+            "record_kind": "codex_control_smoke",
+            "schema_version": "1.0.0",
+            "smoke_id": f"g56r-004-smoke-{control_kind}",
+            "control_id": control["control_id"],
+            "control_kind": control_kind,
+            "authentication_mode": "chatgpt_subscription",
+            "authorization": "withheld",
+            "run_state": "unrun",
+            "scored": False,
+            "outcome_bearing": False,
+            "partition_id": self.smoke_partition["partition_id"],
+            "partition_type": "calibration",
+            "objective_ids": [objective],
+            "confirmation_entries": 0,
+            "elapsed_wall_clock_seconds": 600,
+            "objective_attempts": default_attempts,
+            "observed_cache_isolation": [
+                self.isolation_pair("unpinned", "adaptive"),
+                self.isolation_pair("unpinned", "justified_high_effort"),
+                self.isolation_pair("adaptive", "justified_high_effort"),
+            ],
+        }
+        record.update(overrides)
+        if "produced_evidence" not in overrides:
+            record["produced_evidence"] = self.produced_evidence(
+                control_kind, self.record_unit_rows(record)
+            )
+        return record
+
+    def record_unit_rows(self, record: dict[str, object]) -> list[dict[str, object]]:
+        return [
+            row
+            for attempt in record["objective_attempts"]
+            for row in attempt["unit_rows"]
+        ]
+
+    def produced_evidence(
+        self,
+        control_kind: str,
+        unit_rows: list[dict[str, object]] | None = None,
+    ) -> dict[str, object]:
+        control = control_of_kind(self.registry, control_kind)
+        if control_kind == "unpinned":
+            return {
+                "read_back_from": "produced_evidence",
+                "served_model": control["unpinned"]["pinned_parent_model"],
+                "served_effort": control["unpinned"]["pinned_parent_effort"],
+                "observed_absent_overrides": {
+                    member: True for member in CODEX_REQUIRED_ABSENT_OVERRIDES
+                },
+            }
+        if control_kind == "adaptive":
+            ladder = control["adaptive"]["escalation_ladder"]
+            pre_model, pre_effort = ladder[0].rsplit("__", 1)
+            post_model, post_effort = ladder[1].rsplit("__", 1)
+            return {
+                "read_back_from": "produced_evidence",
+                "qualifying_signal": {
+                    "objective_id": self.smoke_partition["objective_ids"][0],
+                    "failure_code": "candidate_failed",
+                    "failure_plane": "candidate",
+                    "terminal_state": "failed",
+                    "retries": 0,
+                    "budget_observations": {},
+                },
+                "pre_escalation": {
+                    "route_id": ladder[0],
+                    "served_model": pre_model,
+                    "served_effort": pre_effort,
+                },
+                "post_escalation": {
+                    "route_id": ladder[1],
+                    "served_model": post_model,
+                    "served_effort": post_effort,
+                },
+            }
+        if unit_rows is None:
+            unit_rows = [self.unit_member("parent"), self.unit_member("child-1", "parent")]
+        return {
+            "read_back_from": "produced_evidence",
+            "served_route_id": CODEX_JUSTIFIED_HIGH_EFFORT_ROUTE_ID,
+            "served_model": CODEX_JUSTIFIED_HIGH_EFFORT_MODEL,
+            "served_effort": CODEX_JUSTIFIED_HIGH_EFFORT_EFFORT,
+            "successor_freeze_digest": CODEX_G56R003_SUCCESSOR_FREEZE_ID,
+            "route_evidence_digest": CODEX_G56R003_ROUTE_EVIDENCE_DIGEST,
+            "eligibility_predicate_result": True,
+            "eligibility_rationale_binding": "required_core_workspace_write_phase_executor",
+            "fallback_route_id": None,
+            "dynamic_route_discovery": False,
+            "parent_plus_child_aggregate": self.controls.aggregate_parent_plus_children(
+                control, unit_rows
+            ),
+        }
+
+    def isolation_pair(self, left: str, right: str, status: str = "observed_disjoint") -> dict[str, object]:
+        return {
+            "arm_pair": sorted([
+                CODEX_CONTROL_IDS_BY_KIND[left],
+                CODEX_CONTROL_IDS_BY_KIND[right],
+            ]),
+            "status": status,
+            "arm_cache_root_digest": "sha256:" + "1" * 64,
+            "paired_arm_cache_root_digest": "sha256:" + "2" * 64,
+            "roots_disjoint": status == "observed_disjoint",
+        }
+
+    def test_plan_names_exactly_one_chatgpt_sign_in_smoke_per_control(self) -> None:
+        for kind in CODEX_CONTROL_KINDS:
+            with self.subTest(control_kind=kind):
+                plan = self.build_plan(kind)
+                self.assertEqual(plan["control_kind"], kind)
+                self.assertEqual(plan["control_id"], CODEX_CONTROL_IDS_BY_KIND[kind])
+                self.assertEqual(plan["authentication_mode"], "chatgpt_subscription")
+                self.assertEqual(plan["run_state"], "unrun")
+                self.assertEqual(plan["authorization"], "withheld")
+                self.assertEqual(plan["objective_ids"], [self.smoke_partition["objective_ids"][0]])
+
+    def test_plan_refuses_api_key_and_ambiguous_authorization(self) -> None:
+        for kwargs in (
+            {"authentication_mode": "api_key"},
+            {"authorization": "unknown"},
+            {"authorization": "granted"},
+        ):
+            with self.subTest(kwargs=kwargs):
+                with self.assertRaises(self.error):
+                    self.build_plan_with("unpinned", **kwargs)
+
+    def test_seal_keeps_authorization_withheld_as_unrun_not_refused(self) -> None:
+        sealed = self.seal(self.smoke_record("unpinned"))
+        self.assertEqual(sealed["run_state"], "unrun")
+        self.assertEqual(sealed["evidence_admissibility"], "unrun")
+        self.assertEqual(sealed["authorization"], "withheld")
+        self.assertEqual(sealed["refusal_reasons"], [])
+
+    def test_seal_refuses_api_key_ambiguous_auth_scored_and_outcome_rows(self) -> None:
+        cases = (
+            {"authentication_mode": "api_key"},
+            {"authorization": "unknown"},
+            {"scored": True},
+            {"outcome_bearing": True},
+        )
+        for overrides in cases:
+            with self.subTest(overrides=overrides):
+                with self.assertRaises(self.error):
+                    self.seal(self.smoke_record("adaptive", **overrides))
+
+    def test_all_mirrored_ceilings_raw_identity_and_elapsed_scope_are_reported(self) -> None:
+        sealed = self.seal(self.smoke_record("justified_high_effort"))
+        self.assertEqual(sealed["counted_over"], "parent_plus_children_unit")
+        self.assertEqual(sealed["consumed"]["max_duration_seconds"], 600)
+        self.assertEqual(sealed["raw_token_ceiling_members"], [
+            "input_tokens",
+            "output_tokens",
+            "cached_input_tokens",
+        ])
+        for member in (
+            "max_attempts",
+            "max_candidates",
+            "max_confirmation_entries",
+            "max_duration_seconds",
+            "max_input_tokens",
+            "max_output_tokens",
+            "max_cached_input_tokens",
+            "raw_token_ceiling",
+        ):
+            with self.subTest(member=member):
+                self.assertIn(member, sealed["consumed"])
+
+    def test_nested_attempt_objectives_must_match_top_level_smoke_partition(self) -> None:
+        admitted = self.smoke_partition["objective_ids"]
+        reserved = next(
+            entry for entry in self.partition_entries if entry["qualification_eligible"]
+        )["objective_ids"][0]
+        seeded_cases = (
+            ("reserved_objective", reserved),
+            ("outside_smoke_partition", "G56R-004-OUTSIDE-SMOKE-OBJ"),
+            ("top_level_mismatch", admitted[1]),
+        )
+        for label, nested_objective in seeded_cases:
+            with self.subTest(case=label):
+                record = self.smoke_record("unpinned")
+                record["objective_attempts"][0]["objective_id"] = nested_objective
+                with self.assertRaises(self.error):
+                    self.seal(record)
+
+    def test_candidate_repetition_cache_diagnostics_and_child_count_follow_frozen_accounting(self) -> None:
+        objectives = self.smoke_partition["objective_ids"]
+        rows_one = [
+            self.unit_member("objective-1-parent", raw=(10, 10, 10, 0), cache=(70, 30, 400)),
+            self.unit_member("objective-1-child-1", "objective-1-parent", raw=(20, 20, 20, 0), cache=(7, 3, 40)),
+            self.unit_member("objective-1-child-2", "objective-1-parent", raw=(30, 30, 30, 0), cache=(13, 5, 80)),
+        ]
+        rows_two = [
+            self.unit_member("objective-2-parent", raw=(40, 40, 40, 0), cache=(17, 11, 120)),
+            self.unit_member("objective-2-child-1", "objective-2-parent", raw=(50, 50, 50, 0), cache=(19, 13, 160)),
+        ]
+        sealed = self.seal(
+            self.smoke_record(
+                "adaptive",
+                objective_ids=objectives[:2],
+                objective_attempts=[
+                    {"objective_id": objectives[0], "unit_rows": rows_one},
+                    {"objective_id": objectives[1], "unit_rows": rows_two},
+                ],
+            )
+        )
+        self.assertEqual(sealed["consumed"]["max_attempts"], 2)
+        self.assertEqual(sealed["consumed"]["max_candidates"], 1)
+        self.assertEqual(sealed["child_dispatch_count"], 3)
+        self.assertEqual(sealed["consumed"]["max_cache_read_tokens"], 800)
+        self.assertEqual(
+            sealed["consumed"]["max_cache_write_tokens_by_ttl_class"],
+            {"ephemeral_5m": 126, "ephemeral_1h": 62},
+        )
+
+    def test_partial_cache_diagnostics_preserve_the_observed_ceiling(self) -> None:
+        missing_read = self.smoke_record("adaptive")
+        del missing_read["objective_attempts"][0]["unit_rows"][0]["cache_diagnostic"][
+            "cache_read_tokens"
+        ]
+        read_sealed = self.seal(missing_read)
+        self.assertEqual(read_sealed["consumed"]["max_cache_read_tokens"], 400)
+        self.assertEqual(
+            read_sealed["consumed"]["max_cache_write_tokens_by_ttl_class"],
+            {"ephemeral_5m": 140, "ephemeral_1h": 60},
+        )
+        self.assertEqual(read_sealed["bounds_unobserved"], ["max_cache_read_tokens"])
+
+        missing_ttl = self.smoke_record("adaptive")
+        del missing_ttl["objective_attempts"][0]["unit_rows"][0]["cache_diagnostic"][
+            "cache_write_tokens_by_ttl_class"
+        ]["ephemeral_1h"]
+        ttl_sealed = self.seal(missing_ttl)
+        self.assertEqual(ttl_sealed["consumed"]["max_cache_read_tokens"], 800)
+        self.assertEqual(
+            ttl_sealed["consumed"]["max_cache_write_tokens_by_ttl_class"],
+            {"ephemeral_5m": 140, "ephemeral_1h": 30},
+        )
+        self.assertEqual(
+            ttl_sealed["bounds_unobserved"],
+            ["max_cache_write_tokens_by_ttl_class.ephemeral_1h"],
+        )
+
+    def test_missing_child_cache_diagnostic_does_not_erase_observed_parent_breaches(self) -> None:
+        record = self.smoke_record(
+            "adaptive",
+            objective_attempts=[
+                {
+                    "objective_id": self.smoke_partition["objective_ids"][0],
+                    "unit_rows": [
+                        self.unit_member(
+                            "parent",
+                            cache=(160_001, 40_001, 1_200_001),
+                        ),
+                        self.unit_member("child", "parent", cache=None),
+                    ],
+                }
+            ],
+        )
+        with self.assertRaises(self.error):
+            self.seal(record)
+
+    def test_missing_child_cache_diagnostic_preserves_observed_subtotals_and_incompleteness(self) -> None:
+        record = self.smoke_record(
+            "adaptive",
+            objective_attempts=[
+                {
+                    "objective_id": self.smoke_partition["objective_ids"][0],
+                    "unit_rows": [
+                        self.unit_member("parent", cache=(70, 30, 400)),
+                        self.unit_member("child", "parent", cache=None),
+                    ],
+                }
+            ],
+        )
+        sealed = self.seal(record)
+        self.assertEqual(sealed["consumed"]["max_cache_read_tokens"], 400)
+        self.assertEqual(
+            sealed["consumed"]["max_cache_write_tokens_by_ttl_class"],
+            {"ephemeral_5m": 70, "ephemeral_1h": 30},
+        )
+        self.assertEqual(
+            sealed["bounds_unobserved"],
+            [
+                "max_cache_read_tokens",
+                "max_cache_write_tokens_by_ttl_class.ephemeral_1h",
+                "max_cache_write_tokens_by_ttl_class.ephemeral_5m",
+            ],
+        )
+
+    def test_partial_cache_write_still_enforces_observed_ttl_breaches(self) -> None:
+        record = self.smoke_record("adaptive")
+        record["objective_attempts"][0]["unit_rows"][0]["cache_diagnostic"][
+            "cache_write_tokens_by_ttl_class"
+        ]["ephemeral_5m"] = 160_001
+        del record["objective_attempts"][0]["unit_rows"][0]["cache_diagnostic"][
+            "cache_write_tokens_by_ttl_class"
+        ]["ephemeral_1h"]
+        with self.assertRaises(self.error):
+            self.seal(record)
+
+    def test_adaptive_qualifying_signal_objective_is_bound_to_the_demonstrated_attempt(self) -> None:
+        reserved = next(
+            entry for entry in self.partition_entries if entry["qualification_eligible"]
+        )["objective_ids"][0]
+        for label, objective in (
+            ("outside_attempts", self.smoke_partition["objective_ids"][1]),
+            ("reserved", reserved),
+        ):
+            with self.subTest(case=label):
+                evidence = copy.deepcopy(self.produced_evidence("adaptive"))
+                evidence["qualifying_signal"]["objective_id"] = objective
+                with self.assertRaises(self.error):
+                    self.seal(
+                        self.smoke_record("adaptive", produced_evidence=evidence)
+                    )
+
+    def test_public_smoke_apis_bind_injected_inputs_to_the_committed_authority(self) -> None:
+        stale_registry = copy.deepcopy(self.registry)
+        stale_registry["controls"][0]["control_digest"] = "sha256:" + "9" * 64
+
+        altered_bounds = copy.deepcopy(self.registry)
+        altered_bounds["smoke_bounds"]["max_attempts"]["value"] = 500
+
+        stale_partition_digest = copy.deepcopy(self.partition_entries)
+        stale_partition_digest[1]["objective_set_digest"] = "sha256:" + "8" * 64
+
+        changed_reserved_membership = copy.deepcopy(self.partition_entries)
+        changed_reserved_membership[0]["objective_ids"] = [
+            "G56R-011-RESERVED-OBJ-COMPARISON-DRIFTED"
+        ]
+
+        cases = (
+            ("stale_control_digest", stale_registry, self.partition_entries),
+            ("altered_bounds", altered_bounds, self.partition_entries),
+            ("stale_objective_set_digest", self.registry, stale_partition_digest),
+            ("changed_reserved_membership", self.registry, changed_reserved_membership),
+        )
+        for label, registry, entries in cases:
+            with self.subTest(api="build_plan", case=label):
+                with self.assertRaises(self.error):
+                    self.smoke_module.build_plan(
+                        "adaptive",
+                        registry=registry,
+                        partition_entries=entries,
+                        authorization="withheld",
+                    )
+            with self.subTest(api="seal_record", case=label):
+                with self.assertRaises(self.error):
+                    self.smoke_module.seal_record(
+                        self.smoke_record("adaptive"),
+                        registry=registry,
+                        partition_entries=entries,
+                    )
+
+    def test_exported_partition_helpers_bind_injected_entries_to_committed_authority(self) -> None:
+        stale_partition_digest = copy.deepcopy(self.partition_entries)
+        stale_partition_digest[1]["objective_set_digest"] = "sha256:" + "8" * 64
+
+        changed_reserved_membership = copy.deepcopy(self.partition_entries)
+        changed_reserved_membership[0]["objective_ids"] = [
+            "G56R-011-RESERVED-OBJ-COMPARISON-DRIFTED"
+        ]
+
+        clean_record = {
+            "objective_ids": [self.smoke_partition["objective_ids"][0]],
+            "outcome_bearing": False,
+            "partition_id": self.smoke_partition["partition_id"],
+            "partition_type": "calibration",
+            "scored": False,
+        }
+
+        cases = (
+            ("stale_objective_set_digest", stale_partition_digest),
+            ("changed_reserved_membership", changed_reserved_membership),
+        )
+        for label, entries in cases:
+            with self.subTest(helper="guard_plan_objectives", case=label):
+                with self.assertRaises(self.error):
+                    self.smoke_module.guard_plan_objectives(
+                        [self.smoke_partition["objective_ids"][0]], entries
+                    )
+            with self.subTest(helper="plan_objectives", case=label):
+                with self.assertRaises(self.error):
+                    self.smoke_module.plan_objectives(entries)
+            with self.subTest(helper="guard_smoke_record", case=label):
+                with self.assertRaises(self.error):
+                    self.smoke_module.guard_smoke_record(clean_record, entries)
+
+    def test_repeating_one_candidate_objective_breaches_candidate_ceiling(self) -> None:
+        objective = self.smoke_partition["objective_ids"][0]
+        record = self.smoke_record(
+            "adaptive",
+            objective_ids=[objective],
+            objective_attempts=[
+                {"objective_id": objective, "unit_rows": [self.unit_member("parent-1")]},
+                {"objective_id": objective, "unit_rows": [self.unit_member("parent-2")]},
+            ],
+        )
+        with self.assertRaises(self.error):
+            self.seal(record)
+
+    def test_cache_read_and_write_ceilings_are_refused_independently(self) -> None:
+        objective = self.smoke_partition["objective_ids"][0]
+        seeded_cases = (
+            ("cache_read", (1, 1, 1_200_001)),
+            ("cache_write_5m", (160_001, 1, 1)),
+            ("cache_write_1h", (1, 40_001, 1)),
+        )
+        for label, cache in seeded_cases:
+            with self.subTest(case=label):
+                record = self.smoke_record(
+                    "justified_high_effort",
+                    objective_attempts=[
+                        {
+                            "objective_id": objective,
+                            "unit_rows": [
+                                self.unit_member(
+                                    "parent",
+                                    raw=(1, 1, 1, 0),
+                                    cache=cache,
+                                )
+                            ],
+                        }
+                    ],
+                )
+                with self.assertRaises(self.error):
+                    self.seal(record)
+
+    def test_adaptive_exact_treatment_requires_signal_and_served_route_movement(self) -> None:
+        control = control_of_kind(self.registry, "adaptive")
+        ladder = control["adaptive"]["escalation_ladder"]
+        sealed = self.seal(self.smoke_record("adaptive"))
+        self.assertEqual(
+            sealed["produced_evidence"]["pre_escalation"]["route_id"],
+            ladder[0],
+        )
+        self.assertEqual(
+            sealed["produced_evidence"]["post_escalation"]["route_id"],
+            ladder[1],
+        )
+
+        route_only = {
+            "read_back_from": "produced_evidence",
+            "pre_escalation": {"route_id": ladder[0]},
+            "post_escalation": {"route_id": ladder[1]},
+        }
+        missing_signal = copy.deepcopy(self.produced_evidence("adaptive"))
+        del missing_signal["qualifying_signal"]
+        mismatched_metadata = copy.deepcopy(self.produced_evidence("adaptive"))
+        mismatched_metadata["pre_escalation"]["served_effort"] = "xhigh"
+        non_qualifying_signal = copy.deepcopy(self.produced_evidence("adaptive"))
+        non_qualifying_signal["qualifying_signal"].update({
+            "failure_code": "none",
+            "failure_plane": "none",
+            "terminal_state": "completed",
+        })
+        for label, evidence in (
+            ("route_only", route_only),
+            ("missing_signal", missing_signal),
+            ("mismatched_metadata", mismatched_metadata),
+            ("non_qualifying_signal", non_qualifying_signal),
+        ):
+            with self.subTest(case=label):
+                with self.assertRaises(self.error):
+                    self.seal(self.smoke_record("adaptive", produced_evidence=evidence))
+
+    def test_high_effort_exact_treatment_recomputes_the_recorded_unit_aggregate(self) -> None:
+        control = control_of_kind(self.registry, "justified_high_effort")
+        record = self.smoke_record("justified_high_effort")
+        expected = self.controls.aggregate_parent_plus_children(
+            control, self.record_unit_rows(record)
+        )
+        sealed = self.seal(record)
+        self.assertEqual(
+            sealed["produced_evidence"]["parent_plus_child_aggregate"],
+            expected,
+        )
+
+        invented = self.smoke_record("justified_high_effort")
+        invented["produced_evidence"]["parent_plus_child_aggregate"] = {
+            "terminal_state": "completed"
+        }
+        with self.assertRaises(self.error):
+            self.seal(invented)
+
+        mismatched = self.smoke_record("justified_high_effort")
+        mismatched["objective_attempts"][0]["unit_rows"].append(
+            self.unit_member("child-2", "parent", raw=(2, 2, 2, 0), cache=(2, 2, 2))
+        )
+        with self.assertRaises(self.error):
+            self.seal(mismatched)
+
+    def test_child_dispatches_do_not_consume_objective_attempts(self) -> None:
+        record = self.smoke_record("adaptive")
+        record["objective_attempts"][0]["unit_rows"].extend([
+            self.unit_member("child-2", "parent"),
+            self.unit_member("child-3", "parent"),
+        ])
+        sealed = self.seal(record)
+        self.assertEqual(sealed["consumed"]["max_attempts"], 1)
+        self.assertEqual(sealed["child_dispatch_count"], 3)
+
+    def test_exact_treatment_is_read_back_from_produced_evidence(self) -> None:
+        for kind in CODEX_CONTROL_KINDS:
+            with self.subTest(control_kind=kind):
+                sealed = self.seal(self.smoke_record(kind))
+                self.assertEqual(
+                    sealed["produced_evidence"]["read_back_from"], "produced_evidence"
+                )
+                request_only = self.smoke_record(
+                    kind,
+                    produced_evidence=dict(
+                        self.produced_evidence(kind),
+                        read_back_from="dispatch_request",
+                    ),
+                )
+                with self.assertRaises(self.error):
+                    self.seal(request_only)
+
+    def test_all_three_unordered_cache_isolation_pairs_are_required(self) -> None:
+        sealed = self.seal(self.smoke_record("unpinned"))
+        self.assertEqual(len(sealed["cache_isolation"]["pairs"]), 3)
+        self.assertTrue(sealed["cache_isolation"]["all_pairs_disjoint"])
+
+        missing = self.smoke_record("unpinned")
+        missing["observed_cache_isolation"] = missing["observed_cache_isolation"][:2]
+        with self.assertRaises(self.error):
+            self.seal(missing)
+
+
+class CodexRawCaptureExclusionTests(unittest.TestCase):
+    """T030 RED: committed smoke artifacts must contain summaries, never raw runs."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.assertIsNotNone(codex_control_smoke, "codex_control_smoke is not importable")
+        self.controls = codex_policy_controls
+        self.smoke_module = codex_control_smoke
+        self.error = self.controls.ControlContractError
+
+    def sanitize(self, artifact: dict[str, object]) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.smoke_module, "sanitize_repository_artifact"),
+            "T031 must expose sanitize_repository_artifact for repository-safe smoke output",
+        )
+        return self.smoke_module.sanitize_repository_artifact(artifact)
+
+    def governed_summary(self, **overrides: object) -> dict[str, object]:
+        artifact: dict[str, object] = {
+            "artifact_kind": "codex_control_smoke_summary",
+            "schema_version": "1.0.0",
+            "control_id": CODEX_CONTROL_IDS_BY_KIND["adaptive"],
+            "run_state": "unrun",
+            "evidence_admissibility": "unrun",
+            "governed_summary": {
+                "status": "authorization_withheld",
+                "digest": "sha256:" + "3" * 64,
+            },
+            "refusal_record": {
+                "reasons": [],
+                "digest": "sha256:" + "4" * 64,
+            },
+            "replay_fixture": {
+                "case_set_id": "g56r-004-adaptive-signal-resolution",
+                "digest": "sha256:" + "5" * 64,
+                "raw_capture": False,
+            },
+        }
+        artifact.update(overrides)
+        return artifact
+
+    def test_governed_summaries_digests_refusals_and_non_raw_replay_are_admitted(self) -> None:
+        sanitized = self.sanitize(self.governed_summary())
+        self.assertEqual(sanitized["artifact_kind"], "codex_control_smoke_summary")
+        self.assertEqual(sanitized["run_state"], "unrun")
+        self.assertEqual(sanitized["governed_summary"]["status"], "authorization_withheld")
+        self.assertEqual(sanitized["refusal_record"]["reasons"], [])
+        self.assertFalse(sanitized["replay_fixture"]["raw_capture"])
+
+    def test_raw_live_model_text_prompts_and_responses_are_refused(self) -> None:
+        raw_cases = (
+            {"live_model_text": "assistant raw response"},
+            {"prompt": "score this candidate with private context"},
+            {"response": "raw model output"},
+            {"messages": [{"role": "user", "content": "raw prompt"}]},
+        )
+        for seeded in raw_cases:
+            with self.subTest(seeded=seeded):
+                with self.assertRaises(self.error):
+                    self.sanitize(self.governed_summary(**seeded))
+
+    def test_operator_local_paths_unsanitized_captures_and_path_cache_roots_are_refused(self) -> None:
+        raw_cases = (
+            {"operator_local_path": "/local/operator/raw-smoke.json"},
+            {"unsanitized_capture": {"path": "/private/tmp/raw.json"}},
+            {
+                "observed_cache_isolation": [
+                    {
+                        "arm_pair": sorted([
+                            CODEX_CONTROL_IDS_BY_KIND["unpinned"],
+                            CODEX_CONTROL_IDS_BY_KIND["adaptive"],
+                        ]),
+                        "arm_cache_root_digest": "/tmp/codex-cache-a",
+                        "paired_arm_cache_root_digest": "sha256:" + "6" * 64,
+                    }
+                ]
+            },
+        )
+        for seeded in raw_cases:
+            with self.subTest(seeded=seeded):
+                with self.assertRaises(self.error):
+                    self.sanitize(self.governed_summary(**seeded))
+
+    def test_repository_summary_nested_member_sets_are_exact(self) -> None:
+        raw_cases = (
+            {
+                "governed_summary": {
+                    "status": "authorization_withheld",
+                    "digest": "sha256:" + "3" * 64,
+                    "raw_output_digest": "sha256:" + "6" * 64,
+                }
+            },
+            {
+                "refusal_record": {
+                    "reasons": [],
+                    "digest": "sha256:" + "4" * 64,
+                    "raw_reason_digest": "sha256:" + "7" * 64,
+                }
+            },
+            {
+                "replay_fixture": {
+                    "case_set_id": "g56r-004-adaptive-signal-resolution",
+                    "digest": "sha256:" + "5" * 64,
+                    "raw_capture": False,
+                    "response_digest": "sha256:" + "8" * 64,
+                }
+            },
+        )
+        for seeded in raw_cases:
+            with self.subTest(seeded=seeded):
+                with self.assertRaises(self.error):
+                    self.sanitize(self.governed_summary(**seeded))
+
+    def test_repository_summary_replay_case_set_id_is_bound_to_the_committed_fixture(self) -> None:
+        artifact = self.governed_summary(
+            replay_fixture={
+                "case_set_id": "Summarize the smoke plan in prose for the next reviewer",
+                "digest": "sha256:" + "5" * 64,
+                "raw_capture": False,
+            }
+        )
+        with self.assertRaises(self.error):
+            self.sanitize(artifact)
+
+    def test_repository_summary_digest_rejects_prose_payload_with_sha256_prefix(self) -> None:
+        valid_digest = "sha256:" + "abcdef0123456789" * 4
+        valid = self.sanitize(
+            self.governed_summary(
+                governed_summary={
+                    "status": "authorization_withheld",
+                    "digest": valid_digest,
+                }
+            )
+        )
+        self.assertEqual(valid["governed_summary"]["digest"], valid_digest)
+
+        prose_payload = "nothexprompttext" * 4
+        self.assertEqual(len(prose_payload), 64)
+        artifact = self.governed_summary(
+            governed_summary={
+                "status": "authorization_withheld",
+                "digest": "sha256:" + prose_payload,
+            }
+        )
+        with self.assertRaises(self.error):
+            self.sanitize(artifact)
+
+    def test_repository_summary_rejects_path_strings_and_unrun_refusal_reasons(self) -> None:
+        raw_cases = (
+            {"replay_fixture": {
+                "case_set_id": "/private/tmp/raw-smoke.json",
+                "digest": "sha256:" + "5" * 64,
+                "raw_capture": False,
+            }},
+            {"refusal_record": {
+                "reasons": ["operator refused from /private/tmp/raw-smoke.json"],
+                "digest": "sha256:" + "4" * 64,
+            }},
+        )
+        for seeded in raw_cases:
+            with self.subTest(seeded=seeded):
+                with self.assertRaises(self.error):
+                    self.sanitize(self.governed_summary(**seeded))
 
 
 class UnpinnedControlTests(unittest.TestCase):
@@ -3604,6 +5498,18 @@ TEST_CASES = (
     SmokeDriverRefusalDurabilityTests,
     RegistryIdentityAndClosureTests,
     Car003BindingTests,
+    CodexRegistryFixtureTests,
+    CodexUnpinnedControlTests,
+    CodexAdaptiveLadderTests,
+    CodexAdaptiveSignalResolutionTests,
+    CodexAdaptiveMovementAndBreachTests,
+    CodexJustifiedHighEffortControlTests,
+    CodexParentPlusChildrenAggregationTests,
+    CodexReservedPartitionArtifactTests,
+    CodexReservedPartitionTests,
+    CodexDeterministicReplayTests,
+    CodexControlSmokePlanAndSealTests,
+    CodexRawCaptureExclusionTests,
     UnpinnedControlTests,
     AdaptiveSignalMapTests,
     AdaptiveRowResolutionTests,

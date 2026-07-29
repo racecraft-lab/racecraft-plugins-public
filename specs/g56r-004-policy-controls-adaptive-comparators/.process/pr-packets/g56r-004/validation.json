@@ -1,0 +1,41 @@
+{
+  "body_file": "specs/g56r-004-policy-controls-adaptive-comparators/.process/pr-packets/g56r-004/body.md",
+  "error_class": "none",
+  "exit_code": 0,
+  "failures": [],
+  "mode": "single",
+  "packet_id": "g56r-004",
+  "pr_blocked": false,
+  "remediation_evidence": [],
+  "rule_outcomes": [
+    {
+      "evidence": "no failures",
+      "rule": "packet.validation",
+      "status": "passed"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "source_fingerprints": {
+    "body": {
+      "algorithm": "sha256",
+      "path": "specs/g56r-004-policy-controls-adaptive-comparators/.process/pr-packets/g56r-004/body.md",
+      "sha256": "3072422163917efbee403eb17db5fe25b3f50915a2665ecd0c7d306ce77b441f",
+      "size_bytes": 4515
+    },
+    "packet": {
+      "algorithm": "sha256",
+      "path": "specs/g56r-004-policy-controls-adaptive-comparators/.process/pr-packets/g56r-004.json",
+      "sha256": "78d17ed1634a5e0c0c1dcf106c97d2ee91afdd11d25fe2d1dec1228e0edbe212",
+      "size_bytes": 6650
+    }
+  },
+  "status": "passed",
+  "stderr_line": "",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "g56r-004-policy-controls-adaptive-comparators"
+  },
+  "timestamp": "2026-07-29T12:18:26Z",
+  "title_value": "feat(g56r-004): add policy controls and adaptive comparators",
+  "validation_result_path": "specs/g56r-004-policy-controls-adaptive-comparators/.process/pr-packets/g56r-004/validation.json"
+}

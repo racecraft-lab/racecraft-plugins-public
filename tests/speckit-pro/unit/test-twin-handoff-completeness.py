@@ -24,6 +24,7 @@ import hashlib
 import json
 import re
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from typing import Any, Callable
@@ -38,6 +39,12 @@ for _path in (LIB_DIR, LAYER6_LIB_DIR):
         sys.path.insert(0, str(_path))
 
 from test_result import run_counted  # noqa: E402
+from claude_successor_freeze import record_digest  # noqa: E402
+
+try:  # G56R-004 T007 deliverable — absent until the Codex mirror helpers land.
+    import codex_policy_controls  # type: ignore[import-not-found]  # noqa: E402
+except ImportError:  # pragma: no cover - exercised only during the T006 RED phase
+    codex_policy_controls = None  # type: ignore[assignment]
 
 
 PROCESS_ROOT = REPO_ROOT / "docs" / "ai" / "specs" / ".process"
@@ -49,6 +56,15 @@ COMPARISON_SCHEMA = CONTRACTS_DIR / "control-comparison.schema.json"
 REGISTRY_INSTANCE = FIXTURES_DIR / "policy-control-registry.json"
 COMPARISON_INSTANCE = FIXTURES_DIR / "control-comparison.json"
 PARTITION_INSTANCE = FIXTURES_DIR / "partition-registry-entries.json"
+
+CAR_004_HANDOFF = PROCESS_ROOT / "CAR-004-twin-handoff.md"
+G56R_CONTRACTS_DIR = TEST_ROOT / "layer6-efficiency" / "contracts-codex-specification"
+G56R_FIXTURES_DIR = TEST_ROOT / "layer6-efficiency" / "fixtures-codex-controls"
+G56R_REGISTRY_SCHEMA = G56R_CONTRACTS_DIR / "policy-control-registry.schema.json"
+G56R_REGISTRY_INSTANCE = G56R_FIXTURES_DIR / "policy-control-registry.json"
+G56R_COMPARISON_SCHEMA = G56R_CONTRACTS_DIR / "control-comparison.schema.json"
+G56R_COMPARISON_INSTANCE = G56R_FIXTURES_DIR / "control-comparison.json"
+G56R_PARTITION_INSTANCE = G56R_FIXTURES_DIR / "partition-registry-entries.json"
 
 CAR_003_ID_PREFIX = "https://racecraft.dev/schemas/car-003/"
 CAR_003_ADDITIVE_RECORDS_ID = f"{CAR_003_ID_PREFIX}car-003-additive-records.schema.json"
@@ -619,6 +635,471 @@ def publication_errors(text: str, entries: list[dict[str, Any]]) -> list[str]:
     return errors
 
 
+class G56R004TwinMirrorTests(unittest.TestCase):
+    """T006 RED: the Codex registry subset mirrors CAR-004 with one divergence."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(
+            codex_policy_controls,
+            "codex_policy_controls is not importable; T007 must implement G56R-004 mirror helpers",
+        )
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+
+    def mirror_report(self) -> dict[str, Any]:
+        return self.module.validate_car_004_twin_mirror(
+            car_handoff_path=CAR_004_HANDOFF,
+            codex_registry_schema_path=G56R_REGISTRY_SCHEMA,
+            codex_registry_instance_path=G56R_REGISTRY_INSTANCE,
+        )
+
+    def test_registry_authority_gate_derives_categories_from_the_handoff(self) -> None:
+        report = self.mirror_report()
+        self.assertEqual(report["compared_categories"], list(DERIVED_CATEGORIES))
+        self.assertNotIn("differences", report)
+
+    def test_the_only_sanctioned_divergence_is_justified_high_effort(self) -> None:
+        report = self.mirror_report()
+        self.assertEqual(
+            report["sanctioned_divergences"],
+            [
+                {
+                    "category": 3,
+                    "car_value": "orchestration_changing",
+                    "codex_value": "justified_high_effort",
+                    "unchanged_values": ["adaptive", "unpinned"],
+                }
+            ],
+        )
+
+    def test_registry_zeros_units_enums_and_numerics_are_preserved(self) -> None:
+        report = self.mirror_report()
+        preserved = report["preserved_literals"]
+        for literal_group in ("zeros", "units", "enums", "numerics"):
+            with self.subTest(literal_group=literal_group):
+                self.assertTrue(preserved[literal_group])
+        self.assertEqual(preserved["zeros"]["max_confirmation_entries"], 0)
+        self.assertEqual(preserved["units"]["raw_token_ceiling"], "tokens")
+        self.assertIn("justified_high_effort", preserved["enums"]["control_kind"])
+        self.assertEqual(preserved["numerics"]["raw_token_ceiling"], 1000000)
+
+    def test_mirror_validation_refuses_caller_selected_car_authority_tree(self) -> None:
+        car_registry = _load(REGISTRY_INSTANCE)
+        codex_registry = _load(G56R_REGISTRY_INSTANCE)
+        for registry in (car_registry, codex_registry):
+            registry["frozen_at"] = "2026-07-28T00:00:00Z"
+            for control in registry["controls"]:
+                control["frozen_at"] = "2026-07-28T00:00:00Z"
+        for control in codex_registry["controls"]:
+            control["control_digest"] = record_digest(
+                control, digest_field="control_digest"
+            )
+        codex_registry["registry_digest"] = record_digest(
+            codex_registry, digest_field="registry_digest"
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            layer6_root = Path(tmpdir)
+            car_registry_path = (
+                layer6_root / "fixtures-controls" / REGISTRY_INSTANCE.name
+            )
+            codex_schema_path = (
+                layer6_root
+                / "contracts-codex-specification"
+                / G56R_REGISTRY_SCHEMA.name
+            )
+            codex_registry_path = (
+                layer6_root
+                / "fixtures-codex-controls"
+                / G56R_REGISTRY_INSTANCE.name
+            )
+            for relative_dir in (
+                "contracts-claude",
+                "fixtures-controls",
+                "contracts-codex-specification",
+                "fixtures-codex-controls",
+            ):
+                (layer6_root / relative_dir).mkdir(parents=True)
+            (layer6_root / "contracts-claude" / REGISTRY_SCHEMA.name).write_text(
+                REGISTRY_SCHEMA.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            codex_schema_path.write_text(
+                G56R_REGISTRY_SCHEMA.read_text(encoding="utf-8"),
+                encoding="utf-8",
+            )
+            car_registry_path.write_text(
+                json.dumps(car_registry, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            codex_registry_path.write_text(
+                json.dumps(codex_registry, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(self.error, "authority"):
+                self.module.validate_car_004_twin_mirror(
+                    car_handoff_path=CAR_004_HANDOFF,
+                    codex_registry_schema_path=codex_schema_path,
+                    codex_registry_instance_path=codex_registry_path,
+                )
+
+
+class G56R004FinalTwinReconciliationTests(unittest.TestCase):
+    """T032 RED: final composed Codex artifacts reconcile against CAR-004."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(
+            codex_policy_controls,
+            "codex_policy_controls is not importable; T033 must implement final reconciliation",
+        )
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+
+    def reconcile(self, **paths: Path) -> dict[str, Any]:
+        self.assertTrue(
+            hasattr(self.module, "reconcile_final_twin_handoff"),
+            "T033 must expose reconcile_final_twin_handoff for composed G56R-004 artifacts",
+        )
+        inputs = {
+            "car_handoff_path": CAR_004_HANDOFF,
+            "codex_registry_schema_path": G56R_REGISTRY_SCHEMA,
+            "codex_registry_instance_path": G56R_REGISTRY_INSTANCE,
+            "codex_comparison_schema_path": G56R_COMPARISON_SCHEMA,
+            "codex_comparison_instance_path": G56R_COMPARISON_INSTANCE,
+            "codex_partition_instance_path": G56R_PARTITION_INSTANCE,
+        }
+        inputs.update(paths)
+        return self.module.reconcile_final_twin_handoff(**inputs)
+
+    def test_registry_comparison_and_partition_categories_one_to_six_reconcile(self) -> None:
+        report = self.reconcile()
+        self.assertEqual(report["compared_categories"], list(DERIVED_CATEGORIES))
+        self.assertEqual(report["differences"], EMPTY_DIFFERENCES)
+        self.assertEqual(
+            report["artifact_groups"], ["registry", "comparison", "partition"]
+        )
+        self.assertEqual(report["missing"], [])
+        self.assertEqual(report["extra"], [])
+        self.assertEqual(report["invented"], [])
+        self.assertEqual(report["drifted"], [])
+        self.assertEqual(report["duplicated"], [])
+        self.assertEqual(report["silently_omitted"], [])
+
+    def test_seeded_missing_extra_invented_drifted_and_duplicated_members_fail(self) -> None:
+        report = self.reconcile()
+        seed = getattr(
+            self.module,
+            "seed_final_twin_reconciliation",
+            None,
+        )
+        self.assertIsNotNone(
+            seed,
+            "T033 must expose seed_final_twin_reconciliation for drift-proof RED coverage",
+        )
+        for mutation, bucket in (
+            ("missing", "missing"),
+            ("extra", "extra"),
+            ("invented", "invented"),
+            ("drifted", "drifted"),
+            ("duplicated", "duplicated"),
+            ("silently_omitted", "silently_omitted"),
+        ):
+            with self.subTest(mutation=mutation):
+                mutated = seed(report, mutation)
+                self.assertTrue(mutated[bucket], f"{mutation} member was not reported")
+                with self.assertRaisesRegex(
+                    self.error, "final twin reconciliation differences"
+                ):
+                    self.module._raise_on_final_reconciliation_differences(mutated)
+
+    def test_reconciliation_buckets_have_distinct_evidence_sources(self) -> None:
+        entries, _ = parse_record(CAR_004_HANDOFF.read_text(encoding="utf-8"))
+
+        def classify(actual: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+            differences = self.module._diff_final_handoff_members(
+                expected_entries=entries,
+                actual_entries=actual,
+            )
+            return self.module._final_reconciliation_buckets(
+                differences,
+                expected_entries=entries,
+                actual_entries=actual,
+            )
+
+        required = next(
+            entry for entry in entries if entry["mirror_obligation"] == "mirror_required"
+        )
+        missing_required = [
+            entry
+            for entry in entries
+            if (entry["category"], entry["member_id"])
+            != (required["category"], required["member_id"])
+        ]
+        required_buckets = classify(missing_required)
+        self.assertTrue(required_buckets["silently_omitted"])
+        self.assertEqual(required_buckets["missing"], [])
+
+        car_owned = next(
+            entry for entry in entries if entry["mirror_obligation"] == "car_owned"
+        )
+        missing_car_owned = [
+            entry
+            for entry in entries
+            if (entry["category"], entry["member_id"])
+            != (car_owned["category"], car_owned["member_id"])
+        ]
+        car_owned_buckets = classify(missing_car_owned)
+        self.assertTrue(car_owned_buckets["missing"])
+        self.assertEqual(car_owned_buckets["silently_omitted"], [])
+
+        wrong_category = copy.deepcopy(car_owned)
+        wrong_category["category"] = 6
+        extra_buckets = classify([*entries, wrong_category])
+        self.assertTrue(extra_buckets["extra"])
+        self.assertEqual(extra_buckets["invented"], [])
+
+        invented = copy.deepcopy(car_owned)
+        invented["member_id"] = "invented-by-test"
+        invented_buckets = classify([*entries, invented])
+        self.assertTrue(invented_buckets["invented"])
+        self.assertEqual(invented_buckets["extra"], [])
+
+        drifted = copy.deepcopy(entries)
+        numeric = next(entry for entry in drifted if entry.get("category") == 6)
+        numeric["value"] = "drifted-by-test"
+        self.assertTrue(classify(drifted)["drifted"])
+
+        duplicated = [*entries, copy.deepcopy(entries[0])]
+        self.assertTrue(classify(duplicated)["duplicated"])
+
+    def test_reconciliation_reports_verified_codex_sources_only(self) -> None:
+        report = self.reconcile()
+        for path in report["source_paths"]:
+            self.assertFalse(
+                str(path).startswith("tests/speckit-pro/layer6-efficiency/contracts-claude/"),
+                f"frozen CAR contract edit leaked into reconciliation output: {path}",
+            )
+        evidence = report["verified_source_artifacts"]
+        self.assertEqual(len(evidence), 5)
+        for item in evidence:
+            with self.subTest(path=item["path"]):
+                source = REPO_ROOT / item["path"]
+                self.assertTrue(source.is_file())
+                self.assertEqual(
+                    item["sha256"],
+                    f"sha256:{hashlib.sha256(source.read_bytes()).hexdigest()}",
+                )
+
+    def test_final_actual_entries_are_not_seeded_with_car_owned_prose(self) -> None:
+        actual = self.module._derive_mapped_final_handoff_members(
+            codex_registry_schema_path=G56R_REGISTRY_SCHEMA,
+            codex_registry_instance_path=G56R_REGISTRY_INSTANCE,
+            codex_comparison_schema_path=G56R_COMPARISON_SCHEMA,
+            codex_comparison_instance_path=G56R_COMPARISON_INSTANCE,
+            codex_partition_instance_path=G56R_PARTITION_INSTANCE,
+        )
+        self.assertTrue(actual)
+        car_owned_fields = {
+            "mirror_obligation",
+            "path",
+            "rationale",
+            "requirement",
+            "sha256",
+        }
+        for entry in actual:
+            with self.subTest(member_id=entry["member_id"]):
+                self.assertFalse(car_owned_fields & set(entry))
+
+    def test_partition_membership_parser_is_independent_of_json_line_shape(self) -> None:
+        text = CAR_004_HANDOFF.read_text(encoding="utf-8")
+        entries, _ = parse_record(text)
+        blocks = _JSON_BLOCK.findall(text)
+        formatted = json.dumps(entries, indent=2, sort_keys=True) + "\n"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            handoff = Path(tmpdir) / CAR_004_HANDOFF.name
+            handoff.write_text(text.replace(blocks[0], formatted, 1), encoding="utf-8")
+            report = self.module.partition_owned_mirror_members(
+                handoff_path=handoff,
+                fixture_path=G56R_PARTITION_INSTANCE,
+            )
+        self.assertEqual(report["categories_present"], [4])
+
+    def test_final_reconciliation_does_not_source_actuals_from_caller_handoff(self) -> None:
+        text = CAR_004_HANDOFF.read_text(encoding="utf-8")
+        entries, _ = parse_record(text)
+        kept = [
+            entry
+            for entry in entries
+            if entry.get("contract_id")
+            != "https://racecraft.dev/schemas/car-004/control-comparison.schema.json"
+        ]
+        self.assertLess(len(kept), len(entries))
+        blocks = _JSON_BLOCK.findall(text)
+        mutated_block = "[\n" + ",\n".join(
+            json.dumps(entry, sort_keys=True) for entry in kept
+        ) + "\n]\n"
+        mutated_text = text.replace(
+            blocks[0],
+            mutated_block,
+            1,
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            handoff_path = Path(tmpdir) / CAR_004_HANDOFF.name
+            handoff_path.write_text(mutated_text, encoding="utf-8")
+
+            report = self.reconcile(car_handoff_path=handoff_path)
+
+        self.assertEqual(report["differences"], EMPTY_DIFFERENCES)
+        self.assertEqual(report["missing"], [])
+        self.assertEqual(report["extra"], [])
+        self.assertEqual(report["invented"], [])
+        self.assertEqual(report["drifted"], [])
+        self.assertEqual(report["duplicated"], [])
+        self.assertEqual(report["silently_omitted"], [])
+
+    def test_final_reconciliation_derives_actual_members_from_codex_artifacts(self) -> None:
+        fixture = _load(G56R_COMPARISON_INSTANCE)
+        fixture["dominance_rule"]["margin_map"]["input_tokens"]["relative_margin"] = 0.20
+        fixture["comparison_digest"] = record_digest(
+            fixture, digest_field="comparison_digest"
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            drifted_path = Path(tmpdir) / "control-comparison.json"
+            drifted_path.write_text(
+                json.dumps(fixture, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(
+                self.error, "mismatched.*input_tokens.*value"
+            ):
+                self.reconcile(codex_comparison_instance_path=drifted_path)
+
+    def test_final_reconciliation_distinguishes_missing_value_from_explicit_null(self) -> None:
+        entries, _ = parse_record(CAR_004_HANDOFF.read_text(encoding="utf-8"))
+        actual = copy.deepcopy(entries)
+        target = next(
+            entry
+            for entry in actual
+            if entry.get("category") == 6
+            and entry.get("member_id")
+            == "car-004-control-comparison#/dominance_rule/margin_map/acceptance"
+        )
+        self.assertIsNone(target["value"])
+        del target["value"]
+
+        diff_members = self.module._diff_final_handoff_members(
+            expected_entries=entries,
+            actual_entries=actual,
+        )
+
+        self.assertIn(
+            {
+                "artifact_group": "comparison",
+                "category": 6,
+                "field": "value",
+                "member_id": (
+                    "car-004-control-comparison"
+                    "#/dominance_rule/margin_map/acceptance"
+                ),
+            },
+            diff_members["mismatched"],
+        )
+
+    def test_final_reconciliation_rejects_comparison_frozen_at_only_drift(self) -> None:
+        fixture = _load(G56R_COMPARISON_INSTANCE)
+        fixture["frozen_at"] = "2026-07-28T00:00:00Z"
+        fixture["comparison_digest"] = record_digest(
+            fixture, digest_field="comparison_digest"
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            drifted_path = Path(tmpdir) / "control-comparison.json"
+            drifted_path.write_text(
+                json.dumps(fixture, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(self.error, "comparison fixture authority drift"):
+                self.reconcile(codex_comparison_instance_path=drifted_path)
+
+    def test_comparison_fixture_semantic_drift_with_stale_digest_is_rejected(self) -> None:
+        fixture = _load(G56R_COMPARISON_INSTANCE)
+        fixture["dominance_rule"]["weights_prohibited"] = False
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            drifted_path = Path(tmpdir) / "control-comparison.json"
+            drifted_path.write_text(
+                json.dumps(fixture, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(self.error, "comparison"):
+                self.reconcile(codex_comparison_instance_path=drifted_path)
+
+    def test_comparison_fixture_semantic_drift_with_recomputed_digest_is_rejected(self) -> None:
+        fixture = _load(G56R_COMPARISON_INSTANCE)
+        margin = fixture["dominance_rule"]["margin_map"]["input_tokens"]
+        margin["relative_margin"] = 0.20
+        fixture["comparison_digest"] = record_digest(
+            fixture, digest_field="comparison_digest"
+        )
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            drifted_path = Path(tmpdir) / "control-comparison.json"
+            drifted_path.write_text(
+                json.dumps(fixture, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(self.error, "comparison"):
+                self.reconcile(codex_comparison_instance_path=drifted_path)
+
+    def test_comparison_schema_required_set_drift_is_rejected(self) -> None:
+        schema = _load(G56R_COMPARISON_SCHEMA)
+        schema["required"].remove("comparison_digest")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            drifted_schema_path = Path(tmpdir) / "control-comparison.schema.json"
+            drifted_schema_path.write_text(
+                json.dumps(schema, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(self.error, "comparison schema"):
+                self.reconcile(codex_comparison_schema_path=drifted_schema_path)
+
+    def test_partition_fixture_reserved_objective_drift_with_recomputed_digest_is_rejected(self) -> None:
+        fixture = _load(G56R_PARTITION_INSTANCE)
+        reserved = next(
+            entry
+            for entry in fixture["entries"]
+            if entry["partition_id"] == "G56R-011-RESERVED-COMPARISON"
+        )
+        reserved["objective_ids"] = ["G56R-011-RESERVED-OBJ-COMPARISON-DRIFTED"]
+        encoded = json.dumps(
+            reserved["objective_ids"],
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ).encode("utf-8")
+        reserved["objective_set_digest"] = f"sha256:{hashlib.sha256(encoded).hexdigest()}"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            drifted_path = Path(tmpdir) / "partition-registry-entries.json"
+            drifted_path.write_text(
+                json.dumps(fixture, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(self.error, "partition"):
+                self.reconcile(codex_partition_instance_path=drifted_path)
+
+
 class TwinHandoffCompletenessTests(unittest.TestCase):
     def setUp(self) -> None:
         if RECORD_PATH is None:
@@ -840,5 +1321,11 @@ class TwinHandoffCompletenessTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    suite = unittest.defaultTestLoader.loadTestsFromTestCase(TwinHandoffCompletenessTests)
+    suite = unittest.TestSuite()
+    for case in (
+        G56R004TwinMirrorTests,
+        G56R004FinalTwinReconciliationTests,
+        TwinHandoffCompletenessTests,
+    ):
+        suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
     raise SystemExit(run_counted(suite, label="test-twin-handoff-completeness"))

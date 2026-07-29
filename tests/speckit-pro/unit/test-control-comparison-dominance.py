@@ -47,12 +47,26 @@ try:  # CAR-004 deliverable — absent until the comparison module is implemente
 except ImportError:  # pragma: no cover - exercised only before the module lands
     claude_control_comparison = None  # type: ignore[assignment]
 
+try:  # G56R-004 T021 deliverable — absent until the Codex comparison module lands.
+    import codex_control_comparison  # type: ignore[import-not-found]  # noqa: E402
+except ImportError:  # pragma: no cover - exercised only during the T020 RED state
+    codex_control_comparison = None  # type: ignore[assignment]
+
 
 CONTRACT_ROOT = TEST_ROOT / "layer6-efficiency" / "contracts-claude"
 FIXTURE_ROOT = TEST_ROOT / "layer6-efficiency" / "fixtures-controls"
+CODEX_CONTRACT_ROOT = TEST_ROOT / "layer6-efficiency" / "contracts-codex-specification"
+CODEX_FIXTURE_ROOT = TEST_ROOT / "layer6-efficiency" / "fixtures-codex-controls"
 
 COMPARISON_SCHEMA_PATH = CONTRACT_ROOT / "control-comparison.schema.json"
 COMPARISON_SCHEMA_ID = "https://racecraft.dev/schemas/car-004/control-comparison.schema.json"
+CODEX_COMPARISON_SCHEMA_PATH = CODEX_CONTRACT_ROOT / "control-comparison.schema.json"
+CODEX_COMPARISON_INSTANCE_PATH = CODEX_FIXTURE_ROOT / "control-comparison.json"
+CODEX_COMPARISON_SCHEMA_ID = (
+    "https://racecraft.dev/schemas/g56r-004/control-comparison.schema.json"
+)
+CODEX_COMPARISON_ID = "g56r-004-control-comparison"
+G56R_003_ANALYSIS_PLAN_ID = "https://racecraft.dev/schemas/g56r-003/analysis-plan.schema.json"
 JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
 
 # FR-004 and SC-017: a reference that leaves the owning document is refused, so
@@ -1100,6 +1114,320 @@ class FloorReadStrictnessTests(ComparisonModuleTestCase):
             self.module.compare(candidate, "not-an-arm-at-all", self.contract)
 
 
+class CodexComparisonArtifactPresenceTests(unittest.TestCase):
+    """T020 RED: the G56R-004 comparison contract, fixture, and helper must exist."""
+
+    def test_the_codex_comparison_schema_is_published_under_the_feature_id(self) -> None:
+        self.assertTrue(
+            CODEX_COMPARISON_SCHEMA_PATH.is_file(),
+            f"{CODEX_COMPARISON_SCHEMA_PATH} is missing; T021 must publish it",
+        )
+        schema = load_json(CODEX_COMPARISON_SCHEMA_PATH)
+        self.assertEqual(schema["$schema"], JSON_SCHEMA_DIALECT)
+        self.assertEqual(schema["$id"], CODEX_COMPARISON_SCHEMA_ID)
+
+    def test_the_codex_comparison_fixture_is_published_under_the_feature_id(self) -> None:
+        self.assertTrue(
+            CODEX_COMPARISON_INSTANCE_PATH.is_file(),
+            f"{CODEX_COMPARISON_INSTANCE_PATH} is missing; T021 must publish it",
+        )
+        fixture = load_json(CODEX_COMPARISON_INSTANCE_PATH)
+        self.assertEqual(fixture["comparison_id"], CODEX_COMPARISON_ID)
+        self.assertEqual(fixture["schema_version"], "1.0.0")
+        self.assertEqual(fixture["status"], "frozen")
+
+    def test_the_codex_comparison_helper_module_is_importable(self) -> None:
+        self.assertIsNotNone(
+            codex_control_comparison,
+            "codex_control_comparison is not importable; T021 must implement it",
+        )
+
+
+class CodexComparisonModuleTestCase(unittest.TestCase):
+    """Shared G56R-004 setup for the Codex-local comparison rule."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(
+            codex_control_comparison,
+            "codex_control_comparison is not importable; T021 must implement it",
+        )
+        self.module = codex_control_comparison
+        self.error = self.module.ControlComparisonError
+        self.contract = self.module.load_comparison(CODEX_COMPARISON_INSTANCE_PATH)
+
+    def compare(self, candidate: dict[str, object], comparator: dict[str, object]) -> dict:
+        return self.module.compare(candidate, comparator, self.contract)
+
+
+class CodexComparisonContractTests(CodexComparisonModuleTestCase):
+    """T020 RED: G56R-004 freezes the CAR-004 comparison behavior locally."""
+
+    def test_the_codex_fixture_loads_and_recomputes_its_content_address(self) -> None:
+        self.assertEqual(self.contract["comparison_id"], CODEX_COMPARISON_ID)
+        self.assertEqual(self.contract["schema_version"], "1.0.0")
+        self.assertEqual(self.contract["status"], "frozen")
+        self.assertEqual(
+            self.contract["comparison_digest"],
+            record_digest(self.contract, digest_field="comparison_digest"),
+        )
+
+    def test_eligibility_floors_gate_every_verdict_before_resources_are_read(self) -> None:
+        floors = self.contract["eligibility_floors"]
+        self.assertEqual(sorted(floors["required_gates"]), sorted(frozen_gates()))
+        self.assertIs(floors["all_gates_must_pass"], True)
+        self.assertIs(floors["availability_gate_required"], True)
+        self.assertEqual(floors["verdict_when_floor_unmet"], "no_verdict")
+        self.assertEqual(floors["claim_class_when_floor_unmet"], "no_comparative_claim")
+
+        for arm_name, candidate, comparator in (
+            (
+                "candidate",
+                eligible_arm(resource_vector(input_tokens=1), quality_floors_met=False),
+                eligible_arm(),
+            ),
+            (
+                "comparator",
+                eligible_arm(resource_vector(input_tokens=1)),
+                eligible_arm(reliability_guardrails_respected=False),
+            ),
+        ):
+            with self.subTest(ineligible=arm_name):
+                outcome = self.compare(candidate, comparator)
+                self.assertEqual(outcome["verdict"], "no_verdict")
+                self.assertEqual(outcome["stage_reached"], "eligibility_floors")
+                self.assertEqual(
+                    self.module.claim_class(outcome["verdict"], self.contract)[
+                        "permitted_claim_class"
+                    ],
+                    "no_comparative_claim",
+                )
+
+    def test_dominance_rule_declares_all_eight_direction_aware_dimensions(self) -> None:
+        rule = self.contract["dominance_rule"]
+        self.assertEqual(rule["rule"], "environment_independent_pareto")
+        self.assertEqual(rule["evaluation_order"], ["eligibility_floors", "pareto", "materiality_margin"])
+        self.assertEqual(rule["dimension_projection"], {"duration_ms": "duration"})
+        self.assertEqual(sorted(rule["dimensions"]), sorted(frozen_dimensions()))
+        self.assertEqual(sorted(rule["margin_map"]), sorted(frozen_dimensions()))
+        self.assertTrue(rule["weights_prohibited"])
+        self.assertEqual(rule["margin_denominator"], "comparator_value")
+        self.assertEqual(rule["zero_denominator_result"], "margin_not_computable")
+
+    def test_margin_map_preserves_exact_margins_units_directions_and_null_no_worse_values(self) -> None:
+        expected = {
+            "input_tokens": (0.10, "tokens", "lower_is_better", "margin_eligible"),
+            "cached_input_tokens": (0.10, "tokens", "lower_is_better", "margin_eligible"),
+            "output_tokens": (0.10, "tokens", "lower_is_better", "margin_eligible"),
+            "duration": (0.10, "milliseconds", "lower_is_better", "margin_eligible"),
+            "acceptance": (None, "ratio", "higher_is_better", "no_worse_only"),
+            "compactions": (None, "count", "lower_is_better", "no_worse_only"),
+            "retries": (None, "count", "lower_is_better", "no_worse_only"),
+            "terminal_state": (None, "categorical", "equal_only", "no_worse_only"),
+        }
+        margin_map = self.contract["dominance_rule"]["margin_map"]
+        for dimension, (value, unit, direction, klass) in expected.items():
+            with self.subTest(dimension=dimension):
+                entry = margin_map[dimension]
+                self.assertEqual(entry["unit"], unit)
+                self.assertEqual(entry["direction"], direction)
+                self.assertEqual(entry["class"], klass)
+                self.assertEqual(entry.get("relative_margin"), value)
+
+    def test_confidence_and_multiplicity_are_single_valued_and_disjoint(self) -> None:
+        confidence = self.contract["confidence_method"]
+        self.assertEqual(confidence["method"], "one_sided_lower_confidence_bound")
+        self.assertEqual(confidence["confidence_level"], 0.95)
+        self.assertEqual(confidence["alpha"], 0.05)
+        self.assertEqual(confidence["cluster_unit"], "role")
+        self.assertEqual(
+            confidence["cluster_adjustment"], "cluster_robust_sandwich_variance_by_role"
+        )
+        self.assertTrue(confidence["replay_point_estimate_stand_in"])
+
+        multiplicity = self.contract["multiplicity_position"]
+        self.assertEqual(multiplicity["family"], "secondary_control_arm_family")
+        self.assertEqual(
+            multiplicity["adjustment"],
+            "holm_bonferroni_within_the_secondary_control_arm_family",
+        )
+        self.assertEqual(multiplicity["family_wise_alpha"], 0.05)
+        self.assertFalse(multiplicity["draws_alpha_from_primary"])
+        self.assertTrue(multiplicity["disjoint_from_frozen_families"])
+
+    def test_materiality_uses_the_ten_percent_comparator_denominator_and_zero_guard(self) -> None:
+        clears = self.compare(eligible_arm(resource_vector(input_tokens=900)), eligible_arm())
+        self.assertEqual(clears["verdict"], "dominant")
+        self.assertEqual(clears["per_component"]["input_tokens"], "cleared")
+
+        short = self.compare(eligible_arm(resource_vector(input_tokens=905)), eligible_arm())
+        self.assertEqual(short["verdict"], "not_dominant")
+        self.assertEqual(short["per_component"]["input_tokens"], "not_cleared")
+
+        zeroed = {
+            "input_tokens": 0,
+            "cached_input_tokens": 0,
+            "output_tokens": 0,
+            "duration_ms": 0,
+        }
+        outcome = self.compare(
+            eligible_arm(resource_vector(retries=0, **zeroed)),
+            eligible_arm(resource_vector(**zeroed)),
+        )
+        self.assertEqual(outcome["verdict"], "not_dominant")
+        self.assertEqual(
+            sorted(set(outcome["per_component"].values())),
+            ["margin_not_computable"],
+        )
+
+    def test_mixed_null_and_terminal_uncertain_outcomes_are_inconclusive(self) -> None:
+        cases = {
+            "mixed": resource_vector(input_tokens=500, retries=4),
+            "null_acceptance": resource_vector(input_tokens=500, acceptance=None),
+            "terminal_state": resource_vector(input_tokens=500, terminal_state="failed"),
+        }
+        for label, vector in cases.items():
+            with self.subTest(case=label):
+                self.assertEqual(
+                    self.compare(eligible_arm(vector), eligible_arm())["verdict"],
+                    "inconclusive",
+                )
+
+    def test_the_helper_accepts_no_weighted_score_or_price_coefficient(self) -> None:
+        for name in ("pareto_verdict", "materiality_filter", "compare"):
+            with self.subTest(function=name):
+                parameters = list(inspect.signature(getattr(self.module, name)).parameters)
+                self.assertEqual(parameters, ["candidate", "comparator", "contract"])
+        self.assertNotIn("weighted_score", json.dumps(self.contract, sort_keys=True))
+        self.assertNotIn("price_coefficient", json.dumps(self.contract, sort_keys=True))
+
+    def test_the_comparison_owned_category_one_to_six_mirror_members_are_reported(self) -> None:
+        report = self.module.comparison_owned_mirror_members(
+            handoff_path=REPO_ROOT / "docs" / "ai" / "specs" / ".process" / "CAR-004-twin-handoff.md",
+            codex_schema_path=CODEX_COMPARISON_SCHEMA_PATH,
+            codex_instance_path=CODEX_COMPARISON_INSTANCE_PATH,
+        )
+        self.assertEqual(report["comparison_id"], CODEX_COMPARISON_ID)
+        self.assertEqual(report["schema_id"], CODEX_COMPARISON_SCHEMA_ID)
+        self.assertEqual(set(report["categories_present"]), {1, 2, 3, 5, 6})
+        self.assertEqual(report["missing"], [])
+        self.assertEqual(report["extra"], [])
+        self.assertEqual(report["drifted"], [])
+        self.assertEqual(
+            report["no_worse_null_margin_dimensions"],
+            ["acceptance", "compactions", "retries", "terminal_state"],
+        )
+        self.assertIn(G56R_003_ANALYSIS_PLAN_ID, report["bound_ids"])
+
+    def test_comparison_owned_report_refuses_schema_semantic_drift(self) -> None:
+        drifted_schema = load_json(CODEX_COMPARISON_SCHEMA_PATH)
+        drifted_schema["required"].remove("comparison_digest")
+
+        with tempfile.TemporaryDirectory() as directory:
+            seeded_schema = Path(directory) / "control-comparison.schema.json"
+            seeded_schema.write_text(json.dumps(drifted_schema), encoding="utf-8")
+            with self.assertRaisesRegex(self.error, "comparison schema authority drift"):
+                self.module.comparison_owned_mirror_members(
+                    handoff_path=REPO_ROOT
+                    / "docs"
+                    / "ai"
+                    / "specs"
+                    / ".process"
+                    / "CAR-004-twin-handoff.md",
+                    codex_schema_path=seeded_schema,
+                    codex_instance_path=CODEX_COMPARISON_INSTANCE_PATH,
+                )
+
+    def test_comparison_owned_report_refuses_recomputed_semantic_drift(self) -> None:
+        drifted = load_json(CODEX_COMPARISON_INSTANCE_PATH)
+        for entry in drifted["dominance_rule"]["margin_map"].values():
+            if entry["class"] == "margin_eligible":
+                entry["relative_margin"] = 0.20
+        drifted["comparison_digest"] = record_digest(
+            drifted, digest_field="comparison_digest"
+        )
+
+        with tempfile.TemporaryDirectory() as directory:
+            seeded = Path(directory) / "control-comparison.json"
+            seeded.write_text(json.dumps(drifted), encoding="utf-8")
+            with self.assertRaisesRegex(self.error, "comparison fixture authority drift"):
+                self.module.comparison_owned_mirror_members(
+                    handoff_path=REPO_ROOT
+                    / "docs"
+                    / "ai"
+                    / "specs"
+                    / ".process"
+                    / "CAR-004-twin-handoff.md",
+                    codex_schema_path=CODEX_COMPARISON_SCHEMA_PATH,
+                    codex_instance_path=seeded,
+                )
+
+
+class CodexReleaseClaimPolicyTests(CodexComparisonModuleTestCase):
+    """T022 RED: release messaging is explicit and cannot conclude G56R-011."""
+
+    def test_every_reachable_outcome_maps_to_exactly_one_release_claim_policy(self) -> None:
+        policies = self.module.release_claim_policies(self.contract)
+        self.assertEqual(
+            sorted(policies),
+            ["dominant", "inconclusive", "no_verdict", "not_dominant"],
+        )
+        for outcome, policy in policies.items():
+            with self.subTest(outcome=outcome):
+                self.assertEqual(
+                    sorted(policy),
+                    [
+                        "forbidden_claim_classes",
+                        "g56r_011_final_conclusion_allowed",
+                        "messaging_restriction",
+                        "permitted_claim_class",
+                        "static_defaults_may_ship_for_operational_simplicity",
+                    ],
+                )
+                self.assertIs(policy["g56r_011_final_conclusion_allowed"], False)
+                self.assertIs(
+                    policy["static_defaults_may_ship_for_operational_simplicity"],
+                    True,
+                )
+
+    def test_dominant_release_policy_restricts_only_wording_not_static_shipment(self) -> None:
+        dominant = self.module.release_claim_policy("dominant", self.contract)
+        self.assertEqual(
+            dominant["permitted_claim_class"],
+            "measured_improvement_over_previous_static_baseline",
+        )
+        self.assertEqual(
+            sorted(dominant["forbidden_claim_classes"]),
+            ["best_measured", "efficient", "optimal"],
+        )
+        self.assertIs(dominant["messaging_restriction"], True)
+        self.assertIs(
+            dominant["static_defaults_may_ship_for_operational_simplicity"], True
+        )
+        self.assertIs(dominant["g56r_011_final_conclusion_allowed"], False)
+
+    def test_non_dominant_and_no_verdict_release_policies_make_no_comparative_claim(self) -> None:
+        for outcome in ("not_dominant", "inconclusive", "no_verdict"):
+            with self.subTest(outcome=outcome):
+                policy = self.module.release_claim_policy(outcome, self.contract)
+                self.assertEqual(policy["permitted_claim_class"], "no_comparative_claim")
+                self.assertEqual(policy["forbidden_claim_classes"], [])
+                self.assertIs(policy["messaging_restriction"], False)
+                self.assertIs(policy["g56r_011_final_conclusion_allowed"], False)
+
+    def test_this_feature_rejects_any_final_static_core_dominance_conclusion(self) -> None:
+        for conclusion in (
+            "static_core_dominant",
+            "control_arm_dominant",
+            "final_g56r_011_verdict",
+        ):
+            with self.subTest(conclusion=conclusion):
+                with self.assertRaises(self.error):
+                    self.module.record_g56r_011_dominance_conclusion(
+                        conclusion,
+                        self.contract,
+                    )
+
+
 TEST_CASES = (
     ControlComparisonDominanceTests,
     ComparisonDocumentShapeTests,
@@ -1114,6 +1442,9 @@ TEST_CASES = (
     CommittedComparisonInstanceTests,
     MarginBoundaryExactnessTests,
     FloorReadStrictnessTests,
+    CodexComparisonArtifactPresenceTests,
+    CodexComparisonContractTests,
+    CodexReleaseClaimPolicyTests,
 )
 
 
