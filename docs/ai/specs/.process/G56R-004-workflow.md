@@ -841,7 +841,8 @@ For every behavior task:
 | Contract freeze | T004-T007 | 4 of 4 | Registry RED 545/547 → GREEN 549/549; registry-mirror RED 26/29 → GREEN 32/32; A-002 dependency ordering remediated and revalidated |
 | Policy behavior and replay | T008-T015 | 8 of 8 | Unpinned RED 549/553 → GREEN 561/561; ladder RED 561/565 → GREEN 566/566; signal RED 610/616 → GREEN 615/615; movement RED 615/622 → GREEN 622/622; replay 18/18 |
 | High effort and aggregation | T016-T019 | 4 of 4 | High-effort RED 622/626 → GREEN 629/629; aggregation RED 629/633 → GREEN 638/638; deterministic aggregation replay fixture verified; twin owner 32/32 |
-| Comparison, partition, parity | | | |
+| Comparison and claims | T020-T023 | 4 of 4 | Comparison RED 135/147 → GREEN 159/159; claim-policy RED 159/167 → GREEN 170/170; final owners policy 638/638, comparison 170/170, twin 32/32 |
+| Partition, replay, and parity | | | |
 | Integration and operator evidence | | | |
 
 ---

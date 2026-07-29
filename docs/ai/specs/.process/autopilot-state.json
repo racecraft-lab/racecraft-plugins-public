@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T07:27:36Z",
-  "active_step": "Phase 7: Implement - Comparison and claims (T020-T023)",
+  "updated_at": "2026-07-29T07:45:04Z",
+  "active_step": "Phase 7: Implement - Partitions and replay (T024-T027)",
   "status": "in_progress",
   "worktree_binding": {
     "mode": "operator_authorized_in_session_workdir",
@@ -175,11 +175,11 @@
     },
     {
       "step": "Phase 7: Implement - Comparison and claims (T020-T023)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Partitions and replay (T024-T027)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - Smoke and capture boundary (T028-T031)",
@@ -459,7 +459,7 @@
     },
     "implement": {
       "status": "in_progress",
-      "active_group": "comparison_and_claims",
+      "active_group": "partitions_and_replay",
       "completed_tasks": [
         "T001",
         "T002",
@@ -479,7 +479,11 @@
         "T016",
         "T017",
         "T018",
-        "T019"
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023"
       ],
       "groups": {
         "baseline_and_guardrails": {
@@ -517,6 +521,16 @@
           "aggregation_red": "629/633",
           "aggregation_green": "638/638",
           "aggregation_replay_cases": "1/1",
+          "twin_owner": "32/32"
+        },
+        "comparison_and_claims": {
+          "status": "completed",
+          "tasks": "T020-T023",
+          "comparison_red": "135/147",
+          "comparison_green": "159/159",
+          "claim_policy_red": "159/167",
+          "claim_policy_green": "170/170",
+          "policy_owner": "638/638",
           "twin_owner": "32/32"
         }
       }
@@ -696,6 +710,12 @@
       "agent": "implement-executor",
       "result": "consumed_with_parent_verification_after_interrupt",
       "artifact": "tests/speckit-pro/layer6-efficiency/lib/codex_policy_controls.py"
+    },
+    {
+      "task": "T020-T023",
+      "agent": "implement-executor",
+      "result": "consumed",
+      "artifact": "tests/speckit-pro/layer6-efficiency/lib/codex_control_comparison.py"
     }
   ]
 }
