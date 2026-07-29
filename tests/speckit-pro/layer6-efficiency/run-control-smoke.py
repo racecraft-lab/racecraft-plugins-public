@@ -35,6 +35,7 @@ Usage::
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -62,6 +63,14 @@ from claude_experiment_policy import (  # noqa: E402
 # FR-033: the committed layer6 .gitignore already excludes this directory's
 # contents wholesale, so per-run smoke output stays untracked without any edit.
 RESULTS_DIR = LAYER6_ROOT / "results"
+
+# FR-031a: the record over-claimed its demonstration. Named as a constant so an
+# operator script can key on it rather than on prose.
+RELABEL_REFUSAL_REASON = "demonstration_state_relabelled_without_evidence"
+# A reader failed in a way its own contract did not anticipate. The record is
+# still written; these prefixes keep the defect legible rather than silent.
+READER_FAULT_PREFIX = "bound_reader_raised_"
+DEMONSTRATION_FAULT_PREFIX = "demonstration_reader_raised_"
 
 # The command-line spelling on the left, the frozen ``control_kind`` on the right.
 CONTROL_CHOICES = {
@@ -226,6 +235,30 @@ def render_plan(plan: dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def record_filename(record: dict[str, Any]) -> str:
+    """An injective, filesystem-safe name for one sealed record.
+
+    Sanitizing alone is lossy — ``a/b`` and ``a-b`` both flatten to ``a-b`` — so
+    a short digest of the identifier as written rides along. Two distinct smokes
+    therefore never write the same file, and no smoke can produce the name of the
+    committed baseline the layer6 ``.gitignore`` re-includes, because every name
+    this returns ends in that digest. A re-run of the *same* ``smoke_id`` does
+    overwrite, deliberately: the re-run is the remedy a refusal prescribes.
+    """
+    smoke_id = record.get("smoke_id")
+    if not isinstance(smoke_id, str) or not smoke_id.strip():
+        raise controls.ControlContractError(
+            "the record carries no smoke_id; a sealed record is named for the run that produced "
+            "it, and an unnamed one cannot stay distinguishable from any other"
+        )
+    safe = "".join(
+        character if character.isalnum() or character in "-_" else "-"
+        for character in smoke_id
+    )
+    fingerprint = hashlib.sha256(smoke_id.encode("utf-8")).hexdigest()[:12]
+    return f"{safe}-{fingerprint}.json"
+
+
 def seal_record(
     record: dict[str, Any],
     *,
@@ -235,33 +268,53 @@ def seal_record(
     """FR-026a.2, FR-030c.3, FR-033: validate, then write whatever the verdict is.
 
     Every refusal ``validate_smoke_record`` can produce lands here: an observed
-    ``api_key``, a scored row, a reserved-partition reference, and a breached
-    bound. The refused record is written with its observed values and its refusal
-    reason rather than discarded, because an absent record and a refused one must
-    never be indistinguishable.
+    ``api_key``, a scored row, a reserved-partition reference, a pair that did not
+    observe disjoint cache state, and a breached bound. The refused record is
+    written with its observed values and its refusal reason rather than discarded,
+    because an absent record and a refused one must never be indistinguishable.
+
+    That promise holds for *every* way a reader can fail, not only the contract
+    errors it declares. A reader raising something unforeseen is still a refusal;
+    losing the operator's single copy of a live run over it would be the one
+    outcome this function exists to prevent.
     """
     registry = registry if registry is not None else controls.load_registry()
     sealed = dict(record)
     reading: dict[str, Any] | None = None
-    refusal_reasons: list[str]
+    refusal_reasons: list[str] = []
     try:
         reading = dict(controls.validate_smoke_record(record, registry))
         refusal_reasons = list(reading["refusal_reasons"])
     except controls.ControlContractError as exc:
         refusal_reasons = [str(exc)]
+    except Exception as exc:  # noqa: BLE001 — see the docstring; the record survives
+        refusal_reasons = [f"{READER_FAULT_PREFIX}{type(exc).__name__}: {exc}"]
+
+    demonstration: dict[str, Any] | None = None
+    try:
+        demonstration = controls.evaluate_demonstration(record, registry)
+    except Exception as exc:  # noqa: BLE001 — documented never to raise; prove it here
+        refusal_reasons.append(f"{DEMONSTRATION_FAULT_PREFIX}{type(exc).__name__}: {exc}")
+
+    # FR-031a: a record claiming a demonstration its own evidence does not carry
+    # is not admissible. Computing ``relabel_refused`` and then admitting the
+    # record anyway would leave the relabel effective, which is exactly the
+    # remedy-by-relabel the requirement forbids.
+    if (
+        demonstration is not None
+        and demonstration.get("demonstration_state") == controls.NOT_DEMONSTRATED
+        and record.get("demonstration_state") == controls.DEMONSTRATED
+    ):
+        refusal_reasons.append(RELABEL_REFUSAL_REASON)
 
     admitted = reading is not None and not refusal_reasons
     sealed["evidence_admissibility"] = "admitted" if admitted else "refused"
     sealed["refusal_reasons"] = refusal_reasons
     sealed["bound_reading"] = reading
-    if reading is not None:
-        sealed["demonstration"] = controls.evaluate_demonstration(record, registry)
+    sealed["demonstration"] = demonstration
 
-    stem = str(sealed.get("smoke_id") or sealed.get("control_id") or "unidentified-smoke")
-    safe = "".join(character if character.isalnum() or character in "-_" else "-"
-                   for character in stem)
     results_dir.mkdir(parents=True, exist_ok=True)
-    path = results_dir / f"{safe}.json"
+    path = results_dir / record_filename(sealed)
     path.write_text(
         json.dumps(sealed, indent=2, sort_keys=True, default=str) + "\n", encoding="utf-8"
     )
@@ -270,6 +323,7 @@ def seal_record(
         "admitted": admitted,
         "refusal_reasons": refusal_reasons,
         "reading": reading,
+        "demonstration": demonstration,
     }
 
 

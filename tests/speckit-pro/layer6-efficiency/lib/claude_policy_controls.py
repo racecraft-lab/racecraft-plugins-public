@@ -198,6 +198,10 @@ def _conforms(instance: Any, node: Any, root: dict[str, Any], path: str) -> bool
     return True
 
 
+def _child_path(path: str, key: str) -> str:
+    return f"{path}.{key}" if path else key
+
+
 def _validate_object(
     instance: dict[str, Any], node: dict[str, Any], root: dict[str, Any], path: str
 ) -> None:
@@ -205,22 +209,38 @@ def _validate_object(
     missing = set(node.get("required", ())) - set(instance)
     if missing:
         raise ControlContractError(f"{path}: missing required keys {sorted(missing)}")
-    if node.get("additionalProperties") is False:
-        extra = set(instance) - set(properties)
-        if extra:
-            raise ControlContractError(f"{path}: unexpected keys {sorted(extra)}")
+    additional = node.get("additionalProperties")
+    extra = sorted(set(instance) - set(properties))
+    if additional is False and extra:
+        raise ControlContractError(f"{path}: unexpected keys {extra}")
     minimum_properties = node.get("minProperties")
     if minimum_properties is not None and len(instance) < minimum_properties:
         raise ControlContractError(f"{path}: fewer than minProperties {minimum_properties}")
+    maximum_properties = node.get("maxProperties")
+    if maximum_properties is not None and len(instance) > maximum_properties:
+        raise ControlContractError(f"{path}: more than maxProperties {maximum_properties}")
+    names = node.get("propertyNames")
+    if names is not None:
+        for key in sorted(instance):
+            _validate(key, names, root, f"{_child_path(path, key)} (property name)")
     for key, subschema in properties.items():
         if key in instance:
-            _validate(instance[key], subschema, root, f"{path}.{key}" if path else key)
+            _validate(instance[key], subschema, root, _child_path(path, key))
+    # ``additionalProperties`` as a schema constrains every member ``properties``
+    # did not name. Four of the frozen CAR-003 documents use this form, so
+    # treating the keyword as boolean-only would drop those constraints.
+    if isinstance(additional, dict):
+        for key in extra:
+            _validate(instance[key], additional, root, _child_path(path, key))
 
 
 def _validate_string(instance: str, node: dict[str, Any], path: str) -> None:
     minimum_length = node.get("minLength")
     if minimum_length is not None and len(instance) < minimum_length:
         raise ControlContractError(f"{path}: shorter than minLength {minimum_length}")
+    maximum_length = node.get("maxLength")
+    if maximum_length is not None and len(instance) > maximum_length:
+        raise ControlContractError(f"{path}: longer than maxLength {maximum_length}")
     pattern = node.get("pattern")
     if pattern is not None and not _compiled(pattern).fullmatch(instance):
         raise ControlContractError(f"{path}: {instance!r} does not match pattern {pattern}")
@@ -257,12 +277,48 @@ def _validate_number(instance: Any, node: dict[str, Any], path: str) -> None:
     exclusive_minimum = node.get("exclusiveMinimum")
     if exclusive_minimum is not None and instance <= exclusive_minimum:
         raise ControlContractError(f"{path}: not above exclusiveMinimum {exclusive_minimum}")
+    exclusive_maximum = node.get("exclusiveMaximum")
+    if exclusive_maximum is not None and instance >= exclusive_maximum:
+        raise ControlContractError(f"{path}: not below exclusiveMaximum {exclusive_maximum}")
+
+
+# Every keyword this engine understands, split by the role it plays. A keyword
+# outside this set is refused rather than skipped: an ignored keyword and a
+# satisfied one produce the same result, which is precisely the confusion a
+# fail-closed engine may not permit. Teaching the engine a new keyword is the
+# prerequisite for using it in a contract, never the other way round.
+SUPPORTED_KEYWORDS = frozenset(
+    {
+        # Annotations. Carried by the documents, deliberately not enforced.
+        "$schema", "$id", "$defs", "title", "description",
+        # Reference and composition.
+        "$ref", "allOf", "anyOf", "oneOf", "not", "if", "then", "else",
+        # Assertions that apply whatever the instance type.
+        "type", "const", "enum",
+        # Objects.
+        "properties", "required", "additionalProperties", "propertyNames",
+        "minProperties", "maxProperties",
+        # Arrays.
+        "items", "minItems", "maxItems", "uniqueItems",
+        # Strings.
+        "minLength", "maxLength", "pattern", "format",
+        # Numbers.
+        "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum",
+    }
+)
 
 
 def _validate(instance: Any, node: Any, root: dict[str, Any], path: str) -> None:
     """Recursively validate ``instance`` against one schema node (fail-closed)."""
     if not isinstance(node, dict):
         raise ControlContractError(f"{path}: schema node is not an object")
+
+    unsupported = sorted(set(node) - SUPPORTED_KEYWORDS)
+    if unsupported:
+        raise ControlContractError(
+            f"{path or '<root>'}: schema declares {unsupported}, which this engine does not "
+            "implement; an unenforceable keyword is refused rather than ignored"
+        )
 
     if "$ref" in node:
         _validate(instance, _resolve_ref(node["$ref"], root, path), root, path)
@@ -284,6 +340,14 @@ def _validate(instance: Any, node: Any, root: dict[str, Any], path: str) -> None
         _conforms(instance, branch, root, path) for branch in node["anyOf"]
     ):
         raise ControlContractError(f"{path}: no anyOf branch matched")
+    if "oneOf" in node:
+        matched = sum(
+            1 for branch in node["oneOf"] if _conforms(instance, branch, root, path)
+        )
+        if matched != 1:
+            raise ControlContractError(
+                f"{path}: {matched} oneOf branches matched; exactly one must"
+            )
     if "not" in node and _conforms(instance, node["not"], root, path):
         raise ControlContractError(f"{path}: matched a schema the document forbids")
     if "if" in node:
@@ -377,6 +441,10 @@ def _validate_smoke_bounds(bounds: Any, path: str = "smoke_bounds") -> None:
 def validate_registry(registry: Mapping[str, Any]) -> Mapping[str, Any]:
     """Fail-closed registry semantics: identity, closure, and the token identity."""
     require_utc_timestamp(registry.get("frozen_at"), "frozen_at")
+    # FR-005a and SC-018: recompute every bound document's byte digest here, on
+    # the path every consumer actually takes. A guard that only the unit test
+    # calls does not guard anything.
+    verify_car_003_bindings(registry)
     assert_closed_at_three(registry)
 
     for index, control in enumerate(registry["controls"]):
@@ -668,6 +736,14 @@ def validate_signal_maps(control: Mapping[str, Any]) -> None:
         )
     if not isinstance(adaptive.get("retry_count_response"), Mapping):
         raise ControlContractError("retry_count holds a rank but declares no mapped response")
+    # FR-012a.4: the de-escalation floor is what the streak is compared against,
+    # so a control missing it is incomplete here rather than at the comparison.
+    threshold = adaptive.get("de_escalation_clean_pass_threshold")
+    if isinstance(threshold, bool) or not isinstance(threshold, int) or threshold < 1:
+        raise ControlContractError(
+            f"de_escalation_clean_pass_threshold is a whole count of clean passes, "
+            f"not {threshold!r}"
+        )
     triggers = adaptive.get("budget_triggers")
     if not isinstance(triggers, list) or not triggers:
         raise ControlContractError("budget_threshold holds a rank but declares no trigger")
@@ -945,6 +1021,14 @@ def advance_clean_streak(
     streak = streak + 1 if clean else 0
 
     threshold = adaptive.get("de_escalation_clean_pass_threshold")
+    # A control that declares no threshold cannot be compared against one. Saying
+    # so here keeps the failure in this module's currency instead of surfacing as
+    # a bare ``int >= None`` TypeError from the comparison below.
+    if isinstance(threshold, bool) or not isinstance(threshold, int) or threshold < 1:
+        raise ControlContractError(
+            f"the adaptive control declares de_escalation_clean_pass_threshold={threshold!r}; "
+            "the streak is compared against a whole count of clean passes"
+        )
     if streak >= threshold:
         outcome["de_escalation_evaluated"] = True
         target = previous_route(control, route)
@@ -998,11 +1082,24 @@ def evaluate_bounds(
     retries = 0
     duration_ms = 0
     for position, entry in enumerate(attempts):
+        if not isinstance(entry, Mapping):
+            raise ControlContractError(f"attempts[{position}] is not an attempt record")
         if entry.get("counter_reset_on_escalation"):
             raise ControlContractError(
                 f"attempts[{position}] resets a counter on escalation; FR-014a.1 spans every "
                 "attempt and every route, so a control cannot buy extra attempts by stepping up"
             )
+        # Both counters are read explicitly rather than indexed: an attempt that
+        # recorded neither must fail closed in this module's own currency, not as
+        # a bare KeyError that escapes every ``except ControlContractError`` the
+        # fail-closed design routes callers through.
+        for member in ("retries", "duration_ms"):
+            value = entry.get(member)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ControlContractError(
+                    f"attempts[{position}].{member} is a whole count over the attempt, "
+                    f"not {value!r}"
+                )
         retries += entry["retries"]
         duration_ms += entry["duration_ms"]
 
@@ -1459,7 +1556,14 @@ def _raw_token_vector(member: Mapping[str, Any]) -> Mapping[str, Any]:
 
 def _sum_or_unobserved(values: list[Any]) -> int | None:
     """``None`` when any member did not record the quantity — never zero."""
-    return None if any(value is None for value in values) else sum(values)
+    if any(value is None for value in values):
+        return None
+    for value in values:
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise ControlContractError(
+                f"a recorded quantity is a whole count, not {value!r}"
+            )
+    return sum(values)
 
 
 def aggregate_raw_tokens_and_cache(
@@ -1930,6 +2034,10 @@ EVIDENCE_ADMISSIBILITY = ("admitted", "refused")
 # because a non-scored smoke row produces no score bundle for one to sit on.
 API_KEY_REFUSAL_REASON = "observed_authentication_mode_api_key"
 REFUSED_AUTHENTICATION_MODE = "api_key"
+# FR-032, refused on the same terms as an observed api_key: a pair that did not
+# observe disjoint cache state leaves the record inadmissible as evidence, but
+# the observation survives on it so the remedy stays a re-run, never a relabel.
+CACHE_ISOLATION_REFUSAL_REASON = "observed_cache_isolation_not_disjoint"
 
 SMOKE_RECORD_REQUIRED = (
     "arm_id",
@@ -2068,7 +2176,12 @@ def _smoke_aggregate(rows: list[Mapping[str, Any]]) -> dict[str, Any]:
         "raw_token_ceiling_quantity": ceiling_quantity,
         "cache_read_tokens": cache_read,
         "cache_write_tokens_by_ttl_class": cache_write,
-        "additive_duration_ms": sum(int(row.get("duration_ms") or 0) for row in rows),
+        # FR-030b.3's second quantity, held to the same discipline as every other
+        # one in this aggregate: a member that recorded no duration leaves the sum
+        # unobserved rather than contributing a zero that reads as "fast".
+        "additive_duration_ms": _sum_or_unobserved(
+            [row.get("duration_ms") for row in rows]
+        ),
     }
 
 
@@ -2145,11 +2258,19 @@ def validate_smoke_record(
         raise ControlContractError(
             f"elapsed_wall_clock_seconds is an elapsed reading over the unit, not {elapsed!r}"
         )
+    # Same reading, same discipline: a count is compared against a ceiling below,
+    # so a non-count here would surface as a bare TypeError from that comparison
+    # rather than as this module's own contract error.
+    confirmations = record["confirmation_entries"]
+    if not isinstance(confirmations, int) or isinstance(confirmations, bool) or confirmations < 0:
+        raise ControlContractError(
+            f"confirmation_entries is a count over the unit, not {confirmations!r}"
+        )
 
     consumed: dict[str, Any] = {
         SMOKE_ATTEMPT_BOUND: len(attempts),
         SMOKE_CANDIDATE_BOUND: repetitions,
-        SMOKE_CONFIRMATION_BOUND: record["confirmation_entries"],
+        SMOKE_CONFIRMATION_BOUND: confirmations,
         SMOKE_DURATION_BOUND: elapsed,
         RAW_TOKEN_CEILING_MEMBER: aggregate["raw_token_ceiling_quantity"],
     }
@@ -2187,9 +2308,15 @@ def validate_smoke_record(
     ):
         unobserved.add(CACHE_QUANTITY_CEILINGS["cache_write_tokens_by_ttl_class"])
 
+    # FR-032: the record is required to carry its pairwise isolation observations,
+    # so they are read here. A required member nothing inspects is decoration.
+    isolation = read_record_cache_isolation(record)
+
     refusal_reasons: list[str] = []
     if observed_mode == REFUSED_AUTHENTICATION_MODE:
         refusal_reasons.append(API_KEY_REFUSAL_REASON)
+    if not isolation["all_pairs_disjoint"]:
+        refusal_reasons.append(CACHE_ISOLATION_REFUSAL_REASON)
 
     return {
         "control_id": record["control_id"],
@@ -2202,6 +2329,7 @@ def validate_smoke_record(
         "consumed": consumed,
         "additive_duration_ms": aggregate["additive_duration_ms"],
         "bounds_unobserved": sorted(unobserved),
+        "cache_isolation": isolation,
         "unit_member_count": len(rows),
         "child_dispatch_count": child_dispatches,
         "objective_attempt_count": len(attempts),
@@ -2277,6 +2405,19 @@ def _record_unit_rows(record: Mapping[str, Any]) -> list[Mapping[str, Any]]:
         for row in (attempt.get("unit_rows") or [])
         if isinstance(row, Mapping)
     ]
+
+
+def _observed_wall_time_ms(row: Mapping[str, Any]) -> int | None:
+    """A whole-millisecond reading, or ``None`` when the member recorded none.
+
+    A malformed value is not a lesser problem than an absent one: both leave the
+    wall time unobserved, and neither may raise out of a reader FR-031a requires
+    to return a verdict for every record it is handed.
+    """
+    value = row.get("wall_time_ms")
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        return None
+    return value
 
 
 def _route_observation(
@@ -2357,14 +2498,14 @@ def evaluate_demonstration(
         children = [row for row in rows if row.get("spawned_by") is not None]
         if len(parents) != 1 or len(children) < 2:
             reasons.append("unit_has_fewer_than_two_non_parent_members")
-        elif any(row.get("wall_time_ms") is None for row in parents + children):
+        elif any(_observed_wall_time_ms(row) is None for row in parents + children):
             # FR-031a.5: never satisfied by the members that did report, and
             # never with a missing value read as zero, which would make the
             # inequality trivially true and invert the whole check.
             reasons.append("wall_time_unobserved")
         else:
-            parent_wall_time = int(parents[0]["wall_time_ms"])
-            child_total = sum(int(row["wall_time_ms"]) for row in children)
+            parent_wall_time = _observed_wall_time_ms(parents[0])
+            child_total = sum(_observed_wall_time_ms(row) for row in children)
             if parent_wall_time >= child_total:
                 reasons.append("parallel_inequality_not_met")
             else:
@@ -2401,6 +2542,104 @@ def _isolation_root(pair: Mapping[str, Any], member: str, path: str) -> str | No
     return value
 
 
+def validate_isolation_pair(
+    pair: Any, path: str, arm_id: str, arms: list[str] | None = None
+) -> dict[str, Any]:
+    """One recorded arm pair, read fail-closed.
+
+    Shared by the single-record reading in :func:`validate_smoke_record` and the
+    whole-series claim in :func:`evaluate_cache_isolation`, so one recorded pair
+    cannot be admissible on one path and refused on the other. ``arms`` is the
+    series membership when there is a series to check against; a single record
+    knows only its own ``arm_id``.
+    """
+    if not isinstance(pair, Mapping):
+        raise ControlContractError(f"{path} is not a pair record")
+    if PRECOMMITMENT_MEMBER in pair:
+        raise ControlContractError(
+            f"{path} offers the {PRECOMMITMENT_MEMBER!r} precommitment as the "
+            "observation; a precommitment that arms will be isolated is not evidence "
+            "that they were"
+        )
+    paired = pair.get("paired_arm_id")
+    if arms is not None:
+        if paired not in arms or paired == arm_id:
+            raise ControlContractError(
+                f"{path} pairs {paired!r}, which is not another arm of this series"
+            )
+    elif not isinstance(paired, str) or not paired or paired == arm_id:
+        raise ControlContractError(
+            f"{path} pairs {paired!r}, which is not another arm than {arm_id!r}"
+        )
+    status = pair.get("status")
+    if status not in ISOLATION_STATUSES:
+        raise ControlContractError(
+            f"{path} records status {status!r}, outside the frozen closed set "
+            f"{list(ISOLATION_STATUSES)}"
+        )
+    own = _isolation_root(pair, "arm_cache_root_digest", path)
+    other = _isolation_root(pair, "paired_arm_cache_root_digest", path)
+    if status == ISOLATION_DISJOINT and (
+        own is None or other is None or pair.get("roots_disjoint") is not True
+    ):
+        raise ControlContractError(
+            f"{path} claims {ISOLATION_DISJOINT!r} without both root digests and a true "
+            "disjointness flag; it can never be asserted with absent evidence"
+        )
+    return {
+        "paired_arm_id": paired,
+        "status": status,
+        "roots_disjoint": pair.get("roots_disjoint"),
+        "arm_cache_root_digest": own,
+        "paired_arm_cache_root_digest": other,
+        "failure_code": ISOLATION_FAILURE_CODES.get(status),
+        "failure_plane": (
+            failure_plane_for(ISOLATION_FAILURE_CODES[status])
+            if status in ISOLATION_FAILURE_CODES
+            else None
+        ),
+    }
+
+
+def read_record_cache_isolation(record: Mapping[str, Any]) -> dict[str, Any]:
+    """FR-032, read off the one record a live smoke actually produces.
+
+    The whole-series completeness check needs every arm and so belongs to
+    :func:`evaluate_cache_isolation`. What one record can answer on its own is
+    whether the pairs it *did* record observed disjoint cache state, and that
+    answer is what makes ``observed_cache_isolation`` a requirement rather than
+    a decoration.
+    """
+    observations = record.get("observed_cache_isolation")
+    if not isinstance(observations, list) or not observations:
+        raise ControlContractError(
+            "observed_cache_isolation records no pair; FR-032's claim is discharged pairwise "
+            "and an empty list discharges nothing"
+        )
+    arm_id = str(record.get("arm_id"))
+    pairs = [
+        validate_isolation_pair(pair, f"observed_cache_isolation[{position}]", arm_id)
+        for position, pair in enumerate(observations)
+    ]
+    seen: dict[str, str] = {}
+    for entry in pairs:
+        paired = str(entry["paired_arm_id"])
+        if paired in seen:
+            raise ControlContractError(
+                f"observed_cache_isolation records the pair {arm_id!r}/{paired!r} twice"
+            )
+        seen[paired] = str(entry["status"])
+    not_disjoint = sorted(
+        paired for paired, status in seen.items() if status != ISOLATION_DISJOINT
+    )
+    return {
+        "arm_id": arm_id,
+        "pairs": pairs,
+        "all_pairs_disjoint": not not_disjoint,
+        "pairs_not_disjoint": not_disjoint,
+    }
+
+
 def evaluate_cache_isolation(series: Any) -> dict[str, Any]:
     """FR-032 and FR-032a: the claim is pairwise over every unordered arm pair.
 
@@ -2427,48 +2666,18 @@ def evaluate_cache_isolation(series: Any) -> dict[str, Any]:
             raise ControlContractError(f"{arm_id} records no observed_cache_isolation")
         for position, pair in enumerate(observations):
             path = f"{arm_id}.observed_cache_isolation[{position}]"
-            if not isinstance(pair, Mapping):
-                raise ControlContractError(f"{path} is not a pair record")
-            if PRECOMMITMENT_MEMBER in pair:
-                raise ControlContractError(
-                    f"{path} offers the {PRECOMMITMENT_MEMBER!r} precommitment as the "
-                    "observation; a precommitment that arms will be isolated is not evidence "
-                    "that they were"
-                )
-            paired = pair.get("paired_arm_id")
-            if paired not in arms or paired == arm_id:
-                raise ControlContractError(
-                    f"{path} pairs {paired!r}, which is not another arm of this series"
-                )
-            status = pair.get("status")
-            if status not in ISOLATION_STATUSES:
-                raise ControlContractError(
-                    f"{path} records status {status!r}, outside the frozen closed set "
-                    f"{list(ISOLATION_STATUSES)}"
-                )
-            own = _isolation_root(pair, "arm_cache_root_digest", path)
-            other = _isolation_root(pair, "paired_arm_cache_root_digest", path)
-            if status == ISOLATION_DISJOINT and (
-                own is None or other is None or pair.get("roots_disjoint") is not True
-            ):
-                raise ControlContractError(
-                    f"{path} claims {ISOLATION_DISJOINT!r} without both root digests and a true "
-                    "disjointness flag; it can never be asserted with absent evidence"
-                )
+            read = validate_isolation_pair(pair, path, arm_id, arms)
+            status = read["status"]
 
-            key = frozenset({arm_id, str(paired)})
+            key = frozenset({arm_id, str(read["paired_arm_id"])})
             entry = {
                 "pair": sorted(key),
                 "status": status,
-                "roots_disjoint": pair.get("roots_disjoint"),
-                "arm_cache_root_digest": own,
-                "paired_arm_cache_root_digest": other,
-                "failure_code": ISOLATION_FAILURE_CODES.get(status),
-                "failure_plane": (
-                    failure_plane_for(ISOLATION_FAILURE_CODES[status])
-                    if status in ISOLATION_FAILURE_CODES
-                    else None
-                ),
+                "roots_disjoint": read["roots_disjoint"],
+                "arm_cache_root_digest": read["arm_cache_root_digest"],
+                "paired_arm_cache_root_digest": read["paired_arm_cache_root_digest"],
+                "failure_code": read["failure_code"],
+                "failure_plane": read["failure_plane"],
             }
             existing = recorded.get(key)
             if existing is not None and existing["status"] != status:
@@ -2518,6 +2727,7 @@ __all__ = (
     "ControlContractError",
     "DEMONSTRATION_EVIDENCE_SOURCES",
     "DEMONSTRATION_REASONS",
+    "DEMONSTRATED",
     "DEMONSTRATION_STATES",
     "DISPATCH_REQUEST_SOURCE",
     "EVIDENCE_ADMISSIBILITY",
@@ -2539,6 +2749,7 @@ __all__ = (
     "ISOLATION_FAILURE_CODES",
     "ISOLATION_STATUSES",
     "NONE_SENTINEL",
+    "NOT_DEMONSTRATED",
     "PARENT_CHILD_GRAPH_MEMBERS",
     "POLICY_RESPONSES",
     "RAW_TOKEN_CEILING_MEMBER",

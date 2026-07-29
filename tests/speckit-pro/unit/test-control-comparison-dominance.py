@@ -356,7 +356,15 @@ def synthetic_comparison() -> dict[str, object]:
             "digest": "sha256:" + "2" * 64,
         },
         "messaging_map": synthetic_messaging_map(),
-        "car_003_bindings": [{"id": ANALYSIS_PLAN_ID, "digest": "sha256:" + "3" * 64}],
+        # A real committed digest, not a placeholder: validate_comparison now
+        # recomputes these against the bound document's bytes, so a stand-in
+        # would only prove the guard fires on the fixture.
+        "car_003_bindings": [
+            {
+                "id": ANALYSIS_PLAN_ID,
+                "digest": file_bytes_digest(CONTRACT_ROOT / "analysis-plan.schema.json"),
+            }
+        ],
     }
     return reseal(document)
 
@@ -1030,6 +1038,68 @@ class CommittedComparisonInstanceTests(unittest.TestCase):
                 self.module.load_comparison(seeded)
 
 
+class MarginBoundaryExactnessTests(ComparisonModuleTestCase):
+    """FR-021: the declared margin is a decimal, and the boundary is exact.
+
+    ``json.load`` turns the literal ``0.1`` into the nearest binary float, and a
+    candidate sitting exactly on the declared margin then clears or misses it
+    depending on the scale its inputs happen to be recorded in. A rule whose
+    premise is byte-deterministic reproducibility cannot behave that way.
+    """
+
+    def filter_at(self, comparator: float, candidate: float) -> str:
+        base = projected_vector()
+        comparator_vector = dict(base)
+        candidate_vector = dict(base)
+        for dimension in MARGIN_ELIGIBLE_DIMENSIONS:
+            comparator_vector[dimension] = comparator
+            candidate_vector[dimension] = comparator
+        candidate_vector["duration"] = candidate
+        return self.module.materiality_filter(
+            candidate_vector, comparator_vector, self.contract
+        )["duration"]
+
+    def test_a_candidate_exactly_on_the_margin_clears_it(self) -> None:
+        # (0.3 - 0.27) / 0.3 is a tenth. In binary it is 0.09999999999999991.
+        self.assertEqual(self.filter_at(0.3, 0.27), "cleared")
+
+    def test_the_boundary_does_not_move_with_the_scale_of_its_inputs(self) -> None:
+        for comparator, candidate in ((0.3, 0.27), (3.0, 2.7), (30.0, 27.0), (1.0, 0.9)):
+            with self.subTest(comparator=comparator):
+                self.assertEqual(self.filter_at(comparator, candidate), "cleared")
+
+    def test_a_candidate_just_inside_the_margin_does_not_clear_it(self) -> None:
+        self.assertEqual(self.filter_at(0.3, 0.2701), "not_cleared")
+
+    def test_a_non_finite_resource_value_is_not_a_number(self) -> None:
+        # An infinity would otherwise divide into a improvement of one.
+        self.assertEqual(self.filter_at(float("inf"), 1.0), "margin_not_computable")
+
+
+class FloorReadStrictnessTests(ComparisonModuleTestCase):
+    """FR-019: a mandatory gate cannot be retired by deleting the member that names it."""
+
+    def test_the_availability_gate_switch_is_frozen_at_true(self) -> None:
+        del self.contract["eligibility_floors"]["availability_gate_required"]
+        with self.assertRaises(self.error):
+            self.module.validate_comparison(reseal(self.contract))
+
+    def test_an_arm_failing_availability_is_ineligible_however_the_contract_reads(self) -> None:
+        arm = eligible_arm(availability_gate_passed=False)
+        self.assertFalse(self.module.check_eligibility_floors(arm, self.contract))
+        # And deleting the switch refuses the contract rather than clearing the arm.
+        del self.contract["eligibility_floors"]["availability_gate_required"]
+        with self.assertRaises(self.error):
+            self.module.check_eligibility_floors(arm, self.contract)
+
+    def test_both_arms_are_read_even_when_the_candidate_already_fails(self) -> None:
+        # Short-circuiting would return a well-formed no-verdict from a
+        # comparison in which the comparator was never inspected at all.
+        candidate = eligible_arm(quality_floors_met=False)
+        with self.assertRaises(self.error):
+            self.module.compare(candidate, "not-an-arm-at-all", self.contract)
+
+
 TEST_CASES = (
     ControlComparisonDominanceTests,
     ComparisonDocumentShapeTests,
@@ -1042,6 +1112,8 @@ TEST_CASES = (
     MessagingMapTests,
     ClaimClassTotalityTests,
     CommittedComparisonInstanceTests,
+    MarginBoundaryExactnessTests,
+    FloorReadStrictnessTests,
 )
 
 

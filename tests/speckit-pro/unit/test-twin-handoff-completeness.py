@@ -9,7 +9,10 @@ record fails, and a recorded member absent from the artifacts fails too. It also
 holds the mirror-obligation and sanctioned-divergence rules.
 
 The record itself lives under ``docs/ai/specs/.process/`` — cross-platform
-coordination, not repository validation — and never inside the test tree.
+coordination, not repository validation — and never inside the test tree. It is
+**located by what it describes** rather than named: see :func:`live_handoff_record`
+for why a permanently-registered suite test must not hard-code one spec's
+artifact path.
 
 Every check is offline and makes zero live model calls.
 """
@@ -38,7 +41,6 @@ from test_result import run_counted  # noqa: E402
 
 
 PROCESS_ROOT = REPO_ROOT / "docs" / "ai" / "specs" / ".process"
-RECORD_PATH = PROCESS_ROOT / "CAR-004-twin-handoff.md"
 
 CONTRACTS_DIR = TEST_ROOT / "layer6-efficiency" / "contracts-claude"
 FIXTURES_DIR = TEST_ROOT / "layer6-efficiency" / "fixtures-controls"
@@ -50,6 +52,34 @@ PARTITION_INSTANCE = FIXTURES_DIR / "partition-registry-entries.json"
 
 CAR_003_ID_PREFIX = "https://racecraft.dev/schemas/car-003/"
 CAR_003_ADDITIVE_RECORDS_ID = f"{CAR_003_ID_PREFIX}car-003-additive-records.schema.json"
+
+
+def live_handoff_record() -> Path | None:
+    """The handoff record describing the contracts this module derives from.
+
+    Located by what it *describes* rather than by a filename carrying a spec ID.
+    A permanently-registered suite test naming one spec's ``.process/`` artifact
+    is what made the CAR-003 contracts load-bearing and forced a relocation
+    before that spec could be archived; hard-coding a name here would rebuild
+    that trap. Several handoff records coexist under ``.process/`` — each one
+    names the contract documents it hands off, so the right record is the one
+    naming the registry schema committed in this test tree.
+
+    Returns ``None`` once that record has been archived away. The contracts it
+    described stay in the test tree, but there is no live record left to
+    reconcile them against, and the module says so instead of failing on a
+    missing file.
+    """
+    if not PROCESS_ROOT.is_dir():
+        return None
+    registry_id = json.loads(REGISTRY_SCHEMA.read_text(encoding="utf-8"))["$id"]
+    for path in sorted(PROCESS_ROOT.glob("*-twin-handoff.md")):
+        if registry_id in path.read_text(encoding="utf-8"):
+            return path
+    return None
+
+
+RECORD_PATH = live_handoff_record()
 
 # Categories 1-6 are re-derived here; 7 and 8 are authored decision semantics and
 # guard behaviors that add no schema member. [FR-034a, research D12]
@@ -582,13 +612,22 @@ def publication_errors(text: str, entries: list[dict[str, Any]]) -> list[str]:
         errors.append("the record states no publication date")
     if not NOTIFIED_PATTERN.search(text):
         errors.append("the record states no G56R-004 notification reference")
-    for entry in entries:
-        if RECORD_PATH.name in str(entry.get("member_id")):
-            errors.append("the record enrolls itself as a hash-relevant member")
+    if RECORD_PATH is not None:
+        for entry in entries:
+            if RECORD_PATH.name in str(entry.get("member_id")):
+                errors.append("the record enrolls itself as a hash-relevant member")
     return errors
 
 
 class TwinHandoffCompletenessTests(unittest.TestCase):
+    def setUp(self) -> None:
+        if RECORD_PATH is None:
+            self.skipTest(
+                "no live handoff record under docs/ai/specs/.process/ names the registry schema "
+                "committed in this test tree; the record this module reconciles has been archived"
+            )
+        self.record_text = RECORD_PATH.read_text(encoding="utf-8")
+
     def test_validator_module_directory_is_on_the_import_path(self) -> None:
         self.assertTrue(LAYER6_LIB_DIR.is_dir())
         self.assertIn(str(LAYER6_LIB_DIR), sys.path)
@@ -600,19 +639,19 @@ class TwinHandoffCompletenessTests(unittest.TestCase):
     # --- record shape -----------------------------------------------------
 
     def test_the_record_parses_into_exactly_two_machine_read_blocks(self) -> None:
-        entries, divergences = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, divergences = parse_record(self.record_text)
         self.assertIsInstance(entries, list)
         self.assertIsInstance(divergences, list)
         self.assertTrue(entries, "the mirror-membership block is empty")
 
     def test_every_derived_category_is_represented_in_the_record(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         recorded = {entry["category"] for entry in entries}
         for category in DERIVED_CATEGORIES:
             self.assertIn(category, recorded, f"category {category} carries no entry")
 
     def test_the_authored_categories_are_represented_in_the_record(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         recorded = {entry["category"] for entry in entries}
         for category in AUTHORED_CATEGORIES:
             self.assertIn(category, recorded, f"category {category} carries no entry")
@@ -620,7 +659,7 @@ class TwinHandoffCompletenessTests(unittest.TestCase):
     # --- FR-034a: both-directions derivation ------------------------------
 
     def test_categories_one_through_six_diff_to_zero_in_both_directions(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         differences = diff_membership(derive_membership(), entries)
         self.assertEqual(
             differences,
@@ -629,7 +668,7 @@ class TwinHandoffCompletenessTests(unittest.TestCase):
         )
 
     def test_a_delivered_member_absent_from_the_record_fails(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         for category in DERIVED_CATEGORIES:
             seeded = [
                 entry for entry in copy.deepcopy(entries) if entry["category"] != category
@@ -641,7 +680,7 @@ class TwinHandoffCompletenessTests(unittest.TestCase):
             )
 
     def test_a_recorded_member_absent_from_the_artifacts_fails(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         seeded = copy.deepcopy(entries)
         invented = copy.deepcopy(seeded[0])
         invented["member_id"] = f"{invented['member_id']}-invented"
@@ -653,7 +692,7 @@ class TwinHandoffCompletenessTests(unittest.TestCase):
         )
 
     def test_a_derived_fact_that_drifts_from_the_artifacts_fails(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         seeded = copy.deepcopy(entries)
         for entry in seeded:
             if entry["category"] == 1:
@@ -666,14 +705,14 @@ class TwinHandoffCompletenessTests(unittest.TestCase):
         )
 
     def test_a_duplicated_member_fails(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         seeded = copy.deepcopy(entries)
         seeded.append(copy.deepcopy(seeded[0]))
         differences = diff_membership(derive_membership(), seeded)
         self.assertTrue(differences["duplicated"], "a duplicated member was not reported")
 
     def test_an_undeclared_field_on_a_derived_entry_fails(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         seeded = copy.deepcopy(entries)
         seeded[0]["invented_field"] = "unmirrorable"
         differences = diff_membership(derive_membership(), seeded)
@@ -685,70 +724,70 @@ class TwinHandoffCompletenessTests(unittest.TestCase):
     # --- FR-034: obligations ----------------------------------------------
 
     def test_every_entry_carries_exactly_one_obligation_from_the_closed_set(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         self.assertEqual(obligation_errors(entries), [])
         self.assertEqual(
             OBLIGATIONS, ("mirror_required", "sanctioned_divergence", "car_owned")
         )
 
     def test_an_entry_carrying_no_obligation_is_rejected(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         seeded = copy.deepcopy(entries)
         del seeded[0]["mirror_obligation"]
         self.assertTrue(obligation_errors(seeded))
 
     def test_an_entry_carrying_more_than_one_obligation_is_rejected(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         seeded = copy.deepcopy(entries)
         seeded[0]["mirror_obligation"] = ["mirror_required", "car_owned"]
         self.assertTrue(obligation_errors(seeded))
 
     def test_an_obligation_outside_the_closed_set_is_rejected(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         seeded = copy.deepcopy(entries)
         seeded[0]["mirror_obligation"] = "reconciliation_candidate"
         self.assertTrue(obligation_errors(seeded))
 
     def test_every_obligation_is_publishable_because_none_is_a_candidate(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         self.assertNotIn("reconciliation_candidate", OBLIGATIONS)
-        self.assertEqual(reconciliation_errors(RECORD_PATH.read_text(encoding="utf-8"), entries), [])
+        self.assertEqual(reconciliation_errors(self.record_text, entries), [])
 
     def test_an_entry_flagged_as_a_reconciliation_candidate_is_rejected(self) -> None:
-        entries, _ = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, _ = parse_record(self.record_text)
         seeded = copy.deepcopy(entries)
         seeded[0]["reconciliation_candidate"] = True
         self.assertTrue(
-            reconciliation_errors(RECORD_PATH.read_text(encoding="utf-8"), seeded)
+            reconciliation_errors(self.record_text, seeded)
         )
 
     def test_the_reconciliation_candidate_list_is_explicitly_empty(self) -> None:
-        text = RECORD_PATH.read_text(encoding="utf-8")
+        text = self.record_text
         self.assertIn(RECONCILIATION_HEADING, text)
         self.assertIn(RECONCILIATION_STATEMENT, text)
         entries, _ = parse_record(text)
         self.assertEqual(reconciliation_errors(text, entries), [])
 
     def test_a_record_that_leaves_the_candidate_list_unstated_is_rejected(self) -> None:
-        text = RECORD_PATH.read_text(encoding="utf-8").replace(RECONCILIATION_STATEMENT, "")
+        text = self.record_text.replace(RECONCILIATION_STATEMENT, "")
         entries, _ = parse_record(text)
         self.assertTrue(reconciliation_errors(text, entries))
 
     # --- FR-035, FR-035a: sanctioned divergence ---------------------------
 
     def test_the_sanctioned_divergence_set_is_closed_at_exactly_one_entry(self) -> None:
-        entries, divergences = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, divergences = parse_record(self.record_text)
         self.assertEqual(len(divergences), 1)
         self.assertEqual(divergence_errors(entries, divergences), [])
 
     def test_a_second_sanctioned_divergence_is_rejected(self) -> None:
-        entries, divergences = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, divergences = parse_record(self.record_text)
         seeded = copy.deepcopy(divergences)
         seeded.append(copy.deepcopy(seeded[0]))
         self.assertTrue(divergence_errors(entries, seeded))
 
     def test_a_second_entry_claiming_the_divergence_obligation_is_rejected(self) -> None:
-        entries, divergences = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, divergences = parse_record(self.record_text)
         seeded = copy.deepcopy(entries)
         for entry in seeded:
             if entry["mirror_obligation"] != "sanctioned_divergence":
@@ -757,7 +796,7 @@ class TwinHandoffCompletenessTests(unittest.TestCase):
         self.assertTrue(divergence_errors(seeded, divergences))
 
     def test_a_divergence_classified_against_an_ineligible_category_is_rejected(self) -> None:
-        entries, divergences = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        entries, divergences = parse_record(self.record_text)
         self.assertEqual(DIVERGENCE_INELIGIBLE_CATEGORIES, (1, 2, 6, 7))
         for category in DIVERGENCE_INELIGIBLE_CATEGORIES:
             seeded_entries = copy.deepcopy(entries)
@@ -777,7 +816,7 @@ class TwinHandoffCompletenessTests(unittest.TestCase):
             )
 
     def test_the_divergence_entry_is_reachable_without_either_roadmap(self) -> None:
-        _, divergences = parse_record(RECORD_PATH.read_text(encoding="utf-8"))
+        _, divergences = parse_record(self.record_text)
         entry = divergences[0]
         for field in DIVERGENCE_FIELDS:
             self.assertIn(field, entry)
@@ -787,12 +826,12 @@ class TwinHandoffCompletenessTests(unittest.TestCase):
     # --- FR-037a: publication -------------------------------------------
 
     def test_the_record_states_its_publication_date_and_notification_reference(self) -> None:
-        text = RECORD_PATH.read_text(encoding="utf-8")
+        text = self.record_text
         entries, _ = parse_record(text)
         self.assertEqual(publication_errors(text, entries), [])
 
     def test_a_record_with_no_notification_reference_is_rejected(self) -> None:
-        text = RECORD_PATH.read_text(encoding="utf-8")
+        text = self.record_text
         entries, _ = parse_record(text)
         seeded = "\n".join(
             line for line in text.splitlines() if not line.startswith("**Notified**:")

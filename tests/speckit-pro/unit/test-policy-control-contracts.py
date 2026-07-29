@@ -18,10 +18,12 @@ operator-driven and deliberately live outside this module.
 
 from __future__ import annotations
 
+import contextlib
 import copy
 import hashlib
 import importlib.util
 import inspect
+import io
 import json
 import re
 import sys
@@ -634,10 +636,10 @@ def synthetic_registry(frozen_at: str = FROZEN_AT) -> dict[str, object]:
         "frozen_at": frozen_at,
         "controls": [synthetic_control(kind, frozen_at) for kind in CONTROL_KINDS],
         "smoke_bounds": synthetic_smoke_bounds(),
-        "car_003_bindings": [
-            {"id": "https://racecraft.dev/schemas/car-003/score-bundle.schema.json",
-             "digest": "sha256:" + "1" * 64},
-        ],
+        # A real committed binding, not a placeholder digest: validate_registry
+        # recomputes these against the bound documents' bytes, so a stand-in
+        # digest here would only prove the guard fires on the fixture.
+        "car_003_bindings": [committed_binding("score-bundle.schema.json")],
     })
 
 
@@ -2565,18 +2567,36 @@ def route_observation(model: str, effort: str, route_id: str) -> dict[str, objec
     return {"model": model, "effort": effort, "candidate_route_id": route_id}
 
 
-def demonstration_evidence(kind: str, **overrides: object) -> dict[str, object]:
-    """Evidence shaped as the run produced it, never as the dispatch asked for it."""
+def demonstration_evidence(
+    kind: str, control: dict[str, object] | None = None, **overrides: object
+) -> dict[str, object]:
+    """Evidence shaped as the run produced it, never as the dispatch asked for it.
+
+    ``control`` anchors the evidence to the control it will be read against. The
+    committed registry and the synthetic one declare different ladders and pins,
+    so evidence quoting the wrong one demonstrates nothing — which now refuses
+    the record rather than passing unnoticed.
+    """
+    ladder = LADDER_ROUTES
+    pin_model, pin_effort = "model-alpha", "high"
+    if isinstance(control, dict):
+        adaptive = control.get("adaptive")
+        if isinstance(adaptive, dict) and adaptive.get("escalation_ladder"):
+            ladder = tuple(adaptive["escalation_ladder"])
+        pin = control.get("unpinned")
+        if isinstance(pin, dict):
+            pin_model = str(pin.get("pinned_parent_model", pin_model))
+            pin_effort = str(pin.get("pinned_parent_effort", pin_effort))
     if kind == "adaptive":
         evidence: dict[str, object] = {
             "read_back_from": "configured_route_proof",
-            "pre_escalation": route_observation("model-alpha", "low", LADDER_ROUTES[0]),
-            "post_escalation": route_observation("model-alpha", "high", LADDER_ROUTES[1]),
+            "pre_escalation": route_observation("model-alpha", "low", ladder[0]),
+            "post_escalation": route_observation("model-alpha", "high", ladder[1]),
         }
     elif kind == "unpinned":
         evidence = {
             "read_back_from": "configured_route_proof",
-            "served_route": route_observation("model-alpha", "high", LADDER_ROUTES[1]),
+            "served_route": route_observation(pin_model, pin_effort, ladder[1]),
         }
     else:
         evidence = {"read_back_from": "execution_trace"}
@@ -2604,9 +2624,12 @@ def smoke_record(control: dict[str, object], **overrides: object) -> dict[str, o
         "elapsed_wall_clock_seconds": 600,
         "claude_code_subagent_model_unset": True,
         "objective_attempts": [smoke_attempt(objective)],
-        "observed_cache_isolation": [],
+        # FR-032: a record claiming admissible evidence carries the pairwise
+        # observation that backs the claim. An empty list discharges nothing, so
+        # it is not what a conforming record looks like.
+        "observed_cache_isolation": [isolation_pair(f"{control['control_id']}-paired")],
         "demonstration_state": "demonstrated",
-        "demonstration_evidence": demonstration_evidence(kind),
+        "demonstration_evidence": demonstration_evidence(kind, control),
     }
     record.update(overrides)
     return record
@@ -3240,10 +3263,345 @@ class SmokeDriverSealTests(unittest.TestCase):
         self.assertNotIn(SMOKE_DRIVER_PATH.name, registered)
 
 
+class SchemaEngineKeywordCoverageTests(unittest.TestCase):
+    """An unenforceable keyword is refused, and the enforceable ones are enforced.
+
+    The engine is shared by every contract in ``contracts-claude/``, several of
+    which use keywords CAR-004's own two documents do not. A keyword the engine
+    quietly skips is indistinguishable from one the instance satisfied, so both
+    halves are pinned here: the corpus stays inside the supported set, and each
+    keyword the corpus uses actually rejects something.
+    """
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+
+    def accepts(self, instance: object, schema: dict[str, object]) -> bool:
+        try:
+            self.module.validate_instance(instance, schema)
+        except self.error:
+            return False
+        return True
+
+    def test_every_keyword_the_committed_corpus_uses_is_supported(self) -> None:
+        supported = self.module.SUPPORTED_KEYWORDS
+        unknown: list[tuple[str, list[str]]] = []
+
+        def walk(node: object, document: str) -> None:
+            if not isinstance(node, dict):
+                return
+            extra = sorted(set(node) - supported)
+            if extra:
+                unknown.append((document, extra))
+            for keyword, value in node.items():
+                if keyword in ("properties", "$defs") and isinstance(value, dict):
+                    for child in value.values():
+                        walk(child, document)
+                elif keyword in ("items", "not", "if", "then", "else", "propertyNames"):
+                    walk(value, document)
+                elif keyword == "additionalProperties" and isinstance(value, dict):
+                    walk(value, document)
+                elif keyword in ("allOf", "anyOf", "oneOf") and isinstance(value, list):
+                    for child in value:
+                        walk(child, document)
+
+        for path in sorted(CONTRACT_ROOT.glob("*.schema.json")):
+            walk(load_json(path), path.name)
+        self.assertEqual(unknown, [], "a committed contract uses a keyword the engine skips")
+
+    def test_a_keyword_the_engine_cannot_enforce_is_refused(self) -> None:
+        # Refusing beats ignoring: teaching the engine is the prerequisite for
+        # using a keyword, not a follow-up to discovering it did nothing.
+        with self.assertRaises(self.error):
+            self.module.validate_instance(5, {"type": "integer", "multipleOf": 2})
+
+    def test_additional_properties_as_a_schema_constrains_the_unnamed_members(self) -> None:
+        schema = {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": {"type": "integer", "minimum": 0},
+        }
+        self.assertTrue(self.accepts({"a": 1}, schema))
+        self.assertFalse(self.accepts({"a": -1}, schema))
+        self.assertFalse(self.accepts({"a": "one"}, schema))
+
+    def test_exclusive_maximum_bounds_the_open_upper_end(self) -> None:
+        schema = {"type": "number", "exclusiveMaximum": 2}
+        self.assertTrue(self.accepts(1.999, schema))
+        self.assertFalse(self.accepts(2, schema))
+
+    def test_one_of_admits_exactly_one_branch(self) -> None:
+        schema = {"oneOf": [{"type": "integer"}, {"type": "string"}]}
+        self.assertTrue(self.accepts(1, schema))
+        self.assertTrue(self.accepts("x", schema))
+        self.assertFalse(self.accepts(1.5, schema))
+        self.assertFalse(self.accepts(True, schema))
+
+    def test_property_names_constrains_the_keys(self) -> None:
+        schema = {"type": "object", "propertyNames": {"pattern": "^[a-z]+$"}}
+        self.assertTrue(self.accepts({"ab": 1}, schema))
+        self.assertFalse(self.accepts({"A1": 1}, schema))
+
+    def test_the_string_and_object_maxima_bound_their_own_types(self) -> None:
+        self.assertFalse(self.accepts("abcd", {"type": "string", "maxLength": 3}))
+        self.assertFalse(
+            self.accepts({"a": 1, "b": 2}, {"type": "object", "maxProperties": 1})
+        )
+
+
+class BindingDriftOnProductionPathsTests(unittest.TestCase):
+    """FR-005a and SC-018: the byte-drift guard runs where consumers actually go.
+
+    A guard reachable only from a unit test guards the unit test. Every loader a
+    consumer touches is exercised here against a seeded byte change in a bound
+    CAR-003 document, and each one must fail closed.
+    """
+
+    BOUND = "score-bundle.schema.json"
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.path = CONTRACT_ROOT / self.BOUND
+        self.original = self.path.read_bytes()
+        self.addCleanup(self.path.write_bytes, self.original)
+
+    def seed_byte_drift(self) -> None:
+        # A trailing newline: the parsed value is identical, only the bytes move.
+        self.path.write_bytes(self.original + b"\n")
+
+    def test_load_registry_recomputes_the_bound_digests(self) -> None:
+        self.assertTrue(self.module.load_registry())
+        self.seed_byte_drift()
+        with self.assertRaises(self.module.ControlContractError):
+            self.module.load_registry()
+
+    def test_replay_recomputes_the_bound_digests(self) -> None:
+        self.seed_byte_drift()
+        with self.assertRaises(self.module.ControlContractError):
+            self.module.replay()
+
+    def test_the_operator_plan_recomputes_the_bound_digests(self) -> None:
+        self.assertIsNotNone(smoke_driver, "run-control-smoke.py is not importable")
+        self.seed_byte_drift()
+        with self.assertRaises(self.module.ControlContractError):
+            smoke_driver.build_plan("adaptive")
+
+
+class SmokeRecordCacheIsolationReadingTests(unittest.TestCase):
+    """FR-032: the required member is read, so the requirement is a requirement."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = synthetic_registry()
+        self.control = control_of_kind(self.registry, "unpinned")
+
+    def read(self, pairs: object) -> dict[str, object]:
+        return self.module.validate_smoke_record(
+            smoke_record(self.control, observed_cache_isolation=pairs), self.registry
+        )
+
+    def test_a_disjoint_pair_is_admitted(self) -> None:
+        reading = self.read([isolation_pair("other-arm")])
+        self.assertEqual(reading["evidence_admissibility"], "admitted")
+        self.assertTrue(reading["cache_isolation"]["all_pairs_disjoint"])
+
+    def test_a_shared_pair_refuses_the_record_and_survives_on_it(self) -> None:
+        reading = self.read([isolation_pair("other-arm", "observed_shared")])
+        self.assertEqual(reading["evidence_admissibility"], "refused")
+        self.assertIn(
+            self.module.CACHE_ISOLATION_REFUSAL_REASON, reading["refusal_reasons"]
+        )
+        self.assertEqual(reading["cache_isolation"]["pairs_not_disjoint"], ["other-arm"])
+
+    def test_an_unobserved_pair_refuses_the_record(self) -> None:
+        reading = self.read([isolation_pair("other-arm", "unobserved")])
+        self.assertEqual(reading["evidence_admissibility"], "refused")
+
+    def test_an_empty_observation_list_discharges_nothing(self) -> None:
+        with self.assertRaises(self.error):
+            self.read([])
+
+    def test_a_precommitment_is_not_an_observation_on_this_path_either(self) -> None:
+        pair = isolation_pair("other-arm")
+        pair[self.module.PRECOMMITMENT_MEMBER] = True
+        with self.assertRaises(self.error):
+            self.read([pair])
+
+    def test_the_same_pair_may_not_be_recorded_twice(self) -> None:
+        with self.assertRaises(self.error):
+            self.read([isolation_pair("other-arm"), isolation_pair("other-arm")])
+
+
+class ReaderTotalityTests(unittest.TestCase):
+    """Fail-closed means this module's own error, never a bare builtin one.
+
+    Callers route every entrypoint through ``except ControlContractError``. A
+    reader raising ``KeyError`` or ``TypeError`` escapes that handler, so a
+    malformed record surfaces as a traceback instead of a contract refusal.
+    """
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_policy_controls, "claude_policy_controls is not importable")
+        self.module = claude_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = synthetic_registry()
+
+    def test_an_attempt_missing_a_counter_is_a_contract_error(self) -> None:
+        control = control_of_kind(self.registry, "adaptive")
+        scope = control["execution_contract"]["retry_bounds"]["counted_over"]
+        with self.assertRaises(self.error):
+            self.module.evaluate_bounds(
+                control, {"counted_over": scope, "attempts": [{"duration_ms": 1}]}
+            )
+
+    def test_a_control_without_a_de_escalation_threshold_is_a_contract_error(self) -> None:
+        control = copy.deepcopy(control_of_kind(self.registry, "adaptive"))
+        del control["adaptive"]["de_escalation_clean_pass_threshold"]
+        with self.assertRaises(self.error):
+            self.module.validate_signal_maps(control)
+        with self.assertRaises(self.error):
+            self.module.advance_clean_streak(
+                control,
+                {"current_route_id": control["adaptive"]["escalation_ladder"][0]},
+                objective(),
+            )
+
+    def test_a_non_count_confirmation_entry_is_a_contract_error(self) -> None:
+        control = control_of_kind(self.registry, "unpinned")
+        with self.assertRaises(self.error):
+            self.module.validate_smoke_record(
+                smoke_record(control, confirmation_entries=["one", "two"]), self.registry
+            )
+
+    def test_a_malformed_wall_time_yields_a_verdict_rather_than_raising(self) -> None:
+        # FR-031a documents this reader as never raising. A value it cannot read
+        # leaves the wall time unobserved, which is a verdict, not an exception.
+        control = control_of_kind(self.registry, "orchestration_changing")
+        objective = entry_of_eligibility(False)["objective_ids"][0]
+        rows = [
+            dict(smoke_unit_row("parent"), wall_time_ms="not-a-number"),
+            smoke_unit_row("child-0", "parent"),
+            smoke_unit_row("child-1", "parent"),
+        ]
+        observed = self.module.evaluate_demonstration(
+            smoke_record(control, objective_attempts=[smoke_attempt(objective, rows)]),
+            self.registry,
+        )
+        self.assertEqual(observed["demonstration_state"], "not_demonstrated")
+        self.assertIn("wall_time_unobserved", observed["reasons"])
+
+    def test_an_unrecorded_duration_leaves_the_additive_sum_unobserved(self) -> None:
+        # FR-016e.5: never zero. A zero would read as a unit that finished fast.
+        rows = [smoke_unit_row("parent"), smoke_unit_row("child-0", "parent")]
+        self.assertEqual(
+            self.module._smoke_aggregate(rows)["additive_duration_ms"],
+            sum(int(row["duration_ms"]) for row in rows),
+        )
+        rows[1] = dict(rows[1])
+        del rows[1]["duration_ms"]
+        self.assertIsNone(self.module._smoke_aggregate(rows)["additive_duration_ms"])
+
+
+class SmokeDriverRefusalDurabilityTests(unittest.TestCase):
+    """FR-031a and FR-030c.3: the record survives, and a relabel does not stand."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(smoke_driver, "run-control-smoke.py is not importable")
+        self.driver = smoke_driver
+        self.registry = claude_policy_controls.load_registry()
+        self.control = control_of_kind(self.registry, "adaptive")
+
+    def seal(self, record: dict[str, object]) -> dict[str, object]:
+        with tempfile.TemporaryDirectory() as directory:
+            outcome = self.driver.seal_record(
+                record, results_dir=Path(directory), registry=self.registry
+            )
+            outcome["written"] = json.loads(Path(outcome["path"]).read_text(encoding="utf-8"))
+            return outcome
+
+    def test_a_relabelled_demonstration_is_refused(self) -> None:
+        outcome = self.seal(
+            smoke_record(
+                self.control, demonstration_evidence={}, demonstration_state="demonstrated"
+            )
+        )
+        self.assertIs(outcome["admitted"], False)
+        self.assertIn(self.driver.RELABEL_REFUSAL_REASON, outcome["written"]["refusal_reasons"])
+        self.assertEqual(
+            outcome["written"]["demonstration"]["demonstration_state"], "not_demonstrated"
+        )
+
+    def test_the_command_line_exits_non_zero_on_a_relabelled_demonstration(self) -> None:
+        # An operator script keys on the exit status; a relabel that exits 0
+        # would read there as a clean pass.
+        record = smoke_record(
+            self.control, demonstration_evidence={}, demonstration_state="demonstrated"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "record.json"
+            source.write_text(json.dumps(record), encoding="utf-8")
+            original = self.driver.RESULTS_DIR
+            self.driver.RESULTS_DIR = Path(directory) / "results"
+            self.addCleanup(setattr, self.driver, "RESULTS_DIR", original)
+            with contextlib.redirect_stderr(io.StringIO()):
+                status = self.driver.main(
+                    ["--control", "adaptive", "--seal", str(source)]
+                )
+        self.assertNotEqual(status, 0)
+
+    def test_an_unforeseen_reader_fault_still_writes_the_record(self) -> None:
+        # The one outcome seal_record exists to prevent is losing the operator's
+        # single copy of a live run, whatever the reader did.
+        def explode(*_args: object, **_kwargs: object) -> None:
+            raise RuntimeError("reader defect")
+
+        original = claude_policy_controls.validate_smoke_record
+        claude_policy_controls.validate_smoke_record = explode
+        self.addCleanup(
+            setattr, claude_policy_controls, "validate_smoke_record", original
+        )
+        outcome = self.seal(smoke_record(self.control))
+        self.assertIs(outcome["admitted"], False)
+        self.assertTrue(
+            any(
+                reason.startswith(self.driver.READER_FAULT_PREFIX)
+                for reason in outcome["written"]["refusal_reasons"]
+            )
+        )
+        self.assertEqual(outcome["written"]["control_id"], self.control["control_id"])
+
+    def test_two_distinct_smoke_ids_never_write_the_same_file(self) -> None:
+        # Sanitizing alone flattens both of these to the same stem.
+        first = self.driver.record_filename({"smoke_id": "arm/one"})
+        second = self.driver.record_filename({"smoke_id": "arm-one"})
+        self.assertNotEqual(first, second)
+
+    def test_no_smoke_can_produce_the_committed_baseline_filename(self) -> None:
+        # results/consolidated-baseline.json is the one path the layer6
+        # .gitignore re-includes, so a smoke overwriting it would replace
+        # committed evidence.
+        produced = self.driver.record_filename({"smoke_id": "consolidated-baseline"})
+        self.assertNotEqual(produced, "consolidated-baseline.json")
+
+    def test_a_record_without_a_smoke_id_is_not_sealable(self) -> None:
+        with self.assertRaises(claude_policy_controls.ControlContractError):
+            self.driver.record_filename({"control_id": "car-004-adaptive"})
+
+
 TEST_CASES = (
     PolicyControlContractTests,
     RegistryDocumentShapeTests,
     SchemaEngineFailClosedTests,
+    SchemaEngineKeywordCoverageTests,
+    BindingDriftOnProductionPathsTests,
+    SmokeRecordCacheIsolationReadingTests,
+    ReaderTotalityTests,
+    SmokeDriverRefusalDurabilityTests,
     RegistryIdentityAndClosureTests,
     Car003BindingTests,
     UnpinnedControlTests,

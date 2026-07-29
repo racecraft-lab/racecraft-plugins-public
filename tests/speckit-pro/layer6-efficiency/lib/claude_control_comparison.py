@@ -25,7 +25,9 @@ returns a partial verdict. Standard library only — no third-party ``jsonschema
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -37,9 +39,11 @@ from claude_successor_freeze import record_digest
 from claude_policy_controls import (
     CONTRACT_ROOT,
     FIXTURE_ROOT,
+    ControlContractError,
     load_contract,
     require_utc_timestamp,
     validate_instance,
+    verify_car_003_bindings,
 )
 
 
@@ -193,6 +197,14 @@ def _validate_eligibility_floors(contract: Mapping[str, Any]) -> None:
     _require(
         floors.get("all_gates_must_pass") is True,
         "eligibility_floors.all_gates_must_pass is frozen at true",
+    )
+    # FR-019 names the availability gate among the mandatory ones, so the member
+    # that switches it on is frozen at true rather than merely present. Left
+    # unchecked, deleting it would silently retire a mandatory gate.
+    _require(
+        floors.get("availability_gate_required") is True,
+        "eligibility_floors.availability_gate_required is frozen at true; FR-019 counts "
+        "availability among the mandatory gates",
     )
     _require(
         floors.get("reliability_guardrail_breach_result") == FROZEN_GUARDRAIL_BREACH_RESULT,
@@ -370,6 +382,13 @@ def _validate_messaging_map(contract: Mapping[str, Any]) -> None:
 def validate_comparison(contract: Mapping[str, Any]) -> Mapping[str, Any]:
     """Fail-closed comparison semantics: identity, frozen sets, and the messaging map."""
     require_utc_timestamp(contract.get("frozen_at"), "frozen_at")
+    # FR-005a and SC-018, on the path every consumer takes. The shared verifier
+    # raises in its own module's currency; restate it in this module's so a
+    # caller catching ControlComparisonError still sees a binding drift.
+    try:
+        verify_car_003_bindings(contract)
+    except ControlContractError as exc:
+        raise ControlComparisonError(str(exc)) from exc
     _validate_eligibility_floors(contract)
     _validate_dominance_rule(contract)
     _validate_multiplicity_position(contract)
@@ -460,7 +479,14 @@ def check_eligibility_floors(arm: Mapping[str, Any], contract: Mapping[str, Any]
         return False
     if arm.get("reliability_guardrails_respected") is not True:
         return False
-    if floors.get("availability_gate_required") and arm.get("availability_gate_passed") is not True:
+    # Read strictly, not truthily: an absent member would otherwise disable the
+    # gate rather than fail the arm, which is the wrong direction for a floor.
+    _require(
+        floors.get("availability_gate_required") is True,
+        "eligibility_floors.availability_gate_required is frozen at true; a contract that "
+        "omits it cannot be used to clear an arm",
+    )
+    if arm.get("availability_gate_passed") is not True:
         return False
     return True
 
@@ -471,7 +497,22 @@ def check_eligibility_floors(arm: Mapping[str, Any], contract: Mapping[str, Any]
 
 
 def _is_number(value: Any) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+    )
+
+
+def _exact(value: int | float) -> Decimal:
+    """The decimal the contract's JSON source actually wrote.
+
+    ``json.load`` turns the literal ``0.3`` into the nearest binary float, which
+    is not three tenths. Routing through ``repr`` — the shortest string that
+    round-trips — recovers the written decimal, so the margin below is tested in
+    the base the contract was authored in rather than in binary.
+    """
+    return Decimal(str(value))
 
 
 def _require_projected(vector: Any, label: str) -> Mapping[str, Any]:
@@ -575,14 +616,17 @@ def materiality_filter(
         if not _is_number(denominator) or not _is_number(value) or denominator == 0:
             per_component[dimension] = MARGIN_NOT_COMPUTABLE
             continue
+        base, observed = _exact(denominator), _exact(value)
         if entry["direction"] == "lower_is_better":
-            improvement = (denominator - value) / denominator
+            improvement = (base - observed) / base
         else:
-            improvement = (value - denominator) / denominator
+            improvement = (observed - base) / base
         # FR-021d: the point estimate stands in for the one-sided lower bound on
-        # the single deterministic row the replay fixtures exercise.
+        # the single deterministic row the replay fixtures exercise. The test is
+        # exact — a candidate sitting on the declared boundary must not change
+        # verdict with the scale its inputs happen to be recorded in.
         per_component[dimension] = (
-            CLEARED if improvement >= entry["relative_margin"] else NOT_CLEARED
+            CLEARED if improvement >= _exact(entry["relative_margin"]) else NOT_CLEARED
         )
     return per_component
 
@@ -611,9 +655,12 @@ def compare(
     ``stage_reached`` names the last stage the comparison entered, so the margin
     is visibly never reached except on candidate dominance.
     """
-    if not check_eligibility_floors(candidate, contract) or not check_eligibility_floors(
-        comparator, contract
-    ):
+    # Both arms are read before either verdict is taken. Short-circuiting on the
+    # candidate would let a structurally malformed comparator return a clean
+    # no-verdict, which reads as a comparison that ran when half of it never did.
+    candidate_eligible = check_eligibility_floors(candidate, contract)
+    comparator_eligible = check_eligibility_floors(comparator, contract)
+    if not candidate_eligible or not comparator_eligible:
         return {"verdict": NO_VERDICT, "per_component": {}, "stage_reached": STAGE_FLOORS}
 
     candidate_vector = project_resource_vector(_arm_vector(candidate, "candidate"))

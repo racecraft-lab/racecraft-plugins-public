@@ -181,10 +181,13 @@ a streak-breaking one. [FR-012a.3]
 | `acceptance_rule` | `const "parent_objective_oracle"` | yes | never summed, averaged, minimized, or maximized | FR-016b |
 | `acceptance_floor_on_non_completed` | `const 0` | yes | matches the frozen candidate-failure acceptance constant | FR-016b |
 
-`fan_out` is a declared **ceiling** on automatically spawned children, never an
-exact count: a run spawning fewer children — zero included — still conforms and
-yields a valid row, while a run spawning more does not conform and is refused
-rather than aggregated. [FR-017a]
+`fan_out` is a declared **ceiling**, never an exact count: a run spawning fewer
+children — zero included — still conforms and yields a valid row, while a run
+spawning more does not conform and is refused rather than aggregated. The
+ceiling is read **over the whole unit**, against every member other than the
+parent, and not per node: a grandchild counts toward it exactly as a direct
+child does. Reading it per node would leave a deep chain unbounded while the
+additive sum still charged its full cost to the control. [FR-017a]
 
 `child_shape` sub-members, both hash-relevant:
 
