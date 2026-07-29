@@ -650,7 +650,7 @@ class G56R004TwinMirrorTests(unittest.TestCase):
             codex_registry_instance_path=G56R_REGISTRY_INSTANCE,
         )
 
-    def test_categories_one_through_six_match_car_004_in_both_directions(self) -> None:
+    def test_categories_one_through_six_match_the_handoff_in_both_directions(self) -> None:
         report = self.mirror_report()
         self.assertEqual(report["compared_categories"], list(DERIVED_CATEGORIES))
         self.assertEqual(report["differences"], EMPTY_DIFFERENCES)

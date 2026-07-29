@@ -1117,7 +1117,7 @@ class FloorReadStrictnessTests(ComparisonModuleTestCase):
 class CodexComparisonArtifactPresenceTests(unittest.TestCase):
     """T020 RED: the G56R-004 comparison contract, fixture, and helper must exist."""
 
-    def test_the_codex_comparison_schema_is_published_under_the_g56r_004_id(self) -> None:
+    def test_the_codex_comparison_schema_is_published_under_the_feature_id(self) -> None:
         self.assertTrue(
             CODEX_COMPARISON_SCHEMA_PATH.is_file(),
             f"{CODEX_COMPARISON_SCHEMA_PATH} is missing; T021 must publish it",
@@ -1126,7 +1126,7 @@ class CodexComparisonArtifactPresenceTests(unittest.TestCase):
         self.assertEqual(schema["$schema"], JSON_SCHEMA_DIALECT)
         self.assertEqual(schema["$id"], CODEX_COMPARISON_SCHEMA_ID)
 
-    def test_the_codex_comparison_fixture_is_published_under_the_g56r_004_id(self) -> None:
+    def test_the_codex_comparison_fixture_is_published_under_the_feature_id(self) -> None:
         self.assertTrue(
             CODEX_COMPARISON_INSTANCE_PATH.is_file(),
             f"{CODEX_COMPARISON_INSTANCE_PATH} is missing; T021 must publish it",
@@ -1371,7 +1371,7 @@ class CodexReleaseClaimPolicyTests(CodexComparisonModuleTestCase):
                 self.assertIs(policy["messaging_restriction"], False)
                 self.assertIs(policy["g56r_011_final_conclusion_allowed"], False)
 
-    def test_g56r_004_rejects_any_final_static_core_dominance_conclusion(self) -> None:
+    def test_this_feature_rejects_any_final_static_core_dominance_conclusion(self) -> None:
         for conclusion in (
             "static_core_dominant",
             "control_arm_dominant",

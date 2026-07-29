@@ -42,5 +42,6 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/llm-integration.md](checklists/llm-integration.md)
 - [checklists/performance.md](checklists/performance.md)
+- [.process/pr-review-traceability.md](.process/pr-review-traceability.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

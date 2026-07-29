@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T08:35:27Z",
-  "active_step": "Phase 7: Implement - Verification and review evidence (T034-T038)",
+  "updated_at": "2026-07-29T09:10:13Z",
+  "active_step": "Post: Doctor Extension Check",
   "status": "in_progress",
   "worktree_binding": {
     "mode": "operator_authorized_in_session_workdir",
@@ -191,7 +191,7 @@
     },
     {
       "step": "Phase 7: Implement - Verification and review evidence (T034-T038)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -458,8 +458,8 @@
       "bounded_remediation_iterations": 0
     },
     "implement": {
-      "status": "in_progress",
-      "active_group": "verification_and_review_evidence",
+      "status": "completed",
+      "active_group": null,
       "completed_tasks": [
         "T001",
         "T002",
@@ -493,7 +493,12 @@
         "T030",
         "T031",
         "T032",
-        "T033"
+        "T033",
+        "T034",
+        "T035",
+        "T036",
+        "T037",
+        "T038"
       ],
       "groups": {
         "baseline_and_guardrails": {
@@ -571,6 +576,44 @@
           "comparison_owner": "170/170",
           "unrepresentable_members": 0,
           "frozen_contract_edits": 0
+        },
+        "verification_and_review_evidence": {
+          "status": "completed",
+          "tasks": "T034-T038",
+          "completed_tasks": [
+            "T034",
+            "T035",
+            "T036",
+            "T037",
+            "T038"
+          ],
+          "traceability_packet": "specs/g56r-004-policy-controls-adaptive-comparators/.process/pr-review-traceability.md",
+          "narrow_verification": {
+            "test-policy-control-contracts": "689/689",
+            "test-control-comparison-dominance": "170/170",
+            "test-twin-handoff-completeness": "41/41"
+          },
+          "docs_reference": {
+            "generate": "pass_7_pages",
+            "check": "pass_current",
+            "generated_change": "docs-site/src/content/docs/reference/tests.md"
+          },
+          "default_suite": {
+            "headline": "5142/5142",
+            "layer_1": "1428/1428",
+            "layer_4": "3528/3528",
+            "layer_5": "186/186",
+            "sandbox_only_attempt": "5079/5141_failed_due_restricted_worktree_writes"
+          },
+          "final_safety": {
+            "privacy_scan": "10/10",
+            "diff_check": "pass",
+            "suite_manifest_changes": 0,
+            "frozen_artifact_changes": 0,
+            "raw_capture_changes": 0,
+            "live_smoke": "not_run"
+          },
+          "live_smoke": "operator_only_unrun"
         }
       }
     }

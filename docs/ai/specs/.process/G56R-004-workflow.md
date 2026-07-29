@@ -845,7 +845,7 @@ For every behavior task:
 | Partition, replay, and parity | T024-T027 | 4 of 4 | Partition RED 638/645 → GREEN 650/650; deterministic replay RED 650/654 → GREEN 657/657; final owners policy 657/657, comparison 170/170, twin 32/32 |
 | Smoke and capture boundary | T028-T031 | 4 of 4 | Smoke plan/seal RED 657/674 → GREEN 681/681; raw-capture exclusion RED 681/689 → GREEN 689/689; live smoke remains operator-only and unrun |
 | Twin reconciliation | T032-T033 | 2 of 2 | Final composition RED 32/36 → GREEN 41/41 across registry, comparison, and partition groups; zero drift buckets, zero unrepresentable members, zero frozen-contract edits |
-| Verification and review evidence | | | |
+| Verification and review evidence | T034-T038 | 5 of 5 | PR traceability packet complete; narrow owners pass 689/689, 170/170, and 41/41; docs reference generation/check passes; default suite passes 5142/5142; privacy 10/10; scope/frozen-artifact audit and diff check pass; live smoke remains operator-only and unrun |
 
 ---
 
