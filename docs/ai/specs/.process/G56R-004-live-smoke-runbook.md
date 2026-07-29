@@ -1,11 +1,17 @@
-# Quickstart: G56R-004 Policy Controls and Adaptive Comparators
+# G56R-004 Live Smoke Runbook (Operator Only)
+
+This is the forward-looking operator procedure preserved after G56R-004
+archival. Deterministic replay and contract verification shipped in PR #403;
+the ChatGPT sign-in observations remain unrun and require explicit operator
+authorization.
 
 ## Prerequisites
 
-- Worktree:
+- Repository:
+  use a checkout of `main` at or after merge commit
+  `77e7dfff017597c6c93118a30eeb2b1c08d734de`.
+- Historical workflow:
   `docs/ai/specs/.process/G56R-004-workflow.md` must be present in the checkout.
-- Branch:
-  `g56r-004-policy-controls-adaptive-comparators`.
 - Runtime:
   Python 3.11+ standard library only.
 - Live smokes:
@@ -104,3 +110,16 @@ Expected result:
 - PR packet maps requirements and success criteria to changed files,
   verification evidence, known gaps, operator-only smoke status, and
   non-applicability notes for runtime/installer/release behavior.
+
+## Archive Provenance
+
+The original planning quickstart and complete active-spec artifacts remain
+recoverable from the merge commit:
+
+```text
+git show 77e7dfff017597c6c93118a30eeb2b1c08d734de:specs/g56r-004-policy-controls-adaptive-comparators/quickstart.md
+git checkout 77e7dfff017597c6c93118a30eeb2b1c08d734de -- specs/g56r-004-policy-controls-adaptive-comparators
+```
+
+Detailed cleanup and verification evidence lives in
+`.specify/memory/archive-reports/2026-07-29-g56r-004-post-merge-hygiene.md`.

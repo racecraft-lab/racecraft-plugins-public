@@ -19,7 +19,8 @@ is prepared for `$speckit-scaffold-spec G56R-NNN`.
 the shared official-source evidence foundation from PR #362;
 [G56R-002](.process/G56R-002-workflow.md) is complete and archived after
 PRs #366-#368; [G56R-003](.process/G56R-003-workflow.md) is complete and
-archived after PR #386; G56R-004 is ready
+archived after PR #386; [G56R-004](.process/G56R-004-workflow.md) is complete
+and archived after PR #403; G56R-005 is ready
 
 **Legacy identifier note:** `G56R` and the existing filenames are retained for
 traceability. They do not limit the candidate catalog to GPT-5.6.
@@ -222,8 +223,8 @@ G56R-006 Resolver, Materializer, Installer, and Strict Override
 | G56R-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/G56R-001-workflow.md](.process/G56R-001-workflow.md) | PR #360 merged; canonical evidence lives under `docs/ai/research/` |
 | G56R-002 | Capability Discovery, Telemetry Profile, and Exact Treatment | Complete / Archived | [.process/G56R-002-workflow.md](.process/G56R-002-workflow.md) | PRs #366-#368 merged; canonical evidence, contracts, replay fixtures, and validators live outside `specs/**` |
 | G56R-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Complete / Archived | [.process/G56R-003-workflow.md](.process/G56R-003-workflow.md) | PR #386 merged; canonical materialization module, contracts, corpus fixtures, and validators live outside `specs/**` |
-| G56R-004 | Policy Controls and Adaptive Comparators | In Progress | [.process/G56R-004-workflow.md](.process/G56R-004-workflow.md) | Scaffold complete; run Specify via autopilot |
-| G56R-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by G56R-004 |
+| G56R-004 | Policy Controls and Adaptive Comparators | Complete / Archived | [.process/G56R-004-workflow.md](.process/G56R-004-workflow.md) | PR #403 merged; frozen Codex control registry, comparison rule, fixtures, and validators live outside `specs/**`. Operator-authorized live smokes remain unrun; the procedure is [.process/G56R-004-live-smoke-runbook.md](.process/G56R-004-live-smoke-runbook.md) |
+| G56R-005 | Model Availability, Fallback, and Recovery Simulation | Ready | - | G56R-004 dependency satisfied by PR #403 |
 | G56R-006 | Capability-aware Resolver, Materializer, Installer, and Strict Override | Pending | - | Blocked by G56R-005 |
 | G56R-007 | Quality-critical Executor Routing | Pending | - | Blocked by G56R-006 |
 | G56R-008 | Structured-work Agent Routing | Pending | - | Blocked by G56R-006 |

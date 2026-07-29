@@ -1862,6 +1862,48 @@ deleted. Exact PR titles, merged-at timestamps, merge commits, and head branches
 are recorded in
 `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`.
 
+## 2026-07-29 - G56R-004 Post-Merge Archive Cleanup
+
+### G56R-004
+
+- PR: https://github.com/racecraft-lab/racecraft-plugins-public/pull/403
+- Title: `feat(g56r-004): add policy controls and adaptive comparators`
+- Merged at: `2026-07-29T19:36:55Z`
+- Merge commit: `77e7dfff017597c6c93118a30eeb2b1c08d734de`
+- Source: `specs/g56r-004-policy-controls-adaptive-comparators`
+- Canonical artifacts: two closed Codex specification schemas, four governed
+  control fixtures, three standard-library helpers, and three durable Layer 4
+  test owners under `tests/speckit-pro/`.
+- Governance note: repository-only validation assets; no production routing,
+  installer, manifest, scheduler, default, release behavior, plugin payload, or
+  version changed.
+
+G56R-004 freezes the Codex-local control and comparison evidence that G56R-005
+and G56R-011 consume later. The implementation preserves the CAR-004 mirror
+shape while deriving actual twin evidence from source artifacts and retaining
+the one sanctioned platform naming divergence.
+
+### Known gap carried forward
+
+The operator-authorized ChatGPT sign-in smokes remain unrun, so SC-014 through
+SC-016 are partial for live observation. Deterministic smoke planning, refusal,
+sealing, bounds, exact-treatment, cache-isolation, and privacy evidence remain
+green; no live result is inferred.
+
+### Runbook relocation
+
+The feature quickstart contained the forward-looking operator procedure rather
+than pure planning exhaust. It was moved to
+`docs/ai/specs/.process/G56R-004-live-smoke-runbook.md` before the active folder
+was removed. No schema or fixture relocation was needed because all live
+machine-enforced artifacts already live under `tests/speckit-pro/`.
+
+Detailed recovery and verification evidence:
+
+- `.specify/memory/archive-reports/2026-07-29-g56r-004-post-merge-hygiene.md`
+
+---
+
 ## 2026-07-28 - CAR-004 Post-Merge Archive Cleanup
 
 ### CAR-004

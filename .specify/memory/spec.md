@@ -2298,3 +2298,46 @@ no contract schema needed relocating — CAR-004 authored both schemas directly
 into the test tree, and a tree-wide search found zero readers of the spec folder
 outside `specs/**`. Detailed provenance, canonical artifact locations, and
 recovery commands live in the dated CAR-004 archive report.
+
+## Revision 2026-07-29 - G56R-004 Policy Controls and Adaptive Comparators Archived
+
+### Shipped Behavior Preserved
+
+- G56R-004 shipped through merged PR #403 the Codex-local mirrors of the three
+  frozen policy controls: `unpinned`, `adaptive`, and
+  `justified_high_effort`. Two closed, content-addressed schemas, four governed
+  fixtures, three standard-library helpers, and three durable Layer 4 owners
+  enforce the control, comparison, replay, smoke, privacy, and twin-completeness
+  contracts.
+- The comparison procedure remains gate-first and direction-aware across eight
+  dimensions. Empty or malformed comparison handoffs fail closed, and actual
+  twin entries are derived from source artifacts rather than copied from
+  expected values.
+- G56R-004 changes no production routing, installer, manifest, scheduler,
+  default, or release behavior. Its evidence is repository-only under
+  `tests/speckit-pro/`.
+- G56R-005 is ready. Its G56R-004 dependency is satisfied by the merged
+  contracts, fixtures, validators, replay cases, and focused test owners.
+
+### Known Gap Carried Forward
+
+The three operator-authorized ChatGPT sign-in smokes were not run. SC-014
+through SC-016 therefore remain partial for live observation even though
+deterministic smoke planning, refusal, bounds, sealing, exact-treatment,
+cache-isolation, and privacy evidence pass. No live or off-box result is
+claimed.
+
+### Cleanup Note
+
+The active G56R-004 folder was removed after PR #403 merge provenance and all
+live readers were checked. Historical workflow and design evidence remains
+under `docs/ai/specs/.process/`.
+
+The feature quickstart contained the forward-looking operator smoke procedure,
+so it was moved to
+`docs/ai/specs/.process/G56R-004-live-smoke-runbook.md` before cleanup. No
+contract relocation was needed: all machine-enforced schemas, fixtures,
+helpers, and tests already live under `tests/speckit-pro/`, and a repository
+search found no live code or test reader of the active spec path. Detailed
+provenance, canonical artifact locations, and recovery commands live in the
+dated G56R-004 archive report.
