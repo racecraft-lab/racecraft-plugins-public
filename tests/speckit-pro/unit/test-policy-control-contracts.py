@@ -69,6 +69,11 @@ try:  # CAR-004 deliverable — absent until the policy-control module is implem
 except ImportError:  # pragma: no cover - exercised only before the module lands
     claude_policy_controls = None  # type: ignore[assignment]
 
+try:  # G56R-004 deliverable — extended as Codex control validation lands.
+    import codex_policy_controls  # type: ignore[import-not-found]  # noqa: E402
+except ImportError:  # pragma: no cover - exercised only before the module lands
+    codex_policy_controls = None  # type: ignore[assignment]
+
 
 CONTRACT_ROOT = TEST_ROOT / "layer6-efficiency" / "contracts-claude"
 FIXTURE_ROOT = TEST_ROOT / "layer6-efficiency" / "fixtures-controls"
@@ -87,6 +92,19 @@ CODEX_CONTROL_IDS_BY_KIND = {
     "justified_high_effort": "g56r-004-justified-high-effort-control",
 }
 CODEX_CONTROL_KINDS = tuple(CODEX_CONTROL_IDS_BY_KIND)
+CODEX_REQUIRED_ABSENT_OVERRIDES = (
+    "api_key",
+    "effort",
+    "model",
+    "provider",
+    "service_tier",
+)
+CODEX_G56R003_SUCCESSOR_FREEZE_ID = (
+    "sha256:734672cea5a83e5b8f296ee604f7cb8d93e0a5296a3f864b873fe78bfe518f1e"
+)
+CODEX_G56R003_ROUTE_EVIDENCE_DIGEST = (
+    "sha256:f01ff64ca3d17b40db8ca802dd6501e62d91c4c161d01a94879c156f90eb09e4"
+)
 JSON_SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema"
 
 # FR-004 and SC-017: a reference that leaves the owning document is refused, so
@@ -927,6 +945,536 @@ class CodexRegistryFixtureTests(unittest.TestCase):
             record_digest(drifted, digest_field="registry_digest"),
             registry["registry_digest"],
         )
+
+
+class CodexUnpinnedControlTests(unittest.TestCase):
+    """G56R-004 FR-008, FR-009, FR-037, and SC-015: inherited exact treatment."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.control = control_of_kind(self.registry, "unpinned")
+        self.unpinned = self.control["unpinned"]
+
+    def validate_control(self, control: dict[str, object]) -> object:
+        self.assertTrue(
+            hasattr(self.module, "validate_unpinned_control"),
+            "T009 must expose validate_unpinned_control for Codex unpinned controls",
+        )
+        return self.module.validate_unpinned_control(control)
+
+    def validate_exact_treatment(self, evidence: dict[str, object]) -> dict[str, object]:
+        self.assertTrue(
+            hasattr(self.module, "validate_unpinned_exact_treatment"),
+            "T009 must read Codex unpinned exact treatment from produced evidence",
+        )
+        return self.module.validate_unpinned_exact_treatment(self.control, evidence)
+
+    def exact_treatment_evidence(self, **overrides: object) -> dict[str, object]:
+        evidence: dict[str, object] = {
+            "read_back_from": "produced_evidence",
+            "dispatch_intent": {"model_resolution": "inherit"},
+            "produced_evidence": {
+                "served_model": self.unpinned["pinned_parent_model"],
+                "served_effort": self.unpinned["pinned_parent_effort"],
+                "observed_absent_overrides": {
+                    member: True for member in CODEX_REQUIRED_ABSENT_OVERRIDES
+                },
+            },
+        }
+        evidence.update(overrides)
+        return evidence
+
+    def test_the_unpinned_control_freezes_one_inherited_parent_arm(self) -> None:
+        self.assertEqual(self.unpinned["arm_count"], 1)
+        self.assertEqual(self.unpinned["model_resolution"], "inherit")
+        self.assertEqual(
+            self.control["execution_contract"]["dispatch_parameters"],
+            {"model_resolution": "inherit"},
+        )
+        self.assertIsNone(self.validate_control(self.control))
+
+        for arm_count in (0, 2):
+            with self.subTest(arm_count=arm_count):
+                control = copy.deepcopy(self.control)
+                control["unpinned"]["arm_count"] = arm_count
+                with self.assertRaises(self.error):
+                    self.validate_control(control)
+
+    def test_parent_context_identity_includes_every_frozen_parent_member(self) -> None:
+        self.assertIsNone(self.validate_control(self.control))
+        for member in (
+            "pinned_parent_model",
+            "pinned_parent_effort",
+            "authentication_mode",
+            "environment_boundary",
+        ):
+            with self.subTest(member=member):
+                self.assertIn(member, self.unpinned)
+        self.assertEqual(self.unpinned["authentication_mode"], "chatgpt_subscription")
+        self.assertIn("client_version", self.unpinned["environment_boundary"])
+
+        changed = copy.deepcopy(self.control)
+        changed["unpinned"]["environment_boundary"]["client_version"] = "codex-client-repin"
+        changed["control_digest"] = record_digest(changed, digest_field="control_digest")
+        self.assertNotEqual(changed["control_digest"], self.control["control_digest"])
+        self.assertIsNone(self.validate_control(changed))
+
+    def test_required_local_overrides_are_closed_and_observed_absent(self) -> None:
+        self.assertIsNone(self.validate_control(self.control))
+        self.assertEqual(
+            tuple(sorted(self.unpinned["required_absent_overrides"])),
+            CODEX_REQUIRED_ABSENT_OVERRIDES,
+        )
+        evidence = self.exact_treatment_evidence()
+        for override in CODEX_REQUIRED_ABSENT_OVERRIDES:
+            with self.subTest(override=override):
+                seeded = copy.deepcopy(evidence)
+                seeded["produced_evidence"]["observed_absent_overrides"][override] = False
+                with self.assertRaises(self.error):
+                    self.validate_exact_treatment(seeded)
+
+    def test_exact_treatment_is_read_back_from_produced_evidence(self) -> None:
+        observed = self.validate_exact_treatment(self.exact_treatment_evidence())
+        self.assertEqual(observed["read_back_from"], "produced_evidence")
+        self.assertEqual(observed["served_model"], self.unpinned["pinned_parent_model"])
+        self.assertEqual(observed["served_effort"], self.unpinned["pinned_parent_effort"])
+
+        request_only = self.exact_treatment_evidence(read_back_from="dispatch_intent")
+        with self.assertRaises(self.error):
+            self.validate_exact_treatment(request_only)
+
+
+class CodexAdaptiveLadderTests(unittest.TestCase):
+    """G56R-004 FR-010, FR-011, FR-017, and SC-005: frozen Codex ladder."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.control = control_of_kind(self.registry, "adaptive")
+        self.adaptive = self.control["adaptive"]
+        self.freeze = self.successor_freeze()
+
+    def validate_ladder(
+        self, control: dict[str, object], freeze: dict[str, object]
+    ) -> object:
+        self.assertTrue(
+            hasattr(self.module, "validate_adaptive_ladder"),
+            "T011 must expose validate_adaptive_ladder for Codex adaptive controls",
+        )
+        return self.module.validate_adaptive_ladder(control, freeze)
+
+    def successor_freeze(self, **overrides: object) -> dict[str, object]:
+        ladder = list(self.adaptive["escalation_ladder"])
+        tuples = [
+            (ladder[0], "gpt-5.5", "medium"),
+            (ladder[1], "gpt-5.5", "high"),
+            (ladder[2], "gpt-5.6-terra", "high"),
+        ]
+        freeze: dict[str, object] = {
+            "candidate_freeze_id": CODEX_G56R003_SUCCESSOR_FREEZE_ID,
+            "freeze_digest": self.adaptive["freeze_digest"],
+            "admitted_tuples": [
+                {
+                    "source_spec_id": "G56R-003",
+                    "candidate_route_id": route_id,
+                    "model": model,
+                    "effort": effort,
+                    "source_evidence_digest": CODEX_G56R003_ROUTE_EVIDENCE_DIGEST,
+                    "runtime_evidence_digest": CODEX_G56R003_ROUTE_EVIDENCE_DIGEST,
+                }
+                for route_id, model, effort in tuples
+            ],
+            "excluded_tuples": [],
+        }
+        freeze.update(overrides)
+        return freeze
+
+    def test_the_adaptive_ladder_is_the_ordered_g56r003_successor_tuple_set(self) -> None:
+        self.assertEqual(self.adaptive["candidate_freeze_id"], CODEX_G56R003_SUCCESSOR_FREEZE_ID)
+        self.assertEqual(
+            self.adaptive["escalation_ladder"],
+            [tuple_["candidate_route_id"] for tuple_ in self.freeze["admitted_tuples"]],
+        )
+        self.assertTrue(
+            all(tuple_["source_spec_id"] == "G56R-003" for tuple_ in self.freeze["admitted_tuples"])
+        )
+        self.assertIsNone(self.validate_ladder(self.control, self.freeze))
+
+    def test_ladder_order_is_hash_relevant_and_declared(self) -> None:
+        self.assertIsNone(self.validate_ladder(self.control, self.freeze))
+        reordered = copy.deepcopy(self.control)
+        first, second, third = reordered["adaptive"]["escalation_ladder"]
+        reordered["adaptive"]["escalation_ladder"] = [second, first, third]
+        reordered["control_digest"] = record_digest(reordered, digest_field="control_digest")
+        self.assertNotEqual(reordered["control_digest"], self.control["control_digest"])
+        with self.assertRaises(self.error):
+            self.validate_ladder(reordered, self.freeze)
+
+    def test_cross_model_steps_have_rationales_and_duplicate_or_omitted_routes_fail(self) -> None:
+        self.assertIsNone(self.validate_ladder(self.control, self.freeze))
+        rationale = self.adaptive["escalation_ladder_rationales"][0]
+        self.assertEqual(
+            (rationale["from_route"], rationale["to_route"]),
+            (self.adaptive["escalation_ladder"][1], self.adaptive["escalation_ladder"][2]),
+        )
+        self.assertTrue(rationale["rationale"])
+
+        for label, ladder in {
+            "duplicate": [
+                self.adaptive["escalation_ladder"][0],
+                self.adaptive["escalation_ladder"][0],
+                self.adaptive["escalation_ladder"][2],
+            ],
+            "omission": self.adaptive["escalation_ladder"][:-1],
+        }.items():
+            with self.subTest(case=label):
+                control = copy.deepcopy(self.control)
+                control["adaptive"]["escalation_ladder"] = list(ladder)
+                with self.assertRaises(self.error):
+                    self.validate_ladder(control, self.freeze)
+
+    def test_successor_freeze_and_route_evidence_drift_invalidate_the_control(self) -> None:
+        self.assertIsNone(self.validate_ladder(self.control, self.freeze))
+        drifted_freeze = copy.deepcopy(self.freeze)
+        drifted_freeze["freeze_digest"] = "sha256:" + "0" * 64
+        with self.assertRaises(self.error):
+            self.validate_ladder(self.control, drifted_freeze)
+
+        drifted_route = copy.deepcopy(self.freeze)
+        drifted_route["admitted_tuples"][0]["runtime_evidence_digest"] = "sha256:" + "1" * 64
+        with self.assertRaises(self.error):
+            self.validate_ladder(self.control, drifted_route)
+
+
+class CodexAdaptiveSignalResolutionTests(unittest.TestCase):
+    """G56R-004 FR-012, FR-013, and SC-006: Codex adaptive signal resolution."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.control = control_of_kind(self.registry, "adaptive")
+        self.adaptive = self.control["adaptive"]
+
+    def signal_validator(self) -> object:
+        self.assertTrue(
+            hasattr(self.module, "validate_adaptive_signal_maps"),
+            "T013 must expose validate_adaptive_signal_maps for Codex adaptive controls",
+        )
+        return self.module.validate_adaptive_signal_maps
+
+    def response_resolver(self) -> object:
+        self.assertTrue(
+            hasattr(self.module, "resolve_adaptive_response"),
+            "T013 must expose resolve_adaptive_response for Codex adaptive rows",
+        )
+        return self.module.resolve_adaptive_response
+
+    def clean_row(self, **overrides: object) -> dict[str, object]:
+        row: dict[str, object] = {
+            "terminal_state": "completed",
+            "failure_plane": "none",
+            "failure_code": "none",
+            "retries": 0,
+            "budget_observations": {"max_duration_seconds": 100},
+        }
+        row.update(overrides)
+        return row
+
+    def test_signal_sources_are_the_closed_frozen_observed_set(self) -> None:
+        self.assertEqual(self.adaptive["signal_precedence"], list(SIGNAL_SOURCES))
+        self.assertEqual(
+            sorted(self.control["execution_contract"]["observed_signals"]),
+            ["failure_code", "failure_plane", "retries", "terminal_state"],
+        )
+        self.assertEqual(
+            [trigger["member"] for trigger in self.adaptive["budget_triggers"]],
+            ["max_duration_seconds"],
+        )
+        self.assertIsNone(self.signal_validator()(self.control))
+
+    def test_response_maps_are_total_single_valued_and_closed(self) -> None:
+        cases = {
+            "terminal_state_response": frozen_terminal_states(),
+            "failure_plane_response": frozen_failure_planes(),
+            "failure_code_response": frozen_failure_codes(),
+        }
+        for member, enum in cases.items():
+            with self.subTest(map=member):
+                self.assertEqual(sorted(self.adaptive[member]), sorted(enum))
+                self.assertTrue(
+                    all(response in POLICY_RESPONSES for response in self.adaptive[member].values())
+                )
+        self.assertIsNone(self.signal_validator()(self.control))
+
+    def test_resolution_uses_the_declared_precedence_order(self) -> None:
+        resolver = self.response_resolver()
+        row = self.clean_row(
+            failure_code="candidate_failed",
+            failure_plane="candidate",
+            retries=3,
+            budget_observations={"max_duration_seconds": 1800},
+        )
+        self.assertEqual(resolver(self.control, row), "escalate")
+
+        lower_source = self.clean_row(failure_plane="candidate")
+        self.assertEqual(resolver(self.control, lower_source), "escalate")
+
+    def test_failure_plane_and_code_responses_stay_consistent(self) -> None:
+        for code in frozen_failure_codes():
+            with self.subTest(failure_code=code):
+                self.assertEqual(
+                    self.adaptive["failure_plane_response"][failure_plane_for(code)],
+                    self.adaptive["failure_code_response"][code],
+                )
+        self.assertIsNone(self.signal_validator()(self.control))
+
+    def test_terminal_states_match_their_candidate_failure_codes(self) -> None:
+        codes = frozen_failure_codes()
+        for state in frozen_terminal_states():
+            if state == "completed":
+                continue
+            with self.subTest(terminal_state=state):
+                paired = f"candidate_{state}"
+                self.assertIn(paired, codes)
+                self.assertEqual(
+                    self.adaptive["terminal_state_response"][state],
+                    self.adaptive["failure_code_response"][paired],
+                )
+        self.assertIsNone(self.signal_validator()(self.control))
+
+    def test_unknown_closed_domain_values_fail_before_resolution(self) -> None:
+        resolver = self.response_resolver()
+        cases = (
+            {"failure_code": "route_repointed"},
+            {"failure_plane": "routing"},
+            {"terminal_state": "quiesced"},
+        )
+        for seeded in cases:
+            with self.subTest(**seeded):
+                with self.assertRaises(self.error):
+                    resolver(self.control, self.clean_row(**seeded))
+
+
+class CodexAdaptiveMovementAndBreachTests(unittest.TestCase):
+    """G56R-004 FR-014 through FR-016 and SC-007: Codex adaptive replay semantics."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(codex_policy_controls, "codex_policy_controls is not importable")
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+        self.registry = load_json(CODEX_REGISTRY_FIXTURE_PATH)
+        self.control = control_of_kind(self.registry, "adaptive")
+        self.adaptive = self.control["adaptive"]
+        self.ladder = list(self.adaptive["escalation_ladder"])
+
+    def state(
+        self, route_index: int = 0, clean_streak: int = 0, escalations_used: int = 0
+    ) -> dict[str, object]:
+        return {
+            "objective_id": "g56r-004-objective-1",
+            "current_route_id": self.ladder[route_index],
+            "clean_streak": clean_streak,
+            "escalations_used": escalations_used,
+        }
+
+    def row(self, **overrides: object) -> dict[str, object]:
+        row: dict[str, object] = {
+            "objective_id": "g56r-004-objective-1",
+            "terminal_state": "completed",
+            "failure_plane": "none",
+            "failure_code": "none",
+            "retries": 0,
+            "budget_observations": {"max_duration_seconds": 100},
+        }
+        row.update(overrides)
+        return row
+
+    def attempt(self, route_id: str, retries: int, duration_ms: int) -> dict[str, object]:
+        return {
+            "attempt_id": f"{route_id}-{retries}-{duration_ms}",
+            "route_id": route_id,
+            "retries": retries,
+            "duration_ms": duration_ms,
+        }
+
+    def bounded_objective(
+        self,
+        attempts: list[dict[str, object]],
+        **overrides: object,
+    ) -> dict[str, object]:
+        row: dict[str, object] = {
+            "objective_id": "g56r-004-objective-1",
+            "counted_over": self.control["execution_contract"]["retry_bounds"]["counted_over"],
+            "attempts": attempts,
+            "budget_observations": {"max_duration_seconds": 100},
+        }
+        row.update(overrides)
+        return row
+
+    def state_advancer(self) -> object:
+        self.assertTrue(
+            hasattr(self.module, "advance_adaptive_state"),
+            "T015 must expose advance_adaptive_state for Codex adaptive movement replay",
+        )
+        return self.module.advance_adaptive_state
+
+    def bounds_evaluator(self) -> object:
+        self.assertTrue(
+            hasattr(self.module, "evaluate_adaptive_bounds"),
+            "T015 must expose evaluate_adaptive_bounds for Codex retry and cancellation replay",
+        )
+        return self.module.evaluate_adaptive_bounds
+
+    def reroute_classifier(self) -> object:
+        self.assertTrue(
+            hasattr(self.module, "classify_adaptive_service_reroute"),
+            "T015 must expose classify_adaptive_service_reroute for Codex platform reroutes",
+        )
+        return self.module.classify_adaptive_service_reroute
+
+    def test_at_most_one_escalation_is_spent_per_objective(self) -> None:
+        advance = self.state_advancer()
+        failure = self.row(failure_code="candidate_failed", failure_plane="candidate")
+        first = advance(self.control, self.state(route_index=0), failure)
+        self.assertTrue(first["escalated"])
+        self.assertEqual(first["current_route_id"], self.ladder[1])
+        self.assertEqual(first["escalations_used"], 1)
+        self.assertEqual(
+            first["escalation_step"],
+            {"from_route_id": self.ladder[0], "to_route_id": self.ladder[1]},
+        )
+
+        second = advance(self.control, first, failure)
+        self.assertFalse(second["escalated"])
+        self.assertEqual(second["current_route_id"], self.ladder[1])
+        self.assertEqual(second["escalations_used"], 1)
+
+    def test_floor_and_ceiling_do_not_wrap_when_movement_is_due(self) -> None:
+        advance = self.state_advancer()
+        ceiling = advance(
+            self.control,
+            self.state(route_index=len(self.ladder) - 1),
+            self.row(failure_code="candidate_failed", failure_plane="candidate"),
+        )
+        self.assertFalse(ceiling["escalated"])
+        self.assertEqual(ceiling["current_route_id"], self.ladder[-1])
+        self.assertNotEqual(ceiling["current_route_id"], self.ladder[0])
+
+        floor = advance(self.control, self.state(route_index=0, clean_streak=2), self.row())
+        self.assertTrue(floor["de_escalation_evaluated"])
+        self.assertFalse(floor["de_escalated"])
+        self.assertEqual(floor["current_route_id"], self.ladder[0])
+        self.assertEqual(floor["clean_streak"], 0)
+        self.assertNotEqual(floor["current_route_id"], self.ladder[-1])
+
+    def test_three_clean_passes_de_escalate_between_objectives(self) -> None:
+        advance = self.state_advancer()
+        carried = self.state(route_index=1)
+        for _ in range(2):
+            carried = advance(self.control, carried, self.row())
+            self.assertFalse(carried["de_escalated"])
+        carried = advance(self.control, carried, self.row())
+        self.assertTrue(carried["de_escalation_evaluated"])
+        self.assertTrue(carried["de_escalated"])
+        self.assertEqual(carried["current_route_id"], self.ladder[0])
+        self.assertEqual(carried["clean_streak"], 0)
+
+    def test_non_scorable_rows_do_not_advance_or_reset_the_clean_streak(self) -> None:
+        advance = self.state_advancer()
+        reroute = self.row(
+            terminal_state="failed",
+            failure_code="service_reroute",
+            failure_plane="treatment",
+            retries=3,
+        )
+        carried = advance(self.control, self.state(route_index=1, clean_streak=2), reroute)
+        self.assertTrue(carried["excluded"])
+        self.assertFalse(carried["clean_pass"])
+        self.assertEqual(carried["clean_streak"], 2)
+        self.assertEqual(carried["current_route_id"], self.ladder[1])
+
+        final = advance(self.control, carried, self.row())
+        self.assertTrue(final["de_escalated"])
+        self.assertEqual(final["current_route_id"], self.ladder[0])
+
+    def test_retry_and_cancellation_breaches_record_only_their_declared_pairings(self) -> None:
+        evaluate = self.bounds_evaluator()
+        retry_bounds = self.control["execution_contract"]["retry_bounds"]
+        cancellation_bounds = self.control["execution_contract"]["cancellation_bounds"]
+
+        respected = evaluate(
+            self.control,
+            self.bounded_objective([
+                self.attempt(self.ladder[0], retry_bounds["max_retries"], 1000)
+            ]),
+        )
+        self.assertFalse(respected["retry_bound_breached"])
+        self.assertFalse(respected["cancellation_bound_breached"])
+        self.assertIsNone(respected["terminal_state"])
+        self.assertIsNone(respected["failure_code"])
+
+        retry_breach = evaluate(
+            self.control,
+            self.bounded_objective([
+                self.attempt(self.ladder[0], retry_bounds["max_retries"] + 1, 1000)
+            ]),
+        )
+        self.assertTrue(retry_breach["retry_bound_breached"])
+        self.assertEqual(retry_breach["terminal_state"], "failed")
+        self.assertEqual(retry_breach["failure_code"], "candidate_failed")
+
+        cancellation_breach = evaluate(
+            self.control,
+            self.bounded_objective([
+                self.attempt(self.ladder[0], 0, cancellation_bounds["max_duration_ms"] + 1)
+            ]),
+        )
+        self.assertTrue(cancellation_breach["cancellation_bound_breached"])
+        self.assertEqual(cancellation_breach["terminal_state"], "cancelled")
+        self.assertEqual(cancellation_breach["failure_code"], "candidate_cancelled")
+
+    def test_budget_triggers_resolve_by_response_not_on_breach_pairing(self) -> None:
+        evaluate = self.bounds_evaluator()
+        trigger = self.adaptive["budget_triggers"][0]
+        reading = evaluate(
+            self.control,
+            self.bounded_objective(
+                [self.attempt(self.ladder[0], 0, 1000)],
+                budget_observations={trigger["member"]: trigger["threshold"]},
+            ),
+        )
+        self.assertTrue(reading["budget_trigger_met"])
+        self.assertEqual(reading["budget_response"], trigger["response"])
+        self.assertFalse(reading["retry_bound_breached"])
+        self.assertFalse(reading["cancellation_bound_breached"])
+        self.assertIsNone(reading["terminal_state"])
+        self.assertIsNone(reading["failure_code"])
+
+    def test_service_reroute_is_non_scorable_without_spending_movement(self) -> None:
+        from claude_score_bundle import SERVICE_REROUTE_DISPOSITION_REASON
+
+        classify = self.reroute_classifier()
+        classified = classify(
+            self.control,
+            self.state(route_index=1, clean_streak=2),
+            self.row(failure_code="service_reroute", failure_plane="treatment"),
+        )
+        self.assertTrue(classified["service_reroute"])
+        self.assertEqual(classified["response"], "non_scorable")
+        self.assertFalse(classified["escalation_allowance_spent"])
+        self.assertFalse(classified["ladder_position_changed"])
+        self.assertEqual(classified["current_route_id"], self.ladder[1])
+        self.assertEqual(classified["clean_streak"], 2)
+        self.assertTrue(classified["unit_non_scorable"])
+        self.assertEqual(classified["failure_plane"], failure_plane_for("service_reroute"))
+        self.assertEqual(classified["disposition_reason"], SERVICE_REROUTE_DISPOSITION_REASON)
 
 
 class UnpinnedControlTests(unittest.TestCase):
@@ -3680,6 +4228,10 @@ TEST_CASES = (
     RegistryIdentityAndClosureTests,
     Car003BindingTests,
     CodexRegistryFixtureTests,
+    CodexUnpinnedControlTests,
+    CodexAdaptiveLadderTests,
+    CodexAdaptiveSignalResolutionTests,
+    CodexAdaptiveMovementAndBreachTests,
     UnpinnedControlTests,
     AdaptiveSignalMapTests,
     AdaptiveRowResolutionTests,

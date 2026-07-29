@@ -839,7 +839,7 @@ For every behavior task:
 |-------|-------|-----------|----------|
 | Baseline and guardrails | T001-T003 | 3 of 3 | Owner baselines 545/545, 135/135, and 26/26; exact 12-path boundary confirmed; live smoke remains operator-only and unrun |
 | Contract freeze | T004-T007 | 4 of 4 | Registry RED 545/547 → GREEN 549/549; registry-mirror RED 26/29 → GREEN 32/32; A-002 dependency ordering remediated and revalidated |
-| Policy behavior and replay | | | |
+| Policy behavior and replay | T008-T015 | 8 of 8 | Unpinned RED 549/553 → GREEN 561/561; ladder RED 561/565 → GREEN 566/566; signal RED 610/616 → GREEN 615/615; movement RED 615/622 → GREEN 622/622; replay 18/18 |
 | Comparison, partition, parity | | | |
 | Integration and operator evidence | | | |
 

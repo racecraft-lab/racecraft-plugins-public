@@ -24,7 +24,7 @@
   "controls": [
     {
       "attribution_level": "policy",
-      "control_digest": "sha256:5d4fe502e2334ab6b1c79136db98063c0860d8cfd4868c6983bcd9acb0554446",
+      "control_digest": "sha256:f0fae103e4b87f8a6c5ed6ec914a07ec2b58affeba48e7fdaaf0d77bc6601b50",
       "control_id": "g56r-004-unpinned-control",
       "control_kind": "unpinned",
       "evidence_requirements": [
@@ -60,13 +60,26 @@
       "frozen_at": "2026-07-27T00:00:00Z",
       "unpinned": {
         "arm_count": 1,
+        "authentication_mode": "chatgpt_subscription",
+        "environment_boundary": {
+          "client": "codex",
+          "client_version": "codex-parent-session",
+          "credential_boundary": "chatgpt_subscription_no_api_key"
+        },
         "model_resolution": "inherit",
         "pinned_parent_binding": {
           "digest": "sha256:85e2ae0faf2c72bed3ba6f7469c5b39d9923fdfe5bcabbc540411473f022dc70",
           "id": "https://racecraft.dev/schemas/car-003/experiment-assignment.schema.json"
         },
         "pinned_parent_effort": "high",
-        "pinned_parent_model": "model-alpha"
+        "pinned_parent_model": "model-alpha",
+        "required_absent_overrides": [
+          "api_key",
+          "effort",
+          "model",
+          "provider",
+          "service_tier"
+        ]
       }
     },
     {
@@ -79,7 +92,7 @@
             "threshold": 1800
           }
         ],
-        "candidate_freeze_id": "sha256:efccacf2bb277b2d87bf04f14bb542d941049d9456c94d55999ce8a311b4f392",
+        "candidate_freeze_id": "sha256:734672cea5a83e5b8f296ee604f7cb8d93e0a5296a3f864b873fe78bfe518f1e",
         "clean_pass_accounting": {
           "escalating_objective_counts": false,
           "first_entry_de_escalation": "no_step_and_no_wrap_around",
@@ -96,15 +109,15 @@
         "de_escalation_clean_pass_threshold": 3,
         "de_escalation_timing": "between_objectives",
         "escalation_ladder": [
-          "model-alpha__medium",
-          "model-alpha__high",
-          "model-beta__high"
+          "gpt-5.5__medium",
+          "gpt-5.5__high",
+          "gpt-5.6-terra__high"
         ],
         "escalation_ladder_rationales": [
           {
-            "from_route": "model-alpha__high",
+            "from_route": "gpt-5.5__high",
             "rationale": "cross-model rank is a declared capability judgment; no rule may derive it from a model identifier",
-            "to_route": "model-beta__high"
+            "to_route": "gpt-5.6-terra__high"
           }
         ],
         "failure_code_response": {
@@ -183,7 +196,7 @@
         }
       },
       "attribution_level": "policy",
-      "control_digest": "sha256:28be5f9afd847c8b7d9edcbef1adc6b35a39d7850090dd5c746317e1ef647c78",
+      "control_digest": "sha256:612aaabb3838d98fce0cd5577118dc6d9e599a5097a81697db22554f2b08976f",
       "control_id": "g56r-004-adaptive-control",
       "control_kind": "adaptive",
       "evidence_requirements": [
@@ -200,7 +213,7 @@
           }
         },
         "dispatch_parameters": {
-          "candidate_route_id": "model-alpha__medium",
+          "candidate_route_id": "gpt-5.5__medium",
           "model_resolution": "explicit"
         },
         "observed_signals": [
@@ -308,7 +321,7 @@
     }
   ],
   "frozen_at": "2026-07-27T00:00:00Z",
-  "registry_digest": "sha256:9a03fddef3a898409dfdaa63c41045c7222d82d712acf3dde6b29f6e08e0f77f",
+  "registry_digest": "sha256:3821df1ffa0d7b701b41fbc0fbf2426a1bc55704ff4b74a493574a55137ee96e",
   "registry_id": "g56r-004-policy-control-registry",
   "schema_version": "1.0.0",
   "smoke_bounds": {
