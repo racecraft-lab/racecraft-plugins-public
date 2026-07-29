@@ -27,6 +27,9 @@ That obligation exists precisely because group E cannot reach that far.
 |---|-------|-----------|
 | A1 | `brand-kit.css` contains exactly one `BRAND-KIT:START` and one `BRAND-KIT:END`, start before end | canonical file malformed |
 | A2 | `theme-toggle.html` contains exactly one `GALLERY-HEAD:START` / `GALLERY-HEAD:END` pair, ordered | canonical file malformed |
+| A3 | For every gallery HTML artifact: each marker pair it uses appears exactly once, with a matching end | duplicated or unbalanced markers |
+| A4 | For every gallery HTML artifact embedding a block: the region between its markers equals the canonical region **byte for byte** | any single-character drift; message names artifact + block |
+| A5 | Every `shipped` entry's artifact embeds the brand block | shipped artifact omits the block (no pass-by-absence) |
 
 **The head block's marker pair is named for the region, not the control.** It carries
 the policy declaration, the pre-first-paint theme application, the colour-scheme
@@ -47,9 +50,6 @@ consequence is deliberate and consistent with FR-004: with scripting unavailable
 reader still gets their operating-system theme through the media query, and loses only
 the ability to override it — the same degradation the storage-unavailable path already
 accepts.
-| A3 | For every gallery HTML artifact: each marker pair it uses appears exactly once, with a matching end | duplicated or unbalanced markers |
-| A4 | For every gallery HTML artifact embedding a block: the region between its markers equals the canonical region **byte for byte** | any single-character drift; message names artifact + block |
-| A5 | Every `shipped` entry's artifact embeds the brand block | shipped artifact omits the block (no pass-by-absence) |
 
 Only the delimited region is compared, so template-specific styling outside the
 markers never fails (Story 1 scenario 4).
@@ -518,6 +518,50 @@ Registration entry, appended last (the array is append-ordered, not sorted):
 ```json
 { "path": "tests/speckit-pro/unit/test-artifact-gallery.py", "label": "test-artifact-gallery", "baseline": null }
 ```
+
+## Group K — Canonical-block cross-file agreement (FR-022, FR-024)
+
+Closure between the **two canonical files**, the same shape as C8 closing the
+catalog's signal vocabulary against the contract document's prose. Each row names
+a value one file writes and the other consumes, extracted from each file and
+compared — never held as a literal in the test, which would make the test a third
+copy to keep in step rather than a check on the other two.
+
+| # | Check | Fails when |
+|---|-------|-----------|
+| K1 | The class `theme-toggle.html`'s marked region sets on the control it builds is a class `brand-kit.css`'s marked region carries a rule for, and every other class the region sets is styled there too | the control carries no class at all (which I4 passes), the class is renamed in one file alone, or the rule sits above the brand start marker and so reaches no artifact; names both files and the class |
+| K2 | The set of families named **first** in `brand-kit.css`'s typeface stacks equals the set of families in `theme-toggle.html`'s font request | a face added to the kit and not to the request, or renamed in one file alone — every artifact then falls through to the next face in the stack while E4 still passes; names both files and the family |
+
+**Why this is its own group rather than rows added to I and E.** Group A catches
+drift between a canonical region and an artifact's copy of it. Group I catches a
+construct omitted from a copied region. Neither can see two regions that are each
+internally correct and disagree **with each other**, which is a third failure mode
+— and the one that has actually shipped: the theme control went out unstyled and
+was caught in a browser screenshot, because I4 asks for a button carrying a name
+and a state and says nothing about the class the kit styles it by. E4 has the
+same blind spot for K2: the request it validates is well formed, so a family
+missing from it produces a plausible-looking render rather than a failure.
+
+**K1 asserts one direction, K2 asserts both.** A class the kit styles and the head
+block never sets is not a defect — the kit legitimately carries rules a template
+opts into — while a class the head block sets and the kit never styles is the
+unstyled ship. Both one-sided renames are caught by that one direction, since each
+leaves the head block naming a class no rule matches. K2's two sides are closed
+against each other in both directions, because an unrequested face falls through
+to a fallback and an unused request costs every artifact a fetch.
+
+**K2 compares families only, by decision.** An unrequested axis value is
+synthesised by the engine; an unrequested family is not served at all. Comparing
+the weight lists as well would make the check fail on every ordinary weight change
+and teach a reader to edit it rather than read it. Weight coverage stays with the
+manual typography scenario.
+
+**Neither row holds a copy of the agreed value.** What the test holds is a
+*locator* for each side — how a class is set, how a typeface stack is spelled,
+which query parameter names a family — which is the distinction C8 already records
+for naming a section heading without restating the vocabulary under it. The
+fixtures use synthetic class names and synthetic typeface names throughout, so a
+check that had quietly grown a shipped literal would fail every one of them.
 
 ## Not validated by the automated suite
 
