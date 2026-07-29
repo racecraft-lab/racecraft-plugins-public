@@ -2,8 +2,8 @@
   "workflow_file": "docs/ai/specs/.process/G56R-004-workflow.md",
   "spec_id": "G56R-004",
   "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
-  "updated_at": "2026-07-29T08:25:12Z",
-  "active_step": "Phase 7: Implement - Twin reconciliation (T032-T033)",
+  "updated_at": "2026-07-29T08:35:27Z",
+  "active_step": "Phase 7: Implement - Verification and review evidence (T034-T038)",
   "status": "in_progress",
   "worktree_binding": {
     "mode": "operator_authorized_in_session_workdir",
@@ -187,11 +187,11 @@
     },
     {
       "step": "Phase 7: Implement - Twin reconciliation (T032-T033)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Verification and review evidence (T034-T038)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -459,7 +459,7 @@
     },
     "implement": {
       "status": "in_progress",
-      "active_group": "twin_reconciliation",
+      "active_group": "verification_and_review_evidence",
       "completed_tasks": [
         "T001",
         "T002",
@@ -491,7 +491,9 @@
         "T028",
         "T029",
         "T030",
-        "T031"
+        "T031",
+        "T032",
+        "T033"
       ],
       "groups": {
         "baseline_and_guardrails": {
@@ -559,6 +561,16 @@
           "raw_capture_red": "681/689",
           "raw_capture_green": "689/689",
           "live_smoke": "operator_only_unrun"
+        },
+        "twin_reconciliation": {
+          "status": "completed",
+          "tasks": "T032-T033",
+          "twin_red": "32/36",
+          "twin_green": "41/41",
+          "policy_owner": "689/689",
+          "comparison_owner": "170/170",
+          "unrepresentable_members": 0,
+          "frozen_contract_edits": 0
         }
       }
     }
@@ -755,6 +767,12 @@
       "agent": "implement-executor",
       "result": "consumed",
       "artifact": "tests/speckit-pro/layer6-efficiency/lib/codex_control_smoke.py"
+    },
+    {
+      "task": "T032-T033",
+      "agent": "implement-executor",
+      "result": "consumed",
+      "artifact": "tests/speckit-pro/layer6-efficiency/lib/codex_policy_controls.py"
     }
   ]
 }

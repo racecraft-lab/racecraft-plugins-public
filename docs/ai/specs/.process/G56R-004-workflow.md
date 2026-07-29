@@ -844,7 +844,8 @@ For every behavior task:
 | Comparison and claims | T020-T023 | 4 of 4 | Comparison RED 135/147 → GREEN 159/159; claim-policy RED 159/167 → GREEN 170/170; final owners policy 638/638, comparison 170/170, twin 32/32 |
 | Partition, replay, and parity | T024-T027 | 4 of 4 | Partition RED 638/645 → GREEN 650/650; deterministic replay RED 650/654 → GREEN 657/657; final owners policy 657/657, comparison 170/170, twin 32/32 |
 | Smoke and capture boundary | T028-T031 | 4 of 4 | Smoke plan/seal RED 657/674 → GREEN 681/681; raw-capture exclusion RED 681/689 → GREEN 689/689; live smoke remains operator-only and unrun |
-| Twin reconciliation and review evidence | | | |
+| Twin reconciliation | T032-T033 | 2 of 2 | Final composition RED 32/36 → GREEN 41/41 across registry, comparison, and partition groups; zero drift buckets, zero unrepresentable members, zero frozen-contract edits |
+| Verification and review evidence | | | |
 
 ---
 

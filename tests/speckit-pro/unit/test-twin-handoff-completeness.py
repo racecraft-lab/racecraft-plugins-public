@@ -60,6 +60,9 @@ G56R_CONTRACTS_DIR = TEST_ROOT / "layer6-efficiency" / "contracts-codex-specific
 G56R_FIXTURES_DIR = TEST_ROOT / "layer6-efficiency" / "fixtures-codex-controls"
 G56R_REGISTRY_SCHEMA = G56R_CONTRACTS_DIR / "policy-control-registry.schema.json"
 G56R_REGISTRY_INSTANCE = G56R_FIXTURES_DIR / "policy-control-registry.json"
+G56R_COMPARISON_SCHEMA = G56R_CONTRACTS_DIR / "control-comparison.schema.json"
+G56R_COMPARISON_INSTANCE = G56R_FIXTURES_DIR / "control-comparison.json"
+G56R_PARTITION_INSTANCE = G56R_FIXTURES_DIR / "partition-registry-entries.json"
 
 CAR_003_ID_PREFIX = "https://racecraft.dev/schemas/car-003/"
 CAR_003_ADDITIVE_RECORDS_ID = f"{CAR_003_ID_PREFIX}car-003-additive-records.schema.json"
@@ -678,6 +681,89 @@ class G56R004TwinMirrorTests(unittest.TestCase):
         self.assertEqual(preserved["numerics"]["raw_token_ceiling"], 1000000)
 
 
+class G56R004FinalTwinReconciliationTests(unittest.TestCase):
+    """T032 RED: final composed Codex artifacts reconcile against CAR-004."""
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(
+            codex_policy_controls,
+            "codex_policy_controls is not importable; T033 must implement final reconciliation",
+        )
+        self.module = codex_policy_controls
+        self.error = self.module.ControlContractError
+
+    def reconcile(self, **paths: Path) -> dict[str, Any]:
+        self.assertTrue(
+            hasattr(self.module, "reconcile_final_twin_handoff"),
+            "T033 must expose reconcile_final_twin_handoff for composed G56R-004 artifacts",
+        )
+        inputs = {
+            "car_handoff_path": CAR_004_HANDOFF,
+            "codex_registry_schema_path": G56R_REGISTRY_SCHEMA,
+            "codex_registry_instance_path": G56R_REGISTRY_INSTANCE,
+            "codex_comparison_schema_path": G56R_COMPARISON_SCHEMA,
+            "codex_comparison_instance_path": G56R_COMPARISON_INSTANCE,
+            "codex_partition_instance_path": G56R_PARTITION_INSTANCE,
+        }
+        inputs.update(paths)
+        return self.module.reconcile_final_twin_handoff(**inputs)
+
+    def test_registry_comparison_and_partition_categories_one_to_six_reconcile(self) -> None:
+        report = self.reconcile()
+        self.assertEqual(report["compared_categories"], list(DERIVED_CATEGORIES))
+        self.assertEqual(report["differences"], EMPTY_DIFFERENCES)
+        self.assertEqual(
+            report["artifact_groups"], ["registry", "comparison", "partition"]
+        )
+        self.assertEqual(report["missing"], [])
+        self.assertEqual(report["extra"], [])
+        self.assertEqual(report["invented"], [])
+        self.assertEqual(report["drifted"], [])
+        self.assertEqual(report["duplicated"], [])
+        self.assertEqual(report["silently_omitted"], [])
+
+    def test_seeded_missing_extra_invented_drifted_and_duplicated_members_fail(self) -> None:
+        report = self.reconcile()
+        seed = getattr(
+            self.module,
+            "seed_final_twin_reconciliation",
+            None,
+        )
+        self.assertIsNotNone(
+            seed,
+            "T033 must expose seed_final_twin_reconciliation for drift-proof RED coverage",
+        )
+        for mutation, bucket in (
+            ("missing", "missing"),
+            ("extra", "extra"),
+            ("invented", "invented"),
+            ("drifted", "drifted"),
+            ("duplicated", "duplicated"),
+            ("silently_omitted", "silently_omitted"),
+        ):
+            with self.subTest(mutation=mutation):
+                mutated = seed(report, mutation)
+                self.assertTrue(mutated[bucket], f"{mutation} member was not reported")
+
+    def test_unrepresentable_members_are_named_declined_and_do_not_void_car_obligation(self) -> None:
+        report = self.reconcile()
+        for member in report["unrepresentable_members"]:
+            with self.subTest(member=member["member_id"]):
+                self.assertTrue(member["member_id"])
+                self.assertEqual(member["car_004_obligation"], "mirror_required")
+                self.assertEqual(member["disposition"], "declined")
+                self.assertTrue(member["rationale"].strip())
+
+    def test_frozen_car_contracts_are_forbidden_from_codex_reconciliation_outputs(self) -> None:
+        report = self.reconcile()
+        self.assertEqual(report["frozen_contract_edits"], [])
+        for path in report["source_paths"]:
+            self.assertFalse(
+                str(path).startswith("tests/speckit-pro/layer6-efficiency/contracts-claude/"),
+                f"frozen CAR contract edit leaked into reconciliation output: {path}",
+            )
+
+
 class TwinHandoffCompletenessTests(unittest.TestCase):
     def setUp(self) -> None:
         if RECORD_PATH is None:
@@ -900,6 +986,10 @@ class TwinHandoffCompletenessTests(unittest.TestCase):
 
 if __name__ == "__main__":
     suite = unittest.TestSuite()
-    for case in (G56R004TwinMirrorTests, TwinHandoffCompletenessTests):
+    for case in (
+        G56R004TwinMirrorTests,
+        G56R004FinalTwinReconciliationTests,
+        TwinHandoffCompletenessTests,
+    ):
         suite.addTests(unittest.defaultTestLoader.loadTestsFromTestCase(case))
     raise SystemExit(run_counted(suite, label="test-twin-handoff-completeness"))

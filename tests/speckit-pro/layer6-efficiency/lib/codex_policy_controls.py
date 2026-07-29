@@ -1542,3 +1542,135 @@ def replay_codex_controls(path: Path) -> list[dict[str, Any]]:
     if observed_ids != set(_CODEX_CONTROL_IDS_BY_KIND.values()):
         raise ControlContractError("Codex replay cases do not cover every control id")
     return replayed
+
+
+_FINAL_RECONCILIATION_BUCKETS = (
+    "missing",
+    "extra",
+    "invented",
+    "drifted",
+    "duplicated",
+    "silently_omitted",
+)
+_DIFFERENCE_BUCKET_BY_RECONCILIATION_MUTATION = {
+    "missing": "missing_from_record",
+    "extra": "absent_from_artifacts",
+    "invented": "absent_from_artifacts",
+    "drifted": "mismatched",
+    "duplicated": "duplicated",
+    "silently_omitted": "missing_from_record",
+}
+
+
+def _repo_relative_path(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(_LAYER6_ROOT.parents[2]))
+    except ValueError:
+        return str(resolved)
+
+
+def _validate_comparison_reconciliation_sources(
+    *, schema_path: Path, instance_path: Path
+) -> dict[str, Any]:
+    schema = _load_json(schema_path)
+    instance = _load_json(instance_path)
+    if not isinstance(schema, dict) or not isinstance(instance, dict):
+        raise ControlContractError("comparison reconciliation sources must be objects")
+    if schema.get("properties", {}).get("schema_version", {}).get("const") != "1.0.0":
+        raise ControlContractError("comparison schema version drift")
+    if instance.get("schema_version") != "1.0.0":
+        raise ControlContractError("comparison fixture version drift")
+    if instance.get("comparison_id") != "g56r-004-control-comparison":
+        raise ControlContractError("comparison fixture identity drift")
+    if not _require_nonempty_string(
+        instance.get("comparison_digest"), "comparison_digest"
+    ).startswith("sha256:"):
+        raise ControlContractError("comparison digest drift")
+    return {
+        "comparison_id": instance["comparison_id"],
+        "schema_version": instance["schema_version"],
+    }
+
+
+def reconcile_final_twin_handoff(
+    *,
+    car_handoff_path: Path,
+    codex_registry_schema_path: Path,
+    codex_registry_instance_path: Path,
+    codex_comparison_schema_path: Path,
+    codex_comparison_instance_path: Path,
+    codex_partition_instance_path: Path,
+) -> dict[str, Any]:
+    """Compose registry, comparison, and partition mirrors into the final report."""
+
+    registry_report = validate_car_004_twin_mirror(
+        car_handoff_path=car_handoff_path,
+        codex_registry_schema_path=codex_registry_schema_path,
+        codex_registry_instance_path=codex_registry_instance_path,
+    )
+    comparison_report = _validate_comparison_reconciliation_sources(
+        schema_path=codex_comparison_schema_path,
+        instance_path=codex_comparison_instance_path,
+    )
+    partition_report = partition_owned_mirror_members(
+        handoff_path=car_handoff_path,
+        fixture_path=codex_partition_instance_path,
+    )
+
+    report = {
+        "artifact_groups": ["registry", "comparison", "partition"],
+        "compared_categories": list(registry_report["compared_categories"]),
+        "differences": copy.deepcopy(registry_report["differences"]),
+        "sanctioned_divergences": copy.deepcopy(
+            registry_report["sanctioned_divergences"]
+        ),
+        "source_paths": [
+            _repo_relative_path(codex_registry_schema_path),
+            _repo_relative_path(codex_registry_instance_path),
+            _repo_relative_path(codex_comparison_schema_path),
+            _repo_relative_path(codex_comparison_instance_path),
+            _repo_relative_path(codex_partition_instance_path),
+        ],
+        "frozen_contract_edits": [],
+        "unrepresentable_members": [],
+        "registry": {
+            "preserved_literals": copy.deepcopy(registry_report["preserved_literals"])
+        },
+        "comparison": comparison_report,
+        "partition": partition_report,
+    }
+    for bucket in _FINAL_RECONCILIATION_BUCKETS:
+        report[bucket] = []
+    return report
+
+
+def seed_final_twin_reconciliation(
+    report: dict[str, Any], mutation: str
+) -> dict[str, Any]:
+    """Return a copied report with one deterministic reconciliation fault."""
+
+    if mutation not in _FINAL_RECONCILIATION_BUCKETS:
+        raise ControlContractError(f"unknown reconciliation mutation {mutation!r}")
+    seeded = copy.deepcopy(report)
+    marker = {
+        "member_id": f"seeded-{mutation}-member",
+        "mutation": mutation,
+    }
+    for bucket in _FINAL_RECONCILIATION_BUCKETS:
+        seeded.setdefault(bucket, [])
+    seeded[mutation].append(copy.deepcopy(marker))
+
+    differences = seeded.setdefault(
+        "differences",
+        {
+            "missing_from_record": [],
+            "absent_from_artifacts": [],
+            "mismatched": [],
+            "duplicated": [],
+        },
+    )
+    differences.setdefault(
+        _DIFFERENCE_BUCKET_BY_RECONCILIATION_MUTATION[mutation], []
+    ).append(marker)
+    return seeded
