@@ -529,8 +529,6 @@ def _budget_trigger_reading(
     control: dict[str, Any], observations: Any
 ) -> tuple[bool, str | None]:
     adaptive = _adaptive(control)
-    if observations is None:
-        observations = {}
     if not isinstance(observations, dict):
         raise ControlContractError("budget_observations must be an object")
     declared = {trigger["member"] for trigger in adaptive["budget_triggers"]}
@@ -648,10 +646,11 @@ def evaluate_adaptive_bounds(
     _adaptive(control)
     retry_bounds = _bound_declaration(control, "retry_bounds")
     cancellation_bounds = _bound_declaration(control, "cancellation_bounds")
-    declared_scopes = {retry_bounds.get("counted_over"), cancellation_bounds.get("counted_over")}
-    if len(declared_scopes) != 1:
+    declared_scope = _require_nonempty_string(
+        retry_bounds.get("counted_over"), "retry_bounds.counted_over"
+    )
+    if cancellation_bounds.get("counted_over") != declared_scope:
         raise ControlContractError("retry and cancellation bounds must share one scope")
-    declared_scope = declared_scopes.pop()
     if objective.get("counted_over") != declared_scope:
         raise ControlContractError("objective counted_over disagrees with the control bounds")
 
@@ -1114,12 +1113,16 @@ def _unit_members(
         member_ids.append(row_id)
         observed.append(member)
 
-    known = set(member_ids)
-    for member in observed[1:]:
-        if member["spawned_by"] not in known:
+    reachable = {member_ids[0]}
+    pending = observed[1:]
+    while pending:
+        linked = [member for member in pending if member["spawned_by"] in reachable]
+        if not linked:
             raise ControlContractError(
-                f"{member['row_id']!r} records a spawned_by value outside the unit"
+                f"{pending[0]['row_id']!r} records a spawned_by value outside the parent chain"
             )
+        reachable.update(member["row_id"] for member in linked)
+        pending = [member for member in pending if member["row_id"] not in reachable]
 
     fan_out = _require_mapping(
         specialization.get("topology_descriptor"), "topology_descriptor"
@@ -1199,6 +1202,10 @@ def aggregate_parent_plus_children(
         for diagnostic in diagnostics:
             if not isinstance(diagnostic, dict):
                 raise ControlContractError("cache_diagnostic must be an object or absent")
+            if not isinstance(diagnostic.get("cache_write_tokens_by_ttl_class", {}), dict):
+                raise ControlContractError(
+                    "cache_write_tokens_by_ttl_class must be an object or absent"
+                )
         cache_read = _sum_or_unobserved(
             [diagnostic.get("cache_read_tokens") for diagnostic in diagnostics],
             "cache_read_tokens",
