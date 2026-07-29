@@ -490,6 +490,10 @@ instead of silently preferring a downstream artifact.
 | `contracts/` | ✅ | Human-readable contract/API notes |
 | `quickstart.md` | ✅ | Deterministic replay and operator smoke runbook |
 
+Post-merge archive note: the forward-looking operator procedure from
+`quickstart.md` is preserved at
+`docs/ai/specs/.process/G56R-004-live-smoke-runbook.md`.
+
 ### Plan Results
 
 - G3: ✅ `plan.md exists with 0 unresolved markers`.
