@@ -653,10 +653,10 @@ class G56R004TwinMirrorTests(unittest.TestCase):
             codex_registry_instance_path=G56R_REGISTRY_INSTANCE,
         )
 
-    def test_categories_one_through_six_match_the_handoff_in_both_directions(self) -> None:
+    def test_registry_authority_gate_derives_categories_from_the_handoff(self) -> None:
         report = self.mirror_report()
         self.assertEqual(report["compared_categories"], list(DERIVED_CATEGORIES))
-        self.assertEqual(report["differences"], EMPTY_DIFFERENCES)
+        self.assertNotIn("differences", report)
 
     def test_the_only_sanctioned_divergence_is_justified_high_effort(self) -> None:
         report = self.mirror_report()
@@ -808,24 +808,122 @@ class G56R004FinalTwinReconciliationTests(unittest.TestCase):
             with self.subTest(mutation=mutation):
                 mutated = seed(report, mutation)
                 self.assertTrue(mutated[bucket], f"{mutation} member was not reported")
+                with self.assertRaisesRegex(
+                    self.error, "final twin reconciliation differences"
+                ):
+                    self.module._raise_on_final_reconciliation_differences(mutated)
 
-    def test_unrepresentable_members_are_named_declined_and_do_not_void_car_obligation(self) -> None:
-        report = self.reconcile()
-        for member in report["unrepresentable_members"]:
-            with self.subTest(member=member["member_id"]):
-                self.assertTrue(member["member_id"])
-                self.assertEqual(member["car_004_obligation"], "mirror_required")
-                self.assertEqual(member["disposition"], "declined")
-                self.assertTrue(member["rationale"].strip())
+    def test_reconciliation_buckets_have_distinct_evidence_sources(self) -> None:
+        entries, _ = parse_record(CAR_004_HANDOFF.read_text(encoding="utf-8"))
 
-    def test_frozen_car_contracts_are_forbidden_from_codex_reconciliation_outputs(self) -> None:
+        def classify(actual: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+            differences = self.module._diff_final_handoff_members(
+                expected_entries=entries,
+                actual_entries=actual,
+            )
+            return self.module._final_reconciliation_buckets(
+                differences,
+                expected_entries=entries,
+                actual_entries=actual,
+            )
+
+        required = next(
+            entry for entry in entries if entry["mirror_obligation"] == "mirror_required"
+        )
+        missing_required = [
+            entry
+            for entry in entries
+            if (entry["category"], entry["member_id"])
+            != (required["category"], required["member_id"])
+        ]
+        required_buckets = classify(missing_required)
+        self.assertTrue(required_buckets["silently_omitted"])
+        self.assertEqual(required_buckets["missing"], [])
+
+        car_owned = next(
+            entry for entry in entries if entry["mirror_obligation"] == "car_owned"
+        )
+        missing_car_owned = [
+            entry
+            for entry in entries
+            if (entry["category"], entry["member_id"])
+            != (car_owned["category"], car_owned["member_id"])
+        ]
+        car_owned_buckets = classify(missing_car_owned)
+        self.assertTrue(car_owned_buckets["missing"])
+        self.assertEqual(car_owned_buckets["silently_omitted"], [])
+
+        wrong_category = copy.deepcopy(car_owned)
+        wrong_category["category"] = 6
+        extra_buckets = classify([*entries, wrong_category])
+        self.assertTrue(extra_buckets["extra"])
+        self.assertEqual(extra_buckets["invented"], [])
+
+        invented = copy.deepcopy(car_owned)
+        invented["member_id"] = "invented-by-test"
+        invented_buckets = classify([*entries, invented])
+        self.assertTrue(invented_buckets["invented"])
+        self.assertEqual(invented_buckets["extra"], [])
+
+        drifted = copy.deepcopy(entries)
+        numeric = next(entry for entry in drifted if entry.get("category") == 6)
+        numeric["value"] = "drifted-by-test"
+        self.assertTrue(classify(drifted)["drifted"])
+
+        duplicated = [*entries, copy.deepcopy(entries[0])]
+        self.assertTrue(classify(duplicated)["duplicated"])
+
+    def test_reconciliation_reports_verified_codex_sources_only(self) -> None:
         report = self.reconcile()
-        self.assertEqual(report["frozen_contract_edits"], [])
         for path in report["source_paths"]:
             self.assertFalse(
                 str(path).startswith("tests/speckit-pro/layer6-efficiency/contracts-claude/"),
                 f"frozen CAR contract edit leaked into reconciliation output: {path}",
             )
+        evidence = report["verified_source_artifacts"]
+        self.assertEqual(len(evidence), 5)
+        for item in evidence:
+            with self.subTest(path=item["path"]):
+                source = REPO_ROOT / item["path"]
+                self.assertTrue(source.is_file())
+                self.assertEqual(
+                    item["sha256"],
+                    f"sha256:{hashlib.sha256(source.read_bytes()).hexdigest()}",
+                )
+
+    def test_final_actual_entries_are_not_seeded_with_car_owned_prose(self) -> None:
+        actual = self.module._derive_mapped_final_handoff_members(
+            codex_registry_schema_path=G56R_REGISTRY_SCHEMA,
+            codex_registry_instance_path=G56R_REGISTRY_INSTANCE,
+            codex_comparison_schema_path=G56R_COMPARISON_SCHEMA,
+            codex_comparison_instance_path=G56R_COMPARISON_INSTANCE,
+            codex_partition_instance_path=G56R_PARTITION_INSTANCE,
+        )
+        self.assertTrue(actual)
+        car_owned_fields = {
+            "mirror_obligation",
+            "path",
+            "rationale",
+            "requirement",
+            "sha256",
+        }
+        for entry in actual:
+            with self.subTest(member_id=entry["member_id"]):
+                self.assertFalse(car_owned_fields & set(entry))
+
+    def test_partition_membership_parser_is_independent_of_json_line_shape(self) -> None:
+        text = CAR_004_HANDOFF.read_text(encoding="utf-8")
+        entries, _ = parse_record(text)
+        blocks = _JSON_BLOCK.findall(text)
+        formatted = json.dumps(entries, indent=2, sort_keys=True) + "\n"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            handoff = Path(tmpdir) / CAR_004_HANDOFF.name
+            handoff.write_text(text.replace(blocks[0], formatted, 1), encoding="utf-8")
+            report = self.module.partition_owned_mirror_members(
+                handoff_path=handoff,
+                fixture_path=G56R_PARTITION_INSTANCE,
+            )
+        self.assertEqual(report["categories_present"], [4])
 
     def test_final_reconciliation_does_not_source_actuals_from_caller_handoff(self) -> None:
         text = CAR_004_HANDOFF.read_text(encoding="utf-8")

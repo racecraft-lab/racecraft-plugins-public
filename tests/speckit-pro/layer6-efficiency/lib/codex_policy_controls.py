@@ -65,6 +65,8 @@ _EFFORT_RANK = {
     effort: index for index, effort in enumerate(("low", "medium", "high", "xhigh", "max"))
 }
 _AUTHENTICATION_MODE = "chatgpt_subscription"
+# Deliberate code-owned freeze authority: changing these values is an explicit,
+# reviewable re-freeze rather than a fixture editing its own validation source.
 _CODEX_SUCCESSOR_FREEZE_ID = (
     "sha256:734672cea5a83e5b8f296ee604f7cb8d93e0a5296a3f864b873fe78bfe518f1e"
 )
@@ -1248,22 +1250,24 @@ def validate_car_004_twin_mirror(
     codex_registry_schema_path: Path,
     codex_registry_instance_path: Path,
 ) -> dict[str, Any]:
-    """Validate the registry-owned category 1-6 mirror subset bidirectionally."""
+    """Validate frozen registry authorities and the handoff category envelope."""
 
-    try:
-        handoff = car_handoff_path.read_text(encoding="utf-8")
-    except OSError as exc:
-        raise ControlContractError(f"cannot load {car_handoff_path}: {exc}") from exc
-    for category in range(1, 7):
-        if f'"category": {category}' not in handoff:
-            raise ControlContractError(f"CAR-004 handoff omits category {category}")
-    if (
-        '"mirror_obligation": "sanctioned_divergence"' not in handoff
-        or '"members": ["unpinned", "adaptive", "orchestration_changing"]'
-        not in handoff
-        or '"status": "closed_nothing_owed"' not in handoff
-    ):
-        raise ControlContractError("CAR-004 handoff omits the sanctioned divergence")
+    handoff_entries, handoff_divergences = _load_handoff_membership(car_handoff_path)
+    _, frozen_divergences = _load_handoff_membership(_FROZEN_CAR_HANDOFF_PATH)
+    _validate_handoff_obligations(handoff_entries)
+    compared_categories = sorted(
+        {
+            entry["category"]
+            for entry in handoff_entries
+            if entry.get("category") in range(1, 7)
+        }
+    )
+    if compared_categories != list(range(1, 7)):
+        raise ControlContractError("CAR-004 handoff category envelope drift")
+    _assert_single_sanctioned_divergence(
+        expected_divergences=frozen_divergences,
+        actual_divergences=handoff_divergences,
+    )
 
     car_schema = _load_json(_CAR_REGISTRY_SCHEMA_PATH)
     codex_schema = _load_json(codex_registry_schema_path)
@@ -1287,18 +1291,26 @@ def validate_car_004_twin_mirror(
         )
 
     smoke_bounds = codex_registry["smoke_bounds"]
+    car_control_kind_enum = car_schema["$defs"]["control"]["properties"][
+        "control_kind"
+    ]["enum"]
     control_kind_enum = codex_schema["$defs"]["control"]["properties"]["control_kind"][
         "enum"
     ]
+    car_only = sorted(set(car_control_kind_enum) - set(control_kind_enum))
+    codex_only = sorted(set(control_kind_enum) - set(car_control_kind_enum))
+    unchanged = sorted(set(car_control_kind_enum) & set(control_kind_enum))
+    if len(car_only) != 1 or len(codex_only) != 1:
+        raise ControlContractError("sanctioned control-kind divergence drift")
+    divergence = {
+        "category": handoff_divergences[0]["category"],
+        "car_value": car_only[0],
+        "codex_value": codex_only[0],
+        "unchanged_values": unchanged,
+    }
     return {
-        "compared_categories": [1, 2, 3, 4, 5, 6],
-        "differences": {
-            "missing_from_record": [],
-            "absent_from_artifacts": [],
-            "mismatched": [],
-            "duplicated": [],
-        },
-        "sanctioned_divergences": [copy.deepcopy(_SANCTIONED_DIVERGENCE)],
+        "compared_categories": compared_categories,
+        "sanctioned_divergences": [divergence],
         "preserved_literals": {
             "zeros": {
                 "max_confirmation_entries": smoke_bounds["max_confirmation_entries"][
@@ -1479,22 +1491,15 @@ def partition_owned_mirror_members(
         load_partition_entries(_FROZEN_CODEX_PARTITION_ENTRIES_PATH)
     ):
         raise ControlContractError("partition fixture authority drift")
-    try:
-        handoff = handoff_path.read_text(encoding="utf-8")
-    except OSError as exc:
-        raise ControlContractError(f"cannot load {handoff_path}: {exc}") from exc
+    handoff_entries, _ = _load_handoff_membership(handoff_path)
     required_car_ids = {"CAR-004-SMOKE", "CAR-011-RESERVED-COMPARISON"}
-    observed_car_ids: set[str] = set()
-    for raw_line in handoff.splitlines():
-        line = raw_line.rstrip(",")
-        if not line.startswith("{") or '"kind": "partition_id"' not in line:
-            continue
-        try:
-            record = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if record.get("category") == 4 and record.get("mirror_obligation") == "car_owned":
-            observed_car_ids.add(str(record.get("member_id")))
+    observed_car_ids = {
+        str(record.get("member_id"))
+        for record in handoff_entries
+        if record.get("category") == 4
+        and record.get("kind") == "partition_id"
+        and record.get("mirror_obligation") == "car_owned"
+    }
     if observed_car_ids != required_car_ids:
         raise ControlContractError("CAR-004 partition identity evidence drift")
     return {
@@ -1646,6 +1651,23 @@ _FINAL_DIFFERENCE_BUCKETS = (
     "mismatched",
     "duplicated",
 )
+_FINAL_COMPARE_FIELDS = {
+    1: ("category", "member_id", "contract_id", "hash_relevant", "schema_version"),
+    2: ("category", "member_id", "contract_id", "hash_relevant", "properties", "required"),
+    3: ("category", "member_id", "contract_id", "hash_relevant", "kind", "members", "sites"),
+    4: ("category", "member_id", "contract_id", "hash_relevant", "kind", "sites"),
+    5: ("category", "member_id", "contract_id", "hash_relevant", "sites"),
+    6: ("category", "member_id", "contract_id", "hash_relevant", "value", "unit", "direction", "class"),
+}
+_FIELDS_NOT_CROSS_PLATFORM_COMPARED = (
+    "bound_id",
+    "digest",
+    "mirror_obligation",
+    "path",
+    "rationale",
+    "requirement",
+    "sha256",
+)
 
 
 def _repo_relative_path(path: Path) -> str:
@@ -1725,6 +1747,18 @@ def _load_handoff_membership(
     )
 
 
+def _validate_handoff_obligations(entries: list[dict[str, Any]]) -> None:
+    for entry in entries:
+        if entry.get("category") not in range(1, 7):
+            continue
+        if entry.get("mirror_obligation") not in {
+            "mirror_required",
+            "car_owned",
+            "sanctioned_divergence",
+        }:
+            raise ControlContractError("CAR-004 handoff mirror obligation drift")
+
+
 def _final_artifact_group(entry: dict[str, Any]) -> str:
     if entry.get("contract_id") == _CAR_COMPARISON_SCHEMA_ID:
         return "comparison"
@@ -1798,7 +1832,7 @@ def _diff_final_handoff_members(
     for key in sorted(set(expected) & set(actual)):
         expected_entry = expected[key]
         actual_entry = actual[key]
-        for field in sorted(set(expected_entry) | set(actual_entry)):
+        for field in _FINAL_COMPARE_FIELDS[key[0]]:
             if (
                 (field in expected_entry) != (field in actual_entry)
                 or expected_entry.get(field) != actual_entry.get(field)
@@ -1825,16 +1859,38 @@ def _assert_single_sanctioned_divergence(
 
 def _final_reconciliation_buckets(
     differences: dict[str, list[dict[str, Any]]],
+    *,
+    expected_entries: list[dict[str, Any]],
+    actual_entries: list[dict[str, Any]],
 ) -> dict[str, list[dict[str, Any]]]:
-    missing = copy.deepcopy(differences["missing_from_record"])
-    absent = copy.deepcopy(differences["absent_from_artifacts"])
+    expected, _ = _final_members_by_key(expected_entries)
+    actual, _ = _final_members_by_key(actual_entries)
+    missing_keys = sorted(set(expected) - set(actual))
+    absent_keys = sorted(set(actual) - set(expected))
+    expected_member_ids = {member_id for _, member_id in expected}
     return {
-        "missing": missing,
-        "extra": absent,
-        "invented": copy.deepcopy(absent),
+        "missing": [
+            _final_marker(expected[key])
+            for key in missing_keys
+            if expected[key].get("mirror_obligation") != "mirror_required"
+        ],
+        "extra": [
+            _final_marker(actual[key])
+            for key in absent_keys
+            if key[1] in expected_member_ids
+        ],
+        "invented": [
+            _final_marker(actual[key])
+            for key in absent_keys
+            if key[1] not in expected_member_ids
+        ],
         "drifted": copy.deepcopy(differences["mismatched"]),
         "duplicated": copy.deepcopy(differences["duplicated"]),
-        "silently_omitted": copy.deepcopy(missing),
+        "silently_omitted": [
+            _final_marker(expected[key])
+            for key in missing_keys
+            if expected[key].get("mirror_obligation") == "mirror_required"
+        ],
     }
 
 
@@ -1898,34 +1954,25 @@ def _validate_comparison_for_reconciliation_derivation(
         ) from exc
 
 
-def _final_entry_from_expected(
+def _final_entry(
     *,
-    expected: dict[tuple[int, str], dict[str, Any]],
     category: int,
     member_id: str,
     contract_id: str,
     facts: dict[str, Any],
 ) -> dict[str, Any]:
-    entry = copy.deepcopy(expected.get((category, member_id), {}))
-    hash_relevant = entry.get("hash_relevant", True)
-    entry.update(
-        {
-            "category": category,
-            "member_id": member_id,
-            "contract_id": contract_id,
-            "hash_relevant": hash_relevant,
-            **facts,
-        }
-    )
-    if "mirror_obligation" not in entry:
-        entry["mirror_obligation"] = "mirror_required"
-    return entry
+    return {
+        "category": category,
+        "member_id": member_id,
+        "contract_id": contract_id,
+        "hash_relevant": True,
+        **facts,
+    }
 
 
 def _derive_schema_final_entries(
     *,
     schemas: list[dict[str, Any]],
-    expected: dict[tuple[int, str], dict[str, Any]],
 ) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     for raw_schema in schemas:
@@ -1939,12 +1986,11 @@ def _derive_schema_final_entries(
             .get("const")
         )
         entries.append(
-            _final_entry_from_expected(
-                expected=expected,
+            _final_entry(
                 category=1,
                 member_id=schema_id,
                 contract_id=schema_id,
-                facts={"schema_version": schema_version},
+                facts={"hash_relevant": False, "schema_version": schema_version},
             )
         )
 
@@ -1955,8 +2001,7 @@ def _derive_schema_final_entries(
                 return
             member_id = f"{schema_id}{pointer}"
             entries.append(
-                _final_entry_from_expected(
-                    expected=expected,
+                _final_entry(
                     category=2,
                     member_id=member_id,
                     contract_id=schema_id,
@@ -1989,8 +2034,7 @@ def _derive_schema_final_entries(
             members = values[key] if kind == "enum" else [values[key]]
             ordered = sorted(f"{schema_id}{site}" for site in sites)
             entries.append(
-                _final_entry_from_expected(
-                    expected=expected,
+                _final_entry(
                     category=3,
                     member_id=ordered[0],
                     contract_id=schema_id,
@@ -2009,7 +2053,6 @@ def _derive_identifier_final_entries(
     registry: dict[str, Any],
     comparison: dict[str, Any],
     partition_entries: list[dict[str, Any]],
-    expected: dict[tuple[int, str], dict[str, Any]],
 ) -> list[dict[str, Any]]:
     registry_identity = _document_identity(registry)
     comparison_identity = _document_identity(comparison)
@@ -2101,8 +2144,7 @@ def _derive_identifier_final_entries(
         )
         entry = grouped.setdefault(
             member_id,
-            _final_entry_from_expected(
-                expected=expected,
+            _final_entry(
                 category=4,
                 member_id=member_id,
                 contract_id=contract_id,
@@ -2123,7 +2165,6 @@ def _derive_binding_final_entries(
     *,
     registry: dict[str, Any],
     comparison: dict[str, Any],
-    expected: dict[tuple[int, str], dict[str, Any]],
 ) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     for document, schema_id in (
@@ -2151,18 +2192,13 @@ def _derive_binding_final_entries(
         for (bound_id, digest), sites in found.items():
             ordered = sorted(f"{identity}{site}" for site in sites)
             entries.append(
-                _final_entry_from_expected(
-                    expected=expected,
+                _final_entry(
                     category=5,
                     member_id=ordered[0],
                     contract_id=schema_id,
                     facts={
-                        "bound_id": expected.get((5, ordered[0]), {}).get(
-                            "bound_id", bound_id
-                        ),
-                        "digest": expected.get((5, ordered[0]), {}).get(
-                            "digest", digest
-                        ),
+                        "bound_id": bound_id,
+                        "digest": digest,
                         "sites": ordered,
                     },
                 )
@@ -2181,7 +2217,6 @@ def _adaptive_control_position(registry: dict[str, Any]) -> tuple[int, dict[str,
 def _derive_registry_final_numeric_entries(
     *,
     registry: dict[str, Any],
-    expected: dict[tuple[int, str], dict[str, Any]],
 ) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     registry_id = _normalize_platform_value(registry.get("registry_id"))
@@ -2195,8 +2230,7 @@ def _derive_registry_final_numeric_entries(
         "/adaptive/de_escalation_clean_pass_threshold"
     )
     entries.append(
-        _final_entry_from_expected(
-            expected=expected,
+        _final_entry(
             category=6,
             member_id=threshold_id,
             contract_id=_CAR_SCHEMA_ID,
@@ -2214,8 +2248,7 @@ def _derive_registry_final_numeric_entries(
         if isinstance(node, dict) and set(node) == {"value", "unit", "direction"}:
             member_id = f"{registry_id}#/smoke_bounds{pointer}"
             entries.append(
-                _final_entry_from_expected(
-                    expected=expected,
+                _final_entry(
                     category=6,
                     member_id=member_id,
                     contract_id=_CAR_SCHEMA_ID,
@@ -2238,7 +2271,6 @@ def _derive_registry_final_numeric_entries(
 def _derive_comparison_final_numeric_entries(
     *,
     comparison: dict[str, Any],
-    expected: dict[tuple[int, str], dict[str, Any]],
 ) -> list[dict[str, Any]]:
     entries: list[dict[str, Any]] = []
     comparison_id = _normalize_platform_value(comparison.get("comparison_id"))
@@ -2267,8 +2299,7 @@ def _derive_comparison_final_numeric_entries(
     )
     for pointer, value, unit, direction in scalars:
         entries.append(
-            _final_entry_from_expected(
-                expected=expected,
+            _final_entry(
                 category=6,
                 member_id=f"{comparison_id}{pointer}",
                 contract_id=_CAR_COMPARISON_SCHEMA_ID,
@@ -2285,8 +2316,7 @@ def _derive_comparison_final_numeric_entries(
     for dimension in sorted(margin_map):
         margin = _require_mapping(margin_map[dimension], f"margin_map[{dimension!r}]")
         entries.append(
-            _final_entry_from_expected(
-                expected=expected,
+            _final_entry(
                 category=6,
                 member_id=(
                     f"{comparison_id}#/dominance_rule/margin_map/"
@@ -2306,14 +2336,12 @@ def _derive_comparison_final_numeric_entries(
 
 def _derive_mapped_final_handoff_members(
     *,
-    expected_entries: list[dict[str, Any]],
     codex_registry_schema_path: Path,
     codex_registry_instance_path: Path,
     codex_comparison_schema_path: Path,
     codex_comparison_instance_path: Path,
     codex_partition_instance_path: Path,
 ) -> list[dict[str, Any]]:
-    expected, _ = _final_members_by_key(expected_entries)
     registry_schema = _load_json(codex_registry_schema_path)
     comparison_schema = _load_json(codex_comparison_schema_path)
     registry = _validate_codex_registry_reconciliation_sources(
@@ -2340,30 +2368,24 @@ def _derive_mapped_final_handoff_members(
 
     actual = _derive_schema_final_entries(
         schemas=[registry_schema, comparison_schema],
-        expected=expected,
     )
     actual.extend(
         _derive_identifier_final_entries(
             registry=normalized_registry,
             comparison=normalized_comparison,
             partition_entries=normalized_partition_entries,
-            expected=expected,
         )
     )
     actual.extend(
         _derive_binding_final_entries(
             registry=normalized_registry,
             comparison=normalized_comparison,
-            expected=expected,
         )
     )
-    actual.extend(
-        _derive_registry_final_numeric_entries(registry=registry, expected=expected)
-    )
+    actual.extend(_derive_registry_final_numeric_entries(registry=registry))
     actual.extend(
         _derive_comparison_final_numeric_entries(
             comparison=comparison,
-            expected=expected,
         )
     )
     return actual
@@ -2384,6 +2406,22 @@ def _validate_comparison_reconciliation_sources(
     }
 
 
+def _verified_source_artifacts(paths: list[Path]) -> list[dict[str, str]]:
+    evidence: list[dict[str, str]] = []
+    for path in paths:
+        try:
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        except OSError as exc:
+            raise ControlContractError(f"cannot hash reconciliation source {path}: {exc}") from exc
+        evidence.append(
+            {
+                "path": _repo_relative_path(path),
+                "sha256": f"sha256:{digest}",
+            }
+        )
+    return evidence
+
+
 def reconcile_final_twin_handoff(
     *,
     car_handoff_path: Path,
@@ -2398,13 +2436,13 @@ def reconcile_final_twin_handoff(
     expected_entries, expected_divergences = _load_handoff_membership(
         _FROZEN_CAR_HANDOFF_PATH
     )
+    _validate_handoff_obligations(expected_entries)
     _, actual_divergences = _load_handoff_membership(car_handoff_path)
     _assert_single_sanctioned_divergence(
         expected_divergences=expected_divergences,
         actual_divergences=actual_divergences,
     )
     actual_entries = _derive_mapped_final_handoff_members(
-        expected_entries=expected_entries,
         codex_registry_schema_path=codex_registry_schema_path,
         codex_registry_instance_path=codex_registry_instance_path,
         codex_comparison_schema_path=codex_comparison_schema_path,
@@ -2415,7 +2453,11 @@ def reconcile_final_twin_handoff(
         expected_entries=expected_entries,
         actual_entries=actual_entries,
     )
-    final_buckets = _final_reconciliation_buckets(differences)
+    final_buckets = _final_reconciliation_buckets(
+        differences,
+        expected_entries=expected_entries,
+        actual_entries=actual_entries,
+    )
     _raise_on_final_reconciliation_differences(
         {
             "differences": differences,
@@ -2435,23 +2477,42 @@ def reconcile_final_twin_handoff(
         handoff_path=car_handoff_path,
         fixture_path=codex_partition_instance_path,
     )
+    source_evidence = _verified_source_artifacts(
+        [
+            codex_registry_schema_path,
+            codex_registry_instance_path,
+            codex_comparison_schema_path,
+            codex_comparison_instance_path,
+            codex_partition_instance_path,
+        ]
+    )
 
     report = {
         "artifact_groups": ["registry", "comparison", "partition"],
-        "compared_categories": list(registry_report["compared_categories"]),
+        "compared_categories": sorted({entry["category"] for entry in actual_entries}),
+        "comparison_contract": {
+            "fields_by_category": {
+                str(category): list(fields)
+                for category, fields in _FINAL_COMPARE_FIELDS.items()
+            },
+            "fields_not_cross_platform_compared": list(
+                _FIELDS_NOT_CROSS_PLATFORM_COMPARED
+            ),
+        },
         "differences": differences,
         "sanctioned_divergences": copy.deepcopy(
             registry_report["sanctioned_divergences"]
         ),
-        "source_paths": [
-            _repo_relative_path(codex_registry_schema_path),
-            _repo_relative_path(codex_registry_instance_path),
-            _repo_relative_path(codex_comparison_schema_path),
-            _repo_relative_path(codex_comparison_instance_path),
-            _repo_relative_path(codex_partition_instance_path),
+        "source_paths": [item["path"] for item in source_evidence],
+        "verified_source_artifacts": source_evidence,
+        "verified_platform_bindings": [
+            {
+                field: copy.deepcopy(entry[field])
+                for field in ("member_id", "bound_id", "digest", "sites")
+            }
+            for entry in actual_entries
+            if entry["category"] == 5
         ],
-        "frozen_contract_edits": [],
-        "unrepresentable_members": [],
         "registry": {
             "preserved_literals": copy.deepcopy(registry_report["preserved_literals"])
         },
