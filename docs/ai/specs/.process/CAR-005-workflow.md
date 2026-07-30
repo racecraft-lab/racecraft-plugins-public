@@ -36,7 +36,7 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 35 FRs, 2 user stories, 18 acceptance scenarios, 12 success criteria, 6 edge cases. G1 pass. 3 clarification markers → Clarify runs. Parity premise corrected mid-phase. |
 | Clarify | `/speckit-clarify` | ✅ Complete | 2 sessions, 10 questions, all resolved. **G2 pass — 0 markers remain** (authoritative grep, not the blind helper). 43 FRs after Clarify. 5 consensus rows: 3 high-confidence Round 1, 1 escape-hatch to Round 2 confirmed high, 1 operator-directive. Round 1 and Round 2 together **overturned the orchestrator's own enum-placement answer**. |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Plan | `/speckit-plan` | ✅ Complete | 4 artifacts, 1360 lines. G3 pass. 12 research decisions, 0 open. 17 corpus cases allocated 9/8 across the seam. Surfaced a spec contradiction the orchestrator authored plus two unstated constraints — all three folded back into the spec. |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -615,11 +615,38 @@ account for; it is worth carrying into future autopilot runs.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Entities and types |
-| `contracts/` | ⏳ | Fixture/snapshot/report contract specifications |
-| `quickstart.md` | ⏳ | Developer onboarding |
+| `plan.md` | ✅ | 356 lines, from the preset template. All 6 preset sections filled; Declared File Operations parse-verified. Adds Reviewability Budget, Slice Seam, Phase Status. |
+| `research.md` | ✅ | 366 lines, 12 decisions (D1–D12), 0 open questions |
+| `data-model.md` | ✅ | 418 lines, all 7 Key Entities modelled; 3 schemas + 2 diagnostic `$defs` + 2 closed code enums + 4-member sub-reason enum + 11-member action enum |
+| `contracts/` | ➖ | **Deliberately omitted**, reason recorded in `plan.md`. The design-artifact `specs/<feature>/contracts/` directory would carry nothing this spec does not already pin — the real contracts are the three JSON Schema documents in the test tree. Not an empty placeholder. |
+| `quickstart.md` | ✅ | 220 lines |
+
+**G3 gate:** ✅ PASS — `validate-gate G3`, `plan.md exists with 0 unresolved markers`.
+Markers across all four artifacts: 0 `NEEDS CLARIFICATION`, 0 `[Gap]`, 0 `CRITICAL`, 0
+`TODO`/`FIXME`. Privacy: 0 occurrences of `/Users/` or `/home/`. Baseline re-run during
+planning: full suite **5345/5345**.
+
+**Step 7b — plan-phase reviewability budget (advisory).** `estimate-reviewable-loc` on
+`plan.md`: `status: pass`, `projected: 0`, `greenfield: false`, thresholds 400/800,
+declared files 8 (6 NEW / 2 MODIFIED), `production: 0`. **This `pass` is a blind pass and
+must not be read as evidence about slice size** — the helper computes
+`production_files × 40` (`read_only.py:926`), so a 0-production-file feature always
+projects 0 regardless of how much artifact it ships. Recorded per the advisory contract;
+it neither blocks nor informs the elected split. Corpus allocation from the plan: **17
+cases — 9 in slice 1, 8 in slice 2** — covering every SC-001 scenario.
+
+**Three findings the Plan phase surfaced that the spec did not state, now folded back in:**
+
+| Finding | Where it landed |
+|---------|-----------------|
+| **A real contradiction the orchestrator authored.** FR-012a named a bare `$defs.remediationAction` while FR-016a prohibits bare-enum `$defs`. Verified empirically: zero of the eleven documents in that directory has a `$defs` member carrying a top-level `enum`, so the two requirements could not both be satisfied literally. Resolved by inlining at `$defs/remediation/properties/actions/items/enum`, which keeps the closed set, literal strings, single declaration site, and stable pointer — only the `$defs` name is given up. | FR-012a corrected |
+| **Schema must stay permissive about the defects it diagnoses.** Route `resolved_model`/`effort` must remain optional and `fallback_routes` must not set `uniqueItems` — otherwise FR-023's inherit-materialization and FR-020's fallback-loop fixtures fail *schema validation* instead of producing the diagnostics those FRs require, making them unsatisfiable. FR-027 is the deliberate inverse: an out-of-range declared budget *should* fail validation. | New FR-003a, with the dividing rule stated |
+| **Durable naming is mechanically enforced, and it reaches test method names.** A layout test checks durable naming and `car` is a live spec family, so no script stem *or test method name* may contain `car-005`. Schema `$id` values may keep it (path stems are checked, not contents). Separately, adding documents to `contracts-claude/` opts them into a keyword-coverage test; every keyword this feature needs was verified supported. | FR-032 extended; new FR-032a |
+
+**Process note:** the executor initially wrote two artifacts to the main repository path
+instead of the worktree, then removed them and verified the main repo clean before
+rewriting into the worktree. Independently confirmed by the orchestrator:
+`git -C <main repo> status --porcelain` is empty.
 
 ---
 

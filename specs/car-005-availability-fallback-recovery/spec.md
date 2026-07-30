@@ -180,6 +180,24 @@ cohort specs inherit proven rejection semantics.
   per named synthetic agent, a preferred route (alias, qualified resolved model
   ID, and explicit effort), an ordered list of qualified fallback routes, and
   declared probe, retry, and fan-out budgets. [US1]
+- **FR-003a**: The route-policy schema MUST be deliberately **permissive about the
+  defects this feature exists to diagnose**, because a schema strict enough to reject
+  them would make the requirements that simulate them unsatisfiable: [US1] [US2]
+  - A route's `resolved_model` and `effort` MUST remain **optional**. FR-023 requires a
+    policy whose route omits an explicit model or effort to be rejected at *resolution*
+    with `silent_inherit_materialization`. If the schema required those fields, the
+    fixture would fail *schema validation* instead and no diagnostic would ever be
+    produced.
+  - `fallback_routes` MUST NOT declare `uniqueItems`. FR-020 requires a policy whose
+    fallback chain revisits an already-attempted route to be rejected at resolution with
+    `fallback_loop`. `uniqueItems` would reject that fixture at schema-validation time,
+    again pre-empting the diagnostic.
+  - FR-027 is the deliberate **inverse** case: an out-of-range *declared budget* is
+    meant to fail schema validation rather than surface as a diagnostic, which is why
+    the budget maxima are enforced in the schema while these two constraints are not.
+
+  The dividing rule: defects the simulator must *diagnose* stay representable in the
+  schema; defects that are simply *invalid input* are rejected by it.
 - **FR-004**: Resolution MUST walk the preferred route first and then the
   declared fallbacks in their declared order, selecting the first compatible
   route, and the report MUST record every attempted route in attempt order. [US1]
@@ -255,9 +273,18 @@ cohort specs inherit proven rejection semantics.
   autopilot gate-state contract that requires `details` and omits `remediation`, the
   inverse of the runner). FR-012 binds to the installed **runner**; that other contract
   MUST NOT be copied as the precedent.
-- **FR-012a**: Every `remediation.actions` entry MUST be drawn from a single closed
-  `$defs.remediationAction` enum of **literal strings** declared in the
-  resolution-report schema. Entries MUST NOT be structured objects — the runner types
+- **FR-012a**: Every `remediation.actions` entry MUST be drawn from a **single closed
+  enum of literal strings** with exactly one declaration site in the resolution-report
+  schema, located **inline** at `$defs/remediation/properties/actions/items/enum`.
+  *(Corrected during Plan: an earlier draft of this requirement named a bare
+  `$defs.remediationAction` member, which directly contradicts FR-016a — verified
+  empirically that zero of the eleven documents in this directory has a `$defs` member
+  carrying a top-level `enum`, so such a member would be the first and would break the
+  very invariant FR-016a cites. The two requirements could not both be satisfied
+  literally. Inlining preserves everything FR-012a is for — one closed set, literal
+  strings, a single declaration site, and a stable JSON pointer for set-equality
+  assertions; only the `$defs` name is given up, and `/items/enum` nested under a
+  `$defs` object is already an existing shape in this directory.)* Entries MUST NOT be structured objects — the runner types
   this field as a list of plain strings, and changing its shape is the second dialect
   FR-012 forbids — and MUST NOT be templates with substitution slots, because closure
   would then degrade from set equality to one regex per template, weakening SC-003 for
@@ -500,6 +527,18 @@ cohort specs inherit proven rejection semantics.
 - **FR-032**: New scripts and tests MUST use durable capability-based file names
   never coupled to the spec ID, and every new test MUST be registered in the
   test suite manifest. [US1] [US2]
+  This is **mechanically enforced**, not merely a convention: an existing layout test
+  checks durable naming, and `car` is a live spec family because the feature directory
+  is `specs/car-005-...`. Accordingly **no authored script stem and no test method name**
+  may contain `car-005`. Schema `$id` values MAY retain `car-005`, because the check
+  inspects path stems rather than file contents — and `car-003`/`car-004` already appear
+  in every existing `$id` in this directory.
+- **FR-032a**: Adding documents to `contracts-claude/` opts them into a pre-existing
+  Layer 4 test that asserts every document in that directory uses only JSON Schema
+  keywords the shared validation engine implements. Every keyword this feature needs —
+  `oneOf`, `allOf`/`if`/`then`/`not`, `minItems`/`maxItems`, and `maximum` — MUST be
+  within that supported set. This was verified during planning; it is recorded here so a
+  later change cannot introduce an unsupported keyword unknowingly. [US1]
 - **FR-033**: The feature MUST be delivered as two vertical slices — User Story 1
   then User Story 2 — as a stacked pull-request chain in which the second slice
   stacks on the first. [US1] [US2]
