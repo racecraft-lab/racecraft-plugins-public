@@ -362,11 +362,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 28528,
+              "byte_count": 29220,
               "kind": "docs",
               "path": "artifact-gallery/SPA-CONTRACT.md",
               "required": true,
-              "sha256": "26ff8068c8e2e8e5d681a30eac702b788e75de208e8db7beb191a67ee7a221ae",
+              "sha256": "6573ec8a7a11e4980e47d25a20556f56527340293cd67584e0fb866498118631",
               "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
               "transform": "none"
             },
@@ -380,11 +380,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 18521,
+              "byte_count": 19370,
               "kind": "docs",
               "path": "artifact-gallery/brand-kit.css",
               "required": true,
-              "sha256": "926959f9a93508db530acd018df23c5cb598af9d2cff0a972fc4cf2f55800a85",
+              "sha256": "0dd6b0953e5b3a8b8f9b236921d5c87e9b1364aeb0a8ce478f59d33722869ceb",
               "source_path": "speckit-pro/artifact-gallery/brand-kit.css",
               "transform": "none"
             },
@@ -1336,11 +1336,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 28528,
+              "byte_count": 29220,
               "kind": "docs",
               "path": "artifact-gallery/SPA-CONTRACT.md",
               "required": true,
-              "sha256": "26ff8068c8e2e8e5d681a30eac702b788e75de208e8db7beb191a67ee7a221ae",
+              "sha256": "6573ec8a7a11e4980e47d25a20556f56527340293cd67584e0fb866498118631",
               "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
               "transform": "none"
             },
@@ -1354,11 +1354,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 18521,
+              "byte_count": 19370,
               "kind": "docs",
               "path": "artifact-gallery/brand-kit.css",
               "required": true,
-              "sha256": "926959f9a93508db530acd018df23c5cb598af9d2cff0a972fc4cf2f55800a85",
+              "sha256": "0dd6b0953e5b3a8b8f9b236921d5c87e9b1364aeb0a8ce478f59d33722869ceb",
               "source_path": "speckit-pro/artifact-gallery/brand-kit.css",
               "transform": "none"
             },
@@ -2174,7 +2174,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "0494bb252220d089cea07147161e1e48136277ab833940fbe3dd94324f80aa60",
+          "file_tree_hash": "905bc5822ee531d49af61b987907557064cee669db9f649911a3be41f40a45a8",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2223,11 +2223,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 28528,
+              "byte_count": 29220,
               "kind": "docs",
               "path": "artifact-gallery/SPA-CONTRACT.md",
               "required": true,
-              "sha256": "26ff8068c8e2e8e5d681a30eac702b788e75de208e8db7beb191a67ee7a221ae",
+              "sha256": "6573ec8a7a11e4980e47d25a20556f56527340293cd67584e0fb866498118631",
               "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
               "transform": "none"
             },
@@ -2241,11 +2241,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 18521,
+              "byte_count": 19370,
               "kind": "docs",
               "path": "artifact-gallery/brand-kit.css",
               "required": true,
-              "sha256": "926959f9a93508db530acd018df23c5cb598af9d2cff0a972fc4cf2f55800a85",
+              "sha256": "0dd6b0953e5b3a8b8f9b236921d5c87e9b1364aeb0a8ce478f59d33722869ceb",
               "source_path": "speckit-pro/artifact-gallery/brand-kit.css",
               "transform": "none"
             },
@@ -3350,11 +3350,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 28528,
+              "byte_count": 29220,
               "kind": "docs",
               "path": "artifact-gallery/SPA-CONTRACT.md",
               "required": true,
-              "sha256": "26ff8068c8e2e8e5d681a30eac702b788e75de208e8db7beb191a67ee7a221ae",
+              "sha256": "6573ec8a7a11e4980e47d25a20556f56527340293cd67584e0fb866498118631",
               "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
               "transform": "none"
             },
@@ -3368,11 +3368,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 18521,
+              "byte_count": 19370,
               "kind": "docs",
               "path": "artifact-gallery/brand-kit.css",
               "required": true,
-              "sha256": "926959f9a93508db530acd018df23c5cb598af9d2cff0a972fc4cf2f55800a85",
+              "sha256": "0dd6b0953e5b3a8b8f9b236921d5c87e9b1364aeb0a8ce478f59d33722869ceb",
               "source_path": "speckit-pro/artifact-gallery/brand-kit.css",
               "transform": "none"
             },
@@ -4440,7 +4440,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "63f5997748f0b2aae03c139b2c12fae2bebac9079c92206731ad3d8ff740f137",
+          "file_tree_hash": "05fab82be04979b7c2efc461d67dc16ba449c81ab16d54a58faee71b185d5b90",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

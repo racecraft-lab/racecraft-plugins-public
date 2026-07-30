@@ -68,23 +68,29 @@
  *   --rc-border-strong #847F72 |  3.70 |  3.99 |  3.50 |  3.18 | meaningful non-text on all four
  *   --rc-border-subtle #E0DED9 |  1.24 |  1.34 |  1.18 |  1.07 | decorative only; PROHIBITED for meaning (rule 2)
  *
- * DARK theme — surfaces   --rc-surface #1A1A1A   --rc-surface-raised #1F2937
+ * DARK theme — surfaces   --rc-surface #1A1A1A   --rc-surface-raised #242424
  *                         --rc-surface-sunken #141414
  *                         --rc-surface-muted #1E1E1E
  *
+ *   All four dark surfaces are pure neutrals. An earlier raised value of
+ *   #1F2937 was a blue-grey borrowed from the upstream navigation and sidebar
+ *   background, a role it was chosen for and this one is not; it was the only
+ *   non-neutral in the set and the only surface in either theme that forced a
+ *   pairing below its floor. See correction 4.
+ *
  *   foreground                 surf.   raisd   sunkn   muted   verdict
- *   --rc-text          #E6E6E6 | 13.94 | 11.76 | 14.76 | 13.36 | AA body on all four
- *   --rc-text-muted    #9CA3AF |  6.86 |  5.78 |  7.26 |  6.57 | AA body on all four
- *   --rc-link          #7CB3DD |  7.75 |  6.54 |  8.20 |  7.42 | AA body on all four
- *   --rc-accent        #3C89C6 |  4.63 |  3.90 |  4.90 |  4.43 | large text + non-text on all four
- *   --rc-brand-red     #dc143c |  3.49 |  2.94 |  3.69 |  3.34 | large text + non-text; PROHIBITED on raised (rule 3)
- *   --rc-danger-text   #FF6B85 |  6.38 |  5.38 |  6.75 |  6.11 | AA body on all four
- *   --rc-border-strong #6B7280 |  3.60 |  3.04 |  3.81 |  3.45 | meaningful non-text on all four; 3.04 is the binding minimum
- *   --rc-border-subtle #404040 |  1.68 |  1.42 |  1.78 |  1.61 | decorative only; PROHIBITED for meaning (rule 2)
+ *   --rc-text          #E6E6E6 | 13.94 | 12.44 | 14.76 | 13.36 | AA body on all four
+ *   --rc-text-muted    #9CA3AF |  6.86 |  6.11 |  7.26 |  6.57 | AA body on all four
+ *   --rc-link          #7CB3DD |  7.75 |  6.91 |  8.20 |  7.42 | AA body on all four
+ *   --rc-accent        #3C89C6 |  4.63 |  4.13 |  4.90 |  4.43 | large text + non-text on all four
+ *   --rc-brand-red     #dc143c |  3.49 |  3.11 |  3.69 |  3.34 | large text + non-text on all four
+ *   --rc-danger-text   #FF6B85 |  6.38 |  5.69 |  6.75 |  6.11 | AA body on all four
+ *   --rc-border-strong #6B7280 |  3.60 |  3.21 |  3.81 |  3.45 | meaningful non-text on all four; 3.21 is the binding minimum
+ *   --rc-border-subtle #404040 |  1.68 |  1.50 |  1.78 |  1.61 | decorative only; PROHIBITED for meaning (rule 2)
  *
  * Focus ring. The indicator is --rc-link in both themes and clears the 3:1
  * non-text floor on every surface it can appear on — 5.37 / 5.80 / 5.09 /
- * 4.61 light and 7.75 / 6.54 / 8.20 / 7.42 dark, reading surface / raised /
+ * 4.61 light and 7.75 / 6.91 / 8.20 / 7.42 dark, reading surface / raised /
  * sunken / muted (FR-023).
  *
  *
@@ -98,33 +104,39 @@
  *    Use --rc-link there instead (4.61 on that surface).
  *
  * 2. --rc-border-subtle is PROHIBITED wherever a boundary conveys meaning, in
- *    both themes. It measures 1.07–1.34 light and 1.42–1.78 dark against the
+ *    both themes. It measures 1.07–1.34 light and 1.50–1.78 dark against the
  *    surfaces, so it is decorative only. Use --rc-border-strong for any
  *    boundary that carries meaning — form-control edges, state borders, and
  *    the focus indicator.
  *
- * 3. --rc-brand-red is PROHIBITED as a foreground on --rc-surface-raised in
- *    the dark theme. #dc143c on #1F2937 measures 2.94, under the 3:1 non-text
- *    floor. Use --rc-danger-text (#FF6B85, 5.38 on that surface) instead.
- *    The prohibition is exactly that narrow — that pairing, in that role, in
- *    that theme. Brand red passes on the other three dark surfaces
- *    (3.34–3.69), and brand red as a BACKGROUND carrying #FFFFFF text
- *    measures 4.99 and stays available in both themes.
- *
- * 4. --rc-border-strong in the light theme is #847F72, corrected from
+ * 3. --rc-border-strong in the light theme is #847F72, corrected from
  *    #8A8578. The earlier value measured 2.93 against --rc-surface-muted —
  *    below the 3:1 floor — which an audit against --rc-surface alone (3.41)
  *    did not surface. This token exists to carry boundaries that convey
  *    meaning, so prohibiting it on a surface would be a trap; it is darkened
  *    one step instead and clears 3:1 on all four light surfaces (3.18–3.99).
- *    The dark value #6B7280 needed no change (3.04–3.81).
+ *    The dark value #6B7280 needed no change (3.21–3.81).
  *
- * Rules 3 and 4 are the two classes of FR-025 resolution side by side, and
- * the difference between them is the whole rule: a functional token that
- * misses its floor is re-valued (4); a brand primitive is not, so the need it
- * cannot serve is routed to a functional sibling (3). That rule is restated
- * inside the block, at the point of definition, because this header does not
- * ship.
+ * 4. --rc-surface-raised in the dark theme is #242424, corrected from
+ *    #1F2937. The earlier value was a blue-grey borrowed from the upstream
+ *    navigation and sidebar background — the only non-neutral among the four
+ *    dark surfaces, and a value chosen for chrome rather than for elevated
+ *    content. Against it --rc-brand-red measured 2.94, below the 3:1 non-text
+ *    floor, and --rc-border-strong measured 3.04, the tightest ratio anywhere
+ *    in the kit. Correcting the surface lifts EVERY dark foreground at once
+ *    rather than trading one token off against another: brand red to 3.11,
+ *    border-strong to 3.21, body text to 12.44, and no pairing anywhere
+ *    regresses. Elevation still reads, because #242424 remains lighter than
+ *    --rc-surface (#1A1A1A) and --rc-surface-muted (#1E1E1E).
+ *
+ * Rules 3 and 4 are two corrections and rules 1 and 2 are two prohibitions,
+ * which is the FR-025 rule in practice: a functional token that misses its
+ * floor is re-valued (3), a surface that forces the miss is corrected (4), and
+ * a brand primitive is never re-valued — the need it cannot serve is routed to
+ * a functional sibling instead. That third case currently has NO instance,
+ * because correcting the raised surface removed the only one. Its absence is
+ * not the rule's repeal: the rule is restated inside the block, at each
+ * token's point of definition, because this header does not ship.
  *
  * This file makes no external reference of any kind — no font import, no
  * remote asset, no network position. The brand typeface request belongs in
@@ -183,12 +195,13 @@
   /* Brand primitive. 10% of the palette, punctuation-level emphasis. Role:
    * large text and meaningful non-text only.
    *
-   * PROHIBITED as a foreground on --rc-surface-raised in the dark theme,
-   * where it measures 2.94 against #1F2937. Its functional sibling
-   * --rc-danger-text (#FF6B85 dark, 5.38 there) carries that need instead.
-   * The restriction is that pairing in that role only: brand red as a
-   * BACKGROUND carrying #FFFFFF text measures 4.99 and is available in both
-   * themes, and it passes on the other three dark surfaces (3.34–3.69). */
+   * Permitted on all four surfaces in BOTH themes — 3.97–4.99 light and
+   * 3.11–3.69 dark — so this primitive carries no prohibition of its own. It
+   * once did: against a raised surface of #1F2937 it measured 2.94. That was
+   * resolved by correcting the surface rather than by re-valuing the primitive
+   * or routing around it, which is why no exception is needed here. As a
+   * BACKGROUND carrying #FFFFFF text it measures 4.99 and is available in
+   * both themes. */
   --rc-brand-red: #dc143c;
 
   /* Functional sibling of --rc-brand-red: the AA-body-safe red, for red text
@@ -234,7 +247,7 @@
 @media (prefers-color-scheme: dark) {
   :root {
     --rc-surface: #1A1A1A;
-    --rc-surface-raised: #1F2937;
+    --rc-surface-raised: #242424;
     --rc-surface-sunken: #141414;
     --rc-surface-muted: #1E1E1E;
 
@@ -248,9 +261,8 @@
     --rc-accent: #3C89C6;
 
     /* Brand primitive, identical in both themes — a primitive is not
-     * re-valued. PROHIBITED as a foreground on --rc-surface-raised here
-     * (2.94); use --rc-danger-text (#FF6B85, 5.38) for that. As a background
-     * with #FFFFFF text it is unaffected. */
+     * re-valued. Clears the 3:1 non-text floor on all four surfaces here
+     * (3.11–3.69), so it carries no exception. */
     --rc-brand-red: #dc143c;
 
     /* Functional token, re-valued for this theme. */
@@ -264,7 +276,7 @@
   color-scheme: dark;
 
   --rc-surface: #1A1A1A;
-  --rc-surface-raised: #1F2937;
+  --rc-surface-raised: #242424;
   --rc-surface-sunken: #141414;
   --rc-surface-muted: #1E1E1E;
 
@@ -277,8 +289,8 @@
 
   --rc-accent: #3C89C6;
 
-  /* Brand primitive, identical in both themes. PROHIBITED as a foreground on
-   * --rc-surface-raised here (2.94); use --rc-danger-text (#FF6B85, 5.38). */
+  /* Brand primitive, identical in both themes. Clears the 3:1 non-text floor
+   * on all four surfaces here (3.11–3.69), so it carries no exception. */
   --rc-brand-red: #dc143c;
 
   --rc-danger-text: #FF6B85;

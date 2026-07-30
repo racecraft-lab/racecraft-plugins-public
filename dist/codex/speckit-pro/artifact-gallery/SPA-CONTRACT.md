@@ -338,17 +338,18 @@ measured against all four surfaces, in both themes, with each ratio written out
 unrounded. Look a pairing up there rather than re-deriving it. The table is not
 repeated here — there is one audit, and a second copy would only drift from it.
 
-Three pairings do not meet their floor and are prohibited. Each names what to
+Two pairings do not meet their floor and are prohibited. Each names what to
 use instead:
 
 | Prohibited | Measured | Use instead |
 |---|---|---|
 | `--rc-accent` on `--rc-surface-muted`, light theme | 2.99 | `--rc-link` |
-| `--rc-brand-red` on `--rc-surface-raised`, dark theme | 2.94 | `--rc-danger-text` |
 | `--rc-border-subtle` for any boundary that conveys meaning, either theme | 1.07–1.78 | `--rc-border-strong` |
 
 For red body copy use `--rc-danger-text` in either theme; `--rc-brand-red` is
-audited for large text and non-text use only.
+audited for large text and non-text use only. Brand red itself carries **no**
+prohibition — it clears the 3:1 non-text floor on all four surfaces in both
+themes (3.97–4.99 light, 3.11–3.69 dark).
 
 **Why a prohibition rather than a corrected value.** The kit distinguishes two
 token classes at their point of definition. A **functional token** exists to
@@ -358,6 +359,15 @@ cannot serve is routed to a functional sibling named beside it, which is why
 `--rc-brand-red` keeps its value and `--rc-danger-text` exists. Prohibitions are
 written as narrowly as the measurement supports — one pairing in one theme,
 never a blanket ban on a token.
+
+There is a third resolution, preferred over both when it is available: correct
+the **surface**. Brand red was once prohibited on the dark raised surface, where
+it measured 2.94 against a blue-grey `#1F2937` borrowed from the upstream
+navigation background. Re-valuing that surface to a neutral `#242424` lifted
+every dark foreground at once — brand red to 3.11, the meaningful-boundary token
+to 3.21 — instead of trading one token against another, and the prohibition
+ceased to exist. Prefer fixing the surface when one surface is what forces the
+miss; fall back to a prohibition only when the surface itself is fixed.
 
 A pairing that neither meets its floor nor carries a prohibition naming its
 replacement is a defect in the kit. Report it rather than working around it

@@ -202,7 +202,8 @@ rather than assuming caught two real failures in the palette as drafted:
    conveys meaning. **Superseded in part by R13**: the light value was first set
    to `#8A8578` and audited only against `--rc-surface` (3.41); measured against
    all four light surfaces it falls to 2.93 on `--rc-surface-muted`, so the value
-   is now `#847F72` (3.18–3.99). Dark `#6B7280` stands (3.04–3.81).
+   is now `#847F72` (3.18–3.99). Dark `#6B7280` stands (3.21–3.81 once R14
+   corrected the raised surface; 3.04–3.81 as first measured against `#1F2937`).
 
 Brand red `#dc143c` passes at 3.97–4.99 across light surfaces, which is AA for
 exactly the punctuation-level, non-text and large-text role FR-001 reserves it
@@ -369,7 +370,10 @@ audit itself had two holes, and a failure was sitting in each one.
    3.34 across the four dark surfaces. The pairing with `--rc-surface-raised`
    `#1F2937` is under the 3:1 non-text floor. Resolved the same way R8 resolved
    the accent failure — prohibit the pairing, name the replacement
-   (`--rc-danger-text` `#FF6B85`, 5.38).
+   (`--rc-danger-text` `#FF6B85`, 5.38). **Superseded by R14**: the cause was the
+   surface, not the token. `--rc-surface-raised` is now `#242424`, brand red
+   clears 3:1 on all four dark surfaces (3.11–3.69), and this prohibition no
+   longer exists.
 2. **`--rc-border-strong` was audited against one surface out of four.** R8
    recorded "3.41 on `--rc-surface`" where every other row carried a range.
    Measured across all four light surfaces, `#8A8578` gives 3.41 / 3.68 / 3.23 /
@@ -378,7 +382,8 @@ audit itself had two holes, and a failure was sitting in each one.
    meaning, so a rule forbidding it on one surface would be a trap for exactly
    the author it is meant to serve. The value is darkened one step to `#847F72`
    (3.18–3.99 across all four). Dark `#6B7280` was re-measured and stands
-   (3.04–3.81, binding minimum on raised).
+   (3.04–3.81, binding minimum on raised — lifted to 3.21–3.81 by R14, which
+   removed that binding constraint by correcting the surface).
 
 Both holes share one shape: **an unmeasured pairing read as a passing one.**
 FR-005 is amended so absence is a defect — the audit must be symmetric across
@@ -430,6 +435,67 @@ future reader cannot tell a deliberate prohibition from an oversight, which is
 the exact confusion that let two failures hide. Adding a dark-specific brand-red
 token instead of prohibiting the raised pairing — rejected, it adds a permanent
 token to serve one surface where an existing token already fits.
+
+---
+
+## R14 — The failing pairing was the surface's fault, not the token's
+
+**Supersedes R13 finding 1 and the dark half of R8.** R13 resolved brand red's
+2.94 against the dark raised surface by prohibiting the pairing. That resolution
+was sound given the options it weighed, but its alternatives analysis had a blind
+spot: it considered changing the *foreground* — prohibit it, or add a dark
+brand-red token — and never considered changing the *surface*.
+
+The raised surface was `#1F2937`. That value traces to
+`docs-site/src/styles/brand.css`, where it is `--sl-color-bg-nav` and
+`--sl-color-bg-sidebar` — the navigation and sidebar background. The brand source
+defines **no** raised content surface at all: it has a page background
+(`#1a1a1a`), that navigation chrome, and a code-chip grey (`#1e1e1e`). So
+`--rc-surface-raised` is a token this feature introduced, populated by borrowing
+a value chosen for a different job. It was also the only non-neutral among the
+four dark surfaces, the other three being pure greys.
+
+**Two facts make correcting the surface strictly better than prohibiting the
+pairing.** First, `#1F2937` misses by almost nothing: brand red needs the raised
+luminance at or below 0.02014 to clear 3:1, and `#1F2937` is 0.02153 — over by
+0.0014. Second, that same surface held the tightest ratio anywhere in the kit,
+`--rc-border-strong` at 3.04, which the audit itself flagged as the binding
+minimum. One surface was constraining two tokens.
+
+Re-valuing it to a neutral `#242424` lifts **every** dark foreground at once and
+regresses none:
+
+| Foreground | on `#1F2937` | on `#242424` |
+|---|---|---|
+| `--rc-brand-red` | 2.94 (fails 3:1) | **3.11** |
+| `--rc-border-strong` | 3.04 (binding minimum) | **3.21** |
+| `--rc-text` | 11.76 | 12.44 |
+| `--rc-text-muted` | 5.78 | 6.11 |
+| `--rc-link` | 6.54 | 6.91 |
+| `--rc-accent` | 3.90 | 4.13 |
+| `--rc-danger-text` | 5.38 | 5.69 |
+
+Elevation still reads: `#242424` (luminance 0.01764) stays above `--rc-surface`
+`#1A1A1A` (0.01033) and `--rc-surface-muted` `#1E1E1E` (0.01298), so the
+ordering sunken < surface < muted < raised is preserved.
+
+**Decision**: `--rc-surface-raised` dark becomes `#242424`. R13's brand-red
+prohibition is removed, not relaxed — brand red now clears its floor on all four
+surfaces in both themes and carries no exception. All 64 pairings were recomputed
+from the shipped token values and both header tables verified row by row.
+
+**Alternatives considered**: Keeping the prohibition — rejected once the surface
+was identified as the cause, because it leaves an authoring trap in place across
+all 21 planned templates to protect a borrowed value. A dark-specific brand-red
+variant (`#EA1A44`, which also clears 3:1) — rejected for the same reason R13
+rejected it, and now unnecessary. Darkening `#1F2937` within its own blue-grey
+hue family — viable, but it would preserve the one non-neutral in an otherwise
+neutral surface set for no stated reason.
+
+**Lesson**: when a pairing misses its floor, the surface is a candidate for
+correction, not just the foreground. R13 enumerated foreground remedies
+exhaustively and never asked whether the background was right. A token borrowed
+from another role is the first place to look.
 
 ---
 
