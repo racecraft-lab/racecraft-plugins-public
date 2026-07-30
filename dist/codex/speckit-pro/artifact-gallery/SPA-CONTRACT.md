@@ -486,6 +486,34 @@ attribute on the root element — never read storage yourself, and never place a
 stored value into markup, into a selector, or into any other executable
 position. A second reader re-opens the hole the block closes.
 
+`data-theme` is always present, on both paths: the block writes the resolved
+theme during head parsing whether or not a reader has stored an override, so
+there is no state in which your template reads it and finds nothing. While no
+override is stored the block follows the operating system, so a reader who
+changes their system theme after load gets the attribute, the rendering, and the
+control's reported state all moving together.
+
+### The brand mark
+
+The block also carries the Racecraft mark, and mounting it is **opt-in**. Provide
+an empty element with a `data-rc-brand-mark` attribute wherever the mark belongs,
+and the block fills it:
+
+```html
+<span data-rc-brand-mark></span>
+```
+
+Leave the attribute off and no artwork is mounted — an artifact with no sensible
+place for a mark simply does not provide one, and that is the common case rather
+than an omission. Provide the attribute on an element that already has a child
+and the block leaves it alone, so your own artwork is never replaced.
+
+Do not write the `rc-brand-mark` class yourself. It is the kit's sizing rule and
+the block sets it on the artwork it mounts; setting it on an element of your own
+gets the sizing with no mark in it. The artwork's neutral fill is `currentColor`,
+so it follows the theme — set `color` on the container to change it. Brand red
+inside the mark is a primitive and is identical in both themes.
+
 ### Focus and motion
 
 Every interactive element in your artifact carries the kit's focus-visible

@@ -118,6 +118,26 @@ def _read_exact(path: Path) -> str:
         return handle.read()
 
 
+def _read_exact_or_none(path: Path) -> str | None:
+    """``_read_exact``, or ``None`` when the file is not decodable as UTF-8.
+
+    This cannot take ``_document_text``'s ``errors="replace"`` route: a replaced
+    character *is* drift, and A4 exists to catch drift, so a lenient read here
+    would turn the byte-exact comparison into an approximate one.
+
+    But an unhandled decode error is worse. It propagates out of the check and
+    stops the module before it reaches the files that are fine — the unittest run
+    dies with a traceback naming a codec rather than naming an artifact, and every
+    later group goes unreached. That is verbatim the failure ``_document_text``'s
+    own docstring says it exists to avoid. So the condition is reported as a
+    failure by the caller instead of raised.
+    """
+    try:
+        return _read_exact(path)
+    except UnicodeDecodeError:
+        return None
+
+
 def _markers(block: str) -> tuple[str, str]:
     return f"{block}:START", f"{block}:END"
 
@@ -180,7 +200,9 @@ def _canonical_region(gallery_root: Path, block: str) -> str | None:
     path = gallery_root / CANONICAL_FILES[block]
     if not path.is_file():
         return None
-    text = _read_exact(path)
+    text = _read_exact_or_none(path)
+    if text is None:
+        return None  # A1/A2 report the undecodable canonical file
     return _region(text, block) if _embeds(text, block) else None
 
 
@@ -189,7 +211,10 @@ def _canonical_pair_failures(gallery_root: Path, block: str) -> list[str]:
     path = gallery_root / name
     if not path.is_file():
         return [f"{name}: block {block}: canonical file is missing, so no artifact can embed the block"]
-    return _pair_failures(name, block, _read_exact(path))
+    text = _read_exact_or_none(path)
+    if text is None:
+        return [f"{name}: block {block}: canonical file is not decodable as UTF-8, so no region can be read"]
+    return _pair_failures(name, block, text)
 
 
 def check_a1(gallery_root: Path) -> list[str]:
@@ -210,8 +235,13 @@ def check_a3(gallery_root: Path) -> list[str]:
     """
     failures: list[str] = []
     for path in _gallery_html_files(gallery_root):
-        text = _read_exact(path)
         label = _label(gallery_root, path)
+        text = _read_exact_or_none(path)
+        if text is None:
+            failures.append(
+                f"{label}: is not decodable as UTF-8, so no marker pair can be read from it"
+            )
+            continue
         for block in CANONICAL_FILES:
             if _uses(text, block):
                 failures.extend(_pair_failures(label, block, text))
@@ -227,8 +257,10 @@ def check_a4(gallery_root: Path) -> list[str]:
     failures: list[str] = []
     canonical: dict[str, str | None] = {}
     for path in _gallery_html_files(gallery_root):
-        text = _read_exact(path)
         label = _label(gallery_root, path)
+        text = _read_exact_or_none(path)
+        if text is None:
+            continue  # A3 owns the undecodable file; reporting it twice names one defect twice
         for block in CANONICAL_FILES:
             if not _embeds(text, block):
                 continue  # absent, or unbalanced — the unbalanced case is A3's
@@ -298,7 +330,10 @@ def check_a5(gallery_root: Path) -> list[str]:
                 for block in CANONICAL_FILES
             )
             continue
-        text = _read_exact(artifact)
+        text = _read_exact_or_none(artifact)
+        if text is None:
+            failures.append(f"{label}: is not decodable as UTF-8, so no embedded block can be read")
+            continue
         failures.extend(
             f"{label}: block {block}: shipped entry '{identifier}' does not embed the block"
             for block in CANONICAL_FILES
@@ -2587,7 +2622,10 @@ def _documented_signals(gallery_root: Path) -> tuple[set[str] | None, list[str]]
             f"{SPA_CONTRACT_FILE}: the document is missing, so the catalog's signal vocabulary is documented "
             "nowhere and the two cannot be closed against each other"
         ]
-    section = _section(_read_exact(path), SIGNAL_SECTION_HEADING)
+    documented = _read_exact_or_none(path)
+    if documented is None:
+        return None, [f"{SPA_CONTRACT_FILE}: is not decodable as UTF-8, so the documented vocabulary cannot be read"]
+    section = _section(documented, SIGNAL_SECTION_HEADING)
     if section is None:
         return None, [
             f"{SPA_CONTRACT_FILE}: no '{SIGNAL_SECTION_HEADING}' section, so the documented vocabulary "
@@ -5282,7 +5320,9 @@ def check_g2(gallery_root: Path) -> list[str]:
     notice = gallery_root / UPSTREAM_NOTICE_FILE
     if not notice.is_file():
         return []  # G1 owns the missing file
-    text = _read_exact(notice)
+    text = _read_exact_or_none(notice)
+    if text is None:
+        return [f"{UPSTREAM_NOTICE_FILE}: is not decodable as UTF-8, so the permission notice cannot be compared"]
     failures = [
         f"{UPSTREAM_NOTICE_FILE}: the permission notice is altered or truncated at "
         f"'{paragraph.splitlines()[0]}'"

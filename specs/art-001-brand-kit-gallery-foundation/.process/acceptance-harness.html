@@ -58,14 +58,45 @@
     }
   }
 
-  /* Runs while the head is parsing, so an override is on the root element
-     before first paint and a dark theme reader sees no flash of light. With no
-     stored override nothing is written and the kit's media query decides. */
-  var active = storedTheme();
-  if (active) {
-    applyTheme(active);
-  } else {
-    active = systemTheme();
+  /* Runs while the head is parsing, so the theme is on the root element before
+     first paint and a dark theme reader sees no flash of light.
+
+     data-theme is written on BOTH paths, not only when an override is stored.
+     Leaving it absent by default had two costs: the contract tells a template to
+     read data-theme to learn the current theme, and on the default path there was
+     nothing to read; and `active` held a snapshot of the operating-system theme
+     that nothing kept current. A reader who flipped their system theme after load
+     got a repainted page with a stale control — announced as "not pressed" on a
+     dark page — and a first click that changed nothing visible, so reaching the
+     other theme took two presses. */
+  var override = storedTheme();
+  var active = override || systemTheme();
+  applyTheme(active);
+
+  /* Reassigned once the control exists. A no-op until then, so the media
+     listener below can call it unconditionally — including before the control is
+     built, which is when an early system change would otherwise be lost. */
+  var announce = function () {};
+
+  /* While no override is stored the operating system is still the authority, so
+     a later change to it has to be followed rather than snapshotted. Storing an
+     override ends this: from then on the reader's choice wins, which is why the
+     listener checks `override` on every fire rather than being torn down. */
+  var media = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+  if (media) {
+    var followSystem = function (event) {
+      if (override) {
+        return;
+      }
+      active = event.matches ? DARK : LIGHT;
+      applyTheme(active);
+      announce();
+    };
+    if (media.addEventListener) {
+      media.addEventListener('change', followSystem);
+    } else if (media.addListener) {
+      media.addListener(followSystem);  /* older engines: removed from the platform, still shipped */
+    }
   }
 
   document.addEventListener('DOMContentLoaded', function () {
@@ -78,12 +109,18 @@
        changes between positions. */
     control.textContent = LABEL;
     control.setAttribute('aria-label', LABEL);
-    control.setAttribute('aria-pressed', active === DARK ? 'true' : 'false');
+    announce = function () {
+      control.setAttribute('aria-pressed', active === DARK ? 'true' : 'false');
+    };
+    announce();
     control.addEventListener('click', function () {
       active = active === DARK ? LIGHT : DARK;
+      /* The reader has now chosen, so the operating system stops being the
+         authority and the media listener above stands down. */
+      override = active;
       applyTheme(active);
       rememberTheme(active);
-      control.setAttribute('aria-pressed', active === DARK ? 'true' : 'false');
+      announce();
     });
     document.body.insertBefore(control, document.body.firstChild);
 
@@ -124,8 +161,8 @@
   --rc-surface-muted: #EDEBE6;
 
   /* ---- Borders --------------------------------------------------------- */
-  /* Decorative only. Measures 1.07–1.34 here and 1.42–1.78 dark, so it never
-   * carries meaning — see prohibition rule 2. */
+  /* Decorative only. Measures 1.13–1.34 here and 1.50–1.78 dark, so it never
+   * carries meaning — see prohibition rule 1. */
   --rc-border-subtle: #E0DED9;
   /* Meaningful non-text: form-control edges, state borders, the focus ring.
    * Audited to at least 3:1 on all four surfaces in both themes. */
@@ -167,7 +204,7 @@
   /* Brand primitive. 10% of the palette, punctuation-level emphasis. Role:
    * large text and meaningful non-text only.
    *
-   * Permitted on all four surfaces in BOTH themes — 3.97–4.99 light and
+   * Permitted on all four surfaces in BOTH themes — 4.19–4.99 light and
    * 3.11–3.69 dark — so this primitive carries no prohibition of its own. It
    * once did: against a raised surface of #1F2937 it measured 2.94. That was
    * resolved by correcting the surface rather than by re-valuing the primitive
