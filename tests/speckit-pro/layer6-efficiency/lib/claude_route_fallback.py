@@ -40,12 +40,13 @@ from typing import Any
 # Read-only imports of the shared fail-closed schema engine. ``load_contract``
 # parses the committed contract this module reads its vocabularies from;
 # ``CONTRACT_ROOT`` locates it without re-deriving a second path;
-# ``validate_instance`` and ``ControlContractError`` are the engine surface the
-# corpus loader and the resolution walk consult, so no second validator is
-# authored here (FR-016).
-from claude_policy_controls import (  # noqa: F401
+# and ``validate_instance`` is the engine surface the corpus loader and the
+# resolution walk consult, so no second validator is authored here (FR-016).
+# The engine raises its own ``ControlContractError``; this module lets it
+# propagate rather than catching or re-wrapping it, so the name is deliberately
+# not imported and every one of these three imports is used.
+from claude_policy_controls import (
     CONTRACT_ROOT,
-    ControlContractError,
     load_contract,
     validate_instance,
 )
