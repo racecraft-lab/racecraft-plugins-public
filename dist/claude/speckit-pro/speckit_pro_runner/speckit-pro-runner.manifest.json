@@ -112,7 +112,7 @@
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
-      "sha256": "09545c0385a9e932f6c893ca449193f2ca5087c852450719534dcf1e30efbbb2"
+      "sha256": "fbd62a235e5f6263987b87d2b5b71d4e752df972b5e221c8c74fd43289dab0d6"
     },
     {
       "path": {
@@ -120,7 +120,7 @@
         "value": "speckit_pro_runner/helpers/mutation.py",
         "display": "speckit_pro_runner/helpers/mutation.py"
       },
-      "sha256": "6f83596584838611409c0a33c35175119bd51aec2e240f93fa0e9996f5e433e3"
+      "sha256": "7b2e939bb663f985ece886bcd7ab8310080bd20b13621d98c57f0cdd03ff9e58"
     },
     {
       "path": {
