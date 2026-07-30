@@ -34,5 +34,7 @@ the slice artifacts in the body below.
 - [checklists/data-integrity.md](checklists/data-integrity.md)
 - [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/llm-integration.md](checklists/llm-integration.md)
+- [.process/slice-1-pr-packet.md](.process/slice-1-pr-packet.md)
+- [.process/slice-2-pr-packet.md](.process/slice-2-pr-packet.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->
