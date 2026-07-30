@@ -386,9 +386,17 @@ cohort specs inherit proven rejection semantics.
     terminal failure diagnostic, or claim `no_safe_route` while carrying no remediation
     at all — and it is the `no_safe_route` diagnostic that carries the mandated rollback
     action (FR-012a, FR-029), so its presence is what makes SC-010 reachable.
-- **FR-012c**: `severity` and `source` MUST be pinned rather than left to the emitter,
-  because both are required fields that enter the serialized bytes FR-014 compares.
-  [US1] [US2]
+- **FR-012c**: `severity` and `source` MUST be pinned, because both are required fields
+  that enter the serialized bytes FR-014 compares. For `severity` this is a **deliberate
+  divergence from the installed runner, not a mirroring of it** — the runner's mechanism
+  is caller-determined (`severity` is a keyword parameter defaulting to `"error"`, and
+  `plan_layers_diagnostic` takes `code` and `severity` as two *independent* parameters,
+  which is exactly the signature you would not write if severity were a function of
+  code), and no code-to-severity table exists anywhere in the runner. The divergence is
+  justified by a difference in emitter: the runner's emitter is *code*, which needs a
+  default, whereas this feature's emitter is a *hand-authored corpus*, where leaving
+  severity to the emitter means the corpus author picks freely per case — unfalsifiable
+  authoring latitude in a byte-compared corpus. [US1] [US2]
   - **`severity` is a function of `code`.** Each code MUST carry one fixed severity,
     fixed once in the code-to-severity table in `data-model.md` §3 and asserted by a
     single test over every emitted diagnostic. The four route-rejection codes are
@@ -409,6 +417,24 @@ cohort specs inherit proven rejection semantics.
     `layer6-efficiency/` binds a code to a severity, and the runner merely defaults the
     keyword to `error` (`envelope.py:43-47`) while its validator checks set membership
     only (`gates/release.py:823`).
+    **The external split is not the deciding input, because the standards answer a
+    different question** — runtime severity derivation for tools emitting *unbounded*
+    findings, versus this feature's authoring constraint on a *bounded, hand-pinned*
+    corpus. LSP in particular does not support the occurrence-level reading: it carries
+    no rule catalog on the wire, so its omission fallback is a fixed constant rather
+    than a rule default, leaving it silent on this question. SARIF's per-result `level`
+    is interchange-superset accommodation, and its documented variation axis is
+    per-*run* configuration for audit and reproducibility, not per-occurrence semantics.
+    The decisive grounds are internal: this feature already emits **exactly one terminal
+    diagnostic, always last**, and already carries a **dedicated gate field**
+    (`release_claim_eligible`), so every fact a per-occurrence severity could express is
+    already carried structurally — and a second channel could contradict the first. That
+    also settles the hard case: `unqualified_override` is `warning` in *both*
+    configurations, including when it coexists with `no_safe_route`, because the
+    consequence travels on `release_claim_eligible` and the terminal `no_safe_route`
+    entry already supplies the report's `error`. This feature is SARIF-shaped
+    (descriptive severity plus a separate gate), not ESLint-shaped (severity *is* the
+    gate).
   - **`source` is a single constant.** Every diagnostic this simulator emits MUST carry
     `source` as the literal `route-fallback-simulator`, constrained with `const` in both
     diagnostic `$defs`. Left as an open `minLength: 1` string it is an unpinned byte in
@@ -815,26 +841,72 @@ cohort specs inherit proven rejection semantics.
   retry exhaustion in prose at `:154` — "Exhausting retries means at least one attempt
   failed". [US2]
   - **`probe_attempts`** increments **once per route whose snapshot probe state is
-    consulted** — that is, once for each attempted route that reaches probe evaluation,
-    reading capability-probe availability and the exact-invocation outcome together as
-    one consultation. A route rejected earlier in the inter-code order, before probing
-    is reached, adds nothing. The count is therefore checkable against the report itself,
+    consulted** — precisely, once per route's **first** consultation, reading
+    capability-probe availability and the exact-invocation outcome together as one
+    consultation. A route rejected earlier in the inter-code order, before probing is
+    reached, adds nothing. The count is therefore checkable against the report itself,
     following the in-tree definition of one attempt as one entry of an enumerable list
     (`claude_policy_controls.py:2236`).
+    **"First consultation" rather than "each consultation" is load-bearing, not
+    stylistic.** A retry also reaches probe evaluation, so counting every consultation
+    here would make a route probed twice yield `probe_attempts: 2` against
+    `candidate_routes: 1` — falsifying the asserted `probe_attempts <= candidate_routes`
+    invariant — and would make `retries: 1` **unreachable** under
+    `max_probe_attempts: 1`, rendering FR-028 unsatisfiable at its declared all-budgets-1
+    configuration. Retries are therefore carved out of this counter by construction: this
+    counter takes each route's first consultation, `retries` takes every subsequent one.
   - **`retries`** increments **once per re-consultation of a route whose
-    exact-invocation probe outcome is `failure`**. This is the definition that makes
-    retry exhaustion reachable at all against a static snapshot: a re-read returns the
-    same `failure`, so the retry budget deterministically exhausts rather than depending
-    on simulated flakiness, and it satisfies the registry's own criterion that
-    exhausting retries means at least one attempt failed. A route whose probe outcome is
-    `success` or `absent` incurs no retry.
-  - **`fan_out`** increments **once per candidate route entered in the walk** — the
-    preferred route plus each fallback reached — so `max_fan_out` bounds walk breadth and
-    equals the length of `attempted_routes` when the walk runs. This gives the third
-    dimension a referent it otherwise lacks in a sequential first-match walk: with a
-    fallback list longer than `max_fan_out - 1`, the walk stops after `max_fan_out`
-    routes rather than continuing to the end of the list. `probe_attempts` is therefore
-    always less than or equal to `fan_out`, and the two are not redundant.
+    exact-invocation probe outcome is `failure`** — that is, every consultation of a route
+    *after* its first, which `probe_attempts` already took. A route whose probe outcome is
+    `success` or `absent` incurs no retry. The **exclusive** base (re-attempts only, not
+    total attempts) is deliberate and doubly grounded: a field named `retries` excludes
+    the initial attempt by universal convention, whereas a field named `attempts` includes
+    it — and this repository's own frozen registry independently fixes the same direction
+    with "exhausting retries means at least one attempt failed". This schema already
+    encodes it too: `max_retries` carries `minimum: 0` where both sibling caps carry
+    `minimum: 1`, because "no re-attempt" is coherent while "never probe" is not. So
+    `max_retries: 1` admits two consultations of one route.
+    **Honest framing of what a retry is here.** Re-consulting an *unchanged* snapshot is a
+    no-op by construction — a live retry exists because the outcome *might* change, and a
+    deterministic outcome derived from a frozen snapshot is exactly the non-retryable
+    class real resilience libraries never retry. So this counter is not literally "a
+    re-read that might succeed". It is a **declared allowance for the attempts the live
+    CAR-006 preflight would make against a real environment**, which this simulator
+    exercises deterministically because the fixture pins the outcome. That is the faithful
+    degenerate projection of the live unit CAR-006 inherits, and it matches the registry's
+    own posture that exhausting retries is "the one outcome the bound execution trace can
+    evidence" — a statement about what the record can prove, not about what physically
+    happened. Framing it as a literal re-read would be a fiction; this framing is the same
+    arithmetic without one.
+  - **`candidate_routes`** increments **once per candidate route entered in the walk** —
+    the preferred route plus each fallback reached — so `max_candidate_routes` bounds walk
+    breadth and equals the length of `attempted_routes` when the walk runs. This gives the
+    third dimension a referent it otherwise lacks in a sequential first-match walk: with a
+    fallback list longer than `max_candidate_routes - 1`, the walk stops after
+    `max_candidate_routes` routes rather than continuing to the end of the list.
+    `probe_attempts` is therefore always less than or equal to this count, and the two are
+    not redundant.
+    **The roadmap phrase is "fan-out"; this field is deliberately not named that.** In
+    this contracts directory the token `fan_out` is **already frozen with a different referent** —
+    "a declared ceiling on automatically spawned children"
+    (`contracts-claude/policy-control-registry.schema.json:547-551`), and set at dispatch
+    time at `:143`. The Codex twin roadmap names that same concept "**subagent** fan-out …
+    **in the harness**", confirming the program's referent is dispatch breadth enforced by
+    the harness, not resolver walk breadth. Reusing the token here would put two referents
+    on one name inside one contracts directory — the same second-dialect trap FR-012
+    refuses at this spec's own diagnostics boundary. The program's existing unit for
+    entered candidates is `candidates`, already a member of the frozen unit enum beside
+    `attempts`, so this field follows precedent rather than departing from it. The token
+    `fan_out` stays reserved for its harness sense, which is where CAR-006 will need it.
+  - **Counting scope.** All three counters are counted **over the reported agent's own
+    walk** — never aggregated across corpus cases or across agents. Stating the scope is
+    not optional detail: the frozen registry pairs a `counted_over` scope with every
+    ceiling precisely so "a run cannot stay inside its bounds by distributing retries …
+    across children", and a ceiling without a scope is as unfalsifiable as one without a
+    unit. Note the registry's durable rule is **unit + scope + breach outcome**, not
+    "every cap carries a `unit`" — two of its own caps (`boundScopeAndBreach.max_retries`,
+    `topologyDescriptor.fan_out`) are bare integers carrying scope and breach semantics
+    instead.
   - **All three exhaust into `no_safe_route`.** No new terminal code may be introduced —
     FR-005 closes the resolution enum and forbids extension by this feature, and FR-019
     already records that budget exhaustion is "bounded, not rejected" and terminates
@@ -846,11 +918,23 @@ cohort specs inherit proven rejection semantics.
     resolve produce counter-equals-cap on a `resolved` report. The terminal
     `no_safe_route` diagnostic MUST therefore carry `details.exhausted_budget`: an
     **array** whose members are drawn from the closed three-member inline enum
-    (`probe_attempts`, `retries`, `fan_out`), listing every class whose actual count
+    (`probe_attempts`, `retries`, `candidate_routes`), listing every class whose actual count
     equals its declared cap, ordered by that enum's declaration, with `minItems: 1` and
     `uniqueItems: true`. It is present on that diagnostic and on no other, so its
     presence means "spent to the limit **and** the walk failed", which is exactly the
     conjunction a single counter comparison cannot express.
+    **Required only when at least one class is at cap; omitted — not empty — when none
+    is**, since `minItems: 1` forbids the empty array. This is a qualification, not a
+    weakening: the field's stated meaning is that its presence means "spent to the limit
+    and the walk failed", and omission is what preserves that reading. Two cases make the
+    qualification necessary rather than hypothetical. A pre-walk structural rejection
+    (FR-019c) fixes all three actual counts at `0` while `max_probe_attempts` and
+    `max_candidate_routes` carry `minimum: 1`, so its at-cap set is **necessarily** empty. And a
+    `no_safe_route` report arising from an empty fallback list can end below every cap.
+    Omission is unambiguous because the report already carries both the declared caps and
+    the actual counts, from which the empty at-cap set is re-derivable. Note this defect
+    is independent of FR-019c's partition — the empty-fallback-list case reaches it too,
+    so it required fixing regardless.
     An array rather than a single naming of "the class that terminated the walk" is
     deliberate, and the difference matters. With more than one cap reached — the FR-028
     case declares all three at `1` and reaches all three — deciding which one *caused*
@@ -905,7 +989,7 @@ cohort specs inherit proven rejection semantics.
   touching a retry, leaving the roadmap's named obligation unproven. Fixing the
   retry budget to bind closes that. Declaring the other two caps at `1` in the same case
   proves they are respected without adding a case: the report pins `probe_attempts` and
-  `fan_out` against their caps too, and `details.exhausted_budget` lists all three
+  `candidate_routes` against their caps too, and `details.exhausted_budget` lists all three
   classes, so `retries` is provably among the budgets spent to their limit on a failing
   report (FR-026a). The case's mechanics are fixed so this is reachable: the preferred
   route's exact-invocation outcome is `failure`, the single permitted retry re-consults
@@ -928,7 +1012,7 @@ cohort specs inherit proven rejection semantics.
 
   **Outcome-attached, not precondition-attached.** FR-029 opens "When the preferred route
   and every declared fallback are rejected", which FR-026a's fan-out cap now makes
-  narrower than the set of reports that need it: a walk truncated at `max_fan_out` ends
+  narrower than the set of reports that need it: a walk truncated at `max_candidate_routes` ends
   with routes that were never reached and therefore never rejected, yet still terminates
   in `no_safe_route`. Every obligation FR-029 imposes — naming the unresolved agent,
   every attempted route, each rejection reason, and remediation carrying the verbatim

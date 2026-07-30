@@ -108,7 +108,7 @@ co-located with the field's `type` (the directory's universal habit):
 | --- | --- |
 | `max_probe_attempts` | `minimum: 1`, `maximum: 8` |
 | `max_retries` | `minimum: 0`, `maximum: 8` |
-| `max_fan_out` | `minimum: 1`, `maximum: 8` |
+| `max_candidate_routes` | `minimum: 1`, `maximum: 8` |
 
 A declared `1` satisfies FR-028's budget-of-one exhaustion case. Slice 2's
 negative fixture declares `9` and must fail validation rather than be clamped.
@@ -292,7 +292,7 @@ and their inline enums are declared in slice 1:
 | `declared_effort` | ladder enum | `effort_unsupported` (FR-007) |
 | `supported_efforts` | array of ladder efforts | `effort_unsupported` (FR-007) |
 | `route_id` | string | **every** route-scoped diagnostic — all four resolution codes and the four policy-authoring violations (FR-029a); the join key to `attempted_routes` |
-| `exhausted_budget` | array, `items` an inline 3-member enum (`probe_attempts`, `retries`, `fan_out`), `minItems: 1`, `uniqueItems: true`, enum declaration order | the terminal `no_safe_route` diagnostic only; lists every class whose actual count equals its declared cap (FR-026a) |
+| `exhausted_budget` | array, `items` an inline 3-member enum (`probe_attempts`, `retries`, `candidate_routes`), `minItems: 1`, `uniqueItems: true`, enum declaration order | the terminal `no_safe_route` diagnostic only; lists every class whose actual count equals its declared cap (FR-026a) |
 
 The four sub-reasons are total over the projection and the simulator evaluates them in
 the FR-006 order — `alias_unresolved`, `alias_repointed`, `model_absent`,
@@ -434,7 +434,7 @@ every schema keyword.
 | `$defs` | Fields |
 | --- | --- |
 | `dispatchTuple` | `agent`, `alias`, `resolved_model`, `effort` — all required (FR-013) |
-| `reportedBudgets` | `declared` (`max_probe_attempts`, `max_retries`, `max_fan_out`) and `actual` (`probe_attempts`, `retries`, `fan_out`), all required integers (FR-026); each actual counter's unit is defined in FR-026a |
+| `reportedBudgets` | `declared` (`max_probe_attempts`, `max_retries`, `max_candidate_routes`) and `actual` (`probe_attempts`, `retries`, `candidate_routes`), all required integers (FR-026); each actual counter's unit is defined in FR-026a |
 | `optionalHelper` | `consulted` (boolean), `no_helper_path_validated` (boolean), and `probe_attempts` (integer, `minimum: 0`) — all three required (FR-025, FR-025a) |
 | `override` | `source`, `tuple` (`$ref: #/$defs/dispatchTuple`), `would_have_been` (`outcome` required, `effective_dispatch_tuple` optional) — all required (FR-024) |
 
@@ -442,10 +442,10 @@ every schema keyword.
 unit cannot be checked against its cap: `probe_attempts` increments once per attempted
 route whose snapshot probe state is consulted; `retries` once per re-consultation of a
 route whose exact-invocation outcome is `failure`, which is what makes retry exhaustion
-reachable against a static snapshot; `fan_out` once per candidate route entered, so it
+reachable against a static snapshot; `candidate_routes` once per candidate route entered, so it
 equals `len(attempted_routes)` whenever the walk runs. Hence
-`probe_attempts <= fan_out` always, and the two are not redundant — a route rejected
-before probing is reached raises `fan_out` without raising `probe_attempts`. Declaring
+`probe_attempts <= candidate_routes` always, and the two are not redundant — a route rejected
+before probing is reached raises `candidate_routes` without raising `probe_attempts`. Declaring
 the unit follows this directory's own habit of pairing every cap with a required `unit`
 (`policy-control-registry.schema.json:670-676`).
 
@@ -545,7 +545,7 @@ Two case-authoring obligations that the field design alone does not convey:
 - **`budget-exhaustion-of-one` binds the `retries` class.** It declares all three budgets
   at `1` — valid against §1's bounds, since `max_retries` allows `0` upward and the other
   two allow `1` upward — pins all three actual counts, and pins
-  `details.exhausted_budget: ["probe_attempts", "retries", "fan_out"]` on its terminal
+  `details.exhausted_budget: ["probe_attempts", "retries", "candidate_routes"]` on its terminal
   diagnostic (FR-028, FR-026a). Its preferred route's exact-invocation outcome is
   `failure`, the one permitted retry re-consults it and returns the same `failure`, and no
   further retry may be taken. Retries are named explicitly because the roadmap states
