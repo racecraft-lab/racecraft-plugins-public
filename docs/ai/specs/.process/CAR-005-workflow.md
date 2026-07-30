@@ -34,8 +34,8 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Specify | `/speckit-specify` | ✅ Complete | 35 FRs, 2 user stories, 18 acceptance scenarios, 12 success criteria, 6 edge cases. G1 pass. 3 clarification markers → Clarify runs. Parity premise corrected mid-phase. |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | 2 sessions + 3 real markers to resolve |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -74,6 +74,33 @@ Each phase requires **human review and approval** before proceeding:
 
 **Constitution Check:** ✅ (verified at scaffold — the spec surface is repository-only validation; no plugin runtime, payload, or shipped-default change)
 
+### Phase 0 Prerequisites Evidence (autopilot, 2026-07-29)
+
+| Check | Result |
+|-------|--------|
+| `check-prerequisites` | `all_pass: true` — SpecKit CLI 0.11.8, project initialized, constitution present, all commands installed, workflow file found, `is_worktree: true` |
+| Branch | `car-005-availability-fallback-recovery` (verified by `git rev-parse --abbrev-ref HEAD`). The helper reports `branch: ""` / `on_feature_branch: false` because the branch is intentionally non-numeric; `.specify/feature.json` pins `specs/car-005-availability-fallback-recovery`, so `ON_FEATURE_BRANCH` is treated as **true** and no feature branch is created. |
+| `detect-commands` | `stack: unknown`, all commands `N/A`. PROJECT_COMMANDS taken from the constitution Quality Gates: structural `python3 tests/speckit-pro/run-all.py --layer 1`, script-safety `--layer 4`, full `python3 tests/speckit-pro/run-all.py`. No BUILD/TYPECHECK/LINT gate exists in this repository. |
+| `detect-presets` | `speckit-pro-reviewability` v1.0.0 — overrides spec/plan/tasks templates; all three `specify preset resolve` calls land on the preset. |
+| `resolve-confidence-mode` | `advisory` → `CONFIDENCE_GATE_MODE=advisory` for G6.5 (no `--strict`/`--advisory` in argv, no local config file). |
+| Settings | No `.claude/speckit-pro.local.md` — defaults apply (`gate-failure: stop`). |
+| `PROJECT_IMPLEMENTATION_AGENT` | None detected (`.claude/agents/` holds only `plugin-release-auditor.md` and `speckit-skill-reviewer.md`, neither an implementation agent) → fallback `speckit-pro:phase-executor`; test-tree tasks route to `speckit-pro:implement-executor`. |
+| `AGENT_TEAMS_AVAILABLE` | `false` (no `TeamCreate` in the session surface) → `[P]` runs dispatch as batched background subagents in one message. |
+| **G0 constitution gate** | ✅ **PASS** — `python3 tests/speckit-pro/run-all.py` → **5345/5345** (L1 1428/1428, L4 3731/3731, L5 186/186), toolchain preflight ok. Baseline captured before any phase work. |
+| Archive Sweep | Zero candidates. `specs/*` contains only `car-005-availability-fallback-recovery`, which is `--current-target` and excluded. No files mutated. CAR-004 and G56R-004 already archived. |
+| Tier-2 PROCESS relocation | Suppressed — the only candidate is named by `.specify/feature.json` (`frozen/in-flight`) and already carries `structureVersion: 1`. `relocate-process-artifacts` is deferred and was not invoked. |
+
+**Extension hook decisions (all 8 events read from `.specify/extensions.yml`):**
+
+| Hook | Decision |
+|------|----------|
+| `before_specify` → `speckit.git.feature` (`optional: false`) | **SKIPPED** — would create a feature branch. The worktree branch already exists and is correct; creating another would break the run. Documented per hook rule 2. |
+| `before_specify` → `speckit.archive.run` (`optional: true`) | **Satisfied** by the Step -1 Archive Sweep above. |
+| `before_*` → `speckit.git.commit` (clarify/plan/tasks/checklist/analyze/implement) | **Accepted** — the autopilot's own per-phase checkpoint commits fulfil these; not re-run separately. |
+| `after_specify` → `speckit.speckit-utils.doctor` | **Accepted** — run as the Phase 0 doctor health check. |
+| `after_plan` → `speckit.speckit-utils.validate` | **Accepted** — run at the G3 boundary. |
+| `after_implement` → `verify`, `verify-tasks`, `retrospective`, `git.commit` | **Accepted** — mapped to the canonical post-implementation tasks. |
+
 ---
 
 ## Specification Context
@@ -95,7 +122,7 @@ From the technical roadmap scope and the design concept:
 
 - [ ] An executable reference simulator (`lib/claude_route_fallback.py`, test-tree only) resolves fixture route policies against synthetic environment snapshots and emits resolution reports (Q1)
 - [ ] The scenario corpus covers every mandated family: preferred model absent (including a `fable`-unavailable case), effort unsupported, probe unavailable, exact-invocation probe success and failure, alias re-pointing, platform route change, unqualified `CLAUDE_CODE_SUBAGENT_MODEL` override, helper-unavailable, no-safe-route, and retry exhaustion
-- [ ] Two closed enums: the five roadmap-pinned resolution codes verbatim, plus the policy-violation enum (`fallback_loop`, `unqualified_adjacent_model`, `generic_agent_substitution`, `silent_inherit_materialization`, `unqualified_override`); a structural parity test asserts the resolution enum exactly matches the five codes both roadmaps pin (Q2, Q3)
+- [ ] Two closed enums: the five **Claude**-roadmap-pinned resolution codes verbatim, plus the policy-violation enum (`fallback_loop`, `unqualified_adjacent_model`, `generic_agent_substitution`, `silent_inherit_materialization`, `unqualified_override`); a structural parity test asserts exact set equality with the Claude roadmap's five codes AND pins the recorded cross-platform divergence on the third member (Q2, Q3, as corrected by the 2026-07-29 design-concept revision note)
 - [ ] Rejection and remediation entries mirror the installed runner diagnostics envelope — `{code, message, severity, source, details, remediation: {summary, actions[]}}` (Q4)
 - [ ] Alias re-pointing / platform route change code as `preferred_model_unavailable` with a machine-readable sub-reason in `details` (Q11)
 - [ ] The override scenario reports the override as the effective dispatch tuple with a loud `unqualified_override` diagnostic, claims-exclusion marking, and the qualified would-have-been resolution (Q12)
@@ -259,17 +286,35 @@ Two stories, one per accepted vertical slice (Q10):
 
 ### Specify Results
 
-<!-- Fill in after running the command -->
-
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | 35 (FR-001…FR-033, with FR-017a/FR-017b) |
+| User Stories | 2 — US1 resolution-failure semantics (P1), US2 structural rejection + recovery (P2) |
+| Acceptance Criteria | 18 acceptance scenarios (9 per story) + 12 success criteria (SC-001…SC-012) + 6 edge cases |
+| Preset template | `speckit-pro-reviewability` v1.0.0 spec-template used — required the Reviewability Notes, Reviewability Budget, and PR Review Packet Requirements sections that the core template lacks |
+| Clarification markers | 3 (FR-006 sub-reason enum membership; FR-017 divergence disposition; FR-033 file-level slice-seam allocation) |
+
+**G1 gate:** ✅ PASS — `validate-gate G1` returned `pass: true`, `spec.md exists`.
+
+**⚠️ Marker-gate blind spot (recorded, deliberately NOT fixed here).** `validate-gate`
+reported `markers: 0` and `count-markers` reported `clarifications: 0`, but the spec
+carries **3 real markers** at `spec.md:193`, `spec.md:257`, and `spec.md:319`. Cause: the
+runner counts the literal regex `\[NEEDS CLARIFICATION\]` — bare brackets with nothing
+between — at `speckit-pro/speckit_pro_runner/helpers/read_only.py:710,743,744,752,769,775,781`,
+while the project's own spec templates document and demonstrate the
+`[NEEDS CLARIFICATION: <question>]` form
+(`.specify/templates/spec-template.md:98-99` and the identical preset template lines).
+Every correctly-formed marker is therefore invisible to the G1 and G2 marker gates.
+
+Handling: the authoritative marker count for this run is the orchestrator's own
+`grep -c "NEEDS CLARIFICATION"`, not the helper. The spec was **not** rewritten to use
+bare markers — that would delete the question text Clarify consumes. Fixing the regex
+touches plugin production source, which CAR-005 forbids (FR-030, 0 production files), so
+it is reported as follow-up work outside this spec's diff.
 
 ### Files Generated
 
-- [ ] `specs/car-005-availability-fallback-recovery/spec.md`
+- [x] `specs/car-005-availability-fallback-recovery/spec.md`
 
 ### SpecKit Traceability Markers
 
@@ -393,9 +438,16 @@ optional for a successful resolution versus a no-safe-route outcome.
 - Replay: each corpus case pins its expected report; the test asserts
   run-twice byte-identity and pinned-report byte-identity (Q8).
 - The structural parity test reads the resolution enum from the committed
-  schema and asserts exact equality with the five codes pinned in BOTH
-  docs/ai/specs/claude-agent-routing-technical-roadmap.md and the Codex
-  roadmap (Q3).
+  schema and asserts (a) exact set equality with the five codes pinned in
+  docs/ai/specs/claude-agent-routing-technical-roadmap.md (lines 527-529),
+  failing on drift in either direction, and (b) the RECORDED cross-platform
+  divergence against
+  docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md (lines
+  536-538): four members byte-identical, third member intentionally different
+  (capability_probe_unavailable on Claude vs capability_discovery_unavailable
+  on Codex), pinned as data so a silent change on either side fails. The
+  roadmaps do NOT pin an identical five-code set — see the 2026-07-29 revision
+  note in the design concept, which supersedes the original Q2/Q3 wording.
 - Re-read docs/ai/specs/.process/CAR-005-design-concept.md for the rationale
   behind any decision the prompts compress.
 ```
@@ -725,7 +777,7 @@ Before starting any task:
 - [ ] New unit tests registered in the suite manifest
 - [ ] Docs reference regenerated (`pnpm --dir docs-site reference:generate`; deps installed at scaffold) — new `.py` files under `tests/speckit-pro/` stale the generated `reference/tests.md`, and CI's validate-docs job runs `reference:check` against it
 - [ ] No shared `contracts/` member added; no frozen CAR-002/003/004 schema modified (additive-only verified in the diff)
-- [ ] Structural parity test proves the resolution enum matches both roadmaps' five pinned codes
+- [ ] Structural parity test proves exact set equality with the Claude roadmap's five pinned codes and pins the recorded third-member divergence against the Codex roadmap
 - [ ] Two stacked slice PRs created via gh-stack (slice 2 stacks on slice 1); each PR title passes the release-readiness gate (`<type>(<lowercase-scope>): <plain English description>`) and each feat/fix PR body carries exactly one non-empty release-note fence
 - [ ] PRs reviewed
 - [ ] Merged to main branch

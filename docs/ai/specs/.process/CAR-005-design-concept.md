@@ -404,6 +404,58 @@ produces 2 PRs, so the slice PRs are managed as a gh-stack stacked-PR chain
   pattern, not the exhaustive list.
   **Suggested next step:** Finalize the closed set in `/speckit-specify` FRs
   and enforce it in the resolution-report schema.
+- **What:** Whether the recorded third-member divergence between the two
+  roadmaps (`capability_probe_unavailable` on Claude vs
+  `capability_discovery_unavailable` on Codex) should later be reconciled by a
+  joint CAR/G56R roadmap amendment, or kept as a permanent intentional
+  platform difference.
+  **Why deferred:** Discovered during the autopilot Phase 0 grounding pass, not
+  during the interview — see the 2026-07-29 revision note below. Reconciling it
+  is a two-platform joint landing and is outside CAR-005's scope either way;
+  only the *recording* of the divergence is in scope here.
+  **Suggested next step:** Raise in Clarify Session 2 (enum closure) for an
+  operator decision; CAR-005 pins the divergence as data regardless, so either
+  answer leaves the shipped artifacts correct.
+
+## Revision Notes
+
+### 2026-07-29 — Q2/Q3 parity premise corrected (autopilot Phase 0)
+
+Q2 asserted the five resolution codes are "mirrored line-for-line in the Codex
+roadmap, so parity holds", and Q3 built the structural parity test on "the five
+codes both roadmaps pin". **That premise is factually wrong.** Verified against
+both roadmaps:
+
+- `docs/ai/specs/claude-agent-routing-technical-roadmap.md:527-529` pins
+  `preferred_model_unavailable`, `effort_unsupported`,
+  **`capability_probe_unavailable`**, `treatment_probe_failed`, `no_safe_route`.
+- `docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md:536-538` pins
+  `preferred_model_unavailable`, `effort_unsupported`,
+  **`capability_discovery_unavailable`**, `treatment_probe_failed`,
+  `no_safe_route`.
+
+Four members are byte-identical; the third diverges (`_probe_` vs
+`_discovery_`). The divergence reads as deliberate — the Codex scope is about
+capability *discovery* and carries a Codex-only concern ("distinguish every
+service reroute from these plugin reasons", "approved/unapproved service
+reroute") with no Claude analogue.
+
+**Corrected decisions (these supersede the Q2/Q3 wording above):**
+
+1. CAR-005's resolution enum stays exactly the five codes the **Claude**
+   roadmap pins, including `capability_probe_unavailable`. The Claude roadmap
+   is authoritative for this platform. No rename, no sixth member.
+2. The structural parity test asserts (a) exact set equality between the
+   committed schema's resolution enum and the Claude roadmap's five codes,
+   failing on drift in either direction; and (b) the *recorded* cross-platform
+   divergence — four shared members identical, third member intentionally
+   different — pinned as data so a silent change on either side fails.
+3. No Codex-side artifact is edited (already a Non-goal). Reconciling shared
+   contract members across platforms is a deliberate joint two-platform
+   landing — exactly the CAR-012 situation Q3 avoided recreating.
+4. **Open:** whether the divergence should later be reconciled by a joint
+   CAR/G56R roadmap amendment or kept permanently. Carried into the Clarify
+   phase; the operator owns the call. This is added to the Open Questions above.
 
 ## Recommended Next Step
 
