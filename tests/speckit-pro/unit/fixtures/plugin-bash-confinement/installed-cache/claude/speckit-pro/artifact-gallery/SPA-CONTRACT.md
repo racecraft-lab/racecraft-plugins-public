@@ -96,13 +96,18 @@ would not resolve.
 
 ```text
 {
-  "schema_version": "1.0",   // string, first key
-  "signals":        [...],   // the five vocabulary names
+  "schema_version": "1.0",   // string
+  "signals":        [...],   // the five routing vocabulary names
+  "export_kinds":   [...],   // the two export vocabulary names
   "templates":      [...]    // one entry object per template
 }
 ```
 
-Exactly three keys, in that order. Nothing else belongs at top level.
+Exactly four keys. Nothing else belongs at top level. The order above is the
+order the file is written in, and it is the order to keep — but it is a
+convention, not an obligation: JSON object key order carries no meaning to any
+consumer, so validation deliberately checks the key *set* and never the
+sequence.
 
 - `schema_version` — the catalog's format version. A consumer that does not
   recognize the value refuses to route and reports the value it read rather
@@ -111,6 +116,12 @@ Exactly three keys, in that order. Nothing else belongs at top level.
   change requires a coordinated payload release.
 - `signals` — the closed routing vocabulary, carrying membership only. This is
   the authoritative list of names. Each name's meaning lives further down.
+- `export_kinds` — the closed export vocabulary, carrying membership only, in
+  the same shape and for the same reason as `signals`: a flat array of strings
+  that each entry's `exports` array draws from. Its two members are `prompt` and
+  `markdown`, and their meanings are under the export obligations further down.
+  The vocabulary closes in both directions — every kind declared here is carried
+  by at least one entry, and every kind an entry carries is declared here.
 - `templates` — one entry per planned gallery template.
 
 ### Entry shape — nine keys, no more, no fewer

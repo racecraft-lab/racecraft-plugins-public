@@ -337,6 +337,14 @@ exceeds the estimate
   system swatches/tokens), 06 (component variants sheet), 07 (animation
   prototype with parameter sliders), 08 (interaction prototype: linked
   screens), 10 (SVG illustration sheet).
+- **Export affordances per ART-001 FR-028**, matching each entry's declared
+  `exports`. Two of the six carry `["prompt", "markdown"]` and need **new**
+  affordances, since upstream supplies none: `visual-designs` and
+  `component-variants` are decision artifacts — the reader is choosing among
+  directions or among states, and what must leave the page is the choice plus its
+  reason, not a description of the screen. The other four — `design-system`,
+  `animation-prototype`, `interaction-prototype`, `svg-illustrations` — are declared
+  read-only (`[]`) and must carry none.
 - Manifest rows: all `ad-hoc` with when-to-use guidance.
 
 **Out of Scope:**
@@ -381,13 +389,13 @@ exceeds the estimate
 - One vertical slice of seven sibling ports; editors keep functional
   copy-as-markdown/JSON export buttons (the feedback-loop pattern).
 - **Export affordances per ART-001 FR-028**, matching each entry's declared
-  `exports`. The three editors (`triage-board`, `feature-flags`, `prompt-tuner`)
-  carry `["markdown"]` — their export is configuration data, not an instruction — so
-  the upstream buttons satisfy the obligation and need only re-labelling to the
-  contract's wording. `visual-designs` and `component-variants` carry
-  `["prompt", "markdown"]` and need **new** affordances: the reader is choosing among
-  directions or states, and the choice plus its reason is what must leave the page.
-  The remaining two are declared read-only (`[]`).
+  `exports`. The three editors — `triage-board`, `feature-flags`, `prompt-tuner` —
+  carry `["markdown"]`: their export is configuration data, not an instruction, so
+  the upstream buttons already satisfy the obligation and need only re-labelling to
+  the contract's wording ("Copy as Markdown", not "Export") plus the
+  clipboard-failure fallback. The other four in this slice — `slide-deck`,
+  `concept-explainer`, `status-report`, `incident-report` — are declared read-only
+  (`[]`) and must carry none.
 - Branded derivatives of upstream 09 (slide deck), 15 (concept explainer), 11
   (status report), 12 (incident report), 18 (triage board), 19 (feature-flag
   editor), 20 (prompt tuner).

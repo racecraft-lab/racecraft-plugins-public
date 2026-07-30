@@ -28,6 +28,7 @@ reviewable implementation branches.
 
 | Tier | Specs | Purpose | Parallelization |
 |---|---|---|---|
+| 1 | HRNS-015 | Repair six observed autopilot and PR-emission defects | Fully independent — no HRNS dependency in either direction, so it can run at any point, including first |
 | 1 | HRNS-001 | Inventory harness surfaces and classify SpecKit Pro gaps | Sequential foundation |
 | 2 | HRNS-002, HRNS-003 | Durable context/state and helper/tool contract foundations | Parallel after HRNS-001 |
 | 3 | HRNS-004, HRNS-005 | Permission/sandbox controls and eval readiness | Parallel after HRNS-003 where needed |

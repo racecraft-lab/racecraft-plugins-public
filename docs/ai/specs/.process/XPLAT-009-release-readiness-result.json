@@ -362,11 +362,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 33149,
+              "byte_count": 33930,
               "kind": "docs",
               "path": "artifact-gallery/SPA-CONTRACT.md",
               "required": true,
-              "sha256": "a30d1e53dcb4c45bf87039278f6de65803b7779e09c9734838faf86e42e89e51",
+              "sha256": "40b189f59fbabce06d6cae3d399c377057209db8e09cad5b2f8adbd9a6516863",
               "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
               "transform": "none"
             },
@@ -384,7 +384,7 @@
               "kind": "docs",
               "path": "artifact-gallery/brand-kit.css",
               "required": true,
-              "sha256": "9206459890e1bbb6b934c4cd18e349cff0b82b26f0bd64b43cffe6b69e7b6263",
+              "sha256": "45c92ec1e33f6869c1afa371662edd2a1e57cc3ecde204839963a3388a72633b",
               "source_path": "speckit-pro/artifact-gallery/brand-kit.css",
               "transform": "none"
             },
@@ -1336,11 +1336,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 33149,
+              "byte_count": 33930,
               "kind": "docs",
               "path": "artifact-gallery/SPA-CONTRACT.md",
               "required": true,
-              "sha256": "a30d1e53dcb4c45bf87039278f6de65803b7779e09c9734838faf86e42e89e51",
+              "sha256": "40b189f59fbabce06d6cae3d399c377057209db8e09cad5b2f8adbd9a6516863",
               "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
               "transform": "none"
             },
@@ -1358,7 +1358,7 @@
               "kind": "docs",
               "path": "artifact-gallery/brand-kit.css",
               "required": true,
-              "sha256": "9206459890e1bbb6b934c4cd18e349cff0b82b26f0bd64b43cffe6b69e7b6263",
+              "sha256": "45c92ec1e33f6869c1afa371662edd2a1e57cc3ecde204839963a3388a72633b",
               "source_path": "speckit-pro/artifact-gallery/brand-kit.css",
               "transform": "none"
             },
@@ -2174,7 +2174,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "1f19a7eb4e5e5998e7f6baf190c5997e61984d09eca02a7365cdd183fffc6d99",
+          "file_tree_hash": "861b3208c19793f8f8ee615c2d5974a8621cba3f933adf9edde7d106573c983e",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2223,11 +2223,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 33149,
+              "byte_count": 33930,
               "kind": "docs",
               "path": "artifact-gallery/SPA-CONTRACT.md",
               "required": true,
-              "sha256": "a30d1e53dcb4c45bf87039278f6de65803b7779e09c9734838faf86e42e89e51",
+              "sha256": "40b189f59fbabce06d6cae3d399c377057209db8e09cad5b2f8adbd9a6516863",
               "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
               "transform": "none"
             },
@@ -2245,7 +2245,7 @@
               "kind": "docs",
               "path": "artifact-gallery/brand-kit.css",
               "required": true,
-              "sha256": "9206459890e1bbb6b934c4cd18e349cff0b82b26f0bd64b43cffe6b69e7b6263",
+              "sha256": "45c92ec1e33f6869c1afa371662edd2a1e57cc3ecde204839963a3388a72633b",
               "source_path": "speckit-pro/artifact-gallery/brand-kit.css",
               "transform": "none"
             },
@@ -3350,11 +3350,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 33149,
+              "byte_count": 33930,
               "kind": "docs",
               "path": "artifact-gallery/SPA-CONTRACT.md",
               "required": true,
-              "sha256": "a30d1e53dcb4c45bf87039278f6de65803b7779e09c9734838faf86e42e89e51",
+              "sha256": "40b189f59fbabce06d6cae3d399c377057209db8e09cad5b2f8adbd9a6516863",
               "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
               "transform": "none"
             },
@@ -3372,7 +3372,7 @@
               "kind": "docs",
               "path": "artifact-gallery/brand-kit.css",
               "required": true,
-              "sha256": "9206459890e1bbb6b934c4cd18e349cff0b82b26f0bd64b43cffe6b69e7b6263",
+              "sha256": "45c92ec1e33f6869c1afa371662edd2a1e57cc3ecde204839963a3388a72633b",
               "source_path": "speckit-pro/artifact-gallery/brand-kit.css",
               "transform": "none"
             },
@@ -4440,7 +4440,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "55d0c079fe6c4df41e17c1de54e4a760cb53d1027a9e2d213b2c85a3d0ef1fba",
+          "file_tree_hash": "04036c2f7253baecf23245aac6e858b2edc6db63e8b8377df778d8af00cd26de",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

@@ -79,7 +79,7 @@
  *   #1F2937 was a blue-grey borrowed from the upstream navigation and sidebar
  *   background, a role it was chosen for and this one is not; it was the only
  *   non-neutral in the set and the only surface in either theme that forced a
- *   pairing below its floor. See correction 4.
+ *   pairing below its floor. See correction 2.
  *
  *   foreground                 surf.   raisd   sunkn   muted   verdict
  *   --rc-text          #E6E6E6 | 13.94 | 12.44 | 14.76 | 13.36 | AA body on all four
@@ -167,8 +167,8 @@
   --rc-surface-muted: #EDEBE6;
 
   /* ---- Borders --------------------------------------------------------- */
-  /* Decorative only. Measures 1.07–1.34 here and 1.42–1.78 dark, so it never
-   * carries meaning — see prohibition rule 2. */
+  /* Decorative only. Measures 1.13–1.34 here and 1.50–1.78 dark, so it never
+   * carries meaning — see prohibition rule 1. */
   --rc-border-subtle: #E0DED9;
   /* Meaningful non-text: form-control edges, state borders, the focus ring.
    * Audited to at least 3:1 on all four surfaces in both themes. */
@@ -210,7 +210,7 @@
   /* Brand primitive. 10% of the palette, punctuation-level emphasis. Role:
    * large text and meaningful non-text only.
    *
-   * Permitted on all four surfaces in BOTH themes — 3.97–4.99 light and
+   * Permitted on all four surfaces in BOTH themes — 4.19–4.99 light and
    * 3.11–3.69 dark — so this primitive carries no prohibition of its own. It
    * once did: against a raised surface of #1F2937 it measured 2.94. That was
    * resolved by correcting the surface rather than by re-valuing the primitive

@@ -1390,7 +1390,7 @@ def check_b3(gallery_root: Path) -> list[str]:
 
 
 def check_b4(gallery_root: Path) -> list[str]:
-    """B4 — each entry carries exactly the eight documented keys."""
+    """B4 — each entry carries exactly the nine documented keys."""
     entries = _entries(gallery_root)
     if entries is None:
         return []
@@ -1402,7 +1402,7 @@ def check_b4(gallery_root: Path) -> list[str]:
             failures.append(
                 _catalog_failure(
                     where,
-                    f"expected an object carrying the eight documented keys, found {type(entry).__name__}",
+                    f"expected an object carrying the nine documented keys, found {type(entry).__name__}",
                 )
             )
             continue
@@ -1413,7 +1413,7 @@ def check_b4(gallery_root: Path) -> list[str]:
         failures.extend(
             _catalog_failure(
                 where,
-                f"key '{key}': unexpected — an entry carries exactly the eight documented keys and no "
+                f"key '{key}': unexpected — an entry carries exactly the nine documented keys and no "
                 "stored path, since the artifact resolves as 'templates/<id>.html'",
             )
             for key in sorted(present.difference(ENTRY_KEYS))
@@ -1766,7 +1766,14 @@ def check_b14(gallery_root: Path) -> list[str]:
     for entry in catalog.get("templates") or []:
         if not isinstance(entry, dict):
             continue
-        for member in entry.get("exports") or []:
+        members = entry.get("exports")
+        # A str is iterable, so an `exports` written as "prompt" rather than
+        # ["prompt"] would otherwise be walked character by character and
+        # reported as five undeclared kinds. B13 owns that shape; skip it here
+        # rather than emit noise about a defect another check already names.
+        if not isinstance(members, list):
+            continue
+        for member in members:
             if isinstance(member, str):
                 carried.add(member)
     return [
@@ -1958,7 +1965,7 @@ class CatalogShapeFixtureTests(CatalogFixtureCase):
 
         self.assertReports(check_b3(self.gallery), "templates", "dict")
 
-    # -- B4: the eight keys --
+    # -- B4: the nine keys --
 
     def test_b4_accepts_exactly_the_nine_documented_keys(self) -> None:
         self.write_manifest(self.catalog())
@@ -1992,7 +1999,7 @@ class CatalogShapeFixtureTests(CatalogFixtureCase):
         catalog["templates"][SEEDED_IDS.index(FIXTURE_ENTRY_ID)] = FIXTURE_ENTRY_ID
         self.write_manifest(catalog)
 
-        self.assertReports(check_b4(self.gallery), self.position_of(FIXTURE_ENTRY_ID), "eight")
+        self.assertReports(check_b4(self.gallery), self.position_of(FIXTURE_ENTRY_ID), "nine")
 
     def test_b4_reports_every_offending_entry(self) -> None:
         catalog = self.catalog()
@@ -2242,6 +2249,12 @@ class CatalogShapeFixtureTests(CatalogFixtureCase):
         self.assertReports(failures, FIXTURE_ENTRY_ID, "must be an array")
         self.assertReports(failures, SEEDED_IDS[1], "repeats")
 
+        # A str is iterable. B14 must not walk "prompt" character by character
+        # and report five undeclared kinds; B13 above owns that shape, and two
+        # checks reporting one defect in different vocabularies is worse than
+        # one reporting it precisely.
+        self.assertEqual(check_b14(self.gallery), [])
+
     def test_b14_accepts_a_vocabulary_that_closes(self) -> None:
         self.write_manifest(self.catalog())
 
@@ -2489,7 +2502,7 @@ def check_c7(gallery_root: Path) -> list[str]:
 
     An ad-hoc trigger is never evaluated, because the stage filter runs first
     and excludes it. It is still mandatory, so all 21 entries carry one uniform
-    validated shape. B4 reports the same key as missing from the eight; this row
+    validated shape. B4 reports the same key as missing from the nine; this row
     exists in its own right because the obligation is the uniform shape rather
     than the key count.
     """
