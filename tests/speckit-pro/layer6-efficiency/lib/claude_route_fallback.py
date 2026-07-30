@@ -133,6 +133,40 @@ DECLARED_BUDGET_MEMBERS: tuple[str, ...] = tuple(
     REPORT_SCHEMA["$defs"]["reportedBudgets"]["properties"]["declared"]["required"]
 )
 
+# FR-026a: the three budget classes the terminal diagnostic may name, read live from
+# the contract's own inline enum in its declared order — which is also the order the
+# at-cap set is listed in, so "enum declaration order" is a property of the one
+# declaration site rather than a sort this module chooses.
+EXHAUSTED_BUDGET_CLASSES: tuple[str, ...] = tuple(
+    _RESOLUTION_DIAGNOSTIC["properties"]["details"]["properties"]["exhausted_budget"]["items"][
+        "enum"
+    ]
+)
+
+# The declared cap each class is measured against. Derived by prefixing rather than
+# transcribed, and held equal at import to the contract's own two member sets: the
+# actual counters the report requires, and the declared caps it echoes. That pairing
+# is what makes "actual equals its cap" a comparison the contract underwrites rather
+# than a naming convention this module assumes.
+BUDGET_CAP_OF: dict[str, str] = {member: f"max_{member}" for member in EXHAUSTED_BUDGET_CLASSES}
+
+# FR-026 and FR-028: the classes whose cap gates ENTRY to the next candidate — one
+# shared check governing every dimension a candidate spends, which is why no separate
+# case is needed to prove each is respected. The partition is derived from the
+# contract's own asymmetry rather than chosen here: a cap carrying ``minimum: 1``
+# cannot be declared at zero, so being spent to it is a state the walk can only reach
+# by having done something. ``max_retries`` carries ``minimum: 0`` — "no re-attempt"
+# is coherent while "never probe" is not — so a policy declaring zero must still walk,
+# and that cap gates a re-consultation instead of an entry.
+ENTRY_GATED_BUDGET_CLASSES: tuple[str, ...] = tuple(
+    member
+    for member, cap in BUDGET_CAP_OF.items()
+    if REPORT_SCHEMA["$defs"]["reportedBudgets"]["properties"]["declared"]["properties"][cap].get(
+        "minimum"
+    )
+    == 1
+)
+
 # FR-012c: severity is a function of ``code``, not of the occurrence. The table is the
 # one recorded in data-model.md section 3 and covers both closed enums, so the
 # completeness check below is a real check rather than a check of half a table.
@@ -208,6 +242,19 @@ _require(
         for action in actions
     ),
     "the action table names a string outside the contract's closed action vocabulary",
+)
+_require(
+    frozenset(EXHAUSTED_BUDGET_CLASSES)
+    == frozenset(REPORT_SCHEMA["$defs"]["reportedBudgets"]["properties"]["actual"]["required"]),
+    "the exhausted-budget classes are not exactly the report's three actual counters",
+)
+_require(
+    frozenset(BUDGET_CAP_OF.values()) == frozenset(DECLARED_BUDGET_MEMBERS),
+    "the budget class-to-cap pairing does not cover exactly the contract's declared caps",
+)
+_require(
+    len(ENTRY_GATED_BUDGET_CLASSES) == len(EXHAUSTED_BUDGET_CLASSES) - 1,
+    "the entry gate does not exclude exactly the one cap the contract admits at zero",
 )
 
 
@@ -594,20 +641,32 @@ def _optional_helper_state(policy: dict[str, Any], snapshot: dict[str, Any]) -> 
     }
 
 
-def _reported_budgets(state: _WalkState, budgets: dict[str, Any]) -> dict[str, Any]:
-    """FR-026: the declared caps beside the actual counts.
+def _spent(state: _WalkState) -> dict[str, int]:
+    """FR-026a: the three actual counters of one walk, keyed by the contract's classes.
 
     ``candidate_routes`` is read off the attempt list rather than counted separately,
     because one candidate entered is exactly one entry recorded — the two are
-    definitionally equal, and deriving it makes them unable to disagree.
+    definitionally equal, and deriving it makes them unable to disagree. One function
+    for all three is what lets the cap gates, the at-cap set, and the reported block
+    read the same numbers rather than three parallel derivations of them.
     """
+    counters = {
+        "probe_attempts": state.probe_attempts,
+        "retries": state.retries,
+        "candidate_routes": len(state.attempted),
+    }
+    _require(
+        frozenset(counters) == frozenset(EXHAUSTED_BUDGET_CLASSES),
+        "the walk's counters are not exactly the contract's three budget classes",
+    )
+    return counters
+
+
+def _reported_budgets(state: _WalkState, budgets: dict[str, Any]) -> dict[str, Any]:
+    """FR-026: the declared caps beside the actual counts."""
     return {
         "declared": {member: budgets[member] for member in DECLARED_BUDGET_MEMBERS},
-        "actual": {
-            "probe_attempts": state.probe_attempts,
-            "retries": state.retries,
-            "candidate_routes": len(state.attempted),
-        },
+        "actual": _spent(state),
     }
 
 
@@ -676,19 +735,123 @@ def _route_diagnostics(
     return diagnostics
 
 
-def _stage_no_safe_route(agent: str) -> list[dict[str, Any]]:
+# --------------------------------------------------------------------------- #
+# FR-026: the three declared caps, enforced as caps rather than reported as counts #
+# --------------------------------------------------------------------------- #
+# Enforcement is ONE shared check over the two caps a candidate spends, which is why
+# FR-028 can prove all three dimensions from a single case: entering a candidate
+# spends a candidate slot and, when the route is consultable, a first probe
+# consultation, so both are gated together at entry. The retry cap gates a
+# re-consultation instead, because a policy may validly declare zero retries and must
+# still walk.
+
+
+def _entry_budget_remains(state: _WalkState, budgets: dict[str, Any]) -> bool:
+    """FR-026: whether the walk may enter one more candidate route under every cap.
+
+    Read off the counters the report will carry, so each cap is checked against the
+    number a consumer sees rather than against a second counter that could drift
+    from it.
+    """
+    spent = _spent(state)
+    return all(
+        spent[member] < budgets[BUDGET_CAP_OF[member]] for member in ENTRY_GATED_BUDGET_CLASSES
+    )
+
+
+def _walk_may_advance(
+    state: _WalkState, budgets: dict[str, Any], remaining: list[dict[str, Any]]
+) -> bool:
+    """Whether a further candidate route is both declared and affordable.
+
+    False on either ground — the declared chain is exhausted, or the candidate cap
+    is reached — and those are exactly the two ways a walk ends for want of a
+    candidate rather than by resolving or by revisiting.
+    """
+    return bool(remaining) and _entry_budget_remains(state, budgets)
+
+
+def _retryable(state: _WalkState, route: dict[str, Any], snapshot: dict[str, Any]) -> bool:
+    """FR-026a: whether a rejected route is one a retry could be spent on.
+
+    Two conditions, both necessary. The route must already have been *consulted*,
+    so its first consultation is the one ``probe_attempts`` took and a further one
+    is by definition a re-consultation; and its exact-invocation outcome must be
+    ``failure``, since a route whose outcome is ``success`` or ``absent`` incurs no
+    retry. A route rejected before probing was reached satisfies neither.
+    """
+    return route["route_id"] in state.consulted and bool(
+        _stage_treatment_probe_failed(route, snapshot)
+    )
+
+
+def _spend_retry_allowance(
+    state: _WalkState, route: dict[str, Any], snapshot: dict[str, Any], budgets: dict[str, Any]
+) -> None:
+    """FR-026a and FR-028: the declared retry allowance, spent as a last resort.
+
+    Called only where the walk cannot advance to a further candidate, because
+    advancing to a declared alternative strictly dominates re-consulting a route
+    whose outcome is already recorded — a chain with a route still to try therefore
+    never spends a retry, which is what keeps this counter a measured quantity
+    rather than a side effect of every rejection.
+
+    Each pass re-consults the same route and re-reads its exact-invocation outcome.
+    Against a static snapshot that outcome does not move, so the allowance is spent
+    to its cap and no further retry may be taken — which is what retry exhaustion
+    means here (FR-026a's recorded framing: a declared allowance for the attempts a
+    live preflight would make, exercised deterministically). The re-consultation
+    emits **no** second diagnostic: the route's rejection is already recorded once,
+    and a duplicate entry would inflate the array and the FR-029a join with no
+    information the counters do not already carry.
+    """
+    while state.retries < budgets["max_retries"]:
+        _consult_probe_state(state, route)
+        if not _stage_treatment_probe_failed(route, snapshot):
+            return
+
+
+def _at_cap_budget_classes(reported: dict[str, Any]) -> list[str]:
+    """FR-026a: every budget class whose actual count equals its declared cap.
+
+    A pure function of the two blocks the report already carries, taken in the
+    contract's own enum order, so the set is deterministic by construction and needs
+    no tie-break rule over simulator internals. That is the whole reason it is an
+    array: with more than one cap reached, no observable report content could settle
+    which one *caused* termination — against a static snapshot a further retry returns
+    the same outcome, so no budget is causally privileged.
+    """
+    return [
+        member
+        for member in EXHAUSTED_BUDGET_CLASSES
+        if reported["actual"][member] == reported["declared"][BUDGET_CAP_OF[member]]
+    ]
+
+
+def _stage_no_safe_route(agent: str, reported: dict[str, Any]) -> list[dict[str, Any]]:
     """FR-029: the one terminal entry, carrying the mandated rollback action.
 
     It is the only code carrying both a forward remedy and the rollback, so per-route
-    entries are never inflated toward the three-action truncation boundary. ``details``
-    is omitted rather than emitted empty: its only member here would be the at-cap
-    budget set, and ``minItems: 1`` forbids recording an empty one.
+    entries are never inflated toward the three-action truncation boundary.
+
+    It is also the only entry that may carry ``details.exhausted_budget``, which is
+    what makes the field's presence mean "spent to the limit **and** the walk failed"
+    — a conjunction a counter comparison alone cannot express, since a walk can reach
+    a cap and still resolve. ``details`` is OMITTED rather than emitted empty when no
+    class is at cap: ``minItems: 1`` forbids the empty array, and two reachable
+    endings have a necessarily empty at-cap set — a pre-walk rejection fixing all
+    three counters at ``0`` against caps whose minimum is ``1``, and a rejection over
+    an empty fallback list ending below every cap. Omission is unambiguous because
+    the report carries both the caps and the counts, from which the empty set is
+    re-derivable.
     """
+    exhausted = _at_cap_budget_classes(reported)
     return [
         _diagnostic(
             "no_safe_route",
             f"No declared route resolved for agent {agent}.",
             "No declared route resolved, so this environment cannot support a release claim.",
+            details={"exhausted_budget": exhausted} if exhausted else None,
         )
     ]
 
@@ -1102,8 +1265,18 @@ def resolve(
     # exactly when this branch was not taken.
     pre_walk = _pre_walk_violations(policy)
     revisited: list[list[dict[str, Any]]] = []
+    declared = _declared_routes(policy)
     if not pre_walk:
-        for route in _declared_routes(policy):
+        for position, route in enumerate(declared):
+            # FR-026: one shared check over every cap a candidate spends, so a walk
+            # against a fallback list longer than max_candidate_routes truncates rather
+            # than running to the end of the list, and a walk that has spent its probe
+            # allowance stops rather than entering a route it cannot afford to consult.
+            # Checked before the revisit branch because a route the caps exclude is
+            # never reached at all, which is what keeps each counter's bound a
+            # structural property rather than a post-hoc assertion.
+            if not _entry_budget_remains(state, budgets):
+                break
             if _already_attempted(state, route):
                 revisited.append(_stage_fallback_loop(route))
                 break
@@ -1115,6 +1288,10 @@ def resolve(
             if disposition == "selected":
                 selected = route
                 break
+            if not _walk_may_advance(state, budgets, declared[position + 1 :]) and _retryable(
+                state, route, snapshot
+            ):
+                _spend_retry_allowance(state, route, snapshot, budgets)
 
     # FR-024a: the outcome follows the QUALIFIED walk. An override is recorded beside
     # it and never promotes it, which is what lets one report say that nothing
@@ -1125,11 +1302,15 @@ def resolve(
         if overrides is None
         else _override_record(policy, snapshot, overrides, selected, outcome)
     )
+    # The terminal entry names the budget classes spent to their cap, so the reported
+    # block is built before the array rather than beside it: the counters are final
+    # once the walk has ended, and one derivation feeds both.
+    reported = _reported_budgets(state, budgets)
     diagnostics = _assemble_diagnostics(
         pre_walk=pre_walk,
         per_route=[*state.diagnostics_by_route, *revisited],
         override=() if override is None else _stage_unqualified_override(override),
-        terminal=() if selected is not None else _stage_no_safe_route(agent),
+        terminal=() if selected is not None else _stage_no_safe_route(agent, reported),
     )
 
     report: dict[str, Any] = {
@@ -1138,7 +1319,7 @@ def resolve(
         "outcome": outcome,
         "attempted_routes": state.attempted,
         "diagnostics": diagnostics,
-        "budgets": _reported_budgets(state, budgets),
+        "budgets": reported,
         "release_claim_eligible": _release_claim_eligible(outcome, diagnostics, overrides),
         "optional_helper": _optional_helper_state(policy, snapshot),
     }
@@ -1174,6 +1355,17 @@ def resolve(
         f"probe_attempts {actual['probe_attempts']} exceeds candidate_routes"
         f" {actual['candidate_routes']}",
     )
+
+    # FR-026: the caps are hard caps this walk never exceeds. Each is enforced where
+    # its quantity is spent, so this is the fail-closed confirmation of all three at
+    # once rather than the place enforcement happens — a counter over its cap here
+    # means a gate above it was bypassed, and the report is not returned.
+    for member, cap in BUDGET_CAP_OF.items():
+        _require(
+            actual[member] <= report["budgets"]["declared"][cap],
+            f"{member} {actual[member]} exceeds the declared {cap}"
+            f" {report['budgets']['declared'][cap]}",
+        )
 
     # FR-033b: every report this module emits is a fully valid instance of the committed
     # contract, checked against the schema parsed once at import — so validity is a

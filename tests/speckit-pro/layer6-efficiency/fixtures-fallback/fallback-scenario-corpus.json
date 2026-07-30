@@ -1414,6 +1414,256 @@
           "effort": "high"
         }
       }
+    },
+    {
+      "case_id": "budget-exhaustion-of-one",
+      "purpose": "An environment whose preferred route resolves to an available, probe-available model whose exact-invocation probe fails, under a policy declaring all three budgets at one while also declaring a fallback route that would have resolved.",
+      "proves": "Retry exhaustion specifically, which the roadmap states as its own proof obligation and which a probe-only case would leave unproven: the preferred route's exact-invocation outcome is a failure, the single permitted retry re-consults it and returns the same failure, and no further retry may be taken. Declaring the other two caps at one in the same case proves they are respected too — the walk truncates at max_candidate_routes rather than continuing to the declared fallback that would have resolved, so the cap is what produced the no-safe-route outcome. All three actual counts are pinned at their declared cap and none exceeds it, and details.exhausted_budget lists all three classes in the enum's declaration order, because with every cap reached no budget is causally privileged and no observable report content could settle which one terminated the walk.",
+      "requirements": ["FR-026", "FR-026a", "FR-028"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-retried",
+          "alias": "alias-retried",
+          "resolved_model": "model-retried",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-beyond-the-cap",
+            "alias": "alias-beyond-the-cap",
+            "resolved_model": "model-beyond-the-cap",
+            "effort": "high",
+            "qualified": true
+          }
+        ],
+        "budgets": {"max_probe_attempts": 1, "max_retries": 1, "max_candidate_routes": 1}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-beyond-the-cap", "model-retried"],
+        "alias_bindings": {
+          "alias-beyond-the-cap": "model-beyond-the-cap",
+          "alias-retried": "model-retried"
+        },
+        "supported_efforts": {
+          "model-beyond-the-cap": ["low", "medium", "high"],
+          "model-retried": ["low", "medium", "high"]
+        },
+        "probe_availability": {"model-beyond-the-cap": true, "model-retried": true},
+        "exact_invocation_probe": {"model-beyond-the-cap": "success", "model-retried": "failure"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-beyond-the-cap", "model-retried"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "no_safe_route",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-retried",
+            "alias": "alias-retried",
+            "resolved_model": "model-retried",
+            "effort": "high",
+            "disposition": "rejected"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "treatment_probe_failed",
+            "message": "Route preferred-retried has an exact-invocation probe failure for model model-retried.",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The exact-invocation probe failed for the route's model.",
+              "actions": ["Inspect the exact-invocation probe evidence for this route."]
+            },
+            "details": {"route_id": "preferred-retried"}
+          },
+          {
+            "code": "no_safe_route",
+            "message": "No declared route resolved for agent fixture-required-executor.",
+            "severity": "error",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "No declared route resolved, so this environment cannot support a release claim.",
+              "actions": [
+                "Widen the declared fallback list with qualified routes.",
+                "Roll back to the previous plugin release."
+              ]
+            },
+            "details": {"exhausted_budget": ["probe_attempts", "retries", "candidate_routes"]}
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 1, "max_retries": 1, "max_candidate_routes": 1},
+          "actual": {"probe_attempts": 1, "retries": 1, "candidate_routes": 1}
+        },
+        "release_claim_eligible": false,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0},
+        "unresolved_agent": "fixture-required-executor"
+      }
+    },
+    {
+      "case_id": "no-safe-route-report-only",
+      "purpose": "An environment that rejects the preferred route and both declared fallbacks on three different grounds — a re-pointed alias, an effort the model does not support, and capability probing unavailable — with every budget left well below its declared cap.",
+      "proves": "The report-only outcome in full. The report names the unresolved agent, records every attempted route with disposition rejected, and carries one diagnostic per failed check, each joined to the route it concerns by details.route_id — which is what makes 'each rejection reason' readable per route rather than as an unattributed list, since a variable number of diagnostics per route means the two arrays cannot be zipped by position. release_claim_eligible is false and the terminal no_safe_route entry closes the array at severity error, carrying the verbatim rollback action among its two actions while no per-route entry repeats it. Every counter ends below its cap, so details.exhausted_budget is omitted rather than emitted empty — the no-safe-route obligations attach to the outcome, not to budget exhaustion.",
+      "requirements": ["FR-012a", "FR-012b", "FR-029", "FR-029a"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-moved",
+          "alias": "alias-moved",
+          "resolved_model": "model-moved-pinned",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-over-ladder",
+            "alias": "alias-over-ladder",
+            "resolved_model": "model-over-ladder",
+            "effort": "max",
+            "qualified": true
+          },
+          {
+            "route_id": "fallback-unprobeable",
+            "alias": "alias-unprobeable",
+            "resolved_model": "model-unprobeable",
+            "effort": "high",
+            "qualified": true
+          }
+        ],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-moved-observed", "model-over-ladder", "model-unprobeable"],
+        "alias_bindings": {
+          "alias-moved": "model-moved-observed",
+          "alias-over-ladder": "model-over-ladder",
+          "alias-unprobeable": "model-unprobeable"
+        },
+        "supported_efforts": {
+          "model-moved-observed": ["low", "medium", "high"],
+          "model-over-ladder": ["low", "medium", "high"],
+          "model-unprobeable": ["low", "medium", "high"]
+        },
+        "probe_availability": {
+          "model-moved-observed": true,
+          "model-over-ladder": true,
+          "model-unprobeable": false
+        },
+        "exact_invocation_probe": {
+          "model-moved-observed": "success",
+          "model-over-ladder": "success",
+          "model-unprobeable": "absent"
+        },
+        "platform_route_changes": [],
+        "available_models_allowlist": [
+          "model-moved-observed",
+          "model-over-ladder",
+          "model-unprobeable"
+        ]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "no_safe_route",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-moved",
+            "alias": "alias-moved",
+            "resolved_model": "model-moved-pinned",
+            "effort": "high",
+            "disposition": "rejected"
+          },
+          {
+            "route_id": "fallback-over-ladder",
+            "alias": "alias-over-ladder",
+            "resolved_model": "model-over-ladder",
+            "effort": "max",
+            "disposition": "rejected"
+          },
+          {
+            "route_id": "fallback-unprobeable",
+            "alias": "alias-unprobeable",
+            "resolved_model": "model-unprobeable",
+            "effort": "high",
+            "disposition": "rejected"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "preferred_model_unavailable",
+            "message": "Route preferred-moved pins a tuple the environment does not offer (alias_repointed).",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The route's pinned alias and resolved model no longer match the environment.",
+              "actions": ["Re-probe the environment and confirm the pinned alias and resolved model."]
+            },
+            "details": {
+              "alias": "alias-moved",
+              "observed_resolved_model": "model-moved-observed",
+              "pinned_resolved_model": "model-moved-pinned",
+              "route_id": "preferred-moved",
+              "sub_reason": "alias_repointed"
+            }
+          },
+          {
+            "code": "effort_unsupported",
+            "message": "Route fallback-over-ladder declares effort max, which model model-over-ladder does not support.",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The route's declared effort is outside the model's supported effort set.",
+              "actions": ["Declare an effort the model's probed capability set supports."]
+            },
+            "details": {
+              "declared_effort": "max",
+              "route_id": "fallback-over-ladder",
+              "supported_efforts": ["low", "medium", "high"]
+            }
+          },
+          {
+            "code": "capability_probe_unavailable",
+            "message": "Route fallback-unprobeable has capability probing unavailable for model model-unprobeable.",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "Capability probing is unavailable for the route's model.",
+              "actions": ["Re-run capability probing before trusting this route."]
+            },
+            "details": {"route_id": "fallback-unprobeable"}
+          },
+          {
+            "code": "no_safe_route",
+            "message": "No declared route resolved for agent fixture-required-executor.",
+            "severity": "error",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "No declared route resolved, so this environment cannot support a release claim.",
+              "actions": [
+                "Widen the declared fallback list with qualified routes.",
+                "Roll back to the previous plugin release."
+              ]
+            }
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 2, "retries": 0, "candidate_routes": 3}
+        },
+        "release_claim_eligible": false,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0},
+        "unresolved_agent": "fixture-required-executor"
+      }
     }
   ]
 }

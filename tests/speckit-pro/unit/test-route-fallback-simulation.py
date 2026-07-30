@@ -695,8 +695,12 @@ class DiagnosticEmissionOrderTests(SimulatorCaseMixin, unittest.TestCase):
         )
 
     def test_the_terminal_entry_is_unique_last_and_carries_the_verbatim_rollback(self) -> None:
+        # Rejected for an unavailable capability probe rather than an exact-invocation
+        # failure, so the walk spends no retry and this report ends below every cap —
+        # which keeps the closing omission assertion an unconditional claim about the
+        # terminal entry's shape rather than one contingent on the at-cap set.
         preferred = route_of("preferred-terminal", "alias-terminal", "model-terminal")
-        snapshot = snapshot_for(preferred, invocation={"model-terminal": "failure"})
+        snapshot = snapshot_for(preferred, probe={"model-terminal": False})
         report = self.resolve(policy_of(preferred), snapshot)
         terminal = report["diagnostics"][-1]
         self.assertEqual(terminal["code"], "no_safe_route")
@@ -709,6 +713,8 @@ class DiagnosticEmissionOrderTests(SimulatorCaseMixin, unittest.TestCase):
                 "Roll back to the previous plugin release.",
             ],
         )
+        actual, declared = report["budgets"]["actual"], report["budgets"]["declared"]
+        self.assertTrue(all(actual[key] < declared[f"max_{key}"] for key in actual))
         self.assertNotIn("details", terminal)
 
     def test_the_outcome_and_the_terminal_code_are_coupled_in_both_directions(self) -> None:
@@ -1132,6 +1138,31 @@ SESSION_ORCHESTRATION_SETTING = "ultracode"
 UNRECOGNISED_DIAGNOSTIC_CODE = "fixture_unrecognised_reason_code"
 
 AGENTS_ROOT = REPO_ROOT / "speckit-pro" / "agents"
+LAYER6_ROOT = TEST_ROOT / "layer6-efficiency"
+SIMULATOR_PATH = LAYER6_LIB_DIR / "claude_route_fallback.py"
+
+# FR-029: the simulator is report-only, so no call that mutates a path and no module
+# whose reason for existing is mutating one may appear in it. Named as data because a
+# failure should say which capability leaked in, and because the two lists are the
+# audit's whole surface — an unnamed write primitive would pass silently.
+MUTATING_CALLS = frozenset(
+    {
+        "write_text",
+        "write_bytes",
+        "write",
+        "writelines",
+        "unlink",
+        "rmdir",
+        "mkdir",
+        "rename",
+        "replace",
+        "touch",
+        "chmod",
+        "symlink_to",
+        "hardlink_to",
+    }
+)
+MUTATION_CAPABLE_MODULES = frozenset({"os", "shutil", "tempfile", "subprocess", "io"})
 AGENT_FRONTMATTER_NAME = re.compile(r"^name:[ \t]*(?P<name>\S+)[ \t]*$", re.MULTILINE)
 FIXTURE_NAME_PREFIX = "fixture-"
 AGENT_NAME_KEYS = ("agent", "substituted_agent", "unresolved_agent")
@@ -1228,6 +1259,18 @@ def roadmap_reason_codes(path: Path, span: tuple[str, str]) -> tuple[str, ...]:
 
 def module_syntax_tree() -> ast.Module:
     return ast.parse(MODULE_PATH.read_text(encoding="utf-8"), filename=str(MODULE_PATH))
+
+
+def simulator_syntax_tree() -> ast.Module:
+    """The simulator module's own syntax tree.
+
+    Read from the committed source rather than from the imported object, because the
+    property under test is what the module *may* do, not what one call happened to do:
+    a write reachable only on an untaken branch would be invisible to any behavioural
+    probe and is exactly what FR-029's report-only obligation forbids.
+    """
+    source = SIMULATOR_PATH.read_text(encoding="utf-8")
+    return ast.parse(source, filename=str(SIMULATOR_PATH))
 
 
 def binding_kinds(tree: ast.AST, name: str) -> set[str]:
@@ -1862,6 +1905,8 @@ APPENDED_CASE_IDS = (
     "unqualified-override",
     "override-skipped-by-allowlist",
     "helper-unavailable-continues",
+    "budget-exhaustion-of-one",
+    "no-safe-route-report-only",
 )
 
 # The report's not-consulted helper triple, which is also the no-helper-declared
@@ -1922,6 +1967,18 @@ def allowlisting(snapshot: dict[str, object], *models: str) -> dict[str, object]
     inferring: it is what the organization permits, not what the environment offers.
     """
     return {**snapshot, "available_models_allowlist": list(models)}
+
+
+def capping(policy: dict[str, object], **caps: int) -> dict[str, object]:
+    """The same policy with one or more declared budget caps narrowed.
+
+    A wrapper for the same reason ``allowlisting`` is one: ``policy_of`` is the
+    slice-1 builder every earlier case was written against, and narrowing a cap is
+    a per-case difference rather than a default worth carrying in that signature.
+    """
+    declared = dict(policy["budgets"])  # type: ignore[arg-type]
+    declared.update(caps)
+    return {**policy, "budgets": declared}
 
 
 class StructuralPreWalkTests(SimulatorCaseMixin, unittest.TestCase):
@@ -2576,6 +2633,476 @@ class OptionalHelperPathTests(SimulatorCaseMixin, unittest.TestCase):
             self.resolve(policy, snapshot_for(self.required()))
 
 
+# --------------------------------------------------------------------------- #
+# Budget caps, exhaustion enumeration, and no-safe-route recovery                #
+# --------------------------------------------------------------------------- #
+# The three caps are hard caps rather than advisory counters, and their units are
+# what make "never exceeds" falsifiable at all: ``probe_attempts`` takes each
+# route's FIRST consultation, ``retries`` takes every consultation after it, and
+# ``candidate_routes`` takes each candidate entered. Counting every consultation in
+# the first would falsify the ``probe_attempts <= candidate_routes`` invariant and
+# make one retry unreachable under a probe cap of one — which is the configuration
+# the exhaustion case declares.
+
+
+class BudgetCapTests(SimulatorCaseMixin, unittest.TestCase):
+    """FR-026 and FR-026a: three hard caps, three units, one terminal outcome.
+
+    The retry allowance is the walk's **last resort**, spent only when no further
+    candidate route may be entered — either the declared chain is exhausted or the
+    candidate cap is reached. Advancing to a declared alternative strictly dominates
+    re-consulting a route whose outcome the walk already recorded, so a chain with a
+    route still to try never spends one. That ordering is what keeps the retry
+    counter a measurable quantity rather than a side effect of every rejection.
+    """
+
+    def failing(self, route_id: str = "preferred-retried") -> dict[str, object]:
+        """A route whose exact-invocation probe outcome is a failure."""
+        return route_of(route_id, f"alias-{route_id}", f"model-{route_id}")
+
+    def failing_snapshot(self, *routes: dict[str, object]) -> dict[str, object]:
+        return snapshot_for(
+            *routes, invocation={str(each["resolved_model"]): "failure" for each in routes}
+        )
+
+    # --- candidate_routes: walk breadth (FR-026) ---
+
+    def test_the_walk_truncates_at_the_declared_candidate_cap(self) -> None:
+        preferred = self.failing("preferred-capped")
+        spare = route_of("fallback-would-resolve", "alias-would-resolve", "model-would-resolve")
+        policy = capping(policy_of(preferred, (spare,)), max_candidate_routes=1)
+        report = self.resolve(policy, self.failing_snapshot(preferred, spare))
+        self.assertEqual(
+            [entry["route_id"] for entry in report["attempted_routes"]], ["preferred-capped"]
+        )
+        self.assertEqual(report["budgets"]["actual"]["candidate_routes"], 1)
+        self.assertEqual(report["outcome"], "no_safe_route")
+
+    def test_a_route_the_cap_excluded_is_never_entered_even_though_it_would_resolve(self) -> None:
+        preferred = self.failing("preferred-shadowing")
+        spare = route_of("fallback-shadowed", "alias-shadowed", "model-shadowed")
+        snapshot = self.failing_snapshot(preferred)
+        snapshot["available_models"] = [*snapshot["available_models"], "model-shadowed"]
+        snapshot["alias_bindings"]["alias-shadowed"] = "model-shadowed"
+        snapshot["supported_efforts"]["model-shadowed"] = list(EFFORT_LADDER)
+        snapshot["probe_availability"]["model-shadowed"] = True
+        snapshot["exact_invocation_probe"]["model-shadowed"] = "success"
+        uncapped = self.resolve(policy_of(preferred, (spare,)), snapshot)
+        capped = self.resolve(
+            capping(policy_of(preferred, (spare,)), max_candidate_routes=1), snapshot
+        )
+        self.assertEqual(uncapped["outcome"], "resolved")
+        self.assertEqual(capped["outcome"], "no_safe_route")
+        self.assertNotIn(
+            "fallback-shadowed", [entry["route_id"] for entry in capped["attempted_routes"]]
+        )
+
+    def test_candidate_routes_equals_the_attempt_length_under_a_truncated_walk(self) -> None:
+        preferred = self.failing("preferred-measured")
+        spares = tuple(
+            route_of(f"fallback-measured-{index}", f"alias-measured-{index}", f"model-m-{index}")
+            for index in range(3)
+        )
+        policy = capping(policy_of(preferred, spares), max_candidate_routes=2)
+        report = self.resolve(policy, self.failing_snapshot(preferred, *spares))
+        self.assertEqual(
+            report["budgets"]["actual"]["candidate_routes"], len(report["attempted_routes"])
+        )
+        self.assertEqual(report["budgets"]["actual"]["candidate_routes"], 2)
+
+    # --- retries: the exclusive base (FR-026a) ---
+
+    def test_one_declared_retry_admits_two_consultations_of_one_route(self) -> None:
+        preferred = self.failing("preferred-twice")
+        policy = capping(
+            policy_of(preferred), max_probe_attempts=1, max_retries=1, max_candidate_routes=1
+        )
+        actual = self.resolve(policy, self.failing_snapshot(preferred))["budgets"]["actual"]
+        self.assertEqual(actual["probe_attempts"], 1)
+        self.assertEqual(actual["retries"], 1)
+        self.assertEqual(actual["candidate_routes"], 1)
+
+    def test_a_retry_raises_the_retry_counter_and_never_the_probe_counter(self) -> None:
+        preferred = self.failing("preferred-not-reprobed")
+        policy = capping(policy_of(preferred), max_probe_attempts=1, max_retries=2)
+        actual = self.resolve(policy, self.failing_snapshot(preferred))["budgets"]["actual"]
+        self.assertEqual(actual["retries"], 2)
+        self.assertEqual(actual["probe_attempts"], 1)
+        self.assertLessEqual(actual["probe_attempts"], actual["candidate_routes"])
+
+    def test_the_retry_allowance_is_not_spent_while_a_further_candidate_remains(self) -> None:
+        preferred = self.failing("preferred-superseded")
+        spare = route_of("fallback-supersedes", "alias-supersedes", "model-supersedes")
+        snapshot = snapshot_for(
+            preferred, spare, invocation={str(preferred["resolved_model"]): "failure"}
+        )
+        snapshot["exact_invocation_probe"]["model-supersedes"] = "success"
+        report = self.resolve(policy_of(preferred, (spare,)), snapshot)
+        self.assertEqual(report["outcome"], "resolved")
+        self.assertEqual(report["budgets"]["actual"]["retries"], 0)
+
+    def test_a_route_whose_probe_outcome_is_not_a_failure_incurs_no_retry(self) -> None:
+        preferred = route_of("preferred-effort-only", "alias-effort-only", "model-effort-only", "max")
+        snapshot = snapshot_for(preferred, efforts={"model-effort-only": ["low"]})
+        actual = self.resolve(policy_of(preferred), snapshot)["budgets"]["actual"]
+        self.assertEqual(actual["retries"], 0)
+        self.assertEqual(actual["probe_attempts"], 1)
+
+    def test_a_route_rejected_before_probing_incurs_no_retry(self) -> None:
+        preferred = route_of("preferred-unconsulted", "alias-unconsulted", "model-unconsulted")
+        report = self.resolve(policy_of(preferred), snapshot_for(preferred, available=()))
+        self.assertEqual(report["budgets"]["actual"], {
+            "probe_attempts": 0,
+            "retries": 0,
+            "candidate_routes": 1,
+        })
+
+    # --- the shared cap guarantee (SC-009) ---
+
+    def test_no_actual_counter_ever_exceeds_its_declared_cap(self) -> None:
+        preferred = self.failing("preferred-bounded")
+        spares = tuple(
+            route_of(f"fallback-bounded-{index}", f"alias-bounded-{index}", f"model-b-{index}")
+            for index in range(4)
+        )
+        snapshot = self.failing_snapshot(preferred, *spares)
+        for caps in ({"max_candidate_routes": 1}, {"max_retries": 1}, {"max_probe_attempts": 2}):
+            with self.subTest(caps=caps):
+                policy = capping(policy_of(preferred, spares), **caps)
+                budgets = self.resolve(policy, snapshot)["budgets"]
+                for member, count in budgets["actual"].items():
+                    self.assertLessEqual(count, budgets["declared"][f"max_{member}"])
+
+    def test_every_committed_case_stays_inside_all_three_declared_caps(self) -> None:
+        for case in self.module.load_corpus()["cases"]:
+            with self.subTest(case=case["case_id"]):
+                budgets = case["expected_report"]["budgets"]
+                for member, count in budgets["actual"].items():
+                    self.assertLessEqual(count, budgets["declared"][f"max_{member}"])
+
+    def test_every_exhaustion_class_terminates_in_no_safe_route_without_a_new_code(self) -> None:
+        preferred = self.failing("preferred-terminating")
+        spare = self.failing("fallback-terminating")
+        snapshot = self.failing_snapshot(preferred, spare)
+        for caps in (
+            {"max_candidate_routes": 1},
+            {"max_retries": 1},
+            {"max_probe_attempts": 1, "max_retries": 1, "max_candidate_routes": 1},
+        ):
+            with self.subTest(caps=caps):
+                report = self.resolve(capping(policy_of(preferred, (spare,)), **caps), snapshot)
+                self.assertEqual(report["outcome"], "no_safe_route")
+                self.assertEqual(self.codes(report)[-1], "no_safe_route")
+        self.assertEqual(len(self.module.RESOLUTION_CODES), 5)
+
+
+class ExhaustedBudgetEnumerationTests(SimulatorCaseMixin, unittest.TestCase):
+    """FR-026a and SC-009: which budgets were spent to their limit, and where that is said.
+
+    Comparing one counter to its cap is not sufficient on its own — a walk can reach a
+    cap and still resolve — so the at-cap set is recorded on the terminal entry and
+    nowhere else, which is what makes its presence mean "spent to the limit **and** the
+    walk failed". It is an ARRAY because with more than one cap reached no budget is
+    causally privileged: against a static snapshot a further retry returns the same
+    outcome, so no observable report content could settle which one terminated the walk.
+    """
+
+    def failing(self, route_id: str) -> dict[str, object]:
+        return route_of(route_id, f"alias-{route_id}", f"model-{route_id}")
+
+    def failing_snapshot(self, *routes: dict[str, object]) -> dict[str, object]:
+        return snapshot_for(
+            *routes, invocation={str(each["resolved_model"]): "failure" for each in routes}
+        )
+
+    def terminal(self, report: dict[str, object]) -> dict[str, object]:
+        return self.only_diagnostic(report, "no_safe_route")
+
+    def exhausted_in(self, report: dict[str, object]) -> list[list[str]]:
+        """Every ``details.exhausted_budget`` the report carries, in array order."""
+        return [
+            list(entry["details"]["exhausted_budget"])
+            for entry in report["diagnostics"]
+            if "exhausted_budget" in entry.get("details", {})
+        ]
+
+    def test_the_class_vocabulary_is_read_live_from_the_contracts_inline_enum(self) -> None:
+        declared = read_by_pointer(
+            load_contract(CONTRACT_ROOT / "route-resolution-report.schema.json"),
+            "$defs/resolutionDiagnostic/properties/details/properties/exhausted_budget/items/enum",
+        )
+        self.assertEqual(list(self.module.EXHAUSTED_BUDGET_CLASSES), declared)
+        self.assertEqual(
+            set(self.module.EXHAUSTED_BUDGET_CLASSES),
+            set(self.module.BUDGET_CAP_OF),
+        )
+
+    def test_all_three_at_cap_classes_are_listed_in_the_enums_declaration_order(self) -> None:
+        preferred = self.failing("preferred-all-at-cap")
+        policy = capping(
+            policy_of(preferred), max_probe_attempts=1, max_retries=1, max_candidate_routes=1
+        )
+        report = self.resolve(policy, self.failing_snapshot(preferred))
+        self.assertEqual(
+            self.terminal(report)["details"]["exhausted_budget"],
+            list(self.module.EXHAUSTED_BUDGET_CLASSES),
+        )
+
+    def test_a_single_at_cap_class_is_recorded_alone(self) -> None:
+        preferred = route_of("preferred-only-candidate", "alias-only-cand", "model-only-cand")
+        spare = route_of("fallback-unreached", "alias-unreached-cap", "model-unreached-cap")
+        snapshot = snapshot_for(preferred, spare, available=("model-unreached-cap",))
+        policy = capping(policy_of(preferred, (spare,)), max_candidate_routes=1)
+        report = self.resolve(policy, snapshot)
+        self.assertEqual(
+            self.terminal(report)["details"]["exhausted_budget"], ["candidate_routes"]
+        )
+
+    def test_the_field_is_omitted_rather_than_emitted_empty_when_no_class_is_at_cap(self) -> None:
+        preferred = route_of("preferred-below-cap", "alias-below-cap", "model-below-cap")
+        report = self.resolve(policy_of(preferred), snapshot_for(preferred, available=()))
+        terminal = self.terminal(report)
+        self.assertNotIn("details", terminal)
+        self.assertEqual(self.exhausted_in(report), [])
+
+    def test_the_two_necessarily_empty_at_cap_endings_omit_the_field(self) -> None:
+        """A pre-walk rejection fixes all three counters at zero against caps whose
+        minimum is one; a rejection over an empty fallback list can end below every cap.
+        Both are committed cases, so the omission is pinned rather than only inline."""
+        for case_id in (
+            "fable-alias-model-absent",
+            "unqualified-adjacent-model",
+            "generic-agent-substitution",
+            "silent-inherit-materialization",
+        ):
+            with self.subTest(case=case_id):
+                case = next(
+                    each
+                    for each in self.module.load_corpus()["cases"]
+                    if each["case_id"] == case_id
+                )
+                self.assertEqual(self.exhausted_in(case["expected_report"]), [])
+
+    def test_a_resolved_walk_that_reaches_a_cap_records_no_at_cap_set(self) -> None:
+        """The conjunction a counter comparison cannot express: counter equals cap on a
+        report that nevertheless resolved, so nothing is enumerated anywhere."""
+        preferred = route_of("preferred-reached-cap", "alias-reached-a", "model-reached-a")
+        spare = route_of("fallback-reached-cap", "alias-reached-b", "model-reached-b")
+        snapshot = snapshot_for(preferred, spare, available=("model-reached-b",))
+        policy = capping(policy_of(preferred, (spare,)), max_probe_attempts=1)
+        report = self.resolve(policy, snapshot)
+        self.assertEqual(report["outcome"], "resolved")
+        self.assertEqual(
+            report["budgets"]["actual"]["probe_attempts"],
+            report["budgets"]["declared"]["max_probe_attempts"],
+        )
+        self.assertEqual(self.exhausted_in(report), [])
+
+    def test_the_at_cap_set_appears_on_the_terminal_entry_and_on_no_other(self) -> None:
+        preferred = self.failing("preferred-sole-bearer")
+        policy = capping(
+            policy_of(preferred), max_probe_attempts=1, max_retries=1, max_candidate_routes=1
+        )
+        report = self.resolve(policy, self.failing_snapshot(preferred))
+        bearers = [
+            entry["code"]
+            for entry in report["diagnostics"]
+            if "exhausted_budget" in entry.get("details", {})
+        ]
+        self.assertEqual(bearers, ["no_safe_route"])
+        self.assertGreater(len(report["diagnostics"]), 1)
+
+    def test_no_committed_case_carries_the_field_outside_a_terminal_entry(self) -> None:
+        for case in self.module.load_corpus()["cases"]:
+            with self.subTest(case=case["case_id"]):
+                for entry in case["expected_report"]["diagnostics"]:
+                    if "exhausted_budget" in entry.get("details", {}):
+                        self.assertEqual(entry["code"], "no_safe_route")
+
+    def test_every_enumerated_class_actually_equals_its_declared_cap(self) -> None:
+        """The set is a pure function of the counters and caps the report already
+        carries, so it is re-derivable and cannot disagree with them."""
+        for case in self.module.load_corpus()["cases"]:
+            report = case["expected_report"]
+            budgets = report["budgets"]
+            expected = [
+                member
+                for member in self.module.EXHAUSTED_BUDGET_CLASSES
+                if budgets["actual"][member] == budgets["declared"][f"max_{member}"]
+            ]
+            recorded = self.exhausted_in(report)
+            with self.subTest(case=case["case_id"]):
+                if report["outcome"] == "no_safe_route" and expected:
+                    self.assertEqual(recorded, [expected])
+                else:
+                    self.assertEqual(recorded, [])
+
+
+class NoSafeRouteRecoveryTests(SimulatorCaseMixin, unittest.TestCase):
+    """FR-029, FR-029a, SC-010: the report-only outcome, and what it owes a consumer.
+
+    The obligations attach to the **outcome**, not to FR-029's stated precondition, so
+    they hold however the walk ended — every declared fallback rejected, an empty
+    fallback list, a candidate cap reached, or a pre-walk structural rejection. A
+    truncated walk ends with routes that were never reached and therefore never
+    rejected, yet still terminates here, so a precondition-attached reading would let
+    it escape the remediation requirement on a technicality.
+
+    Report-only is asserted structurally rather than promised: the module opens no file
+    for writing at all, so there is no shipped agent file it could mutate.
+    """
+
+    ROLLBACK = "Roll back to the previous plugin release."
+
+    # Every way a walk can end in no_safe_route, so the outcome-attached obligations are
+    # checked over the whole family rather than over the one ending FR-029 names.
+    def endings(self) -> list[tuple[str, dict[str, object]]]:
+        rejected = route_of("preferred-rejected-all", "alias-rejected-all", "model-rejected-all")
+        spare = route_of("fallback-rejected-all", "alias-rejected-spare", "model-rejected-spare")
+        every_fallback = self.resolve(
+            policy_of(rejected, (spare,)), snapshot_for(rejected, spare, available=())
+        )
+
+        lonely = route_of("preferred-no-fallback", "alias-no-fallback", "model-no-fallback")
+        empty_list = self.resolve(policy_of(lonely), snapshot_for(lonely, available=()))
+
+        capped = route_of("preferred-cap-ended", "alias-cap-ended", "model-cap-ended")
+        reachable = route_of("fallback-cap-ended", "alias-cap-spare", "model-cap-spare")
+        cap_reached = self.resolve(
+            capping(policy_of(capped, (reachable,)), max_candidate_routes=1),
+            snapshot_for(capped, reachable, probe={"model-cap-ended": False}),
+        )
+
+        explicit = route_of("preferred-pre-walk", "alias-pre-walk", "model-pre-walk")
+        inheriting = inheriting_route("fallback-pre-walk", "alias-pre-walk-inherit")
+        pre_walk = self.resolve(policy_of(explicit, (inheriting,)), snapshot_for(explicit))
+
+        return [
+            ("every fallback rejected", every_fallback),
+            ("empty fallback list", empty_list),
+            ("candidate cap reached", cap_reached),
+            ("pre-walk rejection", pre_walk),
+        ]
+
+    def test_every_ending_names_the_unresolved_agent_and_stays_report_only(self) -> None:
+        for label, report in self.endings():
+            with self.subTest(ending=label):
+                self.assertEqual(report["outcome"], "no_safe_route")
+                self.assertEqual(report["unresolved_agent"], report["agent"])
+                self.assertIs(report["release_claim_eligible"], False)
+                self.assertNotIn("effective_dispatch_tuple", report)
+
+    def test_every_ending_closes_with_one_terminal_entry_bearing_the_rollback(self) -> None:
+        for label, report in self.endings():
+            with self.subTest(ending=label):
+                terminal = [
+                    entry for entry in report["diagnostics"] if entry["code"] == "no_safe_route"
+                ]
+                self.assertEqual(len(terminal), 1)
+                self.assertIs(report["diagnostics"][-1], terminal[0])
+                self.assertEqual(terminal[0]["severity"], "error")
+                self.assertIn(self.ROLLBACK, terminal[0]["remediation"]["actions"])
+                self.assertTrue(terminal[0]["remediation"]["summary"])
+
+    def test_the_rollback_action_appears_on_the_terminal_entry_and_on_no_other(self) -> None:
+        for label, report in self.endings():
+            for entry in report["diagnostics"][:-1]:
+                with self.subTest(ending=label, code=entry["code"]):
+                    self.assertNotIn(self.ROLLBACK, entry["remediation"]["actions"])
+                    self.assertLessEqual(len(entry["remediation"]["actions"]), 3)
+
+    def test_every_attempted_route_of_a_failing_walk_is_recorded_as_rejected(self) -> None:
+        for label, report in self.endings():
+            with self.subTest(ending=label):
+                dispositions = {
+                    entry["disposition"] for entry in report["attempted_routes"]
+                }
+                self.assertLessEqual(dispositions, {"rejected"})
+
+    def test_every_route_scoped_diagnostic_joins_a_route_by_its_key(self) -> None:
+        """FR-029a: joinable, not merely co-present. Position is not a key here — a
+        variable number of diagnostics is emitted per route, so the two arrays are not
+        the same length and cannot be zipped."""
+        for label, report in self.endings():
+            attempted = {entry["route_id"] for entry in report["attempted_routes"]}
+            for entry in report["diagnostics"]:
+                if entry["code"] == "no_safe_route":
+                    continue
+                with self.subTest(ending=label, code=entry["code"]):
+                    self.assertIn("route_id", entry["details"])
+                    if attempted:
+                        self.assertIn(entry["details"]["route_id"], attempted)
+
+    def test_every_committed_failing_case_joins_each_reason_to_its_route(self) -> None:
+        for case in self.module.load_corpus()["cases"]:
+            report = case["expected_report"]
+            if report["outcome"] != "no_safe_route":
+                continue
+            declared = {case["policy"]["preferred_route"]["route_id"]} | {
+                route["route_id"] for route in case["policy"]["fallback_routes"]
+            }
+            with self.subTest(case=case["case_id"]):
+                self.assertEqual(report["diagnostics"][-1]["code"], "no_safe_route")
+                self.assertIn(
+                    self.ROLLBACK, report["diagnostics"][-1]["remediation"]["actions"]
+                )
+                for entry in report["diagnostics"][:-1]:
+                    self.assertIn(entry["details"]["route_id"], declared)
+
+    # --- report-only, proven structurally (FR-029) ---
+
+    def test_the_simulator_opens_no_file_for_writing_and_imports_no_write_tool(self) -> None:
+        tree = simulator_syntax_tree()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                name = (
+                    node.func.attr
+                    if isinstance(node.func, ast.Attribute)
+                    else getattr(node.func, "id", "")
+                )
+                self.assertNotIn(name, MUTATING_CALLS, f"{name} mutates the filesystem")
+                if name == "open":
+                    modes = [
+                        arg.value
+                        for arg in [*node.args, *(kw.value for kw in node.keywords)]
+                        if isinstance(arg, ast.Constant) and isinstance(arg.value, str)
+                    ]
+                    self.assertTrue(
+                        all(set(mode) <= set("rbt") for mode in modes),
+                        f"open called with a write mode: {modes}",
+                    )
+            if isinstance(node, (ast.Import, ast.ImportFrom)):
+                for alias in node.names:
+                    root = (alias.name or "").split(".")[0]
+                    self.assertNotIn(root, MUTATION_CAPABLE_MODULES)
+                if isinstance(node, ast.ImportFrom):
+                    self.assertNotIn((node.module or "").split(".")[0], MUTATION_CAPABLE_MODULES)
+
+    def test_the_only_file_the_simulator_reads_is_the_committed_corpus(self) -> None:
+        tree = simulator_syntax_tree()
+        readers = {
+            node.name
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and called_names(node) & {"read_text", "read_bytes", "open"}
+        }
+        self.assertEqual(readers, {"load_corpus"})
+
+    def test_no_path_the_simulator_declares_reaches_the_shipped_agent_tree(self) -> None:
+        declared = (
+            self.module.CONTRACT_ROOT,
+            self.module.FIXTURE_ROOT,
+            self.module.DEFAULT_CORPUS_PATH,
+            self.module.REPORT_SCHEMA_PATH,
+            self.module.POLICY_SCHEMA_PATH,
+            self.module.SNAPSHOT_SCHEMA_PATH,
+        )
+        for path in declared:
+            with self.subTest(path=str(path)):
+                self.assertTrue(Path(path).resolve().is_relative_to(LAYER6_ROOT))
+                self.assertFalse(Path(path).resolve().is_relative_to(AGENTS_ROOT))
+
+
 class AppendedScenarioCaseTests(unittest.TestCase):
     """FR-018, FR-019c, FR-024b, FR-025, FR-033b: what the appended cases pin.
 
@@ -2694,6 +3221,119 @@ class AppendedScenarioCaseTests(unittest.TestCase):
             with self.subTest(route=route["route_id"]):
                 self.assertNotIn(route["resolved_model"], offered)
 
+    def test_the_exhaustion_case_declares_every_budget_at_one(self) -> None:
+        declared = self.cases["budget-exhaustion-of-one"]["policy"]["budgets"]
+        self.assertEqual(set(declared.values()), {1})
+        self.assertEqual(self.pinned("budget-exhaustion-of-one")["budgets"]["declared"], declared)
+
+    def test_the_exhaustion_case_pins_all_three_counts_at_their_declared_cap(self) -> None:
+        budgets = self.pinned("budget-exhaustion-of-one")["budgets"]
+        for member, count in budgets["actual"].items():
+            with self.subTest(member=member):
+                self.assertEqual(count, budgets["declared"][f"max_{member}"])
+
+    def test_the_exhaustion_case_binds_the_retry_class_on_a_failing_preferred_route(self) -> None:
+        """The roadmap states retry exhaustion as its own obligation, which a
+        probe-only case would leave unproven — so the preferred route's
+        exact-invocation outcome is a failure, the one permitted retry re-consults it,
+        and no further retry may be taken."""
+        case = self.cases["budget-exhaustion-of-one"]
+        preferred = case["policy"]["preferred_route"]
+        self.assertEqual(
+            case["snapshot"]["exact_invocation_probe"][preferred["resolved_model"]], "failure"
+        )
+        report = case["expected_report"]
+        self.assertEqual(report["budgets"]["actual"]["retries"], 1)
+        self.assertEqual(report["budgets"]["declared"]["max_retries"], 1)
+        rejected = [
+            entry["code"]
+            for entry in report["diagnostics"]
+            if entry.get("details", {}).get("route_id") == preferred["route_id"]
+        ]
+        self.assertEqual(rejected, ["treatment_probe_failed"])
+
+    def test_the_exhaustion_case_enumerates_all_three_classes_in_enum_order(self) -> None:
+        report = self.pinned("budget-exhaustion-of-one")
+        terminal = report["diagnostics"][-1]
+        self.assertEqual(terminal["code"], "no_safe_route")
+        self.assertEqual(
+            terminal["details"]["exhausted_budget"],
+            list(self.module.EXHAUSTED_BUDGET_CLASSES),
+        )
+        self.assertEqual(report["outcome"], "no_safe_route")
+
+    def test_the_exhaustion_case_declares_a_route_the_cap_kept_the_walk_from_reaching(
+        self,
+    ) -> None:
+        """The cap is what produced no_safe_route: a later declared route would have
+        resolved, and the truncated walk never entered it."""
+        case = self.cases["budget-exhaustion-of-one"]
+        unreached = case["policy"]["fallback_routes"]
+        self.assertNotEqual(unreached, [])
+        attempted = {entry["route_id"] for entry in case["expected_report"]["attempted_routes"]}
+        for route in unreached:
+            with self.subTest(route=route["route_id"]):
+                self.assertNotIn(route["route_id"], attempted)
+                self.assertIn(route["resolved_model"], case["snapshot"]["available_models"])
+                self.assertEqual(
+                    case["snapshot"]["exact_invocation_probe"][route["resolved_model"]], "success"
+                )
+
+    def test_the_exhaustion_cases_declared_budgets_validate_against_the_policy_contract(
+        self,
+    ) -> None:
+        contract = load_contract(CONTRACT_ROOT / "route-policy.schema.json")
+        validate_instance(self.cases["budget-exhaustion-of-one"]["policy"], contract, path="policy")
+
+    def test_the_report_only_case_rejects_every_attempted_route(self) -> None:
+        report = self.pinned("no-safe-route-report-only")
+        self.assertEqual(report["outcome"], "no_safe_route")
+        self.assertEqual(report["unresolved_agent"], report["agent"])
+        self.assertIs(report["release_claim_eligible"], False)
+        self.assertNotEqual(report["attempted_routes"], [])
+        self.assertEqual(
+            {entry["disposition"] for entry in report["attempted_routes"]}, {"rejected"}
+        )
+
+    def test_the_report_only_case_joins_one_diagnostic_per_failed_check_to_its_route(self) -> None:
+        case = self.cases["no-safe-route-report-only"]
+        report = case["expected_report"]
+        attempted = [entry["route_id"] for entry in report["attempted_routes"]]
+        rejections = report["diagnostics"][:-1]
+        self.assertEqual([entry["details"]["route_id"] for entry in rejections], attempted)
+        self.assertEqual(len(set(entry["code"] for entry in rejections)), len(rejections))
+
+    def test_the_report_only_case_closes_with_the_verbatim_rollback_and_no_repeat(self) -> None:
+        report = self.pinned("no-safe-route-report-only")
+        terminal = report["diagnostics"][-1]
+        self.assertEqual(terminal["code"], "no_safe_route")
+        self.assertEqual(terminal["severity"], "error")
+        self.assertEqual(len(terminal["remediation"]["actions"]), 2)
+        self.assertIn("Roll back to the previous plugin release.", terminal["remediation"]["actions"])
+        for entry in report["diagnostics"][:-1]:
+            with self.subTest(code=entry["code"]):
+                self.assertNotIn(
+                    "Roll back to the previous plugin release.", entry["remediation"]["actions"]
+                )
+
+    def test_the_report_only_case_ends_below_every_declared_cap(self) -> None:
+        """Its at-cap set is empty, so the terminal entry carries no details at all —
+        which is what keeps the field's presence meaning 'spent to the limit AND the
+        walk failed' rather than merely 'the walk failed'."""
+        report = self.pinned("no-safe-route-report-only")
+        budgets = report["budgets"]
+        for member, count in budgets["actual"].items():
+            with self.subTest(member=member):
+                self.assertLess(count, budgets["declared"][f"max_{member}"])
+        self.assertNotIn("details", report["diagnostics"][-1])
+
+    def test_the_corpus_closes_at_eighteen_cases_with_slice_one_at_the_head(self) -> None:
+        declared = list(self.cases)
+        self.assertEqual(len(declared), 18)
+        self.assertEqual(len(SLICE_ONE_CASE_IDS), 9)
+        self.assertEqual(len(APPENDED_CASE_IDS), 9)
+        self.assertEqual(declared, [*SLICE_ONE_CASE_IDS, *APPENDED_CASE_IDS])
+
     def test_each_of_the_three_role_classes_is_a_subject_or_a_declared_helper(self) -> None:
         covered: set[str] = set()
         for case in self.cases.values():
@@ -2702,6 +3342,140 @@ class AppendedScenarioCaseTests(unittest.TestCase):
             if helper is not None:
                 covered.add(helper["agent"]["role_class"])
         self.assertEqual(covered, set(SYNTHETIC_ROLE_CLASSES))
+
+
+# --------------------------------------------------------------------------- #
+# SC-001: every mandated scenario is represented, with zero unrepresented        #
+# --------------------------------------------------------------------------- #
+# Each predicate reads the CONTENT of a case — the codes it emits, the sub-reason
+# it carries, the disposition it pins — rather than its ``case_id``, so the
+# coverage claim is about substance and survives a rename. Exhaustion is named by
+# its terminating class rather than as generic budget exhaustion, because the
+# roadmap states retry exhaustion as its own proof obligation.
+
+
+def emitted_codes(case: dict[str, object]) -> set[str]:
+    return {str(entry["code"]) for entry in case["expected_report"]["diagnostics"]}
+
+
+def emits(code: str):
+    return lambda case: code in emitted_codes(case)
+
+
+def sub_reasons(case: dict[str, object]) -> set[str]:
+    return {
+        str(entry["details"]["sub_reason"])
+        for entry in case["expected_report"]["diagnostics"]
+        if "sub_reason" in entry.get("details", {})
+    }
+
+
+def carries_sub_reason(name: str):
+    return lambda case: name in sub_reasons(case)
+
+
+def covers_the_fable_family(case: dict[str, object]) -> bool:
+    """The roadmap's own fable scenario, subordinated to preferred-model-absent: the
+    pinned model of the real family alias is no longer offered."""
+    return any(
+        entry["details"].get("sub_reason") == "model_absent"
+        and entry["details"].get("alias") == "fable"
+        for entry in case["expected_report"]["diagnostics"]
+        if "details" in entry
+    )
+
+
+def resolved_through_a_successful_probe(case: dict[str, object]) -> bool:
+    tuple_ = case["expected_report"].get("effective_dispatch_tuple")
+    if case["expected_report"]["outcome"] != "resolved" or tuple_ is None:
+        return False
+    probed = case["snapshot"]["exact_invocation_probe"].get(tuple_["resolved_model"])
+    return probed == "success"
+
+
+def override_skipped_by_the_allowlist(case: dict[str, object]) -> bool:
+    override = case["expected_report"].get("override")
+    return override is not None and override["disposition"] == "skipped_by_allowlist"
+
+
+def helper_declared_but_not_consulted(case: dict[str, object]) -> bool:
+    return "optional_helper" in case["policy"] and (
+        case["expected_report"]["optional_helper"]["consulted"] is False
+    )
+
+
+def exhausted_class(name: str):
+    def predicate(case: dict[str, object]) -> bool:
+        return any(
+            name in entry.get("details", {}).get("exhausted_budget", [])
+            for entry in case["expected_report"]["diagnostics"]
+        )
+
+    return predicate
+
+
+def ends_with_no_safe_route(case: dict[str, object]) -> bool:
+    return case["expected_report"]["outcome"] == "no_safe_route"
+
+
+MANDATED_SCENARIOS: tuple[tuple[str, object], ...] = (
+    ("preferred model absent, including the fable case", covers_the_fable_family),
+    ("alias unresolved", carries_sub_reason("alias_unresolved")),
+    ("effort unsupported", emits("effort_unsupported")),
+    ("probe unavailable", emits("capability_probe_unavailable")),
+    ("exact-invocation probe success", resolved_through_a_successful_probe),
+    ("exact-invocation probe failure", emits("treatment_probe_failed")),
+    ("alias re-pointing", carries_sub_reason("alias_repointed")),
+    ("platform route change", carries_sub_reason("platform_route_changed")),
+    ("unqualified override", emits("unqualified_override")),
+    ("override skipped by the organization allowlist", override_skipped_by_the_allowlist),
+    ("fallback loop", emits("fallback_loop")),
+    ("unqualified adjacent model", emits("unqualified_adjacent_model")),
+    ("generic-agent substitution", emits("generic_agent_substitution")),
+    ("silent inherit materialization", emits("silent_inherit_materialization")),
+    ("helper unavailable", helper_declared_but_not_consulted),
+    ("retry exhaustion", exhausted_class("retries")),
+    ("no safe route", ends_with_no_safe_route),
+)
+
+
+class MandatedScenarioCoverageTests(unittest.TestCase):
+    """SC-001: the roadmap's scenario list against the committed corpus.
+
+    The count of unrepresented scenarios is the measurable outcome, so it is asserted
+    as an empty list rather than as a total — a failure then names which scenarios
+    lost their case rather than reporting that some number moved.
+    """
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_route_fallback, "claude_route_fallback is not importable")
+        self.module = claude_route_fallback
+        self.cases = self.module.load_corpus()["cases"]
+
+    def matching(self, predicate: object) -> list[str]:
+        return [case["case_id"] for case in self.cases if predicate(case)]
+
+    def test_every_mandated_scenario_is_represented_with_zero_unrepresented(self) -> None:
+        unrepresented = [name for name, predicate in MANDATED_SCENARIOS if not self.matching(predicate)]
+        self.assertEqual(unrepresented, [])
+
+    def test_the_scenario_table_names_each_mandated_scenario_once(self) -> None:
+        names = [name for name, _ in MANDATED_SCENARIOS]
+        self.assertEqual(len(names), len(set(names)))
+        self.assertEqual(len(names), 17)
+
+    def test_no_scenario_predicate_is_satisfied_by_every_case(self) -> None:
+        """A predicate matching all eighteen would report coverage without
+        discriminating, which is the one way this table could pass while proving
+        nothing."""
+        for name, predicate in MANDATED_SCENARIOS:
+            with self.subTest(scenario=name):
+                matched = self.matching(predicate)
+                self.assertNotEqual(matched, [])
+                self.assertLess(len(matched), len(self.cases))
+
+    def test_the_corpus_the_coverage_claim_is_taken_over_holds_eighteen_cases(self) -> None:
+        self.assertEqual(len(self.cases), 18)
 
 
 def _declared(policy: dict[str, object]) -> tuple[dict[str, object], ...]:
@@ -2739,7 +3513,11 @@ TEST_CASES = (
     FallbackLoopTests,
     SubagentModelOverrideTests,
     OptionalHelperPathTests,
+    BudgetCapTests,
+    ExhaustedBudgetEnumerationTests,
+    NoSafeRouteRecoveryTests,
     AppendedScenarioCaseTests,
+    MandatedScenarioCoverageTests,
 )
 
 
