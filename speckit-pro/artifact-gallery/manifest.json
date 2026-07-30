@@ -1,0 +1,247 @@
+{
+  "schema_version": "1.0",
+  "signals": [
+    "competing_approaches",
+    "brownfield_change",
+    "self_review_findings",
+    "large_diff",
+    "operational_flow_change"
+  ],
+  "export_kinds": [
+    "prompt",
+    "markdown"
+  ],
+  "templates": [
+    {
+      "id": "implementation-plan",
+      "category": "exploration-planning",
+      "title": "Implementation Plan",
+      "when_to_use": "Lay out the phases of a planned change, the files each phase touches, and the order they land in. Reach for it when a reviewer needs the shape of the work before they read any code.",
+      "stage": "draft-pr",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "16-implementation-plan.html" },
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
+    },
+    {
+      "id": "spec-explainer",
+      "category": "research",
+      "title": "Spec Explainer",
+      "when_to_use": "Explain what a feature does and why it is being built, for a reader who has not opened the spec. Reach for it when the change is easier to judge from its intent than from its diff.",
+      "stage": "draft-pr",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "14-research-feature-explainer.html" },
+      "status": "planned",
+      "exports": []
+    },
+    {
+      "id": "code-approaches",
+      "category": "exploration-planning",
+      "title": "Code Approaches",
+      "when_to_use": "Put two or more implementation approaches side by side with the trade-off that decides between them. Reach for it when planning weighed a real alternative and the reviewer needs to see why the chosen one won.",
+      "stage": "draft-pr",
+      "trigger": { "any_of": ["competing_approaches"] },
+      "source": { "origin": "upstream", "file": "01-exploration-code-approaches.html" },
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
+    },
+    {
+      "id": "module-map",
+      "category": "code-review",
+      "title": "Module Map",
+      "when_to_use": "Map the existing modules a change touches and how they call each other. Reach for it when the change edits code a reviewer has to understand before they can read the edit.",
+      "stage": "draft-pr",
+      "trigger": { "any_of": ["brownfield_change"] },
+      "source": { "origin": "upstream", "file": "04-code-understanding.html" },
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
+    },
+    {
+      "id": "pr-writeup",
+      "category": "code-review",
+      "title": "Pull Request Write-up",
+      "when_to_use": "State what the finished change does, what it deliberately leaves out, and how it was verified. Reach for it on any pull request you are asking someone to review.",
+      "stage": "final-pr",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "17-pr-writeup.html" },
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
+    },
+    {
+      "id": "annotated-diff",
+      "category": "code-review",
+      "title": "Annotated Diff",
+      "when_to_use": "Walk a reviewer through the diff hunk by hunk, annotating the ones that need it. Reach for it when the change is large, or when the self-review recorded a gap worth pointing at.",
+      "stage": "final-pr",
+      "trigger": { "any_of": ["self_review_findings", "large_diff"] },
+      "source": { "origin": "upstream", "file": "03-code-review-pr.html" },
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
+    },
+    {
+      "id": "flowchart",
+      "category": "diagrams",
+      "title": "Flowchart",
+      "when_to_use": "Draw a multi-step process as a diagram: the steps, the branches, and the points where it can fail. Reach for it when the change alters a runtime or delivery flow that prose describes poorly.",
+      "stage": "final-pr",
+      "trigger": { "any_of": ["operational_flow_change"] },
+      "source": { "origin": "upstream", "file": "13-flowchart-diagram.html" },
+      "status": "planned",
+      "exports": []
+    },
+    {
+      "id": "uat-walkthrough",
+      "category": "editors",
+      "title": "UAT Walkthrough",
+      "when_to_use": "Give a non-engineer numbered steps to run against the change, each with an observable result and a pass or fail toggle, and export the outcome as text. Reach for it when acceptance depends on someone exercising the change rather than reading it.",
+      "stage": "final-pr",
+      "trigger": { "always": true },
+      "source": { "origin": "repository" },
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
+    },
+    {
+      "id": "visual-designs",
+      "category": "exploration-planning",
+      "title": "Visual Design Options",
+      "when_to_use": "Show several visual directions for the same screen so a reader can choose one. Reach for it before any of them is built.",
+      "stage": "ad-hoc",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "02-exploration-visual-designs.html" },
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
+    },
+    {
+      "id": "design-system",
+      "category": "design",
+      "title": "Design System",
+      "when_to_use": "Document the tokens, type scale, and components a surface is built from, each rendered as itself. Reach for it when contributors need one place to check what a color or a spacing step is called.",
+      "stage": "ad-hoc",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "05-design-system.html" },
+      "status": "planned",
+      "exports": []
+    },
+    {
+      "id": "component-variants",
+      "category": "design",
+      "title": "Component Variants",
+      "when_to_use": "Render every state of one component on a single page: default, hover, focus, disabled, error, and loading. Reach for it when a state is easy to miss and expensive to get wrong.",
+      "stage": "ad-hoc",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "06-component-variants.html" },
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
+    },
+    {
+      "id": "animation-prototype",
+      "category": "prototyping",
+      "title": "Animation Prototype",
+      "when_to_use": "Play a motion design at real speed so timing and easing can be judged rather than described. Reach for it when a still image cannot settle the question.",
+      "stage": "ad-hoc",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "07-prototype-animation.html" },
+      "status": "planned",
+      "exports": []
+    },
+    {
+      "id": "interaction-prototype",
+      "category": "prototyping",
+      "title": "Interaction Prototype",
+      "when_to_use": "Make a flow clickable so a reader can walk it themselves. Reach for it when the open question is how a sequence of steps behaves, not how one screen looks.",
+      "stage": "ad-hoc",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "08-prototype-interaction.html" },
+      "status": "planned",
+      "exports": []
+    },
+    {
+      "id": "svg-illustrations",
+      "category": "diagrams",
+      "title": "SVG Illustrations",
+      "when_to_use": "Draw a diagram or illustration as vector markup that stays sharp at any size and loads no image file. Reach for it when the picture carries the explanation.",
+      "stage": "ad-hoc",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "10-svg-illustrations.html" },
+      "status": "planned",
+      "exports": []
+    },
+    {
+      "id": "slide-deck",
+      "category": "decks",
+      "title": "Slide Deck",
+      "when_to_use": "Present a finding as paged slides you step through while people watch. Reach for it when the audience is listening rather than reading.",
+      "stage": "ad-hoc",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "09-slide-deck.html" },
+      "status": "planned",
+      "exports": []
+    },
+    {
+      "id": "concept-explainer",
+      "category": "research",
+      "title": "Concept Explainer",
+      "when_to_use": "Teach one unfamiliar concept from first principles, with a worked example. Reach for it when the reader needs the idea itself before they can use anything built on it.",
+      "stage": "ad-hoc",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "15-research-concept-explainer.html" },
+      "status": "planned",
+      "exports": []
+    },
+    {
+      "id": "status-report",
+      "category": "reports",
+      "title": "Status Report",
+      "when_to_use": "Report where work stands: what landed, what is in flight, what is blocked, and on whom. Reach for it for a recurring update where the reader wants the state rather than the narrative.",
+      "stage": "ad-hoc",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "11-status-report.html" },
+      "status": "planned",
+      "exports": []
+    },
+    {
+      "id": "incident-report",
+      "category": "reports",
+      "title": "Incident Report",
+      "when_to_use": "Record what broke, when it broke, what the impact was, and what stops it recurring. Reach for it after an outage or a defect that reached users.",
+      "stage": "ad-hoc",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "12-incident-report.html" },
+      "status": "planned",
+      "exports": []
+    },
+    {
+      "id": "triage-board",
+      "category": "editors",
+      "title": "Triage Board",
+      "when_to_use": "Sort a list of issues into columns, then export the result as text you can paste back. Reach for it when triage decisions have to leave the page in a form another tool reads.",
+      "stage": "ad-hoc",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "18-editor-triage-board.html" },
+      "status": "planned",
+      "exports": ["markdown"]
+    },
+    {
+      "id": "feature-flags",
+      "category": "editors",
+      "title": "Feature Flag Editor",
+      "when_to_use": "Toggle a set of flags and export the configuration that results. Reach for it when someone needs to compose a flag state without hand-editing the config file.",
+      "stage": "ad-hoc",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "19-editor-feature-flags.html" },
+      "status": "planned",
+      "exports": ["markdown"]
+    },
+    {
+      "id": "prompt-tuner",
+      "category": "editors",
+      "title": "Prompt Tuner",
+      "when_to_use": "Edit a prompt beside its output, compare revisions, and export the version you keep. Reach for it when a prompt is being tuned by hand and each change has to be seen.",
+      "stage": "ad-hoc",
+      "trigger": { "always": true },
+      "source": { "origin": "upstream", "file": "20-editor-prompt-tuner.html" },
+      "status": "planned",
+      "exports": ["markdown"]
+    }
+  ]
+}
