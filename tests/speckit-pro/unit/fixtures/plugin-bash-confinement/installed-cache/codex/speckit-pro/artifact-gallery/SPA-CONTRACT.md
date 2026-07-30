@@ -113,7 +113,7 @@ Exactly three keys, in that order. Nothing else belongs at top level.
   the authoritative list of names. Each name's meaning lives further down.
 - `templates` — one entry per planned gallery template.
 
-### Entry shape — eight keys, no more, no fewer
+### Entry shape — nine keys, no more, no fewer
 
 | Key | Type | What it means |
 |---|---|---|
@@ -125,6 +125,7 @@ Exactly three keys, in that order. Nothing else belongs at top level.
 | `trigger` | object | One of the two forms below. Mandatory on every entry. |
 | `source` | object | Provenance, in one of the two forms below. |
 | `status` | string | `planned` or `shipped`. |
+| `exports` | array | The export affordances this artifact must carry, drawn from the `export_kinds` vocabulary. An empty array declares that the artifact is read-only and carries none. See the export obligations below. |
 
 ### The artifact path is derived, not stored
 
@@ -320,13 +321,70 @@ its declared review surfaces. Present when the change touches a file that
 documents or drives a multi-step process — a workflow definition, a runbook, an
 install or release procedure — rather than only the code that process runs.
 
+## Export obligations
+
+An artifact is read by a person who is in the middle of doing something. If that
+reading produces anything — a choice, an objection, a result — and the artifact
+gives them no way to carry it out, the work is stranded in a browser tab and has to
+be retyped from memory. **An artifact whose reader produces something MUST end with
+an export.** Which kinds it carries is declared in its catalog entry's `exports`
+array, not left to the author's judgement, so a reviewer can tell a deliberate
+read-only artifact from a forgotten affordance.
+
+The vocabulary is closed. `export_kinds` declares it as data in the catalog, and
+the same closure holds as for routing signals: every kind declared is used by at
+least one entry, and every kind used is declared.
+
+| Kind | What it produces | Where it goes |
+|---|---|---|
+| `prompt` | The reader's conclusion phrased as an instruction to a coding agent — the decision and its consequence, not a description of the screen. | Pasted straight into Claude Code or Codex. |
+| `markdown` | The same conclusion phrased as a record: what was decided, observed, or configured. | A pull-request comment, or committed to a file. |
+
+The two are not interchangeable, and an artifact that needs both must offer both.
+A `prompt` export closes the loop immediately and skips the round trip entirely. A
+`markdown` export is the auditable form: it lands in a pull-request comment where
+the feedback sweep can read it, classify it, and route it through consensus. Choose
+by what the reader is trying to do, never by which is easier to build.
+
+### What an export must contain
+
+- **The reader's conclusion, not the artifact's content.** A `prompt` export from a
+  plan review says which phase to reorder and why; it does not restate the plan.
+- **Enough context to act on alone.** The person pasting it has left the artifact
+  behind. Name the artifact, the spec, and the location the conclusion attaches to.
+- **Only what the reader actually produced.** An export that invents a conclusion
+  the reader did not reach is worse than no export, because it reads as theirs.
+- **Nothing the reader did not see.** Never export inline data the artifact was
+  built from but did not display, and never export a value the reader could not
+  have inspected.
+
+### The affordance itself
+
+- A single control per kind, labelled with the destination rather than the
+  mechanism: "Copy as prompt", "Copy as Markdown". Not "Export" alone.
+- It MUST be reachable and operable by keyboard, and it MUST report success in text
+  rather than only by colour or animation, per the accessibility obligations below.
+- Clipboard access can fail or be refused, especially over `file://`. On failure the
+  artifact MUST reveal the text in a selectable field instead, so the reader can copy
+  it manually. Silence on failure is a defect: the reader believes they have it.
+- The export MUST be derived from the artifact's live state at the moment it is
+  invoked, never from a value baked in when the file was written.
+
+### Read-only artifacts
+
+An entry whose `exports` is empty is asserting that its reader produces nothing
+durable — an explainer, a diagram, a deck. That is a legitimate and common case, and
+an empty array is the way to say it deliberately. What is not legitimate is an
+artifact whose reader plainly produces something and whose entry claims otherwise;
+that is the defect this declaration exists to make visible.
+
 ## Accessibility obligations you inherit
 
 The two canonical blocks carry most of this for you. What follows is the part
 that stays yours once they are embedded, plus the rules that decide whether the
 blocks keep working after your own markup lands.
 
-### Color pairings: audited, and three that are prohibited
+### Color pairings: audited, and one that is prohibited
 
 Every foreground/background pairing the kit permits meets WCAG AA — at least
 4.5:1 for normal text (1.4.3), and at least 3:1 for large text and for non-text

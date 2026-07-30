@@ -7,6 +7,10 @@
     "large_diff",
     "operational_flow_change"
   ],
+  "export_kinds": [
+    "prompt",
+    "markdown"
+  ],
   "templates": [
     {
       "id": "implementation-plan",
@@ -16,7 +20,8 @@
       "stage": "draft-pr",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "16-implementation-plan.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
     },
     {
       "id": "spec-explainer",
@@ -26,7 +31,8 @@
       "stage": "draft-pr",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "14-research-feature-explainer.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": []
     },
     {
       "id": "code-approaches",
@@ -36,7 +42,8 @@
       "stage": "draft-pr",
       "trigger": { "any_of": ["competing_approaches"] },
       "source": { "origin": "upstream", "file": "01-exploration-code-approaches.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
     },
     {
       "id": "module-map",
@@ -46,7 +53,8 @@
       "stage": "draft-pr",
       "trigger": { "any_of": ["brownfield_change"] },
       "source": { "origin": "upstream", "file": "04-code-understanding.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
     },
     {
       "id": "pr-writeup",
@@ -56,7 +64,8 @@
       "stage": "final-pr",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "17-pr-writeup.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
     },
     {
       "id": "annotated-diff",
@@ -66,7 +75,8 @@
       "stage": "final-pr",
       "trigger": { "any_of": ["self_review_findings", "large_diff"] },
       "source": { "origin": "upstream", "file": "03-code-review-pr.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
     },
     {
       "id": "flowchart",
@@ -76,7 +86,8 @@
       "stage": "final-pr",
       "trigger": { "any_of": ["operational_flow_change"] },
       "source": { "origin": "upstream", "file": "13-flowchart-diagram.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": []
     },
     {
       "id": "uat-walkthrough",
@@ -86,7 +97,8 @@
       "stage": "final-pr",
       "trigger": { "always": true },
       "source": { "origin": "repository" },
-      "status": "planned"
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
     },
     {
       "id": "visual-designs",
@@ -96,7 +108,8 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "02-exploration-visual-designs.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
     },
     {
       "id": "design-system",
@@ -106,7 +119,8 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "05-design-system.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": []
     },
     {
       "id": "component-variants",
@@ -116,7 +130,8 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "06-component-variants.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": ["prompt", "markdown"]
     },
     {
       "id": "animation-prototype",
@@ -126,7 +141,8 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "07-prototype-animation.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": []
     },
     {
       "id": "interaction-prototype",
@@ -136,7 +152,8 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "08-prototype-interaction.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": []
     },
     {
       "id": "svg-illustrations",
@@ -146,7 +163,8 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "10-svg-illustrations.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": []
     },
     {
       "id": "slide-deck",
@@ -156,7 +174,8 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "09-slide-deck.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": []
     },
     {
       "id": "concept-explainer",
@@ -166,7 +185,8 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "15-research-concept-explainer.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": []
     },
     {
       "id": "status-report",
@@ -176,7 +196,8 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "11-status-report.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": []
     },
     {
       "id": "incident-report",
@@ -186,7 +207,8 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "12-incident-report.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": []
     },
     {
       "id": "triage-board",
@@ -196,7 +218,8 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "18-editor-triage-board.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": ["markdown"]
     },
     {
       "id": "feature-flags",
@@ -206,7 +229,8 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "19-editor-feature-flags.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": ["markdown"]
     },
     {
       "id": "prompt-tuner",
@@ -216,7 +240,8 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "20-editor-prompt-tuner.html" },
-      "status": "planned"
+      "status": "planned",
+      "exports": ["markdown"]
     }
   ]
 }

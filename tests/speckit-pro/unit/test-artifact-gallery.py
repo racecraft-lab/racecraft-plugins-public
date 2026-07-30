@@ -1174,12 +1174,28 @@ class SharedBlockAccessibilityFixtureTests(GalleryFixtureCase):
 # ---------------------------------------------------------------------------
 
 SCHEMA_VERSION = "1.0"
-CATALOG_KEYS = ("schema_version", "signals", "templates")
+CATALOG_KEYS = ("schema_version", "signals", "export_kinds", "templates")
 
-# The eight documented keys, in FR-007's declaration order. Only the *set* is
+# The nine documented keys, in FR-007's declaration order. Only the *set* is
 # asserted: JSON object key order carries no meaning to any consumer, so a rule
 # about ordering would be one no check ever applies.
-ENTRY_KEYS = ("id", "category", "title", "when_to_use", "stage", "trigger", "source", "status")
+ENTRY_KEYS = (
+    "id",
+    "category",
+    "title",
+    "when_to_use",
+    "stage",
+    "trigger",
+    "source",
+    "status",
+    "exports",
+)
+
+# The closed export vocabulary, declared as data in the catalog for the same
+# reason the signal vocabulary is: a consumer reads the declaration rather than
+# a list embedded in a checker. `prompt` carries a reader's conclusion to a
+# coding agent; `markdown` carries it to a pull-request comment or a file.
+EXPORT_KINDS = ("prompt", "markdown")
 
 SEEDED_ENTRY_COUNT = 21
 STAGES = ("draft-pr", "final-pr", "ad-hoc")
@@ -1662,6 +1678,114 @@ def check_b12(gallery_root: Path) -> list[str]:
     ]
 
 
+def check_b13(gallery_root: Path) -> list[str]:
+    """B13 — every entry's ``exports`` is an array drawn from the declared vocabulary.
+
+    The value is a list, its members are strings, each member is declared in the
+    catalog's own ``export_kinds``, and no member repeats. An empty list is
+    valid and is how an entry states that its reader produces nothing durable —
+    that assertion has to be sayable, or every read-only artifact looks like a
+    forgotten one.
+
+    Membership is checked against the catalog's declaration rather than the
+    module constant, for the same reason the signal checks are: a consumer reads
+    the declaration, so the declaration is what has to be right.
+    """
+    catalog, failures = _catalog(gallery_root)
+    if catalog is None:
+        return failures
+    declared = catalog.get("export_kinds")
+    if not isinstance(declared, list):
+        return []  # B1 owns the shape of the declaration itself.
+    allowed = {kind for kind in declared if isinstance(kind, str)}
+    problems: list[str] = []
+    for index, entry in enumerate(catalog.get("templates") or []):
+        if not isinstance(entry, dict):
+            continue
+        where = _usable_id(entry) or f"templates[{index}]"
+        value = entry.get("exports")
+        if not isinstance(value, list):
+            problems.append(
+                _catalog_failure(
+                    f"entry '{where}'",
+                    "key 'exports': must be an array of declared export kinds — an absent or non-array "
+                    "value leaves it unsaid whether the artifact is read-only or simply unfinished",
+                )
+            )
+            continue
+        seen: set[str] = set()
+        for member in value:
+            if not isinstance(member, str):
+                problems.append(
+                    _catalog_failure(
+                        f"entry '{where}'",
+                        f"key 'exports': member {member!r} is not a string",
+                    )
+                )
+                continue
+            if member not in allowed:
+                problems.append(
+                    _catalog_failure(
+                        f"entry '{where}'",
+                        f"key 'exports': '{member}' is not declared in 'export_kinds' — the vocabulary is "
+                        "closed, and a kind no consumer can resolve is worse than none",
+                    )
+                )
+            if member in seen:
+                problems.append(
+                    _catalog_failure(
+                        f"entry '{where}'",
+                        f"key 'exports': '{member}' repeats — a kind is carried once or not at all",
+                    )
+                )
+            seen.add(member)
+    return problems
+
+
+def check_b14(gallery_root: Path) -> list[str]:
+    """B14 — the export vocabulary closes in both directions.
+
+    Every kind declared is carried by at least one entry, and every kind carried
+    is declared. The same property the signal vocabulary holds, enforced the
+    same way and for the same reason: a declared-but-unused kind is dead
+    vocabulary a later author will guess at, and a used-but-undeclared kind is a
+    value no consumer can resolve.
+
+    B13 already rejects an undeclared member per entry. This states the
+    catalog-wide half — the direction B13 structurally cannot see, because it
+    reads one entry at a time.
+    """
+    catalog, failures = _catalog(gallery_root)
+    if catalog is None:
+        return failures
+    declared_raw = catalog.get("export_kinds")
+    if not isinstance(declared_raw, list):
+        return []
+    declared = {kind for kind in declared_raw if isinstance(kind, str)}
+    carried: set[str] = set()
+    for entry in catalog.get("templates") or []:
+        if not isinstance(entry, dict):
+            continue
+        for member in entry.get("exports") or []:
+            if isinstance(member, str):
+                carried.add(member)
+    return [
+        _catalog_failure(
+            "top level",
+            f"key 'export_kinds': '{kind}' is declared but no entry carries it — an unused kind is "
+            "vocabulary a later author has to guess the meaning of",
+        )
+        for kind in sorted(declared.difference(carried))
+    ] + [
+        _catalog_failure(
+            "top level",
+            f"key 'export_kinds': '{kind}' is carried by an entry but is not declared — the vocabulary "
+            "is the declaration, not the union of what entries happen to use",
+        )
+        for kind in sorted(carried.difference(declared))
+    ]
+
+
 GROUP_B_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
     ("B1", check_b1),
     ("B2", check_b2),
@@ -1675,6 +1799,8 @@ GROUP_B_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
     ("B10", check_b10),
     ("B11", check_b11),
     ("B12", check_b12),
+    ("B13", check_b13),
+    ("B14", check_b14),
 )
 
 
@@ -1720,7 +1846,7 @@ class CatalogFixtureCase(GalleryFixtureCase):
     """
 
     def entry(self, index: int, identifier: str, **overrides: object) -> dict:
-        """One conforming entry: the eight keys, in FR-007's declaration order."""
+        """One conforming entry: the nine keys, in FR-007's declaration order."""
         entry: dict = {
             "id": identifier,
             "category": "code-review",
@@ -1734,6 +1860,13 @@ class CatalogFixtureCase(GalleryFixtureCase):
             ),
             "source": {"origin": "upstream", "file": f"{index:02d}-{identifier}.html"},
             "status": "planned",
+            # The first two entries between them consume the whole export
+            # vocabulary, so the conforming case also satisfies B14's closure
+            # check with no unused kind. Later entries declare read-only, which
+            # is the majority case in the real catalog.
+            "exports": (
+                [EXPORT_KINDS[index]] if index < len(EXPORT_KINDS) else []
+            ),
         }
         entry.update(overrides)
         return entry
@@ -1742,6 +1875,7 @@ class CatalogFixtureCase(GalleryFixtureCase):
         return {
             "schema_version": SCHEMA_VERSION,
             "signals": list(FIXTURE_SIGNALS),
+            "export_kinds": list(EXPORT_KINDS),
             "templates": [self.entry(index, identifier) for index, identifier in enumerate(SEEDED_IDS)],
             **overrides,
         }
@@ -1763,7 +1897,7 @@ class CatalogShapeFixtureTests(CatalogFixtureCase):
 
     # -- B1: the top-level keys --
 
-    def test_b1_accepts_exactly_the_three_top_level_keys(self) -> None:
+    def test_b1_accepts_exactly_the_four_top_level_keys(self) -> None:
         self.write_manifest(self.catalog())
 
         self.assertEqual(check_b1(self.gallery), [])
@@ -1826,7 +1960,7 @@ class CatalogShapeFixtureTests(CatalogFixtureCase):
 
     # -- B4: the eight keys --
 
-    def test_b4_accepts_exactly_the_eight_documented_keys(self) -> None:
+    def test_b4_accepts_exactly_the_nine_documented_keys(self) -> None:
         self.write_manifest(self.catalog())
 
         self.assertEqual(check_b4(self.gallery), [])
@@ -2066,6 +2200,70 @@ class CatalogShapeFixtureTests(CatalogFixtureCase):
         failures = check_b12(self.gallery)
         self.assertReports(failures, FIXTURE_ENTRY_ID, "seeded")
         self.assertReports(failures, "flow-chart", "seeded")
+
+    def test_b13_accepts_declared_export_kinds_including_the_empty_case(self) -> None:
+        """The conforming fixture carries both a populated and an empty ``exports``."""
+        catalog = self.catalog()
+        populated = [entry for entry in catalog["templates"] if entry["exports"]]
+        empty = [entry for entry in catalog["templates"] if entry["exports"] == []]
+        self.assertTrue(populated, "fixture must exercise a carried export")
+        self.assertTrue(empty, "fixture must exercise the read-only case")
+        self.write_manifest(catalog)
+
+        self.assertEqual(check_b13(self.gallery), [])
+
+    def test_b13_catches_an_undeclared_kind(self) -> None:
+        catalog = self.catalog()
+        self.entry_at(catalog, FIXTURE_ENTRY_ID)["exports"] = ["csv"]
+        self.write_manifest(catalog)
+
+        self.assertReports(check_b13(self.gallery), FIXTURE_ENTRY_ID, "not declared")
+
+    def test_b13_catches_a_missing_exports_key(self) -> None:
+        """Absence is the defect this key exists to remove.
+
+        Without the key it is unsaid whether the artifact is deliberately
+        read-only or simply unfinished, which is the ambiguity the declaration
+        was added to close.
+        """
+        catalog = self.catalog()
+        del self.entry_at(catalog, FIXTURE_ENTRY_ID)["exports"]
+        self.write_manifest(catalog)
+
+        self.assertReports(check_b13(self.gallery), FIXTURE_ENTRY_ID, "must be an array")
+
+    def test_b13_catches_a_non_array_and_a_repeat(self) -> None:
+        catalog = self.catalog()
+        self.entry_at(catalog, FIXTURE_ENTRY_ID)["exports"] = "prompt"
+        self.entry_at(catalog, SEEDED_IDS[1])["exports"] = ["markdown", "markdown"]
+        self.write_manifest(catalog)
+
+        failures = check_b13(self.gallery)
+        self.assertReports(failures, FIXTURE_ENTRY_ID, "must be an array")
+        self.assertReports(failures, SEEDED_IDS[1], "repeats")
+
+    def test_b14_accepts_a_vocabulary_that_closes(self) -> None:
+        self.write_manifest(self.catalog())
+
+        self.assertEqual(check_b14(self.gallery), [])
+
+    def test_b14_catches_a_declared_kind_no_entry_carries(self) -> None:
+        catalog = self.catalog(export_kinds=[*EXPORT_KINDS, "csv"])
+        self.write_manifest(catalog)
+
+        self.assertReports(check_b14(self.gallery), "csv", "declared but no entry carries it")
+
+    def test_b14_catches_a_carried_kind_the_declaration_omits(self) -> None:
+        """The half B13 structurally cannot see.
+
+        B13 reads one entry at a time, so it catches the undeclared member on
+        that entry. This states the catalog-wide direction: the declaration is
+        the vocabulary, not the union of whatever entries happen to carry.
+        """
+        catalog = self.catalog(export_kinds=["prompt"])
+        self.write_manifest(catalog)
+
+        self.assertReports(check_b14(self.gallery), "markdown", "is not declared")
 
 
 # ---------------------------------------------------------------------------

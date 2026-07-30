@@ -74,6 +74,8 @@ start marker without every artifact having to embed them.
 | B10 | `source` matches one of its two forms exactly; `source.origin` ∈ {`upstream`,`repository`}; `upstream` carries a non-empty `file`, `repository` carries no `file` | malformed attribution; an unrecognized `origin` — which must fail here rather than fall through group G |
 | B11 | `source.file` is unique across the catalog | two entries claiming one upstream file, which FR-020's per-artifact attribution cannot express |
 | B12 | the catalog's identifier set equals the seeded identifier set pinned in the validation | a later spec renaming an identifier — which every other check misses, because renaming the derived file alongside it leaves the catalog and the artifact directory agreeing with each other |
+| B13 | every entry's `exports` is an array whose members are declared in `export_kinds`, with no repeat | an artifact left silent about whether its reader can carry a conclusion out — an absent key cannot be told apart from a deliberate read-only artifact, which is the ambiguity the key exists to close |
+| B14 | the export vocabulary closes in both directions: every declared kind is carried, every carried kind is declared | dead vocabulary a later author has to guess the meaning of, and a kind no consumer can resolve — the catalog-wide half B13 cannot see, because it reads one entry at a time |
 
 **On B9 and the derived path.** FR-019 no longer asks whether the id "equals the
 referenced file stem": with the path composed as `templates/<id>.html` that

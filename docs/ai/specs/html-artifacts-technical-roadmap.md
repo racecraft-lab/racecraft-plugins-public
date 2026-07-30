@@ -235,6 +235,14 @@ Budget result: within budget
 - Manifest rows: implementation-plan + spec-explainer `draft-pr`/always;
   code-approaches `draft-pr`/conditional (competing approaches recorded);
   module-map `draft-pr`/conditional (brownfield).
+- **Export affordances per ART-001 FR-028**, matching each entry's declared
+  `exports`. Three of the four carry `["prompt", "markdown"]` and must implement
+  both: `implementation-plan` and `module-map` export the reader's objections tied
+  to the phase or module they attach to; `code-approaches` exports the chosen
+  approach and the reason. `spec-explainer` is declared read-only (`[]`) and must
+  carry none. This is the review checkpoint the staged workflow exists for, so an
+  artifact here that strands the reader's conclusion in a browser tab defeats the
+  stage.
 
 **Out of Scope:**
 - Generation/authoring logic (ART-007).
@@ -280,6 +288,11 @@ Budget result: within budget
 - Manifest rows: pr-writeup `final-pr`/always; annotated-diff
   `final-pr`/conditional (self-review findings or large diff); flowchart
   `final-pr`/conditional (operational-flow change).
+- **Export affordances per ART-001 FR-028**, matching each entry's declared
+  `exports`. `pr-writeup` and `annotated-diff` carry `["prompt", "markdown"]`: the
+  reviewer's questions and per-hunk objections, exportable either as a
+  pull-request comment for the sweep to read or as an instruction to paste straight
+  into a coding agent. `flowchart` is declared read-only (`[]`) and carries none.
 
 **Out of Scope:**
 - Generation logic and the ready flip (ART-010).
@@ -367,6 +380,14 @@ exceeds the estimate
 **Scope:**
 - One vertical slice of seven sibling ports; editors keep functional
   copy-as-markdown/JSON export buttons (the feedback-loop pattern).
+- **Export affordances per ART-001 FR-028**, matching each entry's declared
+  `exports`. The three editors (`triage-board`, `feature-flags`, `prompt-tuner`)
+  carry `["markdown"]` — their export is configuration data, not an instruction — so
+  the upstream buttons satisfy the obligation and need only re-labelling to the
+  contract's wording. `visual-designs` and `component-variants` carry
+  `["prompt", "markdown"]` and need **new** affordances: the reader is choosing among
+  directions or states, and the choice plus its reason is what must leave the page.
+  The remaining two are declared read-only (`[]`).
 - Branded derivatives of upstream 09 (slide deck), 15 (concept explainer), 11
   (status report), 12 (incident report), 18 (triage board), 19 (feature-flag
   editor), 20 (prompt tuner).
@@ -520,6 +541,13 @@ Budget result: within budget
   → stop-or-proceed.
 - `gh`-based read of unresolved draft-PR comments (including artifact-exported
   markdown blocks); zero unresolved feedback proceeds directly.
+- The sweep reads the **`markdown`** export kind (ART-001 FR-028) — that is what a
+  reader pastes into a pull-request comment, and its shape is what the
+  comment-schema fixtures must parse. The **`prompt`** kind deliberately bypasses
+  this sweep: a reader who pastes it into a coding agent has closed the loop without
+  the round trip, and that is a supported path rather than a gap. The sweep therefore
+  MUST NOT assume every artifact conclusion reaches it, and MUST NOT treat an absent
+  comment as an absent opinion.
 - Substantive items route through the existing category-routed consensus
   machinery to amend spec.md / plan.md / tasks.md; affected artifacts
   regenerate via the ART-007 author; commits pushed.
@@ -570,6 +598,16 @@ Budget result: within budget
   matrix, per-step pass/fail toggles, copy-results-as-markdown export button
   emitting the fixed schema (OQ-5: fixed headings + one checkbox row per step
   ID, mechanically parseable by the review loop).
+- Its catalog entry declares `["prompt", "markdown"]` (ART-001 FR-028), so **both**
+  kinds ship. The `markdown` kind is the fixed results schema above — the auditable
+  record. The `prompt` kind turns a failing run into work: it names the steps that did
+  not pass and asks for a cause or a fix, so a tester who is not the implementer can
+  hand the outcome straight to a coding agent without translating it first. A run
+  where everything passed exports the tick-the-tasks instruction instead.
+- A working reference implementation of both kinds already exists at
+  `specs/art-001-brand-kit-gallery-foundation/.process/acceptance-harness.html`
+  (ART-001's own acceptance harness, which is this same Class-C shape); reuse its
+  clipboard-failure and live-state handling rather than re-deriving them.
 - `uat-runbook-author` → `uat-artifact-author` on both platforms; post-impl
   task list and task-list-canonical reference updated.
 - Markdown runbook path retired from post-implementation; fail-open preserved

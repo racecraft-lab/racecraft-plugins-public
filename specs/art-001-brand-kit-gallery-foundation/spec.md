@@ -114,6 +114,10 @@
   editable home for the same prose. Nothing else belongs at top level — no schema
   pointer (no schema document will exist, and this repository's one such pointer is
   already dangling) and no description.
+  **Amended to four keys by FR-028** — `export_kinds` joins them, declared as data for
+  exactly the reason `signals` is. "Nothing else belongs at top level" was reasoning
+  about schema pointers and descriptions, neither of which carries a vocabulary a
+  consumer must resolve; this key does.
 - **Q: Does the catalog carry a `schema_version`, and in what format?**
   → **A: Yes — `"1.0"`, a `snake_case` key with a string value, first in the
   document.** This matches the repository's two hand-authored version-carrying
@@ -342,9 +346,9 @@ confirm it renders correctly, has no errors, and its theme control works.
   seeded with one entry for each of the 21 planned gallery templates — 20
   derived from upstream templates (4 draft-PR, 3 final-PR, 6 design and
   prototyping, 7 knowledge, report and editor) plus 1 repository-authored UAT
-  walkthrough. Each entry MUST carry exactly eight fields, named
-  `id`, `category`, `title`, `when_to_use`, `stage`, `trigger`, `source`, and
-  `status`: an identifier unique across the catalog and in filename-safe kebab-case
+  walkthrough. Each entry MUST carry exactly nine fields, named
+  `id`, `category`, `title`, `when_to_use`, `stage`, `trigger`, `source`,
+  `status`, and `exports` (the last added by FR-028): an identifier unique across the catalog and in filename-safe kebab-case
   (FR-019), which the artifact's file stem then equals by construction rather than
   by a separate rule; a category drawn from `exploration-planning`, `code-review`, `design`,
   `prototyping`, `diagrams`, `decks`, `research`, `reports`, or `editors`; a title;
@@ -665,7 +669,7 @@ confirm it renders correctly, has no errors, and its theme control works.
   rule rather than by a plain substring search, so that the contract document can
   state the rule in prose without tripping it — a check that fails the document
   which records it would be a self-defeating gate.
-- **FR-019**: Every catalog entry's declared shape MUST be validated: the eight
+- **FR-019**: Every catalog entry's declared shape MUST be validated: the nine
   required keys present with the documented names; `title` and `when_to_use`
   present as **non-empty strings**; `stage` and `category` values within their
   closed sets; `status` either planned or shipped; `source` matching one of its two
@@ -892,6 +896,33 @@ confirm it renders correctly, has no errors, and its theme control works.
   the common failure is not the absence of escaping but escaping for the wrong
   context — a value escaped for HTML text and then written into a script body is not
   protected at all.
+
+- **FR-028**: An artifact whose reader **produces** something while using it — a
+  choice, an objection, or a result — MUST end with an export that carries what they
+  produced out of the browser. The foundation MUST therefore declare a closed export
+  vocabulary as data in the routing catalog, under a top-level `export_kinds` key, and
+  every catalog entry MUST carry an `exports` array drawn from it. The vocabulary is
+  `prompt`, the reader's conclusion phrased as an instruction to a coding agent, and
+  `markdown`, the same conclusion phrased as a record for a pull-request comment or a
+  file. **An empty array is valid and is the required way to state that an artifact is
+  deliberately read-only** — without that, a read-only explainer and an artifact whose
+  export was forgotten are indistinguishable, which is the ambiguity this declaration
+  exists to remove. Validation MUST enforce the array's shape, membership in the
+  declared vocabulary, and absence of repeats, and MUST enforce that the vocabulary
+  closes in both directions exactly as the signal vocabulary does: every kind declared
+  is carried by some entry, and every kind carried is declared. The single-file
+  contract MUST state what an export contains — the reader's conclusion rather than
+  the artifact's content, enough context to act on alone, only what the reader
+  actually produced, and nothing they could not have inspected — and MUST require the
+  affordance be keyboard-operable, report success in text, derive from live state at
+  invocation, and reveal its text in a selectable field when the clipboard is refused,
+  which is the ordinary case over `file://`.
+
+  This requirement is the **foundation half only**: the vocabulary, the per-entry
+  declaration, the validation, and the authoring contract. ART-001 ships no artifact,
+  so no export is implemented here. The per-template affordances belong to the port
+  specs, and the walkthrough's own export belongs to the spec that replaces the UAT
+  runbook.
 
 ### Reviewability Notes *(if applicable)*
 
