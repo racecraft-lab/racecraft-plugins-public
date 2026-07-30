@@ -18,8 +18,8 @@ from typing import Any
 from ..envelope import diagnostic, is_diagnostic, response
 from ..merge_utils import deep_merge
 from ..path_utils import resolves_to_current_python, sha256_text
-from .mutation import empty_mutation, operation_record, resolve_candidate_path, run_mutation_helper, validate_target_path
-from .read_only import find_repo_root, is_relative_to, repo_relative
+from .mutation import empty_mutation, operation_record, run_mutation_helper, validate_target_path
+from .read_only import find_repo_root, is_relative_to, repo_relative, resolve_input_path
 
 INVENTORY_NAME = "install_inventory.json"
 FAKE_HOME_FIXTURE_ROOT = Path("tests") / "speckit-pro" / "unit" / "fixtures"
@@ -1350,7 +1350,7 @@ def install_root_from_inputs(inputs: dict[str, Any], repo_root: Path) -> Path | 
     path_diag = validate_target_path(f"{raw}/.speckit-pro-install-probe", repo_root)
     if path_diag is not None:
         return path_diag
-    return resolve_candidate_path(raw, repo_root)
+    return resolve_input_path(raw, repo_root)
 
 
 def resolve_case_path(raw: str, repo_root: Path) -> Path:
