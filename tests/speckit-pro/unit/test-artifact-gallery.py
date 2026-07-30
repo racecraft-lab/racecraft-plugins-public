@@ -3609,7 +3609,14 @@ CALL_ARGUMENT_WINDOW = 400
 # ``</script``, and no nesting is possible, so the body is delimited rather than
 # parsed. Matching it is what lets the whole body be scanned instead of only the
 # window after a recognized call.
-_SCRIPT_BODY_RE = re.compile(r"(?is)(<script\b[^>]*>)(.*?)(</script\s*>)")
+#
+# The end tag is ``</script`` followed by whitespace, ``/``, or ``>`` — an end tag
+# may carry bogus attributes and still terminate the element, so ``</script foo>``
+# and ``</script\t\nbar>`` both end it. A pattern requiring ``</script\s*>``
+# misses those, and missing the end tag means the body is not scanned at all:
+# a one-token evasion against the whole script pass. ``\b`` is what keeps
+# ``</scriptfoo>`` from matching, since that is not an end tag.
+_SCRIPT_BODY_RE = re.compile(r"(?is)(<script\b[^>]*>)(.*?)(</script\b[^>]*>)")
 
 # XML namespace identifiers. These are compared as strings by a parser and are
 # never fetched, so a namespace constant assigned in script is not a reference.
@@ -4379,6 +4386,36 @@ class ExternalReferenceFixtureTests(ExternalReferenceFixtureCase):
         dropped this position.
         """
         self.write_document(f'<div onclick="fetch(\'https://{FIXTURE_FOREIGN_HOST}/y\')"></div>')
+
+        self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
+
+    def test_an_end_tag_carrying_bogus_attributes_still_ends_the_script(self) -> None:
+        """Found by CodeQL (``py/bad-tag-filter``) against this very change.
+
+        An end tag may carry bogus attributes and still terminate a raw-text
+        element, so ``</script foo>`` ends it. A pattern requiring
+        ``</script\\s*>`` never finds that end tag — and a body whose end is
+        never found is a body never scanned, which is a one-token evasion against
+        the whole script pass.
+        """
+        self.write_document(
+            f'<script>var E = "https://{FIXTURE_FOREIGN_HOST}/x";</script foo>'
+        )
+
+        self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
+
+    def test_an_end_tag_with_whitespace_and_attributes_still_ends_the_script(self) -> None:
+        self.write_document(
+            f'<script>var E = "https://{FIXTURE_FOREIGN_HOST}/y";</script\t\n bar>'
+        )
+
+        self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
+
+    def test_a_name_that_merely_starts_with_script_is_not_an_end_tag(self) -> None:
+        """``</scriptfoo>`` is not an end tag, so the body continues past it."""
+        self.write_document(
+            f'<script>var A = "ok";</scriptfoo> var E = "https://{FIXTURE_FOREIGN_HOST}/z";</script>'
+        )
 
         self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
 
