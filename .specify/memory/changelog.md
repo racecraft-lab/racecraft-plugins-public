@@ -1862,6 +1862,61 @@ deleted. Exact PR titles, merged-at timestamps, merge commits, and head branches
 are recorded in
 `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`.
 
+## 2026-07-30 - ART-001 Post-Merge Archive Cleanup
+
+### ART-001
+
+- PRs: https://github.com/racecraft-lab/racecraft-plugins-public/pull/407 and
+  the follow-up fix
+  https://github.com/racecraft-lab/racecraft-plugins-public/pull/409
+- Titles: `feat(speckit-pro): add the artifact gallery brand kit, routing
+  catalog, and validation` and `fix(speckit-pro): scan artifact script bodies
+  for external references and prohibited constructs`
+- Merged at: `2026-07-30T13:12:39Z` and `2026-07-30T14:43:55Z`
+- Source: `specs/art-001-brand-kit-gallery-foundation`
+- Canonical artifacts: the six-file gallery under
+  `speckit-pro/artifact-gallery/` and its two `dist/` materializations, the
+  payload-completeness gate fix, the regenerated installed-cache proofs, and
+  `tests/speckit-pro/unit/test-artifact-gallery.py`.
+- Governance note: this spec does change the shipped plugin payload — the
+  gallery directory is new shipped content — so the generated artifact contract
+  was part of its merge, not of this cleanup.
+
+ART-001 is the foundation the four template-port specs consume: the Racecraft
+brand kit, the gallery manifest schema, and the single-file-SPA contract. Its
+highest-value output was verification rather than code — seven defects surfaced
+after the implementation was written, the most serious being a fail-silent gap
+in the payload builder that would have shipped every payload without the gallery
+directory at all.
+
+### Manual acceptance discharged before merge
+
+T026 and T027 ran on 2026-07-29 over `file://`: 12 of 12 scenarios passed, none
+unrun. The feature retrospective contradicts itself here — its narrative section
+records the run, its task-execution section still lists both tasks open — and
+the workflow record and the merge both proceeded on the former. Noted, not
+silently reconciled.
+
+### Harness relocation
+
+`.process/acceptance-harness.html` was forward-looking rather than exhaust: it
+is the evidence behind the 12-of-12 result and the reference implementation the
+roadmap directs a later spec to reuse. It moved to
+`docs/ai/specs/.process/ART-001-acceptance-harness.html` before removal, and the
+two references pointing into the spec folder were repointed.
+
+### Known gap carried forward
+
+ART-001 ships no gallery artifacts of its own, so roughly half its validation
+surface runs against synthetic fixtures. Re-running the twelve manual scenarios
+against a real shipped artifact belongs to ART-002.
+
+Detailed recovery and verification evidence:
+
+- `.specify/memory/archive-reports/2026-07-30-art-001-post-merge-hygiene.md`
+
+---
+
 ## 2026-07-30 - CAR-005 Post-Merge Archive Cleanup
 
 ### CAR-005

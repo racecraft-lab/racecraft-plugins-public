@@ -19,7 +19,9 @@ input.
 **Source PRD:** [../../prd-html-artifacts.md](../../prd-html-artifacts.md)
 **Roadmap MOC:** [html-artifacts-roadmap-MOC.md](html-artifacts-roadmap-MOC.md)
 **Spec ID prefix:** `ART-###`
-**Status:** Active; dependency graph approved 2026-07-28; all specs pending
+**Status:** Active; dependency graph approved 2026-07-28; ART-001 is complete
+and archived after PR #407 and its follow-up fix PR #409; ART-002 through
+ART-006 are ready
 
 ---
 
@@ -122,15 +124,15 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| ART-001 | Artifact Brand Kit & Gallery Foundation | 🔄 In Review | [.process/ART-001-workflow.md](.process/ART-001-workflow.md) | PR open; 2 manual scenarios outstanding |
-| ART-002 | Draft-PR Template Set | ⏳ Pending | - | Blocked by ART-001 |
-| ART-003 | Final-PR Template Set | ⏳ Pending | - | Blocked by ART-001 |
-| ART-004 | Gallery Completion: Design & Prototyping | ⏳ Pending | - | Blocked by ART-001 |
-| ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Pending | - | Blocked by ART-001 |
-| ART-006 | Autopilot Staging | ⏳ Pending | - | Ready to scaffold (parallel with ART-001) |
+| ART-001 | Artifact Brand Kit & Gallery Foundation | ✅ Complete / Archived | [.process/ART-001-workflow.md](.process/ART-001-workflow.md) | PR #407 merged with follow-up fix PR #409; the brand kit, gallery manifest, SPA contract, and validator live outside `specs/**`. T026 and T027 ran on 2026-07-29, 12 of 12 manual scenarios passed; the harness is preserved at [.process/ART-001-acceptance-harness.html](.process/ART-001-acceptance-harness.html) |
+| ART-002 | Draft-PR Template Set | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
+| ART-003 | Final-PR Template Set | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
+| ART-004 | Gallery Completion: Design & Prototyping | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
+| ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
+| ART-006 | Autopilot Staging | ⏳ Ready | - | Ready to scaffold; no dependencies |
 | ART-007 | Draft-PR Emission | ⏳ Pending | - | Blocked by ART-002, ART-006 |
 | ART-008 | Feedback Sweep | ⏳ Pending | - | Blocked by ART-007 |
-| ART-009 | UAT Walkthrough Replacement | ⏳ Pending | - | Blocked by ART-001, ART-006 |
+| ART-009 | UAT Walkthrough Replacement | ⏳ Pending | - | Blocked by ART-006 |
 | ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Pending | - | Blocked by ART-003, ART-007, ART-012 |
 | ART-011 | Scaffold Integration | ⏳ Pending | - | Blocked by ART-006 |
 | ART-012 | Implementation-Notes Capture | ⏳ Pending | - | Blocked by ART-006 |
@@ -613,7 +615,7 @@ Budget result: within budget
   hand the outcome straight to a coding agent without translating it first. A run
   where everything passed exports the tick-the-tasks instruction instead.
 - A working reference implementation of both kinds already exists at
-  `specs/art-001-brand-kit-gallery-foundation/.process/acceptance-harness.html`
+  `docs/ai/specs/.process/ART-001-acceptance-harness.html`
   (ART-001's own acceptance harness, which is this same Class-C shape); reuse its
   clipboard-failure and live-state handling rather than re-deriving them.
 - `uat-runbook-author` → `uat-artifact-author` on both platforms; post-impl

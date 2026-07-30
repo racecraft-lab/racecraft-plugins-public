@@ -1,29 +1,24 @@
 {
   "schema_version": "1.0",
-  "spec_id": "CAR-005",
-  "feature_dir": "specs/car-005-availability-fallback-recovery",
-  "branch": "car-005-availability-fallback-recovery",
+  "spec_id": "ART-001",
+  "feature_dir": "specs/art-001-brand-kit-gallery-foundation",
+  "branch": "art-001-brand-kit-gallery-foundation",
   "status": "completed_archived",
-  "active_step": "Archived: post-merge cleanup applied for CAR-005",
-  "updated_at": "2026-07-30T22:15:43Z",
-  "prior_run_note": "The full CAR-005 run record - the operator-ratified two-slice split, the gh-stack delivery, the deferred tasks-mode reviewability gate and the committed evidence chain used in its place, and the post-merge review remediation - remains in the preserved workflow and design-concept files and in git history at merge commits 3ba89fa4bee8b1cc6402b47a473181d3f96eed12 (PR #411) and e31475fa7cb36aed83b76bc63d423bcb10557b97 (PR #412). One defect ships unfixed: claude_route_fallback.py declares POLICY_SCHEMA_PATH and SNAPSHOT_SCHEMA_PATH but reads neither, so resolve() validates the report it emits and not the policy or snapshot it accepts. All eighteen committed corpus policies and snapshots satisfy both contracts, so the correction changes no pinned report; it is a follow-up change against main.",
-  "atomicity_route": {
-    "route": "one-navigable-PR",
-    "releasable": true,
-    "note": "classifier abstain bucket; the operator-ratified 2-slice split held and was delivered as a stacked chain"
-  },
+  "active_step": "Archived: post-merge cleanup applied for ART-001",
+  "updated_at": "2026-07-30T23:19:28Z",
+  "prior_run_note": "The full ART-001 run record - 34 tasks, the seven defects verification found after the code was written, and the payload-builder fail-silent fix - remains in the preserved workflow and design-concept files and in git history at merge commits c4498dd0ce0a85618b8e923108682c4818c083f6 (PR #407) and a6cc2b21bad2fa0514eacc4032f296ddd332cc3c (PR #409). Manual acceptance was discharged before merge: T026 and T027 ran 2026-07-29 with 12 of 12 scenarios passing, and the harness behind that result is preserved at docs/ai/specs/.process/ART-001-acceptance-harness.html. The feature retrospective contradicted itself on T026/T027 - narrative section closed, task-execution section still open - and the workflow record and the merge both proceeded on the closed reading. ART-001 ships no gallery artifacts of its own, so roughly half its validation surface runs against synthetic fixtures; re-running the manual scenarios against a real shipped artifact belongs to ART-002. The prior archive sweep for CAR-005 is recorded at .specify/memory/archive-reports/2026-07-30-car-005-post-merge-hygiene.md.",
   "archive_sweep": {
     "status": "applied",
-    "cleanup_branch": "chore/archive-car-005-post-merge",
+    "cleanup_branch": "chore/archive-art-001-post-merge",
     "archived_specs": [
       {
-        "spec_id": "CAR-005",
+        "spec_id": "ART-001",
         "pull_requests": [
-          411,
-          412
+          407,
+          409
         ],
-        "merge_commit": "e31475fa7cb36aed83b76bc63d423bcb10557b97",
-        "report": ".specify/memory/archive-reports/2026-07-30-car-005-post-merge-hygiene.md"
+        "merge_commit": "c4498dd0ce0a85618b8e923108682c4818c083f6",
+        "report": ".specify/memory/archive-reports/2026-07-30-art-001-post-merge-hygiene.md"
       }
     ]
   },
