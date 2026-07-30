@@ -30,5 +30,6 @@ the slice artifacts in the body below.
 - [plan.md](plan.md)
 - [data-model.md](data-model.md)
 - [research.md](research.md)
+- [checklists/data-integrity.md](checklists/data-integrity.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

@@ -483,7 +483,10 @@ Q10's "slice 2 touches no slice-1 file" reading therefore yields to **append-onl
 additivity**: slice 2 appends and alters nothing. The same rule governs the simulator
 module and the unit test. **Schemas are excluded** — all three land complete in slice 1
 and slice 2 modifies no schema file, so the report schema needs no append-only
-allowance (see the enum-placement revision note below). The literal no-touch reading
+allowance. (The enum-placement decision that produced this exclusion is not a dated
+revision note here — it lives in spec.md FR-019/FR-019a and in the Consensus Resolution
+Log rows 2b/2e of the workflow file, where Round 1 `[codebase]` and Round 2 `[spec]`
+consensus jointly overturned an earlier slice-2 answer.) The literal no-touch reading
 was unachievable for the remaining three artifacts anyway — the corpus is one file, the
 simulator is one module, and slice 1 cannot pre-register a test path that does not yet
 exist.

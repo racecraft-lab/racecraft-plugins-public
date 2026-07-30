@@ -623,7 +623,8 @@ account for; it is worth carrying into future autopilot runs.
 
 **G3 gate:** ✅ PASS — `validate-gate G3`, `plan.md exists with 0 unresolved markers`.
 Markers across all four artifacts: 0 `NEEDS CLARIFICATION`, 0 `[Gap]`, 0 `CRITICAL`, 0
-`TODO`/`FIXME`. Privacy: 0 occurrences of `/Users/` or `/home/`. Baseline re-run during
+`TODO`/`FIXME`. Privacy: zero absolute home-directory paths in any authored artifact,
+confirmed by `test-privacy-scan` 10/10. Baseline re-run during
 planning: full suite **5345/5345**.
 
 **Step 7b — plan-phase reviewability budget (advisory).** `estimate-reviewable-loc` on
@@ -748,10 +749,39 @@ Focus on CAR-005 Model Availability, Fallback, and Recovery Simulation requireme
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| data-integrity | | | |
+| data-integrity | 57 | 12 found / 12 closed / 0 remaining | New FR-014a, FR-015a, FR-019b; revised FR-006, FR-027, FR-033a, Assumptions; data-model.md §2–§5 |
 | error-handling | | | |
 | llm-integration | | | |
 | **Total** | | | |
+
+#### data-integrity — the 12 gaps resolved to 7 root causes
+
+Zero unresolved for consensus, so the paired consensus task was skipped per protocol.
+Output at `specs/car-005-availability-fallback-recovery/checklists/data-integrity.md`.
+Several of these were defects in text the **orchestrator** authored during Clarify.
+
+| Root cause | Why it mattered | Fix |
+|-----------|-----------------|-----|
+| **Canonical serialization was gestured at, not pinned** (3 gaps) | The repository has **eight** `canonical_json` definitions and **three append a trailing newline**; six copies under `unit/` re-declare the function locally. The sharp risk: the established comparison shape re-serializes *both* sides, so a local copy that disagreed with the simulator would **cancel** the discrepancy instead of failing — a green test over a wrong simulator. Float rendering was also unaddressed. | New **FR-014a** names the serializer, forbids the trailing newline, requires assertions over the simulator's own `serialize_report` with no local re-declaration, and records the integer-only numeric invariant. Stale Assumptions bullet implying a fixed *indentation* corrected. |
+| **Sub-reason exclusivity is not uniform** (2 gaps) | FR-006 (orchestrator-authored) claimed "mutually exclusive and total" as two structural properties. Totality holds; exclusivity does **not** hold uniformly — `platform_route_changed` reads a separate array and can co-occur with any of the first three. Its disjointness comes *only* from being evaluated last, so the ordering is **load-bearing**, not the determinism nicety FR-006 implied. The corpus consequence was unstated: a case pinning `platform_route_changed` must bind its alias exactly as pinned *and* list the model available, or an earlier predicate wins and the hand-pinned report is wrong. | FR-006 splits structural from order-derived exclusivity and states the authoring precondition. No member and no ordering changed. |
+| **The two enums shipped with unequal protection** (1 gap) | The resolution enum gets exact set equality read live (FR-017a). The policy-violation enum had only FR-019a, which proves *one* out-of-vocabulary code fails — that shows the field is constrained, not constrained *to those five*. Adding a sixth member or dropping one would have failed no test. | New **FR-019b**: exact set equality by JSON pointer, failing both directions. It also justifies why this test *may* declare members in-file where FR-017a forbids transcription — the roadmap names its four rejections in prose only, never as code tokens, so the schema is the sole token-bearing artifact and the test-side literal *is* the second witness. |
+| **Case-ID uniqueness was prose-only** (2 gaps) | FR-033b's append-only seam and SC-007 both depend on unique stable case IDs, but no schema validates the corpus envelope and a tree-wide search found no `case_id` uniqueness assertion for any existing fixture corpus. | New **FR-015a**: slice 1 asserts uniqueness, non-emptiness, self-containment, and absence of cross-case references. It states plainly that cross-slice **stability is not mechanically enforceable** — the claim spans two states, and the replay test cannot detect it because a case whose inputs *and* pinned report both moved still replays consistently. An honest limitation rather than a false guarantee. |
+| **Blanket `additionalProperties: false` would have made the snapshot schema unsatisfiable** (2 gaps) | data-model.md asserted `false` "at every object". Followed literally, the four snapshot maps keyed by alias/model ID would reject **every** entry, since each data key is by definition an additional property — no non-empty snapshot could validate. It also already contradicted the deliberately-open `details`. | Three-class closure rule: record → `false`; open-keyed map → `additionalProperties: <value schema>` + `propertyNames`; deliberately open → `true` (`details` only). Plus a concrete per-map table. Keys are constrained so an empty-string alias cannot become a silently unmatchable entry. |
+| **The budget-maxima negative proof sat in the wrong slice** (1 gap) | FR-027 (orchestrator-authored) filed the out-of-range fixture under slice 2's "*behavioural* half" — but it proves *validation*, not behaviour. That left slice 1 shipping a `maximum` whose enforcement was unproven inside its own diff: exactly the condition FR-019a exists to prevent for the enums, and which FR-033b forbids by requiring slice 1 to pass alone. | FR-027: the negative proof travels with the constraint into slice 1, constructed inline. Slice 2 keeps the behavioural half. Seam tables in FR-033a and plan.md updated. Verified the engine rejects rather than clamps. |
+| **Action-vocabulary adequacy was unverifiable** (1 gap) | Eleven members as a flat list with no mapping to the ten diagnostic codes, so sufficiency against `minItems: 1`/`maxItems: 3` could not be checked, and a case could pair any code with any action and still satisfy every keyword. | Explicit code-to-action table. All ten codes covered; maximum is 2 (`no_safe_route`, carrying a forward remedy plus the mandated verbatim rollback) against a cap of 3 — nothing near the runner's truncation boundary. |
+
+**Verification:** gaps closed in 1 loop. `count-markers all` → all zero. Layer 1
+1428/1428 and Layer 4 3731/3731, both matching the pre-change baseline. Privacy scan
+10/10.
+
+**Side effects flagged rather than buried:** the spec went from 46 to 49 FR identifiers,
+raising the advisory slice estimate from 1,110 to 1,185 with its 3-slice conclusion
+unchanged. FR-027's reallocation moves one test obligation into slice 1 — it completes
+the Clarify-settled US1 tagging rather than disturbing it.
+
+**Incidental finding, fixed by the orchestrator:** the design concept carried a dangling
+cross-reference to a nonexistent "enum-placement revision note". The substance lives in
+FR-019/FR-019a and Consensus rows 2b/2e; the reference now points there.
 
 ### Addressing Gaps
 

@@ -223,8 +223,30 @@ cohort specs inherit proven rejection semantics.
   - **`platform_route_changed`** — the snapshot declares a platform-side route change
     for the pinned tuple.
 
-  These four are mutually exclusive and **total** over the FR-002 projection: any
-  unavailable pinned tuple matches exactly one. `alias_unresolved` is a fourth member
+  These four are **total** over the FR-002 projection — any unavailable pinned tuple
+  matches at least one — and the ordered walk yields exactly one. Their exclusivity is
+  **not uniform**, and the difference is load-bearing rather than cosmetic:
+  - The first three are **structurally disjoint**, because their predicates partition
+    the state of a single snapshot field. The alias is either unbound
+    (`alias_unresolved`), bound to some other model (`alias_repointed`), or bound
+    exactly as pinned (`model_absent`'s precondition). No snapshot satisfies two.
+  - `platform_route_changed` reads a **separate** snapshot field, so it can co-occur
+    with any of the first three. Its disjointness is produced by the evaluation
+    order — it is tested last and only reached when all three prior predicates miss.
+    The order is therefore the mechanism that makes the vocabulary single-valued, not
+    a tie-breaking nicety, and it MUST be structural in the simulator (a staged call
+    graph) rather than a comment that a later edit can reorder.
+
+  **Consequence for the corpus, which MUST be honoured when the case is authored:**
+  a case intended to pin `platform_route_changed` MUST bind its alias exactly as the
+  route pins it *and* list the pinned resolved model among the available models, so
+  the three earlier predicates all miss. A snapshot that merely declares a
+  platform-side route change while also repointing the alias, or while omitting the
+  model, resolves to `alias_repointed` or `model_absent` instead — and because the
+  case's expected report is pinned by hand, that mismatch surfaces as a replay
+  failure whose stated cause looks unrelated to how the snapshot was built.
+
+  `alias_unresolved` is a fourth member
   rather than a fold into `model_absent` because it is a reachable input that neither
   other member can describe — `alias_repointed`'s `details` must name a
   pinned-versus-observed model pair and there is no observed model, and
@@ -329,6 +351,32 @@ cohort specs inherit proven rejection semantics.
   report, and the test MUST assert that two successive simulator runs over
   identical inputs are byte-identical to each other and byte-identical to the
   pinned report under canonical JSON serialization. [US1]
+- **FR-014a**: "Canonical JSON serialization" MUST resolve to a single named in-tree
+  function rather than to a restated convention. Every unpinned dimension admits two
+  conforming implementations that disagree byte-for-byte, which would make FR-014
+  unfalsifiable. The serializer is `canonical_json` from the Layer 6
+  successor-freeze library — `sort_keys=True`, `separators=(",", ":")`,
+  `ensure_ascii=False`, `allow_nan=False` — which pins key order, whitespace,
+  unicode escaping, and non-finite rejection in one place. Three further dimensions
+  MUST hold, none of which that call signature settles: [US1]
+  - **No trailing newline.** The serialized report ends at its closing brace. This
+    MUST be stated rather than assumed, because the dimension is genuinely divergent
+    in-tree: the repository carries eight `canonical_json` definitions and three of
+    them append a newline. A silent mismatch here is the most likely way FR-014
+    fails.
+  - **One serializer, not two.** The simulator and the pinning test MUST reach the
+    same function by import. The test MUST assert over the string the simulator's own
+    `serialize_report` returns, and MUST NOT re-declare a local `canonical_json` —
+    which is the dominant habit in the unit tree, where all six existing occurrences
+    re-declare it and two of those six append a newline. Re-serializing the parsed
+    report on both sides of the comparison would *cancel* a serializer discrepancy
+    rather than catch it, leaving a green test over a simulator whose real output
+    differs.
+  - **No floating-point field.** Every numeric field in the report is an integer —
+    the declared budget caps and the actual counts — so `repr`-dependent float
+    rendering is unreachable rather than merely unlikely. `allow_nan=False` rejects
+    non-finite values but does not pin float formatting, so the absence of float
+    fields is recorded as an invariant instead of a hope.
 - **FR-015**: The scenario corpus MUST be a single self-contained file under the
   Layer 6 efficiency fallback fixtures directory, organized as a list of cases
   where each case bundles its own policy, synthetic snapshot, overrides,
@@ -340,6 +388,31 @@ cohort specs inherit proven rejection semantics.
   sorted** — matching the existing pinned-replay precedent — so an appended case
   never reorders an existing one and never perturbs an existing case's pinned bytes.
   [US1] [US2]
+- **FR-015a**: Case identity and self-containment MUST be **mechanically asserted**,
+  not left to prose. FR-033b's append-only seam rule and SC-007's read-one-case
+  guarantee both depend on these properties, and the corpus has no schema of its own
+  to enforce them — FR-016 permits exactly three schema documents and none validates
+  the corpus envelope. Slice 1's test MUST therefore assert, over the whole `cases[]`
+  array: [US1] [US2]
+  - **`case_id` uniqueness** — the count of distinct `case_id` values equals the
+    count of cases. Nothing in the repository asserts this today for any fixture
+    corpus, so it is a new obligation rather than an inherited one.
+  - **`case_id` non-emptiness and shape** — each is a non-empty string, so a case
+    cannot be silently keyed by `null` or `""`.
+  - **Per-case self-containment** — every case carries its own `policy`, `snapshot`,
+    `overrides` (explicitly `null` when the case declares none, never absent), and
+    `expected_report`. Declared budgets are reached through `policy` per FR-003.
+  - **No cross-case reference** — no case's payload names another case's `case_id`,
+    so a case can be read and replayed in isolation as SC-007 requires.
+
+  **Cross-slice stability is deliberately *not* claimed as mechanically enforced.**
+  Uniqueness and self-containment above are checkable from a single committed state;
+  "slice 2 altered no slice-1 case" is a statement about two states and is enforced by
+  FR-033b plus diff review, not by any assertion. The replay test cannot substitute:
+  if slice 2 re-pinned a slice-1 case's inputs *and* its expected report together, the
+  test would still pass because both sides of the comparison moved. Recording which
+  half is mechanical and which is review-borne prevents a reviewer from trusting a
+  guarantee that does not exist.
 - **FR-016**: New JSON Schema contracts MUST land platform-scoped in the Layer 6
   efficiency Claude contracts directory and MUST match the existing schema style
   there (JSON Schema draft 2020-12 with the established `$id` convention). No
@@ -453,6 +526,27 @@ cohort specs inherit proven rejection semantics.
   validation rather than passing through"), so it is provable with zero corpus cases;
   the positive-emission obligation belongs to SC-001, which is satisfied at feature
   completion rather than per-slice. [US1]
+- **FR-019b**: **Slice 1** MUST additionally assert **exact set equality** on the
+  policy-violation enum, read live by JSON pointer
+  (`$defs/policyViolationDiagnostic/properties/code/enum`), against the five members
+  FR-019 fixes. Drift MUST fail in both directions — a sixth member and a dropped
+  member both fail. FR-019a alone is insufficient: proving that one out-of-vocabulary
+  code fails validation shows the field is constrained, not that it is constrained to
+  *these five*. Without FR-019b a sixth member could be added, or one of the five
+  silently removed, and no test in the suite would fail — whereas the
+  route-resolution enum already has exactly this guarantee from FR-017a, so the two
+  closed vocabularies would otherwise ship with unequal protection. [US1]
+  Unlike FR-017a, this test **does** declare its five expected members in the test
+  file, and that is correct rather than a violation of the read-live discipline. The
+  two cases are inverses. FR-017a compares two independently committed artifacts —
+  the schema and the roadmap — so transcribing either one collapses two witnesses
+  into one and absorbs the drift the test exists to catch. The policy-violation
+  vocabulary has **no** independent committed authority: the roadmap names its four
+  rejections in prose (`Reject fallback loops, unqualified adjacent models,
+  generic-agent substitution, and silent inherit materialization`) and never as
+  code tokens, and the fifth member `unqualified_override` is this spec's own
+  addition. The schema is the only artifact carrying the tokens, so a test-side
+  literal is the second witness, and it is what makes drift detectable at all. [US1]
 - **FR-020**: A policy whose fallback chain revisits an already-attempted route
   MUST be rejected with `fallback_loop`, and the walk MUST terminate without
   repeating that route. [US2]
@@ -497,10 +591,20 @@ cohort specs inherit proven rejection semantics.
   same schema-authoring act as declaring the field. Splitting them would make
   slice 2 reopen a slice-1 schema for a one-keyword change, which FR-033b forbids.
   The *behavioural* half stays in slice 2: FR-026 (simulator enforces the caps and
-  reports actual counts), FR-028 (the exhaustion case), and the out-of-range negative
-  fixture that proves validation rejects rather than clamps. Honest cost of this
-  allocation, recorded: slice 1 declares budget constraints it validates but does not
-  yet enforce behaviourally. That is contained inside a contract FR-003 mandates for
+  reports actual counts) and FR-028 (the exhaustion case).
+  The **negative validation proof travels with the constraint into slice 1**, by the
+  same reasoning FR-019a applies to enum closure: an out-of-range budget failing
+  schema validation is a property of the slice-1 schema, provable the moment that
+  schema exists and provable with zero corpus cases. Filing it under "the behavioural
+  half" mis-classified it on this requirement's own terms — it proves *validation*
+  rejects, which is not behaviour — and would have left slice 1 shipping a ceiling
+  whose enforcement is unproven inside its own diff, exactly the condition FR-019a
+  exists to prevent for the enums and that FR-033b forbids by requiring slice 1 to be
+  complete and passing alone. Slice 1's test therefore constructs an out-of-range
+  declared budget **inline**, in the FR-019a manner, and asserts it fails validation;
+  it is not a corpus case, because every corpus case must validate. Honest cost of
+  this allocation, recorded: slice 1 declares budget constraints it validates but does
+  not yet enforce behaviourally. That is contained inside a contract FR-003 mandates for
   slice 1 regardless, which is why it is the lesser evil against making slice 2 reopen
   a slice-1 schema for a one-keyword change. The co-location itself is universal in
   this directory — every numeric constraint shares the object literal with its field's
@@ -553,7 +657,7 @@ cohort specs inherit proven rejection semantics.
   | `layer6-efficiency/contracts-claude/route-resolution-report.schema.json` | create — `outcome` discriminator with `allOf`/`if`/`then` conditional requiredness; two diagnostic `$defs` each with its own inline `code` enum unioned by `oneOf`; the four-member sub-reason enum; the closed `remediationAction` enum (`minItems: 1`, `maxItems: 3`); attempted-route list; effective dispatch tuple; `optional_helper`; `release_claim_eligible` | **unchanged — must stay untouched** |
   | `layer6-efficiency/lib/claude_route_fallback.py` | create — canonical serialization, snapshot projection intake, preferred-then-fallback walk, five-code semantics, `details` sub-reasons | extend — structural-validation pre-pass, budget cap enforcement with attempt counting, override handling, helper-unavailable path, no-safe-route remediation |
   | `layer6-efficiency/fixtures-fallback/fallback-scenario-corpus.json` | create — `cases[]` holding the US1 resolution-failure cases with pinned reports | append the US2 cases to the end of `cases[]`; existing case positions and pinned bytes unchanged |
-  | `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity, roadmap parity test | append the US2 test functions |
+  | `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity over the simulator's own serializer, roadmap parity test, set equality on **both** closed enums, inline negative tests for out-of-vocabulary code and out-of-range budget, corpus case-ID uniqueness and self-containment | append the US2 test functions |
   | `suite-manifest.json` | modify — append **one** entry to the layer 4 `scripts[]` array | **unchanged — must stay untouched** |
   | `docs-site/src/content/docs/reference/tests.md` | regenerate (generated; excluded from review) | regenerate |
 
@@ -738,9 +842,14 @@ cohort specs inherit proven rejection semantics.
 - The synthetic cast covers three role classes — a required executor, a bounded
   analyst, and an optional helper — which is sufficient to express every mandated
   scenario without adding more synthetic agents.
-- Canonical JSON serialization means sorted keys and a fixed separator and
-  indentation convention, consistent with the existing pinned-report precedent in
-  the Layer 6 controls fixtures.
+- Canonical JSON serialization is no longer carried as an assumption: FR-014a pins it
+  to a named in-tree function. Note that the resolved serializer emits **minimal
+  separators and no indentation**, so an earlier reading of this assumption as
+  implying a fixed *indentation* convention was wrong — a report serialized with
+  `indent` set would not be byte-identical to one serialized without it. The corpus
+  file on disk stays human-readable and indented; that is a property of the committed
+  fixture's own formatting, not of the serialized report, and the two never meet
+  because both sides of every byte comparison pass through the same serializer.
 - The scoping-time estimate (770 reviewable LOC, 2 slices) and the roadmap's authored
   budget (257, 1 slice) are both forward guesses from coarse signals, and **neither
   measures this surface**: with 0 production files the repository's declared-LOC

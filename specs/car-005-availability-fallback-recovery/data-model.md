@@ -21,10 +21,34 @@ built to avoid (spec FR-017a; research D1).
 | `environment-snapshot-projection.schema.json` | `https://racecraft.dev/schemas/car-005/environment-snapshot-projection.schema.json` | each corpus case's `snapshot` |
 | `route-resolution-report.schema.json` | `https://racecraft.dev/schemas/car-005/route-resolution-report.schema.json` | each case's `expected_report` and every simulator output |
 
-All three declare `$schema` draft 2020-12, `additionalProperties: false` at every
-object, and `schema_version: {"const": "1.0.0"}`. No `$ref` leaves its own
-`#/$defs/` (FR-016). No fourth shared-definitions document exists; helpers are
-re-declared locally, which is what all eleven existing documents do (research D5).
+All three declare `$schema` draft 2020-12 and `schema_version: {"const": "1.0.0"}`.
+No `$ref` leaves its own `#/$defs/` (FR-016). No fourth shared-definitions document
+exists; helpers are re-declared locally, which is what all eleven existing documents
+do (research D5).
+
+### Object closure rule — three classes, not one blanket setting
+
+Closure is `additionalProperties: false` for **record** objects only. Stating it as a
+blanket rule for *every* object would be wrong in two places, and wrong in opposite
+directions, so the rule is written out per class:
+
+| Class | Setting | Members |
+| --- | --- | --- |
+| **Record** — a fixed, known field set | `additionalProperties: false` | every root; every `$defs` in §1 and §3 (`agentIdentity`, `route`, `declaredBudgets`, `attemptedRoute`, both diagnostic `$defs`, `remediation`, `dispatchTuple`, `reportedBudgets`, `optionalHelper`, `override`); each corpus case's validated members |
+| **Open-keyed map** — keys are data, not schema | `additionalProperties: <value schema>` plus `propertyNames` | the four §2 snapshot maps |
+| **Deliberately open** | `additionalProperties: true` | `details` only (§3) |
+
+`false` on an open-keyed map would reject **every** entry, because each data key is by
+definition an additional property — the snapshot schema would be unsatisfiable for any
+non-empty snapshot. The map form is the directory's established shape, not an
+exception invented here: `score-bundle.schema.json` `$defs/ballot/properties/`
+`criterion_scores` is an open-keyed map declared with `additionalProperties: <schema>`,
+and `propertyNames` already constrains map keys in three of the eleven documents.
+
+`details` is the single deliberate `true`, justified in §3. Recording it in this table
+is what keeps it distinguishable from an oversight — an unclosed nested object is
+otherwise indistinguishable from a forgotten one, which is precisely where drift
+enters.
 
 ---
 
@@ -128,6 +152,29 @@ independent within a case.
 probe is unavailable, because FR-008 forbids treating probe absence as probe
 success and an absent key is exactly the ambiguity that invites it.
 
+**Map closure.** Four of these fields are open-keyed maps whose keys are aliases or
+model IDs — data, not schema — so they take the map form from the closure table above,
+never `additionalProperties: false`:
+
+| Map | `propertyNames` | `additionalProperties` (the value schema) |
+| --- | --- | --- |
+| `alias_bindings` | `{"type": "string", "minLength": 1}` | `{"type": "string", "minLength": 1}` |
+| `supported_efforts` | `{"type": "string", "minLength": 1}` | `{"type": "array", "items": {<ladder enum>}, "uniqueItems": true}` |
+| `probe_availability` | `{"type": "string", "minLength": 1}` | `{"type": "boolean"}` |
+| `exact_invocation_probe` | `{"type": "string", "minLength": 1}` | `{"enum": ["success", "failure", "absent"]}` |
+
+Keys are constrained by `propertyNames` rather than left unconstrained, so an empty-string
+alias or model ID is rejected at validation instead of becoming a silently unmatchable
+map entry. The key sets cannot be closed to an `enum` — the aliases and model IDs are
+per-case synthetic values, and a cross-document constraint tying snapshot keys to
+policy values is not expressible here (the same limit FR-006 records for
+`alias_unresolved`).
+
+`platform_route_changes` is an **array** of two-field records, not a map, so it is
+closed with `additionalProperties: false` per record and carries
+`uniqueItems: true` — a tuple listed twice would carry no additional meaning, and the
+engine implements `uniqueItems` (research D2).
+
 Object maps are safe for determinism: `canonical_json` sorts keys (research D1),
 so no dict-insertion order reaches the serialized bytes.
 
@@ -228,10 +275,20 @@ and their inline enums are declared in slice 1:
 | `supported_efforts` | array of ladder efforts | `effort_unsupported` (FR-007) |
 | `route_id` | string | probe diagnostics |
 
-The four sub-reasons are mutually exclusive and total over the projection, and the
-simulator evaluates them in the FR-006 order — `alias_unresolved`,
-`alias_repointed`, `model_absent`, `platform_route_changed` — so exactly one
-applies and replay stays byte-identical.
+The four sub-reasons are total over the projection and the simulator evaluates them in
+the FR-006 order — `alias_unresolved`, `alias_repointed`, `model_absent`,
+`platform_route_changed` — so exactly one applies and replay stays byte-identical.
+
+Their exclusivity is **not uniform**, which is why the order is structural rather than
+decorative (FR-006). The first three partition the state of `alias_bindings` against
+`available_models` and cannot co-occur. `platform_route_changed` reads the separate
+`platform_route_changes` array, so it *can* co-occur with any of the first three and is
+disjoint only because it is evaluated last. Concretely, for the
+`platform-route-changed` case to pin the sub-reason its name promises, its snapshot must
+bind the alias exactly as the route pins it and list the pinned model in
+`available_models`; otherwise an earlier predicate matches first and the case's pinned
+report is wrong. The staged private helpers make this order a call-graph property, so a
+future edit cannot reorder it by moving a line.
 
 **`$defs/policyViolationDiagnostic`** — identical envelope; its
 `properties/code/enum` holds exactly `fallback_loop`,
@@ -276,6 +333,35 @@ Unset the unqualified subagent-model override before making release claims.
 the imperative rendering of the roadmap's own guidance at
 `claude-agent-routing-technical-roadmap.md:536-537` and `:902-903` (research D10).
 The `no_safe_route` diagnostic's `actions` must include it.
+
+**Adequacy of the vocabulary against the bounds.** `minItems: 1` obliges every
+diagnostic to carry an action and `maxItems: 3` caps it, so the eleven members are only
+sufficient if every code has at least one apt action and no code needs a fourth. Both
+hold, and the mapping is recorded here rather than left to the implementer, so a
+reviewer can check sufficiency without re-deriving it:
+
+| Code | Action members | Count |
+| --- | --- | --- |
+| `preferred_model_unavailable` | Re-probe the environment and confirm the pinned alias and resolved model. | 1 |
+| `effort_unsupported` | Declare an effort the model's probed capability set supports. | 1 |
+| `capability_probe_unavailable` | Re-run capability probing before trusting this route. | 1 |
+| `treatment_probe_failed` | Inspect the exact-invocation probe evidence for this route. | 1 |
+| `no_safe_route` | Widen the declared fallback list with qualified routes. **+** Roll back to the previous plugin release. | 2 |
+| `fallback_loop` | Remove the repeated route from the fallback chain. | 1 |
+| `unqualified_adjacent_model` | Replace the adjacent model with a qualified route. | 1 |
+| `generic_agent_substitution` | Restore the named agent in the fallback route. | 1 |
+| `silent_inherit_materialization` | Declare the model and effort explicitly on the route. | 1 |
+| `unqualified_override` | Unset the unqualified subagent-model override before making release claims. | 1 |
+
+All ten codes across both closed enums are covered; the maximum is 2, against a cap of
+3, so no code is near the truncation boundary and none would be silently shortened by
+the real runner. The mapping is one-to-one except for `no_safe_route`, which is the
+only code carrying both a forward remedy and the mandated rollback.
+
+Each corpus case pins its diagnostic's `actions` array explicitly, so this mapping
+constrains *authoring* rather than adding a runtime rule — but leaving it unrecorded
+would let a case pair, say, `fallback_loop` with the rollback action and still satisfy
+every schema keyword.
 
 > **Documented deviation.** FR-012a names this vocabulary
 > `$defs.remediationAction`. It is instead declared inline at
@@ -343,6 +429,21 @@ a fourth would have to be `$ref`-ed across files, which the engine refuses. Its
 envelope is asserted structurally by the unit test; its three payload members are
 validated against the three committed schemas.
 
+Because no schema governs the envelope, the properties FR-033b and SC-007 lean on are
+asserted in the test instead of being assumed (FR-015a): `case_id` values are unique,
+non-empty strings; every case carries `policy`, `snapshot`, `overrides` (explicitly
+`null` when none) and `expected_report`; and no case's payload names another case's
+`case_id`. `uniqueItems` could have expressed the first of these if the corpus were
+schema-validated, but it is not, and adding a fourth document to gain one keyword is
+what FR-016 forbids.
+
+**Cross-slice stability is review-borne, not asserted.** Uniqueness and
+self-containment are properties of one committed state and are checkable; "slice 2 did
+not alter a slice-1 case" spans two states. The replay test cannot detect it, because a
+case whose inputs *and* pinned report both moved still replays consistently. FR-033b
+plus the stacked-diff review is the enforcement, and saying so keeps the guarantee from
+being over-read.
+
 ### Case allocation
 
 Slice 1 (User Story 1) — nine cases covering FR-004 through FR-011 and the four
@@ -361,8 +462,9 @@ Slice 2 (User Story 2) — eight cases appended at the tail:
 `no-safe-route-report-only`.
 
 Seventeen cases cover every scenario SC-001 enumerates. The out-of-range budget
-fixture is **not** a corpus case — it must fail schema validation, so it is
-constructed inline in the slice-2 test, the same technique FR-019a uses.
+fixture is **not** a corpus case — it must fail schema validation, and every corpus
+case must validate — so it is constructed inline in the **slice-1** test, the same
+technique FR-019a uses, travelling with the `maximum` keyword it proves (FR-027).
 
 ---
 
@@ -375,6 +477,17 @@ network, wall-clock, or randomness input (FR-001).
 Imported read-only rather than restated (research D1): `validate_instance`,
 `load_contract`, `CONTRACT_ROOT`, `ControlContractError` from
 `claude_policy_controls`; `canonical_json` from `claude_successor_freeze`.
+
+**The unit test imports the same `canonical_json`, and re-declares nothing** (FR-014a).
+This is a deliberate break with local habit: all six existing `canonical_json`
+occurrences under `unit/` define their own copy, and two of those six append a trailing
+newline while the library function does not. A local copy here would be a second
+serializer, and because the pinning comparison passes the pinned report through the same
+local copy, a discrepancy against the simulator's real output would cancel rather than
+fail. The test therefore asserts over the string `serialize_report` itself returns.
+Serialized reports carry **no trailing newline** and **no floating-point value** — the
+only numeric fields are the integer budget caps and counts — so neither dimension is
+left to a serializer default.
 
 **Slice 1** — module constants for both closed vocabularies and the sub-reason
 order; `RouteFallbackError(AssertionError)`; a `_require(condition, message)`
