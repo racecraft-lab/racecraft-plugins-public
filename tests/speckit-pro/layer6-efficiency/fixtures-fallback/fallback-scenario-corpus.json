@@ -1,0 +1,793 @@
+{
+  "schema_version": "1.0.0",
+  "fixture_kind": "route_fallback_replay",
+  "description": "Pinned route-resolution replay cases. Each case bundles its own policy, synthetic environment snapshot, environment overrides, and fully pinned expected report, so one case can be read and replayed without opening another. Case order is DECLARATION order and is never sorted: an appended case must never reorder an existing one or perturb an existing case's pinned bytes. Agent names are synthetic and fixture- prefixed; no shipped agent name appears anywhere in this file. Every case's policy validates against route-policy.schema.json, its snapshot against environment-snapshot-projection.schema.json, and its expected_report against route-resolution-report.schema.json.",
+  "cases": [
+    {
+      "case_id": "preferred-absent-fallback-selected",
+      "purpose": "An environment that no longer offers the preferred route's pinned resolved model, but does offer the declared fallback's.",
+      "proves": "The walk attempts the preferred route first, records it as rejected with a model_absent sub-reason, then selects the first compatible declared fallback and reports that fallback's tuple as the effective dispatch tuple.",
+      "requirements": ["FR-004", "FR-006", "FR-013"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-primary",
+          "alias": "alias-primary",
+          "resolved_model": "model-primary",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-secondary",
+            "alias": "alias-secondary",
+            "resolved_model": "model-secondary",
+            "effort": "high",
+            "qualified": true
+          }
+        ],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-secondary"],
+        "alias_bindings": {"alias-primary": "model-primary", "alias-secondary": "model-secondary"},
+        "supported_efforts": {"model-secondary": ["low", "medium", "high"]},
+        "probe_availability": {"model-secondary": true},
+        "exact_invocation_probe": {"model-secondary": "success"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-primary", "model-secondary"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "resolved",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-primary",
+            "alias": "alias-primary",
+            "resolved_model": "model-primary",
+            "effort": "high",
+            "disposition": "rejected"
+          },
+          {
+            "route_id": "fallback-secondary",
+            "alias": "alias-secondary",
+            "resolved_model": "model-secondary",
+            "effort": "high",
+            "disposition": "selected"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "preferred_model_unavailable",
+            "message": "Route preferred-primary pins a tuple the environment does not offer (model_absent).",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The route's pinned alias and resolved model no longer match the environment.",
+              "actions": ["Re-probe the environment and confirm the pinned alias and resolved model."]
+            },
+            "details": {
+              "alias": "alias-primary",
+              "pinned_resolved_model": "model-primary",
+              "route_id": "preferred-primary",
+              "sub_reason": "model_absent"
+            }
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 1, "retries": 0, "candidate_routes": 2}
+        },
+        "release_claim_eligible": true,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0},
+        "effective_dispatch_tuple": {
+          "agent": "fixture-required-executor",
+          "alias": "alias-secondary",
+          "resolved_model": "model-secondary",
+          "effort": "high"
+        }
+      }
+    },
+    {
+      "case_id": "fable-alias-model-absent",
+      "purpose": "An environment in which the preferred route names the real fable family alias, the alias still binds exactly as the route pins it, but the pinned resolved model is no longer offered — and the policy declares no fallback at all.",
+      "proves": "The fable-unavailable scenario the routing roadmap subordinates to preferred-model-absent lands on the model_absent sub-reason, and a preferred rejection over an empty fallback list leads directly to a report-only no-safe-route outcome carrying the verbatim rollback action.",
+      "requirements": ["FR-006", "FR-010", "FR-029"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-bounded-analyst", "role_class": "bounded_analyst"},
+        "preferred_route": {
+          "route_id": "preferred-fable",
+          "alias": "fable",
+          "resolved_model": "model-fable-1",
+          "effort": "xhigh",
+          "qualified": true
+        },
+        "fallback_routes": [],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-fable-legacy"],
+        "alias_bindings": {"fable": "model-fable-1"},
+        "supported_efforts": {"model-fable-legacy": ["low", "medium", "high", "xhigh", "max"]},
+        "probe_availability": {"model-fable-legacy": true},
+        "exact_invocation_probe": {"model-fable-legacy": "success"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-fable-1", "model-fable-legacy"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-bounded-analyst",
+        "outcome": "no_safe_route",
+        "unresolved_agent": "fixture-bounded-analyst",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-fable",
+            "alias": "fable",
+            "resolved_model": "model-fable-1",
+            "effort": "xhigh",
+            "disposition": "rejected"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "preferred_model_unavailable",
+            "message": "Route preferred-fable pins a tuple the environment does not offer (model_absent).",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The route's pinned alias and resolved model no longer match the environment.",
+              "actions": ["Re-probe the environment and confirm the pinned alias and resolved model."]
+            },
+            "details": {
+              "alias": "fable",
+              "pinned_resolved_model": "model-fable-1",
+              "route_id": "preferred-fable",
+              "sub_reason": "model_absent"
+            }
+          },
+          {
+            "code": "no_safe_route",
+            "message": "No declared route resolved for agent fixture-bounded-analyst.",
+            "severity": "error",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "No declared route resolved, so this environment cannot support a release claim.",
+              "actions": [
+                "Widen the declared fallback list with qualified routes.",
+                "Roll back to the previous plugin release."
+              ]
+            }
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 0, "retries": 0, "candidate_routes": 1}
+        },
+        "release_claim_eligible": false,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0}
+      }
+    },
+    {
+      "case_id": "alias-unresolved",
+      "purpose": "An environment whose alias-to-resolved-model table carries no binding at all for the preferred route's pinned alias, even though the model the route pins is itself offered.",
+      "proves": "An unbound alias is its own sub-reason rather than a fold into model_absent: the diagnostic names the alias and no model, because none was ever resolved. It also holds the evaluation order down — the pinned model IS available here, so a vocabulary that checked availability first would mis-report this input.",
+      "requirements": ["FR-006"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-unbound",
+          "alias": "alias-unbound",
+          "resolved_model": "model-unbound",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-stable",
+            "alias": "alias-stable",
+            "resolved_model": "model-stable",
+            "effort": "medium",
+            "qualified": true
+          }
+        ],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-stable", "model-unbound"],
+        "alias_bindings": {"alias-stable": "model-stable"},
+        "supported_efforts": {
+          "model-stable": ["low", "medium", "high"],
+          "model-unbound": ["low", "medium", "high"]
+        },
+        "probe_availability": {"model-stable": true, "model-unbound": true},
+        "exact_invocation_probe": {"model-stable": "success", "model-unbound": "success"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-stable", "model-unbound"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "resolved",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-unbound",
+            "alias": "alias-unbound",
+            "resolved_model": "model-unbound",
+            "effort": "high",
+            "disposition": "rejected"
+          },
+          {
+            "route_id": "fallback-stable",
+            "alias": "alias-stable",
+            "resolved_model": "model-stable",
+            "effort": "medium",
+            "disposition": "selected"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "preferred_model_unavailable",
+            "message": "Route preferred-unbound pins a tuple the environment does not offer (alias_unresolved).",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The route's pinned alias and resolved model no longer match the environment.",
+              "actions": ["Re-probe the environment and confirm the pinned alias and resolved model."]
+            },
+            "details": {
+              "alias": "alias-unbound",
+              "route_id": "preferred-unbound",
+              "sub_reason": "alias_unresolved"
+            }
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 1, "retries": 0, "candidate_routes": 2}
+        },
+        "release_claim_eligible": true,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0},
+        "effective_dispatch_tuple": {
+          "agent": "fixture-required-executor",
+          "alias": "alias-stable",
+          "resolved_model": "model-stable",
+          "effort": "medium"
+        }
+      }
+    },
+    {
+      "case_id": "alias-repointed",
+      "purpose": "An environment whose alias table still binds the preferred route's alias, but to a resolved model other than the one the route pins — the shape provider-side version drift, per-family redefinition, and allowlist substitution all present as.",
+      "proves": "The diagnostic carries the pinned-versus-observed model pair, which is what distinguishes this sub-reason from the other three. The report also stays release_claim_eligible: the route that will dispatch is a declared qualified fallback whose model was present, and the route-scoped drift is carried by the rejected attempt entry and its sub-reason rather than by the report-scoped flag.",
+      "requirements": ["FR-006", "FR-024a"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-repointed",
+          "alias": "alias-drifting",
+          "resolved_model": "model-pinned",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-exact",
+            "alias": "alias-exact",
+            "resolved_model": "model-exact",
+            "effort": "high",
+            "qualified": true
+          }
+        ],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-exact", "model-observed", "model-pinned"],
+        "alias_bindings": {"alias-drifting": "model-observed", "alias-exact": "model-exact"},
+        "supported_efforts": {
+          "model-exact": ["low", "medium", "high"],
+          "model-observed": ["low", "medium", "high"],
+          "model-pinned": ["low", "medium", "high"]
+        },
+        "probe_availability": {"model-exact": true, "model-observed": true, "model-pinned": true},
+        "exact_invocation_probe": {
+          "model-exact": "success",
+          "model-observed": "success",
+          "model-pinned": "success"
+        },
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-exact", "model-observed", "model-pinned"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "resolved",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-repointed",
+            "alias": "alias-drifting",
+            "resolved_model": "model-pinned",
+            "effort": "high",
+            "disposition": "rejected"
+          },
+          {
+            "route_id": "fallback-exact",
+            "alias": "alias-exact",
+            "resolved_model": "model-exact",
+            "effort": "high",
+            "disposition": "selected"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "preferred_model_unavailable",
+            "message": "Route preferred-repointed pins a tuple the environment does not offer (alias_repointed).",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The route's pinned alias and resolved model no longer match the environment.",
+              "actions": ["Re-probe the environment and confirm the pinned alias and resolved model."]
+            },
+            "details": {
+              "alias": "alias-drifting",
+              "observed_resolved_model": "model-observed",
+              "pinned_resolved_model": "model-pinned",
+              "route_id": "preferred-repointed",
+              "sub_reason": "alias_repointed"
+            }
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 1, "retries": 0, "candidate_routes": 2}
+        },
+        "release_claim_eligible": true,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0},
+        "effective_dispatch_tuple": {
+          "agent": "fixture-required-executor",
+          "alias": "alias-exact",
+          "resolved_model": "model-exact",
+          "effort": "high"
+        }
+      }
+    },
+    {
+      "case_id": "platform-route-changed",
+      "purpose": "An environment that declares a platform-side route change against the preferred route's pinned tuple while leaving the binding wholly intact: the alias binds EXACTLY as the route pins it and the pinned resolved model IS among the available models.",
+      "proves": "The fourth sub-reason, reached only because the three alias-table predicates all miss. That construction is load-bearing rather than incidental — a snapshot that also repointed the alias would resolve to alias_repointed and one that omitted the model to model_absent, and because this report is pinned by hand either slip would surface as a replay failure whose stated cause looks unrelated to how the snapshot was built. It also shows the probe counter rising for a route this sub-reason rejects: the model is available and bound, so its probe state IS consulted.",
+      "requirements": ["FR-006", "FR-024a"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-route-changed",
+          "alias": "alias-changed",
+          "resolved_model": "model-changed",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-intact",
+            "alias": "alias-intact",
+            "resolved_model": "model-intact",
+            "effort": "high",
+            "qualified": true
+          }
+        ],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-changed", "model-intact"],
+        "alias_bindings": {"alias-changed": "model-changed", "alias-intact": "model-intact"},
+        "supported_efforts": {
+          "model-changed": ["low", "medium", "high"],
+          "model-intact": ["low", "medium", "high"]
+        },
+        "probe_availability": {"model-changed": true, "model-intact": true},
+        "exact_invocation_probe": {"model-changed": "success", "model-intact": "success"},
+        "platform_route_changes": [{"alias": "alias-changed", "resolved_model": "model-changed"}],
+        "available_models_allowlist": ["model-changed", "model-intact"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "resolved",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-route-changed",
+            "alias": "alias-changed",
+            "resolved_model": "model-changed",
+            "effort": "high",
+            "disposition": "rejected"
+          },
+          {
+            "route_id": "fallback-intact",
+            "alias": "alias-intact",
+            "resolved_model": "model-intact",
+            "effort": "high",
+            "disposition": "selected"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "preferred_model_unavailable",
+            "message": "Route preferred-route-changed pins a tuple the environment does not offer (platform_route_changed).",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The route's pinned alias and resolved model no longer match the environment.",
+              "actions": ["Re-probe the environment and confirm the pinned alias and resolved model."]
+            },
+            "details": {
+              "alias": "alias-changed",
+              "observed_resolved_model": "model-changed",
+              "pinned_resolved_model": "model-changed",
+              "route_id": "preferred-route-changed",
+              "sub_reason": "platform_route_changed"
+            }
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 2, "retries": 0, "candidate_routes": 2}
+        },
+        "release_claim_eligible": true,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0},
+        "effective_dispatch_tuple": {
+          "agent": "fixture-required-executor",
+          "alias": "alias-intact",
+          "resolved_model": "model-intact",
+          "effort": "high"
+        }
+      }
+    },
+    {
+      "case_id": "effort-unsupported",
+      "purpose": "An environment offering the preferred route's model and binding its alias exactly as pinned, but supporting only the lower three rungs of the effort ladder while the route declares max.",
+      "proves": "Rejection at preflight, with the diagnostic naming BOTH the declared effort and the model's supported set. The divergence from documented runtime behaviour is deliberate and is pinned here: the runtime would silently degrade to the highest supported level at or below the declared one, and a route whose effort silently degrades is not the tuple the policy pinned. It also shows probe state still being consulted for a route an earlier check already rejected, since effort and probe support are independent grounds.",
+      "requirements": ["FR-007", "FR-007a"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-max-effort",
+          "alias": "alias-capped",
+          "resolved_model": "model-capped",
+          "effort": "max",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-supported-effort",
+            "alias": "alias-ladder",
+            "resolved_model": "model-ladder",
+            "effort": "medium",
+            "qualified": true
+          }
+        ],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-capped", "model-ladder"],
+        "alias_bindings": {"alias-capped": "model-capped", "alias-ladder": "model-ladder"},
+        "supported_efforts": {
+          "model-capped": ["low", "medium", "high"],
+          "model-ladder": ["low", "medium", "high"]
+        },
+        "probe_availability": {"model-capped": true, "model-ladder": true},
+        "exact_invocation_probe": {"model-capped": "success", "model-ladder": "success"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-capped", "model-ladder"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "resolved",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-max-effort",
+            "alias": "alias-capped",
+            "resolved_model": "model-capped",
+            "effort": "max",
+            "disposition": "rejected"
+          },
+          {
+            "route_id": "fallback-supported-effort",
+            "alias": "alias-ladder",
+            "resolved_model": "model-ladder",
+            "effort": "medium",
+            "disposition": "selected"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "effort_unsupported",
+            "message": "Route preferred-max-effort declares effort max, which model model-capped does not support.",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The route's declared effort is outside the model's supported effort set.",
+              "actions": ["Declare an effort the model's probed capability set supports."]
+            },
+            "details": {
+              "declared_effort": "max",
+              "route_id": "preferred-max-effort",
+              "supported_efforts": ["low", "medium", "high"]
+            }
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 2, "retries": 0, "candidate_routes": 2}
+        },
+        "release_claim_eligible": true,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0},
+        "effective_dispatch_tuple": {
+          "agent": "fixture-required-executor",
+          "alias": "alias-ladder",
+          "resolved_model": "model-ladder",
+          "effort": "medium"
+        }
+      }
+    },
+    {
+      "case_id": "capability-probe-unavailable",
+      "purpose": "An environment marking capability probing for the preferred route's model with an explicit false rather than an absent key, and recording no exact-invocation outcome for it at all. This is where the frozen runtime-capability programme's undetermined observation lands.",
+      "proves": "Probe unavailability rejects the route, and probe absence is never read as probe success — an observation from which no availability claim derives is at least as weak as an absent probe, so treating it as selectable would be the substitution the requirement forbids. The absent exact-invocation outcome is not itself a probe failure, so exactly one diagnostic is emitted.",
+      "requirements": ["FR-008", "FR-002a"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-unprobed",
+          "alias": "alias-unprobed",
+          "resolved_model": "model-unprobed",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-probed",
+            "alias": "alias-probed",
+            "resolved_model": "model-probed",
+            "effort": "high",
+            "qualified": true
+          }
+        ],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-probed", "model-unprobed"],
+        "alias_bindings": {"alias-probed": "model-probed", "alias-unprobed": "model-unprobed"},
+        "supported_efforts": {
+          "model-probed": ["low", "medium", "high"],
+          "model-unprobed": ["low", "medium", "high"]
+        },
+        "probe_availability": {"model-probed": true, "model-unprobed": false},
+        "exact_invocation_probe": {"model-probed": "success", "model-unprobed": "absent"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-probed", "model-unprobed"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "resolved",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-unprobed",
+            "alias": "alias-unprobed",
+            "resolved_model": "model-unprobed",
+            "effort": "high",
+            "disposition": "rejected"
+          },
+          {
+            "route_id": "fallback-probed",
+            "alias": "alias-probed",
+            "resolved_model": "model-probed",
+            "effort": "high",
+            "disposition": "selected"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "capability_probe_unavailable",
+            "message": "Route preferred-unprobed has capability probing unavailable for model model-unprobed.",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "Capability probing is unavailable for the route's model.",
+              "actions": ["Re-run capability probing before trusting this route."]
+            },
+            "details": {"route_id": "preferred-unprobed"}
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 2, "retries": 0, "candidate_routes": 2}
+        },
+        "release_claim_eligible": true,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0},
+        "effective_dispatch_tuple": {
+          "agent": "fixture-required-executor",
+          "alias": "alias-probed",
+          "resolved_model": "model-probed",
+          "effort": "high"
+        }
+      }
+    },
+    {
+      "case_id": "treatment-probe-failed",
+      "purpose": "An environment in which the preferred route's model is available, bound, effort-capable, and probe-available, but its exact-invocation probe outcome is a failure. This is where the frozen programme's hard_rejection observation lands.",
+      "proves": "An exact-invocation failure rejects the route and it is never selected: the route appears in the attempt list with disposition rejected and the walk continues to the next declared fallback.",
+      "requirements": ["FR-009"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-probe-failure",
+          "alias": "alias-failing",
+          "resolved_model": "model-failing",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-probe-success",
+            "alias": "alias-passing",
+            "resolved_model": "model-passing",
+            "effort": "high",
+            "qualified": true
+          }
+        ],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-failing", "model-passing"],
+        "alias_bindings": {"alias-failing": "model-failing", "alias-passing": "model-passing"},
+        "supported_efforts": {
+          "model-failing": ["low", "medium", "high"],
+          "model-passing": ["low", "medium", "high"]
+        },
+        "probe_availability": {"model-failing": true, "model-passing": true},
+        "exact_invocation_probe": {"model-failing": "failure", "model-passing": "success"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-failing", "model-passing"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "resolved",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-probe-failure",
+            "alias": "alias-failing",
+            "resolved_model": "model-failing",
+            "effort": "high",
+            "disposition": "rejected"
+          },
+          {
+            "route_id": "fallback-probe-success",
+            "alias": "alias-passing",
+            "resolved_model": "model-passing",
+            "effort": "high",
+            "disposition": "selected"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "treatment_probe_failed",
+            "message": "Route preferred-probe-failure has an exact-invocation probe failure for model model-failing.",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The exact-invocation probe failed for the route's model.",
+              "actions": ["Inspect the exact-invocation probe evidence for this route."]
+            },
+            "details": {"route_id": "preferred-probe-failure"}
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 2, "retries": 0, "candidate_routes": 2}
+        },
+        "release_claim_eligible": true,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0},
+        "effective_dispatch_tuple": {
+          "agent": "fixture-required-executor",
+          "alias": "alias-passing",
+          "resolved_model": "model-passing",
+          "effort": "high"
+        }
+      }
+    },
+    {
+      "case_id": "preferred-probe-success-clean",
+      "purpose": "An undegraded environment: the preferred route's alias binds exactly as pinned, its model is offered, its declared effort is supported, capability probing is available, and its exact-invocation probe succeeds. A second qualified fallback is declared and never reached.",
+      "proves": "The clean-success path emits NO resolution diagnostic — an empty diagnostics array is a conforming report, which is why the array declares no minItems — while still recording the effective dispatch tuple, omitting unresolved_agent, and reading release_claim_eligible true. The unreached fallback also shows candidate_routes counting routes ENTERED rather than routes declared: the policy declares two and the walk enters one.",
+      "requirements": ["FR-011", "FR-013"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-clean",
+          "alias": "alias-clean",
+          "resolved_model": "model-clean",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-clean-spare",
+            "alias": "alias-clean-spare",
+            "resolved_model": "model-clean-spare",
+            "effort": "high",
+            "qualified": true
+          }
+        ],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-clean", "model-clean-spare"],
+        "alias_bindings": {"alias-clean": "model-clean", "alias-clean-spare": "model-clean-spare"},
+        "supported_efforts": {
+          "model-clean": ["low", "medium", "high"],
+          "model-clean-spare": ["low", "medium", "high"]
+        },
+        "probe_availability": {"model-clean": true, "model-clean-spare": true},
+        "exact_invocation_probe": {"model-clean": "success", "model-clean-spare": "success"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-clean", "model-clean-spare"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "resolved",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-clean",
+            "alias": "alias-clean",
+            "resolved_model": "model-clean",
+            "effort": "high",
+            "disposition": "selected"
+          }
+        ],
+        "diagnostics": [],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 1, "retries": 0, "candidate_routes": 1}
+        },
+        "release_claim_eligible": true,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0},
+        "effective_dispatch_tuple": {
+          "agent": "fixture-required-executor",
+          "alias": "alias-clean",
+          "resolved_model": "model-clean",
+          "effort": "high"
+        }
+      }
+    }
+  ]
+}
