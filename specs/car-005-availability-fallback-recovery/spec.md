@@ -256,7 +256,22 @@ cohort specs inherit proven rejection semantics.
   `https://racecraft.dev/schemas/car-005/<name>.schema.json` `$id`, and **no document
   may use a `$ref` that leaves its own `#/$defs/`**; cross-document `$ref` resolution
   is prohibited in this contracts directory. Filenames MUST be capability-named, never
-  spec-ID-named. All three land in slice 1. [US1]
+  spec-ID-named. All three land in slice 1. No fourth shared-definitions schema may be
+  introduced: `digest`- and `binding`-style helpers are re-declared locally in all
+  eleven existing documents, and there is no cross-file `$ref` anywhere in the
+  directory. [US1]
+- **FR-016a**: Enums MUST be declared **inline at their point of use**, not as bare
+  named `$defs` members. No bare-enum `$defs` exists anywhere in this contracts
+  directory; every enum in all eleven documents sits at either
+  `/properties/<field>/enum` or `/$defs/<objectShape>/properties/<field>/enum`.
+  Accordingly the resolution report MUST express its two closed enums as **two
+  diagnostic-entry `$defs`, each carrying its own inline `code` enum**, unioned by a
+  `oneOf` where the report's diagnostics array is declared —
+  `$defs/resolutionDiagnostic/properties/code/enum` and
+  `$defs/policyViolationDiagnostic/properties/code/enum`. This reuses the
+  `oneOf`-over-sibling-variants idiom the directory already licenses for multi-shape
+  documents, and it gives FR-017a a stable JSON pointer to exactly the five
+  route-resolution codes. [US1]
 - **FR-017**: A structural test MUST enforce the resolution enum against the
   roadmaps in two distinct assertions, so drift on either platform fails
   visibly rather than silently stranding the Codex twin: [US1]
@@ -264,7 +279,11 @@ cohort specs inherit proven rejection semantics.
     resolution-report schema's route-resolution enum and the five codes the
     **Claude** routing roadmap pins. Drift in either direction MUST fail — a
     missing member and an extra member both fail. The Claude roadmap is
-    authoritative for this platform's enum.
+    authoritative for this platform's enum. The test MUST read the enum **live** from
+    the committed schema by JSON pointer
+    (`$defs/resolutionDiagnostic/properties/code/enum`) and MUST NOT transcribe its
+    members into the test file — a test that restated the enum would absorb the very
+    drift it exists to catch.
   - **FR-017b**: The test MUST pin the known cross-platform divergence as data
     rather than prose: the four shared members (`preferred_model_unavailable`,
     `effort_unsupported`, `treatment_probe_failed`, `no_safe_route`) are
@@ -284,13 +303,20 @@ cohort specs inherit proven rejection semantics.
   enum whose members are exactly `fallback_loop`, `unqualified_adjacent_model`,
   `generic_agent_substitution`, `silent_inherit_materialization`, and
   `unqualified_override`. [US2]
-  This enum MUST land in slice 2 as an additive `$defs/policyViolationCode` member of
-  the slice-1 `route-resolution-report.schema.json`, together with widening that
-  schema's diagnostic `code` field to a two-member `oneOf` over the two closed enums.
-  It MUST NOT be pre-declared in slice 1, where no case can emit it and SC-003 could
-  not be proven for it inside slice 1's own diff. It MUST NOT be a separate schema
-  document, because cross-document `$ref` resolution is prohibited in this contracts
-  directory (FR-016) — a separate document could only be referenced illegally. [US2]
+  This enum MUST be declared in **slice 1**, in `route-resolution-report.schema.json`,
+  alongside the route-resolution enum — even though no slice-1 corpus case can emit a
+  policy-violation code. Declaring a closed vocabulary in full while most members are
+  unexercised is the established practice in this contracts directory, not a review
+  smell: `score-bundle.schema.json:88-89` declares a 12-member `failure_plane` and a
+  36-member `failure_code` enum, of which at most 4 members are exercised by any
+  shipped fixture. Declaring both enums in slice 1 also means slice 2 modifies **no
+  schema file at all** — strictly stronger than FR-033b's append-only rule — and it
+  is what makes FR-012 (tagged [US1]) fully satisfiable by the slice-1 contract, since
+  FR-012 requires `code` to be drawn from *either* of this feature's two closed enums.
+  It MUST NOT be a separate schema document: cross-document `$ref` resolution is
+  prohibited here (FR-016), so a separate document could only be referenced illegally,
+  and a second document would force the enum to be restated — the exact drift the
+  read-enums-live discipline exists to prevent. [US1]
 - **FR-020**: A policy whose fallback chain revisits an already-attempted route
   MUST be rejected with `fallback_loop`, and the walk MUST terminate without
   repeating that route. [US2]
@@ -331,7 +357,13 @@ cohort specs inherit proven rejection semantics.
   allocation, recorded: slice 1 declares budget constraints it validates but does not
   yet enforce behaviourally. That is contained inside a contract FR-003 mandates for
   slice 1 regardless, which is why it is the lesser evil against making slice 2 reopen
-  a slice-1 schema for a one-keyword change.
+  a slice-1 schema for a one-keyword change. The co-location itself is universal in
+  this directory — every numeric constraint shares the object literal with its field's
+  `type`, with zero counterexamples. Recorded caveat: bounding a `max_*` budget field
+  from **above** with `maximum` has no exact precedent here (the existing budget
+  precedent bounds such fields from below with `minimum`, because there the field's
+  value *is* the ceiling), so the keyword choice is this feature's own decision even
+  though its placement follows convention.
 - **FR-028**: The corpus MUST include a budget-exhaustion case proving the cap
   with a declared budget of one. [US2]
 - **FR-029**: When the preferred route and every declared fallback are rejected,
@@ -361,7 +393,7 @@ cohort specs inherit proven rejection semantics.
   | ---- | ------- | ------- |
   | `layer6-efficiency/contracts-claude/route-policy.schema.json` | create — route shape, ordered fallbacks, declared budget fields **and their schema maxima** | unchanged |
   | `layer6-efficiency/contracts-claude/environment-snapshot-projection.schema.json` | create | unchanged |
-  | `layer6-efficiency/contracts-claude/route-resolution-report.schema.json` | create — diagnostics envelope, `$defs.resolutionCode` (the five codes), attempted-route list, effective dispatch tuple | extend `$defs` with `policyViolationCode` and widen the diagnostic `code` to accept either enum |
+  | `layer6-efficiency/contracts-claude/route-resolution-report.schema.json` | create — diagnostics envelope carrying **both** closed enums, attempted-route list, effective dispatch tuple, release-claim eligibility | **unchanged — must stay untouched** |
   | `layer6-efficiency/lib/claude_route_fallback.py` | create — canonical serialization, snapshot projection intake, preferred-then-fallback walk, five-code semantics, `details` sub-reasons | extend — structural-validation pre-pass, budget cap enforcement with attempt counting, override handling, helper-unavailable path, no-safe-route remediation |
   | `layer6-efficiency/fixtures-fallback/fallback-scenario-corpus.json` | create — `cases[]` holding the US1 resolution-failure cases with pinned reports | append the US2 cases to the end of `cases[]`; existing case positions and pinned bytes unchanged |
   | `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity, roadmap parity test | append the US2 test functions |
@@ -380,7 +412,11 @@ cohort specs inherit proven rejection semantics.
   rewrite, reorder, rename, or re-pin anything slice 1 committed: no slice-1
   `case_id`, input, or pinned expected report may change, and no slice-1 function
   signature may change. Slice 1 MUST be complete and passing on its own, with
-  nothing stubbed or `TODO`-marked for a later slice. If a slice-2 finding requires
+  nothing stubbed or `TODO`-marked for a later slice. **Schemas are out of scope for
+  this rule entirely**: all three land complete in slice 1 and slice 2 modifies no
+  schema file, preserving the directory's unbroken invariant that no contract document
+  has ever been edited after its introducing commit. Slice 2's additive surface is
+  therefore exactly three files — the simulator module, the corpus, and the unit test. If a slice-2 finding requires
   changing slice-1 content, that is evidence the slice-1 contract was wrong: the fix
   MUST land on slice 1's branch and the chain MUST be restacked — it MUST NOT be
   absorbed into slice 2's diff. [US1] [US2]

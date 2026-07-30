@@ -474,13 +474,37 @@ alone — item 4 to `[spec]` (which project decision yields) and item 2 to
 `[codebase]` (what the schema convention shows).
 
 **Subagent delivery caveat (affects how this run is executed, not its outcome).**
-Subagents in this session run detached. A named background agent's final text is
-**not** returned to the orchestrator — it must explicitly call `SendMessage(to: "main")`.
-The Specify and first two Clarify executors completed and went idle without
-sending, so their prose was lost even though the Specify agent's file output
-(`spec.md`) landed correctly and was validated directly by the parent. Every
-subsequent dispatch in this run carries an explicit "finish by calling SendMessage
-to main" instruction.
+Subagents in this session run detached, and delivery depends on **whether the
+dispatch passed a `name`**:
+
+- **Unnamed** `Agent(...)` dispatches deliver correctly — the orchestrator receives
+  the agent's full final output in the completion notification. Clarify Session 1's
+  executor was dispatched this way and returned a complete, well-cited question set.
+- **Named** dispatches do **not** deliver. The agent completes, emits an
+  `idle_notification`, and its final text is never returned. Four named agents
+  (Specify, two Clarify executors, and the Session 1 `[spec]` consensus analyst) all
+  went idle without delivering.
+
+**Correction to the orchestrator's first diagnosis.** The orchestrator initially
+concluded that named agents fail because they omit a required
+`SendMessage(to: "main")` call, and added that instruction to subsequent prompts. That
+diagnosis was wrong: the Round 1 `[codebase]` analyst reported that **no `SendMessage`
+tool exists in the subagent environment at all** — `select:SendMessage` returns no
+match there. Subagents therefore *cannot* message the orchestrator, and the added
+instruction was impossible to follow. The real mechanism is simply that an unnamed
+dispatch's final output is returned by the harness while a named dispatch's is not.
+The `doctor` agent's report arrived because that agent was reached through a different
+path, not because it obeyed an instruction the others ignored.
+
+Nothing was lost substantively: the Specify agent's file output (`spec.md`) landed
+correctly and was validated directly by the parent, and the Session 1 `[spec]`
+analyst's confirmation was redundant against an executor answer already carrying six
+independently cited reasons. But real wall-clock was spent waiting on reports that
+were never going to arrive.
+
+**Rule adopted for the remainder of this run: dispatch every subagent WITHOUT a
+`name`.** This is a session-level behaviour that the skill's prompt templates do not
+account for; it is worth carrying into future autopilot runs.
 
 ---
 
@@ -901,7 +925,10 @@ mandatory human-review stop applies to them.
 | # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
 |---|------|----------------------|------------|-------|---------|------------|---------------|
 | 1 | Clarify | S1-Q4: one corpus file or two? (the Q9/Q10 conflict) | [spec] | 1 | executor high-confidence, analyst confirmation pending | **Q9 holds.** One corpus file; slice 2 appends at the tail of `cases[]` and alters nothing. The literal "slice 2 touches no slice-1 file" reading is unachievable and yields to append-only additivity. Applied to FR-015, FR-033b/c + design-concept revision note | clarify-executor; spec-context-analyst (Round 1, in flight) |
-| 2 | Clarify | S1-Q2: schema count and where the policy-violation enum lives | [codebase] | 1 | executor high-confidence, analyst confirmation pending | **3 separate schema documents**, capability-named, `car-005` `$id` scope. Violation enum lands in slice 2 as an additive `$defs/policyViolationCode` inside the slice-1 report schema. A separate enum document is **blocked, not merely worse** — cross-document `$ref` is prohibited in this contracts directory. Budget maxima ship in slice 1 with the fields. Applied to FR-016, FR-019, FR-027 | clarify-executor; codebase-analyst (Round 1, in flight) |
+| 2 | Clarify | S1-Q2a: how many schema documents? | [codebase] | 1 | high-confidence | **3 separate documents**, capability-named, `car-005` `$id` scope. One-document-per-file is 11/11 in this directory; the two multi-shape files self-document a bundling rule (a `oneOf` over sibling record *variants*) that CAR-005's three distinct document kinds do not meet. No fourth shared-defs file — `digest`/`binding` are re-declared locally in all eleven and there is no cross-file `$ref` anywhere. Applied to FR-016 | codebase-analyst |
+| 2b | Clarify | S1-Q2b: where is the policy-violation enum declared — slice 1 or slice 2? | [codebase] → [spec] | 1→2 | **escape-hatch** | Round 1 recommended slice 1 but at only **medium** confidence, and explicitly deferred its decisive argument (FR-012's `[US1]` tag) to the spec-context lane. Escalated to Round 2 `[spec]`. **Provisionally applied as slice-1 declaration**, reversing the orchestrator's own earlier slice-2 answer: unexercised closed-enum members are house style here (`score-bundle.schema.json:88-89` ships a 36-member enum with ≤4 exercised), no contract document in this tree has ever been edited post-introduction, and slice-1 declaration means slice 2 touches **no** schema at all. Applied to FR-019, FR-033a/b | codebase-analyst (R1) + spec-context-analyst (R2, in flight) |
+| 2c | Clarify | S1-Q2c: do the budget maxima ship in slice 1 with the fields? | [codebase] | 1 | high-confidence | **Yes.** Numeric constraints share the object literal with their field's `type` universally in this directory, zero counterexamples, so declaring a field and bounding it is one authoring act. Caveat recorded: bounding a `max_*` field from *above* with `maximum` has no exact precedent (the existing budget precedent bounds from below with `minimum`), so the keyword choice is this feature's own. Applied to FR-027 | codebase-analyst |
+| 2d | Clarify | S1-Q2d: enum declaration style — bare `$defs` enum or inline at point of use? | [codebase] | 1 | high-confidence | **Inline at point of use.** No bare-enum `$defs` exists anywhere in the directory. Report expresses both enums as two diagnostic-entry `$defs`, each with its own inline `code` enum, unioned by `oneOf` at the diagnostics array — giving FR-017a a stable pointer. FR-017a additionally now requires reading the enum **live** by JSON pointer rather than transcribing it. New FR-016a; FR-017a amended | codebase-analyst |
 | 3 | Clarify | S1-Q5: are two slices still warranted now the artifact list is concrete? | [spec] | n/a | **operator-directive** | **Keep two slices**, with the rationale corrected: the split is *elected on review burden and independent slice value*, not forced by a LOC ceiling. Consensus was deliberately **not** dispatched — the executor's own blocker was operator authority, not an evidence gap, and no analyst can supply authority the operator already exercised. Surfaced to the operator for a change of mind; shipped artifacts are identical either way, only PR count and the append-only discipline change | none dispatched (see Resolution) |
 
 ## Lessons Learned
