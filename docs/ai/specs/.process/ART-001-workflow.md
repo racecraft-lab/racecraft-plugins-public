@@ -449,6 +449,14 @@ exact header wording. No authoritative source sets a substantiality threshold. T
 recommendation rests on cost asymmetry — roughly three lines per file against an
 unresolvable argument — not on a published rule. This must be restated in the PR body.
 
+**✅ RESOLVED by the maintainer, 2026-07-29 — keep over-attributing.** The
+substantiality question is accepted as unresolvable rather than settled, and the
+cost-asymmetry recommendation is adopted on that basis. FR-020 stands as written:
+every ported artifact carries all five attribution labels, deliberately erring
+toward too much attribution rather than too little. Revisit only if the header
+proves a practical nuisance in the ports. This is no longer a blocker for
+ART-002…005.
+
 **Item 5 — two of the executor's own worries did not survive checking.** The
 cardinality oracle is scoped to the *signal* vocabulary only and does not cover
 category, so "a tenth member breaks validation" was invalid; and SC-004 fixes that

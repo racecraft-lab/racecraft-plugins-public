@@ -247,15 +247,31 @@ Net unspecified implementations at close: **zero.**
 
 ## Follow-up actions
 
-**Requires a human decision (blocking ART-002, not this PR):**
+**Decided by the maintainer after this report was first written — all four
+questions in this section are now closed:**
 
-1. **MIT "substantial portion."** Whether these re-skins clear the licence's
-   undefined bar is unresolved by any authoritative source; the header currently
-   over-attributes deliberately.
-2. **Three brand-owner questions.** May brand red be tuned per theme; is the danger
-   red acceptable as the dark-theme emphasis colour; may the muted surface be
-   lightened — the last is the cheapest structural fix and would restore contrast
-   headroom for every boundary token at once.
+1. **MIT "substantial portion" — DECIDED: keep over-attributing.** Whether these
+   re-skins clear the licence's undefined bar remains unresolved by any
+   authoritative source, and that is accepted rather than litigated.
+   Over-attribution carries no legal downside and costs a small header, so FR-020
+   stands as written: every ported artifact carries all five attribution labels.
+   Revisit only if the header becomes a practical nuisance.
+2. **Three brand-owner questions — DECIDED, and two of them dissolved.**
+   - *May brand red be tuned per theme?* No, and it no longer needs to be. The
+     dark raised surface was corrected instead (research R14), so brand red keeps
+     one value across both themes and now clears its floor on all four surfaces.
+   - *Is the danger red acceptable as the dark emphasis colour?* Moot. That
+     question existed only because the removed prohibition routed brand-red usage
+     to `--rc-danger-text`. Nothing routes there for emphasis now, so the token
+     serves only its stated purpose, red body copy.
+   - *May the muted surface be lightened?* Yes — done (research R15). It was the
+     binding constraint on two tokens at once, and correcting it also let
+     `--rc-border-strong` return to its brand value `#8A8578`.
+
+   Net: the kit went from four rules to one, and the survivor
+   (`--rc-border-subtle` is decorative only) is a role statement rather than a
+   contrast defect. No brand primitive carries a restriction and no functional
+   token sits at an engineered value.
 
 **Owned by the first port spec (ART-002):**
 
