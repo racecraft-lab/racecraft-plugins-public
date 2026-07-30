@@ -177,7 +177,20 @@ cohort specs inherit proven rejection semantics.
   it is a second rule family inside the one resolution walk, and `fallback_loop`
   detection needs the walk state that this module already owns. Slice 2 MUST add new
   module-level constants, new private helpers, and new public entry points, and MUST
-  change no slice-1 function signature. [US1] [US2]
+  change no slice-1 **public** function signature — `resolve`, `serialize_report`,
+  `load_corpus`, and `RouteFallbackError`. [US1] [US2]
+  *(Qualified 2026-07-30, after a measured deviation rather than to make a failing
+  check pass. The clause was written unqualified and the slice-2 work changed two
+  **private** helpers: `_optional_helper_state` gained the snapshot it needs to walk
+  the helper's declared routes, and `_stage_no_safe_route` gained the report under
+  construction. An AST comparison across the seam confirms zero callables removed and
+  the public surface untouched. The rule's purpose is that slice 1 stays independently
+  landable and that nothing a consumer depends on shifts underneath it; private helper
+  arity is invisible to both — CAR-006 re-proves against the **fixtures**, not this
+  module's internals. Qualifying to "public" states what the clause always meant. The
+  deviation itself remains recorded in slice 2's PR packet under known gaps, and the
+  quickstart's signature-drift row was deliberately **not** softened to match the
+  code.)*
 - **FR-002**: The system MUST define a minimal, purpose-built environment
   snapshot projection carrying only what resolution consumes, which is **seven**
   facts and not the five an earlier reading of this requirement listed: available

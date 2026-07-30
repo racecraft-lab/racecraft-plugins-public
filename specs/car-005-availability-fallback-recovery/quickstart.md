@@ -9,9 +9,10 @@ How to verify each slice end-to-end. Run every command from the repository root.
 ## Prerequisites
 
 The repository test suite needs no bootstrap — run it directly. `docs-site/` is the
-only surface with dependencies, and it is needed here because both slices add a
-tracked `.py` file under `tests/speckit-pro/`, which regenerates a docs reference
-page.
+only surface with dependencies, and it is needed here because both slices change a
+tracked `.py` file under `tests/speckit-pro/`, which requires the docs reference
+page to be re-checked. Slice 1 *adds* a module and the page changes; slice 2 only
+*extends* existing modules, so the page is already current (see §Slice 2).
 
 ```bash
 # Once per worktree, before any docs command.
@@ -161,9 +162,17 @@ git diff --stat car-005-availability-fallback-recovery-slice-1...HEAD
 ```
 
 Expected: exactly **three** authored files changed — the simulator module, the
-corpus, and the unit test — plus the regenerated docs reference page. If any
-schema file, or `suite-manifest.json`, appears in this diff, the seam is broken
-(FR-033a, FR-033b). Replace the branch name above with the actual slice-1 branch.
+corpus, and the unit test. If any schema file, or `suite-manifest.json`, appears in
+this diff, the seam is broken (FR-033a, FR-033b). Replace the branch name above
+with the actual slice-1 branch.
+
+The regenerated docs reference page is **not** expected in this diff, and its
+absence is not a skipped regeneration. The page is generated from the set of test
+modules and their descriptions; slice 2 adds no module and changes no description,
+so `reference:generate` is a no-op here. `reference:check` reporting
+`Reference pages are current.` is the assertion — run it, and do not go looking for
+a `docs-site/src/content/docs/reference/tests.md` entry in the diff. Slice 1, which
+adds the module, is where that page changes.
 
 ### Slice-1 content is untouched
 
@@ -186,7 +195,7 @@ restacks — it is never absorbed into slice 2's diff.
 | Budget cap | the budget-of-one case pins all three actual counters at their declared cap of `1` and never exceeds it — the single permitted retry re-consults the failing preferred route and no further retry is taken (FR-026, SC-009) |
 | Exhaustion enumerated | `details.exhausted_budget` on the terminal `no_safe_route` diagnostic lists all three classes in enum declaration order, and appears on no other diagnostic (FR-026a, SC-009) |
 | No-safe-route is report-only | the case names the unresolved agent, every attempted route, each rejection reason, and remediation whose actions include `Roll back to the previous plugin release.` verbatim; no shipped agent file is read for mutation or written (FR-029, SC-010) |
-| Helper unavailability | recorded as the structured `optional_helper` field, not a diagnostic; `probe_attempts` is an explicit `0` and no `attempted_routes` entry names a helper route; required-agent resolution does not fail (FR-025) |
+| Helper unavailability | recorded as the structured `optional_helper` field, not a diagnostic; **`optional_helper.probe_attempts`** is an explicit `0` and no `attempted_routes` entry names a helper route; required-agent resolution does not fail (FR-025). Read the qualified name literally — it counts probes spent on the *helper's* routes and is disjoint from `budgets.actual.probe_attempts`, which counts the reported agent's own walk and is legitimately non-zero in this same case (FR-025a) |
 | Override honored | the override is the effective dispatch tuple as a hybrid — model from the override, `agent` and `effort` retained — `release_claim_eligible: false`, and the would-have-been qualified resolution recorded (FR-024) |
 | Override skipped by allowlist | `disposition` is `skipped_by_allowlist`, `override.tuple` is **absent**, `effective_dispatch_tuple` follows the qualified walk, and the report deliberately does **not** name the model that runs instead (FR-024b) |
 | No signature drift | no slice-1 function signature changed (FR-001, FR-033b) |
