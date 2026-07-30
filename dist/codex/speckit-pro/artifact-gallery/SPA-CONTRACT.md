@@ -338,18 +338,22 @@ measured against all four surfaces, in both themes, with each ratio written out
 unrounded. Look a pairing up there rather than re-deriving it. The table is not
 repeated here — there is one audit, and a second copy would only drift from it.
 
-Two pairings do not meet their floor and are prohibited. Each names what to
-use instead:
+Every foreground clears its floor on every surface in both themes, with one
+exception, and that exception is a role statement rather than a contrast defect:
 
 | Prohibited | Measured | Use instead |
 |---|---|---|
-| `--rc-accent` on `--rc-surface-muted`, light theme | 2.99 | `--rc-link` |
-| `--rc-border-subtle` for any boundary that conveys meaning, either theme | 1.07–1.78 | `--rc-border-strong` |
+| `--rc-border-subtle` for any boundary that conveys meaning, either theme | 1.13–1.78 | `--rc-border-strong` |
+
+`--rc-border-subtle` is deliberately faint. It is not a failure to be fixed, and
+raising its value would defeat its purpose; it simply must never be the thing
+carrying a meaning.
 
 For red body copy use `--rc-danger-text` in either theme; `--rc-brand-red` is
-audited for large text and non-text use only. Brand red itself carries **no**
-prohibition — it clears the 3:1 non-text floor on all four surfaces in both
-themes (3.97–4.99 light, 3.11–3.69 dark).
+audited for large text and non-text use only. Both brand primitives — brand red
+and the accent — carry **no** prohibition: brand red clears 3:1 on all four
+surfaces in both themes (4.19–4.99 light, 3.11–3.69 dark), and the accent does
+the same (3.16–3.76 light, 4.13–4.90 dark).
 
 **Why a prohibition rather than a corrected value.** The kit distinguishes two
 token classes at their point of definition. A **functional token** exists to

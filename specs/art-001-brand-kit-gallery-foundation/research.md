@@ -204,6 +204,9 @@ rather than assuming caught two real failures in the palette as drafted:
    all four light surfaces it falls to 2.93 on `--rc-surface-muted`, so the value
    is now `#847F72` (3.18–3.99). Dark `#6B7280` stands (3.21–3.81 once R14
    corrected the raised surface; 3.04–3.81 as first measured against `#1F2937`).
+   **Superseded by R15**: the light darkening is reverted. Once the muted surface
+   was corrected to `#EDEBE6`, the brand value `#8A8578` clears 3:1 on all four
+   light surfaces (3.09–3.68), so the token is restored rather than engineered.
 
 Brand red `#dc143c` passes at 3.97–4.99 across light surfaces, which is AA for
 exactly the punctuation-level, non-text and large-text role FR-001 reserves it
@@ -383,7 +386,10 @@ audit itself had two holes, and a failure was sitting in each one.
    the author it is meant to serve. The value is darkened one step to `#847F72`
    (3.18–3.99 across all four). Dark `#6B7280` was re-measured and stands
    (3.04–3.81, binding minimum on raised — lifted to 3.21–3.81 by R14, which
-   removed that binding constraint by correcting the surface).
+   removed that binding constraint by correcting the surface). **Superseded by
+   R15**: the light value returns to `#8A8578`. The cause was the muted surface,
+   which R8 and this finding had each hit independently without noticing they
+   shared one.
 
 Both holes share one shape: **an unmeasured pairing read as a passing one.**
 FR-005 is amended so absence is a defect — the audit must be symmetric across
@@ -496,6 +502,73 @@ neutral surface set for no stated reason.
 correction, not just the foreground. R13 enumerated foreground remedies
 exhaustively and never asked whether the background was right. A token borrowed
 from another role is the first place to look.
+
+---
+
+## R15 — Applying R14's lesson to the light theme restores a brand value
+
+**Supersedes R8's accent prohibition and R13 finding 2.** R14 established that a
+surface can be the cause of a contrast miss. Applied to the light theme, the same
+question has a stronger answer, because one surface was constraining two tokens
+and one of those constraints had already forced a brand value to be altered.
+
+`--rc-surface-muted` was `#E8E5DF`, the darkest of the four light surfaces. Two
+separate findings traced to it and to nothing else:
+
+- **R8**: `--rc-accent` `#3C89C6` measures **2.99** against it, below the 3:1
+  non-text floor. Resolved then by prohibiting the pairing.
+- **R13 finding 2**: `--rc-border-strong`'s value `#8A8578` measures **2.93**
+  against it. Resolved then by darkening the token to `#847F72`.
+
+Both remedies were local to a foreground. Neither asked whether `#E8E5DF` was
+right. As with `#1F2937`, it misses by very little: the accent needs the muted
+luminance at or above 0.78788 to clear 3:1, and `#E8E5DF` is 0.78522 — short by
+0.00266.
+
+**The window is wide.** Muted must stay darker than `--rc-surface-sunken`
+`#F1F0EC` (luminance 0.87077) to keep reading as recessed, so the usable range is
+0.78788 to 0.87077 — a width of 0.0829, far more headroom than the dark theme
+had. `#EDEBE6` (0.83134) sits comfortably inside it.
+
+**What lightening it buys.** Not just the accent. From `#EBE9E3` upward,
+`--rc-border-strong` clears 3:1 on all four light surfaces at its **original
+brand value** `#8A8578`, so the R13 darkening becomes unnecessary and is
+reverted:
+
+| Foreground | on `#E8E5DF` | on `#EDEBE6` |
+|---|---|---|
+| `--rc-accent` | 2.99 (fails 3:1) | **3.16** |
+| `--rc-border-strong` `#8A8578` | 2.93 (fails 3:1) | **3.09** |
+| `--rc-text` | 14.11 | 14.89 |
+| `--rc-text-muted` | 6.01 | 6.34 |
+| `--rc-link` | 4.61 | 4.87 |
+| `--rc-brand-red` | 3.97 | 4.19 |
+| `--rc-danger-text` | 4.82 | 5.09 |
+
+**Decision**: `--rc-surface-muted` light becomes `#EDEBE6`, and
+`--rc-border-strong` light is **restored** to the brand value `#8A8578`
+(3.09–3.68 across the four light surfaces). R8's accent prohibition is removed.
+All 64 pairings were recomputed from the shipped token values and both header
+tables verified row by row.
+
+**Net effect across R14 and R15.** The kit began with four rules — two
+prohibitions and two foreground corrections — and now has three: one prohibition
+and two surface corrections. The single remaining prohibition is
+`--rc-border-subtle`, which is not a contrast defect at all but a role statement
+about a token deliberately built to be faint. No brand primitive carries a
+restriction, and no functional token sits at an engineered value.
+
+**Alternatives considered**: Keeping the accent prohibition and the darkened
+border value — rejected, because both existed only to accommodate a surface that
+was itself one step off, and both imposed a rule on all 21 planned templates.
+Lightening only as far as `#EAE7E1`, the minimum that clears the accent (3.05) —
+rejected, because it leaves `#8A8578` at 2.98, still short, and so would preserve
+the border-strong correction for nothing. Re-valuing `--rc-accent` — rejected on
+FR-025 grounds: brand blue is a primitive and is not re-valued by engineering.
+
+**Lesson**: check whether two findings share a cause before resolving either. R8
+and R13 finding 2 were treated as independent and given independent remedies;
+they were the same surface, measured twice.
 
 ---
 

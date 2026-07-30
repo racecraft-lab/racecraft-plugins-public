@@ -258,7 +258,9 @@ Computed with the WCAG 2.x relative-luminance formula, per theme independently
 (FR-005, SC-007). Ratios are stated in the `brand-kit.css` comment block so a
 template port can verify a pairing without re-deriving it.
 
-**Light theme** — surfaces `#F7F6F4` / `#FFFFFF` / `#F1F0EC` / `#E8E5DF`
+**Light theme** — surfaces `#F7F6F4` / `#FFFFFF` / `#F1F0EC` / `#EDEBE6`
+
+The muted surface was `#E8E5DF`, one step too dark; see rule 3.
 
 Every foreground is measured against **all four** surfaces, in both themes
 (FR-005). A single representative surface is not an audit — the two failures
@@ -266,19 +268,19 @@ found late in this feature were both hiding in an unmeasured surface.
 
 | Foreground | Ratio range across the four surfaces | Verdict |
 |------------|--------------------------------------|---------|
-| `--rc-text` `#111827` | 14.11 – 17.74 | AA body |
-| `--rc-text-muted` `#4B5563` | 6.01 – 7.56 | AA body |
-| `--rc-link` `#2A6A99` | 4.61 – 5.80 | AA body |
-| `--rc-accent` `#3C89C6` | 3.30 – 3.76 on surface/raised/sunken | AA large + non-text; **prohibited** on muted (2.99) |
-| `--rc-brand-red` `#dc143c` | 3.97 – 4.99 | AA large + non-text |
-| `--rc-danger-text` `#C4102F` | 4.82 – 6.07 | AA body |
-| `--rc-border-strong` `#847F72` | 3.18 – 3.99 | AA non-text on all four |
-| `--rc-border-subtle` `#E0DED9` | 1.07 – 1.34 | decorative only — **prohibited** for meaning |
+| `--rc-text` `#111827` | 14.89 – 17.74 | AA body |
+| `--rc-text-muted` `#4B5563` | 6.34 – 7.56 | AA body |
+| `--rc-link` `#2A6A99` | 4.87 – 5.80 | AA body |
+| `--rc-accent` `#3C89C6` | 3.16 – 3.76 | AA large + non-text on all four |
+| `--rc-brand-red` `#dc143c` | 4.19 – 4.99 | AA large + non-text |
+| `--rc-danger-text` `#C4102F` | 5.09 – 6.07 | AA body |
+| `--rc-border-strong` `#8A8578` | 3.09 – 3.68 | AA non-text on all four; 3.09 on muted is the binding minimum |
+| `--rc-border-subtle` `#E0DED9` | 1.13 – 1.34 | decorative only — **prohibited** for meaning |
 
 **Dark theme** — surfaces `#1A1A1A` / `#242424` / `#141414` / `#1E1E1E`
 
 All four are pure neutrals. An earlier raised value of `#1F2937` was a blue-grey
-borrowed from the upstream navigation background; see rule 4.
+borrowed from the upstream navigation background; see rule 2.
 
 | Foreground | Ratio range across the four surfaces | Verdict |
 |------------|--------------------------------------|---------|
@@ -291,44 +293,46 @@ borrowed from the upstream navigation background; see rule 4.
 | `--rc-border-strong` `#6B7280` | 3.21 – 3.81 | AA non-text on all four; 3.21 on raised is the binding minimum |
 | `--rc-border-subtle` `#404040` | 1.50 – 1.78 | decorative only — **prohibited** for meaning |
 
-Four constraints fall out of the audit and are recorded as rules in the CSS
-comment — two prohibitions and two corrections. Per FR-005 these are the
+Three constraints fall out of the audit and are recorded as rules in the CSS
+comment — one prohibition and two surface corrections. Per FR-005 these are the
 complete set of pairings that do not meet their threshold; every one names its
 replacement, and no failing pairing is left without a rule.
 
-1. **`--rc-accent` is never paired with `--rc-surface-muted` in light theme** —
-   `#3C89C6` on `#E8E5DF` measures 2.99, just under the 3:1 non-text floor. Use
-   `--rc-link` there instead.
-2. **`--rc-border-subtle` is decorative only** — 1.07–1.34 (light) and 1.50–1.78
+1. **`--rc-border-subtle` is decorative only** — 1.13–1.34 (light) and 1.50–1.78
    (dark) against the surfaces. Any boundary that conveys meaning (form control
-   edges, focus ring) MUST use `--rc-border-strong`.
-3. **`--rc-border-strong` light is `#847F72`, not `#8A8578`** — the original
-   value measured 2.93 against `--rc-surface-muted`, below the 3:1 floor, which
-   the first audit did not surface because it recorded only the single
-   `--rc-surface` pairing (3.41). Because this token exists precisely to carry
-   boundaries that convey meaning, prohibiting it on a surface would be a trap;
-   the value is darkened one step instead so it clears 3:1 on all four light
-   surfaces (3.18–3.99). Dark `#6B7280` needed no change (3.21–3.81).
-4. **`--rc-surface-raised` dark is `#242424`, not `#1F2937`** — the original was
+   edges, focus ring) MUST use `--rc-border-strong`. This token is deliberately
+   faint: it is a role statement, not a contrast defect, and raising its value
+   would defeat its purpose. It is the only remaining prohibition in the kit.
+2. **`--rc-surface-raised` dark is `#242424`, not `#1F2937`** — the original was
    a blue-grey taken from the upstream navigation and sidebar background, a role
    it was chosen for and this one is not. It was the only non-neutral among the
-   four dark surfaces and the only surface in either theme that forced a pairing
-   below its floor: `--rc-brand-red` measured 2.94 against it and
-   `--rc-border-strong` 3.04, the tightest ratio in the kit. Correcting the
-   surface lifts every dark foreground simultaneously — brand red to 3.11,
-   border-strong to 3.21, body text to 12.44 — with no pairing regressing
-   anywhere, and it removed the only prohibition that had applied to a brand
-   primitive. Elevation still reads: `#242424` stays lighter than
+   four dark surfaces and forced two pairings low: `--rc-brand-red` measured 2.94
+   against it and `--rc-border-strong` 3.04, then the tightest ratio in the kit.
+   Correcting the surface lifts every dark foreground simultaneously — brand red
+   to 3.11, border-strong to 3.21, body text to 12.44 — with no pairing
+   regressing anywhere, and it removed the only prohibition that had applied to a
+   brand primitive. Elevation still reads: `#242424` stays lighter than
    `--rc-surface` `#1A1A1A` and `--rc-surface-muted` `#1E1E1E`.
+3. **`--rc-surface-muted` light is `#EDEBE6`, not `#E8E5DF`** — the original was
+   one step too dark and was the binding constraint on two separate tokens.
+   `--rc-accent` measured 2.99 against it, below the 3:1 non-text floor; and
+   `--rc-border-strong` could not hold its brand value `#8A8578` there (2.93), so
+   it had been darkened to `#847F72` solely to clear that one pairing. Lightening
+   the surface resolves both at once: the accent reaches 3.16 and needs no
+   prohibition, and **`--rc-border-strong` is restored to its brand value
+   `#8A8578`**, which now clears 3:1 on all four light surfaces (3.09–3.68). The
+   surface stays darker than `--rc-surface-sunken` `#F1F0EC`, so the recessed
+   reading is preserved.
 
-Rules 3 and 4 are corrections and rules 1 and 2 are prohibitions. That ordering
-is the FR-025 rule in practice: a functional token that misses its floor is
-re-valued, a surface that forces the miss is corrected, and a brand primitive is
-never re-valued — its unmet need routes to a functional sibling. That third case
-now has no instance, because rule 4 removed the only one.
+Rules 2 and 3 correct **surfaces**, not foregrounds, and that is the more general
+lesson: when a pairing misses its floor the background is a candidate for
+correction, and it is often the cheaper fix because every foreground measured
+against it improves at once. FR-025's two foreground remedies — re-value a
+functional token, route around a brand primitive — both still govern, but neither
+now has a live instance, because both causes were removed at the surface instead.
 
 Focus ring uses `--rc-link` in both themes and clears the 3:1 non-text floor on
-every surface it can appear on: 5.37 / 5.80 / 5.09 / 4.61 light, 7.75 / 6.91 /
+every surface it can appear on: 5.37 / 5.80 / 5.09 / 4.87 light, 7.75 / 6.91 /
 8.20 / 7.42 dark (FR-023).
 
 All ratios above were recomputed from the token hex values with the WCAG 2.x
