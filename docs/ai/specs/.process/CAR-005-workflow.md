@@ -1157,12 +1157,72 @@ Before starting any task:
 
 ### Implementation Progress
 
-| Phase | Tasks | Completed | Notes |
-|-------|-------|-----------|-------|
-| 1 - Slice 1: schemas + serialization | | | |
-| 2 - Slice 1: simulator + corpus + replay | | | |
-| 3 - Slice 2: rejections + override/helper | | | |
-| 4 - Slice 2: exhaustion + parity + registration | | | |
+Phase 7 runs as **six sequential groups**, not per-task parallel dispatch. The simulator
+module, the scenario corpus, and the unit-test module are each a **single file touched by a
+dozen or more tasks**, so concurrent agents would corrupt them. `[P]` markers are honoured
+only where tasks genuinely own different files.
+
+| Group | Tasks | Status | Notes |
+|-------|-------|--------|-------|
+| A — slice-1 foundation | T001–T012 (12) | ✅ Complete | 3 schemas, test + simulator skeletons |
+| B — slice-1 resolution + US1 corpus | T013–T026 (14) | 🔄 In Progress | resolve walk, five codes, 9 pinned cases |
+| C — slice-1 assertion obligations + close | T027–T037 (11) | ⏳ Pending | the 7 easy-to-miss tests, manifest entry, docs regen, full suite |
+| D — slice-2 rejections + override/helper | T038–T048 (11) | ⏳ Pending | structural pre-pass, both override branches, helper path |
+| E — slice-2 exhaustion + recovery | T049–T057 (9) | ⏳ Pending | budgets as hard caps, no-safe-route, coverage, additivity check |
+| F — polish | T058–T063 (6) | ⏳ Pending | non-goal audits, quickstart walks, PR review packets |
+
+### Group A — T001–T012 complete
+
+**Verified RED before GREEN with real assertion errors**, not a retrospective "all passed":
+T005's contract-presence class went `0/12` (twelve `AssertionError`s naming each
+uncommitted schema) → `12/12` once T006–T010 landed; T012's serialization surface went
+`12/17` (five `AssertionError: unexpectedly None : claude_route_fallback is not
+importable`) → `17/17`. T006–T010 are pure JSON-schema authoring with no assertable
+behaviour of their own, and the executor **declined to fake a RED for them**, verifying
+instead at T011's layer-4 run plus per-schema satisfiability probes. That is the right
+call and worth recording.
+
+**It probed the schema traps empirically rather than trusting the spec.** Confirmed: the
+FR-023 inherit-materialization route and the FR-020 duplicate fallback both **validate**
+(so they produce diagnostics, not validation errors — exactly what FR-003a exists to
+protect); a budget of 9 fails; all eight route-scoped `details.route_id` branches bite;
+`unqualified_override` with no `details` passes as the deliberate exception; a
+`no_safe_route` report carrying **both** `unresolved_agent` and `effective_dispatch_tuple`
+validates — the case a root `oneOf` could not have expressed; and `remediation` hoisted to
+the report root is rejected.
+
+**Audits:** every keyword used is inside the shared engine's supported set; 19 `$ref`s and
+**zero** non-local; **zero** bare-enum `$defs` across the whole directory;
+`additionalProperties` split 20 record-`false` / 4 open-keyed map value-schemas / 2
+deliberately-`true` (both the `details` class); the action enum is 11 plain strings with
+`minItems: 1`/`maxItems: 3` and carries `Roll back to the previous plugin release.`
+verbatim.
+
+**Verification:** L1 **1428/1428**, L4 **3731/3731**, T001 baseline full suite
+**5345/5345**. L4 is unchanged before and after because the new module is not yet
+manifest-registered — that is T035 in Group C, correctly outside this group.
+
+**Interpretive calls recorded** (none altered a schema): report-root `agent` is a
+name string, since `data-model.md` requires the member without shaping it and its closure
+table lists no `agentIdentity`; `details` named properties follow the carried-by column
+and so differ per `$defs` (the policy-violation entry names only `route_id`, because
+declaring `sub_reason` there would be dead contract); `budgets.declared` mirrors the
+policy's own bounds and the three actual counters take `minimum: 0`, so a report cannot
+echo a cap the policy could never declare; `minLength: 1` added to identity strings the
+data model typed only as "string", matching the directory's universal habit, because an
+empty join key is unmatchable; and `no_safe_route` takes no `allOf` branch alongside
+`unqualified_override`, since the spec's "one member takes no branch" counts within the
+route-scoped set and `no_safe_route` is the terminal report-scoped entry.
+
+**T004's slice-1 working notes, preserved here** because the group's scope barred writes
+under `specs/` and the repository has no tracked working-notes location: 0 production
+files; 8 authored plus 1 generated; primary surface harness/adapter, secondary seed/config
+(one manifest entry); split **elected on review burden and independent slice value, not
+gate-forced**, since `estimate-reviewable-loc` returns `production × 40 = 0` and cannot
+adjudicate it, and the advisory `estimate-spec-size` figure suggesting more slices is
+recorded and deliberately not acted on. Restack rule: a slice-2 finding needing a slice-1
+change lands on slice 1's branch and the chain restacks — never absorbed into slice 2's
+diff.
 
 ---
 
