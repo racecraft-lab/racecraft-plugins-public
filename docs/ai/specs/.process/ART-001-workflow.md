@@ -1225,14 +1225,89 @@ single validation module, so Phases 3–6 are necessarily sequential there.
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] Unit test passes: `python3 tests/speckit-pro/unit/test-artifact-gallery.py`
-- [ ] Registered in `tests/speckit-pro/suite-manifest.json`
-- [ ] Layer 1 structural suite passes
-- [ ] Payload/proof regeneration complete (shipped `speckit-pro/artifact-gallery/`)
-- [ ] Manual verification: open brand-kit demo/template over `file://` in both themes
-- [ ] PR created and reviewed
+- [x] All tasks marked complete in tasks.md — 31 of 34; T026/T027 remain genuinely manual
+      and T034 is this PR-review packet
+- [x] Unit test passes: `python3 tests/speckit-pro/unit/test-artifact-gallery.py`
+- [x] Registered in `tests/speckit-pro/suite-manifest.json`
+- [x] Layer 1 structural suite passes — 1428/1428
+- [x] Payload/proof regeneration complete (shipped `speckit-pro/artifact-gallery/`)
+- [ ] Manual verification: open brand-kit demo/template over `file://` in both themes —
+      harness authored and reviewed in-browser; the real `file://` load is the open part
+- [x] PR created — [#407](https://github.com/racecraft-lab/racecraft-plugins-public/pull/407),
+      all 21 required checks green
 - [ ] Merged to main branch (humans merge)
+
+### Self-Review (four-question audit)
+
+Run against the finished branch, before hand-off.
+
+1. **Does the diff do only what the spec says?** Yes, with one addition the spec did not
+   originally carry: two lines in `speckit-pro/speckit_pro_runner/gates/payloads.py`.
+   That edit is outside the gallery directory, so it was written into the spec as FR-018
+   rather than smuggled in — without it the feature ships nothing while the build stays
+   green.
+2. **Is anything claimed that was not verified?** One class, and it is disclosed rather
+   than implied: roughly half the 73 checks cannot exercise the real gallery, because this
+   feature ships zero artifacts. Those run against synthetic fixtures, and the contract
+   table says so per row instead of leaving the reader to assume live coverage. The
+   in-document policy behaviour over `file://` is confirmed against browser-engine source,
+   not executed — also stated.
+3. **Would a reviewer be misled by anything?** The size figures were the risk. The declared
+   gate figures (62 LOC / 2 production files / 24 total) are correct against the binding
+   metric, which counts production code only — but the *authored* volume is far larger, and
+   quoting only the gate numbers would have read as a small change. The spec now discloses
+   7,838 authored lines across nine files, 6,322 of them the validation module, and names
+   the module as roughly fourteen times its ~450-line estimate. The overrun is disclosed,
+   not absorbed.
+4. **What would I want to know if I were reviewing this cold?** That the two-line payload
+   edit is the load-bearing part; that the contrast table above the brand-kit marker is
+   measured rather than asserted, and corrected four failures; and that seven defects were
+   found by verification after the code was written — each listed in the PR body, because a
+   reviewer reading only the green suite would not know the checks had ever been weak.
+
+### UAT runbook (deferred helper — substitute evidence)
+
+`generate-uat-skeleton` is **deferred on the installed runner** and was therefore not
+invoked; no skeleton exists, so `speckit-pro:uat-runbook-author` had nothing to rewrite and
+was not dispatched either.
+
+- Helper ID: `generate-uat-skeleton`
+- Requested operation: UAT skeleton generation for `specs/art-001-brand-kit-gallery-foundation`
+- Deferral reason: not registered for runner dispatch on the installed 2.21.0 runner
+- Substitute evidence: an acceptance harness was authored and driven in a real browser in
+  both themes, and the UAT steps were written by hand into the PR packet's `How To UAT`
+  section rather than generated. Two scenarios stay open and are named as open: first paint
+  over `file://`, and keyboard-only operation of the theme control.
+
+This is recorded rather than silently skipped — the first pass through this step skipped it
+without evidence, which is the failure this block exists to prevent.
+
+### PR emission — contract deviation, recorded
+
+The skill's PR step is: emit a feature-local packet, validate it read-only, validate the
+write path, *then* open the PR. The actual order was inverted — the body was hand-written
+and the PR opened with `--body-file`, and the packet was emitted afterwards. The packet now
+exists and validates:
+
+- `specs/art-001-brand-kit-gallery-foundation/.process/pr-packets/art-001-pr-packet.json`
+  plus its generated `body.md`
+- `validate-pr-packet-read-only` → `status: passed`, `pr_blocked: false`
+- `validate-pr-packet-write` → `writes_state: false`, apply refused on a dirty worktree
+
+The packet is intentionally **untracked**: no merged spec in this repository tracks one, and
+Layer 1 was re-run with it present to confirm the known untracked-`.process` index trap does
+not fire — 1428/1428, including `validate-moc-stale-index` and
+`validate-spec-index-determinism`. Because packets are never committed here, the write
+helper's apply mode is unreachable by construction, and its `expected_failure` is the
+dirty-worktree guard working correctly rather than a packet defect.
+
+**The inversion had a real cost.** The hand-written body omitted the `release-note` fence
+that `feat`/`fix` PRs require, so `validate-release-note` failed on the opened PR
+([job 90744484570](https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/30502334595/job/90744484570)):
+`feat/fix pull requests require exactly one non-empty release-note fence`. Fixed by adding
+one fence, verified against the real validator locally before pushing
+(`release_note_validation_passed`), and confirmed green on re-run. Going through the packet
+path would not by itself have prevented this — see the gap raised below.
 
 ---
 
@@ -1295,6 +1370,29 @@ single validation module, so Phases 3–6 are necessarily sequential there.
 - **The gap-counting helper matches `[Gap]` literally.** Markers written as
   `[Gap, <ref>]` — the style the skill's own example uses — under-report silently. One
   domain reported 1 marker against 20 real ones until rewritten.
+- **The PR packet's generated body cannot satisfy this repository's release-note gate.**
+  `required_headings()` in `speckit_pro_runner/helpers/pr_emission.py:427` fixes eight
+  headings — Summary, What Changed, Why It Matters, How To Review, How To UAT,
+  Verification, Scope, Known Gaps — and the generator emits no fenced block of any kind.
+  This repository requires `feat`/`fix` PR bodies to carry exactly one non-empty
+  ` ```release-note ` fence (`scripts/release_note_policy.py:508`). So the packet path and
+  the repo gate are mutually unsatisfiable as written: taking the generated body verbatim
+  fails CI, which is why the hand-written body was kept. The packet needs either a
+  consumer-facing release-note field that renders as that fence, or a documented
+  host-repo-body hook.
+- **`validate-pr-packet-write`'s apply mode is unreachable where packets are untracked.**
+  It refuses on a dirty worktree, and an emitted packet is by definition a new untracked
+  file until committed. In a repository that never commits packets — zero tracked across
+  every merged spec here — there is no sequence that reaches a clean apply. The
+  `writes_state: false` assertion the skill actually depends on is available from the
+  refusal, so this is a contract-clarity gap rather than a blocker, but the skill's
+  wording implies a passing write run that cannot happen.
+- **Nothing in the post-implementation list is self-verifying.** Eleven of its twelve
+  entries were genuinely executed while every one stayed unmarked, and two — Review
+  Remediation and Retrospective — were never run at all, which only surfaced because the
+  operator read the task list. The list is prose in a separate section from the loop, so
+  no step fails when a later step is skipped. A terminal step that refuses to report
+  completion while any prior entry is unmarked would have caught both.
 
 ---
 
