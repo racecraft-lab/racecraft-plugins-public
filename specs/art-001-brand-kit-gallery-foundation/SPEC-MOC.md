@@ -37,6 +37,8 @@ the slice artifacts in the body below.
 - [checklists/data-integrity.md](checklists/data-integrity.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/security.md](checklists/security.md)
+- [.process/acceptance-harness.html](.process/acceptance-harness.html)
 - [.process/changed-files.txt](.process/changed-files.txt)
 - [quickstart.md](quickstart.md)
+- [retrospective.md](retrospective.md)
 <!-- GENERATED:BACKLINKS:END -->

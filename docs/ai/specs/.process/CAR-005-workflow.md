@@ -40,7 +40,7 @@ captured during scoping.
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 136 items, **67 gaps found and all closed**. G4 pass. Two requirements were found to assert platform behaviour that does not exist, and three were unsatisfiable as written. Spec 35 → 60 FR identifiers across the phase. |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Implement | `/speckit-implement` | ✅ Complete | All 63 tasks, G7 pass. Suite 7008/7008 merged. Stacked PRs #411 and #412 open, not merged. |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -1447,15 +1447,73 @@ after the fact rather than as part of Analyze itself.
 
 ### What Worked Well
 
--
+- **Grounding platform claims against live documentation, not memory.** Three of four
+  assertions this spec made about Claude Code behaviour were wrong or incomplete, and all
+  three would have shipped as fixtures "proving" behaviour the runtime does not have — then
+  been inherited by CAR-006 as contract. The override is not unconditional; an unsupported
+  effort degrades silently rather than being rejected; and CAR-002 never pinned the
+  unavailable-model fact at all. Only the effort *ladder* survived unchanged.
+- **Adversarial self-checking by the implementation agents.** Three groups ran in-memory
+  mutation probes (9, then a perturbation audit, then 29) instead of accepting a green test.
+  One catch was decisive: retargeting the loop case off the bounded analyst was **missed by
+  replay** and caught only by the role-class assertion. A test that passes proves nothing
+  until you have seen it fail.
+- **Deriving pinned reports by hand *before* comparing to code output.** The derivation and
+  the implementation then agreed independently, rather than the fixture recording whatever
+  the code happened to emit.
+- **Refusing to soften a failing check.** Group F found a real signature-drift FAIL and
+  recorded it rather than editing the quickstart row to match the code. That is what made
+  the FR-001 qualification a *correction* rather than a rationalisation.
+- **Deliberate forward-compatible slack.** Slice-1 budgets were given headroom in Group B so
+  no counter sat at its cap; three groups later, slice 2's exhaustion work landed without
+  perturbing a single slice-1 pinned byte.
 
 ### Challenges Encountered
 
--
+- **The orchestrator's own dispatch design caused the run's main failure mode.** Five agents
+  returned truncated final messages and their reports were lost. Cause: expensive
+  return-format sections demanded *after* 70–120 tool calls of work, so the summary was the
+  first thing cut. Ten further agents delivered nothing because they were dispatched
+  **named**; unnamed dispatch always delivered. The fix — "write your summary FIRST, then
+  stop" — was proven in the one group it was applied to, which returned a complete report
+  including a failing acceptance row.
+- **Two real plugin bugs, recorded not fixed** (CAR-005 forbids production files):
+  `count-markers` and `validate-gate` match the literal `\[NEEDS CLARIFICATION\]` and bare
+  `[Gap]`, while this project's own templates document `[NEEDS CLARIFICATION: <question>]`.
+  **Every correctly-formed marker is invisible to the G1 and G2 gates** — they reported 0
+  while the spec carried 3. One regex change in
+  `speckit-pro/speckit_pro_runner/helpers/read_only.py` closes both.
+- **No reviewability gate measures a 0-production-file surface.** `estimate-reviewable-loc`
+  computes `production_files × 40`, so it returns 0 and `pass` for a 7,000-line feature. The
+  sibling CAR-004 shipped ~11,600 artifact lines in a single PR under the same shape. The
+  split had to be *elected* on review burden; no automated signal could force or forbid it.
+- **FR-033b's append-only seam is not fully achievable for a test module.** When the spec
+  deliberately allocates interim behaviour to slice 1 and final behaviour to slice 2, the
+  slice-1 assertion cannot survive slice 2 and its replacement cannot live in slice 1.
+- **Building the stack surfaced two errors late.** Copying a docstring fix pulled the whole
+  slice-2 simulator onto slice 1 (5 failures — which usefully proved the standalone check
+  bites), and both branches independently merging `main` produced **two merge bases**, so the
+  stacked PR would have shown its base's content until slice 1 was merged in.
 
 ### Patterns to Reuse
 
--
+- **Dispatch unnamed, one job per agent, summary-first.** Cap the return format. Treat a
+  named agent's output as lost by default.
+- **Ask an agent to prove its assertion bites.** If it passes immediately, require an
+  in-memory perturbation that makes it fire. Vacuous assertions are invisible in a green
+  suite — three were found here even after four consensus rounds.
+- **Verify the verifier.** The phantom-completion check found a task marked `[X]` with half
+  its work undone, in a suite reporting 6540/6540. Green tests cannot detect a task that was
+  simply never finished.
+- **Grep the tree for a token before naming a field.** `fan_out` was already frozen in the
+  same contracts directory meaning a ceiling on spawned children.
+- **Record the awkward facts in the PR body.** Both packets state that the split was elected
+  rather than gate-forced, that the estimator suggests more slices and was deliberately not
+  acted on, that slice 2 is not a pure append, and that two behaviours knowingly diverge from
+  the documented runtime.
+- **Carry platform findings to the roadmap, not just the spec.** The Grounded Platform Facts
+  section (PF-1…PF-4) is what stops CAR-006 through CAR-012 repeating the same three
+  mistakes; fixing only this spec would have left the roadmap propagating them.
 
 ---
 
