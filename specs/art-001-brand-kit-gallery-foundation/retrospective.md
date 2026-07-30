@@ -127,7 +127,7 @@ against a plan that projected far less. This is disclosed in `spec.md` rather th
 absorbed. Two things keep it from being a simple overrun: the declared gate figures
 (62 LOC / 2 production files / 24 total) are *correct* against the binding metric,
 which counts production code only, so the reviewability gate was never misled; and
-every one of the 75 checks is mutation-proved non-vacuous, so the volume is not
+every one of the 77 checks is mutation-proved non-vacuous, so the volume is not
 padding. Root cause: the estimate was made against "a test file for a CSS token set"
 before the security surface (external-reference scanning with executed evasions) and
 the accessibility surface (per-pairing contrast measurement) were understood to be
@@ -204,7 +204,7 @@ any artifact whose reader produces something should be asked what carries it out
 | I. Plugin Structure Compliance | PASS | Layer 1 1428/1428, including payload completeness and conformance |
 | II. Cross-Platform Runtime & Script Safety | PASS | Python 3.11+ stdlib only; no new Bash or `jq` dependency; both Claude and Codex payloads updated |
 | III. Semantic Versioning | PASS | No hand-edited versions; `artifact-consistency` green |
-| IV. Test Coverage Before Merge | PASS | 75 checks registered in `suite-manifest.json`; full suite 5786/5786 |
+| IV. Test Coverage Before Merge | PASS | 77 checks registered in `suite-manifest.json`; full suite 5786/5786 |
 | V. Conventional Commits | PASS | `validate-pr-title` green; all commits conventional |
 | VI. KISS, Simplicity & YAGNI | PASS, with the volume finding above | See assessment |
 

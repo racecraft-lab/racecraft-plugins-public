@@ -29,7 +29,7 @@ That obligation exists precisely because group E cannot reach that far.
 | A2 | `theme-toggle.html` contains exactly one `GALLERY-HEAD:START` / `GALLERY-HEAD:END` pair, ordered | canonical file malformed |
 | A3 | For every gallery HTML artifact: each marker pair it uses appears exactly once, with a matching end | duplicated or unbalanced markers |
 | A4 | For every gallery HTML artifact embedding a block: the region between its markers equals the canonical region **byte for byte** | any single-character drift; message names artifact + block |
-| A5 | Every `shipped` entry's artifact embeds the brand block | shipped artifact omits the block (no pass-by-absence) |
+| A5 | Every `shipped` entry's artifact embeds **both** canonical blocks | shipped artifact omits either block — A3 skips a file using neither pair and A4 skips one embedding neither, so an artifact omitting the head block was invisible to all of group A while hand-writing its own policy |
 
 **The head block's marker pair is named for the region, not the control.** It carries
 the policy declaration, the pre-first-paint theme application, the colour-scheme
@@ -62,10 +62,10 @@ start marker without every artifact having to embed them.
 
 | # | Check | Fails when |
 |---|-------|-----------|
-| B1 | Top level has exactly the keys `schema_version`, `signals`, `templates` | extra or missing top-level key |
+| B1 | Top level has exactly the keys `schema_version`, `signals`, `export_kinds`, `templates` | extra or missing top-level key |
 | B2 | `schema_version == "1.0"` | version drift |
 | B3 | `templates` has 21 entries | catalog seeded wrong |
-| B4 | Each entry has exactly the eight documented keys | missing/extra key; names entry + key |
+| B4 | Each entry has exactly the nine documented keys | missing/extra key; names entry + key |
 | B5 | `stage` ∈ {`draft-pr`,`final-pr`,`ad-hoc`} | unrecognized stage; names entry + value |
 | B6 | `category` ∈ the nine-member enum | unrecognized category; names entry + value |
 | B7 | `status` ∈ {`planned`,`shipped`} | unrecognized status |
@@ -384,6 +384,8 @@ failing at the real cause.
 | G5 | Every entry takes exactly one of the G3/G4 branches | an `origin` matching neither — the fail-open case (FR-020) |
 | G6 | The upstream **file** named in an artifact's header equals its entry's `source.file` | a header asserting a different provenance than the catalog declares — what a header copy-pasted from a neighbouring artifact produces |
 | G7 | The upstream **repository** named in an artifact's header equals the single repository this contract names | a header asserting an upstream this gallery does not derive from |
+| G8 | the header's licence identifier is the upstream licence, compared not merely present | an artifact claiming any licence it likes — G3 asks only that a value follow the label, and the reference scan exempts comments, so `License: WTFPL-2.0` satisfied every other check |
+| G9 | the header's licence-text reference is the notice shipped in this gallery | a reader sent anywhere for "the full license text"; also the pairing that revealed the pinned literal contradicted the path the contract prescribes |
 
 **On G6/G7 — presence is not provenance.** G3 checks each required element for
 presence and nothing more, so a header naming a different upstream file than its

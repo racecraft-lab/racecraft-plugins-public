@@ -3665,6 +3665,39 @@ def _meta_refresh_target(content: str) -> str | None:
     return target or None
 
 
+def _decoded_style_references(label: str, elements: list[_Element], raw: str) -> list[_Reference]:
+    """``url()`` inside a ``style`` **attribute**, read after entity decoding.
+
+    ``style`` is routed to the text pass, and that pass matches the raw document
+    text — which is correct for a ``<style>`` element, a raw-text element whose
+    character references a browser never decodes. It is wrong for an attribute.
+    An attribute value IS entity-decoded before the CSS parser sees it, so
+    ``style="background:url(&#104;ttps://host/x.png)"`` carried a fetch that no
+    check could see: the raw text held ``url(&#104;ttps://…)``, which exposes no
+    scheme and no host, so E1 skipped it for want of a host, E7 and E8 for want of
+    a scheme, E6's grammar permits ``&``, ``#`` and ``;``, E10 refuses only
+    backslashes, and E12 wants a leading ``//``.
+
+    The parser hands back the decoded value, so this pass simply reads what the
+    browser will act on. Emitted only when the decoded reference does **not**
+    appear verbatim in the raw text: an ordinary unencoded style URL is already
+    reported by the text pass, and reporting one defect under two rules is what
+    ``TEXT_SCANNED_ATTRIBUTES`` exists to prevent.
+    """
+    references: list[_Reference] = []
+    for element in elements:
+        for name, value in element.attributes:
+            if name.casefold() not in TEXT_SCANNED_ATTRIBUTES or not value.strip():
+                continue
+            for match in _STYLE_URL_RE.finditer(value):
+                reference = match.group("ref").strip()
+                if reference and reference not in raw:
+                    references.append(
+                        _Reference(label, f"<{element.tag} {name}> url()", reference, RESOURCE, True, ())
+                    )
+    return references
+
+
 def _element_references(label: str, elements: list[_Element]) -> tuple[list[_Reference], list[str]]:
     """Parsed positions, default-deny: every URL-valued attribute is scanned.
 
@@ -3759,8 +3792,10 @@ def _references(gallery_root: Path) -> tuple[list[_Reference], list[str]]:
         label = _label(gallery_root, path)
         text = _document_text(path)
         if path.suffix.lower() == ".html":
-            parsed, reported = _element_references(label, _elements(text))
+            elements = _elements(text)
+            parsed, reported = _element_references(label, elements)
             references.extend(parsed)
+            references.extend(_decoded_style_references(label, elements, text))
             unrecognized.extend(reported)
         references.extend(_text_references(label, text))
     return references, unrecognized
@@ -4128,6 +4163,37 @@ class ExternalReferenceFixtureTests(ExternalReferenceFixtureCase):
         self.write_document('<div class="rc-panel" data-stage="draft-pr"></div>')
 
         self.assertEqual(check_e0(self.gallery), [])
+
+    def test_a_character_reference_is_decoded_in_a_style_attribute(self) -> None:
+        """The seam between the two passes.
+
+        An attribute value is entity-decoded before the CSS parser reads it; a
+        ``<style>`` element's content is not, because it is a raw-text element. The
+        text pass matches raw text, so routing ``style`` to it hid every encoded
+        reference in an attribute: the raw form exposes no scheme and no host, so
+        E1, E7 and E8 all skipped it, E6's grammar permits the escape characters,
+        E10 refuses only backslashes, and E12 wants a leading ``//``.
+        """
+        self.write_document('<div style="background-image:url(&#104;ttps://evil.example/x.png)"></div>')
+
+        self.assertReports(check_e1(self.gallery), "evil.example")
+
+    def test_a_character_reference_in_a_style_element_stays_undecoded(self) -> None:
+        """The other half of the same seam, and it must NOT be reported.
+
+        A browser does not decode character references inside a ``style``
+        element, so nothing is fetched and there is no defect to report.
+        Decoding the whole document text would have invented one.
+        """
+        self.write_document("<style>.a{background:url(&#104;ttps://evil.example/q.png)}</style>")
+
+        self.assertEqual([failure for _, check in GROUP_E_CHECKS for failure in check(self.gallery)], [])
+
+    def test_a_plain_style_attribute_reference_is_reported_once(self) -> None:
+        """One defect, one rule. The decoded pass emits only what the raw pass cannot see."""
+        self.write_document('<div style="background:url(https://evil.example/z.png)"></div>')
+
+        self.assertEqual(len(check_e1(self.gallery)), 1)
 
     def test_e0_accepts_a_namespace_declaration(self) -> None:
         """Inline SVG is the standard iconography for a self-contained artifact.
@@ -5115,7 +5181,16 @@ FORBIDDEN_NOTICE_NAME = "LICENSE"
 # The single upstream this gallery derives from, named once here exactly as
 # ``SPA-CONTRACT.md`` names it once for authors. G7 is what joins the two.
 UPSTREAM_REPOSITORY = "anthropics/html-effectiveness"
-UPSTREAM_LICENSE_URL = "https://github.com/anthropics/html-effectiveness/blob/main/LICENSE"
+# What the contract tells an author to write, and therefore what a conforming
+# header carries. This was pinned to a github.com blob URL while
+# SPA-CONTRACT.md and UPSTREAM-NOTICE.md both prescribe the relative path, so
+# the literal matched no header any conforming author would produce — and
+# because the value was never compared, nothing revealed the contradiction.
+UPSTREAM_LICENSE_REFERENCE = "UPSTREAM-NOTICE.md"
+
+# The licence the upstream project is under. Compared, not merely required to
+# be non-empty: an artifact claiming "WTFPL-2.0" carried a value and passed.
+UPSTREAM_LICENSE_ID = "MIT"
 
 # The permission notice, pinned as a literal rather than read back out of the
 # file under validation — a comparison against text derived from that same file
@@ -5183,7 +5258,7 @@ ATTRIBUTION_ELEMENTS: tuple[_AttributionElement, ...] = (
     _AttributionElement("upstream file", UPSTREAM_FILE_LABEL, ()),
     _AttributionElement("verbatim copyright line", None, (UPSTREAM_COPYRIGHT,)),
     _AttributionElement("license identifier", LICENSE_LABEL, ()),
-    _AttributionElement("link to the full license text", LICENSE_TEXT_LABEL, (UPSTREAM_LICENSE_URL,)),
+    _AttributionElement("link to the full license text", LICENSE_TEXT_LABEL, (UPSTREAM_LICENSE_REFERENCE,)),
     _AttributionElement("modified-derivative statement", DERIVATIVE_LABEL, ()),
 )
 
@@ -5225,7 +5300,13 @@ def _labelled_value(text: str, label: str) -> str | None:
 
 
 def _carried(header: str, element: _AttributionElement) -> bool:
-    """G3's direction — the element is present **and** carries a value."""
+    """G3's direction — the element is present **and** carries a value.
+
+    Presence and non-emptiness only. Whether a value is *correct* is a different
+    question with a different owner: G7 compares the repository, G8 the licence
+    identifier, and G9 the licence-text reference. Folding those comparisons in
+    here would make G3 report the same defect G7 already names.
+    """
     if element.label is None:
         return all(literal in header for literal in element.literals)
     return bool(_labelled_value(header, element.label))
@@ -5467,6 +5548,32 @@ def check_g7(gallery_root: Path) -> list[str]:
     return _agreement_failures(gallery_root, REPOSITORY_LABEL, lambda _entry: UPSTREAM_REPOSITORY)
 
 
+def check_g8(gallery_root: Path) -> list[str]:
+    """G8 — the header's licence identifier is the upstream licence.
+
+    G3 asks only that a value follow the label, which left this presence-only: a
+    header reading ``License: WTFPL-2.0`` satisfied G3, G4 and G6, and the
+    reference scan never saw it because the header is a comment and comments are
+    exempt. An artifact could claim any licence it liked. The upstream licence is
+    a fact about the upstream project, not a per-artifact choice, so it is
+    compared rather than merely required.
+    """
+    return _agreement_failures(gallery_root, LICENSE_LABEL, lambda _entry: UPSTREAM_LICENSE_ID)
+
+
+def check_g9(gallery_root: Path) -> list[str]:
+    """G9 — the header's licence-text reference points at the notice in this gallery.
+
+    Presence-only for the same reason as G8, and with a sharper consequence:
+    an artifact could point a reader at any URL for "the full license text".
+    The reference is the shipped notice, by the relative path
+    ``SPA-CONTRACT.md`` prescribes — which is also the value this module pins, a
+    pairing that was wrong until G8 and G9 made the literal load-bearing enough
+    to notice.
+    """
+    return _agreement_failures(gallery_root, LICENSE_TEXT_LABEL, lambda _entry: UPSTREAM_LICENSE_REFERENCE)
+
+
 GROUP_G_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
     ("G1", check_g1),
     ("G2", check_g2),
@@ -5475,6 +5582,8 @@ GROUP_G_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
     ("G5", check_g5),
     ("G6", check_g6),
     ("G7", check_g7),
+    ("G8", check_g8),
+    ("G9", check_g9),
 )
 
 
@@ -5551,7 +5660,7 @@ class UpstreamAttributionFixtureCase(CatalogFixtureCase):
             "upstream file": f"{UPSTREAM_FILE_LABEL} {upstream_file or declared}",
             "verbatim copyright line": UPSTREAM_COPYRIGHT,
             "license identifier": f"{LICENSE_LABEL} MIT",
-            "link to the full license text": f"{LICENSE_TEXT_LABEL} {UPSTREAM_LICENSE_URL}",
+            "link to the full license text": f"{LICENSE_TEXT_LABEL} {UPSTREAM_LICENSE_REFERENCE}",
             "modified-derivative statement": (
                 f"{DERIVATIVE_LABEL} modified from the upstream original, not the original itself"
             ),
