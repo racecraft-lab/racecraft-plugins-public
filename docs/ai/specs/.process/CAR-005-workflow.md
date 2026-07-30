@@ -945,10 +945,42 @@ When checklist identifies `[Gap]` items:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 63 (T001–T063, sequential, no gaps, all unique) |
+| **Phases** | 5 — Setup (3), Foundational (9), US1 (25), US2 (20), Polish (6) |
+| **Parallel Opportunities** | 9 `[P]` tasks (T002, T003, T006, T007, T008, T058, T059, T061, T062). None inside US1/US2 — two tasks appending to one corpus file are not parallel-safe. |
+| **User Stories Covered** | US1 25, US2 20, 18 unlabelled (Setup/Foundational/Polish per template) |
+| **Slice split** | **slice 1 = 40** (T001–T037, T058–T060) · **slice 2 = 23** (T038–T057, T061–T063). Every task carries `[S1]` or `[S2]`, verified programmatically: 0 missing, 0 malformed. A Slice Partition section carries the file-level table so PR emission reads it directly. |
+| **FR coverage** | **60/60 mapped**, script-verified against spec.md — no FR without a task, no coverage row absent from the spec, no dangling task reference. All 13 success criteria mapped. |
+
+**G5 gate:** ✅ PASS — `validate-gate G5`, "63 tasks found". Full suite re-run during
+the phase: **5345/5345**.
+
+The seven easy-to-miss slice-1 obligations each got a dedicated task: FR-019a → T031,
+FR-019b → T029, FR-017a → T028, FR-027 → T032, FR-015a → T033, FR-014a → T027 (framed
+explicitly as the cancel-out correctness trap), effort-ladder set equality → T030. Both
+deliberate divergences are marked do-not-fix in their task text (T016 preflight effort
+rejection; T045 the allowlist-skip bounded negative). Non-goal boundaries encoded as a
+table with audit tasks T058/T061.
+
+**Tasks-mode reviewability gate — deferred, with the fallback evidence chain used
+instead.** `reviewability-gate` was invoked with `mode_name: "tasks"` and returned
+`status: input_error`, exit 2, `{"error": "reviewability-gate read-only runner supports
+setup mode only"}`. Recorded per the deferred-helper contract: helper ID
+`reviewability-gate`, requested mode `tasks`, deferral reason "installed read-only runner
+supports setup mode only". Continuing on the committed fallback chain, which is current
+and complete: the **setup-mode** gate result from scaffold (pass / 257 / 0 production /
+10 files / 1 surface — noting it is a scraped authored figure, not a measurement); the
+**plan-phase** `estimate-reviewable-loc` verdict (pass / projected 0 / greenfield false —
+a *blind* pass, since it computes `production_files × 40` and this feature has none); and
+the **operator-ratified split decision** recorded above and reaffirmed 2026-07-30. No
+correctness stop applies: marker state is well-formed, no stale fingerprint, no invalid
+packet, no unsafe output.
+
+**One pre-existing inconsistency the Tasks executor found and deliberately did not
+edit,** fixed by the orchestrator instead of being carried into Analyze: `quickstart.md`
+said the corpus replay covers "all seventeen cases" where the binding count is 18
+(`data-model.md` §4 already said eighteen; `tasks.md` uses 18 throughout). Corrected —
+leaving a known factual error for a later phase to "discover" would be theatre.
 
 ---
 
@@ -969,10 +1001,25 @@ line count. Surface the four fields the SKILL extracts from the emitted decision
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
-| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+| **Route** | `one-navigable-PR` | The classifier's **default / abstain** bucket — not a positive finding against splitting. |
+| **Releasable** | `true` | No destructive-migration or concurrency-sensitive change; nothing blocks release on safety grounds. |
+| **Signals** | `change-shape:modify-heavy` | The single decisive signal. Almost certainly reads slice 2's append/extend task verbs — the feature in fact **creates** seven new files and modifies two, so `modify-heavy` is a shape misread, not evidence about splittability. |
+| **Warnings** | *(empty)* | No release-safety risk attached. |
+
+**Route conflict, surfaced rather than silently resolved** (the scoping note below
+requires this). Three signals gave three answers:
+
+| Source | Says | Weight |
+|--------|------|--------|
+| `atomicity-route` classifier | `one-navigable-PR` | **Abstention.** This value is the classifier's documented default/abstain bucket, and its one signal is a shape misread. It does not argue against splitting. |
+| `estimate-spec-size` (advisory) | **4** slices (1,305, warn) | Coarse formula over requirement *count* (`stories × 25 + files × 40 + FRs × 15`). The FR count grew 35 → 60 through defect repair; file count never changed and corpus went 17 → 18. It is measuring density, not deliverables. |
+| Operator | **2** slices, gh-stack chain | Ratified at scoping (Q10) and reaffirmed 2026-07-30 with "you can use gh-stack to create as many PRs as needed" — which lifts the ceiling rather than mandating more. |
+
+**Decision: hold at 2 slices.** The classifier abstained, so there is no genuine
+disagreement to resolve — only an advisory count formula pointing higher for a reason
+that does not correspond to more deliverable surface. The operator's ceiling is now
+open, so if Analyze surfaces a structural seam that genuinely warrants a third slice,
+splitting further is available without a further decision.
 
 Scoping note: the operator has already ratified a 2-slice split (Q10) with
 gh-stack stacked delivery. If the classifier route disagrees with `split-PR`,

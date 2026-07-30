@@ -1431,6 +1431,7 @@ cohort specs inherit proven rejection semantics.
   | `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity over the simulator's own serializer, roadmap parity test, set equality on **all three** closed enums (both reason-code vocabularies and the effort ladder, FR-007a), inline negative tests for out-of-vocabulary code and out-of-range budget, corpus case-ID uniqueness and self-containment | append the US2 test functions |
   | `suite-manifest.json` | modify — append **one** entry to the layer 4 `scripts[]` array | **unchanged — must stay untouched** |
   | `docs-site/src/content/docs/reference/tests.md` | regenerate (generated; excluded from review) | regenerate |
+  | `docs/ai/specs/claude-agent-routing-technical-roadmap.md` | modify — status line and progress row at scaffold, plus the **Grounded Platform Facts** section (PF-1…PF-4) and the two amended scope bullets recording that the override is conditional and that CAR-002 never pinned the unavailable-model fact | untouched |
 
   Registering exactly **one** test module in slice 1 is what keeps the manifest out
   of slice 2's diff: slice 1's entry becomes the tail of the `scripts[]` array, so a

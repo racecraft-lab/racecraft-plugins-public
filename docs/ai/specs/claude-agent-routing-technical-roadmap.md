@@ -170,6 +170,83 @@ creates them.
 - Evidence wins: no model generation, alias, or product tier is forced into a
   role when it fails.
 
+## Grounded Platform Facts
+
+Verified against the live Claude Code documentation on 2026-07-30 (CLI 2.1.220)
+during the CAR-005 autopilot run. **Every spec from CAR-006 onward inherits these;
+read this section before writing a requirement about model, effort, or override
+behaviour.** Three of the four facts below contradicted a requirement that had
+already been written and reviewed, so treat platform behaviour as something to
+verify rather than assume.
+
+**PF-1 — the `CLAUDE_CODE_SUBAGENT_MODEL` override is NOT unconditional.** It is
+first in the resolution order (env var → per-invocation `model` parameter →
+subagent frontmatter `model` → main conversation model), and its scope is "all
+subagents, agent teams, and agents in a workflow". But Claude Code checks it, the
+per-invocation parameter, and frontmatter against the organization
+`availableModels` allowlist and **skips a value resolving to an excluded model,
+running the subagent on the *inherited* model instead**. Two consequences for any
+override-validation requirement: an override can fail to take effect, so "the
+override wins" is false as an unconditional claim; and the documented fallback
+target is the *inherited* model — the docs do **not** say resolution resumes at
+the per-invocation parameter, so reading it that way is inference. Also note the
+variable sets a **model only**: it cannot supply an `effort`, so a dispatch tuple
+under an override is part-override, part-retained.
+
+**PF-2 — an unsupported effort DEGRADES silently; it is not rejected.** "If you
+set a level the active model does not support, Claude Code falls back to the
+highest supported level at or below the one you set." Organization effort caps
+clamp the same way, and the warning is **suppressed** under `--output-format json`
+or `stream-json` and in background agents. Supported sets: `low|medium|high|xhigh|max`
+on Fable 5, Opus 5, Sonnet 5, Opus 4.8 and Opus 4.7; only `low|medium|high|max`
+on Opus 4.6 and Sonnet 4.6 (**no `xhigh`**); and models outside that table support
+**no effort at all**, including Haiku 4.5, Claude 3, Sonnet 4.0/4.5 and Opus
+4.0/4.1. The effort scale is also calibrated per model, so the same level name
+does not denote the same underlying value across models. **Implication for
+qualification (CAR-007 through CAR-010): a route whose effort silently degrades is
+not a qualified route**, because the tuple that ran is not the tuple the policy
+pinned and no result field records the difference. CAR-005 therefore rejects such a
+route at preflight as a deliberate policy divergence from runtime behaviour — a
+divergence, not a mirror, and future specs must keep it labelled that way.
+`ultracode` is **not** a model effort level (it sends `xhigh` plus workflow
+orchestration) and must not appear in an effort enum.
+
+**PF-3 — aliases re-point, by three distinct mechanisms.** "Aliases point to the
+recommended version for your provider and update over time. To pin to a specific
+version, use the full model name." The documented mechanisms are provider/version
+drift (the docs record `opus` moving at v2.1.219 and v2.1.207), per-family env
+redefinition via `ANTHROPIC_DEFAULT_OPUS_MODEL` and siblings, which redefines the
+alias process-wide *underneath* the whole resolution order, and **allowlist
+substitution** — on the Anthropic API and Claude Platform on AWS a family alias
+"resolves to the newest version of its family that the allowlist permits" and
+announces both requested and substituted models, while Bedrock, Google Cloud and
+Foundry reject or replace instead. So substitution behaviour is
+**provider-dependent**. This is why a route tuple must pin a qualified resolved
+model ID and not merely an alias. `modelUsage` in the result message is the
+authoritative post-hoc record of what an alias actually resolved to; the stderr
+remap warning is suppressed under `json`/`stream-json`.
+
+**PF-4 — CAR-002 did not pin the unavailable-model platform fact.** The CAR-005
+scope line below says its reason codes are "aligned with the CAR-002 probed
+unavailable-model behavior". CAR-002 in fact produced a **three**-member
+vocabulary — `hard_rejection`, `soft_remap`, `undetermined` — recorded as
+`labeled_inference` rather than `observation`; CAP-Q5 is `answered` only when some
+surface returns a non-`undetermined` outcome; CAP-Q6 (route-change detection) is
+hardcoded `status: "open"`; and **no live capture is committed to the tree**. Any
+spec claiming alignment with a determinate CAR-002 observation is claiming more
+than exists. CAR-005 pins its semantics *ahead of* the platform fact, which is
+coherent for a synthetic simulation but must be stated rather than glossed. Note
+also that `undetermined` must map to probe-unavailable, never to probe-success —
+the fail-open direction was a live defect caught in CAR-005.
+
+**Parity:** PF-1 through PF-4 are platform facts, not Claude-specific design, so
+they apply equally to the Codex half of this catalog. They are recorded here only,
+because a Codex-side edit is a deliberate joint two-platform landing under the
+shared parity contract. **G56R-005 onward should carry the same section**; raise it
+as a joint change rather than copying unilaterally.
+
+---
+
 ## Reviewability Contract
 
 Every implementation spec must fit the repository's human review budget. Warn
@@ -527,7 +604,13 @@ Budget result: re-estimate at scaffold; replay fixtures plus reason-code tests
 - Define stable reason codes (`preferred_model_unavailable`,
   `effort_unsupported`, `capability_probe_unavailable`,
   `treatment_probe_failed`, `no_safe_route`) aligned with the CAR-002 probed
-  unavailable-model behavior.
+  unavailable-model behavior. **Amended 2026-07-30 (see PF-4):** CAR-002 recorded
+  that behaviour as *labeled inference* over a three-member vocabulary with no
+  committed live capture, so this alignment is with CAR-002's **vocabulary and
+  detection rule**, not with a pinned platform observation. CAR-005 pins its
+  semantics ahead of the platform fact. `effort_unsupported` is likewise a
+  deliberate **preflight qualification** decision, not a mirror of runtime
+  behaviour, because the runtime silently degrades an unsupported effort (PF-2).
 - Reject fallback loops, unqualified adjacent models, generic-agent
   substitution, and silent `inherit` materialization; bound probe attempts,
   retries, and fan-out.
@@ -592,7 +675,16 @@ drift gate
 - Implement override validation: read `CLAUDE_CODE_SUBAGENT_MODEL` and
   settings-level overrides, validate the resulting tuple for every named agent
   against qualified routes, and report non-qualified overrides loudly;
-  release claims exclude overridden environments.
+  release claims exclude overridden environments. **Amended 2026-07-30 (see
+  PF-1):** an override does **not** unconditionally take effect — a value
+  resolving to a model outside the organization `availableModels` allowlist is
+  skipped, and the subagent runs on the *inherited* model. Override validation
+  must therefore distinguish *honored* from *skipped*, and must not report a
+  skipped override as the effective dispatch tuple. The variable also supplies a
+  **model only**, so an overridden tuple is part-override, part-retained and the
+  `effort` member still comes from the resolved route. CAR-005's fixture corpus
+  carries both branches (`override-honored`, `override-skipped-by-allowlist`) for
+  this framework to re-prove against.
 - Add a thin, non-blocking SessionStart warning that surfaces unresolved
   routes or non-qualified overrides, mirroring the existing missing-CLI
   warning pattern.

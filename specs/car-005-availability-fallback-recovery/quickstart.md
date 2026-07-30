@@ -178,7 +178,7 @@ restacks — it is never absorbed into slice 2's diff.
 
 | Check | Criterion |
 | --- | --- |
-| Corpus replay | all seventeen cases byte-identical to their pinned reports (SC-002) |
+| Corpus replay | all eighteen cases byte-identical to their pinned reports (SC-002) |
 | Scenario coverage | every scenario SC-001 enumerates has at least one case, zero unrepresented |
 | Budget cap | the budget-of-one case records exactly one attempt and never exceeds the declared cap (FR-026, SC-009) |
 | Out-of-range budget | an inline fixture declaring a budget above the schema maximum **fails validation** rather than being clamped (FR-027) |
