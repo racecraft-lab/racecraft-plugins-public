@@ -18,7 +18,6 @@ from .read_only import (
     is_relative_to,
     looks_like_windows_absolute_path,
     normalize_display,
-    normalize_path_input,
     path_diagnostic,
     render_spec_index,
     repo_relative,
@@ -798,7 +797,7 @@ def run_mutation_helper(
     mutation["planned_operations"] = operation_records(normalized)
     mutation["planned_paths"] = sorted(
         {
-            repo_relative(resolve_candidate_path(op["target"], repo_root), repo_root)
+            repo_relative(resolve_input_path(op["target"], repo_root), repo_root)
             for op in normalized
             if op["kind"] == "write_file"
         }
@@ -924,7 +923,7 @@ def run_mutation_helper(
             return locked_response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[diag])
 
         if op["kind"] == "write_file":
-            target = resolve_candidate_path(op["target"], repo_root)
+            target = resolve_input_path(op["target"], repo_root)
             rel = repo_relative(target, repo_root)
             source_precondition_changed = operation_source_fingerprint_diagnostic(op, repo_root)
             if source_precondition_changed is not None:
@@ -1186,7 +1185,7 @@ def validate_target_path(raw: str, repo_root: Path) -> dict[str, Any] | None:
             "path escapes the repo/plugin trust boundary",
             {"field": "target", "path": normalize_display(raw)},
         )
-    target = resolve_candidate_path(raw, repo_root)
+    target = resolve_input_path(raw, repo_root)
     resolved = target.resolve(strict=False)
     if not is_relative_to(resolved, repo_root):
         return path_diagnostic(
@@ -1236,7 +1235,7 @@ def validate_target_path(raw: str, repo_root: Path) -> dict[str, Any] | None:
 
 def validate_batch_write_conflicts(operations: list[dict[str, Any]], repo_root: Path) -> dict[str, Any] | None:
     write_targets: list[tuple[dict[str, Any], Path]] = [
-        (op, resolve_candidate_path(op["target"], repo_root).resolve(strict=False))
+        (op, resolve_input_path(op["target"], repo_root).resolve(strict=False))
         for op in operations
         if op["kind"] == "write_file"
     ]
@@ -1302,12 +1301,6 @@ def command_plan_apply_diagnostic(operations: list[dict[str, Any]], helper_id: s
     )
 
 
-def resolve_candidate_path(raw: str, repo_root: Path) -> Path:
-    value = normalize_path_input(raw)
-    path = Path(value)
-    return path if path.is_absolute() else repo_root / path
-
-
 def dirty_worktree_diagnostic(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any] | None:
     overrides = inputs.get("test_overrides")
     if isinstance(overrides, dict) and overrides.get("dirty_worktree") is True:
@@ -1369,7 +1362,7 @@ def capture_write_snapshots(
     for op in operations:
         if op["kind"] != "write_file":
             continue
-        target = resolve_candidate_path(op["target"], repo_root)
+        target = resolve_input_path(op["target"], repo_root)
         rel = repo_relative(target, repo_root)
         if rel in snapshots:
             continue
@@ -1391,7 +1384,7 @@ def capture_write_snapshots(
 def rollback_applied_writes(touched_paths: list[str], snapshots: dict[str, dict[str, Any]], repo_root: Path) -> list[str]:
     errors: list[str] = []
     for rel in reversed(touched_paths):
-        target = resolve_candidate_path(rel, repo_root)
+        target = resolve_input_path(rel, repo_root)
         try:
             original = snapshots.get(rel) or {"exists": False, "created_parent_dirs": []}
             current = snapshot_write_target(target, repo_root)
@@ -1805,7 +1798,7 @@ def applied_targets_changed_diagnostic(
     message: str,
 ) -> dict[str, Any] | None:
     for rel in touched_paths:
-        target = resolve_candidate_path(rel, repo_root)
+        target = resolve_input_path(rel, repo_root)
         try:
             current = snapshot_write_target(target, repo_root)
         except OSError as exc:
@@ -1846,7 +1839,7 @@ def operation_source_fingerprint_diagnostic(operation: dict[str, Any], repo_root
         path_value = expected.get("path")
         if not isinstance(path_value, str) or not path_value:
             return source_fingerprint_changed(label, "missing-path")
-        target = resolve_candidate_path(path_value, repo_root)
+        target = resolve_input_path(path_value, repo_root)
         if validate_target_path(path_value, repo_root) is not None:
             return source_fingerprint_changed(label, "unsafe-path")
         try:
@@ -1924,7 +1917,7 @@ def remove_created_parent_dirs(relative_dirs: list[str], repo_root: Path) -> lis
     for rel in reversed(relative_dirs):
         if not isinstance(rel, str) or not rel:
             continue
-        target = resolve_candidate_path(rel, repo_root)
+        target = resolve_input_path(rel, repo_root)
         try:
             opened = open_safe_parent_fd(target, repo_root, create=False)
             if opened is None:
