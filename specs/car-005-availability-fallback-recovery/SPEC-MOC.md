@@ -5,15 +5,15 @@
 #
 # up: MUST be a quoted relative markdown link, NEVER a wikilink. The target is
 # load-bearing: stale-index lint resolves it from this spec directory.
-up: "[HTML artifacts roadmap](../../docs/ai/specs/html-artifacts-technical-roadmap.md)"
+up: "[Claude agent routing roadmap](../../docs/ai/specs/claude-agent-routing-technical-roadmap.md)"
 related: []                  # list of relative markdown links; carried, unenforced in v1
-status: ""                   # carried, unenforced in v1
+status: "In Progress"        # carried, unenforced in v1
 rank:                        # carried, unenforced in v1
-spec_id: "ART-001"           # namespace-matches the containing directory
+spec_id: "CAR-005"           # namespace-matches the containing directory
 structureVersion: 1          # keep in sync with the lint scripts' hardcoded literal
 ---
 
-# ART-001 — Map of Content
+# CAR-005 — Map of Content
 
 Navigation map for this spec. The `up:` link above points to the parent technical
 roadmap. As this spec is decomposed into slices, add relative Markdown links to
@@ -31,14 +31,10 @@ the slice artifacts in the body below.
 - [tasks.md](tasks.md)
 - [data-model.md](data-model.md)
 - [research.md](research.md)
-- [contracts/gallery-validation-contract.md](contracts/gallery-validation-contract.md)
-- [contracts/routing-catalog-contract.md](contracts/routing-catalog-contract.md)
-- [checklists/accessibility.md](checklists/accessibility.md)
 - [checklists/data-integrity.md](checklists/data-integrity.md)
-- [checklists/requirements.md](checklists/requirements.md)
-- [checklists/security.md](checklists/security.md)
-- [.process/acceptance-harness.html](.process/acceptance-harness.html)
-- [.process/changed-files.txt](.process/changed-files.txt)
+- [checklists/error-handling.md](checklists/error-handling.md)
+- [checklists/llm-integration.md](checklists/llm-integration.md)
+- [.process/slice-1-pr-packet.md](.process/slice-1-pr-packet.md)
+- [.process/slice-2-pr-packet.md](.process/slice-2-pr-packet.md)
 - [quickstart.md](quickstart.md)
-- [retrospective.md](retrospective.md)
 <!-- GENERATED:BACKLINKS:END -->
