@@ -362,6 +362,60 @@
               "transform": "none"
             },
             {
+              "byte_count": 37188,
+              "kind": "docs",
+              "path": "artifact-gallery/SPA-CONTRACT.md",
+              "required": true,
+              "sha256": "4d5d9c495356bf720043038f423766b617192826695cd6502d0958ecc63d2357",
+              "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
+              "transform": "none"
+            },
+            {
+              "byte_count": 2138,
+              "kind": "docs",
+              "path": "artifact-gallery/UPSTREAM-NOTICE.md",
+              "required": true,
+              "sha256": "4c223d61b0f71c5059fa59a2a0857fe4950c65834195ac0bb91cad9969e9fdda",
+              "source_path": "speckit-pro/artifact-gallery/UPSTREAM-NOTICE.md",
+              "transform": "none"
+            },
+            {
+              "byte_count": 20482,
+              "kind": "docs",
+              "path": "artifact-gallery/brand-kit.css",
+              "required": true,
+              "sha256": "45c92ec1e33f6869c1afa371662edd2a1e57cc3ecde204839963a3388a72633b",
+              "source_path": "speckit-pro/artifact-gallery/brand-kit.css",
+              "transform": "none"
+            },
+            {
+              "byte_count": 6186,
+              "kind": "docs",
+              "path": "artifact-gallery/brand-voice.md",
+              "required": true,
+              "sha256": "491478830fef76920348d66e6b0a2baedc47084bb84a6e22f141b4e5180aaf46",
+              "source_path": "speckit-pro/artifact-gallery/brand-voice.md",
+              "transform": "none"
+            },
+            {
+              "byte_count": 10912,
+              "kind": "docs",
+              "path": "artifact-gallery/manifest.json",
+              "required": true,
+              "sha256": "2d0f7657b9e2ea68193b3d83160fb4078000791fd9bdf06f145592879a31ed2a",
+              "source_path": "speckit-pro/artifact-gallery/manifest.json",
+              "transform": "none"
+            },
+            {
+              "byte_count": 10075,
+              "kind": "docs",
+              "path": "artifact-gallery/theme-toggle.html",
+              "required": true,
+              "sha256": "4b966f880f52614a6c73521c1339aa2c8d37bf7b2b779ea6739b07eb65928ab3",
+              "source_path": "speckit-pro/artifact-gallery/theme-toggle.html",
+              "transform": "none"
+            },
+            {
               "byte_count": 159,
               "kind": "hook",
               "path": "hooks/hooks.json",
@@ -983,11 +1037,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 42889,
+              "byte_count": 42945,
               "kind": "runner",
               "path": "speckit_pro_runner/gates/payloads.py",
               "required": true,
-              "sha256": "94a9632203cd8078bfcf551dda15c54c8639b4f988faad8b9d2f031ead3ba0f6",
+              "sha256": "5cbef2ebd78b524baf7dc1f69b8b35db42a77452a87de8111186c634fd488a02",
               "source_path": "speckit-pro/speckit_pro_runner/gates/payloads.py",
               "transform": "none"
             },
@@ -1131,7 +1185,7 @@
               "kind": "trust_metadata",
               "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
               "required": true,
-              "sha256": "855e5b508236b5476740dbdb02961b91f8f0e411bcf953347e04751a6689ee96",
+              "sha256": "01676aa769e74188f8f5df4fe1b2ab9e144e044a2ee0eaf58ec3bc6c2e4a592a",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
               "transform": "none"
             },
@@ -1140,7 +1194,7 @@
               "kind": "checksum",
               "path": "speckit_pro_runner/speckit-pro-runner.sha256",
               "required": true,
-              "sha256": "88d475e618df0fb8c337d7a99e43e957c8f9970169421f9ded12f806dcc1456f",
+              "sha256": "13e1d1693b3dc690d21bb35ad92c5413e402fbdad7903ca27ae67489d95ceee5",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
               "transform": "none"
             }
@@ -1282,6 +1336,60 @@
               "transform": "none"
             },
             {
+              "byte_count": 37188,
+              "kind": "docs",
+              "path": "artifact-gallery/SPA-CONTRACT.md",
+              "required": true,
+              "sha256": "4d5d9c495356bf720043038f423766b617192826695cd6502d0958ecc63d2357",
+              "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
+              "transform": "none"
+            },
+            {
+              "byte_count": 2138,
+              "kind": "docs",
+              "path": "artifact-gallery/UPSTREAM-NOTICE.md",
+              "required": true,
+              "sha256": "4c223d61b0f71c5059fa59a2a0857fe4950c65834195ac0bb91cad9969e9fdda",
+              "source_path": "speckit-pro/artifact-gallery/UPSTREAM-NOTICE.md",
+              "transform": "none"
+            },
+            {
+              "byte_count": 20482,
+              "kind": "docs",
+              "path": "artifact-gallery/brand-kit.css",
+              "required": true,
+              "sha256": "45c92ec1e33f6869c1afa371662edd2a1e57cc3ecde204839963a3388a72633b",
+              "source_path": "speckit-pro/artifact-gallery/brand-kit.css",
+              "transform": "none"
+            },
+            {
+              "byte_count": 6186,
+              "kind": "docs",
+              "path": "artifact-gallery/brand-voice.md",
+              "required": true,
+              "sha256": "491478830fef76920348d66e6b0a2baedc47084bb84a6e22f141b4e5180aaf46",
+              "source_path": "speckit-pro/artifact-gallery/brand-voice.md",
+              "transform": "none"
+            },
+            {
+              "byte_count": 10912,
+              "kind": "docs",
+              "path": "artifact-gallery/manifest.json",
+              "required": true,
+              "sha256": "2d0f7657b9e2ea68193b3d83160fb4078000791fd9bdf06f145592879a31ed2a",
+              "source_path": "speckit-pro/artifact-gallery/manifest.json",
+              "transform": "none"
+            },
+            {
+              "byte_count": 10075,
+              "kind": "docs",
+              "path": "artifact-gallery/theme-toggle.html",
+              "required": true,
+              "sha256": "4b966f880f52614a6c73521c1339aa2c8d37bf7b2b779ea6739b07eb65928ab3",
+              "source_path": "speckit-pro/artifact-gallery/theme-toggle.html",
+              "transform": "none"
+            },
+            {
               "byte_count": 159,
               "kind": "hook",
               "path": "hooks/hooks.json",
@@ -1903,11 +2011,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 42889,
+              "byte_count": 42945,
               "kind": "runner",
               "path": "speckit_pro_runner/gates/payloads.py",
               "required": true,
-              "sha256": "94a9632203cd8078bfcf551dda15c54c8639b4f988faad8b9d2f031ead3ba0f6",
+              "sha256": "5cbef2ebd78b524baf7dc1f69b8b35db42a77452a87de8111186c634fd488a02",
               "source_path": "speckit-pro/speckit_pro_runner/gates/payloads.py",
               "transform": "none"
             },
@@ -2051,7 +2159,7 @@
               "kind": "trust_metadata",
               "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
               "required": true,
-              "sha256": "855e5b508236b5476740dbdb02961b91f8f0e411bcf953347e04751a6689ee96",
+              "sha256": "01676aa769e74188f8f5df4fe1b2ab9e144e044a2ee0eaf58ec3bc6c2e4a592a",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
               "transform": "none"
             },
@@ -2060,13 +2168,13 @@
               "kind": "checksum",
               "path": "speckit_pro_runner/speckit-pro-runner.sha256",
               "required": true,
-              "sha256": "88d475e618df0fb8c337d7a99e43e957c8f9970169421f9ded12f806dcc1456f",
+              "sha256": "13e1d1693b3dc690d21bb35ad92c5413e402fbdad7903ca27ae67489d95ceee5",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
               "transform": "none"
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "093f3fcbf86e7380a7e1a683cdb872b09d2aa4d7b9081118f5ba6fe05795f36b",
+          "file_tree_hash": "90f3a42ae48759145f5f30d9373eddad06f4d24d05409eb92213568b1d9fde77",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2115,6 +2223,60 @@
               "transform": "none"
             },
             {
+              "byte_count": 37188,
+              "kind": "docs",
+              "path": "artifact-gallery/SPA-CONTRACT.md",
+              "required": true,
+              "sha256": "4d5d9c495356bf720043038f423766b617192826695cd6502d0958ecc63d2357",
+              "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
+              "transform": "none"
+            },
+            {
+              "byte_count": 2138,
+              "kind": "docs",
+              "path": "artifact-gallery/UPSTREAM-NOTICE.md",
+              "required": true,
+              "sha256": "4c223d61b0f71c5059fa59a2a0857fe4950c65834195ac0bb91cad9969e9fdda",
+              "source_path": "speckit-pro/artifact-gallery/UPSTREAM-NOTICE.md",
+              "transform": "none"
+            },
+            {
+              "byte_count": 20482,
+              "kind": "docs",
+              "path": "artifact-gallery/brand-kit.css",
+              "required": true,
+              "sha256": "45c92ec1e33f6869c1afa371662edd2a1e57cc3ecde204839963a3388a72633b",
+              "source_path": "speckit-pro/artifact-gallery/brand-kit.css",
+              "transform": "none"
+            },
+            {
+              "byte_count": 6186,
+              "kind": "docs",
+              "path": "artifact-gallery/brand-voice.md",
+              "required": true,
+              "sha256": "491478830fef76920348d66e6b0a2baedc47084bb84a6e22f141b4e5180aaf46",
+              "source_path": "speckit-pro/artifact-gallery/brand-voice.md",
+              "transform": "none"
+            },
+            {
+              "byte_count": 10912,
+              "kind": "docs",
+              "path": "artifact-gallery/manifest.json",
+              "required": true,
+              "sha256": "2d0f7657b9e2ea68193b3d83160fb4078000791fd9bdf06f145592879a31ed2a",
+              "source_path": "speckit-pro/artifact-gallery/manifest.json",
+              "transform": "none"
+            },
+            {
+              "byte_count": 10075,
+              "kind": "docs",
+              "path": "artifact-gallery/theme-toggle.html",
+              "required": true,
+              "sha256": "4b966f880f52614a6c73521c1339aa2c8d37bf7b2b779ea6739b07eb65928ab3",
+              "source_path": "speckit-pro/artifact-gallery/theme-toggle.html",
+              "transform": "none"
+            },
+            {
               "byte_count": 6373,
               "kind": "agent",
               "path": "codex-agents/analyze-executor.toml",
@@ -2988,11 +3150,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 42889,
+              "byte_count": 42945,
               "kind": "runner",
               "path": "speckit_pro_runner/gates/payloads.py",
               "required": true,
-              "sha256": "94a9632203cd8078bfcf551dda15c54c8639b4f988faad8b9d2f031ead3ba0f6",
+              "sha256": "5cbef2ebd78b524baf7dc1f69b8b35db42a77452a87de8111186c634fd488a02",
               "source_path": "speckit-pro/speckit_pro_runner/gates/payloads.py",
               "transform": "none"
             },
@@ -3136,7 +3298,7 @@
               "kind": "trust_metadata",
               "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
               "required": true,
-              "sha256": "855e5b508236b5476740dbdb02961b91f8f0e411bcf953347e04751a6689ee96",
+              "sha256": "01676aa769e74188f8f5df4fe1b2ab9e144e044a2ee0eaf58ec3bc6c2e4a592a",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
               "transform": "none"
             },
@@ -3145,7 +3307,7 @@
               "kind": "checksum",
               "path": "speckit_pro_runner/speckit-pro-runner.sha256",
               "required": true,
-              "sha256": "88d475e618df0fb8c337d7a99e43e957c8f9970169421f9ded12f806dcc1456f",
+              "sha256": "13e1d1693b3dc690d21bb35ad92c5413e402fbdad7903ca27ae67489d95ceee5",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
               "transform": "none"
             }
@@ -3188,6 +3350,60 @@
               "transform": "none"
             },
             {
+              "byte_count": 37188,
+              "kind": "docs",
+              "path": "artifact-gallery/SPA-CONTRACT.md",
+              "required": true,
+              "sha256": "4d5d9c495356bf720043038f423766b617192826695cd6502d0958ecc63d2357",
+              "source_path": "speckit-pro/artifact-gallery/SPA-CONTRACT.md",
+              "transform": "none"
+            },
+            {
+              "byte_count": 2138,
+              "kind": "docs",
+              "path": "artifact-gallery/UPSTREAM-NOTICE.md",
+              "required": true,
+              "sha256": "4c223d61b0f71c5059fa59a2a0857fe4950c65834195ac0bb91cad9969e9fdda",
+              "source_path": "speckit-pro/artifact-gallery/UPSTREAM-NOTICE.md",
+              "transform": "none"
+            },
+            {
+              "byte_count": 20482,
+              "kind": "docs",
+              "path": "artifact-gallery/brand-kit.css",
+              "required": true,
+              "sha256": "45c92ec1e33f6869c1afa371662edd2a1e57cc3ecde204839963a3388a72633b",
+              "source_path": "speckit-pro/artifact-gallery/brand-kit.css",
+              "transform": "none"
+            },
+            {
+              "byte_count": 6186,
+              "kind": "docs",
+              "path": "artifact-gallery/brand-voice.md",
+              "required": true,
+              "sha256": "491478830fef76920348d66e6b0a2baedc47084bb84a6e22f141b4e5180aaf46",
+              "source_path": "speckit-pro/artifact-gallery/brand-voice.md",
+              "transform": "none"
+            },
+            {
+              "byte_count": 10912,
+              "kind": "docs",
+              "path": "artifact-gallery/manifest.json",
+              "required": true,
+              "sha256": "2d0f7657b9e2ea68193b3d83160fb4078000791fd9bdf06f145592879a31ed2a",
+              "source_path": "speckit-pro/artifact-gallery/manifest.json",
+              "transform": "none"
+            },
+            {
+              "byte_count": 10075,
+              "kind": "docs",
+              "path": "artifact-gallery/theme-toggle.html",
+              "required": true,
+              "sha256": "4b966f880f52614a6c73521c1339aa2c8d37bf7b2b779ea6739b07eb65928ab3",
+              "source_path": "speckit-pro/artifact-gallery/theme-toggle.html",
+              "transform": "none"
+            },
+            {
               "byte_count": 6373,
               "kind": "agent",
               "path": "codex-agents/analyze-executor.toml",
@@ -4061,11 +4277,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 42889,
+              "byte_count": 42945,
               "kind": "runner",
               "path": "speckit_pro_runner/gates/payloads.py",
               "required": true,
-              "sha256": "94a9632203cd8078bfcf551dda15c54c8639b4f988faad8b9d2f031ead3ba0f6",
+              "sha256": "5cbef2ebd78b524baf7dc1f69b8b35db42a77452a87de8111186c634fd488a02",
               "source_path": "speckit-pro/speckit_pro_runner/gates/payloads.py",
               "transform": "none"
             },
@@ -4209,7 +4425,7 @@
               "kind": "trust_metadata",
               "path": "speckit_pro_runner/speckit-pro-runner.manifest.json",
               "required": true,
-              "sha256": "855e5b508236b5476740dbdb02961b91f8f0e411bcf953347e04751a6689ee96",
+              "sha256": "01676aa769e74188f8f5df4fe1b2ab9e144e044a2ee0eaf58ec3bc6c2e4a592a",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
               "transform": "none"
             },
@@ -4218,13 +4434,13 @@
               "kind": "checksum",
               "path": "speckit_pro_runner/speckit-pro-runner.sha256",
               "required": true,
-              "sha256": "88d475e618df0fb8c337d7a99e43e957c8f9970169421f9ded12f806dcc1456f",
+              "sha256": "13e1d1693b3dc690d21bb35ad92c5413e402fbdad7903ca27ae67489d95ceee5",
               "source_path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
               "transform": "none"
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "e9397dac0c48570b66a9bff02e678d828c1a88e3b56b03d5d3c86dccac956a89",
+          "file_tree_hash": "3557a5d7583dc59fcb69100536e126a6f9ab9d9d6b2821441dab767547134676",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

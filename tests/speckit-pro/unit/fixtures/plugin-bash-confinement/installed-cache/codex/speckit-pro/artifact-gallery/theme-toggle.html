@@ -1,0 +1,160 @@
+<!--
+  Racecraft artifact gallery, canonical head block.
+
+  Copy the region between the two markers, including the markers, into the
+  artifact's head element, directly after the character encoding declaration and
+  before anything else. Validation compares the region byte for byte. Amend this
+  file in its own change, never the copy inside an artifact.
+
+  The region stays inside the head element and carries only metadata content, so
+  the theme control is created at run time instead of being written as markup
+  here. The head element admits only metadata content, so a parser meeting a
+  button there closes the head and opens the body, which silently relocates the
+  whole region and voids the policy declaration for every artifact embedding it.
+  With scripting unavailable the reader still gets the operating system theme
+  from the kit's media query and loses only the ability to override it, the same
+  degradation the storage unavailable path already accepts.
+
+  Everything else an artifact needs, the brand typeface request included, is the
+  artifact's own and belongs outside this region.
+-->
+<!-- GALLERY-HEAD:START -->
+<meta http-equiv="Content-Security-Policy" content="base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; connect-src 'none'">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;family=Geist:wght@400;500;600&amp;family=Fira+Code:wght@400;500&amp;display=swap">
+<script>
+(function () {
+  'use strict';
+
+  var LIGHT = 'light';
+  var DARK = 'dark';
+  var STORAGE_KEY = 'speckit-pro:artifact-gallery:theme';
+  var LABEL = 'Dark theme';
+  var root = document.documentElement;
+
+  /* The read is wrapped because a browser may refuse storage to a local file and
+     throw. That catch covers the throw only: the closed set comparison below is
+     what validates the value, so a value written by some other local document is
+     discarded rather than swallowed. */
+  function storedTheme() {
+    var raw = null;
+    try {
+      raw = window.localStorage.getItem(STORAGE_KEY);
+    } catch (unavailable) {
+      raw = null;
+    }
+    if (raw === DARK) {
+      return DARK;
+    }
+    if (raw === LIGHT) {
+      return LIGHT;
+    }
+    return null;
+  }
+
+  function systemTheme() {
+    return window.matchMedia
+      && window.matchMedia('(prefers-color-scheme: dark)').matches ? DARK : LIGHT;
+  }
+
+  /* theme is always one of the two literals above, never the string read back.
+     The scheme is set alongside the attribute so the browser's own surfaces,
+     form widgets and scrollbars, follow the chosen theme rather than the
+     operating system preference. */
+  function applyTheme(theme) {
+    root.setAttribute('data-theme', theme);
+    root.style.setProperty('color-scheme', theme);
+  }
+
+  function rememberTheme(theme) {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, theme);
+    } catch (unavailable) {
+      /* Storage refused: the override still applies for this session and
+         nothing is surfaced to the reader as an error. */
+    }
+  }
+
+  /* Runs while the head is parsing, so the theme is on the root element before
+     first paint and a dark theme reader sees no flash of light.
+
+     data-theme is written on BOTH paths, not only when an override is stored.
+     Leaving it absent by default had two costs: the contract tells a template to
+     read data-theme to learn the current theme, and on the default path there was
+     nothing to read; and `active` held a snapshot of the operating-system theme
+     that nothing kept current. A reader who flipped their system theme after load
+     got a repainted page with a stale control — announced as "not pressed" on a
+     dark page — and a first click that changed nothing visible, so reaching the
+     other theme took two presses. */
+  var override = storedTheme();
+  var active = override || systemTheme();
+  applyTheme(active);
+
+  /* Reassigned once the control exists. A no-op until then, so the media
+     listener below can call it unconditionally — including before the control is
+     built, which is when an early system change would otherwise be lost. */
+  var announce = function () {};
+
+  /* While no override is stored the operating system is still the authority, so
+     a later change to it has to be followed rather than snapshotted. Storing an
+     override ends this: from then on the reader's choice wins, which is why the
+     listener checks `override` on every fire rather than being torn down. */
+  var media = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+  if (media) {
+    var followSystem = function (event) {
+      if (override) {
+        return;
+      }
+      active = event.matches ? DARK : LIGHT;
+      applyTheme(active);
+      announce();
+    };
+    if (media.addEventListener) {
+      media.addEventListener('change', followSystem);
+    } else if (media.addListener) {
+      media.addListener(followSystem);  /* older engines: removed from the platform, still shipped */
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var control = document.createElement('button');
+    control.type = 'button';
+    control.className = 'rc-theme-toggle';
+    /* The name is carried both as the visible label and as an explicit
+       accessible name, identical to each other, so it is stable across theme
+       positions and never derived from an icon glyph. The pressed state is what
+       changes between positions. */
+    control.textContent = LABEL;
+    control.setAttribute('aria-label', LABEL);
+    announce = function () {
+      control.setAttribute('aria-pressed', active === DARK ? 'true' : 'false');
+    };
+    announce();
+    control.addEventListener('click', function () {
+      active = active === DARK ? LIGHT : DARK;
+      /* The reader has now chosen, so the operating system stops being the
+         authority and the media listener above stands down. */
+      override = active;
+      applyTheme(active);
+      rememberTheme(active);
+      announce();
+    });
+    document.body.insertBefore(control, document.body.firstChild);
+
+    /* The Racecraft mark, decided once here so all 21 artifacts carry the same
+       artwork, and mounted only where a template asks for it — a template opts in
+       with an empty element carrying data-rc-brand-mark, so an artifact that has no
+       sensible place for a mark simply does not provide one. The neutral fill is
+       currentColor rather than a literal, so the mark follows the theme; the source
+       artwork hard-codes the light text value, which would be near-invisible on the
+       dark surface. Brand red is kept as-is: it is a primitive, identical in both
+       themes, and a logo mark carries no contrast obligation. */
+    var marks = document.querySelectorAll('[data-rc-brand-mark]');
+    for (var i = 0; i < marks.length; i += 1) {
+      if (!marks[i].firstElementChild) {
+        marks[i].innerHTML = '<svg class="rc-brand-mark" aria-hidden="true" focusable="false" viewBox="0 0 1250 1041" xmlns="http://www.w3.org/2000/svg"><g id="Layer-1"><g id="Group"><path id="Path" fill="none" stroke="none" d="M 469.2146 466.481079 C 475.719025 466.913025 479.789063 467.417053 483.859436 467.419189 C 564.027405 467.459656 644.205872 468.200745 724.358704 467.082886 C 758.932922 466.600647 793.701721 464.031494 827.943237 459.259766 C 887.535583 450.955139 931.979431 421.172302 952.822693 362.165222 C 966.562134 323.269104 955.263794 299.261963 915.212158 290.790527 C 885.175415 284.437683 854.049622 286.777832 823.338196 286.262207 L 551.617859 285.865051 C 547.658691 289.279785 544.522156 294.119812 541.683289 300.907715 C 518.750977 355.742432 494.148651 409.87854 469.2146 466.481079 Z"/><path id="path1" fill="currentColor" stroke="none" d="M 724.358704 467.082886 C 644.205872 468.200745 564.027405 467.459656 483.859436 467.419189 C 479.789063 467.417053 475.719025 466.913025 469.2146 466.481079 C 494.148651 409.87854 518.750977 355.742432 541.683289 300.907715 C 544.522156 294.119812 547.658691 289.279785 551.617859 285.865051 L 342.342896 285.559387 C 260.177399 469.638306 179.055176 654.182251 97.632225 838.592102 C 90.298721 855.201111 83.153061 871.893066 75 890.665649 C 81.568802 890.665649 86.0662 890.665649 90.563942 890.665649 C 149.156647 890.665649 207.754974 890.243164 266.338196 891.003296 C 278.828583 891.165405 283.973541 886.742615 288.748108 875.762939 C 327.223907 787.282959 366.557587 699.17688 405.200134 610.769043 C 409.149872 601.732727 413.847748 598.350708 423.879456 598.412598 C 495.594299 598.855835 567.316162 598.97644 639.028259 598.338074 C 651.588257 598.226196 656.575989 601.980713 660.146179 614.129578 C 686.022888 702.187134 712.782104 789.985413 739.30249 877.853333 C 741.274719 884.387329 741.97821 890.943481 752.262817 890.889709 C 827.716675 890.49646 903.174438 890.596313 978.629028 890.981812 L 868.0047 581.535278 L 827.943237 459.259766 C 793.701721 464.031494 758.932922 466.600647 724.358704 467.082886 Z"/><path id="path2" fill="#dc143c" stroke="none" d="M 1106.95105 175.728577 C 1083.181885 166.424988 1057.712158 158.817505 1032.460938 156.494568 C 977.976929 151.482605 923.15033 148.620117 868.431335 148.060852 C 749.383118 146.844177 630.314148 147.752014 511.253937 147.520203 C 459.6539 147.419922 416.363739 164.23291 387.122986 208.566345 C 371.954071 231.564331 356.125244 254.671082 344.959869 279.677917 C 344.085083 281.637085 343.217316 283.599854 342.342896 285.559387 L 551.617859 285.865051 L 823.338196 286.262207 C 854.049622 286.777832 885.175415 284.437683 915.212158 290.790527 C 955.263794 299.261963 966.562134 323.269104 952.822693 362.165222 C 931.979431 421.172302 887.535583 450.955139 827.943237 459.259766 L 868.0047 581.535278 C 890.488831 576.130737 911.725342 572.328369 932.138062 565.907288 C 1059.137085 525.957703 1144.790894 444.708496 1178.169067 313.813171 C 1195.045044 247.631958 1170.367798 200.550781 1106.95105 175.728577 Z"/></g></g></svg>';
+      }
+    }
+  });
+})();
+</script>
+<!-- GALLERY-HEAD:END -->
