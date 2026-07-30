@@ -191,16 +191,33 @@ cohort specs inherit proven rejection semantics.
   roadmap pins: `preferred_model_unavailable`, `effort_unsupported`,
   `capability_probe_unavailable`, `treatment_probe_failed`, and `no_safe_route`.
   The enum MUST NOT be extended by this feature. [US1]
-- **FR-006**: A route whose pinned tuple is unavailable — because the model is
-  absent, because the alias now binds to a different resolved model, or because
-  the platform changed the route — MUST be reported as
+- **FR-006**: A route whose pinned tuple is unavailable MUST be reported as
   `preferred_model_unavailable` carrying a machine-readable sub-reason in the
-  diagnostic's `details` object. The sub-reason vocabulary MUST be a closed set.
-  [US1] [NEEDS CLARIFICATION: the sub-reason pattern was set at scoping as
-  `alias_repointed` | `platform_route_changed` | `model_absent`, but exhaustive
-  membership across all mandated scenarios was explicitly deferred — is that
-  three-member set the final closed enum, or do additional members surface from
-  the corpus?]
+  diagnostic's `details` object. The sub-reason vocabulary is the closed
+  **four-member** set below, evaluated in this order so exactly one member applies to
+  any snapshot and replay stays byte-identical: [US1]
+  - **`alias_unresolved`** — the route's pinned alias has no binding at all in the
+    snapshot's alias-to-resolved-model table.
+  - **`alias_repointed`** — the alias is bound, but to a resolved model ID other than
+    the one the route pins.
+  - **`model_absent`** — the alias binds exactly as pinned, but the pinned resolved
+    model ID is not among the snapshot's available model IDs.
+  - **`platform_route_changed`** — the snapshot declares a platform-side route change
+    for the pinned tuple.
+
+  These four are mutually exclusive and **total** over the FR-002 projection: any
+  unavailable pinned tuple matches exactly one. `alias_unresolved` is a fourth member
+  rather than a fold into `model_absent` because it is a reachable input that neither
+  other member can describe — `alias_repointed`'s `details` must name a
+  pinned-versus-observed model pair and there is no observed model, and
+  `model_absent`'s `details` must name the missing resolved model ID and none was ever
+  resolved. Folding it in would emit a diagnostic with an empty model field, which is
+  an unreported input class inside a supposedly closed vocabulary and a determinism
+  hazard. The input cannot be forbidden by schema, because the policy and the snapshot
+  are separate documents within one case and a cross-document key constraint is not
+  expressible. The `fable` case required by FR-010 exercises **`model_absent`** — the
+  roadmap subordinates it to preferred-model-absent ("including a `fable`-unavailable
+  case"). The corpus MUST additionally include one `alias_unresolved` case.
 - **FR-007**: A route whose model is available but whose declared effort is not
   in that model's supported efforts MUST be reported as `effort_unsupported`,
   naming both the declared effort and the model's supported efforts. [US1]
@@ -225,9 +242,59 @@ cohort specs inherit proven rejection semantics.
   `message`, `severity`, `source`, `details`, and `remediation` with `summary`
   and `actions` — with `code` drawn from one of this feature's two closed enums.
   No second diagnostics dialect may be introduced. [US1]
+  Within the diagnostic definition, `code`, `message`, `severity`, `source`, and
+  `remediation` are **required** and `details` is **optional**, mirroring the installed
+  runner, which always emits the first five (substituting default remediation when the
+  caller passes none) and emits `details` only when non-empty. `severity` is closed to
+  `info`, `warning`, `error`, matching the runner's own diagnostic validator. The same
+  `if`/`then` idiom MUST make `details` required for `preferred_model_unavailable`
+  (FR-006) and `effort_unsupported` (FR-007). `remediation` is a field of each
+  diagnostic entry, **never** a top-level report field — hoisting it would create the
+  second dialect this requirement forbids.
+  Note the trap: a different diagnostics dialect exists elsewhere in the tree (an
+  autopilot gate-state contract that requires `details` and omits `remediation`, the
+  inverse of the runner). FR-012 binds to the installed **runner**; that other contract
+  MUST NOT be copied as the precedent.
+- **FR-012a**: Every `remediation.actions` entry MUST be drawn from a single closed
+  `$defs.remediationAction` enum of **literal strings** declared in the
+  resolution-report schema. Entries MUST NOT be structured objects — the runner types
+  this field as a list of plain strings, and changing its shape is the second dialect
+  FR-012 forbids — and MUST NOT be templates with substitution slots, because closure
+  would then degrade from set equality to one regex per template, weakening SC-003 for
+  the one field SC-010 depends on. Case-specific values (the missing model ID, the
+  declared and supported efforts, the observed alias binding) are carried in the
+  diagnostic's `details` object, never interpolated into an action string, so a
+  consumer acts on set membership without parsing prose. The `actions` array MUST
+  declare `minItems: 1` and `maxItems: 3`, mirroring the installed runner, which always
+  substitutes at least one default action and hard-truncates the list to three — a
+  fourth action would be silently discarded by the real runner. The `no_safe_route`
+  diagnostic's `actions` MUST include the member
+  `Roll back to the previous plugin release.` **verbatim**, which is the imperative
+  rendering of the rollback guidance the roadmap states in both the CAR-005 scope and
+  the downstream live-UAT scope. [US1] [US2]
 - **FR-013**: The resolution report MUST record, for each resolved agent, the
   effective dispatch tuple that resolution selected, so consumers can read the
   outcome without re-deriving it from the attempt list. [US1]
+- **FR-013a**: The resolution report MUST be a **single** schema shape discriminated by
+  a required `outcome` field whose closed values are `resolved` and `no_safe_route`,
+  with conditional requiredness expressed as `allOf` + `if`/`then` carrying `required`
+  and `not: {required: [...]}` — the idiom the committed Layer 6 Claude contracts
+  already use. It MUST NOT be expressed as a root-level `oneOf` or as two separate
+  report schemas. Root `oneOf` is reserved in this directory for documents that are
+  unions of distinct *record classes*, and a partition by outcome is **impossible**
+  here: the FR-024 override path produces a `no_safe_route` report that still carries
+  `effective_dispatch_tuple`, so a success variant and a failure variant do not
+  partition the space. [US1]
+  - Required in **both** outcomes: `schema_version`, `agent`, `outcome`,
+    `attempted_routes` (in attempt order), `diagnostics` (present, possibly empty —
+    FR-011 requires a clean success to emit none), `budgets` (declared caps plus actual
+    counts), `release_claim_eligible`, `optional_helper`.
+  - `effective_dispatch_tuple` is required when `outcome` is `resolved`, **and
+    additionally** required when an override is in force.
+  - `unresolved_agent` is required when `outcome` is `no_safe_route` and **forbidden**
+    when `outcome` is `resolved`.
+  - `override` is optional, present only when the synthetic environment carries one,
+    and carries the would-have-been qualified resolution FR-024 requires.
 
 #### Determinism, corpus, and contract placement (User Story 1)
 
@@ -292,7 +359,24 @@ cohort specs inherit proven rejection semantics.
     versus `capability_discovery_unavailable` on Codex. An unnoticed change to
     either side MUST fail the test. This feature MUST NOT edit the Codex
     roadmap or any Codex-side artifact.
-  [NEEDS CLARIFICATION: should the recorded third-member divergence eventually be reconciled by a joint CAR/G56R roadmap amendment landed on both platforms together, or do the two platforms keep intentionally different third members permanently? This spec records and pins the divergence; it does not decide its long-term disposition.]
+  - **FR-017c**: The recorded third-member divergence is a **permanent intentional
+    platform difference**, not deferred drift. Evidence that it is semantic rather
+    than cosmetic: each roadmap's *scenario* name matches its own *code* name — Claude
+    mandates a "probe unavailable" scenario and pins `capability_probe_unavailable`,
+    while Codex mandates a "discovery unavailable" scenario and pins
+    `capability_discovery_unavailable`; Codex treats discovery and probing as distinct
+    concepts, mandating "discovery unavailable" alongside a *separate* exact-invocation
+    availability probe and treatment probe, where Claude has no such split; the Codex
+    term recurs consistently across its own scope and its downstream live-UAT scope,
+    which a typo would not survive; and Codex carries an approved/unapproved
+    service-reroute layer with no Claude analogue. Reconciliation is therefore **not**
+    planned — it would force one platform to adopt a term that misdescribes its own
+    mechanism, for zero operational gain, and a synchronized two-platform amendment is
+    the CAR-012 situation this program exists to avoid. The single review trigger that
+    would reopen the question is a future decision to promote a resolution-enum-bearing
+    schema into the shared byte-identical contracts directory. No Codex-side artifact
+    is edited by this feature; FR-017b's data pinning remains the enforcement
+    mechanism regardless of disposition.
 - **FR-018**: All fixture policies MUST name a small synthetic cast by role class
   (for example a required executor, a bounded analyst, and an optional helper)
   and MUST NOT name any of the twelve real shipped agents. [US1]
@@ -317,6 +401,31 @@ cohort specs inherit proven rejection semantics.
   prohibited here (FR-016), so a separate document could only be referenced illegally,
   and a second document would force the enum to be restated — the exact drift the
   read-enums-live discipline exists to prevent. [US1]
+  The five members are exactly sufficient — no sixth is needed. The roadmap's four
+  named rejections map one-to-one onto the first four members, and
+  `unqualified_override` covers the override condition. Three near-misses resolve
+  without a new member: budget exhaustion is **bounded, not rejected**, and terminates
+  into `no_safe_route` with FR-026 counters; an out-of-range *declared* budget is an
+  FR-027 schema-validation failure, so the fixture never loads and no code is emitted;
+  and helper-unavailability is a structured field, not a diagnostic (FR-025). The Codex
+  roadmap's rejection list is strictly longer — it adds partial required-agent
+  installation and fallback changes to instructions, tools, skills, MCP, sandbox,
+  mutation, or output contracts — but those have no Claude analogue, and FR-017a makes
+  the Claude roadmap authoritative for this platform's vocabulary. Importing them would
+  be enum drift, not parity. [US2]
+- **FR-019a**: **Slice 1** MUST ship a negative-validation test asserting that a
+  diagnostic entry whose `code` falls outside **both** closed enums fails schema
+  validation. The test MUST construct the instance and schema **inline** and MUST NOT
+  require a corpus case. This is the requirement that makes declaring the
+  policy-violation enum in slice 1 safe: without it, slice 1 would ship a closed
+  vocabulary whose closure is unproven within its own diff, and SC-003 would genuinely
+  be unmet for that enum until slice 2. It is also the repository's established
+  technique — an existing Layer 4 test class proves schema-engine keyword coverage for
+  keywords that no shipped fixture exercises, constructing instances inline for exactly
+  this reason. Note that SC-003 is a **negative** property ("an unrecognized code fails
+  validation rather than passing through"), so it is provable with zero corpus cases;
+  the positive-emission obligation belongs to SC-001, which is satisfied at feature
+  completion rather than per-slice. [US1]
 - **FR-020**: A policy whose fallback chain revisits an already-attempted route
   MUST be rejected with `fallback_loop`, and the walk MUST terminate without
   repeating that route. [US2]
@@ -339,6 +448,15 @@ cohort specs inherit proven rejection semantics.
 - **FR-025**: When the optional helper's routes are unavailable, the helper MUST
   NOT be consulted, the report MUST record continuation on the validated
   no-helper path, and required-agent resolution MUST NOT fail as a result. [US2]
+  This continuation MUST be recorded as a **structured report field** — an
+  `optional_helper` object carrying `consulted: false` and
+  `no_helper_path_validated: true` — and **not** as a diagnostic entry. Helper
+  unavailability is neither a rejection nor a remediation, so FR-012 does not apply to
+  it and neither closed enum gains a member for it. The roadmap frames it as a
+  non-event ("the helper is simply not consulted"), and adding a `helper_unavailable`
+  member to the policy-violation enum would repeat exactly the objection that kept
+  environment conditions out of that enum in the first place: it is an environment
+  condition, not a policy-authoring defect, and the enum's meaning would blur.
 
 #### Budgets, exhaustion, and no-safe-route recovery (User Story 2)
 
@@ -368,9 +486,9 @@ cohort specs inherit proven rejection semantics.
   with a declared budget of one. [US2]
 - **FR-029**: When the preferred route and every declared fallback are rejected,
   the report MUST be report-only, naming the unresolved agent, every attempted
-  route, each rejection reason, and remediation whose actions include rolling
-  back to the previous plugin release. The simulator MUST NOT write or mutate any
-  shipped agent file. [US2]
+  route, each rejection reason, and remediation whose `actions` include the FR-012a
+  member `Roll back to the previous plugin release.` **verbatim**. The simulator MUST
+  NOT write or mutate any shipped agent file. [US2]
 
 #### Repository and delivery constraints (both stories)
 
@@ -393,7 +511,7 @@ cohort specs inherit proven rejection semantics.
   | ---- | ------- | ------- |
   | `layer6-efficiency/contracts-claude/route-policy.schema.json` | create — route shape, ordered fallbacks, declared budget fields **and their schema maxima** | unchanged |
   | `layer6-efficiency/contracts-claude/environment-snapshot-projection.schema.json` | create | unchanged |
-  | `layer6-efficiency/contracts-claude/route-resolution-report.schema.json` | create — diagnostics envelope carrying **both** closed enums, attempted-route list, effective dispatch tuple, release-claim eligibility | **unchanged — must stay untouched** |
+  | `layer6-efficiency/contracts-claude/route-resolution-report.schema.json` | create — `outcome` discriminator with `allOf`/`if`/`then` conditional requiredness; two diagnostic `$defs` each with its own inline `code` enum unioned by `oneOf`; the four-member sub-reason enum; the closed `remediationAction` enum (`minItems: 1`, `maxItems: 3`); attempted-route list; effective dispatch tuple; `optional_helper`; `release_claim_eligible` | **unchanged — must stay untouched** |
   | `layer6-efficiency/lib/claude_route_fallback.py` | create — canonical serialization, snapshot projection intake, preferred-then-fallback walk, five-code semantics, `details` sub-reasons | extend — structural-validation pre-pass, budget cap enforcement with attempt counting, override handling, helper-unavailable path, no-safe-route remediation |
   | `layer6-efficiency/fixtures-fallback/fallback-scenario-corpus.json` | create — `cases[]` holding the US1 resolution-failure cases with pinned reports | append the US2 cases to the end of `cases[]`; existing case positions and pinned bytes unchanged |
   | `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity, roadmap parity test | append the US2 test functions |
@@ -528,7 +646,8 @@ cohort specs inherit proven rejection semantics.
 ### Measurable Outcomes
 
 - **SC-001**: Every scenario the roadmap mandates is represented by at least one
-  corpus case — preferred model absent (including the `fable` case), effort
+  corpus case — preferred model absent (including the `fable` case), **alias
+  unresolved**, effort
   unsupported, probe unavailable, exact-invocation probe success, exact-invocation
   probe failure, alias re-pointing, platform route change, unqualified override,
   fallback loop, unqualified adjacent model, generic-agent substitution, silent
@@ -589,9 +708,24 @@ cohort specs inherit proven rejection semantics.
   accounting reads 0. The two-slice split is elected on review burden and independent
   slice value, so plan-time re-estimation cannot overturn it by returning a smaller
   number — only an operator decision can.
-- G56R-005, the Codex twin, has not been scaffolded; this spec is the first-mover
-  structural template it will mirror, and any promotion of a schema to the shared
-  byte-identical contracts directory is a deliberate future joint change.
+- **Named follow-up for the mirroring obligation.** G56R-005 exists as a `Ready`
+  roadmap entry with its own independently authored scope, and a shared parity contract
+  document governs cross-platform evidence — but the obligation to mirror *this* spec's
+  structural template is **not** written into G56R-005's own scope text. Per the PR
+  packet requirement that deferred work name its follow-up, the follow-up is named here
+  explicitly: **G56R-005** carries the mirroring of CAR-005's schemas, enums, and corpus
+  organization, and any promotion of a schema to the shared byte-identical contracts
+  directory is a deliberate future joint change requiring both platforms to land
+  together.
+- **No CAR-012-class parity debt is incurred.** `contracts-claude/` and
+  `contracts-codex-specification/` are platform-scoped directories, not mirrored twins,
+  and were never byte-identical: their documents carry different `$id` namespaces
+  (`car-00N` versus `g56r-00N`), and their membership diverges in both directions.
+  CAR-012's joint-landing rule is scoped specifically to the **separate shared**
+  contracts directory whose members are verified byte-identical across platforms. FR-016
+  plus SC-005 (zero members added to that shared directory) is exactly the boundary that
+  keeps this feature clear of CAR-012 territory, which is what the platform-scoping
+  decision was chosen to achieve.
 - **Corrected premise**: the scoping input asserted that the five resolution
   codes are "mirrored line-for-line" across both routing roadmaps and that
   "parity holds". That is factually incorrect and this spec corrects it. Four

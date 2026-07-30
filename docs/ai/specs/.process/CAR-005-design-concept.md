@@ -397,13 +397,14 @@ produces 2 PRs, so the slice PRs are managed as a gh-stack stacked-PR chain
   **Suggested next step:** When G56R-005 scaffolds, mirror the structural
   template from this spec's shipped artifacts; record any deliberate
   divergence with reasoning in both roadmaps.
-- **What:** Exact closed membership of the `details` sub-reason enum from Q11
-  (`alias_repointed` | `platform_route_changed` | `model_absent` was the
-  pattern set; more members may surface while authoring the corpus).
-  **Why deferred:** Specify-phase enumeration work; the interview fixed the
-  pattern, not the exhaustive list.
-  **Suggested next step:** Finalize the closed set in `/speckit-specify` FRs
-  and enforce it in the resolution-report schema.
+- ~~**What:** Exact closed membership of the `details` sub-reason enum from Q11~~
+  **RESOLVED** at Clarify Session 2 — the closed set is **four** members, not three:
+  `alias_unresolved`, `alias_repointed`, `model_absent`, `platform_route_changed`,
+  evaluated in that order. `alias_unresolved` was added because an alias with no
+  binding at all in the snapshot is a reachable input that neither `alias_repointed`
+  (no observed model to name) nor `model_absent` (no resolved model was ever obtained)
+  can describe, and schema cannot forbid it since the policy and snapshot are separate
+  documents within one case. The `fable` case maps to `model_absent`. See FR-006.
 - **What:** Whether the recorded third-member divergence between the two
   roadmaps (`capability_probe_unavailable` on Claude vs
   `capability_discovery_unavailable` on Codex) should later be reconciled by a
@@ -453,9 +454,18 @@ reroute") with no Claude analogue.
 3. No Codex-side artifact is edited (already a Non-goal). Reconciling shared
    contract members across platforms is a deliberate joint two-platform
    landing — exactly the CAR-012 situation Q3 avoided recreating.
-4. **Open:** whether the divergence should later be reconciled by a joint
-   CAR/G56R roadmap amendment or kept permanently. Carried into the Clarify
-   phase; the operator owns the call. This is added to the Open Questions above.
+4. ~~**Open:** whether the divergence should later be reconciled by a joint
+   CAR/G56R roadmap amendment or kept permanently.~~ **RESOLVED** at Clarify
+   Session 2 as a **permanent intentional platform difference** — the divergence is
+   semantic, not drift. Each roadmap's scenario name matches its own code name; Codex
+   treats discovery and probing as distinct concepts and mandates "discovery
+   unavailable" alongside a separate availability probe and treatment probe, where
+   Claude has no such split; the Codex term recurs across its own scope and its
+   downstream live-UAT scope, which a typo would not survive; and Codex carries an
+   approved/unapproved service-reroute layer with no Claude analogue. Reconciling would
+   force one platform to adopt a term that misdescribes its own mechanism. One review
+   trigger only: promotion of a resolution-enum-bearing schema into the shared
+   byte-identical contracts directory. See FR-017c.
 
 ### 2026-07-29 — Q9/Q10 seam conflict resolved in Q9's favour (Clarify Session 1)
 
@@ -470,10 +480,13 @@ cases, two files would duplicate or cross-reference the cast — and would requi
 amending FR-015 and weakening SC-007.
 
 Q10's "slice 2 touches no slice-1 file" reading therefore yields to **append-only
-additivity**: slice 2 appends and alters nothing. The same rule governs the
-resolution-report schema, the simulator module, and the unit test. The literal
-no-touch reading was unachievable anyway — the corpus is one file, the simulator is
-one module, and slice 1 cannot pre-register a test path that does not yet exist.
+additivity**: slice 2 appends and alters nothing. The same rule governs the simulator
+module and the unit test. **Schemas are excluded** — all three land complete in slice 1
+and slice 2 modifies no schema file, so the report schema needs no append-only
+allowance (see the enum-placement revision note below). The literal no-touch reading
+was unachievable for the remaining three artifacts anyway — the corpus is one file, the
+simulator is one module, and slice 1 cannot pre-register a test path that does not yet
+exist.
 
 ### 2026-07-29 — Q10 split rationale corrected (Clarify Session 1)
 
