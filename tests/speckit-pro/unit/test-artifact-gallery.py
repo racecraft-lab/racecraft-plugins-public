@@ -45,6 +45,7 @@ import ast
 import inspect
 import json
 import re
+import shutil
 import sys
 import tempfile
 import unittest
@@ -248,11 +249,21 @@ def check_a4(gallery_root: Path) -> list[str]:
 
 
 def check_a5(gallery_root: Path) -> list[str]:
-    """A5 — every ``shipped`` entry's artifact embeds the brand block.
+    """A5 — every ``shipped`` entry's artifact embeds **both** canonical blocks.
 
     Absence is never a pass: a shipped entry whose artifact is missing, or whose
-    artifact carries no ``BRAND-KIT`` pair, fails here rather than falling
-    through A4, which can only compare a region that exists.
+    artifact carries no pair for a block, fails here rather than falling through
+    A4, which can only compare a region that exists.
+
+    Both blocks, not just the brand kit. A3 skips a file that uses neither pair
+    and A4 skips a file that embeds neither, so an artifact omitting the
+    ``GALLERY-HEAD`` block was invisible to all of group A while satisfying every
+    other group — it could hand-write a policy declaration byte-identical to the
+    canonical one, pass J6 through J10, and still ship with no theme control, no
+    pre-first-paint theme application, no persistence, and no typeface request.
+    Those four are the whole reason the head block exists, and
+    ``SPA-CONTRACT.md``'s "Do not write your own, and do not move it" was
+    enforced by nothing.
     """
     manifest = gallery_root / MANIFEST_FILE
     if not manifest.is_file():
@@ -281,12 +292,18 @@ def check_a5(gallery_root: Path) -> list[str]:
             continue  # an id that composes a path is B9's failure; resolving it here would leave the gallery
         label = f"{TEMPLATES_DIR}/{identifier}.html"
         if not artifact.is_file():
-            failures.append(
-                f"{label}: block {BRAND_BLOCK}: shipped entry '{identifier}' has no artifact, "
+            failures.extend(
+                f"{label}: block {block}: shipped entry '{identifier}' has no artifact, "
                 "so the block is embedded nowhere"
+                for block in CANONICAL_FILES
             )
-        elif not _embeds(_read_exact(artifact), BRAND_BLOCK):
-            failures.append(f"{label}: block {BRAND_BLOCK}: shipped entry '{identifier}' does not embed the block")
+            continue
+        text = _read_exact(artifact)
+        failures.extend(
+            f"{label}: block {block}: shipped entry '{identifier}' does not embed the block"
+            for block in CANONICAL_FILES
+            if not _embeds(text, block)
+        )
     return failures
 
 
@@ -518,6 +535,35 @@ class MarkerBlockDriftFixtureTests(GalleryFixtureCase):
         self.write_catalog({"id": "pr-writeup", "status": "shipped"})
 
         self.assertReports(check_a5(self.gallery), "pr-writeup.html", BRAND_BLOCK)
+
+    def test_a5_rejects_a_shipped_entry_omitting_the_head_block(self) -> None:
+        """The head block is required too, and by A5 alone.
+
+        An artifact can carry the brand block and hand-write a policy
+        declaration byte-identical to the canonical one — satisfying J6 through
+        J10 — while omitting the head block entirely. A3 skips it (no pair, so
+        ``_uses`` is false) and A4 skips it (``_embeds`` is false), so before
+        this the omission was invisible to every group. What ships in that state
+        has no theme control, no pre-first-paint theme application, no
+        persistence, and no typeface request.
+        """
+        self.write_canonical()
+        brand = _region(_read_exact(self.gallery / CANONICAL_FILES[BRAND_BLOCK]), BRAND_BLOCK)
+        self.write(
+            "templates/pr-writeup.html",
+            "<!doctype html>\n<html><head><meta charset=\"utf-8\">\n"
+            f"<style>\n{_marked(BRAND_BLOCK, brand)}\n</style>\n"
+            "</head><body></body></html>\n",
+        )
+        self.write_catalog({"id": "pr-writeup", "status": "shipped"})
+
+        failures = check_a5(self.gallery)
+        self.assertReports(failures, "pr-writeup.html", HEAD_BLOCK)
+        # The brand block IS present, so only the head block may be reported.
+        self.assertFalse(
+            [failure for failure in failures if BRAND_BLOCK in failure],
+            f"the brand block is embedded, so it must not be reported: {failures}",
+        )
 
     def test_a5_rejects_a_shipped_entry_with_no_artifact(self) -> None:
         self.write_canonical()
@@ -4429,6 +4475,33 @@ def _artifacts(gallery_root: Path) -> list[tuple[str, str, list[_Element]]]:
     return documents
 
 
+def _construct_documents(gallery_root: Path) -> list[tuple[str, str, list[_Element]]]:
+    """Every artifact, **plus the canonical head block**, parsed once each.
+
+    Group E already made this scoping choice and states the reason at
+    ``_gallery_files``: a foreign reference in a canonical file reaches every
+    artifact and is fixable in none of them. The same is true of a prohibited
+    construct and — more sharply — of the policy declaration, because the head
+    block's marked region is copied verbatim into all 21 artifacts. A policy
+    deleted there is a policy deleted everywhere, and since ART-001 ships no
+    artifact, a templates-only sweep reaches nothing at all: every construct and
+    directive check would pass on an empty set while the shipped bytes went
+    unread.
+
+    The canonical file is a **fragment**. Its region is what an artifact embeds,
+    so it carries no ``head`` element of its own and no document order beyond the
+    region. Only position-independent checks read this set; J7 and J8 stay
+    artifact-only, because "a direct child of head" and "nothing content-bearing
+    precedes it" are questions a fragment cannot answer and would answer wrongly.
+    """
+    documents = list(_artifacts(gallery_root))
+    head = gallery_root / CANONICAL_FILES[HEAD_BLOCK]
+    if head.is_file():
+        text = _document_text(head)
+        documents.append((_label(gallery_root, head), text, _elements(text)))
+    return documents
+
+
 def _policy_element(elements: list[_Element]) -> _Element | None:
     for element in elements:
         if element.tag != "meta":
@@ -4475,7 +4548,7 @@ def check_j1(gallery_root: Path) -> list[str]:
     return [
         f"{label}: carries a '{BASE_ELEMENT}' element, which redefines what every relative reference "
         "resolves to and leaves no foreign host in any position group E scans"
-        for label, _, elements in _artifacts(gallery_root)
+        for label, _, elements in _construct_documents(gallery_root)
         for element in elements
         if element.tag == BASE_ELEMENT
     ]
@@ -4493,7 +4566,7 @@ def check_j2(gallery_root: Path) -> list[str]:
     return [
         f"{label}: carries the scheme-relative reference '{match.group(0)}', which resolves against the "
         "document's own scheme rather than a network one"
-        for label, text, _ in _artifacts(gallery_root)
+        for label, text, _ in _construct_documents(gallery_root)
         for match in _SCHEME_RELATIVE_TEXT_RE.finditer(text)
     ]
 
@@ -4509,7 +4582,7 @@ def check_j3(gallery_root: Path) -> list[str]:
     return [
         f"{label}: <{element.tag}> carries the event-handler attribute '{name}', which is executable "
         "content in a position no resource-load scan reads"
-        for label, _, elements in _artifacts(gallery_root)
+        for label, _, elements in _construct_documents(gallery_root)
         for element in elements
         for name, _value in element.attributes
         if name.startswith(EVENT_HANDLER_PREFIX)
@@ -4522,7 +4595,7 @@ def check_j4(gallery_root: Path) -> list[str]:
     return [
         f"{label}: <{element.tag}> carries a '{SRCDOC_ATTRIBUTE}' attribute, which is a complete nested "
         "document written inside an attribute value"
-        for label, _, elements in _artifacts(gallery_root)
+        for label, _, elements in _construct_documents(gallery_root)
         for element in elements
         for name, _value in element.attributes
         if name == SRCDOC_ATTRIBUTE
@@ -4537,7 +4610,7 @@ def check_j5(gallery_root: Path) -> list[str]:
     working would otherwise carry a beacon with it.
     """
     failures: list[str] = []
-    for label, _, elements in _artifacts(gallery_root):
+    for label, _, elements in _construct_documents(gallery_root):
         for element in elements:
             names = {name for name, _ in element.attributes}
             if element.tag == FORM_ELEMENT and ACTION_ATTRIBUTE in names:
@@ -4564,7 +4637,7 @@ def check_j6(gallery_root: Path) -> list[str]:
     needs none of the five, so restricting them breaks nothing.
     """
     failures: list[str] = []
-    for label, _, elements in _artifacts(gallery_root):
+    for label, _, elements in _construct_documents(gallery_root):
         element = _policy_element(elements)
         if element is None:
             failures.append(
@@ -4633,7 +4706,7 @@ def check_j9(gallery_root: Path) -> list[str]:
     conservative one.
     """
     failures: list[str] = []
-    for label, _, elements in _artifacts(gallery_root):
+    for label, _, elements in _construct_documents(gallery_root):
         element = _policy_element(elements)
         if element is None:
             continue  # J6 owns an absent declaration
@@ -4659,7 +4732,7 @@ def check_j10(gallery_root: Path) -> list[str]:
     relying on protection that was silently removed.
     """
     failures: list[str] = []
-    for label, _, elements in _artifacts(gallery_root):
+    for label, _, elements in _construct_documents(gallery_root):
         element = _policy_element(elements)
         if element is None:
             continue  # J6 owns an absent declaration
@@ -4689,10 +4762,16 @@ GROUP_J_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
 class ProhibitedConstructTests(unittest.TestCase):
     """Group J against the shipped gallery.
 
-    Every check sweeps an empty set here: ART-001 ships no artifact, so this
-    case proves only that an artifact-free gallery is not an error. The fixture
-    case below is the whole of group J's evidence, which is why every one of the
-    ten is exercised there rather than declared.
+    ART-001 ships no artifact, so the ``templates/`` sweep is empty — but the
+    group is **not** vacuous here, and it must not be. J1-J6, J9 and J10 read
+    ``_construct_documents``, which adds the canonical head block, because that
+    block's region is copied verbatim into all 21 artifacts: a construct or a
+    weakened directive there ships everywhere at once. Only J7 and J8 stay
+    artifact-only, since a fragment has no head element to be a direct child of.
+
+    That distinction was a real defect before it was a design: with the group
+    scoped to ``templates/`` alone, the entire policy declaration could be
+    deleted from the shipped block and all of group J still passed.
     """
 
     def test_group_j_passes_against_the_shipped_gallery(self) -> None:
@@ -4700,8 +4779,39 @@ class ProhibitedConstructTests(unittest.TestCase):
             with self.subTest(msg=name):
                 self.assertEqual(check(GALLERY_ROOT), [])
 
-    def test_the_shipped_gallery_carries_no_artifact_so_group_j_is_vacuous(self) -> None:
+    def test_the_shipped_gallery_carries_no_artifact(self) -> None:
         self.assertEqual(_artifact_files(GALLERY_ROOT, "*.html"), [])
+
+    def test_the_canonical_head_block_is_nonetheless_reached(self) -> None:
+        """The scope fix, asserted rather than assumed.
+
+        Without this the group reads an empty set and every check below passes
+        for the wrong reason.
+        """
+        labels = [label for label, _, _ in _construct_documents(GALLERY_ROOT)]
+        self.assertIn(CANONICAL_FILES[HEAD_BLOCK], labels)
+
+    def test_the_shipped_policy_declaration_is_actually_guarded(self) -> None:
+        """Delete the declaration from the canonical block; J6 must report it.
+
+        The regression test for the finding itself. Operates on a copy of the
+        real gallery so the assertion is about the shipped bytes, not a fixture
+        that happens to resemble them.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            gallery = Path(raw) / "artifact-gallery"
+            shutil.copytree(GALLERY_ROOT, gallery)
+            head = gallery / CANONICAL_FILES[HEAD_BLOCK]
+            kept = [line for line in head.read_text().splitlines() if POLICY_EQUIV not in line.casefold()]
+            head.write_text("\n".join(kept) + "\n")
+
+            failures = check_j6(gallery)
+
+        self.assertTrue(failures, "the shipped policy declaration is guarded by nothing")
+        self.assertTrue(
+            any(CANONICAL_FILES[HEAD_BLOCK] in failure for failure in failures),
+            f"J6 reported {failures}, naming something other than the canonical block",
+        )
 
 
 # --- Group J fixtures ------------------------------------------------------
