@@ -3381,6 +3381,39 @@ SRCSET_ATTRIBUTES: frozenset[str] = frozenset({"srcset", "imagesrcset"})
 TEXT_SCANNED_ATTRIBUTES: frozenset[str] = frozenset({"style"})
 EVENT_HANDLER_PREFIX = "on"
 
+# Attributes whose value is a namespace *name*, not a resource. A namespace URI
+# is an identifier compared as a string; nothing fetches it, and the SVG one is
+# required markup on inline SVG — the standard iconography for a self-contained
+# artifact. Without this exemption E0's default-deny branch reports
+# ``http://www.w3.org/2000/svg`` as an unverified host and the gate turns red on
+# correct markup, which is the pressure that gets a gate weakened rather than
+# obeyed. Prefix-matched so ``xmlns:xlink`` and any other prefixed declaration
+# are covered; ``xlink:href`` is NOT a namespace declaration and stays scanned.
+NAMESPACE_ATTRIBUTE_PREFIX = "xmlns"
+
+# A ``data:`` reference carries its bytes inline, so it makes no request and
+# names no host. It is the ONLY way the single-file rule can be satisfied with a
+# raster, an encoded vector, or an inline font, so refusing it outright would put
+# the contract in conflict with itself — E7 and E8 both fired on it, giving a
+# conforming author two failures and no documented escape.
+#
+# Bounded by media type rather than admitted wholesale: a ``data:`` URI can also
+# carry a document, and ``data:text/html`` is a script execution context. Only
+# image and font types are embedded assets. SVG is included because in an image
+# or CSS position it renders in a mode that runs no script, and the policy
+# declaration's ``object-src 'none'`` and ``frame-src 'none'`` close the
+# positions where it would.
+EMBEDDED_ASSET_TYPE_PREFIXES: tuple[str, ...] = ("image/", "font/")
+
+
+def _embedded_asset(value: str) -> bool:
+    """True when the value is a ``data:`` URI carrying an image or a font."""
+    stripped = value.strip()
+    if not stripped.casefold().startswith("data:"):
+        return False
+    media = stripped[len("data:") :].split(",", 1)[0].split(";", 1)[0].strip().casefold()
+    return media.startswith(EMBEDDED_ASSET_TYPE_PREFIXES)
+
 # E6's grammar: RFC 3986's unreserved and reserved sets plus the percent that
 # introduces an escape. Stated as a repertoire rather than as a list of bad
 # characters, which is what makes it closed. It subsumes the pre-parse rejection
@@ -3610,6 +3643,8 @@ def _element_references(label: str, elements: list[_Element]) -> tuple[list[_Ref
         for name, value in element.attributes:
             if not value.strip():
                 continue
+            if name.casefold().split(":", 1)[0] == NAMESPACE_ATTRIBUTE_PREFIX:
+                continue  # a namespace name, compared as a string and never fetched
             position = f"<{element.tag} {name}>"
             if element.tag == "a" and name == "href":
                 references.append(_Reference(label, position, value, NAVIGATION, False, relations))
@@ -3887,6 +3922,8 @@ def check_e7(gallery_root: Path) -> list[str]:
         if _scheme_relative(reference.value):
             failures.append(_named(reference, "is scheme-relative, so it is neither https nor same-document relative"))
             continue
+        if _embedded_asset(reference.value):
+            continue  # an inline image or font: no request, no host, and the single-file rule needs it
         parsed = _parsed(reference.value)
         if parsed is None:
             continue  # E8 owns it
@@ -3904,6 +3941,8 @@ def check_e8(gallery_root: Path) -> list[str]:
     """
     failures: list[str] = []
     for reference in _resource_references(gallery_root):
+        if _embedded_asset(reference.value):
+            continue  # E7's exemption: an inline asset has no host by construction, not by evasion
         parsed = _parsed(reference.value)
         if parsed is None:
             failures.append(_named(reference, "admits no structured parse, so no host can be compared"))
@@ -4051,6 +4090,27 @@ class ExternalReferenceFixtureTests(ExternalReferenceFixtureCase):
         self.write_document('<div class="rc-panel" data-stage="draft-pr"></div>')
 
         self.assertEqual(check_e0(self.gallery), [])
+
+    def test_e0_accepts_a_namespace_declaration(self) -> None:
+        """Inline SVG is the standard iconography for a self-contained artifact.
+
+        A namespace URI is an identifier compared as a string; nothing fetches
+        it. Reporting it as an unverified host turns the gate red on correct
+        markup, and a gate that fails on correct markup is one an author learns
+        to weaken. Prefixed declarations are covered too.
+        """
+        self.write_document(
+            '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"'
+            ' viewBox="0 0 1 1"><path d="M0 0h1v1z"/></svg>'
+        )
+
+        self.assertEqual(check_e0(self.gallery), [])
+
+    def test_e0_still_scans_xlink_href_which_is_not_a_namespace_declaration(self) -> None:
+        """The exemption is the declaration, not anything beginning with ``xlink``."""
+        self.write_document(f'<svg><use xlink:href="https://{FIXTURE_FOREIGN_HOST}/s.svg#i"/></svg>')
+
+        self.assertReports(check_e1(self.gallery), FIXTURE_FOREIGN_HOST)
 
     # -- E1: exact case-folded host equality, never containment --
 
@@ -4256,6 +4316,33 @@ class ExternalReferenceFixtureTests(ExternalReferenceFixtureCase):
         self.write_document('<img src="javascript:alert(1)">')
 
         self.assertReports(check_e7(self.gallery), "sample.html", "javascript:")
+
+    def test_e7_accepts_an_embedded_image_or_font(self) -> None:
+        """A ``data:`` URI is the only way the single-file rule admits an asset.
+
+        Refusing it put the contract in conflict with itself: a conforming author
+        embedding a raster got two failures — E7 for the scheme and E8 for the
+        absent host — and no documented escape, so the pressure landed on
+        weakening the gate rather than on the artifact.
+        """
+        self.write_document(
+            '<img src="data:image/png;base64,iVBORw0KGgo=" alt="">'
+            '<style>@font-face{font-family:X;src:url(data:font/woff2;base64,AAA)}'
+            '.a{background:url("data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=")}</style>'
+        )
+
+        self.assertEqual(check_e7(self.gallery), [])
+        self.assertEqual(check_e8(self.gallery), [])
+
+    def test_e7_still_refuses_a_data_uri_carrying_a_document(self) -> None:
+        """The allowance is bounded by media type, not granted to the scheme.
+
+        ``data:text/html`` is a script execution context, so it is not an
+        embedded asset however it is encoded.
+        """
+        self.write_document('<iframe src="data:text/html,<script>go()</script>"></iframe>')
+
+        self.assertTrue(check_e7(self.gallery) or check_e8(self.gallery))
 
     def test_e7_accepts_a_same_document_relative_reference(self) -> None:
         self.write_document('<img src="#logo">')
@@ -5106,12 +5193,21 @@ def _carried(header: str, element: _AttributionElement) -> bool:
     return bool(_labelled_value(header, element.label))
 
 
-def _attribution_evidence(text: str) -> list[tuple[str, str]]:
-    """G4's direction — every upstream attribution element the text carries."""
+def _attribution_evidence(text: str, *, labels: bool = True) -> list[tuple[str, str]]:
+    """G4's direction — every upstream attribution element the text carries.
+
+    ``labels=False`` drops the generic field labels and matches only the
+    distinctive literals — the upstream repository name, the verbatim copyright
+    line, the license URL. That distinction is what keeps G4 honest across a whole
+    document: ``License:`` is a phrase ordinary content writes by accident, and a
+    dependency table with a visible ``License: MIT`` row is not a provenance
+    claim. The upstream repository name is not written by accident, so
+    "Adapted from <upstream>" in visible prose still is one.
+    """
     found: list[tuple[str, str]] = []
     for element in ATTRIBUTION_ELEMENTS:
-        labels = (element.label,) if element.label is not None else ()
-        for marker in labels + element.literals:
+        prefixes = (element.label,) if labels and element.label is not None else ()
+        for marker in prefixes + element.literals:
             if marker in text:
                 found.append((element.name, marker))
                 break
@@ -5221,18 +5317,41 @@ def check_g3(gallery_root: Path) -> list[str]:
 
 
 def check_g4(gallery_root: Path) -> list[str]:
-    """G4 — a ``repository`` entry's artifact carries **no** header element.
+    """G4 — a ``repository`` entry's artifact carries **no** attribution header.
 
     Every element G3 requires, refused here — not the copyright line alone. An
     artifact carrying repository, filename, license identifier, and license link
     while avoiding that one line is a misattribution wearing a convincing header.
+
+    Two reads, because one text is not enough. The **header comment** is checked
+    for every element including the generic field labels, which is the direction
+    G3 mirrors. The **whole document** is checked for the distinctive literals
+    only — the upstream repository name, the verbatim copyright line, the license
+    URL — so a claim made in visible prose rather than a header still fails.
+
+    The split is what removes a false positive without opening a hole. Sweeping
+    the whole document for *labels* meant a dependency table with a visible
+    ``License: MIT`` row failed a repository-origin artifact, reported as
+    "carries an upstream attribution element", with no way to comply short of not
+    writing the word; `design-system`, `status-report` and `feature-flags` are all
+    plausible carriers of that row. Restricting the sweep to the header alone
+    would have gone too far the other way: "Adapted from <upstream>" in prose is a
+    provenance claim, and nobody writes the upstream repository name by accident.
     """
     failures: list[str] = []
     for where, label, _entry, artifact in _attributable(gallery_root, REPOSITORY):
+        text = _document_text(artifact)
+        header = _attribution_header(text)
+        found: list[tuple[str, str]] = list(_attribution_evidence(text, labels=False))
+        seen = {name for name, _ in found}
+        if header is not None:
+            found.extend(
+                (name, evidence) for name, evidence in _attribution_evidence(header) if name not in seen
+            )
         failures.extend(
             f"{label}: {where}: field 'source': origin '{REPOSITORY}', but the artifact carries an upstream "
             f"attribution element — {name}: '{evidence}'"
-            for name, evidence in _attribution_evidence(_document_text(artifact))
+            for name, evidence in found
         )
     return failures
 
@@ -5542,6 +5661,19 @@ class UpstreamAttributionFixtureTests(UpstreamAttributionFixtureCase):
         self.ship(origin=REPOSITORY, body=f"<p>Adapted from {UPSTREAM_REPOSITORY}.</p>")
 
         self.assertReports(check_g4(self.gallery), FIXTURE_ATTRIBUTED_LABEL, "upstream repository")
+
+    def test_g4_accepts_a_visible_license_row_in_ordinary_content(self) -> None:
+        """``License:`` is a phrase ordinary content writes by accident.
+
+        A dependency table with a visible ``License: MIT`` row is not a
+        provenance claim, and a repository-origin artifact carrying one had no way
+        to comply short of not writing the word. Generic field labels are read in
+        the header comment only; the distinctive literals are read everywhere,
+        which is what keeps the test above passing.
+        """
+        self.ship(origin=REPOSITORY, body="<table><tr><td>License: MIT</td></tr></table>")
+
+        self.assertEqual(check_g4(self.gallery), [])
 
     def test_g4_accepts_a_repository_artifact_carrying_no_element(self) -> None:
         self.ship(origin=REPOSITORY, body="<h1>Repository-authored</h1>")

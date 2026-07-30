@@ -543,6 +543,27 @@ These prohibitions do not touch the attribution header described under
 **Source attribution** above: it is an HTML comment, and comments and visible
 text are not resource-loading positions.
 
+### Embedding an asset: `data:` URIs
+
+The single-file rule leaves exactly one way to carry a raster, an encoded vector,
+or a font: a `data:` URI. That is **permitted** in any resource position, and it
+does not count as an external reference, because the bytes are in the document and
+nothing is fetched.
+
+The allowance is bounded by media type, not granted to the scheme:
+
+| Media type | |
+|---|---|
+| `image/…` (including `image/svg+xml`) | Permitted |
+| `font/…` | Permitted |
+| Anything else — `text/html`, a script type, an unlabelled `data:` | **Refused** |
+
+`data:text/html` is a script execution context, so it is not an asset however it
+is encoded; the policy declaration's `object-src 'none'` and `frame-src 'none'`
+close the positions where an SVG could reach one. Prefer a plain relative path
+when the artifact is not required to be single-file — an inline asset costs bytes
+in every copy — but never reach for a remote host to avoid the size.
+
 ### The policy declaration in the head block
 
 Every artifact carries an in-document policy declaration, and it ships inside
