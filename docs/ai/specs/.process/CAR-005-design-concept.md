@@ -457,6 +457,46 @@ reroute") with no Claude analogue.
    CAR/G56R roadmap amendment or kept permanently. Carried into the Clarify
    phase; the operator owns the call. This is added to the Open Questions above.
 
+### 2026-07-29 — Q9/Q10 seam conflict resolved in Q9's favour (Clarify Session 1)
+
+Q9 (one self-contained corpus) and Q10 (two slices, stacked) cannot both hold
+without slice 2 writing into a slice-1 file. **Q9 holds.** The corpus is the durable
+contract CAR-006 re-proves its production resolver against, whereas Q10's seam is
+delivery mechanics that stop existing once both PRs merge; when a permanent artifact
+shape conflicts with a transient delivery mechanic, the mechanic yields. Two corpus
+files would also reopen the "per-scenario-family files" alternative Q9 already
+rejected on independent grounds — with a three-agent synthetic cast shared across all
+cases, two files would duplicate or cross-reference the cast — and would require
+amending FR-015 and weakening SC-007.
+
+Q10's "slice 2 touches no slice-1 file" reading therefore yields to **append-only
+additivity**: slice 2 appends and alters nothing. The same rule governs the
+resolution-report schema, the simulator module, and the unit test. The literal
+no-touch reading was unachievable anyway — the corpus is one file, the simulator is
+one module, and slice 1 cannot pre-register a test path that does not yet exist.
+
+### 2026-07-29 — Q10 split rationale corrected (Clarify Session 1)
+
+Q10 recorded the split as protocol-recommended on the estimator's `warn`. The
+justification is now known to be weaker than stated in one direction and stronger in
+another:
+
+- **No reviewability gate measures this surface.** `estimate-reviewable-loc` computes
+  `production_files × 40`, so a 0-production-file feature projects 0 and passes; the
+  setup gate merely scrapes an authored number; the PR-time gate thresholds that same
+  declared figure. **One slice would pass every gate.**
+- **The sibling precedent proves it.** CAR-004 — same primary surface, 0 production
+  files, declared 250 reviewable LOC — shipped roughly 11,600 artifact lines in a
+  single PR (#401).
+- **The estimator signal is larger, not smaller, than recorded.** Re-run on the real
+  spec (2 user stories, 10 files, 35 FRs) it returns 975 and 3 suggested slices.
+
+The split therefore stands on **review burden and independent slice value**, not on a
+LOC ceiling: slice 1 is what CAR-006 needs first and is valuable even if slice 2
+slipped, and a single ~3,100–4,600-line PR spanning two rule families is the CAR-004
+review experience this split exists to avoid repeating. Only an operator decision can
+change it — re-estimation cannot, since every automated signal is blind here.
+
 ## Recommended Next Step
 
 Setup mode — scaffolding has already happened in this run. Informational:

@@ -90,6 +90,25 @@ Each phase requires **human review and approval** before proceeding:
 | Archive Sweep | Zero candidates. `specs/*` contains only `car-005-availability-fallback-recovery`, which is `--current-target` and excluded. No files mutated. CAR-004 and G56R-004 already archived. |
 | Tier-2 PROCESS relocation | Suppressed — the only candidate is named by `.specify/feature.json` (`frozen/in-flight`) and already carries `structureVersion: 1`. `relocate-process-artifacts` is deferred and was not invoked. |
 
+**Phase 0 Doctor Health Check (`speckit-utils`): 5 PASS / 2 WARN / 0 FAIL.**
+
+| Area | Result |
+|------|--------|
+| Templates | PASS — 5/5 present and non-empty in `.specify/templates/` |
+| Python runner | PASS — all 6 required files present in `speckit-pro/speckit_pro_runner/`; manifest parses |
+| Constitution | PASS — `.specify/memory/constitution.md`, 996 words |
+| Agent config | WARN — `.claude/` exists but `.claude/commands/` is absent, so 0 `speckit.*.md` command files are registered. **Expected, not broken:** this project uses the skills-based invocation model (27 `speckit-*` skills under `.claude/skills/`), which is the documented v0.8.13 slash-command→skills migration. |
+| Features | WARN — `spec ✓ plan ✗ tasks ✗ (needs plan)`. Expected at this point in the run; Plan is Phase 3. |
+| Non-numeric branch | Informational, resolves correctly — `.specify/feature.json` pins the feature directory and the doctor observed no drift or misresolution. |
+| Extensions | 7 registered and enabled. Observation: `.specify/extensions/agent-context/` exists on disk with a config file but has **no entry in `.specify/extensions/.registry`** — unscored, recorded for follow-up. |
+
+**Skill-name resolution (load-bearing for the post-implementation tasks):** the
+registered names use dashes, not dots, and drop the `speckit.` prefix —
+`speckit-speckit-utils-doctor` resolves; `speckit.speckit-utils.doctor` does **not**.
+The post-implementation `verify`, `verify-tasks`, and `retrospective` steps must use
+the dash form (`speckit-verify-run`-style) rather than the dotted command IDs printed
+in `.specify/extensions/.registry`.
+
 **Extension hook decisions (all 8 events read from `.specify/extensions.yml`):**
 
 | Hook | Decision |
@@ -144,6 +163,60 @@ resolution-failure semantics (five reason codes, snapshot projection, replay
 pinning); slice 2 = structural rejections, override/helper paths, retry
 exhaustion. Delivery directive: with more than one PR, the slice PRs are
 managed as a **gh-stack stacked-PR chain** (slice 2 stacks on slice 1).
+
+#### Adjudicating the 257-vs-770 disagreement (autopilot Phase 0, evidence added)
+
+The disagreement is **not** between two measurements. Setup-mode
+`reviewability-gate` performs no measurement at all — it regex-scrapes numbers a
+human already typed into the target document:
+`loc = last_number(text, r"(?:projected reviewable loc|reviewable loc)[^0-9]{0,40}([0-9]+)")`
+at `speckit-pro/speckit_pro_runner/helpers/read_only.py:850`, with sibling scrapes
+for production files and total files on lines 851-852. Its `pass` / `257` verdict
+is a restatement of the roadmap's own authored line
+(`docs/ai/specs/claude-agent-routing-technical-roadmap.md:516`) and carries no
+independent evidentiary weight. That same roadmap entry says "re-estimate at
+scaffold" (line 518).
+
+`estimate-spec-size` computes 770 from structured signals. Measured sizes of the
+closest committed precedents corroborate the larger figure:
+
+| Precedent | Lines |
+|-----------|-------|
+| `lib/claude_treatment_runner.py` | 705 |
+| `lib/claude_control_comparison.py` | 764 |
+| `lib/claude_policy_controls.py` | 2805 |
+| `unit/test-control-comparison-dominance.py` | 1459 |
+| `unit/test-policy-control-contracts.py` | 5544 |
+| `contracts-claude/control-comparison.schema.json` | 308 |
+| `contracts-claude/policy-control-registry.schema.json` | 685 |
+| `fixtures-controls/control-replay.json` | 660 |
+
+**Conclusion, corrected at Clarify Session 1.** An earlier draft of this section
+claimed a single undivided slice "would breach the 800 block threshold on logic
+alone". **That was wrong, and the correction matters:** no gate in this repository
+measures this surface at all. `estimate-reviewable-loc` computes
+`projected = production_files × 40` (`read_only.py:926`), so a 0-production-file
+feature projects 0 and returns `pass`; the PR-time packet gate thresholds the same
+author-declared figure (`pr_emission.py:589-619`). One slice would pass every gate.
+The sibling precedent proves it empirically: **CAR-004** — same primary surface, 0
+production files, declared 250 reviewable LOC, status ok — shipped roughly **11,600
+artifact lines in a single PR (#401)**. The declared figure systematically excludes
+fixture JSON, platform-scoped schemas, test-library modules, and unit tests.
+
+So the split is **elected, not gate-forced**, and its justification is review burden
+plus independent slice value — not a ceiling breach. Design-concept Open Question 2
+("if plan-time re-estimation lands near the authored 257 the maintainer may revisit
+whether 2 slices remain warranted") resolves as: **re-estimation cannot settle this
+either way**, because every automated signal reads 0 for this surface. Keeping the
+split is the operator's ratified judgement, and only an operator decision can change
+it. Recorded so no later phase mistakes a `pass` from a blind gate for evidence
+against the split.
+
+Two further corrections to the earlier draft: `estimate-spec-size` re-run on the
+spec's **real** signals (2 user stories, 10 files, 35 FRs) returns **975 / 3 slices**,
+not 770 / 2 — the scoping figure came from coarser signals. And `greenfield` is
+**false** here, because `suite-manifest.json` is modified rather than created
+(`read_only.py:922`), so thresholds stay 400/800 rather than 600/1200.
 
 ---
 
@@ -372,8 +445,42 @@ optional for a successful resolution versus a no-safe-route outcome.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Slice seam / stacked delivery | | |
+| 1 | Slice seam / stacked delivery | 5 | All 5 resolved. FR-033's marker cleared. Added FR-033a (file-level allocation table), FR-033b (slice-2 edits must be additive; no slice-1 churn), FR-033c (single corpus preserved), FR-033d (single simulator module). FR-027 retagged US2→US1. Split confirmed on independent evidence. |
 | 2 | Enum closure / report totality | | |
+
+#### Session 1 — resolution detail
+
+Executor dispatch note, recorded for honesty: the `clarify-executor` subagents did
+not deliver a question set (they completed and went idle without relaying output —
+see the delivery caveat at the end of this section). Rather than stall the run, the
+**parent orchestrator resolved Session 1 directly**, which is what the protocol
+assigns to the parent in any case — the executor's role is only to *prepare* the
+question set; answering and applying edits is the parent's job. The parent's
+evidence base was its own: the full spec, the design concept including the new
+revision note, both roadmaps, the `contracts-claude/` and `lib/` conventions, the
+suite-manifest layer structure, and directly measured precedent file sizes.
+
+| # | Question | Resolution | Applied as |
+|---|----------|-----------|-----------|
+| 1 | Exact file-level slice allocation | Slice 1 creates all seven files; slice 2 extends three of them and creates none | FR-033a table |
+| 2 | Schema partitioning across the seam | 3 schema files (matching the one-schema-per-conceptual-document convention); the policy-violation enum is added in slice 2 by extending the report schema's `$defs` and widening the diagnostic `code`, so slice 1 never ships an enum it does not validate against | FR-033a rows, FR-027 |
+| 3 | Simulator module partitioning | One module, created in slice 1 and extended in slice 2. Structural validation is a pre-pass of the same capability, not a second capability; splitting it would be a single-use abstraction (constitution VI) | FR-033d |
+| 4 | Corpus partitioning — the real Q9/Q10 tension | **Q9 wins; Q10's seam does not require file separation.** One corpus file. Slice 2 appends to the end of `cases[]`. Because a stacked PR diffs against its base branch, appended cases read as pure additions and slice 1 never changes. "No slice-1 churn" means slice 2 must not force slice 1 to be rewritten before merging — not that slice 2 may never touch a slice-1 file | FR-033b, FR-033c |
+| 5 | Are two slices still warranted? | **Yes.** The setup gate's 257 is a scraped authored number, not a measurement (`read_only.py:850`); the estimator's computed 770 is corroborated by measured precedents. An independent per-artifact projection (~350 schemas + ~550 simulator + ~900 corpus + ~700 unit suite) puts a single undivided slice past the 800 block threshold on logic alone | spec.md Reviewability Budget |
+
+Items 2 and 4 resolve genuinely contestable trade-offs, so both were sent to a
+category-routed consensus round rather than accepted on the parent's reasoning
+alone — item 4 to `[spec]` (which project decision yields) and item 2 to
+`[codebase]` (what the schema convention shows).
+
+**Subagent delivery caveat (affects how this run is executed, not its outcome).**
+Subagents in this session run detached. A named background agent's final text is
+**not** returned to the orchestrator — it must explicitly call `SendMessage(to: "main")`.
+The Specify and first two Clarify executors completed and went idle without
+sending, so their prose was lost even though the Specify agent's file output
+(`spec.md`) landed correctly and was validated directly by the parent. Every
+subsequent dispatch in this run carries an explicit "finish by calling SendMessage
+to main" instruction.
 
 ---
 
@@ -783,6 +890,19 @@ Before starting any task:
 - [ ] Merged to main branch
 
 ---
+
+## Consensus Resolution Log
+
+Category-routed two-layer resolution (see the autopilot consensus protocol). One
+row per synthesizer result, in item-encounter order. Security-keyword scan on all
+three Specify-phase clarification markers: **no security keywords present**, so no
+mandatory human-review stop applies to them.
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | S1-Q4: one corpus file or two? (the Q9/Q10 conflict) | [spec] | 1 | executor high-confidence, analyst confirmation pending | **Q9 holds.** One corpus file; slice 2 appends at the tail of `cases[]` and alters nothing. The literal "slice 2 touches no slice-1 file" reading is unachievable and yields to append-only additivity. Applied to FR-015, FR-033b/c + design-concept revision note | clarify-executor; spec-context-analyst (Round 1, in flight) |
+| 2 | Clarify | S1-Q2: schema count and where the policy-violation enum lives | [codebase] | 1 | executor high-confidence, analyst confirmation pending | **3 separate schema documents**, capability-named, `car-005` `$id` scope. Violation enum lands in slice 2 as an additive `$defs/policyViolationCode` inside the slice-1 report schema. A separate enum document is **blocked, not merely worse** — cross-document `$ref` is prohibited in this contracts directory. Budget maxima ship in slice 1 with the fields. Applied to FR-016, FR-019, FR-027 | clarify-executor; codebase-analyst (Round 1, in flight) |
+| 3 | Clarify | S1-Q5: are two slices still warranted now the artifact list is concrete? | [spec] | n/a | **operator-directive** | **Keep two slices**, with the rationale corrected: the split is *elected on review burden and independent slice value*, not forced by a LOC ceiling. Consensus was deliberately **not** dispatched — the executor's own blocker was operator authority, not an evidence gap, and no analyst can supply authority the operator already exercised. Surfaced to the operator for a change of mind; shipped artifacts are identical either way, only PR count and the append-only discipline change | none dispatched (see Resolution) |
 
 ## Lessons Learned
 

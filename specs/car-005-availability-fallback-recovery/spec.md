@@ -165,6 +165,12 @@ cohort specs inherit proven rejection semantics.
   simulators, that behaves as a pure function from (route policy, synthetic
   environment snapshot, environment overrides, declared budgets) to a resolution
   report, with no filesystem, network, wall-clock, or randomness input. [US1]
+  The simulator MUST be a **single** module, created in slice 1 and extended
+  additively in slice 2. Structural policy validation MUST NOT be a second module:
+  it is a second rule family inside the one resolution walk, and `fallback_loop`
+  detection needs the walk state that this module already owns. Slice 2 MUST add new
+  module-level constants, new private helpers, and new public entry points, and MUST
+  change no slice-1 function signature. [US1] [US2]
 - **FR-002**: The system MUST define a minimal, purpose-built environment
   snapshot projection carrying only what resolution consumes: available model
   IDs, alias-to-resolved-model bindings, per-model supported efforts, probe
@@ -234,10 +240,23 @@ cohort specs inherit proven rejection semantics.
   where each case bundles its own policy, synthetic snapshot, overrides,
   declared budgets, and expected report, so each case is readable and replayable
   in isolation. [US1]
+  The corpus MUST remain a single file across both slices. Slice 1 commits the User
+  Story 1 cases; slice 2 appends the User Story 2 cases at the tail of `cases[]` and
+  MUST NOT alter any case slice 1 committed. Case order is **declaration order, not
+  sorted** — matching the existing pinned-replay precedent — so an appended case
+  never reorders an existing one and never perturbs an existing case's pinned bytes.
+  [US1] [US2]
 - **FR-016**: New JSON Schema contracts MUST land platform-scoped in the Layer 6
   efficiency Claude contracts directory and MUST match the existing schema style
   there (JSON Schema draft 2020-12 with the established `$id` convention). No
   member may be added to the shared byte-identical contracts directory. [US1]
+  The three contracts MUST be three separate documents — `route-policy.schema.json`,
+  `environment-snapshot-projection.schema.json`, and
+  `route-resolution-report.schema.json` — each carrying an
+  `https://racecraft.dev/schemas/car-005/<name>.schema.json` `$id`, and **no document
+  may use a `$ref` that leaves its own `#/$defs/`**; cross-document `$ref` resolution
+  is prohibited in this contracts directory. Filenames MUST be capability-named, never
+  spec-ID-named. All three land in slice 1. [US1]
 - **FR-017**: A structural test MUST enforce the resolution enum against the
   roadmaps in two distinct assertions, so drift on either platform fails
   visibly rather than silently stranding the Codex twin: [US1]
@@ -265,6 +284,13 @@ cohort specs inherit proven rejection semantics.
   enum whose members are exactly `fallback_loop`, `unqualified_adjacent_model`,
   `generic_agent_substitution`, `silent_inherit_materialization`, and
   `unqualified_override`. [US2]
+  This enum MUST land in slice 2 as an additive `$defs/policyViolationCode` member of
+  the slice-1 `route-resolution-report.schema.json`, together with widening that
+  schema's diagnostic `code` field to a two-member `oneOf` over the two closed enums.
+  It MUST NOT be pre-declared in slice 1, where no case can emit it and SC-003 could
+  not be proven for it inside slice 1's own diff. It MUST NOT be a separate schema
+  document, because cross-document `$ref` resolution is prohibited in this contracts
+  directory (FR-016) — a separate document could only be referenced illegally. [US2]
 - **FR-020**: A policy whose fallback chain revisits an already-attempted route
   MUST be rejected with `fallback_loop`, and the walk MUST terminate without
   repeating that route. [US2]
@@ -295,7 +321,17 @@ cohort specs inherit proven rejection semantics.
   attempt count alongside the declared budget for each capped dimension. [US2]
 - **FR-027**: The schema MUST enforce maxima on the declared budget fields, so a
   fixture declaring an out-of-range budget fails validation rather than being
-  clamped at run time. [US2]
+  clamped at run time. **[US1]** — retagged from US2 at Clarify: the budget fields
+  themselves are FR-003 (US1, slice 1), and declaring a field's `maximum` is the
+  same schema-authoring act as declaring the field. Splitting them would make
+  slice 2 reopen a slice-1 schema for a one-keyword change, which FR-033b forbids.
+  The *behavioural* half stays in slice 2: FR-026 (simulator enforces the caps and
+  reports actual counts), FR-028 (the exhaustion case), and the out-of-range negative
+  fixture that proves validation rejects rather than clamps. Honest cost of this
+  allocation, recorded: slice 1 declares budget constraints it validates but does not
+  yet enforce behaviourally. That is contained inside a contract FR-003 mandates for
+  slice 1 regardless, which is why it is the lesser evil against making slice 2 reopen
+  a slice-1 schema for a one-keyword change.
 - **FR-028**: The corpus MUST include a budget-exhaustion case proving the cap
   with a declared budget of one. [US2]
 - **FR-029**: When the preferred route and every declared fallback are rejected,
@@ -316,10 +352,48 @@ cohort specs inherit proven rejection semantics.
   test suite manifest. [US1] [US2]
 - **FR-033**: The feature MUST be delivered as two vertical slices — User Story 1
   then User Story 2 — as a stacked pull-request chain in which the second slice
-  stacks on the first. [US1] [US2] [NEEDS CLARIFICATION: exact file-level
-  slice-seam allocation — which schemas, corpus cases, simulator functions, and
-  test modules land in slice 1 versus slice 2 — was deferred from scoping to
-  planning; what is the final allocation?]
+  stacks on the first. [US1] [US2]
+- **FR-033a**: The slice seam MUST follow this file-level allocation. Slice 1
+  **creates** every file; slice 2 **extends** three of them additively and creates
+  none. [US1] [US2]
+
+  | File | Slice 1 | Slice 2 |
+  | ---- | ------- | ------- |
+  | `layer6-efficiency/contracts-claude/route-policy.schema.json` | create — route shape, ordered fallbacks, declared budget fields **and their schema maxima** | unchanged |
+  | `layer6-efficiency/contracts-claude/environment-snapshot-projection.schema.json` | create | unchanged |
+  | `layer6-efficiency/contracts-claude/route-resolution-report.schema.json` | create — diagnostics envelope, `$defs.resolutionCode` (the five codes), attempted-route list, effective dispatch tuple | extend `$defs` with `policyViolationCode` and widen the diagnostic `code` to accept either enum |
+  | `layer6-efficiency/lib/claude_route_fallback.py` | create — canonical serialization, snapshot projection intake, preferred-then-fallback walk, five-code semantics, `details` sub-reasons | extend — structural-validation pre-pass, budget cap enforcement with attempt counting, override handling, helper-unavailable path, no-safe-route remediation |
+  | `layer6-efficiency/fixtures-fallback/fallback-scenario-corpus.json` | create — `cases[]` holding the US1 resolution-failure cases with pinned reports | append the US2 cases to the end of `cases[]`; existing case positions and pinned bytes unchanged |
+  | `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity, roadmap parity test | append the US2 test functions |
+  | `suite-manifest.json` | modify — append **one** entry to the layer 4 `scripts[]` array | **unchanged — must stay untouched** |
+  | `docs-site/src/content/docs/reference/tests.md` | regenerate (generated; excluded from review) | regenerate |
+
+  Registering exactly **one** test module in slice 1 is what keeps the manifest out
+  of slice 2's diff: slice 1's entry becomes the tail of the `scripts[]` array, so a
+  second slice-2 entry would have to add a comma to slice 1's last line. One module
+  avoids that single-character churn entirely.
+
+- **FR-033b**: The seam rule is **append-only additivity**, not "slice 2 touches no
+  slice-1 file" — the latter is unachievable, because the corpus is one file by
+  FR-015, the simulator is one module by FR-033d, and slice 1 cannot pre-register a
+  test path that does not yet exist. Slice 2 MAY add to a slice-1 file but MUST NOT
+  rewrite, reorder, rename, or re-pin anything slice 1 committed: no slice-1
+  `case_id`, input, or pinned expected report may change, and no slice-1 function
+  signature may change. Slice 1 MUST be complete and passing on its own, with
+  nothing stubbed or `TODO`-marked for a later slice. If a slice-2 finding requires
+  changing slice-1 content, that is evidence the slice-1 contract was wrong: the fix
+  MUST land on slice 1's branch and the chain MUST be restacked — it MUST NOT be
+  absorbed into slice 2's diff. [US1] [US2]
+- **FR-033c**: The scenario corpus MUST remain a **single** file across both
+  slices, preserving the one-self-contained-corpus decision. The seam is carried
+  by the stacked branch chain — slice 2's diff is measured against slice 1's
+  branch, so appended cases read as pure additions — not by splitting the corpus
+  into per-slice files. [US1] [US2]
+- **FR-033d**: The reference simulator MUST remain a **single** module across both
+  slices, matching the repository's one-module-per-capability convention in the
+  Layer 6 library. Structural policy validation is a pre-pass of the same
+  route-resolution capability, not a separate capability, and MUST NOT be split
+  into a second module solely to avoid a slice-2 edit. [US1] [US2]
 
 ### Reviewability Notes *(if applicable)*
 
@@ -333,23 +407,51 @@ cohort specs inherit proven rejection semantics.
   reference simulator) with the unit-test surface that exercises it
 - **Secondary surfaces, if any**: seed/config — the test suite manifest entry for
   the new unit test
-- **Projected reviewable LOC**: approximately 770 total across both slices per
-  the shared size estimator, against an authored roadmap budget of 257; the
-  divergence is recorded and re-estimated at planning. Roughly 400 in slice 1
-  and 370 in slice 2.
+- **Projected reviewable LOC**: **0 by this repository's declared-LOC accounting**,
+  and that is the honest answer rather than a favourable one. The surface has 0
+  production files, and every automated signal is blind to it:
+  `estimate-reviewable-loc` computes `projected = production_files × 40`
+  (`speckit-pro/speckit_pro_runner/helpers/read_only.py:926`), which yields 0 and
+  status `pass`; the setup gate performs no measurement at all, regex-scraping the
+  number a human typed into the roadmap (`read_only.py:850`); and the PR-time packet
+  gate thresholds the same author-declared figure
+  (`speckit-pro/speckit_pro_runner/helpers/pr_emission.py:589-619`). Note also that
+  `greenfield` evaluates **false** here because `suite-manifest.json` is modified
+  rather than created (`read_only.py:922`), so the thresholds stay 400/800 rather
+  than 600/1200.
+  By **artifact lines**, which is what a reviewer actually reads: roughly
+  1,900–2,700 in slice 1 and 1,200–1,900 in slice 2 — three schemas ~470–620, the
+  simulator ~550–750 then +350–550, the corpus ~450–600 then +400–550, the unit test
+  ~450–700 then +350–600.
+  The advisory `estimate-spec-size` formula (`user_stories × 25 + files × 40 +
+  frs × 15`, `read_only.py:967`) re-run on this spec's **real** signals — 2 user
+  stories, 10 files, 35 functional requirements — returns **975 and 3 suggested
+  slices**, up from the 770/2 computed at scoping from coarser signals (4 stories,
+  10 files, 18 FRs). Nothing in the estimator supports collapsing to one slice.
 - **Projected production files**: 0
-- **Projected total files**: approximately 10 (2–3 schemas, 1 scenario corpus,
-  1 simulator library module, 1–2 unit tests, 1 manifest entry, plus spec
-  artifacts)
-- **Budget result**: split required
-- **Split decision**: Split into two vertical slices along the rule-family seam,
-  each cutting schema through simulator through test end-to-end. Slice 1 is User
-  Story 1 (resolution-failure semantics: snapshot projection, the five resolution
-  codes, report envelope, replay pinning). Slice 2 is User Story 2 (structural
-  rejections, override and helper paths, budget exhaustion, report-only
-  no-safe-route). The two slice pull requests are managed as a stacked chain with
-  slice 2 stacked on slice 1. The pull-request-time diff-mode reviewability gate
-  is the final authority on slice sizes.
+- **Projected total files**: 7 authored plus 1 generated — 3 schemas, 1 scenario
+  corpus, 1 simulator library module, 1 unit test, 1 suite-manifest entry, and the
+  regenerated `docs-site/src/content/docs/reference/tests.md`. Slice 2 creates no new
+  authored file.
+- **Budget result**: **split elected, not gate-forced.** With 0 production files every
+  automated LOC signal reads 0 or `pass`, so one slice would pass every gate. The
+  immediately preceding sibling spec CAR-004 — same primary surface, 0 production
+  files, declared 250 reviewable LOC, status ok — shipped roughly 11,600 artifact
+  lines in a single pull request (#401). The declared figure in this repository
+  systematically excludes fixture JSON, platform-scoped schemas, test-library
+  modules, and unit tests.
+- **Split decision**: Two vertical slices, elected on **review-burden and
+  independent-value grounds rather than on a LOC ceiling**. The seam is the
+  rule-family boundary, each slice cutting schema through simulator through test
+  end-to-end: slice 1 is User Story 1 (resolution-failure semantics — snapshot
+  projection, the five resolution codes, report envelope, replay pinning); slice 2 is
+  User Story 2 (structural rejections, override and helper paths, budget exhaustion,
+  report-only no-safe-route). Slice 1 is independently landable and releasable and is
+  the artifact CAR-006 needs first; slice 2 adds no new authored file and lands as
+  append-only additive edits. The two pull requests are managed as a gh-stack chain
+  with slice 2 stacked on slice 1. Because no gate measures this surface,
+  plan-time or PR-time re-estimation **cannot** overturn the split by returning a
+  smaller number — only an operator decision can.
 
 ### PR Review Packet Requirements *(mandatory)*
 
@@ -445,9 +547,12 @@ cohort specs inherit proven rejection semantics.
 - Canonical JSON serialization means sorted keys and a fixed separator and
   indentation convention, consistent with the existing pinned-report precedent in
   the Layer 6 controls fixtures.
-- The estimator's approximately 770 reviewable LOC and the roadmap's authored 257
-  disagree; the two-slice split stands, and planning re-estimates rather than
-  re-litigates the split unless plan evidence clearly contradicts it.
+- The scoping-time estimate (770 reviewable LOC, 2 slices) and the roadmap's authored
+  budget (257, 1 slice) are both forward guesses from coarse signals, and **neither
+  measures this surface**: with 0 production files the repository's declared-LOC
+  accounting reads 0. The two-slice split is elected on review burden and independent
+  slice value, so plan-time re-estimation cannot overturn it by returning a smaller
+  number — only an operator decision can.
 - G56R-005, the Codex twin, has not been scaffolded; this spec is the first-mover
   structural template it will mirror, and any promotion of a schema to the shared
   byte-identical contracts directory is a deliberate future joint change.
