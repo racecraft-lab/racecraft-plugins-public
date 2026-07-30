@@ -4,8 +4,8 @@
   "feature_dir": "specs/car-005-availability-fallback-recovery",
   "branch": "car-005-availability-fallback-recovery",
   "status": "in_progress",
-  "active_step": "Phase 5 Tasks complete (G5 pass); Phase 6 Analyze next",
-  "updated_at": "2026-07-30T05:40:00Z",
+  "active_step": "Post-implementation: reviewability boundary applied; PR emission next",
+  "updated_at": "2026-07-30T12:00:00Z",
   "prior_run_note": "The full G56R-004 run record - design decisions, atomicity route, reviewability evidence, implementation, and review remediation - remains in the preserved workflow and design-concept files and in git history at merge commit 77e7dfff017597c6c93118a30eeb2b1c08d734de. The operator-authorized ChatGPT sign-in smokes were never run, so SC-014 through SC-016 remain partial for live observation; the operator procedure is preserved at docs/ai/specs/.process/G56R-004-live-smoke-runbook.md.",
   "atomicity_route": {
     "route": "one-navigable-PR",
@@ -71,6 +71,23 @@
       "requested_mode": "tasks",
       "result": "input_error exit 2",
       "reason": "installed read-only runner supports setup mode only"
+    },
+    "final-reviewability-backstop": {
+      "requested_mode": "read_only",
+      "result": "helper_not_promoted, promotion_status=deferred",
+      "reason": "registered but deferred on the installed runner; committed evidence chain used instead"
     }
+  },
+  "final_reviewability_gate": {
+    "status": "proceed_on_committed_evidence",
+    "backstop": "deferred",
+    "evidence": [
+      "setup-mode reviewability-gate at scaffold: pass (scraped authored figure, not a measurement)",
+      "plan-phase estimate-reviewable-loc: pass, projected 0 (blind: production_files x 40, and this feature has 0)",
+      "operator-ratified 2-slice split, reaffirmed 2026-07-30 with the PR-count ceiling lifted",
+      "atomicity-route: one-navigable-PR (classifier abstain bucket), releasable true",
+      "current pr_marker_plan with 2 ordered markers and full task membership"
+    ],
+    "decision": "marker-based PR emission for 2 slice PRs; no correctness stop applies"
   }
 }

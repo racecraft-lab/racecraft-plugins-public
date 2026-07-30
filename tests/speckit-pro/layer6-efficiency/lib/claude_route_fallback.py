@@ -417,8 +417,9 @@ def load_corpus(path: Path | str = DEFAULT_CORPUS_PATH) -> dict[str, Any]:
     The corpus has **no schema of its own** — FR-016 permits exactly three contract
     documents and none of them validates the envelope — so the properties FR-033b's
     append-only seam rule and SC-007's read-one-case guarantee lean on are checked
-    here, fail-closed, before any case reaches the walk. This is the one entry point
-    that touches the filesystem; ``resolve`` never does.
+    here, fail-closed, before any case reaches the walk. This is the one *callable*
+    that touches the filesystem at call time; the three contract documents are read
+    once at module import, and ``resolve`` never reads anything.
     """
     document = Path(path)
     _require(document.is_file(), f"scenario corpus is not committed: {document}")

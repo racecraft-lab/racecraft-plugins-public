@@ -1169,7 +1169,51 @@ only where tasks genuinely own different files.
 | C — slice-1 assertion obligations + close | T027–T037 (11) | ⏳ Pending | the 7 easy-to-miss tests, manifest entry, docs regen, full suite |
 | D — slice-2 rejections + override/helper | T038–T048 (11) | ⏳ Pending | structural pre-pass, both override branches, helper path |
 | E — slice-2 exhaustion + recovery | T049–T057 (9) | ⏳ Pending | budgets as hard caps, no-safe-route, coverage, additivity check |
-| F — polish | T058–T063 (6) | ⏳ Pending | non-goal audits, quickstart walks, PR review packets |
+| F — polish | T058–T063 (6) | ✅ Complete | non-goal audits, quickstart walks, PR review packets |
+
+**G7: ✅ PASS — "All 63 tasks complete".** Full suite **6540/6540** at `70d5b508`
+(L1 1428, L4 4926, L5 186), then **7008/7008** after merging `origin/main`
+(L4 5394, both features' tests coexisting). 7,177 lines of feature artifact.
+
+### Post-implementation findings
+
+**Phantom-completion check: 62 of 63 confirmed real, 1 genuine phantom.**
+**T063** is marked `[X]` but only half done — its packet exists (20.6 KB) while its
+PR-emission half has not happened: `gh pr list --head car-005-availability-fallback-recovery`
+is empty while `gh pr list` returns #406–#410, so the CLI is authenticated and working;
+no slice branches exist; and the packet is written in the imperative future ("**must**
+name slice 1's PR/branch"), not as a record. This is a **premature marking, not lost
+work** — PR emission is the post-implementation step now in progress, and T063 is
+genuinely complete only once the chain exists. Recorded rather than silently re-marked.
+
+Related but explicitly **not** phantom: **T055** says "verify against slice 1's branch",
+which does not exist; the verification was really performed against the slice-1 close
+commit `22458aad` and its evidence is recorded. Substance holds, wording is loose.
+
+**Three vacuous assertions found — redundancy, not a hole.** Three "added-member"
+mutation controls compare a live set unioned with a fixture-only literal against a
+test-file literal, so they can only fail if someone adds the fixture string to the
+test's own constant. The paired **dropped-member** tests are not vacuous, and the
+"both directions" claim of FR-019b and the effort ladder is genuinely carried by the
+primary set-equality tests, which do fail both ways. Recorded; not worth a fix that
+would churn a green suite.
+
+**Independent code review against `REVIEW.md`: 0 blocking, 3 nits.** It independently
+re-verified the claims most worth doubting: determinism replayed across five
+`PYTHONHASHSEED` values plus `TZ=Pacific/Kiritimati` and `LC_ALL=C`, byte-identical
+every time; the route schema calibrated in **both** directions (admits the inherit
+route and the duplicate fallback, rejects an over-range budget, with the test walking
+every cap at ceiling and ceiling+1); all three enum protections failing in both
+directions with the parity test genuinely reading both roadmaps off disk; and the
+report-only guarantee enforced by an AST audit that bans write primitives and the
+`os`/`shutil`/`tempfile`/`subprocess`/`io` imports outright. It also re-derived two
+pinned reports by hand and matched them.
+
+**The review's first nit was actionable and has been fixed.** The branch was two
+commits behind `main`, and ART-001 (#407) had added its own layer-4 manifest entry at
+the same array tail — a guaranteed conflict. `origin/main` is now merged, the manifest
+resolved to carry **both** entries (64 in layer 4), and the generated docs reference
+page regenerated rather than hand-merged. Suite green at 7008/7008 on the merged tree.
 
 ### Seam deviation found at Group D — FR-033b is not fully achievable as written
 
@@ -1353,6 +1397,51 @@ which is appropriate for a plan but leaves genuine choices to implementation.
 
 **Gate outcome:** 0.94 ≥ 0.90 threshold, `CONFIDENCE_GATE_MODE=advisory`. Proceed to
 Phase 7.
+
+## Self-Review (mandatory, reporting step — never gates the PR)
+
+**1. Tests executed.** Full suite **7008/7008** on the merged tree (L1 1428, L4 5394,
+L5 186), exit zero; **6540/6540** on the feature alone before merging `origin/main`.
+The new module runs green standalone at **1195/1195** and is default-dispatched through
+the layer-4 manifest. Privacy scan 10/10. `reference:check` reports the generated docs
+page current. BUILD, TYPECHECK and LINT are **N/A** — this repository has no such gate,
+so four of the canonical five commands do not exist here and their absence is not a gap.
+Determinism was independently replayed across five `PYTHONHASHSEED` values plus
+`TZ=Pacific/Kiritimati` and `LC_ALL=C`, byte-identical every time.
+
+**2. Edge cases.** Non-happy-path is the **majority** of the corpus, not an afterthought:
+18 cases split 11 `resolved` / 7 `no_safe_route`, with **16 of 18 emitting at least one
+diagnostic**. Every scenario SC-001 enumerates has at least one case and zero are
+unrepresented, asserted by a coverage test carrying 17 predicates plus a guard proving no
+predicate matches all 18 cases. The spec's six named edge cases are all represented,
+including the two hardest: an override coexisting with no-safe-route, and a route rejected
+for more than one reason at once. No `[edge-case-gap]` markers.
+
+**3. Requirements matched.** **60 of 60** functional-requirement identifiers and **13 of
+13** success criteria map to tasks, script-verified against `spec.md` rather than asserted
+— no requirement without a task, no coverage row without a spec entry, no dangling task
+reference. All 63 tasks marked complete; G7 confirms.
+
+**4. Follow-up and tidiness.** No `TODO`, `FIXME`, `XXX`, `HACK`, stray `print`, or
+debugger call anywhere in the 7,177 lines of new code. No `[DEFERRED]` markers. No
+leftover scaffolding. **Five items are deferred or recorded rather than silently
+dropped**, and each is named in the PR packets:
+
+| Item | Disposition |
+|---|---|
+| **T063 phantom** — marked `[X]` with its PR-emission half undone | Genuinely incomplete until the stacked chain exists; being closed by the PR-creation step now |
+| **Slice 2 is not a pure append** — 8 lines across 5 slice-1 test bodies adapted | Two unavoidable (the spec reallocates the asserted behaviour across the seam), two avoidable slice-1 authoring defects. Stated in slice 2's packet |
+| **FR-001 qualified to *public* signatures** after two private helpers changed arity | Dated and justified in place; the quickstart's signature-drift row was deliberately **not** softened to match the code |
+| **Three vacuous added-member mutation controls** | Redundancy, not a hole — the paired dropped-member and primary set-equality tests do fail both ways. Not fixed, to avoid churning a green suite for no coverage gain |
+| **CAR-002 never pinned the unavailable-model platform fact** | This feature pins semantics *ahead of* the platform fact; recorded in both packets and in the roadmap's PF-4 |
+
+**Honest weak point.** The thinnest part of this run is not the artifact but the
+*verification of the verification*: the Analyze phase's second re-verification sweep never
+completed, which is why the pre-Implement confidence gate scored risk assessment 0.88
+rather than the 1.00 a clean-gate reading would have permitted. The compensating controls
+were an adversarial phantom-completion check over all 63 tasks (which found one real
+phantom) and an independent `REVIEW.md`-calibrated review (0 blocking). Both were run
+after the fact rather than as part of Analyze itself.
 
 ## Lessons Learned
 
