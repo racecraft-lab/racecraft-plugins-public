@@ -1862,6 +1862,54 @@ deleted. Exact PR titles, merged-at timestamps, merge commits, and head branches
 are recorded in
 `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`.
 
+## 2026-07-30 - CAR-005 Post-Merge Archive Cleanup
+
+### CAR-005
+
+- PRs: https://github.com/racecraft-lab/racecraft-plugins-public/pull/411 and
+  https://github.com/racecraft-lab/racecraft-plugins-public/pull/412
+- Titles: `feat(car-005): add a reference simulator that pins what happens when
+  an agent's model is unavailable` and `feat(car-005): extend the route-fallback
+  simulator with structural rejection and recovery cases`
+- Merged at: `2026-07-30T20:53:03Z` and `2026-07-30T21:19:49Z`
+- Merge commits: `3ba89fa4bee8b1cc6402b47a473181d3f96eed12` and
+  `e31475fa7cb36aed83b76bc63d423bcb10557b97`
+- Source: `specs/car-005-availability-fallback-recovery`
+- Canonical artifacts: three closed Claude route contracts, one eighteen-case
+  replay corpus, one standard-library simulator module, and one durable Layer 4
+  test owner under `tests/speckit-pro/`.
+- Governance note: repository-only validation assets; no production routing,
+  installer, manifest, scheduler, default, release behavior, plugin payload, or
+  version changed.
+
+CAR-005 pins bounded resolution and recovery semantics synthetically, ahead of
+any real route policy. `no_safe_route` is report-only — it names the unresolved
+agent, the attempted routes, each rejection reason, and rollback remediation,
+and mutates no shipped agent file. The two slices delivered as a stacked chain
+and slice 2 held the append-only seam: no schema file and no suite-manifest
+entry changed, and corpus additions landed only at the tail of `cases[]`.
+
+### Known gap carried forward
+
+The simulator declares `POLICY_SCHEMA_PATH` and `SNAPSHOT_SCHEMA_PATH` but reads
+neither, so it validates the report it emits and not the policy or snapshot it
+accepts. All eighteen committed policies and snapshots satisfy both contracts,
+so closing the gap changes no pinned report; the correction is a follow-up
+change against `main`, and CAR-006 inherits the gap until then.
+
+### No relocation required
+
+Every machine-enforced artifact was authored directly under
+`tests/speckit-pro/`, and a tree-wide search for the bare directory name found
+no live reader before removal. Unlike CAR-004 and G56R-004 the feature carried
+no unrun operator procedure, so nothing had to move out of the folder first.
+
+Detailed recovery and verification evidence:
+
+- `.specify/memory/archive-reports/2026-07-30-car-005-post-merge-hygiene.md`
+
+---
+
 ## 2026-07-29 - G56R-004 Post-Merge Archive Cleanup
 
 ### G56R-004

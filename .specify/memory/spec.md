@@ -2341,3 +2341,73 @@ helpers, and tests already live under `tests/speckit-pro/`, and a repository
 search found no live code or test reader of the active spec path. Detailed
 provenance, canonical artifact locations, and recovery commands live in the
 dated G56R-004 archive report.
+
+## Revision 2026-07-30 - CAR-005 Model Availability, Fallback, and Recovery Simulation Archived
+
+### Shipped Behavior Preserved
+
+- CAR-005 shipped through the merged stacked PRs #411 and #412 a synthetic
+  reference simulator that pins what a session preflight does when an agent's
+  preferred model is unavailable. Three closed JSON Schema contracts, an
+  eighteen-case fixture corpus, one standard-library module, and one durable
+  Layer 4 owner enforce resolution, rejection, budget, override, helper, and
+  replay semantics.
+- Resolution is bounded and report-only. `no_safe_route` names the unresolved
+  agent, every attempted route, each rejection reason, and remediation that
+  includes rolling back to the previous plugin release; no shipped agent file is
+  read for mutation or written. Budget exhaustion enumerates all three classes
+  on the terminal diagnostic and on no other.
+- The five reason codes are frozen. `effort_unsupported` and the mapping of
+  `undetermined` to probe-unavailable are deliberate **preflight qualification**
+  divergences from runtime behaviour, not mirrors of it, and are labelled that
+  way because the runtime silently degrades an unsupported effort.
+- Slice 2 held the append-only seam: it changed no schema file and no
+  `tests/speckit-pro/suite-manifest.json` entry, and appended only at the tail
+  of `cases[]` without altering a slice-1 case, input, or pinned report.
+- CAR-005 changes no production routing, installer, manifest, scheduler,
+  default, plugin payload, or release behavior. Its evidence is
+  repository-only under `tests/speckit-pro/`.
+- CAR-006 is ready. Its CAR-005 dependency is satisfied by the merged
+  contracts, corpus, simulator, and focused test owner.
+
+### Known Gap Carried Forward
+
+`claude_route_fallback.py` declares `POLICY_SCHEMA_PATH` and
+`SNAPSHOT_SCHEMA_PATH` next to `REPORT_SCHEMA_PATH` but loads only the report
+schema. Neither declared contract is read anywhere in the module, so `resolve()`
+validates the report it emits and never the policy or snapshot it accepts: a
+snapshot violating its own `additionalProperties: false` resolves clean, and a
+policy missing a declared budget member raises a bare `KeyError` instead of a
+contract error. The loader docstring claims fail-closed enforcement of the
+properties FR-033b and SC-007 lean on, which overstates the member-presence and
+`case_id` checks it actually performs.
+
+All eighteen committed corpus policies and snapshots were validated against both
+declared contracts and violate neither, so closing the gap changes no pinned
+report. It is a shipped defect in the accept path, not a wrong result. CAR-006
+inherits it; it needs its own change against `main` because both CAR-005 slices
+are merged.
+
+### Parity Note
+
+PF-1 through PF-4 — the grounded platform facts verified against Claude Code
+2.1.220 during this run — are platform behaviour, not Claude-specific design,
+and are recorded in the Claude roadmap only. The Codex mirror is a deliberate
+joint two-platform landing under the shared parity contract; G56R-005 onward
+should carry the same section.
+
+### Cleanup Note
+
+The active CAR-005 folder was removed after both merge provenances and all live
+readers were checked. Historical workflow and design evidence remains under
+`docs/ai/specs/.process/`.
+
+No relocation was required. Every machine-enforced artifact — the three
+contracts, the corpus, the simulator, and the test owner — was authored directly
+under `tests/speckit-pro/`, and a tree-wide search for the bare directory name
+found no live code, test, or script reader before removal. Unlike CAR-004 and
+G56R-004, the feature quickstart is a per-slice validation guide for slices that
+are now merged rather than an unrun operator procedure; its slice-diff commands
+name deleted branches, and its failure-triage table is derivable from the
+shipped tests. Detailed provenance, canonical artifact locations, and recovery
+commands live in the dated CAR-005 archive report.

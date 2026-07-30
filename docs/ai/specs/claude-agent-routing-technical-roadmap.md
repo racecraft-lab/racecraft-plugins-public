@@ -19,7 +19,8 @@ PRD and is prepared for `$speckit-scaffold-spec CAR-NNN`.
 **Status:** Active; dependency graph approved 2026-07-12; CAR-001 is complete
 and archived after PRs #350 and #362; CAR-002 is complete and archived after
 PR #369; CAR-003 is complete and archived after PR #385; CAR-004 is complete
-and archived after PR #401; CAR-005 is in progress
+and archived after PR #401; CAR-005 is complete and archived after the stacked
+PRs #411 and #412; CAR-006 is ready
 
 **Parity note:** This roadmap is the Claude half of the shared twelve-agent
 catalog. The Codex half lives in the companion Codex routing roadmap (PR #330
@@ -308,8 +309,8 @@ G56R-003 -+     (joint change; lands with G56R-012 on both platforms)
 | CAR-002 | Capability Probing, Telemetry Profile, and Exact-Treatment Contract | Complete / Archived | [.process/CAR-002-workflow.md](.process/CAR-002-workflow.md) | PR #369 merged; canonical snapshot, telemetry profile, trace schema, and validators live outside `specs/**` |
 | CAR-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Complete / Archived | [.process/CAR-003-workflow.md](.process/CAR-003-workflow.md) | PR #385 merged; canonical materializer, evaluation evidence, qualification modules, and validators live outside `specs/**` |
 | CAR-004 | Policy Controls and Adaptive Comparators | Complete / Archived | [.process/CAR-004-workflow.md](.process/CAR-004-workflow.md) | PR #401 merged; frozen control registry, comparison rule, fixtures, and validators live outside `specs/**`. T062's three live smokes were never run, so SC-009, SC-026, SC-027, SC-029, SC-030, and SC-031 stay unevidenced; the operator runbook is [.process/CAR-004-live-smoke-runbook.md](.process/CAR-004-live-smoke-runbook.md) |
-| CAR-005 | Model Availability, Fallback, and Recovery Simulation | In Progress | [.process/CAR-005-workflow.md](.process/CAR-005-workflow.md) | Specify (scaffolded 2026-07-29; 2 vertical slices, gh-stack delivery) |
-| CAR-006 | Route-policy Manifest, Materializer, Preflight, and Strict Override | Pending | - | Blocked by CAR-005 |
+| CAR-005 | Model Availability, Fallback, and Recovery Simulation | Complete / Archived | [.process/CAR-005-workflow.md](.process/CAR-005-workflow.md) | Stacked PRs #411 and #412 merged; the reference simulator, three closed contracts, the eighteen-case corpus, and the Layer 4 owner live outside `specs/**`. The simulator declares `POLICY_SCHEMA_PATH` and `SNAPSHOT_SCHEMA_PATH` but reads neither, so it validates the report it emits and not the policy or snapshot it accepts; CAR-006 inherits that gap |
+| CAR-006 | Route-policy Manifest, Materializer, Preflight, and Strict Override | Ready | - | CAR-005 dependency satisfied by PRs #411 and #412 |
 | CAR-007 | Quality-critical Executor Routing | Pending | - | Blocked by CAR-006 |
 | CAR-008 | Structured-work Agent Routing | Pending | - | Blocked by CAR-006 |
 | CAR-009 | Read-only Reasoning and Orchestration-support Agent Routing | Pending | - | Blocked by CAR-006 |
