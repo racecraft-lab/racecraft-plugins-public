@@ -147,19 +147,13 @@ def resolve_repo_root(inputs: dict[str, Any]) -> Path | dict[str, Any]:
 
 def find_repo_root(start: Path) -> Path | None:
     candidates = [start, *start.parents] if start.is_dir() else [start.parent, *start.parent.parents]
+    # The nearest trusted marker wins so installed-cache runs inside nested
+    # consumer worktrees cannot be captured by an ancestor source checkout.
     for candidate in candidates:
         root = candidate.resolve(strict=False)
         runner_dir = candidate / "speckit-pro" / "speckit_pro_runner"
         if runner_dir.is_dir() and path_stays_in_trust_boundary(runner_dir, root):
             return root
-    # Installed-cache fallback: no vendored runner anywhere above `start`
-    # (the runner is executing out of the Claude/Codex plugin cache against a
-    # consumer project), so anchor the trust boundary to the nearest SpecKit
-    # project root — the ancestor carrying a real `.specify/` directory. The
-    # vendored-tree walk above stays authoritative so source checkouts and
-    # vendored installs resolve exactly as before.
-    for candidate in candidates:
-        root = candidate.resolve(strict=False)
         specify_dir = candidate / ".specify"
         if specify_dir.is_dir() and path_stays_in_trust_boundary(specify_dir, root):
             return root

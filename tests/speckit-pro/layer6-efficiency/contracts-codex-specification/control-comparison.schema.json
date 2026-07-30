@@ -1,0 +1,308 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/schemas/g56r-004/control-comparison.schema.json",
+  "title": "G56R-004 Control Comparison",
+  "description": "Codex-local mirror of the CAR-004 comparison rule for the G56R-004 policy controls. G56R-004 produces no verdict; it freezes how one will be produced, in three stages in a fixed order — eligibility floors, then the eight-dimension Pareto rule, then the materiality margin. The margin never replaces the Pareto rule; it is a second-stage materiality filter reached only on candidate dominance. Every reference into the frozen G56R-003 set is a data-level {id, digest} binding under #/$defs/binding, never a cross-document $ref (FR-004), so the repository validator resolves nothing outside this document's own #/$defs/ (SC-017).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "comparison_id",
+    "comparison_digest",
+    "status",
+    "frozen_at",
+    "eligibility_floors",
+    "dominance_rule",
+    "confidence_method",
+    "multiplicity_position",
+    "reserved_partition_binding",
+    "messaging_map",
+    "car_003_bindings"
+  ],
+  "properties": {
+    "schema_version": {"const": "1.0.0"},
+    "comparison_id": {"type": "string", "minLength": 1},
+    "comparison_digest": {
+      "description": "FR-002c: the document's own content address, over the whole document with this member removed from the preimage.",
+      "$ref": "#/$defs/digest"
+    },
+    "status": {"const": "frozen"},
+    "frozen_at": {
+      "description": "FR-002b: a Z-suffixed UTC instant, inside the preimage.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "eligibility_floors": {"$ref": "#/$defs/eligibilityFloors"},
+    "dominance_rule": {"$ref": "#/$defs/dominanceRule"},
+    "confidence_method": {"$ref": "#/$defs/confidenceMethod"},
+    "multiplicity_position": {"$ref": "#/$defs/multiplicityPosition"},
+    "reserved_partition_binding": {
+      "description": "FR-025 and FR-025c: the reserved CAR-011 comparison partition, named by its partition_id together with its membership digest — the digest over the deduplicated, lexicographically sorted objective identifiers, which is the only digest that pins membership. No CAR-004 row ever references a member of that objective set.",
+      "$ref": "#/$defs/binding"
+    },
+    "messaging_map": {
+      "description": "FR-024 and SC-008: total and single-valued over the closed verdict enum. A mixed, tied, inconclusive, or incomplete comparison imposes no messaging restriction, so neither non-dominant entry carries a forbidden set — carrying one would BE the restriction FR-022 refuses to impose.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dominant", "not_dominant", "inconclusive"],
+      "properties": {
+        "dominant": {"$ref": "#/$defs/messagingMapEntry"},
+        "not_dominant": {"$ref": "#/$defs/messagingMapEntry"},
+        "inconclusive": {"$ref": "#/$defs/messagingMapEntry"}
+      }
+    },
+    "car_003_bindings": {
+      "description": "FR-004 and FR-005a: every frozen CAR-003 contract this document references, by stable $id and by the SHA-256 of its committed bytes. The recorded digest is recomputed on load and fails closed on a mismatch.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/binding"}
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "binding": {
+      "description": "FR-004 and research D2: the CAR-003 binding shape restated locally. No $ref crosses a document boundary and no $id outside car-004/ is dereferenced.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "digest"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "digest": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "eligibilityFloors": {
+      "description": "FR-019: stage one. A control that has not cleared every floor yields no verdict whatever its resource numbers say. FR-024a and SC-019: the no-verdict outcome carries its claim class and its (absent) messaging restriction HERE, inside this block, rather than as a fourth verdict member or a fourth messaging-map row.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_gates",
+        "all_gates_must_pass",
+        "quality_floors_binding",
+        "reliability_guardrail_breach_result",
+        "availability_gate_required",
+        "verdict_when_floor_unmet",
+        "claim_class_when_floor_unmet",
+        "messaging_restriction_when_floor_unmet"
+      ],
+      "properties": {
+        "required_gates": {
+          "description": "FR-019: set-equal to the frozen seven-member deterministic_gates.gate enum. Validated live against the bound score-bundle contract rather than trusted from this transcription.",
+          "type": "array",
+          "minItems": 7,
+          "maxItems": 7,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["role", "safety", "grounding", "mutation", "tool", "output", "acceptance"]
+          }
+        },
+        "all_gates_must_pass": {"const": true},
+        "quality_floors_binding": {"$ref": "#/$defs/binding"},
+        "reliability_guardrail_breach_result": {"const": "no_qualification"},
+        "availability_gate_required": {"const": true},
+        "verdict_when_floor_unmet": {"const": "no_verdict"},
+        "claim_class_when_floor_unmet": {"const": "no_comparative_claim"},
+        "messaging_restriction_when_floor_unmet": {"const": false}
+      }
+    },
+    "dominanceRule": {
+      "description": "FR-020, FR-021, FR-021a, FR-021c, FR-021e: stages two and three. The evaluation order is part of the contract, not a convention, and is stated literally. No weighted composite is introduced, and no ranking that could be read as one.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rule",
+        "weights_prohibited",
+        "dimensions",
+        "dimension_projection",
+        "evaluation_order",
+        "margin_denominator",
+        "zero_denominator_result",
+        "margin_map"
+      ],
+      "properties": {
+        "rule": {"const": "environment_independent_pareto"},
+        "weights_prohibited": {"const": true},
+        "dimensions": {
+          "description": "FR-020: set-equal to the frozen eight-member pareto_policy.dimensions. Validated live against the bound analysis plan rather than trusted from this transcription.",
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "input_tokens",
+              "cached_input_tokens",
+              "output_tokens",
+              "duration",
+              "retries",
+              "compactions",
+              "acceptance",
+              "terminal_state"
+            ]
+          }
+        },
+        "dimension_projection": {"$ref": "#/$defs/dimensionProjection"},
+        "evaluation_order": {
+          "const": ["eligibility_floors", "pareto", "materiality_margin"]
+        },
+        "margin_denominator": {
+          "description": "FR-021c: the comparator's value.",
+          "const": "comparator_value"
+        },
+        "zero_denominator_result": {
+          "description": "FR-021c and SC-016: a zero comparator value yields margin_not_computable, never an infinite or hundred-percent improvement. A comparison in which every eligible component is not computable is not_dominant.",
+          "const": "margin_not_computable"
+        },
+        "margin_map": {
+          "description": "FR-021, FR-021b, SC-016: total over all eight dimensions, none omitted. Four are margin-eligible at a 0.10 relative margin; four are no-worse-only and each carries a recorded reason. None of the four no-worse-only dimensions can ever supply material dominance, and any of them being worse defeats it — so a control that is cheaper because it gave up can never read as materially dominant.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "input_tokens",
+            "cached_input_tokens",
+            "output_tokens",
+            "duration",
+            "retries",
+            "compactions",
+            "acceptance",
+            "terminal_state"
+          ],
+          "properties": {
+            "input_tokens": {"$ref": "#/$defs/marginMapEntry"},
+            "cached_input_tokens": {"$ref": "#/$defs/marginMapEntry"},
+            "output_tokens": {"$ref": "#/$defs/marginMapEntry"},
+            "duration": {"$ref": "#/$defs/marginMapEntry"},
+            "retries": {"$ref": "#/$defs/marginMapEntry"},
+            "compactions": {"$ref": "#/$defs/marginMapEntry"},
+            "acceptance": {"$ref": "#/$defs/marginMapEntry"},
+            "terminal_state": {"$ref": "#/$defs/marginMapEntry"}
+          }
+        }
+      }
+    },
+    "dimensionProjection": {
+      "description": "FR-021e: the single frozen rename carrying the frozen resource_vector member name onto the frozen Pareto dimension name. Closed at exactly one entry, so an unprojected vector raises rather than comparing under two different names for one quantity.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["duration_ms"],
+      "properties": {
+        "duration_ms": {"const": "duration"}
+      }
+    },
+    "marginMapEntry": {
+      "description": "FR-021 and FR-021b: a margin-eligible dimension carries its relative margin and no reason; a no-worse-only dimension carries its reason and no margin. terminal_state is categorical and unordered here — the FR-016a severity rank is aggregation-only and is never read by this document. A null or absent acceptance or terminal_state makes that dimension uncertain and the whole comparison inconclusive.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "unit", "direction"],
+      "properties": {
+        "class": {"enum": ["margin_eligible", "no_worse_only"]},
+        "relative_margin": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
+        "unit": {"enum": ["tokens", "milliseconds", "count", "ratio", "categorical"]},
+        "direction": {"enum": ["lower_is_better", "higher_is_better", "equal_only"]},
+        "reason": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {
+          "description": "FR-021: a margin-eligible dimension declares its relative margin and carries no no-worse-only reason.",
+          "if": {"properties": {"class": {"const": "margin_eligible"}}, "required": ["class"]},
+          "then": {"required": ["relative_margin"], "not": {"required": ["reason"]}}
+        },
+        {
+          "description": "FR-021b: a no-worse-only dimension declares why it can never supply material dominance and carries no margin.",
+          "if": {"properties": {"class": {"const": "no_worse_only"}}, "required": ["class"]},
+          "then": {"required": ["reason"], "not": {"required": ["relative_margin"]}}
+        }
+      ]
+    },
+    "confidenceMethod": {
+      "description": "FR-021d and FR-023: exactly one confidence method is declared. Under deterministic replay the point estimate stands in for the bound, which is recorded rather than left implicit.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "confidence_level",
+        "alpha",
+        "cluster_unit",
+        "cluster_adjustment",
+        "replay_point_estimate_stand_in"
+      ],
+      "properties": {
+        "method": {"const": "one_sided_lower_confidence_bound"},
+        "confidence_level": {"const": 0.95},
+        "alpha": {"const": 0.05},
+        "cluster_unit": {"const": "role"},
+        "cluster_adjustment": {"const": "cluster_robust_sandwich_variance_by_role"},
+        "replay_point_estimate_stand_in": {"const": true}
+      }
+    },
+    "multiplicityPosition": {
+      "description": "FR-005, FR-023, SC-017: exactly one multiplicity position is declared. The secondary control-arm family is declared HERE, beside and disjoint from the frozen analysis plan's three families, and MUST NOT be added to that plan's multiplicity declaration, which is closed at three families.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family",
+        "adjustment",
+        "family_wise_alpha",
+        "draws_alpha_from_primary",
+        "disjoint_from_frozen_families",
+        "rationale"
+      ],
+      "properties": {
+        "family": {"const": "secondary_control_arm_family"},
+        "adjustment": {"const": "holm_bonferroni_within_the_secondary_control_arm_family"},
+        "family_wise_alpha": {"const": 0.05},
+        "draws_alpha_from_primary": {"const": false},
+        "disjoint_from_frozen_families": {"const": true},
+        "rationale": {"type": "string", "minLength": 1}
+      }
+    },
+    "messagingMapEntry": {
+      "description": "FR-022 and FR-024: only the dominant verdict restricts. The dominant entry restricts wording to measured improvement over the previous static baseline and forbids the efficient, optimal, and best_measured claim classes; it also records that the restriction is release-wording-only and that the static defaults may still ship, so a mechanical consumer cannot read a wording restriction as a shipping one.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["permitted_claim_class", "forbidden_claim_classes", "messaging_restriction"],
+      "properties": {
+        "permitted_claim_class": {
+          "enum": ["measured_improvement_over_previous_static_baseline", "no_comparative_claim"]
+        },
+        "forbidden_claim_classes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["efficient", "optimal", "best_measured"]}
+        },
+        "messaging_restriction": {"type": "boolean"},
+        "restriction_scope": {"const": "release_wording_only"},
+        "static_defaults_may_still_ship": {"const": true}
+      },
+      "allOf": [
+        {
+          "description": "FR-024: the restricting entry. All three forbidden claim classes are named and both halves of the acceptance criterion are recorded.",
+          "if": {"properties": {"messaging_restriction": {"const": true}}, "required": ["messaging_restriction"]},
+          "then": {
+            "required": ["restriction_scope", "static_defaults_may_still_ship"],
+            "properties": {
+              "permitted_claim_class": {"const": "measured_improvement_over_previous_static_baseline"},
+              "forbidden_claim_classes": {"minItems": 3}
+            }
+          }
+        },
+        {
+          "description": "FR-022 and FR-024: a non-restricting entry carries an empty forbidden set and no restriction scope, since a forbidden set IS a restriction and FR-022 imposes none.",
+          "if": {"properties": {"messaging_restriction": {"const": false}}, "required": ["messaging_restriction"]},
+          "then": {
+            "properties": {
+              "permitted_claim_class": {"const": "no_comparative_claim"},
+              "forbidden_claim_classes": {"maxItems": 0}
+            },
+            "not": {
+              "anyOf": [
+                {"required": ["restriction_scope"]},
+                {"required": ["static_defaults_may_still_ship"]}
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

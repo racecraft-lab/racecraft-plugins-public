@@ -18,7 +18,8 @@ PRD and is prepared for `$speckit-scaffold-spec CAR-NNN`.
 **Proposed branch:** `claude/agent-routing-fallback`
 **Status:** Active; dependency graph approved 2026-07-12; CAR-001 is complete
 and archived after PRs #350 and #362; CAR-002 is complete and archived after
-PR #369; CAR-003 is complete and archived after PR #385; CAR-004 is ready
+PR #369; CAR-003 is complete and archived after PR #385; CAR-004 is complete
+and archived after PR #401; CAR-005 is ready
 
 **Parity note:** This roadmap is the Claude half of the shared twelve-agent
 catalog. The Codex half lives in the companion Codex routing roadmap (PR #330
@@ -229,8 +230,8 @@ G56R-003 -+     (joint change; lands with G56R-012 on both platforms)
 | CAR-001 | Candidate Route Baseline and Role Contracts | Complete / Archived | [.process/CAR-001-workflow.md](.process/CAR-001-workflow.md) | PR #350 and evidence-parity amendment PR #362 merged; canonical evidence lives under `docs/ai/research/` |
 | CAR-002 | Capability Probing, Telemetry Profile, and Exact-Treatment Contract | Complete / Archived | [.process/CAR-002-workflow.md](.process/CAR-002-workflow.md) | PR #369 merged; canonical snapshot, telemetry profile, trace schema, and validators live outside `specs/**` |
 | CAR-003 | Evaluation Runner, Fixtures, Scoring, and Statistical Analysis | Complete / Archived | [.process/CAR-003-workflow.md](.process/CAR-003-workflow.md) | PR #385 merged; canonical materializer, evaluation evidence, qualification modules, and validators live outside `specs/**` |
-| CAR-004 | Policy Controls and Adaptive Comparators | Ready | - | CAR-003 dependency satisfied by PR #385 |
-| CAR-005 | Model Availability, Fallback, and Recovery Simulation | Pending | - | Blocked by CAR-004 |
+| CAR-004 | Policy Controls and Adaptive Comparators | Complete / Archived | [.process/CAR-004-workflow.md](.process/CAR-004-workflow.md) | PR #401 merged; frozen control registry, comparison rule, fixtures, and validators live outside `specs/**`. T062's three live smokes were never run, so SC-009, SC-026, SC-027, SC-029, SC-030, and SC-031 stay unevidenced; the operator runbook is [.process/CAR-004-live-smoke-runbook.md](.process/CAR-004-live-smoke-runbook.md) |
+| CAR-005 | Model Availability, Fallback, and Recovery Simulation | Ready | - | CAR-004 dependency satisfied by PR #401 |
 | CAR-006 | Route-policy Manifest, Materializer, Preflight, and Strict Override | Pending | - | Blocked by CAR-005 |
 | CAR-007 | Quality-critical Executor Routing | Pending | - | Blocked by CAR-006 |
 | CAR-008 | Structured-work Agent Routing | Pending | - | Blocked by CAR-006 |

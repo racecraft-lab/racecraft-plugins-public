@@ -1862,6 +1862,99 @@ deleted. Exact PR titles, merged-at timestamps, merge commits, and head branches
 are recorded in
 `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`.
 
+## 2026-07-29 - G56R-004 Post-Merge Archive Cleanup
+
+### G56R-004
+
+- PR: https://github.com/racecraft-lab/racecraft-plugins-public/pull/403
+- Title: `feat(g56r-004): add policy controls and adaptive comparators`
+- Merged at: `2026-07-29T19:36:55Z`
+- Merge commit: `77e7dfff017597c6c93118a30eeb2b1c08d734de`
+- Source: `specs/g56r-004-policy-controls-adaptive-comparators`
+- Canonical artifacts: two closed Codex specification schemas, four governed
+  control fixtures, three standard-library helpers, and three durable Layer 4
+  test owners under `tests/speckit-pro/`.
+- Governance note: repository-only validation assets; no production routing,
+  installer, manifest, scheduler, default, release behavior, plugin payload, or
+  version changed.
+
+G56R-004 freezes the Codex-local control and comparison evidence that G56R-005
+and G56R-011 consume later. The implementation preserves the CAR-004 mirror
+shape while deriving actual twin evidence from source artifacts and retaining
+the one sanctioned platform naming divergence.
+
+### Known gap carried forward
+
+The operator-authorized ChatGPT sign-in smokes remain unrun, so SC-014 through
+SC-016 are partial for live observation. Deterministic smoke planning, refusal,
+sealing, bounds, exact-treatment, cache-isolation, and privacy evidence remain
+green; no live result is inferred.
+
+### Runbook relocation
+
+The feature quickstart contained the forward-looking operator procedure rather
+than pure planning exhaust. It was moved to
+`docs/ai/specs/.process/G56R-004-live-smoke-runbook.md` before the active folder
+was removed. No schema or fixture relocation was needed because all live
+machine-enforced artifacts already live under `tests/speckit-pro/`.
+
+Detailed recovery and verification evidence:
+
+- `.specify/memory/archive-reports/2026-07-29-g56r-004-post-merge-hygiene.md`
+
+---
+
+## 2026-07-28 - CAR-004 Post-Merge Archive Cleanup
+
+### CAR-004
+
+- PR: https://github.com/racecraft-lab/racecraft-plugins-public/pull/401
+- Title: `feat(car-004): add the three routing policy controls and their
+  comparison rules`
+- Merged at: `2026-07-29T00:58:26Z`
+- Merge commit: `8b224ce8d1fbaba89606772a4d51401ac754a70b`
+- Source: `specs/car-004-policy-controls-comparators`
+- Canonical artifacts: two content-addressed schemas under
+  `tests/speckit-pro/layer6-efficiency/contracts-claude/`, four frozen instances
+  under `tests/speckit-pro/layer6-efficiency/fixtures-controls/`, the
+  `claude_policy_controls.py` and `claude_control_comparison.py` Layer 6 modules
+  sharing one fail-closed schema engine, the operator-only
+  `run-control-smoke.py` driver, and three deterministic Layer 4 unit suites.
+- Governance note: zero production files. The change is validation assets only,
+  touching nothing under `speckit-pro/` and altering no shipped default or
+  generated payload.
+
+CAR-004 preserves the freeze ordering the feature exists to protect: the
+comparison rule is frozen before any result exists to measure it against. No
+CAR-004 artifact states or implies which side wins, and the reserved partition is
+guarded so CAR-011's comparison cannot reuse workload selection already saw.
+
+### Known gap carried forward
+
+Task T062 — the three bounded, developer-local, subscription-authenticated live
+smokes — was never run, so SC-009, SC-026, SC-027, SC-029, SC-030, and SC-031
+ship unevidenced. This was named in the PR body before merge, not discovered
+afterwards.
+
+### Runbook relocation
+
+The feature's `.process/` directory held one forward-looking artifact rather than
+pure exhaust. `CAR-004-live-smoke-runbook.md` is the only operator instruction
+set that closes the six criteria above, and the preserved `CAR-004-workflow.md`
+pointed at it, so it was moved to `docs/ai/specs/.process/` and its three
+archived-path references were repointed at git provenance. The PR packet under
+`.process/pr-packets/` is exhaust and was removed with the folder.
+
+No contract relocation was needed. Unlike CAR-003, CAR-004 authored both JSON
+Schema documents directly into the test tree, and a tree-wide search for the bare
+directory name found zero readers outside `specs/**` before removal.
+
+Detailed recovery and verification evidence:
+
+- `.specify/memory/archive-reports/2026-07-28-car-004-post-merge-hygiene.md`
+
+---
+
 ## 2026-07-27 - CAR-003 and G56R-003 Post-Merge Archive Cleanup
 
 ### CAR-003

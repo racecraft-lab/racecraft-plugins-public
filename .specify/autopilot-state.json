@@ -1,35 +1,27 @@
 {
   "schema_version": "1.0",
-  "spec_id": "CAR-003",
-  "feature_dir": "specs/car-003-evaluation-runner-scoring",
-  "branch": "car-003-evaluation-runner-scoring",
+  "spec_id": "G56R-004",
+  "feature_dir": "specs/g56r-004-policy-controls-adaptive-comparators",
+  "branch": "g56r-004-policy-controls-adaptive-comparators",
   "status": "completed_archived",
-  "active_step": "Archived: post-merge cleanup applied for CAR-003 and G56R-003",
-  "updated_at": "2026-07-27T00:00:00Z",
-  "prior_run_note": "The full CAR-003 run record - atomicity route, marker plan, reviewability evidence, and the final size-only gate verdict - remains in the preserved workflow file, the typed size exception at docs/ai/specs/.process/CAR-003-size-exception.md, and git history at merge commit 9fab2083cd74fcaca28cb6589cf8705e0e8ddd3c.",
+  "active_step": "Archived: post-merge cleanup applied for G56R-004",
+  "updated_at": "2026-07-29T19:42:40Z",
+  "prior_run_note": "The full G56R-004 run record - design decisions, atomicity route, reviewability evidence, implementation, and review remediation - remains in the preserved workflow and design-concept files and in git history at merge commit 77e7dfff017597c6c93118a30eeb2b1c08d734de. The operator-authorized ChatGPT sign-in smokes were never run, so SC-014 through SC-016 remain partial for live observation; the operator procedure is preserved at docs/ai/specs/.process/G56R-004-live-smoke-runbook.md.",
   "atomicity_route": {
     "route": "one-navigable-PR",
     "releasable": true
   },
   "archive_sweep": {
     "status": "applied",
-    "cleanup_branch": "chore/archive-merged-specs-20260727",
+    "cleanup_branch": "codex/archive-g56r-004-post-merge",
     "archived_specs": [
       {
-        "spec_id": "CAR-003",
+        "spec_id": "G56R-004",
         "pull_requests": [
-          385
+          403
         ],
-        "merge_commit": "9fab2083cd74fcaca28cb6589cf8705e0e8ddd3c",
-        "report": ".specify/memory/archive-reports/2026-07-27-car-003-post-merge-hygiene.md"
-      },
-      {
-        "spec_id": "G56R-003",
-        "pull_requests": [
-          386
-        ],
-        "merge_commit": "dcceef86daed97fe42e81a43c90e82556457dc48",
-        "report": ".specify/memory/archive-reports/2026-07-27-g56r-003-post-merge-hygiene.md"
+        "merge_commit": "77e7dfff017597c6c93118a30eeb2b1c08d734de",
+        "report": ".specify/memory/archive-reports/2026-07-29-g56r-004-post-merge-hygiene.md"
       }
     ]
   },

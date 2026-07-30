@@ -3,7 +3,7 @@
   "runner_contract_id": "speckit-pro-runner",
   "selected_runtime_name": "python-stdlib-runner",
   "contract_version": "1.0",
-  "plugin_version": "2.21.0",
+  "plugin_version": "2.21.1",
   "runner_version": "0.1.0",
   "source_revision": "unknown",
   "python_minimum_version": "3.11",
@@ -72,7 +72,7 @@
         "value": "speckit_pro_runner/gates/payloads.py",
         "display": "speckit_pro_runner/gates/payloads.py"
       },
-      "sha256": "a3c5de8a4448b2efa88dcffc298eac379e4712026cb63eb8f1896bf76b650e89"
+      "sha256": "5cbef2ebd78b524baf7dc1f69b8b35db42a77452a87de8111186c634fd488a02"
     },
     {
       "path": {
@@ -112,7 +112,7 @@
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
-      "sha256": "ef2ecc6128c4970545929319f59128185ca559b6a006673dc268a8bee97b9088"
+      "sha256": "09545c0385a9e932f6c893ca449193f2ca5087c852450719534dcf1e30efbbb2"
     },
     {
       "path": {
@@ -120,7 +120,7 @@
         "value": "speckit_pro_runner/helpers/mutation.py",
         "display": "speckit_pro_runner/helpers/mutation.py"
       },
-      "sha256": "2c2e5e5995798fd7f8bcc5ac22a48209f6eaa8031d0b6ceeec5b0c2424502656"
+      "sha256": "6f83596584838611409c0a33c35175119bd51aec2e240f93fa0e9996f5e433e3"
     },
     {
       "path": {
@@ -144,7 +144,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "bc2ed940cb710cc20349feb7d8f1f37b6aa1f041a903f4419a3c25eb14abafdf"
+      "sha256": "a71481cf0639ae48ccaa000cc15ea398a085c7bd0170e9c909ce696d4caea72e"
     },
     {
       "path": {
@@ -176,7 +176,7 @@
         "value": "speckit_pro_runner/path_utils.py",
         "display": "speckit_pro_runner/path_utils.py"
       },
-      "sha256": "a1adeed413e74af9aa860a9873e236a74ae0fbd434ca5c636a8cc9be0dd198e9"
+      "sha256": "02840b01a30d3d891b219df26cf2efcd66325d196e6959317acee7353afddb29"
     },
     {
       "path": {
@@ -184,7 +184,7 @@
         "value": "speckit_pro_runner/runtime.py",
         "display": "speckit_pro_runner/runtime.py"
       },
-      "sha256": "8e538c5b37ffa43f81fac9beac4fbdc5d87d774bd4d69f9700b2859a1870a29b"
+      "sha256": "3cb545c1b202376945f820e039db5e30f80ef411786089901230caf406f1dc91"
     }
   ]
 }

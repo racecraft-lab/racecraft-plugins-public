@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import platform
 import re
@@ -23,7 +22,7 @@ from . import (
     SOURCE_CONTEXT,
 )
 from .envelope import diagnostic, response
-from .path_utils import resolves_to_current_python
+from .path_utils import resolves_to_current_python, sha256_file
 
 CAPTURE_LIMIT_BYTES = 16 * 1024
 MANIFEST_NAME = "speckit-pro-runner.manifest.json"
@@ -333,14 +332,6 @@ def parse_checksum_file(path: Path) -> dict[str, str]:
             raise MetadataFormatError(f"checksum line {line_number} is malformed")
         records[rel.strip()] = digest
     return records
-
-
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as fh:
-        for chunk in iter(lambda: fh.read(65536), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def handle_typed_path_fixture(request_id: str | None, inputs: dict[str, Any]) -> dict[str, Any]:

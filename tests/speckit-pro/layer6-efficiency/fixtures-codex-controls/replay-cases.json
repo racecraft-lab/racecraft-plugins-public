@@ -1,0 +1,557 @@
+{
+  "case_set_id": "g56r-004-adaptive-signal-resolution",
+  "control_replay_cases": [
+    {
+      "case_id": "unpinned-non-live-control-replay",
+      "control_id": "g56r-004-unpinned-control",
+      "control_kind": "unpinned",
+      "objective_id": "G56R-004-SMOKE-OBJ-01",
+      "outcome_bearing": false,
+      "partition_id": "G56R-004-SMOKE",
+      "partition_type": "calibration",
+      "scored": false
+    },
+    {
+      "case_id": "adaptive-non-live-control-replay",
+      "control_id": "g56r-004-adaptive-control",
+      "control_kind": "adaptive",
+      "objective_id": "G56R-004-SMOKE-OBJ-02",
+      "outcome_bearing": false,
+      "partition_id": "G56R-004-SMOKE",
+      "partition_type": "calibration",
+      "scored": false
+    },
+    {
+      "case_id": "justified-high-effort-non-live-control-replay",
+      "control_id": "g56r-004-justified-high-effort-control",
+      "control_kind": "justified_high_effort",
+      "objective_id": "G56R-004-SMOKE-OBJ-03",
+      "outcome_bearing": false,
+      "partition_id": "G56R-004-SMOKE",
+      "partition_type": "calibration",
+      "scored": false
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "terminal-state-hold",
+      "expected_response": "hold",
+      "exercises": [
+        "terminal_state"
+      ],
+      "row": {
+        "budget_observations": {
+          "max_duration_seconds": 100
+        },
+        "failure_code": "none",
+        "failure_plane": "none",
+        "retries": 0,
+        "terminal_state": "completed"
+      }
+    },
+    {
+      "case_id": "failure-code-precedence",
+      "expected_response": "escalate",
+      "exercises": [
+        "failure_code",
+        "precedence"
+      ],
+      "row": {
+        "budget_observations": {
+          "max_duration_seconds": 1800
+        },
+        "failure_code": "candidate_failed",
+        "failure_plane": "candidate",
+        "retries": 3,
+        "terminal_state": "completed"
+      }
+    },
+    {
+      "case_id": "failure-plane-precedence",
+      "expected_response": "escalate",
+      "exercises": [
+        "failure_plane"
+      ],
+      "row": {
+        "budget_observations": {
+          "max_duration_seconds": 100
+        },
+        "failure_code": "none",
+        "failure_plane": "candidate",
+        "retries": 0,
+        "terminal_state": "completed"
+      }
+    },
+    {
+      "case_id": "retry-count-threshold",
+      "expected_response": "escalate",
+      "exercises": [
+        "retry_count"
+      ],
+      "row": {
+        "budget_observations": {
+          "max_duration_seconds": 100
+        },
+        "failure_code": "none",
+        "failure_plane": "none",
+        "retries": 1,
+        "terminal_state": "completed"
+      }
+    },
+    {
+      "case_id": "budget-threshold",
+      "expected_response": "escalate",
+      "exercises": [
+        "budget_threshold"
+      ],
+      "row": {
+        "budget_observations": {
+          "max_duration_seconds": 1800
+        },
+        "failure_code": "none",
+        "failure_plane": "none",
+        "retries": 0,
+        "terminal_state": "completed"
+      }
+    },
+    {
+      "case_id": "unknown-failure-code-refused",
+      "expected_error": "ControlContractError",
+      "exercises": [
+        "closed_domain_refusal"
+      ],
+      "row": {
+        "budget_observations": {
+          "max_duration_seconds": 100
+        },
+        "failure_code": "route_repointed",
+        "failure_plane": "none",
+        "retries": 0,
+        "terminal_state": "completed"
+      }
+    },
+    {
+      "case_id": "unknown-failure-plane-refused",
+      "expected_error": "ControlContractError",
+      "exercises": [
+        "closed_domain_refusal"
+      ],
+      "row": {
+        "budget_observations": {
+          "max_duration_seconds": 100
+        },
+        "failure_code": "none",
+        "failure_plane": "routing",
+        "retries": 0,
+        "terminal_state": "completed"
+      }
+    },
+    {
+      "case_id": "unknown-terminal-state-refused",
+      "expected_error": "ControlContractError",
+      "exercises": [
+        "closed_domain_refusal"
+      ],
+      "row": {
+        "budget_observations": {
+          "max_duration_seconds": 100
+        },
+        "failure_code": "none",
+        "failure_plane": "none",
+        "retries": 0,
+        "terminal_state": "quiesced"
+      }
+    }
+  ],
+  "bound_cases": [
+    {
+      "attempts": [
+        {
+          "duration_ms": 1000,
+          "retries": 4,
+          "route_id": "gpt-5.5__medium"
+        }
+      ],
+      "budget_observations": {
+        "max_duration_seconds": 100
+      },
+      "case_id": "retry-bound-respected",
+      "counted_over": "per_objective",
+      "expected": {
+        "cancellation_bound_breached": false,
+        "failure_code": null,
+        "retry_bound_breached": false,
+        "terminal_state": null
+      }
+    },
+    {
+      "attempts": [
+        {
+          "duration_ms": 1000,
+          "retries": 5,
+          "route_id": "gpt-5.5__medium"
+        }
+      ],
+      "budget_observations": {
+        "max_duration_seconds": 100
+      },
+      "case_id": "retry-bound-breach",
+      "counted_over": "per_objective",
+      "expected": {
+        "failure_code": "candidate_failed",
+        "retry_bound_breached": true,
+        "terminal_state": "failed"
+      }
+    },
+    {
+      "attempts": [
+        {
+          "duration_ms": 1800001,
+          "retries": 0,
+          "route_id": "gpt-5.5__medium"
+        }
+      ],
+      "budget_observations": {
+        "max_duration_seconds": 100
+      },
+      "case_id": "cancellation-bound-breach",
+      "counted_over": "per_objective",
+      "expected": {
+        "cancellation_bound_breached": true,
+        "failure_code": "candidate_cancelled",
+        "terminal_state": "cancelled"
+      }
+    },
+    {
+      "attempts": [
+        {
+          "duration_ms": 1000,
+          "retries": 0,
+          "route_id": "gpt-5.5__medium"
+        }
+      ],
+      "budget_observations": {
+        "max_duration_seconds": 1800
+      },
+      "case_id": "budget-trigger-response-not-breach-pairing",
+      "counted_over": "per_objective",
+      "expected": {
+        "budget_response": "escalate",
+        "budget_trigger_met": true,
+        "cancellation_bound_breached": false,
+        "failure_code": null,
+        "retry_bound_breached": false,
+        "terminal_state": null
+      }
+    }
+  ],
+  "movement_cases": [
+    {
+      "case_id": "one-escalation-per-objective",
+      "initial_state": {
+        "clean_streak": 0,
+        "current_route_id": "gpt-5.5__medium",
+        "escalations_used": 0,
+        "objective_id": "g56r-004-objective-1"
+      },
+      "rows": [
+        {
+          "budget_observations": {
+            "max_duration_seconds": 100
+          },
+          "failure_code": "candidate_failed",
+          "failure_plane": "candidate",
+          "objective_id": "g56r-004-objective-1",
+          "retries": 0,
+          "terminal_state": "completed"
+        },
+        {
+          "budget_observations": {
+            "max_duration_seconds": 100
+          },
+          "failure_code": "candidate_failed",
+          "failure_plane": "candidate",
+          "objective_id": "g56r-004-objective-1",
+          "retries": 0,
+          "terminal_state": "completed"
+        }
+      ],
+      "expected_final": {
+        "current_route_id": "gpt-5.5__high",
+        "escalations_used": 1
+      }
+    },
+    {
+      "case_id": "ceiling-no-wrap",
+      "initial_state": {
+        "clean_streak": 0,
+        "current_route_id": "gpt-5.6-terra__high",
+        "escalations_used": 0,
+        "objective_id": "g56r-004-objective-1"
+      },
+      "rows": [
+        {
+          "budget_observations": {
+            "max_duration_seconds": 100
+          },
+          "failure_code": "candidate_failed",
+          "failure_plane": "candidate",
+          "objective_id": "g56r-004-objective-1",
+          "retries": 0,
+          "terminal_state": "completed"
+        }
+      ],
+      "expected_final": {
+        "current_route_id": "gpt-5.6-terra__high",
+        "escalated": false
+      }
+    },
+    {
+      "case_id": "floor-deescalation-no-wrap",
+      "initial_state": {
+        "clean_streak": 2,
+        "current_route_id": "gpt-5.5__medium",
+        "escalations_used": 0,
+        "objective_id": "g56r-004-objective-1"
+      },
+      "rows": [
+        {
+          "budget_observations": {
+            "max_duration_seconds": 100
+          },
+          "failure_code": "none",
+          "failure_plane": "none",
+          "objective_id": "g56r-004-objective-1",
+          "retries": 0,
+          "terminal_state": "completed"
+        }
+      ],
+      "expected_final": {
+        "clean_streak": 0,
+        "current_route_id": "gpt-5.5__medium",
+        "de_escalated": false,
+        "de_escalation_evaluated": true
+      }
+    },
+    {
+      "case_id": "three-clean-pass-deescalation",
+      "initial_state": {
+        "clean_streak": 0,
+        "current_route_id": "gpt-5.5__high",
+        "escalations_used": 0,
+        "objective_id": "g56r-004-objective-1"
+      },
+      "rows": [
+        {
+          "budget_observations": {
+            "max_duration_seconds": 100
+          },
+          "failure_code": "none",
+          "failure_plane": "none",
+          "objective_id": "g56r-004-objective-1",
+          "retries": 0,
+          "terminal_state": "completed"
+        },
+        {
+          "budget_observations": {
+            "max_duration_seconds": 100
+          },
+          "failure_code": "none",
+          "failure_plane": "none",
+          "objective_id": "g56r-004-objective-1",
+          "retries": 0,
+          "terminal_state": "completed"
+        },
+        {
+          "budget_observations": {
+            "max_duration_seconds": 100
+          },
+          "failure_code": "none",
+          "failure_plane": "none",
+          "objective_id": "g56r-004-objective-1",
+          "retries": 0,
+          "terminal_state": "completed"
+        }
+      ],
+      "expected_final": {
+        "clean_streak": 0,
+        "current_route_id": "gpt-5.5__medium",
+        "de_escalated": true,
+        "de_escalation_evaluated": true
+      }
+    },
+    {
+      "case_id": "non-scorable-exclusion-resumes-streak",
+      "initial_state": {
+        "clean_streak": 2,
+        "current_route_id": "gpt-5.5__high",
+        "escalations_used": 0,
+        "objective_id": "g56r-004-objective-1"
+      },
+      "rows": [
+        {
+          "budget_observations": {
+            "max_duration_seconds": 100
+          },
+          "failure_code": "service_reroute",
+          "failure_plane": "treatment",
+          "objective_id": "g56r-004-objective-1",
+          "retries": 3,
+          "terminal_state": "failed"
+        },
+        {
+          "budget_observations": {
+            "max_duration_seconds": 100
+          },
+          "failure_code": "none",
+          "failure_plane": "none",
+          "objective_id": "g56r-004-objective-1",
+          "retries": 0,
+          "terminal_state": "completed"
+        }
+      ],
+      "expected_final": {
+        "clean_streak": 0,
+        "current_route_id": "gpt-5.5__medium",
+        "de_escalated": true
+      }
+    }
+  ],
+  "reroute_cases": [
+    {
+      "case_id": "service-reroute-non-scorable-without-movement",
+      "expected": {
+        "clean_streak": 2,
+        "current_route_id": "gpt-5.5__high",
+        "disposition_reason": "service_reroute_requested_route_non_scorable",
+        "escalation_allowance_spent": false,
+        "failure_plane": "treatment",
+        "ladder_position_changed": false,
+        "response": "non_scorable",
+        "service_reroute": true,
+        "unit_non_scorable": true
+      },
+      "row": {
+        "budget_observations": {
+          "max_duration_seconds": 100
+        },
+        "failure_code": "service_reroute",
+        "failure_plane": "treatment",
+        "objective_id": "g56r-004-objective-1",
+        "retries": 0,
+        "terminal_state": "completed"
+      },
+      "state": {
+        "clean_streak": 2,
+        "current_route_id": "gpt-5.5__high",
+        "escalations_used": 0,
+        "objective_id": "g56r-004-objective-1"
+      }
+    }
+  ],
+  "aggregation_cases": [
+    {
+      "case_id": "parent-plus-child-deterministic-fold",
+      "expected": {
+        "bounded_by": {
+          "cache_read_tokens": "max_cache_read_tokens",
+          "cache_write_tokens_by_ttl_class": "max_cache_write_tokens_by_ttl_class",
+          "cached_input_tokens": "max_cached_input_tokens",
+          "input_tokens": "max_input_tokens",
+          "output_tokens": "max_output_tokens",
+          "reasoning_output_tokens": null
+        },
+        "cache_read_tokens": 120,
+        "cache_write_tokens_by_ttl_class": {
+          "ephemeral_1h": 8,
+          "ephemeral_5m": 20
+        },
+        "decision_dimensions": {
+          "acceptance": 0.92,
+          "cached_input_tokens": 13,
+          "compactions": 13,
+          "duration_ms": 13,
+          "input_tokens": 13,
+          "output_tokens": 13,
+          "retries": 13,
+          "terminal_state": "completed"
+        },
+        "member_count": 2,
+        "raw_token_ceiling_members": [
+          "input_tokens",
+          "output_tokens",
+          "cached_input_tokens"
+        ],
+        "raw_token_ceiling_quantity": 450,
+        "raw_tokens": {
+          "cached_input_tokens": 90,
+          "input_tokens": 300,
+          "output_tokens": 60,
+          "reasoning_output_tokens": 16
+        },
+        "unit_member_ids": [
+          "parent",
+          "child-1"
+        ],
+        "unobserved": []
+      },
+      "members": [
+        {
+          "cache_diagnostic": {
+            "cache_read_tokens": 40,
+            "cache_write_tokens_by_ttl_class": {
+              "ephemeral_1h": 3,
+              "ephemeral_5m": 7
+            }
+          },
+          "raw_token_vector": {
+            "cached_input_tokens": 30,
+            "input_tokens": 100,
+            "output_tokens": 20,
+            "reasoning_output_tokens": 5
+          },
+          "resource_vector": {
+            "acceptance": 0.92,
+            "cached_input_tokens": 10,
+            "compactions": 10,
+            "duration_ms": 10,
+            "input_tokens": 10,
+            "output_tokens": 10,
+            "retries": 10,
+            "terminal_state": "completed"
+          },
+          "row_id": "parent",
+          "spawned_by": null
+        },
+        {
+          "cache_diagnostic": {
+            "cache_read_tokens": 80,
+            "cache_write_tokens_by_ttl_class": {
+              "ephemeral_1h": 5,
+              "ephemeral_5m": 13
+            }
+          },
+          "raw_token_vector": {
+            "cached_input_tokens": 60,
+            "input_tokens": 200,
+            "output_tokens": 40,
+            "reasoning_output_tokens": 11
+          },
+          "resource_vector": {
+            "acceptance": 1.0,
+            "cached_input_tokens": 3,
+            "compactions": 3,
+            "duration_ms": 3,
+            "input_tokens": 3,
+            "output_tokens": 3,
+            "retries": 3,
+            "terminal_state": "completed"
+          },
+          "row_id": "child-1",
+          "spawned_by": "parent"
+        }
+      ]
+    }
+  ],
+  "schema_version": "g56r-004-replay-cases.v1"
+}

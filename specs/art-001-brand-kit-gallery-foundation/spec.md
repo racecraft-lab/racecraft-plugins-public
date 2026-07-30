@@ -922,13 +922,27 @@ confirm it renders correctly, has no errors, and its theme control works.
   documentation; the validation module is a test. Regenerated payload and proof
   artifacts are declared generated and excluded.
 
-  **Total authored volume is much larger and is disclosed deliberately**: roughly
-  1,570 lines across nine authored files — about 580 in the validation module, 476
-  declarative (design tokens and catalog rows), 415 prose, 70 markup, and 25
-  reproduced verbatim. That figure is **not** the budget metric and must not be
-  compared against the budget thresholds, which the contract defines over
-  production code only. It is recorded because a reviewer deserves to know the real
-  size of what they are being asked to read, independent of what the metric counts.
+  **Total authored volume is far larger than planned, and the overrun is disclosed
+  rather than absorbed.** As shipped: 7,838 authored lines across nine files — 6,322 of
+  them the validation module, plus 553 contract, 443 tokens, 222 catalog, 129 voice, 123
+  head block, 46 notice, and four lines of edits to the payload builder and suite
+  registry. The plan's disclosure figure was ~1,570. **The validation module alone is
+  roughly fourteen times its ~450-line estimate.**
+
+  The estimate was not wrong through carelessness; it was made before the checklist
+  domains established that there would be 73 checks, that every one needed a negative
+  fixture, and that each would be mutation-proved. Those decisions are what produced the
+  volume, and they are the reason the validation is worth trusting — but the honest
+  reading is that a forward estimate taken before requirement discovery is not a
+  prediction, and this one missed by an order of magnitude. The same pattern is recorded
+  against CAR-003.
+
+  Under the binding production-code-only metric the declared figures above are unchanged
+  and still pass: the validation module is a test, which the product plan's Reviewability
+  Contract excludes by name. That is a correct application of the rule, not a way around
+  it — but it is the whole of the argument, and a reviewer should weigh it knowing the
+  review surface is 6,322 lines of test rather than the ~450 planned.
+
 - **Budget result**: warning accepted, on a **different basis than at scaffold**
 - **Split decision**: Remains one spec, but the original justification no longer
   applies and has been replaced rather than restated.

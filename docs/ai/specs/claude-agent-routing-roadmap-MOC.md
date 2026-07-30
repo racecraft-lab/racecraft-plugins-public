@@ -4,7 +4,7 @@ related:
   - "[Claude Code Agent Model Routing and Graceful Fallback PRD](../../prd-claude-agent-routing.md)"
   - "[Shared Agent Routing Evidence Parity Contract](agent-routing-parity-contract.md)"
   - "[Shared Candidate Manifest Schema](../research/agent-route-candidate-manifest.schema.json)"
-status: "Active; CAR-001, CAR-002, and CAR-003 complete/archived; CAR-004 ready"
+status: "Active; CAR-001 through CAR-004 complete/archived; CAR-005 ready"
 rank:
 spec_id: "claude-agent-routing"
 structureVersion: 1

@@ -77,7 +77,8 @@ currently uses neither.
   block (70-20-10 palette — warm-neutral scale, brand red `#dc143c` as
   punctuation, brand blue `#3c89c6` accents — plus GTO90 dark-mode set),
   typography stacks (Space Grotesk headings, Geist body, Fira Code mono via
-  Google Fonts `<link>` with `font-display: swap` and system fallbacks), a
+  Google Fonts `<link>` URLs with the `display=swap` query parameter and
+  system fallbacks), a
   brand-voice cheat-sheet, and accessibility rules (AA contrast, visible focus
   ring, reduced-motion guard). Provenance headers cite the sources
   (racecraft-lab/racecraft `docs/brand/*` and this repo's

@@ -7,8 +7,6 @@ import copy
 import hashlib
 import importlib.util
 import json
-import os
-import subprocess
 import sys
 import tempfile
 import types
@@ -18,11 +16,15 @@ from uuid import uuid4
 
 
 ROOT = Path(__file__).resolve().parents[3]
+LIB_DIR = ROOT / "tests/speckit-pro/lib"
+if str(LIB_DIR) not in sys.path:
+    sys.path.insert(0, str(LIB_DIR))
+from qualification_cli_test_helpers import run_qualification_cli  # noqa: E402
+
 MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/qualification_statistics.py"
 REPLAY_MODULE_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/lib/qualification_replay.py"
 SCORING_TEST_PATH = ROOT / "tests/speckit-pro/unit/test-codex-qualification-scoring.py"
 CONTRACT_TEST_PATH = ROOT / "tests/speckit-pro/unit/test-codex-qualification-contracts.py"
-QUALIFICATION_RUNNER_PATH = ROOT / "tests/speckit-pro/layer6-efficiency/run-codex-qualification.py"
 ANALYSIS_PLAN_SCHEMA_PATH = (
     ROOT / "tests/speckit-pro/layer6-efficiency/contracts/analysis-plan.schema.json"
 )
@@ -204,21 +206,6 @@ def seal_analysis_plan(plan: dict) -> dict:
 
 def write_canonical_json(path: Path, value: object) -> None:
     path.write_text(canonical_json(value), encoding="utf-8")
-
-
-def run_qualification_cli(*args: str) -> subprocess.CompletedProcess[str]:
-    env = os.environ.copy()
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    return subprocess.run(
-        [sys.executable, str(QUALIFICATION_RUNNER_PATH), *args],
-        cwd=ROOT,
-        text=True,
-        encoding="utf-8",
-        capture_output=True,
-        env=env,
-        shell=False,
-        check=False,
-    )
 
 
 def binding(label: str) -> dict:
