@@ -1171,6 +1171,58 @@ only where tasks genuinely own different files.
 | E — slice-2 exhaustion + recovery | T049–T057 (9) | ⏳ Pending | budgets as hard caps, no-safe-route, coverage, additivity check |
 | F — polish | T058–T063 (6) | ⏳ Pending | non-goal audits, quickstart walks, PR review packets |
 
+### Seam deviation found at Group D — FR-033b is not fully achievable as written
+
+**Surfaced rather than glossed, because FR-033b is a requirement this run authored.**
+
+Every *enumerated* prohibition in FR-033b holds, verified independently by the
+orchestrator against `22458aad`:
+
+| FR-033b prohibition | Result |
+|---|---|
+| No slice-1 `case_id` changed | ✅ first nine cases byte-identical |
+| No slice-1 input changed | ✅ |
+| No slice-1 pinned expected report changed | ✅ |
+| No slice-1 **public** function signature changed | ✅ `load_corpus`, `resolve`, `serialize_report` unchanged |
+| Corpus is append-only | ✅ **626 additions, 0 deletions**, one hunk at the tail |
+| Slice 2 touches no schema | ✅ |
+| Slice 2 touches no `suite-manifest.json` | ✅ |
+
+But FR-033b also says, more broadly, that slice 2 "MUST NOT rewrite … anything slice 1
+committed", with any such change landing on slice 1's branch and restacking. **Seven test
+lines across four slice-1 test-method bodies were modified** (names and signatures kept
+byte-identical; one *private* helper gained a parameter with no external caller). Split by
+cause:
+
+- **Two are inherent and unavoidable.** The spec deliberately allocates *interim* behaviour
+  to slice 1 and *final* behaviour to slice 2: a route omitting a pinned model raises in
+  slice 1 and emits `silent_inherit_materialization` in slice 2 (FR-023); a policy
+  declaring a helper fails closed in slice 1 and resolves through the helper path in slice
+  2 (FR-025/FR-025a). A test asserting the slice-1 behaviour **cannot** survive slice 2,
+  and the replacement assertion **cannot** live in slice 1, because the behaviour it
+  asserts does not exist there. No branch arrangement fixes this.
+- **Two were avoidable in hindsight, and are a slice-1 authoring defect.**
+  `test_the_corpus_holds_the_nine_declared_slice_one_cases` asserted `len(cases) == 9`,
+  which is incompatible with *any* append and so guaranteed slice 2 would have to touch it;
+  it is now an identity-and-position pin of the nine slice-1 IDs at the head, which is
+  strictly stronger for the seam **and** append-tolerant. Two guard tests likewise could
+  have asserted against `_require_pinned_tuple` directly from the start.
+
+**Disposition: accepted, and the slice-2 PR body will state it rather than claim a pure
+append.** The practical impact is nil — slice 1 was green standalone at `22458aad`, slice 2
+is green, and nothing a reviewer relies on for replay changed. Restacking the two avoidable
+ones would mean rewriting three published commits to relocate seven lines, and the two
+inherent ones cannot be relocated at all. Claiming "slice 2 appends only" in the PR would
+be false; saying "slice 2 appends, and adapts four slice-1 test bodies whose asserted
+behaviour the spec itself reallocates" is true.
+
+**The durable finding, for CAR-006 and G56R-005:** an append-only seam is achievable for
+*schemas, fixtures, and corpora* but **not** for a test module when the spec assigns
+interim behaviour to the earlier slice. Either the earlier slice's tests must be written
+append-tolerant and behaviour-agnostic at the seam, or the requirement must permit
+body-level adaptation of tests whose subject behaviour is reallocated. FR-033b as written
+assumes the former without saying so.
+
 ### Group A — T001–T012 complete
 
 **Verified RED before GREEN with real assertion errors**, not a retrospective "all passed":

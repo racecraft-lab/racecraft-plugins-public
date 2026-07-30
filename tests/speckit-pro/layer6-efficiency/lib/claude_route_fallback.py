@@ -439,7 +439,7 @@ def _require_pinned_tuple(route: dict[str, Any]) -> None:
     was never given, and a selected route must yield a dispatch tuple whose four
     members are all required.
     """
-    for member in ("resolved_model", "effort"):
+    for member in INHERITABLE_ROUTE_MEMBERS:
         value = route.get(member)
         _require(
             isinstance(value, str) and bool(value),
@@ -554,21 +554,44 @@ def _release_claim_eligible(
     return True
 
 
-def _optional_helper_state(policy: dict[str, Any]) -> dict[str, Any]:
-    """FR-025a: the helper block, structured and never a diagnostic.
+def _optional_helper_state(policy: dict[str, Any], snapshot: dict[str, Any]) -> dict[str, Any]:
+    """FR-025 and FR-025a: the helper block, structured and never a diagnostic.
 
-    Fails closed on a policy that declares a helper rather than reporting the
-    no-helper-declared state for it: writing ``consulted: false`` beside
-    ``no_helper_path_validated: true`` for a policy that *does* declare one would be a
-    false claim, and in a byte-compared corpus a false claim is indistinguishable from a
-    true one until someone reads the policy.
+    Helper unavailability is an environment condition rather than a policy-authoring
+    defect, so it emits no diagnostic and neither closed enum gains a member for it.
+
+    All three reachable states are reported from one walk over the helper's own
+    declared routes, held in its **own** ``_WalkState``. That is what makes three
+    separate obligations structural rather than asserted:
+
+    * ``consulted`` is derived from the probe counter, not set beside it, so "not
+      consulted" is a measurable zero. An implementation cannot probe every helper
+      route and still report ``false`` — the two cannot disagree, because one is
+      defined as the other being non-zero.
+    * the counter is **disjoint** from ``budgets.actual.probe_attempts``, because the
+      helper's consultations are counted in a state the reported agent's walk never
+      touches.
+    * no helper route can reach ``attempted_routes``, because only the agent's own
+      state feeds that array.
+
+    A policy declaring no helper reports the same triple as an unavailable one, which
+    is deliberate rather than a lost distinction: whether a helper exists is a
+    property of the policy, and every case carries its own policy.
     """
-    _require(
-        "optional_helper" not in policy,
-        f"policy for {policy['agent']['name']!r} declares an optional helper, whose"
-        " consultation this walk does not account for",
-    )
-    return {"consulted": False, "no_helper_path_validated": True, "probe_attempts": 0}
+    declared = policy.get("optional_helper")
+    if declared is None:
+        return {"consulted": False, "no_helper_path_validated": True, "probe_attempts": 0}
+    helper = _WalkState()
+    for route in _declared_routes(declared):
+        _require_pinned_tuple(route)
+        if not _route_diagnostics(route, snapshot, helper):
+            break
+    consulted = helper.probe_attempts > 0
+    return {
+        "consulted": consulted,
+        "no_helper_path_validated": not consulted,
+        "probe_attempts": helper.probe_attempts,
+    }
 
 
 def _reported_budgets(state: _WalkState, budgets: dict[str, Any]) -> dict[str, Any]:
@@ -670,6 +693,358 @@ def _stage_no_safe_route(agent: str) -> list[dict[str, Any]]:
     ]
 
 
+# --------------------------------------------------------------------------- #
+# FR-019c: the pre-walk staged call graph over the policy-document violations   #
+# --------------------------------------------------------------------------- #
+# The four policy-authoring codes do NOT partition uniformly, and recording the
+# partition is what reconciles FR-020 with the pre-pass framing. Three are
+# properties of the policy *document*, decidable by reading the declared routes
+# with no walk state, so they run to completion before the first route is
+# attempted and suppress the walk entirely. ``fallback_loop`` is deliberately not
+# among them: it is defined against a route already attempted, and deciding it from
+# the document alone would convert a policy that RESOLVES into a failing one,
+# because a duplicate later in the chain is never reached when an earlier route
+# resolves. ``unqualified_override`` is neither — it is an environment condition
+# read from the overrides input and never suppresses the walk.
+
+IN_WALK_VIOLATION_CODE = "fallback_loop"
+ENVIRONMENT_VIOLATION_CODE = "unqualified_override"
+
+# Derived by filtering the live enum rather than transcribed, so "three, not four"
+# is a property of the one declaration site instead of a second list to keep in step.
+PRE_WALK_VIOLATION_CODES: tuple[str, ...] = tuple(
+    code
+    for code in POLICY_VIOLATION_CODES
+    if code not in (IN_WALK_VIOLATION_CODE, ENVIRONMENT_VIOLATION_CODE)
+)
+_require(
+    len(PRE_WALK_VIOLATION_CODES) == len(POLICY_VIOLATION_CODES) - 2,
+    "the pre-walk partition does not exclude exactly the in-walk and environment codes",
+)
+
+# FR-023: the two dispatch members a route may leave to inheritance. One declaration
+# site, read by the pre-walk stage that rejects an omission and by the walk-entry
+# guard that fails closed on one, so the two cannot disagree about which members
+# resolution requires.
+INHERITABLE_ROUTE_MEMBERS: tuple[str, ...] = ("resolved_model", "effort")
+
+
+def _adjacent_sibling(route: dict[str, Any], policy: dict[str, Any]) -> dict[str, Any]:
+    """The declared route a route's ``adjacent_to`` reference names.
+
+    Fails closed on a dangling reference: an adjacency claim against a route the
+    policy does not declare is unresolvable, and silently reading it as "no
+    adjacency" would let the defect FR-021 exists to catch pass as a clean policy.
+    """
+    reference = route["adjacent_to"]
+    siblings = [each for each in _declared_routes(policy) if each["route_id"] == reference]
+    _require(
+        siblings,
+        f"route {route['route_id']!r} declares adjacency to {reference!r},"
+        " which this policy does not declare",
+    )
+    return siblings[0]
+
+
+def _stage_unqualified_adjacent_model(
+    route: dict[str, Any], policy: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """FR-021: a fallback adjacent to a qualified route but not itself qualified.
+
+    The adjacency relation is read from the route's own ``adjacent_to`` sibling
+    reference rather than inferred from declaration position, so "adjacent" is a
+    stated property of the fixture instead of an artefact of list order.
+    """
+    if "adjacent_to" not in route:
+        return []
+    sibling = _adjacent_sibling(route, policy)
+    if route.get("qualified") or not sibling.get("qualified"):
+        return []
+    return [
+        _diagnostic(
+            "unqualified_adjacent_model",
+            f"Route {route['route_id']} is adjacent to qualified route"
+            f" {sibling['route_id']} without being qualified itself.",
+            "The declared fallback is adjacent to a qualified route but is not qualified.",
+            details={"route_id": route["route_id"]},
+        )
+    ]
+
+
+def _stage_generic_agent_substitution(
+    route: dict[str, Any], policy: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """FR-022: a fallback replacing a named synthetic agent with a generic one."""
+    substituted = route.get("substituted_agent")
+    if substituted is None or substituted.get("class") != "generic":
+        return []
+    return [
+        _diagnostic(
+            "generic_agent_substitution",
+            f"Route {route['route_id']} substitutes generic agent"
+            f" {substituted['name']} for named agent {policy['agent']['name']}.",
+            "The declared fallback substitutes a generic agent for the policy's named agent.",
+            details={"route_id": route["route_id"]},
+        )
+    ]
+
+
+def _stage_silent_inherit_materialization(
+    route: dict[str, Any], policy: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """FR-023: a route whose model or effort would be materialized by inheritance.
+
+    Such a route is **admitted by the route contract and rejected here**, which is
+    why both members stay optional in that contract: requiring them there would make
+    the fixture fail validation and no diagnostic would ever be produced. The omitted
+    member is named in the message rather than in ``details``, which carries the join
+    key alone for every policy-authoring code.
+    """
+    for member in INHERITABLE_ROUTE_MEMBERS:
+        value = route.get(member)
+        if isinstance(value, str) and value:
+            continue
+        return [
+            _diagnostic(
+                "silent_inherit_materialization",
+                f"Route {route['route_id']} of policy {policy['agent']['name']} omits"
+                f" {member}, which resolution would materialize by inheritance.",
+                "The declared route leaves a dispatch member to be materialized by inheritance.",
+                details={"route_id": route["route_id"]},
+            )
+        ]
+    return []
+
+
+PRE_WALK_STAGES: tuple[tuple[str, Any], ...] = (
+    ("unqualified_adjacent_model", _stage_unqualified_adjacent_model),
+    ("generic_agent_substitution", _stage_generic_agent_substitution),
+    ("silent_inherit_materialization", _stage_silent_inherit_materialization),
+)
+
+_require(
+    tuple(name for name, _ in PRE_WALK_STAGES) == PRE_WALK_VIOLATION_CODES,
+    "the staged pre-walk call graph does not match the contract's declared order",
+)
+
+
+def _pre_walk_violations(policy: dict[str, Any]) -> list[dict[str, Any]]:
+    """FR-019c and FR-012b: the whole pre-walk pass, run to completion.
+
+    Ordered by the declared route position each violation concerns and then by the
+    FR-019 declaration order, which the staged tuple above makes a call-graph
+    property. Every route is read even after one has already been rejected, because
+    the pass reports the policy rather than stopping at the first defect.
+    """
+    violations: list[dict[str, Any]] = []
+    for route in _declared_routes(policy):
+        for code, stage in PRE_WALK_STAGES:
+            for entry in stage(route, policy):
+                _require(
+                    entry["code"] == code,
+                    f"pre-walk stage {code} emitted a {entry['code']} entry",
+                )
+                violations.append(entry)
+    return violations
+
+
+def _already_attempted(state: _WalkState, route: dict[str, Any]) -> bool:
+    """FR-020: whether the walk has already attempted this route.
+
+    Read off the attempt list the walk already builds rather than from a second set,
+    so the identity a revisit is recognised by is the same identity the report
+    records — which is what makes the loop diagnostic's join key trustworthy.
+    """
+    return any(entry["route_id"] == route["route_id"] for entry in state.attempted)
+
+
+def _stage_fallback_loop(route: dict[str, Any]) -> list[dict[str, Any]]:
+    """FR-020: the revisit, detected in the walk at the point it is reached.
+
+    Emitted as a trailing per-route group so it lands after the last attempted
+    route's entries in the whole-array order, which is where detection-on-arrival
+    puts it. The revisited route is neither re-attempted nor re-consulted.
+    """
+    return [
+        _diagnostic(
+            "fallback_loop",
+            f"Route {route['route_id']} is revisited by the declared fallback chain.",
+            "The declared fallback chain revisits a route the walk already attempted.",
+            details={"route_id": route["route_id"]},
+        )
+    ]
+
+
+# --------------------------------------------------------------------------- #
+# FR-024 and FR-024b: the two override branches                                #
+# --------------------------------------------------------------------------- #
+# The honored branch records what will dispatch; the allowlist-skip branch records
+# only that the override did NOT take effect. The second is deliberately bounded to
+# that negative: the documented fallback target there is the *inherited* model,
+# which this projection does not carry and must not gain, so naming a model that
+# runs instead would be inference rather than simulation.
+
+# FR-024b: the documented mechanism, read live from the contract's own ``const`` so
+# the variable's name has one declaration site here as it does in the schema.
+OVERRIDE_SOURCE: str = REPORT_SCHEMA["$defs"]["override"]["properties"]["source"]["const"]
+
+# The documented value that restores normal model resolution. It is a SET value that
+# behaves as unset, so it is the no-override state rather than an override, and a
+# case declaring it carries a null ``overrides`` member instead (FR-015a, FR-024b).
+INHERIT_SENTINEL = "inherit"
+
+
+def _override_requested_model(overrides: dict[str, Any]) -> str:
+    """The raw override value, which may be a family alias or a full model ID."""
+    _require(
+        set(overrides) == {OVERRIDE_SOURCE},
+        f"the environment overrides declare something other than {OVERRIDE_SOURCE},"
+        " and this simulation recognises no second override mechanism",
+    )
+    requested = overrides[OVERRIDE_SOURCE]
+    _require(
+        isinstance(requested, str) and bool(requested),
+        f"the {OVERRIDE_SOURCE} override declares no value",
+    )
+    _require(
+        requested != INHERIT_SENTINEL,
+        f"{OVERRIDE_SOURCE}={INHERIT_SENTINEL} restores normal model resolution and is"
+        " the no-override state, which a case declares with a null overrides member",
+    )
+    return requested
+
+
+def _override_target(requested: str, snapshot: dict[str, Any]) -> str:
+    """The resolved model the override's requested value names.
+
+    The documented variable accepts either a family alias or a full model ID, so a
+    value the snapshot binds resolves through the binding and one it does not binds
+    to itself. This is the value the organization allowlist is checked against,
+    because the documented runtime skips a value that *resolves to* an excluded model.
+    """
+    return snapshot["alias_bindings"].get(requested, requested)
+
+
+def _override_is_qualified(policy: dict[str, Any], requested: str, target: str) -> bool:
+    """FR-024b: an override is unqualified when its tuple matches no qualified route.
+
+    Compared on alias and resolved model, which are the two members the override
+    determines: the agent is the policy's own subject and the effort is retained from
+    the walk, so neither discriminates between an override and a declared route.
+    """
+    return any(
+        route.get("qualified")
+        and route.get("alias") == requested
+        and route.get("resolved_model") == target
+        for route in _declared_routes(policy)
+    )
+
+
+def _override_dispatch_tuple(
+    policy: dict[str, Any],
+    requested: str,
+    target: str,
+    selected: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """FR-024b: the hybrid tuple, part override and part retained.
+
+    The variable sets a **model** only — no documented subagent-effort environment
+    override exists — so the alias and resolved model come from the override's
+    requested value while the agent and effort are retained from the route the
+    qualified walk selected, or from the preferred route when it selected none.
+    Attributing each member is what makes the pinned bytes derivable.
+    """
+    retained = policy["preferred_route"] if selected is None else selected
+    effort = retained.get("effort")
+    _require(
+        isinstance(effort, str) and bool(effort),
+        f"the override retains its effort from route {retained.get('route_id')!r},"
+        " which declares none",
+    )
+    return {
+        "agent": policy["agent"]["name"],
+        "alias": requested,
+        "resolved_model": target,
+        "effort": effort,
+    }
+
+
+def _override_record(
+    policy: dict[str, Any],
+    snapshot: dict[str, Any],
+    overrides: dict[str, Any],
+    selected: dict[str, Any] | None,
+    outcome: str,
+) -> dict[str, Any]:
+    """The override block, on whichever of the two documented branches applies."""
+    requested = _override_requested_model(overrides)
+    target = _override_target(requested, snapshot)
+    honored = target in snapshot["available_models_allowlist"]
+    would_have_been: dict[str, Any] = {"outcome": outcome}
+    if selected is not None:
+        would_have_been["effective_dispatch_tuple"] = _dispatch_tuple(
+            policy["agent"]["name"], selected
+        )
+    record: dict[str, Any] = {
+        "source": OVERRIDE_SOURCE,
+        "requested_model": requested,
+        "disposition": "honored" if honored else "skipped_by_allowlist",
+        "qualified": _override_is_qualified(policy, requested, target),
+        "would_have_been": would_have_been,
+    }
+    if honored:
+        record["tuple"] = _override_dispatch_tuple(policy, requested, target, selected)
+    return record
+
+
+def _stage_unqualified_override(record: dict[str, Any]) -> list[dict[str, Any]]:
+    """FR-024: the diagnostic an *unqualified* override in force emits.
+
+    Scoped to the qualification defect alone: a qualified override is equally in
+    force and equally disqualifies the environment, but emits nothing here, because
+    the diagnostic reports the defect while ``release_claim_eligible`` reports the
+    environment. It carries no ``details`` at all — it is an environment condition
+    scoped to no route, so it has no join key to carry — and its severity is
+    ``warning`` because dispatch proceeds under it.
+    """
+    if record["qualified"]:
+        return []
+    return [
+        _diagnostic(
+            "unqualified_override",
+            f"A {OVERRIDE_SOURCE} override requests {record['requested_model']},"
+            " which matches no route this policy declares qualified.",
+            "An unqualified subagent-model override excludes this environment"
+            " from release claims.",
+        )
+    ]
+
+
+def _effective_dispatch_tuple(
+    agent: str, selected: dict[str, Any] | None, record: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    """What will actually dispatch, which is not always what resolution selected.
+
+    An honored override wins at dispatch by its documented precedence. A skipped one
+    does not, so the tuple falls back to the qualified walk's own selection — never
+    to a model named for the override, and never to the inherited model the runtime
+    would use, which this projection does not carry. When the override was skipped
+    *and* the walk selected nothing there is no honest tuple to record and the
+    contract requires one, so that state fails closed rather than being invented.
+    """
+    if record is not None and record["disposition"] == "honored":
+        return record["tuple"]
+    if selected is not None:
+        return _dispatch_tuple(agent, selected)
+    _require(
+        record is None,
+        f"a {OVERRIDE_SOURCE} override skipped by the organization allowlist over a walk"
+        " that resolved nothing has no representable effective dispatch tuple: the"
+        " projection does not carry the inherited model the runtime would run",
+    )
+    return None
+
+
 def _assemble_diagnostics(
     *,
     pre_walk: Any = (),
@@ -720,19 +1095,40 @@ def resolve(
     agent = policy["agent"]["name"]
     state = _WalkState()
     selected: dict[str, Any] | None = None
-    for route in _declared_routes(policy):
-        _require_pinned_tuple(route)
-        route_diagnostics = _route_diagnostics(route, snapshot, state)
-        state.diagnostics_by_route.append(route_diagnostics)
-        disposition = "rejected" if route_diagnostics else "selected"
-        state.attempted.append(_attempted_entry(route, disposition))
-        if disposition == "selected":
-            selected = route
-            break
 
+    # FR-019c: the pre-walk pass runs to completion first, and the walk does not start
+    # at all when it emits anything. The biconditional the report contract leans on
+    # follows from this shape rather than from a bound: the attempt array is empty
+    # exactly when this branch was not taken.
+    pre_walk = _pre_walk_violations(policy)
+    revisited: list[list[dict[str, Any]]] = []
+    if not pre_walk:
+        for route in _declared_routes(policy):
+            if _already_attempted(state, route):
+                revisited.append(_stage_fallback_loop(route))
+                break
+            _require_pinned_tuple(route)
+            route_diagnostics = _route_diagnostics(route, snapshot, state)
+            state.diagnostics_by_route.append(route_diagnostics)
+            disposition = "rejected" if route_diagnostics else "selected"
+            state.attempted.append(_attempted_entry(route, disposition))
+            if disposition == "selected":
+                selected = route
+                break
+
+    # FR-024a: the outcome follows the QUALIFIED walk. An override is recorded beside
+    # it and never promotes it, which is what lets one report say that nothing
+    # qualified resolved and that something will nevertheless dispatch.
     outcome = "resolved" if selected is not None else "no_safe_route"
+    override = (
+        None
+        if overrides is None
+        else _override_record(policy, snapshot, overrides, selected, outcome)
+    )
     diagnostics = _assemble_diagnostics(
-        per_route=state.diagnostics_by_route,
+        pre_walk=pre_walk,
+        per_route=[*state.diagnostics_by_route, *revisited],
+        override=() if override is None else _stage_unqualified_override(override),
         terminal=() if selected is not None else _stage_no_safe_route(agent),
     )
 
@@ -744,11 +1140,14 @@ def resolve(
         "diagnostics": diagnostics,
         "budgets": _reported_budgets(state, budgets),
         "release_claim_eligible": _release_claim_eligible(outcome, diagnostics, overrides),
-        "optional_helper": _optional_helper_state(policy),
+        "optional_helper": _optional_helper_state(policy, snapshot),
     }
-    if selected is not None:
-        report["effective_dispatch_tuple"] = _dispatch_tuple(agent, selected)
-    else:
+    if override is not None:
+        report["override"] = override
+    effective = _effective_dispatch_tuple(agent, selected, override)
+    if effective is not None:
+        report["effective_dispatch_tuple"] = effective
+    if selected is None:
         report["unresolved_agent"] = agent
 
     # FR-012b: the outcome value and the terminal code are coupled BOTH ways, so a

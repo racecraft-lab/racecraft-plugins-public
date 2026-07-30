@@ -788,6 +788,632 @@
           "effort": "high"
         }
       }
+    },
+    {
+      "case_id": "fallback-loop",
+      "purpose": "A policy whose declared fallback chain names its own preferred route a second time, in an environment where every declared route's exact-invocation probe fails so the walk actually reaches the repeat.",
+      "proves": "The one policy-authoring violation decided against walk state rather than against the policy document. It is detected on REACHING the revisit, so the report carries the two routes attempted before it without repeating the revisited route, the revisited route is never consulted a second time, and the loop entry sits after the last attempted route's entries and before the terminal one. Reaching the repeat at all is why the environment degrades every route: a chain whose earlier route resolved would never get here, which is exactly why this code cannot join the pre-walk pass.",
+      "requirements": ["FR-020", "FR-012b", "FR-033d"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-bounded-analyst", "role_class": "bounded_analyst"},
+        "preferred_route": {
+          "route_id": "preferred-revisited",
+          "alias": "alias-revisited",
+          "resolved_model": "model-revisited",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-detour",
+            "alias": "alias-detour",
+            "resolved_model": "model-detour",
+            "effort": "high",
+            "qualified": true
+          },
+          {
+            "route_id": "preferred-revisited",
+            "alias": "alias-revisited",
+            "resolved_model": "model-revisited",
+            "effort": "high",
+            "qualified": true
+          }
+        ],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-detour", "model-revisited"],
+        "alias_bindings": {"alias-detour": "model-detour", "alias-revisited": "model-revisited"},
+        "supported_efforts": {
+          "model-detour": ["low", "medium", "high"],
+          "model-revisited": ["low", "medium", "high"]
+        },
+        "probe_availability": {"model-detour": true, "model-revisited": true},
+        "exact_invocation_probe": {"model-detour": "failure", "model-revisited": "failure"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-detour", "model-revisited"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-bounded-analyst",
+        "outcome": "no_safe_route",
+        "unresolved_agent": "fixture-bounded-analyst",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-revisited",
+            "alias": "alias-revisited",
+            "resolved_model": "model-revisited",
+            "effort": "high",
+            "disposition": "rejected"
+          },
+          {
+            "route_id": "fallback-detour",
+            "alias": "alias-detour",
+            "resolved_model": "model-detour",
+            "effort": "high",
+            "disposition": "rejected"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "treatment_probe_failed",
+            "message": "Route preferred-revisited has an exact-invocation probe failure for model model-revisited.",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The exact-invocation probe failed for the route's model.",
+              "actions": ["Inspect the exact-invocation probe evidence for this route."]
+            },
+            "details": {"route_id": "preferred-revisited"}
+          },
+          {
+            "code": "treatment_probe_failed",
+            "message": "Route fallback-detour has an exact-invocation probe failure for model model-detour.",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The exact-invocation probe failed for the route's model.",
+              "actions": ["Inspect the exact-invocation probe evidence for this route."]
+            },
+            "details": {"route_id": "fallback-detour"}
+          },
+          {
+            "code": "fallback_loop",
+            "message": "Route preferred-revisited is revisited by the declared fallback chain.",
+            "severity": "error",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The declared fallback chain revisits a route the walk already attempted.",
+              "actions": ["Remove the repeated route from the fallback chain."]
+            },
+            "details": {"route_id": "preferred-revisited"}
+          },
+          {
+            "code": "no_safe_route",
+            "message": "No declared route resolved for agent fixture-bounded-analyst.",
+            "severity": "error",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "No declared route resolved, so this environment cannot support a release claim.",
+              "actions": [
+                "Widen the declared fallback list with qualified routes.",
+                "Roll back to the previous plugin release."
+              ]
+            }
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 2, "retries": 0, "candidate_routes": 2}
+        },
+        "release_claim_eligible": false,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0}
+      }
+    },
+    {
+      "case_id": "unqualified-adjacent-model",
+      "purpose": "A policy whose declared fallback names an adjacency to the qualified preferred route while not itself being qualified, against an environment that is wholly undegraded.",
+      "proves": "A defect of the policy DOCUMENT, decided before the first route is attempted. The adjacency is read from the route's own adjacent_to sibling reference rather than inferred from list position, the diagnostic names the declared route that was never attempted, and the walk is suppressed entirely: the attempt array is empty, all three counters are unspent, and the environment is excluded from release claims. The undegraded snapshot is load-bearing rather than incidental — the preferred route would have resolved cleanly, so nothing but the structural rejection can account for the outcome.",
+      "requirements": ["FR-021", "FR-019c", "FR-029a"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-anchor",
+          "alias": "alias-anchor",
+          "resolved_model": "model-anchor",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-adjacent",
+            "alias": "alias-adjacent",
+            "resolved_model": "model-adjacent",
+            "effort": "high",
+            "qualified": false,
+            "adjacent_to": "preferred-anchor"
+          }
+        ],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-adjacent", "model-anchor"],
+        "alias_bindings": {"alias-adjacent": "model-adjacent", "alias-anchor": "model-anchor"},
+        "supported_efforts": {
+          "model-adjacent": ["low", "medium", "high"],
+          "model-anchor": ["low", "medium", "high"]
+        },
+        "probe_availability": {"model-adjacent": true, "model-anchor": true},
+        "exact_invocation_probe": {"model-adjacent": "success", "model-anchor": "success"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-adjacent", "model-anchor"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "no_safe_route",
+        "unresolved_agent": "fixture-required-executor",
+        "attempted_routes": [],
+        "diagnostics": [
+          {
+            "code": "unqualified_adjacent_model",
+            "message": "Route fallback-adjacent is adjacent to qualified route preferred-anchor without being qualified itself.",
+            "severity": "error",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The declared fallback is adjacent to a qualified route but is not qualified.",
+              "actions": ["Replace the adjacent model with a qualified route."]
+            },
+            "details": {"route_id": "fallback-adjacent"}
+          },
+          {
+            "code": "no_safe_route",
+            "message": "No declared route resolved for agent fixture-required-executor.",
+            "severity": "error",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "No declared route resolved, so this environment cannot support a release claim.",
+              "actions": [
+                "Widen the declared fallback list with qualified routes.",
+                "Roll back to the previous plugin release."
+              ]
+            }
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 0, "retries": 0, "candidate_routes": 0}
+        },
+        "release_claim_eligible": false,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0}
+      }
+    },
+    {
+      "case_id": "generic-agent-substitution",
+      "purpose": "A policy whose declared fallback dispatches a generic agent in place of the policy's own named synthetic agent, again against an undegraded environment.",
+      "proves": "The substitution is decided from the route's substituted_agent object whose class is generic, so the defect is a property of the declared document and not of the environment. The rejection is pre-walk on the same terms as the adjacency case: empty attempt array, unspent counters, and no effective dispatch tuple.",
+      "requirements": ["FR-022", "FR-019c", "FR-029a"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-named-agent",
+          "alias": "alias-named-agent",
+          "resolved_model": "model-named-agent",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-generic",
+            "alias": "alias-generic",
+            "resolved_model": "model-generic",
+            "effort": "high",
+            "qualified": true,
+            "substituted_agent": {"name": "fixture-generic-stand-in", "class": "generic"}
+          }
+        ],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-generic", "model-named-agent"],
+        "alias_bindings": {
+          "alias-generic": "model-generic",
+          "alias-named-agent": "model-named-agent"
+        },
+        "supported_efforts": {
+          "model-generic": ["low", "medium", "high"],
+          "model-named-agent": ["low", "medium", "high"]
+        },
+        "probe_availability": {"model-generic": true, "model-named-agent": true},
+        "exact_invocation_probe": {"model-generic": "success", "model-named-agent": "success"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-generic", "model-named-agent"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "no_safe_route",
+        "unresolved_agent": "fixture-required-executor",
+        "attempted_routes": [],
+        "diagnostics": [
+          {
+            "code": "generic_agent_substitution",
+            "message": "Route fallback-generic substitutes generic agent fixture-generic-stand-in for named agent fixture-required-executor.",
+            "severity": "error",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The declared fallback substitutes a generic agent for the policy's named agent.",
+              "actions": ["Restore the named agent in the fallback route."]
+            },
+            "details": {"route_id": "fallback-generic"}
+          },
+          {
+            "code": "no_safe_route",
+            "message": "No declared route resolved for agent fixture-required-executor.",
+            "severity": "error",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "No declared route resolved, so this environment cannot support a release claim.",
+              "actions": [
+                "Widen the declared fallback list with qualified routes.",
+                "Roll back to the previous plugin release."
+              ]
+            }
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 0, "retries": 0, "candidate_routes": 0}
+        },
+        "release_claim_eligible": false,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0}
+      }
+    },
+    {
+      "case_id": "silent-inherit-materialization",
+      "purpose": "A policy whose declared fallback omits BOTH its resolved model and its effort, so each would be materialized by inheritance rather than pinned by the policy.",
+      "proves": "The fixture the route contract must admit and the simulator must reject. Its policy validates against route-policy.schema.json — which is why resolved_model and effort stay optional there — and resolution rejects it pre-walk with one diagnostic naming the first omitted member. Requiring the members in the contract would fail this case at validation and no diagnostic would ever be produced, which is the inverted failure this pairing exists to prevent.",
+      "requirements": ["FR-023", "FR-003a", "FR-019c"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-explicit",
+          "alias": "alias-explicit",
+          "resolved_model": "model-explicit",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [
+          {
+            "route_id": "fallback-inheriting",
+            "alias": "alias-inheriting",
+            "qualified": true
+          }
+        ],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-explicit"],
+        "alias_bindings": {"alias-explicit": "model-explicit"},
+        "supported_efforts": {"model-explicit": ["low", "medium", "high"]},
+        "probe_availability": {"model-explicit": true},
+        "exact_invocation_probe": {"model-explicit": "success"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-explicit"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "no_safe_route",
+        "unresolved_agent": "fixture-required-executor",
+        "attempted_routes": [],
+        "diagnostics": [
+          {
+            "code": "silent_inherit_materialization",
+            "message": "Route fallback-inheriting of policy fixture-required-executor omits resolved_model, which resolution would materialize by inheritance.",
+            "severity": "error",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "The declared route leaves a dispatch member to be materialized by inheritance.",
+              "actions": ["Declare the model and effort explicitly on the route."]
+            },
+            "details": {"route_id": "fallback-inheriting"}
+          },
+          {
+            "code": "no_safe_route",
+            "message": "No declared route resolved for agent fixture-required-executor.",
+            "severity": "error",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "No declared route resolved, so this environment cannot support a release claim.",
+              "actions": [
+                "Widen the declared fallback list with qualified routes.",
+                "Roll back to the previous plugin release."
+              ]
+            }
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 0, "retries": 0, "candidate_routes": 0}
+        },
+        "release_claim_eligible": false,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0}
+      }
+    },
+    {
+      "case_id": "unqualified-override",
+      "purpose": "An environment carrying a subagent-model override whose requested value binds to a model the organization allowlist PERMITS, over a policy whose preferred route resolves cleanly and matches the override on neither alias nor model.",
+      "proves": "The honored branch. The override becomes the effective dispatch tuple by its documented precedence, and that tuple is a HYBRID rather than a copy: the alias and resolved model come from the requested value while the agent and effort are retained from the route the qualified walk selected, because the variable sets a model only. The override is unqualified because its tuple matches no route the policy declares qualified, so the diagnostic is emitted at warning severity carrying no route-scoped join key, dispatch proceeds, and the consequence is carried by release_claim_eligible false. The would-have-been block records the qualified resolution the override displaced.",
+      "requirements": ["FR-024", "FR-024a", "FR-024b"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-honored",
+          "alias": "alias-honored",
+          "resolved_model": "model-honored",
+          "effort": "xhigh",
+          "qualified": true
+        },
+        "fallback_routes": [],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-forced", "model-honored"],
+        "alias_bindings": {"alias-forced": "model-forced", "alias-honored": "model-honored"},
+        "supported_efforts": {
+          "model-forced": ["low", "medium", "high", "xhigh"],
+          "model-honored": ["low", "medium", "high", "xhigh"]
+        },
+        "probe_availability": {"model-forced": true, "model-honored": true},
+        "exact_invocation_probe": {"model-forced": "success", "model-honored": "success"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-forced", "model-honored"]
+      },
+      "overrides": {"CLAUDE_CODE_SUBAGENT_MODEL": "alias-forced"},
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "resolved",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-honored",
+            "alias": "alias-honored",
+            "resolved_model": "model-honored",
+            "effort": "xhigh",
+            "disposition": "selected"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "unqualified_override",
+            "message": "A CLAUDE_CODE_SUBAGENT_MODEL override requests alias-forced, which matches no route this policy declares qualified.",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "An unqualified subagent-model override excludes this environment from release claims.",
+              "actions": [
+                "Unset the unqualified subagent-model override before making release claims."
+              ]
+            }
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 1, "retries": 0, "candidate_routes": 1}
+        },
+        "release_claim_eligible": false,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0},
+        "override": {
+          "source": "CLAUDE_CODE_SUBAGENT_MODEL",
+          "requested_model": "alias-forced",
+          "disposition": "honored",
+          "qualified": false,
+          "tuple": {
+            "agent": "fixture-required-executor",
+            "alias": "alias-forced",
+            "resolved_model": "model-forced",
+            "effort": "xhigh"
+          },
+          "would_have_been": {
+            "outcome": "resolved",
+            "effective_dispatch_tuple": {
+              "agent": "fixture-required-executor",
+              "alias": "alias-honored",
+              "resolved_model": "model-honored",
+              "effort": "xhigh"
+            }
+          }
+        },
+        "effective_dispatch_tuple": {
+          "agent": "fixture-required-executor",
+          "alias": "alias-forced",
+          "resolved_model": "model-forced",
+          "effort": "xhigh"
+        }
+      }
+    },
+    {
+      "case_id": "override-skipped-by-allowlist",
+      "purpose": "The same subagent-model override value, against an environment whose organization allowlist EXCLUDES the model that value resolves to.",
+      "proves": "The allowlist-skip branch, and the bounded negative it is deliberately limited to. The override is skipped rather than honored, so the override record carries NO tuple: the documented fallback target is the inherited model, which this projection does not carry and must not gain, and naming any model there would assert one the simulation cannot know. The report's own effective dispatch tuple therefore follows the qualified walk. release_claim_eligible is false here too, for a reason independent of the override disqualifier. Without this second case the corpus would pin the unconditional override effect the documented runtime does not have.",
+      "requirements": ["FR-024b", "FR-024a", "SC-001"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-excluded",
+          "alias": "alias-excluded",
+          "resolved_model": "model-excluded",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4}
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-excluded", "model-forced"],
+        "alias_bindings": {"alias-excluded": "model-excluded", "alias-forced": "model-forced"},
+        "supported_efforts": {
+          "model-excluded": ["low", "medium", "high"],
+          "model-forced": ["low", "medium", "high"]
+        },
+        "probe_availability": {"model-excluded": true, "model-forced": true},
+        "exact_invocation_probe": {"model-excluded": "success", "model-forced": "success"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-excluded"]
+      },
+      "overrides": {"CLAUDE_CODE_SUBAGENT_MODEL": "alias-forced"},
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "resolved",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-excluded",
+            "alias": "alias-excluded",
+            "resolved_model": "model-excluded",
+            "effort": "high",
+            "disposition": "selected"
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "unqualified_override",
+            "message": "A CLAUDE_CODE_SUBAGENT_MODEL override requests alias-forced, which matches no route this policy declares qualified.",
+            "severity": "warning",
+            "source": "route-fallback-simulator",
+            "remediation": {
+              "summary": "An unqualified subagent-model override excludes this environment from release claims.",
+              "actions": [
+                "Unset the unqualified subagent-model override before making release claims."
+              ]
+            }
+          }
+        ],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 1, "retries": 0, "candidate_routes": 1}
+        },
+        "release_claim_eligible": false,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0},
+        "override": {
+          "source": "CLAUDE_CODE_SUBAGENT_MODEL",
+          "requested_model": "alias-forced",
+          "disposition": "skipped_by_allowlist",
+          "qualified": false,
+          "would_have_been": {
+            "outcome": "resolved",
+            "effective_dispatch_tuple": {
+              "agent": "fixture-required-executor",
+              "alias": "alias-excluded",
+              "resolved_model": "model-excluded",
+              "effort": "high"
+            }
+          }
+        },
+        "effective_dispatch_tuple": {
+          "agent": "fixture-required-executor",
+          "alias": "alias-excluded",
+          "resolved_model": "model-excluded",
+          "effort": "high"
+        }
+      }
+    },
+    {
+      "case_id": "helper-unavailable-continues",
+      "purpose": "The one policy that declares an optional helper alongside its root required agent, in an environment that binds every alias but offers only the required agent's model — so both of the helper's declared routes name models the environment does not offer.",
+      "proves": "Both halves of the helper requirement. The helper is not consulted and the report records continuation on the validated no-helper path as a STRUCTURED field rather than as a diagnostic entry, with probe_attempts an explicit zero that makes the non-consultation measurable instead of self-asserted; that counter is disjoint from the agent's own, which stands at one. No attempted-route entry names a helper route, which is the corroborating structural evidence a counter alone cannot supply. And the second half: required-agent resolution does not fail as a result — the outcome is resolved, the tuple is the required agent's own route, and the environment stays eligible for release claims, so helper unavailability is not a disqualifier.",
+      "requirements": ["FR-025", "FR-025a", "FR-025b"],
+      "policy": {
+        "schema_version": "1.0.0",
+        "agent": {"name": "fixture-required-executor", "role_class": "required_executor"},
+        "preferred_route": {
+          "route_id": "preferred-required",
+          "alias": "alias-required",
+          "resolved_model": "model-required",
+          "effort": "high",
+          "qualified": true
+        },
+        "fallback_routes": [],
+        "budgets": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+        "optional_helper": {
+          "agent": {"name": "fixture-optional-helper", "role_class": "optional_helper"},
+          "preferred_route": {
+            "route_id": "helper-preferred",
+            "alias": "alias-helper-primary",
+            "resolved_model": "model-helper-primary",
+            "effort": "medium",
+            "qualified": true
+          },
+          "fallback_routes": [
+            {
+              "route_id": "helper-fallback",
+              "alias": "alias-helper-spare",
+              "resolved_model": "model-helper-spare",
+              "effort": "medium",
+              "qualified": true
+            }
+          ]
+        }
+      },
+      "snapshot": {
+        "schema_version": "1.0.0",
+        "available_models": ["model-required"],
+        "alias_bindings": {
+          "alias-helper-primary": "model-helper-primary",
+          "alias-helper-spare": "model-helper-spare",
+          "alias-required": "model-required"
+        },
+        "supported_efforts": {"model-required": ["low", "medium", "high"]},
+        "probe_availability": {"model-required": true},
+        "exact_invocation_probe": {"model-required": "success"},
+        "platform_route_changes": [],
+        "available_models_allowlist": ["model-required"]
+      },
+      "overrides": null,
+      "expected_report": {
+        "schema_version": "1.0.0",
+        "agent": "fixture-required-executor",
+        "outcome": "resolved",
+        "attempted_routes": [
+          {
+            "route_id": "preferred-required",
+            "alias": "alias-required",
+            "resolved_model": "model-required",
+            "effort": "high",
+            "disposition": "selected"
+          }
+        ],
+        "diagnostics": [],
+        "budgets": {
+          "declared": {"max_probe_attempts": 4, "max_retries": 2, "max_candidate_routes": 4},
+          "actual": {"probe_attempts": 1, "retries": 0, "candidate_routes": 1}
+        },
+        "release_claim_eligible": true,
+        "optional_helper": {"consulted": false, "no_helper_path_validated": true, "probe_attempts": 0},
+        "effective_dispatch_tuple": {
+          "agent": "fixture-required-executor",
+          "alias": "alias-required",
+          "resolved_model": "model-required",
+          "effort": "high"
+        }
+      }
     }
   ]
 }

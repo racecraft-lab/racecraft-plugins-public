@@ -804,17 +804,19 @@ class EffectiveDispatchTupleTests(SimulatorCaseMixin, unittest.TestCase):
 
     def test_a_route_reaching_the_walk_without_a_pinned_model_fails_closed(self) -> None:
         preferred = route_of("preferred-unpinned", "alias-unpinned", "model-unpinned")
-        snapshot = snapshot_for(preferred)
         del preferred["resolved_model"]
+        # Asserted against the walk-entry guard rather than through ``resolve``: such a
+        # route no longer REACHES the walk, because the pre-walk pass rejects it with
+        # ``silent_inherit_materialization`` first. The guard is what keeps a route that
+        # arrives by any other path from resolving to an incomplete dispatch tuple.
         with self.assertRaises(self.module.RouteFallbackError):
-            self.resolve(policy_of(preferred), snapshot)
+            self.module._require_pinned_tuple(preferred)
 
     def test_a_route_reaching_the_walk_without_a_pinned_effort_fails_closed(self) -> None:
         preferred = route_of("preferred-effortless", "alias-effortless", "model-effortless")
-        snapshot = snapshot_for(preferred)
         del preferred["effort"]
         with self.assertRaises(self.module.RouteFallbackError):
-            self.resolve(policy_of(preferred), snapshot)
+            self.module._require_pinned_tuple(preferred)
 
 
 class ReportScopedFieldTests(SimulatorCaseMixin, unittest.TestCase):
@@ -917,6 +919,21 @@ class ReportScopedFieldTests(SimulatorCaseMixin, unittest.TestCase):
             "preferred_route": helper_route,
             "fallback_routes": [],
         }
+        # The prohibition is what matters here: writing the no-helper triple for a policy
+        # that DOES declare one would be a false claim, and in a byte-compared corpus a
+        # false claim is indistinguishable from a true one until someone reads the policy.
+        report = self.resolve(policy, snapshot_for(preferred, helper_route))
+        self.assertNotEqual(
+            report["optional_helper"],
+            {"consulted": False, "no_helper_path_validated": True, "probe_attempts": 0},
+        )
+        self.assertIs(report["optional_helper"]["consulted"], True)
+        # A helper whose consultation cannot be accounted for still fails closed.
+        policy["optional_helper"]["preferred_route"] = {
+            "route_id": "helper-unaccountable",
+            "alias": "alias-helper-unaccountable",
+            "qualified": True,
+        }
         with self.assertRaises(self.module.RouteFallbackError):
             self.resolve(policy, snapshot_for(preferred, helper_route))
 
@@ -1018,7 +1035,14 @@ class CorpusContractValidationTests(SimulatorCaseMixin, unittest.TestCase):
                     self.assertEqual(validate_instance(case[member], schema), case[member])
 
     def test_the_corpus_holds_the_nine_declared_slice_one_cases(self) -> None:
-        self.assertEqual(len(self.cases), 9)
+        # Held by identity and position rather than by count: appended cases must leave
+        # these nine at the head in the same order, and a bare length would still pass if
+        # an appended case displaced one of them. The total is asserted separately.
+        self.assertEqual(len(SLICE_ONE_CASE_IDS), 9)
+        self.assertEqual(
+            [case["case_id"] for case in self.cases[: len(SLICE_ONE_CASE_IDS)]],
+            list(SLICE_ONE_CASE_IDS),
+        )
 
     def test_the_route_contract_admits_an_omitted_model_the_simulator_rejects(self) -> None:
         inheriting = {"route_id": "preferred-inherits", "alias": "alias-inherits", "qualified": True}
@@ -1027,8 +1051,12 @@ class CorpusContractValidationTests(SimulatorCaseMixin, unittest.TestCase):
             validate_instance(policy, self.contracts["policy"]),
             policy,
         )
-        with self.assertRaises(self.module.RouteFallbackError):
-            self.resolve(policy, snapshot_for())
+        # Rejected with a diagnostic rather than at validation, which is the whole reason
+        # the route contract leaves both members optional: tightening it would fail this
+        # fixture before any diagnostic could be produced.
+        report = self.resolve(policy, snapshot_for())
+        self.assertEqual(self.codes(report), ["silent_inherit_materialization", "no_safe_route"])
+        self.assertEqual(report["attempted_routes"], [])
 
     def test_the_route_contract_admits_a_repeated_fallback_the_schema_must_not_forbid(self) -> None:
         preferred = route_of("preferred-repeat", "alias-repeat", "model-repeat")
@@ -1799,6 +1827,895 @@ class FixtureHygieneTests(unittest.TestCase):
                 self.assertEqual(entry["source"], DIAGNOSTIC_SOURCE)
 
 
+# --------------------------------------------------------------------------- #
+# Structural rejections, the override branches, and the helper path             #
+# --------------------------------------------------------------------------- #
+# The four policy-authoring violations partition by the state they need, and the
+# partition is load bearing rather than tidy: three are properties of the policy
+# DOCUMENT and are decided before the first route is attempted, while
+# ``fallback_loop`` is decided against walk state, on reaching a route already
+# attempted. Deciding a loop pre-walk would convert a policy that RESOLVES into a
+# failing one, because a duplicate later in the chain is never reached when an
+# earlier route resolves — which is exactly what the negative case below pins.
+
+# The nine cases the corpus opened with, in declaration order. Named rather than
+# counted, because the appended cases must leave these nine at the head in the same
+# order: a bare length would still pass if an appended case displaced one of them.
+SLICE_ONE_CASE_IDS = (
+    "preferred-absent-fallback-selected",
+    "fable-alias-model-absent",
+    "alias-unresolved",
+    "alias-repointed",
+    "platform-route-changed",
+    "effort-unsupported",
+    "capability-probe-unavailable",
+    "treatment-probe-failed",
+    "preferred-probe-success-clean",
+)
+
+# The cases appended at the tail, in declaration order.
+APPENDED_CASE_IDS = (
+    "fallback-loop",
+    "unqualified-adjacent-model",
+    "generic-agent-substitution",
+    "silent-inherit-materialization",
+    "unqualified-override",
+    "override-skipped-by-allowlist",
+    "helper-unavailable-continues",
+)
+
+# The report's not-consulted helper triple, which is also the no-helper-declared
+# triple: identical by design, since whether a helper exists is a property of the
+# policy and every case carries its own policy.
+NO_HELPER_PATH = {"consulted": False, "no_helper_path_validated": True, "probe_attempts": 0}
+UNSPENT_BUDGET = {"probe_attempts": 0, "retries": 0, "candidate_routes": 0}
+
+# The documented environment variable, and the value it accepts to restore normal
+# model resolution. The sentinel is a SET value that behaves as unset, so it is the
+# no-override state rather than an override.
+OVERRIDE_VARIABLE = "CLAUDE_CODE_SUBAGENT_MODEL"
+INHERIT_SENTINEL = "inherit"
+
+
+def unqualified_adjacent_route(
+    route_id: str, alias: str, model: str, *, adjacent_to: str
+) -> dict[str, object]:
+    """A fallback declaring adjacency to a sibling while not itself being qualified."""
+    route = route_of(route_id, alias, model)
+    route["qualified"] = False
+    route["adjacent_to"] = adjacent_to
+    return route
+
+
+def substituting_route(
+    route_id: str, alias: str, model: str, *, agent: str, agent_class: str = "generic"
+) -> dict[str, object]:
+    """A fallback dispatching a different agent than the policy's own subject."""
+    route = route_of(route_id, alias, model)
+    route["substituted_agent"] = {"name": agent, "class": agent_class}
+    return route
+
+
+def inheriting_route(route_id: str, alias: str, **pinned: str) -> dict[str, object]:
+    """A route leaving one or both dispatch members to be materialized by inheritance."""
+    return {"route_id": route_id, "alias": alias, "qualified": True, **pinned}
+
+
+def helper_declaration(
+    *routes: dict[str, object], name: str = "fixture-optional-helper"
+) -> dict[str, object]:
+    """The policy member by which a policy declares its optional helper."""
+    preferred, *fallbacks = routes
+    return {
+        "agent": {"name": name, "role_class": "optional_helper"},
+        "preferred_route": dict(preferred),
+        "fallback_routes": [dict(each) for each in fallbacks],
+    }
+
+
+def allowlisting(snapshot: dict[str, object], *models: str) -> dict[str, object]:
+    """The same snapshot with the organization allowlist narrowed to ``models``.
+
+    Narrowed by replacement rather than by a builder parameter, so the slice-1
+    builder every other case reads keeps the signature those cases were written
+    against. The allowlist is the one snapshot member with no default worth
+    inferring: it is what the organization permits, not what the environment offers.
+    """
+    return {**snapshot, "available_models_allowlist": list(models)}
+
+
+class StructuralPreWalkTests(SimulatorCaseMixin, unittest.TestCase):
+    """FR-019c, FR-021, FR-022, FR-023: three document-level defects, decided pre-walk.
+
+    Each of the three is decidable by reading the declared routes with no walk state,
+    so the pass runs to completion before the first route is attempted and suppresses
+    the walk entirely when it emits anything. The report a rejection produces is an
+    ordinary valid instance of the one report shape — empty attempt array, all three
+    counters unspent, the policy's own agent named unresolved — not an under-specified
+    one, which is why the array's lower bound admits zero.
+    """
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.policy_contract = load_contract(CONTRACT_ROOT / "route-policy.schema.json")
+
+    def adjacent_pair(self) -> tuple[dict[str, object], dict[str, object]]:
+        anchor = route_of("preferred-anchor", "alias-anchor", "model-anchor")
+        adjacent = unqualified_adjacent_route(
+            "fallback-adjacent", "alias-adjacent", "model-adjacent", adjacent_to="preferred-anchor"
+        )
+        return policy_of(anchor, (adjacent,)), snapshot_for(anchor, adjacent)
+
+    def substituting_pair(self) -> tuple[dict[str, object], dict[str, object]]:
+        named = route_of("preferred-named-agent", "alias-named-agent", "model-named-agent")
+        generic = substituting_route(
+            "fallback-generic", "alias-generic", "model-generic", agent="fixture-generic-stand-in"
+        )
+        return policy_of(named, (generic,)), snapshot_for(named, generic)
+
+    def inheriting_pair(self, **pinned: str) -> tuple[dict[str, object], dict[str, object]]:
+        explicit = route_of("preferred-explicit", "alias-explicit", "model-explicit")
+        inheriting = inheriting_route("fallback-inheriting", "alias-inheriting", **pinned)
+        return policy_of(explicit, (inheriting,)), snapshot_for(explicit)
+
+    # --- the pass itself (FR-019c) ---
+
+    def test_the_pre_walk_pass_is_staged_over_three_codes_and_not_four(self) -> None:
+        staged = tuple(name for name, _ in self.module.PRE_WALK_STAGES)
+        self.assertEqual(staged, tuple(self.module.PRE_WALK_VIOLATION_CODES))
+        self.assertEqual(len(staged), 3)
+        self.assertNotIn("fallback_loop", staged)
+        self.assertNotIn("unqualified_override", staged)
+        self.assertEqual(
+            list(staged),
+            [code for code in self.module.POLICY_VIOLATION_CODES if code in set(staged)],
+        )
+
+    def test_a_pre_walk_rejection_records_an_empty_attempt_array(self) -> None:
+        policy, snapshot = self.adjacent_pair()
+        self.assertEqual(self.resolve(policy, snapshot)["attempted_routes"], [])
+
+    def test_a_pre_walk_rejection_reports_the_contracted_no_safe_route_shape(self) -> None:
+        policy, snapshot = self.adjacent_pair()
+        report = self.resolve(policy, snapshot)
+        self.assertEqual(report["outcome"], "no_safe_route")
+        self.assertEqual(report["unresolved_agent"], "fixture-required-executor")
+        self.assertNotIn("effective_dispatch_tuple", report)
+        self.assertEqual(report["budgets"]["actual"], dict(UNSPENT_BUDGET))
+        self.assertEqual(report["optional_helper"], dict(NO_HELPER_PATH))
+        self.assertIs(report["release_claim_eligible"], False)
+
+    def test_the_pass_suppresses_the_walk_even_where_a_route_would_have_resolved(self) -> None:
+        policy, snapshot = self.adjacent_pair()
+        report = self.resolve(policy, snapshot)
+        self.assertEqual(report["budgets"]["actual"]["probe_attempts"], 0)
+        clean = self.resolve(policy_of(policy["preferred_route"]), snapshot)
+        self.assertEqual(clean["outcome"], "resolved")
+
+    def test_the_attempt_array_is_empty_only_when_the_pass_rejected_the_policy(self) -> None:
+        rejected, snapshot = self.adjacent_pair()
+        walked = policy_of(rejected["preferred_route"])
+        failing = route_of("preferred-terminates", "alias-terminates", "model-terminates")
+        for label, policy, environment in (
+            ("pre-walk rejection", rejected, snapshot),
+            ("clean resolution", walked, snapshot),
+            (
+                "no safe route",
+                policy_of(failing),
+                snapshot_for(failing, invocation={"model-terminates": "failure"}),
+            ),
+        ):
+            with self.subTest(input=label):
+                report = self.resolve(policy, environment)
+                self.assertEqual(
+                    report["attempted_routes"] == [],
+                    self.module._pre_walk_violations(policy) != [],
+                )
+
+    def test_the_pass_violations_lead_the_array_and_the_terminal_entry_closes_it(self) -> None:
+        anchor = route_of("preferred-anchor", "alias-anchor", "model-anchor")
+        adjacent = unqualified_adjacent_route(
+            "fallback-adjacent", "alias-adjacent", "model-adjacent", adjacent_to="preferred-anchor"
+        )
+        generic = substituting_route(
+            "fallback-generic", "alias-generic", "model-generic", agent="fixture-generic-stand-in"
+        )
+        policy = policy_of(anchor, (adjacent, generic))
+        report = self.resolve(policy, snapshot_for(anchor, adjacent, generic))
+        self.assertEqual(
+            self.codes(report),
+            ["unqualified_adjacent_model", "generic_agent_substitution", "no_safe_route"],
+        )
+
+    def test_two_violations_on_one_route_follow_the_declaration_order(self) -> None:
+        anchor = route_of("preferred-anchor", "alias-anchor", "model-anchor")
+        both = substituting_route(
+            "fallback-both", "alias-both", "model-both", agent="fixture-generic-stand-in"
+        )
+        both["qualified"] = False
+        both["adjacent_to"] = "preferred-anchor"
+        policy = policy_of(anchor, (both,))
+        report = self.resolve(policy, snapshot_for(anchor, both))
+        self.assertEqual(
+            self.codes(report),
+            ["unqualified_adjacent_model", "generic_agent_substitution", "no_safe_route"],
+        )
+
+    # --- unqualified_adjacent_model (FR-021) ---
+
+    def test_an_unqualified_fallback_adjacent_to_a_qualified_route_is_rejected(self) -> None:
+        policy, snapshot = self.adjacent_pair()
+        entry = self.only_diagnostic(self.resolve(policy, snapshot), "unqualified_adjacent_model")
+        self.assertEqual(entry["severity"], "error")
+        self.assertEqual(entry["details"], {"route_id": "fallback-adjacent"})
+        self.assertEqual(
+            entry["remediation"]["actions"], ["Replace the adjacent model with a qualified route."]
+        )
+
+    def test_the_rejected_adjacent_fallback_is_never_selected(self) -> None:
+        policy, snapshot = self.adjacent_pair()
+        report = self.resolve(policy, snapshot)
+        self.assertEqual(
+            [entry["route_id"] for entry in report["attempted_routes"]], []
+        )
+        self.assertNotIn("effective_dispatch_tuple", report)
+
+    def test_a_qualified_route_declaring_adjacency_is_not_rejected(self) -> None:
+        anchor = route_of("preferred-anchor", "alias-anchor", "model-anchor")
+        adjacent = route_of("fallback-adjacent", "alias-adjacent", "model-adjacent")
+        adjacent["adjacent_to"] = "preferred-anchor"
+        policy = policy_of(anchor, (adjacent,))
+        self.assertEqual(self.module._pre_walk_violations(policy), [])
+
+    def test_an_unqualified_route_declaring_no_adjacency_is_not_rejected_by_this_rule(self) -> None:
+        anchor = route_of("preferred-anchor", "alias-anchor", "model-anchor")
+        unqualified = route_of("fallback-unqualified", "alias-unqualified", "model-unqualified")
+        unqualified["qualified"] = False
+        policy = policy_of(anchor, (unqualified,))
+        self.assertEqual(self.module._pre_walk_violations(policy), [])
+
+    def test_an_adjacency_naming_no_declared_sibling_fails_closed(self) -> None:
+        anchor = route_of("preferred-anchor", "alias-anchor", "model-anchor")
+        dangling = unqualified_adjacent_route(
+            "fallback-dangling", "alias-dangling", "model-dangling", adjacent_to="no-such-route"
+        )
+        policy = policy_of(anchor, (dangling,))
+        with self.assertRaises(self.module.RouteFallbackError):
+            self.module._pre_walk_violations(policy)
+
+    # --- generic_agent_substitution (FR-022) ---
+
+    def test_a_generic_agent_substitution_is_rejected(self) -> None:
+        policy, snapshot = self.substituting_pair()
+        entry = self.only_diagnostic(self.resolve(policy, snapshot), "generic_agent_substitution")
+        self.assertEqual(entry["severity"], "error")
+        self.assertEqual(entry["details"], {"route_id": "fallback-generic"})
+        self.assertEqual(
+            entry["remediation"]["actions"], ["Restore the named agent in the fallback route."]
+        )
+
+    def test_a_named_agent_substitution_is_not_rejected(self) -> None:
+        named = route_of("preferred-named-agent", "alias-named-agent", "model-named-agent")
+        substituting = substituting_route(
+            "fallback-named",
+            "alias-named",
+            "model-named",
+            agent="fixture-named-stand-in",
+            agent_class="named",
+        )
+        policy = policy_of(named, (substituting,))
+        self.assertEqual(self.module._pre_walk_violations(policy), [])
+
+    # --- silent_inherit_materialization (FR-023) ---
+
+    def test_a_route_omitting_its_resolved_model_is_admitted_then_rejected(self) -> None:
+        policy, snapshot = self.inheriting_pair(effort="high")
+        self.assertEqual(validate_instance(policy, self.policy_contract), policy)
+        entry = self.only_diagnostic(
+            self.resolve(policy, snapshot), "silent_inherit_materialization"
+        )
+        self.assertEqual(entry["severity"], "error")
+        self.assertEqual(entry["details"], {"route_id": "fallback-inheriting"})
+        self.assertEqual(
+            entry["remediation"]["actions"],
+            ["Declare the model and effort explicitly on the route."],
+        )
+
+    def test_a_route_omitting_its_effort_is_admitted_then_rejected(self) -> None:
+        policy, snapshot = self.inheriting_pair(resolved_model="model-inheriting")
+        self.assertEqual(validate_instance(policy, self.policy_contract), policy)
+        report = self.resolve(policy, snapshot)
+        self.assertEqual(self.codes(report), ["silent_inherit_materialization", "no_safe_route"])
+        self.assertEqual(report["attempted_routes"], [])
+
+    def test_a_route_omitting_both_members_is_rejected_once_naming_the_first(self) -> None:
+        policy, snapshot = self.inheriting_pair()
+        report = self.resolve(policy, snapshot)
+        self.assertEqual(self.codes(report), ["silent_inherit_materialization", "no_safe_route"])
+        self.assertIn("resolved_model", report["diagnostics"][0]["message"])
+
+    def test_a_route_pinning_both_members_explicitly_is_not_rejected(self) -> None:
+        explicit = route_of("preferred-explicit", "alias-explicit", "model-explicit")
+        spare = route_of("fallback-explicit", "alias-explicit-spare", "model-explicit-spare")
+        self.assertEqual(self.module._pre_walk_violations(policy_of(explicit, (spare,))), [])
+
+    def test_the_walk_entry_guard_still_fails_closed_on_an_unpinned_route(self) -> None:
+        for member in ("resolved_model", "effort"):
+            with self.subTest(omitted=member):
+                route = route_of("preferred-guarded", "alias-guarded", "model-guarded")
+                del route[member]
+                with self.assertRaises(self.module.RouteFallbackError):
+                    self.module._require_pinned_tuple(route)
+
+
+class FallbackLoopTests(SimulatorCaseMixin, unittest.TestCase):
+    """FR-020, FR-012b, FR-033d: the one violation decided against walk state.
+
+    It is detected on *reaching* the revisit, which fixes both its position in the
+    array — after the last attempted route's entries — and the reason it cannot join
+    the pre-walk pass: a duplicate later in a chain whose earlier route resolves is
+    never reached, so deciding it from the document alone would fail a policy that
+    resolves. Needing the attempt list is also why structural validation is a second
+    rule family in this one module rather than a second module.
+    """
+
+    def looping_policy(self, *, revisited_effort: str = "high") -> dict[str, object]:
+        preferred = route_of("preferred-revisited", "alias-revisited", "model-revisited",
+                             revisited_effort)
+        detour = route_of("fallback-detour", "alias-detour", "model-detour")
+        return policy_of(preferred, (detour, dict(preferred)))
+
+    def failing_snapshot(self, policy: dict[str, object]) -> dict[str, object]:
+        routes = _declared(policy)
+        return snapshot_for(
+            *routes,
+            invocation={str(route["resolved_model"]): "failure" for route in routes},
+        )
+
+    def test_a_revisited_route_terminates_the_walk_without_repeating_it(self) -> None:
+        policy = self.looping_policy()
+        report = self.resolve(policy, self.failing_snapshot(policy))
+        self.assertEqual(
+            [entry["route_id"] for entry in report["attempted_routes"]],
+            ["preferred-revisited", "fallback-detour"],
+        )
+        self.assertEqual(report["outcome"], "no_safe_route")
+
+    def test_the_loop_entry_follows_the_last_attempted_routes_entries(self) -> None:
+        policy = self.looping_policy()
+        report = self.resolve(policy, self.failing_snapshot(policy))
+        self.assertEqual(
+            self.codes(report),
+            [
+                "treatment_probe_failed",
+                "treatment_probe_failed",
+                "fallback_loop",
+                "no_safe_route",
+            ],
+        )
+
+    def test_the_loop_entry_joins_an_attempted_route_by_its_route_id(self) -> None:
+        policy = self.looping_policy()
+        report = self.resolve(policy, self.failing_snapshot(policy))
+        entry = self.only_diagnostic(report, "fallback_loop")
+        self.assertEqual(entry["severity"], "error")
+        self.assertEqual(entry["details"], {"route_id": "preferred-revisited"})
+        self.assertIn(
+            entry["details"]["route_id"],
+            [attempted["route_id"] for attempted in report["attempted_routes"]],
+        )
+        self.assertEqual(
+            entry["remediation"]["actions"], ["Remove the repeated route from the fallback chain."]
+        )
+
+    def test_the_revisited_route_is_not_consulted_a_second_time(self) -> None:
+        policy = self.looping_policy()
+        report = self.resolve(policy, self.failing_snapshot(policy))
+        self.assertEqual(
+            report["budgets"]["actual"],
+            {"probe_attempts": 2, "retries": 0, "candidate_routes": 2},
+        )
+
+    def test_a_chain_whose_earlier_route_resolves_never_reaches_the_revisit(self) -> None:
+        policy = self.looping_policy()
+        report = self.resolve(policy, snapshot_for(*_declared(policy)))
+        self.assertEqual(report["outcome"], "resolved")
+        self.assertEqual(self.codes(report), [])
+        self.assertEqual(self.module._pre_walk_violations(policy), [])
+
+    def test_a_loop_is_never_decided_by_the_pre_walk_pass(self) -> None:
+        policy = self.looping_policy()
+        self.assertEqual(self.module._pre_walk_violations(policy), [])
+        report = self.resolve(policy, self.failing_snapshot(policy))
+        self.assertNotEqual(report["attempted_routes"], [])
+
+    def test_a_loop_disqualifies_the_environment_from_release_claims(self) -> None:
+        policy = self.looping_policy()
+        report = self.resolve(policy, self.failing_snapshot(policy))
+        self.assertIs(report["release_claim_eligible"], False)
+
+
+class SubagentModelOverrideTests(SimulatorCaseMixin, unittest.TestCase):
+    """FR-024, FR-024a, FR-024b: two branches, one of them deliberately bounded.
+
+    The honored branch records the override as what will dispatch — a HYBRID tuple,
+    because the variable sets a model only and no documented subagent-effort override
+    exists. The allowlist-skip branch records only that the override did not take
+    effect: the documented fallback target there is the *inherited* model, which this
+    projection does not carry and must not gain, so naming a model that runs instead
+    would be inference. Neither branch moves ``outcome``, which follows the qualified
+    walk, and both set ``release_claim_eligible`` false.
+    """
+
+    def overridden(self, requested: str = "alias-forced") -> dict[str, str]:
+        return {OVERRIDE_VARIABLE: requested}
+
+    def forced(self, effort: str = "xhigh") -> dict[str, object]:
+        return route_of("preferred-honored", "alias-honored", "model-honored", effort)
+
+    def environment(self, *routes: dict[str, object], permitted: bool = True) -> dict[str, object]:
+        """A snapshot offering the declared routes plus the override's own target."""
+        target = route_of("route-forced", "alias-forced", "model-forced")
+        snapshot = snapshot_for(*routes, target)
+        offered = list(snapshot["available_models"])
+        return allowlisting(snapshot, *(offered if permitted else
+                                        [each for each in offered if each != "model-forced"]))
+
+    def test_an_honored_override_records_the_hybrid_effective_dispatch_tuple(self) -> None:
+        preferred = self.forced()
+        report = self.resolve(
+            policy_of(preferred), self.environment(preferred), self.overridden()
+        )
+        self.assertEqual(
+            report["effective_dispatch_tuple"],
+            {
+                "agent": "fixture-required-executor",
+                "alias": "alias-forced",
+                "resolved_model": "model-forced",
+                "effort": "xhigh",
+            },
+        )
+        self.assertEqual(report["override"]["tuple"], report["effective_dispatch_tuple"])
+        self.assertEqual(report["override"]["disposition"], "honored")
+        self.assertEqual(report["override"]["source"], OVERRIDE_VARIABLE)
+        self.assertEqual(report["override"]["requested_model"], "alias-forced")
+
+    def test_the_override_supplies_the_model_while_agent_and_effort_are_retained(self) -> None:
+        preferred = self.forced("medium")
+        spare = route_of("fallback-retained", "alias-retained", "model-retained", "low")
+        snapshot = self.environment(preferred, spare)
+        snapshot["available_models"] = ["model-forced", "model-retained"]
+        report = self.resolve(policy_of(preferred, (spare,)), snapshot, self.overridden())
+        self.assertEqual(report["effective_dispatch_tuple"]["effort"], "low")
+        self.assertEqual(report["effective_dispatch_tuple"]["agent"], "fixture-required-executor")
+        self.assertEqual(report["override"]["would_have_been"]["outcome"], "resolved")
+
+    def test_the_retained_effort_comes_from_the_preferred_route_when_none_was_selected(self) -> None:
+        preferred = self.forced("max")
+        snapshot = self.environment(preferred)
+        snapshot["exact_invocation_probe"]["model-honored"] = "failure"
+        report = self.resolve(policy_of(preferred), snapshot, self.overridden())
+        self.assertEqual(report["effective_dispatch_tuple"]["effort"], "max")
+
+    def test_an_override_never_promotes_a_no_safe_route_outcome_to_resolved(self) -> None:
+        preferred = self.forced()
+        snapshot = self.environment(preferred)
+        snapshot["exact_invocation_probe"]["model-honored"] = "failure"
+        report = self.resolve(policy_of(preferred), snapshot, self.overridden())
+        self.assertEqual(report["outcome"], "no_safe_route")
+        self.assertEqual(report["unresolved_agent"], "fixture-required-executor")
+        self.assertIn("effective_dispatch_tuple", report)
+        self.assertEqual(report["override"]["would_have_been"], {"outcome": "no_safe_route"})
+
+    def test_the_would_have_been_tuple_is_omitted_rather_than_present_as_null(self) -> None:
+        preferred = self.forced()
+        snapshot = self.environment(preferred)
+        snapshot["exact_invocation_probe"]["model-honored"] = "failure"
+        would_have_been = self.resolve(
+            policy_of(preferred), snapshot, self.overridden()
+        )["override"]["would_have_been"]
+        self.assertNotIn("effective_dispatch_tuple", would_have_been)
+        self.assertEqual(set(would_have_been), {"outcome"})
+
+    def test_the_would_have_been_block_records_the_qualified_resolution(self) -> None:
+        preferred = self.forced()
+        report = self.resolve(
+            policy_of(preferred), self.environment(preferred), self.overridden()
+        )
+        self.assertEqual(
+            report["override"]["would_have_been"],
+            {
+                "outcome": "resolved",
+                "effective_dispatch_tuple": {
+                    "agent": "fixture-required-executor",
+                    "alias": "alias-honored",
+                    "resolved_model": "model-honored",
+                    "effort": "xhigh",
+                },
+            },
+        )
+
+    def test_the_override_diagnostic_is_scoped_to_no_route_and_proceeds_at_warning(self) -> None:
+        preferred = self.forced()
+        report = self.resolve(
+            policy_of(preferred), self.environment(preferred), self.overridden()
+        )
+        entry = self.only_diagnostic(report, "unqualified_override")
+        self.assertEqual(entry["severity"], "warning")
+        self.assertNotIn("details", entry)
+        self.assertEqual(
+            entry["remediation"]["actions"],
+            ["Unset the unqualified subagent-model override before making release claims."],
+        )
+        self.assertIs(report["override"]["qualified"], False)
+
+    def test_a_qualified_override_is_in_force_without_the_unqualified_diagnostic(self) -> None:
+        preferred = route_of("preferred-matching", "alias-forced", "model-forced", "high")
+        snapshot = self.environment(preferred)
+        report = self.resolve(policy_of(preferred), snapshot, self.overridden())
+        self.assertIs(report["override"]["qualified"], True)
+        self.assertEqual(self.codes(report), [])
+        self.assertIs(report["release_claim_eligible"], False)
+
+    def test_the_override_entry_sits_between_the_walk_and_the_terminal_entry(self) -> None:
+        preferred = self.forced()
+        snapshot = self.environment(preferred)
+        snapshot["exact_invocation_probe"]["model-honored"] = "failure"
+        report = self.resolve(policy_of(preferred), snapshot, self.overridden())
+        self.assertEqual(
+            self.codes(report),
+            ["treatment_probe_failed", "unqualified_override", "no_safe_route"],
+        )
+
+    def test_an_override_is_independent_of_the_pre_walk_pass(self) -> None:
+        anchor = route_of("preferred-anchor", "alias-anchor", "model-anchor")
+        adjacent = unqualified_adjacent_route(
+            "fallback-adjacent", "alias-adjacent", "model-adjacent", adjacent_to="preferred-anchor"
+        )
+        policy = policy_of(anchor, (adjacent,))
+        report = self.resolve(policy, self.environment(anchor, adjacent), self.overridden())
+        self.assertEqual(
+            self.codes(report),
+            ["unqualified_adjacent_model", "unqualified_override", "no_safe_route"],
+        )
+        self.assertEqual(report["attempted_routes"], [])
+        self.assertEqual(report["effective_dispatch_tuple"]["resolved_model"], "model-forced")
+
+    def test_any_override_in_force_disqualifies_the_environment(self) -> None:
+        preferred = self.forced()
+        for label, permitted in (("honored", True), ("skipped", False)):
+            with self.subTest(branch=label):
+                report = self.resolve(
+                    policy_of(preferred),
+                    self.environment(preferred, permitted=permitted),
+                    self.overridden(),
+                )
+                self.assertEqual(report["outcome"], "resolved")
+                self.assertIs(report["release_claim_eligible"], False)
+
+    # --- the allowlist-skip branch (FR-024b) ---
+
+    def test_an_allowlist_excluded_override_is_skipped_and_records_no_tuple(self) -> None:
+        preferred = self.forced()
+        report = self.resolve(
+            policy_of(preferred),
+            self.environment(preferred, permitted=False),
+            self.overridden(),
+        )
+        self.assertEqual(report["override"]["disposition"], "skipped_by_allowlist")
+        self.assertNotIn("tuple", report["override"])
+
+    def test_the_skipped_branch_names_no_model_that_runs_instead(self) -> None:
+        preferred = self.forced()
+        report = self.resolve(
+            policy_of(preferred),
+            self.environment(preferred, permitted=False),
+            self.overridden(),
+        )
+        self.assertEqual(
+            set(report["override"]),
+            {"source", "requested_model", "disposition", "qualified", "would_have_been"},
+        )
+
+    def test_the_report_tuple_follows_the_qualified_walk_on_the_skipped_branch(self) -> None:
+        preferred = self.forced()
+        report = self.resolve(
+            policy_of(preferred),
+            self.environment(preferred, permitted=False),
+            self.overridden(),
+        )
+        self.assertEqual(
+            report["effective_dispatch_tuple"],
+            {
+                "agent": "fixture-required-executor",
+                "alias": "alias-honored",
+                "resolved_model": "model-honored",
+                "effort": "xhigh",
+            },
+        )
+
+    def test_the_allowlist_gate_is_independent_of_fixture_declared_qualification(self) -> None:
+        preferred = route_of("preferred-matching", "alias-forced", "model-forced", "high")
+        spare = route_of("fallback-permitted", "alias-permitted", "model-permitted", "high")
+        snapshot = self.environment(preferred, spare, permitted=False)
+        snapshot["available_models"] = ["model-permitted"]
+        report = self.resolve(policy_of(preferred, (spare,)), snapshot, self.overridden())
+        self.assertIs(report["override"]["qualified"], True)
+        self.assertEqual(report["override"]["disposition"], "skipped_by_allowlist")
+        self.assertEqual(self.codes(report), ["preferred_model_unavailable"])
+
+    def test_a_skipped_override_over_a_walk_that_resolved_nothing_fails_closed(self) -> None:
+        preferred = self.forced()
+        snapshot = self.environment(preferred, permitted=False)
+        snapshot["exact_invocation_probe"]["model-honored"] = "failure"
+        with self.assertRaises(self.module.RouteFallbackError):
+            self.resolve(policy_of(preferred), snapshot, self.overridden())
+
+    def test_the_inherit_sentinel_is_the_no_override_state_rather_than_an_override(self) -> None:
+        preferred = self.forced()
+        snapshot = self.environment(preferred)
+        with self.assertRaises(self.module.RouteFallbackError):
+            self.resolve(policy_of(preferred), snapshot, self.overridden(INHERIT_SENTINEL))
+        report = self.resolve(policy_of(preferred), snapshot, None)
+        self.assertNotIn("override", report)
+        self.assertIs(report["release_claim_eligible"], True)
+
+    def test_an_unrecognised_override_mechanism_fails_closed(self) -> None:
+        preferred = self.forced()
+        snapshot = self.environment(preferred)
+        for label, overrides in (
+            ("another variable", {"CLAUDE_CODE_MAIN_MODEL": "model-forced"}),
+            ("no variable at all", {}),
+            ("an empty value", {OVERRIDE_VARIABLE: ""}),
+        ):
+            with self.subTest(overrides=label):
+                with self.assertRaises(self.module.RouteFallbackError):
+                    self.resolve(policy_of(preferred), snapshot, overrides)
+
+    def test_a_full_model_id_override_resolves_to_itself(self) -> None:
+        preferred = self.forced()
+        report = self.resolve(
+            policy_of(preferred), self.environment(preferred), self.overridden("model-forced")
+        )
+        self.assertEqual(report["override"]["requested_model"], "model-forced")
+        self.assertEqual(
+            report["effective_dispatch_tuple"]["alias"],
+            report["effective_dispatch_tuple"]["resolved_model"],
+        )
+
+
+class OptionalHelperPathTests(SimulatorCaseMixin, unittest.TestCase):
+    """FR-025, FR-025a, FR-025b: a structured field, and a counter that makes it checkable.
+
+    Helper unavailability is an environment condition, not a policy-authoring defect,
+    so it is never a diagnostic and neither closed enum gains a member for it. The
+    required ``probe_attempts`` is what turns "not consulted" from a boolean the
+    simulator asserts about itself into a measurable zero: an implementation could
+    otherwise probe every helper route and still write ``false`` without changing a
+    pinned byte. The counter is disjoint from the agent's own, and the attempt list
+    is the corroborating evidence a counter alone cannot supply.
+    """
+
+    def required(self) -> dict[str, object]:
+        return route_of("preferred-required", "alias-required", "model-required")
+
+    def helper_routes(self) -> tuple[dict[str, object], dict[str, object]]:
+        return (
+            route_of("helper-preferred", "alias-helper-primary", "model-helper-primary", "medium"),
+            route_of("helper-fallback", "alias-helper-spare", "model-helper-spare", "medium"),
+        )
+
+    def with_helper(self) -> dict[str, object]:
+        policy = policy_of(self.required())
+        policy["optional_helper"] = helper_declaration(*self.helper_routes())
+        return policy
+
+    def unavailable(self) -> dict[str, object]:
+        """A snapshot binding every alias but offering only the required agent's model."""
+        required = self.required()
+        return snapshot_for(required, *self.helper_routes(), available=("model-required",))
+
+    def available(self) -> dict[str, object]:
+        return snapshot_for(self.required(), *self.helper_routes())
+
+    def test_an_unavailable_helper_is_not_consulted_and_the_no_helper_path_is_validated(
+        self,
+    ) -> None:
+        report = self.resolve(self.with_helper(), self.unavailable())
+        self.assertEqual(report["optional_helper"], dict(NO_HELPER_PATH))
+
+    def test_the_required_agent_still_resolves_when_the_helper_is_unavailable(self) -> None:
+        report = self.resolve(self.with_helper(), self.unavailable())
+        self.assertEqual(report["outcome"], "resolved")
+        self.assertEqual(report["effective_dispatch_tuple"]["resolved_model"], "model-required")
+        self.assertIs(report["release_claim_eligible"], True)
+
+    def test_no_attempted_route_entry_names_a_helper_route(self) -> None:
+        report = self.resolve(self.with_helper(), self.unavailable())
+        helper_ids = {str(route["route_id"]) for route in self.helper_routes()}
+        attempted = {str(entry["route_id"]) for entry in report["attempted_routes"]}
+        self.assertEqual(attempted & helper_ids, set())
+        self.assertEqual(attempted, {"preferred-required"})
+
+    def test_helper_unavailability_emits_no_diagnostic_entry(self) -> None:
+        report = self.resolve(self.with_helper(), self.unavailable())
+        self.assertEqual(report["diagnostics"], [])
+        for vocabulary in (self.module.RESOLUTION_CODES, self.module.POLICY_VIOLATION_CODES):
+            self.assertNotIn("helper_unavailable", vocabulary)
+
+    def test_an_available_helper_is_consulted_with_a_non_zero_probe_count(self) -> None:
+        report = self.resolve(self.with_helper(), self.available())
+        helper = report["optional_helper"]
+        self.assertIs(helper["consulted"], True)
+        self.assertIs(helper["no_helper_path_validated"], False)
+        self.assertGreaterEqual(helper["probe_attempts"], 1)
+
+    def test_the_helper_counter_is_disjoint_from_the_agents_own_counter(self) -> None:
+        report = self.resolve(self.with_helper(), self.available())
+        self.assertEqual(report["budgets"]["actual"]["probe_attempts"], 1)
+        self.assertEqual(report["optional_helper"]["probe_attempts"], 1)
+        unavailable = self.resolve(self.with_helper(), self.unavailable())
+        self.assertEqual(unavailable["budgets"]["actual"]["probe_attempts"], 1)
+        self.assertEqual(unavailable["optional_helper"]["probe_attempts"], 0)
+
+    def test_a_policy_declaring_no_helper_reports_the_third_state(self) -> None:
+        report = self.resolve(policy_of(self.required()), snapshot_for(self.required()))
+        self.assertEqual(report["optional_helper"], dict(NO_HELPER_PATH))
+
+    def test_the_helper_walk_stops_at_its_first_compatible_route(self) -> None:
+        policy = self.with_helper()
+        report = self.resolve(policy, self.available())
+        self.assertEqual(report["optional_helper"]["probe_attempts"], 1)
+
+    def test_a_helper_route_reaching_consultation_unpinned_fails_closed(self) -> None:
+        policy = policy_of(self.required())
+        policy["optional_helper"] = helper_declaration(
+            inheriting_route("helper-inheriting", "alias-helper-inheriting")
+        )
+        with self.assertRaises(self.module.RouteFallbackError):
+            self.resolve(policy, snapshot_for(self.required()))
+
+
+class AppendedScenarioCaseTests(unittest.TestCase):
+    """FR-018, FR-019c, FR-024b, FR-025, FR-033b: what the appended cases pin.
+
+    These read the committed corpus rather than building fixtures, because the
+    property under test is what the *pinned* cases claim. Byte-identical replay is
+    asserted elsewhere over every case; what is asserted here is that the appended
+    cases cover the branches one case cannot cover alone — the two opposite override
+    dispositions, the empty attempt array of a pre-walk rejection against the
+    populated one of an in-walk loop, and the one policy that declares a helper.
+    """
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_route_fallback, "claude_route_fallback is not importable")
+        self.module = claude_route_fallback
+        self.cases = {case["case_id"]: case for case in self.module.load_corpus()["cases"]}
+
+    def pinned(self, case_id: str) -> dict[str, object]:
+        self.assertIn(case_id, self.cases, f"{case_id} is not committed to the corpus")
+        return self.cases[case_id]["expected_report"]
+
+    def test_the_appended_cases_sit_at_the_tail_in_declaration_order(self) -> None:
+        declared = list(self.cases)
+        self.assertEqual(declared[: len(SLICE_ONE_CASE_IDS)], list(SLICE_ONE_CASE_IDS))
+        self.assertEqual(
+            declared[len(SLICE_ONE_CASE_IDS) : len(SLICE_ONE_CASE_IDS) + len(APPENDED_CASE_IDS)],
+            list(APPENDED_CASE_IDS),
+        )
+
+    def test_the_three_pre_walk_cases_record_no_attempts_and_no_spend(self) -> None:
+        for case_id in (
+            "unqualified-adjacent-model",
+            "generic-agent-substitution",
+            "silent-inherit-materialization",
+        ):
+            with self.subTest(case=case_id):
+                report = self.pinned(case_id)
+                self.assertEqual(report["attempted_routes"], [])
+                self.assertEqual(report["budgets"]["actual"], dict(UNSPENT_BUDGET))
+                self.assertIs(report["release_claim_eligible"], False)
+                self.assertEqual(report["outcome"], "no_safe_route")
+                self.assertEqual(report["optional_helper"], dict(NO_HELPER_PATH))
+
+    def test_the_loop_case_records_the_routes_attempted_before_the_revisit(self) -> None:
+        report = self.pinned("fallback-loop")
+        attempted = [entry["route_id"] for entry in report["attempted_routes"]]
+        self.assertEqual(len(attempted), len(set(attempted)))
+        self.assertNotEqual(attempted, [])
+        loop = [entry for entry in report["diagnostics"] if entry["code"] == "fallback_loop"]
+        self.assertEqual(len(loop), 1)
+        self.assertIn(loop[0]["details"]["route_id"], attempted)
+
+    def test_a_structural_rejection_case_takes_the_bounded_analyst_as_its_subject(self) -> None:
+        subjects = {
+            self.cases[case_id]["policy"]["agent"]["role_class"]
+            for case_id in APPENDED_CASE_IDS[:4]
+        }
+        self.assertIn("bounded_analyst", subjects)
+
+    def test_the_two_override_cases_pin_opposite_dispositions(self) -> None:
+        honored = self.pinned("unqualified-override")["override"]
+        skipped = self.pinned("override-skipped-by-allowlist")["override"]
+        self.assertEqual(honored["disposition"], "honored")
+        self.assertEqual(skipped["disposition"], "skipped_by_allowlist")
+        self.assertIs(honored["qualified"], False)
+        self.assertIn("tuple", honored)
+        self.assertNotIn("tuple", skipped)
+        for report in (self.pinned("unqualified-override"),
+                       self.pinned("override-skipped-by-allowlist")):
+            self.assertIs(report["release_claim_eligible"], False)
+            self.assertIn("effective_dispatch_tuple", report)
+
+    def test_the_two_override_cases_declare_the_same_variable(self) -> None:
+        for case_id in ("unqualified-override", "override-skipped-by-allowlist"):
+            with self.subTest(case=case_id):
+                overrides = self.cases[case_id]["overrides"]
+                self.assertEqual(set(overrides), {OVERRIDE_VARIABLE})
+                self.assertEqual(self.pinned(case_id)["override"]["source"], OVERRIDE_VARIABLE)
+
+    def test_the_override_allowlists_differ_on_the_requested_target(self) -> None:
+        honored = self.cases["unqualified-override"]
+        skipped = self.cases["override-skipped-by-allowlist"]
+        for case in (honored, skipped):
+            requested = case["overrides"][OVERRIDE_VARIABLE]
+            target = case["snapshot"]["alias_bindings"].get(requested, requested)
+            permitted = target in case["snapshot"]["available_models_allowlist"]
+            expected = case["expected_report"]["override"]["disposition"] == "honored"
+            with self.subTest(case=case["case_id"]):
+                self.assertIs(permitted, expected)
+
+    def test_the_helper_case_is_the_only_case_declaring_a_policy_helper(self) -> None:
+        declaring = [
+            case_id
+            for case_id, case in self.cases.items()
+            if "optional_helper" in case["policy"]
+        ]
+        self.assertEqual(declaring, ["helper-unavailable-continues"])
+
+    def test_the_helper_case_pins_a_measurable_zero_and_a_resolved_required_agent(self) -> None:
+        case = self.cases["helper-unavailable-continues"]
+        report = case["expected_report"]
+        self.assertEqual(report["optional_helper"], dict(NO_HELPER_PATH))
+        self.assertEqual(report["outcome"], "resolved")
+        helper = case["policy"]["optional_helper"]
+        helper_ids = {helper["preferred_route"]["route_id"]} | {
+            route["route_id"] for route in helper["fallback_routes"]
+        }
+        attempted = {entry["route_id"] for entry in report["attempted_routes"]}
+        self.assertEqual(attempted & helper_ids, set())
+        self.assertEqual(helper["agent"]["role_class"], "optional_helper")
+
+    def test_the_helper_snapshot_offers_none_of_the_helpers_route_models(self) -> None:
+        case = self.cases["helper-unavailable-continues"]
+        helper = case["policy"]["optional_helper"]
+        offered = set(case["snapshot"]["available_models"])
+        for route in (helper["preferred_route"], *helper["fallback_routes"]):
+            with self.subTest(route=route["route_id"]):
+                self.assertNotIn(route["resolved_model"], offered)
+
+    def test_each_of_the_three_role_classes_is_a_subject_or_a_declared_helper(self) -> None:
+        covered: set[str] = set()
+        for case in self.cases.values():
+            covered.add(case["policy"]["agent"]["role_class"])
+            helper = case["policy"].get("optional_helper")
+            if helper is not None:
+                covered.add(helper["agent"]["role_class"])
+        self.assertEqual(covered, set(SYNTHETIC_ROLE_CLASSES))
+
+
+def _declared(policy: dict[str, object]) -> tuple[dict[str, object], ...]:
+    """The policy's declared routes, deduplicated by ``route_id`` in declared order.
+
+    Deduplicated because a looping chain declares the same route twice and the
+    snapshot builder would otherwise carry a repeated model.
+    """
+    seen: dict[str, dict[str, object]] = {}
+    for route in (policy["preferred_route"], *policy["fallback_routes"]):
+        seen.setdefault(str(route["route_id"]), route)
+    return tuple(seen.values())
+
+
 TEST_CASES = (
     CommittedContractIdentityTests,
     SimulatorSerializationSurfaceTests,
@@ -1818,6 +2735,11 @@ TEST_CASES = (
     InlineNegativeValidationTests,
     CorpusEnvelopeTests,
     FixtureHygieneTests,
+    StructuralPreWalkTests,
+    FallbackLoopTests,
+    SubagentModelOverrideTests,
+    OptionalHelperPathTests,
+    AppendedScenarioCaseTests,
 )
 
 
