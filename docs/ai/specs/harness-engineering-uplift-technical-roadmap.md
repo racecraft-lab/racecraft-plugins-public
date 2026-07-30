@@ -22,12 +22,13 @@ lifecycle and indexing-interoperability lane.
 
 ## Roadmap Overview
 
-The feature is decomposed into **14 specifications** across **9 spec dependency
+The feature is decomposed into **15 specifications** across **9 spec dependency
 tiers**. A separate follow-on scaffold lane turns accepted roadmap items into
 reviewable implementation branches.
 
 | Tier | Specs | Purpose | Parallelization |
 |---|---|---|---|
+| 1 | HRNS-015 | Repair six observed autopilot and PR-emission defects | Fully independent — no HRNS dependency in either direction, so it can run at any point, including first |
 | 1 | HRNS-001 | Inventory harness surfaces and classify SpecKit Pro gaps | Sequential foundation |
 | 2 | HRNS-002, HRNS-003 | Durable context/state and helper/tool contract foundations | Parallel after HRNS-001 |
 | 3 | HRNS-004, HRNS-005 | Permission/sandbox controls and eval readiness | Parallel after HRNS-003 where needed |
@@ -256,6 +257,7 @@ HRNS-002 + HRNS-005 + HRNS-006 + HRNS-009 + HRNS-010 + HRNS-011 + HRNS-012 + HRN
 | HRNS-012 | Knowledge Conformance, Health, and Drift Maintenance | Pending | - | Blocked by HRNS-005, HRNS-006, HRNS-009, and HRNS-010 |
 | HRNS-013 | Code-Intelligence and Vector-Index Interoperability | Pending | - | Blocked by HRNS-003, HRNS-005, HRNS-006, HRNS-009, and HRNS-010 |
 | HRNS-014 | External OKF Exchange and Reviewable Reconciliation | Pending | - | Blocked by HRNS-004, HRNS-006, HRNS-007, HRNS-009, HRNS-010, and HRNS-012 |
+| HRNS-015 | Autopilot and PR-Emission Defect Repair | Ready | - | Independent; six observed defects with reproductions, no dependency on other HRNS specs |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -1324,6 +1326,98 @@ explicit decisions -> isolated proposal is one complete safe exchange boundary.
   preserve a bounded diagnostic, resumable decision packet, or cleanup path.
 - Claude Code and Codex parity fixtures prove equivalent validation,
   classifications, proposals, approval boundaries, and evidence.
+
+---
+
+### HRNS-015: Autopilot and PR-Emission Defect Repair
+
+**Priority:** P1 | **Depends On:** none | **Enables:** none
+
+**Goal:** Fix six defects observed during a live autopilot run, each with a
+reproduction and a `file:line` cause, so the documented happy path stops
+producing a failing pull request.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: 150 |
+Production files: 6 |
+Total files: 12 |
+Budget result: within budget
+
+These are not speculative hardening items. Every one was hit while running
+ART-001 to a merged-ready PR, and the evidence is recorded in
+`docs/ai/specs/.process/ART-001-workflow.md` under "Raised against speckit-pro"
+and in that spec's retrospective.
+
+**Scope:**
+
+- **The generated PR-packet body cannot satisfy a host repository's release-note
+  gate.** `required_headings()` fixes eight headings and the generator emits no
+  fenced block of any kind, while this repository requires `feat`/`fix` bodies to
+  carry exactly one non-empty ` ```release-note ` fence. The documented path —
+  emit packet, then open the PR from it — therefore fails a required check.
+  Either add a consumer-facing release-note field that renders as that fence, or
+  document a host-repository body hook. This is the load-bearing defect: it took
+  a live PR red.
+- **No post-implementation checklist entry is self-verifying.** The twelve-entry
+  list is prose in a section separate from the execution loop, so nothing fails
+  when a step is skipped. In the observed run, eleven entries were executed while
+  all twelve stayed unmarked and two were never executed at all; only an operator
+  reading the task list surfaced it. Add a terminal step that refuses to report
+  completion while any prior entry is unmarked.
+- **`validate-pr-packet-write`'s apply mode is unreachable where packets are
+  untracked.** It refuses on a dirty worktree, and a freshly emitted packet is by
+  definition untracked until committed. In a repository that never commits
+  packets there is no sequence that reaches a clean apply. Clarify the contract,
+  or accept the refusal as the success path for that case.
+- **The orchestrator loop permits a correct-but-halted turn.** The loop is
+  written as a procedure and nothing states that a turn must not end while work
+  remains. Observed twice in one run, in the identical shape: finish batch,
+  verify, commit, narrate, end turn with nothing dispatched. A rule such as
+  "never emit a user-facing turn while work remains unless an agent is live"
+  would close it.
+- **A subagent can create an agent team and leave a teammate running.** One did;
+  it outlived its parent by roughly an hour and three-quarters, and only the main
+  session could reap it. Executors that form teams need an explicit teardown
+  obligation.
+- **The gap-counting helper matches `[Gap]` literally.** Markers written as
+  `[Gap, <ref>]` — the style the skill's own example uses — under-report
+  silently. One checklist domain reported 1 marker against 20 real ones until
+  rewritten.
+
+**Out of Scope:**
+
+- Redesigning the PR-packet schema or the post-implementation sequence. This spec
+  repairs observed defects; structural redesign belongs to HRNS-006 (packets) and
+  HRNS-007 (orchestration).
+- Changing any host repository's release-note policy. The gate is correct; the
+  generator is what cannot satisfy it.
+
+**Key Files:**
+
+- `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` - `required_headings()`
+  and the packet body generator; also the write-validation dirty-worktree guard.
+- `speckit-pro/skills/speckit-autopilot/SKILL.md` - the execution loop that
+  permits a halted turn.
+- `speckit-pro/skills/speckit-autopilot/references/post-implementation.md` - the
+  twelve-entry list that verifies nothing.
+- `speckit-pro/agents/` - executor definitions needing a team-teardown
+  obligation.
+- `docs/ai/specs/.process/ART-001-workflow.md` - the observed evidence for all
+  six, with reproductions.
+
+**Done When:**
+
+- A packet emitted by the documented path produces a body that passes a
+  host-repository release-note gate, proven by a fixture carrying the required
+  fence, or the host-body hook is documented and exercised.
+- A fixture proves the post-implementation sequence fails, rather than reports
+  success, when any entry is unexecuted.
+- The packet write-validation contract states which outcome is success when
+  packets are untracked, with a fixture for that case.
+- The orchestrator loop carries an explicit non-halting rule, and a Layer 5 or
+  equivalent check proves executors that form teams also tear them down.
+- The gap counter matches `[Gap` rather than `[Gap]`, with a fixture covering the
+  `[Gap, <ref>]` form that previously under-reported.
 
 ---
 
