@@ -572,7 +572,9 @@ These prohibitions do not touch the attribution header described under
 text are not resource-loading positions.
 
 **A script body is scanned in full, and so is markup you build as a string.**
-Every string literal inside a `script` element is read: a static
+Every string literal inside a `script` element is scanned for URL-shaped values —
+a lexical scan, not a JavaScript parse, so treat it as a floor rather than a
+guarantee of full literal coverage. What it reaches includes a static
 `import … from "…"`, its bare and `export … from` forms, an import map, a URL
 bound to a variable, and an assignment such as `img.src = "…"` are all
 references, not just an argument written inside a recognised call. And markup

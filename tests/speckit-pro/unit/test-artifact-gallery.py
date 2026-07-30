@@ -3616,7 +3616,15 @@ CALL_ARGUMENT_WINDOW = 400
 # misses those, and missing the end tag means the body is not scanned at all:
 # a one-token evasion against the whole script pass. ``\b`` is what keeps
 # ``</scriptfoo>`` from matching, since that is not an end tag.
-_SCRIPT_BODY_RE = re.compile(r"(?is)(<script\b[^>]*>)(.*?)(</script\b[^>]*>)")
+# The start tag allows ``>`` inside a quoted attribute value, which is valid HTML
+# — ``<script type="text/plain;x=a>b">`` is one tag, not a tag plus body. Stopping
+# at the first ``>`` put the tail of the start tag into the body, which misparsed
+# markup literals and mangled the start tag when blanking. Detection stayed
+# conservative either way, because the body was a superset; correctness of the
+# delimiter is the point, and the end-tag mistake above is what argues for it.
+_SCRIPT_BODY_RE = re.compile(
+    r"(?is)(<script\b(?:[^>\"']|\"[^\"]*\"|'[^']*')*>)(.*?)(</script\b[^>]*>)"
+)
 
 # XML namespace identifiers. These are compared as strings by a parser and are
 # never fetched, so a namespace constant assigned in script is not a reference.
