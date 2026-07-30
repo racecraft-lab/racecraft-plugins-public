@@ -750,9 +750,54 @@ Focus on CAR-005 Model Availability, Fallback, and Recovery Simulation requireme
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
 | data-integrity | 57 | 12 found / 12 closed / 0 remaining | New FR-014a, FR-015a, FR-019b; revised FR-006, FR-027, FR-033a, Assumptions; data-model.md §2–§5 |
-| error-handling | | | |
+| error-handling | 48 | 29 found / 29 closed / 0 remaining | New FR-012b, FR-012c, FR-019c, FR-024a, FR-025a, FR-026a, FR-029a; amended FR-012, FR-013a, FR-028, FR-032a, FR-033a, SC-001, SC-009, SC-010, 2 Edge Cases; data-model.md §3 |
 | llm-integration | | | |
 | **Total** | | | |
+
+#### error-handling — 29 gaps in 8 clusters, all closed; 3 items escalated to consensus
+
+Output at `specs/car-005-availability-fallback-recovery/checklists/error-handling.md`.
+This domain found roughly 2.4× the gaps of data-integrity, which is expected — the whole
+feature *is* error handling, so this domain's focus overlaps the spec's core.
+
+| Cluster | The defect | Fix |
+|---------|-----------|-----|
+| Structural-rejection timing and report validity (6 gaps) | "Pre-pass" appeared only in FR-033a's slice cell and FR-033d's *module-structure* argument, while FR-001 ("needs the walk state") and FR-020 ("already-attempted") place `fallback_loop` *inside* the walk. Worse, `attempted_routes` carried `minItems: 1`, so a pre-walk rejection had **no valid report representation at all**. | New **FR-019c** partitions the four codes (three pre-walk, `fallback_loop` in-walk) and specifies the full report; `attempted_routes` relaxed to `minItems: 0` with an empty-iff-pre-walk biconditional. **Escalated to consensus** — see below. |
+| Emission determinism (6) | The Edge Case demanded determinism without supplying an order — its own phrase "and in what order" presupposes plural entries. | New **FR-012b**: one diagnostic per failed check, inter-code order = FR-005 declaration order, three-stage array order, exactly one terminal `no_safe_route` last, plus an explicit statement that the sub-reason ordering is **orthogonal** — conflating the two is how this stayed hidden. |
+| Budget semantics (6) | No counting unit for any of the three counters. `fan_out` had **no referent at all** in this feature and `retries` had **no reachable meaning** against a static snapshot. FR-026 was therefore unfalsifiable. | New **FR-026a** defines all three units and pins `no_safe_route` for all classes. **Escalated to consensus** — the two contested definitions are the executor's own construction. |
+| Retry exhaustion (2) | The roadmap mandates "prove retry exhaustion", but FR-028 said only "a budget" and the user story says "probe **or** retry". | FR-028 binds the retry class specifically, declares all three at 1, and records that neither other class is a sole at-cap class. |
+| Override interaction (3) | Unclear `release_claim_eligible` when an override coexists with no-safe-route, and no semantics for a would-have-been tuple when there is no qualified resolution to record. | New **FR-024a**: `outcome` follows the qualified walk; `release_claim_eligible` written as a disqualifier list with `true` residual; the would-have-been tuple is **omitted, not null**, matching this directory's false-forcing-only asymmetry. |
+| Helper measurability (3) | `consulted: false` was **self-asserted** — an implementation could probe the helper and still write `false`. | New **FR-025a**: a required `probe_attempts` that must be 0, disjoint from the agent's counter, plus no helper route in `attempted_routes`. |
+| Joinability (1) | Two arrays with no join key; position cannot serve because FR-012b emits a variable diagnostic count per route. | New **FR-029a**: `details.route_id` required on all eight route-scoped codes. |
+| Envelope determinism (2) | No per-code severity and no `source` value rule — both unpinned bytes in a byte-compared corpus. | New **FR-012c**: `severity` a function of `code`; `source` pinned with `const`. **Escalated to consensus** — external practice is genuinely split. |
+
+**The executor caught three defects in its own fixes** via adversarial re-read, in the
+same loop: `exhausted_budget` started as a single value naming "the" terminating class,
+which is not observable because FR-028's case reaches all three caps and no budget is
+causally privileged (rewritten as an at-cap **array**); SC-009 still promised the
+singular form (reconciled); and the `details`-requiredness fix reached only **4 of the 8
+codes** it cited, because `policyViolationDiagnostic` gained no branches — so the
+`route_id` join would have held for resolution rejections and failed **silently** for
+policy-authoring ones. Now 8 branches, 4 per `$defs`.
+
+**Verification:** closed in 1 loop. Layer 1 1428/1428 and Layer 4 3731/3731, both exactly
+matching the pre-change baseline. Markers 0. Privacy scan 10/10, no home paths in any
+artifact.
+
+**Side effects:** 49 → **56** distinct FR identifiers (16 → 23 lettered). Advisory
+`estimate-spec-size` 1,185 → 1,290, still 3 suggested slices, so the two-slice decision
+is unaffected. **Slice seam unaffected** — every added field lands in the slice-1 report
+schema, so slice 2 still modifies no schema file and both FR-033b's guarantee and the
+directory's never-edited-after-introduction invariant hold. Data-integrity's 12 closures
+verified unreversed.
+
+**A second marker-gate blind spot, recorded alongside the first.** `count-markers`
+matches a **bare** `[Gap]` token only — a composite marker such as `[Gap, Spec §X]`
+silently counts as zero. This is the same literal-token brittleness already recorded for
+the clarification-marker gate at the Specify phase. The executor worked around it by
+writing the marker bare and the traceability bracket separately. Both blind spots live in
+the same helper and would be fixed by the same change, which remains out of CAR-005's
+scope (FR-030, zero production files).
 
 #### data-integrity — the 12 gaps resolved to 7 root causes
 

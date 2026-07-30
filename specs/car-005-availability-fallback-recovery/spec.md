@@ -138,11 +138,15 @@ cohort specs inherit proven rejection semantics.
 - A route is rejected for more than one reason at once (for example, the model
   is present but the effort is unsupported *and* the exact-invocation probe
   failed): the report must be deterministic about which diagnostics are emitted
-  and in what order, so replay stays byte-identical.
+  and in what order, so replay stays byte-identical. **FR-012b pins both** — one
+  diagnostic per failed check, sequenced by the FR-005 declaration order — so this
+  example resolves to `effort_unsupported` then `treatment_probe_failed`.
 - An unqualified override is present *and* no qualified route resolves: the
   report must still record the override as effective, still mark the environment
   excluded from release claims, and still report the would-have-been outcome as
-  `no_safe_route`.
+  `no_safe_route`. FR-024a pins the three consequences: `outcome` follows the
+  qualified walk rather than the override, `release_claim_eligible` is `false`, and the
+  would-have-been dispatch tuple is **omitted** rather than `null`.
 - The optional helper is unavailable *and* a required agent is also unresolvable:
   helper unavailability must not mask or soften the required agent's
   `no_safe_route` outcome.
@@ -287,8 +291,18 @@ cohort specs inherit proven rejection semantics.
   runner, which always emits the first five (substituting default remediation when the
   caller passes none) and emits `details` only when non-empty. `severity` is closed to
   `info`, `warning`, `error`, matching the runner's own diagnostic validator. The same
-  `if`/`then` idiom MUST make `details` required for `preferred_model_unavailable`
-  (FR-006) and `effort_unsupported` (FR-007). `remediation` is a field of each
+  `if`/`then` idiom MUST make `details` required for **every one of the eight
+  route-scoped codes FR-029a names**, and MUST additionally require `route_id` *within*
+  `details` on each — a branch that requires only the container leaves the key itself
+  optional, which is no key at all. That is **eight branches, four in each diagnostic
+  `$defs`**: in `resolutionDiagnostic` for `preferred_model_unavailable` (FR-006),
+  `effort_unsupported` (FR-007), `capability_probe_unavailable` (FR-008), and
+  `treatment_probe_failed` (FR-009); in `policyViolationDiagnostic` for `fallback_loop`
+  (FR-020), `unqualified_adjacent_model` (FR-021), `generic_agent_substitution`
+  (FR-022), and `silent_inherit_materialization` (FR-023). The first two additionally
+  require the payload FR-006 and FR-007 name. `unqualified_override` is the one member
+  of either enum that takes no branch: it is an environment condition scoped to no
+  route (FR-019c), so it has no route key to carry. `remediation` is a field of each
   diagnostic entry, **never** a top-level report field — hoisting it would create the
   second dialect this requirement forbids.
   Note the trap: a different diagnostics dialect exists elsewhere in the tree (an
@@ -321,6 +335,88 @@ cohort specs inherit proven rejection semantics.
   `Roll back to the previous plugin release.` **verbatim**, which is the imperative
   rendering of the rollback guidance the roadmap states in both the CAR-005 scope and
   the downstream live-UAT scope. [US1] [US2]
+- **FR-012b**: Diagnostic emission MUST be **pinned, not merely required to be
+  deterministic**. The Edge Cases entry for a route rejected on more than one ground
+  obliges the report to be deterministic about "which diagnostics are emitted and in
+  what order"; that phrasing presupposes an order without supplying one, so replay
+  byte-identity (FR-014) rests on a convention no artifact states. Four rules fix it.
+  [US1] [US2]
+  - **Cardinality per route: every applicable reason, not the first.** A route that
+    fails more than one independent check MUST emit one diagnostic per failed check.
+    Emitting only the highest-precedence reason would discard reportable input classes
+    and would make the no-safe-route report's "each rejection reason" (FR-029)
+    incomplete. This is also the repository's own accumulating precedent —
+    `claude_policy_controls.py:2282-2298` collects a breach finding for **every**
+    exceeded budget dimension of one record and raises with all of them, rather than
+    on the first — and it is the convergent external practice: `google.rpc.BadRequest`
+    types `field_violations` as a repeated field describing all violations in a
+    request, and RFC 9457's `errors` extension array reports multiple same-category
+    problems in one response.
+  - **Inter-code order: the FR-005 declaration order.** Within one attempted route,
+    diagnostics MUST be emitted in the order the resolution enum declares its members —
+    `preferred_model_unavailable`, `effort_unsupported`, `capability_probe_unavailable`,
+    `treatment_probe_failed`. The Edge Cases example (effort unsupported *and*
+    exact-invocation probe failed) therefore emits `effort_unsupported` then
+    `treatment_probe_failed`, and a reviewer can derive that sequence from the
+    requirements alone. Declaration order is chosen over the alternative in-tree idiom,
+    the alphabetical `sorted(set(reasons))` at `claude_policy_controls.py:2524`, because
+    sorting scrambles a precedence that carries meaning and cannot be made structural.
+  - **This order is separate from the FR-006 sub-reason order and neither supplies the
+    other.** The sub-reason order is *intra-diagnostic*: it selects the single
+    `details.sub_reason` value a `preferred_model_unavailable` entry carries. The order
+    here is *inter-diagnostic*: it sequences whole entries. Both MUST be structural in
+    the simulator (a staged call graph, per FR-006) rather than a comment; conflating
+    them would leave the inter-code sequence unpinned while appearing to be covered.
+  - **Whole-array order.** `diagnostics` MUST be ordered as three stages: first the
+    policy-document violations FR-019c assigns to the pre-walk pass, ordered by the
+    declared route position they concern and then by the FR-019 declaration order;
+    second, for each `attempted_routes` entry in attempt order, that route's
+    diagnostics in the inter-code order above, with `fallback_loop` emitted after the
+    last attempted route's entries because it is detected on reaching the revisit;
+    third `unqualified_override` if present, and last **exactly one**
+    `no_safe_route` entry when the outcome is `no_safe_route`, which MUST be the final
+    element of the array.
+  - **The outcome value and the diagnostic code are coupled both ways.**
+    `no_safe_route` is the one token this contract uses in two roles — a member of the
+    `outcome` discriminator (FR-013a) and a member of the resolution enum (FR-005) — and
+    the relationship MUST be stated so the two cannot drift apart within one report.
+    `outcome` is `no_safe_route` **if and only if** the `diagnostics` array carries
+    exactly one entry whose `code` is `no_safe_route`; a `resolved` report MUST carry
+    none. Without the biconditional a report could claim `resolved` while carrying a
+    terminal failure diagnostic, or claim `no_safe_route` while carrying no remediation
+    at all — and it is the `no_safe_route` diagnostic that carries the mandated rollback
+    action (FR-012a, FR-029), so its presence is what makes SC-010 reachable.
+- **FR-012c**: `severity` and `source` MUST be pinned rather than left to the emitter,
+  because both are required fields that enter the serialized bytes FR-014 compares.
+  [US1] [US2]
+  - **`severity` is a function of `code`.** Each code MUST carry one fixed severity,
+    fixed once in the code-to-severity table in `data-model.md` §3 and asserted by a
+    single test over every emitted diagnostic. The four route-rejection codes are
+    `warning` — a rejected route is not itself a failure, since the walk may still
+    resolve on a later fallback — and `unqualified_override` is `warning` because
+    dispatch proceeds under it. `no_safe_route` and the four policy-authoring
+    violations are `error`. This makes `error` a usable threshold: its presence means
+    the policy is unusable as written, while a report carrying only `warning` entries
+    resolved despite them. External practice on this is genuinely **divided** —
+    LSP 3.17 types `severity` as an optional per-`Diagnostic` field and SARIF lets a
+    per-result `level` override the rule's `defaultConfiguration.level`, whereas ESLint
+    fixes severity per rule ID with no per-occurrence override (an open request to
+    change that, `eslint/eslint#16040`, confirms the limitation is current practice
+    rather than an oversight). This feature takes the rule-level pole deliberately:
+    every diagnostic here is hand-pinned in a byte-compared corpus, so a
+    context-varying severity would be unfalsifiable authoring latitude rather than
+    expressiveness. No in-tree precedent decided it — no schema under
+    `layer6-efficiency/` binds a code to a severity, and the runner merely defaults the
+    keyword to `error` (`envelope.py:43-47`) while its validator checks set membership
+    only (`gates/release.py:823`).
+  - **`source` is a single constant.** Every diagnostic this simulator emits MUST carry
+    `source` as the literal `route-fallback-simulator`, constrained with `const` in both
+    diagnostic `$defs`. Left as an open `minLength: 1` string it is an unpinned byte in
+    every diagnostic of every case. The runner mirrors this shape exactly — it hardcodes
+    one literal per producing module (`envelope.py:55`) and its own `is_diagnostic`
+    predicate keys off that value (`envelope.py:70`) — so a `const` here encodes in the
+    schema what the runner enforces in code. The value is capability-named, never
+    spec-ID-named, consistent with FR-032.
 - **FR-013**: The resolution report MUST record, for each resolved agent, the
   effective dispatch tuple that resolution selected, so consumers can read the
   outcome without re-deriving it from the attempt list. [US1]
@@ -335,9 +431,11 @@ cohort specs inherit proven rejection semantics.
   `effective_dispatch_tuple`, so a success variant and a failure variant do not
   partition the space. [US1]
   - Required in **both** outcomes: `schema_version`, `agent`, `outcome`,
-    `attempted_routes` (in attempt order), `diagnostics` (present, possibly empty —
-    FR-011 requires a clean success to emit none), `budgets` (declared caps plus actual
-    counts), `release_claim_eligible`, `optional_helper`.
+    `attempted_routes` (in attempt order; empty if and only if the policy was rejected
+    before the walk started — FR-019c), `diagnostics` (present, possibly empty —
+    FR-011 requires a clean success to emit none; ordered by FR-012b), `budgets`
+    (declared caps plus actual counts, counted per FR-026a), `release_claim_eligible`
+    (derived per FR-024a), `optional_helper` (valued per FR-025a).
   - `effective_dispatch_tuple` is required when `outcome` is `resolved`, **and
     additionally** required when an override is in force.
   - `unresolved_agent` is required when `outcome` is `no_safe_route` and **forbidden**
@@ -547,6 +645,50 @@ cohort specs inherit proven rejection semantics.
   code tokens, and the fifth member `unqualified_override` is this spec's own
   addition. The schema is the only artifact carrying the tokens, so a test-side
   literal is the second witness, and it is what makes drift detectable at all. [US1]
+- **FR-019c**: The **timing** of structural policy validation relative to the route
+  walk, and the **report a structural rejection produces**, MUST both be stated as
+  requirements. Today neither is: "pre-pass" appears only in FR-033a's slice-allocation
+  cell and in FR-033d's one-module justification, both of which are statements about
+  module structure rather than evaluation order, and FR-020 through FR-023 impose no
+  ordering at all. [US2]
+  - **The defects partition; they are not uniformly pre-walk.** Three are properties of
+    the policy **document**, decidable by reading the declared routes with no walk
+    state: `unqualified_adjacent_model`, `generic_agent_substitution`, and
+    `silent_inherit_materialization`. These MUST be evaluated in a pass that completes
+    **before the first route is attempted**, and when that pass emits any diagnostic the
+    walk MUST NOT start. `fallback_loop` is **not** in that pass: FR-020 defines it
+    against a route "already-attempted" and requires the walk to "terminate without
+    repeating that route", and FR-001 states its detection "needs the walk state that
+    this module already owns". It is therefore detected during the walk, at the point
+    the revisit is reached. Recording the partition is what reconciles those two
+    statements with the pre-pass framing, which is accurate for three codes and was
+    over-generalised to four.
+  - **A pre-walk rejection records no attempts.** `attempted_routes` MUST be **empty**
+    in a report produced by the pre-walk pass, and empty in no other report — the array
+    is empty **if and only if** the pre-walk pass rejected the policy. Recording a route
+    as attempted when it was not would misreport the walk, so the array's lower bound
+    MUST admit zero. This is a deliberate departure from the directory's one existing
+    attempt-array precedent, `contracts/treatment-record.schema.json:940-945`, which
+    declares `attempted_route_ids` with `minItems: 1`; the biconditional above replaces
+    the guarantee that bound was providing, and it must be stated rather than implied,
+    because this directory's established habit is to make "a stage that was not reached"
+    explicit rather than absent (`contracts-claude/analysis-decision.schema.json:57,71`
+    records `not_evaluated` for an unreached gate, with the description "A gate that was
+    not reached records not_evaluated rather than being omitted").
+  - **The report is a valid FR-013a report, not an under-specified one.** For a pre-walk
+    rejection: `outcome` is `no_safe_route` — the only member of the closed discriminator
+    that a rejected policy can take, and `resolved` is unreachable because no route was
+    selected; `unresolved_agent` is the policy's own agent name, satisfying FR-013a's
+    conditional branch; `effective_dispatch_tuple` is absent unless an override is in
+    force (FR-024a); `diagnostics` carries the violations in FR-012b's order plus the
+    terminal `no_safe_route` entry; `budgets` carries the declared caps with all three
+    actual counts at `0`, since nothing was probed, retried, or walked;
+    `optional_helper` takes its not-consulted form (FR-025a); and
+    `release_claim_eligible` is `false` (FR-024a).
+  - **`unqualified_override` is not part of this pass.** It shares the policy-violation
+    enum but is an environment condition read from the overrides input, not a defect of
+    the policy document, so it is evaluated where FR-024 places it and never suppresses
+    the walk.
 - **FR-020**: A policy whose fallback chain revisits an already-attempted route
   MUST be rejected with `fallback_loop`, and the walk MUST terminate without
   repeating that route. [US2]
@@ -566,6 +708,50 @@ cohort specs inherit proven rejection semantics.
   emit an `unqualified_override` diagnostic, mark the environment as excluded
   from release claims, and additionally record the qualified resolution that
   would have applied without the override. [US2]
+- **FR-024a**: Three consequences of combining FR-024 with FR-013a MUST be stated,
+  because each is currently derivable only by inference and each changes reported bytes.
+  [US2]
+  - **`outcome` follows the qualified walk, never the override.** An override MUST NOT
+    turn a `no_safe_route` outcome into `resolved`. FR-013a already relies on this — it
+    justifies rejecting a root `oneOf` by observing that "the FR-024 override path
+    produces a `no_safe_route` report that still carries `effective_dispatch_tuple`" —
+    but never states it as a rule, leaving open the opposite reading in which an override
+    is always dispatchable and therefore always resolves. `outcome` describes what
+    qualified resolution achieved; `effective_dispatch_tuple` describes what will
+    actually dispatch. The two disagree exactly when an override is in force, which is
+    the condition that makes the environment ineligible for release claims.
+  - **`release_claim_eligible` has a derivation rule for every report, not only the
+    override case.** It is required in both outcomes, yet only the override path fixes
+    it. Following this directory's established asymmetry — the closest analogue,
+    `qualification_eligible`, is schema-forced to `false` under a named condition
+    (`contracts-claude/experiment-assignment.schema.json:52-56`) with no matching
+    true-forcing branch, and its companion reason vocabulary carries fourteen
+    disqualifying members against one residual `none`
+    (`contracts-claude/analysis-decision.schema.json:79-95`) — the rule is written as a
+    closed list of disqualifiers with `true` as the residual.
+    `release_claim_eligible` MUST be `false` when **any** of the following holds: an
+    override is in force; `outcome` is `no_safe_route`; or the report carries any
+    policy-violation diagnostic. It is `true` only when none holds. A no-safe-route
+    report therefore reads `false` even with no override present — claiming a release on
+    an environment where a required agent does not resolve is precisely what the
+    rollback remediation exists to prevent.
+  - **The would-have-been tuple is omitted, not `null`, when there is nothing to
+    record.** `override.would_have_been` always carries its own `outcome`; its
+    `effective_dispatch_tuple` member MUST be **absent** when no qualified route
+    resolved, and MUST NOT be present as `null`. This has to be stated rather than
+    deduced from canonical serialization: RFC 8785 canonicalizes an explicit `null` and
+    an omitted member equally well and is silent on the choice by scope, so byte
+    determinism does not decide it — only a stated rule does. Omission is chosen because
+    it is the report's own established idiom (FR-013a expresses every conditional member
+    by presence and absence, forbidding `unresolved_agent` outright on the `resolved`
+    branch) and because omit-by-default is the external default too, presence being
+    tracked separately only where the distinction is load-bearing (Google AIP-149).
+    This deliberately differs from FR-015a's rule that a case's `overrides` be
+    "explicitly `null` when the case declares none, never absent", and the difference is
+    not an inconsistency: the corpus envelope has **no schema** (FR-016 permits exactly
+    three documents, none validating it), so there an explicit `null` is the only way to
+    distinguish a declared-empty case from a malformed one, whereas the report's schema
+    expresses that distinction with conditional requiredness.
 - **FR-025**: When the optional helper's routes are unavailable, the helper MUST
   NOT be consulted, the report MUST record continuation on the validated
   no-helper path, and required-agent resolution MUST NOT fail as a result. [US2]
@@ -578,12 +764,107 @@ cohort specs inherit proven rejection semantics.
   member to the policy-violation enum would repeat exactly the objection that kept
   environment conditions out of that enum in the first place: it is an environment
   condition, not a policy-authoring defect, and the enum's meaning would blur.
+- **FR-025a**: "Not consulted" MUST be **measurable from the report**, not merely
+  asserted by it. `consulted: false` on its own is a boolean the simulator sets about
+  its own behaviour: an implementation could probe every helper route and still write
+  `false`, satisfying the letter of FR-025 while violating it in substance, and no
+  pinned byte would change. Established practice for making a non-invocation claim
+  checkable is an instrumented count rather than a flag — `unittest.mock`'s
+  `assert_not_called` is backed by an integer `call_count`, and Mockito's
+  `verifyNoInteractions` inspects the mock's recorded interaction history — and metrics
+  guidance likewise prefers an emitted explicit zero over inferring absence, because an
+  absent series and a never-executed path are indistinguishable. Three obligations
+  follow. [US2]
+  - **An explicit zero.** `optional_helper` MUST carry a required `probe_attempts`
+    integer, and it MUST be `0` in every report where `consulted` is `false`. The
+    corpus case pins the zero and the test asserts it, so the claim is falsifiable.
+  - **The zero is unambiguous.** `optional_helper.probe_attempts` counts probes spent on
+    the **helper's** routes only. It is disjoint from `budgets.actual.probe_attempts`,
+    which counts the reported agent's own walk (FR-026a). Without the disjointness
+    stated, a zero in one counter could be read as covered by a non-zero in the other.
+  - **No helper route appears as attempted.** When `consulted` is `false`, no
+    `attempted_routes` entry may name a helper route. This is the corroborating
+    structural evidence: a counter alone can be wrong in the same direction as the flag,
+    whereas the attempt list is the same array the walk builds for every other purpose.
+
+  The field's values MUST also be specified for the other two reachable states, since
+  `optional_helper` is required in **every** report and only the unavailable state was
+  described. When the policy declares an optional helper whose routes are available and
+  it is consulted: `consulted: true`, `no_helper_path_validated: false`,
+  `probe_attempts` at least `1`. When the policy declares no optional helper at all:
+  `consulted: false`, `no_helper_path_validated: true`, `probe_attempts: 0` — identical
+  to the unavailable state, which is acceptable and deliberate rather than a lost
+  distinction, because whether a helper exists is a property of the policy and every
+  case carries its own policy (FR-015a), so no reader has to infer it from this field.
+  Required-agent resolution MUST be unaffected in all three states, which is the second
+  half of FR-025 and the half a helper-unavailable case must also pin. [US2]
 
 #### Budgets, exhaustion, and no-safe-route recovery (User Story 2)
 
 - **FR-026**: Declared probe, retry, and fan-out budgets MUST be treated as hard
   caps that resolution never exceeds, and the report MUST record the actual
   attempt count alongside the declared budget for each capped dimension. [US2]
+- **FR-026a**: Each capped dimension MUST have a **defined unit of counting**, a
+  **defined exhaustion outcome**, and a way for a consumer to tell **which** budget
+  exhausted. None of the three is stated today, which leaves FR-026's "actual attempt
+  count" and SC-009's "never exceeds the declared budget" unfalsifiable — two conforming
+  implementations could report different counts for the same case and both claim
+  compliance. Declaring the unit is directory practice, not an addition to it: every cap
+  in `contracts-claude/policy-control-registry.schema.json:670-676` carries a required
+  `unit` drawn from a closed enum alongside its `value`, and that document also defines
+  retry exhaustion in prose at `:154` — "Exhausting retries means at least one attempt
+  failed". [US2]
+  - **`probe_attempts`** increments **once per route whose snapshot probe state is
+    consulted** — that is, once for each attempted route that reaches probe evaluation,
+    reading capability-probe availability and the exact-invocation outcome together as
+    one consultation. A route rejected earlier in the inter-code order, before probing
+    is reached, adds nothing. The count is therefore checkable against the report itself,
+    following the in-tree definition of one attempt as one entry of an enumerable list
+    (`claude_policy_controls.py:2236`).
+  - **`retries`** increments **once per re-consultation of a route whose
+    exact-invocation probe outcome is `failure`**. This is the definition that makes
+    retry exhaustion reachable at all against a static snapshot: a re-read returns the
+    same `failure`, so the retry budget deterministically exhausts rather than depending
+    on simulated flakiness, and it satisfies the registry's own criterion that
+    exhausting retries means at least one attempt failed. A route whose probe outcome is
+    `success` or `absent` incurs no retry.
+  - **`fan_out`** increments **once per candidate route entered in the walk** — the
+    preferred route plus each fallback reached — so `max_fan_out` bounds walk breadth and
+    equals the length of `attempted_routes` when the walk runs. This gives the third
+    dimension a referent it otherwise lacks in a sequential first-match walk: with a
+    fallback list longer than `max_fan_out - 1`, the walk stops after `max_fan_out`
+    routes rather than continuing to the end of the list. `probe_attempts` is therefore
+    always less than or equal to `fan_out`, and the two are not redundant.
+  - **All three exhaust into `no_safe_route`.** No new terminal code may be introduced —
+    FR-005 closes the resolution enum and forbids extension by this feature, and FR-019
+    already records that budget exhaustion is "bounded, not rejected" and terminates
+    there. That statement currently sits inside an enum-sufficiency argument rather than
+    in a requirement, which is why it is restated here as one.
+  - **The exhausted classes MUST be identifiable from the report.** Comparing a counter
+    to its cap is **not** sufficient on its own: a walk can legitimately reach a cap
+    without failing because of it — two probes under `max_probe_attempts: 2` that both
+    resolve produce counter-equals-cap on a `resolved` report. The terminal
+    `no_safe_route` diagnostic MUST therefore carry `details.exhausted_budget`: an
+    **array** whose members are drawn from the closed three-member inline enum
+    (`probe_attempts`, `retries`, `fan_out`), listing every class whose actual count
+    equals its declared cap, ordered by that enum's declaration, with `minItems: 1` and
+    `uniqueItems: true`. It is present on that diagnostic and on no other, so its
+    presence means "spent to the limit **and** the walk failed", which is exactly the
+    conjunction a single counter comparison cannot express.
+    An array rather than a single naming of "the class that terminated the walk" is
+    deliberate, and the difference matters. With more than one cap reached — the FR-028
+    case declares all three at `1` and reaches all three — deciding which one *caused*
+    termination would require a tie-break rule over simulator internals that no
+    observable report content can settle: against a static snapshot a further retry
+    would return the same outcome, so no budget's exhaustion changes the result and none
+    is causally privileged. Recording the at-cap set is a pure function of the counters
+    and caps the report already carries, so it is deterministic by construction and
+    needs no such rule. This keeps the practice the external shape recommends —
+    distinguishing which limit was reached rather than collapsing every limit into one
+    undifferentiated terminal state, as Temporal does with `RetryState` on the failure
+    and the AWS SDK retry loop does by naming attempts-exhausted and quota-depleted
+    separately — while carrying it as a field rather than a distinct code, which is what
+    keeps FR-005's closed enum closed.
 - **FR-027**: The schema MUST enforce maxima on the declared budget fields, so a
   fixture declaring an out-of-range budget fails validation rather than being
   clamped at run time. **[US1]** — retagged from US2 at Clarify: the budget fields
@@ -615,11 +896,68 @@ cohort specs inherit proven rejection semantics.
   though its placement follows convention.
 - **FR-028**: The corpus MUST include a budget-exhaustion case proving the cap
   with a declared budget of one. [US2]
+  That case MUST exhaust the **retry** budget specifically, and MUST declare all three
+  budgets at `1` while pinning all three actual counts. Naming the class matters because
+  the roadmap lists "Prove retry exhaustion" as its own obligation
+  (`docs/ai/specs/claude-agent-routing-technical-roadmap.md:541`) while this requirement
+  says only "a budget", and User Story 2's acceptance scenario 7 says "a probe or retry
+  budget of one" — a disjunction a case could satisfy by exhausting probes and never
+  touching a retry, leaving the roadmap's named obligation unproven. Fixing the
+  retry budget to bind closes that. Declaring the other two caps at `1` in the same case
+  proves they are respected without adding a case: the report pins `probe_attempts` and
+  `fan_out` against their caps too, and `details.exhausted_budget` lists all three
+  classes, so `retries` is provably among the budgets spent to their limit on a failing
+  report (FR-026a). The case's mechanics are fixed so this is reachable: the preferred
+  route's exact-invocation outcome is `failure`, the single permitted retry re-consults
+  it and returns the same `failure`, and no further retry may be taken — which is what
+  retry exhaustion means against a static snapshot. All three declared values satisfy the
+  schema bounds in `data-model.md` §1 (`max_retries` `minimum: 0`, the other two
+  `minimum: 1`), so the case validates. Recorded honestly: no case makes probe-attempt or
+  fan-out exhaustion the *sole* at-cap class, which is acceptable for the same reason
+  FR-019 accepts declaring unexercised enum members — one shared cap check governs all
+  three dimensions, so separate cases would re-prove the same code path under a different
+  field name. [US2]
 - **FR-029**: When the preferred route and every declared fallback are rejected,
   the report MUST be report-only, naming the unresolved agent, every attempted
   route, each rejection reason, and remediation whose `actions` include the FR-012a
   member `Roll back to the previous plugin release.` **verbatim**. The simulator MUST
   NOT write or mutate any shipped agent file. [US2]
+- **FR-029a**: FR-029's obligations attach to the **outcome**, not to its stated
+  precondition, and its two arrays MUST be **joinable** rather than merely co-present.
+  [US2]
+
+  **Outcome-attached, not precondition-attached.** FR-029 opens "When the preferred route
+  and every declared fallback are rejected", which FR-026a's fan-out cap now makes
+  narrower than the set of reports that need it: a walk truncated at `max_fan_out` ends
+  with routes that were never reached and therefore never rejected, yet still terminates
+  in `no_safe_route`. Every obligation FR-029 imposes — naming the unresolved agent,
+  every attempted route, each rejection reason, and remediation carrying the verbatim
+  rollback action — MUST therefore apply to **any** report whose `outcome` is
+  `no_safe_route`, however the walk ended: every declared fallback rejected, an empty
+  fallback list, a budget cap reached, or a pre-walk structural rejection (FR-019c). This
+  keeps FR-012a's mandated rollback action universal on that code, which is what SC-010
+  depends on, and removes the reading in which a truncated walk escapes the remediation
+  requirement on a technicality.
+
+  **Joinable, not merely co-present.** As written, a consumer reading a no-safe-route report is given two
+  arrays and no key between them, so the association is positional — and position is not
+  a key here, because FR-012b emits a variable number of diagnostics per route, so the
+  arrays are not the same length and cannot be zipped. Every diagnostic that concerns a
+  specific route MUST therefore carry `details.route_id`: the four route-rejection codes,
+  and `fallback_loop`, `unqualified_adjacent_model`, `generic_agent_substitution`, and
+  `silent_inherit_materialization`. For a code emitted during the walk the value MUST
+  match an `attempted_routes` entry's `route_id`; for a pre-walk violation (FR-019c) it
+  names the **declared** route, which by construction was never attempted. `route_id` is
+  already the identity the policy schema assigns for exactly this purpose — it is how a
+  `fallback_loop` revisit is recognised — so this reuses a key rather than adding one.
+  The composition of the report is fixed by the same requirement: the per-route rejection
+  diagnostics carry their own single code-specific action, and the rollback action appears
+  **only** on the terminal `no_safe_route` entry, which also carries the summary
+  remediation. Repeating the rollback on every rejection entry would inflate each entry's
+  `actions` array toward the `maxItems: 3` truncation boundary for no added information;
+  the code-to-action mapping in `data-model.md` §3 already allocates it to
+  `no_safe_route` alone, and this requirement is what makes that allocation binding
+  rather than advisory. [US2]
 
 #### Repository and delivery constraints (both stories)
 
@@ -640,9 +978,12 @@ cohort specs inherit proven rejection semantics.
 - **FR-032a**: Adding documents to `contracts-claude/` opts them into a pre-existing
   Layer 4 test that asserts every document in that directory uses only JSON Schema
   keywords the shared validation engine implements. Every keyword this feature needs —
-  `oneOf`, `allOf`/`if`/`then`/`not`, `minItems`/`maxItems`, and `maximum` — MUST be
-  within that supported set. This was verified during planning; it is recorded here so a
-  later change cannot introduce an unsupported keyword unknowingly. [US1]
+  `oneOf`, `allOf`/`if`/`then`/`not`, `minItems`/`maxItems`, `maximum`, and `const` —
+  MUST be within that supported set. This was verified during planning; it is recorded
+  here so a later change cannot introduce an unsupported keyword unknowingly. `const`
+  is listed explicitly because FR-012c now relies on it to pin `source`, a second use
+  beyond the `schema_version` pin every document already carries; the engine implements
+  it (`claude_policy_controls.py:332`). [US1]
 - **FR-033**: The feature MUST be delivered as two vertical slices — User Story 1
   then User Story 2 — as a stacked pull-request chain in which the second slice
   stacks on the first. [US1] [US2]
@@ -654,7 +995,7 @@ cohort specs inherit proven rejection semantics.
   | ---- | ------- | ------- |
   | `layer6-efficiency/contracts-claude/route-policy.schema.json` | create — route shape, ordered fallbacks, declared budget fields **and their schema maxima** | unchanged |
   | `layer6-efficiency/contracts-claude/environment-snapshot-projection.schema.json` | create | unchanged |
-  | `layer6-efficiency/contracts-claude/route-resolution-report.schema.json` | create — `outcome` discriminator with `allOf`/`if`/`then` conditional requiredness; two diagnostic `$defs` each with its own inline `code` enum unioned by `oneOf`; the four-member sub-reason enum; the closed `remediationAction` enum (`minItems: 1`, `maxItems: 3`); attempted-route list; effective dispatch tuple; `optional_helper`; `release_claim_eligible` | **unchanged — must stay untouched** |
+  | `layer6-efficiency/contracts-claude/route-resolution-report.schema.json` | create — `outcome` discriminator with `allOf`/`if`/`then` conditional requiredness; two diagnostic `$defs` each with its own inline `code` enum unioned by `oneOf`; the four-member sub-reason enum; the closed `remediationAction` enum (`minItems: 1`, `maxItems: 3`); per-code `severity` and the `const` `source`; the `exhausted_budget` array over its own three-member enum; attempted-route list admitting zero entries; effective dispatch tuple; `optional_helper` with its probe counter; `release_claim_eligible` | **unchanged — must stay untouched** |
   | `layer6-efficiency/lib/claude_route_fallback.py` | create — canonical serialization, snapshot projection intake, preferred-then-fallback walk, five-code semantics, `details` sub-reasons | extend — structural-validation pre-pass, budget cap enforcement with attempt counting, override handling, helper-unavailable path, no-safe-route remediation |
   | `layer6-efficiency/fixtures-fallback/fallback-scenario-corpus.json` | create — `cases[]` holding the US1 resolution-failure cases with pinned reports | append the US2 cases to the end of `cases[]`; existing case positions and pinned bytes unchanged |
   | `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity over the simulator's own serializer, roadmap parity test, set equality on **both** closed enums, inline negative tests for out-of-vocabulary code and out-of-range budget, corpus case-ID uniqueness and self-containment | append the US2 test functions |
@@ -794,8 +1135,10 @@ cohort specs inherit proven rejection semantics.
   unsupported, probe unavailable, exact-invocation probe success, exact-invocation
   probe failure, alias re-pointing, platform route change, unqualified override,
   fallback loop, unqualified adjacent model, generic-agent substitution, silent
-  inherit materialization, helper unavailable, budget exhaustion, and no safe
-  route — with zero mandated scenarios unrepresented.
+  inherit materialization, helper unavailable, **retry** exhaustion, and no safe
+  route — with zero mandated scenarios unrepresented. Exhaustion is named by its
+  terminating class rather than as generic "budget exhaustion", because the roadmap
+  states retry exhaustion as its own proof obligation (FR-028).
 - **SC-002**: 100% of corpus cases replay byte-identically to their pinned
   expected report, and 100% replay byte-identically across two successive runs.
 - **SC-003**: Both reason-code vocabularies are closed sets whose membership is
@@ -815,10 +1158,18 @@ cohort specs inherit proven rejection semantics.
   new test is dispatched through the suite manifest rather than only runnable by
   hand.
 - **SC-009**: A budget-exhaustion case demonstrates that the actual attempt count
-  never exceeds the declared budget, proven at a declared budget of one.
+  never exceeds the declared budget for all three capped dimensions, proven at a
+  declared budget of one, and the failing report enumerates every dimension spent to its
+  cap so a consumer is not left to infer that from counters alone. The criterion is
+  deliberately phrased as an enumeration rather than as naming the one dimension that
+  terminated the walk: FR-026a establishes that no observable report content privileges
+  one at-cap budget as the cause, so a success criterion promising a single culprit would
+  be unmeetable by the design that satisfies the rest of this requirement.
 - **SC-010**: The no-safe-route case's remediation actions are machine-readable
   and include previous-plugin-release rollback, so a consumer can act on them
-  without parsing prose.
+  without parsing prose — and every attempted route is joinable by route key to the
+  diagnostics that rejected it, so "each rejection reason" is readable per route rather
+  than as an unattributed list.
 - **SC-011**: Each slice is independently reviewable and passes the
   pull-request-time diff-mode reviewability gate on its own diff.
 - **SC-012**: The committed resolution enum is exactly the five codes the Claude

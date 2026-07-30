@@ -81,7 +81,7 @@ fixture edited, no member added to the shared byte-identical
 No authored filename coupled to the spec ID.
 
 **Scale/Scope**: 3 schema documents, 1 simulator module, 1 corpus of 17 cases, 1
-unit test, 1 manifest entry, 1 regenerated docs page. 2 user stories, 49
+unit test, 1 manifest entry, 1 regenerated docs page. 2 user stories, 56
 functional requirements, 12 success criteria.
 
 **Reviewability Budget**: Primary surface harness/adapter (Layer 6 efficiency
@@ -214,8 +214,8 @@ gh-stack delivery" (`:234`). The advisory `estimate-spec-size` formula
 (`user_stories × 25 + files × 40 + frs × 15`, `read_only.py:967`) re-run on this
 spec's real signals returns **3** suggested slices either way it is counted: the
 spec's own figure of 35 functional requirements yields 975, and the literal count
-of 49 distinct FR identifiers — the spec carries fourteen lettered
-sub-requirements such as FR-012a and FR-033d — yields 1,185. Both exceed the
+of 56 distinct FR identifiers — the spec carries twenty-three lettered
+sub-requirements such as FR-012a and FR-033d — yields 1,290. Both exceed the
 400-LOC ceiling by more than a factor of two. Nothing in the estimator supports
 collapsing to one slice. The Progress Tracking row is correct; the
 `Suggested slices: 1` figure is a stale scoping guess from coarser signals.
@@ -229,7 +229,7 @@ creates none (FR-033a).
 | --- | --- | --- |
 | `contracts-claude/route-policy.schema.json` | create — route shape, ordered fallbacks, declared budget fields **and their maxima** | unchanged |
 | `contracts-claude/environment-snapshot-projection.schema.json` | create | unchanged |
-| `contracts-claude/route-resolution-report.schema.json` | create — `outcome` discriminator with `allOf`/`if`/`then`; both diagnostic `$defs` with inline `code` enums unioned by `oneOf`; four-member sub-reason enum; closed action enum with `minItems: 1`/`maxItems: 3`; attempted routes; dispatch tuple; `optional_helper`; `release_claim_eligible` | **unchanged** |
+| `contracts-claude/route-resolution-report.schema.json` | create — `outcome` discriminator with `allOf`/`if`/`then`; both diagnostic `$defs` with inline `code` enums unioned by `oneOf`; per-code `severity` and `const` `source`; four-member sub-reason enum plus the `exhausted_budget` array over its three-member enum; closed action enum with `minItems: 1`/`maxItems: 3`; attempted routes admitting zero entries; dispatch tuple; `optional_helper` with its probe counter; `release_claim_eligible` | **unchanged** |
 | `lib/claude_route_fallback.py` | create — canonical serialization, snapshot intake, preferred-then-fallback walk, five-code semantics, `details` sub-reasons | extend — structural pre-pass, budget caps with attempt counting, override handling, helper-unavailable path, no-safe-route remediation |
 | `fixtures-fallback/fallback-scenario-corpus.json` | create — nine US1 cases with pinned reports | append eight US2 cases at the tail; existing positions and pinned bytes unchanged |
 | `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity over the simulator's own serializer, roadmap parity, set equality on both closed enums, inline negative tests for out-of-vocabulary code and out-of-range budget, corpus case-ID uniqueness and self-containment | append the US2 test functions |
@@ -259,7 +259,7 @@ behind for a later slice.
 
 ```text
 specs/car-005-availability-fallback-recovery/
-├── spec.md              # Input (clarified: 49 FRs, 0 markers)
+├── spec.md              # Input (clarified: 56 FRs, 0 markers)
 ├── SPEC-MOC.md          # Pre-existing navigation note (untouched)
 ├── plan.md              # This file (/speckit-plan output)
 ├── research.md          # Phase 0 output — precedent verification, 12 decisions

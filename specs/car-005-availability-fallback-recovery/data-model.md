@@ -196,11 +196,11 @@ Required in **both** outcomes: `schema_version`, `agent`, `outcome`,
 | Field | Type | Notes |
 | --- | --- | --- |
 | `outcome` | inline enum `resolved`/`no_safe_route` | the discriminator |
-| `attempted_routes` | array of `$defs/attemptedRoute`, `minItems: 1` | array order **is** attempt order (FR-004); no redundant index field |
-| `diagnostics` | array, no `minItems` | may be empty — FR-011's clean success emits none |
-| `budgets` | `$defs/reportedBudgets` | declared caps plus actual counts (FR-026) |
-| `release_claim_eligible` | boolean | `false` under an unqualified override (FR-024) |
-| `optional_helper` | `$defs/optionalHelper` | structured, never a diagnostic (FR-025) |
+| `attempted_routes` | array of `$defs/attemptedRoute`, `minItems: 0` | array order **is** attempt order (FR-004); no redundant index field. Empty **iff** the pre-walk pass rejected the policy (FR-019c) |
+| `diagnostics` | array, no `minItems` | may be empty — FR-011's clean success emits none. Order is the three-stage sequence in FR-012b |
+| `budgets` | `$defs/reportedBudgets` | declared caps plus actual counts (FR-026), counted per the units in FR-026a |
+| `release_claim_eligible` | boolean | `true` only as a residual — `false` under an override, under `no_safe_route`, or with any policy-violation diagnostic present (FR-024a) |
+| `optional_helper` | `$defs/optionalHelper` | structured, never a diagnostic (FR-025); valued per FR-025a in all three helper states |
 | `effective_dispatch_tuple` | `$defs/dispatchTuple` | conditional (below) |
 | `unresolved_agent` | string, `minLength: 1` | conditional (below) |
 | `override` | `$defs/override` | optional; present only when the environment carries one |
@@ -218,7 +218,18 @@ Three `allOf` branches, each in the directory's verified `if`/`then` +
 Branch 3 is what makes the override path expressible: combined with branch 2 it
 yields a `no_safe_route` report carrying both `unresolved_agent` and
 `effective_dispatch_tuple`, which is precisely the field combination a root
-`oneOf` could not express.
+`oneOf` could not express. Note what branch 3 does **not** do: it does not make the
+report `resolved`. `outcome` follows the qualified walk and an override never promotes
+it (FR-024a), which is why branches 2 and 3 are independent rather than exclusive.
+
+**The empty-attempt case validates.** With `minItems: 0` on `attempted_routes`, a
+pre-walk structural rejection (FR-019c) produces `outcome: no_safe_route` plus
+`unresolved_agent`, satisfying branch 2, with an empty attempt array, all three actual
+budget counters at `0`, and `release_claim_eligible: false`. It is an ordinary valid
+instance of this one shape, not a fourth branch. The `minItems: 1` this document
+previously carried would have made that report invalid — the array's bound and the
+pre-pass ordering contradicted each other, and the biconditional in FR-019c is what
+replaces the guarantee the bound was providing.
 
 ### `$defs/attemptedRoute`
 
@@ -239,10 +250,10 @@ Both share the runner envelope verified at `envelope.py:43-66` (research D7):
 | --- | --- | --- |
 | `code` | yes | the inline closed enum — differs per `$defs` |
 | `message` | yes | string, `minLength: 1`, `maxLength: 240` (the runner truncates at 240) |
-| `severity` | yes | inline enum `info`/`warning`/`error` |
-| `source` | yes | string, `minLength: 1` |
+| `severity` | yes | inline enum `info`/`warning`/`error`; the value is a **function of `code`** — see the table below (FR-012c) |
+| `source` | yes | `{"const": "route-fallback-simulator"}` — one literal per producing module, mirroring `envelope.py:55` (FR-012c) |
 | `remediation` | yes | `$ref: "#/$defs/remediation"` |
-| `details` | **no** | object; required conditionally |
+| `details` | **no** | object; required conditionally — for all four route-scoped resolution codes (FR-012, FR-029a) |
 
 `remediation` is a field of each diagnostic entry and **never** a top-level report
 field — hoisting it would create the second dialect FR-012 forbids.
@@ -256,8 +267,15 @@ codes the Claude roadmap pins at
 This pointer — `$defs/resolutionDiagnostic/properties/code/enum` — is FR-017a's
 live read target. Nothing else may restate these five members anywhere.
 
-Two `allOf` branches make `details` required for `preferred_model_unavailable`
-(FR-006) and `effort_unsupported` (FR-007).
+**Four** `allOf` branches inside this `$defs` make `details` required, one per
+route-scoped resolution code: `preferred_model_unavailable` (FR-006),
+`effort_unsupported` (FR-007), `capability_probe_unavailable` (FR-008), and
+`treatment_probe_failed` (FR-009). Each branch requires **both** `details` and
+`route_id` within it, since FR-029a's join key living in an optional object — or in a
+required object as an optional member — is not a key a consumer can rely on. The first
+two branches additionally require the payload members their own requirements name.
+`$defs/policyViolationDiagnostic` carries **four more** branches of the same shape, so
+the eight route-scoped codes are covered symmetrically; see below.
 
 `details` is an **open** object (`additionalProperties: true`) with named
 properties pinned, mirroring the runner's `dict[str, Any]`. Openness is load
@@ -273,11 +291,22 @@ and their inline enums are declared in slice 1:
 | `observed_resolved_model` | string | `alias_repointed`, `platform_route_changed` |
 | `declared_effort` | ladder enum | `effort_unsupported` (FR-007) |
 | `supported_efforts` | array of ladder efforts | `effort_unsupported` (FR-007) |
-| `route_id` | string | probe diagnostics |
+| `route_id` | string | **every** route-scoped diagnostic — all four resolution codes and the four policy-authoring violations (FR-029a); the join key to `attempted_routes` |
+| `exhausted_budget` | array, `items` an inline 3-member enum (`probe_attempts`, `retries`, `fan_out`), `minItems: 1`, `uniqueItems: true`, enum declaration order | the terminal `no_safe_route` diagnostic only; lists every class whose actual count equals its declared cap (FR-026a) |
 
 The four sub-reasons are total over the projection and the simulator evaluates them in
 the FR-006 order — `alias_unresolved`, `alias_repointed`, `model_absent`,
 `platform_route_changed` — so exactly one applies and replay stays byte-identical.
+
+**Two orders, orthogonal, both structural.** The sub-reason order above is
+*intra-diagnostic*: it picks the single `sub_reason` a `preferred_model_unavailable`
+entry carries. FR-012b adds an *inter-diagnostic* order: a route failing several
+independent checks emits one diagnostic per failed check, sequenced by the FR-005
+declaration order, and the whole `diagnostics` array runs pre-walk violations, then
+per-route entries in attempt order, then `unqualified_override`, then exactly one
+terminal `no_safe_route` last. Neither order supplies the other, and treating the
+sub-reason staging as covering diagnostic sequencing is exactly how the inter-code order
+stayed unpinned while appearing to be settled. Both are staged call graphs, not comments.
 
 Their exclusivity is **not uniform**, which is why the order is structural rather than
 decorative (FR-006). The first three partition the state of `alias_bindings` against
@@ -294,6 +323,17 @@ future edit cannot reorder it by moving a line.
 `properties/code/enum` holds exactly `fallback_loop`,
 `unqualified_adjacent_model`, `generic_agent_substitution`,
 `silent_inherit_materialization`, `unqualified_override`.
+
+It carries **four** `allOf` branches of its own, mirroring the resolution `$defs`
+exactly: `fallback_loop`, `unqualified_adjacent_model`, `generic_agent_substitution`,
+and `silent_inherit_materialization` each require `details` and `route_id` within it
+(FR-012, FR-029a). Without them, four of the eight codes FR-029a names could validly omit
+`details` and so omit the route key — the join would hold for resolution rejections and
+silently fail for policy-authoring ones, which is the half-covered state a reviewer would
+be least likely to notice. `unqualified_override` takes **no** branch, and that is the
+deliberate exception: it is an environment condition scoped to no route (FR-019c), so it
+has no `route_id` to carry. Eight branches across the two `$defs`, one per route-scoped
+code, with exactly one member of either enum exempt.
 
 Declared in **slice 1** even though no slice-1 corpus case can emit one (FR-019).
 That is house style here — `score-bundle.schema.json:88-89` declares a 12-member
@@ -340,23 +380,37 @@ sufficient if every code has at least one apt action and no code needs a fourth.
 hold, and the mapping is recorded here rather than left to the implementer, so a
 reviewer can check sufficiency without re-deriving it:
 
-| Code | Action members | Count |
-| --- | --- | --- |
-| `preferred_model_unavailable` | Re-probe the environment and confirm the pinned alias and resolved model. | 1 |
-| `effort_unsupported` | Declare an effort the model's probed capability set supports. | 1 |
-| `capability_probe_unavailable` | Re-run capability probing before trusting this route. | 1 |
-| `treatment_probe_failed` | Inspect the exact-invocation probe evidence for this route. | 1 |
-| `no_safe_route` | Widen the declared fallback list with qualified routes. **+** Roll back to the previous plugin release. | 2 |
-| `fallback_loop` | Remove the repeated route from the fallback chain. | 1 |
-| `unqualified_adjacent_model` | Replace the adjacent model with a qualified route. | 1 |
-| `generic_agent_substitution` | Restore the named agent in the fallback route. | 1 |
-| `silent_inherit_materialization` | Declare the model and effort explicitly on the route. | 1 |
-| `unqualified_override` | Unset the unqualified subagent-model override before making release claims. | 1 |
+The same table fixes each code's `severity`, which FR-012c makes a function of `code`
+rather than of the occurrence. A single test asserts both columns over every emitted
+diagnostic.
+
+| Code | `severity` | Action members | Count |
+| --- | --- | --- | --- |
+| `preferred_model_unavailable` | `warning` | Re-probe the environment and confirm the pinned alias and resolved model. | 1 |
+| `effort_unsupported` | `warning` | Declare an effort the model's probed capability set supports. | 1 |
+| `capability_probe_unavailable` | `warning` | Re-run capability probing before trusting this route. | 1 |
+| `treatment_probe_failed` | `warning` | Inspect the exact-invocation probe evidence for this route. | 1 |
+| `no_safe_route` | `error` | Widen the declared fallback list with qualified routes. **+** Roll back to the previous plugin release. | 2 |
+| `fallback_loop` | `error` | Remove the repeated route from the fallback chain. | 1 |
+| `unqualified_adjacent_model` | `error` | Replace the adjacent model with a qualified route. | 1 |
+| `generic_agent_substitution` | `error` | Restore the named agent in the fallback route. | 1 |
+| `silent_inherit_materialization` | `error` | Declare the model and effort explicitly on the route. | 1 |
+| `unqualified_override` | `warning` | Unset the unqualified subagent-model override before making release claims. | 1 |
 
 All ten codes across both closed enums are covered; the maximum is 2, against a cap of
 3, so no code is near the truncation boundary and none would be silently shortened by
 the real runner. The mapping is one-to-one except for `no_safe_route`, which is the
-only code carrying both a forward remedy and the mandated rollback.
+only code carrying both a forward remedy and the mandated rollback — and FR-029a makes
+that allocation binding, so the rollback action never repeats on a per-route entry.
+
+The severity split is what makes `error` a usable threshold. A route rejection is a
+`warning` because the walk may still resolve on a later fallback, so a report carrying
+only warnings resolved *despite* them; `error` marks a policy that is unusable as
+written, or a walk that ended with no route. `unqualified_override` is a `warning`
+because dispatch proceeds under it — its consequence is carried by
+`release_claim_eligible: false`, not by the severity. `info` is declared by the closed
+vocabulary and emitted by no code, which is the same declared-but-unexercised position
+FR-019 takes for the policy-violation members slice 1 cannot emit.
 
 Each corpus case pins its diagnostic's `actions` array explicitly, so this mapping
 constrains *authoring* rather than adding a runtime rule — but leaving it unrecorded
@@ -380,15 +434,35 @@ every schema keyword.
 | `$defs` | Fields |
 | --- | --- |
 | `dispatchTuple` | `agent`, `alias`, `resolved_model`, `effort` — all required (FR-013) |
-| `reportedBudgets` | `declared` (`max_probe_attempts`, `max_retries`, `max_fan_out`) and `actual` (`probe_attempts`, `retries`, `fan_out`), all required (FR-026) |
-| `optionalHelper` | `consulted` (boolean) and `no_helper_path_validated` (boolean), both required (FR-025) |
-| `override` | `source`, `tuple` (`$ref: #/$defs/dispatchTuple`), `would_have_been` (`outcome` plus optional `effective_dispatch_tuple`) — all required (FR-024) |
+| `reportedBudgets` | `declared` (`max_probe_attempts`, `max_retries`, `max_fan_out`) and `actual` (`probe_attempts`, `retries`, `fan_out`), all required integers (FR-026); each actual counter's unit is defined in FR-026a |
+| `optionalHelper` | `consulted` (boolean), `no_helper_path_validated` (boolean), and `probe_attempts` (integer, `minimum: 0`) — all three required (FR-025, FR-025a) |
+| `override` | `source`, `tuple` (`$ref: #/$defs/dispatchTuple`), `would_have_been` (`outcome` required, `effective_dispatch_tuple` optional) — all required (FR-024) |
+
+**What each actual counter counts** (FR-026a), stated here because a counter without a
+unit cannot be checked against its cap: `probe_attempts` increments once per attempted
+route whose snapshot probe state is consulted; `retries` once per re-consultation of a
+route whose exact-invocation outcome is `failure`, which is what makes retry exhaustion
+reachable against a static snapshot; `fan_out` once per candidate route entered, so it
+equals `len(attempted_routes)` whenever the walk runs. Hence
+`probe_attempts <= fan_out` always, and the two are not redundant — a route rejected
+before probing is reached raises `fan_out` without raising `probe_attempts`. Declaring
+the unit follows this directory's own habit of pairing every cap with a required `unit`
+(`policy-control-registry.schema.json:670-676`).
+
+`optional_helper.probe_attempts` is **disjoint** from `budgets.actual.probe_attempts`:
+the former counts probes spent on the helper's routes, the latter the reported agent's
+own walk. The helper counter exists so that "not consulted" is a measurable zero rather
+than a self-asserted boolean (FR-025a) — an implementation could otherwise probe every
+helper route and still write `consulted: false` without changing a pinned byte.
 
 `override.would_have_been.outcome` carries its own `resolved`/`no_safe_route`
 value so the spec's edge case is expressible: an unqualified override present
 *and* no qualified route resolving still records the override as effective, still
 sets `release_claim_eligible: false`, and still reports the would-have-been
-outcome as `no_safe_route`.
+outcome as `no_safe_route`. In that case `would_have_been.effective_dispatch_tuple` is
+**omitted**, never present as `null` (FR-024a) — canonical serialization renders both
+forms deterministically, so the choice is a schema decision that has to be stated, and
+omission is what the rest of this report already does for conditional members.
 
 `optional_helper` is a structured field, never a diagnostic, and neither closed
 enum gains a member for helper unavailability (FR-025).
@@ -466,6 +540,27 @@ fixture is **not** a corpus case — it must fail schema validation, and every c
 case must validate — so it is constructed inline in the **slice-1** test, the same
 technique FR-019a uses, travelling with the `maximum` keyword it proves (FR-027).
 
+Two case-authoring obligations that the field design alone does not convey:
+
+- **`budget-exhaustion-of-one` binds the `retries` class.** It declares all three budgets
+  at `1` — valid against §1's bounds, since `max_retries` allows `0` upward and the other
+  two allow `1` upward — pins all three actual counts, and pins
+  `details.exhausted_budget: ["probe_attempts", "retries", "fan_out"]` on its terminal
+  diagnostic (FR-028, FR-026a). Its preferred route's exact-invocation outcome is
+  `failure`, the one permitted retry re-consults it and returns the same `failure`, and no
+  further retry may be taken. Retries are named explicitly because the roadmap states
+  retry exhaustion as its own obligation while FR-028's parent sentence and User Story 2's
+  scenario 7 both allow "a probe or retry budget", which a probe-only case would satisfy
+  while leaving retries unproven. No case makes probe-attempt or fan-out exhaustion the
+  sole at-cap class.
+- **The three pre-walk violation cases record an empty `attempted_routes`.**
+  `unqualified-adjacent-model`, `generic-agent-substitution`, and
+  `silent-inherit-materialization` are rejected before the walk starts, so their pinned
+  reports carry `attempted_routes: []`, all three actual counters at `0`, and
+  `release_claim_eligible: false` (FR-019c). `fallback-loop` is the exception in that
+  group: it is detected during the walk, so its report carries the routes attempted
+  before the revisit and does **not** repeat the revisited route.
+
 ---
 
 ## 5. Simulator public surface
@@ -513,6 +608,24 @@ override handling, the helper-unavailable path, and no-safe-route remediation.
 Because structural validation is a pre-pass of the same resolution walk — and
 because `fallback_loop` detection needs the walk state this module already owns —
 it is not a second module (FR-033d).
+
+**The pre-pass covers three codes, not four** (FR-019c). `unqualified_adjacent_model`,
+`generic_agent_substitution`, and `silent_inherit_materialization` are decidable from
+the declared policy alone, so they run to completion before the first route is
+attempted and suppress the walk entirely. `fallback_loop` is detected *inside* the walk,
+on reaching a route already attempted — which is what FR-001 means by needing walk state
+and what FR-020 means by "already-attempted". `unqualified_override` is neither: it is an
+environment condition read from the overrides input and never suppresses the walk.
+
+**Diagnostic ordering is a second staged call graph** (FR-012b), separate from the
+sub-reason staging. Per attempted route, one private helper per rejection family is
+called in the FR-005 declaration order and each appends its own diagnostic if its
+predicate holds — the accumulate-all shape
+`claude_policy_controls.py:2282-2298` already uses for budget breaches, rather than the
+alphabetical `sorted(set(reasons))` at `claude_policy_controls.py:2524`, which would
+scramble a meaningful precedence and could not be made structural. The array is then
+assembled in the three stages FR-012b fixes, with exactly one terminal `no_safe_route`
+entry last.
 
 ---
 
