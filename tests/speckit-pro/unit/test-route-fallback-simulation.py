@@ -3062,14 +3062,31 @@ class NoSafeRouteRecoveryTests(SimulatorCaseMixin, unittest.TestCase):
                 )
                 self.assertNotIn(name, MUTATING_CALLS, f"{name} mutates the filesystem")
                 if name == "open":
-                    modes = [
-                        arg.value
-                        for arg in [*node.args, *(kw.value for kw in node.keywords)]
-                        if isinstance(arg, ast.Constant) and isinstance(arg.value, str)
-                    ]
+                    # Only the real ``mode`` argument is a mode. Collecting every
+                    # string literal in the call would misread a filename or an
+                    # ``encoding="utf-8"`` keyword as a mode and fail a read-only
+                    # ``open`` — a false positive that would make this audit
+                    # untrustworthy the first time the simulator legitimately used
+                    # ``open``. The position differs by call shape: ``open(file,
+                    # mode)`` puts it at index 1, while ``path.open(mode)`` binds
+                    # the path as the receiver and puts it at index 0.
+                    mode_index = 0 if isinstance(node.func, ast.Attribute) else 1
+                    mode_node = next(
+                        (kw.value for kw in node.keywords if kw.arg == "mode"),
+                        node.args[mode_index] if len(node.args) > mode_index else None,
+                    )
+                    if mode_node is None:
+                        continue  # omitted mode defaults to "r" — read-only, safe
                     self.assertTrue(
-                        all(set(mode) <= set("rbt") for mode in modes),
-                        f"open called with a write mode: {modes}",
+                        isinstance(mode_node, ast.Constant)
+                        and isinstance(mode_node.value, str),
+                        "open called with a non-literal mode, which this audit "
+                        "cannot prove read-only",
+                    )
+                    self.assertLessEqual(
+                        set(mode_node.value),
+                        set("rbt"),
+                        f"open called with a write mode: {mode_node.value!r}",
                     )
             if isinstance(node, (ast.Import, ast.ImportFrom)):
                 for alias in node.names:
