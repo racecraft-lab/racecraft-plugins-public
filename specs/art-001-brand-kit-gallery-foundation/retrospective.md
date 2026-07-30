@@ -280,7 +280,12 @@ questions in this section are now closed:**
    verified against browser-engine source, not executed.
 5. Demonstrate SC-004 by porting without editing any shared foundation file.
 
-**Raised against speckit-pro (recorded in the workflow file, not ART-001 scope):**
+**Raised against speckit-pro — now tracked as HRNS-015 (not ART-001 scope):**
+
+All six are consolidated into one roadmap entry, *HRNS-015: Autopilot and
+PR-Emission Defect Repair*, in the harness-engineering-uplift roadmap. Status
+Ready, 150 estimated reviewable LOC, one slice, no dependency on other HRNS
+specs. Each carries its reproduction and `file:line` cause.
 
 6. The PR packet's generated body and this repository's release-note gate are
    mutually unsatisfiable as written.

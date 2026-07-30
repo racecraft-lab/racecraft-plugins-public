@@ -1368,6 +1368,12 @@ path would not by itself have prevented this — see the gap raised below.
 
 ### Raised against speckit-pro (not ART-001 scope)
 
+**All six are now tracked as [HRNS-015: Autopilot and PR-Emission Defect
+Repair](../harness-engineering-uplift-technical-roadmap.md)**, status Ready,
+estimated 150 reviewable LOC in a single slice. Each carries its reproduction and
+`file:line` cause there. Scaffold it with `/speckit-pro:speckit-scaffold-spec
+HRNS-015`.
+
 - **The autopilot skill permits a correct-but-halted turn.** Its loop is written as a
   procedure and its post-implementation list is a separate section, so nothing states
   that a turn must not end while phases remain. A rule such as *"never emit a
