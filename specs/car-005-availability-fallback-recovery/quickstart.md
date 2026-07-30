@@ -110,9 +110,12 @@ IV).
 | Roadmap parity | the resolution enum read live by JSON pointer equals the five codes the Claude roadmap pins; a missing **and** an extra member each fail (FR-017a, SC-012) |
 | Divergence pinned | `capability_probe_unavailable` versus `capability_discovery_unavailable` held as test data; a silent change to either roadmap's spelling fails (FR-017b) |
 | Closure of both enums | the inline negative test rejects a diagnostic whose `code` is outside **both** enums (FR-019a, SC-003) |
+| Policy-violation enum set equality | the enum read live by JSON pointer equals the five members exactly; a sixth **and** a dropped member each fail (FR-019b, SC-003) |
+| Effort-ladder set equality | the route schema's effort enum equals `low`/`medium`/`high`/`xhigh`/`max` exactly, failing in both directions; `ultracode` is not a member (FR-007a, SC-013) |
+| Out-of-range budget | an inline declared-budget object above the schema `maximum` **fails validation** rather than being clamped (FR-027) |
 | Zero production files | nothing under `speckit-pro/` changed (SC-004) |
 | Zero shared-contract members | `layer6-efficiency/contracts/` unchanged (SC-005) |
-| No shipped agent names | zero of the twelve real agents appear in fixtures (SC-006) |
+| Synthetic cast only | every corpus agent name carries the `fixture-` prefix, and no name matches the roster listed live from `speckit-pro/agents/` (FR-018, SC-006) |
 
 ### Manual determinism spot-check
 
@@ -180,11 +183,12 @@ restacks — it is never absorbed into slice 2's diff.
 | --- | --- |
 | Corpus replay | all eighteen cases byte-identical to their pinned reports (SC-002) |
 | Scenario coverage | every scenario SC-001 enumerates has at least one case, zero unrepresented |
-| Budget cap | the budget-of-one case records exactly one attempt and never exceeds the declared cap (FR-026, SC-009) |
-| Out-of-range budget | an inline fixture declaring a budget above the schema maximum **fails validation** rather than being clamped (FR-027) |
+| Budget cap | the budget-of-one case pins all three actual counters at their declared cap of `1` and never exceeds it — the single permitted retry re-consults the failing preferred route and no further retry is taken (FR-026, SC-009) |
+| Exhaustion enumerated | `details.exhausted_budget` on the terminal `no_safe_route` diagnostic lists all three classes in enum declaration order, and appears on no other diagnostic (FR-026a, SC-009) |
 | No-safe-route is report-only | the case names the unresolved agent, every attempted route, each rejection reason, and remediation whose actions include `Roll back to the previous plugin release.` verbatim; no shipped agent file is read for mutation or written (FR-029, SC-010) |
-| Helper unavailability | recorded as the structured `optional_helper` field, not a diagnostic; required-agent resolution does not fail (FR-025) |
-| Override path | override recorded as effective dispatch tuple, `release_claim_eligible: false`, and the would-have-been qualified resolution recorded (FR-024) |
+| Helper unavailability | recorded as the structured `optional_helper` field, not a diagnostic; `probe_attempts` is an explicit `0` and no `attempted_routes` entry names a helper route; required-agent resolution does not fail (FR-025) |
+| Override honored | the override is the effective dispatch tuple as a hybrid — model from the override, `agent` and `effort` retained — `release_claim_eligible: false`, and the would-have-been qualified resolution recorded (FR-024) |
+| Override skipped by allowlist | `disposition` is `skipped_by_allowlist`, `override.tuple` is **absent**, `effective_dispatch_tuple` follows the qualified walk, and the report deliberately does **not** name the model that runs instead (FR-024b) |
 | No signature drift | no slice-1 function signature changed (FR-001, FR-033b) |
 
 ---

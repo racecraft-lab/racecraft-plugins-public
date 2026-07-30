@@ -28,7 +28,9 @@ answered it. `claude_policy_controls.py:108` publishes
 subset engine whose docstring states the invariant this feature depends on:
 "every `$ref` is resolved against its own `#/$defs/` and a reference leaving the
 document fails closed (SC-017)". That is FR-016's no-cross-document-`$ref` rule
-enforced by the engine itself rather than by convention.
+enforced by the engine itself rather than by convention. The trailing `SC-017` is
+**CAR-004's** success criterion, quoted verbatim from that docstring — it is not a
+reference to a criterion of this feature, whose criteria stop at SC-013.
 
 The reuse precedent is explicit and recent. `claude_control_comparison.py:37-48`
 imports `CONTRACT_ROOT`, `FIXTURE_ROOT`, `ControlContractError`,
@@ -253,7 +255,7 @@ The `$id` values *do* contain `car-005`, and that is correct: the check inspects
 path stems, not file contents, and the existing convention already embeds
 `car-003`/`car-004` in every `$id` (verified across all eleven documents). The
 roadmap's own proposed Key Files
-(`docs/ai/specs/claude-agent-routing-technical-roadmap.md:552-554`) independently
+(`docs/ai/specs/claude-agent-routing-technical-roadmap.md:636-637`) independently
 name `fixtures-fallback/` and `test-route-fallback-simulation.py`, matching this
 plan.
 
@@ -262,11 +264,11 @@ plan.
 ## D10: The roadmap parity source is verified verbatim
 
 **Verified** the five codes the Claude roadmap pins, at
-`docs/ai/specs/claude-agent-routing-technical-roadmap.md:527-529`:
+`docs/ai/specs/claude-agent-routing-technical-roadmap.md:604-606`:
 `preferred_model_unavailable`, `effort_unsupported`,
 `capability_probe_unavailable`, `treatment_probe_failed`, `no_safe_route`.
 Exactly five — a whole-file scan for backticked reason-code tokens returns only
-these, all within `:527-529`.
+these, all within `:604-606`.
 
 **Verified** the Codex counterpart at
 `docs/ai/specs/codex-gpt-5-6-agent-routing-technical-roadmap.md:535-538`, whose
@@ -285,13 +287,13 @@ parsing the roadmap.
 
 **FR-012a's verbatim rollback string is grounded.** The roadmap states the
 guidance twice in indicative mood — CAR-005 scope: "consumer recovery is the
-previous plugin release" (`:536-537`); CAR-011 live-UAT scope: "rollback to the
-previous plugin release" (`:902-903`). `Roll back to the previous plugin
+previous plugin release" (`:619-620`); CAR-011 live-UAT scope: "rollback to the
+previous plugin release" (`:994-995`). `Roll back to the previous plugin
 release.` is the imperative rendering FR-012a pins, consistent with both.
 
 **FR-017c's permanence evidence is confirmed**: the Claude roadmap bounds three
-budget dimensions ("bound probe attempts, retries, and fan-out", `:532-533`) and
-names four rejections (`:531-533`), while Codex bounds six and names six
+budget dimensions ("bound probe attempts, retries, and fan-out", `:615-616`) and
+names four rejections (`:614-616`), while Codex bounds six and names six
 (`:539-545`), and Codex carries an approved/unapproved service-reroute
 distinction with no Claude analogue. The vocabularies describe different
 mechanisms; reconciliation would force one platform onto a term that misdescribes
@@ -315,7 +317,7 @@ effort enum to exactly those five with the description "FR-003: the closed
 ordered Claude ladder." Inventing a parallel effort vocabulary would make
 FR-007's `effort_unsupported` case untranslatable when CAR-006 adopts the corpus.
 Agent names and model IDs are the opposite case — FR-018 and SC-006 require the
-cast to be synthetic and forbid naming any of the twelve shipped agents, so those
+cast to be synthetic, `fixture-` prefixed, and never a shipped agent name, so those
 are invented per the three role classes the spec's assumptions fix (required
 executor, bounded analyst, optional helper).
 

@@ -63,7 +63,7 @@ helper state.
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `name` | string, `minLength: 1` | synthetic; never one of the twelve shipped agents (FR-018, SC-006) |
+| `name` | string, `minLength: 1` | synthetic, `fixture-` prefixed; never a shipped agent name, with the roster read live from `speckit-pro/agents/` rather than transcribed (FR-018, SC-006) |
 | `role_class` | inline enum | `required_executor`, `bounded_analyst`, `optional_helper` — the three classes the spec's assumptions fix |
 
 ### `$defs/route`
@@ -338,7 +338,7 @@ field — hoisting it would create the second dialect FR-012 forbids.
 
 **`$defs/resolutionDiagnostic`** — `properties/code/enum` holds exactly the five
 codes the Claude roadmap pins at
-`docs/ai/specs/claude-agent-routing-technical-roadmap.md:527-529`:
+`docs/ai/specs/claude-agent-routing-technical-roadmap.md:604-606`:
 `preferred_model_unavailable`, `effort_unsupported`,
 `capability_probe_unavailable`, `treatment_probe_failed`, `no_safe_route`.
 
@@ -449,7 +449,7 @@ Unset the unqualified subagent-model override before making release claims.
 
 `Roll back to the previous plugin release.` is verbatim per FR-012a/FR-029 and is
 the imperative rendering of the roadmap's own guidance at
-`claude-agent-routing-technical-roadmap.md:536-537` and `:902-903` (research D10).
+`claude-agent-routing-technical-roadmap.md:619-620` and `:994-995` (research D10).
 The `no_safe_route` diagnostic's `actions` must include it.
 
 **Adequacy of the vocabulary against the bounds.** `minItems: 1` obliges every
@@ -660,8 +660,8 @@ Two case-authoring obligations that the field design alone does not convey:
   further retry may be taken. Retries are named explicitly because the roadmap states
   retry exhaustion as its own obligation while FR-028's parent sentence and User Story 2's
   scenario 7 both allow "a probe or retry budget", which a probe-only case would satisfy
-  while leaving retries unproven. No case makes probe-attempt or fan-out exhaustion the
-  sole at-cap class.
+  while leaving retries unproven. No case makes probe-attempt or candidate-route exhaustion
+  the sole at-cap class.
 - **The two override cases pin opposite dispositions.** `unqualified-override`
   declares a snapshot whose allowlist permits the override target, so `disposition` is
   `honored`, `qualified` is `false`, the hybrid `tuple` is present, and the

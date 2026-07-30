@@ -40,9 +40,9 @@ reuse one — resolved to reuse: the fail-closed engine at
 `claude_policy_controls.py:108` already enforces the no-cross-document-`$ref` rule
 FR-016 depends on, and CAR-004 set the import precedent (research D1).
 
-Delivery is two vertical slices as a `gh-stack` chain. Slice 1 creates all seven
-authored files complete; slice 2 extends exactly three of them additively and
-creates none.
+Delivery is two vertical slices as a `gh-stack` chain. Slice 1 lands all eight
+authored files complete — the six it creates plus the two it modifies; slice 2
+extends exactly three of them additively and creates none.
 
 ## Technical Context
 
@@ -81,14 +81,14 @@ fixture edited, no member added to the shared byte-identical
 No authored filename coupled to the spec ID.
 
 **Scale/Scope**: 3 schema documents, 1 simulator module, 1 corpus of 18 cases, 1
-unit test, 1 manifest entry, 1 regenerated docs page. 2 user stories, 57
-functional requirements, 13 success criteria.
+unit test, 1 manifest entry, 1 roadmap update, 1 regenerated docs page. 2 user
+stories, 60 functional-requirement identifiers, 13 success criteria.
 
 **Reviewability Budget**: Primary surface harness/adapter (Layer 6 efficiency
 schemas, fixtures, and reference simulator) with its unit-test surface; secondary
 surface seed/config (one `suite-manifest.json` entry). Projected reviewable LOC
 **0** by this repository's declared-LOC accounting; projected production files
-**0**; projected total files 7 authored plus 1 generated. Budget result: **split
+**0**; projected total files 8 authored plus 1 generated. Budget result: **split
 elected on review burden, not gate-forced** — see the dedicated section below.
 
 ## Declared File Operations
@@ -107,20 +107,27 @@ rather than here.
 - NEW tests/speckit-pro/layer6-efficiency/fixtures-fallback/fallback-scenario-corpus.json
 - NEW tests/speckit-pro/unit/test-route-fallback-simulation.py
 - MODIFIED tests/speckit-pro/suite-manifest.json
+- MODIFIED docs/ai/specs/claude-agent-routing-technical-roadmap.md
 - MODIFIED docs-site/src/content/docs/reference/tests.md
 
-Eight entries: six new authored files, one modified authored file, one regenerated
-generated file. The estimator classifies **none** of them as production —
-`is_production_file` matches only paths starting `src/`, `app/`, `lib/`, or
-`scripts/`, or ending `.ts`/`.tsx`/`.js`/`.jsx`/`.mjs`/`.cjs`/`.sql`
+Nine entries: six new authored files, two modified authored files, and one
+regenerated generated file — which the estimator reports as `new: 6` and
+`modified: 3`, since it does not distinguish an authored modification from a
+regenerated one. The roadmap entry is listed because it is genuinely in slice 1's
+diff — it carries the status line and progress row from scaffold plus the
+**Grounded Platform Facts** section (PF-1…PF-4) and the two dated scope
+amendments, and FR-033a's allocation table names it. The estimator classifies
+**none** of the nine as production — `is_production_file` matches only paths
+starting `src/`, `app/`, `lib/`, or `scripts/`, or ending
+`.ts`/`.tsx`/`.js`/`.jsx`/`.mjs`/`.cjs`/`.sql`
 (`speckit-pro/speckit_pro_runner/helpers/read_only.py:3811-3812`). Every path here
-starts with `tests/` or `docs-site/` and ends `.json`, `.py`, or `.md`, so
+starts with `tests/`, `docs/`, or `docs-site/` and ends `.json`, `.py`, or `.md`, so
 `production = 0` and `projected = 0 × 40 = 0`.
 
-`greenfield` evaluates **false**, because `suite-manifest.json` is MODIFIED and is
-not excluded-generated, so the thresholds stay 400/800 rather than 600/1200
-(`read_only.py:922`). Status will read `pass` — at a projected value of 0 it could
-not read anything else.
+`greenfield` evaluates **false**, because `suite-manifest.json` and the roadmap are
+MODIFIED and neither is excluded-generated, so the thresholds stay 400/800 rather
+than 600/1200 (`read_only.py:923-925`). Status will read `pass` — at a projected
+value of 0 it could not read anything else.
 
 ## Constitution Check
 
@@ -152,7 +159,7 @@ from review.
 and the measurement is uninformative here. The constitution's thresholds are warn
 above 400 reviewable LOC / 6 production files / 15 total files / more than one
 primary surface, and block above 800 / 8 / 25 / more than one primary surface. This
-feature declares 0 production files, 8 declared entries, and one primary surface.
+feature declares 0 production files, 9 declared entries, and one primary surface.
 Projected reviewable LOC is 0. Nothing warns and nothing blocks.
 
 **Split decision**: two vertical slices, User Story 1 then User Story 2, as a
@@ -174,7 +181,7 @@ Stated honestly rather than favourably, because the automated signals here are
 blind and it would be easy to imply otherwise.
 
 **No gate measures this surface.** `estimate-reviewable-loc` computes
-`projected = production_files × 40` (`read_only.py:926`), and
+`projected = production × 40` (`read_only.py:926`), and
 `production_files` is 0, so it returns 0 with status `pass`. The setup gate
 performs no measurement at all — it regex-scrapes the number a human typed into
 the roadmap (`read_only.py:850`). The PR-time packet gate thresholds that same
@@ -208,14 +215,14 @@ Because no gate measures this surface, plan-time or PR-time re-estimation
 decision can.
 
 **Recorded roadmap inconsistency**: the CAR-005 roadmap entry declares
-`Suggested slices: 1` (`docs/ai/specs/claude-agent-routing-technical-roadmap.md:516`)
+`Suggested slices: 1` (`docs/ai/specs/claude-agent-routing-technical-roadmap.md:593`)
 while the same roadmap's Progress Tracking row declares "2 vertical slices,
-gh-stack delivery" (`:234`). The advisory `estimate-spec-size` formula
-(`user_stories × 25 + files × 40 + frs × 15`, `read_only.py:967`) re-run on this
+gh-stack delivery" (`:311`). The advisory `estimate-spec-size` formula
+(`user_stories × 25 + files × 40 + frs × 15`, `read_only.py:964`) re-run on this
 spec's real signals returns **at least 3** suggested slices however it is counted:
 the spec's earlier figure of 35 functional requirements yields 975 and 3 slices,
-and the current literal count of 57 distinct FR identifiers — 33 base numbers plus
-twenty-four lettered sub-requirements such as FR-012a and FR-033d — yields **1,305
+and the current literal count of 60 distinct FR identifiers — 33 base numbers plus
+twenty-seven lettered sub-requirements such as FR-012a and FR-033d — yields **1,350
 and 4 slices**, status `warn`. Every reading exceeds the 400-LOC ceiling by more
 than a factor of two. Nothing in the estimator supports collapsing to one slice.
 The Progress Tracking row is correct; the `Suggested slices: 1` figure is a stale
@@ -238,6 +245,7 @@ creates none (FR-033a).
 | `fixtures-fallback/fallback-scenario-corpus.json` | create — nine US1 cases with pinned reports | append nine US2 cases at the tail, including both override cases; existing positions and pinned bytes unchanged |
 | `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity over the simulator's own serializer, roadmap parity, set equality on all three closed enums (both reason-code vocabularies and the effort ladder), inline negative tests for out-of-vocabulary code and out-of-range budget, corpus case-ID uniqueness and self-containment | append the US2 test functions |
 | `suite-manifest.json` | modify — append **one** entry to the layer 4 `scripts[]` array | **unchanged** |
+| `docs/ai/specs/claude-agent-routing-technical-roadmap.md` | modify — status line and progress row at scaffold, plus the **Grounded Platform Facts** section (PF-1…PF-4) and the two dated scope amendments recording that the override is conditional and that CAR-002 never pinned the unavailable-model fact | untouched |
 | `docs-site/src/content/docs/reference/tests.md` | regenerate (generated; excluded from review) | regenerate |
 
 **Schemas are excluded from the seam entirely.** All three land complete in slice
@@ -263,7 +271,7 @@ behind for a later slice.
 
 ```text
 specs/car-005-availability-fallback-recovery/
-├── spec.md              # Input (clarified: 56 FRs, 0 markers)
+├── spec.md              # Input (clarified: 60 FR identifiers, 0 markers)
 ├── SPEC-MOC.md          # Pre-existing navigation note (untouched)
 ├── plan.md              # This file (/speckit-plan output)
 ├── research.md          # Phase 0 output — precedent verification, 12 decisions
@@ -315,7 +323,7 @@ feature is repository-only validation, so it follows the existing Layer 6
 efficiency layout, which the roadmap itself already anticipated: the CAR-005 Key
 Files list proposes `layer6-efficiency/fixtures-fallback/` and
 `unit/test-route-fallback-simulation.py`
-(`docs/ai/specs/claude-agent-routing-technical-roadmap.md:552-554`), matching this
+(`docs/ai/specs/claude-agent-routing-technical-roadmap.md:636-637`), matching this
 plan exactly.
 
 Placement rationale per directory:

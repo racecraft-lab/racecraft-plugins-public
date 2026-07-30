@@ -1072,9 +1072,40 @@ Focus on:
 
 ### Analysis Results
 
+**G6 gate:** ✅ PASS — `validate-gate G6`, "0 CRITICAL/HIGH findings".
+
+**Executor delivery caveat, recorded honestly.** The `analyze-executor` completed but its
+final output was a single mid-sentence fragment ("Now the second analysis loop — a full
+re-verification sweep"), so **no findings summary was ever delivered**. It had, however,
+already applied substantial fixes: 121 insertions / 78 deletions across six artifacts. The
+orchestrator therefore reconstructed the findings **from the diff itself** rather than
+trusting an undelivered report, and independently re-verified the consistency claims. What
+follows is read off the committed diff, not quoted from a summary.
+
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| A-01 | HIGH | **Every roadmap line-number citation in the spec had gone stale.** Inserting the Grounded Platform Facts section shifted the roadmap by ~78 lines, invalidating each `claude-agent-routing-technical-roadmap.md:NNN` reference — the citations that FR-002a, FR-006, FR-017c, FR-024a/b and the reviewability section depend on for their grounding. A reader following one would land in the wrong scope block. | All repaired: `342-344`→`420-421`, `355-358`→`432-435`, `526`→`602-603`, `592-595`→`676-677`, `552-554`→`636-637`, `516`→`593`, `234`→`311`. Caused by the orchestrator's own roadmap edit. |
+| A-02 | HIGH | **FR-018 said "the twelve real shipped agents".** The shipped roster is **eleven** definitions under `speckit-pro/agents/` today; a twelfth (`autopilot-fast-helper`) is net-new in CAR-010. So the count was wrong *now*, and a blocklist keyed to a roster snapshot would silently stop covering names added later. | Added the **positive** rule — every fixture agent name must carry the `fixture-` prefix — and required the negative assertion to derive its roster **live**, for the same reason FR-017a reads the resolution enum live: a transcribed roster absorbs the drift it exists to catch. |
+| A-03 | MEDIUM | **Declared File Operations omitted the roadmap**, which is genuinely in slice 1's diff. The plan said "eight entries: six new, one modified, one regenerated". | Now nine entries: six new, two modified, one regenerated — with the note that the estimator reports `new: 6 / modified: 3` because it does not distinguish an authored modification from a regenerated one. FR-033a's table gained the row too. |
+| A-04 | MEDIUM | **Stale counts across `plan.md`**: "57 functional requirements", "spec.md (clarified: 56 FRs)", "7 authored plus 1 generated", "8 declared entries", and an estimator figure of 1,305. | Corrected to 60 FR identifiers (33 base + 27 lettered), 8 authored plus 1 generated, 9 declared entries, and **1,350 / 4 slices**. |
+| A-05 | LOW | Imprecise source citations: `production_files × 40` where the helper's identifier is `production`, and `read_only.py:922` / `:967` off by a line or two. | Corrected to `production × 40`, `:923-925`, `:964`. |
+| A-06 | LOW | `quickstart.md` corpus replay said "all seventeen cases" where the binding count is 18. | Found by the Tasks executor and fixed by the orchestrator before Analyze ran; verified still correct. |
+
+**Orchestrator's independent verification** (not relying on the undelivered summary):
+FR identifiers defined = **60**, success criteria = **13**, distinct task IDs = **63** —
+all three matching their claimed values. Zero dangling `FR-xxx` references across all six
+artifacts and the three checklists. One apparent dangling `SC-017` in `research.md` was
+checked and is a **false positive**: it is a verbatim quotation from CAR-004's engine
+docstring, annotated in place as "**CAR-004's** success criterion… not a reference to a
+criterion of this feature, whose criteria stop at SC-013". Correctly handled. Case-count
+mentions are coherent throughout (18 total, 9 + 9; `data-model.md`'s "the other seventeen
+cases" is 18 − 1 and correct). The seam invariant "slice 2 modifies no schema file" is
+stated consistently in `spec.md` (FR-033a/b), `plan.md`, and `tasks.md`.
+
+**Analyze consensus:** not dispatched — no `Unresolved for consensus` section was
+delivered, and the orchestrator's own re-verification found nothing warranting one. This
+is a *skip on absence of reported items*, not a skip on verified zero, and is recorded as
+such rather than presented as a clean consensus pass.
 
 ---
 
@@ -1169,6 +1200,47 @@ mandatory human-review stop applies to them.
 | 5 | Gap | EH-CHK047: is `severity` a function of `code` (rule-level) or per-occurrence? | [domain] | 1 | high-confidence | **Keep rule-level — but the stated warrant was falsifiable and is replaced.** FR-012c implied mirroring the runner; the runner is in fact **caller-determined** (`severity` a keyword param defaulting to `error`, and `plan_layers_diagnostic` takes `code` and `severity` as *independent* parameters — the signature you would not write if severity followed code), with **no code-to-severity table anywhere**. Relabelled as a deliberate divergence justified by emitter difference: the runner's emitter is code needing a default; this feature's is a hand-authored corpus where "left to the emitter" means unfalsifiable authoring latitude. External practice is a genuine coin flip and **not** the deciding input — the standards answer runtime derivation for *unbounded* findings. LSP specifically does not support the occurrence reading (no rule catalog on the wire, so its fallback is a constant, not a rule default). Decisive grounds are internal: exactly one terminal diagnostic always last, plus a dedicated `release_claim_eligible` gate, make a second channel redundant and potentially contradictory. The hard case confirms it — `unqualified_override` is `warning` in **both** configurations | domain-researcher |
 | 6 | Gap | EH-CHK024/025: what do `retries` and `fan_out` actually count? | [domain, spec] | 1 | **both-agree** | **`fan_out` RENAMED to `candidate_routes` / `max_candidate_routes`.** Both analysts independently found the token is **already frozen with a different referent in the same contracts directory** — "a declared ceiling on automatically spawned children" — and the Codex twin names that concept "**subagent** fan-out … **in the harness**". Reusing it would put two referents on one name in one directory: the same second-dialect trap FR-012 refuses. `candidates` was already a member of the frozen unit enum, so the rename follows precedent rather than departing from it. Descoping was rejected — dropping the third budget leaves walk breadth unbounded. **`probe_attempts` restated as "once per route's *first* consultation"**: a retry also reaches probe evaluation, so counting every consultation broke the `probe_attempts <= candidate_routes` invariant and made `retries: 1` unreachable under `max_probe_attempts: 1`, rendering FR-028 unsatisfiable at its own declared configuration. **`retries` keeps its exclusive base** (correct per convention *and* the repo's own registry) **with the justification reframed** — re-reading an unchanged snapshot is a no-op fiction, so it is recorded as a declared allowance for the attempts a live preflight would make, deterministically pinned by the fixture. **Counting scope added** (per reported agent's own walk). Corrected the executor's "every cap carries a `unit`" claim: two of the registry's own caps are bare integers, so the durable rule is unit + scope + breach | domain-researcher + spec-context-analyst |
 | 3 | Clarify | S1-Q5: are two slices still warranted now the artifact list is concrete? | [spec] | n/a | **operator-directive** | **Keep two slices**, with the rationale corrected: the split is *elected on review burden and independent slice value*, not forced by a LOC ceiling. Consensus was deliberately **not** dispatched — the executor's own blocker was operator authority, not an evidence gap, and no analyst can supply authority the operator already exercised. Surfaced to the operator for a change of mind; shipped artifacts are identical either way, only PR count and the append-only discipline change | none dispatched (see Resolution) |
+
+## Pre-Implement Confidence (G6.5)
+
+**Provenance — read this before the number.** The protocol assigns this emit to the
+`consensus-synthesizer`. It was dispatched and **also went idle without delivering**
+(its final output was a mid-sentence fragment, the same failure that swallowed the
+analyze-executor's summary). Rather than soft-skip the last check before 63
+implementation tasks, the **orchestrator scored it directly**, having read every artifact
+and driven every phase. This block is therefore **orchestrator-scored, not
+synthesizer-scored** — recorded that way so the number is not mistaken for an independent
+assessment.
+
+```text
+📊 Confidence: 0.94
+
+- Task understanding: 0.92
+- Approach clarity: 0.94
+- Requirements alignment: 0.96
+- Risk assessment: 0.88
+- Completeness: 0.98
+```
+
+**Lowest criterion is risk assessment (0.88), and it is deliberately not 1.00.** `G6`
+reports zero CRITICAL/HIGH findings, but that would be a hollow 1.00: the
+`analyze-executor` went idle *while beginning its second re-verification sweep*, so that
+sweep never completed. The orchestrator reconstructed the findings from the diff and
+independently re-verified FR/SC/task counts, cross-reference resolution, case-count
+coherence and the seam invariant — all clean — but an independently completed second
+analysis loop is a thing this run does **not** have, and scoring around that would be
+dishonest. Nothing known is open; the gap is in verification depth, not in a known defect.
+
+Task understanding is marked at 0.92 for density rather than ambiguity: 60 FR identifiers
+including 27 lettered sub-requirements, each with inline grounding prose, across ~1,360
+lines. Every one traces to a real decision, but an implementer must hold a great deal at
+once — mitigated substantially by 63 concrete tasks and `data-model.md`'s explicit schema
+shapes. Approach clarity is 0.94 with no TBD markers; the one soft spot is that the
+simulator's internal function-level structure is described rather than fully designed,
+which is appropriate for a plan but leaves genuine choices to implementation.
+
+**Gate outcome:** 0.94 ≥ 0.90 threshold, `CONFIDENCE_GATE_MODE=advisory`. Proceed to
+Phase 7.
 
 ## Lessons Learned
 

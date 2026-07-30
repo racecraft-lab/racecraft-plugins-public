@@ -207,7 +207,7 @@ cohort specs inherit proven rejection semantics.
 - **FR-002a**: The projection's provenance and its **epistemic status** MUST be
   recorded, because the roadmap makes the CAR-002 probed unavailable-model
   behaviour the input that "shapes the CAR-005 reason codes"
-  (`docs/ai/specs/claude-agent-routing-technical-roadmap.md:342-344`) and this
+  (`docs/ai/specs/claude-agent-routing-technical-roadmap.md:420-421`) and this
   feature would otherwise claim an alignment it cannot demonstrate. [US1]
   - **Unavailability is a snapshot-declared preflight input, never a simulated
     dispatch attempt.** Every unavailability this feature reports is read from the
@@ -369,7 +369,7 @@ cohort specs inherit proven rejection semantics.
   - **Reconciliation with CAR-002's detection rule.** CAR-002 defines platform
     route-change detection as "any observed model ID differing from the resolved
     qualified ID, **including alias re-pointing**", recorded separately from
-    resolver fallback (`claude-agent-routing-technical-roadmap.md:355-358`) — one
+    resolver fallback (`claude-agent-routing-technical-roadmap.md:432-435`) — one
     bucket where this vocabulary has two members. The two are **not** in conflict,
     and the relationship MUST be stated because the appearance of conflict is
     otherwise the natural reading. CAR-002's rule is a *detection* rule with one
@@ -783,7 +783,23 @@ cohort specs inherit proven rejection semantics.
     mechanism regardless of disposition.
 - **FR-018**: All fixture policies MUST draw their agent names from a small
   synthetic cast of three role classes — a required executor, a bounded analyst, and
-  an optional helper — and MUST NOT name any of the twelve real shipped agents. [US1]
+  an optional helper — and MUST NOT name any real shipped agent. [US1]
+  - **Every fixture agent name MUST carry the `fixture-` prefix**, giving the cast
+    `fixture-required-executor`, `fixture-bounded-analyst`, and
+    `fixture-optional-helper`. This is the positive form of the rule and it is what
+    the corpus is asserted against; the design concept fixed the `fixture-*` cast at
+    Q5 and CAR-002 set the precedent with its `PROBE_AGENT_NAME = "car002-probe"`
+    (`claude_capabilities.py:450`). The prefix rule is required in addition to the
+    negative one because the negative one alone is **not stable**: the shipped roster
+    is eleven agent definitions under `speckit-pro/agents/` today, and a twelfth
+    (`autopilot-fast-helper`) is net-new in CAR-010, so a blocklist keyed to a
+    snapshot of the roster silently stops covering names added after it was written.
+    A prefix test cannot go stale that way, and it is also what makes the design
+    concept's stated purpose — that simulation output be impossible to mistake for a
+    shipped-route claim in a grep result or a review — actually hold.
+  - **The negative assertion MUST derive its roster live** rather than transcribing
+    agent names into the test, for the same reason FR-017a reads the resolution enum
+    live: a transcribed roster absorbs the drift it exists to catch.
   "Cast" describes the vocabulary the corpus draws from, **not** the number of agents
   one policy names. A policy names exactly one agent as its subject (FR-003) and MAY
   additionally declare one optional helper (FR-025b); the third role class appears as
@@ -971,7 +987,7 @@ cohort specs inherit proven rejection semantics.
   - **A platform route change or an alias re-point is *not* a disqualifier, and the
     silence on that MUST be replaced by a decision.** The program's position on the
     same condition is that a route change "marks the run non-scorable for the
-    requested route" (`claude-agent-routing-technical-roadmap.md:355-358`), which
+    requested route" (`claude-agent-routing-technical-roadmap.md:432-435`), which
     reads at first like a fourth disqualifier. It is not, because the two answer
     different questions at different scopes. CAR-002's non-scorability is
     **route-scoped** and concerns whether a *measured outcome* can be attributed to
@@ -992,7 +1008,7 @@ cohort specs inherit proven rejection semantics.
   defining no qualification test, and asserting an unconditional effect. [US2]
   - **The mechanism is `CLAUDE_CODE_SUBAGENT_MODEL`.** The roadmap names it in this
     feature's own scope ("an unqualified `CLAUDE_CODE_SUBAGENT_MODEL` override",
-    `claude-agent-routing-technical-roadmap.md:526`) and this spec dropped the name.
+    `claude-agent-routing-technical-roadmap.md:602-603`) and this spec dropped the name.
     The override record's `source` field MUST therefore be pinned with `const` to that
     identifier rather than left an open string, for the same reason FR-012c pins
     `source` on diagnostics: an unpinned required field is an unpinned byte in every
@@ -1038,7 +1054,7 @@ cohort specs inherit proven rejection semantics.
     **unqualified** when the tuple it produces matches no route the policy declares
     qualified — which is the test CAR-006 is scoped to perform ("validate the
     resulting tuple for every named agent against qualified routes",
-    `claude-agent-routing-technical-roadmap.md:592-595`). Without the predicate the
+    `claude-agent-routing-technical-roadmap.md:676-677`). Without the predicate the
     corpus case is authored against an undefined term and SC-001's
     unqualified-override family has no falsifiable membership test.
   - **A qualified override is in force too.** FR-024a disqualifies a report when "an
@@ -1078,10 +1094,10 @@ cohort specs inherit proven rejection semantics.
     FR-024a reasons the disqualifier from this report's internals; the external
     warrant is stronger and MUST be cited. CAR-002's exact-treatment replay schema
     binds "env-override proof (`CLAUDE_CODE_SUBAGENT_MODEL` unset)"
-    (`claude-agent-routing-technical-roadmap.md:351-354`) — the program's posture for
+    (`claude-agent-routing-technical-roadmap.md:428-431`) — the program's posture for
     a scored run is *proof of unset*, which is strictly stronger than flagging an
     override after the fact. CAR-006 then requires overrides be reported "loudly" with
-    "release claims exclude overridden environments" (`:592-595`). This feature is the
+    "release claims exclude overridden environments" (`:675-678`). This feature is the
     complement of CAR-002's proof: it pins what the report must say when the surface
     CAR-002 proves absent is present instead.
   - **The corpus MUST carry a second override case.** `override-skipped-by-allowlist`
@@ -1329,7 +1345,7 @@ cohort specs inherit proven rejection semantics.
   That case MUST exhaust the **retry** budget specifically, and MUST declare all three
   budgets at `1` while pinning all three actual counts. Naming the class matters because
   the roadmap lists "Prove retry exhaustion" as its own obligation
-  (`docs/ai/specs/claude-agent-routing-technical-roadmap.md:541`) while this requirement
+  (`docs/ai/specs/claude-agent-routing-technical-roadmap.md:624`) while this requirement
   says only "a budget", and User Story 2's acceptance scenario 7 says "a probe or retry
   budget of one" — a disjunction a case could satisfy by exhausting probes and never
   touching a retry, leaving the roadmap's named obligation unproven. Fixing the
@@ -1343,7 +1359,7 @@ cohort specs inherit proven rejection semantics.
   retry exhaustion means against a static snapshot. All three declared values satisfy the
   schema bounds in `data-model.md` §1 (`max_retries` `minimum: 0`, the other two
   `minimum: 1`), so the case validates. Recorded honestly: no case makes probe-attempt or
-  fan-out exhaustion the *sole* at-cap class, which is acceptable for the same reason
+  candidate-route exhaustion the *sole* at-cap class, which is acceptable for the same reason
   FR-019 accepts declaring unexercised enum members — one shared cap check governs all
   three dimensions, so separate cases would re-prove the same code path under a different
   field name. [US2]
@@ -1357,7 +1373,7 @@ cohort specs inherit proven rejection semantics.
   [US2]
 
   **Outcome-attached, not precondition-attached.** FR-029 opens "When the preferred route
-  and every declared fallback are rejected", which FR-026a's fan-out cap now makes
+  and every declared fallback are rejected", which FR-026a's candidate-route cap now makes
   narrower than the set of reports that need it: a walk truncated at `max_candidate_routes` ends
   with routes that were never reached and therefore never rejected, yet still terminates
   in `no_safe_route`. Every obligation FR-029 imposes — naming the unresolved agent,
@@ -1430,8 +1446,8 @@ cohort specs inherit proven rejection semantics.
   | `layer6-efficiency/fixtures-fallback/fallback-scenario-corpus.json` | create — `cases[]` holding the US1 resolution-failure cases with pinned reports | append the US2 cases to the end of `cases[]`, including both override cases (honored and allowlist-skipped); existing case positions and pinned bytes unchanged |
   | `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity over the simulator's own serializer, roadmap parity test, set equality on **all three** closed enums (both reason-code vocabularies and the effort ladder, FR-007a), inline negative tests for out-of-vocabulary code and out-of-range budget, corpus case-ID uniqueness and self-containment | append the US2 test functions |
   | `suite-manifest.json` | modify — append **one** entry to the layer 4 `scripts[]` array | **unchanged — must stay untouched** |
-  | `docs-site/src/content/docs/reference/tests.md` | regenerate (generated; excluded from review) | regenerate |
   | `docs/ai/specs/claude-agent-routing-technical-roadmap.md` | modify — status line and progress row at scaffold, plus the **Grounded Platform Facts** section (PF-1…PF-4) and the two amended scope bullets recording that the override is conditional and that CAR-002 never pinned the unavailable-model fact | untouched |
+  | `docs-site/src/content/docs/reference/tests.md` | regenerate (generated; excluded from review) | regenerate |
 
   Registering exactly **one** test module in slice 1 is what keeps the manifest out
   of slice 2's diff: slice 1's entry becomes the tail of the `scripts[]` array, so a
@@ -1485,17 +1501,17 @@ cohort specs inherit proven rejection semantics.
   number a human typed into the roadmap (`read_only.py:850`); and the PR-time packet
   gate thresholds the same author-declared figure
   (`speckit-pro/speckit_pro_runner/helpers/pr_emission.py:589-619`). Note also that
-  `greenfield` evaluates **false** here because `suite-manifest.json` is modified
-  rather than created (`read_only.py:922`), so the thresholds stay 400/800 rather
-  than 600/1200.
+  `greenfield` evaluates **false** here because `suite-manifest.json` and the routing
+  roadmap are modified rather than created (`read_only.py:923-925`), so the
+  thresholds stay 400/800 rather than 600/1200.
   By **artifact lines**, which is what a reviewer actually reads: roughly
   1,900–2,700 in slice 1 and 1,200–1,900 in slice 2 — three schemas ~470–620, the
   simulator ~550–750 then +350–550, the corpus ~450–600 then +400–550, the unit test
   ~450–700 then +350–600.
   The advisory `estimate-spec-size` formula (`user_stories × 25 + files × 40 +
-  frs × 15`, `read_only.py:967`) re-run on this spec's **real** signals — 2 user
-  stories, 10 files, and the literal count of **57** distinct FR identifiers
-  (33 base numbers plus 24 lettered sub-requirements) — returns **1,305 and 4
+  frs × 15`, `read_only.py:964`) re-run on this spec's **real** signals — 2 user
+  stories, 10 files, and the literal count of **60** distinct FR identifiers
+  (33 base numbers plus 27 lettered sub-requirements) — returns **1,350 and 4
   suggested slices**, status `warn`. It returned 975 and 3 slices against the
   35-requirement figure carried before Clarify and the three checklist domains
   added sub-requirements, and 770/2 at scoping from coarser signals (4 stories, 10
@@ -1593,13 +1609,17 @@ cohort specs inherit proven rejection semantics.
   counterpart is traceable to that counterpart, and every place the simulation
   **deliberately diverges** from it names the divergence and its justification. The
   count of simulated behaviours asserted without either a cited runtime source or a
-  recorded deliberate-divergence note is exactly zero. Three carry recorded
+  recorded deliberate-divergence note is exactly zero. **Four** carry recorded
   divergences today — preflight rejection of an unsupported effort where the runtime
   silently degrades (FR-007a), sub-division of platform route change into two
-  sub-reasons where CAR-002 detects one bucket (FR-006), and pinning resolution
-  semantics ahead of an unsettled platform fact (FR-002a) — and the effort ladder
-  additionally carries a set-equality assertion against its frozen in-tree source
-  (FR-007a).
+  sub-reasons where CAR-002 detects one bucket (FR-006), pinning resolution
+  semantics ahead of an unsettled platform fact (FR-002a), and making `severity` a
+  function of `code` where the installed runner leaves it caller-determined
+  (FR-012c) — and the effort ladder additionally carries a set-equality assertion
+  against its frozen in-tree source (FR-007a). The count is stated because the
+  criterion is only falsifiable against an enumeration: a divergence recorded
+  somewhere in the requirements but missing from this list would satisfy the
+  zero-count clause while defeating the traceability the criterion exists to give.
 - **SC-002**: 100% of corpus cases replay byte-identically to their pinned
   expected report, and 100% replay byte-identically across two successive runs.
 - **SC-003**: Both reason-code vocabularies are closed sets whose membership is
