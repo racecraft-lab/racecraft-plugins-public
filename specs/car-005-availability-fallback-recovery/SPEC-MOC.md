@@ -32,5 +32,6 @@ the slice artifacts in the body below.
 - [research.md](research.md)
 - [checklists/data-integrity.md](checklists/data-integrity.md)
 - [checklists/error-handling.md](checklists/error-handling.md)
+- [checklists/llm-integration.md](checklists/llm-integration.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

@@ -68,7 +68,7 @@ construction — no Bash, no `jq`, no shell dependency (constitution principle I
 not a plugin surface. The simulator is an executable specification, not shipped
 code.
 
-**Performance Goals**: N/A. The corpus is seventeen synthetic cases replayed
+**Performance Goals**: N/A. The corpus is eighteen synthetic cases replayed
 in-process; the module is a pure function with no I/O in its hot path. Determinism
 is the operative property, not speed.
 
@@ -80,9 +80,9 @@ fixture edited, no member added to the shared byte-identical
 `layer6-efficiency/contracts/` directory. No `$ref` may leave its own `#/$defs/`.
 No authored filename coupled to the spec ID.
 
-**Scale/Scope**: 3 schema documents, 1 simulator module, 1 corpus of 17 cases, 1
-unit test, 1 manifest entry, 1 regenerated docs page. 2 user stories, 56
-functional requirements, 12 success criteria.
+**Scale/Scope**: 3 schema documents, 1 simulator module, 1 corpus of 18 cases, 1
+unit test, 1 manifest entry, 1 regenerated docs page. 2 user stories, 57
+functional requirements, 13 success criteria.
 
 **Reviewability Budget**: Primary surface harness/adapter (Layer 6 efficiency
 schemas, fixtures, and reference simulator) with its unit-test surface; secondary
@@ -212,13 +212,17 @@ decision can.
 while the same roadmap's Progress Tracking row declares "2 vertical slices,
 gh-stack delivery" (`:234`). The advisory `estimate-spec-size` formula
 (`user_stories × 25 + files × 40 + frs × 15`, `read_only.py:967`) re-run on this
-spec's real signals returns **3** suggested slices either way it is counted: the
-spec's own figure of 35 functional requirements yields 975, and the literal count
-of 56 distinct FR identifiers — the spec carries twenty-three lettered
-sub-requirements such as FR-012a and FR-033d — yields 1,290. Both exceed the
-400-LOC ceiling by more than a factor of two. Nothing in the estimator supports
-collapsing to one slice. The Progress Tracking row is correct; the
-`Suggested slices: 1` figure is a stale scoping guess from coarser signals.
+spec's real signals returns **at least 3** suggested slices however it is counted:
+the spec's earlier figure of 35 functional requirements yields 975 and 3 slices,
+and the current literal count of 57 distinct FR identifiers — 33 base numbers plus
+twenty-four lettered sub-requirements such as FR-012a and FR-033d — yields **1,305
+and 4 slices**, status `warn`. Every reading exceeds the 400-LOC ceiling by more
+than a factor of two. Nothing in the estimator supports collapsing to one slice.
+The Progress Tracking row is correct; the `Suggested slices: 1` figure is a stale
+scoping guess from coarser signals. The two-slice election is likewise not moved
+upward by the advisory figure — the estimator does not measure a 0-production-file
+surface in either direction, and the seam is the rule-family boundary (spec
+§Reviewability Budget).
 
 ## Slice Seam
 
@@ -227,12 +231,12 @@ creates none (FR-033a).
 
 | File | Slice 1 | Slice 2 |
 | --- | --- | --- |
-| `contracts-claude/route-policy.schema.json` | create — route shape, ordered fallbacks, declared budget fields **and their maxima** | unchanged |
-| `contracts-claude/environment-snapshot-projection.schema.json` | create | unchanged |
+| `contracts-claude/route-policy.schema.json` | create — route shape with its closed five-member effort enum, ordered fallbacks, declared budget fields **and their maxima**, optional `optional_helper` declaration (FR-025b) | unchanged |
+| `contracts-claude/environment-snapshot-projection.schema.json` | create — all seven projection members, including declared platform route changes and the organization model allowlist (FR-002) | unchanged |
 | `contracts-claude/route-resolution-report.schema.json` | create — `outcome` discriminator with `allOf`/`if`/`then`; both diagnostic `$defs` with inline `code` enums unioned by `oneOf`; per-code `severity` and `const` `source`; four-member sub-reason enum plus the `exhausted_budget` array over its three-member enum; closed action enum with `minItems: 1`/`maxItems: 3`; attempted routes admitting zero entries; dispatch tuple; `optional_helper` with its probe counter; `release_claim_eligible` | **unchanged** |
-| `lib/claude_route_fallback.py` | create — canonical serialization, snapshot intake, preferred-then-fallback walk, five-code semantics, `details` sub-reasons | extend — structural pre-pass, budget caps with attempt counting, override handling, helper-unavailable path, no-safe-route remediation |
-| `fixtures-fallback/fallback-scenario-corpus.json` | create — nine US1 cases with pinned reports | append eight US2 cases at the tail; existing positions and pinned bytes unchanged |
-| `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity over the simulator's own serializer, roadmap parity, set equality on both closed enums, inline negative tests for out-of-vocabulary code and out-of-range budget, corpus case-ID uniqueness and self-containment | append the US2 test functions |
+| `lib/claude_route_fallback.py` | create — canonical serialization, snapshot intake, preferred-then-fallback walk, five-code semantics, `details` sub-reasons | extend — structural pre-pass, budget caps with attempt counting, override handling including the allowlist-skip branch, helper-unavailable path, no-safe-route remediation |
+| `fixtures-fallback/fallback-scenario-corpus.json` | create — nine US1 cases with pinned reports | append nine US2 cases at the tail, including both override cases; existing positions and pinned bytes unchanged |
+| `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity over the simulator's own serializer, roadmap parity, set equality on all three closed enums (both reason-code vocabularies and the effort ladder), inline negative tests for out-of-vocabulary code and out-of-range budget, corpus case-ID uniqueness and self-containment | append the US2 test functions |
 | `suite-manifest.json` | modify — append **one** entry to the layer 4 `scripts[]` array | **unchanged** |
 | `docs-site/src/content/docs/reference/tests.md` | regenerate (generated; excluded from review) | regenerate |
 

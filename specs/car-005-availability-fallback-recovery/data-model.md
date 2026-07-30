@@ -55,7 +55,9 @@ enters.
 ## 1. Route policy
 
 Root, all required: `schema_version`, `agent`, `preferred_route`,
-`fallback_routes`, `budgets`.
+`fallback_routes`, `budgets`. One **optional** member: `optional_helper`
+(FR-025b) — absent means the policy declares no helper, which is FR-025a's third
+helper state.
 
 ### `$defs/agentIdentity`
 
@@ -71,7 +73,7 @@ Root, all required: `schema_version`, `agent`, `preferred_route`,
 | `route_id` | yes | string, `minLength: 1` | attempt-order identity; how a `fallback_loop` revisit is recognised |
 | `alias` | yes | string, `minLength: 1` | the pinned alias (FR-003) |
 | `resolved_model` | **no** | string, `minLength: 1` | the pinned qualified resolved model ID |
-| `effort` | **no** | inline enum `low`/`medium`/`high`/`xhigh`/`max` | the frozen Claude ladder (research D11) |
+| `effort` | **no** | inline enum `low`/`medium`/`high`/`xhigh`/`max` | the frozen Claude ladder (research D11); closed and drift-tested per FR-007a |
 | `qualified` | yes | boolean | fixture-declared qualification, per the spec's assumption |
 | `adjacent_to` | no | string | a sibling `route_id`; encodes the FR-021 adjacency relation |
 | `substituted_agent` | no | object `{name, class}`, `class` inline enum `named`/`generic` | present only when the route dispatches a different agent (FR-022) |
@@ -119,13 +121,41 @@ budget precedent bounds such fields from below, because there the field's value
 *is* the ceiling. The keyword choice is this feature's own; only its placement
 follows convention.
 
+### `$defs/declaredOptionalHelper`
+
+The member FR-025b adds, so the helper the report describes is one the policy
+actually declares. Record object, `additionalProperties: false`, all three
+required when the member is present:
+
+| Field | Type | Purpose |
+| --- | --- | --- |
+| `agent` | `$ref: #/$defs/agentIdentity` | the helper's own identity; `role_class` MUST be `optional_helper` |
+| `preferred_route` | `$ref: #/$defs/route` | the helper's preferred route — same route shape, no new vocabulary |
+| `fallback_routes` | array of `$defs/route`, `minItems: 0` | the helper's ordered fallbacks |
+
+This is what makes three FR-025a obligations checkable rather than prose: which
+routes are *the helper's* (so `optional_helper.probe_attempts` has a domain to
+count over), whether the policy declares a helper at all (so the three report
+states are distinguishable), and which `attempted_routes` entries would be helper
+routes (so "no helper route appears as attempted" is falsifiable). The role-class
+constraint is what stops a required agent being declared in the helper slot.
+
+**No second budget set.** The declared budgets stay on the policy root. The
+helper's accounting is the disjoint `optional_helper.probe_attempts` counter in §3,
+not a parallel `declaredBudgets` — a second cap set would need its own exhaustion
+semantics, which no requirement asks for.
+
+**Still one report per policy.** The root `agent` remains the reported subject, so
+`outcome`, `unresolved_agent`, and `effective_dispatch_tuple` stay single-valued
+and §3's conditional-requiredness branches are untouched.
+
 ---
 
 ## 2. Environment snapshot projection
 
 Root, all required: `schema_version`, `available_models`, `alias_bindings`,
 `supported_efforts`, `probe_availability`, `exact_invocation_probe`,
-`platform_route_changes`.
+`platform_route_changes`, `available_models_allowlist`.
 
 Purpose-built from the five facts resolution consumes. It does **not** reuse the
 CAR-002 runtime-capability capture-record shape (FR-002), which carries capture
@@ -139,6 +169,7 @@ provenance, digests, and retention metadata resolution never reads.
 | `probe_availability` | object, model ID → boolean | FR-008 `capability_probe_unavailable` |
 | `exact_invocation_probe` | object, model ID → inline enum `success`/`failure`/`absent` | FR-009 `treatment_probe_failed`, FR-011 clean success |
 | `platform_route_changes` | array of `{alias, resolved_model}` pinned tuples | FR-006 `platform_route_changed` |
+| `available_models_allowlist` | array of model-ID strings, `uniqueItems: true`, `minItems: 0` | FR-024b's override-skip branch |
 
 **Resolved ambiguity — keying.** Acceptance scenarios 4 and 5 speak of probe state
 "for a candidate route", while FR-002 enumerates probe availability and
@@ -151,6 +182,51 @@ independent within a case.
 `probe_availability` uses an explicit `false` rather than an absent key wherever a
 probe is unavailable, because FR-008 forbids treating probe absence as probe
 success and an absent key is exactly the ambiguity that invites it.
+
+**Sufficiency, both directions.** The consumed-by column above is the artifact
+FR-002's bidirectional claim is checked against: every member has a named consuming
+requirement, and no requirement reads a fact absent from the table. `schema_version`
+is the one member with no resolution consumer and is not an exception — it is
+document identity, carried by all eleven documents in this directory, never read by
+the walk.
+
+**`available_models_allowlist` is an empty array when the organization sets none**,
+never an absent key. The distinction is load-bearing in the same way
+`probe_availability`'s explicit `false` is: an absent allowlist means "no
+restriction, every override target passes", while an empty allowlist would mean "no
+model is permitted". Encoding the unrestricted case as `[]` would invert the
+meaning, so the unrestricted case is `[]` **only** when the environment genuinely
+permits nothing, and an environment with no allowlist configured carries every
+model it makes available — which is the state CAR-002's own unset proof records as
+`available_models_absent` (`claude_capabilities.py:743`). It is disjoint from
+`available_models`: the latter is what the environment offers, the former what the
+organization permits, and FR-024b's skip fires on the allowlist alone.
+
+### Mapping from the CAR-002 outcome vocabulary (FR-002a)
+
+The projection is a projection *of* CAR-002's frozen observation, so the mapping is
+declared rather than left to a reader. It is one-way and **total on the CAR-002
+side** — no observed outcome is unrepresentable — and it needs no new enum member:
+
+| CAR-002 `observed_outcome` | Projection encoding | Resolution code |
+| --- | --- | --- |
+| `hard_rejection` | `exact_invocation_probe[model] = "failure"` | `treatment_probe_failed` (FR-009) |
+| `soft_remap` | a `platform_route_changes` entry for the pinned tuple | `preferred_model_unavailable` + `platform_route_changed` (FR-006) |
+| `undetermined` | `probe_availability[model] = false` | `capability_probe_unavailable` (FR-008) |
+
+`undetermined` maps to probe **unavailability** rather than to `absent` or
+`success`, and that is the fail-closed choice FR-008 already governs one field over:
+CAR-002 records that no availability claim derives from an undetermined observation,
+which is at least as weak as an absent probe, so treating it as a selectable route
+would be the exact substitution FR-008 forbids. `success` and `absent` are this
+projection's own values for the cases CAR-002's unavailable-model probe never
+reaches — a probe that ran against an available model and succeeded, and no
+exact-invocation outcome recorded at all.
+
+The values project the **`subagent_frontmatter`** surface (FR-002a), which is the
+surface this feature routes and the one CAR-002 reads as labeled inference rather
+than certified fact. `print_model` is the other surface CAR-002 records and is not
+projected here.
 
 **Map closure.** Four of these fields are open-keyed maps whose keys are aliases or
 model IDs — data, not schema — so they take the map form from the closure table above,
@@ -173,7 +249,9 @@ policy values is not expressible here (the same limit FR-006 records for
 `platform_route_changes` is an **array** of two-field records, not a map, so it is
 closed with `additionalProperties: false` per record and carries
 `uniqueItems: true` — a tuple listed twice would carry no additional meaning, and the
-engine implements `uniqueItems` (research D2).
+engine implements `uniqueItems` (research D2). `available_models_allowlist` is an
+array of plain strings under the same reasoning: it is an ordered-irrelevant set of
+model IDs, so it carries `uniqueItems: true` and needs no per-item closure.
 
 Object maps are safe for determinism: `canonical_json` sorts keys (research D1),
 so no dict-insertion order reaches the serialized bytes.
@@ -436,7 +514,7 @@ every schema keyword.
 | `dispatchTuple` | `agent`, `alias`, `resolved_model`, `effort` — all required (FR-013) |
 | `reportedBudgets` | `declared` (`max_probe_attempts`, `max_retries`, `max_candidate_routes`) and `actual` (`probe_attempts`, `retries`, `candidate_routes`), all required integers (FR-026); each actual counter's unit is defined in FR-026a |
 | `optionalHelper` | `consulted` (boolean), `no_helper_path_validated` (boolean), and `probe_attempts` (integer, `minimum: 0`) — all three required (FR-025, FR-025a) |
-| `override` | `source`, `tuple` (`$ref: #/$defs/dispatchTuple`), `would_have_been` (`outcome` required, `effective_dispatch_tuple` optional) — all required (FR-024) |
+| `override` | `source` (`const` `CLAUDE_CODE_SUBAGENT_MODEL`), `requested_model` (string), `disposition` (inline enum `honored`/`skipped_by_allowlist`), `qualified` (boolean), `tuple` (`$ref: #/$defs/dispatchTuple`, required only when `disposition` is `honored`), `would_have_been` (`outcome` required, `effective_dispatch_tuple` optional) — per FR-024, FR-024b |
 
 **What each actual counter counts** (FR-026a), stated here because a counter without a
 unit cannot be checked against its cap: `probe_attempts` increments once per attempted
@@ -454,6 +532,37 @@ the former counts probes spent on the helper's routes, the latter the reported a
 own walk. The helper counter exists so that "not consulted" is a measurable zero rather
 than a self-asserted boolean (FR-025a) — an implementation could otherwise probe every
 helper route and still write `consulted: false` without changing a pinned byte.
+
+**The override record is shaped by FR-024b's fidelity rules**, and four of its five
+members exist because of them:
+
+- **`source` is `const`** to the documented environment variable's name, for the same
+  reason FR-012c makes the diagnostic `source` a `const`: a required field left as an
+  open string is an unpinned byte in every case that carries it, and an override whose
+  mechanism is anonymous cannot be checked against a documented behaviour at all.
+- **`requested_model` is the raw override value**, which the documentation permits to be
+  either a family alias or a full model ID. It is recorded separately from `tuple`
+  because the two differ on the skipped branch, where there is no effective tuple to
+  read the requested value out of.
+- **`disposition` closes the two documented outcomes.** `honored` is the branch where
+  the target passes the organization allowlist and the override becomes the effective
+  dispatch tuple; `skipped_by_allowlist` is the branch where the platform skips a value
+  resolving to an excluded model. `tuple` is required on the first and **forbidden** on
+  the second — the runtime's documented fallback target there is the *inherited* model,
+  which this projection does not carry, so recording any tuple would be asserting a
+  model the simulation cannot know (FR-024b).
+- **`qualified` is a separate boolean from the allowlist disposition**, because the two
+  gates are independent: an override can be unqualified yet allowlist-permitted, or
+  qualified yet allowlist-excluded. The `unqualified_override` diagnostic is emitted on
+  `qualified: false` alone; `release_claim_eligible` is `false` on either branch and for
+  either value, since any override in force excludes the environment (FR-024a, FR-024b).
+
+**The honored branch's `tuple` is a hybrid, not a copy of the override.** The variable
+sets a model only — no documented subagent-effort environment override exists — so
+`tuple.alias` and `tuple.resolved_model` come from the override's requested value while
+`tuple.agent` and `tuple.effort` are retained from the route the qualified walk
+selected, or from the preferred route when it selected none. Attributing each member is
+what makes the pinned bytes derivable rather than implementation-defined.
 
 `override.would_have_been.outcome` carries its own `resolved`/`no_safe_route`
 value so the spec's edge case is expressible: an unqualified override present
@@ -528,14 +637,14 @@ sub-reasons:
 `effort-unsupported`, `capability-probe-unavailable`, `treatment-probe-failed`,
 `preferred-probe-success-clean`.
 
-Slice 2 (User Story 2) — eight cases appended at the tail:
+Slice 2 (User Story 2) — nine cases appended at the tail:
 
 `fallback-loop`, `unqualified-adjacent-model`, `generic-agent-substitution`,
 `silent-inherit-materialization`, `unqualified-override`,
-`helper-unavailable-continues`, `budget-exhaustion-of-one`,
-`no-safe-route-report-only`.
+`override-skipped-by-allowlist`, `helper-unavailable-continues`,
+`budget-exhaustion-of-one`, `no-safe-route-report-only`.
 
-Seventeen cases cover every scenario SC-001 enumerates. The out-of-range budget
+Eighteen cases cover every scenario SC-001 enumerates. The out-of-range budget
 fixture is **not** a corpus case — it must fail schema validation, and every corpus
 case must validate — so it is constructed inline in the **slice-1** test, the same
 technique FR-019a uses, travelling with the `maximum` keyword it proves (FR-027).
@@ -553,6 +662,30 @@ Two case-authoring obligations that the field design alone does not convey:
   scenario 7 both allow "a probe or retry budget", which a probe-only case would satisfy
   while leaving retries unproven. No case makes probe-attempt or fan-out exhaustion the
   sole at-cap class.
+- **The two override cases pin opposite dispositions.** `unqualified-override`
+  declares a snapshot whose allowlist permits the override target, so `disposition` is
+  `honored`, `qualified` is `false`, the hybrid `tuple` is present, and the
+  `unqualified_override` diagnostic is emitted. `override-skipped-by-allowlist`
+  declares the same override against an allowlist that excludes its target, so
+  `disposition` is `skipped_by_allowlist`, `tuple` is **absent**, and the report's
+  `effective_dispatch_tuple` follows the qualified walk rather than the override.
+  Both carry `release_claim_eligible: false`. One case cannot cover both branches, and
+  without the second the corpus would pin the unconditional override effect FR-024b
+  exists to correct (FR-024b, SC-001).
+- **`helper-unavailable-continues` is the one case declaring a policy helper.** Its
+  policy carries the root required agent plus the `optional_helper` declaration
+  (FR-025b), and its snapshot marks the helper's route models unavailable. Its pinned
+  report carries `optional_helper: {consulted: false, no_helper_path_validated: true,
+  probe_attempts: 0}`, no `attempted_routes` entry naming a helper route, and a
+  resolved outcome for the required agent — which is the second half of FR-025 that
+  the case must also pin. The other seventeen cases omit the member, exercising
+  FR-025a's no-helper-declared state.
+- **Each of the three role classes is the subject or declared helper of at least one
+  case** (FR-018): the required executor across the resolution-failure and
+  no-safe-route cases, the bounded analyst as the subject of at least one
+  structural-rejection case, and the optional helper as the declared helper of
+  `helper-unavailable-continues`. This is what makes the Assumptions sufficiency claim
+  checkable against the allocation rather than merely asserted.
 - **The three pre-walk violation cases record an empty `attempted_routes`.**
   `unqualified-adjacent-model`, `generic-agent-substitution`, and
   `silent-inherit-materialization` are rejected before the walk starts, so their pinned
@@ -603,7 +736,9 @@ call-graph property rather than a convention"
 **Slice 2** — additive only: new module constants, new private helpers, and new
 public entry points. **No slice-1 signature changes** (FR-001, FR-033b). Adds the
 structural-validation pre-pass, budget cap enforcement with attempt counting,
-override handling, the helper-unavailable path, and no-safe-route remediation.
+override handling — including the allowlist-skip branch and the hybrid effective
+tuple (FR-024b) — the helper-unavailable path over the policy's declared helper
+routes (FR-025b), and no-safe-route remediation.
 
 Because structural validation is a pre-pass of the same resolution walk — and
 because `fallback_loop` detection needs the walk state this module already owns —

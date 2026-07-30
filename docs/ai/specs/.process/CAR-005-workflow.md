@@ -37,7 +37,7 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | 35 FRs, 2 user stories, 18 acceptance scenarios, 12 success criteria, 6 edge cases. G1 pass. 3 clarification markers → Clarify runs. Parity premise corrected mid-phase. |
 | Clarify | `/speckit-clarify` | ✅ Complete | 2 sessions, 10 questions, all resolved. **G2 pass — 0 markers remain** (authoritative grep, not the blind helper). 43 FRs after Clarify. 5 consensus rows: 3 high-confidence Round 1, 1 escape-hatch to Round 2 confirmed high, 1 operator-directive. Round 1 and Round 2 together **overturned the orchestrator's own enum-placement answer**. |
 | Plan | `/speckit-plan` | ✅ Complete | 4 artifacts, 1360 lines. G3 pass. 12 research decisions, 0 open. 17 corpus cases allocated 9/8 across the seam. Surfaced a spec contradiction the orchestrator authored plus two unstated constraints — all three folded back into the spec. |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 136 items, **67 gaps found and all closed**. G4 pass. Two requirements were found to assert platform behaviour that does not exist, and three were unsatisfiable as written. Spec 35 → 60 FR identifiers across the phase. |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -751,8 +751,65 @@ Focus on CAR-005 Model Availability, Fallback, and Recovery Simulation requireme
 |-----------|-------|------|-----------------|
 | data-integrity | 57 | 12 found / 12 closed / 0 remaining | New FR-014a, FR-015a, FR-019b; revised FR-006, FR-027, FR-033a, Assumptions; data-model.md §2–§5 |
 | error-handling | 48 | 29 found / 29 closed / 0 remaining | New FR-012b, FR-012c, FR-019c, FR-024a, FR-025a, FR-026a, FR-029a; amended FR-012, FR-013a, FR-028, FR-032a, FR-033a, SC-001, SC-009, SC-010, 2 Edge Cases; data-model.md §3 |
-| llm-integration | | | |
-| **Total** | | | |
+| llm-integration | 31 | 26 found / 26 closed / 0 remaining | New FR-002a, FR-007a, FR-024b, FR-025b, SC-013; amended FR-002, FR-006, FR-007, FR-018, FR-024a, FR-033a, SC-001, Key Entities, Assumptions; data-model.md; plan.md |
+| **Total** | **136** | **67 found / 67 closed / 0 remaining** | G4 pass; spec 35 → 60 FR identifiers across the whole of Phase 4 |
+
+#### llm-integration — two requirements asserted platform behaviour that does not exist
+
+The executor's three research sub-agents all died without delivering (the named-agent
+delivery failure), so the **orchestrator grounded all three external questions itself**
+against the live Claude Code documentation and relayed verbatim sources. Two of the three
+overturned a requirement; the third confirmed one.
+
+| Finding | Status before | Grounded reality | Fix |
+|---------|---------------|------------------|-----|
+| **FR-024 override was unconditional** | The override becomes the effective dispatch tuple, full stop — justified as honest simulation "without pretending the preflight can block an env var" | The runtime checks the value against the organization `availableModels` allowlist and **skips** a value resolving to an excluded model, running the subagent on the *inherited* model instead. The env var also sets a **model only**, so it cannot supply the `effort` member the dispatch tuple requires | **FR-024b**: honored branch is conditional; adds a `skipped_by_allowlist` disposition and a second corpus case; attributes each tuple member (model/alias from the override, agent and effort retained from the walk) |
+| **FR-007 implied runtime rejection** | An unsupported effort is reported as `effort_unsupported`, i.e. the route is rejected | The runtime **silently degrades** to the highest supported level at or below the declared one, and organization caps clamp the same way with the warning suppressed under `json`/`stream-json` | **FR-007a**: rejection is restated as a deliberate **preflight qualification policy** — a route whose effort silently degrades is not qualified, because the tuple that ran is not the tuple the policy pinned and no report field records the difference |
+| Effort ladder | Possibly invented | **Confirmed real**: `low|medium|high|xhigh|max`, and "available levels depend on the model" — `xhigh` is unsupported on Opus 4.6/Sonnet 4.6 and Haiku 4.5 supports no effort at all | Grounding recorded; ladder gained the set-equality drift protection the other two closed enums already had |
+
+**A fail-open hole closed on the way.** CAR-002's probe vocabulary is three-valued
+(`hard_rejection`, `soft_remap`, `undetermined`), and `undetermined` had **no
+representation** in CAR-005's projection — it would have collapsed into probe `success`.
+New **FR-002a** maps it to `probe_availability: false` so FR-008 governs it, fixes the
+projected surface as `subagent_frontmatter`, declares the mapping total on the CAR-002
+side, and records that CAR-005 pins semantics **ahead of** the platform fact rather than
+downstream of it (CAP-Q5 is `labeled_inference` and open; CAP-Q6 is hardcoded open; no
+live capture is committed).
+
+**A contract that made three requirements unsatisfiable.** The policy root carried a
+single `agent`, so nothing could express "a required agent *and* an optional helper" —
+making three FR-025a obligations impossible to satisfy. New **FR-025b** adds an optional
+`optional_helper` policy member. Note the diagnosis: three role classes were always
+sufficient; **the contract was what was insufficient**.
+
+**Also:** the projection grew from five declared facts to **seven** (adding declared
+platform route changes and the allowlist) after FR-002 was found to under-specify itself
+against its own authority; and FR-006 now states its relationship to CAR-002 explicitly —
+CAR-005 sub-divides CAR-002's single route-change bucket by *which snapshot field
+evidences the divergence*, with the union of its members equal to that bucket.
+
+**Side effects:** 53 → 57 → **60** FR identifiers (base numbers unchanged at 33), SC 12 →
+13, corpus 17 → **18** cases (slice 1 stays at 9, slice 2 goes 8 → 9). **Slice seam
+intact** — no new file, two members join slice-1 `create` cells, and both append-only
+additivity and "slice 2 modifies no schema file" still hold.
+
+#### Orchestrator adjudication of the six escalated items
+
+The executor returned six items under `## Unresolved for consensus`. I adjudicated all six
+directly rather than dispatching another consensus fan-out, because in four of them the
+executor had already chosen the **conservative correct option** (refusing to encode
+inference, refusing to widen a consensus-settled enum) and the remaining two are an
+operator call and a verified-safe late addition. Spawning analysts to re-derive a
+conclusion already reached on cited evidence would be theatre. Reasoning recorded per item:
+
+| Item | Adjudication |
+|------|-------------|
+| `[domain, spec]` allowlist-skip fallback target — bounded negative vs a richer projection | **Accept the bounded negative.** The docs say only that an excluded value runs on the *inherited* model; "resolution resumes at the per-invocation parameter" is inference. The executor deliberately refused to encode it, which is the right call. Recording a negative it can prove beats asserting a fallback target the projection cannot carry. |
+| `[domain]` does the sub-reason set need a member for allowlist substitution? | **No new member.** All three re-pointing vectors — provider version drift, per-family env redefinition, allowlist substitution — manifest **identically in the projection**: the alias binds to a resolved ID other than the one pinned. The projection is cause-agnostic by design; distinguishing them would require it to carry causation it deliberately does not. The cause-agnostic closure is faithful, and the provider-dependence is recorded as a boundary. |
+| `[spec]` `release_claim_eligible: true` after a re-point that resolved on a qualified fallback, vs CAR-002's "non-scorable" | **Accept the scoping distinction.** The two claims have different objects: CAR-002's non-scorable is *route-scoped measurement attribution* for a requested route; `release_claim_eligible` is *report-scoped release eligibility* for an environment. Not a contradiction, and adding a fourth disqualifier would conflate them. |
+| `[domain]` FR-007a's deliberate divergence from runtime degradation | **Confirmed deliberate.** Directed by the orchestrator on the grounded evidence. Silent degradation is precisely what a qualification program must refuse to rely on; it is recorded as the one place the corpus knowingly does not mirror the runtime. |
+| `[spec]` the advisory estimator now suggests **4** slices (1,305 / warn, was 975 / 3) | **No action; surfaced to the operator.** The two-slice election is settled and only an operator decision can move it. Recorded honestly: the FR count grew 35 → 60 almost entirely through defect-fixing rather than scope creep, and the estimator is a coarse function of that count — `user_stories × 25 + files × 40 + frs × 15` — so its escalation reflects requirement *density*, not new deliverables. Corpus cases went 17 → 18 and file count did not change. |
+| `[codebase, spec]` FR-025b adds a schema member late | **Accept.** Verified additive and slice-1-contained; the seam invariant holds. A contract change after three consensus rounds is worth noting, but the alternative was leaving three requirements permanently unsatisfiable. |
 
 #### error-handling — 29 gaps in 8 clusters, all closed; 3 items escalated to consensus
 

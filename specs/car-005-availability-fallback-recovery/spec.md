@@ -28,7 +28,10 @@ for structural rejections or recovery paths to be reported *in*.
 resolution-failure cases in the scenario corpus and asserting each produced
 report is byte-identical to that case's pinned expected report. Delivers value
 on its own: CAR-006 can adopt the snapshot projection, report contract, and
-reason-code enum even if nothing else in this feature lands.
+reason-code enum even if nothing else in this feature lands. The projection is
+**CAR-006's preflight input contract** — the shape its live capability capture must
+project into — which is why FR-002 states sufficiency in both directions and why a
+vestigial member here would be inherited debt rather than a local cost.
 
 **Acceptance Scenarios**:
 
@@ -176,14 +179,83 @@ cohort specs inherit proven rejection semantics.
   module-level constants, new private helpers, and new public entry points, and MUST
   change no slice-1 function signature. [US1] [US2]
 - **FR-002**: The system MUST define a minimal, purpose-built environment
-  snapshot projection carrying only what resolution consumes: available model
-  IDs, alias-to-resolved-model bindings, per-model supported efforts, probe
-  availability, and exact-invocation probe outcomes. It MUST NOT reuse the
-  CAR-002 runtime-capability-snapshot capture-record shape. [US1]
+  snapshot projection carrying only what resolution consumes, which is **seven**
+  facts and not the five an earlier reading of this requirement listed: available
+  model IDs, alias-to-resolved-model bindings, per-model supported efforts, probe
+  availability, exact-invocation probe outcomes, **declared platform route changes
+  for pinned tuples**, and **the organization model allowlist**. It MUST NOT reuse
+  the CAR-002 runtime-capability-snapshot capture-record shape. [US1]
+  The last two are named because each is read by a requirement that is otherwise
+  unsatisfiable from the projection, and this requirement is simultaneously the
+  stated authority on the projection's shape — so an incomplete list here is not a
+  summary but a defect:
+  - **Declared platform route changes** are what FR-006's `platform_route_changed`
+    sub-reason reads. That sub-reason's predicate is "the snapshot declares a
+    platform-side route change for the pinned tuple", so the declaration has to be
+    a projection member for the predicate to have anything to evaluate.
+  - **The organization model allowlist** is what FR-024b's override-skip branch
+    reads. The documented runtime checks an override value against the allowlist
+    and skips one that resolves to an excluded model, so an override's effect on
+    dispatch is not derivable without it.
+
+  **Sufficiency is claimed in both directions**, and both halves are checkable
+  against the consumed-by column in `data-model.md` §2: no requirement reads a fact
+  the projection omits, and no projection member lacks a named consuming
+  requirement. A member with no consumer would be dead contract that CAR-006
+  inherits under FR-002's own minimality claim, which is the cost this
+  bidirectional reading exists to prevent.
+- **FR-002a**: The projection's provenance and its **epistemic status** MUST be
+  recorded, because the roadmap makes the CAR-002 probed unavailable-model
+  behaviour the input that "shapes the CAR-005 reason codes"
+  (`docs/ai/specs/claude-agent-routing-technical-roadmap.md:342-344`) and this
+  feature would otherwise claim an alignment it cannot demonstrate. [US1]
+  - **Unavailability is a snapshot-declared preflight input, never a simulated
+    dispatch attempt.** Every unavailability this feature reports is read from the
+    projection by the pure function FR-001 mandates. No requirement here simulates,
+    predicts, or encodes what a dispatch against an absent model would do. This
+    follows from FR-001's no-network purity and FR-008's refusal to read probe
+    absence as probe success, and it is stated as a requirement anyway because the
+    dispatch-outcome fact is **not settled** (below) — so an artifact that appeared
+    to encode one would assert more than the program knows.
+  - **What CAR-002 actually froze is a three-member vocabulary over two surfaces.**
+    The committed probe classifies an unavailable-model observation as
+    `hard_rejection`, `soft_remap`, or `undetermined`, across the `print_model` and
+    `subagent_frontmatter` surfaces
+    (`tests/speckit-pro/layer6-efficiency/lib/claude_capabilities.py:77`,
+    `:829-851`, `:901-934`). That is **not** the binary "hard error versus silent
+    substitution" the roadmap anticipated, and `undetermined` is a first-class
+    recorded value carrying the explicit reading that no availability claim derives
+    from it.
+  - **Its status is labeled inference and open, not pinned fact.** That probe emits
+    its unavailable-model answer with `"label": "labeled_inference"` where the
+    alias-binding answers carry `"label": "observation"`, and reports `status`
+    `answered` only when some surface returned a non-`undetermined` outcome; the
+    route-change-detection answer is hardcoded `status: "open"`
+    (`claude_capabilities.py:1061-1102`), because inducing a re-point collides with
+    the same unset-proof that keeps the environment clean. No committed capture in
+    the tree carries an actual observed outcome. **This feature therefore pins
+    resolution semantics *ahead of* the platform fact rather than downstream of
+    it.** That is coherent for a synthetic simulation — the corpus is the contract
+    and CAR-006 re-proves its resolver against it — but it MUST be stated rather
+    than glossed, so no reader infers that a determinate platform observation
+    stands behind these five codes.
+  - **The surface is `subagent_frontmatter`, and the mapping is one-way and total
+    on the CAR-002 side.** This feature routes named subagents, so the projection's
+    exact-invocation values project that surface — the one CAR-002 itself reads as
+    inference rather than certified fact. The mapping from CAR-002's three outcomes
+    onto projection members MUST be declared in `data-model.md` §2 and MUST leave
+    no CAR-002 outcome unrepresented. In particular `undetermined` MUST NOT map to
+    a probe success or to a silently selectable route: it maps to probe
+    unavailability, so FR-008 governs it. Fail-closed here is the same rule FR-008
+    already imposes one field over — an observation from which no availability
+    claim derives is at least as weak as an absent probe. No new enum member is
+    required: all three CAR-002 outcomes land on projection members this
+    requirement already names.
 - **FR-003**: The system MUST define a route-policy fixture contract expressing,
   per named synthetic agent, a preferred route (alias, qualified resolved model
-  ID, and explicit effort), an ordered list of qualified fallback routes, and
-  declared probe, retry, and fan-out budgets. [US1]
+  ID, and explicit effort), an ordered list of qualified fallback routes, declared
+  probe, retry, and fan-out budgets, and — optionally — the policy's declared
+  optional helper with its own routes (FR-025b). [US1]
 - **FR-003a**: The route-policy schema MUST be deliberately **permissive about the
   defects this feature exists to diagnose**, because a schema strict enough to reject
   them would make the requirements that simulate them unsatisfiable: [US1] [US2]
@@ -262,9 +334,117 @@ cohort specs inherit proven rejection semantics.
   expressible. The `fable` case required by FR-010 exercises **`model_absent`** — the
   roadmap subordinates it to preferred-model-absent ("including a `fable`-unavailable
   case"). The corpus MUST additionally include one `alias_unresolved` case.
+
+  **The vocabulary's fidelity to the platform MUST be recorded, not only its
+  totality over the projection.** Totality over a projection this feature authors is
+  a closed loop; what a reviewer needs is that the projection's input classes are the
+  real ways a pinned tuple goes stale.
+  - **Alias re-pointing is documented behaviour, so `alias_repointed` rests on a
+    real hazard.** Aliases point to the recommended version for the provider and
+    **update over time**; pinning requires the full model name or a per-family
+    environment override. The published documentation records re-points having
+    actually occurred, with version fences on the `opus` family. `fable` is likewise
+    a real documented family alias, so FR-010's case names a real one.
+  - **Three documented vectors, one observation.** An alias's binding can move by
+    (a) provider-side version drift, (b) per-family environment redefinition, and
+    (c) allowlist substitution to the newest permitted version of the family. The
+    sub-reason is deliberately **cause-agnostic**: all three vectors present
+    identically in the projection as "the alias binds to a resolved model ID other
+    than the one the route pins", because the projection records the *binding*, not
+    the mechanism that moved it. No fourth member is needed and none may be added —
+    a cause the projection cannot distinguish cannot be a sub-reason it reports.
+    Vector (b) is independently corroborated in-tree: CAR-002 records that inducing
+    a re-point requires exactly such a per-family override and that this "structurally
+    collides" with its own unset proof, which is *why* its route-change question is
+    left open (`claude_capabilities.py:482-487`).
+  - **Recorded limitation, bounded deliberately.** Allowlist substitution is
+    provider-dependent — some providers substitute and announce, others reject or
+    replace outright — so the same organizational configuration can present as a
+    re-point on one provider and as an absent model on another. The projection
+    carries no provider identity and MUST NOT gain one: which provider an
+    environment ran against is upstream of resolution and belongs to CAR-006's live
+    preflight, not to a synthetic replay whose snapshot is already the observed
+    outcome. What the projection records is what was observed, whichever provider
+    produced it. This is a stated boundary, not an unexamined one.
+  - **Reconciliation with CAR-002's detection rule.** CAR-002 defines platform
+    route-change detection as "any observed model ID differing from the resolved
+    qualified ID, **including alias re-pointing**", recorded separately from
+    resolver fallback (`claude-agent-routing-technical-roadmap.md:355-358`) — one
+    bucket where this vocabulary has two members. The two are **not** in conflict,
+    and the relationship MUST be stated because the appearance of conflict is
+    otherwise the natural reading. CAR-002's rule is a *detection* rule with one
+    disposition; this vocabulary is a *reporting* refinement that sub-divides that
+    single bucket by **which snapshot field evidences the divergence** — the alias
+    table moved (`alias_repointed`), or the binding is intact and a route change is
+    declared against the pinned tuple (`platform_route_changed`). The union of the
+    two members is exactly CAR-002's bucket, so nothing CAR-002 detects goes
+    unreported and nothing is double-counted. The sub-division is a **contract
+    decision made ahead of the platform fact**, not an observed distinction: CAR-002's
+    route-change answer is hardcoded open (FR-002a), so no capture exists that could
+    have distinguished the two at execution time.
 - **FR-007**: A route whose model is available but whose declared effort is not
   in that model's supported efforts MUST be reported as `effort_unsupported`,
   naming both the declared effort and the model's supported efforts. [US1]
+- **FR-007a**: The **effort vocabulary** and the **relationship between this
+  requirement and documented runtime behaviour** MUST both be stated. Neither is
+  today: the ladder is fixed only in `data-model.md` and sourced to an in-tree
+  frozen contract, and FR-007's rejection semantics were never reconciled with what
+  the runtime does with an unsupported effort. [US1]
+  - **The ladder is closed at five members, in this order:** `low`, `medium`,
+    `high`, `xhigh`, `max`. It reuses the frozen ordered ladder the successor
+    capability contract already pins
+    (`contracts-claude/successor-capability-freeze.schema.json:166-169`, described
+    there as "the closed ordered Claude ladder"), so this feature introduces no
+    parallel effort vocabulary that would make FR-007's case untranslatable when
+    CAR-006 adopts the corpus.
+  - **Its scope is the subagent-frontmatter surface**, which is the surface this
+    feature routes. Those five are exactly the documented options for a subagent's
+    `effort` field. `ultracode` is deliberately **not** a member and its absence is
+    not an omission: it is a session-level orchestration setting accepted by the
+    interactive effort command rather than a model effort level — it sends `xhigh`
+    to the model and additionally has the client orchestrate dynamic workflows —
+    and it is not among the subagent `effort` options
+    (`docs/ai/research/claude-agent-route-candidates.md:605-611`, `EFF-1`/`EFF-2`).
+    Recording the scope is what stops a reader from treating a session-only value as
+    a missing member of a supposedly closed ladder.
+  - **A third closed enum needs the drift protection the other two already have.**
+    The two reason-code vocabularies receive exact set-equality assertions read live
+    by JSON pointer (FR-017a, FR-019b); the effort ladder is a third closed enum in
+    the same shipped schemas and had none, so a sixth member or a dropped member
+    would fail nothing. Slice 1's test MUST therefore assert exact set equality
+    between the route schema's effort enum and these five members, failing in both
+    directions. Unlike FR-017a and like FR-019b, the expected members are declared
+    in the test file, and for the same reason: the second independent committed
+    witness is the frozen successor-capability contract, and a test-side literal
+    plus that contract is what makes drift detectable at all.
+  - **Per-model effort support is a real documented constraint, not an invention.**
+    The subagent `effort` field's documented option list carries the qualifier
+    "available levels depend on the model" (`EFF-1`), and the constraint has real
+    instances rather than being merely theoretical: current models divide into those
+    supporting all five, those omitting `xhigh`, and those supporting no effort
+    level at all. FR-007's `effort_unsupported` therefore models a live platform
+    constraint, and the projection's per-model supported-efforts map (FR-002) is the
+    faithful shape for it.
+  - **Rejection is a deliberate preflight policy, not a mirror of runtime
+    rejection.** The runtime does **not** fail an unsupported effort: it falls back
+    to the highest supported level at or below the one declared, and an
+    organization-level effort cap clamps the same way — silently under the
+    machine-readable output formats a harness uses. This requirement nevertheless
+    rejects the route at preflight, and the divergence is the point rather than an
+    oversight: a route whose declared effort silently degrades is **not a qualified
+    route**, because the tuple that actually ran is not the tuple the policy pinned
+    and no report field would record the difference. A qualification program whose
+    whole purpose is attributable treatment cannot rest on a silent downgrade. The
+    honest statement is therefore that `effort_unsupported` is a **preflight
+    qualification failure**, and this feature refuses at preflight what the runtime
+    would paper over at dispatch. Stating it is what keeps the corpus from appearing
+    to prove a runtime rejection that does not exist — the same fidelity obligation
+    FR-024b carries for the override.
+  - **Recorded reproducibility note.** The effort scale is calibrated per model, so
+    one level name does not denote the same underlying value across models. Combined
+    with alias drift (FR-006), an alias-plus-effort pin is doubly unstable, which is
+    independent support for FR-003's insistence that a route pin a **qualified
+    resolved model ID** and not an alias alone.
 - **FR-008**: A route whose candidate model has capability probing marked
   unavailable in the snapshot MUST be reported as
   `capability_probe_unavailable`, and probe absence MUST NOT be treated as probe
@@ -601,9 +781,18 @@ cohort specs inherit proven rejection semantics.
     schema into the shared byte-identical contracts directory. No Codex-side artifact
     is edited by this feature; FR-017b's data pinning remains the enforcement
     mechanism regardless of disposition.
-- **FR-018**: All fixture policies MUST name a small synthetic cast by role class
-  (for example a required executor, a bounded analyst, and an optional helper)
-  and MUST NOT name any of the twelve real shipped agents. [US1]
+- **FR-018**: All fixture policies MUST draw their agent names from a small
+  synthetic cast of three role classes — a required executor, a bounded analyst, and
+  an optional helper — and MUST NOT name any of the twelve real shipped agents. [US1]
+  "Cast" describes the vocabulary the corpus draws from, **not** the number of agents
+  one policy names. A policy names exactly one agent as its subject (FR-003) and MAY
+  additionally declare one optional helper (FR-025b); the third role class appears as
+  the subject of its own cases. Stating the distinction is what reconciles this
+  requirement's plural phrasing with a policy contract rooted on a single agent
+  identity — a reading under which every policy had to name all three was the earlier
+  ambiguity here. Each of the three classes MUST be the subject or declared helper of
+  at least one corpus case, so the sufficiency claim in Assumptions is checkable
+  against the case allocation rather than asserted.
 
 #### Structural policy rejections (User Story 2)
 
@@ -734,9 +923,10 @@ cohort specs inherit proven rejection semantics.
   emit an `unqualified_override` diagnostic, mark the environment as excluded
   from release claims, and additionally record the qualified resolution that
   would have applied without the override. [US2]
-- **FR-024a**: Three consequences of combining FR-024 with FR-013a MUST be stated,
-  because each is currently derivable only by inference and each changes reported bytes.
-  [US2]
+- **FR-024a**: Four consequences of combining FR-024 with FR-013a MUST be stated —
+  three because each is otherwise derivable only by inference and each changes reported
+  bytes, and a fourth because the program's position on a neighbouring condition would
+  otherwise read as a missing disqualifier. [US2]
   - **`outcome` follows the qualified walk, never the override.** An override MUST NOT
     turn a `no_safe_route` outcome into `resolved`. FR-013a already relies on this — it
     justifies rejecting a root `oneOf` by observing that "the FR-024 override path
@@ -778,6 +968,126 @@ cohort specs inherit proven rejection semantics.
     three documents, none validating it), so there an explicit `null` is the only way to
     distinguish a declared-empty case from a malformed one, whereas the report's schema
     expresses that distinction with conditional requiredness.
+  - **A platform route change or an alias re-point is *not* a disqualifier, and the
+    silence on that MUST be replaced by a decision.** The program's position on the
+    same condition is that a route change "marks the run non-scorable for the
+    requested route" (`claude-agent-routing-technical-roadmap.md:355-358`), which
+    reads at first like a fourth disqualifier. It is not, because the two answer
+    different questions at different scopes. CAR-002's non-scorability is
+    **route-scoped** and concerns whether a *measured outcome* can be attributed to
+    the requested tuple; `release_claim_eligible` is **report-scoped** and concerns
+    whether this environment resolved its agent to a qualified route. A report whose
+    preferred route was rejected for `alias_repointed` or `platform_route_changed`
+    and which then resolved on a declared qualified fallback is
+    `release_claim_eligible: true`, deliberately: the route that will dispatch is
+    qualified and its model was present in the snapshot. The route-scoped fact is not
+    lost — it is carried by that route's `attempted_routes` entry with `disposition:
+    rejected` and by the sub-reason in its diagnostic, which is exactly the
+    "recorded separately from resolver fallback" CAR-002 asks for. Recording this as
+    a decision is what distinguishes it from an omission from the disqualifier list.
+- **FR-024b**: The override's **runtime referent** MUST be named and its documented
+  behaviour MUST be matched, because FR-024 exists to simulate honestly and a fixture
+  that pins behaviour the runtime does not have is worse than no fixture. Today the
+  requirement says only "an unqualified subagent-model override", naming no mechanism,
+  defining no qualification test, and asserting an unconditional effect. [US2]
+  - **The mechanism is `CLAUDE_CODE_SUBAGENT_MODEL`.** The roadmap names it in this
+    feature's own scope ("an unqualified `CLAUDE_CODE_SUBAGENT_MODEL` override",
+    `claude-agent-routing-technical-roadmap.md:526`) and this spec dropped the name.
+    The override record's `source` field MUST therefore be pinned with `const` to that
+    identifier rather than left an open string, for the same reason FR-012c pins
+    `source` on diagnostics: an unpinned required field is an unpinned byte in every
+    case that carries it, and an override whose mechanism is anonymous cannot be
+    checked against a documented behaviour at all.
+  - **Its documented precedence is what makes "wins at dispatch" true.** The
+    documented subagent model-resolution order places the environment variable
+    **first**, above the per-invocation model parameter, above the subagent
+    definition's `model` frontmatter, and above the main conversation's model. The
+    repository's own dated extract records the same fact
+    (`docs/ai/research/claude-agent-route-candidates.md:619-624`, `RES-1`/`RES-2`:
+    "Overrides the per-invocation `model` parameter and the subagent definition's
+    `model` frontmatter"). FR-024's effective-dispatch-tuple rule is grounded in that
+    ordering and MUST cite it rather than assert it.
+  - **The override is conditional, and this is the correction that matters.** The
+    documented runtime checks the environment variable, the per-invocation parameter,
+    and frontmatter against the organization's model allowlist, and **skips a value
+    that resolves to an excluded model**, running the subagent on the inherited model
+    instead. FR-024 as written asserts the override becomes the effective dispatch
+    tuple unconditionally, which is a stronger claim than the runtime supports. The
+    corrected rule: the override becomes the effective dispatch tuple **only when its
+    target passes the allowlist**; when it does not, the override is **skipped** and
+    MUST NOT be recorded as effective. The allowlist is an FR-002 projection member
+    precisely so this branch is decidable from the snapshot.
+  - **What the skipped branch may and may not claim.** It MUST record that the
+    override did not take effect and MUST NOT name the model that runs instead: the
+    documented fallback target is the *inherited* model, which this projection does
+    not carry and MUST NOT gain — a parent-session model is a live-preflight input
+    belonging to CAR-006, not to a pure function over a route policy and a snapshot.
+    Reading the skip as "resolution resumes at the per-invocation parameter" is
+    **inference and MUST NOT be encoded**; the documentation says inherited. So the
+    skipped case's honest claim is bounded to the negative. `release_claim_eligible`
+    is nevertheless `false` on that branch too, and for a reason independent of
+    FR-024a's override disqualifier: the environment carries the interference surface
+    *and* the model that dispatches is neither the policy's pinned route nor the
+    override's target, so it is the least attributable of the three states.
+  - **The allowlist gate is a different gate from this feature's own qualification.**
+    Allowlist membership is an organizational configuration; "qualified" is a
+    fixture-declared property (see Assumptions). The two are independent, so an
+    override can be unqualified yet allowlist-permitted, or qualified yet
+    allowlist-excluded. Conflating them would make the two branches indistinguishable.
+  - **"Unqualified" MUST be defined rather than assumed.** An override is
+    **unqualified** when the tuple it produces matches no route the policy declares
+    qualified — which is the test CAR-006 is scoped to perform ("validate the
+    resulting tuple for every named agent against qualified routes",
+    `claude-agent-routing-technical-roadmap.md:592-595`). Without the predicate the
+    corpus case is authored against an undefined term and SC-001's
+    unqualified-override family has no falsifiable membership test.
+  - **A qualified override is in force too.** FR-024a disqualifies a report when "an
+    override is in force" while FR-024's diagnostic is scoped to an *unqualified*
+    one, leaving the qualified case unstated. It is resolved in the direction FR-024a
+    already took: any override in force sets `release_claim_eligible: false`, because
+    the program's rule is that "release claims exclude overridden environments"
+    without qualifying which kind. A **qualified** override in force records the
+    override as effective and sets the flag `false`, but emits **no**
+    `unqualified_override` diagnostic — the diagnostic reports the qualification
+    defect, the flag reports the environment. The corpus need not carry a case for it;
+    stating the rule is what keeps the two scopes from being read as the same scope.
+  - **The effective tuple under an override is a hybrid, and its members MUST be
+    attributed.** The variable sets a **model** only; there is no documented
+    subagent-effort environment override, and effort is carried by the subagent
+    `effort` field (FR-007a). Since the dispatch tuple requires an effort, the
+    override cannot supply the whole tuple and "record the override as the effective
+    dispatch tuple" is imprecise as written. The rule: under an override in force,
+    `effective_dispatch_tuple` carries the override's model — with its `alias` member
+    holding the override's own value, which may itself be an alias, since the
+    documented variable accepts an alias or a full model ID — and retains the
+    **agent** and the **effort** from the route the qualified walk selected, or from
+    the preferred route when the walk selected none. Attributing the members is what
+    makes the pinned bytes derivable; leaving it implicit invites two conforming
+    implementations that disagree on the effort member.
+  - **The `inherit` sentinel is excluded, with the reason recorded.** The documented
+    variable accepts `inherit` to restore normal model resolution, so it is a **set**
+    value that behaves as unset. It is therefore **not** an override and MUST be
+    modelled as the no-override state — the case's `overrides` is `null` per FR-015a.
+    This is not a free choice: CAR-002's committed unset proof already treats it this
+    way and records the caveat that the equivalence is client-version-gated
+    (`claude_capabilities.py:725-747`, `inherit_equivalent_to_unset`). Version-gating
+    is out of scope here — this simulator has no client-version input by FR-001 — and
+    saying so is what stops a reader from expecting a version dimension the
+    projection does not carry.
+  - **The claims-exclusion consequence follows the program, not only this spec.**
+    FR-024a reasons the disqualifier from this report's internals; the external
+    warrant is stronger and MUST be cited. CAR-002's exact-treatment replay schema
+    binds "env-override proof (`CLAUDE_CODE_SUBAGENT_MODEL` unset)"
+    (`claude-agent-routing-technical-roadmap.md:351-354`) — the program's posture for
+    a scored run is *proof of unset*, which is strictly stronger than flagging an
+    override after the fact. CAR-006 then requires overrides be reported "loudly" with
+    "release claims exclude overridden environments" (`:592-595`). This feature is the
+    complement of CAR-002's proof: it pins what the report must say when the surface
+    CAR-002 proves absent is present instead.
+  - **The corpus MUST carry a second override case.** `override-skipped-by-allowlist`
+    is appended alongside the existing honored-override case, in slice 2. One case
+    cannot cover both branches, and without the second the corpus would pin the
+    unconditional behaviour this requirement corrects. [US2]
 - **FR-025**: When the optional helper's routes are unavailable, the helper MUST
   NOT be consulted, the report MUST record continuation on the validated
   no-helper path, and required-agent resolution MUST NOT fail as a result. [US2]
@@ -824,6 +1134,42 @@ cohort specs inherit proven rejection semantics.
   case carries its own policy (FR-015a), so no reader has to infer it from this field.
   Required-agent resolution MUST be unaffected in all three states, which is the second
   half of FR-025 and the half a helper-unavailable case must also pin. [US2]
+- **FR-025b**: The route-policy contract MUST provide the member by which a policy
+  **declares** its optional helper. Without one, three obligations already written are
+  unsatisfiable, and the defect is structural rather than editorial: FR-003 roots a
+  policy on a single named agent, so nothing in the contract can express "a required
+  agent *and* an optional helper" — which is exactly what the helper-unavailable case
+  needs, and exactly what FR-018's "name a small synthetic cast" (a cast, plural)
+  already presumes. [US1] [US2]
+  - **The three unsatisfiable obligations.** FR-025a distinguishes its three helper
+    states by "whether the policy declares an optional helper", a property no policy
+    field carries; `optional_helper.probe_attempts` counts probes spent "on the
+    **helper's** routes", which are not locatable; and FR-025a's rule that no
+    `attempted_routes` entry may name a helper route is uncheckable when no artifact
+    says which routes are the helper's. All three are measurability obligations that
+    silently degrade to prose without this member.
+  - **The member.** The policy root gains an **optional** `optional_helper` object
+    carrying its own agent identity (whose `role_class` MUST be the helper class) and
+    its own preferred route and ordered fallback routes — the same route shape the
+    required agent uses, so no new route vocabulary is introduced. Absent member means
+    the policy declares no helper, which is FR-025a's third state. The declared
+    budgets stay on the policy root and are **not** duplicated per helper: the helper's
+    probe accounting is the separate disjoint counter FR-025a already defines, not a
+    second budget set.
+  - **What this does not change.** The policy still resolves and reports for **one**
+    agent — the root `agent` — so `outcome`, `unresolved_agent`, and
+    `effective_dispatch_tuple` remain single-valued and FR-013a is untouched. The
+    helper is declared so its routes are identifiable and its non-consultation
+    measurable, never so a second resolution report is produced. One case still carries
+    one policy and one expected report (FR-015a).
+  - **Slice allocation.** The member lands in slice 1 with the rest of the route
+    schema, per FR-033b's rule that slice 2 modifies no schema file; only the
+    behaviour that reads it is slice 2. This is the same allocation FR-027 already
+    uses for the budget maxima and FR-019 for the policy-violation enum.
+  - **The sufficiency claim is corrected, not weakened.** Three role classes remain
+    sufficient — the fix adds no fourth class and no fourth synthetic agent. What was
+    insufficient was the *contract*, which offered one agent slot for a cast of three
+    roles. The Assumptions entry is updated accordingly.
 
 #### Budgets, exhaustion, and no-safe-route recovery (User Story 2)
 
@@ -1077,12 +1423,12 @@ cohort specs inherit proven rejection semantics.
 
   | File | Slice 1 | Slice 2 |
   | ---- | ------- | ------- |
-  | `layer6-efficiency/contracts-claude/route-policy.schema.json` | create — route shape, ordered fallbacks, declared budget fields **and their schema maxima** | unchanged |
-  | `layer6-efficiency/contracts-claude/environment-snapshot-projection.schema.json` | create | unchanged |
+  | `layer6-efficiency/contracts-claude/route-policy.schema.json` | create — route shape with its closed five-member effort enum, ordered fallbacks, declared budget fields **and their schema maxima**, and the optional `optional_helper` declaration (FR-025b) | unchanged |
+  | `layer6-efficiency/contracts-claude/environment-snapshot-projection.schema.json` | create — all seven projection members, including declared platform route changes and the organization model allowlist (FR-002) | unchanged |
   | `layer6-efficiency/contracts-claude/route-resolution-report.schema.json` | create — `outcome` discriminator with `allOf`/`if`/`then` conditional requiredness; two diagnostic `$defs` each with its own inline `code` enum unioned by `oneOf`; the four-member sub-reason enum; the closed `remediationAction` enum (`minItems: 1`, `maxItems: 3`); per-code `severity` and the `const` `source`; the `exhausted_budget` array over its own three-member enum; attempted-route list admitting zero entries; effective dispatch tuple; `optional_helper` with its probe counter; `release_claim_eligible` | **unchanged — must stay untouched** |
-  | `layer6-efficiency/lib/claude_route_fallback.py` | create — canonical serialization, snapshot projection intake, preferred-then-fallback walk, five-code semantics, `details` sub-reasons | extend — structural-validation pre-pass, budget cap enforcement with attempt counting, override handling, helper-unavailable path, no-safe-route remediation |
-  | `layer6-efficiency/fixtures-fallback/fallback-scenario-corpus.json` | create — `cases[]` holding the US1 resolution-failure cases with pinned reports | append the US2 cases to the end of `cases[]`; existing case positions and pinned bytes unchanged |
-  | `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity over the simulator's own serializer, roadmap parity test, set equality on **both** closed enums, inline negative tests for out-of-vocabulary code and out-of-range budget, corpus case-ID uniqueness and self-containment | append the US2 test functions |
+  | `layer6-efficiency/lib/claude_route_fallback.py` | create — canonical serialization, snapshot projection intake, preferred-then-fallback walk, five-code semantics, `details` sub-reasons | extend — structural-validation pre-pass, budget cap enforcement with attempt counting, override handling including the allowlist-skip branch, helper-unavailable path, no-safe-route remediation |
+  | `layer6-efficiency/fixtures-fallback/fallback-scenario-corpus.json` | create — `cases[]` holding the US1 resolution-failure cases with pinned reports | append the US2 cases to the end of `cases[]`, including both override cases (honored and allowlist-skipped); existing case positions and pinned bytes unchanged |
+  | `unit/test-route-fallback-simulation.py` | create — resolution semantics, replay byte-identity over the simulator's own serializer, roadmap parity test, set equality on **all three** closed enums (both reason-code vocabularies and the effort ladder, FR-007a), inline negative tests for out-of-vocabulary code and out-of-range budget, corpus case-ID uniqueness and self-containment | append the US2 test functions |
   | `suite-manifest.json` | modify — append **one** entry to the layer 4 `scripts[]` array | **unchanged — must stay untouched** |
   | `docs-site/src/content/docs/reference/tests.md` | regenerate (generated; excluded from review) | regenerate |
 
@@ -1147,9 +1493,20 @@ cohort specs inherit proven rejection semantics.
   ~450–700 then +350–600.
   The advisory `estimate-spec-size` formula (`user_stories × 25 + files × 40 +
   frs × 15`, `read_only.py:967`) re-run on this spec's **real** signals — 2 user
-  stories, 10 files, 35 functional requirements — returns **975 and 3 suggested
-  slices**, up from the 770/2 computed at scoping from coarser signals (4 stories,
-  10 files, 18 FRs). Nothing in the estimator supports collapsing to one slice.
+  stories, 10 files, and the literal count of **57** distinct FR identifiers
+  (33 base numbers plus 24 lettered sub-requirements) — returns **1,305 and 4
+  suggested slices**, status `warn`. It returned 975 and 3 slices against the
+  35-requirement figure carried before Clarify and the three checklist domains
+  added sub-requirements, and 770/2 at scoping from coarser signals (4 stories, 10
+  files, 18 FRs). The trend is monotonic upward and nothing in the estimator
+  supports collapsing to one slice.
+  **The two-slice election is unchanged by this**, on the grounds already recorded:
+  no gate measures a 0-production-file surface, so the estimator is advisory here in
+  both directions — it can no more force a third and fourth slice than it could
+  overturn the split by returning a smaller number. The seam is the rule-family
+  boundary, and there are two rule families. That the advisory figure now suggests
+  four is recorded rather than acted on, because only an operator decision can move
+  this split.
 - **Projected production files**: 0
 - **Projected total files**: 7 authored plus 1 generated — 3 schemas, 1 scenario
   corpus, 1 simulator library module, 1 unit test, 1 suite-manifest entry, and the
@@ -1190,14 +1547,18 @@ cohort specs inherit proven rejection semantics.
 
 - **Route policy fixture**: a synthetic agent's routing intent — preferred route
   (alias, qualified resolved model ID, explicit effort), ordered qualified
-  fallback routes, and declared probe, retry, and fan-out budgets.
+  fallback routes, declared probe, retry, and fan-out budgets, and optionally a
+  declared optional helper with its own routes (FR-025b).
 - **Environment snapshot projection**: the minimal view of a probed environment
   that resolution consumes — available model IDs, alias-to-resolved-model
-  bindings, per-model supported efforts, probe availability, and
-  exact-invocation probe outcomes.
-- **Environment overrides**: externally imposed dispatch settings, notably an
-  unqualified subagent-model override, that resolution must honor and report on
-  rather than suppress.
+  bindings, per-model supported efforts, probe availability, exact-invocation
+  probe outcomes, declared platform route changes for pinned tuples, and the
+  organization model allowlist. All seven are read by a named requirement and none
+  is vestigial (FR-002); this is the input contract CAR-006's preflight inherits.
+- **Environment overrides**: externally imposed dispatch settings — specifically
+  the `CLAUDE_CODE_SUBAGENT_MODEL` subagent-model override, which resolution must
+  honor and report on rather than suppress, subject to the organization allowlist
+  gate that can cause the platform to skip it (FR-024b).
 - **Declared budgets**: the per-policy hard caps on probe attempts, retries, and
   fan-out, together with the actual attempt counts resolution reports back.
 - **Resolution report**: the deterministic output for one scenario — attempted
@@ -1218,11 +1579,26 @@ cohort specs inherit proven rejection semantics.
   unresolved**, effort
   unsupported, probe unavailable, exact-invocation probe success, exact-invocation
   probe failure, alias re-pointing, platform route change, unqualified override,
-  fallback loop, unqualified adjacent model, generic-agent substitution, silent
+  **override skipped by the organization allowlist**, fallback loop, unqualified
+  adjacent model, generic-agent substitution, silent
   inherit materialization, helper unavailable, **retry** exhaustion, and no safe
   route — with zero mandated scenarios unrepresented. Exhaustion is named by its
   terminating class rather than as generic "budget exhaustion", because the roadmap
-  states retry exhaustion as its own proof obligation (FR-028).
+  states retry exhaustion as its own proof obligation (FR-028). The
+  override-skipped family is this spec's own addition rather than a roadmap-named
+  one, and it is mandatory for the reason FR-024b gives: without it the corpus pins
+  an unconditional override effect the documented runtime does not have.
+- **SC-013**: Every behaviour this feature simulates that has a documented runtime
+  counterpart is traceable to that counterpart, and every place the simulation
+  **deliberately diverges** from it names the divergence and its justification. The
+  count of simulated behaviours asserted without either a cited runtime source or a
+  recorded deliberate-divergence note is exactly zero. Three carry recorded
+  divergences today — preflight rejection of an unsupported effort where the runtime
+  silently degrades (FR-007a), sub-division of platform route change into two
+  sub-reasons where CAR-002 detects one bucket (FR-006), and pinning resolution
+  semantics ahead of an unsettled platform fact (FR-002a) — and the effort ladder
+  additionally carries a set-equality assertion against its frozen in-tree source
+  (FR-007a).
 - **SC-002**: 100% of corpus cases replay byte-identically to their pinned
   expected report, and 100% replay byte-identically across two successive runs.
 - **SC-003**: Both reason-code vocabularies are closed sets whose membership is
@@ -1274,9 +1650,30 @@ cohort specs inherit proven rejection semantics.
   to that shape rather than inventing a parallel one.
 - "Qualified" in fixture policies means declared-qualified by the fixture itself.
   Real route qualification is CAR-007 through CAR-010 and is not simulated here.
+  This is a **different gate** from the organization model allowlist FR-024b reads:
+  the allowlist is an environment configuration carried in the snapshot, while
+  qualification is a per-route boolean the fixture declares. The two are independent
+  in both directions (FR-024b).
+- **Platform fidelity rests on a dated documentation extract, not on this spec's own
+  reading.** Every claim about runtime behaviour — the subagent model-resolution
+  order, the allowlist skip, the alias set and its drift, the effort ladder and its
+  model-dependence — is traceable to the repository's dated, quoted extract of the
+  published Claude Code documentation
+  (`docs/ai/research/claude-agent-route-candidates.md`, `RES-1`–`RES-5`, `EFF-1`,
+  `EFF-2`, `ALS-repoint`) and, where the program has already probed the surface, to
+  the committed CAR-002 probe code. Where the documentation is silent the surface is
+  recorded as a capability question rather than assumed: the unavailable-model
+  dispatch outcome and the execution-time manifestation of alias re-pointing are both
+  open questions in that extract, which is the ground FR-002a records. A later
+  documentation change is therefore a change to a cited source, not a silent
+  invalidation of an uncited assumption.
 - The synthetic cast covers three role classes — a required executor, a bounded
   analyst, and an optional helper — which is sufficient to express every mandated
-  scenario without adding more synthetic agents.
+  scenario without adding more synthetic agents. What was **not** sufficient was the
+  contract: a policy rooted on one agent identity could not express the
+  required-agent-plus-optional-helper pairing the helper-unavailable scenario needs,
+  so FR-025b adds the policy's helper declaration. The class count is unchanged; only
+  the number of agents one policy can name changed, from one to one-plus-an-optional-helper.
 - Canonical JSON serialization is no longer carried as an assumption: FR-014a pins it
   to a named in-tree function. Note that the resolved serializer emits **minimal
   separators and no indentation**, so an earlier reading of this assumption as
