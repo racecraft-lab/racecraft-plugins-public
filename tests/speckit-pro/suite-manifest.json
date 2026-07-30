@@ -121,7 +121,8 @@
         { "path": "tests/speckit-pro/unit/test-moc-lint-exit-codes.py", "label": "test-moc-lint-exit-codes", "baseline": "tests/speckit-pro/parity/bash-to-python/test-moc-lint-exit-codes-baseline.txt" },
         { "path": "tests/speckit-pro/unit/test-policy-control-contracts.py", "label": "test-policy-control-contracts", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-control-comparison-dominance.py", "label": "test-control-comparison-dominance", "baseline": null },
-        { "path": "tests/speckit-pro/unit/test-twin-handoff-completeness.py", "label": "test-twin-handoff-completeness", "baseline": null }
+        { "path": "tests/speckit-pro/unit/test-twin-handoff-completeness.py", "label": "test-twin-handoff-completeness", "baseline": null },
+        { "path": "tests/speckit-pro/unit/test-route-fallback-simulation.py", "label": "test-route-fallback-simulation", "baseline": null }
       ]
     },
     {

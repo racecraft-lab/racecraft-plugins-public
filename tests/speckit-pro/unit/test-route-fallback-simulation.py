@@ -17,6 +17,8 @@ dispatch.
 
 from __future__ import annotations
 
+import ast
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -1041,6 +1043,762 @@ class CorpusContractValidationTests(SimulatorCaseMixin, unittest.TestCase):
             validate_instance(policy, self.contracts["policy"])
 
 
+# --------------------------------------------------------------------------- #
+# Slice-1 assertion obligations                                                 #
+# --------------------------------------------------------------------------- #
+# Each case below proves a slice-1 guarantee inside slice 1's own diff: every one
+# is provable the moment the slice-1 schemas exist, and none waits on the slice
+# that first emits the value it constrains.
+
+MODULE_PATH = Path(__file__).resolve()
+
+# FR-017a and FR-019b: the read targets, declared once each so the pointer is a
+# stated constant rather than an attribute chain buried inside a comparison.
+RESOLUTION_CODE_POINTER = "$defs/resolutionDiagnostic/properties/code/enum"
+POLICY_VIOLATION_CODE_POINTER = "$defs/policyViolationDiagnostic/properties/code/enum"
+SUB_REASON_POINTER = "$defs/resolutionDiagnostic/properties/details/properties/sub_reason/enum"
+DECLARED_EFFORT_POINTER = (
+    "$defs/resolutionDiagnostic/properties/details/properties/declared_effort/enum"
+)
+REMEDIATION_ACTION_POINTER = "$defs/remediation/properties/actions/items/enum"
+ROUTE_EFFORT_POINTER = "$defs/route/properties/effort/enum"
+DECLARED_BUDGETS_POINTER = "$defs/declaredBudgets"
+FROZEN_EFFORT_POINTER = "$defs/tuple/properties/effort/enum"
+FROZEN_CAPABILITY_CONTRACT = "successor-capability-freeze.schema.json"
+
+ROADMAP_ROOT = REPO_ROOT / "docs" / "ai" / "specs"
+CLAUDE_ROADMAP = ROADMAP_ROOT / "claude-agent-routing-technical-roadmap.md"
+CODEX_ROADMAP = ROADMAP_ROOT / "codex-gpt-5-6-agent-routing-technical-roadmap.md"
+
+# Prose anchors, deliberately NOT code tokens: the reason codes are read out of the
+# span each pair delimits, so this module never restates the enum it is checking.
+CLAUDE_REASON_CODE_SPAN = ("Define stable reason codes (", ")")
+CODEX_REASON_CODE_SPAN = ("Require deterministic resolution reasons:", ";")
+BACKTICKED_TOKEN = re.compile(r"`([a-z][a-z0-9_]*)`")
+
+# FR-017b and FR-017c: the recorded divergence, held as data. It is a permanent,
+# intentional platform difference — Codex splits discovery from probing and Claude
+# has no such split — so no reconciliation is attempted, and pinning both spellings
+# is what makes a silent edit to either roadmap fail the suite.
+CLAUDE_ONLY_REASON_CODE = "capability_probe_unavailable"
+CODEX_ONLY_REASON_CODE = "capability_discovery_unavailable"
+SHARED_REASON_CODE_COUNT = 4
+
+# FR-019b: the second witness for the policy-violation vocabulary. Declaring these
+# members here is correct rather than a break with the read-live discipline — see
+# ClosedVocabularySetEqualityTests for why the two enums are treated differently.
+POLICY_VIOLATION_MEMBERS = frozenset(
+    {
+        "fallback_loop",
+        "unqualified_adjacent_model",
+        "generic_agent_substitution",
+        "silent_inherit_materialization",
+        "unqualified_override",
+    }
+)
+
+# FR-007a: the session-level orchestration setting that is deliberately not a model
+# effort level, named so its absence from the ladder is asserted rather than assumed.
+SESSION_ORCHESTRATION_SETTING = "ultracode"
+
+UNRECOGNISED_DIAGNOSTIC_CODE = "fixture_unrecognised_reason_code"
+
+AGENTS_ROOT = REPO_ROOT / "speckit-pro" / "agents"
+AGENT_FRONTMATTER_NAME = re.compile(r"^name:[ \t]*(?P<name>\S+)[ \t]*$", re.MULTILINE)
+FIXTURE_NAME_PREFIX = "fixture-"
+AGENT_NAME_KEYS = ("agent", "substituted_agent", "unresolved_agent")
+SYNTHETIC_ROLE_CLASSES = frozenset({"required_executor", "bounded_analyst", "optional_helper"})
+DIAGNOSTIC_SOURCE = "route-fallback-simulator"
+CASE_PAYLOAD_MEMBERS = ("policy", "snapshot", "overrides", "expected_report")
+
+# FR-012c and data-model.md section 3: severity is a function of code, and each code
+# carries one fixed action allocation. Recorded here because the mapping has no
+# token-bearing committed authority — the schemas close the vocabularies but leave
+# which member pairs with which code entirely open, which is exactly the authoring
+# latitude a byte-compared hand-authored corpus must not have.
+SEVERITY_BY_CODE = {
+    "preferred_model_unavailable": "warning",
+    "effort_unsupported": "warning",
+    "capability_probe_unavailable": "warning",
+    "treatment_probe_failed": "warning",
+    "no_safe_route": "error",
+    "fallback_loop": "error",
+    "unqualified_adjacent_model": "error",
+    "generic_agent_substitution": "error",
+    "silent_inherit_materialization": "error",
+    "unqualified_override": "warning",
+}
+ACTIONS_BY_CODE = {
+    "preferred_model_unavailable": [
+        "Re-probe the environment and confirm the pinned alias and resolved model."
+    ],
+    "effort_unsupported": ["Declare an effort the model's probed capability set supports."],
+    "capability_probe_unavailable": ["Re-run capability probing before trusting this route."],
+    "treatment_probe_failed": ["Inspect the exact-invocation probe evidence for this route."],
+    "no_safe_route": [
+        "Widen the declared fallback list with qualified routes.",
+        "Roll back to the previous plugin release.",
+    ],
+    "fallback_loop": ["Remove the repeated route from the fallback chain."],
+    "unqualified_adjacent_model": ["Replace the adjacent model with a qualified route."],
+    "generic_agent_substitution": ["Restore the named agent in the fallback route."],
+    "silent_inherit_materialization": ["Declare the model and effort explicitly on the route."],
+    "unqualified_override": [
+        "Unset the unqualified subagent-model override before making release claims."
+    ],
+}
+
+# The class whose job is to prove serialize_report and the shared library agree.
+SERIALIZER_EQUIVALENCE_CLASS = "SimulatorSerializationSurfaceTests"
+# The two places a call to the shared library serializer is legitimate, each for a reason
+# that is not report serialization: the equivalence case above, and the purity case, which
+# hashes the INPUT policy and snapshot to prove resolve mutates neither — inputs are not
+# reports, so serialize_report is not the tool for them. Anywhere else it would be a second
+# REPORT serializer, which is the trap FR-014a names.
+SHARED_SERIALIZER_CALLERS = (SERIALIZER_EQUIVALENCE_CLASS, "ResolutionWalkTests")
+# The classes that compare serialized bytes. Named rather than inferred, with the
+# names asserted present, so a rename cannot quietly leave the audit covering nothing.
+BYTE_COMPARING_CLASSES = ("ReplayDeterminismTests",)
+APPROVED_SERIALIZER_CALLS = frozenset({"serialize_report", "replay"})
+# A raw json dump has no legitimate place here at all: it is neither of the two
+# serializers, and the trailing-newline and key-order guarantees are not its to keep.
+BANNED_JSON_CALLS = frozenset({"dumps", "dump"})
+
+
+def read_by_pointer(document: object, pointer: str) -> object:
+    """Resolve a slash-separated JSON pointer against ``document``.
+
+    The enums are read through this rather than by attribute chain so the pointer the
+    requirement names is the literal string the test carries.
+    """
+    node = document
+    for token in pointer.split("/"):
+        if not isinstance(node, dict) or token not in node:
+            raise KeyError(f"{pointer}: no {token!r} under {type(node).__name__}")
+        node = node[token]
+    return node
+
+
+def roadmap_reason_codes(path: Path, span: tuple[str, str]) -> tuple[str, ...]:
+    """Every backticked token the roadmap declares inside ``span``, in declared order.
+
+    An unmatched anchor returns the empty tuple rather than raising: the callers assert
+    non-emptiness with a message naming the anchor, so a roadmap edit that moved the
+    declaration surfaces as that rather than as an opaque set difference.
+    """
+    opening, closing = span
+    text = path.read_text(encoding="utf-8")
+    start = text.find(opening)
+    if start < 0:
+        return ()
+    start += len(opening)
+    end = text.find(closing, start)
+    if end < 0:
+        return ()
+    return tuple(BACKTICKED_TOKEN.findall(text[start:end]))
+
+
+def module_syntax_tree() -> ast.Module:
+    return ast.parse(MODULE_PATH.read_text(encoding="utf-8"), filename=str(MODULE_PATH))
+
+
+def binding_kinds(tree: ast.AST, name: str) -> set[str]:
+    """Every way ``tree`` binds ``name``, described so a failure names what bound it."""
+    kinds: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id == name and isinstance(node.ctx, ast.Store):
+            kinds.add("assignment")
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name:
+            kinds.add("function definition")
+        elif isinstance(node, ast.ClassDef) and node.name == name:
+            kinds.add("class definition")
+        elif isinstance(node, ast.arg) and node.arg == name:
+            kinds.add("parameter")
+        elif isinstance(node, ast.ImportFrom):
+            for alias in node.names:
+                if (alias.asname or alias.name) == name:
+                    kinds.add(f"import from {node.module}")
+        elif isinstance(node, ast.Import):
+            for alias in node.names:
+                if (alias.asname or alias.name.split(".")[0]) == name:
+                    kinds.add("plain import")
+    return kinds
+
+
+def called_names(node: ast.AST) -> set[str]:
+    """The bare and attribute names of every call inside ``node``."""
+    names: set[str] = set()
+    for sub in ast.walk(node):
+        if not isinstance(sub, ast.Call):
+            continue
+        if isinstance(sub.func, ast.Name):
+            names.add(sub.func.id)
+        elif isinstance(sub.func, ast.Attribute):
+            names.add(sub.func.attr)
+    return names
+
+
+def declared_classes(tree: ast.Module) -> dict[str, ast.ClassDef]:
+    return {node.name: node for node in tree.body if isinstance(node, ast.ClassDef)}
+
+
+def numeric_leaves(value: object, location: str) -> list[tuple[str, object]]:
+    """Every non-boolean numeric leaf under ``value``, with the path that reached it."""
+    if isinstance(value, dict):
+        found: list[tuple[str, object]] = []
+        for key, member in value.items():
+            found.extend(numeric_leaves(member, f"{location}.{key}"))
+        return found
+    if isinstance(value, list):
+        found = []
+        for index, member in enumerate(value):
+            found.extend(numeric_leaves(member, f"{location}[{index}]"))
+        return found
+    if isinstance(value, bool):
+        return []
+    if isinstance(value, (int, float)):
+        return [(location, value)]
+    return []
+
+
+def agent_names_in(value: object) -> set[str]:
+    """Every agent name reachable under ``value``, whichever member carries it."""
+    names: set[str] = set()
+    if isinstance(value, dict):
+        for key, member in value.items():
+            if key in AGENT_NAME_KEYS:
+                if isinstance(member, str):
+                    names.add(member)
+                elif isinstance(member, dict) and isinstance(member.get("name"), str):
+                    names.add(member["name"])
+            names |= agent_names_in(member)
+    elif isinstance(value, list):
+        for member in value:
+            names |= agent_names_in(member)
+    return names
+
+
+def shipped_agent_roster() -> set[str]:
+    """The shipped roster, listed live: file stems and their declared frontmatter names.
+
+    FR-018 and SC-006: derived rather than transcribed. Eleven agents ship today and one
+    more is net-new in a later feature, so a blocklist written into this file would stop
+    covering names added after it was written — which is why the ``fixture-`` prefix is
+    the positive rule this negative assertion only supplements.
+    """
+    roster: set[str] = set()
+    for path in sorted(AGENTS_ROOT.glob("*.md")):
+        roster.add(path.stem)
+        match = AGENT_FRONTMATTER_NAME.search(path.read_text(encoding="utf-8"))
+        if match is not None:
+            roster.add(match.group("name"))
+    return roster
+
+
+class SingleSerializerDisciplineTests(unittest.TestCase):
+    """FR-014a and SC-002: one serializer, and every byte comparison taken over it.
+
+    This is a correctness trap, not a style rule. The repository carries eight
+    ``canonical_json`` definitions of which three append a trailing newline, and all six
+    existing occurrences under ``unit/`` declare their own copy. The established
+    comparison shape re-serializes BOTH sides, so a divergent local copy would CANCEL a
+    real mismatch rather than fail on it, leaving a green test over a simulator whose
+    output differs. A green test over a wrong simulator is the failure mode, so the
+    audit is mechanical: a local definition has to be unable to appear, not something a
+    reviewer has to notice is absent.
+    """
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_route_fallback, "claude_route_fallback is not importable")
+        self.module = claude_route_fallback
+        self.tree = module_syntax_tree()
+        self.classes = declared_classes(self.tree)
+
+    def test_the_only_canonical_serializer_binding_is_the_shared_librarys_import(self) -> None:
+        self.assertEqual(
+            binding_kinds(self.tree, "canonical_json"),
+            {"import from claude_successor_freeze"},
+        )
+
+    def test_no_second_serializer_is_called_outside_the_two_documented_places(self) -> None:
+        for name in SHARED_SERIALIZER_CALLERS:
+            self.assertIn(
+                name, self.classes, f"{name} is no longer declared, so this audit covers nothing"
+            )
+        self.assertIn(
+            "canonical_json",
+            called_names(self.classes[SERIALIZER_EQUIVALENCE_CLASS]),
+            f"{SERIALIZER_EQUIVALENCE_CLASS} no longer compares the two serializers",
+        )
+        allowed = {id(self.classes[name]) for name in SHARED_SERIALIZER_CALLERS}
+        offenders: list[str] = []
+        for node in self.tree.body:
+            where = f"{getattr(node, 'name', type(node).__name__)} (line {node.lineno})"
+            banned = set(BANNED_JSON_CALLS)
+            if id(node) not in allowed:
+                banned.add("canonical_json")
+            offenders.extend(f"{where}: {each}" for each in sorted(called_names(node) & banned))
+        self.assertEqual(offenders, [])
+
+    def test_every_byte_comparison_is_taken_over_the_simulators_own_serializer(self) -> None:
+        for name in BYTE_COMPARING_CLASSES:
+            node = self.classes.get(name)
+            self.assertIsNotNone(node, f"{name} is no longer declared, so this audit covers nothing")
+            compared = 0
+            for call in ast.walk(node):
+                if not isinstance(call, ast.Call) or not isinstance(call.func, ast.Attribute):
+                    continue
+                if call.func.attr != "assertEqual":
+                    continue
+                if not any(isinstance(argument, ast.Call) for argument in call.args):
+                    continue  # a comparison against a literal, not a byte comparison
+                compared += 1
+                for argument in call.args:
+                    approved = (
+                        isinstance(argument, ast.Call)
+                        and isinstance(argument.func, ast.Attribute)
+                        and argument.func.attr in APPROVED_SERIALIZER_CALLS
+                    )
+                    self.assertTrue(
+                        approved,
+                        f"{name} line {call.lineno}: a compared value does not come from "
+                        f"serialize_report",
+                    )
+            self.assertGreater(compared, 0, f"{name} takes no byte comparison at all")
+
+    def test_no_pinned_report_serializes_with_a_trailing_newline(self) -> None:
+        for case in self.module.load_corpus()["cases"]:
+            with self.subTest(case=case["case_id"]):
+                serialized = self.module.serialize_report(case["expected_report"])
+                self.assertFalse(serialized.endswith("\n"))
+
+    def test_every_number_in_every_pinned_report_is_an_integer(self) -> None:
+        checked = 0
+        for case in self.module.load_corpus()["cases"]:
+            for location, value in numeric_leaves(case["expected_report"], case["case_id"]):
+                checked += 1
+                with self.subTest(location=location):
+                    self.assertNotIsInstance(value, float)
+                    self.assertIsInstance(value, int)
+        self.assertGreater(
+            checked, 0, "no numeric field was reached, so this assertion covers nothing"
+        )
+
+
+class RoadmapParityTests(unittest.TestCase):
+    """FR-017 through FR-017c and SC-012: the resolution enum against the roadmap pinning it.
+
+    Both sides are read live from committed files. The five members are deliberately NOT
+    transcribed here: a test that restated the enum would absorb the very drift it exists
+    to catch, because the schema and the roadmap are two independently committed witnesses
+    and a third copy collapses them into one. The prose anchors the codes are read out of
+    are not themselves code tokens, so moving the declaration fails loudly instead of
+    silently narrowing what is compared.
+    """
+
+    def resolution_enum(self) -> list[str]:
+        document = load_contract(CONTRACT_ROOT / "route-resolution-report.schema.json")
+        return list(read_by_pointer(document, RESOLUTION_CODE_POINTER))
+
+    def claude_roadmap_codes(self) -> tuple[str, ...]:
+        codes = roadmap_reason_codes(CLAUDE_ROADMAP, CLAUDE_REASON_CODE_SPAN)
+        self.assertTrue(
+            codes,
+            f"{CLAUDE_ROADMAP.name} declares no reason codes under "
+            f"{CLAUDE_REASON_CODE_SPAN[0]!r}",
+        )
+        return codes
+
+    def codex_roadmap_codes(self) -> tuple[str, ...]:
+        codes = roadmap_reason_codes(CODEX_ROADMAP, CODEX_REASON_CODE_SPAN)
+        self.assertTrue(
+            codes,
+            f"{CODEX_ROADMAP.name} declares no reason codes under "
+            f"{CODEX_REASON_CODE_SPAN[0]!r}",
+        )
+        return codes
+
+    def test_the_resolution_enum_equals_the_codes_the_claude_roadmap_pins(self) -> None:
+        enum = self.resolution_enum()
+        self.assertEqual(len(set(enum)), len(enum), "the enum declares a duplicate member")
+        self.assertEqual(set(enum), set(self.claude_roadmap_codes()))
+
+    def test_a_dropped_member_fails_the_parity_comparison(self) -> None:
+        enum = self.resolution_enum()
+        pinned = set(self.claude_roadmap_codes())
+        for member in enum:
+            with self.subTest(dropped=member):
+                self.assertNotEqual(set(enum) - {member}, pinned)
+
+    def test_an_added_member_fails_the_parity_comparison(self) -> None:
+        enum = set(self.resolution_enum())
+        self.assertNotIn(UNRECOGNISED_DIAGNOSTIC_CODE, enum)
+        self.assertNotEqual(enum | {UNRECOGNISED_DIAGNOSTIC_CODE}, set(self.claude_roadmap_codes()))
+
+    def test_the_cross_platform_divergence_is_pinned_as_test_data(self) -> None:
+        claude = set(self.claude_roadmap_codes())
+        codex = set(self.codex_roadmap_codes())
+        self.assertEqual(claude - codex, {CLAUDE_ONLY_REASON_CODE})
+        self.assertEqual(codex - claude, {CODEX_ONLY_REASON_CODE})
+        self.assertEqual(len(claude & codex), SHARED_REASON_CODE_COUNT)
+
+    def test_the_schema_carries_the_claude_spelling_of_the_divergent_member(self) -> None:
+        enum = set(self.resolution_enum())
+        self.assertIn(CLAUDE_ONLY_REASON_CODE, enum)
+        self.assertNotIn(CODEX_ONLY_REASON_CODE, enum)
+
+
+class ClosedVocabularySetEqualityTests(unittest.TestCase):
+    """FR-019b, FR-007a, SC-003, and SC-013: the two enums whose second witness is this file.
+
+    The read-live-only discipline FR-017a imposes on the resolution enum deliberately does
+    NOT extend to these two, and the difference is the whole point. The resolution enum has
+    an independently committed second witness in the Claude roadmap, so restating it here
+    would collapse two witnesses into one. The policy-violation vocabulary has none — the
+    roadmap names its four rejections in prose only, never as code tokens, and the fifth
+    member is this spec's own addition — so the literal here IS the second witness and is
+    what makes drift detectable at all. The effort ladder sits between the two: the frozen
+    successor-capability contract carries the same five members, so both witnesses are
+    asserted and neither alone is trusted.
+    """
+
+    def report_enum(self, pointer: str) -> list[str]:
+        document = load_contract(CONTRACT_ROOT / "route-resolution-report.schema.json")
+        return list(read_by_pointer(document, pointer))
+
+    def route_effort_enum(self) -> list[str]:
+        document = load_contract(CONTRACT_ROOT / "route-policy.schema.json")
+        return list(read_by_pointer(document, ROUTE_EFFORT_POINTER))
+
+    def frozen_effort_enum(self) -> list[str]:
+        document = load_contract(CONTRACT_ROOT / FROZEN_CAPABILITY_CONTRACT)
+        return list(read_by_pointer(document, FROZEN_EFFORT_POINTER))
+
+    def test_the_policy_violation_enum_holds_exactly_its_five_declared_members(self) -> None:
+        enum = self.report_enum(POLICY_VIOLATION_CODE_POINTER)
+        self.assertEqual(len(set(enum)), len(enum), "the enum declares a duplicate member")
+        self.assertEqual(set(enum), set(POLICY_VIOLATION_MEMBERS))
+
+    def test_a_dropped_policy_violation_member_fails_the_comparison(self) -> None:
+        enum = self.report_enum(POLICY_VIOLATION_CODE_POINTER)
+        for member in enum:
+            with self.subTest(dropped=member):
+                self.assertNotEqual(set(enum) - {member}, set(POLICY_VIOLATION_MEMBERS))
+
+    def test_an_added_policy_violation_member_fails_the_comparison(self) -> None:
+        enum = set(self.report_enum(POLICY_VIOLATION_CODE_POINTER))
+        self.assertNotEqual(
+            enum | {UNRECOGNISED_DIAGNOSTIC_CODE}, set(POLICY_VIOLATION_MEMBERS)
+        )
+
+    def test_the_two_closed_vocabularies_are_disjoint(self) -> None:
+        resolution = set(self.report_enum(RESOLUTION_CODE_POINTER))
+        violations = set(self.report_enum(POLICY_VIOLATION_CODE_POINTER))
+        self.assertEqual(resolution & violations, set())
+
+    def test_the_effort_enum_holds_exactly_the_five_member_ladder(self) -> None:
+        enum = self.route_effort_enum()
+        self.assertEqual(len(set(enum)), len(enum), "the ladder declares a duplicate level")
+        self.assertEqual(set(enum), set(EFFORT_LADDER))
+
+    def test_the_effort_enum_matches_the_frozen_successor_capability_contract(self) -> None:
+        self.assertEqual(set(self.route_effort_enum()), set(self.frozen_effort_enum()))
+
+    def test_a_dropped_effort_level_fails_the_comparison(self) -> None:
+        enum = self.route_effort_enum()
+        for member in enum:
+            with self.subTest(dropped=member):
+                self.assertNotEqual(set(enum) - {member}, set(EFFORT_LADDER))
+
+    def test_an_added_effort_level_fails_the_comparison(self) -> None:
+        enum = set(self.route_effort_enum())
+        self.assertNotEqual(enum | {SESSION_ORCHESTRATION_SETTING}, set(EFFORT_LADDER))
+
+    def test_the_session_orchestration_setting_is_not_an_effort_level(self) -> None:
+        self.assertNotIn(SESSION_ORCHESTRATION_SETTING, set(EFFORT_LADDER))
+        self.assertNotIn(SESSION_ORCHESTRATION_SETTING, set(self.route_effort_enum()))
+        self.assertNotIn(SESSION_ORCHESTRATION_SETTING, set(self.frozen_effort_enum()))
+
+
+class InlineNegativeValidationTests(unittest.TestCase):
+    """FR-019a, FR-027, and SC-003: two negatives, each provable with zero corpus cases.
+
+    Neither property can be a corpus case, because every corpus case must validate. Both
+    travel with the slice-1 keyword they prove — the closure with the enum, the ceiling
+    with ``maximum`` — rather than waiting for the slice that first emits the value, which
+    is what stops slice 2 having to reopen a slice-1 schema for a one-keyword change.
+
+    The instance and the schema handed to the validator are both built here; the enums and
+    the maxima inside them are read LIVE from the shipped documents, because an inline copy
+    would prove the closure of this test's own literal rather than of what slice 1 ships.
+    Each negative is paired with a positive control over the whole live vocabulary: without
+    it the negative is unattributable, since an inline instance malformed for an unrelated
+    reason also fails validation and the test would pass while proving nothing.
+    """
+
+    def setUp(self) -> None:
+        self.report_schema = load_contract(CONTRACT_ROOT / "route-resolution-report.schema.json")
+
+    def any_action(self) -> str:
+        """One member of the live action vocabulary; every member is equally valid here."""
+        return list(read_by_pointer(self.report_schema, REMEDIATION_ACTION_POINTER))[0]
+
+    def maximal_details(self) -> dict[str, object]:
+        """A ``details`` object satisfying every conditional branch in both diagnostic ``$defs``.
+
+        Carrying every conditionally required member at once is what lets the control run
+        over the whole vocabulary: the branches only add requirements, ``details`` is open,
+        and so one object keeps every code valid and leaves the code itself as the sole
+        difference between the control and the negative.
+        """
+        effort = list(read_by_pointer(self.report_schema, DECLARED_EFFORT_POINTER))
+        return {
+            "route_id": "inline-negative-route",
+            "sub_reason": list(read_by_pointer(self.report_schema, SUB_REASON_POINTER))[0],
+            "declared_effort": effort[0],
+            "supported_efforts": [effort[0]],
+        }
+
+    def diagnostic(self, code: str) -> dict[str, object]:
+        return {
+            "code": code,
+            "message": "an inline diagnostic built for the closure proof",
+            "severity": "error",
+            "source": DIAGNOSTIC_SOURCE,
+            "remediation": {
+                "summary": "an inline fixture asks nothing of a consumer",
+                "actions": [self.any_action()],
+            },
+            "details": self.maximal_details(),
+        }
+
+    def union_schema(self) -> dict[str, object]:
+        """An inline document whose one property is the shipped diagnostics union."""
+        return {
+            "$schema": JSON_SCHEMA_DIALECT,
+            "type": "object",
+            "additionalProperties": False,
+            "required": ["diagnostic"],
+            "properties": {"diagnostic": self.report_schema["properties"]["diagnostics"]["items"]},
+            "$defs": self.report_schema["$defs"],
+        }
+
+    def inline_report(self, diagnostics: list[dict[str, object]]) -> dict[str, object]:
+        """A minimal no-safe-route report, so the union is reached through the shipped array."""
+        return {
+            "schema_version": SCHEMA_VERSION,
+            "agent": "fixture-required-executor",
+            "outcome": "no_safe_route",
+            "attempted_routes": [],
+            "diagnostics": diagnostics,
+            "budgets": {
+                "declared": dict(INLINE_BUDGETS),
+                "actual": {"probe_attempts": 0, "retries": 0, "candidate_routes": 0},
+            },
+            "release_claim_eligible": False,
+            "optional_helper": {
+                "consulted": False,
+                "no_helper_path_validated": True,
+                "probe_attempts": 0,
+            },
+            "unresolved_agent": "fixture-required-executor",
+        }
+
+    def live_codes(self) -> list[str]:
+        return list(read_by_pointer(self.report_schema, RESOLUTION_CODE_POINTER)) + list(
+            read_by_pointer(self.report_schema, POLICY_VIOLATION_CODE_POINTER)
+        )
+
+    def test_an_out_of_vocabulary_diagnostic_code_fails_validation(self) -> None:
+        self.assertNotIn(UNRECOGNISED_DIAGNOSTIC_CODE, set(self.live_codes()))
+        with self.assertRaises(ControlContractError):
+            validate_instance(
+                {"diagnostic": self.diagnostic(UNRECOGNISED_DIAGNOSTIC_CODE)}, self.union_schema()
+            )
+
+    def test_every_code_in_either_live_vocabulary_validates_under_the_same_schema(self) -> None:
+        schema = self.union_schema()
+        codes = self.live_codes()
+        self.assertTrue(codes, "neither vocabulary declared a member, so the control proves nothing")
+        for code in codes:
+            with self.subTest(code=code):
+                instance = {"diagnostic": self.diagnostic(code)}
+                self.assertEqual(validate_instance(instance, schema), instance)
+
+    def test_an_out_of_vocabulary_code_fails_through_the_shipped_diagnostics_array(self) -> None:
+        with self.assertRaises(ControlContractError):
+            validate_instance(
+                self.inline_report([self.diagnostic(UNRECOGNISED_DIAGNOSTIC_CODE)]),
+                self.report_schema,
+            )
+        control = self.inline_report([self.diagnostic(self.live_codes()[0])])
+        self.assertEqual(validate_instance(control, self.report_schema), control)
+
+    def test_a_declared_budget_above_the_schema_maximum_fails_validation(self) -> None:
+        budgets = load_contract(CONTRACT_ROOT / "route-policy.schema.json")
+        schema = read_by_pointer(budgets, DECLARED_BUDGETS_POINTER)
+        for field in sorted(schema["properties"]):
+            ceiling = schema["properties"][field]["maximum"]
+            with self.subTest(budget=field, maximum=ceiling):
+                at_ceiling = {**INLINE_BUDGETS, field: ceiling}
+                self.assertEqual(validate_instance(dict(at_ceiling), schema), at_ceiling)
+                above = {**INLINE_BUDGETS, field: ceiling + 1}
+                with self.assertRaises(ControlContractError):
+                    validate_instance(above, schema)
+                # Rejected rather than clamped: the refused value is still the one declared.
+                self.assertEqual(above[field], ceiling + 1)
+
+
+class CorpusEnvelopeTests(unittest.TestCase):
+    """FR-015a and SC-007: the envelope properties no schema document validates.
+
+    The corpus has no schema of its own — exactly three documents are permitted and none
+    of them validates the envelope — so these hold mechanically here or nowhere. Both the
+    append-only seam rule and the read-one-case guarantee rest on them. Cross-slice
+    stability is deliberately NOT claimed as mechanically enforced: a case whose inputs
+    and pinned report both moved would still replay consistently, so that half stays
+    review-borne rather than being asserted misleadingly.
+    """
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_route_fallback, "claude_route_fallback is not importable")
+        self.module = claude_route_fallback
+        self.cases = self.module.load_corpus()["cases"]
+        self.case_ids = [case["case_id"] for case in self.cases]
+
+    def test_case_ids_are_unique_across_the_whole_corpus(self) -> None:
+        self.assertEqual(len(set(self.case_ids)), len(self.cases))
+
+    def test_every_case_id_is_a_non_empty_string(self) -> None:
+        for index, case in enumerate(self.cases):
+            with self.subTest(index=index):
+                identifier = case.get("case_id")
+                self.assertIsInstance(identifier, str)
+                self.assertNotEqual(identifier, "")
+
+    def test_every_case_carries_its_own_four_payload_members(self) -> None:
+        for case in self.cases:
+            for member in CASE_PAYLOAD_MEMBERS:
+                with self.subTest(case=case["case_id"], member=member):
+                    self.assertIn(member, case)
+
+    def test_a_case_declaring_no_override_carries_an_explicit_null(self) -> None:
+        for case in self.cases:
+            with self.subTest(case=case["case_id"]):
+                declared = case["overrides"]
+                self.assertTrue(
+                    declared is None or isinstance(declared, dict),
+                    f"overrides is {type(declared).__name__}, neither an explicit null nor an object",
+                )
+
+    def test_no_cases_payload_names_another_cases_identifier(self) -> None:
+        self.assertGreater(
+            len(self.cases), 1, "one case cannot reference another, so this proves nothing"
+        )
+        for case in self.cases:
+            payload = self.module.serialize_report(
+                {member: case[member] for member in CASE_PAYLOAD_MEMBERS}
+            )
+            for other in self.case_ids:
+                if other == case["case_id"]:
+                    continue
+                with self.subTest(case=case["case_id"], referenced=other):
+                    self.assertNotIn(other, payload)
+
+
+class FixtureHygieneTests(unittest.TestCase):
+    """FR-012c, FR-018, FR-032, SC-006, and SC-013: a synthetic cast, and severity by code.
+
+    The ``fixture-`` prefix is the POSITIVE rule and is what the corpus is held to, because
+    the negative one alone goes stale: the shipped roster is listed live rather than
+    transcribed, since a blocklist written here stops covering agents added after it was
+    written and one is net-new in a later feature.
+
+    Severity being a function of ``code`` is a deliberate divergence from the installed
+    runner, whose severity is caller-determined. It is justified because this feature's
+    emitter is a hand-authored, byte-compared corpus, where leaving severity to the emitter
+    would be unfalsifiable authoring latitude rather than a caller's judgement.
+    """
+
+    def setUp(self) -> None:
+        self.assertIsNotNone(claude_route_fallback, "claude_route_fallback is not importable")
+        self.module = claude_route_fallback
+        self.corpus = self.module.load_corpus()
+        self.cases = self.corpus["cases"]
+
+    def emitted_diagnostics(self) -> list[tuple[str, dict[str, object]]]:
+        emitted: list[tuple[str, dict[str, object]]] = []
+        for case in self.cases:
+            policy = case["policy"]
+            produced = self.module.resolve(
+                policy, case["snapshot"], case["overrides"], policy["budgets"]
+            )
+            for origin, report in (("pinned", case["expected_report"]), ("produced", produced)):
+                for entry in report["diagnostics"]:
+                    emitted.append((f"{case['case_id']}/{origin}", entry))
+        return emitted
+
+    def declared_role_classes(self) -> list[tuple[str, object]]:
+        declared: list[tuple[str, object]] = []
+        for case in self.cases:
+            policy = case["policy"]
+            declared.append((case["case_id"], policy["agent"]["role_class"]))
+            helper = policy.get("optional_helper")
+            if helper is not None:
+                declared.append((f"{case['case_id']}/helper", helper["agent"]["role_class"]))
+        return declared
+
+    def test_every_agent_name_in_the_corpus_carries_the_fixture_prefix(self) -> None:
+        names = agent_names_in(self.cases)
+        self.assertTrue(names, "no agent name was reached, so this assertion covers nothing")
+        for name in sorted(names):
+            with self.subTest(agent=name):
+                self.assertTrue(name.startswith(FIXTURE_NAME_PREFIX))
+
+    def test_no_shipped_agent_name_appears_anywhere_in_the_corpus(self) -> None:
+        roster = shipped_agent_roster()
+        self.assertTrue(roster, f"{AGENTS_ROOT} listed no agent, so this assertion covers nothing")
+        corpus = self.module.serialize_report(self.corpus)
+        for name in sorted(roster):
+            with self.subTest(agent=name):
+                self.assertNotIn(name, corpus)
+
+    def test_every_declared_agent_holds_one_of_the_three_synthetic_role_classes(self) -> None:
+        declared = self.declared_role_classes()
+        self.assertTrue(declared, "no role class was reached, so this assertion covers nothing")
+        for location, role_class in declared:
+            with self.subTest(agent=location):
+                self.assertIn(role_class, SYNTHETIC_ROLE_CLASSES)
+
+    def test_the_severity_and_action_maps_cover_both_closed_vocabularies(self) -> None:
+        schema = load_contract(CONTRACT_ROOT / "route-resolution-report.schema.json")
+        codes = set(read_by_pointer(schema, RESOLUTION_CODE_POINTER)) | set(
+            read_by_pointer(schema, POLICY_VIOLATION_CODE_POINTER)
+        )
+        self.assertEqual(set(SEVERITY_BY_CODE), codes)
+        self.assertEqual(set(ACTIONS_BY_CODE), codes)
+        allocated = {action for actions in ACTIONS_BY_CODE.values() for action in actions}
+        self.assertEqual(allocated, set(read_by_pointer(schema, REMEDIATION_ACTION_POINTER)))
+
+    def test_every_emitted_diagnostic_carries_the_severity_its_code_fixes(self) -> None:
+        emitted = self.emitted_diagnostics()
+        self.assertTrue(emitted, "no diagnostic was emitted, so this assertion covers nothing")
+        for location, entry in emitted:
+            with self.subTest(diagnostic=location, code=entry["code"]):
+                self.assertEqual(entry["severity"], SEVERITY_BY_CODE[str(entry["code"])])
+
+    def test_every_emitted_diagnostic_carries_the_actions_its_code_allocates(self) -> None:
+        for location, entry in self.emitted_diagnostics():
+            with self.subTest(diagnostic=location, code=entry["code"]):
+                actions = entry["remediation"]["actions"]
+                self.assertEqual(actions, ACTIONS_BY_CODE[str(entry["code"])])
+
+    def test_every_emitted_diagnostic_names_this_module_as_its_source(self) -> None:
+        for location, entry in self.emitted_diagnostics():
+            with self.subTest(diagnostic=location):
+                self.assertEqual(entry["source"], DIAGNOSTIC_SOURCE)
+
+
 TEST_CASES = (
     CommittedContractIdentityTests,
     SimulatorSerializationSurfaceTests,
@@ -1054,6 +1812,12 @@ TEST_CASES = (
     ReportScopedFieldTests,
     CorpusContractValidationTests,
     ReplayDeterminismTests,
+    SingleSerializerDisciplineTests,
+    RoadmapParityTests,
+    ClosedVocabularySetEqualityTests,
+    InlineNegativeValidationTests,
+    CorpusEnvelopeTests,
+    FixtureHygieneTests,
 )
 
 
