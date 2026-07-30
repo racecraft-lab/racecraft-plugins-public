@@ -1239,11 +1239,45 @@ single validation module, so Phases 3–6 are necessarily sequential there.
 - [x] Registered in `tests/speckit-pro/suite-manifest.json`
 - [x] Layer 1 structural suite passes — 1428/1428
 - [x] Payload/proof regeneration complete (shipped `speckit-pro/artifact-gallery/`)
-- [ ] Manual verification: open brand-kit demo/template over `file://` in both themes —
-      harness authored and reviewed in-browser; the real `file://` load is the open part
+- [x] Manual verification: open brand-kit demo/template over `file://` in both themes —
+      **all twelve scenarios passed**, see the acceptance evidence below
 - [x] PR created — [#407](https://github.com/racecraft-lab/racecraft-plugins-public/pull/407),
       all 21 required checks green
 - [ ] Merged to main branch (humans merge)
+
+### Manual acceptance evidence (T026, T027) — 2026-07-29
+
+**Result: 12 of 12 passed. M1–M12, no failures, none unrun.**
+
+Run by the maintainer against
+`specs/art-001-brand-kit-gallery-foundation/.process/acceptance-harness.html`, loaded
+from disk over `file://`. The harness embeds the canonical `GALLERY-HEAD` region and the
+`BRAND-KIT` token block **byte-identically** to their source files — verified at build
+time, and re-verified after both surface corrections — so the run exercised the shipped
+kit rather than a copy of it.
+
+| Task | Scenarios | Covers | Result |
+| --- | --- | --- | --- |
+| T026 | M1–M6 | SC-001, SC-005, SC-006; FR-004 | 6/6 pass |
+| T027 | M7–M12 | SC-010, SC-011; FR-022, FR-023, FR-024 | 6/6 pass |
+
+What this does and does not establish. The twelve scenarios verify the **mechanism** —
+first paint with no flash of the wrong theme over `file://`, the theme control's
+persistence and its refused-storage fallback, offline rendering degrading only in
+typeface, keyboard-only operation with a visible focus indicator, the accessible name
+stable across both theme positions with the state changing between them, reduced motion
+suppressing the cross-theme transition, native controls and scrollbars following the
+*chosen* theme rather than the operating system, and no invisible-text period during font
+loading. It does **not** observe those outcomes on a shipped gallery artifact, because
+ART-001 ships none by design; `quickstart.md` §8 specifies the scratch-harness run for
+exactly this reason and assigns the re-run against a real artifact to the first port
+spec. That re-run remains ART-002's, and is not an ART-001 gap.
+
+**How the result arrived is itself first evidence for FR-028.** The maintainer recorded
+the twelve outcomes in the harness and used its `prompt` export to hand them back as a
+single paste — the reader's conclusion phrased as an instruction, carried out of the
+browser without being retyped. That is the export obligation working end to end on its
+first real use, on the artifact whose missing affordance exposed the gap.
 
 ### Self-Review (four-question audit)
 

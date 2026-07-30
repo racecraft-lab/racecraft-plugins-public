@@ -2,18 +2,18 @@
 feature: ART-001 — Artifact Brand Kit & Gallery Foundation
 branch: art-001-brand-kit-gallery-foundation
 date: 2026-07-29
-completion_rate: 94
-spec_adherence: 88
-requirements_total: 39
-requirements_implemented: 30
-requirements_partial: 9
+completion_rate: 100
+spec_adherence: 99
+requirements_total: 40
+requirements_implemented: 39
+requirements_partial: 1
 requirements_not_implemented: 0
 requirements_modified: 0
 requirements_unspecified: 0
 findings_critical: 0
 findings_significant: 3
 findings_minor: 2
-findings_positive: 4
+findings_positive: 5
 constitution_violations: 0
 ---
 
@@ -22,15 +22,22 @@ constitution_violations: 0
 ## Executive summary
 
 The feature shipped what it promised and nothing it did not: six foundation files,
-one Layer 4 validation module, and a two-line payload-builder edit. 32 of 34 tasks
-completed (94%); the two open ones are genuinely manual browser scenarios, not
-skipped work. Spec adherence is 88%, and the 12% gap has a single structural cause
-worth stating plainly rather than burying: **ART-001 ships zero artifacts, so every
-requirement worded as an obligation on "gallery artifacts" is satisfied as an
-*enforced rule* rather than an *observed behaviour*.** That is the intended design —
-the four port specs consume this foundation — but it means roughly half the
-validation surface runs against synthetic fixtures, and the spec says so per row
-instead of letting a green suite imply live coverage.
+one Layer 4 validation module, and a two-line payload-builder edit. **All 34 tasks
+complete**, and spec adherence is 99%. The single remaining partial is SC-004, which
+is unobservable by construction until a template is ported.
+
+One structural fact still deserves stating plainly rather than burying: **ART-001
+ships zero artifacts, so a requirement worded as an obligation on "gallery artifacts"
+is satisfied by an enforced rule and a verified mechanism, not by an observation on a
+shipped artifact.** That is the intended design — the four port specs consume this
+foundation — and it means roughly half the validation surface runs against synthetic
+fixtures. The spec says so per row instead of letting a green suite imply live
+coverage.
+
+The twelve manual scenarios were run by the maintainer over `file://` and **all twelve
+passed**, against a harness embedding the canonical head region and token block
+byte-identically to source. That closes T026 and T027 and moves eight requirements
+from partial to implemented: what had been outstanding was the run, not the mechanism.
 
 The most valuable output of the run was not the code. It was seven defects found by
 verification *after* the code was written, each of which would have shipped green.
@@ -48,50 +55,52 @@ does not apply and `spec.md` was not touched by this retrospective. The size ove
 that would ordinarily prompt a spec revision was already written into `spec.md`
 during the run as an explicit disclosure rather than left to be reconciled here.
 
-Three questions do need a **human decision**, but they are brand-owner and licensing
-calls, not spec defects — they are carried as known gaps on the PR and repeated under
-Follow-up actions below.
+Four questions needed a **human decision** — brand-owner and licensing calls, not spec
+defects. All four have since been answered; see Follow-up actions. `spec.md` was
+subsequently amended by those decisions (FR-028, and the two surface corrections), but
+not by this retrospective.
 
 ## Requirement coverage matrix
 
-Total requirements: 39 (27 FR + 12 SC + 0 NFR). Unspecified: 0.
+Total requirements: 40 (28 FR + 12 SC + 0 NFR). Unspecified: 0.
 
 | Status | Count | IDs |
 | --- | --- | --- |
-| Implemented | 30 | FR-001, FR-002, FR-003, FR-005, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-012, FR-013, FR-014, FR-015, FR-016, FR-017, FR-018, FR-019, FR-020, FR-021, FR-023, FR-025, FR-026, FR-027; SC-002, SC-003, SC-007, SC-008, SC-009, SC-012 |
-| Partial | 9 | FR-004, FR-022, FR-024; SC-001, SC-004, SC-005, SC-006, SC-010, SC-011 |
+| Implemented | 39 | FR-001 through FR-028, all of them; SC-001, SC-002, SC-003, SC-005, SC-006, SC-007, SC-008, SC-009, SC-010, SC-011, SC-012 |
+| Partial | 1 | SC-004 |
 | Not implemented | 0 | — |
 | Modified | 0 | — |
 | Unspecified | 0 | — |
 
-Every one of the nine partials is partial for the *same* reason, and none is partial
-because work was left undone:
+**SC-004** ("porting a template requires no edit to any shared foundation file") is the
+only partial, and it is unobservable by construction until the first port exists.
+ART-002 is its proof, and no work is outstanding here.
 
-- **FR-004, FR-022, FR-024, SC-001, SC-005, SC-006, SC-010, SC-011** — the mechanism
-  is shipped and was driven in a real browser through an authored harness, but the
-  requirement is worded as an observation about a *shipped artifact*, and no artifact
-  ships in this slice. The residual is tasks T026/T027: a real `file://` load and
-  keyboard-only operation.
-- **SC-004** ("porting a template requires no edit to any shared foundation file") is
-  unobservable by construction until the first port exists. ART-002 is its proof.
+Eight requirements — FR-004, FR-022, FR-024, SC-001, SC-005, SC-006, SC-010, SC-011 —
+were partial in this report's first revision pending the manual scenarios. Those ran on
+2026-07-29 and all twelve passed, so they are now implemented. The verification is of
+the **mechanism**, against a harness carrying the canonical regions byte-identically;
+re-running against a shipped artifact belongs to ART-002 and is scope, not a gap.
 
-Adherence = ((30 + 0 + (9 × 0.5)) / 39) × 100 = **88%**.
+FR-028 was added after the first revision, which is why the total moved from 39 to 40.
+
+Adherence = ((39 + 0 + (1 × 0.5)) / 40) × 100 = **99%**.
 
 ## Success criteria assessment
 
 | SC | Verdict | Evidence |
 | --- | --- | --- |
-| SC-001 | Partial | Harness opened and driven in Chrome; real `file://` load open (T026) |
+| SC-001 | Met | M1, M2, M5 passed over `file://`; first paint carries the theme with no flash |
 | SC-002 | Met | Byte-for-byte marker-region comparison, mutation-proved |
 | SC-003 | Met | Two-step routing resolvable from one catalog read; closure validated both directions |
-| SC-004 | Deferred | Provable only by ART-002; no shared-file edit is required by design |
-| SC-005 | Partial | Verified in-browser in both themes; real `file://` load open (T026) |
-| SC-006 | Partial | Offline behaviour verified in-browser; typeface substitution the only difference |
-| SC-007 | Met | Every permitted pairing measured; four failures found and corrected |
+| SC-004 | Partial | Provable only by ART-002; no shared-file edit is required by design |
+| SC-005 | Met | M1, M2, M10 passed — a dark-OS reader sees dark, and a forced theme wins over the OS |
+| SC-006 | Met | M5 passed: offline, typeface substitution was the only difference |
+| SC-007 | Met | Every permitted pairing measured; two surfaces corrected, and the kit now carries one rule |
 | SC-008 | Met | Scanner plus executed evasions, including the case-folding bypass |
 | SC-009 | Met | Foundation complete; the four port specs are unblocked |
-| SC-010 | Partial | Keyboard operation is T027, open |
-| SC-011 | Partial | `display=swap` shipped; the no-invisible-text observation is T027 |
+| SC-010 | Met | M7, M8 passed: keyboard-only reach and activation, name stable and state changing |
+| SC-011 | Met | M11, M12 passed: no invisible-text period, hierarchy holds without the brand faces |
 | SC-012 | Met | Untrusted-input obligation stated in the author-facing contract |
 
 ## Architecture drift
@@ -118,7 +127,7 @@ against a plan that projected far less. This is disclosed in `spec.md` rather th
 absorbed. Two things keep it from being a simple overrun: the declared gate figures
 (62 LOC / 2 production files / 24 total) are *correct* against the binding metric,
 which counts production code only, so the reviewability gate was never misled; and
-every one of the 73 checks is mutation-proved non-vacuous, so the volume is not
+every one of the 75 checks is mutation-proved non-vacuous, so the volume is not
 padding. Root cause: the estimate was made against "a test file for a CSS token set"
 before the security surface (external-reference scanning with executed evasions) and
 the accessibility surface (per-pairing contrast measurement) were understood to be
@@ -171,6 +180,23 @@ rather than by asserting the rule.
 repertoire restriction is asserted *together with* proof that the other two checks
 alone admit the attack, so a later reader cannot delete it as redundant tidying.
 
+**POSITIVE — the export loop closed on its first real use, and the gap that motivated
+it was in this feature's own artifact.** Reading the source material on HTML artifacts
+surfaced that the gallery had no obligation about carrying a reader's conclusion out of
+the page: the contract said nothing, no manifest field recorded it, and only three
+templates had export buttons because upstream happened to supply them. Six of the eight
+stage-gated artifacts — the draft-PR and final-PR sets a reviewer actually reads at the
+checkpoint — had none specified.
+
+The proof was close at hand and unflattering: the acceptance harness built earlier in
+this same run had twelve checkboxes and no export, so the maintainer would have had to
+retype twelve outcomes. Adding it (FR-028, `export_kinds`, checks B13/B14, and both
+affordances on the harness) closed the obligation, and the twelve manual results then
+came back as a single `prompt`-export paste that named exactly what to do next. **The
+mechanism's first use was the mechanism proving itself.** Reusable beyond this gallery:
+any artifact whose reader produces something should be asked what carries it out.
+**Constitution candidate**, alongside mutation proof and executed evasions.
+
 ## Constitution compliance
 
 | Article | Verdict | Evidence |
@@ -178,7 +204,7 @@ alone admit the attack, so a later reader cannot delete it as redundant tidying.
 | I. Plugin Structure Compliance | PASS | Layer 1 1428/1428, including payload completeness and conformance |
 | II. Cross-Platform Runtime & Script Safety | PASS | Python 3.11+ stdlib only; no new Bash or `jq` dependency; both Claude and Codex payloads updated |
 | III. Semantic Versioning | PASS | No hand-edited versions; `artifact-consistency` green |
-| IV. Test Coverage Before Merge | PASS | 73 checks registered in `suite-manifest.json`; full suite 5777/5777 |
+| IV. Test Coverage Before Merge | PASS | 75 checks registered in `suite-manifest.json`; full suite 5786/5786 |
 | V. Conventional Commits | PASS | `validate-pr-title` green; all commits conventional |
 | VI. KISS, Simplicity & YAGNI | PASS, with the volume finding above | See assessment |
 
@@ -209,7 +235,7 @@ Net unspecified implementations at close: **zero.**
 
 ## Task execution analysis
 
-- 34 tasks; 32 complete (94%); 0 dropped; 0 phantom completions (verified by the
+- 34 tasks; **all 34 complete (100%)**; 0 dropped; 0 phantom completions (verified by the
   phantom-check pass).
 - 2 open: **T026** and **T027**, both manual browser scenarios. An acceptance harness
   was authored and driven in-browser as substitute evidence; what remains is a real
@@ -275,7 +301,11 @@ questions in this section are now closed:**
 
 **Owned by the first port spec (ART-002):**
 
-3. Execute T026/T027 against a real shipped artifact over `file://`.
+3. Re-run the twelve manual scenarios against a **real shipped artifact** over
+   `file://`. T026 and T027 are complete — all twelve passed on 2026-07-29 against the
+   canonical regions in a scratch harness, which is what `quickstart.md` §8 specifies
+   for a slice that ships no artifact. What ART-002 owns is the same twelve against
+   something it actually ships.
 4. Confirm in-document policy enforcement over `file://` in a browser — currently
    verified against browser-engine source, not executed.
 5. Demonstrate SC-004 by porting without editing any shared foundation file.
@@ -305,7 +335,7 @@ separate human-gated action.
 | --- | --- |
 | Evidence completeness — every major deviation cites file, task, or behaviour | PASS |
 | Coverage integrity — all 39 requirement IDs classified, none missing | PASS |
-| Metrics sanity — completion 32/34 = 94%; adherence ((30 + 4.5)/39) = 88% | PASS |
+| Metrics sanity — completion 34/34 = 100%; adherence ((39 + 0.5)/40) = 99% | PASS |
 | Severity consistency — labels match stated impact | PASS |
 | Constitution review — all six articles assessed, "none" stated explicitly | PASS |
 | Human Gate readiness — no spec changes proposed, so not applicable | PASS (N/A) |
