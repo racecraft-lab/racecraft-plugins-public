@@ -124,7 +124,8 @@
         { "path": "tests/speckit-pro/unit/test-control-comparison-dominance.py", "label": "test-control-comparison-dominance", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-twin-handoff-completeness.py", "label": "test-twin-handoff-completeness", "baseline": null },
         { "path": "tests/speckit-pro/unit/test-artifact-gallery.py", "label": "test-artifact-gallery", "baseline": null },
-        { "path": "tests/speckit-pro/unit/test-route-fallback-simulation.py", "label": "test-route-fallback-simulation", "baseline": null }
+        { "path": "tests/speckit-pro/unit/test-route-fallback-simulation.py", "label": "test-route-fallback-simulation", "baseline": null },
+        { "path": "tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py", "label": "test-autopilot-bookkeeping-guard", "baseline": null }
       ]
     },
     {
