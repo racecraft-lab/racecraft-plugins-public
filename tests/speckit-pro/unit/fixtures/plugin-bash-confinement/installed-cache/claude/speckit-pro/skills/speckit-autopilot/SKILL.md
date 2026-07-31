@@ -377,6 +377,22 @@ marked `skipped: <ext-name> not installed`.
 entries (every Phase, every Consensus, every `Post:`) and ADD any
 missing before advancing.
 
+**Then run the deterministic coverage guard and STOP on a nonzero exit.**
+This is the same guard the Codex variant runs, so both distributions share
+one enforcement path instead of two prose descriptions of one:
+
+```text
+Command("<resolved_python> '<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py' --workflow <workflow-file-path> --state <workflow-directory>/autopilot-state.json")
+```
+
+`<resolved_python>` is the Python 3.11+ interpreter resolved by the
+Installed Runtime Contract; `<plugin-root>` is the directory that owns
+`skills/speckit-autopilot/`. Exit 0 is required to advance; exit 1 reports
+the failing checks as JSON on stdout; exit 2 is an input error. The guard
+also fails when a Workflow Overview status row contradicts a gate verdict
+recorded elsewhere in the same file, which is what keeps the status table
+honest across compactions and manual phase runs.
+
 ## Step 2: Main Execution Loop
 
 For each pending phase, spawn a subagent, collect the result, validate
@@ -386,6 +402,9 @@ the gate, advance. Every step is a tool call.
 PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 
 for phase in PHASES starting from first_pending:
+    0. Re-run the Step 1.1 coverage guard against the workflow file and
+       autopilot-state.json. Exit 0 is required; on nonzero, repair the plan
+       and the workflow status table, then repeat before executing this phase.
     1. TaskUpdate: phase task → in_progress
     2. Run before_<phase> hooks from .specify/extensions.yml
     3. For each workflow prompt in this phase:
@@ -621,6 +640,14 @@ After scheduling the loop, the autopilot is DONE. Report
 the final summary with PR URL.
 
 ## Workflow File Update Protocol
+
+**The workflow file is the per-spec durable store.** It survives archive, so
+its Workflow Overview status table is the record of what a spec did.
+`autopilot-state.json` is the current-in-flight pointer for one run — it holds a
+single spec's live plan and is overwritten by the next run, so it is never
+per-spec history. When the two disagree, the workflow file wins and the state
+file is repaired to match. A status row that contradicts a gate verdict recorded
+elsewhere in the same file fails the Step 1.1 coverage guard.
 
 After EVERY phase, update the workflow file so it remains the
 durable source of truth across context compactions and resumes:

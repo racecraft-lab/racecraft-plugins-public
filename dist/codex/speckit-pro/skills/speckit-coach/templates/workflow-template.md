@@ -60,7 +60,9 @@ captured during scoping.
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
+| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -76,6 +78,7 @@ Each phase requires **human review and approval** before proceeding:
 | G4 | After Checklist | All `[Gap]` markers addressed |
 | G5 | After Tasks | Task coverage verified, dependencies ordered |
 | G6 | After Analyze | No `CRITICAL` issues, `WARNING` items reviewed |
+| G6.5 | Before Implement | Composite confidence meets the autonomous implementation threshold |
 | G7 | After Each Implementation Phase | Tests pass, manual verification complete |
 
 ---
@@ -180,7 +183,7 @@ Use these markers in spec.md for traceability through later phases:
 
 ---
 
-## Phase 2: Clarify (Optional but Recommended)
+## Phase 2: Clarify
 
 **When to run:** When spec has areas that could be interpreted multiple ways. 10-20 minutes here saves hours of rework later.
 
@@ -451,6 +454,20 @@ Focus on:
 
 ---
 
+## Phase 6.5: Confidence Gate
+
+**When to run:** After Phase 6 commits and before Phase 7 begins. Gate semantics
+are unchanged; this section records the verdict so a later session can read it.
+
+| Field | Value |
+|-------|-------|
+| Mode | <!-- advisory (default) or strict --> |
+| Composite confidence | <!-- 0.00-1.00 --> |
+| Verdict | <!-- proceed / remediate / stop --> |
+| Evidence | <!-- what the score was computed from --> |
+
+---
+
 ## Phase 7: Implement
 
 **When to run:** After tasks.md is generated and analyzed (no coverage gaps).
@@ -494,6 +511,24 @@ Before starting any task:
 ---
 
 ## Post-Implementation Checklist
+
+The canonical closeout. Every row must reach Complete or an explicit
+`Skipped` before the run may report completion.
+
+| Canonical Item | Status | Evidence |
+|---|---|---|
+| Post: Doctor Extension Check | ⏳ Pending | |
+| Post: Verify Implementation | ⏳ Pending | |
+| Post: Verify Tasks Phantom Check | ⏳ Pending | |
+| Post: Code Review | ⏳ Pending | |
+| Post: Integration Suite | ⏳ Pending | |
+| Post: Reviewability Diff Gate | ⏳ Pending | |
+| Post: Self-Review | ⏳ Pending | |
+| Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: PR Body Generation | ⏳ Pending | |
+| Post: PR Creation | ⏳ Pending | |
+| Post: Review Remediation | ⏳ Pending | |
+| Post: Retrospective | ⏳ Pending | |
 
 <!-- Populate with your project's quality gates from the constitution -->
 

@@ -72,4 +72,6 @@ items. Never omit consensus tasks from the task list at creation time.
 - **Verify task-list completeness before starting Phase 1**: count the
   prescribed entries (every Phase, every Consensus, every `Post:` task) and
   confirm each is present. If the count differs, ADD the missing entries
-  before advancing.
+  before advancing. Then run
+  `validate-autopilot-phase-coverage.py --workflow <workflow> --state <workflow-dir>/autopilot-state.json`
+  and do not advance unless it exits 0.

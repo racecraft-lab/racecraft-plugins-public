@@ -36,7 +36,7 @@ Runtime hook configuration surfaces and source boundaries.
 
 #### Source Facts
 
-- Claude Code hook events: UserPromptExpansion. Source refs: `speckit-pro/hooks/hooks.json`.
+- Claude Code hook events: Stop, UserPromptExpansion. Source refs: `speckit-pro/hooks/hooks.json`.
 - The Claude Code hook matcher targets SpecKit Pro and SpecKit command-style prompts before warning about a missing specify CLI. Source refs: `speckit-pro/hooks/hooks.json`.
 
 #### Sources
@@ -59,7 +59,7 @@ Runtime hook configuration surfaces and source boundaries.
 
 #### Source Facts
 
-- Codex hook events: UserPromptSubmit. Source refs: `speckit-pro/codex-hooks.json`.
+- Codex hook events: Stop, UserPromptSubmit. Source refs: `speckit-pro/codex-hooks.json`.
 - The Codex hook checks prompt text for SpecKit skill sigils and emits a warning when specify is missing. Source refs: `speckit-pro/codex-hooks.json`.
 
 #### Sources
