@@ -1832,3 +1832,54 @@ state to CAR-005 archived, regenerates and checks the SpecKit index, validates
 project state JSON and diff hygiene, and runs the structural and full
 deterministic suites. CAR-006 may now scaffold against the canonical shipped
 evidence. CAR-012 remains the separate paired reconciliation with G56R-012.
+
+## Revision 2026-07-30 - ART-001 Post-Merge Architecture
+
+### Where ART-001 Lives Now
+
+- The authored gallery source lives at `speckit-pro/artifact-gallery/`:
+  `brand-kit.css`, `brand-voice.md`, `manifest.json`, `theme-toggle.html`,
+  `SPA-CONTRACT.md`, and `UPSTREAM-NOTICE.md`.
+- The same six files materialize into `dist/claude/speckit-pro/artifact-gallery/`
+  and `dist/codex/speckit-pro/artifact-gallery/`, with the runner manifest and
+  `.sha256` regenerated to match.
+- `speckit_pro_runner/gates/payloads.py` carries the payload-completeness fix
+  that made the gallery directory's absence a failure instead of a silent pass.
+- `tests/speckit-pro/unit/test-artifact-gallery.py` is the durable owner and
+  holds the SPA-contract scan PR #409 added. The installed-cache-proof fixtures
+  under `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/` were
+  regenerated to include the gallery.
+- The acceptance harness now lives at
+  `docs/ai/specs/.process/ART-001-acceptance-harness.html`.
+
+### Why The Archive Is Safe
+
+Every machine-enforced artifact was authored into the plugin source, the payload,
+or the test tree. After the harness relocation, nothing in live code, tests,
+scripts, workflows, or the docs site reads
+`specs/art-001-brand-kit-gallery-foundation`, so the active folder can be removed
+without changing behavior.
+
+### Why The Harness Moved And The Quickstart Did Not
+
+This cleanup makes the same call CAR-004 and G56R-004 did, and the opposite call
+CAR-005 did, for the same reason each time: relocate what is still needed
+forward, delete what is reproducible.
+
+The harness is needed forward twice over — it is the only artifact behind the
+12-of-12 manual result, and the roadmap explicitly directs a later spec to reuse
+its clipboard-failure and live-state handling rather than re-derive them. Two
+files outside the spec folder pointed at it, so deleting would have left dangling
+pointers in live documents.
+
+The feature `quickstart.md`, by contrast, is a validation guide for work already
+merged, and `retrospective.md` and `.process/changed-files.txt` are run exhaust.
+All three are recoverable at the merge commit and were removed with the folder.
+
+### Testing and Cleanup
+
+The cleanup relocates one harness, repoints two references, removes the merged
+ART-001 active spec, moves the project archive state to ART-001, regenerates and
+checks the SpecKit index, validates project state JSON and diff hygiene, and runs
+the structural and full deterministic suites. ART-002 through ART-006 may now
+scaffold against the canonical shipped foundation.

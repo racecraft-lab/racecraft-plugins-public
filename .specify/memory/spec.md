@@ -2411,3 +2411,63 @@ are now merged rather than an unrun operator procedure; its slice-diff commands
 name deleted branches, and its failure-triage table is derivable from the
 shipped tests. Detailed provenance, canonical artifact locations, and recovery
 commands live in the dated CAR-005 archive report.
+
+## Revision 2026-07-30 - ART-001 Artifact Brand Kit and Gallery Foundation Archived
+
+### Shipped Behavior Preserved
+
+- ART-001 shipped through merged PR #407, with follow-up fix PR #409, the
+  Racecraft brand kit and the gallery foundation the four template-port specs
+  consume: `brand-kit.css`, `brand-voice.md`, `manifest.json`,
+  `theme-toggle.html`, `SPA-CONTRACT.md`, and the MIT `UPSTREAM-NOTICE.md`.
+- The gallery ships in the plugin payload. `speckit-pro/artifact-gallery/`
+  materializes into both `dist/claude/` and `dist/codex/`, and the runner
+  payload gate plus the regenerated installed-cache proofs enforce that it
+  arrives intact.
+- `tests/speckit-pro/unit/test-artifact-gallery.py` is the durable owner.
+  PR #409 extended it to scan artifact script bodies for external references and
+  prohibited constructs, closing a hole in the single-file-SPA contract.
+- ART-001 changes no routing, scheduler, or release behavior beyond adding the
+  gallery to the shipped payload.
+- ART-002 through ART-006 are ready. Their ART-001 dependency is satisfied by
+  the merged brand kit and manifest schema.
+
+### Manual Acceptance Evidence
+
+Unlike CAR-004 and G56R-004, ART-001's manual obligations were discharged before
+merge. T026 and T027 ran on 2026-07-29 against the acceptance harness loaded
+over `file://`: **12 of 12 scenarios passed, no failures, none unrun**, recorded
+in the preserved workflow file. The harness embeds the canonical `GALLERY-HEAD`
+region and `BRAND-KIT` token block byte-identically to source, so the run
+exercised the shipped kit rather than a copy.
+
+The feature `retrospective.md` disagreed with itself on this point: its
+narrative section recorded the run as closing T026 and T027, while its
+task-execution section, not updated in the same revision, still listed both
+open. The workflow record and the merge both proceeded on the former. This is
+noted rather than silently reconciled.
+
+### Known Gap Carried Forward
+
+ART-001 ships zero gallery artifacts of its own — it is the foundation the port
+specs consume — so roughly half its validation surface runs against synthetic
+fixtures rather than a real shipped artifact. The spec records this per
+requirement row instead of letting a green suite imply live coverage. The
+retrospective's own recommendation is to re-run the twelve manual scenarios
+against a real shipped artifact once ART-002 produces one. That closure belongs
+to ART-002, not here.
+
+### Cleanup Note
+
+The active ART-001 folder was removed after PR #407 and #409 merge provenance
+and all live readers were checked. Historical workflow and design evidence
+remains under `docs/ai/specs/.process/`.
+
+One artifact was forward-looking rather than exhaust and was moved before
+removal. `.process/acceptance-harness.html` is both the evidence behind the
+12-of-12 manual result and, per the roadmap, the working reference
+implementation a later spec is told to reuse rather than re-derive. It now lives
+at `docs/ai/specs/.process/ART-001-acceptance-harness.html`, and the two
+references that pointed into the spec folder were repointed. Detailed
+provenance, canonical artifact locations, and recovery commands live in the
+dated ART-001 archive report.

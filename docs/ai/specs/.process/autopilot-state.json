@@ -1,11 +1,11 @@
 {
-  "workflow_file": "docs/ai/specs/.process/CAR-005-workflow.md",
-  "spec_id": "CAR-005",
-  "feature_dir": "specs/car-005-availability-fallback-recovery",
-  "updated_at": "2026-07-30T22:15:43Z",
-  "active_step": "Archived: post-merge cleanup applied for CAR-005",
+  "workflow_file": "docs/ai/specs/.process/ART-001-workflow.md",
+  "spec_id": "ART-001",
+  "feature_dir": "specs/art-001-brand-kit-gallery-foundation",
+  "updated_at": "2026-07-30T23:19:28Z",
+  "active_step": "Archived: post-merge cleanup applied for ART-001",
   "status": "completed_archived",
-  "prior_run_note": "Detailed implementation, slicing, and review-remediation state remains in the preserved CAR-005 workflow, design concept, archive report, and git history at merge commits 3ba89fa4bee8b1cc6402b47a473181d3f96eed12 (PR #411) and e31475fa7cb36aed83b76bc63d423bcb10557b97 (PR #412). The unvalidated-accept-path defect in claude_route_fallback.py ships unfixed and is recorded in the archive report as a follow-up change against main.",
+  "prior_run_note": "Detailed implementation, verification, and manual-acceptance state remains in the preserved ART-001 workflow, design concept, relocated acceptance harness, archive report, and git history at merge commits c4498dd0ce0a85618b8e923108682c4818c083f6 (PR #407) and a6cc2b21bad2fa0514eacc4032f296ddd332cc3c (PR #409). T026 and T027 ran 2026-07-29 with 12 of 12 scenarios passing. The prior CAR-005 sweep is recorded at .specify/memory/archive-reports/2026-07-30-car-005-post-merge-hygiene.md.",
   "settings": {
     "auto_commit": "per-phase",
     "confidence_gate_mode": "advisory",
@@ -14,16 +14,16 @@
   },
   "archive_sweep": {
     "status": "applied",
-    "cleanup_branch": "chore/archive-car-005-post-merge",
+    "cleanup_branch": "chore/archive-art-001-post-merge",
     "archived_specs": [
       {
-        "spec_id": "CAR-005",
+        "spec_id": "ART-001",
         "pull_requests": [
-          411,
-          412
+          407,
+          409
         ],
-        "merge_commit": "e31475fa7cb36aed83b76bc63d423bcb10557b97",
-        "report": ".specify/memory/archive-reports/2026-07-30-car-005-post-merge-hygiene.md"
+        "merge_commit": "c4498dd0ce0a85618b8e923108682c4818c083f6",
+        "report": ".specify/memory/archive-reports/2026-07-30-art-001-post-merge-hygiene.md"
       }
     ],
     "cleanup_mode": "applied",

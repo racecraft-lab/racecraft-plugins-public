@@ -1250,7 +1250,7 @@ single validation module, so Phases 3–6 are necessarily sequential there.
 **Result: 12 of 12 passed. M1–M12, no failures, none unrun.**
 
 Run by the maintainer against
-`specs/art-001-brand-kit-gallery-foundation/.process/acceptance-harness.html`, loaded
+`docs/ai/specs/.process/ART-001-acceptance-harness.html`, loaded
 from disk over `file://`. The harness embeds the canonical `GALLERY-HEAD` region and the
 `BRAND-KIT` token block **byte-identically** to their source files — verified at build
 time, and re-verified after both surface corrections — so the run exercised the shipped
