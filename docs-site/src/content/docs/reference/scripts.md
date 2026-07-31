@@ -31,24 +31,22 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 - **Purpose:** SpecKit autopilot helper scripts used for gates, reviewability, PR packets, UAT skeletons, and workflow checks.
 - **Classification:** `source`
 - **Platform concept:** Repository script group
-- **Claude Code:** speckit-pro/skills/speckit-autopilot/scripts/autopilot-bookkeeping-stop-hook.py, speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py
-- **Codex:** speckit-pro/skills/speckit-autopilot/scripts/autopilot-bookkeeping-stop-hook.py, speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py
+- **Claude Code:** speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py
+- **Codex:** speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py
 - **Runtime difference:** Script groups are repository role inventories; paths are shared unless an individual script name or source file declares a runtime-specific purpose.
 
 #### Source Facts
 
-- speckit-pro/skills/speckit-autopilot/scripts/autopilot-bookkeeping-stop-hook.py is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/autopilot-bookkeeping-stop-hook.py`.
 - speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py is a checked-in source file. Source refs: `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`.
 
 #### Sources
 
-- [speckit-pro/skills/speckit-autopilot/scripts/autopilot-bookkeeping-stop-hook.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/autopilot-bookkeeping-stop-hook.py)
 - [speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py)
 
 #### Inferred Notes
 
 - Review script behavior in its owning source files before changing generated docs that describe the group.
-  - Based on: `speckit-pro/skills/speckit-autopilot/scripts/autopilot-bookkeeping-stop-hook.py`, `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`
+  - Based on: `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`
 
 ### Plugin Scripts
 

@@ -1,16 +1,5 @@
 {
   "hooks": {
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/autopilot-bookkeeping-stop-hook.py\" || exit 0",
-            "timeout": 30
-          }
-        ]
-      }
-    ],
     "UserPromptExpansion": [
       {
         "matcher": "^(speckit-pro:|grill-me|speckit\\.|speckit-)",

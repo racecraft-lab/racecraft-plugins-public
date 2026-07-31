@@ -55,3 +55,32 @@ def body(lines: list[str]) -> str:
         if found:
             out.append(line)
     return "\n".join(out)
+
+
+COMMAND_KEYS = ("command", "commandWindows", "command_windows")
+
+
+def declared_hook_commands(data: object) -> list[str]:
+    """Every non-empty command string declared under any hook event, at any depth.
+
+    Event names are never hard-coded: the walk visits every value under the
+    top-level ``hooks`` map, so a newly registered event is covered the day it
+    lands rather than the day someone remembers to extend a list. Codex's
+    Windows override keys count as commands too.
+    """
+    found: list[str] = []
+
+    def walk(node: object) -> None:
+        if isinstance(node, dict):
+            for key in COMMAND_KEYS:
+                value = node.get(key)
+                if isinstance(value, str) and value.strip():
+                    found.append(f"{key}={value}")
+            for value in node.values():
+                walk(value)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    walk(data.get("hooks") if isinstance(data, dict) else None)
+    return found

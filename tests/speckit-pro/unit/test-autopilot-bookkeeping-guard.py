@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Behavioural coverage for the autopilot bookkeeping guard.
 
-Covers the three surfaces that enforce the bookkeeping rule at run time: the
+Covers the surfaces that enforce the bookkeeping rule at run time: the
 ``workflow_status_evidence_errors`` and ``validate_state_status`` checks inside
-the shipped phase-coverage validator, its ``--rule`` exit-code scoping, and the
-Stop hook that consumes them.
+the shipped phase-coverage validator, and its ``--rule`` exit-code scoping.
 
 The rule's own CI gate asserts that the live corpus is clean, which cannot show
 that the gate would *catch* a violation. These tests supply the negative
@@ -23,7 +22,6 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 TEST_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TEST_DIR.parents[2]
@@ -35,7 +33,6 @@ from test_result import run_counted  # noqa: E402
 
 SKILL_SCRIPTS = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "scripts"
 VALIDATOR = SKILL_SCRIPTS / "validate-autopilot-phase-coverage.py"
-STOP_HOOK = SKILL_SCRIPTS / "autopilot-bookkeeping-stop-hook.py"
 
 PLAN_STEPS = (
     "Archive Sweep: previously merged specs dry-run/apply eligibility",
@@ -60,7 +57,6 @@ def _load(path: Path, name: str):
 
 
 validator = _load(VALIDATOR, "speckit_autopilot_phase_coverage_under_test")
-hook = _load(STOP_HOOK, "speckit_autopilot_bookkeeping_stop_hook_under_test")
 
 
 def workflow(*rows: tuple[str, str], body: str = "") -> str:
@@ -177,116 +173,10 @@ class RuleScopingTests(unittest.TestCase):
         self.assertTrue(report["missing_workflow_post_items"])
 
 
-class StopHookTests(unittest.TestCase):
-    """The hook blocks exactly once, on real drift, and fails open otherwise."""
-
-    def _project(self, root: Path, *, state: dict | None, drifted: bool) -> None:
-        process = root / "docs" / "ai" / "specs" / ".process"
-        process.mkdir(parents=True, exist_ok=True)
-        status = "⏳ Pending" if drifted else "✅ Complete"
-        (process / "T-workflow.md").write_text(
-            workflow(("Tasks", status), body="**G5 gate:** ✅ PASS"), encoding="utf-8"
-        )
-        if state is not None:
-            (process / "autopilot-state.json").write_text(json.dumps(state), encoding="utf-8")
-
-    def _run(self, root: Path, payload: dict) -> tuple[int, str]:
-        completed = subprocess.run(
-            [sys.executable, str(STOP_HOOK)],
-            input=json.dumps(payload), text=True, capture_output=True, check=False,
-        )
-        return completed.returncode, completed.stdout
-
-    def _blocks(self, root: Path, payload: dict) -> bool:
-        payload = {"cwd": str(root), **payload}
-        code, out = self._run(root, payload)
-        self.assertEqual(code, 0, "the hook must never exit nonzero; python3 itself uses exit 2")
-        return '"decision": "block"' in out
-
-    def test_blocks_on_real_drift(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            self._project(root, state={"workflow_file": "docs/ai/specs/.process/T-workflow.md"}, drifted=True)
-            self.assertTrue(self._blocks(root, {"session_id": "s1"}))
-
-    def test_absent_top_level_status_still_blocks(self) -> None:
-        """No shipped contract declares a top-level status; absence must not disable the hook."""
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            self._project(root, state={"workflow_file": "docs/ai/specs/.process/T-workflow.md"}, drifted=True)
-            self.assertTrue(self._blocks(root, {"session_id": "s2"}))
-
-    def test_finished_run_does_not_block(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            self._project(root, state={
-                "status": "completed_archived",
-                "workflow_file": "docs/ai/specs/.process/T-workflow.md",
-            }, drifted=True)
-            self.assertFalse(self._blocks(root, {"session_id": "s3"}))
-
-    def test_clean_workflow_does_not_block(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            self._project(root, state={"workflow_file": "docs/ai/specs/.process/T-workflow.md"}, drifted=False)
-            self.assertFalse(self._blocks(root, {"session_id": "s4"}))
-
-    def test_missing_state_file_does_not_block(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            self._project(root, state=None, drifted=True)
-            self.assertFalse(self._blocks(root, {"session_id": "s5"}))
-
-    def test_path_traversal_is_contained(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            self._project(root, state={"workflow_file": "../../../etc/passwd"}, drifted=True)
-            self.assertFalse(self._blocks(root, {"session_id": "s6"}))
-
-    def test_unparseable_payload_does_not_block(self) -> None:
-        completed = subprocess.run(
-            [sys.executable, str(STOP_HOOK)], input="not json",
-            text=True, capture_output=True, check=False,
-        )
-        self.assertEqual(completed.returncode, 0)
-        self.assertNotIn('"decision": "block"', completed.stdout)
-
-    def test_state_declaring_a_workflow_wins_over_one_that_does_not(self) -> None:
-        """A legacy state file without workflow_file must not shadow the real one."""
-        with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            self._project(root, state={"workflow_file": "docs/ai/specs/.process/T-workflow.md"}, drifted=True)
-            specify = root / ".specify"
-            specify.mkdir(parents=True, exist_ok=True)
-            (specify / "autopilot-state.json").write_text(json.dumps({"status": "in_progress"}), encoding="utf-8")
-            self.assertTrue(self._blocks(root, {"session_id": "s7"}))
-
-    def test_stop_hook_active_suppresses_a_repeat_block(self) -> None:
-        self.assertTrue(hook._already_blocked({"stop_hook_active": True}, Path("/tmp/w.md")))
-
-    def test_second_stop_in_one_session_is_suppressed(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            marker_home = Path(raw)
-            with mock.patch.object(hook.tempfile, "gettempdir", return_value=str(marker_home)):
-                first = hook._already_blocked({"session_id": "dup"}, Path("/tmp/w.md"))
-                second = hook._already_blocked({"session_id": "dup"}, Path("/tmp/w.md"))
-        self.assertFalse(first)
-        self.assertTrue(second)
-
-    def test_unwritable_marker_suppresses_the_block(self) -> None:
-        """Without a recordable bound, blocking would repeat forever."""
-        with mock.patch.object(Path, "touch", side_effect=OSError("read-only")):
-            results = [hook._already_blocked({"session_id": "ro"}, Path("/tmp/w.md")) for _ in range(4)]
-        self.assertEqual(results, [True, True, True, True])
-
-    def test_missing_session_id_suppresses_the_block(self) -> None:
-        self.assertTrue(hook._already_blocked({}, Path("/tmp/w.md")))
-
-
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite()
-    for case in (WorkflowStatusEvidenceTests, StateStatusSchemaTests, RuleScopingTests, StopHookTests):
+    for case in (WorkflowStatusEvidenceTests, StateStatusSchemaTests, RuleScopingTests):
         suite.addTests(loader.loadTestsFromTestCase(case))
     return suite
 

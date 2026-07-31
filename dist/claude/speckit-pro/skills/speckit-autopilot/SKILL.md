@@ -420,7 +420,7 @@ for phase in PHASES starting from first_pending:
     6. Validate gate via gate-validator agent → parse PASS/FAIL
        On FAIL: auto-fix max 2 attempts; then honor gate-failure setting
     7. Update workflow file; auto-commit if configured
-         phases 1-6: git add specs/ && git commit
+         phases 1-6: git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit
          phase 7:    git add -A && git commit
     7b. After Plan (G3 pass, plan.md exists), run the plan-phase
         reviewability budget with runner helper `estimate-reviewable-loc`,
@@ -651,9 +651,20 @@ the final summary with PR URL.
 its Workflow Overview status table is the record of what a spec did.
 `autopilot-state.json` is the current-in-flight pointer for one run — it holds a
 single spec's live plan and is overwritten by the next run, so it is never
-per-spec history. When the two disagree, the workflow file wins and the state
-file is repaired to match. A status row that contradicts a gate verdict recorded
-elsewhere in the same file fails the Step 1.1 coverage guard.
+per-spec history. When the two disagree **about Workflow Overview status
+content**, the workflow file wins and the state file is repaired to match. A
+status row that contradicts a gate verdict recorded elsewhere in the same file
+fails the Step 1.1 coverage guard.
+
+That precedence is scoped to the status table and does not generalize. The
+state file stays authoritative for two things the coverage guard enforces
+directly, and repairing the workflow file to match is the correct move in both:
+
+- **Which workflow file is active.** `autopilot-state.json.workflow_file` is
+  the authority; a mismatch fails with "supplied workflow does not match
+  autopilot state workflow_file authority".
+- **PR Marker Plan Evidence status**, which must equal
+  `pr_marker_plan.status` exactly.
 
 After EVERY phase, update the workflow file so it remains the
 durable source of truth across context compactions and resumes:
