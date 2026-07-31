@@ -20,8 +20,9 @@ input.
 **Roadmap MOC:** [html-artifacts-roadmap-MOC.md](html-artifacts-roadmap-MOC.md)
 **Spec ID prefix:** `ART-###`
 **Status:** Active; dependency graph approved 2026-07-28; ART-001 is complete
-and archived after PR #407 and its follow-up fix PR #409; ART-002 through
-ART-006 are ready
+and archived after PR #407 and its follow-up fix PR #409; ART-006 is scaffolded
+and in progress on `art-006-autopilot-staging`, blocked on a
+bookkeeping-durability prerequisite PR; ART-002 through ART-005 are ready
 
 ---
 
@@ -129,7 +130,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-003 | Final-PR Template Set | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-004 | Gallery Completion: Design & Prototyping | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
-| ART-006 | Autopilot Staging | ⏳ Ready | - | Ready to scaffold; no dependencies |
+| ART-006 | Autopilot Staging | 🔄 In Progress | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | Scaffolded 2026-07-30 on `art-006-autopilot-staging`. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Blocked on a bookkeeping-durability prerequisite PR** — the workflow status table and `autopilot-state.json` are written by unenforced instruction and drifted on CAR-005 and ART-001, so durable stage state has no reliable store until that lands |
 | ART-007 | Draft-PR Emission | ⏳ Pending | - | Blocked by ART-002, ART-006 |
 | ART-008 | Feedback Sweep | ⏳ Pending | - | Blocked by ART-007 |
 | ART-009 | UAT Walkthrough Replacement | ⏳ Pending | - | Blocked by ART-006 |
@@ -447,8 +448,14 @@ Budget result: within budget
   variants (`skills/` + `codex-skills/`); the phase loop bounds itself to the
   stage's phase subset.
 - Auto-detect for bare invocations: workflow status table (phases 1–6
-  complete) + draft-PR existence (via `gh`, corroboration only — the workflow
-  file is authoritative; discrepancies logged per OQ-4).
+  complete). **Amended 2026-07-30 during scaffold:** the `gh` draft-PR
+  corroboration limb is **deferred to ART-007**, which is the spec that creates
+  the draft PRs it would corroborate against — during ART-006 no draft PR
+  exists, so the branch has no live input and only its negative case is
+  testable. ART-007 inherits the OQ-4 contract that the workflow file is
+  authoritative and discrepancies are logged. Deferring this is also what keeps
+  ART-006 a single slice: with the limb included the estimator returns 452 LOC
+  and `suggested_slices: 2`; without it, 382 and one slice.
 - Stage state recorded in the workflow file (workflow-file protocol update);
   `--from-phase` keeps resuming within a stage.
 - Scaffold → autopilot chain contract documented (consumed by ART-011).
