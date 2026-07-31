@@ -160,8 +160,8 @@ evidence.
 
 Run focused verification before committing:
 
-- `python3 -m json.tool docs/ai/specs/.process/autopilot-state.json` when that
-  file changed
+- `resolved_python -m json.tool docs/ai/specs/.process/autopilot-state.json`
+  when that file changed
 - the SpecKit index generator and its `--check` mode
 - a `find specs -mindepth 1 -maxdepth 4 -print` audit showing only expected
   active specs

@@ -444,8 +444,13 @@ Post:
 Then run the deterministic guard against the workflow/state pair:
 
 ```text
-python3 "runner helper validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json"
+resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json" --rule status-evidence
 ```
+
+`resolved_python` is the Python 3.11+ interpreter resolved by the installed
+runtime contract, not a hardcoded interpreter name; `<plugin-root>` is the
+directory that owns `skills/speckit-autopilot/`. `--rule status-evidence`
+scopes the exit code to the bookkeeping rule, matching the Claude variant.
 
 For `pr-marker-plan.v2` state with a changed-file manifest, append
 `--expected-base-commit <live-baseRefOid> --expected-head-commit <live-headRefOid>`

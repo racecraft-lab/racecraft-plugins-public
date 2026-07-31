@@ -646,8 +646,16 @@ After writing or repairing `autopilot-state.json`, run the deterministic
 coverage guard and STOP on nonzero exit:
 
 ```text
-python3 "runner helper validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json"
+resolved_python "<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json" --rule status-evidence
 ```
+
+`resolved_python` is the Python 3.11+ interpreter resolved by the installed
+runtime contract, not a hardcoded interpreter name; `<plugin-root>` is the
+directory that owns `skills/speckit-autopilot/`. `--rule status-evidence`
+scopes the exit code to the bookkeeping rule, the same scoping the Claude
+variant uses, so both distributions gate on one rule. The full report still
+prints, so the structural coverage lists stay visible and worth fixing; they
+do not block, because most of the existing workflow corpus predates them.
 
 When `pr-marker-plan.v2` declares a changed-file manifest, append
 `--expected-base-commit <live-baseRefOid> --expected-head-commit <live-headRefOid>`.

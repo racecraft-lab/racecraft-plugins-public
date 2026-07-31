@@ -461,11 +461,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 6581,
+              "byte_count": 6589,
               "kind": "skill",
               "path": "skills/speckit-archive-cleanup/SKILL.md",
               "required": true,
-              "sha256": "7f1ae0a4a18ef194ba6e94996cd708ea6cd4bdc6e7d8417d502d975c9811dd55",
+              "sha256": "d92253021e59dea3ae527a2c6115d6ebc031883b9355c7a05d3a51d09d8ba610",
               "source_path": "speckit-pro/skills/speckit-archive-cleanup/SKILL.md",
               "transform": "claude_guard_strip"
             },
@@ -1444,11 +1444,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 6581,
+              "byte_count": 6589,
               "kind": "skill",
               "path": "skills/speckit-archive-cleanup/SKILL.md",
               "required": true,
-              "sha256": "7f1ae0a4a18ef194ba6e94996cd708ea6cd4bdc6e7d8417d502d975c9811dd55",
+              "sha256": "d92253021e59dea3ae527a2c6115d6ebc031883b9355c7a05d3a51d09d8ba610",
               "source_path": "speckit-pro/skills/speckit-archive-cleanup/SKILL.md",
               "transform": "claude_guard_strip"
             },
@@ -2192,7 +2192,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "98b4c75dbae15f43c4c591d91d84b45d512475fc93d2bd52a128bb706316126b",
+          "file_tree_hash": "c6deef7c7714d2b9b7554b01fcdd4bd277cfed6099d14c6f7246c37b6e97f2f1",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2457,11 +2457,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 7823,
+              "byte_count": 7831,
               "kind": "skill",
               "path": "skills/speckit-archive-cleanup/SKILL.md",
               "required": true,
-              "sha256": "bf4f163b464f76b9fdf20c5f9344e12af2ca1a5727207210f5196e01c8451172",
+              "sha256": "d4a8ead887ac9c73bba4908f6ebca0898fafbe87be416ba6b48aca545471d85a",
               "source_path": "speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md",
               "transform": "codex_overlay"
             },
@@ -2475,11 +2475,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 58042,
+              "byte_count": 58633,
               "kind": "skill",
               "path": "skills/speckit-autopilot/SKILL.md",
               "required": true,
-              "sha256": "e14e5677b3da2ab28b7d1243a8f862213fcd14d75c17e022cb4d278631a231a3",
+              "sha256": "76d573e91401776ab0e2dbafd1b394e5e46b39f7326b4e01a877d446217e9fb6",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
               "transform": "codex_overlay"
             },
@@ -2700,11 +2700,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 22941,
+              "byte_count": 23306,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution-codex.md",
               "required": true,
-              "sha256": "2bb59d9f9e238180e9bd25dda0ec265a2a5dda47b86568dcdb33694121e92fd7",
+              "sha256": "a159dee8fe350b956d60eb988c45659185c9c30803b80237fa222a152eda1bc3",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
               "transform": "path_normalization"
             },
@@ -3593,11 +3593,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 7823,
+              "byte_count": 7831,
               "kind": "skill",
               "path": "skills/speckit-archive-cleanup/SKILL.md",
               "required": true,
-              "sha256": "bf4f163b464f76b9fdf20c5f9344e12af2ca1a5727207210f5196e01c8451172",
+              "sha256": "d4a8ead887ac9c73bba4908f6ebca0898fafbe87be416ba6b48aca545471d85a",
               "source_path": "speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md",
               "transform": "codex_overlay"
             },
@@ -3611,11 +3611,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 58042,
+              "byte_count": 58633,
               "kind": "skill",
               "path": "skills/speckit-autopilot/SKILL.md",
               "required": true,
-              "sha256": "e14e5677b3da2ab28b7d1243a8f862213fcd14d75c17e022cb4d278631a231a3",
+              "sha256": "76d573e91401776ab0e2dbafd1b394e5e46b39f7326b4e01a877d446217e9fb6",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
               "transform": "codex_overlay"
             },
@@ -3836,11 +3836,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 22941,
+              "byte_count": 23306,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution-codex.md",
               "required": true,
-              "sha256": "2bb59d9f9e238180e9bd25dda0ec265a2a5dda47b86568dcdb33694121e92fd7",
+              "sha256": "a159dee8fe350b956d60eb988c45659185c9c30803b80237fa222a152eda1bc3",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
               "transform": "path_normalization"
             },
@@ -4476,7 +4476,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "f59002ef97382fda29ae526870d89f782f0d19c2cce7f1394fca2f5701232e28",
+          "file_tree_hash": "39442226930919399229657fd10bf91135678dc0b8cb44eaf1d1c4b10dbf9459",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
