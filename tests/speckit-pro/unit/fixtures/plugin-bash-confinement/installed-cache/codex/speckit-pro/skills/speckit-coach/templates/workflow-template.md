@@ -64,7 +64,12 @@ captured during scoping.
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
-**Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
+**Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
+
+G6.5 is advisory by default, so no phase of the main loop flips its row. Leaving
+it Pending is legitimate and does not make the rows below it read as out of
+order; record the verdict in [Phase 6.5](#phase-65-confidence-gate) when the
+gate runs.
 
 ### Phase Gates (SpecKit Best Practice)
 

@@ -397,8 +397,14 @@ This is the same guard the Codex variant runs, so both distributions share
 one enforcement path instead of two prose descriptions of one:
 
 ```text
-Command("<resolved_python> '<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py' --workflow <workflow-file-path> --state <workflow-directory>/autopilot-state.json")
+Command("<resolved_python> '<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py' --workflow <workflow-file-path> --state <workflow-directory>/autopilot-state.json --rule status-evidence")
 ```
+
+`--rule status-evidence` scopes the **exit code** to the bookkeeping rule.
+The full report is still printed, so the structural coverage lists remain
+visible and worth fixing — but they do not block, because most of the existing
+workflow corpus predates them and a blocking guard would make those specs
+unresumable. Drop `--rule` to gate on every check once a spec is migrated.
 
 `<resolved_python>` is the Python 3.11+ interpreter resolved by the
 Installed Runtime Contract; `<plugin-root>` is the directory that owns

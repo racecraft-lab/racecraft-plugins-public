@@ -175,11 +175,17 @@ WORKFLOW_PHASE_GATE_IDS = {
     "Confidence Gate": "6.5",
     "Implement": "7",
 }
+# Rows the main phase loop never drives. A recorded gate PASS still forces them
+# terminal, but leaving one open must not make every row below it read as out of
+# order -- G6.5 is advisory by default, so Pending is its normal resting state.
+WORKFLOW_ADVISORY_PHASES = frozenset({"Confidence Gate"})
 WORKFLOW_TERMINAL_STATUSES = frozenset({
     "Complete",
     "✅ Complete",
     "Skipped",
     "✅ Skipped",
+    # U+23ED with and without the U+FE0F variation selector; both render alike.
+    "⏭ Skipped",
     "⏭️ Skipped",
 })
 WORKFLOW_OPEN_STATUSES = frozenset({
@@ -188,32 +194,57 @@ WORKFLOW_OPEN_STATUSES = frozenset({
     "In Progress",
     "\U0001f504 In Progress",
     "Blocked",
+    # U+26A0 with and without the U+FE0F variation selector; both render alike.
+    "⚠ Blocked",
     "⚠️ Blocked",
 })
 WORKFLOW_STATUS_VALUES = WORKFLOW_TERMINAL_STATUSES | WORKFLOW_OPEN_STATUSES
+# Markdown list, task-list, blockquote, and heading prefixes are stripped before
+# matching so a gate recorded as `- G3 gate: PASS` is evidence like any other.
+GATE_LINE_PREFIX_RE = re.compile(
+    r"^[ \t]*(?:(?:[-*+]|[0-9]+\.)[ \t]+(?:\[[ xX]\][ \t]+)?|>[ \t]*|#{1,6}[ \t]+)+"
+)
 _GATE_ID = r"G(?P<gate>[0-9](?:\.5)?)"
 _GATE_EMPHASIS = r"[ \t*_`]*"
 _GATE_LABEL = r"(?:Gate|GATE|gate|Result|Status|Validation|Confidence[ \t]+[Gg]ate)"
 _GATE_VERDICT = (
     r"(?:PASS(?:ED)?|Pass(?:ed)?|pass(?:ed)?)"
     r"(?![A-Za-z])"
-    r"(?![ \t]+(?:only|when|if|once|unless|after|requires|criteria)\b)"
+    r"(?![ \t]+(?i:only|when|if|once|unless|after|requires|criteria)\b)"
 )
+# The check mark is allowed on either side of the gate id: `✅ G4 PASS` and
+# `G4: ✅ PASS` are both recorded verdicts in the live corpus.
+_GATE_TICK = r"(?:[✅✓][ \t]*)?"
 GATE_RECORD_INLINE_RE = re.compile(
-    r"(?:^|\||\*\*)" + _GATE_EMPHASIS + r"(?:Gate[ \t]+)?" + _GATE_ID + _GATE_EMPHASIS
+    r"(?:^|\||\*\*)" + _GATE_EMPHASIS + _GATE_TICK + _GATE_EMPHASIS
+    + r"(?:Gate[ \t]+)?" + _GATE_ID + _GATE_EMPHASIS
     + r"(?:" + _GATE_LABEL + _GATE_EMPHASIS + r")?[:—–-]?" + _GATE_EMPHASIS
-    + r"(?:[✅✓][ \t]*)?" + _GATE_EMPHASIS + _GATE_VERDICT
+    + _GATE_TICK + _GATE_EMPHASIS + _GATE_VERDICT
 )
 GATE_RECORD_CELL_RE = re.compile(
-    r"\|" + _GATE_EMPHASIS + r"(?:Gate[ \t]+)?" + _GATE_ID + _GATE_EMPHASIS
+    r"\|" + _GATE_EMPHASIS + _GATE_TICK + _GATE_EMPHASIS
+    + r"(?:Gate[ \t]+)?" + _GATE_ID + _GATE_EMPHASIS
     + r"(?:" + _GATE_LABEL + r")?" + _GATE_EMPHASIS
-    + r"\|[ \t]*(?:[✅✓][ \t]*)?\*{0,2}" + _GATE_VERDICT
+    + r"\|[ \t]*" + _GATE_TICK + r"\*{0,2}" + _GATE_VERDICT
 )
 GATE_RECORD_JSON_RE = re.compile(
     r'"gate"[ \t]*:[ \t]*"' + _GATE_ID + r'"[^{}]*?"pass"[ \t]*:[ \t]*true'
 )
 GATE_RECORD_PATTERNS = (GATE_RECORD_INLINE_RE, GATE_RECORD_CELL_RE, GATE_RECORD_JSON_RE)
 HTML_COMMENT_RE = re.compile(r"(?s)<!--.*?-->")
+# Named rule groups for ``--rule``. A caller that only wants the bookkeeping
+# rule enforced can gate on it without newly enforcing the structural coverage
+# checks, which most of the existing workflow corpus predates.
+RULE_PROBLEM_KEYS = {
+    "status-evidence": ("workflow_status_evidence_errors", "state_status_errors"),
+    "coverage": (
+        "missing_workflow_sections",
+        "missing_workflow_tokens",
+        "missing_workflow_post_items",
+        "missing_state_prefixes",
+        "missing_state_post_items",
+    ),
+}
 STATE_STATUS_SCHEMA_PATH = (
     Path(__file__).resolve().parents[1] / "contracts" / "autopilot-state-status.schema.json"
 )
@@ -3814,6 +3845,9 @@ def _workflow_table_rows(lines: list[str], start: int) -> list[int]:
             rows.append(index)
         elif rows:
             break
+        elif stripped.startswith("#"):
+            # A section with no table of its own must not adopt a later one.
+            break
     return rows
 
 
@@ -3833,10 +3867,11 @@ def workflow_criteria_rows(lines: list[str]) -> set[int]:
 
 
 def gate_record_ids(line: str) -> set[str]:
+    unprefixed = GATE_LINE_PREFIX_RE.sub("", line)
     return {
         match.group("gate")
         for pattern in GATE_RECORD_PATTERNS
-        for match in pattern.finditer(line)
+        for match in pattern.finditer(unprefixed)
     }
 
 
@@ -3883,7 +3918,7 @@ def workflow_status_evidence_errors(text: str) -> list[str]:
                     f"workflow status row {number} for {phase!r} reads {status!r} while earlier"
                     f" row {first_open[0]} for {first_open[1]!r} still reads {first_open[2]!r}"
                 )
-        elif first_open is None:
+        elif first_open is None and phase not in WORKFLOW_ADVISORY_PHASES:
             first_open = (number, phase, status)
     return errors
 
@@ -3977,6 +4012,16 @@ def main(argv: list[str] | None = None) -> int:
         "--expected-head-commit",
         help="live PR headRefOid authority required when pr-marker-plan.v2 uses a changed-file manifest",
     )
+    parser.add_argument(
+        "--rule",
+        action="append",
+        choices=sorted(RULE_PROBLEM_KEYS),
+        help=(
+            "Limit the exit code to the named rule. The full report is always printed; "
+            "only which problem lists decide pass/fail changes. Repeatable. "
+            "Omit to gate on every check."
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -3991,6 +4036,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     print(json.dumps(report, sort_keys=True))
+    if args.rule:
+        selected: list[str] = []
+        for rule in args.rule:
+            selected.extend(RULE_PROBLEM_KEYS[rule])
+        return 0 if all(not report.get(key) for key in selected) else 1
     return 0 if report["status"] == "pass" else 1
 
 

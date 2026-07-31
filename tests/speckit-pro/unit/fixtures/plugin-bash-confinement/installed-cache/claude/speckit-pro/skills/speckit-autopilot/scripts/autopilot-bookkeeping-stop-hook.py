@@ -9,9 +9,14 @@ never strand an operator. The hard guarantee lives in
 ``tests/speckit-pro/layer1-structural/validate-workflow-status-evidence.py``,
 which runs in CI and cannot be skipped by any agent.
 
-Blocking contract, identical on both platforms: exit 2 with the reason on
-stderr, which Claude Code and Codex both document as equivalent to emitting
-``{"decision": "block", "reason": ...}`` on stdout. Both are emitted here.
+Blocking contract, identical on both platforms: exit 0 and emit
+``{"decision": "block", "reason": ...}`` on stdout, which both platforms read
+on a successful exit. Exit 2 is deliberately NOT used: ``python3`` itself exits
+2 when it cannot open the script, so a plugin-root that fails to resolve would
+be indistinguishable from a real block and would strand the operator with an
+interpreter error as the reason. This script therefore never returns nonzero,
+and the hook command lines swallow any launch failure. The reason is also
+written to stderr as a diagnostic.
 
 Re-entry is bounded. Codex supplies ``stop_hook_active`` in the Stop payload;
 Claude Code documents no such field, so Claude sessions are keyed by
@@ -38,7 +43,12 @@ STATE_CANDIDATES = (
     Path(".specify") / "autopilot-state.json",
     Path("docs") / "ai" / "specs" / ".process" / "autopilot-state.json",
 )
-IN_FLIGHT_STATUSES = frozenset({"in_progress", "awaiting_review"})
+# No shipped contract requires a top-level ``status``: the canonical
+# state shape carries ``status`` only per plan step. Gating on an
+# allowlist of in-flight values would therefore make this hook inert on
+# every project that follows the contract exactly. Skip only when the run
+# declares itself finished; absent or unrecognized means "still running".
+FINISHED_STATUSES = frozenset({"completed", "completed_pr_open", "completed_archived"})
 COVERAGE_VALIDATOR = Path(__file__).resolve().parent / "validate-autopilot-phase-coverage.py"
 MARKER_PREFIX = "speckit-autopilot-bookkeeping-stop-"
 
@@ -66,6 +76,14 @@ def _project_root(payload: dict[str, object]) -> Path:
 
 
 def _state_file(root: Path) -> tuple[Path, dict[str, object]] | None:
+    """Pick the state file that actually names a workflow, not merely the first one.
+
+    A project can carry more than one ``autopilot-state.json`` -- a legacy
+    ``.specify/`` copy alongside the workflow-directory copy the run writes.
+    Only the one declaring ``workflow_file`` can drive this hook, so a candidate
+    without it must never shadow one that has it.
+    """
+    fallback: tuple[Path, dict[str, object]] | None = None
     for relative in STATE_CANDIDATES:
         candidate = root / relative
         if not candidate.is_file():
@@ -74,9 +92,14 @@ def _state_file(root: Path) -> tuple[Path, dict[str, object]] | None:
             data = json.loads(candidate.read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValueError):
             continue
-        if isinstance(data, dict):
+        if not isinstance(data, dict):
+            continue
+        declared = data.get("workflow_file")
+        if isinstance(declared, str) and declared:
             return candidate, data
-    return None
+        if fallback is None:
+            fallback = (candidate, data)
+    return fallback
 
 
 def _workflow_file(root: Path, state: dict[str, object]) -> Path | None:
@@ -123,7 +146,8 @@ def _already_blocked(payload: dict[str, object], workflow: Path) -> bool:
     try:
         marker.touch()
     except OSError:
-        return False
+        # The bound cannot be recorded, so blocking now would repeat forever.
+        return True
     return False
 
 
@@ -135,7 +159,8 @@ def main() -> int:
         if located is None:
             return 0
         _state_path, state = located
-        if state.get("status") not in IN_FLIGHT_STATUSES:
+        status = state.get("status")
+        if isinstance(status, str) and status in FINISHED_STATUSES:
             return 0
         workflow = _workflow_file(root, state)
         if workflow is None:
@@ -165,7 +190,7 @@ def main() -> int:
     )
     sys.stderr.write(reason + "\n")
     print(json.dumps({"decision": "block", "reason": reason}, sort_keys=True))
-    return 2
+    return 0
 
 
 if __name__ == "__main__":

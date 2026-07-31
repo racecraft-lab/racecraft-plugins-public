@@ -24,7 +24,10 @@ if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 from test_result import run_counted  # noqa: E402
 
-WORKFLOW_DIR = REPO_ROOT / "docs" / "ai" / "specs" / ".process"
+SPEC_DIR = REPO_ROOT / "docs" / "ai" / "specs"
+# Current runs write to `.process/`; the legacy location is still on disk and is
+# scanned too, so a contradicting file cannot merge from either directory.
+WORKFLOW_DIRS = (SPEC_DIR / ".process", SPEC_DIR)
 COVERAGE_VALIDATOR = (
     REPO_ROOT
     / "speckit-pro"
@@ -36,22 +39,29 @@ COVERAGE_VALIDATOR = (
 OVERVIEW_HEADING = "## Workflow Overview"
 CRITERIA_HEADING_PREFIX = "### Phase Gates"
 
+GATE_LINE_PREFIX = re.compile(
+    r"^[ \t]*(?:(?:[-*+]|[0-9]+\.)[ \t]+(?:\[[ xX]\][ \t]+)?|>[ \t]*|#{1,6}[ \t]+)+"
+)
+HTML_COMMENT = re.compile(r"(?s)<!--.*?-->")
 GATE_ID = r"G(?P<gate>[0-9](?:\.5)?)"
 EMPHASIS = r"[ \t*_`]*"
 GATE_LABEL = r"(?:Gate|GATE|gate|Result|Status|Validation|Confidence[ \t]+[Gg]ate)"
 VERDICT = (
     r"(?:PASS(?:ED)?|Pass(?:ed)?|pass(?:ed)?)"
     r"(?![A-Za-z])"
-    r"(?![ \t]+(?:only|when|if|once|unless|after|requires|criteria)\b)"
+    r"(?![ \t]+(?i:only|when|if|once|unless|after|requires|criteria)\b)"
 )
+TICK = r"(?:[✅✓][ \t]*)?"
 GATE_RECORD_INLINE = re.compile(
-    r"(?:^|\||\*\*)" + EMPHASIS + r"(?:Gate[ \t]+)?" + GATE_ID + EMPHASIS
+    r"(?:^|\||\*\*)" + EMPHASIS + TICK + EMPHASIS
+    + r"(?:Gate[ \t]+)?" + GATE_ID + EMPHASIS
     + r"(?:" + GATE_LABEL + EMPHASIS + r")?[:—–-]?" + EMPHASIS
-    + r"(?:[✅✓][ \t]*)?" + EMPHASIS + VERDICT
+    + TICK + EMPHASIS + VERDICT
 )
 GATE_RECORD_CELL = re.compile(
-    r"\|" + EMPHASIS + r"(?:Gate[ \t]+)?" + GATE_ID + EMPHASIS + r"(?:" + GATE_LABEL + r")?"
-    + EMPHASIS + r"\|[ \t]*(?:[✅✓][ \t]*)?\*{0,2}" + VERDICT
+    r"\|" + EMPHASIS + TICK + EMPHASIS
+    + r"(?:Gate[ \t]+)?" + GATE_ID + EMPHASIS + r"(?:" + GATE_LABEL + r")?"
+    + EMPHASIS + r"\|[ \t]*" + TICK + r"\*{0,2}" + VERDICT
 )
 GATE_RECORD_JSON = re.compile(
     r'"gate"[ \t]*:[ \t]*"' + GATE_ID + r'"[^{}]*?"pass"[ \t]*:[ \t]*true'
@@ -68,11 +78,14 @@ PHASE_GATE_IDS = {
     "Confidence Gate": "6.5",
     "Implement": "7",
 }
+# Advisory rows the main phase loop never drives; see the shipped validator.
+ADVISORY_PHASES = frozenset({"Confidence Gate"})
 TERMINAL_STATUSES = frozenset({
     "Complete",
     "✅ Complete",
     "Skipped",
     "✅ Skipped",
+    "⏭ Skipped",
     "⏭️ Skipped",
 })
 OPEN_STATUSES = frozenset({
@@ -81,6 +94,7 @@ OPEN_STATUSES = frozenset({
     "In Progress",
     "\U0001f504 In Progress",
     "Blocked",
+    "⚠ Blocked",
     "⚠️ Blocked",
 })
 KNOWN_STATUSES = TERMINAL_STATUSES | OPEN_STATUSES
@@ -106,6 +120,13 @@ GATE_RECORD_POSITIVE_CASES = (
     "| **Gate G5** | PASS — runner-verified: 136 tasks found, 0 markers |",
     "| G7 | Passed | `run-all` passed `2937/2937` |",
     '{"gate":"G5","pass":true,"reason":"40 tasks found","markers":0,"task_count":40}',
+    "- [x] **G5 gate:** ✅ PASS — 63 tasks found",
+    "- G3 gate: PASS — `plan.md` with 0 unresolved markers",
+    "| Total | 99 | 8 found / 8 resolved | ✅ G4 PASS (0 `[Gap]` markers) |",
+    "**✅ G5 PASS** — 40 tasks found",
+    "#### G1 Gate: PASS",
+    "> **G6 gate:** PASS — 0 CRITICAL findings",
+    "1. G7 gate: Passed",
 )
 GATE_RECORD_NEGATIVE_CASES = (
     "| G7 | After Each Implementation Phase | Tests pass, manual verification complete |",
@@ -117,14 +138,28 @@ GATE_RECORD_NEGATIVE_CASES = (
     "**G5 gate:** ❌ FAIL — 0 tasks found.",
     "| G6 | recommended pass once the analyzer reruns |",
     '{"gate":"G5","pass":false,"reason":"0 tasks found"}',
+    "- **G2 Gate:** Pass Only when zero unresolved markers remain.",
+    "#### G3 Gate: PASS IF the architecture review lands first",
 )
 
 
-def workflow_files(directory: Path) -> list[Path]:
+def workflow_files(*directories: Path) -> list[Path]:
     """Every autopilot workflow markdown file, in deterministic order."""
-    if not directory.is_dir():
-        return []
-    return sorted(directory.glob("*-workflow.md"), key=lambda path: path.name)
+    found: list[Path] = []
+    for directory in directories:
+        if not directory.is_dir():
+            continue
+        found.extend(directory.glob("*-workflow.md"))
+    return sorted(found, key=lambda path: (path.name, str(path)))
+
+
+def markdown_without_comments(text: str) -> str:
+    """Blank HTML comment spans while preserving line numbering.
+
+    Mirrors the shipped validator: a commented-out example must not become
+    evidence, or CI and the in-run guard would disagree about the same file.
+    """
+    return HTML_COMMENT.sub(lambda m: "\n" * m.group(0).count("\n"), text)
 
 
 def _table_row_indexes(lines: list[str], start: int) -> list[int]:
@@ -134,6 +169,9 @@ def _table_row_indexes(lines: list[str], start: int) -> list[int]:
         if stripped.startswith("|") and stripped.endswith("|"):
             rows.append(index)
         elif rows:
+            break
+        elif stripped.startswith("#"):
+            # A section with no table of its own must not adopt a later one.
             break
     return rows
 
@@ -162,10 +200,11 @@ def row_cells(line: str) -> list[str]:
 
 def gate_record_ids(line: str) -> set[str]:
     """Gate ids this line records a PASS verdict for."""
+    unprefixed = GATE_LINE_PREFIX.sub("", line)
     return {
         match.group("gate")
         for pattern in GATE_RECORD_PATTERNS
-        for match in pattern.finditer(line)
+        for match in pattern.finditer(unprefixed)
     }
 
 
@@ -180,15 +219,15 @@ def recorded_gates(lines: list[str], excluded: set[int]) -> dict[str, int]:
     return found
 
 
-def collect_errors(directory: Path) -> dict[str, list[str]]:
+def collect_errors(*directories: Path) -> dict[str, list[str]]:
     """Return each violation class as plain-English `file:line` strings."""
     missing_table: list[str] = []
     unknown_status: list[str] = []
     evidence: list[str] = []
     ordering: list[str] = []
-    for path in workflow_files(directory):
+    for path in workflow_files(*directories):
         display = path.relative_to(REPO_ROOT).as_posix()
-        lines = path.read_text(encoding="utf-8").splitlines()
+        lines = markdown_without_comments(path.read_text(encoding="utf-8")).splitlines()
         rows = overview_row_indexes(lines)
         if len(rows) < 3:
             missing_table.append(f"{display}: no parseable '{OVERVIEW_HEADING}' table")
@@ -218,7 +257,7 @@ def collect_errors(directory: Path) -> dict[str, list[str]]:
                         f"{display}:{number}: {phase!r} reads {status!r} after"
                         f" {first_open[1]!r} at :{first_open[0]} still reads {first_open[2]!r}"
                     )
-            elif first_open is None:
+            elif first_open is None and phase not in ADVISORY_PHASES:
                 first_open = (number, phase, status)
     return {
         "missing_table": missing_table,
@@ -243,11 +282,11 @@ def load_coverage_validator():
 
 class ValidateWorkflowStatusEvidence(unittest.TestCase):
     def test_workflow_status_tables_agree_with_gate_evidence(self) -> None:
-        files = workflow_files(WORKFLOW_DIR)
+        files = workflow_files(*WORKFLOW_DIRS)
         with self.subTest(msg="autopilot workflow files are discoverable"):
-            self.assertTrue(files, f"no *-workflow.md files under {WORKFLOW_DIR}")
+            self.assertTrue(files, f"no *-workflow.md files under {list(WORKFLOW_DIRS)}")
 
-        errors = collect_errors(WORKFLOW_DIR)
+        errors = collect_errors(*WORKFLOW_DIRS)
 
         with self.subTest(msg="every workflow file exposes a parseable Workflow Overview table"):
             self.assertFalse(errors["missing_table"], "\n".join(errors["missing_table"]))
@@ -278,9 +317,38 @@ class ValidateWorkflowStatusEvidence(unittest.TestCase):
                 "CI vocabulary drifted from the shipped validator",
             )
             self.assertEqual(
+                sorted(OPEN_STATUSES),
+                sorted(module.WORKFLOW_OPEN_STATUSES),
+                "CI open-status vocabulary drifted from the shipped validator",
+            )
+            self.assertEqual(
                 dict(PHASE_GATE_IDS),
                 dict(module.WORKFLOW_PHASE_GATE_IDS),
                 "CI phase-to-gate map drifted from the shipped validator",
+            )
+            self.assertEqual(
+                sorted(ADVISORY_PHASES),
+                sorted(module.WORKFLOW_ADVISORY_PHASES),
+                "CI advisory-phase set drifted from the shipped validator",
+            )
+
+        with self.subTest(msg="gate-record matcher matches the shipped phase-coverage validator"):
+            module = load_coverage_validator()
+            self.assertIsNotNone(module, f"could not import {COVERAGE_VALIDATOR}")
+            self.assertEqual(
+                [pattern.pattern for pattern in GATE_RECORD_PATTERNS],
+                [pattern.pattern for pattern in module.GATE_RECORD_PATTERNS],
+                "CI gate-record matcher drifted from the shipped validator",
+            )
+            self.assertEqual(
+                GATE_LINE_PREFIX.pattern,
+                module.GATE_LINE_PREFIX_RE.pattern,
+                "CI line-prefix stripper drifted from the shipped validator",
+            )
+            self.assertEqual(
+                HTML_COMMENT.pattern,
+                module.HTML_COMMENT_RE.pattern,
+                "CI HTML-comment handling drifted from the shipped validator",
             )
 
 
