@@ -713,11 +713,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 4165,
+              "byte_count": 4527,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/task-list-canonical.md",
               "required": true,
-              "sha256": "4b26364c13597f073380fe164efa25e444225b7a40b75e65c54a975316a6406d",
+              "sha256": "d5704138008ac1ca1009e18a56c1f9826ac0c5a6ee598eb05f2f5cfa89788931",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
               "transform": "none"
             },
@@ -1696,11 +1696,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 4165,
+              "byte_count": 4527,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/task-list-canonical.md",
               "required": true,
-              "sha256": "4b26364c13597f073380fe164efa25e444225b7a40b75e65c54a975316a6406d",
+              "sha256": "d5704138008ac1ca1009e18a56c1f9826ac0c5a6ee598eb05f2f5cfa89788931",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
               "transform": "none"
             },
@@ -2192,7 +2192,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "c6deef7c7714d2b9b7554b01fcdd4bd277cfed6099d14c6f7246c37b6e97f2f1",
+          "file_tree_hash": "b94f7c161cfbe0573d134180cdca91e2a463eee9b3ce4ae2261064d09360507c",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2763,20 +2763,20 @@
               "transform": "none"
             },
             {
-              "byte_count": 7425,
+              "byte_count": 7777,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/task-list-canonical-codex.md",
               "required": true,
-              "sha256": "4bde4a4529722276d85a52d5d8e738c020de10c52a99cb1782131f6a6dab19af",
+              "sha256": "d55a36aaffe48cfafa3758b4028f6987de0f465d67cf01123d068d369caaf988",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
               "transform": "path_normalization"
             },
             {
-              "byte_count": 4165,
+              "byte_count": 4527,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/task-list-canonical.md",
               "required": true,
-              "sha256": "4b26364c13597f073380fe164efa25e444225b7a40b75e65c54a975316a6406d",
+              "sha256": "d5704138008ac1ca1009e18a56c1f9826ac0c5a6ee598eb05f2f5cfa89788931",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
               "transform": "none"
             },
@@ -3899,20 +3899,20 @@
               "transform": "none"
             },
             {
-              "byte_count": 7425,
+              "byte_count": 7777,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/task-list-canonical-codex.md",
               "required": true,
-              "sha256": "4bde4a4529722276d85a52d5d8e738c020de10c52a99cb1782131f6a6dab19af",
+              "sha256": "d55a36aaffe48cfafa3758b4028f6987de0f465d67cf01123d068d369caaf988",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
               "transform": "path_normalization"
             },
             {
-              "byte_count": 4165,
+              "byte_count": 4527,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/task-list-canonical.md",
               "required": true,
-              "sha256": "4b26364c13597f073380fe164efa25e444225b7a40b75e65c54a975316a6406d",
+              "sha256": "d5704138008ac1ca1009e18a56c1f9826ac0c5a6ee598eb05f2f5cfa89788931",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/task-list-canonical.md",
               "transform": "none"
             },
@@ -4476,7 +4476,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "39442226930919399229657fd10bf91135678dc0b8cb44eaf1d1c4b10dbf9459",
+          "file_tree_hash": "be9185203b5900c825d86604bd925e853bf91c552cb249631a7f98ae2245894f",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

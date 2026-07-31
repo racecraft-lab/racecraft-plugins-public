@@ -73,5 +73,8 @@ items. Never omit consensus tasks from the task list at creation time.
   prescribed entries (every Phase, every Consensus, every `Post:` task) and
   confirm each is present. If the count differs, ADD the missing entries
   before advancing. Then run
-  `validate-autopilot-phase-coverage.py --workflow <workflow> --state <workflow-dir>/autopilot-state.json`
-  and do not advance unless it exits 0.
+  `<resolved_python> '<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py' --workflow <workflow> --state <workflow-dir>/autopilot-state.json --rule status-evidence`
+  and do not advance unless it exits 0. `<resolved_python>` is the Python 3.11+
+  interpreter resolved by the Installed Runtime Contract, never a literal
+  `python3`; `--rule status-evidence` scopes the exit code to the bookkeeping
+  rule, so a spec that predates the structural coverage checks stays resumable.

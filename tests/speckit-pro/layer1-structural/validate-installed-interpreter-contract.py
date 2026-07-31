@@ -9,10 +9,15 @@ command that does not exist on a stock Windows install, and both platforms read
 a nonzero exit as blocking.
 
 Two things are checked. The class check scans every shipped markdown file for a
-bare interpreter used as a command. The call-site check pins the phase-coverage
-guard invocation in all four autopilot surfaces, because that one is load-bearing
-— the Claude and Codex variants must name the same script with the same scoping
-flag or the two distributions silently enforce different rules.
+bare interpreter used as a command. The call-site check singles out the
+phase-coverage guard, because that one is load-bearing: the Claude and Codex
+variants must name the same script the same resolvable way with the same scoping
+flag, or the two distributions silently enforce different rules.
+
+Call sites are **discovered**, not listed. Any shipped file that names the guard
+script alongside its flags is held to the contract, so a new reference — or an
+old one nobody remembered — cannot drift by being absent from a hand-maintained
+tuple.
 
 Python 3.11+ standard library only.
 """
@@ -43,12 +48,15 @@ HARDCODED_INTERPRETER = re.compile(r"(?<![\w./-])(?:python[0-9.]*|py)\s+(?=[-\w\
 RESOLVED_TOKEN = "resolved_python"
 COVERAGE_SCRIPT = "validate-autopilot-phase-coverage.py"
 COVERAGE_RULE_FLAG = "--rule status-evidence"
-# Every surface that tells an agent to run the phase-coverage guard.
-COVERAGE_CALL_SITES = (
-    Path("speckit-pro/skills/speckit-autopilot/SKILL.md"),
-    Path("speckit-pro/codex-skills/speckit-autopilot/SKILL.md"),
-    Path("speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"),
-)
+# A line that names the script *and* passes its flags is telling an agent to run
+# it. A line that only names the script is prose about it, and is left alone.
+COVERAGE_FLAGS = ("--workflow", "--state")
+# Discovery must still reach both distributions; finding nothing is a failure,
+# not a pass.
+PLATFORM_ROOTS = {
+    "Claude": "speckit-pro/skills/",
+    "Codex": "speckit-pro/codex-skills/",
+}
 
 POSITIVE_CASES = (
     'python3 "runner helper validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE"',
@@ -99,34 +107,42 @@ def hardcoded_interpreter_errors() -> list[str]:
     return errors
 
 
+def coverage_invocations() -> list[tuple[str, int, str]]:
+    """Every shipped line that tells an agent to run the phase-coverage guard."""
+    found: list[tuple[str, int, str]] = []
+    for path in shipped_markdown():
+        display = path.relative_to(REPO_ROOT).as_posix()
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for number, line in enumerate(text.splitlines(), start=1):
+            if COVERAGE_SCRIPT in line and any(flag in line for flag in COVERAGE_FLAGS):
+                found.append((display, number, line))
+    return found
+
+
 def coverage_invocation_errors() -> list[str]:
-    """Every autopilot surface must invoke the guard the same resolvable way."""
+    """Every discovered guard invocation must be resolvable and identically scoped."""
+    invocations = coverage_invocations()
     errors: list[str] = []
-    for relative in COVERAGE_CALL_SITES:
-        path = REPO_ROOT / relative
-        display = relative.as_posix()
-        if not path.is_file():
-            errors.append(f"{display}: missing")
-            continue
-        text = path.read_text(encoding="utf-8")
-        invocations = [
-            (number, line)
-            for number, line in enumerate(text.splitlines(), start=1)
-            if COVERAGE_SCRIPT in line and ("--workflow" in line or "--state" in line)
-        ]
-        if not invocations:
-            errors.append(f"{display}: no {COVERAGE_SCRIPT} invocation found")
-            continue
-        for number, line in invocations:
-            if RESOLVED_TOKEN not in line:
-                errors.append(
-                    f"{display}:{number}: guard invocation does not name {RESOLVED_TOKEN!r}"
-                )
-            if COVERAGE_RULE_FLAG not in line:
-                errors.append(
-                    f"{display}:{number}: guard invocation omits {COVERAGE_RULE_FLAG!r},"
-                    f" so this surface gates on checks the other surface does not"
-                )
+    for platform, root in sorted(PLATFORM_ROOTS.items()):
+        if not any(display.startswith(root) for display, _, _ in invocations):
+            errors.append(
+                f"no {COVERAGE_SCRIPT} invocation found under {root} —"
+                f" the {platform} distribution would run no coverage guard at all"
+            )
+    for display, number, line in invocations:
+        if RESOLVED_TOKEN not in line:
+            errors.append(
+                f"{display}:{number}: guard invocation does not name {RESOLVED_TOKEN!r},"
+                f" so it names an interpreter the Installed Runtime Contract cannot resolve"
+            )
+        if COVERAGE_RULE_FLAG not in line:
+            errors.append(
+                f"{display}:{number}: guard invocation omits {COVERAGE_RULE_FLAG!r},"
+                f" so this call site gates on checks the others do not"
+            )
     return errors
 
 
@@ -143,6 +159,19 @@ class ValidateInstalledInterpreterContract(unittest.TestCase):
         with self.subTest(msg="every phase-coverage guard invocation is resolvable and identically scoped"):
             errors = coverage_invocation_errors()
             self.assertEqual([], errors, "\n".join(errors))
+
+        with self.subTest(msg="guard call-site discovery separates invocations from prose"):
+            invocations = {display for display, _, _ in coverage_invocations()}
+            mentions = {
+                path.relative_to(REPO_ROOT).as_posix()
+                for path in shipped_markdown()
+                if COVERAGE_SCRIPT in path.read_text(encoding="utf-8")
+            }
+            self.assertTrue(invocations, f"no {COVERAGE_SCRIPT} invocation discovered")
+            self.assertTrue(
+                invocations <= mentions,
+                "discovery reported an invocation in a file that never names the script",
+            )
 
         with self.subTest(msg="matcher catches every hardcoded-interpreter form"):
             missed = [case for case in POSITIVE_CASES if not HARDCODED_INTERPRETER.search(case)]
