@@ -377,6 +377,28 @@ marked `skipped: <ext-name> not installed`.
 entries (every Phase, every Consensus, every `Post:`) and ADD any
 missing before advancing.
 
+**Then run the deterministic coverage guard and STOP on a nonzero exit.**
+This is the same guard the Codex variant runs, so both distributions share
+one enforcement path instead of two prose descriptions of one:
+
+```text
+Command("<resolved_python> '<plugin-root>/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py' --workflow <workflow-file-path> --state <workflow-directory>/autopilot-state.json --rule status-evidence")
+```
+
+`--rule status-evidence` scopes the **exit code** to the bookkeeping rule.
+The full report is still printed, so the structural coverage lists remain
+visible and worth fixing — but they do not block, because most of the existing
+workflow corpus predates them and a blocking guard would make those specs
+unresumable. Drop `--rule` to gate on every check once a spec is migrated.
+
+`<resolved_python>` is the Python 3.11+ interpreter resolved by the
+Installed Runtime Contract; `<plugin-root>` is the directory that owns
+`skills/speckit-autopilot/`. Exit 0 is required to advance; exit 1 reports
+the failing checks as JSON on stdout; exit 2 is an input error. The guard
+also fails when a Workflow Overview status row contradicts a gate verdict
+recorded elsewhere in the same file, which is what keeps the status table
+honest across compactions and manual phase runs.
+
 ## Step 2: Main Execution Loop
 
 For each pending phase, spawn a subagent, collect the result, validate
@@ -386,6 +408,9 @@ the gate, advance. Every step is a tool call.
 PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 
 for phase in PHASES starting from first_pending:
+    0. Re-run the Step 1.1 coverage guard against the workflow file and
+       autopilot-state.json. Exit 0 is required; on nonzero, repair the plan
+       and the workflow status table, then repeat before executing this phase.
     1. TaskUpdate: phase task → in_progress
     2. Run before_<phase> hooks from .specify/extensions.yml
     3. For each workflow prompt in this phase:
@@ -395,7 +420,7 @@ for phase in PHASES starting from first_pending:
     6. Validate gate via gate-validator agent → parse PASS/FAIL
        On FAIL: auto-fix max 2 attempts; then honor gate-failure setting
     7. Update workflow file; auto-commit if configured
-         phases 1-6: git add specs/ && git commit
+         phases 1-6: git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit
          phase 7:    git add -A && git commit
     7b. After Plan (G3 pass, plan.md exists), run the plan-phase
         reviewability budget with runner helper `estimate-reviewable-loc`,
@@ -621,6 +646,25 @@ After scheduling the loop, the autopilot is DONE. Report
 the final summary with PR URL.
 
 ## Workflow File Update Protocol
+
+**The workflow file is the per-spec durable store.** It survives archive, so
+its Workflow Overview status table is the record of what a spec did.
+`autopilot-state.json` is the current-in-flight pointer for one run — it holds a
+single spec's live plan and is overwritten by the next run, so it is never
+per-spec history. When the two disagree **about Workflow Overview status
+content**, the workflow file wins and the state file is repaired to match. A
+status row that contradicts a gate verdict recorded elsewhere in the same file
+fails the Step 1.1 coverage guard.
+
+That precedence is scoped to the status table and does not generalize. The
+state file stays authoritative for two things the coverage guard enforces
+directly, and repairing the workflow file to match is the correct move in both:
+
+- **Which workflow file is active.** `autopilot-state.json.workflow_file` is
+  the authority; a mismatch fails with "supplied workflow does not match
+  autopilot state workflow_file authority".
+- **PR Marker Plan Evidence status**, which must equal
+  `pr_marker_plan.status` exactly.
 
 After EVERY phase, update the workflow file so it remains the
 durable source of truth across context compactions and resumes:

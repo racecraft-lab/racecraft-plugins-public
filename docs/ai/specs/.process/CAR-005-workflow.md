@@ -38,8 +38,8 @@ captured during scoping.
 | Clarify | `/speckit-clarify` | ✅ Complete | 2 sessions, 10 questions, all resolved. **G2 pass — 0 markers remain** (authoritative grep, not the blind helper). 43 FRs after Clarify. 5 consensus rows: 3 high-confidence Round 1, 1 escape-hatch to Round 2 confirmed high, 1 operator-directive. Round 1 and Round 2 together **overturned the orchestrator's own enum-placement answer**. |
 | Plan | `/speckit-plan` | ✅ Complete | 4 artifacts, 1360 lines. G3 pass. 12 research decisions, 0 open. 17 corpus cases allocated 9/8 across the seam. Surfaced a spec contradiction the orchestrator authored plus two unstated constraints — all three folded back into the spec. |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 136 items, **67 gaps found and all closed**. G4 pass. Two requirements were found to assert platform behaviour that does not exist, and three were unsatisfiable as written. Spec 35 → 60 FR identifiers across the phase. |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — `validate-gate G5`, 63 tasks found |
+| Analyze | `/speckit-analyze` | ✅ Complete | G6 pass — `validate-gate G6`, 0 CRITICAL/HIGH findings |
 | Implement | `/speckit-implement` | ✅ Complete | All 63 tasks, G7 pass. Suite 7008/7008 merged. Stacked PRs #411 and #412 open, not merged. |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked

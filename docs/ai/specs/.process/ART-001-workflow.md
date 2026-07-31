@@ -38,7 +38,7 @@ captured during scoping.
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — 127 items, 76 gaps closed across 3 domains; spec 14 → 28 FR |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 34 tasks, 6 phases, 9 [P]; all 71 checks / 27 FR / 12 SC covered |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 pass — 8 findings (0 critical), all remediated, 0 unresolved |
-| Implement | `/speckit-implement` | 🔄 In Progress | |
+| Implement | `/speckit-implement` | ✅ Complete | 31 of 34 tasks; PR #407 merged with #409 follow-up; 12-of-12 manual acceptance 2026-07-29 |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 

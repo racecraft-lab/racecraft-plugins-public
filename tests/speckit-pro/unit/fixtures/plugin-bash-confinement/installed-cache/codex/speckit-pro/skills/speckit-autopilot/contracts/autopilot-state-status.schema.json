@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SpecKit autopilot run status",
+  "description": "Closed status vocabulary for the top-level autopilot-state.json run status. autopilot-state.json is the current-in-flight pointer for one run; the per-spec durable record is the workflow file, which survives archive. Retired spellings that must not reappear: complete, complete_pr_open, completed archived, running.",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": [
+        "in_progress",
+        "awaiting_review",
+        "completed_pr_open",
+        "completed",
+        "completed_archived"
+      ]
+    }
+  }
+}

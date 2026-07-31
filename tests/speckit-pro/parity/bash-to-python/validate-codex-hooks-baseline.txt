@@ -6,5 +6,5 @@
 006 NO SessionStart hook (would fire on every session — regression guard)
 007 UserPromptSubmit has non-empty hooks array
 008 Hook entry has hooks array
-009 Hook entry has an empty command list
+009 No hook event declares an executable command
 TOTAL: 9

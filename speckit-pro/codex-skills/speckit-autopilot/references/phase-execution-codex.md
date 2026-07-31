@@ -86,7 +86,9 @@ for phase in PHASES starting from first_pending:
        c. If gate-failure == "skip-and-log": log, continue
     9. Update workflow file with results and print the current checklist summary
    10. If auto-commit == "per-phase":
-       For phases 1–6: run: git add specs/ && git commit
+       For phases 1–6: run: git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit
+       (the workflow file and state file live outside specs/, so a phase that
+       does not stage them by path leaves its bookkeeping uncommitted)
        For phase 7 (implement): run: git add -A && git commit
        (implementation changes include src/, tests/, etc.)
    11. Advance to next phase (next iteration of loop) and write the new
@@ -183,7 +185,7 @@ path.
 At **every phase boundary** — for all seven phases — regenerate the spec map
 navigation zones and fold any change into that phase's existing checkpoint
 commit. This runs as an **idempotent** step **immediately before step 10's
-commit** in the Main Execution Loop above (`git add specs/ && git commit` for
+commit** in the Main Execution Loop above (the scoped `git add` for
 phases 1–6, `git add -A && git commit` for phase 7), so the rebuilt maps are
 swept into that same commit. A boundary that changes nothing contributes
 nothing — no extra `update_plan` item and no `autopilot-state.json` transition
