@@ -1784,3 +1784,51 @@ state files completed/archived, regenerates and checks the SpecKit index,
 validates JSON and diff hygiene, and runs structural plus full deterministic
 suites. G56R-005 may now scaffold against the canonical shipped evidence.
 G56R-012 remains the separate paired reconciliation with CAR-012.
+
+## Revision 2026-07-30 - CAR-005 Post-Merge Architecture
+
+### Where CAR-005 Lives Now
+
+- The three closed Claude route contracts live under
+  `tests/speckit-pro/layer6-efficiency/contracts-claude/`:
+  `route-resolution-report.schema.json`, `route-policy.schema.json`, and
+  `environment-snapshot-projection.schema.json`.
+- The eighteen-case replay corpus lives at
+  `tests/speckit-pro/layer6-efficiency/fixtures-fallback/fallback-scenario-corpus.json`.
+- `claude_route_fallback.py` owns route resolution, the bounded fallback walk,
+  the closed disqualifier list behind `release_claim_eligible`, override
+  disposition, optional-helper accounting, and byte-identical replay. It reuses
+  `claude_policy_controls.CONTRACT_ROOT` and its fail-closed schema engine
+  rather than re-deriving either.
+- `tests/speckit-pro/unit/test-route-fallback-simulation.py` is the durable
+  Layer 4 owner. `tests/speckit-pro/suite-manifest.json` gained exactly one
+  entry in slice 1 and none in slice 2.
+
+### Why The Archive Is Safe
+
+All machine-enforced artifacts were authored directly into the test tree.
+Nothing in live code, tests, or scripts reads
+`specs/car-005-availability-fallback-recovery`, so the active folder can be
+removed without relocating contracts or changing behavior. The feature carried
+no unrun operator procedure — every claim is deterministic and re-runnable from
+the committed suite — so unlike CAR-004 and G56R-004 there was nothing
+forward-looking to move out of the folder first.
+
+### One Architectural Debt Left In Place
+
+The simulator's accept path is unvalidated: two of the three declared contract
+constants are never read, so inputs are trusted while outputs are checked. The
+fix is to load both contracts at import and validate `policy` and `snapshot` in
+`resolve()` and per case in `load_corpus`, which would also make the loader
+docstring true. It is deliberately **not** folded into this cleanup — the
+archive commit changes no shipped behavior, and both CAR-005 slices are already
+on `main`, so the correction is an ordinary follow-up change rather than a
+restack.
+
+### Testing and Cleanup
+
+The cleanup removes only the merged CAR-005 active spec, moves the Claude lane
+state to CAR-005 archived, regenerates and checks the SpecKit index, validates
+project state JSON and diff hygiene, and runs the structural and full
+deterministic suites. CAR-006 may now scaffold against the canonical shipped
+evidence. CAR-012 remains the separate paired reconciliation with G56R-012.
