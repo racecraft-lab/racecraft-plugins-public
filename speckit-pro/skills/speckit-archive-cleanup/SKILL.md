@@ -129,7 +129,7 @@ Run the smallest checks that prove the cleanup, then the standard project
 checks if plugin or generated payload files changed. Typical checks:
 
 - active spec listing shows only expected active specs and `specs/.gitkeep`
-- `python3 -m json.tool docs/ai/specs/.process/autopilot-state.json`
+- `resolved_python -m json.tool docs/ai/specs/.process/autopilot-state.json`
 - SpecKit index generation and `--check`
 - docs-site reference generation/checks when reference pages changed
 - payload builder and payload parity checks when plugin source changed

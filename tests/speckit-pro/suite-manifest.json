@@ -48,7 +48,8 @@
         { "path": "tests/speckit-pro/layer1-structural/validate-codex-skills.py", "label": "validate-codex-skills", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-codex-skills-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-codex-hooks.py", "label": "validate-codex-hooks", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-codex-hooks-baseline.txt" },
         { "path": "tests/speckit-pro/layer1-structural/validate-codex-parity.py", "label": "validate-codex-parity", "baseline": "tests/speckit-pro/parity/bash-to-python/validate-codex-parity-baseline.txt" },
-        { "path": "tests/speckit-pro/layer1-structural/validate-workflow-status-evidence.py", "label": "validate-workflow-status-evidence", "baseline": null }
+        { "path": "tests/speckit-pro/layer1-structural/validate-workflow-status-evidence.py", "label": "validate-workflow-status-evidence", "baseline": null },
+        { "path": "tests/speckit-pro/layer1-structural/validate-installed-interpreter-contract.py", "label": "validate-installed-interpreter-contract", "baseline": null }
       ]
     },
     {
