@@ -497,6 +497,31 @@ def pretty_json_text(obj: Any) -> str:
     return json.dumps(obj, ensure_ascii=False, indent=2) + "\n"
 
 
+def active_feature_directory(repo_root: Path) -> str:
+    """Resolve declared feature state the way the vendored resolver does.
+
+    Precedence mirrors `.specify/scripts/bash/common.sh`: the
+    `SPECIFY_FEATURE_DIRECTORY` override wins, then `.specify/feature.json`.
+    Branch naming is a separate and weaker signal, so it stays with the caller.
+    Without this, the runner and the vendored resolver disagree about whether a
+    run is on a feature whenever the branch is not `NNN-`-prefixed.
+    """
+    override = os.environ.get("SPECIFY_FEATURE_DIRECTORY", "").strip()
+    if override:
+        return override
+    text = trusted_text(repo_root / ".specify" / "feature.json", repo_root)
+    if text is None:
+        return ""
+    try:
+        payload = json.loads(text)
+    except ValueError:
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    value = payload.get("feature_directory")
+    return value.strip() if isinstance(value, str) else ""
+
+
 def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     workflow = normalize_path_input(inputs.get("workflow_file") or "")
     checks: list[dict[str, Any]] = []
@@ -542,7 +567,7 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
 
     branch = git_branch(repo_root)
     is_worktree = git_is_worktree(repo_root)
-    on_feature = re.match(r"^[0-9]{3}[A-Za-z0-9]*-", branch or "") is not None
+    on_feature = bool(active_feature_directory(repo_root)) or re.match(r"^[0-9]{3}[A-Za-z0-9]*-", branch or "") is not None
     checks.append(check("branch", True, f"Branch: {branch}", f"worktree={str(is_worktree).lower()},feature={str(on_feature).lower()}"))
     settings = repo_root / ".claude" / "speckit-pro.local.md"
     if trusted_file_exists(settings, repo_root):
@@ -3662,13 +3687,38 @@ def git_is_worktree(repo_root: Path) -> bool:
     return bool(git_dir_text and git_common_text and git_dir_text != git_common_text)
 
 
+def worktree_backpointer_matches(git_dir: Path, repo_root: Path) -> bool:
+    """Confirm this worktree admin directory belongs to this worktree.
+
+    Git records the link in both directions: the worktree's `.git` file points
+    at `<checkout>/.git/worktrees/<name>`, and that directory holds a `gitdir`
+    file naming the worktree's own `.git` back again. Checking the return leg
+    proves ownership, which comparing directory names cannot — two unrelated
+    checkouts can share a name, and a worktree is normally named for its branch
+    rather than for its checkout.
+    """
+    pointer = git_dir / "gitdir"
+    if not path_stays_in_trust_boundary(pointer, git_dir):
+        return False
+    text = trusted_text(pointer, git_dir)
+    if text is None:
+        return False
+    recorded = text.strip()
+    if not recorded:
+        return False
+    try:
+        return Path(recorded).resolve() == (repo_root / ".git").resolve()
+    except (OSError, RuntimeError, ValueError):
+        return False
+
+
 def allowed_git_dir(git_dir: Path, repo_root: Path) -> bool:
     if path_stays_in_trust_boundary(git_dir, repo_root):
         return True
     if git_dir.parent.name != "worktrees" or git_dir.parent.parent.name != ".git":
         return False
     checkout_root = git_dir.parent.parent.parent
-    if checkout_root.name != repo_root.name:
+    if not worktree_backpointer_matches(git_dir, repo_root):
         return False
     runner_dir = checkout_root / "speckit-pro" / "speckit_pro_runner"
     return runner_dir.is_dir() and path_stays_in_trust_boundary(runner_dir, checkout_root)
