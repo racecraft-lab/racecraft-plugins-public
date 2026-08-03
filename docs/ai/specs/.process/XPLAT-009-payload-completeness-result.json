@@ -276,11 +276,11 @@
             "transform": "claude_guard_strip"
           },
           {
-            "byte_count": 41095,
+            "byte_count": 40993,
             "kind": "skill",
             "path": "skills/speckit-autopilot/SKILL.md",
             "required": true,
-            "sha256": "ca859992674e975a3a9bae2c194c2aaf8db5ef6920cca4401fadebd72a2d044f",
+            "sha256": "631e103965a73e983d7c67da91f253bc465a88c9de83cdf395c7d860a2025d90",
             "source_path": "speckit-pro/skills/speckit-autopilot/SKILL.md",
             "transform": "claude_guard_strip"
           },
@@ -429,11 +429,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 38408,
+            "byte_count": 38466,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/agent-teams-integration.md",
             "required": true,
-            "sha256": "9286c56748e6c38cbdfa8012e2276cc6a6b4ad8021506e230d7c05224f96c21e",
+            "sha256": "e0e71a8bec50b5cba11a37a56f864d65267b87317db40291b9fe3fdf992336ab",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
             "transform": "none"
           },
@@ -1259,11 +1259,11 @@
             "transform": "claude_guard_strip"
           },
           {
-            "byte_count": 41095,
+            "byte_count": 40993,
             "kind": "skill",
             "path": "skills/speckit-autopilot/SKILL.md",
             "required": true,
-            "sha256": "ca859992674e975a3a9bae2c194c2aaf8db5ef6920cca4401fadebd72a2d044f",
+            "sha256": "631e103965a73e983d7c67da91f253bc465a88c9de83cdf395c7d860a2025d90",
             "source_path": "speckit-pro/skills/speckit-autopilot/SKILL.md",
             "transform": "claude_guard_strip"
           },
@@ -1412,11 +1412,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 38408,
+            "byte_count": 38466,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/agent-teams-integration.md",
             "required": true,
-            "sha256": "9286c56748e6c38cbdfa8012e2276cc6a6b4ad8021506e230d7c05224f96c21e",
+            "sha256": "e0e71a8bec50b5cba11a37a56f864d65267b87317db40291b9fe3fdf992336ab",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
             "transform": "none"
           },
@@ -1998,7 +1998,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "c196c3c2bb778c6dbd82b27a04c37331e1503a607797e9764355a819d8abf92a",
+        "file_tree_hash": "f058baf906b382d40ba3cbd23ce72f393241c2b854dc990cfdc85192579df53c",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
@@ -2284,11 +2284,11 @@
             "transform": "path_normalization"
           },
           {
-            "byte_count": 58633,
+            "byte_count": 58454,
             "kind": "skill",
             "path": "skills/speckit-autopilot/SKILL.md",
             "required": true,
-            "sha256": "76d573e91401776ab0e2dbafd1b394e5e46b39f7326b4e01a877d446217e9fb6",
+            "sha256": "93f1cd518bef7a294e8b77ea6b2d70b5ac69ba2c10a92d7e5fdaff4252f5909d",
             "source_path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
             "transform": "codex_overlay"
           },
@@ -2446,11 +2446,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 38408,
+            "byte_count": 38466,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/agent-teams-integration.md",
             "required": true,
-            "sha256": "9286c56748e6c38cbdfa8012e2276cc6a6b4ad8021506e230d7c05224f96c21e",
+            "sha256": "e0e71a8bec50b5cba11a37a56f864d65267b87317db40291b9fe3fdf992336ab",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
             "transform": "none"
           },
@@ -3420,11 +3420,11 @@
             "transform": "path_normalization"
           },
           {
-            "byte_count": 58633,
+            "byte_count": 58454,
             "kind": "skill",
             "path": "skills/speckit-autopilot/SKILL.md",
             "required": true,
-            "sha256": "76d573e91401776ab0e2dbafd1b394e5e46b39f7326b4e01a877d446217e9fb6",
+            "sha256": "93f1cd518bef7a294e8b77ea6b2d70b5ac69ba2c10a92d7e5fdaff4252f5909d",
             "source_path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
             "transform": "codex_overlay"
           },
@@ -3582,11 +3582,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 38408,
+            "byte_count": 38466,
             "kind": "skill",
             "path": "skills/speckit-autopilot/references/agent-teams-integration.md",
             "required": true,
-            "sha256": "9286c56748e6c38cbdfa8012e2276cc6a6b4ad8021506e230d7c05224f96c21e",
+            "sha256": "e0e71a8bec50b5cba11a37a56f864d65267b87317db40291b9fe3fdf992336ab",
             "source_path": "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
             "transform": "none"
           },
@@ -4285,7 +4285,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "e42463ecc79c219d87fa1daad6a335fe04a1ad61bb36b8a594e6ef44e6971855",
+        "file_tree_hash": "977d912e39b288cf33b41c4827e3f3d1152320d1e0eca3cb8e340af01357f9c7",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],

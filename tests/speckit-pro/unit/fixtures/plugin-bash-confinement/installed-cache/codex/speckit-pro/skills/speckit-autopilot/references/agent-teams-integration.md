@@ -347,7 +347,8 @@ Every Agent Teams use site in speckit-pro MUST:
 8. **Route models for fit, not for cost — and always pin max thinking.**
    Per [Anthropic's "Specify teammates and models"](https://code.claude.com/docs/en/agent-teams#specify-teammates-and-models):
    *"Teammates don't inherit the lead's /model selection by default."*
-   The lead is opus at `effort: max` (autopilot prereq); each teammate
+   The lead is opus and runs at the operator's session effort, which the
+   autopilot inherits rather than checks; each teammate
    inherits the model + effort from its underlying subagent definition
    (see [Anthropic's "Use subagent definitions for teammates"](https://code.claude.com/docs/en/agent-teams#use-subagent-definitions-for-teammates)).
    Every bundled speckit-pro subagent ships with `effort: max` per the
