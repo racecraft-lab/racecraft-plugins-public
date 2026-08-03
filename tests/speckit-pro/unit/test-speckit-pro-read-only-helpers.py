@@ -1367,22 +1367,179 @@ class ReadOnlyHelperTests(unittest.TestCase):
 
             self.assertEqual(git_branch(project_path), "")
 
+    @staticmethod
+    def _build_linked_worktree(
+        workspace: Path,
+        checkout_parent: Path,
+        *,
+        worktree_relpath: str,
+        branch: str,
+        backpointer: str | None = "self",
+        admin_name: str | None = None,
+    ) -> Path:
+        """Build a git worktree the way git actually lays one out.
+
+        Git records the link in both directions: the worktree's ``.git`` file
+        points at ``<checkout>/.git/worktrees/<name>``, and that admin directory
+        holds a ``gitdir`` file pointing back at the worktree's own ``.git``.
+        ``backpointer`` selects what the admin directory records — ``"self"`` for
+        the honest link, ``None`` to omit it, or a literal path to forge one.
+        """
+        project_path = workspace / worktree_relpath
+        project_path.mkdir(parents=True)
+        checkout_root = checkout_parent / REPO_ROOT.name
+        git_dir = checkout_root / ".git" / "worktrees" / (admin_name or Path(worktree_relpath).name)
+        (checkout_root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+        git_dir.mkdir(parents=True)
+        (git_dir / "HEAD").write_text(f"ref: refs/heads/{branch}\n", encoding="utf-8")
+        (project_path / ".git").write_text(f"gitdir: {git_dir}\n", encoding="utf-8")
+        if backpointer == "self":
+            (git_dir / "gitdir").write_text(f"{project_path / '.git'}\n", encoding="utf-8")
+        elif backpointer is not None:
+            (git_dir / "gitdir").write_text(f"{backpointer}\n", encoding="utf-8")
+        return project_path
+
+    def test_git_branch_accepts_worktree_named_for_its_branch(self) -> None:
+        """The repository's own convention: .worktrees/<branch-name>.
+
+        The worktree directory is named for the branch, never for the checkout,
+        so a check that compares those two names rejects every feature worktree
+        this repository creates.
+        """
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("git branch worktree metadata case uses check-prerequisites")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as workspace, tempfile.TemporaryDirectory() as checkout_parent:
+            project_path = self._build_linked_worktree(
+                Path(workspace),
+                Path(checkout_parent),
+                worktree_relpath=".worktrees/codex-xplat-008-archive-cleanup",
+                branch="codex/xplat-008-archive-cleanup",
+            )
+            from speckit_pro_runner.helpers.read_only import git_branch
+
+            self.assertEqual(git_branch(project_path), "codex/xplat-008-archive-cleanup")
+
     def test_git_branch_accepts_same_repo_worktree_metadata_name(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("git branch worktree metadata case uses check-prerequisites")
         with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as workspace, tempfile.TemporaryDirectory() as checkout_parent:
-            project_path = Path(workspace) / REPO_ROOT.name
-            project_path.mkdir()
-            checkout_root = Path(checkout_parent) / REPO_ROOT.name
-            git_dir = checkout_root / ".git" / "worktrees" / f"{REPO_ROOT.name}1"
-            runner_dir = checkout_root / "speckit-pro" / "speckit_pro_runner"
-            runner_dir.mkdir(parents=True)
-            git_dir.mkdir(parents=True)
-            (git_dir / "HEAD").write_text("ref: refs/heads/codex/xplat-008-archive-cleanup\n", encoding="utf-8")
-            (project_path / ".git").write_text(f"gitdir: {git_dir}\n", encoding="utf-8")
+            project_path = self._build_linked_worktree(
+                Path(workspace),
+                Path(checkout_parent),
+                worktree_relpath=REPO_ROOT.name,
+                branch="codex/xplat-008-archive-cleanup",
+                admin_name=f"{REPO_ROOT.name}1",
+            )
             from speckit_pro_runner.helpers.read_only import git_branch
 
             self.assertEqual(git_branch(project_path), "codex/xplat-008-archive-cleanup")
+
+    def test_git_branch_rejects_worktree_metadata_without_backpointer(self) -> None:
+        """A same-named directory is not proof of ownership.
+
+        Name equality alone lets an unrelated checkout that merely shares a
+        directory name supply HEAD. Git's own back-pointer is what proves the
+        admin directory belongs to this worktree.
+        """
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("git branch worktree metadata case uses check-prerequisites")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as workspace, tempfile.TemporaryDirectory() as checkout_parent:
+            project_path = self._build_linked_worktree(
+                Path(workspace),
+                Path(checkout_parent),
+                worktree_relpath=REPO_ROOT.name,
+                branch="codex/xplat-008-archive-cleanup",
+                backpointer=None,
+            )
+            from speckit_pro_runner.helpers.read_only import git_branch
+
+            self.assertEqual(git_branch(project_path), "")
+
+    def test_git_branch_rejects_worktree_metadata_pointing_elsewhere(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("git branch worktree metadata case uses check-prerequisites")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as workspace, tempfile.TemporaryDirectory() as checkout_parent, tempfile.TemporaryDirectory() as other:
+            project_path = self._build_linked_worktree(
+                Path(workspace),
+                Path(checkout_parent),
+                worktree_relpath=REPO_ROOT.name,
+                branch="codex/xplat-008-archive-cleanup",
+                backpointer=f"{Path(other) / '.git'}",
+            )
+            from speckit_pro_runner.helpers.read_only import git_branch
+
+            self.assertEqual(git_branch(project_path), "")
+
+    @staticmethod
+    def _feature_state(project_path: Path, **inputs: object) -> dict[str, object]:
+        from speckit_pro_runner.helpers.read_only import check_prerequisites
+
+        result = check_prerequisites(dict(inputs), project_path)
+        return json.loads(result["stdout"])
+
+    def test_check_prerequisites_honors_feature_json_feature_directory(self) -> None:
+        """`.specify/feature.json` is the sanctioned feature-state carrier.
+
+        The vendored resolver reads it (scripts/bash/common.sh), so the runner
+        must agree; otherwise the two implementations disagree about whether a
+        run is on a feature, which is every spec this repository ships on a
+        non-numeric branch.
+        """
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("feature-state precedence case uses check-prerequisites")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            (project_path / ".specify").mkdir()
+            (project_path / ".specify" / "feature.json").write_text(
+                '{"feature_directory":"specs/art-006-autopilot-staging"}\n', encoding="utf-8"
+            )
+            payload = self._feature_state(project_path)
+            self.assertTrue(payload["on_feature_branch"])
+
+    def test_check_prerequisites_honors_specify_feature_directory_env(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("feature-state precedence case uses check-prerequisites")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            (project_path / ".specify").mkdir()
+            with patch.dict(
+                os.environ, {"SPECIFY_FEATURE_DIRECTORY": "specs/car-005-availability"}, clear=False
+            ):
+                payload = self._feature_state(project_path)
+            self.assertTrue(payload["on_feature_branch"])
+
+    def test_check_prerequisites_reports_no_feature_without_state_or_branch(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("feature-state precedence case uses check-prerequisites")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            (project_path / ".specify").mkdir()
+            environment = {
+                key: value
+                for key, value in os.environ.items()
+                if key not in {"SPECIFY_FEATURE_DIRECTORY", "SPECIFY_FEATURE"}
+            }
+            with patch.dict(os.environ, environment, clear=True):
+                payload = self._feature_state(project_path)
+            self.assertFalse(payload["on_feature_branch"])
+
+    def test_check_prerequisites_ignores_blank_feature_directory(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("feature-state precedence case uses check-prerequisites")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            (project_path / ".specify").mkdir()
+            (project_path / ".specify" / "feature.json").write_text(
+                '{"feature_directory":"   "}\n', encoding="utf-8"
+            )
+            environment = {
+                key: value
+                for key, value in os.environ.items()
+                if key not in {"SPECIFY_FEATURE_DIRECTORY", "SPECIFY_FEATURE"}
+            }
+            with patch.dict(os.environ, environment, clear=True):
+                payload = self._feature_state(project_path)
+            self.assertFalse(payload["on_feature_branch"])
 
     def test_trusted_text_returns_none_on_read_error(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
