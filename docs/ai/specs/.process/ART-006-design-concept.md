@@ -7,8 +7,10 @@ spec_id: "ART-006"
 source_input:
   type: "topic"
   ref: "ART-006 scope section, docs/ai/specs/html-artifacts-technical-roadmap.md"
-question_count: 8
+question_count: 11
 stop_reason: "natural"
+revised: "2026-08-03"
+revision_note: "Targeted re-grill (Q9-Q11) after the bookkeeping prerequisite merged in PRs #416/#417 and shipped in speckit-pro 2.22.0. All four original open questions closed."
 ---
 
 # Design Concept: ART-006 Autopilot Staging
@@ -31,11 +33,22 @@ durable stage state, on both platforms.
   run the same resolution logic, not two prose descriptions of it.
 - **Document the scaffold → autopilot chain contract** for ART-011 to consume.
 
-### Hard dependency: the bookkeeping-durability prerequisite
+### Hard dependency: the bookkeeping-durability prerequisite — DISCHARGED 2026-08-03
+
+**Status: satisfied.** The prerequisite shipped as PRs #416 (`ccc4e7d6`) and
+#417 (`a6704ce0`), released to consumers in speckit-pro 2.22.0 (PR #408,
+`70524e24`). Autopilot may execute this spec. Two of its outputs became load-
+bearing for ART-006's own design: `autopilot-state-status.schema.json` fixes the
+workflow-file-is-durable / state-file-is-in-flight split (see Q9), and
+`validate-workflow-status-evidence.py` is the CI gate this spec extends rather
+than duplicates (see Q11).
+
+The original evidence is preserved below as the record of why the prerequisite
+was required.
 
 ART-006's headline deliverable is durable stage state. The store it would rely
-on is currently unenforced and has failed twice in this repository, so a
-prerequisite PR lands **before** autopilot executes this spec. Evidence:
+on was unenforced and had failed twice in this repository, so a prerequisite PR
+lands **before** autopilot executes this spec. Evidence:
 
 - `docs/ai/specs/.process/CAR-005-workflow.md:38-41` reads Tasks `⏳ Pending`
   and Analyze `⏳ Pending` while the same file records `G5 gate: ✅ PASS —
@@ -228,6 +241,75 @@ state, and both platforms — and with `gh` deferred the auto-detect half is now
 just "read the status table", too thin to stand alone. Declared budget 382/400;
 the plan-phase estimator re-checks against real artifacts at G3.
 
+---
+
+### Re-grill session — 2026-08-03
+
+Targeted continuation, not a fresh interview. Q1–Q8 stand unchanged; these three
+cover only what moved when the prerequisite merged and shipped in 2.22.0.
+
+### Q9 — Where is the stage field authoritative?
+
+**Asked because** OQ-1 left this open, and PR #416 then shipped a contract that
+answers half of it. `speckit-pro/skills/speckit-autopilot/contracts/autopilot-state-status.schema.json`
+states the split in prose: `autopilot-state.json` is the in-flight pointer for
+one run; **the workflow file is the durable per-spec record, and it survives
+archive.** That is shipped contract, not a proposal.
+
+**Recommended and chosen:** **workflow file authoritative, state file mirrors.**
+The `Stage` row lives in `## Specification Context → Basic Information` — the
+scalar table `speckit-status/SKILL.md:96` already parses for Branch — and
+`autopilot-state.json` carries a mirrored copy for the running session only. A
+fresh `--stage implement` session reconstructs context from the workflow file.
+Alternatives: state-file-authoritative (rejected — contradicts the shipped
+schema, and the state file does not survive archive, so a resumed or archived
+spec loses its stage); dual-write with no designated authority (rejected — that
+is the exact shape that drifted on CAR-005 and ART-001).
+
+The OQ-1 sub-question about template ownership is moot: #416 edited
+`workflow-template.md` directly, setting the precedent.
+
+### Q10 — Where does the Codex stage prose live?
+
+**Asked because** OQ-3 estimated ~390 words of headroom, and both #416 and #417
+added Codex prose after that estimate.
+
+**Re-measured:** the Codex autopilot SKILL.md body is **7690 words against the
+8000 cap** (`validate-codex-skills.py:168-171`) — **310 words** of headroom, not
+390. `phase-execution-codex.md` is 3106 words and uncapped.
+
+**Recommended and chosen:** **stage prose in `phase-execution-codex.md`**;
+SKILL.md gets only the argv line and a pointer (~60–80 words), leaving ~230 words
+of headroom for ART-007 through ART-012, which all extend the same file. The
+OQ-3 `runtime_doc` assumption is confirmed: `validate-codex-skills.py:235-242`
+concatenates referenced files for content assertions, while the word cap applies
+to the SKILL.md body alone. Alternatives: all prose in SKILL.md (rejected — argv
+plus resolution plus auto-detect plus durable state will not fit in 310 words,
+and overrunning fails the Layer 1 Codex gate); trim existing prose to make room
+(rejected — expands the diff into unrelated wording and pressures a budget with
+18 LOC of margin).
+
+### Q11 — How is the stage field verified?
+
+**Asked because** #416 shipped `validate-workflow-status-evidence.py`, a CI gate
+that already scans every `docs/ai/specs/.process/*-workflow.md` for
+status-versus-evidence contradiction. ART-006's own file is under it. That is new
+machinery the original interview could not have accounted for.
+
+**Recommended and chosen:** **extend the shipped gate, plus a Layer 4 unit
+test.** Stage-field assertions go into `validate-workflow-status-evidence.py` so
+stage drift is caught by the same CI gate that catches phase drift, and
+`tests/speckit-pro/unit/test-autopilot-stage-resolution.py` carries golden
+fixtures for argv and auto-detect resolution. Alternatives: a standalone Layer 1
+stage validator (rejected — two gates walking the same tree with overlapping
+parse logic, both needing updates on any workflow-file format change); Layer 4
+unit tests only (rejected — an instruction no validator reads is exactly what
+drifted CAR-005 and ART-001 and forced the prerequisite).
+
+Filename note: `art` is a live spec family, so `test-art-006-*.py` would fail
+`tests/speckit-pro/unit/test-unit-layout.py:122-141`, which derives families from
+`docs/ai/specs/**/*.md`. The behavior-named filename above avoids it.
+
 ## Decisions settled by evidence (not asked)
 
 These had a determinate answer in the repository, so they were recorded rather
@@ -262,32 +344,53 @@ than put to the maintainer.
 
 ## Open Questions
 
-- **OQ-1 — Where in the workflow file does the stage field live?** The strongest
-  candidate is a new row in `## Specification Context → Basic Information`, an
-  existing scalar key/value table (`skills/speckit-coach/templates/workflow-template.md:103-110`)
-  that `speckit-status/SKILL.md:96` already parses for Branch. Frontmatter is out
-  — real workflow files carry none. A new status-table column is out — two
-  parsers read that row shape. **Sub-question:** `workflow-template.md` is owned
-  by *speckit-coach* and is not in ART-006's Key Files list; confirm it is in
-  scope during Plan.
+All four questions from the 2026-07-30 session are now closed — three by the
+2026-08-03 re-grill, one by fact. Original text is preserved below each entry.
+
+- **OQ-1 — Where in the workflow file does the stage field live?** ✅ **Resolved
+  (Q9, 2026-08-03).** The workflow file is authoritative; `autopilot-state.json`
+  mirrors it for the running session only. The field is a `Stage` row in
+  `## Specification Context → Basic Information`. The sub-question is moot: PR
+  #416 edited `workflow-template.md` directly, so speckit-coach ownership is no
+  longer a reason to keep the field out.
+  *Original:* the strongest candidate is a new row in
+  `## Specification Context → Basic Information`, an existing scalar key/value
+  table that `speckit-status/SKILL.md:96` already parses for Branch. Frontmatter
+  is out — real workflow files carry none. A new status-table column is out —
+  two parsers read that row shape.
 - **OQ-2 — The scaffold template cannot pass the coverage validator today.**
-  `workflow-template.md:55-65` emits 7 status rows; the validator requires
-  `| Confidence Gate | G6.5 |` and `| Post |`. Pre-existing, and the reason
-  CAR/ART specs lack those rows. The template fix is non-optional once Claude-side
-  enforcement is on — decide in the prerequisite PR whether it lands there or in
-  ART-006.
-- **OQ-3 — Codex word budget.** The Codex autopilot body is ~7.6k words against a
-  hard 8000-word cap (`validate-codex-skills.py:168-171`), leaving roughly 390
-  words. Stage prose likely has to live in `phase-execution-codex.md`, which the
-  validator already folds into `runtime_doc`. Confirm during Plan.
-- **OQ-4 — Should the prerequisite become its own roadmap entry?** It has grown
-  to six components. It is a bug fix, and this repository lands bug fixes as
-  plain PRs, but a change to the autopilot's enforcement model is arguably
-  spec-worthy.
+  ✅ **Resolved by fact.** It landed in the prerequisite, not in ART-006: PR #416
+  added the `| Confidence Gate | G6.5 |` row, the `| G6.5 |` gate row, the
+  `## Phase 6.5:` section, and the 12 canonical `Post:` rows to
+  `workflow-template.md`. This spec's own workflow file predated that template
+  and was backfilled on 2026-08-03; it now reports no workflow-side problems.
+- **OQ-3 — Codex word budget.** ✅ **Resolved (Q10, 2026-08-03).** Stage prose
+  goes in `phase-execution-codex.md`; SKILL.md gets only the argv line and a
+  pointer. Re-measured headroom is **310 words**, not the ~390 originally
+  estimated — #416 and #417 both added Codex prose. The `runtime_doc` assumption
+  is confirmed correct: `validate-codex-skills.py:235-242` concatenates
+  referenced files for content assertions, while the 500–8000 word cap at
+  `:168-171` applies to the SKILL.md body alone, so reference files are uncapped.
+- **OQ-4 — Should the prerequisite become its own roadmap entry?** ✅ **Resolved
+  by fact.** No. It shipped as plain PRs #416 and #417, consistent with how this
+  repository lands bug fixes, and reached consumers in speckit-pro 2.22.0.
+
+### New decision from the 2026-08-03 re-grill
+
+- **Q11 — How is the stage field verified?** Extend the shipped
+  `tests/speckit-pro/layer1-structural/validate-workflow-status-evidence.py`
+  with stage-field assertions rather than adding a second validator, plus
+  `tests/speckit-pro/unit/test-autopilot-stage-resolution.py` with golden
+  fixtures for argv and auto-detect resolution. One enforcement path over the
+  workflow-file tree, and the structural half runs in CI whether or not an agent
+  invokes anything — which is precisely the failure this spec's prerequisite
+  existed to fix. The filename avoids `art-006` because
+  `tests/speckit-pro/unit/test-unit-layout.py:122-141` derives live spec families
+  from `docs/ai/specs/**/*.md`, making `art` a forbidden filename token.
 
 ## Recommended Next Step
 
-Land the bookkeeping-durability prerequisite PR, then run:
+The prerequisite has merged and shipped. Run:
 
 ```text
 /speckit-pro:speckit-autopilot docs/ai/specs/.process/ART-006-workflow.md

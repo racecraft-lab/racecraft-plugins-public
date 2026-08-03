@@ -21,8 +21,9 @@ input.
 **Spec ID prefix:** `ART-###`
 **Status:** Active; dependency graph approved 2026-07-28; ART-001 is complete
 and archived after PR #407 and its follow-up fix PR #409; ART-006 is scaffolded
-and in progress on `art-006-autopilot-staging`, blocked on a
-bookkeeping-durability prerequisite PR; ART-002 through ART-005 are ready
+and in progress on `art-006-autopilot-staging`, with its bookkeeping-durability
+prerequisite discharged by PRs #416/#417 in speckit-pro 2.22.0; ART-002 through
+ART-005 are ready
 
 ---
 
@@ -130,7 +131,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-003 | Final-PR Template Set | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-004 | Gallery Completion: Design & Prototyping | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
-| ART-006 | Autopilot Staging | 🔄 In Progress | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | Scaffolded 2026-07-30 on `art-006-autopilot-staging`. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Blocked on a bookkeeping-durability prerequisite PR** — the workflow status table and `autopilot-state.json` are written by unenforced instruction and drifted on CAR-005 and ART-001, so durable stage state has no reliable store until that lands |
+| ART-006 | Autopilot Staging | 🔄 In Progress | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | Scaffolded 2026-07-30 on `art-006-autopilot-staging`; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
 | ART-007 | Draft-PR Emission | ⏳ Pending | - | Blocked by ART-002, ART-006 |
 | ART-008 | Feedback Sweep | ⏳ Pending | - | Blocked by ART-007 |
 | ART-009 | UAT Walkthrough Replacement | ⏳ Pending | - | Blocked by ART-006 |

@@ -6,24 +6,36 @@
 
 ---
 
-## Blocking Prerequisite
+## Prerequisite — Discharged 2026-08-03
 
-**Do not start Phase 1 until the bookkeeping-durability PR has merged.**
+**The bookkeeping-durability prerequisite has merged and shipped. Phase 1 may
+start.**
 
-ART-006 ships durable stage state. The store it relies on is currently
-unenforced and has failed twice in this repository: `CAR-005-workflow.md:38-41`
-reads Tasks and Analyze as Pending while the same file records G5 and G6 PASS at
-`:955` and `:1075`, and `ART-001-workflow.md:41` reads Implement as In Progress
-on a merged, archived spec whose own merge commits touched neither copy of
-`autopilot-state.json`.
+ART-006 ships durable stage state, and the store it relies on was unenforced
+when this workflow was scaffolded — it had already drifted on CAR-005 and
+ART-001. That is fixed:
 
-Root cause: `speckit-pro/codex-skills/speckit-autopilot/SKILL.md:649` runs
-`validate-autopilot-phase-coverage.py` and `:676` requires exit 0; nothing under
-`speckit-pro/skills/speckit-autopilot/` invokes it. Building stage state on that
-foundation reproduces the same failure.
+| Component | Landed in |
+|---|---|
+| Bookkeeping enforcement on both platforms | PR #416 (`ccc4e7d6`) |
+| Codex phase guard made runnable (`resolved_python`, `--rule status-evidence`) | PR #417 (`a6704ce0`) |
+| Released to consumers | speckit-pro 2.22.0, PR #408 (`70524e24`) |
 
-Prerequisite scope and its six components are recorded in the design concept
-under "Hard dependency". Confirm it has merged, then proceed.
+What the prerequisite established that this spec now builds on:
+
+- `speckit-pro/skills/speckit-autopilot/SKILL.md:438` stages the workflow file
+  and `autopilot-state.json` on phases 1–6, so per-phase writes are durable
+  instead of waiting for phase 7's `git add -A`.
+- `speckit-pro/skills/speckit-autopilot/contracts/autopilot-state-status.schema.json`
+  fixes the ownership split this spec depends on: `autopilot-state.json` is the
+  in-flight pointer for one run; **the workflow file is the durable per-spec
+  record, and it survives archive.**
+- `tests/speckit-pro/layer1-structural/validate-workflow-status-evidence.py`
+  gates every `docs/ai/specs/.process/*-workflow.md` in CI, whether or not an
+  agent invokes anything.
+
+The original evidence and the six-component scope remain recorded in the design
+concept under "Hard dependency", marked discharged.
 
 ---
 
@@ -77,6 +89,7 @@ Each phase requires **human review and approval** before proceeding:
 | G4 | After Checklist | All `[Gap]` markers addressed |
 | G5 | After Tasks | Task coverage verified, dependencies ordered |
 | G6 | After Analyze | No `CRITICAL` issues, `WARNING` items reviewed |
+| G6.5 | Before Implement | Composite confidence meets the autonomous implementation threshold |
 | G7 | After Each Implementation Phase | Tests pass, manual verification complete |
 
 ---
@@ -106,10 +119,18 @@ Each phase requires **human review and approval** before proceeding:
 | **Spec ID** | ART-006 |
 | **Name** | Autopilot Staging |
 | **Branch** | `art-006-autopilot-staging` |
-| **Dependencies** | None on the roadmap. One blocking prerequisite PR (see above). |
+| **Dependencies** | None on the roadmap. The bookkeeping prerequisite is discharged (PRs #416/#417, released 2.22.0). |
 | **Enables** | ART-007, ART-008, ART-009, ART-010, ART-011, ART-012 |
 | **Priority** | P1 |
-| **Stage** | <!-- ART-006 introduces this field; see design concept OQ-1 --> |
+| **Stage** | plan |
+
+**The `Stage` row is this spec's own deliverable and its authoritative store.**
+Per the 2026-08-03 re-grill (Q9), the workflow file holds durable stage state and
+`autopilot-state.json` mirrors it for the running session only — the split
+`autopilot-state-status.schema.json` already states. This scalar table is the
+right carrier because `speckit-status/SKILL.md:96` already parses it for Branch;
+the Workflow Overview status table is not, because two parsers read that row
+shape. Values are `plan`, `implement`, `full`.
 
 ### Reviewability Budget And Split Decision
 
@@ -251,7 +272,7 @@ Use these markers in spec.md for traceability through later phases:
 
 ---
 
-## Phase 2: Clarify (Optional but Recommended)
+## Phase 2: Clarify
 
 **When to run:** When spec has areas that could be interpreted multiple ways. 10-20 minutes here saves hours of rework later.
 
@@ -260,23 +281,30 @@ Use these markers in spec.md for traceability through later phases:
 ### Clarify Prompts
 
 Seeded from the design concept's Open Questions. Do not re-litigate anything in
-its "Decisions settled by evidence" section — those have determinate answers in
-the repository and are cited there.
+its "Decisions settled by evidence" section, nor anything the 2026-08-03 re-grill
+closed (Q9, Q10, Q11) — those have determinate answers cited in the design
+concept.
 
 #### Session 1: Stage State Representation
 
 ```text
-/speckit-clarify Focus on where and how stage state is represented. OQ-1: the
-stage field's physical location in the workflow file. The leading candidate is a
-new row in "## Specification Context -> Basic Information", an existing scalar
-key/value table that speckit-status/SKILL.md:96 already parses for Branch.
-Frontmatter is ruled out because real workflow files carry none. A new column in
-the Workflow Overview status table is ruled out because two parsers read that row
-shape. Also settle: the exact stage vocabulary; whether the field is written once
-per stage or updated per phase; and what a fresh --stage implement session must
-read to reconstruct context. Note that workflow-template.md is owned by
-speckit-coach and is NOT in ART-006's Key Files list -- confirm template
-ownership is in scope before planning an edit to it.
+/speckit-clarify Focus on the mechanics of stage state, NOT its location. The
+location is settled by design-concept Q9 and must be treated as a given: the
+workflow file is authoritative via a "Stage" row in "## Specification Context ->
+Basic Information", and autopilot-state.json mirrors it for the running session
+only. This matches the split stated in
+speckit-pro/skills/speckit-autopilot/contracts/autopilot-state-status.schema.json
+-- the state file is the in-flight pointer, the workflow file is the durable
+per-spec record that survives archive. Do not reopen frontmatter, a status-table
+column, or state-file-authoritative. Template ownership is also settled: PR #416
+edited workflow-template.md directly, so speckit-coach ownership does not block
+an edit. What is still open and must be settled here: the exact stage vocabulary
+beyond plan/implement/full; whether the row is written once per stage transition
+or refreshed per phase; how the mirror in autopilot-state.json is kept from
+drifting from the authoritative row, given that undetected drift between these
+two stores is what caused this spec's prerequisite; and precisely what a fresh
+--stage implement session in a different worktree must read to reconstruct
+context.
 ```
 
 #### Session 2: Platform Parity And Enforcement Surface
@@ -288,11 +316,17 @@ validate-codex-parity.py:134 checks file existence only and the two argv
 contracts have already silently diverged over --strict/--advisory. Settle: where
 the shared logic physically lives and how each platform reaches it; the exact
 allowed-tools grant on the Claude side, given the chosen narrow-plus-runner scope
-and the documented Bash(${CLAUDE_SKILL_DIR}/...) idiom; and OQ-3, whether Codex
-stage prose fits in the roughly 390 words of headroom under the 8000-word cap or
-must live in phase-execution-codex.md, which validate-codex-skills.py already
-folds into runtime_doc. Adding any Codex-checked string requires the three-step
-ritual: edit the SKILL.md, add the assertion, update CODEX-PARITY-NOTES.md.
+and the documented Bash(${CLAUDE_SKILL_DIR}/...) idiom. Do NOT reopen where the
+Codex stage prose lives -- design-concept Q10 settled it: the prose goes in
+phase-execution-codex.md and SKILL.md gets only the argv line and a pointer,
+roughly 60-80 words. Treat the budget as measured, not estimated: the Codex
+autopilot SKILL.md body is 7690 of 8000 words (validate-codex-skills.py:168-171),
+so headroom is 310 words, and the cap applies to the SKILL.md body alone while
+referenced files are uncapped and still folded into runtime_doc at :235-242. What
+is open here: exactly which pointer wording goes in SKILL.md, and whether any new
+Codex-checked string is needed at all -- adding one requires the three-step
+ritual: edit the SKILL.md, add the assertion to validate-codex-skills.py, update
+CODEX-PARITY-NOTES.md.
 ```
 
 #### Session 3: Stage Boundary Semantics
@@ -347,9 +381,34 @@ per roadmap :454 and :459-460.
 - Claude's anti-stall line at skills/speckit-autopilot/SKILL.md:50-51 says "do
   not stop early, complete all 7 phases" -- unpinned prose that a --stage plan
   run contradicts verbatim, so it must be reworded to bind to the resolved stage.
-- Codex body headroom is roughly 390 words against the 8000-word cap at
-  validate-codex-skills.py:168-171.
+- Codex body headroom is 310 words, measured 2026-08-03: the SKILL.md body is
+  7690 of the 8000-word cap at validate-codex-skills.py:168-171. The cap applies
+  to the SKILL.md body alone; referenced files are uncapped and still folded into
+  runtime_doc at :235-242. Per design-concept Q10, stage prose goes in
+  phase-execution-codex.md and SKILL.md carries only the argv line and a pointer.
 - Declared budget 382 reviewable LOC, one slice. Re-estimate at G3.
+
+## Decisions fixed by the 2026-08-03 re-grill (do not re-derive)
+- Q9 -- Durable stage state lives in the workflow file, in the "Stage" row of
+  "## Specification Context -> Basic Information". autopilot-state.json mirrors
+  it for the running session only. This is the split already stated by
+  speckit-pro/skills/speckit-autopilot/contracts/autopilot-state-status.schema.json,
+  which PR #416 shipped: the state file is the in-flight pointer for one run, the
+  workflow file is the durable per-spec record and survives archive. Plan the
+  mirror-consistency mechanism, not the location.
+- Q10 -- Codex stage prose lives in phase-execution-codex.md. See the budget
+  constraint above.
+- Q11 -- Verification extends the shipped CI gate rather than adding a second
+  one: put stage-field assertions into
+  tests/speckit-pro/layer1-structural/validate-workflow-status-evidence.py, which
+  PR #416 added and which already scans every docs/ai/specs/.process/*-workflow.md
+  for status-versus-evidence contradiction. Add
+  tests/speckit-pro/unit/test-autopilot-stage-resolution.py with golden fixtures
+  for argv and auto-detect resolution, and register it in
+  tests/speckit-pro/suite-manifest.json -- the manifest is the only dispatch
+  roster. Do not name any file with "art" in it: test-unit-layout.py:122-141
+  derives live spec families from docs/ai/specs/**/*.md, so art-006 in a tracked
+  script filename is a hard failure.
 
 ## Architecture Notes
 - Stage resolution is shared logic executed by both platforms, reached on Claude
@@ -633,6 +692,24 @@ Focus on:
 
 ---
 
+## Phase 6.5: Confidence Gate
+
+**When to run:** After Phase 6 commits and before Phase 7 begins. Gate semantics
+are unchanged; this section records the verdict so a later session can read it.
+
+For ART-006 this gate is also the **plan stage's terminal step** — the stage
+boundary is a real commit, so a fresh `--stage implement` session reconstructs
+context by reading this section and the `Stage` row in Specification Context.
+
+| Field | Value |
+|-------|-------|
+| Mode | <!-- advisory (default) or strict --> |
+| Composite confidence | <!-- 0.00-1.00 --> |
+| Verdict | <!-- proceed / remediate / stop --> |
+| Evidence | <!-- what the score was computed from --> |
+
+---
+
 ## Phase 7: Implement
 
 **When to run:** After tasks.md is generated and analyzed (no coverage gaps).
@@ -682,6 +759,24 @@ Before starting any task:
 ---
 
 ## Post-Implementation Checklist
+
+The canonical closeout. Every row must reach Complete or an explicit
+`Skipped` before the run may report completion.
+
+| Canonical Item | Status | Evidence |
+|---|---|---|
+| Post: Doctor Extension Check | ⏳ Pending | |
+| Post: Verify Implementation | ⏳ Pending | |
+| Post: Verify Tasks Phantom Check | ⏳ Pending | |
+| Post: Code Review | ⏳ Pending | |
+| Post: Integration Suite | ⏳ Pending | |
+| Post: Reviewability Diff Gate | ⏳ Pending | |
+| Post: Self-Review | ⏳ Pending | |
+| Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: PR Body Generation | ⏳ Pending | |
+| Post: PR Creation | ⏳ Pending | |
+| Post: Review Remediation | ⏳ Pending | |
+| Post: Retrospective | ⏳ Pending | |
 
 <!-- Populate with your project's quality gates from the constitution -->
 
