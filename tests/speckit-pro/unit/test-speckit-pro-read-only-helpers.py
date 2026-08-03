@@ -1541,6 +1541,84 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 payload = self._feature_state(project_path)
             self.assertFalse(payload["on_feature_branch"])
 
+    @staticmethod
+    def _detected(project_path: Path) -> dict[str, object]:
+        from speckit_pro_runner.helpers.read_only import detect_commands
+
+        return json.loads(detect_commands({}, project_path)["stdout"])
+
+    def test_detect_commands_finds_repository_test_runner(self) -> None:
+        """A runner script under tests/ is real, verifiable evidence of a test command.
+
+        A repository can be pure-stdlib Python with no packaging marker at all;
+        returning every command as N/A there reads as "this project has no
+        tests" rather than "the detector stopped at the repository root".
+        """
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("test-runner discovery case uses detect-commands")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            (project_path / "tests" / "suite").mkdir(parents=True)
+            (project_path / "tests" / "suite" / "run-all.py").write_text("", encoding="utf-8")
+            payload = self._detected(project_path)
+            self.assertEqual("python", payload["stack"])
+            self.assertEqual("python3 tests/suite/run-all.py", payload["commands"]["UNIT_TEST"])
+            self.assertEqual("python3 tests/suite/run-all.py", payload["commands"]["FULL_VERIFY"])
+            self.assertEqual("test_runner_script", payload["detection"]["source"])
+            self.assertEqual("tests/suite/run-all.py", payload["detection"]["evidence"])
+
+    def test_detect_commands_recognizes_python_without_pyproject(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("python marker case uses detect-commands")
+        for marker in ("requirements.txt", "setup.py", "setup.cfg", "tox.ini", "pytest.ini", "Pipfile"):
+            with self.subTest(marker=marker):
+                with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+                    project_path = Path(project)
+                    (project_path / marker).write_text("", encoding="utf-8")
+                    payload = self._detected(project_path)
+                    self.assertEqual("python", payload["stack"])
+                    self.assertEqual("pytest", payload["commands"]["UNIT_TEST"])
+                    self.assertEqual(marker, payload["detection"]["evidence"])
+
+    def test_detect_commands_prefers_root_marker_over_runner_script(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("precedence case uses detect-commands")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            (project_path / "pyproject.toml").write_text("", encoding="utf-8")
+            (project_path / "tests" / "suite").mkdir(parents=True)
+            (project_path / "tests" / "suite" / "run-all.py").write_text("", encoding="utf-8")
+            payload = self._detected(project_path)
+            self.assertEqual("pytest", payload["commands"]["UNIT_TEST"])
+            self.assertEqual("root_marker", payload["detection"]["source"])
+
+    def test_detect_commands_runner_discovery_is_deterministic(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("determinism case uses detect-commands")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            for sub in ("zeta", "alpha"):
+                (project_path / "tests" / sub).mkdir(parents=True)
+                (project_path / "tests" / sub / "run-all.py").write_text("", encoding="utf-8")
+            first = self._detected(project_path)["commands"]["UNIT_TEST"]
+            self.assertEqual("python3 tests/alpha/run-all.py", first)
+            for _ in range(3):
+                self.assertEqual(first, self._detected(project_path)["commands"]["UNIT_TEST"])
+
+    def test_detect_commands_reports_what_it_searched_when_nothing_found(self) -> None:
+        """An empty result must say it looked, not just return a wall of N/A."""
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("no-detection case uses detect-commands")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            payload = self._detected(Path(project))
+            self.assertEqual("unknown", payload["stack"])
+            self.assertEqual("none", payload["detection"]["source"])
+            self.assertEqual("", payload["detection"]["evidence"])
+            searched = payload["detection"]["searched"]
+            self.assertIn("pyproject.toml", searched)
+            self.assertIn("package.json", searched)
+            self.assertTrue(payload["detection"]["hint"])
+
     def test_trusted_text_returns_none_on_read_error(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("trusted text read-error case uses shared helper behavior")
