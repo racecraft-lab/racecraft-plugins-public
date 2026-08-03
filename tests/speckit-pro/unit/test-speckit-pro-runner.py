@@ -561,6 +561,7 @@ class RunnerFoundationTests(unittest.TestCase):
             "docs-site/scripts/generate-reference-pages.mjs",
             "docs-site/src/data/safe-install-aids.ts",
             "docs-site/src/content/docs/reference/agents.md",
+            "docs-site/src/content/docs/reference/hooks.md",
             "docs-site/src/content/docs/reference/scripts.md",
             "docs-site/src/content/docs/reference/tests.md",
             "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",

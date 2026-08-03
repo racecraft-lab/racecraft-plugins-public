@@ -99,7 +99,7 @@ not rewritten.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 PASS — 43 FR, 4 US, SC-001…019, 0 markers; Pareto + auth amendment verified |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 PASS — 4 sessions, 6 consensus rounds, 1 Round-2 escalation; spec 43 → 50 FRs, 0 markers |
-| Plan | `/speckit-plan` | 🔄 In Progress | |
+| Plan | `/speckit-plan` | ✅ Complete | G3 PASS — `plan.md` with 0 unresolved markers; 5 artifacts incl. contracts/ |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 PASS — 4 domains, 218 items, 57 gaps found / 57 remediated; spec 50 → 58 FRs |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 PASS — 86 tasks, 14 parallel-safe, all 58 FR + 25 SC covered; route one-navigable-PR; marker plan persisted |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 PASS — 12 findings (0 CRITICAL), all remediated; 3 twin-side coordination handoffs |

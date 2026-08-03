@@ -23,6 +23,7 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+from structural_helpers import declared_hook_commands as _declared_hook_commands  # noqa: E402
 from structural_helpers import field_exists as _field_exists  # noqa: E402
 from test_result import run_counted  # noqa: E402
 
@@ -86,13 +87,15 @@ class ValidateCodexHooks(unittest.TestCase):
                 ok = False
             self.assertEqual("true", "true" if ok else "false", "hook entry must have hooks array")
 
-        with self.subTest(msg="Hook entry has an empty command list"):
-            try:
-                inner = data["hooks"]["UserPromptSubmit"][0]["hooks"]
-                ok = isinstance(inner, list) and len(inner) == 0
-            except (KeyError, TypeError, IndexError):
-                ok = False
-            self.assertEqual("true", "true" if ok else "false", "Codex plugin hook must not run a static interpreter command")
+        with self.subTest(msg="No hook event declares an executable command"):
+            declared = _declared_hook_commands(data)
+            self.assertEqual(
+                "true", "true" if not declared else "false",
+                "Plugin hook manifests declare event scope only: no hook event may "
+                "carry an executable command, because a static manifest cannot "
+                "resolve the Python 3.11+ interpreter the Installed Runtime Contract "
+                f"requires. Skills own interpreter resolution. Found: {declared}",
+            )
 
 
 def build_suite() -> unittest.TestSuite:

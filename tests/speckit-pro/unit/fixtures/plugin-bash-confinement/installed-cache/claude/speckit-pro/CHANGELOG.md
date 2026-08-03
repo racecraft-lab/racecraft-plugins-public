@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.22.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.21.1...speckit-pro-v2.22.0) (2026-08-01)
+
+
+### Features
+
+* **speckit-pro:** add the artifact gallery brand kit, routing catalog, and validation ([#407](https://github.com/racecraft-lab/racecraft-plugins-public/issues/407)) ([c4498dd](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c4498dd0ce0a85618b8e923108682c4818c083f6))
+
+
+### Bug Fixes
+
+* **speckit-pro:** enforce autopilot phase bookkeeping on both platforms ([#416](https://github.com/racecraft-lab/racecraft-plugins-public/issues/416)) ([ccc4e7d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/ccc4e7d6801bb009108a6638282ec1c15f926a56))
+* **speckit-pro:** make the codex autopilot phase guard runnable on any python setup ([#417](https://github.com/racecraft-lab/racecraft-plugins-public/issues/417)) ([a6704ce](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a6704ce0b766378b0c635964b02d86317ecbcb7b))
+* **speckit-pro:** scan artifact script bodies for external references and prohibited constructs ([#409](https://github.com/racecraft-lab/racecraft-plugins-public/issues/409)) ([a6cc2b2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a6cc2b21bad2fa0514eacc4032f296ddd332cc3c))
+
 ## [2.21.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.21.0...speckit-pro-v2.21.1) (2026-07-28)
 
 

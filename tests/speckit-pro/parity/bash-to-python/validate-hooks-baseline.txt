@@ -8,5 +8,5 @@
 008 Hook entry has matcher field (scopes to plugin command_name)
 009 Matcher contains plugin-scoping regex (speckit-pro: or speckit. or speckit- or grill-me)
 010 Hook entry has hooks array
-011 Hook entry has an empty command list
+011 No hook event declares an executable command
 TOTAL: 11

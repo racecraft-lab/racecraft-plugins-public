@@ -163,6 +163,92 @@ WORKFLOW_UNSCOPED_CHECKPOINT_CLAIM_RE = re.compile(
 WORKFLOW_PLAN_STATUS_RE = re.compile(
     r"(?m)^-\s+Plan status:\s+`([a-z][a-z0-9_-]*)`\s*$"
 )
+WORKFLOW_OVERVIEW_HEADING = "## Workflow Overview"
+WORKFLOW_CRITERIA_HEADING_PREFIX = "### Phase Gates"
+WORKFLOW_PHASE_GATE_IDS = {
+    "Specify": "1",
+    "Clarify": "2",
+    "Plan": "3",
+    "Checklist": "4",
+    "Tasks": "5",
+    "Analyze": "6",
+    "Confidence Gate": "6.5",
+    "Implement": "7",
+}
+# Rows the main phase loop never drives. A recorded gate PASS still forces them
+# terminal, but leaving one open must not make every row below it read as out of
+# order -- G6.5 is advisory by default, so Pending is its normal resting state.
+WORKFLOW_ADVISORY_PHASES = frozenset({"Confidence Gate"})
+WORKFLOW_TERMINAL_STATUSES = frozenset({
+    "Complete",
+    "✅ Complete",
+    "Skipped",
+    "✅ Skipped",
+    # U+23ED with and without the U+FE0F variation selector; both render alike.
+    "⏭ Skipped",
+    "⏭️ Skipped",
+})
+WORKFLOW_OPEN_STATUSES = frozenset({
+    "Pending",
+    "⏳ Pending",
+    "In Progress",
+    "\U0001f504 In Progress",
+    "Blocked",
+    # U+26A0 with and without the U+FE0F variation selector; both render alike.
+    "⚠ Blocked",
+    "⚠️ Blocked",
+})
+WORKFLOW_STATUS_VALUES = WORKFLOW_TERMINAL_STATUSES | WORKFLOW_OPEN_STATUSES
+# Markdown list, task-list, blockquote, and heading prefixes are stripped before
+# matching so a gate recorded as `- G3 gate: PASS` is evidence like any other.
+GATE_LINE_PREFIX_RE = re.compile(
+    r"^[ \t]*(?:(?:[-*+]|[0-9]+\.)[ \t]+(?:\[[ xX]\][ \t]+)?|>[ \t]*|#{1,6}[ \t]+)+"
+)
+_GATE_ID = r"G(?P<gate>[0-9](?:\.5)?)"
+_GATE_EMPHASIS = r"[ \t*_`]*"
+_GATE_LABEL = r"(?:Gate|GATE|gate|Result|Status|Validation|Confidence[ \t]+[Gg]ate)"
+_GATE_VERDICT = (
+    r"(?:PASS(?:ED)?|Pass(?:ed)?|pass(?:ed)?)"
+    r"(?![A-Za-z])"
+    r"(?![ \t]+(?i:only|when|if|once|unless|after|requires|criteria)\b)"
+)
+# The check mark is allowed on either side of the gate id: `✅ G4 PASS` and
+# `G4: ✅ PASS` are both recorded verdicts in the live corpus.
+_GATE_TICK = r"(?:[✅✓][ \t]*)?"
+GATE_RECORD_INLINE_RE = re.compile(
+    r"(?:^|\||\*\*)" + _GATE_EMPHASIS + _GATE_TICK + _GATE_EMPHASIS
+    + r"(?:Gate[ \t]+)?" + _GATE_ID + _GATE_EMPHASIS
+    + r"(?:" + _GATE_LABEL + _GATE_EMPHASIS + r")?[:—–-]?" + _GATE_EMPHASIS
+    + _GATE_TICK + _GATE_EMPHASIS + _GATE_VERDICT
+)
+GATE_RECORD_CELL_RE = re.compile(
+    r"\|" + _GATE_EMPHASIS + _GATE_TICK + _GATE_EMPHASIS
+    + r"(?:Gate[ \t]+)?" + _GATE_ID + _GATE_EMPHASIS
+    + r"(?:" + _GATE_LABEL + r")?" + _GATE_EMPHASIS
+    + r"\|[ \t]*" + _GATE_TICK + r"\*{0,2}" + _GATE_VERDICT
+)
+GATE_RECORD_JSON_RE = re.compile(
+    r'"gate"[ \t]*:[ \t]*"' + _GATE_ID + r'"[^{}]*?"pass"[ \t]*:[ \t]*true'
+)
+GATE_RECORD_PATTERNS = (GATE_RECORD_INLINE_RE, GATE_RECORD_CELL_RE, GATE_RECORD_JSON_RE)
+HTML_COMMENT_RE = re.compile(r"(?s)<!--.*?-->")
+# Named rule groups for ``--rule``. A caller that only wants the bookkeeping
+# rule enforced can gate on it without newly enforcing the structural coverage
+# checks, which most of the existing workflow corpus predates.
+RULE_PROBLEM_KEYS = {
+    "status-evidence": ("workflow_status_evidence_errors", "state_status_errors"),
+    "coverage": (
+        "missing_workflow_sections",
+        "missing_workflow_tokens",
+        "missing_workflow_post_items",
+        "missing_state_prefixes",
+        "missing_state_post_items",
+    ),
+}
+STATE_STATUS_SCHEMA_PATH = (
+    Path(__file__).resolve().parents[1] / "contracts" / "autopilot-state-status.schema.json"
+)
+
 WORKFLOW_FINGERPRINT_FIELDS = (
     ("Feature spec", "feature_spec_sha"),
     ("Plan-declared scope", "plan_declared_scope_sha"),
@@ -3746,6 +3832,119 @@ def validate_projection_integrity(
     }
 
 
+def _markdown_without_comments(text: str) -> str:
+    """Blank HTML comment spans while preserving line numbering."""
+    return HTML_COMMENT_RE.sub(lambda m: "\n" * m.group(0).count("\n"), text)
+
+
+def _workflow_table_rows(lines: list[str], start: int) -> list[int]:
+    rows: list[int] = []
+    for index in range(start, len(lines)):
+        stripped = lines[index].strip()
+        if stripped.startswith("|") and stripped.endswith("|"):
+            rows.append(index)
+        elif rows:
+            break
+        elif stripped.startswith("#"):
+            # A section with no table of its own must not adopt a later one.
+            break
+    return rows
+
+
+def workflow_overview_rows(lines: list[str]) -> list[int]:
+    for index, line in enumerate(lines):
+        if line.strip() == WORKFLOW_OVERVIEW_HEADING:
+            return _workflow_table_rows(lines, index + 1)
+    return []
+
+
+def workflow_criteria_rows(lines: list[str]) -> set[int]:
+    rows: set[int] = set()
+    for index, line in enumerate(lines):
+        if line.strip().startswith(WORKFLOW_CRITERIA_HEADING_PREFIX):
+            rows.update(_workflow_table_rows(lines, index + 1))
+    return rows
+
+
+def gate_record_ids(line: str) -> set[str]:
+    unprefixed = GATE_LINE_PREFIX_RE.sub("", line)
+    return {
+        match.group("gate")
+        for pattern in GATE_RECORD_PATTERNS
+        for match in pattern.finditer(unprefixed)
+    }
+
+
+def workflow_status_evidence_errors(text: str) -> list[str]:
+    """Report Workflow Overview rows contradicted by the file's own gate records.
+
+    Fenced blocks are deliberately NOT stripped: runner gate output is routinely
+    recorded as fenced JSON, so it is evidence rather than illustration. HTML
+    comments are blanked so a commented-out example cannot become evidence.
+    """
+    lines = _markdown_without_comments(text).splitlines()
+    rows = workflow_overview_rows(lines)
+    if len(rows) < 3:
+        return ["workflow has no parseable Workflow Overview table"]
+    excluded = set(rows) | workflow_criteria_rows(lines)
+    records: dict[str, int] = {}
+    for index, line in enumerate(lines):
+        if index in excluded:
+            continue
+        for gate in gate_record_ids(line):
+            records.setdefault(gate, index + 1)
+    errors: list[str] = []
+    first_open: tuple[int, str, str] | None = None
+    for index in rows[2:]:
+        stripped = lines[index].strip()
+        cells = [cell.strip() for cell in stripped[1:-1].split("|")]
+        if len(cells) < 3:
+            continue
+        phase, status = cells[0], cells[2]
+        number = index + 1
+        if status not in WORKFLOW_STATUS_VALUES:
+            errors.append(
+                f"workflow status row {number} for {phase!r} uses unsupported status {status!r}"
+            )
+        gate = WORKFLOW_PHASE_GATE_IDS.get(phase)
+        if gate is not None and gate in records and status not in WORKFLOW_TERMINAL_STATUSES:
+            errors.append(
+                f"workflow status row {number} for {phase!r} reads {status!r} but the workflow"
+                f" records a G{gate} PASS at line {records[gate]}"
+            )
+        if status in WORKFLOW_TERMINAL_STATUSES:
+            if first_open is not None:
+                errors.append(
+                    f"workflow status row {number} for {phase!r} reads {status!r} while earlier"
+                    f" row {first_open[0]} for {first_open[1]!r} still reads {first_open[2]!r}"
+                )
+        elif first_open is None and phase not in WORKFLOW_ADVISORY_PHASES:
+            first_open = (number, phase, status)
+    return errors
+
+
+def validate_workflow_status_evidence(text: str) -> dict[str, list[str]]:
+    return {"workflow_status_evidence_errors": workflow_status_evidence_errors(text)}
+
+
+def validate_state_status(state: dict[str, Any]) -> dict[str, list[str]]:
+    """Validate the top-level autopilot run status against its canonical schema.
+
+    The check closes the status vocabulary; it does not mandate the field, so a
+    legacy state that predates ``status`` still validates. When the canonical
+    schema is not readable beside this script -- which happens whenever the
+    validator is copied out of the repository -- the check is skipped rather
+    than failed, so an extracted copy cannot manufacture a false violation.
+    """
+    if not STATE_STATUS_SCHEMA_PATH.is_file():
+        return {"state_status_errors": []}
+    schema, errors = _canonical_schema(STATE_STATUS_SCHEMA_PATH, "autopilot-state status")
+    if schema is None:
+        return {"state_status_errors": errors}
+    errors.extend(_json_schema_errors(state, schema, schema, "autopilot_state"))
+    return {"state_status_errors": errors}
+
+
 def build_report(
     workflow: Path,
     state: Path,
@@ -3767,6 +3966,8 @@ def build_report(
         workflow_authority_errors
     )
     state_result = validate_state(plan_steps)
+    status_result = validate_state_status(state_data)
+    workflow_status_result = validate_workflow_status_evidence(workflow_text)
     projection_result = validate_projection_integrity(
         state_data,
         plan_steps,
@@ -3781,6 +3982,8 @@ def build_report(
     )
     problems = {
         **workflow_result,
+        **workflow_status_result,
+        **status_result,
         **workflow_checkpoint_result,
         **state_result,
         **projection_result,
@@ -3809,6 +4012,16 @@ def main(argv: list[str] | None = None) -> int:
         "--expected-head-commit",
         help="live PR headRefOid authority required when pr-marker-plan.v2 uses a changed-file manifest",
     )
+    parser.add_argument(
+        "--rule",
+        action="append",
+        choices=sorted(RULE_PROBLEM_KEYS),
+        help=(
+            "Limit the exit code to the named rule. The full report is always printed; "
+            "only which problem lists decide pass/fail changes. Repeatable. "
+            "Omit to gate on every check."
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -3823,6 +4036,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     print(json.dumps(report, sort_keys=True))
+    if args.rule:
+        selected: list[str] = []
+        for rule in args.rule:
+            selected.extend(RULE_PROBLEM_KEYS[rule])
+        return 0 if all(not report.get(key) for key in selected) else 1
     return 0 if report["status"] == "pass" else 1
 
 
