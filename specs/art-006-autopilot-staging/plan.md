@@ -166,6 +166,19 @@ never hand-edited (root `AGENTS.md`, "Editing Boundaries"):
   plus its report line (≈3). All three narrow behaviour that was already in
   scope; none adds a capability, a file, or a surface. Posture is unchanged —
   still warn on LOC and file count, block on neither.
+- **Phase 4 increment, second checklist (+7 LOC, 446 → 453, no new file, no new
+  surface, no new requirement)**: the error-handling checklist closed six defects
+  by tightening FR-007, FR-009, and FR-010a and by repairing a self-contradiction
+  in the invocation contract. Three cost nothing — the Stop-hook exclusion is an
+  Out of Scope entry, the failing-verdict record-form constraint governs a string
+  already being written, and the contract's exit-code split only removes an
+  ambiguity. Four carry lines: the stage-bounded phase scan and its blocked-row
+  re-entry (≈3 across `SKILL.md` and `phase-execution.md`), the explicit-only
+  scoping of the `--from-phase` range conflict (≈1 in `read_only.py`), the
+  unreadable/unparseable rejection (≈2, reusing the existing unparseable-table
+  notion), and the non-terminal-verdict diagnostic (≈1, extending the diagnostic
+  FR-010a already mandates). Posture unchanged — warn on LOC and file count,
+  block on neither, still far under the 800-LOC block line.
 - **Split decision**: **one slice, no split** — unchanged from spec.md:369-375.
   The 48-LOC growth over the ratified 382 comes entirely from the Clarify phase
   adding nine lettered sub-requirements that *narrow* existing behaviour, and
@@ -340,6 +353,22 @@ the terminal commit is added after the gate resolves; the six per-phase
 and an implementation-stage entry reads the recorded G6.5 verdict instead of
 re-running the gate, emitting the FR-010a diagnostic when a confidence-mode flag
 is accepted but unused.
+
+Two further edits in the same file come from the Phase 4 error-handling
+checklist. The strict-mode STOP guidance at `:622-624` names `--from-phase
+implement`; it is reworded to name `--stage implement`, the direct expression of
+the same intent (FR-007 keeps the `--from-phase` form working, so older guidance
+still resolves). And the Step 1 phase scan at `SKILL.md:365-366` — "the first
+phase with status `⏳ Pending` or `🔄 In Progress`" — must become stage-bounded
+rather than table-wide. `⚠ Blocked` is a legal open status
+(`validate-autopilot-phase-coverage.py:191-200`) that this scan matches
+**neither** arm of, and `Confidence Gate` is in `WORKFLOW_ADVISORY_PHASES`
+(`:181`) so the ordering rule at `:3921` will not flag it either. Left as-is, a
+strict-mode stop leaves the gate row blocked and the scan selects the
+implementation row — the resolved stage reads `plan` while the loop starts Phase
+7. That is the flagship silent failure, so the scan must select only within the
+resolved stage's range and must treat a non-terminal `Confidence Gate` row as the
+planning stage's re-entry point (FR-009).
 
 In `references/task-list-canonical.md`: out-of-stage entries take
 `skipped: <reason>` in the **status** field with the entry **name byte-identical**,

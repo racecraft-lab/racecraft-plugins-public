@@ -144,16 +144,44 @@ Rejection happens during opening preparation, before any phase work, so a
 rejected run leaves no partial phase output (SC-005). `--from-phase` naming a
 phase *inside* the resolved stage's range is accepted and is not a conflict.
 
+**The range conflict is tested only against an explicitly named stage** (FR-007).
+When the stage was auto-detected, `--from-phase` never conflicts with it. The
+reason is concrete: after a strict-mode gate stop, auto-detection resolves `plan`
+because the `Confidence Gate` row is non-terminal, and the shipped stop guidance
+tells the operator to resume at the implementation phase. Testing the conflict
+against the auto-detected stage would reject exactly that documented resume and
+strand the operator at the only boundary the argument exists to cross. An
+operator who means to cross states it — `--stage implement` — and gets the FR-010a
+diagnostic naming the refused verdict they are proceeding past.
+
+That shipped stop guidance currently names `--from-phase implement`. Because this
+change makes `--stage implement` the direct way to express the same intent, the
+guidance is updated to name the stage argument; the `--from-phase` form keeps
+working under the rule above, so no operator following older guidance is stranded.
+
 ### Exit codes
 
 | Code | Meaning |
 |---|---|
 | 0 | Resolved. Envelope on stdout. |
-| 2 | Input error — invalid or conflicting arguments, unreadable workflow file, or a path outside the trust boundary. |
+| 2 | Input error — invalid or conflicting arguments, a workflow file that cannot be read, a workflow file whose `## Workflow Overview` table cannot be parsed, or a path outside the trust boundary. |
 
-Exit 1 is not used: there is no "expected failure" for this operation. An
-unreadable or `Stage`-less workflow file is not a failure — a missing `Stage` row
-degrades to `recorded_stage: null` and resolves through auto-detection.
+Exit 1 is not used: there is no "expected failure" for this operation.
+
+Two cases that look alike are deliberately split, because collapsing them is how
+this operation would produce the flagship silent failure:
+
+- A **readable** workflow file carrying **no `Stage` row** is not a failure. It
+  degrades to `recorded_stage: null` and resolves through auto-detection (FR-008a).
+  This is the common case — nearly every workflow file in the tree predates the
+  entry.
+- A workflow file that **cannot be read**, or whose status table **cannot be
+  parsed**, is exit 2. Auto-detection has no input in that case, and every
+  degraded default resolves the planning stage — which would re-run finished work
+  whenever the file is merely transiently unreadable. Rejecting is the only answer
+  that cannot be silently wrong (FR-007). The at-rest validator already treats an
+  unparseable overview table as its own violation class rather than as an empty
+  table, so this operation matches a distinction the suite already draws.
 
 ## 4. Reporting obligation
 

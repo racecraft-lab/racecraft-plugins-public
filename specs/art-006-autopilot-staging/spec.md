@@ -147,6 +147,15 @@ each resolves to the expected stage and reports the resolution before starting.
   than failing. The guard cannot currently be relied on to detect this itself: run
   against a mismatched slot it exits zero and reports a pass, so re-initialisation
   must not be ordered after it.
+- **Planning stage re-entered after a refused gate.** When the confidence gate
+  stopped the previous planning run, every planning row is terminal while the
+  `Confidence Gate` row is not. A later invocation resolves the planning stage and
+  re-enters *at the confidence gate* — neither at the implementation phase, which
+  is the first row an unmodified status scan would otherwise select, nor by
+  re-running the six finished planning phases.
+- **Unreadable workflow file or unparseable status table.** Rejected during
+  opening preparation rather than degraded to a default, because a default would
+  read every planning row as incomplete and re-plan finished work.
 - **Archived specification.** Because the workflow file survives archiving, the
   recorded stage remains readable after the specification directory is archived.
 
@@ -201,7 +210,17 @@ each resolves to the expected stage and reports the resolution before starting.
 - **FR-007**: An unrecognized stage value, or a stage argument that conflicts with
   another argument in the same invocation, MUST be rejected during opening
   preparation with a non-zero exit and a message naming the problem, before any
-  phase work begins.
+  phase work begins. The conflict test MUST be applied only against an
+  **explicitly named** stage. A `--from-phase` value is never in conflict with an
+  *auto-detected* stage: auto-detection reads the same status table the operator
+  is resuming against, and rejecting that pair would strand the operator at the
+  one boundary a resume argument exists to cross. A workflow file that cannot be
+  read at all, or whose phase status table cannot be parsed, MUST likewise be
+  rejected here rather than degraded to a default. Degrading it would leave every
+  planning row reading non-terminal and resolve the planning stage over finished
+  work — the flagship silent failure, reached through an unreadable file instead
+  of a wrong one. Absence of the `Stage` entry inside an otherwise readable file
+  is a different case and remains legal under FR-008a.
 - **FR-008**: The workflow file MUST be the authoritative durable store of the
   stage, recorded as a `Stage` entry in its basic-information table. The running
   session's state file MUST carry a mirrored copy for the active run only and MUST
@@ -246,7 +265,21 @@ each resolves to the expected stage and reports the resolution before starting.
   advance off its pending state to a non-terminal blocked status rather than to a
   terminal one. That keeps FR-008b's non-empty guarantee intact — the row always
   changes — while leaving FR-006a's predicate unsatisfied, so a boundary the gate
-  refused is not then crossed by a later bare invocation.
+  refused is not then crossed by a later bare invocation. Two further constraints
+  make that guarantee real rather than nominal. First, the stage-bounded phase
+  loop MUST select its starting phase from **within the resolved stage's range
+  only**. The shipped loop scans for the first row reading pending or in-progress,
+  and a blocked row matches neither, so after a strict-mode stop the unmodified
+  scan skips the blocked `Confidence Gate` row and lands on the implementation
+  row — resolving the planning stage while starting the very phase the gate just
+  refused. A non-terminal `Confidence Gate` row MUST therefore make the planning
+  stage re-enter **at the confidence gate**, and a resolved stage MUST NOT start a
+  phase outside its own range even when that row is the first non-terminal one in
+  the table. Second, the recorded failing verdict MUST be written in a form the
+  shipped gate-record matcher does not read as a pass. A row left non-terminal
+  beside a record that scans as a passing confidence gate is exactly the
+  status-versus-evidence contradiction FR-014's two checks fail on, which would
+  turn every strict-mode stop into a tree-wide gate failure.
 - **FR-009a**: The per-phase staged path set MUST be an explicit enumeration of the
   specification directory, the workflow file, and the state file. It MUST NOT be
   expressed as the workflow *directory*, because that directory also holds
@@ -292,7 +325,15 @@ each resolves to the expected stage and reports the resolution before starting.
   already advertises them unconditionally and FR-013 confines Codex changes to
   additive ones. It MUST emit an explicit diagnostic stating that the confidence
   gate is not run in this stage and that the recorded verdict is read instead, so
-  an accepted flag never silently does nothing. (Clarify S3/Q4, settled once the
+  an accepted flag never silently does nothing. When the verdict read from that
+  row is **non-terminal** — the state a strict-mode stop leaves behind under
+  FR-009 — the same diagnostic MUST name it and MUST state that the run is
+  proceeding past a boundary the gate refused. Naming the implementation stage
+  explicitly remains sufficient to proceed, because that is the operator decision
+  the gate's own stop guidance describes; what MUST NOT happen is crossing that
+  boundary silently. This is the one path by which an explicitly named stage
+  crosses a boundary FR-006a keeps closed to auto-detection, so it is the path
+  that most needs to be visible. (Clarify S3/Q4, settled once the
   Round 2 tiebreak established that both distributions already accept those flags
   behaviourally.)
 - **FR-011**: The canonical task list MUST NOT be truncated per stage. Entries
@@ -531,6 +572,18 @@ each resolves to the expected stage and reports the resolution before starting.
   absent branch would be exercised.
 - Draft-pull-request creation, the review feedback sweep, and the scaffold-side
   chain implementation, each owned by a named downstream specification.
+- **Any harness stop-hook enforcement of the stage boundary.** The design concept
+  weighed a `Stop` hook as an enforcement primitive, scoped and fail-open, with
+  the note that one distribution's stop input carries a re-entry field the other
+  lacks so that side would need its own explicit bounded re-entry guard. No such
+  hook ships in this slice: both distributions' hook manifests declare only their
+  existing prompt-time events with empty handler lists, and this specification
+  adds no handler. Stage enforcement is exactly the two surfaces FR-014 names —
+  the in-run coverage guard and the agent-independent at-rest validator — neither
+  of which runs at session end. Nothing here can therefore hold a session open or
+  strand an operator in a continuation loop, and no re-entry guard is required.
+  If a stop-hook primitive is wanted later it belongs to the specification that
+  introduces it, together with its own fail-open and re-entry obligations.
 - Any change to what a gate passes or fails on. Gate semantics are untouched;
   only which stage owns the confidence gate is decided here.
 - Truncating the canonical task list per stage.

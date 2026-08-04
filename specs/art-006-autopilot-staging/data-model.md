@@ -169,8 +169,18 @@ work begins.
 The `Confidence Gate` row is in the predicate on purpose (FR-006a). A strict-mode
 gate stop leaves the six planning rows terminal but that row **blocked**, so the
 boundary the gate refused stays closed to a later bare invocation; crossing it
-then requires an explicit `--stage implement`, which is the operator decision the
-gate's own stop guidance describes.
+then requires an explicit `--stage implement`, and that crossing is reported
+rather than silent (FR-010a). The gate's own stop guidance currently names
+`--from-phase implement` for the same operator decision; FR-007 keeps that form
+working — a `--from-phase` value never conflicts with an *auto-detected* stage —
+and the guidance is reworded to name the stage argument directly.
+
+Auto-detection resolving `plan` here is only half the guarantee. The phase loop
+picks its starting row by a **separate** scan for the first pending or in-progress
+row, and `blocked` matches neither, so an unmodified scan would skip the gate row
+and start at the implementation row while the resolved stage read `plan`. FR-009
+therefore bounds that scan to the resolved stage's range and makes a non-terminal
+`Confidence Gate` row the planning stage's re-entry point.
 
 ### Slot reclaim
 

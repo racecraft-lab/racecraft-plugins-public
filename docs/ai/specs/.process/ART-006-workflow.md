@@ -148,6 +148,7 @@ budget and split decision as the warn path requires:
 | **Adopted — honest count, `gh` deferred (3, 12, 14, modify)** | **382** | **1** | **ok** |
 | If `gh` had stayed in scope (3, 14, 18, modify) | 452 | 2 | warn |
 | **G3 re-estimate against real artifacts (2026-08-04)** | **430** | **1** | **warn** |
+| After Phase 4 checklists 1–2 (+16 state-management, +7 error-handling) | **453** | 1 | warn |
 
 **Split decision: one slice, no split.** The work is vertical — one capability
 cutting end-to-end through argv, resolution, the phase loop, durable state, and
@@ -622,7 +623,7 @@ Focus on Autopilot Staging requirements:
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
 | state-management | 39 | 6 raised, 6 remediated, 0 outstanding | FR-006a (new), FR-009, FR-009a, FR-010a, FR-012a, FR-012b (new), plan.md sweep scope |
-| error-handling | | | |
+| error-handling | 46 | 8 raised, 8 remediated, 0 outstanding | FR-007, FR-009, FR-010a, contracts/stage-invocation.md exit-code split, new Out of Scope entry (stop hook) |
 | api-contracts | | | |
 | **Total** | | | |
 
