@@ -4,7 +4,7 @@
   "feature_dir": "specs/art-006-autopilot-staging",
   "branch": "art-006-autopilot-staging",
   "status": "in_progress",
-  "active_step": "Phase 7: Implement",
+  "active_step": "Post: Code Review",
   "updated_at": "2026-08-04T00:00:00Z",
   "stage": "plan",
   "prior_run_note": "Previous state pointed at ART-001 (completed_archived). autopilot-state.json is the current-in-flight pointer for one run and is overwritten per run; ART-001's durable record remains its own workflow file, which survives archive.",
@@ -108,31 +108,31 @@
     },
     {
       "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "skipped: doctor extension not installed"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Self-Review",
@@ -170,5 +170,20 @@
       "l4": 5423,
       "l5": 186
     }
+  },
+  "test_baseline_final": {
+    "passed": 7226,
+    "total": 7226,
+    "g0_baseline": 7052
+  },
+  "final_reviewability": {
+    "logic_lines": 340,
+    "prose_lines": 535,
+    "test_lines": 1152,
+    "human_reviewable_total": 2020,
+    "files": 29,
+    "declared": 459,
+    "declared_files": 17,
+    "verdict": "over declared budget; composition recorded; split decision deferred to human reviewer"
   }
 }

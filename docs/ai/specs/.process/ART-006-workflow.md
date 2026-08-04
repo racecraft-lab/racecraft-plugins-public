@@ -72,7 +72,7 @@ captured during scoping.
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 passed. 43 tasks, 6 phases, TDD-ordered (tests precede implementation in every story). All 33 normative items traced; FR-016 is documentation-only and correctly carries no implementation task. 0 markers, 0 leaked paths |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 passed. 0 CRITICAL, 0 HIGH, 3 MEDIUM, 1 LOW — all remediated. Cross-artifact drift only; `spec.md` untouched. 86 citations verified in range |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory mode, composite 0.88, verdict **proceed**. G0 baseline preserved at 7052/7052. Plan stage's terminal step (design concept Q7) |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Implement | `/speckit-implement` | ✅ Complete | All 43 tasks (T001–T043). Suite 7226/7226, up from the 7052 baseline. Codex body 7795/8000 (headroom 205). Regeneration idempotent |
 | Post | Post-Implementation | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -923,6 +923,45 @@ Before starting any task:
 | 2 - User Story 1 | | | |
 | 3 - User Story 2 | | | |
 | 4 - Polish | | | |
+
+---
+
+## Final Reviewability Measurement (post-implementation, measured)
+
+This is the first measurement of the **real diff**. Every earlier figure in this
+file was a forward estimate from signals; the runner's `reviewability-gate` is
+setup-mode only (`speckit-pro/speckit_pro_runner/helpers/read_only.py:961`) and
+structurally cannot measure a diff.
+
+| Bucket | Files | Added lines |
+|---|---|---|
+| **Logic — Python and JSON** | 6 | **340** |
+| Skill and reference prose — markdown | 7 | 535 |
+| Tests (largely table-driven golden fixtures) | 18 | 1152 |
+| Generated payloads, manifests, cache proofs — not human-reviewed | 50 | 3019 |
+| Specification and planning documents | 18 | 4694 |
+| **Human-reviewable total (logic + prose + tests)** | **29** | **2020** |
+
+**Against the declared budget this is an overrun, and it is recorded as one.**
+The declared position was 459 reviewable LOC across 17 files, with thresholds of
+400 warn / 800 block and 15 warn / 25 block. The human-reviewable total exceeds
+both block lines.
+
+Two facts qualify that without excusing it. First, the **logic** change is 340
+lines — under the 400 warn line — concentrated in
+`speckit-pro/speckit_pro_runner/helpers/read_only.py` (246), the phase-coverage
+guard (69), and small registry and schema additions. Second, 1152 of the
+remaining lines are tests, dominated by one table-driven fixture file whose rows
+review far faster per line than logic does, and 535 are skill and reference
+prose, which for a plugin marketplace *is* the shipped artifact rather than
+commentary on it.
+
+**The split decision is deliberately left to the human reviewer**, with the
+composition above rather than a single number, because a raw line count of a
+diff this heterogeneous does not by itself say whether the change is reviewable.
+The estimator's forward guess was 459; the outcome is 2020 human-reviewable
+lines of which 340 are logic. That gap is the finding, and it is a finding about
+the estimator as much as about this slice.
 
 ---
 
