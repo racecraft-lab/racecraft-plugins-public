@@ -28,7 +28,13 @@ registered inside the `status-evidence` rule tuple the autopilot already invokes
 (`speckit-pro/skills/speckit-autopilot/SKILL.md:398`) so it can actually change
 the exit code. The agent-independent half extends
 `tests/speckit-pro/layer1-structural/validate-workflow-status-evidence.py:284`,
-which already sweeps every `docs/ai/specs/.process/*-workflow.md` in CI.
+which already sweeps `*-workflow.md` under **two** directories, not one:
+`WORKFLOW_DIRS` at `:28-30` is `(docs/ai/specs/.process/, docs/ai/specs/)`, and
+its own comment states the legacy location is scanned "so a contradicting file
+cannot merge from either directory". That is 51 files plus 6 — the 57 that
+spec.md:206-210 counts. The new `Stage` assertion MUST inherit the two-directory
+sweep rather than being scoped to `.process/`; scoping it narrower would leave
+six workflow files unchecked and would not deliver SC-006's tree-wide guarantee.
 
 ## Technical Context
 
@@ -74,7 +80,8 @@ test files; 57 existing workflow files in the tree must keep validating, and all
 but one of them carry no `Stage` entry (spec.md:206-210).
 
 **Reviewability Budget**: primary surface harness/adapter (single); secondary
-docs/process; projected reviewable LOC 430; production files 0 (estimator
+docs/process; projected reviewable LOC 446 (430 at G3, plus 16 from the Phase 4
+state-management checklist — see "Phase 4 increment" below); production files 0 (estimator
 classification — 11 shipped-source files change, none of which the estimator's
 `src/`/`app/`/`lib/`/`scripts/`/TS/JS/SQL heuristic at
 `speckit-pro/speckit_pro_runner/helpers/read_only.py:3939-3940` counts as
@@ -143,11 +150,22 @@ never hand-edited (root `AGENTS.md`, "Editing Boundaries"):
   its shared runner logic. **Secondary surfaces**: docs/process, the two
   distributions' reference documents. One primary surface, which is the single
   dimension the constitution treats as an unconditional blocker.
-- **Budget position**: projected reviewable LOC 430 against a 400 warn / 800
+- **Budget position**: projected reviewable LOC 446 against a 400 warn / 800
   block threshold; total files 17 against 15 warn / 25 block. **Warn on two
   dimensions, block on none.** The scaffold-time setup gate returned the same
   posture (`status: warn`, `pass: true`, `blockers: []`,
   `docs/ai/specs/.process/ART-006-workflow.md:139-141`).
+- **Phase 4 increment (+16 LOC, 430 → 446, no new file, no new surface)**: the
+  state-management checklist closed six requirement defects. Four cost nothing to
+  implement — FR-009a's phase scoping and FR-012a's unscoped trigger only prevent
+  wrong edits, and the two-directory validator sweep reuses the module's own
+  `workflow_files(*WORKFLOW_DIRS)` rather than a fresh glob. Three carry real
+  lines: FR-006a's predicate row set and its absent-row case (≈4 in
+  `read_only.py`, ≈6 in the new unit test's fixtures), FR-010a's
+  `confidence_gate_status` envelope field (≈3), and FR-012b's predecessor status
+  plus its report line (≈3). All three narrow behaviour that was already in
+  scope; none adds a capability, a file, or a surface. Posture is unchanged —
+  still warn on LOC and file count, block on neither.
 - **Split decision**: **one slice, no split** — unchanged from spec.md:369-375.
   The 48-LOC growth over the ratified 382 comes entirely from the Clarify phase
   adding nine lettered sub-requirements that *narrow* existing behaviour, and
@@ -243,7 +261,14 @@ Add to `speckit-pro/speckit_pro_runner/helpers/read_only.py`, beside
 - `workflow_stage_signals(text)` — reads the `Stage` row out of
   `### Basic Information` and derives planning-phase completeness from the
   `## Workflow Overview` status table, reusing the terminal-status vocabulary the
-  guard already publishes.
+  guard already publishes. Per FR-006a the predicate row set is the six planning
+  rows **plus** `Confidence Gate`, with an absent `Confidence Gate` row treated as
+  non-blocking. Reuse `TERMINAL_STATUSES` but **not** `ADVISORY_PHASES`
+  (`validate-workflow-status-evidence.py:80-81`): that frozenset excludes the
+  `Confidence Gate` row from the *ordering* rule because the phase loop does not
+  drive it, which is a different question from whether planning finished.
+  Inheriting it here is the FR-006a mistake — it would resolve `implement`
+  straight after a strict-mode gate stop.
 - `resolve_autopilot_stage(inputs, repo_root)` — the registered entry point.
   Returns a JSON envelope carrying the resolved stage, its source, and the basis
   string the orchestrator prints (FR-006's "report the resolution before work
@@ -372,10 +397,13 @@ closing the stage vocabulary for free.
   `<family>[-_]\d{3}[a-z]?`, so `art-006` would fail but
   `test-autopilot-stage-resolution` does not match at all.
 - **MODIFIED** `tests/speckit-pro/layer1-structural/validate-workflow-status-evidence.py`
-  — a subTest asserting that any `Stage` row present in any workflow file under
-  `docs/ai/specs/.process/` carries one of the three literals, and that a file
-  with no `Stage` row is accepted. Absence must stay legal: 56 of the 57 workflow
-  files carry no entry (spec.md:206-210).
+  — a subTest asserting that any `Stage` row present in any workflow file the
+  module already sweeps — both `WORKFLOW_DIRS`, not `.process/` alone — carries
+  one of the three literals, and that a file with no `Stage` row is accepted.
+  Absence must stay legal: 56 of the 57 workflow files carry no entry
+  (spec.md:206-210). Reuse `workflow_files(*WORKFLOW_DIRS)` (`:146-152`, `:285`)
+  rather than a fresh glob, so the assertion cannot drift narrower than the
+  sweep SC-006 depends on.
 - **MODIFIED** `tests/speckit-pro/suite-manifest.json` — register the new test in
   `layers[id=4].scripts` as `{path, label, baseline: null}`. This is the only
   dispatch roster; an unregistered test never runs.

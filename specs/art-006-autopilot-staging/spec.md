@@ -184,6 +184,20 @@ each resolves to the expected stage and reports the resolution before starting.
   to the implementation stage, otherwise the planning stage — and MUST report the
   resolved stage and its basis before phase work begins. An explicitly named stage
   MUST override this resolution.
+- **FR-006a**: The "all planning phases complete" predicate MUST be an enumerated
+  row set, not an inferred one: the six planning phase rows *and* the
+  `Confidence Gate` row must all read a terminal status to resolve to the
+  implementation stage. A `Confidence Gate` row that is **absent** MUST NOT block
+  the predicate — only a row that is present and non-terminal does — because most
+  workflow files predate the gate. The row MUST participate here even though the
+  shipped validator lists it as an advisory phase excluded from that validator's
+  *ordering* rule: the exclusion exists because the main phase loop does not drive
+  the row, which is a different question from whether the planning stage is
+  finished. Reusing the advisory exclusion in this predicate is the specific
+  mistake this requirement forbids — it would let a bare invocation resolve
+  `implement` immediately after a strict-mode confidence gate refused to let the
+  run cross that boundary, which is the flagship silent failure this feature
+  exists to prevent.
 - **FR-007**: An unrecognized stage value, or a stage argument that conflicts with
   another argument in the same invocation, MUST be rejected during opening
   preparation with a non-zero exit and a message naming the problem, before any
@@ -226,13 +240,24 @@ each resolves to the expected stage and reports the resolution before starting.
   the per-phase commits, and MUST carry a message naming the stage boundary rather
   than a phase. It is a distinct commit, not a renamed analysis-phase commit,
   because the confidence gate runs after that phase's commit and its verdict must
-  be captured. (Clarify S3/Q1.)
+  be captured. (Clarify S3/Q1.) A strict-mode gate stop counts as the gate
+  resolving for this purpose: the terminal commit MUST still be taken so the
+  failing verdict reaches version history, and the `Confidence Gate` row MUST
+  advance off its pending state to a non-terminal blocked status rather than to a
+  terminal one. That keeps FR-008b's non-empty guarantee intact — the row always
+  changes — while leaving FR-006a's predicate unsatisfied, so a boundary the gate
+  refused is not then crossed by a later bare invocation.
 - **FR-009a**: The per-phase staged path set MUST be an explicit enumeration of the
   specification directory, the workflow file, and the state file. It MUST NOT be
   expressed as the workflow *directory*, because that directory also holds
   untracked run byproducts that a directory-wide add would sweep into phase
   commits — a failure that passes locally and fails only on a clean checkout.
-  (Clarify S3/Q2.)
+  (Clarify S3/Q2.) This enumeration governs the *bookkeeping* commits of the
+  planning-stage phases and the stage-boundary commit. It MUST NOT be applied to
+  the implementation phase's commit, which carries implementation source rather
+  than bookkeeping and therefore continues to stage the working tree as it does
+  today. Narrowing that commit to the enumerated set would silently drop every
+  implementation change from every implementation-stage commit.
 - **FR-010**: A fresh session, including one in a different working copy, MUST be
   able to reconstruct the stage identity, per-phase completion state, and
   confidence-gate verdict it needs to resume a stage from the workflow file alone,
@@ -249,7 +274,15 @@ each resolves to the expected stage and reports the resolution before starting.
   subsystem this spec's key files do not claim.)
 - **FR-010a**: An implementation-stage invocation MUST NOT re-run the pre-implement
   confidence gate; it MUST read the recorded verdict from the workflow file, which
-  FR-010 already places in scope. Opening preparation MUST preserve an
+  FR-010 already places in scope. "The recorded verdict" MUST mean the
+  `Confidence Gate` status row — the same row FR-006a's predicate reads — and MUST
+  NOT mean the free-text gate-record prose elsewhere in the file. Prose records
+  are unstructured and vary between existing workflow files, and a bare composite
+  score is not a verdict: the same score proceeds under advisory mode and stops
+  under strict mode, so a resumed session reading the score alone cannot tell
+  whether the boundary was cleared. Reading the row makes the verdict a single
+  parseable value that survives the session in which the mode was resolved.
+  Opening preparation MUST preserve an
   already-recorded prerequisite test-count baseline rather than overwriting it,
   because the later gate verifies an increase against that baseline and a
   post-planning recount would make the comparison vacuous. A newly observed count
@@ -295,7 +328,7 @@ each resolves to the expected stage and reports the resolution before starting.
   distribution documents recovery only for a *missing* state file and the Claude
   distribution documents none at all, which is a parity gap this requirement
   closes. (Clarify S1/Q3.)
-- **FR-012a**: When an implementation-stage invocation targets a workflow file
+- **FR-012a**: When an invocation of **any** stage targets a workflow file
   that the single-slot state file does not currently name, opening preparation
   MUST reclaim the slot from the target workflow file — rewriting the active
   workflow identity, specification identity, feature directory, branch, run
@@ -305,7 +338,22 @@ each resolves to the expected stage and reports the resolution before starting.
   workflow file. Any field used to note the reclaimed predecessor MUST be part of
   the documented state contract rather than ad hoc. (Clarify S1/Q3. The field name
   used by hand during this run has zero occurrences elsewhere in the repository
-  and MUST NOT be treated as established precedent.)
+  and MUST NOT be treated as established precedent.) The trigger is deliberately
+  not restricted to the implementation stage: the guard's workflow-identity check
+  is inert for every stage (FR-014a), neither distribution documents state-file
+  initialisation for a foreign slot at all — the Codex side covers only a
+  *missing* file — and the matching edge case states the rule without a stage
+  qualifier. A planning- or full-stage run against a foreign slot is exactly as
+  unprotected as an implementation-stage one.
+- **FR-012b**: The predecessor note MUST record the reclaimed run's `status`
+  value verbatim, so a slot reclaimed from a run recorded as `in_progress` is
+  distinguishable from one reclaimed from a `completed` or `completed_archived`
+  run. Reclaiming an `in_progress` slot MUST additionally be surfaced in the
+  stage-resolution report FR-006 already requires, because it is the only
+  available signal that a second run may still be live. It MUST NOT block: the
+  state file carries no liveness evidence, so an `in_progress` value cannot
+  distinguish a live run from an abandoned one, and the predecessor's durable
+  record is unaffected either way.
 - **FR-013**: Changes to the Codex distribution MUST be additive: the four
   string-pinned sentences enforced by the structural suite MUST survive verbatim,
   the stage prose MUST live in the referenced phase-execution document rather than

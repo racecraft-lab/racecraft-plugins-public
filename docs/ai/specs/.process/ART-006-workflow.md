@@ -621,7 +621,7 @@ Focus on Autopilot Staging requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| state-management | | | |
+| state-management | 39 | 6 raised, 6 remediated, 0 outstanding | FR-006a (new), FR-009, FR-009a, FR-010a, FR-012a, FR-012b (new), plan.md sweep scope |
 | error-handling | | | |
 | api-contracts | | | |
 | **Total** | | | |

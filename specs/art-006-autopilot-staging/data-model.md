@@ -84,7 +84,12 @@ by the guard and mirrored by the CI validator — the two are asserted equal at
   `⚠ Blocked`, `⚠️ Blocked`
 
 `Confidence Gate` is advisory — the main phase loop never drives it — so it is
-excluded from the ordering rule (`validate-workflow-status-evidence.py:81-82`).
+excluded from the **ordering** rule (`validate-workflow-status-evidence.py:80-81`,
+`ADVISORY_PHASES`). That exclusion is scoped to ordering and does not carry over:
+per FR-006a the row **is** part of the planning-complete predicate that drives
+auto-detection. The row is a first-class named phase in the same module's
+`PHASE_GATE_IDS` map (`:68-77`, `"Confidence Gate": "6.5"`), so reading it costs
+no new parsing.
 
 ### Canonical task entry
 
@@ -147,23 +152,43 @@ second write needs no empty-commit escape hatch (spec.md:217-220).
                     ┌─ explicit --stage <token> present ─→ that token   (source: argv)
 invocation argv ────┤
                     └─ absent ─→ read workflow ## Workflow Overview
-                                   ├─ all planning phases terminal ─→ implement
-                                   └─ otherwise                    ─→ plan
-                                                                  (source: auto-detect)
+                                   ├─ predicate satisfied ─→ implement
+                                   └─ otherwise           ─→ plan
+                                                          (source: auto-detect)
+
+predicate = every one of these rows reads a TERMINAL status:
+    Specify, Clarify, Plan, Checklist, Tasks, Analyze, Confidence Gate
+  · an ABSENT Confidence Gate row does not block (legacy files)
+  · a PRESENT but non-terminal Confidence Gate row does block
 ```
 
 An explicitly named stage always overrides auto-detection, including when the two
 disagree (FR-006). The resolution and its basis are reported before any phase
 work begins.
 
+The `Confidence Gate` row is in the predicate on purpose (FR-006a). A strict-mode
+gate stop leaves the six planning rows terminal but that row **blocked**, so the
+boundary the gate refused stays closed to a later bare invocation; crossing it
+then requires an explicit `--stage implement`, which is the operator decision the
+gate's own stop guidance describes.
+
 ### Slot reclaim
 
 ```text
---stage implement, state slot names a DIFFERENT specification
+ANY stage, state slot names a DIFFERENT specification
+  → record the predecessor's status verbatim in the predecessor note
   → rewrite workflow_file, spec_id, feature_dir, branch, status, stage, plan
      FROM THE TARGET WORKFLOW FILE
+  → report the reclaim; if the predecessor read `in_progress`, say so
   → THEN run the coverage guard
 ```
+
+The trigger is any stage, not just `implement` (FR-012a): the guard's
+workflow-identity check is inert for all of them, and neither distribution
+documents state-file initialisation against a foreign slot. Recording the
+predecessor's `status` (FR-012b) is what separates reclaiming a finished run from
+reclaiming one still recorded `in_progress`. Neither case blocks — the state file
+holds no liveness evidence — but only one of them is worth reporting.
 
 Reclaiming is normal operation, not an error: the state file is defined as a
 per-run pointer, and the previous specification's durable record is its own

@@ -50,7 +50,10 @@ alternate casing, no long-form spellings.
 | Rank | Source | Notes |
 |---|---|---|
 | 1 | explicit `--stage <token>` | Always wins, including when it disagrees with what auto-detection would have chosen. |
-| 2 | auto-detection from the workflow file's `## Workflow Overview` table | All planning phases terminal → `implement`; otherwise `plan`. |
+| 2 | auto-detection from the workflow file's `## Workflow Overview` table | Every row in the FR-006a predicate set terminal → `implement`; otherwise `plan`. |
+
+The predicate set is the six planning rows plus `Confidence Gate`. An absent
+`Confidence Gate` row does not block; a present non-terminal one does (FR-006a).
 
 `--from-phase` is **not** a competing source of the stage. It moves the starting
 point *within* the resolved stage and never widens or narrows the range
@@ -109,6 +112,7 @@ Structured JSON on stdout. Multi-field output, so JSON rather than the bare toke
   "basis": "explicit --stage plan",
   "recorded_stage": null,
   "planning_complete": false,
+  "confidence_gate_status": null,
   "from_phase": null
 }
 ```
@@ -119,7 +123,8 @@ Structured JSON on stdout. Multi-field output, so JSON rather than the bare toke
 | `source` | `"argv" \| "auto-detect"` | Which precedence rank decided. |
 | `basis` | string | Plain-English reason the orchestrator prints before phase work begins, satisfying FR-006's report requirement. For auto-detection it names the first non-terminal planning phase and its status. |
 | `recorded_stage` | Stage token or `null` | The workflow file's `Stage` row as read. `null` means the row is absent — "no run yet", never an error. |
-| `planning_complete` | boolean | Whether every planning phase row is terminal. The auto-detection input, surfaced so the guard and the tests can assert on it without re-parsing. |
+| `planning_complete` | boolean | Whether every row in the FR-006a predicate set — the six planning rows plus `Confidence Gate` — is terminal. The auto-detection input, surfaced so the guard and the tests can assert on it without re-parsing. |
+| `confidence_gate_status` | status string or `null` | The `Confidence Gate` row as read; `null` when the row is absent. This is the recorded verdict an implementation-stage run reads instead of re-running the gate (FR-010a). |
 | `from_phase` | phase name or `null` | The `--from-phase` value, echoed after range validation. |
 
 ### Response — exit 2, pre-flight rejection
