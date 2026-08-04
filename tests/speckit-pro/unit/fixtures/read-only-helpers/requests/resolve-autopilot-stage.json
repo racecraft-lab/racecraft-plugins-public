@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-resolve-autopilot-stage",
+  "helper_id": "resolve-autopilot-stage",
+  "operation": "resolve-autopilot-stage",
+  "mode": "read_only",
+  "inputs": {
+    "workflow_file": "docs/ai/specs/.process/ART-006-workflow.md",
+    "autopilot_args": [
+      "--stage",
+      "plan",
+      "docs/ai/specs/.process/ART-006-workflow.md"
+    ]
+  }
+}
