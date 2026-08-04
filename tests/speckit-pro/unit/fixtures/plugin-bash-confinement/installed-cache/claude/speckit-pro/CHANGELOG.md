@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.22.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.22.0...speckit-pro-v2.22.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* **speckit-pro:** detect branch and feature state correctly inside a git worktree ([#418](https://github.com/racecraft-lab/racecraft-plugins-public/issues/418)) ([2da7abd](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2da7abd9c88efa443e6fd32d5b73c227d8407b61))
+* **speckit-pro:** inherit the session reasoning effort instead of demanding max ([#419](https://github.com/racecraft-lab/racecraft-plugins-public/issues/419)) ([f6d6e4f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f6d6e4f64590225d3fb04accd749d84486d8403f))
+
 ## [2.22.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.21.1...speckit-pro-v2.22.0) (2026-08-01)
 
 
