@@ -97,7 +97,7 @@ Both distributions reach it by operation identifier at opening preparation — t
 Claude side at a new Step 0.6c after the 0.6b confidence-mode resolver
 (`skills/speckit-autopilot/SKILL.md:327-336`), the Codex side at a matching
 Step 0.6c bullet beside its own 0.6b, which lives in the skill body's pre-flight
-summary at `codex-skills/speckit-autopilot/SKILL.md:570-578`.
+summary at `codex-skills/speckit-autopilot/SKILL.md:571-579`.
 
 The Codex step is **not** sited in `references/phase-execution-codex.md`. That
 document opens at the main execution loop and carries no opening-preparation
@@ -240,4 +240,4 @@ The assertion does **not** go in
 `tests/speckit-pro/layer1-structural/validate-codex-parity.py`: its checks are
 existence-only by design, its counted baseline would need regenerating, and this
 specification's own record already names it as unable to catch this class of
-divergence (spec.md:335-340).
+divergence (spec.md:429-434).

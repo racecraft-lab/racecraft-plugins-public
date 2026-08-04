@@ -33,7 +33,7 @@ echo '{"schema_version":"1.0","request_id":"g3","helper_id":"reviewability-gate"
 ```
 
 Expected: `"status":"warn"`, `"pass":true`, `"blockers":[]`,
-`"primary_surfaces":["harness/adapter"]`, `reviewable_loc` 430, `total_files` 17.
+`"primary_surfaces":["harness/adapter"]`, `reviewable_loc` 459, `total_files` 17.
 Warnings on LOC and total files are the accepted position — see
 [research.md §D9](./research.md#d9--reviewability-re-estimate-at-g3). A
 **blocker** is a real stop.
@@ -136,8 +136,9 @@ print(f"body words: {words}  cap: 8000  headroom: {8000 - words}")
 PY
 ```
 
-Baseline on 2026-08-04: **7671 words, headroom 329**. After the two additions,
-expect ≈7695 and headroom ≈305. Use this module-level `body()` and nothing else —
+Baseline on 2026-08-04: **7671 words, headroom 329**. After the three additions
+(argv token, pointer sentence, Step 0.6c bullet), expect ≈7725 and headroom
+≈275. Use this module-level `body()` and nothing else —
 a hand-rolled frontmatter regex gives a slightly different count.
 
 Then confirm the four string-pinned sentences survived and the structural suite

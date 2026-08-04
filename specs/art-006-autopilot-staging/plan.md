@@ -19,7 +19,7 @@ the mirror comparison — lands once as a **registered runner operation**,
 `helpers/registry.py:171`. Both distributions reach it by operation identifier at
 the same opening-preparation step, so parity comes from one executable rule
 rather than two prose descriptions that nothing compares
-(spec.md:281-297, spec.md:466-467).
+(spec.md:360-376, spec.md:560-561).
 
 Enforcement reuses two shipped checks rather than adding a third. The in-run
 half becomes a new problem key in the phase-coverage guard
@@ -32,7 +32,7 @@ which already sweeps `*-workflow.md` under **two** directories, not one:
 `WORKFLOW_DIRS` at `:28-30` is `(docs/ai/specs/.process/, docs/ai/specs/)`, and
 its own comment states the legacy location is scanned "so a contradicting file
 cannot merge from either directory". That is 51 files plus 6 — the 57 that
-spec.md:206-210 counts. The new `Stage` assertion MUST inherit the two-directory
+spec.md:239-241 counts. The new `Stage` assertion MUST inherit the two-directory
 sweep rather than being scoped to `.process/`; scoping it narrower would leave
 six workflow files unchecked and would not deliver SC-006's tree-wide guarantee.
 
@@ -49,7 +49,7 @@ test suite.
 (`docs/ai/specs/.process/<ID>-workflow.md`) is the authoritative durable store,
 holding the stage in the `Stage` row of `### Basic Information`;
 `<workflow-dir>/autopilot-state.json` mirrors it for the running session only
-(spec.md:191-199).
+(spec.md:224-232).
 
 **Testing**: `python3 tests/speckit-pro/run-all.py`. Layer 1 structural
 validators under `tests/speckit-pro/layer1-structural/`, Layer 4 unit tests with
@@ -72,21 +72,21 @@ table scan at opening preparation, executed once per run.
 measures **7671 words today (headroom 329)**, re-measured 2026-08-04 with the
 module-level `body()` in `tests/speckit-pro/lib/structural_helpers.py:44`. Codex
 changes are additive only, and four string-pinned sentences must survive verbatim
-(spec.md:309-312). Editing either `SKILL.md` dirties the generated distribution
+(spec.md:403-406). Editing either `SKILL.md` dirties the generated distribution
 mirrors, the installed-cache fixtures, and the runner trust metadata.
 
 **Scale/Scope**: one capability across 11 shipped-source files and 6 repository
 test files; 57 existing workflow files in the tree must keep validating, and all
-but one of them carry no `Stage` entry (spec.md:206-210).
+but one of them carry no `Stage` entry (spec.md:239-241).
 
 **Reviewability Budget**: primary surface harness/adapter (single); secondary
-docs/process; projected reviewable LOC 446 (430 at G3, plus 16 from the Phase 4
-state-management checklist — see "Phase 4 increment" below); production files 0 (estimator
+docs/process; projected reviewable LOC 459 (430 at G3, plus 16 + 7 + 6 from the
+three Phase 4 checklists — see the "Phase 4 increment" entries below); production files 0 (estimator
 classification — 11 shipped-source files change, none of which the estimator's
 `src/`/`app/`/`lib/`/`scripts/`/TS/JS/SQL heuristic at
-`speckit-pro/speckit_pro_runner/helpers/read_only.py:3939-3940` counts as
+`speckit-pro/speckit_pro_runner/helpers/read_only.py:3940-3941` counts as
 production); total files 17; budget result **warn, within budget, one slice** —
-over the 400-LOC warn line by 30, under every block line (800 LOC, 25 total
+over the 400-LOC warn line by 59, under every block line (800 LOC, 25 total
 files, one primary surface). Derivation in
 [research.md §D9](./research.md#d9--reviewability-re-estimate-at-g3).
 
@@ -94,7 +94,7 @@ files, one primary surface). Derivation in
 
 The plan-phase reviewability estimator parses this block to project the slice's
 footprint before `tasks.md` exists. Authored files only — generated mirrors are
-enumerated separately below and are excluded per spec.md:356-358.
+enumerated separately below and are excluded per spec.md:449-452.
 
 - MODIFIED speckit-pro/speckit_pro_runner/helpers/read_only.py
 - MODIFIED speckit-pro/speckit_pro_runner/helpers/registry.py
@@ -150,9 +150,12 @@ never hand-edited (root `AGENTS.md`, "Editing Boundaries"):
   its shared runner logic. **Secondary surfaces**: docs/process, the two
   distributions' reference documents. One primary surface, which is the single
   dimension the constitution treats as an unconditional blocker.
-- **Budget position**: projected reviewable LOC 446 against a 400 warn / 800
+- **Budget position**: projected reviewable LOC 459 against a 400 warn / 800
   block threshold; total files 17 against 15 warn / 25 block. **Warn on two
-  dimensions, block on none.** The scaffold-time setup gate returned the same
+  dimensions, block on none.** This line is the figure `reviewability-gate`
+  reports — it reads the last such declaration in the file — so it stays the one
+  declared value and the increments below only itemise how it was reached.
+  The scaffold-time setup gate returned the same
   posture (`status: warn`, `pass: true`, `blockers: []`,
   `docs/ai/specs/.process/ART-006-workflow.md:139-141`).
 - **Phase 4 increment (+16 LOC, 430 → 446, no new file, no new surface)**: the
@@ -194,21 +197,22 @@ never hand-edited (root `AGENTS.md`, "Editing Boundaries"):
   opening-preparation section, where a pre-flight rejection could satisfy neither
   FR-007 nor SC-005. Posture unchanged — warn on LOC and file count, block on
   neither.
-- **Split decision**: **one slice, no split** — unchanged from spec.md:369-375.
-  The 48-LOC growth over the ratified 382 comes entirely from the Clarify phase
-  adding nine lettered sub-requirements that *narrow* existing behaviour, and
-  from three test-registry files the registered-operation contract forces. It is
-  not new capability. Splitting would put argv parsing in one PR and the
+- **Split decision**: **one slice, no split** — unchanged from spec.md:463-469.
+  The 77-LOC growth over the ratified 382 splits into 48 at G3 — the Clarify
+  phase adding nine lettered sub-requirements that *narrow* existing behaviour,
+  plus three test-registry files the registered-operation contract forces — and
+  29 across the three Phase 4 checklists, itemised above. Neither half is new
+  capability. Splitting would put argv parsing in one PR and the
   resolution it feeds in another, which is a worse review unit than the whole
   vertical. Deferred work already names its owner: draft-pull-request
   corroboration and the scaffold-side chain implementation go to the downstream
-  ART specifications (spec.md:480-485).
-- **PR review packet source**: spec.md:377-384 (what changed, why, non-goals,
+  ART specifications (spec.md:574-579).
+- **PR review packet source**: spec.md:471-478 (what changed, why, non-goals,
   review order, scope budget, traceability, verification, known gaps, rollback).
   Rollback is a plain revert — the feature adds an argument and a table row, so
   reverting restores the pre-stage single-sequence behaviour, and a workflow file
   carrying a stale `Stage` row still validates because absence and presence are
-  both legal (spec.md:203-205).
+  both legal (spec.md:236-243).
 
 ## Project Structure
 
@@ -282,7 +286,7 @@ Add to `speckit-pro/speckit_pro_runner/helpers/read_only.py`, beside
 `resolve_confidence_mode` (`:1081-1096`):
 
 - `AUTOPILOT_STAGES = ("plan", "implement", "full")` and the stage→phase-range
-  map. Literal lowercase tokens, no aliases (spec.md:157-164).
+  map. Literal lowercase tokens, no aliases (spec.md:166-173).
 - `parse_stage_args(args)` — reads `--stage <value>` and `--from-phase <value>`
   out of the invocation argv, rejecting an unknown token, a repeated `--stage`
   with differing values, and a `--from-phase` outside the named stage's range.
@@ -292,7 +296,7 @@ Add to `speckit-pro/speckit_pro_runner/helpers/read_only.py`, beside
   guard already publishes. Per FR-006a the predicate row set is the six planning
   rows **plus** `Confidence Gate`, with an absent `Confidence Gate` row treated as
   non-blocking. Reuse `TERMINAL_STATUSES` but **not** `ADVISORY_PHASES`
-  (`validate-workflow-status-evidence.py:80-81`): that frozenset excludes the
+  (`validate-workflow-status-evidence.py:82`): that frozenset excludes the
   `Confidence Gate` row from the *ordering* rule because the phase loop does not
   drive it, which is a different question from whether planning finished.
   Inheriting it here is the FR-006a mistake — it would resolve `implement`
@@ -321,14 +325,14 @@ In `validate-autopilot-phase-coverage.py`:
   new check returns an empty error list rather than a false violation.
 - Add `stage_mirror_errors(workflow_text, state)`: when both stores carry a
   stage and they differ, report it; the workflow file wins and the state mirror
-  is the thing to repair (spec.md:194-196). Absence on either side is legal.
+  is the thing to repair (spec.md:226-229). Absence on either side is legal.
 - **Register `"stage_mirror_errors"` inside the `status-evidence` tuple of
   `RULE_PROBLEM_KEYS` (`:238-247`).** This is the whole point of FR-014a: the
   autopilot invokes the guard with `--rule status-evidence`
   (`SKILL.md:398`), and `main()` at `:4040-4042` computes the exit code *only*
   from the selected rule's keys. A key outside that tuple is computed, printed,
   and inert — which is the live defect the Clarify phase demonstrated by
-  execution (spec.md:320-329).
+  execution (spec.md:414-423).
 
 ### 3. Claude distribution
 
@@ -354,7 +358,7 @@ In `speckit-pro/skills/speckit-autopilot/SKILL.md`:
 - **`:661-680`** — the `Stage` authority becomes **its own clause** in the
   Workflow File Update Protocol. It must **not** join the two-item list at
   `:672-680`: that list enumerates the fields for which the *state file* wins,
-  which is the opposite direction (spec.md:196-199).
+  which is the opposite direction (spec.md:229-232).
 - **`:737`** — the registered-operation list gains a one-line
   `resolve-autopilot-stage` entry.
 
@@ -400,7 +404,7 @@ Three edits to `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`:
    whitespace-delimited token by `structural_helpers.body`'s `.split()` count.
 2. One pointer sentence directing the reader to the stage section of
    `references/phase-execution-codex.md`.
-3. `:570-578` — a **Step 0.6c** bullet beside the existing 0.6b confidence-mode
+3. `:571-579` — a **Step 0.6c** bullet beside the existing 0.6b confidence-mode
    bullet, running `resolve-autopilot-stage` and STOPping before Phase 0 on exit
    2. This one cannot live in a reference file: `phase-execution-codex.md` opens
    at the main execution loop and has no opening-preparation section, so a
@@ -424,7 +428,7 @@ schema behind them: `stage` (closed enum `plan|implement|full`) and
 FR-012a demands — "any field used to note the reclaimed predecessor MUST be part
 of the documented state contract rather than ad hoc" — and it is what makes the
 field established rather than a name invented by hand mid-run
-(spec.md:305-308). The object has no `additionalProperties: false`, so the
+(spec.md:384-387). The object has no `additionalProperties: false`, so the
 addition is backward-compatible with every existing state file, and
 `validate_state_status` (`validate-autopilot-phase-coverage.py:3930-3945`) starts
 closing the stage vocabulary for free.
@@ -439,12 +443,12 @@ closing the stage vocabulary for free.
   documented argv forms feed the same operation and must resolve identically.
   The assertion goes here, not in the structural parity validator, whose checks
   are existence-only and whose counted baseline would need regenerating
-  (spec.md:335-340).
+  (spec.md:429-434).
   Golden fixtures are module-level literals in the test file, the pattern
   `validate-workflow-status-evidence.py:102-143` already uses, so no separate
   fixture file is needed.
   The filename carries no live spec-family token: the rule at
-  `tests/speckit-pro/unit/test-unit-layout.py:143-148` matches
+  `tests/speckit-pro/unit/test-unit-layout.py:144-149` matches
   `<family>[-_]\d{3}[a-z]?`, so `art-006` would fail but
   `test-autopilot-stage-resolution` does not match at all.
 - **MODIFIED** `tests/speckit-pro/layer1-structural/validate-workflow-status-evidence.py`
@@ -452,7 +456,7 @@ closing the stage vocabulary for free.
   module already sweeps — both `WORKFLOW_DIRS`, not `.process/` alone — carries
   one of the three literals, and that a file with no `Stage` row is accepted.
   Absence must stay legal: 56 of the 57 workflow files carry no entry
-  (spec.md:206-210). Reuse `workflow_files(*WORKFLOW_DIRS)` (`:146-152`, `:285`)
+  (spec.md:239-241). Reuse `workflow_files(*WORKFLOW_DIRS)` (`:146-152`, `:285`)
   rather than a fresh glob, so the assertion cannot drift narrower than the
   sweep SC-006 depends on.
 - **MODIFIED** `tests/speckit-pro/suite-manifest.json` — register the new test in
@@ -473,13 +477,13 @@ closing the stage vocabulary for free.
 1. **Reclaim before guard.** An implementation-stage invocation against a state
    slot naming a different specification must re-initialise the slot *before* the
    coverage guard runs. Ordering it after is not merely late, it is unprotected:
-   the workflow-identity check is inert today (spec.md:320-329), so a mismatched
+   the workflow-identity check is inert today (spec.md:414-423), so a mismatched
    slot exits 0 and reports `pass`.
 2. **Terminal commit after the gate.** The plan-stage commit is taken after G6.5
    resolves, so the verdict is captured. It is a distinct commit, not a renamed
    analyze-phase commit, and it is non-empty regardless of whether the `Stage`
    value changed, because the confidence-gate row always advances off pending
-   (spec.md:217-220).
+   (spec.md:250-253).
 3. **Regenerate last.** `scripts/refresh-release-artifacts.py` runs after every
    source edit is final; a second run on unchanged source is a no-op
    (`refresh-release-artifacts.py:22-23`).
@@ -499,4 +503,5 @@ Re-evaluated after the Phase 1 artifacts were written. **All gates still pass.**
 The design added no dependency, no new directory, no new module, and no shell
 script. The two contract documents are specification artifacts under `specs/`,
 not shipped code, and carry no runtime weight. Reviewability moved from the
-ratified 382 to 430 — warn, not block — and the split decision is unchanged.
+ratified 382 to 430 at G3, and the three Phase 4 checklists then carried it to
+459 — warn, not block, at every step — and the split decision is unchanged.

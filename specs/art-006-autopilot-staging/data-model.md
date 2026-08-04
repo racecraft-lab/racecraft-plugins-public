@@ -11,7 +11,7 @@ Tasks phase has something unambiguous to decompose.
 
 A closed enumeration. Exactly three literal lowercase tokens, used identically
 for the invocation argument value and for the recorded entry — no aliases, no
-alternate casing, no long-form spellings (spec.md:157-164).
+alternate casing, no long-form spellings (spec.md:166-173).
 
 | Token | Phase range | Terminal step |
 |---|---|---|
@@ -24,7 +24,7 @@ accepted values (FR-007). There is no fourth token for "no run yet" — that sta
 is expressed by the entry's **absence** (FR-008a).
 
 **Consumed downstream** by ART-007 through ART-012, which is why the spelling is
-a cross-spec contract rather than local prose (spec.md:161-164).
+a cross-spec contract rather than local prose (spec.md:170-173).
 
 ### Workflow file — the authoritative durable store
 
@@ -38,7 +38,7 @@ Path: `docs/ai/specs/.process/<SPEC-ID>-workflow.md`. Survives archiving of
 | Gate evidence | Anywhere outside the two tables above | free text matched by the gate-record patterns | Yes | `G1`–`G7`, `G6.5` PASS records. |
 
 **Absence of `Stage` is legal and is not an error.** Fifty-six of the fifty-seven
-workflow files in the tree carry no entry (spec.md:206-210), so a
+workflow files in the tree carry no entry (spec.md:239-241), so a
 required-everywhere rule would fail the suite against pre-existing files on the
 day it ships. Absence resolves through ordinary auto-detection.
 
@@ -84,16 +84,16 @@ by the guard and mirrored by the CI validator — the two are asserted equal at
   `⚠ Blocked`, `⚠️ Blocked`
 
 `Confidence Gate` is advisory — the main phase loop never drives it — so it is
-excluded from the **ordering** rule (`validate-workflow-status-evidence.py:80-81`,
+excluded from the **ordering** rule (`validate-workflow-status-evidence.py:82`,
 `ADVISORY_PHASES`). That exclusion is scoped to ordering and does not carry over:
 per FR-006a the row **is** part of the planning-complete predicate that drives
 auto-detection. The row is a first-class named phase in the same module's
-`PHASE_GATE_IDS` map (`:68-77`, `"Confidence Gate": "6.5"`), so reading it costs
+`PHASE_GATE_IDS` map (`:71-80`, `"Confidence Gate": "6.5"` at `:78`), so reading it costs
 no new parsing.
 
 ### Canonical task entry
 
-Never truncated per stage (spec.md:265-266). An entry outside the resolved stage
+Never truncated per stage (spec.md:339-341). An entry outside the resolved stage
 keeps its **byte-identical canonical name** and takes `skipped: <reason>` in its
 **status** field. Four constraints, three of them verified against the shipped
 validator:
@@ -119,7 +119,7 @@ autopilot-state.json  stage     →  MIRROR (repaired from the workflow file)
 ```
 
 On disagreement the workflow file wins and the mirror is corrected
-(spec.md:194-196). This clause is recorded on its own in the store-precedence
+(spec.md:226-229). This clause is recorded on its own in the store-precedence
 documentation at `speckit-pro/skills/speckit-autopilot/SKILL.md:661-680`. It is
 **not** added to the two-item list at `:672-680`, which enumerates the fields for
 which the *state file* wins — the opposite direction.
@@ -144,7 +144,7 @@ The two stores are written in the same edit turn and land in the same commit, so
 an interrupted run cannot leave a *committed* disagreement (FR-008b). The
 terminal commit is non-empty regardless of whether `Stage` changed, because the
 confidence-gate row always advances off its pending state — so the conditional
-second write needs no empty-commit escape hatch (spec.md:217-220).
+second write needs no empty-commit escape hatch (spec.md:250-253).
 
 ### Resolution
 

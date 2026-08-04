@@ -17,7 +17,7 @@ lost and why.
 `speckit-pro/speckit_pro_runner/helpers/registry.py:171-178`, reached by
 operation identifier from both distributions at opening preparation.
 
-**Rationale.** FR-012 settles this by Round 2 tiebreak (spec.md:281-297). The
+**Rationale.** FR-012 settles this by Round 2 tiebreak (spec.md:360-376). The
 model already exists one step away: `resolve-confidence-mode` is registered at
 `registry.py:171`, implemented at `read_only.py:1081`, and invoked from the
 Claude skill at `SKILL.md:328-336` and the Codex skill at
@@ -34,7 +34,7 @@ behaviour. Copying a proven shape costs less review than inventing one.
   checker over two already-resolved inputs, with no argv input to resolve *from*.
 - *Two prose descriptions, one per distribution.* This is the status quo the
   spec exists to end. Nothing in CI diffs the two `SKILL.md` bodies
-  (spec.md:466-467), so prose parity is unverifiable by construction.
+  (spec.md:560-561), so prose parity is unverifiable by construction.
 - *A new dedicated module under `helpers/`.* Rejected — see D2.
 
 ---
@@ -196,8 +196,16 @@ documentation value only, and the same explanation belongs in
 
 ## D7 — Codex word budget arithmetic
 
-**Decision.** Two `SKILL.md` edits totalling ≈24 words; all stage prose in
-`references/phase-execution-codex.md`.
+**Decision.** Three `SKILL.md` edits totalling ≈54 words; all *remaining* stage
+prose in `references/phase-execution-codex.md`.
+
+**Revised after the Phase 4 api-contracts checklist.** This section originally
+recorded two edits totalling ≈24 words. The checklist added a third — the Step
+0.6c bullet — because `phase-execution-codex.md` has no opening-preparation
+section, so a rejection sited there would run after phase work began and could
+satisfy neither FR-007 nor SC-005. The bullet is ≈30 words and must live in the
+capped body. Arithmetic below is updated; the decision to keep every other line
+of stage prose out of the body is unchanged.
 
 **Measurement.** Re-measured 2026-08-04 against the current file:
 
@@ -213,7 +221,8 @@ print(len(b.split()))"
 returns everything after the second `---` fence and does **not** strip code
 fences, so a token added inside the argv fence counts. `[--stage plan|implement|full]`
 has no internal whitespace, so it is one `.split()` token. The pointer sentence
-is ≈23 words. Post-edit projection ≈7695 of 8000.
+is ≈23 words and the Step 0.6c bullet ≈30. Post-edit projection ≈7725 of 8000,
+leaving ≈275 words of headroom for ART-007 through ART-012.
 
 The cap applies to the body alone; referenced files are uncapped and are still
 folded into `runtime_doc` at `validate-codex-skills.py:235-242`, which is what
@@ -229,7 +238,7 @@ everything in headroom.
 
 **Rationale.** The constraint is real but narrower than "no filename may contain
 `art`". `_contains_repository_spec_id` at
-`tests/speckit-pro/unit/test-unit-layout.py:143-148` searches for
+`tests/speckit-pro/unit/test-unit-layout.py:144-149` searches for
 `{family}[-_]\d{3}[a-z]?` — a family token followed by a separator and three
 digits. `art-006` fails; a bare substring does not match. The chosen name
 contains no `art` substring at all and no digits, so it is safe under both the
@@ -240,13 +249,21 @@ temporary spec ID as root `AGENTS.md` requires.
 
 ## D9 — Reviewability re-estimate at G3
 
-**Decision.** 430 projected reviewable LOC. **Warn, within budget, one slice.**
+**Decision.** 430 projected reviewable LOC at G3. **Warn, within budget, one
+slice.**
+
+**Superseded total.** This section is the G3 derivation and its arithmetic is
+left as it was measured. The three Phase 4 checklists then added 16, 7, and 6,
+carrying the declared figure to **459** — still warn, still no blocker, still one
+slice. The itemised increments and the current declared position live in
+plan.md's "Reviewability governance" block, which is the single source for the
+number; everything below is how the 430 it starts from was reached.
 
 **Method and why two numbers appear.** The workflow file directs a G3 re-estimate
 with `estimate-reviewable-loc` (`ART-006-workflow.md:157-158`). Run against this
 plan's Declared File Operations block, that helper returns
 `projected: 0, production: 0, status: "pass"`. That is not a real zero: its
-`is_production_file` heuristic (`read_only.py:3939-3940`) counts a path only if it
+`is_production_file` heuristic (`read_only.py:3940-3941`) counts a path only if it
 starts with `src/`, `app/`, `lib/`, or `scripts/`, or ends in a TypeScript,
 JavaScript, or SQL extension. This repository's shipped surface is Python under
 `speckit-pro/speckit_pro_runner/` and Markdown under `speckit-pro/skills/`, so
@@ -273,7 +290,7 @@ FR-008a, FR-008b, FR-009a, FR-010a, FR-012a, FR-014a, FR-015a, plus the carve-ou
 inside FR-010 and FR-013. They *constrain* the same work rather than adding
 capability, and the estimator's flat +15-per-FR term cannot see that distinction.
 FR-010's carve-out is described in the spec itself as "costing zero implementation
-lines" (spec.md:247-249).
+lines" (spec.md:305-307).
 
 Against the constitution's thresholds
 (`reviewability_gate`, `read_only.py:966-980`):
@@ -311,7 +328,7 @@ constitution treats as an unconditional blocker, stays at one.
 requirement that adds work from one that forbids it. The split decision is the
 paragraph above, not the integer.
 
-Splitting is rejected for the reason spec.md:369-375 already gives and which the
+Splitting is rejected for the reason spec.md:463-469 already gives and which the
 real file list confirms: the vertical is argv → resolution → phase-loop bounds →
 durable state → both distributions, and every cut produces a PR whose behaviour
 cannot be reviewed without the other half. The three test-registry files
@@ -327,7 +344,7 @@ byte-identical, applied by a planning-stage run to the implementation phase and
 every post-implementation entry.
 
 **Rationale.** Three of the four constraints were verified against the shipped
-validator during Clarify (spec.md:265-280) and none is negotiable:
+validator during Clarify (spec.md:341-354) and none is negotiable:
 
 - The status field, not the name — the coverage guard matches
   post-implementation checkpoints by exact name equality, so a prefixed name
@@ -339,7 +356,7 @@ validator during Clarify (spec.md:265-280) and none is negotiable:
   extensions (`references/task-list-canonical.md:3` and `:56`, and Codex
   `SKILL.md:627`), so one search finds both kinds of skip.
 
-The canonical list is never truncated (spec.md:265-266); every entry stays
+The canonical list is never truncated (spec.md:339-341); every entry stays
 visible with an honest status.
 
 ---
@@ -355,7 +372,7 @@ boundary rather than a phase.
 taken by the time the gate produces a verdict. Renaming that commit would leave
 the verdict uncommitted. Emptiness is not a risk: the confidence-gate row always
 advances off its pending state, so the commit has content whether or not the
-`Stage` value changed (spec.md:217-220) — which is why the conditional second
+`Stage` value changed (spec.md:250-253) — which is why the conditional second
 `Stage` write needs no empty-commit escape hatch.
 
 The staged path set is the explicit trio already used at
@@ -363,7 +380,7 @@ The staged path set is the explicit trio already used at
 (`git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json`) and
 never the workflow *directory*, which also holds untracked run byproducts — a
 failure that passes locally and fails only on a clean checkout
-(spec.md:230-235).
+(spec.md:283-287).
 
 ---
 

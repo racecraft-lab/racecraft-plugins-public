@@ -70,8 +70,8 @@ captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | G3 passed. plan.md + research.md + data-model.md + quickstart.md + 2 contracts; 0 markers. Shared stage resolution sited as runner operation `resolve-autopilot-stage`. Re-estimate 430 reviewable LOC / 17 files — warn on both, block on neither; one slice, no split, rationale recorded in plan.md |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 passed. 3 of 3 domains; 138 items all evaluated, 20 defects raised and all 20 remediated, 0 outstanding, 0 `[Gap]` markers. +29 LOC (430 → 459), no new requirement beyond domain 1's two |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 passed. 43 tasks, 6 phases, TDD-ordered (tests precede implementation in every story). All 33 normative items traced; FR-016 is documentation-only and correctly carries no implementation task. 0 markers, 0 leaked paths |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
-| Confidence Gate | G6.5 | ⏳ Pending | Plan stage's terminal step (design concept Q7) |
+| Analyze | `/speckit-analyze` | ✅ Complete | G6 passed. 0 CRITICAL, 0 HIGH, 3 MEDIUM, 1 LOW — all remediated. Cross-artifact drift only; `spec.md` untouched. 86 citations verified in range |
+| Confidence Gate | G6.5 | ✅ Complete | Advisory mode, composite 0.88, verdict **proceed**. G0 baseline preserved at 7052/7052. Plan stage's terminal step (design concept Q7) |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | |
 
@@ -782,7 +782,29 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| A1 | MEDIUM | Stale `file:line` citations throughout the downstream artifacts. `spec.md` grew through Clarify and three checklists, so citations written against earlier line numbers no longer pointed at the text they named (e.g. the cross-spec token contract cited at `:161-164`, actually at `:170-173`; the inert-identity-check requirement cited at `:320-329`, actually at `:414-423`). | Re-pointed across `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md`, `contracts/stage-invocation.md`. |
+| A2 | MEDIUM | The reviewable-LOC figure was stale in every artifact that quoted it. Phase 4 moved it 430 → 446 → 453 → 459 but downstream copies still read 446, and the derived "over the warn line by 30" was wrong. | All copies now read 459; the margin reads 59; the growth is decomposed as 48 at G3 plus 16 + 7 + 6 from the three checklists (382 + 77 = 459). |
+| A3 | MEDIUM | The Codex word-cap projection assumed **two** skill-body additions. The api-contracts checklist established a **third** (the relocated Step 0.6c bullet), so the projected post-edit count and headroom were both understated. | Projection corrected to three additions, ≈7725 words against the 8000 cap, from a re-measured baseline of 7671 / headroom 329. |
+| A4 | LOW | One shipped-source citation was off by one line (`read_only.py:3939-3940` for `is_production_file`). | Corrected to `:3940-3941`, verified against the file. |
+| — | — | **No CRITICAL or HIGH findings.** `spec.md` was not modified by this phase: no requirement-level defect was found, no requirement was added or removed, and no scope was added. | — |
+
+**G6 verification (orchestrator).** The executor remediated but recorded no
+severity classification, so the table above is the orchestrator's classification
+from the diff, and the verification below is independent of the executor's
+self-report.
+
+- **Citations.** All 86 resolvable `file:line` citations across the specification
+  directory and this workflow file were extracted and checked against the real
+  files: **0 point past end of file.** Three of the corrected citations were
+  additionally opened and confirmed to name the text claimed — `read_only.py`
+  `is_production_file`, the cross-spec token contract, and FR-014a.
+- **Arithmetic.** 382 ratified + 77 growth = 459; 459 − 400 warn = 59. Both check.
+- **Invariants unchanged.** 33 normative items, 43 tasks, 0
+  `[NEEDS CLARIFICATION]` markers, 0 absolute-path leaks.
+- **Budget posture unchanged**: warn on reviewable LOC and file count, block on
+  neither; one slice, no split.
+
+Consensus was not required: zero items were left unresolved.
 
 ---
 
@@ -797,10 +819,62 @@ context by reading this section and the `Stage` row in Specification Context.
 
 | Field | Value |
 |-------|-------|
-| Mode | <!-- advisory (default) or strict --> |
-| Composite confidence | <!-- 0.00-1.00 --> |
-| Verdict | <!-- proceed / remediate / stop --> |
-| Evidence | <!-- what the score was computed from --> |
+| Mode | **advisory** — from `confidence_gate_mode` in local settings; no `--strict` or `--advisory` flag was passed on this invocation |
+| Composite confidence | **0.88** |
+| Verdict | **proceed** |
+| Evidence | See below |
+
+### Prerequisite test-count baseline (G0) — preserved, not recomputed
+
+**7052/7052 passing**, measured on this tree at the close of Phase 6 with
+`PYTHONDONTWRITEBYTECODE=1 python3 tests/speckit-pro/run-all.py` (exit 0).
+Breakdown: L1 1443, L4 5423, L5 186.
+
+This is the figure T042 compares against, and FR-010a requires it be **preserved
+across the stage boundary rather than recomputed** — a post-planning recount
+would make the later increase check vacuous. A resumed `--stage implement`
+session reads this number here; it does not re-measure it. If a fresh count
+differs, FR-010a requires recording that as a non-blocking drift diagnostic
+rather than replacing this baseline.
+
+### Gate evidence
+
+Raising confidence:
+
+- Every upstream gate passed with orchestrator verification independent of the
+  executor's self-report: G5 coverage was checked by extracting all 33
+  requirement ids and matching them against `tasks.md` (zero missing), and G6 by
+  checking all 86 resolvable `file:line` citations against the real files (zero
+  out of range).
+- Phase 4 was substantive rather than ceremonial: 138 items across three domains,
+  **20 defects raised and all 20 remediated**, 0 outstanding. Two were
+  implementation-blocking — a rejection step sited in a file with no
+  opening-preparation section, and an exit-code table that would have taught the
+  golden fixtures a code the runner never emits.
+- Phase 6 found no requirement-level defect; `spec.md` was not modified.
+- The tree is green at 7052/7052 before any source edit.
+- 0 `[NEEDS CLARIFICATION]` markers, 0 absolute-path leaks, 33 normative items
+  fully traced to 43 TDD-ordered tasks.
+
+Lowering confidence:
+
+- **Codex word cap.** The body is 7671 of 8000 (headroom 329) and the plan spends
+  ≈54 across three additive edits. Comfortable, but the projection was understated
+  once already (finding A3), so T038 re-measures rather than trusting the estimate.
+- **Generated-artifact contract.** Editing either `SKILL.md` dirties the generated
+  distribution mirrors. T040 regenerates and requires idempotence on a second run;
+  a hand-edit here is the classic way this repository breaks.
+- **Prose parity is unverifiable by construction.** Nothing in CI diffs the two
+  `SKILL.md` variants. This specification narrows the exposure by moving the
+  vocabulary to one normative source and pinning three rules to executable
+  checks, but the residue is real and is the reason FR-015a sites the parity
+  assertion in an executable test rather than in review.
+- **Budget is in warn.** 459 reviewable LOC against a 400 warn line, 59 over,
+  well under the 800 block line. The PR-time diff-mode gate measures the real
+  diff and is the honest arbiter.
+
+Advisory mode does not stop on this posture, and the residual risks are all
+carried by named tasks rather than left implicit. **Proceeding to implementation.**
 
 ---
 
