@@ -66,7 +66,7 @@ captured during scoping.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 14 FR, 3 user stories, 8 success criteria, 11 acceptance scenarios, 0 markers |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | Session 1 of 3 resolved via 2-analyst consensus; spec 22 → 27 normative items |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -354,9 +354,34 @@ per roadmap :454 and :459-460.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | | | |
+| 1 | Stage State Representation | 5 asked, 4 routed to consensus | FR-001 pinned to literal `plan`/`implement`/`full`; FR-008 split into authority + at-rest meaning + write cadence; FR-010/SC-003 narrowed with a marker-evidence carve-out; new FR-012a (foreign state slot) and FR-014a (rule-key registration). Spec grew 22 → 27 normative items, 0 markers. |
 | 2 | | | |
 | 3 | | | |
+
+### Consensus Resolution Log
+
+Two analysts were routed from the session's category tags (`[codebase]`,
+`[spec]`); no `[domain]` or `[security]` tag appeared, so the domain researcher
+was not in the union.
+
+| Item | Categories | Round | codebase-analyst | spec-context-analyst | Resolution | Artifact edit |
+|---|---|---|---|---|---|---|
+| S1/Q1 stage-mirror enforcement + repair direction | `[codebase] [spec]` | 1 | partially | partially | Converged: two *different* checks (in-run mirror freshness, at-rest self-consistency) both extending shipped machinery; repair workflow → state. Both corrected the orchestrator's framing — the existing two-item list is the *state-wins* set, so a workflow-wins field needs its own clause. | FR-008 rewritten; FR-014 split |
+| S1/Q2 literal tokens, at-rest meaning, absence | `[spec] [codebase]` | 1 | yes | yes | 2-of-2 agreement, both high confidence. Tokens are lowercase literals; the entry records last *resolved* stage; absence means "no run yet" and must not error. | FR-001, FR-008a, Key Entities, Assumptions, new edge case |
+| S1/Q3 `--stage implement` against a foreign state slot | `[codebase]` | 1 | partially | not routed | Accepted. Parity gap confirmed (Codex covers only a *missing* file, Claude documents none). Re-init must precede the guard. Analyst correctly refused to endorse the `prior_run_note` field name — zero occurrences repo-wide. | FR-012 extended; new FR-012a; new edge case |
+| S1/Q4 FR-010 scope vs marker evidence | `[codebase] [spec]` | 1 | yes, w/ framing correction | **no** on the remedy | Split resolved without Round 2: both agreed the contradiction is real and that the fix is a text carve-out. The rehydration path was rejected as scope creep against an 18-LOC margin, and the codebase analyst's framing correction was carried — marker evidence is *inside* the implement stage, governed by its own stricter rule, not outside it. | FR-010 and SC-003 narrowed |
+| S1/Q5 write cadence + commit atomicity | — | not routed | — | — | Single-source, high confidence, no conflict. Promoted from an Assumption to a requirement. | FR-008b |
+
+**Bug found during consensus, outside this spec's scope.** The store-precedence
+documentation names `autopilot-state.json.workflow_file` as the authority and
+quotes a failure message for a mismatch. That check is inert under every
+invocation the phase loop issues: its error key is absent from the guard's
+rule-to-problem-key map, and its body short-circuits unless a v2 marker-plan
+schema and an expected-head-commit argument are both supplied. Verified by
+direct execution against a state file naming a different specification — the
+guard exits 0 and reports `pass`, with and without the scoping flag. ART-006
+does not fix this; FR-014a exists so this specification does not reproduce it.
+Worth its own issue against the plugin.
 
 ---
 

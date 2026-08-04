@@ -136,6 +136,17 @@ each resolves to the expected stage and reports the resolution before starting.
   not widen or narrow the resolved stage's phase range.
 - **A stage whose phases are all already complete.** Autopilot reports the stage
   as already satisfied instead of re-running finished work.
+- **Workflow file predating this feature.** A workflow file with no recorded stage
+  entry is treated as "no run yet" and resolves through ordinary auto-detection.
+  It is not an error and does not require a fourth stage value. This is the common
+  case, not the exception: of the workflow files in this repository today, all but
+  one carry no stage entry.
+- **State file names a different specification.** When the single-slot state file
+  points at another specification's workflow file, opening preparation reclaims
+  the slot from the target workflow file before the coverage guard runs, rather
+  than failing. The guard cannot currently be relied on to detect this itself: run
+  against a mismatched slot it exits zero and reports a pass, so re-initialisation
+  must not be ordered after it.
 - **Archived specification.** Because the workflow file survives archiving, the
   recorded stage remains readable after the specification directory is archived.
 
@@ -144,7 +155,13 @@ each resolves to the expected stage and reports the resolution before starting.
 ### Functional Requirements
 
 - **FR-001**: The system MUST define a closed set of exactly three stage names —
-  planning, implementation, and full — and MUST reject any other value.
+  the literal lowercase tokens `plan`, `implement`, and `full` — and MUST reject
+  any other value. The same three literals MUST be used for the invocation
+  argument value and for the recorded `Stage` entry; no aliases, no alternate
+  casing, and no long-form spellings. (Clarify S1/Q2: the roadmap, this spec's
+  own workflow file, and ART-011's dependency on "the autopilot plan stage per
+  the ART-006 contract" all already use the short tokens, so the spelling is a
+  cross-spec contract rather than prose.)
 - **FR-002**: Both the Claude and the Codex distributions MUST accept an explicit
   stage argument on the autopilot invocation, using the same argument name and the
   same accepted values.
@@ -168,28 +185,92 @@ each resolves to the expected stage and reports the resolution before starting.
 - **FR-008**: The workflow file MUST be the authoritative durable store of the
   stage, recorded as a `Stage` entry in its basic-information table. The running
   session's state file MUST carry a mirrored copy for the active run only and MUST
-  NOT be treated as authoritative; on disagreement the workflow file MUST win.
+  NOT be treated as authoritative; on disagreement the workflow file MUST win and
+  the state mirror MUST be repaired from it. This authority MUST be recorded as
+  its own clause in the autopilot's store-precedence documentation. It MUST NOT be
+  added to that document's existing two-item exception list, because that list
+  enumerates the fields for which the *state file* wins, which is the opposite
+  direction. (Clarify S1/Q1, both analysts.)
+- **FR-008a**: The `Stage` entry MUST record the last *resolved* stage of the most
+  recent run, not stage completion. Within-stage progress remains derived from the
+  workflow file's phase status table, so no additional token is required to
+  express "planning finished". A workflow file carrying no `Stage` entry MUST be
+  treated as "no run yet" and MUST resolve through the auto-detection rule in
+  FR-006; absence MUST NOT be treated as a fourth stage value and MUST NOT be
+  reported as an error. (Clarify S1/Q2. 57 workflow files exist in this repository
+  and exactly one carries the entry, so a required-everywhere rule would fail the
+  suite against 56 pre-existing files on the day it ships. The shipped validator
+  already establishes the "absence is legal" pattern for its sibling `status`
+  field.)
+- **FR-008b**: The `Stage` entry MUST be written at most twice per run — once when
+  the stage is resolved during opening preparation, and again at the planning
+  stage's terminal commit only if the resolved stage changed. It MUST NOT be
+  refreshed on every phase transition. The authoritative entry and its state
+  mirror MUST be written in the same edit turn and MUST land in the same commit,
+  so an interrupted run cannot leave a committed disagreement between the two
+  stores. (Clarify S1/Q5.)
 - **FR-009**: The stage boundary MUST be durably committed — per-phase bookkeeping
   MUST be staged as each phase completes rather than only at the end of a run, and
   the planning stage MUST close with an explicit terminal commit that makes the
   boundary identifiable in version history.
 - **FR-010**: A fresh session, including one in a different working copy, MUST be
-  able to reconstruct everything it needs to resume a stage from the workflow file
-  alone, without depending on the previous session's state file.
+  able to reconstruct the stage identity, per-phase completion state, and
+  confidence-gate verdict it needs to resume a stage from the workflow file alone,
+  without depending on the previous session's state file. This requirement does
+  NOT extend to pull-request marker-plan evidence. That evidence is reached during
+  the implementation stage's post-implementation steps, so it is not outside this
+  stage; it is governed by its own pre-existing and stricter rule, which requires
+  stopping rather than inferring from workflow prose when the evidence is missing,
+  malformed, or stale. That rule shipped with the discharged prerequisite, is
+  unchanged by this specification, and MUST NOT be relaxed to satisfy this
+  requirement. (Clarify S1/Q4. Both analysts agreed the contradiction is real; the
+  resolution is a specification-text carve-out costing zero implementation lines,
+  not a new rehydration path, which would spend the declared budget margin on a
+  subsystem this spec's key files do not claim.)
 - **FR-011**: The canonical task list MUST NOT be truncated per stage. Entries
   outside the resolved stage MUST be marked with the `skipped:` status, which is
   the only non-complete status the existing pre-final audit tolerates.
 - **FR-012**: Stage resolution MUST be implemented once as shared logic that both
   distributions execute, rather than as two independent prose descriptions of the
-  same rule.
+  same rule. The resume protocol MUST likewise be shared: today the Codex
+  distribution documents recovery only for a *missing* state file and the Claude
+  distribution documents none at all, which is a parity gap this requirement
+  closes. (Clarify S1/Q3.)
+- **FR-012a**: When an implementation-stage invocation targets a workflow file
+  that the single-slot state file does not currently name, opening preparation
+  MUST reclaim the slot from the target workflow file — rewriting the active
+  workflow identity, specification identity, feature directory, branch, run
+  status, resolved stage, and plan list — BEFORE the coverage guard runs.
+  Reclaiming the slot is normal operation, not an error: the state file is defined
+  as a per-run pointer and the previous specification's durable record is its own
+  workflow file. Any field used to note the reclaimed predecessor MUST be part of
+  the documented state contract rather than ad hoc. (Clarify S1/Q3. The field name
+  used by hand during this run has zero occurrences elsewhere in the repository
+  and MUST NOT be treated as established precedent.)
 - **FR-013**: Changes to the Codex distribution MUST be additive: the four
   string-pinned sentences enforced by the structural suite MUST survive verbatim,
   the stage prose MUST live in the referenced phase-execution document rather than
   the skill body, and the skill body MUST remain within its enforced word cap.
-- **FR-014**: Stage correctness MUST be enforced by extending the already-shipped
-  workflow status-evidence validator with stage assertions, plus a unit test
-  carrying golden fixtures for both explicit and auto-detected stage resolution.
-  No new test or script filename may contain a live specification family token.
+- **FR-014**: Stage correctness MUST be enforced in two places, which are two
+  different checks rather than the same check twice: (a) an in-run check in the
+  shipped phase-coverage guard, which both distributions already invoke with both
+  stores on one command line, asserting that the state mirror equals the
+  authoritative entry; and (b) an agent-independent check in the already-shipped
+  workflow status-evidence validator, which runs in the suite whether or not an
+  agent invokes anything. Neither may be a new third validator.
+- **FR-014a**: The in-run check MUST register its own problem key in the guard's
+  rule-to-problem-key map. A check whose key is absent from that map computes its
+  result and reports it in the emitted JSON, but CANNOT affect the exit code under
+  the scoped invocation the autopilot actually issues, and is therefore inert as a
+  gate. This is not hypothetical: the existing workflow-identity check is inert in
+  exactly this way today — run against a state file naming a different
+  specification, the guard exits 0 and reports `pass`, both with and without the
+  scoping flag, because its error key appears in no rule tuple and its body
+  short-circuits unless a v2 marker-plan schema and an expected-head-commit
+  argument are both supplied. (Clarify S1/Q1, verified by direct execution.)
+- **FR-015**: A unit test MUST carry golden fixtures for both explicit and
+  auto-detected stage resolution. No new test or script filename may contain a
+  live specification family token.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -228,7 +309,7 @@ each resolves to the expected stage and reports the resolution before starting.
 
 ### Key Entities *(include if feature involves data)*
 
-- **Stage**: One of exactly three named values — planning, implementation, full.
+- **Stage**: One of exactly three literal lowercase tokens — `plan`, `implement`, `full`.
   Determines which contiguous range of phases an autopilot run executes.
 - **Workflow file**: The durable, per-specification record of a run. Holds the
   authoritative stage, the per-phase status table, and the gate evidence. Survives
@@ -251,8 +332,11 @@ each resolves to the expected stage and reports the resolution before starting.
 - **SC-002**: A planning stage followed later by an implementation stage produces
   the same end result as one uninterrupted full run, for the same workflow file.
 - **SC-003**: An implementation stage resumed in a fresh session, from a different
-  working copy, succeeds without any manually re-supplied context — 100% of the
-  needed context comes from the workflow file.
+  working copy, succeeds without any manually re-supplied stage identity,
+  phase-completion state, or confidence-gate verdict — 100% of *that* context
+  comes from the workflow file. Pull-request marker-plan evidence is excluded from
+  this guarantee and continues to follow its already-shipped stop-rather-than-infer
+  behavior, unchanged by this specification (see FR-010).
 - **SC-004**: Stage auto-detection selects the expected stage on 100% of the
   golden fixture cases covering both the planning-incomplete and
   planning-complete conditions.
@@ -269,7 +353,7 @@ each resolves to the expected stage and reports the resolution before starting.
 
 ## Assumptions
 
-- **Stage vocabulary is closed at three values.** Planning, implementation, and
+- **Stage vocabulary is closed at three values.** `plan`, `implement`, and
   full cover the boundary this feature exists to create; no additional stage names
   are introduced, and downstream specs consume these three.
 - **The confidence gate belongs to the planning stage.** It sits between analysis
