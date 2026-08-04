@@ -25,6 +25,14 @@ advertises. The second is a stale-documentation repair, not new capability — t
 Claude side already resolves those flags from the invocation argv at
 `SKILL.md:327-336` — and it changes no gate behaviour (FR-002).
 
+The leading `/speckit-pro:speckit-autopilot` token is **not** a third addition to
+that line. Each distribution's `## Input` block documents the argv the skill
+*receives*, which on both sides begins at the workflow path; the command token
+shown here is the user-facing Claude invocation, and it is what the scaffold-chain
+contract's invocation table shows for the same reason. Parity is over the flag
+set, its values, and its precedence — never over the leading token, which has no
+Codex counterpart.
+
 ### Codex CLI
 
 ```text
@@ -41,9 +49,20 @@ argv by name, not by position.
 
 ### Stage vocabulary
 
-Stated once, in [data-model.md §Stage](../data-model.md#stage). Not restated per
-platform. Exactly `plan`, `implement`, `full` — literal lowercase, no aliases, no
-alternate casing, no long-form spellings.
+Normatively stated once, in [data-model.md §Stage](../data-model.md#stage):
+exactly `plan`, `implement`, `full` — literal lowercase, no aliases, no alternate
+casing, no long-form spellings. Every other appearance is a readability copy, not
+a second source of truth — the two synopsis blocks above, the two rejection
+messages below, and the scaffold-chain restatement. No copy is per-platform in
+meaning: the two synopses carry the same value set by construction, and neither
+distribution owns a vocabulary the other does not.
+
+The copies are held to the source by **execution, not review**. The FR-015a unit
+test covers every rejection case (plan.md §6), and those messages enumerate the
+accepted values; the status-evidence validator separately asserts that any
+recorded `Stage` row is one of the three literals. A token added to the source and
+not to a copy therefore fails a test rather than shipping as documentation drift —
+which matters because nothing in CI diffs the two skill bodies.
 
 ## 2. Precedence
 
@@ -75,9 +94,18 @@ a fourth value, it is not an error, and it resolves through rank 2.
 `resolve_confidence_mode` (`:1081-1096`)
 
 Both distributions reach it by operation identifier at opening preparation — the
-Claude side at a new Step 0.6c after the 0.6b confidence-mode resolver, the Codex
-side at the matching step in
-`codex-skills/speckit-autopilot/references/phase-execution-codex.md`.
+Claude side at a new Step 0.6c after the 0.6b confidence-mode resolver
+(`skills/speckit-autopilot/SKILL.md:327-336`), the Codex side at a matching
+Step 0.6c bullet beside its own 0.6b, which lives in the skill body's pre-flight
+summary at `codex-skills/speckit-autopilot/SKILL.md:570-578`.
+
+The Codex step is **not** sited in `references/phase-execution-codex.md`. That
+document opens at the main execution loop and carries no opening-preparation
+section, so a rejection sited there would run *after* phase work began and could
+not satisfy FR-007's "before any phase work" or SC-005's no-partial-output
+guarantee. This is the one place stage prose must enter the word-capped Codex
+body rather than an uncapped reference; at roughly thirty words it is well inside
+the headroom FR-013 protects, and it is additive, so no pinned sentence moves.
 
 ### Request
 
@@ -161,12 +189,22 @@ working under the rule above, so no operator following older guidance is strande
 
 ### Exit codes
 
+Two layers reject, and conflating them is how the golden fixtures would be
+written against the wrong surface. The runner validates the *request* before the
+operation runs and returns a **diagnostic envelope, not an exit code**: a
+malformed `autopilot_args` yields `invalid_input` and a path outside the trust
+boundary yields `unsupported_path` (`read_only.py:392-399`, `:275-291`).
+`unsupported_path` is not an exit code at all — it has no entry in the runner's
+exit-code map. Only the operation's own rejections below are exit codes.
+
 | Code | Meaning |
 |---|---|
 | 0 | Resolved. Envelope on stdout. |
-| 2 | Input error — invalid or conflicting arguments, a workflow file that cannot be read, a workflow file whose `## Workflow Overview` table cannot be parsed, or a path outside the trust boundary. |
+| 2 | Input error — invalid or conflicting stage arguments, a workflow file that cannot be read, or a `## Workflow Overview` table that cannot be parsed. |
 
-Exit 1 is not used: there is no "expected failure" for this operation.
+Exit 1 is not used: there is no "expected failure" for this operation. Exit 2 is
+the only non-zero code, and the runner already maps it to `invalid_input`
+(`read_only.py:42-47`), so this operation introduces no new diagnostic code.
 
 Two cases that look alike are deliberately split, because collapsing them is how
 this operation would produce the flagship silent failure:

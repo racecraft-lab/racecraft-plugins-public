@@ -68,7 +68,7 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 14 FR, 3 user stories, 8 success criteria, 11 acceptance scenarios, 0 markers |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 passed. 3 of 3 sessions resolved via 2-analyst consensus (Session 2 needed a Round 2 tiebreak); spec 22 → 31 normative items, 0 `[NEEDS CLARIFICATION]` markers |
 | Plan | `/speckit-plan` | ✅ Complete | G3 passed. plan.md + research.md + data-model.md + quickstart.md + 2 contracts; 0 markers. Shared stage resolution sited as runner operation `resolve-autopilot-stage`. Re-estimate 430 reviewable LOC / 17 files — warn on both, block on neither; one slice, no split, rationale recorded in plan.md |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit-checklist` | ✅ Complete | G4 passed. 3 of 3 domains; 138 items all evaluated, 20 defects raised and all 20 remediated, 0 outstanding, 0 `[Gap]` markers. +29 LOC (430 → 459), no new requirement beyond domain 1's two |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Plan stage's terminal step (design concept Q7) |
@@ -624,8 +624,8 @@ Focus on Autopilot Staging requirements:
 |-----------|-------|------|-----------------|
 | state-management | 39 | 6 raised, 6 remediated, 0 outstanding | FR-006a (new), FR-009, FR-009a, FR-010a, FR-012a, FR-012b (new), plan.md sweep scope |
 | error-handling | 46 | 8 raised, 8 remediated, 0 outstanding | FR-007, FR-009, FR-010a, contracts/stage-invocation.md exit-code split, new Out of Scope entry (stop hook) |
-| api-contracts | | | |
-| **Total** | | | |
+| api-contracts | 53 | 6 defects raised (8 items tagged; CHK013/CHK014 and CHK022/CHK045 are paired readings of one defect each), 6 remediated, 0 outstanding | FR-011 (audit attribution), contracts/stage-invocation.md §1 / §3 / §Stage vocabulary / §Exit codes, contracts/scaffold-autopilot-chain.md §4, plan.md §4 |
+| **Total** | 138 | 20 raised, 20 remediated, 0 outstanding | +29 LOC across three domains (430 → 459) |
 
 ### Addressing Gaps
 

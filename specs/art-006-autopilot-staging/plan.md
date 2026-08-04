@@ -179,6 +179,21 @@ never hand-edited (root `AGENTS.md`, "Editing Boundaries"):
   notion), and the non-terminal-verdict diagnostic (≈1, extending the diagnostic
   FR-010a already mandates). Posture unchanged — warn on LOC and file count,
   block on neither, still far under the 800-LOC block line.
+- **Phase 4 increment, third checklist (+6 LOC, 453 → 459, no new file, no new
+  surface, no new requirement)**: the api-contracts checklist closed six defects
+  in the invocation and chain contracts. Four cost nothing — pinning the stage
+  vocabulary's copies points at rejection-case and literal-assertion coverage §6
+  already declares; the Claude argv-rendering clarification and the FR-011 audit
+  attribution only prevent wrong edits; and the terminal-status ownership note
+  directs ART-011, which is out of this slice. Two carry lines: the Codex Step
+  0.6c bullet relocating from `phase-execution-codex.md` into the capped skill
+  body beside 0.6b (≈4, a site not previously counted as a distinct edit), and
+  the two request-layer diagnostics the unit test must assert separately from
+  exit 2 (≈2 in fixtures). The most consequential fix carries no lines at all:
+  the contract had sited the Codex resolver in a document with no
+  opening-preparation section, where a pre-flight rejection could satisfy neither
+  FR-007 nor SC-005. Posture unchanged — warn on LOC and file count, block on
+  neither.
 - **Split decision**: **one slice, no split** — unchanged from spec.md:369-375.
   The 48-LOC growth over the ratified 382 comes entirely from the Clarify phase
   adding nine lettered sub-requirements that *narrow* existing behaviour, and
@@ -379,15 +394,22 @@ at-most-twice-per-run write cadence, and the same-commit rule for the mirror.
 
 ### 4. Codex distribution — additive, within 329 words
 
-Two edits to `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`:
+Three edits to `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`:
 
 1. `:544` — append `[--stage plan|implement|full]` to the argv line. One
    whitespace-delimited token by `structural_helpers.body`'s `.split()` count.
 2. One pointer sentence directing the reader to the stage section of
    `references/phase-execution-codex.md`.
+3. `:570-578` — a **Step 0.6c** bullet beside the existing 0.6b confidence-mode
+   bullet, running `resolve-autopilot-stage` and STOPping before Phase 0 on exit
+   2. This one cannot live in a reference file: `phase-execution-codex.md` opens
+   at the main execution loop and has no opening-preparation section, so a
+   rejection sited there would run after phase work began and could satisfy
+   neither FR-007 nor SC-005.
 
-Budget: **≈24 words of the 329 available**, leaving ≈305. All Codex stage prose
-lands in `references/phase-execution-codex.md`, which is uncapped. The four
+Budget: **≈54 words of the 329 available**, leaving ≈275. All *remaining* Codex
+stage prose lands in `references/phase-execution-codex.md`, which is uncapped;
+only the argv token, the pointer, and the Step 0.6c bullet enter the capped body. The four
 string-pinned sentences (`validate-codex-skills.py:292`, `:295`, `:306-310`,
 `:313-318`) are untouched — every edit is an addition, and the pinned assertions
 read `runtime_doc`, which folds the referenced files in at `:235-242`.

@@ -352,6 +352,11 @@ each resolves to the expected stage and reports the resolution before starting.
   (d) a planning-stage run marks the implementation phase **and every
   post-implementation entry** out of stage — the post-implementation family is
   where the audit actually blocks. (Clarify S3/Q3.)
+  The "pre-final audit" that tolerates the marker is a Codex-side artifact; the
+  Claude distribution ships no equivalent completion audit, so on that side
+  nothing blocks the marker in the first place. Constraints (a) and (b) are the
+  ones that bind on both distributions, because both derive from the shared
+  phase-coverage guard rather than from either skill body's prose.
 - **FR-012**: Stage resolution MUST be implemented once as shared logic that both
   distributions execute, rather than as two independent prose descriptions of the
   same rule, and that shared logic MUST be a registered runner operation reached

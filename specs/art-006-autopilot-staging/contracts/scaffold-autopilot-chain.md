@@ -78,6 +78,10 @@ conditions, all in the one artifact:
 1. Every planning-phase row in `## Workflow Overview` — Specify, Clarify, Plan,
    Checklist, Tasks, Analyze — carries a terminal status
    (`Complete`, `✅ Complete`, `Skipped`, `✅ Skipped`, `⏭ Skipped`, `⏭️ Skipped`).
+   That set is a copy for readability, not a source: it is owned by the shipped
+   `WORKFLOW_TERMINAL_STATUSES` frozenset in
+   `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`.
+   ART-011 must read the shipped set rather than re-declare these six literals.
 2. A `G6.5` confidence-gate verdict is recorded in the file.
 3. The `Stage` row reads `plan` — the last *resolved* stage of the most recent
    run.
