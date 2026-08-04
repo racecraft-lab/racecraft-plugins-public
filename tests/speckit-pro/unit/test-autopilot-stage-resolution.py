@@ -129,6 +129,52 @@ AUTO_DETECTED_FROM_PHASE_CASES = (
 )
 
 
+# --- Cross-distribution argv parity (FR-015a, SC-007) --------------------
+# Both distributions publish the same flag set in two different synopsis
+# orderings: Claude names `--stage` before the `--strict | --advisory` pair
+# (contracts/stage-invocation.md:15-19), Codex names it after (`:39-43`).
+# Argument order in a synopsis is presentation only — the parser reads argv by
+# name, never by position (speckit_pro_runner/helpers/read_only.py:1111-1112) —
+# so both orderings must reach the one registered `resolve-autopilot-stage`
+# operation and resolve identically. That is asserted here, by execution, rather
+# than in the structural parity validator, whose checks are existence-only.
+#
+# Neither form carries the leading `/speckit-pro:speckit-autopilot` command
+# token: each distribution's `## Input` block documents the argv the skill
+# *receives*, which on both sides begins at the workflow path, and parity is
+# over the flag set, its values, and its precedence — never over that token,
+# which has no Codex counterpart (contracts/stage-invocation.md:24-34).
+#
+# (label, from_phase, spec, stage, mode)
+PARITY_INVOCATIONS = (
+    ("bare invocation", None, None, None, None),
+    ("stage plan", None, None, "plan", None),
+    ("stage implement", None, None, "implement", None),
+    ("stage full", None, None, "full", None),
+    # The two orderings differ only when a stage AND a mode flag are both
+    # present; these are the cases that actually exercise the divergence.
+    ("stage plan with --strict", None, None, "plan", "--strict"),
+    ("stage implement with --advisory", None, None, "implement", "--advisory"),
+    ("stage full with --strict", None, None, "full", "--strict"),
+    ("stage plan with a spec and --advisory", None, "ART-006", "plan", "--advisory"),
+    ("stage plan with an in-range --from-phase", "analyze", None, "plan", "--strict"),
+    ("stage implement with an in-range --from-phase", "implement", None, "implement", "--advisory"),
+    # No stage named: rank 2 decides, and the mode flag must not perturb it.
+    ("auto-detect with --from-phase implement", "implement", None, None, "--strict"),
+    ("auto-detect with a spec and a mode flag", None, "ART-006", None, "--advisory"),
+)
+
+# Rejections must be byte-identical across the two orderings too: a run rejected
+# in one distribution and accepted in the other is the divergence FR-015a exists
+# to prevent. (label, stage, from_phase)
+PARITY_REJECTIONS = (
+    ("unrecognized stage value", "planning", None),
+    ("alternate casing is not an alias", "Plan", None),
+    ("--from-phase outside the named stage's range", "plan", "implement"),
+    ("implement stage with a planning --from-phase", "implement", "tasks"),
+)
+
+
 # --- Workflow-file reader fixtures (FR-006a, FR-008a) --------------------
 PLANNING_ROWS_TERMINAL = (
     ("Specify", "✅ Complete"),
@@ -270,6 +316,16 @@ PLANNING_COMPLETE = PLANNING_ROWS_TERMINAL + (GATE_TERMINAL, IMPLEMENT_PENDING)
 # it would start the very phase the gate just refused.
 STRICT_MODE_STOP = PLANNING_ROWS_TERMINAL + (GATE_BLOCKED, IMPLEMENT_PENDING)
 
+# The workflow states whose auto-detected outcomes differ, so cross-distribution
+# parity is asserted across every branch of the reader, not one happy path.
+PARITY_WORKFLOWS = (
+    ("planning incomplete", PLANNING_INCOMPLETE),
+    ("planning complete", PLANNING_COMPLETE),
+    ("strict-mode gate stop", STRICT_MODE_STOP),
+    ("confidence gate row absent", PLANNING_ROWS_TERMINAL + (IMPLEMENT_PENDING,)),
+    ("confidence gate skipped", PLANNING_ROWS_TERMINAL + (GATE_SKIPPED, IMPLEMENT_PENDING)),
+)
+
 # (label, overview rows, argv, expected stage, expected source, basis must name)
 AUTO_DETECTION_CASES = (
     (
@@ -400,6 +456,34 @@ def workflow_document(rows: tuple[tuple[str, str], ...], stage_row: str = "") ->
         + "| **Branch** | `test-branch` |\n"
         + stage_row
     )
+
+
+def distribution_argv(
+    distribution: str,
+    *,
+    from_phase: str | None = None,
+    spec: str | None = None,
+    stage: str | None = None,
+    mode: str | None = None,
+) -> list[str]:
+    """One distribution's documented synopsis ordering of the same invocation.
+
+    Claude names `--stage` before the `--strict | --advisory` pair; Codex names
+    it after. Both begin at the workflow path and neither carries the leading
+    command token (contracts/stage-invocation.md:15-19, :39-43, :24-34).
+    """
+    argv: list[str] = [WORKFLOW_FILE]
+    if from_phase is not None:
+        argv += ["--from-phase", from_phase]
+    if spec is not None:
+        argv += ["--spec", spec]
+    stage_tokens = ["--stage", stage] if stage is not None else []
+    mode_tokens = [mode] if mode is not None else []
+    if distribution == "claude":
+        return argv + stage_tokens + mode_tokens
+    if distribution == "codex":
+        return argv + mode_tokens + stage_tokens
+    raise ValueError(f"unknown distribution: {distribution!r}")
 
 
 def resolve_stage(text: str, args: list[str] | None = None) -> dict[str, object]:
@@ -809,6 +893,81 @@ class PlanningStageCanonicalListTests(unittest.TestCase):
         )
 
 
+class CrossDistributionArgvParityTests(unittest.TestCase):
+    """T034 — FR-015a/SC-007: both synopsis orderings resolve identically."""
+
+    def argv_pair(self, case: tuple[object, ...]) -> tuple[list[str], list[str]]:
+        _label, from_phase, spec, stage, mode = case
+        kwargs = {"from_phase": from_phase, "spec": spec, "stage": stage, "mode": mode}
+        return distribution_argv("claude", **kwargs), distribution_argv("codex", **kwargs)
+
+    def test_the_two_orderings_are_genuinely_different_token_sequences(self) -> None:
+        # Negative control. If the builder emitted one sequence for both
+        # distributions, every parity assertion below would hold vacuously.
+        differing = [case[0] for case in PARITY_INVOCATIONS if len(set(map(tuple, self.argv_pair(case)))) > 1]
+        # The orderings diverge exactly when a stage and a mode flag co-occur.
+        expected = [label for label, _fp, _spec, stage, mode in PARITY_INVOCATIONS if stage and mode]
+        self.assertEqual(expected, differing)
+        self.assertTrue(differing, "no fixture exercises the ordering difference")
+
+    def test_both_orderings_parse_to_the_same_stage_and_from_phase(self) -> None:
+        for case in PARITY_INVOCATIONS:
+            label, from_phase, _spec, stage, _mode = case
+            with self.subTest(case=label):
+                claude_argv, codex_argv = self.argv_pair(case)
+                claude = read_only.parse_stage_args(claude_argv)
+                codex = read_only.parse_stage_args(codex_argv)
+                self.assertIsNone(claude["error"], claude["error"])
+                self.assertEqual(claude, codex)
+                # Pin the absolute result too, so a parser that degraded both
+                # orderings to the same wrong answer is still caught.
+                self.assertEqual(claude["stage"], stage)
+                self.assertEqual(claude["from_phase"], from_phase)
+
+    def test_both_orderings_resolve_identically_through_the_one_operation(self) -> None:
+        for workflow_label, rows in PARITY_WORKFLOWS:
+            document = workflow_document(rows)
+            for case in PARITY_INVOCATIONS:
+                with self.subTest(workflow=workflow_label, case=case[0]):
+                    claude_argv, codex_argv = self.argv_pair(case)
+                    self.assertEqual(
+                        resolve_envelope(document, claude_argv),
+                        resolve_envelope(document, codex_argv),
+                    )
+
+    def test_both_orderings_reject_identically_before_any_phase_work(self) -> None:
+        # A run rejected under one ordering and accepted under the other is the
+        # silent divergence FR-015a exists to prevent, so the rejection text is
+        # compared as a whole, not merely its presence.
+        for label, stage, from_phase in PARITY_REJECTIONS:
+            with self.subTest(case=label):
+                kwargs = {"stage": stage, "from_phase": from_phase, "mode": "--strict"}
+                claude = read_only.parse_stage_args(distribution_argv("claude", **kwargs))
+                codex = read_only.parse_stage_args(distribution_argv("codex", **kwargs))
+                self.assertIsNotNone(claude["error"])
+                self.assertEqual(claude, codex)
+
+    def test_the_registered_runner_resolves_both_orderings_identically(self) -> None:
+        # Parity is over the one operation both distributions reach by identifier
+        # (FR-012), asserted through the real runner rather than the helper alone.
+        envelopes = []
+        for distribution in ("claude", "codex"):
+            response = run_runner(
+                {
+                    "workflow_file": WORKFLOW_FILE,
+                    "autopilot_args": distribution_argv(
+                        distribution, spec="ART-006", stage="plan", mode="--strict"
+                    ),
+                }
+            )
+            self.assertEqual(response["status"], "ok")
+            envelopes.append(response["data"]["stdout_json"])
+        self.assertEqual(envelopes[0], envelopes[1])
+        self.assertEqual(envelopes[0]["tool"], "resolve-autopilot-stage")
+        self.assertEqual(envelopes[0]["stage"], "plan")
+        self.assertEqual(envelopes[0]["source"], "argv")
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite()
@@ -819,6 +978,7 @@ def build_suite() -> unittest.TestSuite:
         ConfidenceGateVerdictTests,
         AutoDetectionTests,
         PlanningStageCanonicalListTests,
+        CrossDistributionArgvParityTests,
     ):
         suite.addTests(loader.loadTestsFromTestCase(case))
     return suite

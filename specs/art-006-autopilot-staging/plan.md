@@ -411,7 +411,9 @@ Three edits to `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`:
    rejection sited there would run after phase work began and could satisfy
    neither FR-007 nor SC-005.
 
-Budget: **≈54 words of the 329 available**, leaving ≈275. All *remaining* Codex
+Budget: **124 words of the 329 available**, leaving **205** — measured after the
+edits landed, not projected. The pre-implementation estimate was ≈54; the three
+edits needed more prose than budgeted to state the resolution contract fully. All *remaining* Codex
 stage prose lands in `references/phase-execution-codex.md`, which is uncapped;
 only the argv token, the pointer, and the Step 0.6c bullet enter the capped body. The four
 string-pinned sentences (`validate-codex-skills.py:292`, `:295`, `:306-310`,

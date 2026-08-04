@@ -2475,11 +2475,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 58454,
+              "byte_count": 59413,
               "kind": "skill",
               "path": "skills/speckit-autopilot/SKILL.md",
               "required": true,
-              "sha256": "93f1cd518bef7a294e8b77ea6b2d70b5ac69ba2c10a92d7e5fdaff4252f5909d",
+              "sha256": "0664f72e2cfff07d29554656b3c2ac46bdfcf9378bfc57c4b1d08f63c2e3fd88",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
               "transform": "codex_overlay"
             },
@@ -2700,11 +2700,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 23306,
+              "byte_count": 32509,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution-codex.md",
               "required": true,
-              "sha256": "a159dee8fe350b956d60eb988c45659185c9c30803b80237fa222a152eda1bc3",
+              "sha256": "2b60b041ff08468d16f902b14fc8e969848b099ccc796cf5863b556cd77076b5",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
               "transform": "path_normalization"
             },
@@ -2763,11 +2763,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 7777,
+              "byte_count": 9554,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/task-list-canonical-codex.md",
               "required": true,
-              "sha256": "d55a36aaffe48cfafa3758b4028f6987de0f465d67cf01123d068d369caaf988",
+              "sha256": "f6ae209f5a71b670cb22bc368bcd106fa8ff2ec46fd5d4f9757384a05c64be19",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
               "transform": "path_normalization"
             },
@@ -3611,11 +3611,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 58454,
+              "byte_count": 59413,
               "kind": "skill",
               "path": "skills/speckit-autopilot/SKILL.md",
               "required": true,
-              "sha256": "93f1cd518bef7a294e8b77ea6b2d70b5ac69ba2c10a92d7e5fdaff4252f5909d",
+              "sha256": "0664f72e2cfff07d29554656b3c2ac46bdfcf9378bfc57c4b1d08f63c2e3fd88",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
               "transform": "codex_overlay"
             },
@@ -3836,11 +3836,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 23306,
+              "byte_count": 32509,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution-codex.md",
               "required": true,
-              "sha256": "a159dee8fe350b956d60eb988c45659185c9c30803b80237fa222a152eda1bc3",
+              "sha256": "2b60b041ff08468d16f902b14fc8e969848b099ccc796cf5863b556cd77076b5",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
               "transform": "path_normalization"
             },
@@ -3899,11 +3899,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 7777,
+              "byte_count": 9554,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/task-list-canonical-codex.md",
               "required": true,
-              "sha256": "d55a36aaffe48cfafa3758b4028f6987de0f465d67cf01123d068d369caaf988",
+              "sha256": "f6ae209f5a71b670cb22bc368bcd106fa8ff2ec46fd5d4f9757384a05c64be19",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
               "transform": "path_normalization"
             },
@@ -4476,7 +4476,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "a0b5bf063497ba4fc33e4d433189378fcdd0526624837041fa56792c48a7151a",
+          "file_tree_hash": "fab4e40c961a20e0cff35408dcbd69788044be526104c4999ca3808b653a4144",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

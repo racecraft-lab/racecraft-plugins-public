@@ -6,6 +6,7 @@ installed custom subagents through `spawn_agent` and `wait_agent`.
 ## Contents
 
 - [Canonical Order](#canonical-order) — `PHASES = [...]` + `--from-phase` semantics
+- [Stage-Bounded Execution](#stage-bounded-execution) — which phases the resolved stage may start, its terminal step, and the resume protocol
 - [Agent Mapping](#agent-mapping) — per-phase executor + prompt prefix table
 - [Main Execution Loop](#main-execution-loop) — full 11-step per-phase pseudocode
 - [Phase 3: Plan — Reviewability Budget](#phase-3-plan--reviewability-budget-advisory) — advisory plan-phase production-LOC estimate
@@ -22,6 +23,180 @@ PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 `--from-phase` changes the first phase to execute, not the required plan
 coverage. `update_plan` and `autopilot-state.json` must still contain Phase 0,
 all seven SDD phases, and Post before any subagent is spawned.
+
+## Stage-Bounded Execution
+
+`AUTOPILOT_STAGE` is resolved once at Step 0.6c. It bounds which phases this
+invocation may run:
+
+| Stage | Phase range | Terminal step |
+| --- | --- | --- |
+| `plan` | Specify, Clarify, Plan, Checklist, Tasks, Analyze | G6.5 confidence gate, then the stage-boundary commit |
+| `implement` | Implement, then the post-implementation steps | `Post: Retrospective` |
+| `full` | All seven phases end to end | `Post: Retrospective` |
+
+The stage bounds which phases may **start**. It never truncates the canonical
+plan: `update_plan` and `autopilot-state.json` still contain Phase 0, all seven
+SDD phases, and Post before any subagent is spawned, and entries outside the
+range are marked per
+[task-list-canonical-codex.md](./task-list-canonical-codex.md#out-of-stage-entries).
+
+**A resolved stage MUST NOT start a phase outside its own range.** Apply the
+range *before* the first-pending scan picks a row, not after:
+
+```text
+candidate_rows = Workflow Overview rows whose phase is in AUTOPILOT_STAGE's range
+start = first candidate row whose status is NOT terminal
+        (terminal = Complete / ✅ Complete / Skipped / ✅ Skipped / ⏭ Skipped)
+if no such row  → the stage's work is already done; run its terminal step, then STOP
+```
+
+Select on **"not terminal"**, not on "pending or in progress". This is the
+difference that matters. The unbounded scan takes the first row reading
+`⏳ Pending` or `🔄 In Progress`, and a `⚠ Blocked` row matches **neither**
+arm. After a strict-mode G6.5 stop the six planning rows are terminal and the
+`Confidence Gate` row is **blocked**, so the unbounded scan skips straight past
+it and lands on the implementation row — starting the very phase the gate just
+refused, while the resolved stage still reads `plan`. Both halves look correct
+in isolation; only the pair is wrong.
+
+Two consequences follow directly:
+
+- **A non-terminal `Confidence Gate` row makes the planning stage re-enter at
+  the confidence gate**, because that row is inside the plan stage's range and
+  is the first non-terminal row in it.
+- **Crossing that boundary requires an explicit `--stage implement`.** A bare
+  invocation re-resolves `plan` (the row is in the planning-complete predicate),
+  and the crossing is reported rather than silent.
+
+`--from-phase` still moves the starting point *within* the resolved stage's
+range; a value outside an explicitly named stage's range is rejected at Step
+0.6c before any phase work begins.
+
+### Plan Stage: G6.5 Is The Terminal Step
+
+G6.5 runs *after Phase 6 commits and before Phase 7 begins*, so on a
+`--stage plan` run it is the last work the stage does. The run takes the
+stage-boundary commit below and then **STOPs** — it does not advance to Phase 7,
+in any mode. In advisory mode the gate passes or warns and the stage still ends
+here; in strict mode the STOP **is** the gate resolving, and the boundary commit
+is still taken so the failing verdict reaches version history.
+
+On a strict-mode stop, write the `Confidence Gate` row to a **non-terminal**
+blocked status — never to a terminal one. The row must advance off its pending
+state (so the boundary commit is non-empty) while leaving the planning-complete
+predicate unsatisfied (so a later bare invocation re-resolves `plan` rather than
+crossing the boundary the gate refused). Record the failing verdict in a form
+the gate-record matcher does **not** read as a pass: a non-terminal row sitting
+beside a record that scans as a passing G6.5 is exactly the
+status-versus-evidence contradiction that the Step 1.1 coverage guard and the
+tree-wide CI gate both fail on.
+
+#### Stage-boundary commit (plan stage only)
+
+After the gate resolves — pass, warn, or strict stop — take **one distinct
+commit**. It is not a renamed analyze-phase commit: that commit was already
+taken before the gate ran, so renaming it would leave the verdict uncommitted.
+
+```text
+git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json \
+  && git commit -m "chore(SPEC-XXX): close the plan stage boundary"
+```
+
+Three properties, each load-bearing:
+
+- **The message names the stage boundary, not a phase**, so the boundary is
+  identifiable in version history.
+- **The staged path set is the same enumeration as the per-phase bookkeeping
+  commits** — the specification directory, the workflow file, and the state
+  file. Never the workflow *directory*, which also holds untracked run
+  byproducts that a directory-wide add would sweep in.
+- **The commit is non-empty regardless of whether the `Stage` row changed**,
+  because the `Confidence Gate` row always advances off its pending state — so
+  the conditional second `Stage` write needs no empty-commit escape hatch.
+
+`chore:` because a planning-stage boundary ships no runtime change and must not
+trigger a release-please version bump, the same reasoning the spec-MOC
+regeneration commit uses for its `docs:` subject.
+
+### Implementation Stage: Read The Recorded Verdict, Do Not Re-Run The Gate
+
+G6.5 is the **plan** stage's terminal step, so it is outside the implementation
+stage's range. An `implement` invocation **MUST NOT re-run the pre-implement
+confidence gate.** Re-running it would score a planning result the operator
+already accepted, against artifacts that have not changed since the plan stage
+committed — and under `--strict` it could refuse a boundary that was already
+resolved.
+
+Instead, read the **recorded verdict**: the `confidence_gate_status` field of
+the Step 0.6c `resolve-autopilot-stage` envelope, which echoes the
+`Confidence Gate` status row verbatim. Do not read it from the
+`## Phase 6.5: Confidence Gate` prose record — that record's field name varies
+across workflow files (`Verdict`, `Decision`, `Result`), and a bare composite
+score is not a verdict at all: the same score proceeds under advisory mode and
+stops under strict, so identical prose accompanies both outcomes. `null` means
+no row is recorded, which is legal and is not a verdict.
+
+**The confidence-mode flags stay accepted.** `--strict` and `--advisory` are
+advertised unconditionally by both distributions' synopses, so an
+implementation-stage invocation **MUST NOT reject them** — rejecting would be a
+subtractive change to a shipped surface. It must instead make the flag's
+inertness explicit, so an accepted flag never silently does nothing. When
+`--strict` or `--advisory` is present on an `implement` invocation, emit:
+
+```text
+Stage `implement`: the pre-implement confidence gate (G6.5) belongs to the plan
+stage and is not run here, so `<flag>` selects no mode for this invocation. The
+recorded verdict is read from the `Confidence Gate` row instead: `<verdict>`.
+```
+
+Substitute `<flag>` with the flag as given and `<verdict>` with
+`confidence_gate_status` verbatim, or the words `none recorded` when it is
+`null`.
+
+**When the recorded verdict is non-terminal, the same diagnostic names it and
+says the boundary is being crossed.** A non-terminal verdict — `⚠️ Blocked`, or
+any status outside the terminal set — is the state a strict-mode stop leaves
+behind. Append:
+
+```text
+That verdict is non-terminal: the gate refused this boundary, and `--stage
+implement` is proceeding past it.
+```
+
+Emit that sentence on **every** implementation-stage run past a non-terminal
+verdict, flag or no flag. Naming the implementation stage explicitly remains
+sufficient to proceed — the operator is not blocked, and no confirmation is
+required. Crossing *silently* is the only thing forbidden.
+
+### Resume Protocol
+
+Resuming is the same protocol on both distributions, because both read the same
+durable store through the same Step 0.6c operation.
+
+**The `Stage` entry is workflow-file-wins.** The `Stage` row in the workflow
+file's `### Basic Information` table is the authoritative durable store of the
+resolved stage; `autopilot-state.json.stage` mirrors it for the active run only
+and is never authoritative. On disagreement the workflow file wins and the
+mirror is repaired from it. Absence on either side is legal — it means no run
+yet, and resolves through Step 0.6c auto-detection. A two-sided disagreement is
+reported by the Step 1.1 coverage guard as `stage_mirror_errors`, which is
+registered in the `status-evidence` rule and so fails the guard rather than
+merely printing.
+
+Three resume forms, in order of preference:
+
+- **Bare re-invocation** — pass the workflow file and nothing else. Step 0.6c
+  re-resolves the stage from the workflow file's own status table and prints the
+  basis. After a plan-stage boundary this re-resolves `plan` whenever the
+  `Confidence Gate` row is non-terminal, so a refused boundary is never crossed
+  by accident.
+- **`--stage implement`** — the explicit crossing. Required after a strict-mode
+  stop, and it reports the recorded verdict it is proceeding past rather than
+  re-running the gate.
+- **`--from-phase <phase>`** — moves the starting point within the resolved
+  stage's range. The older `--from-phase implement` form keeps working and is
+  not rejected against an auto-detected stage.
 
 ## Agent Mapping
 

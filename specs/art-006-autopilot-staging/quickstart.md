@@ -137,8 +137,9 @@ PY
 ```
 
 Baseline on 2026-08-04: **7671 words, headroom 329**. After the three additions
-(argv token, pointer sentence, Step 0.6c bullet), expect ≈7725 and headroom
-≈275. Use this module-level `body()` and nothing else —
+(argv token, pointer sentence, Step 0.6c bullet), the measured result is **7795
+and headroom 205** (the pre-implementation projection was ≈7725/≈275; the edits
+cost 124 words rather than the budgeted ≈54). Use this module-level `body()` and nothing else —
 a hand-rolled frontmatter regex gives a slightly different count.
 
 Then confirm the four string-pinned sentences survived and the structural suite

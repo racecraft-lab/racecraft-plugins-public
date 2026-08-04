@@ -541,8 +541,13 @@ Orchestrator-Direct pattern.
 You receive a workflow file path and optional arguments:
 
 ```text
-path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID] [--strict | --advisory]
+path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID] [--strict | --advisory] [--stage plan|implement|full]
 ```
+
+`--stage` selects which range of phases this invocation runs, and Step 0.6c
+resolves it when omitted. Argument order is presentation only — every
+argument is read by name. Stage-bounded execution is specified in
+[phase-execution-codex.md](./references/phase-execution-codex.md#stage-bounded-execution).
 
 Before Step -1, bind the workflow to the current worktree. If the supplied
 path is missing from the current checkout, follow the read-only worktree
@@ -577,6 +582,16 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   `advisory`. If the script exits 2 (both flags passed), STOP
   before Phase 0 with the conflict message. **Do not re-run the
   script at G6.5; the gate reads `CONFIDENCE_GATE_MODE` directly.**
+- **Step 0.6c: Resolve The Stage** — run helper operation
+  `resolve-autopilot-stage` with the invocation argv and the workflow
+  file path. Record `stage` as `AUTOPILOT_STAGE` and keep `source`,
+  `basis`, `recorded_stage`, `planning_complete`, and
+  `confidence_gate_status` for the phase loop. An explicit `--stage`
+  always wins; with none given the stage is resolved from the workflow
+  file's `## Workflow Overview` table. If the operation exits 2, STOP
+  before Phase 0 with that one-line message — the same fail-fast shape
+  0.6b uses. **Print the resolved stage and its basis before any phase
+  work begins.**
 - **Step 0.8: Capability Coverage Check** — informational research/context advisory (agents have fallbacks)
 - **Step 0.8b: Capability Enumeration, Grounding & Feed-down** — you are the only component that discovers openly. Enumerate the tools and installed skills this session actually exposes and select best-fit per the capability-discovery directive (speckit-pro/skills/speckit-autopilot/references/capability-discovery.md); assume no fixed set — the user may have installed anything. Subagents inherit the operator's full installed surface and follow the same directive — read-only roles select only read/research capabilities (their mutation built-ins are denied). Still pass the discovered evidence a subagent needs directly in each prompt: shared context beats re-discovery. Ground your OWN output (gate decisions, consensus synthesis, PR bodies) per the grounding contract (speckit-pro/skills/speckit-autopilot/references/grounding.md): cite a real tool/skill/file result for every external fact, and abstain when none grounds it.
 - **Step 0.9: Constitution Validation** — principle checks against current codebase

@@ -9,6 +9,7 @@ list, Codex-specific persistence primitives.
 
 - [Checklist Naming Pattern](#checklist-naming-pattern) — exact item-name templates parsed from the workflow file
 - [Canonical Post-Implementation Item List](#canonical-post-implementation-item-list) — 14-row combined durable Post plan + missing-extension behavior
+- [Out-Of-Stage Entries](#out-of-stage-entries) — how a staged run marks entries outside the resolved stage
 - [Item Naming Rules](#item-naming-rules) — same names across both stores, completed-then-in_progress sequencing
 - [Reference `autopilot-state.json` Schema](#reference-autopilot-statejson-schema) — full example JSON document
 
@@ -86,6 +87,39 @@ rule, so a spec that predates the structural coverage checks stays resumable.
 When v2 state declares a changed-file manifest, also pass
 `--expected-base-commit <live-baseRefOid> --expected-head-commit <live-headRefOid>`
 from freshly fetched live PR metadata, never from the state or manifest.
+
+## Out-Of-Stage Entries
+
+The canonical list is **never truncated** per stage. A staged run
+(`--stage plan` or `--stage implement`) still creates every entry above; entries
+outside the resolved stage take `skipped: <reason>` in the **status** field —
+the same shape used above for an absent extension, so one search finds both
+kinds of skip.
+
+Two of these constraints bind on **both** distributions, because both reach the
+same shared `validate-autopilot-phase-coverage.py` (SKILL.md:662) rather than
+either skill body's prose:
+
+- **Status field only.** The marker goes in the status field and the entry name
+  never changes. The coverage guard matches post-implementation checkpoints by
+  exact name equality, so a `skipped:`-prefixed *name* is read as a *missing*
+  checkpoint and fails the run.
+- **No `pending` substring.** The marker text MUST NOT contain the substring
+  `pending` in any casing — the guard flags any string value containing it
+  case-insensitively.
+
+The third rule is distribution-specific:
+
+- **What each stage marks.** A planning-stage run marks the
+  `Phase 7: Implement` entry and every `Post:` entry; the post-implementation
+  family is where blocking actually happens. An implementation-stage run marks
+  the six planning phase entries instead.
+
+**Codex-only:** the [pre-final completion audit](./post-implementation-codex.md)
+must treat a `skipped: <reason>` status as **satisfied**, not as an incomplete
+item, or a planning-stage run could never return a final response. The Claude
+distribution ships no equivalent completion audit, so it has no counterpart
+rule — which is why this clause is recorded here and not mirrored back.
 
 ## Item Naming Rules
 

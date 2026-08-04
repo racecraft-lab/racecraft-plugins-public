@@ -196,7 +196,8 @@ documentation value only, and the same explanation belongs in
 
 ## D7 — Codex word budget arithmetic
 
-**Decision.** Three `SKILL.md` edits totalling ≈54 words; all *remaining* stage
+**Decision.** Three `SKILL.md` edits totalling **124 words as measured after the
+fact** (estimated ≈54 before implementation); all *remaining* stage
 prose in `references/phase-execution-codex.md`.
 
 **Revised after the Phase 4 api-contracts checklist.** This section originally
@@ -221,8 +222,9 @@ print(len(b.split()))"
 returns everything after the second `---` fence and does **not** strip code
 fences, so a token added inside the argv fence counts. `[--stage plan|implement|full]`
 has no internal whitespace, so it is one `.split()` token. The pointer sentence
-is ≈23 words and the Step 0.6c bullet ≈30. Post-edit projection ≈7725 of 8000,
-leaving ≈275 words of headroom for ART-007 through ART-012.
+is ≈23 words and the Step 0.6c bullet ≈30. **Measured post-edit result: 7795 of
+8000, leaving 205 words of headroom for ART-007 through ART-012.** The estimate
+ran 70 words light; downstream specs should plan against 205, not 275.
 
 The cap applies to the body alone; referenced files are uncapped and are still
 folded into `runtime_doc` at `validate-codex-skills.py:235-242`, which is what
