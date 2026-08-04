@@ -557,6 +557,11 @@ class RunnerFoundationTests(unittest.TestCase):
             "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
             "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
             "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
+            # Dependency pins for the docs site's own toolchain. Not a cutover
+            # surface and not a public claim, but the guard forbids docs-site/
+            # wholesale, so a security patch to a transitive dependency has to
+            # be named here to land at all.
+            "docs-site/pnpm-lock.yaml",
             "docs-site/scripts/validate-doc006-safe-aids.mjs",
             "docs-site/scripts/generate-reference-pages.mjs",
             "docs-site/src/data/safe-install-aids.ts",
