@@ -19,10 +19,18 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 LIB_DIR = REPO_ROOT / "tests" / "speckit-pro" / "lib"
 if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
 from test_result import run_counted  # noqa: E402
+
+# Stage resolution exists once, as a registered runner operation (FR-012). This
+# gate reads the `Stage` row through that same reader rather than a second copy,
+# so CI and the resolver cannot disagree about what a workflow file records.
+from speckit_pro_runner.helpers import read_only  # noqa: E402
 
 SPEC_DIR = REPO_ROOT / "docs" / "ai" / "specs"
 # Current runs write to `.process/`; the legacy location is still on disk and is
@@ -128,6 +136,27 @@ GATE_RECORD_POSITIVE_CASES = (
     "> **G6 gate:** PASS — 0 CRITICAL findings",
     "1. G7 gate: Passed",
 )
+# --- Durable `Stage` entry (FR-001, FR-008a) -----------------------------
+# The closed stage vocabulary, locked against the shared resolver below so the
+# two cannot drift apart.
+STAGE_VALUES = ("plan", "implement", "full")
+BASIC_INFO_HEADING = "### Basic Information"
+# Values that must be reported. Alternate casing and long-form spellings are
+# rejected exactly like unrecognised ones: the vocabulary is three literal
+# lowercase tokens with no aliases.
+STAGE_ROW_REJECTED_VALUES = ("planning", "Plan", "implementation", "PLAN", "full run")
+# Rows that must be accepted, in each spelling a workflow file actually uses.
+STAGE_ROW_ACCEPTED_ROWS = (
+    "| **Stage** | plan |\n",
+    "| Stage | implement |\n",
+    "| **Stage** | `full` |\n",
+    # Absence is legal and is NOT an error — it means "no run yet" (FR-008a).
+    # Fifty-six of the fifty-seven workflow files in this tree carry no entry, so
+    # a required-everywhere rule would fail against pre-existing files on the day
+    # it ships.
+    "",
+)
+
 GATE_RECORD_NEGATIVE_CASES = (
     "| G7 | After Each Implementation Phase | Tests pass, manual verification complete |",
     "| G3 | After Plan | Architecture approved, constitution gates pass, dependencies identified |",
@@ -151,6 +180,17 @@ def workflow_files(*directories: Path) -> list[Path]:
             continue
         found.extend(directory.glob("*-workflow.md"))
     return sorted(found, key=lambda path: (path.name, str(path)))
+
+
+def stage_fixture(stage_row: str) -> str:
+    """A minimal workflow document carrying `stage_row` in `### Basic Information`."""
+    return (
+        "# Test Workflow\n\n"
+        f"{BASIC_INFO_HEADING}\n\n"
+        "| Field | Value |\n|-------|-------|\n"
+        "| **Branch** | `test-branch` |\n"
+        f"{stage_row}"
+    )
 
 
 def markdown_without_comments(text: str) -> str:
@@ -219,15 +259,36 @@ def recorded_gates(lines: list[str], excluded: set[int]) -> dict[str, int]:
     return found
 
 
+def stage_value_errors(display: str, lines: list[str]) -> list[str]:
+    """A recorded `Stage` row must read one of the three stage literals.
+
+    Absence is legal and is not an error (FR-008a): it means "no run yet" and
+    resolves through ordinary auto-detection. The row is read through the shared
+    resolver, so this gate and the runner operation cannot disagree about what a
+    given workflow file records.
+    """
+    value = read_only.workflow_recorded_stage(lines)
+    if value is None or value in STAGE_VALUES:
+        return []
+    return [
+        f"{display}: 'Stage' reads {value!r}, outside the closed stage vocabulary"
+        f" {list(STAGE_VALUES)}"
+    ]
+
+
 def collect_errors(*directories: Path) -> dict[str, list[str]]:
     """Return each violation class as plain-English `file:line` strings."""
     missing_table: list[str] = []
     unknown_status: list[str] = []
     evidence: list[str] = []
     ordering: list[str] = []
+    stage: list[str] = []
     for path in workflow_files(*directories):
         display = path.relative_to(REPO_ROOT).as_posix()
         lines = markdown_without_comments(path.read_text(encoding="utf-8")).splitlines()
+        # Independent of the Workflow Overview table, so it is collected before
+        # the unparseable-table skip below.
+        stage.extend(stage_value_errors(display, lines))
         rows = overview_row_indexes(lines)
         if len(rows) < 3:
             missing_table.append(f"{display}: no parseable '{OVERVIEW_HEADING}' table")
@@ -264,6 +325,7 @@ def collect_errors(*directories: Path) -> dict[str, list[str]]:
         "unknown_status": unknown_status,
         "evidence": evidence,
         "ordering": ordering,
+        "stage": stage,
     }
 
 
@@ -299,6 +361,38 @@ class ValidateWorkflowStatusEvidence(unittest.TestCase):
 
         with self.subTest(msg="no terminal Workflow Overview row follows a non-terminal row"):
             self.assertFalse(errors["ordering"], "\n".join(errors["ordering"]))
+
+        # `errors` above is collected from `workflow_files(*WORKFLOW_DIRS)`, so the
+        # `Stage` assertion inherits the two-directory sweep at WORKFLOW_DIRS
+        # rather than a fresh `.process/`-only glob, which would leave the six
+        # legacy-location workflow files unchecked.
+        with self.subTest(msg="every recorded Stage row reads one of the three stage literals"):
+            self.assertFalse(errors["stage"], "\n".join(errors["stage"]))
+
+        with self.subTest(msg="the Stage vocabulary matches the shared resolver"):
+            self.assertEqual(
+                list(STAGE_VALUES),
+                list(read_only.AUTOPILOT_STAGES),
+                "CI stage vocabulary drifted from the shared runner operation",
+            )
+
+        with self.subTest(msg="a Stage row outside the closed vocabulary is reported"):
+            unreported = [
+                value
+                for value in STAGE_ROW_REJECTED_VALUES
+                if not stage_value_errors(
+                    "fixture", stage_fixture(f"| **Stage** | {value} |\n").splitlines()
+                )
+            ]
+            self.assertEqual([], unreported, f"accepted outside the vocabulary: {unreported}")
+
+        with self.subTest(msg="a valid Stage row and an absent Stage row are both accepted"):
+            rejected = [
+                row
+                for row in STAGE_ROW_ACCEPTED_ROWS
+                if stage_value_errors("fixture", stage_fixture(row).splitlines())
+            ]
+            self.assertEqual([], rejected, f"wrongly reported: {rejected}")
 
         with self.subTest(msg="gate-record matcher accepts every recorded evidence form"):
             unmatched = [case for case in GATE_RECORD_POSITIVE_CASES if not gate_record_ids(case)]

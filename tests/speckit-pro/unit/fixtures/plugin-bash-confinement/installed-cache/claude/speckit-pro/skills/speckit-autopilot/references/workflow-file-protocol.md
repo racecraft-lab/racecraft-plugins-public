@@ -28,6 +28,37 @@ across context compactions and `--from-phase` resumes.
   canonical column set and the 10% Round-2 escape-rate re-evaluation
   trigger computed from these rows.
 
+## The `Stage` Entry
+
+The resolved stage is recorded as a row in the workflow file's
+`### Basic Information` table — the same scalar `| Field | Value |` table that
+already carries `Branch`:
+
+```text
+| **Stage** | plan |
+```
+
+The value is one of `plan`, `implement`, `full`. It records the last **resolved**
+stage of the most recent run, not stage completion — within-stage progress stays
+derived from the Workflow Overview status table. A workflow file carrying **no**
+`Stage` row means "no run yet": that is legal, is not an error, and resolves
+through ordinary auto-detection.
+
+**Write cadence — at most twice per run.** The `Stage` row is *not* refreshed on
+phase transitions:
+
+1. **At resolution**, during opening preparation (Step 0.6c), write the row once.
+2. **At the plan stage's terminal commit only**, write it again **only if** the
+   resolved stage changed. No other write happens.
+
+**Both stores are written in the same edit turn and land in the same commit.**
+The workflow file's `Stage` row is authoritative and `autopilot-state.json.stage`
+is its mirror; writing them together is what guarantees an interrupted run
+cannot leave a *committed* disagreement between the two. Never write one, run a
+phase, and write the other later. On disagreement the workflow file wins and the
+mirror is repaired from it — the Step 1.1 coverage guard reports a two-sided
+mismatch as `stage_mirror_errors` and fails.
+
 ## PR Marker Plan Evidence
 
 When reviewability sizing is marker-planning input, persist marker state as

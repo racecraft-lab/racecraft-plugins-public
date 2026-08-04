@@ -13,6 +13,19 @@
         "completed",
         "completed_archived"
       ]
+    },
+    "stage": {
+      "description": "Mirror of the workflow file's Stage row for the active run only. The workflow file is authoritative; on disagreement it wins and this mirror is repaired from it. Absence means no stage has been resolved yet and is not an error.",
+      "type": "string",
+      "enum": [
+        "plan",
+        "implement",
+        "full"
+      ]
+    },
+    "prior_run_note": {
+      "description": "Verbatim record of the status carried by the predecessor run whose single state slot this run reclaimed. Reclaiming a foreign slot is normal operation, not an error; the note is what separates reclaiming a finished run from one still recorded in_progress.",
+      "type": "string"
     }
   }
 }

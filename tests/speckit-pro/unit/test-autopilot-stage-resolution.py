@@ -223,6 +223,57 @@ UNPARSEABLE_WORKFLOW_TEXTS = (
 )
 
 
+# --- Planning-stage canonical task list (FR-011) -------------------------
+# The canonical list is NEVER truncated per stage. An entry outside the resolved
+# stage keeps its byte-identical canonical name and takes `skipped: <reason>` in
+# its STATUS field (data-model.md:96-110).
+TASK_LIST_CANONICAL_DOC = (
+    PLUGIN_ROOT / "skills" / "speckit-autopilot" / "references" / "task-list-canonical.md"
+)
+OUT_OF_STAGE_STATUS = "skipped: out of stage — resolved stage is plan"
+IN_STAGE_ENTRIES = (
+    "Archive Sweep: previously merged specs dry-run/apply eligibility",
+    "Phase 0: Prerequisites",
+    "Phase 1: Specify",
+    "Phase 2: Clarify - Stage State Representation",
+    "Phase 2: Clarify - Stage State Representation Consensus",
+    "Phase 3: Plan",
+    "Phase 4: Checklist - state-management",
+    "Phase 4: Checklist - state-management Consensus",
+    "Phase 5: Tasks",
+    "Phase 6: Analyze",
+    "Phase 6: Analyze - Consensus",
+    "Phase 6.5: Confidence Gate",
+)
+CANONICAL_POST_ENTRIES = (
+    "Post: Doctor Extension Check",
+    "Post: Verify Implementation",
+    "Post: Verify Tasks Phantom Check",
+    "Post: Code Review",
+    "Post: Integration Suite",
+    "Post: Reviewability Diff Gate",
+    "Post: Self-Review",
+    "Post: UAT Runbook Generation",
+    "Post: PR Body Generation",
+    "Post: PR Creation",
+    "Post: Review Remediation",
+    "Post: Retrospective",
+)
+# A planning-stage run marks the Implement phase AND every `Post:` entry; the
+# post-implementation family is where the pre-final audit actually blocks.
+OUT_OF_STAGE_ENTRIES = ("Phase 7: Implement",) + CANONICAL_POST_ENTRIES
+
+# The marking rules the canonical-list reference must state, so the two
+# distributions mark out-of-stage entries the same way rather than each
+# inventing a shape the shipped guard rejects.
+TASK_LIST_OUT_OF_STAGE_RULES = (
+    "`skipped: <reason>` in the **status** field",
+    "the entry name never changes",
+    "MUST NOT contain the substring `pending` in any casing",
+    "every `Post:` entry",
+)
+
+
 def overview_table(rows: tuple[tuple[str, str], ...]) -> str:
     lines = [
         "## Workflow Overview",
@@ -442,6 +493,78 @@ class WorkflowStageSignalTests(unittest.TestCase):
         self.assertIn("Confidence Gate", read_only.AUTOPILOT_PLANNING_PREDICATE_PHASES)
 
 
+class PlanningStageCanonicalListTests(unittest.TestCase):
+    """T013 — FR-011: out-of-stage entries are marked, never truncated."""
+
+    def planning_stage_state(self, *, prefix_the_name: bool = False) -> dict[str, object]:
+        """A planning-stage `autopilot-state.json` plan array.
+
+        Every canonical entry is present. The Implement phase and every `Post:`
+        entry carry the out-of-stage marker. With ``prefix_the_name`` the marker
+        is (wrongly) moved into the name field, which is the negative control for
+        constraint (a).
+        """
+        plan: list[dict[str, str]] = [
+            {"step": name, "status": "completed"} for name in IN_STAGE_ENTRIES
+        ]
+        for name in OUT_OF_STAGE_ENTRIES:
+            plan.append(
+                {
+                    "step": f"skipped: {name}" if prefix_the_name else name,
+                    "status": OUT_OF_STAGE_STATUS,
+                }
+            )
+        return {"plan": plan}
+
+    def test_marked_entries_keep_byte_identical_canonical_names(self) -> None:
+        module = load_coverage_validator()
+        state = self.planning_stage_state()
+        result = module.validate_state(module.extract_plan_steps(state))
+        for key, values in sorted(result.items()):
+            with self.subTest(check=key):
+                self.assertEqual([], values, f"{key}: {values}")
+
+    def test_a_skipped_prefixed_name_reads_as_a_missing_checkpoint(self) -> None:
+        # The coverage guard matches post-implementation checkpoints by exact
+        # name equality (validate-autopilot-phase-coverage.py:616), so moving the
+        # marker into the name is not a cosmetic difference — it fails every
+        # planning-stage run at the pre-final audit.
+        module = load_coverage_validator()
+        result = module.validate_state(
+            module.extract_plan_steps(self.planning_stage_state(prefix_the_name=True))
+        )
+        self.assertEqual(list(CANONICAL_POST_ENTRIES), result["missing_state_post_items"])
+        self.assertEqual(["Phase 7: Implement"], result["missing_state_prefixes"])
+
+    def test_the_marker_occupies_the_status_field_with_a_skipped_reason_shape(self) -> None:
+        plan = self.planning_stage_state()["plan"]
+        marked = [item for item in plan if item["status"] != "completed"]
+        self.assertEqual(list(OUT_OF_STAGE_ENTRIES), [item["step"] for item in marked])
+        for item in marked:
+            with self.subTest(entry=item["step"]):
+                self.assertTrue(item["status"].startswith("skipped: "), item["status"])
+                self.assertTrue(item["status"].removeprefix("skipped: ").strip())
+
+    def test_the_marker_text_carries_no_pending_substring_in_any_casing(self) -> None:
+        module = load_coverage_validator()
+        plan = self.planning_stage_state()["plan"]
+        self.assertEqual([], module._pending_value_paths(plan, "plan"))
+        # The guard flags any string value containing `pending` case-insensitively,
+        # so a marker naming the work as pending would be reported as a violation.
+        self.assertEqual(
+            ["plan"], module._pending_value_paths("skipped: implementation Pending", "plan")
+        )
+
+    def test_task_list_canonical_documents_the_out_of_stage_marking_rules(self) -> None:
+        text = TASK_LIST_CANONICAL_DOC.read_text(encoding="utf-8")
+        missing = [rule for rule in TASK_LIST_OUT_OF_STAGE_RULES if rule not in text]
+        self.assertEqual(
+            [],
+            missing,
+            "references/task-list-canonical.md does not state: " + "; ".join(missing),
+        )
+
+
 def build_suite() -> unittest.TestSuite:
     loader = unittest.defaultTestLoader
     suite = unittest.TestSuite()
@@ -449,6 +572,7 @@ def build_suite() -> unittest.TestSuite:
         StageVocabularyAndArgvTests,
         RequestLayerDiagnosticTests,
         WorkflowStageSignalTests,
+        PlanningStageCanonicalListTests,
     ):
         suite.addTests(loader.loadTestsFromTestCase(case))
     return suite

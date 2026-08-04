@@ -7,6 +7,7 @@ The complete, prescribed task list the autopilot creates via `TaskCreate` at Ste
 - [Task Naming Pattern](#task-naming-pattern) — phase + post-impl naming conventions
 - [Canonical Post-Implementation Task List](#canonical-post-implementation-task-list) — the 12-entry post-impl set
 - [Extension Detection Rule](#extension-detection-rule) — `.specify/extensions.yml` / `.registry` / Glob fallback
+- [Out-Of-Stage Entries](#out-of-stage-entries) — how a staged run marks entries outside the resolved stage
 - [Consensus Tasks Are Mandatory](#consensus-tasks-are-mandatory) — every Clarify session, Checklist domain, and Analyze gets a paired Consensus task
 - [Other Rules](#other-rules) — Phase 7 group decomposition, completion order, completeness verification
 
@@ -55,6 +56,26 @@ For each extension-dependent task: check `.specify/extensions.yml`
 OR confirm the extension directory exists via `Glob`. If neither, the task
 still appears in the task list with status `skipped: <ext-name> not installed`.
 Never silently drop a task.
+
+## Out-Of-Stage Entries
+
+The canonical list is **never truncated** per stage. A staged run
+(`--stage plan` or `--stage implement`) still creates every entry above; entries
+outside the resolved stage take
+`skipped: <reason>` in the **status** field — the same shape used just above for
+an absent extension, so one search finds both kinds of skip.
+
+- **Status field only.** The marker goes in the status field and
+  the entry name never changes. The coverage guard matches post-implementation
+  checkpoints by exact name equality, so a `skipped:`-prefixed *name* is read as
+  a *missing* checkpoint and fails the run at the pre-final audit.
+- **No `pending` substring.** The marker text
+  MUST NOT contain the substring `pending` in any casing — the guard flags any
+  string value containing it case-insensitively.
+- **What each stage marks.** A planning-stage run marks the
+  `Phase 7: Implement` entry and every `Post:` entry; the post-implementation
+  family is where the audit actually blocks. An implementation-stage run marks
+  the six planning phase entries instead.
 
 ## Consensus Tasks Are Mandatory
 

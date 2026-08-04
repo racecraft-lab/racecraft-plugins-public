@@ -33,7 +33,10 @@ You are an **orchestrator** for SpecKit workflows: read prompts from
 the workflow file and delegate each phase to a **subagent** that runs
 the `/speckit-*` command. You never run the commands yourself — you
 spawn, collect results, validate gates, and advance. Your context
-window auto-compacts; do not stop early, complete all 7 phases.
+window auto-compacts; do not stop early — complete every phase in the
+**resolved stage's** range (`AUTOPILOT_STAGE`, set at Step 0.6c). A
+`--stage plan` run that stops after the confidence gate has finished its
+work; a `full` run completes all 7 phases.
 
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
@@ -275,8 +278,12 @@ depend on earlier resolved items.
 You receive a workflow file path and optional arguments:
 
 ```text
-path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID]
+path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID] [--stage plan|implement|full] [--strict | --advisory]
 ```
+
+`--stage` selects which range of phases this invocation runs; omit it and
+Step 0.6c resolves the stage from the workflow file's own status table.
+Argument order is presentation only — every argument is read by name.
 
 ## Step -1 + Step 0: Pre-flight (Archive Sweep + Prerequisites)
 
@@ -319,6 +326,21 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    `CONFIDENCE_GATE_MODE` for use at G6.5. **Do not re-run the
    resolver at G6.5; G6.5 reads `CONFIDENCE_GATE_MODE` directly.**
    See [Gate Validation §G6.5](./references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement).
+6c. **Resolve the stage** — run runner helper `resolve-autopilot-stage`
+   with the invocation argv and the workflow file path. It returns one
+   JSON envelope; record `stage` as `AUTOPILOT_STAGE` and keep `source`,
+   `basis`, `recorded_stage`, `planning_complete`, and
+   `confidence_gate_status` for the phase loop. An explicit `--stage`
+   always wins; with none given the stage is resolved from the workflow
+   file's `## Workflow Overview` table. If the operation exits 2
+   (unrecognised stage, `--stage` repeated with different values,
+   `--from-phase` outside an explicitly named stage's range, `--stage`
+   with no value, or an unreadable/unparseable workflow file), STOP the
+   autopilot before Phase 0 with that one-line message — the same
+   fail-fast shape 0.6b uses. **Report the resolved stage and its basis
+   before any phase work begins.** The stage bounds which phases this
+   run may start: see
+   [Phase Execution §Stage-Bounded Phase Selection](./references/phase-execution.md#stage-bounded-phase-selection).
 7. **Capability enumeration, grounding & feed-down** — you are the only
    component that discovers openly. Before relying on any capability, enumerate
    what this session actually exposes: surface deferred MCP tools with
@@ -664,6 +686,18 @@ directly, and repairing the workflow file to match is the correct move in both:
 - **PR Marker Plan Evidence status**, which must equal
   `pr_marker_plan.status` exactly.
 
+**The `Stage` entry is workflow-file-wins.** The `Stage` row in the workflow
+file's `### Basic Information` table is the authoritative durable store of the
+resolved stage; `autopilot-state.json.stage` mirrors it for the active run only
+and is never authoritative. On disagreement the workflow file wins and the
+mirror is repaired from it. That is the **opposite** direction from the two
+exceptions above, which is why this rule is recorded as its own clause and MUST
+NOT be added to that list. Absence on either side is legal — it means no run
+yet, and resolves through Step 0.6c auto-detection. A two-sided disagreement is
+reported by the Step 1.1 coverage guard as `stage_mirror_errors`, which is
+registered in the `status-evidence` rule and so fails the guard rather than
+merely printing.
+
 After EVERY phase, update the workflow file so it remains the
 durable source of truth across context compactions and resumes:
 status table `⏳` → `✅` with summary notes; per-phase Results
@@ -721,6 +755,10 @@ registered helper or gate operation IDs below.
   pre-Implement emit and decide whether Phase 7 may begin.
 - `resolve-confidence-mode` — Resolve the pre-Implement confidence mode from
   invocation flags, local config, or the advisory default.
+- `resolve-autopilot-stage` — Resolve which stage this invocation runs from
+  `--stage` or, with none given, from the workflow file's own status table.
+  Returns the stage, its source and basis, the recorded `Stage` row, and the
+  confidence-gate verdict; exits 2 on a pre-flight rejection.
 - `reviewability-gate` — Enforce the setup-mode reviewability budget. Tasks
   and pre-PR modes are deferred for installed workflows; record the deferral
   and use committed fallback evidence per the guidance above instead of

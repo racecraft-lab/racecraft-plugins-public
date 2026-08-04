@@ -40,6 +40,7 @@ site 3 for the forward design.
 - [SpecKit Infrastructure](#speckit-infrastructure) — commands, scripts, templates, constitution
 - [Subagent Delegation](#subagent-delegation) — prompt template for phase executors
 - [Branch/Worktree Detection](#branchworktree-detection) — context detection before dispatch
+- [Stage-Bounded Phase Selection](#stage-bounded-phase-selection) — which phases the resolved stage may start
 - [Phase-by-Phase Execution](#phase-by-phase-execution) — per-phase prompts, agents, gates, file updates (Phases 1–7)
 - [Full Integration / E2E Suite Verification](#full-integration--e2e-suite-verification) — post-Implement test gate
 - [Extension Hook Events](#extension-hook-events) — `.specify/extensions.yml` `before_*` / `after_*` hooks
@@ -133,6 +134,49 @@ When `ON_FEATURE_BRANCH` is true, the Specify subagent gets
 a "skip branch creation" prefix in its prompt. Do NOT use
 `export SPECIFY_FEATURE` — env vars do not persist across
 tool invocations.
+
+## Stage-Bounded Phase Selection
+
+`AUTOPILOT_STAGE` is resolved once at Step 0.6c. It bounds which phases this
+invocation may run:
+
+| Stage | Phase range | Terminal step |
+| --- | --- | --- |
+| `plan` | Specify, Clarify, Plan, Checklist, Tasks, Analyze | G6.5 confidence gate, then the stage-boundary commit |
+| `implement` | Implement, then the post-implementation steps | `Post: Retrospective` |
+| `full` | All seven phases end to end | `Post: Retrospective` |
+
+**A resolved stage MUST NOT start a phase outside its own range.** Apply the
+range *before* the SKILL.md Step 1 scan picks a row, not after:
+
+```text
+candidate_rows = Workflow Overview rows whose phase is in AUTOPILOT_STAGE's range
+start = first candidate row whose status is NOT terminal
+        (terminal = Complete / ✅ Complete / Skipped / ✅ Skipped / ⏭ Skipped)
+if no such row  → the stage's work is already done; run its terminal step, then STOP
+```
+
+Select on **"not terminal"**, not on "pending or in progress". This is the
+difference that matters. The unbounded scan takes the first row reading
+`⏳ Pending` or `🔄 In Progress`, and a `⚠ Blocked` row matches **neither**
+arm. After a strict-mode G6.5 stop the six planning rows are terminal and the
+`Confidence Gate` row is **blocked**, so the unbounded scan skips straight past
+it and lands on the implementation row — starting the very phase the gate just
+refused, while the resolved stage still reads `plan`. Both halves look correct
+in isolation; only the pair is wrong.
+
+Two consequences follow directly:
+
+- **A non-terminal `Confidence Gate` row makes the planning stage re-enter at
+  the confidence gate**, because that row is inside the plan stage's range and
+  is the first non-terminal row in it.
+- **Crossing that boundary requires an explicit `--stage implement`.** A bare
+  invocation re-resolves `plan` (the row is in the planning-complete predicate),
+  and the crossing is reported rather than silent.
+
+`--from-phase` still moves the starting point *within* the resolved stage's
+range; a value outside an explicitly named stage's range is rejected at Step
+0.6c before any phase work begins.
 
 ## Phase-by-Phase Execution
 
@@ -230,7 +274,7 @@ prefix: "Already on feature branch `<branch>`. Do NOT run
 `[NEEDS CLARIFICATION]` markers (routing decision)
 
 **Commit:**
-`git add specs/ && git commit -m "feat(SPEC-XXX): complete specify phase"`
+`git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete specify phase"`
 
 ### Phase 2: Clarify (Conditional)
 
@@ -283,7 +327,7 @@ before the next session runs.
 **Gate:** G2 — verify 0 markers remain
 
 **Commit:**
-`git add specs/ && git commit -m "feat(SPEC-XXX): complete clarify phase"`
+`git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete clarify phase"`
 
 ### Phase 3: Plan
 
@@ -349,7 +393,7 @@ the diagnostic note and continue, same as any other error path.
 exist
 
 **Commit:**
-`git add specs/ && git commit -m "feat(SPEC-XXX): complete plan phase"`
+`git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete plan phase"`
 
 ### Phase 4: Checklist
 
@@ -395,7 +439,7 @@ domain runs.
 **Gate:** G4 — verify 0 `[Gap]` markers
 
 **Commit:**
-`git add specs/ && git commit -m "feat(SPEC-XXX): complete checklist phase"`
+`git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete checklist phase"`
 
 ### Phase 5: Tasks
 
@@ -520,7 +564,7 @@ checkpoint/emission evidence or stops when the boundary requires current marker
 state.
 
 **Commit:**
-`git add specs/ && git commit -m "feat(SPEC-XXX): complete tasks phase"`
+`git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete tasks phase"`
 
 ### Phase 6: Analyze
 
@@ -558,7 +602,7 @@ advance immediately.
 **Gate:** G6 — verify 0 CRITICAL findings
 
 **Commit:**
-`git add specs/ && git commit -m "feat(SPEC-XXX): complete analyze phase"`
+`git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json && git commit -m "feat(SPEC-XXX): complete analyze phase"`
 
 ### Phase 6.5: Pre-Implement Confidence Gate
 
@@ -641,6 +685,52 @@ invocation. Per-invocation flag wins over local config.
 G6.5 task: `Confidence gate (pre-Implement)`. Mark it
 `in_progress` on entry to this phase and `completed` on exit
 regardless of advisory pass-with-warning vs strict pass.
+
+#### Plan stage: G6.5 is the terminal step
+
+G6.5 runs *after Phase 6 commits and before Phase 7 begins*, so on a
+`--stage plan` run it is the last work the stage does. The run takes the
+stage-boundary commit below and then **STOPs** — it does not advance to Phase 7,
+in any mode. In advisory mode the gate passes or warns and the stage still ends
+here; in strict mode the STOP **is** the gate resolving, and the boundary commit
+is still taken so the failing verdict reaches version history.
+
+On a strict-mode stop, write the `Confidence Gate` row to a **non-terminal**
+blocked status — never to a terminal one. The row must advance off its pending
+state (so the boundary commit is non-empty) while leaving the planning-complete
+predicate unsatisfied (so a later bare invocation re-resolves `plan` rather than
+crossing the boundary the gate refused). Record the failing verdict in a form
+the gate-record matcher does **not** read as a pass: a non-terminal row sitting
+beside a record that scans as a passing G6.5 is exactly the
+status-versus-evidence contradiction that the Step 1.1 coverage guard and the
+tree-wide CI gate both fail on.
+
+#### Stage-boundary commit (plan stage only)
+
+After the gate resolves — pass, warn, or strict stop — take **one distinct
+commit**. It is not a renamed analyze-phase commit: that commit was already
+taken before the gate ran, so renaming it would leave the verdict uncommitted.
+
+```text
+git add specs/ <workflow-file-path> <workflow-dir>/autopilot-state.json \
+  && git commit -m "chore(SPEC-XXX): close the plan stage boundary"
+```
+
+Three properties, each load-bearing:
+
+- **The message names the stage boundary, not a phase**, so the boundary is
+  identifiable in version history.
+- **The staged path set is the same enumeration as the per-phase bookkeeping
+  commits** — the specification directory, the workflow file, and the state
+  file. Never the workflow *directory*, which also holds untracked run
+  byproducts that a directory-wide add would sweep in.
+- **The commit is non-empty regardless of whether the `Stage` row changed**,
+  because the `Confidence Gate` row always advances off its pending state — so
+  the conditional second `Stage` write needs no empty-commit escape hatch.
+
+`chore:` because a planning-stage boundary ships no runtime change and must not
+trigger a release-please version bump, the same reasoning the spec-MOC
+regeneration commit below uses for its `docs:` subject.
 
 ### Phase 7: Implement (Task-Level Dispatch)
 
@@ -858,9 +948,11 @@ existing checkpoint commit. This runs as an **idempotent** step
 rebuilt maps are swept into the same `git add … && git commit`. A
 boundary that changes nothing contributes nothing.
 
-**Why before the commit:** the existing per-phase `git add specs/ &&
-git commit` (phases 1–6) / `git add -A && git commit` (phase 7) is what
-folds the rebuilt maps into the one checkpoint commit. Running the
+**Why before the commit:** the existing per-phase `git add <enumerated
+trio> && git commit` (phases 1–6) / `git add -A && git commit` (phase 7)
+is what folds the rebuilt maps into the one checkpoint commit. The
+regenerated maps live under `specs/`, which the enumeration covers.
+Running the
 rebuild *after* the commit would force a second commit on every
 map-affecting boundary — that is the failure this ordering avoids.
 
