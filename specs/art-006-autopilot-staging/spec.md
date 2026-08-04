@@ -164,7 +164,13 @@ each resolves to the expected stage and reports the resolution before starting.
   cross-spec contract rather than prose.)
 - **FR-002**: Both the Claude and the Codex distributions MUST accept an explicit
   stage argument on the autopilot invocation, using the same argument name and the
-  same accepted values.
+  same accepted values. The same change MUST repair the pre-existing divergence
+  between the two usage synopses, where the Claude side omits the confidence-mode
+  flags the Codex side advertises. That omission is stale documentation rather
+  than missing capability — the Claude side already resolves those flags from the
+  invocation arguments — and the same synopsis line is edited anyway to add the
+  stage argument, so the repair costs one line and changes no gate behaviour.
+  (Clarify S2/R3, Round 2 tiebreak.)
 - **FR-003**: The planning stage MUST run the specification, clarification,
   planning, checklist, task-generation, and analysis phases, MUST run the
   confidence gate as its terminal step, and MUST stop without starting the
@@ -208,11 +214,25 @@ each resolves to the expected stage and reports the resolution before starting.
   refreshed on every phase transition. The authoritative entry and its state
   mirror MUST be written in the same edit turn and MUST land in the same commit,
   so an interrupted run cannot leave a committed disagreement between the two
-  stores. (Clarify S1/Q5.)
+  stores. (Clarify S1/Q5.) The planning stage's terminal commit is non-empty
+  independent of whether the `Stage` entry changed, because the confidence-gate row
+  always advances off its pending state — so the conditional second write needs no
+  empty-commit escape. (Clarify S3/Q1.)
 - **FR-009**: The stage boundary MUST be durably committed — per-phase bookkeeping
   MUST be staged as each phase completes rather than only at the end of a run, and
   the planning stage MUST close with an explicit terminal commit that makes the
-  boundary identifiable in version history.
+  boundary identifiable in version history. That terminal commit MUST be taken
+  *after* the confidence gate resolves, MUST stage the same enumerated path set as
+  the per-phase commits, and MUST carry a message naming the stage boundary rather
+  than a phase. It is a distinct commit, not a renamed analysis-phase commit,
+  because the confidence gate runs after that phase's commit and its verdict must
+  be captured. (Clarify S3/Q1.)
+- **FR-009a**: The per-phase staged path set MUST be an explicit enumeration of the
+  specification directory, the workflow file, and the state file. It MUST NOT be
+  expressed as the workflow *directory*, because that directory also holds
+  untracked run byproducts that a directory-wide add would sweep into phase
+  commits — a failure that passes locally and fails only on a clean checkout.
+  (Clarify S3/Q2.)
 - **FR-010**: A fresh session, including one in a different working copy, MUST be
   able to reconstruct the stage identity, per-phase completion state, and
   confidence-gate verdict it needs to resume a stage from the workflow file alone,
@@ -227,12 +247,51 @@ each resolves to the expected stage and reports the resolution before starting.
   resolution is a specification-text carve-out costing zero implementation lines,
   not a new rehydration path, which would spend the declared budget margin on a
   subsystem this spec's key files do not claim.)
+- **FR-010a**: An implementation-stage invocation MUST NOT re-run the pre-implement
+  confidence gate; it MUST read the recorded verdict from the workflow file, which
+  FR-010 already places in scope. Opening preparation MUST preserve an
+  already-recorded prerequisite test-count baseline rather than overwriting it,
+  because the later gate verifies an increase against that baseline and a
+  post-planning recount would make the comparison vacuous. A newly observed count
+  that differs MUST be recorded as a non-blocking drift diagnostic instead of
+  replacing the baseline. An implementation-stage invocation MUST still accept the
+  confidence-mode flags rather than rejecting them, because the Codex surface
+  already advertises them unconditionally and FR-013 confines Codex changes to
+  additive ones. It MUST emit an explicit diagnostic stating that the confidence
+  gate is not run in this stage and that the recorded verdict is read instead, so
+  an accepted flag never silently does nothing. (Clarify S3/Q4, settled once the
+  Round 2 tiebreak established that both distributions already accept those flags
+  behaviourally.)
 - **FR-011**: The canonical task list MUST NOT be truncated per stage. Entries
-  outside the resolved stage MUST be marked with the `skipped:` status, which is
-  the only non-complete status the existing pre-final audit tolerates.
+  outside the resolved stage MUST be marked with a `skipped:` status, which is the
+  only non-complete status the existing pre-final audit tolerates. Four constraints
+  govern that marker, three verified against the shipped validator:
+  (a) the marker MUST occupy the entry's **status** field, and the entry's **name
+  MUST remain byte-identical** to its canonical name, because the coverage guard
+  matches post-implementation checkpoints by exact name equality — a name carrying
+  a `skipped:` prefix is reported as a *missing* checkpoint, which would fail every
+  planning-stage run at the pre-final audit;
+  (b) the marker text MUST NOT contain the substring `pending` in any casing,
+  because the guard flags any string value containing it case-insensitively;
+  (c) it MUST reuse the established `skipped: <reason>` shape already used for
+  absent extensions, so one search finds both kinds of skip; and
+  (d) a planning-stage run marks the implementation phase **and every
+  post-implementation entry** out of stage — the post-implementation family is
+  where the audit actually blocks. (Clarify S3/Q3.)
 - **FR-012**: Stage resolution MUST be implemented once as shared logic that both
   distributions execute, rather than as two independent prose descriptions of the
-  same rule. The resume protocol MUST likewise be shared: today the Codex
+  same rule, and that shared logic MUST be a registered runner operation reached
+  by operation identifier from both distributions — the mechanism the
+  pre-implement confidence-mode resolver already uses at the same
+  opening-preparation step. It MUST NOT live in the shipped phase-coverage guard:
+  that guard accepts only a workflow path, a state path, two expected-commit
+  arguments, and a rule selector, and is a consistency checker over two
+  already-resolved inputs rather than a resolver. Siting resolution there would
+  also contradict the opening-preparation directive to reach helper behaviour
+  through the runner rather than a plugin-local script file. The guard MAY consume
+  the resolver as an imported library, which is how the agent-independent
+  validator already reuses shared logic. (Clarify S2/R1, Round 2 tiebreak.)
+  The resume protocol MUST likewise be shared: today the Codex
   distribution documents recovery only for a *missing* state file and the Claude
   distribution documents none at all, which is a parity gap this requirement
   closes. (Clarify S1/Q3.)
@@ -269,8 +328,25 @@ each resolves to the expected stage and reports the resolution before starting.
   short-circuits unless a v2 marker-plan schema and an expected-head-commit
   argument are both supplied. (Clarify S1/Q1, verified by direct execution.)
 - **FR-015**: A unit test MUST carry golden fixtures for both explicit and
-  auto-detected stage resolution. No new test or script filename may contain a
-  live specification family token.
+  auto-detected stage resolution, including a planning-stage state fixture whose
+  post-implementation entries carry the out-of-stage skipped status with canonical
+  names intact. No new test or script filename may contain a live specification
+  family token.
+- **FR-015a**: The cross-distribution argument-parity assertion MUST live in that
+  same unit test, exercising resolution behaviour on both distributions. It MUST
+  NOT be added to the structural cross-platform parity validator, whose checks are
+  existence-only by design, whose counted baseline would need regenerating, and
+  which this specification's own record already names as unable to catch this
+  class of divergence. (Clarify S2/R2, Round 2 tiebreak.)
+- **FR-016**: The specification MUST document a scaffold-to-autopilot chain
+  contract enumerating five things the downstream scaffold-integration
+  specification cannot derive on its own: the handoff artifact (the workflow file
+  path, the sole handoff token); the entry precondition (at scaffold time the stage
+  entry is absent, and absence means "no run yet"); the per-platform invocation
+  form and the closed stage vocabulary; the workflow-file-observable completion
+  signal for the planning stage; and an explicit statement that the scaffold-side
+  implementation is out of scope here. The contract is documentation only — this
+  specification ships no scaffold-side code. (Clarify S3/Q5.)
 
 ### Reviewability Notes *(if applicable)*
 

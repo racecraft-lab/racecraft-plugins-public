@@ -66,7 +66,7 @@ captured during scoping.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 14 FR, 3 user stories, 8 success criteria, 11 acceptance scenarios, 0 markers |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | Session 1 of 3 resolved via 2-analyst consensus; spec 22 → 27 normative items |
+| Clarify | `/speckit-clarify` | ✅ Complete | G2 passed. 3 of 3 sessions resolved via 2-analyst consensus (Session 2 needed a Round 2 tiebreak); spec 22 → 31 normative items, 0 `[NEEDS CLARIFICATION]` markers |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -355,8 +355,8 @@ per roadmap :454 and :459-460.
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
 | 1 | Stage State Representation | 5 asked, 4 routed to consensus | FR-001 pinned to literal `plan`/`implement`/`full`; FR-008 split into authority + at-rest meaning + write cadence; FR-010/SC-003 narrowed with a marker-evidence carve-out; new FR-012a (foreign state slot) and FR-014a (rule-key registration). Spec grew 22 → 27 normative items, 0 markers. |
-| 2 | | | |
-| 3 | | | |
+| 2 | Platform Parity And Enforcement Surface | 3 asked, 3 routed to consensus | All three split 1-1 in Round 1 and were settled by a Round 2 tiebreak. FR-012 now names the shared substrate (a registered runner operation, not the phase-coverage guard); new FR-015a sites the argument-parity assertion in the unit test rather than the structural parity validator; FR-002 also repairs the stale Claude usage synopsis. Spec 27 → 30 normative items. |
+| 3 | Stage Boundary Semantics | 5 asked, 5 resolved | FR-008b gained the no-empty-commit rationale; FR-009 requires a distinct post-gate terminal commit; new FR-009a enumerates the staged path set; FR-011 fixed four constraints on the out-of-stage `skipped:` marker; FR-010a preserves the test-count baseline and (settled after the S2 tiebreak) accepts the confidence-mode flags with an explicit diagnostic; FR-016 fixed the five-item scaffold chain contract. Spec 30 → 31 normative items. |
 
 ### Consensus Resolution Log
 
@@ -371,6 +371,14 @@ was not in the union.
 | S1/Q3 `--stage implement` against a foreign state slot | `[codebase]` | 1 | partially | not routed | Accepted. Parity gap confirmed (Codex covers only a *missing* file, Claude documents none). Re-init must precede the guard. Analyst correctly refused to endorse the `prior_run_note` field name — zero occurrences repo-wide. | FR-012 extended; new FR-012a; new edge case |
 | S1/Q4 FR-010 scope vs marker evidence | `[codebase] [spec]` | 1 | yes, w/ framing correction | **no** on the remedy | Split resolved without Round 2: both agreed the contradiction is real and that the fix is a text carve-out. The rehydration path was rejected as scope creep against an 18-LOC margin, and the codebase analyst's framing correction was carried — marker evidence is *inside* the implement stage, governed by its own stricter rule, not outside it. | FR-010 and SC-003 narrowed |
 | S1/Q5 write cadence + commit atomicity | — | not routed | — | — | Single-source, high confidence, no conflict. Promoted from an Assumption to a requirement. | FR-008b |
+| S2/R1 substrate for shared stage resolution | `[codebase] [spec]` | 1 → **2** | A: phase-coverage guard | B: runner operation | 1-1 split → Round 2 tiebreak: **B**. The guard takes only a workflow path, a state path, two expected-commit arguments and a rule selector — it is a consistency checker over resolved inputs, not a resolver, and siting resolution there contradicts the opening-preparation directive to reach helper behaviour through the runner. The guard may still import the resolver as a library. | FR-012 extended |
+| S2/R2 where the argument-parity assertion lives | `[codebase]` | 1 → **2** | A: structural parity validator | B: unit test | 1-1 split → Round 2 tiebreak: **B**. The structural validator's checks are existence-only by design and its counted baseline would need regenerating; this spec's own record already names it as unable to catch this class of divergence. | new FR-015a |
+| S2/R3 stale Claude usage synopsis | `[spec]` | 1 → **2** | A: repair here | B: defer | 1-1 split → Round 2 tiebreak: **A**. The omission is stale documentation, not missing capability — the Claude side already resolves the confidence-mode flags from the invocation arguments — and the same synopsis line is edited anyway to add the stage argument, so the repair costs one line and changes no gate behaviour. | FR-002 extended |
+| S3/Q1 terminal commit identity + empty-commit risk | `[codebase]` | 1 | yes | not routed | Accepted. The confidence-gate row always advances off pending, so the planning stage's terminal commit is non-empty regardless of whether `Stage` changed; it is a distinct commit taken *after* the gate resolves, not a renamed analysis-phase commit. | FR-008b, FR-009 |
+| S3/Q2 staged path set | `[codebase]` | 1 | yes | not routed | Accepted. Enumerate the specification directory, workflow file, and state file explicitly — the workflow *directory* also holds untracked run byproducts, a failure that passes locally and fails only on a clean checkout. | new FR-009a |
+| S3/Q3 out-of-stage entry marking | `[codebase] [spec]` | 1 | yes | yes | 2-of-2 agreement. Three of the four marker constraints were verified against the shipped validator: the marker occupies the **status** field with the entry **name byte-identical** (the guard matches checkpoints by exact name equality), must not contain `pending` in any casing, and reuses the existing `skipped: <reason>` shape. A planning-stage run marks the implementation phase *and every post-implementation entry*. | FR-011 |
+| S3/Q4 baseline preservation + flag handling | `[spec]` | 1 (deferred) | not routed | yes | Baseline preservation accepted immediately: a post-planning recount would make the later increase check vacuous, so a differing count is a non-blocking drift diagnostic. The flag-handling half was deferred pending S2/R3 and settled with it — flags are **accepted** with an explicit diagnostic, not rejected, because FR-013 confines Codex changes to additive ones. | FR-010a |
+| S3/Q5 scaffold-to-autopilot chain | `[spec]` | 1 | not routed | yes | Accepted. Five items the downstream scaffold-integration spec cannot derive: handoff artifact, entry precondition, per-platform invocation form + closed stage vocabulary, workflow-observable completion signal, and the fact that this spec ships no scaffold-side code. | FR-016 |
 
 **Bug found during consensus, outside this spec's scope.** The store-precedence
 documentation names `autopilot-state.json.workflow_file` as the authority and
