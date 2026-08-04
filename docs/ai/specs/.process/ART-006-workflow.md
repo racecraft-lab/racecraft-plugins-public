@@ -67,7 +67,7 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 14 FR, 3 user stories, 8 success criteria, 11 acceptance scenarios, 0 markers |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 passed. 3 of 3 sessions resolved via 2-analyst consensus (Session 2 needed a Round 2 tiebreak); spec 22 → 31 normative items, 0 `[NEEDS CLARIFICATION]` markers |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Plan | `/speckit-plan` | ✅ Complete | G3 passed. plan.md + research.md + data-model.md + quickstart.md + 2 contracts; 0 markers. Shared stage resolution sited as runner operation `resolve-autopilot-stage`. Re-estimate 430 reviewable LOC / 17 files — warn on both, block on neither; one slice, no split, rationale recorded in plan.md |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -147,14 +147,26 @@ budget and split decision as the warn path requires:
 | Roadmap-declared (3 stories, 6 files, 8 FRs, modify) | 217 | 1 | ok |
 | **Adopted — honest count, `gh` deferred (3, 12, 14, modify)** | **382** | **1** | **ok** |
 | If `gh` had stayed in scope (3, 14, 18, modify) | 452 | 2 | warn |
+| **G3 re-estimate against real artifacts (2026-08-04)** | **430** | **1** | **warn** |
 
 **Split decision: one slice, no split.** The work is vertical — one capability
 cutting end-to-end through argv, resolution, the phase loop, durable state, and
 both platforms. Deferring the `gh` limb to ART-007 is what keeps it under the
-400 ceiling. The roadmap's 217 reproduces exactly from "6 files, 8 FRs", so it
-restates its own file count rather than measuring independently; 382 is the
-honest figure. Margin is 18 LOC — re-estimate at G3 with `estimate-reviewable-loc`
-against real artifacts.
+800 block ceiling. The roadmap's 217 reproduces exactly from "6 files, 8 FRs", so
+it restates its own file count rather than measuring independently.
+
+**The 18-LOC margin is consumed.** The G3 re-estimate against real artifacts is
+430 LOC across 17 files, which warns on both dimensions and blocks on neither.
+The growth over the ratified 382 is not new capability: it is the nine lettered
+sub-requirements Clarify added, all of which *narrow* existing behaviour, plus
+three test-registry files the registered-operation contract forces. The split
+decision is unchanged — splitting would put argv parsing in one PR and the
+resolution it feeds in another, a worse review unit than the whole vertical.
+Two consequences to carry forward: the margin is no longer available as an
+argument for rejecting scope (it was used that way at Clarify S1/Q4, where the
+rehydration path was also rejected on independent grounds), and any further
+growth should be met by deferring a limb rather than by re-arguing the split.
+Re-check at the PR-time diff-mode gate, which measures the real diff.
 
 ### Success Criteria Summary
 
@@ -420,8 +432,11 @@ Worth its own issue against the plugin.
 - Claude's anti-stall line at skills/speckit-autopilot/SKILL.md:50-51 says "do
   not stop early, complete all 7 phases" -- unpinned prose that a --stage plan
   run contradicts verbatim, so it must be reworded to bind to the resolved stage.
-- Codex body headroom is 310 words, measured 2026-08-03: the SKILL.md body is
-  7690 of the 8000-word cap at validate-codex-skills.py:168-171. The cap applies
+- Codex body headroom is 329 words, re-measured 2026-08-04 after PR #419 removed
+  the effort gate: the SKILL.md body is 7671 of the 8000-word cap at
+  validate-codex-skills.py:168-171. Measure with `structural_helpers.body` from
+  tests/speckit-pro/lib/ -- it is a module-level function, and a hand-rolled
+  frontmatter regex gives a slightly different count. The cap applies
   to the SKILL.md body alone; referenced files are uncapped and still folded into
   runtime_doc at :235-242. Per design-concept Q10, stage prose goes in
   phase-execution-codex.md and SKILL.md carries only the argv line and a pointer.
@@ -472,11 +487,32 @@ Worth its own issue against the plugin.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Entities and types |
-| `contracts/` | ⏳ | API specifications |
-| `quickstart.md` | ⏳ | Developer onboarding |
+| `plan.md` | ✅ | Technical context, execution flow, reviewability governance, alternatives-rejected table |
+| `research.md` | ✅ | Decision rationales |
+| `data-model.md` | ✅ | Stage entity, state contract, workflow-file entry |
+| `contracts/` | ✅ | `stage-invocation.md` (argv surface + `resolve-autopilot-stage`), `scaffold-autopilot-chain.md` (FR-016 five-item handoff contract) |
+| `quickstart.md` | ✅ | Developer onboarding incl. regeneration step |
+
+**G3 verification (orchestrator, independent of the executor's self-report).**
+`[NEEDS CLARIFICATION]` markers across all Phase 3 artifacts: **0**. Absolute
+`/Users/` or `/home/` paths: **0**. No new tracked script or test filename
+carries a live spec-family token — the only `art` substrings are the existing
+`scripts/refresh-release-artifacts.py`, and the new test is
+`tests/speckit-pro/unit/test-autopilot-stage-resolution.py`. Round 2 tiebreak
+outcomes are honoured: the resolver is a registered runner operation beside
+`resolve-confidence-mode` (plan.md:17, plan.md:191) with the guard permitted to
+import it as a library (plan.md:415), and the argument-parity assertion is sited
+in the unit test rather than the structural parity validator (plan.md:362-364).
+
+**Scope budget and split decision (required to proceed on a `warn` posture).**
+Projected 430 reviewable LOC against 400 warn / 800 block, and 17 files against
+15 warn / 25 block — warn on two dimensions, block on none. **One slice, no
+split.** The 48-LOC growth over the ratified 382 comes from the nine lettered
+sub-requirements Clarify added, which *narrow* existing behaviour rather than add
+capability, plus three test-registry files the registered-operation contract
+forces. Splitting would put argv parsing in one PR and the resolution it feeds in
+another — a worse review unit than the whole vertical. Recorded at
+plan.md:140-160.
 
 ---
 

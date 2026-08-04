@@ -1,0 +1,172 @@
+# Contract: Stage Invocation and `resolve-autopilot-stage`
+
+The `--stage` argument is a public invocation surface consumed by six downstream
+specifications and mirrored across two distributions whose argv contracts have
+already silently diverged. Nothing in CI diffs the two `SKILL.md` bodies, so
+anything specified only in prose is unverifiable. This document is the single
+statement of the surface; both distributions restate the argv line and nothing
+else.
+
+## 1. Argv surface — identical on both distributions
+
+### Claude Code
+
+```text
+/speckit-pro:speckit-autopilot path/to/workflow-file.md
+    [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement]
+    [--spec SPEC-ID]
+    [--stage plan|implement|full]
+    [--strict | --advisory]
+```
+
+Current line: `speckit-pro/skills/speckit-autopilot/SKILL.md:293`. Two additions:
+`--stage`, and the `[--strict | --advisory]` pair the Codex synopsis already
+advertises. The second is a stale-documentation repair, not new capability — the
+Claude side already resolves those flags from the invocation argv at
+`SKILL.md:327-336` — and it changes no gate behaviour (FR-002).
+
+### Codex CLI
+
+```text
+path/to/workflow-file.md
+    [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement]
+    [--spec SPEC-ID]
+    [--strict | --advisory]
+    [--stage plan|implement|full]
+```
+
+Current line: `speckit-pro/codex-skills/speckit-autopilot/SKILL.md:544`. One
+addition. Argument order in the synopsis is presentation only; the resolver reads
+argv by name, not by position.
+
+### Stage vocabulary
+
+Stated once, in [data-model.md §Stage](../data-model.md#stage). Not restated per
+platform. Exactly `plan`, `implement`, `full` — literal lowercase, no aliases, no
+alternate casing, no long-form spellings.
+
+## 2. Precedence
+
+| Rank | Source | Notes |
+|---|---|---|
+| 1 | explicit `--stage <token>` | Always wins, including when it disagrees with what auto-detection would have chosen. |
+| 2 | auto-detection from the workflow file's `## Workflow Overview` table | All planning phases terminal → `implement`; otherwise `plan`. |
+
+`--from-phase` is **not** a competing source of the stage. It moves the starting
+point *within* the resolved stage and never widens or narrows the range
+(spec.md:134-136). This preserves the string-pinned Codex sentence
+"`--from-phase` changes only the starting index"
+(`tests/speckit-pro/layer1-structural/validate-codex-skills.py:295`), which must
+survive verbatim.
+
+The absence of a `Stage` entry in the workflow file means "no run yet". It is not
+a fourth value, it is not an error, and it resolves through rank 2.
+
+## 3. Runner operation
+
+**Operation identifier**: `resolve-autopilot-stage`
+**Mode**: `read_only`
+**Registered at**: `speckit-pro/speckit_pro_runner/helpers/registry.py`, beside
+`resolve-confidence-mode` (`:171-178`)
+**Implemented at**: `speckit-pro/speckit_pro_runner/helpers/read_only.py`, beside
+`resolve_confidence_mode` (`:1081-1096`)
+
+Both distributions reach it by operation identifier at opening preparation — the
+Claude side at a new Step 0.6c after the 0.6b confidence-mode resolver, the Codex
+side at the matching step in
+`codex-skills/speckit-autopilot/references/phase-execution-codex.md`.
+
+### Request
+
+```json
+{
+  "schema_version": "1.0",
+  "helper_id": "resolve-autopilot-stage",
+  "operation": "resolve-autopilot-stage",
+  "mode": "read_only",
+  "inputs": {
+    "workflow_file": "docs/ai/specs/.process/ART-006-workflow.md",
+    "autopilot_args": ["--stage", "plan", "docs/ai/specs/.process/ART-006-workflow.md"]
+  }
+}
+```
+
+| Input | Type | Required | Meaning |
+|---|---|---|---|
+| `workflow_file` | string, repo-relative | yes | The workflow file. Path-canonicalised like every other path input; must stay inside the repo/plugin trust boundary (`read_only.py:281-292`). |
+| `autopilot_args` | array of strings | no | The invocation argv. Must be an array of strings or the operation returns an invalid-arguments diagnostic, matching `resolve-confidence-mode` (`read_only.py:337-339`). Omitted or empty means "no explicit stage". |
+
+### Response — exit 0
+
+Structured JSON on stdout. Multi-field output, so JSON rather than the bare token
+`resolve-confidence-mode` returns; constitution §VI requires a structured parser.
+
+```json
+{
+  "tool": "resolve-autopilot-stage",
+  "stage": "plan",
+  "source": "argv",
+  "basis": "explicit --stage plan",
+  "recorded_stage": null,
+  "planning_complete": false,
+  "from_phase": null
+}
+```
+
+| Field | Type | Meaning |
+|---|---|---|
+| `stage` | `"plan" \| "implement" \| "full"` | The resolved stage. |
+| `source` | `"argv" \| "auto-detect"` | Which precedence rank decided. |
+| `basis` | string | Plain-English reason the orchestrator prints before phase work begins, satisfying FR-006's report requirement. For auto-detection it names the first non-terminal planning phase and its status. |
+| `recorded_stage` | Stage token or `null` | The workflow file's `Stage` row as read. `null` means the row is absent — "no run yet", never an error. |
+| `planning_complete` | boolean | Whether every planning phase row is terminal. The auto-detection input, surfaced so the guard and the tests can assert on it without re-parsing. |
+| `from_phase` | phase name or `null` | The `--from-phase` value, echoed after range validation. |
+
+### Response — exit 2, pre-flight rejection
+
+One-line diagnostic on stderr, following `resolve_confidence_mode`'s shape at
+`read_only.py:1085`. The autopilot STOPs before Phase 0 on this exit code, the
+same way it already does for `--strict --advisory` (`SKILL.md:331-333`).
+
+| Condition | Message |
+|---|---|
+| Unrecognised value | `error: unrecognized stage 'planning' — accepted values: plan, implement, full` |
+| `--stage` repeated with differing values | `error: --stage given more than once with different values: plan, implement` |
+| `--from-phase` outside the named stage's range | `error: --stage plan and --from-phase implement are mutually exclusive` |
+| `--stage` present with no value | `error: --stage requires a value — accepted values: plan, implement, full` |
+
+Rejection happens during opening preparation, before any phase work, so a
+rejected run leaves no partial phase output (SC-005). `--from-phase` naming a
+phase *inside* the resolved stage's range is accepted and is not a conflict.
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | Resolved. Envelope on stdout. |
+| 2 | Input error — invalid or conflicting arguments, unreadable workflow file, or a path outside the trust boundary. |
+
+Exit 1 is not used: there is no "expected failure" for this operation. An
+unreadable or `Stage`-less workflow file is not a failure — a missing `Stage` row
+degrades to `recorded_stage: null` and resolves through auto-detection.
+
+## 4. Reporting obligation
+
+Before phase work begins, the orchestrator prints the resolved stage and its
+basis (FR-006). On an implementation-stage invocation that accepts a
+confidence-mode flag, it additionally emits the FR-010a diagnostic stating that
+the confidence gate is not run in this stage and that the recorded verdict is
+read instead — so an accepted flag never silently does nothing.
+
+## 5. Parity obligation
+
+Parity is asserted by execution, not by prose comparison. The new unit test at
+`tests/speckit-pro/unit/test-autopilot-stage-resolution.py` feeds both
+distributions' documented argv forms through the one operation and asserts
+identical resolution across the full fixture set (FR-015a, SC-007).
+
+The assertion does **not** go in
+`tests/speckit-pro/layer1-structural/validate-codex-parity.py`: its checks are
+existence-only by design, its counted baseline would need regenerating, and this
+specification's own record already names it as unable to catch this class of
+divergence (spec.md:335-340).
