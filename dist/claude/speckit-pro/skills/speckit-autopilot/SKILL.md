@@ -68,7 +68,7 @@ frontmatter may still declare Claude `allowed-tools` to authorize the
 orchestrator's core primitives; that declaration is not an MCP/vendor
 availability list and does not replace runtime capability discovery.
 
-## Prerequisites — Model & Effort
+## Prerequisites — Model
 
 The orchestrator makes gate decisions, synthesizes consensus, and
 manages a 7-phase workflow. Weak-model orchestration cascades into
@@ -79,15 +79,13 @@ expensive rework.
 1. **Model:** Opus 4.6 or better. On Sonnet/Haiku/older Opus, STOP and
    instruct: *"Autopilot requires Opus 4.6 for reliable orchestration.
    Please `/model opus` and re-run."*
-2. **Effort:** `max` (required). On anything less, STOP and instruct:
-   *"Autopilot requires max thinking. Please `/effort max` and re-run."*
 
-Non-negotiable. The plugin's policy is **max thinking on every agent,
-regardless of model** — quality is the only optimization axis. Every
-bundled subagent runs at `effort: max` (or `xhigh` on Codex). A
-sub-max orchestrator spawning max subagents wastes the subagents'
-reasoning — the orchestrator's decisions determine whether subagent
-work is productive or wasted.
+**Reasoning effort is inherited, never checked.** Run at whatever the
+operator has set for the session and do not stop, warn, or ask them to
+change it. Higher effort produces better orchestration, so the bundled
+subagents still ship pinned at `effort: max` (or `xhigh` on Codex) —
+that pin only ever raises a worker's effort and never refuses to run.
+The operator owns the session setting; the plugin does not veto it.
 
 ## Critical: Execution Rules
 

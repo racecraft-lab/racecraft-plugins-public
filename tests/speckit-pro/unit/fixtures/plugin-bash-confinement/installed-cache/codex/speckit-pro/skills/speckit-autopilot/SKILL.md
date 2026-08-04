@@ -162,7 +162,7 @@ required custom subagents are installed, then spawn them by agent name. If any
 required SpecKit Pro subagent is missing, STOP and instruct the user to run
 `$install` from the SpecKit Pro plugin, then restart Codex.
 
-## Prerequisites — Model & Effort
+## Prerequisites — Model
 
 The autopilot orchestrator makes gate decisions, synthesizes consensus, and
 manages a 7-phase workflow. Running on a weak model produces poor orchestration
@@ -181,18 +181,16 @@ decisions that cascade into expensive rework.
    or `SPECKIT_CODEX_MODEL=gpt-5.4`; changing only the parent session model
    does not rewrite hard-pinned custom-agent TOML files.
 
-2. **Effort check:** Verify `model_reasoning_effort` is set to `xhigh`
-   for the session. If the session is locked to a lower tier
-   (`low`, `medium`, `high`), STOP and instruct the user to relaunch
-   with `xhigh` reasoning. The plugin's policy is **xhigh thinking on
-   every Codex agent, regardless of model tier** — every bundled
-   custom subagent ships with `model_reasoning_effort = "xhigh"`
-   (including `autopilot-fast-helper` on gpt-5.3-codex-spark). Quality
-   is the only optimization axis.
+**Reasoning effort is inherited, never checked.** Run at whatever
+`model_reasoning_effort` the session already has and do not stop, warn,
+or ask the operator to relaunch. Higher effort produces better
+orchestration, so every bundled custom subagent still ships with
+`model_reasoning_effort = "xhigh"` (including `autopilot-fast-helper`
+on gpt-5.3-codex-spark) — that pin only ever raises a worker's effort
+and never refuses to run. The operator owns the session setting; the
+plugin does not veto it.
 
-These checks are non-negotiable. A sub-xhigh orchestrator spawning
-xhigh subagents wastes the subagents' reasoning — the orchestrator's
-decisions determine whether subagent work is productive or wasted.
+The model check above is non-negotiable.
 
 ## Critical: Execution Rules
 

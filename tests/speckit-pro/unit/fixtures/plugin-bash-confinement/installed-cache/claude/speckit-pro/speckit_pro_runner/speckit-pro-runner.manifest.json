@@ -3,7 +3,7 @@
   "runner_contract_id": "speckit-pro-runner",
   "selected_runtime_name": "python-stdlib-runner",
   "contract_version": "1.0",
-  "plugin_version": "2.22.0",
+  "plugin_version": "2.22.1",
   "runner_version": "0.1.0",
   "source_revision": "unknown",
   "python_minimum_version": "3.11",
@@ -144,7 +144,7 @@
         "value": "speckit_pro_runner/helpers/read_only.py",
         "display": "speckit_pro_runner/helpers/read_only.py"
       },
-      "sha256": "a71481cf0639ae48ccaa000cc15ea398a085c7bd0170e9c909ce696d4caea72e"
+      "sha256": "0ded31bef233a1e9c86cee30af7e1ecb7817d1c895ea4940005c846bd0108efd"
     },
     {
       "path": {

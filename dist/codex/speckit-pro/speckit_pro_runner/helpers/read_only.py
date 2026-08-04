@@ -497,6 +497,31 @@ def pretty_json_text(obj: Any) -> str:
     return json.dumps(obj, ensure_ascii=False, indent=2) + "\n"
 
 
+def active_feature_directory(repo_root: Path) -> str:
+    """Resolve declared feature state the way the vendored resolver does.
+
+    Precedence mirrors `.specify/scripts/bash/common.sh`: the
+    `SPECIFY_FEATURE_DIRECTORY` override wins, then `.specify/feature.json`.
+    Branch naming is a separate and weaker signal, so it stays with the caller.
+    Without this, the runner and the vendored resolver disagree about whether a
+    run is on a feature whenever the branch is not `NNN-`-prefixed.
+    """
+    override = os.environ.get("SPECIFY_FEATURE_DIRECTORY", "").strip()
+    if override:
+        return override
+    text = trusted_text(repo_root / ".specify" / "feature.json", repo_root)
+    if text is None:
+        return ""
+    try:
+        payload = json.loads(text)
+    except ValueError:
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    value = payload.get("feature_directory")
+    return value.strip() if isinstance(value, str) else ""
+
+
 def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     workflow = normalize_path_input(inputs.get("workflow_file") or "")
     checks: list[dict[str, Any]] = []
@@ -542,7 +567,7 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
 
     branch = git_branch(repo_root)
     is_worktree = git_is_worktree(repo_root)
-    on_feature = re.match(r"^[0-9]{3}[A-Za-z0-9]*-", branch or "") is not None
+    on_feature = bool(active_feature_directory(repo_root)) or re.match(r"^[0-9]{3}[A-Za-z0-9]*-", branch or "") is not None
     checks.append(check("branch", True, f"Branch: {branch}", f"worktree={str(is_worktree).lower()},feature={str(on_feature).lower()}"))
     settings = repo_root / ".claude" / "speckit-pro.local.md"
     if trusted_file_exists(settings, repo_root):
@@ -582,6 +607,58 @@ def node_package_script_names(package_text: str) -> set[str]:
     return {script for script in scripts if isinstance(script, str)}
 
 
+PYTHON_ROOT_MARKERS = (
+    "pyproject.toml",
+    "setup.py",
+    "setup.cfg",
+    "requirements.txt",
+    "tox.ini",
+    "pytest.ini",
+    "Pipfile",
+)
+NODE_ROOT_MARKERS = ("package.json",)
+OTHER_ROOT_MARKERS = ("Cargo.toml", "go.mod", "Makefile")
+TEST_RUNNER_NAMES = ("run-all.py", "run_all.py", "run_tests.py", "runtests.py")
+
+
+def discover_test_runner(root: Path, repo_root: Path) -> str:
+    """Find a repository test-runner entry point under `tests/`.
+
+    A project can be pure-standard-library Python with no packaging marker at
+    all, and its test command is then a runner script rather than anything a
+    root marker names. Only a script actually present on disk is reported —
+    existence is the evidence, never an assumed convention — and candidates are
+    sorted so the answer is stable across runs.
+    """
+    tests_dir = root / "tests"
+    if not trusted_dir_exists(tests_dir, repo_root):
+        return ""
+    candidates: list[Path] = [
+        tests_dir / name
+        for name in TEST_RUNNER_NAMES
+        if trusted_file_exists(tests_dir / name, repo_root)
+    ]
+    try:
+        children = sorted(
+            (path for path in tests_dir.iterdir() if trusted_dir_exists(path, repo_root)),
+            key=lambda path: path.as_posix(),
+        )
+    except OSError:
+        children = []
+    for child in children:
+        candidates.extend(
+            child / name
+            for name in TEST_RUNNER_NAMES
+            if trusted_file_exists(child / name, repo_root)
+        )
+    if not candidates:
+        return ""
+    try:
+        return candidates[0].relative_to(root).as_posix()
+    except ValueError:
+        return ""
+
+
 def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     root = resolve_input_path(inputs.get("repo_root") or ".", repo_root)
     commands = {
@@ -597,6 +674,7 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     }
     stack = "unknown"
     package_manager = ""
+    evidence = ""
     if trusted_file_exists(root / "pnpm-lock.yaml", repo_root):
         package_manager = "pnpm"
     elif trusted_file_exists(root / "yarn.lock", repo_root):
@@ -611,6 +689,7 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
         if not package_manager:
             package_manager = "npm"
         stack = "nodejs"
+        evidence = "package.json"
         script_names = node_package_script_names(package_text)
         mapping = {
             "build": "BUILD",
@@ -631,20 +710,45 @@ def detect_commands(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
             commands["SINGLE_FILE_INTEGRATION"] = node_script_command(package_manager, "test:integration:file")
     elif trusted_file_exists(root / "Cargo.toml", repo_root):
         stack = "rust"
+        evidence = "Cargo.toml"
         commands.update({"BUILD": "cargo build", "UNIT_TEST": "cargo test"})
     elif trusted_file_exists(root / "go.mod", repo_root):
         stack = "go"
+        evidence = "go.mod"
         commands.update({"BUILD": "go build ./...", "UNIT_TEST": "go test ./..."})
-    elif trusted_file_exists(root / "pyproject.toml", repo_root):
+    elif python_marker := next((marker for marker in PYTHON_ROOT_MARKERS if trusted_file_exists(root / marker, repo_root)), ""):
         stack = "python"
+        evidence = python_marker
         commands.update({"UNIT_TEST": "pytest"})
     elif trusted_file_exists(root / "Makefile", repo_root):
         stack = "makefile"
+        evidence = "Makefile"
         commands.update({"BUILD": "make build", "UNIT_TEST": "make test", "LINT": "make lint"})
+
+    source = "root_marker" if stack != "unknown" else "none"
+    # Fill only what a root marker did not already name, so an explicit
+    # packaging convention always outranks a discovered script.
+    if commands["UNIT_TEST"] == "N/A":
+        runner = discover_test_runner(root, repo_root)
+        if runner:
+            stack = "python" if stack == "unknown" else stack
+            evidence = runner
+            source = "test_runner_script"
+            commands["UNIT_TEST"] = f"python3 {runner}"
+
     chain = [commands[key] for key in ("BUILD", "TYPECHECK", "LINT", "UNIT_TEST", "INTEGRATION_TEST") if commands[key] != "N/A"]
     if chain:
         commands["FULL_VERIFY"] = " && ".join(chain)
-    return make_result(json_text({"stack": stack, "package_manager": package_manager, "commands": commands}))
+    detection: dict[str, Any] = {"source": source, "evidence": evidence}
+    if source == "none":
+        # A silent wall of N/A reads as "this project has no tests". Say what was
+        # looked for so the caller can supply commands instead of assuming none.
+        detection["searched"] = list(NODE_ROOT_MARKERS + OTHER_ROOT_MARKERS + PYTHON_ROOT_MARKERS)
+        detection["hint"] = (
+            "No packaging marker or tests/ runner script found. Supply commands from the "
+            "project's own documentation instead of treating N/A as 'no checks exist'."
+        )
+    return make_result(json_text({"stack": stack, "package_manager": package_manager, "commands": commands, "detection": detection}))
 
 
 def detect_presets(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -3662,13 +3766,38 @@ def git_is_worktree(repo_root: Path) -> bool:
     return bool(git_dir_text and git_common_text and git_dir_text != git_common_text)
 
 
+def worktree_backpointer_matches(git_dir: Path, repo_root: Path) -> bool:
+    """Confirm this worktree admin directory belongs to this worktree.
+
+    Git records the link in both directions: the worktree's `.git` file points
+    at `<checkout>/.git/worktrees/<name>`, and that directory holds a `gitdir`
+    file naming the worktree's own `.git` back again. Checking the return leg
+    proves ownership, which comparing directory names cannot — two unrelated
+    checkouts can share a name, and a worktree is normally named for its branch
+    rather than for its checkout.
+    """
+    pointer = git_dir / "gitdir"
+    if not path_stays_in_trust_boundary(pointer, git_dir):
+        return False
+    text = trusted_text(pointer, git_dir)
+    if text is None:
+        return False
+    recorded = text.strip()
+    if not recorded:
+        return False
+    try:
+        return Path(recorded).resolve() == (repo_root / ".git").resolve()
+    except (OSError, RuntimeError, ValueError):
+        return False
+
+
 def allowed_git_dir(git_dir: Path, repo_root: Path) -> bool:
     if path_stays_in_trust_boundary(git_dir, repo_root):
         return True
     if git_dir.parent.name != "worktrees" or git_dir.parent.parent.name != ".git":
         return False
     checkout_root = git_dir.parent.parent.parent
-    if checkout_root.name != repo_root.name:
+    if not worktree_backpointer_matches(git_dir, repo_root):
         return False
     runner_dir = checkout_root / "speckit-pro" / "speckit_pro_runner"
     return runner_dir.is_dir() and path_stays_in_trust_boundary(runner_dir, checkout_root)
