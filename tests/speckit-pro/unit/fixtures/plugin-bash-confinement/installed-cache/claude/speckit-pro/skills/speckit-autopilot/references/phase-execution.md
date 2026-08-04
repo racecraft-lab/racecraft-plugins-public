@@ -178,6 +178,56 @@ Two consequences follow directly:
 range; a value outside an explicitly named stage's range is rejected at Step
 0.6c before any phase work begins.
 
+### Implementation Stage: Read The Recorded Verdict, Do Not Re-Run The Gate
+
+G6.5 is the **plan** stage's terminal step, so it is outside the implementation
+stage's range. An `implement` invocation **MUST NOT re-run the pre-implement
+confidence gate.** Re-running it would score a planning result the operator
+already accepted, against artifacts that have not changed since the plan stage
+committed — and under `--strict` it could refuse a boundary that was already
+resolved.
+
+Instead, read the **recorded verdict**: the `confidence_gate_status` field of
+the Step 0.6c `resolve-autopilot-stage` envelope, which echoes the
+`Confidence Gate` status row verbatim. Do not read it from the
+`## Phase 6.5: Confidence Gate` prose record — that record's field name varies
+across workflow files (`Verdict`, `Decision`, `Result`), and a bare composite
+score is not a verdict at all: the same score proceeds under advisory mode and
+stops under strict, so identical prose accompanies both outcomes. `null` means
+no row is recorded, which is legal and is not a verdict.
+
+**The confidence-mode flags stay accepted.** `--strict` and `--advisory` are
+advertised unconditionally by both distributions' synopses, so an implementation
+-stage invocation **MUST NOT reject them** — rejecting would be a subtractive
+change to a shipped surface. It must instead make the flag's inertness explicit,
+so an accepted flag never silently does nothing. When `--strict` or `--advisory`
+is present on an `implement` invocation, emit:
+
+```text
+Stage `implement`: the pre-implement confidence gate (G6.5) belongs to the plan
+stage and is not run here, so `<flag>` selects no mode for this invocation. The
+recorded verdict is read from the `Confidence Gate` row instead: `<verdict>`.
+```
+
+Substitute `<flag>` with the flag as given and `<verdict>` with
+`confidence_gate_status` verbatim, or the words `none recorded` when it is
+`null`.
+
+**When the recorded verdict is non-terminal, the same diagnostic names it and
+says the boundary is being crossed.** A non-terminal verdict — `⚠️ Blocked`, or
+any status outside the terminal set — is the state a strict-mode stop leaves
+behind. Append:
+
+```text
+That verdict is non-terminal: the gate refused this boundary, and `--stage
+implement` is proceeding past it.
+```
+
+Emit that sentence on **every** implementation-stage run past a non-terminal
+verdict, flag or no flag. Naming the implementation stage explicitly remains
+sufficient to proceed — the operator is not blocked, and no confirmation is
+required. Crossing *silently* is the only thing forbidden.
+
 ## Phase-by-Phase Execution
 
 Each phase follows the same pattern: read prompt → spawn
@@ -664,8 +714,11 @@ to proceed, surface a remediation hint, or stop.
               surface the iteration history to the operator,
               advance to Phase 7.
             - mode=strict: STOP. Surface the breakdown + history.
-              Operator may resume with `--from-phase implement`
-              if they accept the lower confidence.
+              Operator may resume with `--stage implement` if they
+              accept the lower confidence; that run reads this
+              recorded verdict rather than re-running the gate, and
+              reports that it is crossing a refused boundary. The
+              older `--from-phase implement` form keeps working.
 ```
 
 The iteration cap of 3 is the only safety bound when `/goal` is

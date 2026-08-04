@@ -212,6 +212,113 @@ RECORDED_STAGE_CASES = (
     ("no Stage row at all", "", None),
 )
 
+# --- Recorded confidence-gate verdict (FR-010a) --------------------------
+# The gate record written under `## Phase 6.5: Confidence Gate` is prose, and it
+# is not a verdict source. Real workflow files spell the record three different
+# ways — `Verdict | **proceed**`, `Decision | Pass; proceed to Phase 7`,
+# `Result | Soft-skip` — so no single prose field name exists to read. The
+# composite score is not a verdict either: the same score proceeds under advisory
+# mode and stops under strict, so an identical prose block accompanies both
+# outcomes. Only the status row records which of the two actually happened.
+GATE_RECORD_PROSE = (
+    "\n## Phase 6.5: Confidence Gate\n\n"
+    "| Field | Value |\n"
+    "|-------|-------|\n"
+    "| Mode | **advisory** |\n"
+    "| Composite confidence | **0.88** |\n"
+    "| Verdict | **proceed** |\n"
+)
+
+# (label, overview rows, expected confidence_gate_status, expected planning_complete)
+CONFIDENCE_GATE_VERDICT_CASES = (
+    (
+        "terminal verdict is echoed verbatim",
+        PLANNING_ROWS_TERMINAL + (GATE_TERMINAL, IMPLEMENT_PENDING),
+        "✅ Complete",
+        True,
+    ),
+    (
+        "a skipped gate is terminal",
+        PLANNING_ROWS_TERMINAL + (GATE_SKIPPED, IMPLEMENT_PENDING),
+        "⏭ Skipped",
+        True,
+    ),
+    (
+        # The state a strict-mode stop leaves behind: the six planning rows are
+        # terminal and the gate refused. The verdict an implementation-stage run
+        # reads instead of re-running the gate (FR-010a).
+        "non-terminal verdict is echoed and does not complete planning",
+        PLANNING_ROWS_TERMINAL + (GATE_BLOCKED, IMPLEMENT_PENDING),
+        "⚠️ Blocked",
+        False,
+    ),
+    (
+        # Absence is null, never an error and never inferred from the prose
+        # record: nearly every workflow file in the tree predates the row.
+        "an absent row is null",
+        PLANNING_ROWS_TERMINAL + (IMPLEMENT_PENDING,),
+        None,
+        True,
+    ),
+)
+
+# --- Auto-detection (FR-006, SC-004) -------------------------------------
+PLANNING_INCOMPLETE = PLANNING_ROWS_TERMINAL[:5] + (("Analyze", "⏳ Pending"), IMPLEMENT_PENDING)
+PLANNING_COMPLETE = PLANNING_ROWS_TERMINAL + (GATE_TERMINAL, IMPLEMENT_PENDING)
+# The state a strict-mode gate stop leaves behind: every planning row terminal,
+# the gate refused. Resolving `implement` here is the flagship silent failure —
+# it would start the very phase the gate just refused.
+STRICT_MODE_STOP = PLANNING_ROWS_TERMINAL + (GATE_BLOCKED, IMPLEMENT_PENDING)
+
+# (label, overview rows, argv, expected stage, expected source, basis must name)
+AUTO_DETECTION_CASES = (
+    (
+        "planning incomplete resolves plan",
+        PLANNING_INCOMPLETE,
+        [],
+        "plan",
+        "auto-detect",
+        ("Analyze", "⏳ Pending"),
+    ),
+    (
+        "every predicate row terminal resolves implement",
+        PLANNING_COMPLETE,
+        [],
+        "implement",
+        "auto-detect",
+        (),
+    ),
+    (
+        # An explicitly named stage always overrides auto-detection, including
+        # when it disagrees with what auto-detection would have chosen.
+        "explicit --stage overrides auto-detection",
+        PLANNING_INCOMPLETE,
+        ["--stage", "implement"],
+        "implement",
+        "argv",
+        (),
+    ),
+    (
+        "strict-mode gate stop resolves plan, never implement",
+        STRICT_MODE_STOP,
+        [],
+        "plan",
+        "auto-detect",
+        ("Confidence Gate", "⚠️ Blocked"),
+    ),
+    (
+        # A planning row absent from the table has no status to name, so the
+        # basis names the phase and says the row is missing rather than
+        # printing a bare `None`.
+        "an absent planning row is named without a status",
+        PLANNING_ROWS_TERMINAL[:3] + PLANNING_ROWS_TERMINAL[4:] + (IMPLEMENT_PENDING,),
+        [],
+        "plan",
+        "auto-detect",
+        ("Checklist",),
+    ),
+)
+
 # Text that must be rejected as exit 2 rather than degraded to a default: with no
 # parseable table, auto-detection has no input, and every degraded default
 # resolves the planning stage — which would re-run finished work whenever the
@@ -293,6 +400,30 @@ def workflow_document(rows: tuple[tuple[str, str], ...], stage_row: str = "") ->
         + "| **Branch** | `test-branch` |\n"
         + stage_row
     )
+
+
+def resolve_stage(text: str, args: list[str] | None = None) -> dict[str, object]:
+    """Run the operation against a workflow file written under its own root.
+
+    The root is resolved because the descriptor-guarded reader resolves the repo
+    root but not the target, so an unresolved symlinked temp path (macOS `/var`
+    -> `/private/var`) would fail the containment check on its own.
+    """
+    with tempfile.TemporaryDirectory() as root:
+        repo_root = Path(root).resolve()
+        (repo_root / "stage-workflow.md").write_text(text, encoding="utf-8")
+        return read_only.resolve_autopilot_stage(
+            {"workflow_file": "stage-workflow.md", "autopilot_args": args or []},
+            repo_root,
+        )
+
+
+def resolve_envelope(text: str, args: list[str] | None = None) -> dict[str, object]:
+    """The exit-0 JSON envelope of a resolution, asserted to have succeeded."""
+    result = resolve_stage(text, args)
+    if result["exit_code"] != 0:
+        raise AssertionError(f"expected exit 0, got {result['exit_code']}: {result['stderr']}")
+    return json.loads(result["stdout"])
 
 
 def runner_env() -> dict[str, str]:
@@ -409,21 +540,6 @@ class RequestLayerDiagnosticTests(unittest.TestCase):
 class WorkflowStageSignalTests(unittest.TestCase):
     """T007 — the workflow-file reader and the FR-006a planning predicate."""
 
-    def resolve(self, text: str, args: list[str] | None = None) -> dict[str, object]:
-        """Run the operation against a workflow file written under its own root.
-
-        The root is resolved because the descriptor-guarded reader resolves the
-        repo root but not the target, so an unresolved symlinked temp path (macOS
-        `/var` -> `/private/var`) would fail the containment check on its own.
-        """
-        with tempfile.TemporaryDirectory() as root:
-            repo_root = Path(root).resolve()
-            (repo_root / "stage-workflow.md").write_text(text, encoding="utf-8")
-            return read_only.resolve_autopilot_stage(
-                {"workflow_file": "stage-workflow.md", "autopilot_args": args or []},
-                repo_root,
-            )
-
     def test_planning_predicate_covers_the_six_rows_plus_the_confidence_gate(self) -> None:
         for label, rows, complete, gate_status, first_open in PLANNING_PREDICATE_CASES:
             with self.subTest(case=label):
@@ -444,7 +560,7 @@ class WorkflowStageSignalTests(unittest.TestCase):
                 self.assertEqual(signals["recorded_stage"], expected)
 
     def test_absent_stage_row_is_not_an_error(self) -> None:
-        result = self.resolve(
+        result = resolve_stage(
             workflow_document(PLANNING_ROWS_TERMINAL + (GATE_TERMINAL,)),
             ["--stage", "plan"],
         )
@@ -456,7 +572,7 @@ class WorkflowStageSignalTests(unittest.TestCase):
         for label, text in UNPARSEABLE_WORKFLOW_TEXTS:
             with self.subTest(case=label):
                 self.assertFalse(read_only.workflow_stage_signals(text)["parsed"])
-                result = self.resolve(text)
+                result = resolve_stage(text)
                 self.assertEqual(result["exit_code"], 2)
                 self.assertTrue(result["stderr"].startswith("error: "), result["stderr"])
                 self.assertEqual(result["stdout"], "")
@@ -491,6 +607,134 @@ class WorkflowStageSignalTests(unittest.TestCase):
         # different question from whether planning finished.
         self.assertIn("Confidence Gate", module.WORKFLOW_ADVISORY_PHASES)
         self.assertIn("Confidence Gate", read_only.AUTOPILOT_PLANNING_PREDICATE_PHASES)
+
+
+class ConfidenceGateVerdictTests(unittest.TestCase):
+    """T024 — `confidence_gate_status` echoes the status row, never the prose."""
+
+    def test_envelope_echoes_the_confidence_gate_status_row(self) -> None:
+        for label, rows, expected, complete in CONFIDENCE_GATE_VERDICT_CASES:
+            with self.subTest(case=label):
+                envelope = resolve_envelope(
+                    workflow_document(rows) + GATE_RECORD_PROSE, ["--stage", "implement"]
+                )
+                self.assertEqual(envelope["confidence_gate_status"], expected)
+                self.assertEqual(envelope["planning_complete"], complete)
+
+    def test_identical_gate_prose_records_two_opposite_verdicts(self) -> None:
+        # One prose block, two outcomes. A composite of 0.88 proceeds under
+        # advisory mode and stops under strict, so the record below is a truthful
+        # description of BOTH runs. Reading it as the verdict would report
+        # `proceed` for the run that was refused.
+        proceeded = resolve_envelope(
+            workflow_document(PLANNING_ROWS_TERMINAL + (GATE_TERMINAL,)) + GATE_RECORD_PROSE
+        )
+        stopped = resolve_envelope(
+            workflow_document(PLANNING_ROWS_TERMINAL + (GATE_BLOCKED,)) + GATE_RECORD_PROSE
+        )
+        self.assertEqual(proceeded["confidence_gate_status"], "✅ Complete")
+        self.assertEqual(stopped["confidence_gate_status"], "⚠️ Blocked")
+        for envelope in (proceeded, stopped):
+            with self.subTest(verdict=envelope["confidence_gate_status"]):
+                self.assertNotIn("proceed", str(envelope["confidence_gate_status"]))
+                self.assertNotIn("0.88", str(envelope["confidence_gate_status"]))
+
+    def test_the_rows_own_notes_cell_is_not_the_verdict(self) -> None:
+        # The shipped ART-006 row carries `composite 0.88, verdict **proceed**`
+        # in its Notes cell, immediately beside the status. The status cell is
+        # the verdict; the cell next to it is commentary about the same run.
+        blocked_row_with_proceed_notes = (
+            "## Workflow Overview\n\n"
+            "| Phase | Command | Status | Notes |\n"
+            "|-------|---------|--------|-------|\n"
+            + "".join(
+                f"| {phase} | `/speckit-run` | {status} | |\n"
+                for phase, status in PLANNING_ROWS_TERMINAL
+            )
+            + "| Confidence Gate | G6.5 | ⚠️ Blocked |"
+            " Advisory mode, composite 0.88, verdict **proceed** |\n"
+        )
+        envelope = resolve_envelope(blocked_row_with_proceed_notes)
+        self.assertEqual(envelope["confidence_gate_status"], "⚠️ Blocked")
+        self.assertFalse(envelope["planning_complete"])
+
+    def test_absent_row_is_null_even_when_the_prose_record_names_a_verdict(self) -> None:
+        envelope = resolve_envelope(
+            workflow_document(PLANNING_ROWS_TERMINAL + (IMPLEMENT_PENDING,)) + GATE_RECORD_PROSE
+        )
+        self.assertIsNone(envelope["confidence_gate_status"])
+
+    def test_the_field_is_the_same_row_the_planning_predicate_reads(self) -> None:
+        # FR-006a's predicate and this field must never disagree: a run told the
+        # gate is blocked while the predicate reports planning complete would
+        # cross the boundary the gate refused.
+        for label, rows, expected, _complete in CONFIDENCE_GATE_VERDICT_CASES:
+            with self.subTest(case=label):
+                text = workflow_document(rows) + GATE_RECORD_PROSE
+                signals = read_only.workflow_stage_signals(text)
+                self.assertEqual(signals["confidence_gate_status"], expected)
+                self.assertEqual(resolve_envelope(text)["confidence_gate_status"], expected)
+
+    def test_a_non_terminal_verdict_is_the_open_row_the_predicate_reports(self) -> None:
+        text = workflow_document(PLANNING_ROWS_TERMINAL + (GATE_BLOCKED, IMPLEMENT_PENDING))
+        signals = read_only.workflow_stage_signals(text)
+        self.assertEqual(
+            signals["first_open"],
+            (read_only.AUTOPILOT_GATE_PHASE, signals["confidence_gate_status"]),
+        )
+        self.assertNotIn(
+            signals["confidence_gate_status"], read_only.AUTOPILOT_TERMINAL_STATUSES
+        )
+
+
+class AutoDetectionTests(unittest.TestCase):
+    """T030 — FR-006/SC-004: a bare invocation resolves and reports its stage."""
+
+    def test_auto_detection_resolves_the_expected_stage_and_source(self) -> None:
+        for label, rows, argv, stage, source, _named in AUTO_DETECTION_CASES:
+            with self.subTest(case=label):
+                envelope = resolve_envelope(workflow_document(rows), argv)
+                self.assertEqual(envelope["stage"], stage)
+                self.assertEqual(envelope["source"], source)
+
+    def test_the_basis_names_the_first_non_terminal_phase_and_its_status(self) -> None:
+        # The basis is what the orchestrator prints before phase work begins
+        # (FR-006). "auto-detected plan" is not a reason; naming the row that
+        # decided it is, and it is what an operator needs to act on.
+        for label, rows, argv, _stage, source, named in AUTO_DETECTION_CASES:
+            if source != "auto-detect" or not named:
+                continue
+            with self.subTest(case=label):
+                basis = str(resolve_envelope(workflow_document(rows), argv)["basis"])
+                for token in named:
+                    self.assertIn(token, basis, f"basis does not name {token!r}: {basis!r}")
+
+    def test_a_strict_mode_gate_stop_never_auto_detects_implement(self) -> None:
+        envelope = resolve_envelope(workflow_document(STRICT_MODE_STOP))
+        self.assertEqual(envelope["stage"], "plan")
+        self.assertEqual(envelope["source"], "auto-detect")
+        self.assertFalse(envelope["planning_complete"])
+        self.assertEqual(envelope["confidence_gate_status"], "⚠️ Blocked")
+        # The six planning rows really are terminal — `plan` is decided by the
+        # gate row alone, which is the whole point of FR-006a's predicate set.
+        signals = read_only.workflow_stage_signals(workflow_document(PLANNING_ROWS_TERMINAL))
+        self.assertTrue(signals["planning_complete"])
+
+    def test_an_explicit_stage_reports_argv_and_a_basis_naming_the_flag(self) -> None:
+        for stage in STAGE_VOCABULARY:
+            with self.subTest(stage=stage):
+                envelope = resolve_envelope(
+                    workflow_document(PLANNING_INCOMPLETE), ["--stage", stage]
+                )
+                self.assertEqual(envelope["stage"], stage)
+                self.assertEqual(envelope["source"], "argv")
+                self.assertEqual(envelope["basis"], f"explicit --stage {stage}")
+
+    def test_the_basis_reports_completion_when_no_row_is_open(self) -> None:
+        envelope = resolve_envelope(workflow_document(PLANNING_COMPLETE))
+        self.assertEqual(envelope["stage"], "implement")
+        self.assertNotIn("None", str(envelope["basis"]))
+        self.assertTrue(str(envelope["basis"]).startswith("auto-detect"), envelope["basis"])
 
 
 class PlanningStageCanonicalListTests(unittest.TestCase):
@@ -572,6 +816,8 @@ def build_suite() -> unittest.TestSuite:
         StageVocabularyAndArgvTests,
         RequestLayerDiagnosticTests,
         WorkflowStageSignalTests,
+        ConfidenceGateVerdictTests,
+        AutoDetectionTests,
         PlanningStageCanonicalListTests,
     ):
         suite.addTests(loader.loadTestsFromTestCase(case))

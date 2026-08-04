@@ -352,10 +352,67 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    `--from-phase` outside an explicitly named stage's range, `--stage`
    with no value, or an unreadable/unparseable workflow file), STOP the
    autopilot before Phase 0 with that one-line message — the same
-   fail-fast shape 0.6b uses. **Report the resolved stage and its basis
-   before any phase work begins.** The stage bounds which phases this
+   fail-fast shape 0.6b uses. **Print the resolved stage and its basis
+   before any phase work begins** — before Phase 0, before the Step 1
+   coverage guard, and before the first subagent dispatch. Emit one line,
+   `Stage: <stage> (<source>) — <basis>`, using the envelope's `basis`
+   verbatim. For an auto-detected stage that basis names the first
+   non-terminal planning phase and its status, which is the row the operator
+   has to act on; `plan` after a strict-mode gate stop reads
+   `the first non-terminal planning phase is Confidence Gate, which is
+   ⚠️ Blocked` rather than an unexplained stage token.
+   If Step 0.6d reclaimed the slot, append
+   `reclaimed the state slot from <prior workflow file> (prior status:
+   <prior_run_note>)` to the same report. A `prior_run_note` of
+   `in_progress` is the only available signal that a second run may still be
+   live — the state file records no pid, heartbeat, or lease — so it is
+   **reported, never blocking**. The stage bounds which phases this
    run may start: see
    [Phase Execution §Stage-Bounded Phase Selection](./references/phase-execution.md#stage-bounded-phase-selection).
+6d. **Reclaim the state slot if it names another workflow** — `autopilot-state.json`
+   holds exactly one run. When this invocation targets a workflow file the state
+   file does not currently name, **re-initialise the slot from the target
+   workflow file before continuing**: rewrite `workflow_file`, `spec_id`,
+   `feature_dir`, `branch`, `status`, `stage`, and `plan`. Reclaiming is normal
+   operation — one slot, many specs — and is **not** an error.
+   - **This runs before the Step 1 coverage guard, not after.** The guard's
+     workflow-identity check is inert under every invocation the phase loop
+     issues: run against a state file naming a different specification it exits
+     **0** and reports `pass`. Ordering re-initialisation after the guard
+     therefore leaves the slot unprotected, not merely late — nothing downstream
+     would catch the stale identity.
+   - The trigger is **unscoped by stage**. Any stage can be the one that finds a
+     foreign slot, and the guard is equally inert for all of them.
+   - Record the reclaimed run's `status` **verbatim** in `prior_run_note` before
+     overwriting it, so `in_progress` stays distinguishable from `completed` or
+     `completed_archived`. Surface it in the Step 0.6c report.
+   - **It MUST NOT block.** The state file carries no liveness evidence — no pid,
+     no heartbeat, no lease — so `in_progress` cannot distinguish a live run from
+     one abandoned to a crash or a closed terminal. Blocking on it would strand
+     every run that followed an interrupted one. Report it and proceed.
+6e. **Preserve the prerequisite test-count baseline; do not recompute it** — if
+   the workflow file already records a G0 test-count baseline, **keep it.** The
+   post-implementation gate verifies the count *increased* against that baseline
+   (see [Gate Validation §G7](./references/gate-validation.md#g7--after-implement)),
+   and a baseline recaptured after planning already contains whatever the run
+   added, which makes the comparison vacuous — it would compare the tree against
+   itself and pass unconditionally. A `--stage implement` run in a fresh session
+   is exactly when this is tempting and exactly when it is wrong.
+   - If a newly observed count differs from the recorded baseline, record it as a
+     **non-blocking drift diagnostic** naming both numbers. Do **not** replace the
+     baseline with it. Drift means the tree moved underneath the spec, which the
+     operator should see; it is not grounds to stop.
+   - **Resume protocol (both distributions).** A run that resumes in a fresh
+     session, or in a different working copy, reconstructs its context from the
+     **workflow file**, which is durable and survives archiving of `specs/<id>/`:
+     the `## Workflow Overview` status table, the `Stage` row, the recorded
+     `Confidence Gate` verdict, and the G0 baseline. `autopilot-state.json` is a
+     mirror of the active run and may be absent, stale, or naming another spec —
+     each is recoverable, and none is an error. A **missing** state file is
+     rebuilt from the workflow file; a state file naming **another** workflow is
+     reclaimed per Step 0.6d. The one carve-out is the pull-request marker plan,
+     which keeps its own stricter stop-rather-than-infer rule and is **not**
+     relaxed to satisfy this resume path.
 7. **Capability enumeration, grounding & feed-down** — you are the only
    component that discovers openly. Before relying on any capability, enumerate
    what this session actually exposes: surface deferred MCP tools with

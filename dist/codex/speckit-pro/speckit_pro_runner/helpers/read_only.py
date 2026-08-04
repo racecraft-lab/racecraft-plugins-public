@@ -1263,6 +1263,22 @@ def workflow_recorded_stage(lines: list[str]) -> str | None:
     return None
 
 
+def auto_detect_basis(first_open: tuple[str, str | None] | None) -> str:
+    """The plain-English reason the orchestrator prints before phase work begins.
+
+    FR-006 requires the *basis*, not just the choice: an operator who sees
+    `plan` after a strict-mode gate stop needs to know the `Confidence Gate` row
+    is what decided it, because that is the row they must act on.
+    """
+    if first_open is None:
+        return "auto-detect: every planning phase and the confidence gate are terminal"
+    phase, status = first_open
+    # A row absent from the table has no status to name; printing a bare `None`
+    # would read as a status the workflow file actually records.
+    reason = f"is {status}" if status else "has no row in the status table"
+    return f"auto-detect: the first non-terminal planning phase is {phase}, which {reason}"
+
+
 def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     """Resolve the autopilot stage once, for both distributions.
 
@@ -1294,7 +1310,7 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
     else:
         source = "auto-detect"
         stage = "implement" if signals["planning_complete"] else "plan"
-        basis = f"auto-detect from the {AUTOPILOT_OVERVIEW_HEADING} table"
+        basis = auto_detect_basis(signals["first_open"])
     return make_result(json_text({
         "tool": "resolve-autopilot-stage",
         "stage": stage,
