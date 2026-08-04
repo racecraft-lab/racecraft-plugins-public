@@ -65,7 +65,7 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | G1 pass — 14 FR, 3 user stories, 8 success criteria, 11 acceptance scenarios, 0 markers |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
@@ -102,11 +102,14 @@ Each phase requires **human review and approval** before proceeding:
 
 | Principle | Requirement | Verification |
 |-----------|-------------|--------------|
-| <!-- e.g., Type Safety --> | <!-- e.g., All functions typed --> | <!-- e.g., `pyright .` --> |
-| <!-- e.g., Test-First --> | <!-- e.g., TDD Red→Green --> | <!-- e.g., `pytest` --> |
-| <!-- e.g., Simplicity --> | <!-- e.g., YAGNI --> | <!-- Code review --> |
+| I. Plugin Structure Compliance | Manifests, skills, agents keep their required shape | `python3 tests/speckit-pro/run-all.py --layer 1` — 1443/1443 |
+| II. Cross-Platform Runtime & Script Safety | Python 3.11+ stdlib only; no new Bash or `jq` | Layer 1 `validate-scripts` + repo Bash-confinement tests pass |
+| III. Semantic Versioning | Version and manifest drift blocked | Layer 1 `validate-plugin` / `validate-codex-plugin` pass at 2.22.1 |
+| IV. Test Coverage Before Merge | New behavior ships with tests | `python3 tests/speckit-pro/run-all.py` — 7052/7052 baseline on this tree |
+| V. Conventional Commits | `<type>(<lowercase-scope>): <description>` | Validated against the live release-readiness gate before PR creation |
+| VI. KISS, Simplicity & YAGNI | Smallest change that satisfies the spec | Enforced at Plan/Analyze and the 382-LOC reviewability budget |
 
-**Constitution Check:** ✅ / ❌ (mark before proceeding to G1)
+**Constitution Check:** ✅ — full suite 7052/7052 on the merged tree (2026-08-04), recorded before G1.
 
 ---
 
@@ -250,13 +253,16 @@ that consume the stage vocabulary.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | <!-- e.g., FR-001 through FR-020 --> |
-| User Stories | <!-- Count --> |
-| Acceptance Criteria | <!-- Count --> |
+| Functional Requirements | FR-001 through FR-014 (14) |
+| User Stories | 3 (US1 explicit staging P1, US2 resume into implement P2, US3 bare invocation P3) |
+| Acceptance Criteria | 11 acceptance scenarios, 8 measurable success criteria |
+| `[NEEDS CLARIFICATION]` markers | 0 |
+| Gate G1 | ✅ PASS — `validate-gate` reported `spec.md exists with 0 markers` |
+| Codex word budget (re-measured) | 7673 of 8000; headroom 327, not the stale ~390 the prompt above records |
 
 ### Files Generated
 
-- [ ] `specs/art-006-autopilot-staging/spec.md`
+- [x] `specs/art-006-autopilot-staging/spec.md`
 
 ### SpecKit Traceability Markers
 
