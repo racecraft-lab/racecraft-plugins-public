@@ -69,7 +69,7 @@ captured during scoping.
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 passed. 3 of 3 sessions resolved via 2-analyst consensus (Session 2 needed a Round 2 tiebreak); spec 22 → 31 normative items, 0 `[NEEDS CLARIFICATION]` markers |
 | Plan | `/speckit-plan` | ✅ Complete | G3 passed. plan.md + research.md + data-model.md + quickstart.md + 2 contracts; 0 markers. Shared stage resolution sited as runner operation `resolve-autopilot-stage`. Re-estimate 430 reviewable LOC / 17 files — warn on both, block on neither; one slice, no split, rationale recorded in plan.md |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 passed. 3 of 3 domains; 138 items all evaluated, 20 defects raised and all 20 remediated, 0 outstanding, 0 `[Gap]` markers. +29 LOC (430 → 459), no new requirement beyond domain 1's two |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | G5 passed. 43 tasks, 6 phases, TDD-ordered (tests precede implementation in every story). All 33 normative items traced; FR-016 is documentation-only and correctly carries no implementation task. 0 markers, 0 leaked paths |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Plan stage's terminal step (design concept Q7) |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -685,10 +685,28 @@ When checklist identifies `[Gap]` items:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 43 (T001–T043) |
+| **Phases** | 6 — Setup, Foundational, US1 (P1/MVP), US2 (P2), US3 (P3), Polish |
+| **Parallel Opportunities** | 9 tasks marked `[P]` |
+| **User Stories Covered** | 3 of 3 |
+
+**G5 verification (orchestrator).** Every one of the 33 normative items in
+`spec.md` is referenced in `tasks.md` — checked by extracting the requirement ids
+from the spec and matching each against the task file; zero missing. The
+traceability table maps each to its tasks and correctly records FR-016 as
+delivered by `contracts/scaffold-autopilot-chain.md` with no implementation task,
+since the chain contract is documentation-only.
+
+The five obligations the checklists imposed all survived decomposition: the three
+additive Codex edits land in the **skill body** (T035) with remaining prose in the
+reference file (T036), so the mis-sited rejection step is not reintroduced;
+request-layer diagnostics are asserted **separately** from process exit codes
+(T004), so no fixture asserts exit 2 for a trust-boundary path; the new test is
+`tests/speckit-pro/unit/test-autopilot-stage-resolution.py` (T003) — no live
+spec-family token — and is registered in the suite manifest (T005); artifact
+regeneration is T040, explicitly ordered after every source edit and required to
+be idempotent on a second run; and docs-site reference regeneration is a separate
+step (T041), which `refresh-release-artifacts.py` does not cover.
 
 ---
 
