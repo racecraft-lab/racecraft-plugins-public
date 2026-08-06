@@ -140,6 +140,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-012 | Implementation-Notes Capture | ⏳ Pending | - | Blocked by ART-006 |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
 | ART-014 | Phase-Guard Enforcement Repair | ⏳ Ready | - | No dependencies; found during ART-006, which deliberately did not fix it |
+| ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -899,6 +900,79 @@ the pre-existing identity check was left out to keep ART-006 one slice.
 
 ---
 
+
+### ART-015: Spec-Size Re-Estimation Trigger
+
+**Priority:** P3 | **Depends On:** none | **Enables:** honest slice budgets
+
+**Goal:** Re-invoke the size estimator at the gates where a spec's signals have
+actually changed, and record the operation's output instead of a hand-authored
+figure.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: ~90 (estimator: ok, modify-weighted) |
+Production files: ~2 |
+Total files: ~4 |
+Budget result: within budget
+
+**Problem:** `estimate-spec-size` computes
+`user_stories*25 + files*40 + frs*15`, halved when `new_vs_modify` is `modify`
+(`speckit-pro/speckit_pro_runner/helpers/read_only.py:1063-1090`). It is accurate
+when fed current signals and it is only ever fed *scoping-time* signals.
+
+ART-006 is the worked example. At scaffold it received 3 user stories, 12 files
+and 14 functional requirements and returned `{estimated_loc: 382,
+suggested_slices: 1, status: "ok"}`. Clarification and three checklist domains
+then grew the specification to 25 functional requirements. Fed those final
+signals — 3 stories, 17 files, 25 FRs — the same operation returns
+`{estimated_loc: 565, suggested_slices: 2, status: "warn"}`. Nothing re-invoked
+it, so the ratified budget stayed at 382 while the specification became a
+`warn`-sized one. The file signal was declared at 17 and came in at exactly 17,
+so the drift is entirely in the requirement count.
+
+The G3 "re-estimate" recorded in that spec's `plan.md` was a number typed by
+hand, not a re-invocation, which is why it moved to 430 rather than to what the
+operation would have returned.
+
+**Scope:**
+- One vertical slice — recompute at the gate, record the operation's output.
+- Re-invoke `estimate-spec-size` at G3 (after Plan) and G5 (after Tasks), reading
+  the current requirement count from `spec.md` and the current file count from
+  the plan's Declared File Operations block.
+- Record the returned triple verbatim in the workflow file's budget table,
+  attributed to the operation, so a hand-typed figure is distinguishable from a
+  computed one.
+- A `status` transition from `ok` to `warn` between gates surfaces to the
+  operator with the previous and current signals side by side. It stays
+  **advisory** — the estimator never blocks, and the PR-time diff gate remains
+  the authority on the real diff.
+
+**Out of Scope:**
+- Changing the estimator's formula, its coefficients, or the 400-line ceiling.
+- Making any estimate blocking.
+- Teaching the model about per-file size. A single 992-line table-driven fixture
+  file was half of ART-006's human-reviewable diff, and a flat per-file term
+  cannot express that. It is a real limit of signal-based estimation, recorded in
+  `ART-006-retrospective.md` and deliberately not addressed here.
+
+**Verification:** A Layer 4 test that feeds scoping-time signals, then grown
+signals, and asserts the recorded budget follows the second — the regression that
+would have caught ART-006's drift. Plus a golden fixture pinning the `ok` → `warn`
+transition report.
+
+**Key Decisions:**
+**The estimator was exonerated by re-running it (2026-08-05):** the first reading
+of ART-006's overrun was that the estimator underestimates. Re-invoking it with
+final signals returned a figure consistent with the outcome, which relocated the
+defect from the model to the absent trigger.
+
+**Key Files:**
+- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — the estimator
+- `speckit-pro/skills/speckit-autopilot/references/gate-validation.md` — G3/G5 gates
+- `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` — gate recording
+- `speckit-pro/codex-skills/speckit-autopilot/` mirror
+
+---
 
 ## Decomposition Principles
 
