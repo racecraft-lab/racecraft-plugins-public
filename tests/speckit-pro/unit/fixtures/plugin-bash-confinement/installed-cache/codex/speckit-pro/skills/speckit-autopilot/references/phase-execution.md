@@ -197,11 +197,11 @@ stops under strict, so identical prose accompanies both outcomes. `null` means
 no row is recorded, which is legal and is not a verdict.
 
 **The confidence-mode flags stay accepted.** `--strict` and `--advisory` are
-advertised unconditionally by both distributions' synopses, so an implementation
--stage invocation **MUST NOT reject them** — rejecting would be a subtractive
-change to a shipped surface. It must instead make the flag's inertness explicit,
-so an accepted flag never silently does nothing. When `--strict` or `--advisory`
-is present on an `implement` invocation, emit:
+advertised unconditionally by both distributions' synopses, so an
+implementation-stage invocation **MUST NOT reject them** — rejecting would be
+a subtractive change to a shipped surface. It must instead make the flag's
+inertness explicit, so an accepted flag never silently does nothing. When
+`--strict` or `--advisory` is present on an `implement` invocation, emit:
 
 ```text
 Stage `implement`: the pre-implement confidence gate (G6.5) belongs to the plan

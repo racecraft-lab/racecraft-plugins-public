@@ -677,11 +677,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 56093,
+              "byte_count": 56092,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution.md",
               "required": true,
-              "sha256": "6f1fac3035894b0f68e0691c1d15101a28e651a3cd698de5823b9c72580db2a2",
+              "sha256": "133883df077f283b2da789db41785ff141ee9b18f6a12edd3285a7962d70496f",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
               "transform": "none"
             },
@@ -1660,11 +1660,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 56093,
+              "byte_count": 56092,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution.md",
               "required": true,
-              "sha256": "6f1fac3035894b0f68e0691c1d15101a28e651a3cd698de5823b9c72580db2a2",
+              "sha256": "133883df077f283b2da789db41785ff141ee9b18f6a12edd3285a7962d70496f",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
               "transform": "none"
             },
@@ -2192,7 +2192,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "26e810eeb7525e77a02dae91eafc0ae6166daf188694521fe67d092ea5dc41e9",
+          "file_tree_hash": "4bec7566a7fc40afa21110576defe59bbc0c8a5b01be5f6b0750f1ca1e265be8",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2709,11 +2709,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 56093,
+              "byte_count": 56092,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution.md",
               "required": true,
-              "sha256": "6f1fac3035894b0f68e0691c1d15101a28e651a3cd698de5823b9c72580db2a2",
+              "sha256": "133883df077f283b2da789db41785ff141ee9b18f6a12edd3285a7962d70496f",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
               "transform": "none"
             },
@@ -3845,11 +3845,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 56093,
+              "byte_count": 56092,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution.md",
               "required": true,
-              "sha256": "6f1fac3035894b0f68e0691c1d15101a28e651a3cd698de5823b9c72580db2a2",
+              "sha256": "133883df077f283b2da789db41785ff141ee9b18f6a12edd3285a7962d70496f",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
               "transform": "none"
             },
@@ -4476,7 +4476,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "fab4e40c961a20e0cff35408dcbd69788044be526104c4999ca3808b653a4144",
+          "file_tree_hash": "1566e5867847774fbdcdfcdb43b9f5641771241d67793caf6135052360b2bcf2",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
