@@ -3,9 +3,9 @@
   "spec_id": "ART-006",
   "feature_dir": "specs/art-006-autopilot-staging",
   "branch": "art-006-autopilot-staging",
-  "status": "in_progress",
-  "active_step": "Post: Review Remediation",
-  "updated_at": "2026-08-04T00:00:00Z",
+  "status": "completed",
+  "active_step": null,
+  "updated_at": "2026-08-05T00:00:00Z",
   "stage": "plan",
   "prior_run_note": "Previous state pointed at ART-001 (completed_archived). autopilot-state.json is the current-in-flight pointer for one run and is overwritten per run; ART-001's durable record remains its own workflow file, which survives archive.",
   "settings": {
@@ -152,11 +152,11 @@
     },
     {
       "step": "Post: Review Remediation",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "confidence_gate": {
@@ -191,5 +191,10 @@
     "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/422",
     "state": "open",
     "merged_by_agent": false
+  },
+  "follow_up": {
+    "roadmap_id": "ART-014",
+    "title": "Phase-Guard Enforcement Repair",
+    "reason": "workflow-identity check is inert; found during ART-006, deliberately not fixed here"
   }
 }
