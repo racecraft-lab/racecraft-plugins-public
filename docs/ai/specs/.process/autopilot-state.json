@@ -4,7 +4,7 @@
   "feature_dir": "specs/art-006-autopilot-staging",
   "branch": "art-006-autopilot-staging",
   "status": "in_progress",
-  "active_step": "Post: Code Review",
+  "active_step": "Post: Review Remediation",
   "updated_at": "2026-08-04T00:00:00Z",
   "stage": "plan",
   "prior_run_note": "Previous state pointed at ART-001 (completed_archived). autopilot-state.json is the current-in-flight pointer for one run and is overwritten per run; ART-001's durable record remains its own workflow file, which survives archive.",
@@ -124,7 +124,7 @@
     },
     {
       "step": "Post: Code Review",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite",
@@ -136,23 +136,23 @@
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "skipped: generate-uat-skeleton operation is deferred in this repository"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Retrospective",
@@ -185,5 +185,11 @@
     "declared": 459,
     "declared_files": 17,
     "verdict": "over declared budget; composition recorded; split decision deferred to human reviewer"
+  },
+  "pull_request": {
+    "number": 422,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/422",
+    "state": "open",
+    "merged_by_agent": false
   }
 }

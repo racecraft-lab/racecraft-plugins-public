@@ -139,6 +139,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-011 | Scaffold Integration | ⏳ Pending | - | Blocked by ART-006 |
 | ART-012 | Implementation-Notes Capture | ⏳ Pending | - | Blocked by ART-006 |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
+| ART-014 | Phase-Guard Enforcement Repair | ⏳ Ready | - | No dependencies; found during ART-006, which deliberately did not fix it |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -822,6 +823,82 @@ behavior — interview decision.
 - `speckit-pro/README.md` — staged-flow overview
 
 ---
+
+### ART-014: Phase-Guard Enforcement Repair
+
+**Priority:** P2 | **Depends On:** none | **Enables:** trustworthy phase-guard verdicts
+
+**Goal:** Make the autopilot phase guard's workflow-identity check actually
+enforce the authority its documentation already promises, and decide explicitly
+which of the guard's other advisory checks should stay advisory.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: ~120 (estimator: ok, modify-weighted) |
+Production files: ~2 |
+Total files: ~5 |
+Budget result: within budget
+
+**Problem:** `speckit-pro/skills/speckit-autopilot/SKILL.md:756-757` documents
+`autopilot-state.json.workflow_file` as authoritative and quotes the failure
+message a mismatch produces: *"supplied workflow does not match autopilot state
+workflow_file authority"*. That message cannot be produced by the invocation the
+autopilot actually issues. Two independent reasons, both verified by execution
+against a state file naming a different specification — the guard exits `0` and
+reports `pass`:
+
+1. `_authorized_workflow_text`
+   (`speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:1298`)
+   returns no errors unless the state carries a `pr-marker-plan.v2` schema
+   (`:1307-1311`) **and** `--expected-head-commit` was supplied (`:1312-1313`).
+   A normal autopilot run satisfies neither, so the two paths are never compared.
+2. Its errors are folded into `workflow_checkpoint_errors` (`:4029-4031`), which
+   is absent from the `status-evidence` tuple of `RULE_PROBLEM_KEYS` (`:239-247`).
+   The autopilot always invokes `--rule status-evidence` (`SKILL.md:398`), and
+   `main()` scopes the exit code to the selected rule's keys (`:4107-4111`), so
+   even a produced error could not fail the run.
+
+**Scope:**
+- One vertical slice — un-short-circuit the comparison, register the key, prove
+  the exit code moves.
+- Decide whether the identity comparison should run unconditionally or whether
+  the marker-plan/head-commit preconditions are load-bearing for some caller;
+  if they are, give the plain identity comparison its own path.
+- Register the identity failure under a key that the `status-evidence` rule
+  actually consults. Registering `workflow_checkpoint_errors` wholesale would
+  simultaneously arm its sibling checkpoint checks against a corpus that has
+  never had to satisfy them — assess that blast radius before choosing between a
+  dedicated key and widening the existing one.
+- Audit the remaining advisory keys and record, per key, whether advisory is
+  intentional. 11 of 19 problem keys cannot move the exit code under `--rule`;
+  `SKILL.md` already justifies the coverage lists as deliberately advisory
+  because the existing workflow corpus predates them, so the audit's job is to
+  separate the deliberate from the accidental, not to arm everything.
+
+**Out of Scope:**
+- Any change to what the coverage lists check.
+- Re-litigating the `--rule` scoping mechanism itself, which is deliberate and
+  documented.
+
+**Verification:** A Layer 4 test that runs the guard against a state file naming
+a different specification and asserts a non-zero exit — the negative control that
+does not exist today. Plus a regression run of the guard across the existing
+`docs/ai/specs/.process/*-workflow.md` corpus to prove no previously-passing spec
+starts failing.
+
+**Key Decisions:**
+**Found during ART-006, deliberately not fixed there (2026-08-04):** ART-006's
+FR-014a exists precisely so the new stage-mirror check would not reproduce this
+defect, and that check is registered and proven to move the exit code. Repairing
+the pre-existing identity check was left out to keep ART-006 one slice.
+
+**Key Files:**
+- `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` — the guard
+- `speckit-pro/skills/speckit-autopilot/SKILL.md` — the authority documentation
+- `tests/speckit-pro/unit/` — the missing negative control
+- `speckit-pro/codex-skills/speckit-autopilot/` mirror
+
+---
+
 
 ## Decomposition Principles
 
