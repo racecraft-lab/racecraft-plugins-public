@@ -42,14 +42,46 @@ and deliberately left.
 
 ## What Needed Correction
 
-**Estimates were wrong three times, always in the same direction.** The
-reviewable-size estimator guessed 459 lines against an outcome of 2020. The Codex
-word-cap projection assumed two skill-body edits when the contract checklist had
-established a third. Then the three edits cost 124 words against a 54-word
-budget. Every miss was an underestimate, and each was caught only because
-something re-measured rather than trusting the number. The word-cap figures were
+**The size estimator was blamed wrongly; the inputs were stale.** The first
+reading of this was "the estimator underestimates" — three misses, all in the same
+direction. Re-running it settles that differently.
+
+`estimate-spec-size` computes `stories×25 + files×40 + frs×15`, halved for a
+modify-weighted spec. At scaffold it was fed 3 stories, 12 files, 14 FRs and
+returned **382, one slice**. Fed the spec's *final* signals — 3 stories, 17 files,
+25 FRs — the same operation returns **565 with `status: warn`**. The requirement
+count grew from 14 to 25 during clarification and the checklists, and nothing ever
+re-fed it. The file signal, by contrast, was declared as 17 and came in at exactly
+17.
+
+So the model is not the problem and the inputs are. There is no re-estimation
+trigger: the estimator runs at scoping time, and the G3 "re-estimate" was a
+hand-authored figure in `plan.md` rather than a re-invocation with refreshed
+signals.
+
+The residual gap is a separate matter and is not an input problem. Actual
+human-reviewable is 1999 lines, of which **992 are a single table-driven fixture
+file** — half the diff in one file. A model whose file term is a flat 40 points
+cannot express "one of these files is a 992-line fixture table." That is a real
+limitation, but it is a limitation of what the signals *can* say, not of the
+arithmetic.
+
+**Two word-cap misses had a different owner entirely.** The Codex projection
+assumed two capped-body edits when the contract checklist had established a third,
+and then the three edits cost 124 words against a 54-word budget. Neither number
+came from a tool — both were hand-authored prose in `plan.md` and `research.md`,
 propagated into four documents promising downstream specs 275 words of headroom
-that did not exist; the real figure is 205.
+that did not exist. The real figure is 205. Lumping these with the estimator
+obscured that the fix is different: a measured value should never be restated by
+hand in a second document.
+
+**A published number was wrong and had to be corrected.** The first reviewability
+measurement reported 29 files and claimed the result exceeded *both* block
+thresholds. Twelve `installed-cache-proof*.json` fixtures had been counted as
+authored tests when they are regenerated artifacts. The corrected count is 17
+files — **warn, not block** — and matches the declaration exactly. The error was
+caught only when the estimator question forced a recount, which is an argument for
+recounting before publishing rather than after.
 
 **"Inert as a gate" turned out to be systemic, not local.** The specification was
 written around one inert check. Investigating it at the user's request revealed
@@ -81,9 +113,13 @@ evaluation rather than an independent re-read.
   of the remaining advisory keys are advisory on purpose. Assess the blast radius
   first: registering `workflow_checkpoint_errors` wholesale would arm its sibling
   checks against a corpus that has never had to satisfy them.
-- **The estimators deserve their own look.** Three misses in one spec, all
-  underestimates. Not tracked yet; worth a decision on whether the forward guess
-  is useful enough to keep given the PR-time diff gate measures the real thing.
+- **Re-estimation trigger.** The estimator is accurate when fed current signals
+  and is never re-fed. The cheap fix is to re-invoke `estimate-spec-size` at G3
+  and G5 with the spec's actual requirement and file counts, and to record the
+  operation's output rather than a hand-authored figure. Worth a roadmap item.
+- **Stop hand-copying measured values.** The word-cap headroom was measured once
+  and then restated by hand in four documents, three of which went stale. Any
+  measured number should have one home and be referenced, not copied.
 - **Draft-PR corroboration and scaffold-side chain implementation** remain with
   the downstream ART specifications, which is what kept this one slice.
 - **A harness stop hook** stays out of scope, recorded with the re-entry and
