@@ -3,9 +3,9 @@
   "spec_id": "ART-006",
   "feature_dir": "specs/art-006-autopilot-staging",
   "branch": "art-006-autopilot-staging",
-  "status": "completed",
+  "status": "completed_archived",
   "active_step": null,
-  "updated_at": "2026-08-05T00:00:00Z",
+  "updated_at": "2026-08-09T00:00:00Z",
   "stage": "plan",
   "prior_run_note": "Previous state pointed at ART-001 (completed_archived). autopilot-state.json is the current-in-flight pointer for one run and is overwritten per run; ART-001's durable record remains its own workflow file, which survives archive.",
   "settings": {
@@ -16,9 +16,11 @@
     "agent_teams_available": true
   },
   "archive_sweep": {
-    "status": "no_op",
-    "reason": "specs/ contains only the current target, which the sweep excludes",
-    "archived_specs": []
+    "status": "applied",
+    "reason": "ART-006 merged in PR #422; live-reader scan on the bare directory name found no dependent code",
+    "archived_specs": [
+      "art-006-autopilot-staging"
+    ]
   },
   "project_commands": {
     "UNIT_TEST": "python3 tests/speckit-pro/run-all.py",
@@ -196,5 +198,20 @@
     "roadmap_id": "ART-014",
     "title": "Phase-Guard Enforcement Repair",
     "reason": "workflow-identity check is inert; found during ART-006, deliberately not fixed here"
+  },
+  "archive": {
+    "archived_at": "2026-08-09",
+    "pull_request": 422,
+    "merge_commit": "5e184e332b8c8f8442cdbda37c3bdc45cb6d62ff",
+    "merged_at": "2026-08-09T17:50:51Z",
+    "cleanup_branch": "chore/archive-art-006-post-merge",
+    "cleanup_applied": true,
+    "source_spec_path_removed": "specs/art-006-autopilot-staging",
+    "process_evidence_preserved": [
+      "docs/ai/specs/.process/ART-006-workflow.md",
+      "docs/ai/specs/.process/ART-006-design-concept.md",
+      "docs/ai/specs/.process/ART-006-retrospective.md"
+    ],
+    "report": ".specify/memory/archive-reports/2026-08-09-art-006-post-merge-hygiene.md"
   }
 }

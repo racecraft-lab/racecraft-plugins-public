@@ -2294,3 +2294,41 @@ git checkout ad89f4531ce33021c3c722ba5f0a0ae73bd5aa29 -- specs/xplat-010-reposit
 
 The detailed archive and verification record is stored in
 `.specify/memory/archive-reports/2026-07-11-xplat-010-post-merge-hygiene.md`.
+
+## 2026-08-09 — ART-006 Autopilot Staging archived
+
+Merged in PR #422 at `5e184e332b8c8f8442cdbda37c3bdc45cb6d62ff`, then archived
+from `chore/archive-art-006-post-merge`.
+
+Shipped the `plan` / `implement` / `full` stage vocabulary on both distributions,
+the registered runner operation `resolve-autopilot-stage` that both reach by
+operation identifier, a stage-bounded phase scan, a registered stage-mirror check
+in the phase-coverage guard, durable stage state in the workflow file with the
+session state file as its mirror, and a cross-distribution argument-parity
+assertion sited in the unit test rather than the existence-only structural
+validator.
+
+Recorded CI anomaly: the merge carries one failed non-required check,
+`Analyze (actions)`, stranded by the 2026-08-06 GitHub Actions major outage
+(incident `qcvjkzcs7j74`). All required checks passed and `mergeStateStatus` was
+`CLEAN`. Default-setup CodeQL runs cannot be retried through the API.
+
+Known gaps carried forward as ready roadmap specs: ART-014 (phase-guard
+enforcement repair — the shipped workflow-identity check is inert two ways over)
+and ART-015 (spec-size re-estimation trigger — the estimator is sound but is only
+ever fed scoping-time signals).
+
+### Recovery Commands
+
+```text
+git show 5e184e332b8c8f8442cdbda37c3bdc45cb6d62ff:specs/art-006-autopilot-staging/spec.md
+git show 5e184e332b8c8f8442cdbda37c3bdc45cb6d62ff:specs/art-006-autopilot-staging/plan.md
+git show 5e184e332b8c8f8442cdbda37c3bdc45cb6d62ff:specs/art-006-autopilot-staging/tasks.md
+git show 5e184e332b8c8f8442cdbda37c3bdc45cb6d62ff:specs/art-006-autopilot-staging/research.md
+git show 5e184e332b8c8f8442cdbda37c3bdc45cb6d62ff:specs/art-006-autopilot-staging/data-model.md
+git show 5e184e332b8c8f8442cdbda37c3bdc45cb6d62ff:specs/art-006-autopilot-staging/quickstart.md
+git checkout 5e184e332b8c8f8442cdbda37c3bdc45cb6d62ff -- specs/art-006-autopilot-staging
+```
+
+The detailed archive and verification record is stored in
+`.specify/memory/archive-reports/2026-08-09-art-006-post-merge-hygiene.md`.
