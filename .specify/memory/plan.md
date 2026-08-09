@@ -1883,3 +1883,35 @@ ART-001 active spec, moves the project archive state to ART-001, regenerates and
 checks the SpecKit index, validates project state JSON and diff hygiene, and runs
 the structural and full deterministic suites. ART-002 through ART-006 may now
 scaffold against the canonical shipped foundation.
+
+## ART-006 Autopilot Staging Cleanup
+
+No relocation was required. Every shipped surface — the runner operation and its
+registration, the phase-coverage guard check, the state schema, both skill bodies
+and their references, and the unit test with its fixtures — was authored outside
+`specs/**`. After the removal, a tree-wide search on the bare directory name
+found no live code, test, script, workflow, or docs-site reader.
+
+The three matches that did exist were checked individually rather than dismissed
+as a family, because the CAR-003 precedent was a live library pointing at spec
+contracts through path components that a joined-path search could not see. Here
+one match writes the string into a temporary directory's feature-state file as an
+opaque value and never reads the real folder, and two reference the preserved
+workflow file under `docs/ai/specs/.process/`.
+
+The feature `quickstart.md`, `research.md`, `data-model.md`, the two contracts and
+the four checklists are run exhaust — validation guides and design records for
+work already merged — and were removed with the folder. All are recoverable at
+the merge commit.
+
+Two defects found during the run were deliberately left unfixed and are tracked
+as ready roadmap specs: ART-014 repairs the phase guard's inert workflow-identity
+check, and ART-015 adds a re-estimation trigger so the size estimator is fed
+current signals rather than only scoping-time ones.
+
+### Testing and Cleanup
+
+The cleanup removes the merged ART-006 active spec, marks the process state
+archived, regenerates and checks the SpecKit index, validates project state JSON
+and diff hygiene, and runs the structural and full deterministic suites. ART-007,
+ART-009, ART-011 and ART-012 are unblocked by ART-006's completion.

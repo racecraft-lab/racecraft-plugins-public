@@ -2471,3 +2471,43 @@ at `docs/ai/specs/.process/ART-001-acceptance-harness.html`, and the two
 references that pointed into the spec folder were repointed. Detailed
 provenance, canonical artifact locations, and recovery commands live in the
 dated ART-001 archive report.
+
+## ART-006 Autopilot Staging (merged, archived)
+
+Autopilot gained first-class stages — `plan`, `implement`, `full` — on both the
+Claude and Codex distributions. A planning run works through specification
+through analysis, closes with the confidence gate, records the stage, commits
+that boundary, and stops. A later implementation-stage run resumes from the
+workflow file alone, including from a different working copy. A bare invocation
+resolves its own stage and reports the choice and its basis before phase work
+begins. Gate semantics are unchanged; only stage ownership of the pre-implement
+confidence gate was decided.
+
+Stage resolution exists once, as the registered runner operation
+`resolve-autopilot-stage` both distributions reach by operation identifier,
+rather than as two prose descriptions that drift. The phase-coverage guard may
+import it as a library but does not host it: that guard is a consistency checker
+over already-resolved inputs, not a resolver.
+
+The feature exists to prevent one failure — resolving the wrong stage silently —
+and three independent routes to it were found and closed. The sharpest: a refused
+strict-mode gate left the resolved stage reading `plan` while the phase loop's
+row scan independently selected the implementation row, because the shipped scan
+matches pending or in-progress and a blocked row matches neither arm. Both halves
+looked correct alone. The other two were an unreadable workflow file degrading to
+a default that re-plans finished work, and an explicitly named implementation
+stage crossing a refused boundary with no diagnostic.
+
+The new stage-mirror check is registered in the guard's rule-to-problem-key map
+and proven by execution to move the exit code: matching stores exit 0, mismatched
+stores exit 1 naming the authority and the repair direction.
+
+### Cleanup Note
+
+The active ART-006 folder was removed after PR #422 merge provenance and a
+tree-wide live-reader scan on the bare directory name. Three matches were found
+outside the folder and all three were verified safe — one writes the path into a
+temporary directory as an opaque value, and two reference the preserved workflow
+file. Historical workflow, design-concept and retrospective evidence remains
+under `docs/ai/specs/.process/`. Detailed provenance, canonical artifact
+locations, and recovery commands live in the dated ART-006 archive report.

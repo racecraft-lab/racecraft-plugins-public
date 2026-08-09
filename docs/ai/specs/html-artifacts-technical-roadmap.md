@@ -20,10 +20,10 @@ input.
 **Roadmap MOC:** [html-artifacts-roadmap-MOC.md](html-artifacts-roadmap-MOC.md)
 **Spec ID prefix:** `ART-###`
 **Status:** Active; dependency graph approved 2026-07-28; ART-001 is complete
-and archived after PR #407 and its follow-up fix PR #409; ART-006 is scaffolded
-and in progress on `art-006-autopilot-staging`, with its bookkeeping-durability
-prerequisite discharged by PRs #416/#417 in speckit-pro 2.22.0; ART-002 through
-ART-005 are ready
+and archived after PR #407 and its follow-up fix PR #409; ART-006 is complete
+and archived after PR #422, which unblocks ART-007, ART-009, ART-011 and
+ART-012; ART-002 through ART-005 are ready; ART-014 and ART-015 were opened from
+ART-006 findings and are ready with no dependencies
 
 ---
 
@@ -131,13 +131,13 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-003 | Final-PR Template Set | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-004 | Gallery Completion: Design & Prototyping | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
-| ART-006 | Autopilot Staging | 🔄 In Progress | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | Scaffolded 2026-07-30 on `art-006-autopilot-staging`; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
-| ART-007 | Draft-PR Emission | ⏳ Pending | - | Blocked by ART-002, ART-006 |
+| ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
+| ART-007 | Draft-PR Emission | ⏳ Pending | - | Blocked by ART-002; ART-006 dependency satisfied by PR #422 |
 | ART-008 | Feedback Sweep | ⏳ Pending | - | Blocked by ART-007 |
-| ART-009 | UAT Walkthrough Replacement | ⏳ Pending | - | Blocked by ART-006 |
+| ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
 | ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Pending | - | Blocked by ART-003, ART-007, ART-012 |
-| ART-011 | Scaffold Integration | ⏳ Pending | - | Blocked by ART-006 |
-| ART-012 | Implementation-Notes Capture | ⏳ Pending | - | Blocked by ART-006 |
+| ART-011 | Scaffold Integration | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
+| ART-012 | Implementation-Notes Capture | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
 | ART-014 | Phase-Guard Enforcement Repair | ⏳ Ready | - | No dependencies; found during ART-006, which deliberately did not fix it |
 | ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
