@@ -28,6 +28,9 @@ REPOSITORY_BASH_CONFINEMENT_PLAN_DIR = (
     "tests/speckit-pro/unit/fixtures/plan-layers/repository-bash-confinement-plan"
 )
 WORKFLOW_FILE = "docs/ai/specs/.process/XPLAT-005-workflow.md"
+# resolve-autopilot-stage reads its workflow file, so its case needs one that is
+# actually on disk; the archived XPLAT-005 record no longer is.
+AUTOPILOT_STAGE_WORKFLOW_FILE = "docs/ai/specs/.process/ART-006-workflow.md"
 PR_PACKET_FIXTURE_DIR = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "fixtures" / "pr-packet"
 PR_PACKET_SCHEMA = (
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "contracts" / "pr-packet.schema.json"
@@ -58,6 +61,7 @@ EXPECTED_HELPERS = [
     "reviewability-gate",
     "estimate-reviewable-loc",
     "resolve-confidence-mode",
+    "resolve-autopilot-stage",
     "confidence-gate",
     "generate-spec-index-check",
     "o5-topology",
@@ -70,6 +74,13 @@ EXPECTED_HELPERS = [
 
 JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
 
+# Helpers with no bash predecessor to compare against, so they carry no
+# bash-reference record. `helper-registry-dispatch` is the runner's own registry
+# view and never had a script; `resolve-autopilot-stage` is new behaviour with no
+# deleted `.sh` ancestor, and inventing a `source_script` for it would record a
+# lie in a provenance manifest.
+NO_BASH_ANCESTOR = ("helper-registry-dispatch", "resolve-autopilot-stage")
+
 HELPER_CASES: dict[str, dict[str, object]] = {
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
     "detect-commands": {},
@@ -79,6 +90,10 @@ HELPER_CASES: dict[str, dict[str, object]] = {
     "reviewability-gate": {"mode_name": "setup", "target": WORKFLOW_FILE},
     "estimate-reviewable-loc": {"plan_file": f"{FEATURE_DIR}/plan.md"},
     "resolve-confidence-mode": {"autopilot_args": ["--advisory", WORKFLOW_FILE]},
+    "resolve-autopilot-stage": {
+        "workflow_file": AUTOPILOT_STAGE_WORKFLOW_FILE,
+        "autopilot_args": ["--stage", "plan"],
+    },
     "confidence-gate": {"workflow_file": WORKFLOW_FILE, "mode_name": "advisory"},
     "generate-spec-index-check": {},
     "o5-topology": {"target": FEATURE_DIR},
@@ -343,7 +358,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         fixture_ids = [record["helper_id"] for record in fixture_manifest["helpers"]]
         bash_ids = [record["helper_id"] for record in bash_manifest["comparisons"]]
         self.assertEqual(fixture_ids, EXPECTED_HELPERS)
-        self.assertEqual(bash_ids, [helper for helper in EXPECTED_HELPERS if helper != "helper-registry-dispatch"])
+        self.assertEqual(bash_ids, [helper for helper in EXPECTED_HELPERS if helper not in NO_BASH_ANCESTOR])
         for record in fixture_manifest["helpers"]:
             for field in (
                 "promotion_status",

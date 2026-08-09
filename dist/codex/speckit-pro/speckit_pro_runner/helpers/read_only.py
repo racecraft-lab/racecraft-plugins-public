@@ -253,6 +253,7 @@ def canonicalize_inputs(helper_id: str, inputs: dict[str, Any], repo_root: Path)
         "reviewability-gate": {"target"},
         "estimate-reviewable-loc": {"plan_file"},
         "resolve-confidence-mode": {"config_path"},
+        "resolve-autopilot-stage": {"workflow_file"},
         "confidence-gate": {"workflow_file"},
         "generate-spec-index-check": {"repo_root"},
         "o5-topology": {"target"},
@@ -331,6 +332,17 @@ def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: 
         config_path = inputs.get("config_path")
         if isinstance(config_path, str) and config_path:
             argv.extend(["--config", request_path_display(config_path, repo_root)])
+        autopilot_args = inputs.get("autopilot_args")
+        if autopilot_args is not None:
+            if not isinstance(autopilot_args, list) or not all(isinstance(arg, str) for arg in autopilot_args):
+                return invalid_args(helper_id, "autopilot_args must be an array of strings")
+            argv.extend(["--", *autopilot_args])
+        return argv
+    if helper_id == "resolve-autopilot-stage":
+        workflow_file = inputs.get("workflow_file")
+        if not isinstance(workflow_file, str) or not workflow_file:
+            return invalid_args(helper_id, "workflow_file is required")
+        argv = [request_path_display(workflow_file, repo_root)]
         autopilot_args = inputs.get("autopilot_args")
         if autopilot_args is not None:
             if not isinstance(autopilot_args, list) or not all(isinstance(arg, str) for arg in autopilot_args):
@@ -1076,6 +1088,239 @@ def estimate_spec_size(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any
     # At-ceiling boundary: ok at exactly the ceiling; warn only when strictly over.
     status = "warn" if estimated_loc > ceiling else "ok"
     return make_result(json_text({"estimated_loc": estimated_loc, "suggested_slices": suggested_slices, "status": status}))
+
+
+# Closed stage vocabulary: exactly three literal lowercase tokens, no aliases and
+# no alternate casing. Consumed by downstream specifications, so the spelling is a
+# cross-spec contract rather than local prose.
+AUTOPILOT_STAGES = ("plan", "implement", "full")
+AUTOPILOT_PLANNING_PHASES = ("specify", "clarify", "plan", "checklist", "tasks", "analyze")
+AUTOPILOT_STAGE_PHASES = {
+    "plan": AUTOPILOT_PLANNING_PHASES,
+    "implement": ("implement",),
+    "full": AUTOPILOT_PLANNING_PHASES + ("implement",),
+}
+STAGE_VALUES_SUFFIX = "accepted values: " + ", ".join(AUTOPILOT_STAGES)
+
+
+def parse_stage_args(args: list[str]) -> dict[str, Any]:
+    """Read --stage and --from-phase out of the autopilot invocation argv.
+
+    Returns ``{"stage", "from_phase", "error"}``; ``error`` is the one-line
+    ``error:`` diagnostic the operation prints on stderr before exiting 2, or
+    None. Arguments are read by name, never by position, so the two
+    distributions' synopsis orderings resolve identically.
+    """
+    stage_values: list[str] = []
+    from_phase: str | None = None
+    tokens = [arg for arg in args if isinstance(arg, str)]
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if token in {"--stage", "--from-phase"}:
+            value = tokens[index + 1] if index + 1 < len(tokens) else None
+            if value is None or value.startswith("-"):
+                if token == "--from-phase":
+                    # --from-phase is the autopilot's own argument; this operation
+                    # only range-checks a value it can see.
+                    index += 1
+                    continue
+                return stage_args_error(f"error: --stage requires a value — {STAGE_VALUES_SUFFIX}")
+            if token == "--stage":
+                if value not in AUTOPILOT_STAGES:
+                    return stage_args_error(f"error: unrecognized stage {value!r} — {STAGE_VALUES_SUFFIX}")
+                stage_values.append(value)
+            else:
+                from_phase = value
+            index += 2
+            continue
+        index += 1
+    distinct = list(dict.fromkeys(stage_values))
+    if len(distinct) > 1:
+        return stage_args_error(
+            "error: --stage given more than once with different values: " + ", ".join(distinct)
+        )
+    stage = distinct[0] if distinct else None
+    # The range conflict is scoped to an EXPLICITLY named stage. An auto-detected
+    # stage never conflicts with --from-phase: after a strict-mode gate stop
+    # auto-detection resolves `plan`, and rejecting the documented
+    # `--from-phase implement` resume would strand the operator at the one
+    # boundary the argument exists to cross.
+    if (
+        stage is not None
+        and from_phase in AUTOPILOT_STAGE_PHASES["full"]
+        and from_phase not in AUTOPILOT_STAGE_PHASES[stage]
+    ):
+        return stage_args_error(
+            f"error: --stage {stage} and --from-phase {from_phase} are mutually exclusive"
+        )
+    return {"stage": stage, "from_phase": from_phase, "error": None}
+
+
+def stage_args_error(message: str) -> dict[str, Any]:
+    return {"stage": None, "from_phase": None, "error": message}
+
+
+# The terminal half of the closed phase-status vocabulary the shipped
+# phase-coverage validator publishes; the new unit test locks the two together so
+# neither can drift alone.
+AUTOPILOT_TERMINAL_STATUSES = frozenset({
+    "Complete",
+    "✅ Complete",
+    "Skipped",
+    "✅ Skipped",
+    # U+23ED with and without the U+FE0F variation selector; both render alike.
+    "⏭ Skipped",
+    "⏭️ Skipped",
+})
+# Planning is complete only when every one of these rows is terminal. The
+# `Confidence Gate` row is deliberately included: the validator excludes it from
+# the ORDERING rule because the phase loop does not drive it, and that exclusion
+# does not carry over to whether planning finished. Inheriting it would resolve
+# `implement` straight after a strict-mode gate stop.
+AUTOPILOT_PLANNING_PREDICATE_PHASES = (
+    "Specify",
+    "Clarify",
+    "Plan",
+    "Checklist",
+    "Tasks",
+    "Analyze",
+    "Confidence Gate",
+)
+AUTOPILOT_GATE_PHASE = "Confidence Gate"
+AUTOPILOT_OVERVIEW_HEADING = "## Workflow Overview"
+AUTOPILOT_BASIC_INFO_HEADING = "### Basic Information"
+HTML_COMMENT_RE = re.compile(r"(?s)<!--.*?-->")
+
+
+def workflow_table_rows(lines: list[str], heading: str) -> list[list[str]]:
+    """Cells of the markdown table under `heading`, header and separator dropped."""
+    for index, line in enumerate(lines):
+        if line.strip() != heading:
+            continue
+        rows: list[list[str]] = []
+        for candidate in lines[index + 1:]:
+            stripped = candidate.strip()
+            if stripped.startswith("|") and stripped.endswith("|"):
+                rows.append([cell.strip() for cell in stripped[1:-1].split("|")])
+            elif rows or stripped.startswith("#"):
+                break
+        return rows[2:] if len(rows) >= 3 else []
+    return []
+
+
+def workflow_stage_signals(text: str) -> dict[str, Any]:
+    """Read the durable `Stage` entry and the planning-complete predicate.
+
+    Returns ``parsed=False`` when the `## Workflow Overview` table is missing or
+    unparseable; the caller rejects that rather than degrading to a default,
+    because every degraded default resolves the planning stage and would re-run
+    finished work whenever the file is merely transiently unreadable.
+    """
+    # Blank HTML comment spans so a commented-out example cannot become evidence,
+    # matching the at-rest validator's treatment of the same tables.
+    lines = HTML_COMMENT_RE.sub("", text).splitlines()
+    overview = workflow_table_rows(lines, AUTOPILOT_OVERVIEW_HEADING)
+    if not overview:
+        return {
+            "parsed": False,
+            "recorded_stage": None,
+            "planning_complete": False,
+            "confidence_gate_status": None,
+            "first_open": None,
+        }
+    statuses: dict[str, str] = {}
+    for cells in overview:
+        if len(cells) >= 3:
+            statuses.setdefault(cells[0], cells[2])
+    first_open: tuple[str, str | None] | None = None
+    for phase in AUTOPILOT_PLANNING_PREDICATE_PHASES:
+        status = statuses.get(phase)
+        if status is None:
+            # An absent gate row does not block: it predates most workflow files.
+            # An absent planning row means that phase has not run.
+            if phase == AUTOPILOT_GATE_PHASE:
+                continue
+            first_open = (phase, None)
+            break
+        if status not in AUTOPILOT_TERMINAL_STATUSES:
+            first_open = (phase, status)
+            break
+    return {
+        "parsed": True,
+        "recorded_stage": workflow_recorded_stage(lines),
+        "planning_complete": first_open is None,
+        "confidence_gate_status": statuses.get(AUTOPILOT_GATE_PHASE),
+        "first_open": first_open,
+    }
+
+
+def workflow_recorded_stage(lines: list[str]) -> str | None:
+    """The `Stage` row of `### Basic Information`, or None when absent (legal)."""
+    for cells in workflow_table_rows(lines, AUTOPILOT_BASIC_INFO_HEADING):
+        if len(cells) >= 2 and cells[0].strip("*` ").casefold() == "stage":
+            return cells[1].strip("*` ") or None
+    return None
+
+
+def auto_detect_basis(first_open: tuple[str, str | None] | None) -> str:
+    """The plain-English reason the orchestrator prints before phase work begins.
+
+    FR-006 requires the *basis*, not just the choice: an operator who sees
+    `plan` after a strict-mode gate stop needs to know the `Confidence Gate` row
+    is what decided it, because that is the row they must act on.
+    """
+    if first_open is None:
+        return "auto-detect: every planning phase and the confidence gate are terminal"
+    phase, status = first_open
+    # A row absent from the table has no status to name; printing a bare `None`
+    # would read as a status the workflow file actually records.
+    reason = f"is {status}" if status else "has no row in the status table"
+    return f"auto-detect: the first non-terminal planning phase is {phase}, which {reason}"
+
+
+def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
+    """Resolve the autopilot stage once, for both distributions.
+
+    Exit 2 with a one-line `error:` diagnostic on pre-flight rejection, following
+    the --strict/--advisory precedent; the caller STOPs before Phase 0. Otherwise
+    a JSON envelope, because three consumers need three different fields.
+    """
+    parsed = parse_stage_args(list(inputs.get("autopilot_args") or []))
+    if parsed["error"]:
+        return make_result("", parsed["error"] + "\n", 2)
+    workflow_raw = request_path_display(inputs.get("workflow_file") or "", repo_root)
+    if not workflow_raw:
+        return make_result("", "error: workflow_file is required\n", 2)
+    text = trusted_text(resolve_input_path(workflow_raw, repo_root), repo_root)
+    if text is None:
+        return make_result("", f"error: workflow file cannot be read: {workflow_raw}\n", 2)
+    signals = workflow_stage_signals(text)
+    if not signals["parsed"]:
+        return make_result(
+            "",
+            f"error: workflow file has no parseable '{AUTOPILOT_OVERVIEW_HEADING}'"
+            f" table: {workflow_raw}\n",
+            2,
+        )
+    stage = parsed["stage"]
+    if stage is not None:
+        source = "argv"
+        basis = f"explicit --stage {stage}"
+    else:
+        source = "auto-detect"
+        stage = "implement" if signals["planning_complete"] else "plan"
+        basis = auto_detect_basis(signals["first_open"])
+    return make_result(json_text({
+        "tool": "resolve-autopilot-stage",
+        "stage": stage,
+        "source": source,
+        "basis": basis,
+        "recorded_stage": signals["recorded_stage"],
+        "planning_complete": signals["planning_complete"],
+        "confidence_gate_status": signals["confidence_gate_status"],
+        "from_phase": parsed["from_phase"],
+    }))
 
 
 def resolve_confidence_mode(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
@@ -4019,6 +4264,7 @@ PY_HELPERS: dict[str, Callable[[dict[str, Any], Path], dict[str, Any]]] = {
     "estimate-reviewable-loc": estimate_reviewable_loc,
     "estimate-spec-size": estimate_spec_size,
     "resolve-confidence-mode": resolve_confidence_mode,
+    "resolve-autopilot-stage": resolve_autopilot_stage,
     "confidence-gate": confidence_gate,
     "generate-spec-index-check": generate_spec_index_check,
     "o5-topology": o5_topology,

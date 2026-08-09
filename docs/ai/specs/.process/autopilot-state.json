@@ -1,45 +1,200 @@
 {
-  "workflow_file": "docs/ai/specs/.process/ART-001-workflow.md",
-  "spec_id": "ART-001",
-  "feature_dir": "specs/art-001-brand-kit-gallery-foundation",
-  "updated_at": "2026-07-30T23:19:28Z",
-  "active_step": "Archived: post-merge cleanup applied for ART-001",
-  "status": "completed_archived",
-  "prior_run_note": "Detailed implementation, verification, and manual-acceptance state remains in the preserved ART-001 workflow, design concept, relocated acceptance harness, archive report, and git history at merge commits c4498dd0ce0a85618b8e923108682c4818c083f6 (PR #407) and a6cc2b21bad2fa0514eacc4032f296ddd332cc3c (PR #409). T026 and T027 ran 2026-07-29 with 12 of 12 scenarios passing. The prior CAR-005 sweep is recorded at .specify/memory/archive-reports/2026-07-30-car-005-post-merge-hygiene.md.",
+  "workflow_file": "docs/ai/specs/.process/ART-006-workflow.md",
+  "spec_id": "ART-006",
+  "feature_dir": "specs/art-006-autopilot-staging",
+  "branch": "art-006-autopilot-staging",
+  "status": "completed",
+  "active_step": null,
+  "updated_at": "2026-08-05T00:00:00Z",
+  "stage": "plan",
+  "prior_run_note": "Previous state pointed at ART-001 (completed_archived). autopilot-state.json is the current-in-flight pointer for one run and is overwritten per run; ART-001's durable record remains its own workflow file, which survives archive.",
   "settings": {
-    "auto_commit": "per-phase",
+    "consensus_mode": "tier-a",
+    "gate_failure": "stop",
+    "auto_commit": true,
     "confidence_gate_mode": "advisory",
-    "consensus_mode": "moderate",
-    "gate_failure": "stop"
+    "agent_teams_available": true
   },
   "archive_sweep": {
-    "status": "applied",
-    "cleanup_branch": "chore/archive-art-001-post-merge",
-    "archived_specs": [
-      {
-        "spec_id": "ART-001",
-        "pull_requests": [
-          407,
-          409
-        ],
-        "merge_commit": "c4498dd0ce0a85618b8e923108682c4818c083f6",
-        "report": ".specify/memory/archive-reports/2026-07-30-art-001-post-merge-hygiene.md"
-      }
-    ],
-    "cleanup_mode": "applied",
-    "safeToApplyCleanup": true
+    "status": "no_op",
+    "reason": "specs/ contains only the current target, which the sweep excludes",
+    "archived_specs": []
   },
   "project_commands": {
-    "BUILD": "N/A",
-    "TYPECHECK": "N/A",
-    "LINT": "python3 tests/speckit-pro/run-all.py --layer 1",
-    "LINT_FIX": "N/A",
-    "UNIT_TEST": "python3 tests/speckit-pro/run-all.py --layer 4",
-    "INTEGRATION_TEST": "N/A",
-    "SINGLE_FILE_TEST": "python3 <test-file>",
-    "SINGLE_FILE_INTEGRATION": "N/A",
+    "UNIT_TEST": "python3 tests/speckit-pro/run-all.py",
     "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
-    "SPEC_INDEX_WRITE": "generate-spec-index-write",
-    "SPEC_INDEX_CHECK": "generate-spec-index-check"
+    "structural_suite": "python3 tests/speckit-pro/run-all.py --layer 1"
+  },
+  "plan": [
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Stage State Representation",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Stage State Representation Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Platform Parity And Enforcement Surface",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Platform Parity And Enforcement Surface Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Stage Boundary Semantics",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Stage Boundary Semantics Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - state-management",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - state-management Consensus",
+      "status": "skipped: executor reported zero unresolved items"
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling Consensus",
+      "status": "skipped: executor reported zero unresolved items"
+    },
+    {
+      "step": "Phase 4: Checklist - api-contracts",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - api-contracts Consensus",
+      "status": "skipped: executor reported zero unresolved items"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "skipped: executor reported zero unresolved items"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - Pending task decomposition",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "skipped: doctor extension not installed"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "completed"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "skipped: generate-uat-skeleton operation is deferred in this repository"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "completed"
+    }
+  ],
+  "confidence_gate": {
+    "mode": "advisory",
+    "composite": 0.88,
+    "verdict": "proceed",
+    "test_baseline": {
+      "passed": 7052,
+      "total": 7052,
+      "l1": 1443,
+      "l4": 5423,
+      "l5": 186
+    }
+  },
+  "test_baseline_final": {
+    "passed": 7226,
+    "total": 7226,
+    "g0_baseline": 7052
+  },
+  "final_reviewability": {
+    "logic_lines": 340,
+    "prose_lines": 535,
+    "test_lines": 1152,
+    "human_reviewable_total": 2020,
+    "files": 29,
+    "declared": 459,
+    "declared_files": 17,
+    "verdict": "over declared budget; composition recorded; split decision deferred to human reviewer"
+  },
+  "pull_request": {
+    "number": 422,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/422",
+    "state": "open",
+    "merged_by_agent": false
+  },
+  "follow_up": {
+    "roadmap_id": "ART-014",
+    "title": "Phase-Guard Enforcement Repair",
+    "reason": "workflow-identity check is inert; found during ART-006, deliberately not fixed here"
   }
 }

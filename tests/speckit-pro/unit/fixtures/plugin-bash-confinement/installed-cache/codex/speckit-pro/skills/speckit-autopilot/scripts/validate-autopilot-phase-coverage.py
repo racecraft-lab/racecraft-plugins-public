@@ -10,6 +10,7 @@ import os
 import re
 import stat
 import subprocess
+import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
@@ -236,7 +237,14 @@ HTML_COMMENT_RE = re.compile(r"(?s)<!--.*?-->")
 # rule enforced can gate on it without newly enforcing the structural coverage
 # checks, which most of the existing workflow corpus predates.
 RULE_PROBLEM_KEYS = {
-    "status-evidence": ("workflow_status_evidence_errors", "state_status_errors"),
+    # A problem key absent from this map computes its result and reports it in
+    # the emitted JSON, but cannot affect the exit code under the scoped
+    # invocation the autopilot actually issues -- so it is inert as a gate.
+    "status-evidence": (
+        "workflow_status_evidence_errors",
+        "state_status_errors",
+        "stage_mirror_errors",
+    ),
     "coverage": (
         "missing_workflow_sections",
         "missing_workflow_tokens",
@@ -3945,6 +3953,64 @@ def validate_state_status(state: dict[str, Any]) -> dict[str, list[str]]:
     return {"state_status_errors": errors}
 
 
+def _stage_reader():
+    """The shared resolver's `Stage` reader, or None when it is not importable.
+
+    The plugin root is ``parents[3]`` from this script in both the repository and
+    an installed tree, so one expression works in both layouts. A package import
+    is required rather than file-location loading because the resolver module
+    uses a relative import that only resolves inside its package.
+    """
+    plugin_root = str(Path(__file__).resolve().parents[3])
+    if plugin_root not in sys.path:
+        sys.path.insert(0, plugin_root)
+    try:
+        from speckit_pro_runner.helpers.read_only import (  # noqa: PLC0415
+            AUTOPILOT_STAGES,
+            HTML_COMMENT_RE as STAGE_HTML_COMMENT_RE,
+            workflow_recorded_stage,
+        )
+    except ImportError:
+        return None
+    return AUTOPILOT_STAGES, STAGE_HTML_COMMENT_RE, workflow_recorded_stage
+
+
+def stage_mirror_errors(workflow_text: str, state: dict[str, Any]) -> dict[str, list[str]]:
+    """Report a state `stage` mirror that disagrees with the workflow file.
+
+    The workflow file is the authoritative durable store; `autopilot-state.json`
+    carries a mirror for the active run only, and on disagreement the workflow
+    file wins and the mirror is repaired from it. Absence on either side is
+    legal, so only a genuine two-sided disagreement is reported.
+
+    When the shared resolver is not importable -- which happens whenever this
+    validator is copied out of a tree that ships it -- the check is skipped
+    rather than failed, the same posture ``validate_state_status`` already takes
+    so an extracted copy cannot manufacture a false violation.
+    """
+    reader = _stage_reader()
+    if reader is None:
+        return {"stage_mirror_errors": []}
+    stages, comment_re, recorded_stage = reader
+    lines = comment_re.sub("", workflow_text).splitlines()
+    authority = recorded_stage(lines)
+    mirror = state.get("stage")
+    if not isinstance(mirror, str) or not mirror:
+        return {"stage_mirror_errors": []}
+    errors: list[str] = []
+    if mirror not in stages:
+        errors.append(
+            f"autopilot state stage {mirror!r} is outside the closed stage"
+            f" vocabulary {list(stages)}"
+        )
+    if authority is not None and mirror != authority:
+        errors.append(
+            f"autopilot state stage {mirror!r} does not match the workflow file"
+            f" Stage authority {authority!r}; repair the mirror from the workflow file"
+        )
+    return {"stage_mirror_errors": errors}
+
+
 def build_report(
     workflow: Path,
     state: Path,
@@ -3967,6 +4033,7 @@ def build_report(
     )
     state_result = validate_state(plan_steps)
     status_result = validate_state_status(state_data)
+    stage_result = stage_mirror_errors(workflow_text, state_data)
     workflow_status_result = validate_workflow_status_evidence(workflow_text)
     projection_result = validate_projection_integrity(
         state_data,
@@ -3984,6 +4051,7 @@ def build_report(
         **workflow_result,
         **workflow_status_result,
         **status_result,
+        **stage_result,
         **workflow_checkpoint_result,
         **state_result,
         **projection_result,

@@ -20,8 +20,10 @@ input.
 **Roadmap MOC:** [html-artifacts-roadmap-MOC.md](html-artifacts-roadmap-MOC.md)
 **Spec ID prefix:** `ART-###`
 **Status:** Active; dependency graph approved 2026-07-28; ART-001 is complete
-and archived after PR #407 and its follow-up fix PR #409; ART-002 through
-ART-006 are ready
+and archived after PR #407 and its follow-up fix PR #409; ART-006 is scaffolded
+and in progress on `art-006-autopilot-staging`, with its bookkeeping-durability
+prerequisite discharged by PRs #416/#417 in speckit-pro 2.22.0; ART-002 through
+ART-005 are ready
 
 ---
 
@@ -129,7 +131,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-003 | Final-PR Template Set | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-004 | Gallery Completion: Design & Prototyping | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
-| ART-006 | Autopilot Staging | ⏳ Ready | - | Ready to scaffold; no dependencies |
+| ART-006 | Autopilot Staging | 🔄 In Progress | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | Scaffolded 2026-07-30 on `art-006-autopilot-staging`; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
 | ART-007 | Draft-PR Emission | ⏳ Pending | - | Blocked by ART-002, ART-006 |
 | ART-008 | Feedback Sweep | ⏳ Pending | - | Blocked by ART-007 |
 | ART-009 | UAT Walkthrough Replacement | ⏳ Pending | - | Blocked by ART-006 |
@@ -137,6 +139,8 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-011 | Scaffold Integration | ⏳ Pending | - | Blocked by ART-006 |
 | ART-012 | Implementation-Notes Capture | ⏳ Pending | - | Blocked by ART-006 |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
+| ART-014 | Phase-Guard Enforcement Repair | ⏳ Ready | - | No dependencies; found during ART-006, which deliberately did not fix it |
+| ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -447,8 +451,14 @@ Budget result: within budget
   variants (`skills/` + `codex-skills/`); the phase loop bounds itself to the
   stage's phase subset.
 - Auto-detect for bare invocations: workflow status table (phases 1–6
-  complete) + draft-PR existence (via `gh`, corroboration only — the workflow
-  file is authoritative; discrepancies logged per OQ-4).
+  complete). **Amended 2026-07-30 during scaffold:** the `gh` draft-PR
+  corroboration limb is **deferred to ART-007**, which is the spec that creates
+  the draft PRs it would corroborate against — during ART-006 no draft PR
+  exists, so the branch has no live input and only its negative case is
+  testable. ART-007 inherits the OQ-4 contract that the workflow file is
+  authoritative and discrepancies are logged. Deferring this is also what keeps
+  ART-006 a single slice: with the limb included the estimator returns 452 LOC
+  and `suggested_slices: 2`; without it, 382 and one slice.
 - Stage state recorded in the workflow file (workflow-file protocol update);
   `--from-phase` keeps resuming within a stage.
 - Scaffold → autopilot chain contract documented (consumed by ART-011).
@@ -812,6 +822,155 @@ behavior — interview decision.
 **Key Files:**
 - `docs-site/src/content/docs/` — gallery + workflow pages
 - `speckit-pro/README.md` — staged-flow overview
+
+---
+
+### ART-014: Phase-Guard Enforcement Repair
+
+**Priority:** P2 | **Depends On:** none | **Enables:** trustworthy phase-guard verdicts
+
+**Goal:** Make the autopilot phase guard's workflow-identity check actually
+enforce the authority its documentation already promises, and decide explicitly
+which of the guard's other advisory checks should stay advisory.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: ~120 (estimator: ok, modify-weighted) |
+Production files: ~2 |
+Total files: ~5 |
+Budget result: within budget
+
+**Problem:** `speckit-pro/skills/speckit-autopilot/SKILL.md:756-757` documents
+`autopilot-state.json.workflow_file` as authoritative and quotes the failure
+message a mismatch produces: *"supplied workflow does not match autopilot state
+workflow_file authority"*. That message cannot be produced by the invocation the
+autopilot actually issues. Two independent reasons, both verified by execution
+against a state file naming a different specification — the guard exits `0` and
+reports `pass`:
+
+1. `_authorized_workflow_text`
+   (`speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py:1298`)
+   returns no errors unless the state carries a `pr-marker-plan.v2` schema
+   (`:1307-1311`) **and** `--expected-head-commit` was supplied (`:1312-1313`).
+   A normal autopilot run satisfies neither, so the two paths are never compared.
+2. Its errors are folded into `workflow_checkpoint_errors` (`:4029-4031`), which
+   is absent from the `status-evidence` tuple of `RULE_PROBLEM_KEYS` (`:239-247`).
+   The autopilot always invokes `--rule status-evidence` (`SKILL.md:398`), and
+   `main()` scopes the exit code to the selected rule's keys (`:4107-4111`), so
+   even a produced error could not fail the run.
+
+**Scope:**
+- One vertical slice — un-short-circuit the comparison, register the key, prove
+  the exit code moves.
+- Decide whether the identity comparison should run unconditionally or whether
+  the marker-plan/head-commit preconditions are load-bearing for some caller;
+  if they are, give the plain identity comparison its own path.
+- Register the identity failure under a key that the `status-evidence` rule
+  actually consults. Registering `workflow_checkpoint_errors` wholesale would
+  simultaneously arm its sibling checkpoint checks against a corpus that has
+  never had to satisfy them — assess that blast radius before choosing between a
+  dedicated key and widening the existing one.
+- Audit the remaining advisory keys and record, per key, whether advisory is
+  intentional. 11 of 19 problem keys cannot move the exit code under `--rule`;
+  `SKILL.md` already justifies the coverage lists as deliberately advisory
+  because the existing workflow corpus predates them, so the audit's job is to
+  separate the deliberate from the accidental, not to arm everything.
+
+**Out of Scope:**
+- Any change to what the coverage lists check.
+- Re-litigating the `--rule` scoping mechanism itself, which is deliberate and
+  documented.
+
+**Verification:** A Layer 4 test that runs the guard against a state file naming
+a different specification and asserts a non-zero exit — the negative control that
+does not exist today. Plus a regression run of the guard across the existing
+`docs/ai/specs/.process/*-workflow.md` corpus to prove no previously-passing spec
+starts failing.
+
+**Key Decisions:**
+**Found during ART-006, deliberately not fixed there (2026-08-04):** ART-006's
+FR-014a exists precisely so the new stage-mirror check would not reproduce this
+defect, and that check is registered and proven to move the exit code. Repairing
+the pre-existing identity check was left out to keep ART-006 one slice.
+
+**Key Files:**
+- `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` — the guard
+- `speckit-pro/skills/speckit-autopilot/SKILL.md` — the authority documentation
+- `tests/speckit-pro/unit/` — the missing negative control
+- `speckit-pro/codex-skills/speckit-autopilot/` mirror
+
+---
+
+
+### ART-015: Spec-Size Re-Estimation Trigger
+
+**Priority:** P3 | **Depends On:** none | **Enables:** honest slice budgets
+
+**Goal:** Re-invoke the size estimator at the gates where a spec's signals have
+actually changed, and record the operation's output instead of a hand-authored
+figure.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: ~90 (estimator: ok, modify-weighted) |
+Production files: ~2 |
+Total files: ~4 |
+Budget result: within budget
+
+**Problem:** `estimate-spec-size` computes
+`user_stories*25 + files*40 + frs*15`, halved when `new_vs_modify` is `modify`
+(`speckit-pro/speckit_pro_runner/helpers/read_only.py:1063-1090`). It is accurate
+when fed current signals and it is only ever fed *scoping-time* signals.
+
+ART-006 is the worked example. At scaffold it received 3 user stories, 12 files
+and 14 functional requirements and returned `{estimated_loc: 382,
+suggested_slices: 1, status: "ok"}`. Clarification and three checklist domains
+then grew the specification to 25 functional requirements. Fed those final
+signals — 3 stories, 17 files, 25 FRs — the same operation returns
+`{estimated_loc: 565, suggested_slices: 2, status: "warn"}`. Nothing re-invoked
+it, so the ratified budget stayed at 382 while the specification became a
+`warn`-sized one. The file signal was declared at 17 and came in at exactly 17,
+so the drift is entirely in the requirement count.
+
+The G3 "re-estimate" recorded in that spec's `plan.md` was a number typed by
+hand, not a re-invocation, which is why it moved to 430 rather than to what the
+operation would have returned.
+
+**Scope:**
+- One vertical slice — recompute at the gate, record the operation's output.
+- Re-invoke `estimate-spec-size` at G3 (after Plan) and G5 (after Tasks), reading
+  the current requirement count from `spec.md` and the current file count from
+  the plan's Declared File Operations block.
+- Record the returned triple verbatim in the workflow file's budget table,
+  attributed to the operation, so a hand-typed figure is distinguishable from a
+  computed one.
+- A `status` transition from `ok` to `warn` between gates surfaces to the
+  operator with the previous and current signals side by side. It stays
+  **advisory** — the estimator never blocks, and the PR-time diff gate remains
+  the authority on the real diff.
+
+**Out of Scope:**
+- Changing the estimator's formula, its coefficients, or the 400-line ceiling.
+- Making any estimate blocking.
+- Teaching the model about per-file size. A single 992-line table-driven fixture
+  file was half of ART-006's human-reviewable diff, and a flat per-file term
+  cannot express that. It is a real limit of signal-based estimation, recorded in
+  `ART-006-retrospective.md` and deliberately not addressed here.
+
+**Verification:** A Layer 4 test that feeds scoping-time signals, then grown
+signals, and asserts the recorded budget follows the second — the regression that
+would have caught ART-006's drift. Plus a golden fixture pinning the `ok` → `warn`
+transition report.
+
+**Key Decisions:**
+**The estimator was exonerated by re-running it (2026-08-05):** the first reading
+of ART-006's overrun was that the estimator underestimates. Re-invoking it with
+final signals returned a figure consistent with the outcome, which relocated the
+defect from the model to the absent trigger.
+
+**Key Files:**
+- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — the estimator
+- `speckit-pro/skills/speckit-autopilot/references/gate-validation.md` — G3/G5 gates
+- `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` — gate recording
+- `speckit-pro/codex-skills/speckit-autopilot/` mirror
 
 ---
 

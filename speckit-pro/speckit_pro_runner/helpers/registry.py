@@ -176,6 +176,16 @@ HELPERS: dict[str, HelperEntry] = {
         "bash_reference",
         authoritative_request("resolve-confidence-mode"),
     ),
+    # New behaviour with no deleted `.sh` predecessor, so there is no prior script
+    # to record and no bash reference to compare against.
+    "resolve-autopilot-stage": HelperEntry(
+        "resolve-autopilot-stage",
+        "resolve-autopilot-stage",
+        None,
+        "python_authoritative",
+        "python_only",
+        authoritative_request("resolve-autopilot-stage"),
+    ),
     "confidence-gate": HelperEntry(
         "confidence-gate",
         "confidence-gate",
