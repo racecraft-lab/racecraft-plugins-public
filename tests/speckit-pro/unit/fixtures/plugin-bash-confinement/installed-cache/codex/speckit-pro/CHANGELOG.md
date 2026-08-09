@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.23.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.22.1...speckit-pro-v2.23.0) (2026-08-09)
+
+
+### Features
+
+* **art-006:** let autopilot stop after planning and resume into implementation later ([#422](https://github.com/racecraft-lab/racecraft-plugins-public/issues/422)) ([5e184e3](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5e184e332b8c8f8442cdbda37c3bdc45cb6d62ff))
+
 ## [2.22.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.22.0...speckit-pro-v2.22.1) (2026-08-04)
 
 
