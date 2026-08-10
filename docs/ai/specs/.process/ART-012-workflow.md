@@ -80,6 +80,34 @@ Each phase requires **human review and approval** before proceeding:
 
 **Constitution Check:** ✅ (no conflicts identified during scoping; verify again after Plan)
 
+### Feature State (namespaced branch)
+
+| Field | Value |
+|-------|-------|
+| Feature dir | pinned via `.specify/feature.json` (gitignored) to `specs/art-012-implementation-notes-capture` |
+| `ON_FEATURE_BRANCH` | **true** (asserted by orchestrator; the upstream `^[0-9]{3}-` regex does not match this repo's namespaced spec IDs, so `check-prerequisites` reports `on_feature_branch: false` — the branch is real and `feature.json` is the sanctioned resolution path) |
+| `before_specify` → `speckit.git.feature` (`optional: false`) | **SKIP** — the branch already exists and is checked out in this worktree; the hook's purpose is satisfied |
+
+### Reviewability Setup Gate (recorded at scaffold time)
+
+Runner helper `reviewability-gate` in setup mode against the technical roadmap
+returned `status: "warn", pass: true` with the single warning
+`primary surfaces 3 exceeds warn threshold 1`. That count comes from the
+helper's whole-roadmap scan; ART-012's own recorded budget is one primary
+surface (harness/adapter). Warnings may proceed when the workflow records the
+scope budget and split decision, which the rest of this subsection does.
+
+**Scope budget (from the roadmap's ART-012 section):** projected ~115
+reviewable production LOC (modify-weighted), ~3 production files, ~6 total
+files, one primary surface. Modify-weighted work carries no greenfield
+allowance (warn 400 / block 800).
+
+**Split decision (grill-me slice-sizing):** one vertical slice, no split —
+`estimate-spec-size` with the spec's scoping signals returned
+`{"estimated_loc": 115, "status": "ok", "suggested_slices": 1}`, and the
+scope (reporting contract → orchestrator append → consumer hand-off) has no
+horizontal layering to re-slice.
+
 ---
 
 ## Specification Context
@@ -129,7 +157,7 @@ surprises during the implement stage as a durable per-spec notes record.
 ```text
 /speckit-specify
 
-## Feature: Implementation-Notes Capture
+## Feature: Implementation-Notes Capture (ART-012)
 
 ### Problem Statement
 Autopilot's implement stage (Phase 7, task-level dispatch) currently returns
@@ -503,9 +531,6 @@ To produce the decision, run the classifier against the feature directory:
 ```text
 runner helper atomicity-route specs/art-012-implementation-notes-capture
 ```
-
-See the classifier script at
-[`speckit-autopilot/scripts/atomicity-route`](../../speckit-autopilot/scripts/atomicity-route).
 
 ---
 
