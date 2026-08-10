@@ -4,7 +4,7 @@
   "feature_dir": "specs/art-002-draft-pr-template-set",
   "branch": "art-002-draft-pr-template-set",
   "status": "in_progress",
-  "active_step": "Phase 5: Tasks",
+  "active_step": "Phase 6: Analyze",
   "updated_at": "2026-08-10T00:00:00Z",
   "stage": "plan",
   "prior_run_note": "completed_archived",
@@ -104,11 +104,11 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "not_started"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -190,5 +190,30 @@
       "greenfield": false
     },
     "spec_amended": "Reviewability Notes and Reviewability Budget corrected from ~190 to 530 per slice, and the greenfield allowance withdrawn"
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "warnings": [],
+    "conflict": "classifier disagrees with the operator-ratified split recorded as FR-040; surfaced in the workflow file, recorded split stands, classifier is advisory and wires nothing"
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "route is not split-PR"
+  },
+  "reviewability_tasks_phase": {
+    "helper": "reviewability-gate",
+    "requested_mode": "tasks",
+    "result": "input_error (exit 2)",
+    "reason": "tasks mode is deferred on the installed runner",
+    "fallback_evidence": [
+      "setup gate at scaffold: warn/pass",
+      "plan estimate-reviewable-loc: pass",
+      "plan setup gate: warn/pass, 530 LOC, zero blockers",
+      "operator-ratified split (FR-040)"
+    ]
   }
 }

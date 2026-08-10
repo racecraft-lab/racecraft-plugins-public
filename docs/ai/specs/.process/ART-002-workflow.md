@@ -36,7 +36,7 @@ captured during scoping.
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions. **G2 PASS** — 0 `[NEEDS CLARIFICATION]`, 0 `[HUMAN REVIEW NEEDED]`, `## Clarifications` recorded in spec.md. 3 items went to consensus, 1 of those to Round 2 (3/3 unanimous). Sessions 2 and 3 needed no consensus. |
 | Plan | `/speckit-plan` | ✅ Complete | **G3 PASS**. 6 artifacts, 1683 lines. Constitution Check passes on all six principles. Reviewability measured at 530 LOC per slice: warn, passing, zero blockers — two scaffold-time budget claims corrected in the spec against measured evidence |
 | Checklist | `/speckit-checklist` | ✅ Complete | **G4 PASS** — 0 `[Gap]` markers. 3 domains, 134 items, 25 gaps all remediated. 2 items escalated: anchor visibility 3/3, malformed-artifact ownership 2/3 with dissent logged |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | **G5 PASS** — 79 tasks, 9 phases, 45 `[P]`, 48/48 FR coverage. Slice boundary gated at T048. Atomicity classifier returned `one-navigable-PR`, disagreeing with the recorded split; surfaced and resolved in favour of FR-040 |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -959,12 +959,40 @@ When checklist identifies `[Gap]` items:
 
 ### Tasks Results
 
+**G5 PASS** — 79 tasks found, 0 unresolved markers.
+
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 79 (T001-T079, sequential, no gaps or duplicates) |
+| **Phases** | 9 — Setup T001-T006; Layer 4 RED-first T007-T016; US1 T017-T029; US2 T030-T040; slice 1 closeout T041-T047; slice boundary T048; US3 T049-T059; US4 T060-T073; slice 2 closeout T074-T079 |
+| **Parallel Opportunities** | 45 `[P]` |
+| **User Stories Covered** | 4 — US1 13 tasks, US2 11, US3 11, US4 14 |
+| **FR coverage** | 48/48, verified programmatically against a `## Requirement Coverage` table; no row cites a non-existent task ID |
+
+**Slice boundary.** Slice 1 is T001-T047. **T048 gates it**: confirm PR 1 merged,
+cut the slice-2 branch from merged main, verify the catalog already carries slice
+1's two flips and the test file is present and unmodified. No task in the last
+three phases may start before T048 passes. Slice 2 is T049-T079.
+
+**Three judgement calls the executor surfaced, all correct.**
+
+1. **The two catalog flips inside a slice are not parallel-safe**, which corrects
+   an assumption in the dispatch prompt. The two templates in a slice are
+   parallel-safe as *files*, but T029/T040 and T059/T073 both edit
+   `manifest.json`. They carry no `[P]` and the file records why.
+2. **`[P]` needed a definition here**, because every task inside one story edits
+   that story's single artifact file. It means parallel-safe against the *other
+   template in the same slice*. Phase 2 carries no `[P]` at all.
+3. **The invented sample feature is pinned rather than left to the implementer.**
+   `NIMBUS-101 — Offline Draft Sync`, with `NIMBUS` verified absent repo-wide, so
+   FR-014a's "outside every roadmap namespace" is checkable by grep instead of
+   being a matter of taste.
+
+Every item on the carry-forward list from Clarify and Checklist landed as its own
+task, including the four that are easiest to lose: R5 separate from R1 (T012), the
+sample-notice-inside and brand-mark-outside pair (T027, T037, T057, T071),
+element creation rather than string-assembled markup (T025, T055, T069), and the
+upstream accordion scoped away from objection disclosures (T068).
 
 ---
 
@@ -986,10 +1014,71 @@ rather than silently following either.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
-| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+| **Route** | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| **Releasable** | `true` | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
+| **Signals** | `change-shape:modify-heavy` | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
+| **Warnings** | none | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+
+#### The classifier disagrees with the recorded split — surfaced, not followed silently
+
+This section predicted `split-PR`. The classifier returned **`one-navigable-PR`**,
+so the disagreement is reported here as this workflow file requires, rather than
+either answer being adopted quietly.
+
+**The recorded split stands.** Delivery remains two sequential pull requests.
+Three reasons, in order of weight:
+
+1. **It is an operator decision, already ratified and already encoded.** The
+   two-slice, two-sequential-PR delivery was chosen by the operator at grill-me
+   Q10 and its follow-up, and it is now **FR-040**, a MUST in the specification
+   with its own acceptance criteria. A read-only advisory classifier does not
+   overturn a recorded requirement; if it should, that is a specification change
+   with its own review, not a silent reroute at G5.
+2. **The measured size points the same way.** The reviewability gate reads 530
+   reviewable LOC from the plan's declared operations and warns at a 400 warn and
+   800 block. One pull request carrying both slices would land materially above
+   that, in the region the block threshold exists to prevent. The split is what
+   keeps each pull request inside a reviewable budget.
+3. **The classifier is explicitly advisory and wires nothing.** It writes no file
+   and creates no branch. Recording its decision is the whole of its effect here.
+
+**One observation about the signal, recorded without overclaiming.** The single
+decisive signal is `change-shape:modify-heavy`, which reads oddly against a
+feature whose production surface is four net-new template files plus one net-new
+test file, with the routing catalog the only modified file. That may be an
+artifact of what the classifier scans in a feature directory dense with planning
+prose. It is noted as a possible calibration issue for whoever owns the
+classifier, not asserted as a defect, and it did not affect the outcome.
+
+#### Layer plan
+
+Route is not `split-PR`, so the layer planner does not run.
+`layer_plan.status = skipped` is recorded in `autopilot-state.json` and here,
+and the run continues with route context. This is the prescribed path for every
+non-split route.
+
+#### Tasks-phase reviewability boundary — deferred, with the fallback chain used
+
+| Field | Value |
+|---|---|
+| Helper | `reviewability-gate` |
+| Requested mode | `tasks` |
+| Result | `status: input_error`, exit 2, "read-only helper rejected the request inputs" |
+| Reason | Tasks mode is deferred on the installed runner; only setup mode is active |
+
+This is expected, not a failure. The autopilot contract says tasks mode is
+deferred and directs the run to continue on committed fallback evidence. That
+evidence is present and current:
+
+- **Setup-mode gate at scaffold:** `warn`, `pass: true`, zero blockers.
+- **Plan-phase `estimate-reviewable-loc`:** `pass`.
+- **Plan-phase setup-mode gate against `plan.md`:** `warn`, `pass: true`,
+  530 reviewable LOC, zero blockers.
+- **Operator-ratified split decision:** recorded above, and now FR-040.
+
+A `warn` with recorded scope and a recorded split is a proceed. No typed
+exception is claimed, and no marker planning state is required, because no
+size-only block exists to route around.
 
 To produce the decision, run the classifier against the feature directory:
 
