@@ -76,7 +76,9 @@ grep -n 'implementation-notes.md' \
 
 Expected in **both** files: the record path, the
 `# Implementation Notes: <SPEC_ID>` header, the `### <TASK_ID>` entry heading,
-the create-if-absent rule, the additive-only rule, and the fail-open rule. The
+the create-if-absent rule, the additive-only rule, and the fail-open rule with
+its three properties: no retry, one level of fallback, and a blast radius of the
+single entry that failed. The
 Claude file additionally describes the two-branch cadence; the Codex file keeps
 its own per-result cadence. Wording differs there by design, per FR-005.
 

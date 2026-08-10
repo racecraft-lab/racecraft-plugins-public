@@ -239,10 +239,16 @@ At the very start of Phase 7, before any task is dispatched, both
 phase-execution documents gain a step that ensures
 `<FEATURE_DIR>/.process/implementation-notes.md` exists:
 
-* Absent: create it with the single-line header `# Implementation Notes: <SPEC_ID>`.
+* Absent: create `<FEATURE_DIR>/.process/` if that directory is not there
+  either, then create the file with the single-line header
+  `# Implementation Notes: <SPEC_ID>`. An absent directory is a thing to create,
+  not a failure to report.
 * Present: leave every existing byte as found. Do not truncate. Do not write a
-  second header. This is the resume case.
-* Failure: record a gap in the workflow file and continue.
+  second header. This is the resume case. "Present" means the file is at that
+  path in the working copy this run executes in. The check is the path itself,
+  never a state file and never anything carried from the session that wrote it,
+  so a fresh session resumes exactly as the original one would.
+* Failure: record a gap in the workflow file, do not retry, and continue.
 
 ### Orchestrator append contract (US1, FR-003)
 
@@ -254,6 +260,7 @@ the Phase 7 Step 3 routing:
 | Implementation executor (default fallback and test tasks) | Yes | The executor's reported text, or `None` |
 | Research task routed to `domain-researcher` | No | `None` |
 | Verification task run orchestrator-direct | No | `None` |
+| Executor that omitted the field, or returned it unreadable | Yes, but incomplete | `None` |
 
 Cadence follows the loop's own two branches:
 
@@ -265,14 +272,42 @@ Cadence follows the loop's own two branches:
   a second entry under the same task ID rather than touching the first.
 
 Writes are additive only. No entry already written is rewritten, reordered, or
-removed, which is what makes SC-005 checkable.
+removed, which is what makes SC-005 checkable. Each entry is also written
+independently of every other. An append that fails inside a collected parallel
+run costs that one entry: the run's remaining entries are still appended and
+the next run is still dispatched.
 
 ### Failure behavior (FR-004)
 
 Any failure to create the record or append an entry is recorded as a gap in the
 run's workflow file at `docs/ai/specs/.process/<SPEC_ID>-workflow.md` and
-changes no task or phase outcome. The record is exhaust; nothing downstream
-depends on it to make progress.
+changes no task or phase outcome. That file is the destination for every gap
+this feature records; it is never the implementation-notes record, which is the
+file that just failed. The record is exhaust; nothing downstream depends on it
+to make progress.
+
+Four properties make the fail-open path safe to rely on.
+
+* **The gap is identifiable.** It names the task ID whose append failed, or the
+  lifecycle step when creation failed, plus which operation failed. Without
+  that, SC-004's "readable afterwards" cannot be checked against anything.
+* **The write is not retried.** One attempt, then the gap. A retry ladder on a
+  file the phase does not depend on is the one way this path could stall the
+  phase it exists to protect, so there is none.
+* **The fallback is one level deep.** Recording the gap is itself fail-open. If
+  the workflow file is the unwritable path, the orchestrator surfaces that
+  second failure in its own run output and carries on. It does not try a third
+  destination, retry, or escalate, so the failure path cannot recurse.
+* **Failures do not spread.** Each append stands alone. A failure recorded for
+  one attempt does not stop the remaining attempts in the same collection batch
+  from being appended, and does not stop the next run from being dispatched.
+
+This shape matches the repository's existing failure semantics rather than
+inventing one. `speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md`
+handles a failed item by surfacing that item and explicitly not blocking the
+rest of its batch, and
+`speckit-pro/agents/uat-runbook-author.md` requires its fail-open path to never
+error in a way that would block the step it precedes.
 
 ### Platform parity (FR-005)
 

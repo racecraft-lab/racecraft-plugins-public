@@ -105,18 +105,26 @@ task was uneventful.
   distinguishable from "this feature never ran".
 - The spec has no implementation tasks at all. The same header-only record is
   produced, for the same reason.
-- Writing the record fails: the containing directory is missing, the path is
-  not writable, or the disk is full. The failure is recorded as a gap and the
-  task and the phase carry on unaffected.
+- Writing the record fails: the containing directory cannot be created, the
+  path is not writable, or the disk is full. The failure is recorded as a gap,
+  the write is not retried, and the task and the phase carry on unaffected.
+- The gap itself cannot be recorded, because the destination it would go to is
+  unwritable too. Nothing further is attempted, nothing blocks, and the second
+  failure shows up only in the run's own output. The fallback stops there, so
+  the failure path cannot loop.
+- One task's entry fails to append while its parallel run is being collected.
+  Every other task in that run is still appended, and the next run is still
+  dispatched. One unwritable entry costs one entry, not a run and not a phase.
 - A task is re-run after an earlier attempt regressed. Two entries carry the
   same task ID, the first showing the failed attempt and the second the
   successful one, and both are kept as history.
 - Several tasks run in parallel and finish out of order. Their entries are
   written together when the orchestrator collects that run, in the order the
   results are collected, which need not match the order the tasks appear in the
-  task list. Task IDs, not position, identify the entries. Entries from an
-  earlier run always precede entries from a later one, because the next run is
-  not dispatched until the previous one has been recorded.
+  task list. A task ID says which task an entry belongs to; an entry's position
+  says when it was recorded, not where its task sits in the task list. Entries
+  from an earlier run always precede entries from a later one, because the next
+  run is not dispatched until the previous one has been recorded.
 - The phase is interrupted while a parallel run is still in flight. That run
   contributes no entries at all, including for tasks inside it that had already
   finished, because the orchestrator never regained control to write them.
@@ -130,9 +138,11 @@ task was uneventful.
   re-opened and appended to, never truncated and never given a second header.
   A task re-executed by the resumed run appends another entry, which is the
   same accurate-history behavior a retry produces.
-- An executor omits the reporting field entirely. An entry for that task is
+- An executor omits the reporting field entirely, or returns it in a form the
+  orchestrator cannot read out of the summary. An entry for that task is
   still appended, recording that nothing was reported, so no task is silently
-  missing from the record.
+  missing from the record. Neither case is a write failure, so neither is
+  recorded as a gap.
 - Reported text spans multiple paragraphs or contains markdown headings. The
   entry's own fixed heading still delimits it unambiguously from the entries
   either side.
@@ -149,16 +159,24 @@ task was uneventful.
   receive an identical reporting contract.
 - **FR-002**: Before it dispatches any task, the implement phase MUST ensure the
   spec's implementation-notes record exists, carrying a header that identifies
-  the spec. If no record exists, it MUST be created with that header. If a
+  the spec. If no record exists, it MUST be created with that header, and
+  creating it MUST include creating its containing directory when that
+  directory is absent, so an absent directory is not by itself a failure. If a
   record already exists — the case when a phase is resumed after a partial run —
-  it MUST be re-opened and appended to. The phase MUST NOT truncate an existing
-  record and MUST NOT re-emit the header into it.
+  it MUST be re-opened and appended to. Whether a record already exists MUST be
+  determined from the record's own path in the working copy the run executes in.
+  It MUST NOT depend on a state file, an index, or anything carried over from
+  the session that wrote the record, so a resume in a fresh session behaves
+  exactly as a resume in the session that started it. The phase MUST NOT
+  truncate an existing record and MUST NOT re-emit the header into it.
 - **FR-003**: The orchestrator MUST append exactly one entry per completed task
   attempt to the record, under a fixed per-task heading with structured fields,
   identified by task ID alone and carrying that task's reported field. "Each
   task attempt" means every attempt the orchestrator dispatched, whichever agent
   or direct command executed it — including attempts whose executor returns no
-  reporting field at all, whose entries record that nothing was reported.
+  reporting field at all, and attempts whose reported field cannot be read out
+  of the summary returned. Both record that nothing was reported. Neither is a
+  failure to write, so neither takes FR-004's gap path.
   Timing depends on how the attempt was dispatched:
   - Dispatched singly or as part of a sequential run: the append MUST happen
     immediately after that attempt completes.
@@ -168,10 +186,26 @@ task was uneventful.
     run is dispatched.
 
   Writes MUST be additive only: a re-run task appends a further entry, and no
-  entry already written MUST be rewritten, reordered, or removed.
+  entry already written MUST be rewritten, reordered, or removed. Every entry
+  MUST be appended after everything already in the record, so the record's
+  document order is the order entries were appended, which is the order the
+  orchestrator collected the attempts. Entries carry no timestamp and no attempt
+  number, so document order is the record's only ordering signal: where two
+  entries share a task ID, the earlier-positioned entry MUST be the earlier
+  attempt.
 - **FR-004**: Any failure to create the record or to append an entry MUST be
   recorded as a gap in the run's durable, operator-visible record of the run,
-  and MUST NOT change the outcome of the task or of the phase.
+  which is that record of the run and never the implementation-notes record
+  that just failed, and MUST NOT change the outcome of the task or of the
+  phase. The gap MUST name the attempt or lifecycle step it belongs to and the
+  operation that failed, so a reader can tell which write was lost. A failed
+  write MUST NOT be retried. Recording the gap is itself fail-open and has
+  exactly one fallback level: if the gap cannot be recorded either, because its
+  destination is the unwritable path, the orchestrator MUST surface that second
+  failure in its own run output, carry on, and MUST NOT retry, escalate, or
+  block. Entries are written independently, so a failure recorded for one
+  attempt MUST NOT stop the remaining attempts in the same collection batch
+  from being appended, and MUST NOT stop the next run from being dispatched.
 - **FR-005**: Both supported agent platforms MUST produce the same *record*:
   the same header, the same per-task entry format, and the same additive-only
   and fail-open behavior of FR-002 through FR-004. The *moment* of append MAY
@@ -249,25 +283,40 @@ task was uneventful.
 - **SC-001**: After an implement phase in which N dispatched task attempts
   complete, the record contains exactly N entries, and 100% of them are
   identified by a task ID. N counts every dispatched attempt, including
-  verification-only and research attempts that carry no reporting field.
+  verification-only and research attempts that carry no reporting field. An
+  attempt whose append failed and was recorded as a gap under FR-004 is
+  excluded from N, with that gap standing in the entry's place, so a fail-open
+  run is not read as a violation of this criterion.
 - **SC-002**: An implement phase interrupted after k of N task attempts leaves
   a record containing the header and one entry for every attempt whose dispatch
   run the orchestrator had already collected at the moment of interruption —
   exactly k entries when every completed attempt ran singly or sequentially. A
-  phase interrupted before any run is collected leaves the header alone.
+  phase interrupted before any run is collected leaves the header alone. Where
+  creating the record or appending an entry failed and was recorded as a gap
+  under FR-004, the gap stands in the record's or the entry's place, so a
+  fail-open run is not read as a violation of this criterion.
 - **SC-003**: In a run where every executor reports nothing, 100% of entries
   read "None". The record is never absent, and never empty of entries, for a
-  spec whose tasks completed.
+  spec whose tasks completed. Where creating the record or appending its
+  entries failed and was recorded as a gap under FR-004, the gap stands in the
+  record's or the entry's place, so a fail-open run is not read as a violation
+  of this criterion.
 - **SC-004**: With record writing forced to fail, the task outcomes and the
   phase outcome are identical to a run where writing succeeds, and the failure
   is readable afterwards as a recorded gap in the run's durable,
   operator-visible record — the same place a reader would look to find out what
-  the run did.
+  the run did — naming the attempt or lifecycle step and the operation that
+  failed. The same holds with that gap destination also forced to fail: the
+  outcomes are still identical, nothing in the run blocks, and the second
+  failure is visible in the run's own output.
 - **SC-005**: Across a full run, no entry's text changes after it is written:
   the record read at any later moment still begins with everything it contained
   earlier, byte for byte.
 - **SC-006**: A reader can recover the task ID and reported text of every entry
-  from the record's headings alone, with no lookup against any other file.
+  from the record's headings alone, with no lookup against any other file, and
+  can recover the order in which entries were recorded from their order in the
+  file. Where a task ID appears more than once, reading the record top to bottom
+  gives that task's attempts in the order they happened.
 
 ## Assumptions
 
@@ -302,6 +351,26 @@ task was uneventful.
   a second entry, kept as accurate history. The same applies to a resumed
   phase: no detection of already-recorded tasks is needed or wanted, so a task
   re-executed after a resume appends a further entry.
+- Scope boundary: the record has one writer, the orchestrator of the run that
+  owns the implement phase, and FR-003's ordering guarantee holds for that one
+  writer. The run-state guard deliberately does not block a second run that
+  finds one already in progress, so two runs against the same spec could
+  interleave their appends. Nothing here coordinates them: no lock, no
+  detection of interleaving, and no repair.
+- Scope boundary: a resumed run finds an existing record only if the working
+  copy it runs in holds one. The run's own checkpoint commits are what carry the
+  record between working copies, so entries written since the last checkpoint
+  exist only in the copy that wrote them. A resume in a working copy without the
+  record takes FR-002's create path and starts a fresh header-only record.
+  Earlier entries are neither recovered nor merged in, and no reconciliation
+  across working copies is specified.
+- Scope boundary: the record's path is stable for exactly as long as the feature
+  directory is. Consumers read it in place during the run that produced it,
+  before the spec is archived. Archive cleanup removes the feature directory
+  from active `specs/`, taking the record with it, after which the record is
+  recoverable the way every other artifact in that directory is, through the
+  commit history that carried it. This feature copies the record nowhere else
+  and maintains no index to it.
 - Scope boundary: making a parallel run's per-task results durable *before* the
   run completes would require changing how the implement phase waits for
   parallel work, which is dispatch machinery this feature does not touch. It is

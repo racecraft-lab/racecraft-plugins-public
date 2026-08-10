@@ -33,7 +33,7 @@ the order the orchestrator collected them.
 | The record exists before the first task is dispatched. | FR-002, SC-002 |
 | An existing record is re-opened, never truncated and never given a second header. | FR-002, US1 scenario 7 |
 | Content is only ever appended. No entry is rewritten, reordered, or removed. | FR-003, SC-005 |
-| Entry count equals the number of dispatched task attempts the orchestrator collected. | SC-001 |
+| Entry count equals the number of dispatched task attempts the orchestrator collected, less any attempt whose append failed and was recorded as a gap instead. | SC-001, FR-004 |
 | A failure to create or append is a recorded gap, not a phase outcome change. | FR-004, SC-004 |
 
 **Lifecycle**
@@ -66,7 +66,7 @@ One block per dispatched task attempt.
 |---|---|
 | Every dispatched attempt gets an entry, including routes that emit no task-result block. | FR-003, SC-001 |
 | An entry is identified by task ID alone. No marker, phase, or route attribution is embedded. | Design Concept Q7 |
-| The field reads exactly `None` when there is nothing to report, whether the executor said `None` or returned no field at all. | FR-003, SC-003, research R6 |
+| The field reads exactly `None` when there is nothing to report, whether the executor said `None`, returned no field at all, or returned one that cannot be read out of its summary. | FR-003, SC-003, research R6 |
 | An entry is immutable once written. A second attempt appends a second entry; the first stays exactly as written. | FR-003, SC-005, Design Concept Q5 |
 | Entries appear in collection order, which need not match task-list order. Entries from an earlier run always precede entries from a later one. | spec.md Edge Cases |
 

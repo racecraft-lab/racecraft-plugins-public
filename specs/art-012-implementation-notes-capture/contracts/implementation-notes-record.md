@@ -72,7 +72,7 @@ second succeeded; both are kept as history.
 
 | Condition at Phase 7 start | Action |
 |---|---|
-| Record absent | Create it with the header. |
+| Record absent | Create its `.process/` directory if that is absent too, then create the file with the header. |
 | Record present | Leave every byte as found. Append after the existing content. |
 
 Never truncate. Never write a second header. The present case is a resumed
@@ -101,7 +101,7 @@ executed it:
 | Implementation executor | Yes | The executor's reported text, or `None` |
 | Research task routed to a researcher agent | No | `None` |
 | Verification task run orchestrator-direct | No | `None` |
-| Executor that omitted the field | Yes, but incomplete | `None` |
+| Executor that omitted the field, or returned it unreadable | Yes, but incomplete | `None` |
 
 `None` is the single value for every nothing-to-report case. A distinct marker
 for "no field returned" would break SC-003, which requires 100% of entries to
@@ -122,6 +122,17 @@ run's workflow file at `docs/ai/specs/.process/<SPEC_ID>-workflow.md`, and the
 task and phase outcomes are exactly what they would have been had the write
 succeeded. The record is exhaust; nothing downstream depends on it to make
 progress.
+
+| Property | Rule |
+|---|---|
+| Destination | The workflow file, never the implementation-notes record that just failed |
+| Gap content | Names the task ID, or the lifecycle step when creation failed, plus which operation failed |
+| Retry | None. One attempt, then the gap |
+| Fallback depth | Exactly one level. If the workflow file is itself unwritable, the failure is surfaced in the run's own output and the run carries on. No third destination, no recursion |
+| Blast radius | One entry. Other entries in the same collection batch are still appended, and the next run is still dispatched |
+
+A reporting-content problem is not a write failure. A missing or unreadable
+field produces a `None` entry, not a gap.
 
 ### Platform parity (FR-005)
 
@@ -156,7 +167,8 @@ produces it.
 4. Both describe appends as additive only, with a retry appending a further
    entry rather than replacing one.
 5. Both describe the failure path as fail-open with a gap recorded in the
-   workflow file.
+   workflow file, not retried, bounded to one fallback level, and scoped to the
+   one entry that failed.
 6. The Claude document describes the two-branch cadence, per-attempt for
    singleton and sequential dispatch and at-collection for a parallel run.
 7. Both cover all three routing branches, so research and verification attempts

@@ -35,7 +35,7 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 4 FRs, 2 user stories, 6 success criteria, 0 markers |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass — 2 verification sessions, 7 findings, 2 consensus rounds, 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass — 6 artifacts, 11 research decisions, 8 declared file ops |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — 2 domains, 58 items, 14 gaps found and all remediated |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
@@ -661,11 +661,63 @@ Focus on Implementation-Notes Capture requirements:
 
 ### Checklist Results
 
+**G4 PASS.** `validate-gate` returned
+`{"gate":"G4","pass":true,"reason":"0 [Gap] markers","markers":0,"details":[]}`,
+cross-checked by an independent tree-wide grep. Layer 1 re-run green at
+1447/1447 after both domains' edits.
+
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| error-handling | | | |
-| state-management | | | |
-| **Total** | | | |
+| error-handling | 28 (CHK001–CHK028) | 6 found, 6 remediated, 0 outstanding | FR-002, FR-003, FR-004, SC-001, SC-004, Edge Cases; plan §Failure behavior; record contract Lifecycle/Coverage/Fail-open |
+| state-management | 30 | 8 found, 8 remediated, 0 outstanding (+1 `[Conflict]` closed by the same work) | FR-002, FR-003, SC-006, Edge Cases, 3 new Assumptions; plan §Orchestrator file lifecycle |
+| **Total** | **58** | **14 found, 14 remediated, 0 outstanding** | |
+
+**What error-handling changed.** Six gaps, each closed against repo precedent
+rather than invention: a failed write is now explicitly never retried (an
+implementer could otherwise have added a blocking retry loop on a file the
+phase does not depend on); FR-004's gap destination was circular and could be
+read as the very record that just failed; the gap's required *content* was
+unspecified, so SC-004 was checkable only as "some gap exists somewhere"; a
+field present but unreadable was uncovered, distinct from a field absent, and
+neither is a write failure; **the fail-open path's own failure was untraced**,
+now bounded to exactly one fallback level so the failure path cannot loop; and
+**failure isolation inside a collected parallel run was unspecified**, so one
+failing append could plausibly have aborted the rest of the batch.
+
+**What state-management changed.** Eight gaps in three clusters. **Entry order
+was never a requirement** — it lived only in Edge Cases and `data-model.md`,
+both of which derive from spec.md rather than bind it, and SC-006 promised a
+reader could recover an entry's task ID and text but never its sequence, which
+is the whole question once two entries share a task ID. FR-003 now makes
+document order append order, and states that entries carry no timestamp and no
+attempt number, so position is the only ordering signal. **The ordering
+guarantee silently assumed a single writer**: the run-state guard deliberately
+does not block a second run that finds one in progress
+(`SKILL.md:389-392` — the state file carries no pid, heartbeat, or lease), so
+two runs can interleave appends; a new Assumption scopes the guarantee to the
+owning orchestrator and records that nothing coordinates concurrent writers. No
+lock was added — it would contradict the no-block rule and is unjustified for
+exhaust. **What a resume checks was unstated**: FR-002 now requires existence
+to be determined from the record's own path in the working copy the run
+executes in, never from a state file or anything carried from the session that
+wrote it, because the documented resume protocol reconstructs from the workflow
+file, which never mentions this record. And **the read window was unbounded**:
+archive cleanup removes the feature directory from active `specs/` after merge,
+so a new Assumption pins the path's lifetime to the feature directory's,
+records that consumers read it in place pre-merge, and points post-archive
+readers at commit history.
+
+Three items were verified without change rather than edited: FR-003's parallel
+bound still excludes phase-end batching even for a phase's final run, because
+"no later than the orchestrator's next turn after that run" binds when "before
+the next run is dispatched" goes vacuous; a task ID stale against a regenerated
+`tasks.md` costs a cross-reference but never legibility, since SC-006 keeps
+entries readable without lookup; and the record stays out of resume-critical
+state because Key Entities classifies it as exhaust nothing depends on.
+
+A security-keyword sweep over the remediated text hit only `session`, three
+times, every one in the CLI-session sense ("a resume in a fresh session"). No
+`[security]` routing was warranted.
 
 ### Addressing Gaps
 
