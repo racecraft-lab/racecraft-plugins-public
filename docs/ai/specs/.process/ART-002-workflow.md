@@ -419,9 +419,70 @@ that the port must drop.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | | | |
+| 1 | Fill-region slot inventory | 5 | 21 slots fixed across the four templates, one slot per section (never per repeated item), flat regions, per-item anchor attributes; inventory comment format fixed as one `Slot: … \| Fills: … \| Source: …` line per slot placed after the attribution header; source vocabulary closed to five artifacts; feature-specific content outside a slot forbidden. FR-015 marker retired. |
 | 2 | | | |
 | 3 | | | |
+
+The session-1 executor fetched all four upstream sources read-only (HTTP 200,
+held in session scratchpad, nothing written or staged) so slot names derive from
+real section structure. Two roadmap-named regions have no upstream counterpart
+and are authored fresh: the implementation plan's task inventory (upstream's
+fourth section is key code) and the spec explainer's goals and non-goals
+(upstream's counterpart is a configuration walkthrough with no Racecraft
+equivalent).
+
+### Consensus Resolution Log
+
+| # | Item | Categories | Round | Analysts | Verdict | Confidence | Applied |
+|---|------|-----------|-------|----------|---------|-----------|---------|
+| C1 | Q2b — does the roadmap's compound "goals/non-goals" contribute one floor entry or two? | `[spec]` | 1 | spec-context-analyst | **Two** — `goals` and `non-goals`. FR-036 ties the floor to *delimited slots*, and the settled inventory realizes the region as two real slots with no compound slot, so a one-entry floor is either unsatisfiable or stops protecting the other half. FR-027 and US2's first acceptance scenario both list them separately. | High (N=1 high → use answer) | Applied — FR-036 |
+| C2 | Q1a — who authors the per-item objection control inside a list slot? | `[codebase]` `[domain]` | 1 | codebase-analyst, domain-researcher | **The template's own inline behavior mounts it** onto each item's stable anchor; the fill region stays inert content plus anchors. Both agreed independently. | High / High (N=2 both agree → use answer) | Applied — new FR-016a and FR-017a |
+| C3 | Q2a — is the module-map floor `{module-graph}` or `{module-graph, modules}`? | `[spec]` | 1 → **2** | spec-context-analyst, codebase-analyst, domain-researcher | **`{module-graph}` alone, 3/3 unanimous**, and FR-016 gets its own separate assertion instead. The distinguished path is a content property of `module-graph`, not a slot. | R1 medium → escalated → 3/3 at Round 2 | Applied — FR-036 and new FR-036a |
+
+**C2 evidence worth carrying forward.** The codebase analyst found that FR-016
+is tagged `[US1] [US4]`, both delivered by ART-002 — so deferring the control to
+ART-007 would ship artifacts with no working objection capture and break US1's
+own independent test. It also found the pattern already shipping twice in the
+canonical head block (the theme control is built with `createElement` and wired
+with `addEventListener`; the brand mark is mounted onto an empty
+`data-rc-brand-mark` element), and confirmed the gallery scanner already parses
+script-built markup through the same prohibited-construct checks as document
+markup. The domain analyst added that the mounted control must be inserted
+immediately after its own anchor so focus order stays correct, that repeated
+same-function controls must be identified consistently, and that confining
+generated values to text and plain-data-attribute positions is the standard
+injection-safety line. Both are now stated as FR-016a and FR-017a.
+
+**C3 reasoning, worth keeping because it is the same shape as a decision this
+repository has already made once.** Round 1 was right on the text but could not
+close its own gap, so escalation earned its keep. The codebase analyst supplied
+the missing half: the gallery test already contains `check_c8`, which exists
+precisely because a count check and a one-directional membership check cannot
+see a *coordinated* change on both sides of a relationship. The fix there was a
+new, separate check closing against an independent shipped source, explicitly
+not a widened literal. The same file states the scoping rule twice in its own
+words: a literal is pinned outside the artifact it validates, because "a set
+derived from the file under validation asserts only that the file equals
+itself", and a check is "closure between two shipped artifacts", never a second
+copy of one file's names. Folding `modules` into a roadmap-sourced floor would
+blend two source documents into one literal.
+
+The domain analyst then removed the last reason to hesitate: widening the floor
+would not have closed the gap at all. Floor membership proves only that a region
+named `modules` exists; FR-016 is an interaction requirement, so only a check
+that inspects the objection anchors verifies it. Testing the requirement beats
+testing a proxy, and a hardcoded literal that accretes entries from mixed
+rationales is a recognized test smell. It also confirmed that leaving an
+interaction-level, keyboard-driven browser behavior to an itemized manual
+acceptance step is standard practice rather than a hole, which is exactly the
+constraint FR-038 and the stdlib-only rule already impose here.
+
+**Carried finding — a real gap, now assigned.** The gallery scanner's existing
+"script builds a named, stateful control" check is scoped to the canonical head
+block's shared region only. It does not extend to a per-item objection control
+living in a template's own script. FR-036a is the assignment: a separate
+assertion that every repeated item inside a list slot carries its stable anchor.
+Carry it into Plan and Tasks as its own task, not as a floor entry.
 
 ---
 

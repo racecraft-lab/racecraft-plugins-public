@@ -4,7 +4,7 @@
   "feature_dir": "specs/art-002-draft-pr-template-set",
   "branch": "art-002-draft-pr-template-set",
   "status": "in_progress",
-  "active_step": "Phase 2: Clarify - Fill-Region Slot Inventory",
+  "active_step": "Phase 2: Clarify - Export And Capture Interaction Details",
   "updated_at": "2026-08-10T00:00:00Z",
   "stage": "plan",
   "prior_run_note": "completed_archived",
@@ -52,15 +52,15 @@
     },
     {
       "step": "Phase 2: Clarify - Fill-Region Slot Inventory",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Fill-Region Slot Inventory Consensus",
-      "status": "not_started"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Export And Capture Interaction Details",
-      "status": "not_started"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Export And Capture Interaction Details Consensus",

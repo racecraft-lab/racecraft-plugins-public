@@ -236,6 +236,10 @@ screenshot.
   render check exercising no real layout.
 - **Sample content mistaken for real content.** Shipped example content must read
   as obviously fictional, so no reader takes it for the project's own data.
+- **Feature-specific content outside a slot.** A region that names the feature,
+  counts its work, or describes its shape but carries no marker pair keeps its
+  shipped fictional content after the artifact is filled, where it reads as the
+  project's own data. Every feature-specific region is a slot.
 - **Second slice sees a changed catalog.** Slice 2 edits the same catalog file
   slice 1 already edited. It must branch from a state that already contains slice
   1's flips rather than reapplying them.
@@ -298,10 +302,13 @@ the contract governs and the disagreement is a defect in this specification.
   populates with a paired comment marker of the form
   `<!-- FILL:<slot>:START -->` … `<!-- FILL:<slot>:END -->`, each pair appearing
   exactly once in the file with its start before its end. [US1] [US2] [US3] [US4]
-- **FR-012**: Each template MUST document its own slot inventory in a comment
-  block near its attribution header, naming each slot, what fills it, and which
-  source artifact the content is drawn from. No central registry file may be
-  added. [US1] [US2] [US3] [US4]
+- **FR-012**: Each template MUST document its own slot inventory in a single
+  HTML comment placed immediately after its attribution header and outside every
+  fill region, carrying none of the attribution header's own labels or literals
+  so the two cannot be confused. Each slot occupies one line, written as
+  `Slot: <name> | Fills: <what fills it> | Source: <source artifact>`, those
+  three labels in that order, with no pipe character inside any value. No
+  central registry file may be added. [US1] [US2] [US3] [US4]
 - **FR-013**: A template's documented inventory and its delimited regions MUST
   agree in both directions: every documented slot has a marker pair in the body,
   and every marker pair in the body is named in the inventory. [US1] [US2] [US3]
@@ -312,16 +319,28 @@ the contract governs and the disagreement is a defect in this specification.
   exercises real layout. [US1] [US2] [US3] [US4]
 - **FR-015**: Slot names MUST be filename-safe kebab-case, following the same
   character rules the catalog applies to identifiers, and MUST be unique within
-  their template. The set of slots each template carries is
-  [NEEDS CLARIFICATION: the exact slot inventory per template is not yet fixed.
-  The roadmap names the regions in prose — phases, data-flow diagram, mockup
-  slots, risk register, and task inventory for the implementation plan; TL;DR,
-  goals and non-goals, acceptance criteria, and clarification FAQ for the spec
-  explainer; the approach comparison for code approaches; the module graph and
-  its distinguished path for the module map — but it fixes neither the slot
-  identifiers, nor their granularity (one slot per section versus one slot per
-  repeated item), nor which source artifact fills each. Names must not be
-  invented before the upstream sources are read.] [US1] [US2] [US3] [US4]
+  their template. Each template MUST carry exactly the slots below, in document
+  order, each named with the source artifact its content is drawn from; a
+  template MUST NOT carry a region of feature-specific content that is not a
+  slot, because unfilled sample content in a filled artifact reads as the
+  project's own data.
+  - implementation-plan: `feature-header` (spec.md), `plan-stats` (plan.md),
+    `phases` (plan.md), `data-flow` (plan.md), `mockups` (design-concept.md),
+    `risk-register` (plan.md, research.md), `task-inventory` (tasks.md)
+  - spec-explainer: `feature-header` (spec.md), `tldr` (spec.md), `goals`
+    (spec.md), `non-goals` (design-concept.md, spec.md), `acceptance-criteria`
+    (spec.md), `clarification-faq` (spec.md, design-concept.md)
+  - code-approaches: `feature-header` (spec.md), `approaches` (research.md,
+    plan.md), `recommendation` (research.md)
+  - module-map: `feature-header` (spec.md), `module-summary` (plan.md),
+    `module-graph` (plan.md), `modules` (plan.md), `key-files` (plan.md)
+
+  Granularity is one slot per section, never one per repeated item: a slot
+  holding a repeated list carries the whole list, so the number of items is a
+  property of the feature rather than of the template. Regions are flat — no
+  slot's marker pair may enclose another's. Each repeated item inside a list
+  slot MUST carry a stable anchor attribute naming that item, which is what an
+  objection or a selection attaches to. [US1] [US2] [US3] [US4]
 
 #### What the reader records
 
@@ -330,9 +349,23 @@ the contract governs and the disagreement is a defect in this specification.
   inline, through a labelled field reachable and operable by keyboard alone, so
   the tie between an objection and the item it attaches to is structural rather
   than something the reader must restate in prose. [US1] [US4]
+- **FR-016a**: Every reader-input control a template carries MUST be built by
+  that template's own inline behavior at load time, mounted onto the stable
+  anchor its item already carries, and inserted immediately after that anchor in
+  document order so tab order and reading order follow the visible order without
+  a positive tab index. A template MUST NOT rely on a later authoring agent to
+  emit control markup: the capture affordances ship working in this feature, and
+  a fill region carries only inert content plus its per-item anchors. This keeps
+  every value a later agent writes in a text or plain-data-attribute position and
+  keeps control markup out of the positions the contract forbids generated
+  content from reaching. [US1] [US3] [US4]
 - **FR-017**: The code-approaches template MUST let the reader select exactly one
   approach from those compared, using a control that natively exposes which one
   is selected, together with one labelled field for their reason. [US3]
+- **FR-017a**: Controls serving the same function across the items of one list
+  MUST be identified consistently — same structure, same labelling, same exposed
+  state — which follows from building them all from one routine rather than
+  emitting each separately. [US1] [US3] [US4]
 - **FR-018**: The interaction detail of capture is
   [NEEDS CLARIFICATION: unsettled — whether an objection field starts revealed or
   sits behind a disclosure the reader opens; whether the export lists only items
@@ -419,7 +452,30 @@ the contract governs and the disagreement is a defect in this specification.
   every region the roadmap names for it is present as a delimited slot — checked
   against a literal expectation, not one derived from the file under test — and
   that the file's documented inventory and its delimited regions agree in both
-  directions. [US1] [US2] [US3] [US4]
+  directions. The literal expectation is a floor rather than an equality: a
+  template may carry more slots than the roadmap names, and the both-ways
+  agreement above is what binds the remainder. Every entry in the floor traces to
+  the roadmap and to nothing else, so a reader can tell why each one is there.
+  The floor is:
+  - implementation-plan: `phases`, `data-flow`, `mockups`, `risk-register`,
+    `task-inventory`
+  - spec-explainer: `tldr`, `goals`, `non-goals`, `acceptance-criteria`,
+    `clarification-faq`
+  - code-approaches: `approaches`
+  - module-map: `module-graph`
+
+  The module map's distinguished path is a required property of `module-graph`'s
+  content, not a slot of its own; a marker pair inside the drawing would split
+  one figure across two fill operations that share a coordinate system. [US1]
+  [US2] [US3] [US4]
+- **FR-036a**: Automated validation MUST separately assert that every repeated
+  item inside a list slot carries the stable anchor an objection or a selection
+  attaches to. This is its own assertion rather than an extra entry in the FR-036
+  floor, for two reasons. A slot's mere presence would only prove a region of
+  that name exists, never that its items are individually addressable, so the
+  floor cannot verify this requirement even in principle. And the floor's entries
+  all trace to one document; an entry sourced from a different requirement would
+  make the literal unauditable. [US1] [US3] [US4]
 - **FR-037**: Validation code this feature adds MUST run on the Python 3.11+
   standard library alone, live under the repository's unit test tree, and be
   registered in the suite manifest. Its filename MUST name the durable capability
@@ -488,7 +544,10 @@ the contract governs and the disagreement is a defect in this specification.
   comment pair carrying the slot's name.
 - **Slot inventory**: A template's own record of its slots — each slot's name,
   what fills it, and which source artifact the content comes from. It lives
-  inside the template and is the surface the authoring agent reads.
+  inside the template and is the surface the authoring agent reads. The source
+  artifact is drawn from a closed set: `spec.md`, `plan.md`, `tasks.md`,
+  `research.md`, `design-concept.md`. A slot drawing on two names both,
+  comma-separated.
 - **Routing catalog entry**: The record that names a template, routes it by stage
   and trigger, declares which export kinds it must carry, and states whether it
   has shipped. This feature changes exactly one value in four of these entries.
@@ -550,6 +609,14 @@ the contract governs and the disagreement is a defect in this specification.
   needed and adding one would create a shared file that can drift.
 - Slot names follow the same character rules the catalog applies to identifiers,
   which keeps them safe to use in a filename, an anchor, or a comment marker.
+- The fill-region validation reuses the gallery scanner's comment-collection
+  idiom, so the inventory and the markers are both read as parser-recognized HTML
+  comments; comment-shaped text inside a script element is not one.
+- Two roadmap-named regions have no upstream counterpart and are authored fresh
+  against an existing upstream layout shape: the implementation plan's task
+  inventory (upstream's fourth section is key code) and the spec explainer's
+  goals and non-goals (upstream's counterpart section is a configuration
+  walkthrough with no Racecraft equivalent).
 - The manual browser checks are executed by an operator at acceptance time.
   Repository tests stay on the Python standard library, so no automated browser
   is introduced and no browser-driving dependency is added.
