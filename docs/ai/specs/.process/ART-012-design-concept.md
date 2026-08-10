@@ -210,12 +210,16 @@ report.
 
 ## Slice-Sizing (advisory)
 
-Ran `estimate-spec-size` with the roadmap's own signals (1 user story, 3
-files, 4 FRs, modify-weighted): **`{estimated_loc: 102, suggested_slices: 1,
-status: "ok"}`**. Consistent with the roadmap's own 115 LOC estimate and well
-under the 400-LOC warn ceiling. The scope is already a single thin vertical
-slice (reporting contract → orchestrator append → consumer hand-off) with no
-horizontal layering — no split warranted, no question asked.
+Ran `estimate-spec-size` with the spec's scoping signals (2 in-scope user
+stories — orchestrator append, executor reporting — 3 production files, 4
+FRs, modify-weighted). Operation output, verbatim:
+**`{"estimated_loc": 115, "status": "ok", "suggested_slices": 1}`** —
+reproducing the roadmap's own 115 figure and well under the 400-LOC warn
+ceiling. (An earlier run during the interview fed 1 user story and returned
+102/ok/1; corrected here because the spec carries two in-scope stories.) The
+scope is already a single thin vertical slice (reporting contract →
+orchestrator append → consumer hand-off) with no horizontal layering — no
+split warranted, no question asked.
 
 ## Open Questions
 

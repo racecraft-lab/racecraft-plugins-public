@@ -173,9 +173,10 @@ both need a durable record to draw from, and today there is none.
   dispatches (Design Concept Q8).
 - Reviewability budget: ~115 reviewable LOC (modify-weighted), ~3
   production files, ~6 total files, primary surface harness/adapter.
-  Advisory `estimate-spec-size` run during scoping returned
-  `{estimated_loc: 102, suggested_slices: 1, status: "ok"}` — one vertical
-  slice, no split.
+  Advisory `estimate-spec-size` run during scoping (2 in-scope user
+  stories, 3 production files, 4 FRs, modify-weighted) returned
+  `{"estimated_loc": 115, "status": "ok", "suggested_slices": 1}` — one
+  vertical slice, no split.
 
 ### Out of Scope
 - Generating the PR writeup itself (ART-010).
