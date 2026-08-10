@@ -33,7 +33,7 @@ captured during scoping.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | spec.md + checklists/requirements.md written; 40 FRs, 4 user stories, 21 acceptance scenarios, 10 success criteria; 3 intentional `[NEEDS CLARIFICATION]` markers held for the three planned Clarify sessions |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions. **G2 PASS** — 0 `[NEEDS CLARIFICATION]`, 0 `[HUMAN REVIEW NEEDED]`, `## Clarifications` recorded in spec.md. 3 items went to consensus, 1 of those to Round 2 (3/3 unanimous). Sessions 2 and 3 needed no consensus. |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -421,7 +421,7 @@ that the port must drop.
 |---------|------------|-----------|--------------|
 | 1 | Fill-region slot inventory | 5 | 21 slots fixed across the four templates, one slot per section (never per repeated item), flat regions, per-item anchor attributes; inventory comment format fixed as one `Slot: … \| Fills: … \| Source: …` line per slot placed after the attribution header; source vocabulary closed to five artifacts; feature-specific content outside a slot forbidden. FR-015 marker retired. |
 | 2 | Export and capture interaction details | 5 | Objection field starts collapsed behind a native disclosure whose control states in text whether the item carries a note; code-approaches uses a native grouped single-choice control with a visible group label and an optional reason; exports list only items the reader recorded against; empty-state wording is fixed per export kind and explicitly denies approval; items are named by four live-state coordinates plus a fragment-usable anchor; one cause-neutral clipboard failure message with a selectable, focused fallback field. FR-018 marker retired. Zero items for consensus. |
-| 3 | | | |
+| 3 | Upstream port fidelity | 5 | Both drawings keep their mechanism and neither is re-authored; styling normalizes to classes in both, with class hooks added to the implementation plan because a blanket selector would flatten its deliberate hierarchy; arrowheads restyle by their own selector; no upstream color survives. Zero prohibited constructs in all four sources, independently verified. Full section-to-slot mapping fixed: three regions authored fresh, ten dropped. Three color-only carriers found with remedies. `spec-explainer` ports no script at all, making its read-only status structural. FR-030 marker retired; **zero markers remain**. Zero items for consensus. |
 
 The session-1 executor fetched all four upstream sources read-only (HTTP 200,
 held in session scratchpad, nothing written or staged) so slot names derive from
@@ -471,6 +471,52 @@ export controls and outside every fill region.
 2. In code-approaches, wrap the existing approaches container in the native
    grouping element rather than replacing it, so the side-by-side layout FR-028
    requires survives.
+
+#### Session 3 section-to-slot mapping (carry into Plan, Implement, and ART-002's own handoff to ART-007)
+
+Every one of the 21 slots is accounted for against an upstream region, an
+authored-fresh decision, or a borrowed layout shape.
+
+| Template | Slot | Upstream region |
+|---|---|---|
+| implementation-plan | `feature-header` | page head eyebrow and title, minus the prompt box |
+| | `plan-stats` | the four-cell summary strip |
+| | `phases` | the milestones section |
+| | `data-flow` | the data-flow section and its caption |
+| | `mockups` | the mockups section |
+| | `risk-register` | the risks and mitigations section |
+| | `task-inventory` | **none — authored fresh**, reusing the key-code grid shape |
+| spec-explainer | `feature-header` | header eyebrow and title |
+| | `tldr` | the TL;DR block |
+| | `goals` | **none — authored fresh** |
+| | `non-goals` | **none — authored fresh** |
+| | `acceptance-criteria` | no content counterpart; reuses the step list's disclosure shape |
+| | `clarification-faq` | the FAQ definition list |
+| code-approaches | `feature-header` | page head, minus the prompt box |
+| | `approaches` | the approaches grid, including trade-off tables and chip footers |
+| | `recommendation` | the recommendation aside |
+| module-map | `feature-header` | header repo line and title |
+| | `module-summary` | the summary paragraph |
+| | `module-graph` | the request-path heading and diagram panel |
+| | `modules` | the callstack walkthrough |
+| | `key-files` | the key-files aside |
+
+**Dropped (10):** three prompt boxes; implementation plan key code and open
+questions; spec explainer navigation, step content, configuration tabs, and
+gotchas; module map gotchas.
+
+**Orchestrator verification of the `[security]` findings.** Session 3 tagged two
+items `[security]` because they concern prohibited constructs. Rather than route
+opinion at them, the orchestrator re-fetched all four upstream sources and ran an
+independent parse-based scan. It reproduced the executor's result exactly: byte
+counts identical, zero prohibited constructs across all four, script counts 0 /
+1 / 0 / 1, no markup builders and no URL-shaped literals in either script, and
+the naive text search hitting exactly three times in the code-approaches source
+where the parse confirms they are text nodes inside displayed sample code. Two
+independent implementations agreeing against the bytes is stronger evidence than
+a three-analyst vote on the same prose, so the items were not escalated. The
+shipped artifacts are scanned again by the real gallery validation at implement
+time, so this finding also has a downstream backstop.
 
 ### Consensus Resolution Log
 

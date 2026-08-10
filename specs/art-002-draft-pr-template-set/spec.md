@@ -246,6 +246,79 @@ screenshot.
   slice 1 already edited. It must branch from a state that already contains slice
   1's flips rather than reapplying them.
 
+## Clarifications
+
+### Session 1 — fill-region slot inventory (2026-08-10)
+
+- **Q: What slots does each template carry, and at what granularity?**
+  A: 21 slots, listed in FR-015 with the source artifact for each. One slot per
+  section, never one per repeated item, because item count is a property of the
+  feature and baking `phase-1`…`phase-4` into a template would cap a plan at four
+  phases. Regions are flat, and each repeated item carries a stable anchor.
+- **Q: What shape does the in-file slot inventory take?**
+  A: One comment placed immediately after the attribution header, one line per
+  slot reading `Slot: … | Fills: … | Source: …`, carrying none of the attribution
+  header's own labels. Placement is load-bearing: the gallery scanner takes the
+  first comment carrying any attribution element as the header, so an inventory
+  placed before it that mentioned a licence or the upstream repository would be
+  read as the header instead.
+- **Q: Is the validation floor a subset or an equality?**
+  A: A subset. A template may carry more slots than the roadmap names, and the
+  both-ways inventory agreement binds the remainder.
+- **Q: Does the module map's `modules` slot belong in that floor?**
+  A: No, resolved unanimously across three perspectives. Floor membership would
+  only prove a region of that name exists, never that its items are individually
+  addressable, so the floor cannot verify the requirement even in principle. It
+  gets its own assertion instead (FR-036a). Every floor entry traces to one
+  document, so a reader can tell why each is there.
+- **Q: Who authors the per-item capture controls?**
+  A: The template's own behavior, at load time, mounted onto each item's anchor
+  (FR-016a). Deferring them to the downstream authoring agent would ship
+  artifacts with no working capture at all, since the capture requirement belongs
+  to this feature's own user stories.
+
+### Session 2 — export and capture interaction (2026-08-10)
+
+- **Q: Does an objection field start revealed or collapsed?**
+  A: Collapsed behind a native disclosure whose control states in text whether
+  the item carries a note. Revealed fields would turn a document meant to be read
+  into a form of five or six empty boxes.
+- **Q: Does an export list every item or only recorded ones?**
+  A: Only recorded ones. Emitting "no objection" for an untouched item asserts an
+  approval the reader never gave, and a trailing count of untouched items is the
+  same assertion in aggregate.
+- **Q: What does an export say when nothing was recorded?**
+  A: That nothing was recorded, and explicitly that the record is not an
+  approval, in wording fixed per export kind. The realistic misreading of an
+  empty export is approval.
+- **Q: Is the code-approaches reason field required?**
+  A: Optional. Requiring it would either strand the reader's real conclusion or
+  pressure filler text, and an absent reason is named rather than omitted.
+- **Q: What does a clipboard failure say?**
+  A: One message for every failure mode, asserting no cause, because the artifact
+  cannot distinguish a refused permission from an unfocused document or a browser
+  policy. No deprecated second attempt, because an ambiguous result risks
+  reporting a success that did not happen.
+
+### Session 3 — upstream port fidelity (2026-08-10)
+
+- **Q: Does each upstream drawing mechanism survive branding?**
+  A: Yes, both, and neither is re-authored (FR-030). They differ only in how
+  color is applied, and the port normalizes that to classes in both.
+- **Q: Does any upstream source carry a prohibited construct?**
+  A: No. All four were fetched and scanned, twice by independent
+  implementations. Nothing is dropped for prohibition reasons.
+- **Q: Which upstream sections map to which slots?**
+  A: Fixed in full. Three regions are authored fresh, one borrows a layout shape,
+  and ten upstream regions are dropped as feature-specific content no slot names.
+- **Q: Where does upstream carry meaning in color alone?**
+  A: Three places, each with a named remedy in FR-029 and FR-032. A fourth, the
+  dashed edge with its explanatory caption, already complies and ports intact.
+- **Q: Does anything conflict with the spec explainer's read-only declaration?**
+  A: The one candidate, a tabbed walkthrough with a script, sits in a section
+  that maps to no slot and is dropped. The template therefore ports with no
+  script of its own, which makes its read-only status structural.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -407,7 +480,12 @@ the contract governs and the disagreement is a defect in this specification.
   rather than by mechanism. [US1] [US3] [US4]
 - **FR-020**: The spec-explainer template MUST carry no export control and no
   reader-input field of any kind, because its catalog entry declares it
-  read-only. [US2]
+  read-only. It MUST also carry no inline behavior of its own: the canonical head
+  block is its only script. Upstream's one script exists solely to drive a tabbed
+  configuration walkthrough that maps to no slot and is dropped, so nothing needs
+  it. This makes the requirement structural — the template is incapable of
+  capturing anything — rather than a judgement that its controls are benign.
+  [US2]
 - **FR-021**: Every export MUST be derived from the artifact's live state at the
   moment it is invoked, never from a value written into the file when it was
   authored. [US1] [US3] [US4]
@@ -441,21 +519,44 @@ the contract governs and the disagreement is a defect in this specification.
 - **FR-027**: The spec-explainer template MUST present a short summary, the
   goals, the explicit non-goals, the acceptance criteria in a form the reader can
   fold away and reopen, and an FAQ built from the answers recorded during
-  clarification. [US2]
+  clarification. The fold-away form is the native disclosure element carried over
+  from upstream's step list, which needs no script and exposes its own state.
+  Unlike the objection disclosures on the other templates, it carries no state
+  text, because there is nothing for a reader to record here. [US2]
 - **FR-028**: The code-approaches template MUST present two or more approaches
   beside one another with the trade-off that decides between them stated for
   each. [US3]
 - **FR-029**: The module-map template MUST present the modules a change touches
   as labelled boxes and the calls between them as arrows, with the path the
-  change runs through distinguished from the rest. [US4]
+  change runs through distinguished from the rest. That distinction MUST be
+  carried by boundary weight and by a visible text tag, never by color. Upstream
+  distinguishes it by fill tint and boundary hue alone, and its tint is an
+  unaudited blend over an unknown backdrop, so neither survives the port. [US4]
 - **FR-030**: Each diagram surface MUST keep the drawing mechanism its upstream
-  source already uses, restyled with brand tokens rather than rebuilt. Whether
-  that holds is
-  [NEEDS CLARIFICATION: unconfirmed — the upstream sources had not been read when
-  the mechanism decision was made, at moderate confidence. Whether each upstream
-  drawing mechanism survives re-styling with brand tokens without carrying a
-  construct the contract prohibits, and whether either surface must instead be
-  re-authored, is settled only after the upstream sources are read.] [US1] [US4]
+  source already uses, restyled with brand tokens rather than rebuilt. Both
+  surfaces were read, and both use the same mechanism — hand-authored inline
+  vector markup with a view box, rectangle, path, line, and text primitives, and
+  arrowheads defined once and referenced by same-document fragment. Neither is
+  re-authored. They differ only in how color is applied, and the port normalizes
+  that difference: [US1] [US4]
+  - The module map already styles through classes, so restyling is a token swap
+    in the rules it already has, plus one rule for the arrowhead.
+  - The implementation plan hardcodes presentation attributes on every shape.
+    Those attributes need not be rewritten, because a presentation attribute
+    carries no specificity and any rule overrides it. The port MUST add class
+    hooks and style through them rather than applying one blanket selector,
+    because a blanket rule would flatten the two-tier text hierarchy and the
+    inverted node the upstream drawing deliberately distinguishes.
+  - An arrowhead renders in its own context and does not inherit paint from the
+    element referencing it, so each MUST be restyled by its own selector.
+  - No upstream color value may survive. Every one is an unaudited pairing, and
+    no upstream source carries any theme-aware rule at all, so a retained value
+    leaves the drawing unreadable in the dark theme.
+- **FR-030a**: Each diagram MUST carry an accessible name, and the information it
+  conveys MUST also be available as text outside the drawing. Neither upstream
+  source satisfies this: one drawing carries no name at all, and the other
+  carries a name but is marked so that assistive technology reads it as a single
+  image, which hides every label inside it. [US1] [US4]
 
 #### Accessibility
 
@@ -467,13 +568,30 @@ the contract governs and the disagreement is a defect in this specification.
 - **FR-032**: Wherever a template uses color to mark a status, an action, or a
   distinction, the same meaning MUST also be available without color — as text, a
   shape, a glyph, or a position — so it survives for a reader who cannot perceive
-  the hue and in a monochrome rendering. [US1] [US2] [US3] [US4]
+  the hue and in a monochrome rendering. Reading the upstream sources found three
+  places this applies, and each carries its own remedy: [US1] [US2] [US3] [US4]
+  - The module map's distinguished path, addressed by FR-029.
+  - The code-approaches trade-off markers, where upstream draws two identical
+    shapes separated only by hue. The carrier already exists in the markup — a
+    persistent column heading and a fixed column position — so the port declares
+    those as the carrier and either drops the markers as redundant or gives them
+    distinct glyphs, so a single row lifted out of the table still reads.
+  - The implementation plan's inverted persistence node, distinguished from its
+    siblings by fill inversion alone. The port adds a text tag or a distinct
+    shape, and drops the unaudited accent used on its sub-label.
+
+  The implementation plan's dashed edge is already compliant and MUST be ported
+  intact: the dash pattern is a non-color carrier and the caption states the
+  convention in words, so the caption is load-bearing rather than decoration.
 - **FR-033**: Every interactive element MUST carry the kit's focus-visible
   treatment. No template may suppress a focus indicator without an equivalent
   replacement, assign a positive tab order, or trap focus. [US1] [US2] [US3]
   [US4]
 - **FR-034**: Any motion a template adds beyond what the kit declares MUST be
-  suppressed for a reader who asks for reduced motion. [US1] [US2] [US3] [US4]
+  suppressed for a reader who asks for reduced motion. Two upstream sources carry
+  an unguarded transform transition — the spec explainer's and the module map's —
+  and no upstream source declares a reduced-motion rule anywhere. The port MUST
+  drop both transitions or place them behind the guard. [US1] [US2] [US3] [US4]
 - **FR-035**: A template MUST NOT author, replace, or wrap the theme control, and
   MUST NOT read the stored theme value itself; where it needs the active theme it
   reads the attribute the head block sets on the root element. Where a template
@@ -651,11 +769,30 @@ the contract governs and the disagreement is a defect in this specification.
   literal as an external reference and fails it, so feedback wording says
   "opened from a filesystem" rather than naming the scheme. The clipboard call
   itself is not a scanned call site.
-- Two roadmap-named regions have no upstream counterpart and are authored fresh
-  against an existing upstream layout shape: the implementation plan's task
-  inventory (upstream's fourth section is key code) and the spec explainer's
-  goals and non-goals (upstream's counterpart section is a configuration
-  walkthrough with no Racecraft equivalent).
+- All four upstream sources were fetched read-only and scanned before this
+  specification was finalized. They carry **zero** prohibited constructs: no base
+  element, no scheme-relative reference, no event-handler attribute, no srcdoc,
+  no submitting form, no ping. Two carry no script at all; the other two carry
+  one each, neither of which builds markup from a string. So the port drops no
+  construct for prohibition reasons. Two details are worth recording because each
+  looks like a defect and is not: the implementation plan's drawing carries an
+  absolute namespace declaration, which is exempt and MUST be retained; and the
+  code-approaches source contains three escaped handler-shaped strings inside
+  displayed sample code, which are text rather than attributes and MUST port
+  verbatim. A reviewer running a naive text search will find the latter three.
+- **Three** regions have no upstream counterpart and are authored fresh: the
+  implementation plan's task inventory (upstream's fourth section is key code)
+  and the spec explainer's goals and its non-goals, separately (upstream's
+  counterpart section is a configuration walkthrough with no Racecraft
+  equivalent). A fourth, the spec explainer's acceptance criteria, has no content
+  counterpart but reuses upstream's disclosure shape.
+- Ten upstream regions are dropped, each because it is feature-specific content
+  that no slot names, which FR-015 forbids: three prompt boxes reproducing a
+  human's chat prompt, the implementation plan's key-code and open-questions
+  sections, the spec explainer's navigation, step content, configuration tabs and
+  gotchas, and the module map's gotchas. The navigation earns its drop twice
+  over, because five of its nine links target the same anchor, which collides
+  with the per-item anchor rule.
 - The manual browser checks are executed by an operator at acceptance time.
   Repository tests stay on the Python standard library, so no automated browser
   is introduced and no browser-driving dependency is added.

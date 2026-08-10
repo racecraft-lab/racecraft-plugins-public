@@ -4,7 +4,7 @@
   "feature_dir": "specs/art-002-draft-pr-template-set",
   "branch": "art-002-draft-pr-template-set",
   "status": "in_progress",
-  "active_step": "Phase 2: Clarify - Upstream Port Fidelity",
+  "active_step": "Phase 3: Plan",
   "updated_at": "2026-08-10T00:00:00Z",
   "stage": "plan",
   "prior_run_note": "completed_archived",
@@ -68,15 +68,15 @@
     },
     {
       "step": "Phase 2: Clarify - Upstream Port Fidelity",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Upstream Port Fidelity Consensus",
-      "status": "not_started"
+      "status": "skipped: executor reported zero unresolved items"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "not_started"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - accessibility",
