@@ -35,7 +35,7 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | spec.md + checklists/requirements.md written; 40 FRs, 4 user stories, 21 acceptance scenarios, 10 success criteria; 3 intentional `[NEEDS CLARIFICATION]` markers held for the three planned Clarify sessions |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions. **G2 PASS** — 0 `[NEEDS CLARIFICATION]`, 0 `[HUMAN REVIEW NEEDED]`, `## Clarifications` recorded in spec.md. 3 items went to consensus, 1 of those to Round 2 (3/3 unanimous). Sessions 2 and 3 needed no consensus. |
 | Plan | `/speckit-plan` | ✅ Complete | **G3 PASS**. 6 artifacts, 1683 lines. Constitution Check passes on all six principles. Reviewability measured at 530 LOC per slice: warn, passing, zero blockers — two scaffold-time budget claims corrected in the spec against measured evidence |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit-checklist` | ✅ Complete | **G4 PASS** — 0 `[Gap]` markers. 3 domains, 134 items, 25 gaps all remediated. 2 items escalated: anchor visibility 3/3, malformed-artifact ownership 2/3 with dissent logged |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
@@ -549,6 +549,36 @@ same-function controls must be identified consistently, and that confining
 generated values to text and plain-data-attribute positions is the standard
 injection-safety line. Both are now stated as FR-016a and FR-017a.
 
+| C4 | Checklist/security — does exporting an item's anchor violate FR-023's "nothing the reader did not see"? | `[spec]` `[security]` | 1 (all 3, security rule) | spec-context-analyst, codebase-analyst, domain-researcher | **Keep the narrow carve-out, 3/3 unanimous.** The anchor is mechanically derived from the item's own visible label, so it restates something rendered rather than revealing something withheld. The alternative — a visible fragment link on every item — would add a second tab stop to every item across three templates to fix a rule violation that causes neither harm the rule was written to prevent. | High / High / High | Applied — FR-023, plus both drift conditions |
+| C5 | Checklist/security — who guards against a malformed *generated* artifact, ART-002 or ART-007? | `[spec]` `[security]` | 1 (all 3, security rule) | spec-context-analyst, codebase-analyst, domain-researcher | **ART-007 owns it, 2/3.** ART-002 records a named handoff obligation and adds no runtime guard. Dissent logged below. | High / High / Medium (dissent) | Applied — Dependencies handoff |
+
+**C4's two drift conditions, which no one had raised.** The carve-out is only
+sound while the anchor tracks the label *as currently rendered*. Two ways it
+quietly stops holding, both now written into FR-023: a slug frozen at generation
+time while its label is later edited no longer restates anything visible; and
+when two items in one slot carry identical labels, uniqueness forces a suffix,
+which must derive from the item's visible list position rather than an opaque
+counter. Without those, "derived from a visible label" degrades into a claim
+nobody can check.
+
+**C5's dissent, logged rather than discarded.** The domain analyst argued for a
+split: the producer owns the conformance rule, but the consumer should still make
+a cheap precondition check at the point it relies on the anchor, because
+tolerating unspecified input conceals faults and a first-party producer is still
+an unvalidated one. It lost on cost and testability — the guard defends against a
+defect ART-002's own artifacts cannot exhibit, could not be exercised by any test
+this feature is permitted to write, and would be triplicated across three
+templates with no shared runtime against a budget already warning.
+
+Its central piece of evidence was absorbed rather than dropped, because it makes
+the handoff concrete: a duplicate anchor raises no error at all. Identifier
+lookup is specified to return the first match in document order, so a filled
+artifact with two identical anchors renders perfectly, mounts a control on the
+wrong item, and exports a conclusion naming an item the reader never annotated.
+Duplicate identifiers also break control-to-label association. That is now stated
+in the handoff, so ART-007 inherits a named failure mode rather than a vague
+request to be careful.
+
 **C3 reasoning, worth keeping because it is the same shape as a decision this
 repository has already made once.** Round 1 was right on the text but could not
 close its own gap, so escalation earned its keep. The codebase analyst supplied
@@ -828,10 +858,54 @@ Focus on Draft-PR Template Set requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| accessibility | | | |
-| ux | | | |
-| security | | | |
-| **Total** | | | |
+| accessibility | 44 | 8 found, 8 remediated, 0 remaining | FR-017a, FR-018, FR-024, FR-025, FR-030a, FR-031, new FR-035a, new FR-035b |
+| ux | 50 | 8 found, 8 remediated, 0 remaining | new FR-014a, FR-018, new FR-018a, FR-019, FR-022, FR-035, SC-004, 2 new edge cases, export-payload contract |
+| security | 40 | 9 found, 9 remediated, 0 remaining | FR-003, FR-011, FR-015, FR-016a, FR-023, FR-025, Assumptions, plan's shared-behavior decision |
+| **Total** | **134** | **25 found, 25 remediated, 0 remaining** | 2 items escalated to consensus, both `[spec, security]` |
+
+All three domains ran in parallel against the same files. Each wrote its own
+checklist file, kept edits small and targeted, and re-read before every write.
+Several edits reported the file changed underneath them; all landed, none was
+abandoned, and a final grep confirmed every intended edit present.
+
+#### The findings worth carrying forward
+
+**Two requirements were literally unsatisfiable as written, and neither was an
+omission.** FR-003 required the attribution header's upstream repository to equal
+what the template's catalog entry declares, but a catalog entry carries only an
+origin and a filename and declares no repository at all; the contract names the
+repository once, centrally. And FR-030a required each diagram's text equivalent
+"outside the drawing", which read as outside the fill region too — so a filled
+artifact would have carried a fictional description of a real drawing. Both now
+say what they meant.
+
+**A validation blind spot, found empirically rather than by reading.** The
+repository's construct scanner extracts markup from script string literals using
+a single-line-only pattern. The security agent tested both forms: a single-line
+string carrying a prohibited handler was caught; the same markup as a multi-line
+template literal was extracted by nothing and reached none of the construct
+checks. Rather than rely on a scan that cannot see the case, FR-016a now requires
+controls to be built by element creation with attributes set by name and text set
+through the text-valued property, and forbids assembling control markup as a
+string at all. The blind spot is recorded in the plan as the reason.
+
+**The fill mechanism cuts both ways, and two elements sit on opposite sides of
+it.** A "this is sample content" notice is only true while the content is sample
+content, so it belongs **inside** a fill region, where the first fill removes it.
+The brand mark is the exact inverse: inside a region it would be deleted on first
+fill, so it belongs **outside**. Both are now stated once, together, in the plan's
+port worksheet, because the two rules only make sense read against each other.
+
+**Three smaller traps.** A whitespace-only objection field would have exported as
+a recorded objection, so a note now requires one non-whitespace character.
+Recorded work is discarded on reload with nothing telling the reader, now stated
+as a requirement and an edge case. And a plain data attribute is only
+conditionally safe, because the gallery scan is default-deny on attributes and
+reports an unrecognized attribute with a URL-shaped value as an unverified host.
+
+**One process note.** The `count-markers` helper counts the literal `[Gap]` token
+across `spec.md`, `plan.md`, and every file under `checklists/`, so checklist
+prose that merely mentions the token registers as a gap. Word around it.
 
 ### Addressing Gaps
 

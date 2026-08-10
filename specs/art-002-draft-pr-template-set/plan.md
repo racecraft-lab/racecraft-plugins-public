@@ -285,11 +285,43 @@ script that force-closes every other `details.snippet` when one opens. That
 behavior must not reach the objection disclosures — it would close a reader's
 in-progress field the moment they opened another. Scope it by class, or drop it.
 
+**How the routine builds, and why the mechanism is fixed rather than left to
+taste.** Each copy creates its elements, sets their attributes by name, and sets
+their text through the text-valued property. None of the three assembles control
+markup as a string and assigns it as markup, and the clipboard fallback field is
+populated through its own text value. FR-016a and FR-025 now require this, and
+the reason is that the alternative is unenforceable here. The repository's
+construct scan extracts markup out of script string literals with a
+single-line-literal pattern, so a markup string spanning more than one line is
+never parsed and reaches none of the prohibited-construct checks — a `base`
+element or an `on*` handler written that way would ship green. Building elements
+leaves no markup string for a construct to hide in, so FR-004 holds by
+construction rather than by a scan with a known blind spot. This is also the
+shape the canonical head block already ships twice, so the port follows a
+pattern in the file it is embedding rather than introducing one.
+
 ## Per-Template Port Worksheet
 
 The input is the section-to-slot mapping fixed in Clarify session 3. What follows
 turns it into work: what is lifted, what is authored fresh, what is dropped, and
 what restyling costs.
+
+**Four small elements are authored fresh on every template that carries them**,
+and are stated once here rather than repeated in each worksheet below. All four
+are one line of markup each, so they do not move the projection above.
+
+| Element | Where it goes | Requirement |
+|---|---|---|
+| The notice that what follows is sample content awaiting a fill | **Inside** the `feature-header` region, so a fill removes it | FR-014a |
+| One line saying what each export is for — prompt for a coding agent, Markdown for a pull-request comment | Beside the export pair | FR-019 |
+| One line saying recorded input is not saved and is lost on reload | Beside the export controls | FR-018a |
+| The opt-in brand mark element | Header chrome, **outside** every fill region, so a fill cannot delete it | FR-035 |
+
+The two placements are opposite on purpose, and both are load-bearing: a notice
+outside the regions would survive the fill and call a filled artifact sample
+content, and a mark inside one would be deleted the first time that region is
+filled. `spec-explainer` carries the first and the fourth only, having nothing to
+record and nothing to export.
 
 ### implementation-plan (US1, slice 1) — upstream `16-implementation-plan.html`
 

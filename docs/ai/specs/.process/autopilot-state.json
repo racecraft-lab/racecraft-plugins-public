@@ -4,7 +4,7 @@
   "feature_dir": "specs/art-002-draft-pr-template-set",
   "branch": "art-002-draft-pr-template-set",
   "status": "in_progress",
-  "active_step": "Phase 4: Checklist - accessibility",
+  "active_step": "Phase 5: Tasks",
   "updated_at": "2026-08-10T00:00:00Z",
   "stage": "plan",
   "prior_run_note": "completed_archived",
@@ -80,31 +80,31 @@
     },
     {
       "step": "Phase 4: Checklist - accessibility",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - accessibility Consensus",
-      "status": "not_started"
+      "status": "skipped: executor reported zero unresolved items"
     },
     {
       "step": "Phase 4: Checklist - ux",
-      "status": "not_started"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - ux Consensus",
-      "status": "not_started"
+      "status": "skipped: executor reported zero unresolved items"
     },
     {
       "step": "Phase 4: Checklist - security",
-      "status": "not_started"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - security Consensus",
-      "status": "not_started"
+      "status": "completed"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "not_started"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",

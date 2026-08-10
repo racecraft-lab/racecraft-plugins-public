@@ -39,6 +39,23 @@ Exactly one control per declared kind, labelled by destination — "Copy as prom
 - **Live state.** Read at the moment of invocation, never a value written into the
   file when it was authored.
 
+## The header line
+
+Every export opens with the same two lines, in every state including the empty
+one, both read from live state:
+
+```text
+Artifact: <artifact title>
+Feature: <feature id> <feature name>
+```
+
+Pinned for the same reason the empty-state bodies are: three templates emit this
+from three separate copies of the code, so a form left to each of them is a form
+that drifts. The artifact title is the one its catalog entry carries. The feature
+identifier is what lets a reader who has left the document find the spec again,
+which is the obligation `SPA-CONTRACT.md` states as naming "the artifact, the
+spec, and the location the conclusion attaches to".
+
 ## The item reference line
 
 Each item an export carries is named by four coordinates read from live state —

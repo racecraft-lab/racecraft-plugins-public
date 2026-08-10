@@ -221,6 +221,11 @@ screenshot.
 - **Storage refused.** A browser may refuse storage for a local file, so the
   theme preference cannot persist. The theme control still applies for the
   session and reports no error.
+- **Recorded work is discarded on reload.** Nothing a reader records is stored,
+  so a reload or a closed tab takes every objection, selection, and reason with
+  it. The export is the only way work leaves the document, and a reader who does
+  not know that loses a whole review silently — so the artifact says so before
+  they rely on it rather than after.
 - **Reduced motion requested.** Any motion an artifact adds beyond what the
   shared kit declares must be suppressed under that preference too.
 - **Inventory and body disagree.** A template's documented slot inventory could
@@ -233,6 +238,10 @@ screenshot.
 - **Upstream carries a prohibited construct.** An upstream source may use a
   construct the contract forbids. The port drops it; it is never carried across
   and never reintroduced.
+- **A dropped region leaves residue.** Ten upstream regions are dropped, and a
+  drop has to take its dependents with it: no heading left standing over nothing,
+  no caption without its figure, and no in-page link pointing into a region that
+  is gone. A template that reads as broken is worse than one that reads as thin.
 - **A slot renders empty.** A slot shipped with no sample content leaves a
   gallery browser judging a template by an empty frame and leaves the manual
   render check exercising no real layout.
@@ -337,9 +346,12 @@ the contract governs and the disagreement is a defect in this specification.
   each pair appearing exactly once with its start before its end. [US1] [US2]
   [US3] [US4]
 - **FR-003**: Each template MUST carry the upstream attribution header using the
-  contract's exact labels, and the upstream repository and upstream file it names
-  MUST equal what that template's own catalog entry declares. [US1] [US2] [US3]
-  [US4]
+  contract's exact labels. The upstream file it names MUST equal that template's
+  own catalog entry's `source.file`. The upstream repository it names MUST equal
+  the single repository the contract names, because a catalog entry's `source`
+  object carries `origin` and `file` only and declares no repository of its own;
+  the repository is named once in the contract rather than repeated per entry, so
+  that is the value the header is checked against. [US1] [US2] [US3] [US4]
 - **FR-004**: No template may contain any construct the contract prohibits,
   including inside a script's string literals and inside markup the artifact
   builds as a string. Where an upstream source uses one, the port MUST drop it
@@ -376,7 +388,16 @@ the contract governs and the disagreement is a defect in this specification.
 - **FR-011**: Each template MUST delimit every region an authoring agent later
   populates with a paired comment marker of the form
   `<!-- FILL:<slot>:START -->` … `<!-- FILL:<slot>:END -->`, each pair appearing
-  exactly once in the file with its start before its end. [US1] [US2] [US3] [US4]
+  exactly once in the file with its start before its end. A marker pair delimits
+  the destination; it does not make that destination escape-free. A value written
+  between a pair lands in HTML text, so a writer that assembles the file as a
+  string MUST escape it for that context, and MUST NOT be able to emit a comment
+  — a value carrying `<!--`, `-->`, or a marker-shaped sequence would forge or
+  terminate a region boundary, moving a boundary the inventory still names and
+  turning FR-013's both-ways agreement into a check on a file no one authored.
+  A writer that sets text through the document rather than through string
+  assembly satisfies this by construction. After any fill, FR-013 MUST still hold.
+  [US1] [US2] [US3] [US4]
 - **FR-012**: Each template MUST document its own slot inventory in a single
   HTML comment placed immediately after its attribution header and outside every
   fill region, carrying none of the attribution header's own labels or literals
@@ -392,6 +413,21 @@ the contract governs and the disagreement is a defect in this specification.
   worked-example content, so a gallery browser judges the template from a
   rendered document rather than an empty frame and the manual render check
   exercises real layout. [US1] [US2] [US3] [US4]
+- **FR-014a**: "Plainly fictional" MUST be checkable rather than a matter of
+  taste, and the sample content MUST stay representative while it is. Three
+  rules carry that. All four templates' sample content describes **one invented
+  feature**, and every slot draws its content from that same invented feature,
+  so a gallery browser comparing two templates is reading one worked example
+  rather than two unrelated ones. That feature is named by an identifier outside
+  every namespace this repository's roadmap uses, so a reviewer confirms the
+  fiction by reading the identifier rather than by judging tone, and a reviewer
+  can find any sample content a fill failed to replace by searching for it. And
+  each template states in its rendered `feature-header` region that what follows
+  is sample content awaiting a fill — in the rendered document, because the slot
+  inventory is an HTML comment a browsing reader never sees. That statement MUST
+  sit inside a fill region: placed outside every region it would survive the
+  fill and then describe a filled artifact as sample content. [US1] [US2] [US3]
+  [US4]
 - **FR-015**: Slot names MUST be filename-safe kebab-case, following the same
   character rules the catalog applies to identifiers, and MUST be unique within
   their template. Each template MUST carry exactly the slots below, in document
@@ -417,8 +453,16 @@ the contract governs and the disagreement is a defect in this specification.
   slot MUST carry a stable anchor attribute naming that item, which is what an
   objection or a selection attaches to. An anchor value is
   `<slot>-<item-slug>` under the same character rules as slot names, which makes
-  it unique across the template and usable as a document fragment. [US1] [US2]
-  [US3] [US4]
+  it unique across the template and usable as a document fragment. A template's
+  own behavior MUST resolve an anchor by looking the value up as an element
+  identifier, never by concatenating it into a selector string. The two are not
+  equivalent for a value a later agent wrote: an identifier lookup takes the
+  value literally, while a selector needs the value to be a valid CSS identifier
+  and would otherwise have to be escaped before use, so a selector built by
+  concatenation can throw, match nothing, or match an element other than the one
+  intended. The rule holds regardless of whether the anchor obeys the format
+  above, which is what makes it a property of the template rather than a
+  dependency on the generator. [US1] [US2] [US3] [US4]
 
 #### What the reader records
 
@@ -436,7 +480,28 @@ the contract governs and the disagreement is a defect in this specification.
   a fill region carries only inert content plus its per-item anchors. This keeps
   every value a later agent writes in a text or plain-data-attribute position and
   keeps control markup out of the positions the contract forbids generated
-  content from reaching. [US1] [US3] [US4]
+  content from reaching. Two conditions bound that claim, and both are
+  requirements rather than notes.
+
+  First, the routine MUST build its controls as document elements — creating each
+  element, setting its attributes by name, and setting its text through the
+  text-valued property — and MUST NOT assemble control markup as a string and
+  assign it as markup. This is the industry's standard safe-sink guidance, and
+  here it is also what keeps the obligation checkable: the repository's construct
+  scan parses markup out of single-line script string literals only, so a
+  prohibited construct inside a markup string spanning more than one line reaches
+  none of the construct checks. Building elements leaves no markup string for a
+  construct to hide in, so FR-004 holds by construction rather than by a scan
+  with a known blind spot.
+
+  Second, "plain data attribute" means an attribute carrying a value that is not
+  URL-shaped. The gallery scan is default-deny on attributes: an attribute it
+  does not recognize as URL-valued whose value is URL-shaped is reported as an
+  unverified host rather than admitted. A slot that puts a URL into a data
+  attribute therefore fails validation even though the position is otherwise
+  correct. Where a slot's content genuinely carries a URL, it belongs in a text
+  node, or in an anchor's `href` under the navigation rule the contract already
+  bounds by scheme. [US1] [US3] [US4]
 - **FR-017**: The code-approaches template MUST let the reader select exactly one
   approach from those compared, using a control that natively exposes which one
   is selected, together with one labelled field for their reason. The
@@ -449,7 +514,12 @@ the contract governs and the disagreement is a defect in this specification.
 - **FR-017a**: Controls serving the same function across the items of one list
   MUST be identified consistently — same structure, same labelling, same exposed
   state — which follows from building them all from one routine rather than
-  emitting each separately. [US1] [US3] [US4]
+  emitting each separately. Consistent is not identical. Each such control's
+  accessible name MUST also carry its own item's visible label, so a reader
+  who lists the document's fields hears which item each one attaches to instead
+  of the same name five times over. The shared part of the name comes from the
+  routine and the distinguishing part from the item, which is how one rule
+  serves consistency and distinguishability at once. [US1] [US3] [US4]
 - **FR-018**: The interaction detail of capture is fixed as follows. [US1] [US3]
   [US4]
   - An objection field MUST start collapsed behind a native disclosure whose
@@ -458,6 +528,17 @@ the contract governs and the disagreement is a defect in this specification.
     recorded objection is visible without opening it. Always-revealed fields are
     rejected: a list of five or six items would turn a document meant to be read
     into a form, against the reviewing operator's actual job.
+  - That note text is not the disclosure's open/closed state, and the two are
+    reported differently. Whether a native disclosure announces its state, and
+    whether it announces a *change* of state, varies by screen reader and
+    browser pairing; some report the state on focus and stay silent when it
+    moves, and at least one common mobile pairing reports no state at all.
+    Removing the disclosure's default marker glyph degrades that report further
+    on several pairings that otherwise manage it. So the port MUST NOT remove
+    that marker without putting an equally visible indicator of open and closed
+    in its place, and the note text MUST sit in the control's own accessible
+    name, which is what keeps a recorded objection findable on a pairing that
+    reports no state at all.
   - An export MUST list only the items the reader recorded against, and MUST NOT
     emit a line, a placeholder, or a count for an item left empty, because
     reporting an item as carrying no objection asserts an approval the reader
@@ -471,13 +552,35 @@ the contract governs and the disagreement is a defect in this specification.
     state — the feature, the artifact, the slot, and the item's visible label —
     together with the item's stable anchor in a form a reader can use to find
     that item again after leaving the document.
+  - An item carries a note when its field holds at least one non-whitespace
+    character, and only then. Whitespace alone is not an objection: it does not
+    turn on the disclosure's state text and it is not a line in an export.
+    Without that rule "left empty" is undefined against a field holding a
+    stray space, and an export emitting a blank objection would state a
+    conclusion the reader did not reach. The state text MUST follow the field's
+    current value rather than its value at the last collapse, so a reader who
+    types and leaves the disclosure open is never told the item is empty.
+- **FR-018a**: A recorded objection, selection, or reason exists only for the
+  life of the browser tab. Nothing is stored, so a reload or a closed tab
+  discards all of it. Every template that records anything MUST say so in text
+  beside its export controls, so a reader learns it before spending a review on
+  it rather than after losing one. Persisting the input is out of scope — the
+  export is how work leaves the document — which is exactly why a reader who
+  does not know the input is temporary can lose a whole review silently. [US1]
+  [US3] [US4]
 
 #### Export affordances
 
 - **FR-019**: The implementation-plan, code-approaches, and module-map templates
   MUST each carry exactly one control per export kind their catalog entry
   declares, labelled by destination — "Copy as prompt" and "Copy as Markdown" —
-  rather than by mechanism. [US1] [US3] [US4]
+  rather than by mechanism. Those two labels name a format, and the two controls
+  sit side by side, so each template MUST also carry one visible line beside the
+  pair saying what each one is for: the prompt export for pasting into a coding
+  agent, the Markdown export for a pull-request comment. Without it the only
+  statement of the difference is in a contract the reader never opens, and a
+  reader who cannot tell the two apart picks by guess. The labels themselves do
+  not change. [US1] [US3] [US4]
 - **FR-020**: The spec-explainer template MUST carry no export control and no
   reader-input field of any kind, because its catalog entry declares it
   read-only. It MUST also carry no inline behavior of its own: the canonical head
@@ -492,24 +595,65 @@ the contract governs and the disagreement is a defect in this specification.
 - **FR-022**: Every export MUST carry the reader's conclusion rather than the
   document's content, and MUST name the artifact, the feature, and the phase,
   module, or approach the conclusion attaches to, so it can be acted on by
-  someone who has left the document behind. [US1] [US3] [US4]
+  someone who has left the document behind. The header line that names the
+  artifact and the feature is fixed in `contracts/export-payload-contract.md`
+  alongside the empty-state bodies, and for the same reason: three templates
+  emit it from three separate copies of the code, so a form left to each of them
+  is a form that drifts. [US1] [US3] [US4]
 - **FR-023**: An export MUST NOT state a conclusion the reader did not reach, and
-  MUST NOT carry any value the reader could not see in the rendered document.
-  [US1] [US3] [US4]
+  MUST NOT carry any value the reader could not see in the rendered document. The
+  item's stable anchor is the single carve-out, and it is bounded rather than
+  waived: FR-018 requires it so a reader can find the item again after leaving the
+  document, and FR-015 derives it from that item's own visible label, so it
+  restates something rendered rather than disclosing something withheld. An export
+  MUST therefore carry the anchor and nothing else the reader could not see — no
+  attribute the artifact reads for its own bookkeeping, no value the shipped file
+  carried but did not display, and no identifier a later agent wrote that does not
+  trace to a visible label. Anything asserting otherwise is a defect in this
+  requirement's carve-out rather than a licence to widen it.
+
+  The carve-out holds only while the anchor stays a deterministic function of the
+  label **as currently rendered** — a transform a reader could redo by hand. Two
+  ways it can quietly stop holding, both of which a later agent MUST avoid:
+  - **A frozen slug.** An anchor assigned once and kept stable while its label is
+    later edited no longer restates anything visible, because the reader now sees
+    different words. An anchor is re-derived whenever its label changes.
+  - **A disambiguating suffix.** Two items in one slot may carry identical visible
+    labels, and uniqueness then forces a suffix. That suffix MUST derive from the
+    item's visible position in its list, which the reader can also see, and MUST
+    NOT be an opaque or generation-time counter. [US1] [US3] [US4]
 - **FR-024**: Every export control MUST be reachable and operable by keyboard
   alone and MUST report its success in text, not by color or motion alone. A
   success message MUST name what the produced text actually carries, so it
-  cannot imply a conclusion the text does not contain. [US1] [US3] [US4]
+  cannot imply a conclusion the text does not contain. A second invocation that
+  produces the same message MUST still be reported. A status region whose text
+  did not change is not announced again, so the artifact MUST clear the region
+  and write the message afresh rather than assign the same string over itself,
+  and the region MUST be in the document from load, because one created at the
+  moment it is first written frequently goes unannounced entirely. [US1] [US3]
+  [US4]
 - **FR-025**: When clipboard access fails or is refused, the artifact MUST reveal
   the same text in a field the reader can select, and MUST NOT report success.
-  The revealed field MUST be selectable and focusable rather than disabled, and
+  "The same text" is byte equality with what the copy attempt carried, and it
+  MUST be placed into the field through the field's own text value rather than as
+  markup, so the revealed text cannot be re-interpreted on the way in, cannot
+  close the field early, and cannot differ from what a successful copy would have
+  produced. A field populated as markup fails this twice over: it is a markup
+  position for a value the reader is being shown as text, and it can display
+  something other than what was copied, which is the one thing this path exists to
+  rule out. The revealed field MUST be selectable and focusable rather than disabled, and
   focus MUST move to it. The failure path MUST use one message regardless of
   whether the clipboard interface was absent or the write was refused, and MUST
   NOT assert a cause, because the artifact cannot distinguish a refused
   permission from an unfocused document or a browser policy. No deprecated
   second copy attempt may be made, because its result is ambiguous and reporting
-  an uncertain success is exactly what this requirement forbids. [US1] [US3]
-  [US4]
+  an uncertain success is exactly what this requirement forbids. The revealed
+  field MUST carry its own programmatic label naming what it holds, and the
+  failure message MUST also be tied to that field as its description, so the
+  reader learns the copy failed from the focus landing there. The status region
+  alone does not discharge this: moving focus and updating a live region in the
+  same moment is a known conflict, and the live region is the one that loses.
+  [US1] [US3] [US4]
 
 #### What each template presents
 
@@ -556,14 +700,25 @@ the contract governs and the disagreement is a defect in this specification.
   conveys MUST also be available as text outside the drawing. Neither upstream
   source satisfies this: one drawing carries no name at all, and the other
   carries a name but is marked so that assistive technology reads it as a single
-  image, which hides every label inside it. [US1] [US4]
+  image, which hides every label inside it. Outside the drawing means outside the
+  drawing element and inside the same fill region. The text equivalent describes
+  the feature, which makes it slot content under FR-015, and placing it outside
+  the marker pair would leave a filled artifact carrying a fictional description
+  of a real drawing. [US1] [US4]
 
 #### Accessibility
 
 - **FR-031**: Every foreground and background pairing a template uses MUST be one
   the brand kit's published audit already clears at its WCAG AA floor. A template
   MUST NOT introduce an unaudited pairing, and MUST NOT use the deliberately
-  faint boundary token for any boundary that carries meaning. [US1] [US2] [US3]
+  faint boundary token for any boundary that carries meaning. A token's audited
+  role binds its use as tightly as its ratio does. The brand red primitive and
+  the accent are cleared for large text and for non-text marks only, so red body
+  copy MUST take the functional danger token instead; large text means at least
+  24px, or at least 18.66px when bold. And the audit measures every foreground
+  against four surfaces, so a fill that is not one of those four has no audited
+  row at all and no text may be placed on it — which is what the inverted node's
+  remedy in FR-032 has to respect. [US1] [US2] [US3]
   [US4]
 - **FR-032**: Wherever a template uses color to mark a status, an action, or a
   distinction, the same meaning MUST also be available without color — as text, a
@@ -596,6 +751,28 @@ the contract governs and the disagreement is a defect in this specification.
   MUST NOT read the stored theme value itself; where it needs the active theme it
   reads the attribute the head block sets on the root element. Where a template
   wants the brand mark it provides the opt-in empty element and nothing else.
+  All four templates want it: the mark is what makes a branded artifact
+  recognizable at a glance, and leaving an opt-in undecided on a feature whose
+  purpose is a branded document is how it ends up on none of them. Each provides
+  it exactly once, in the document's own header chrome and **outside** every
+  fill region — the mark is template chrome rather than feature content, and a
+  mark placed inside a region is deleted the first time that region is filled.
+  [US1] [US2] [US3] [US4]
+- **FR-035a**: Each template MUST declare its own document language and MUST
+  carry a page title naming the artifact and the feature it belongs to. Neither
+  canonical block supplies either one — the head block carries the policy
+  declaration, the typeface request, and the theme script and nothing else — so
+  both are the template's own obligation, and both are what a reader's assistive
+  technology takes its pronunciation and its window identity from. [US1] [US2]
+  [US3] [US4]
+- **FR-035b**: Each template MUST carry exactly one top-level heading and MUST
+  NOT skip a heading rank, so the outline a reader navigates by matches the
+  document they see. Because a later authoring agent replaces a whole region
+  rather than merging into it, each slot's shipped sample content MUST model the
+  heading ranks a filled region is expected to keep, which makes the shipped
+  content the record of that obligation. No inventory field records it, because
+  FR-012 fixes the inventory line at three labels and adding a fourth would
+  break every template's inventory to say something the body already says.
   [US1] [US2] [US3] [US4]
 
 #### Verification and delivery
@@ -741,7 +918,9 @@ the contract governs and the disagreement is a defect in this specification.
   agree in both directions with zero discrepancies.
 - **SC-004**: Zero templates render as an empty frame — every slot shows worked
   example content, so a gallery browser can decide whether a template fits by
-  looking at the rendered document alone.
+  looking at the rendered document alone. 100% of that content names the one
+  invented feature the sample set uses, so the fictional half is confirmed by
+  reading an identifier rather than by judging tone.
 - **SC-005**: Every export reflects only what the reader recorded: with nothing
   recorded, zero exports state a conclusion, and across all exports zero values
   appear that the reader could not see in the document.
@@ -779,11 +958,20 @@ the contract governs and the disagreement is a defect in this specification.
 - The fill-region validation reuses the gallery scanner's comment-collection
   idiom, so the inventory and the markers are both read as parser-recognized HTML
   comments; comment-shaped text inside a script element is not one.
-- No script string literal in any template begins with the local-file scheme
-  followed by a colon. The gallery scanner's URL-shaped pattern treats such a
-  literal as an external reference and fails it, so feedback wording says
-  "opened from a filesystem" rather than naming the scheme. The clipboard call
-  itself is not a scanned call site.
+- No script string literal in any template is URL-shaped. The local-file scheme
+  is the case that bites first — the gallery scanner's URL-shaped pattern treats
+  a literal beginning with that scheme and a colon as an external reference and
+  fails it, so feedback wording says "opened from a filesystem" rather than
+  naming the scheme — but it is not the whole rule, and stating only that case
+  invites the port to pass it and fail the next one. The pattern also matches any
+  scheme followed by `://` **anywhere** in a literal, a literal opening with two
+  slashes, and a literal opening with any of the other opaque schemes that still
+  act. So no literal in an export's wording, a feedback message, a comment inside
+  a script, or a label may contain a web address; a literal that must reference
+  something names it in prose, and an address a reader clicks lives in an anchor,
+  where the contract's navigation exemption covers it. The one exemption is an
+  XML namespace constant, which is compared as a string and never fetched. The
+  clipboard call itself is not a scanned call site; the wording is.
 - All four upstream sources were fetched read-only and scanned before this
   specification was finalized. They carry **zero** prohibited constructs: no base
   element, no scheme-relative reference, no event-handler attribute, no srcdoc,
@@ -829,3 +1017,34 @@ the contract governs and the disagreement is a defect in this specification.
   at. Satisfied; no change to it is made here.
 - **Enables ART-007**: the draft-PR emission that fills these slots. It is blocked
   until at least slice 1 ships, because it has nothing to populate before then.
+- **Handed to ART-007 — the anchor integrity of a filled artifact.** FR-036a's
+  anchor assertion runs only against this feature's own shipped templates.
+  Nothing in this repository ever inspects an artifact the authoring agent writes
+  at run time, and the artifact contract states plainly that whatever safety a
+  generated artifact has is what its generator put there. ART-007 therefore
+  inherits the obligation: before committing a filled artifact it MUST confirm
+  every repeated item in a list slot carries a present, unique anchor — the same
+  property this feature proves for its own sample content — and treat a failure
+  as a generation failure under its own fail-open policy. Catching this at the
+  writer, before the file is committed, is strictly better than a reactive
+  runtime notice a reader might not see.
+
+  Why this obligation is sharper than it looks, and must not be softened into a
+  best-effort note: a duplicate anchor does not raise an error. Identifier lookup
+  is specified to return the first match in document order, silently and
+  deterministically. So a filled artifact carrying two identical anchors renders
+  perfectly, mounts a control on the wrong item, and exports a conclusion naming
+  an item the reader never annotated. It is a plausible, confident, wrong result
+  with no signal anywhere. Duplicate identifiers also break the association
+  between a control and its label, which is an accessibility defect in its own
+  right. Uniqueness is a conformance rule the generator violates, not a
+  robustness nicety the reader's document can paper over.
+
+  This feature adds **no** duplicate-or-missing-anchor detection at run time
+  beyond FR-015's format-agnostic identifier lookup, and that is deliberate. A
+  runtime guard would defend against a defect its own shipped artifacts cannot
+  exhibit; it could not be exercised by any test this feature is allowed to write,
+  because repository tests stay on the Python standard library and no automated
+  browser is introduced, so it would ship as dead code; and it would be
+  triplicated across three templates that have no shared runtime, against a
+  reviewability budget already warning.
