@@ -420,7 +420,7 @@ that the port must drop.
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
 | 1 | Fill-region slot inventory | 5 | 21 slots fixed across the four templates, one slot per section (never per repeated item), flat regions, per-item anchor attributes; inventory comment format fixed as one `Slot: … \| Fills: … \| Source: …` line per slot placed after the attribution header; source vocabulary closed to five artifacts; feature-specific content outside a slot forbidden. FR-015 marker retired. |
-| 2 | | | |
+| 2 | Export and capture interaction details | 5 | Objection field starts collapsed behind a native disclosure whose control states in text whether the item carries a note; code-approaches uses a native grouped single-choice control with a visible group label and an optional reason; exports list only items the reader recorded against; empty-state wording is fixed per export kind and explicitly denies approval; items are named by four live-state coordinates plus a fragment-usable anchor; one cause-neutral clipboard failure message with a selectable, focused fallback field. FR-018 marker retired. Zero items for consensus. |
 | 3 | | | |
 
 The session-1 executor fetched all four upstream sources read-only (HTTP 200,
@@ -430,6 +430,47 @@ and are authored fresh: the implementation plan's task inventory (upstream's
 fourth section is key code) and the spec explainer's goals and non-goals
 (upstream's counterpart is a configuration walkthrough with no Racecraft
 equivalent).
+
+#### Session 2 literal wordings (carry verbatim into Plan, Implement, and UAT)
+
+The spec states these as requirements; the exact strings live here so the
+implementation and the acceptance runbook check the same text.
+
+**Empty-state export bodies.** Header lines naming the feature and the artifact
+are still emitted; only the body differs.
+
+| Template group | Kind | Body |
+|---|---|---|
+| implementation-plan, module-map | `prompt` | `No objection was recorded. There is nothing here to act on. Do not treat this as approval.` |
+| implementation-plan, module-map | `markdown` | `No objection was recorded. This record is not an approval.` |
+| code-approaches | `prompt` | `No approach was chosen. There is nothing here to act on. Do not treat this as approval of any approach.` |
+| code-approaches | `markdown` | `No approach was chosen. This record is not an approval of any approach.` |
+| code-approaches, chosen without a reason | both | reason line reads `Reason: none given.` |
+
+**Clipboard feedback.** One `role="status"` region present from load, beside the
+export controls and outside every fill region.
+
+| State | Message |
+|---|---|
+| n objections, n > 1 | `Copied. 2 objections are on the clipboard.` |
+| exactly one objection | `Copied. 1 objection is on the clipboard.` |
+| no objection recorded | `Copied. The text says no objection was recorded.` |
+| approach chosen | `Copied. Your chosen approach is on the clipboard.` |
+| no approach chosen | `Copied. The text says no approach was chosen.` |
+| any failure | `Copy failed. The text is in the field below. Select it and copy it by hand.` |
+
+**Item reference line.** `<slot> / <item label>  (#<anchor>)`, anchor valued
+`<slot>-<item-slug>`.
+
+**Two implementation traps this session found.**
+
+1. Upstream `04-code-understanding.html` runs an accordion script that
+   force-closes every other `details.snippet` on toggle. That behavior must not
+   reach objection disclosures — it would close a reader's in-progress field.
+   Scope it by class.
+2. In code-approaches, wrap the existing approaches container in the native
+   grouping element rather than replacing it, so the side-by-side layout FR-028
+   requires survives.
 
 ### Consensus Resolution Log
 

@@ -208,9 +208,11 @@ screenshot.
 
 ### Edge Cases
 
-- **Clipboard refused.** Opening a document from a filesystem often denies
-  clipboard access. Every export must reveal its text in a selectable field
-  instead, and must never report success it did not achieve.
+- **Clipboard refused.** Clipboard access can be refused, and the artifact cannot
+  tell why — a missing user gesture, an unfocused document, a browser policy, and
+  an absent interface are indistinguishable from inside the document. Every
+  export must reveal its text in a selectable field instead, and must never
+  report success it did not achieve.
 - **Nothing recorded.** A reader may invoke an export having written nothing and
   chosen nothing. The export says so; it never fabricates a conclusion.
 - **Network unavailable.** With no network the typeface request fails. Every
@@ -340,7 +342,10 @@ the contract governs and the disagreement is a defect in this specification.
   property of the feature rather than of the template. Regions are flat — no
   slot's marker pair may enclose another's. Each repeated item inside a list
   slot MUST carry a stable anchor attribute naming that item, which is what an
-  objection or a selection attaches to. [US1] [US2] [US3] [US4]
+  objection or a selection attaches to. An anchor value is
+  `<slot>-<item-slug>` under the same character rules as slot names, which makes
+  it unique across the template and usable as a document fragment. [US1] [US2]
+  [US3] [US4]
 
 #### What the reader records
 
@@ -361,17 +366,38 @@ the contract governs and the disagreement is a defect in this specification.
   content from reaching. [US1] [US3] [US4]
 - **FR-017**: The code-approaches template MUST let the reader select exactly one
   approach from those compared, using a control that natively exposes which one
-  is selected, together with one labelled field for their reason. [US3]
+  is selected, together with one labelled field for their reason. The
+  single-choice control MUST be grouped by a native grouping element carrying a
+  visible group label as its accessible name, and the reason field MUST be
+  optional; an export names the absence of a reason rather than omitting it or
+  blocking on it. Requiring a reason would either strand the reader's real
+  conclusion or pressure filler text, and there is no submission to enforce it
+  against. [US3]
 - **FR-017a**: Controls serving the same function across the items of one list
   MUST be identified consistently — same structure, same labelling, same exposed
   state — which follows from building them all from one routine rather than
   emitting each separately. [US1] [US3] [US4]
-- **FR-018**: The interaction detail of capture is
-  [NEEDS CLARIFICATION: unsettled — whether an objection field starts revealed or
-  sits behind a disclosure the reader opens; whether the export lists only items
-  carrying a note or every item with its state; what an export says when the
-  reader recorded nothing; and how an export names an item precisely enough for
-  someone who has left the document to find it again.] [US1] [US3] [US4]
+- **FR-018**: The interaction detail of capture is fixed as follows. [US1] [US3]
+  [US4]
+  - An objection field MUST start collapsed behind a native disclosure whose
+    control is reachable and operable by keyboard, and the disclosure's own
+    control MUST state in text whether that item currently carries a note, so a
+    recorded objection is visible without opening it. Always-revealed fields are
+    rejected: a list of five or six items would turn a document meant to be read
+    into a form, against the reviewing operator's actual job.
+  - An export MUST list only the items the reader recorded against, and MUST NOT
+    emit a line, a placeholder, or a count for an item left empty, because
+    reporting an item as carrying no objection asserts an approval the reader
+    did not record.
+  - When the reader recorded nothing, an export MUST state that nothing was
+    recorded and MUST state that the record is not an approval, in wording fixed
+    per export kind rather than left to the implementation, while still naming
+    the artifact and the feature it came from. The realistic misreading of an
+    empty export is approval, so denying it is part of the requirement.
+  - An export MUST name each item it carries by four coordinates read from live
+    state — the feature, the artifact, the slot, and the item's visible label —
+    together with the item's stable anchor in a form a reader can use to find
+    that item again after leaving the document.
 
 #### Export affordances
 
@@ -393,11 +419,19 @@ the contract governs and the disagreement is a defect in this specification.
   MUST NOT carry any value the reader could not see in the rendered document.
   [US1] [US3] [US4]
 - **FR-024**: Every export control MUST be reachable and operable by keyboard
-  alone and MUST report its success in text, not by color or motion alone. [US1]
-  [US3] [US4]
+  alone and MUST report its success in text, not by color or motion alone. A
+  success message MUST name what the produced text actually carries, so it
+  cannot imply a conclusion the text does not contain. [US1] [US3] [US4]
 - **FR-025**: When clipboard access fails or is refused, the artifact MUST reveal
   the same text in a field the reader can select, and MUST NOT report success.
-  [US1] [US3] [US4]
+  The revealed field MUST be selectable and focusable rather than disabled, and
+  focus MUST move to it. The failure path MUST use one message regardless of
+  whether the clipboard interface was absent or the write was refused, and MUST
+  NOT assert a cause, because the artifact cannot distinguish a refused
+  permission from an unfocused document or a browser policy. No deprecated
+  second copy attempt may be made, because its result is ambiguous and reporting
+  an uncertain success is exactly what this requirement forbids. [US1] [US3]
+  [US4]
 
 #### What each template presents
 
@@ -612,6 +646,11 @@ the contract governs and the disagreement is a defect in this specification.
 - The fill-region validation reuses the gallery scanner's comment-collection
   idiom, so the inventory and the markers are both read as parser-recognized HTML
   comments; comment-shaped text inside a script element is not one.
+- No script string literal in any template begins with the local-file scheme
+  followed by a colon. The gallery scanner's URL-shaped pattern treats such a
+  literal as an external reference and fails it, so feedback wording says
+  "opened from a filesystem" rather than naming the scheme. The clipboard call
+  itself is not a scanned call site.
 - Two roadmap-named regions have no upstream counterpart and are authored fresh
   against an existing upstream layout shape: the implementation plan's task
   inventory (upstream's fourth section is key code) and the spec explainer's
