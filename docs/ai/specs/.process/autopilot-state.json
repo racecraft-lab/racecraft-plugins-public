@@ -4,7 +4,7 @@
   "feature_dir": "specs/art-002-draft-pr-template-set",
   "branch": "art-002-draft-pr-template-set",
   "status": "in_progress",
-  "active_step": "Phase 3: Plan",
+  "active_step": "Phase 4: Checklist - accessibility",
   "updated_at": "2026-08-10T00:00:00Z",
   "stage": "plan",
   "prior_run_note": "completed_archived",
@@ -76,11 +76,11 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - accessibility",
-      "status": "not_started"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - accessibility Consensus",
@@ -170,5 +170,25 @@
       "step": "Post: Retrospective",
       "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     }
-  ]
+  ],
+  "reviewability_plan_phase": {
+    "estimate_reviewable_loc": {
+      "status": "pass",
+      "projected": 0,
+      "new": 5,
+      "modified": 3,
+      "note": "projected 0 is a floor artifact; the helper recognizes none of this feature's production path shapes"
+    },
+    "reviewability_gate_setup_plan": {
+      "status": "warn",
+      "pass": true,
+      "reviewable_loc": 530,
+      "production_files": 3,
+      "total_files": 6,
+      "primary_surfaces": 1,
+      "blockers": [],
+      "greenfield": false
+    },
+    "spec_amended": "Reviewability Notes and Reviewability Budget corrected from ~190 to 530 per slice, and the greenfield allowance withdrawn"
+  }
 }

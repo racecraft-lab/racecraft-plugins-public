@@ -648,24 +648,39 @@ the contract governs and the disagreement is a defect in this specification.
 
 ### Reviewability Notes
 
-- No typed reviewability exception is claimed. Both slices are projected within
-  the warn thresholds, so no `Reviewability-Exception` pragma is recorded here or
-  in either pull request.
+- No typed reviewability exception is claimed. Each slice sits **above the warn
+  threshold and well below the block threshold**, and a warning proceeds on
+  recorded scope and a recorded split, both of which exist. No
+  `Reviewability-Exception` pragma is recorded here or in either pull request.
+- This corrects an earlier statement. Scoping projected each slice at roughly
+  half the warn threshold; the plan's line-level derivation of the actual work
+  put it at 530, and the measured gate agrees. The number moved because scoping
+  counted the ported template body and not the capture, export, and clipboard
+  behavior each template must carry, nor the sample content every slot ships
+  with. The split decision is unaffected: it was taken to make each slice a
+  reviewable end-to-end unit, and it still does that.
+- The greenfield allowance does **not** apply. Scoping assumed it would, on the
+  grounds that the work is net-new. The gate reports `greenfield: false`, so the
+  thresholds in force are the base ones, 400 to warn and 800 to block.
 
 ### Reviewability Budget *(mandatory)*
 
 - **Primary surface**: docs/process — the shipped gallery templates
 - **Secondary surfaces, if any**: seed/config (the routing catalog's status
   values); harness/adapter (the fill-region validation)
-- **Projected reviewable LOC**: ~380 across the feature; ~190 per slice,
-  excluding declared generated payload artifacts and validation code
+- **Projected reviewable LOC**: ~530 per slice, measured from the plan's declared
+  file operations rather than estimated from scope, and excluding declared
+  generated payload artifacts
 - **Projected production files**: 4 net-new template files across the feature (2
-  per slice), plus the routing catalog modified once per slice
-- **Projected total files**: ~7 across the feature; ~5 per slice, excluding
+  per slice), plus the routing catalog modified once per slice — 3 production
+  files per slice
+- **Projected total files**: ~7 across the feature; 6 per slice, excluding
   declared generated payload artifacts
-- **Budget result**: within budget — each slice is projected at roughly half the
-  400-LOC warn threshold, 3 production files against a 6-file warn, and ~5 total
-  files against a 15-file warn
+- **Budget result**: **warn, passing, zero blockers.** Measured at 530 reviewable
+  LOC per slice against a 400 warn and an 800 block; 3 production files against a
+  6-file warn; 6 total files against a 15-file warn; one primary surface. Only
+  the LOC dimension warns. A warning proceeds when the workflow records the scope
+  budget and the split decision, and it records both.
 - **Split decision**: Split into two vertical slices delivered as two sequential
   pull requests, per the design concept's Q10 and its follow-up. Slice 1 is the
   two templates the draft-PR stage routes unconditionally (US1, US2), each

@@ -34,7 +34,7 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | spec.md + checklists/requirements.md written; 40 FRs, 4 user stories, 21 acceptance scenarios, 10 success criteria; 3 intentional `[NEEDS CLARIFICATION]` markers held for the three planned Clarify sessions |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions. **G2 PASS** — 0 `[NEEDS CLARIFICATION]`, 0 `[HUMAN REVIEW NEEDED]`, `## Clarifications` recorded in spec.md. 3 items went to consensus, 1 of those to Round 2 (3/3 unanimous). Sessions 2 and 3 needed no consensus. |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Plan | `/speckit-plan` | ✅ Complete | **G3 PASS**. 6 artifacts, 1683 lines. Constitution Check passes on all six principles. Reviewability measured at 530 LOC per slice: warn, passing, zero blockers — two scaffold-time budget claims corrected in the spec against measured evidence |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -103,6 +103,15 @@ subsections do.
 reviewable production LOC, 4 production files (net-new), ~7 total files, one
 primary surface. Net-new-only work carries the 1.5x greenfield allowance
 (warn 600 / block 1200).
+
+> **Superseded at Plan — see [Plan Results](#plan-results).** Two claims above
+> are wrong and are corrected there against measured evidence. The LOC figure is
+> low: the measured budget is **530 per slice**, because scoping counted the
+> ported template body and not the capture, export, and clipboard behavior or the
+> sample content every slot ships. And the greenfield allowance does **not**
+> apply — the gate reports `greenfield: false`, so the thresholds in force are
+> the base 400 warn and 800 block, not 600 and 1200. The gate result is **warn,
+> passing, zero blockers**, and the split decision below is unaffected.
 
 **Split decision (grill-me Q10):** ART-002 is one spec delivered as **two
 vertical slices in two sequential PRs**:
@@ -639,13 +648,96 @@ docs/ai/specs/.process/ART-002-design-concept.md, when a choice needs its
 
 ### Plan Results
 
+**G3 PASS** — `plan.md` exists with 0 unresolved markers.
+
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Entities and types |
-| `contracts/` | ⏳ | Slot inventory + export payload contracts |
-| `quickstart.md` | ⏳ | Developer onboarding |
+| `plan.md` | ✅ | 592 lines. Constitution Check passes on all six principles; two Complexity Tracking rows (accepted duplication, review-size warn) |
+| `research.md` | ✅ | 401 lines. Decision rationales |
+| `data-model.md` | ✅ | 196 lines. Entities and types |
+| `contracts/slot-inventory-contract.md` | ✅ | 185 lines |
+| `contracts/export-payload-contract.md` | ✅ | 160 lines. Pins the session-2 literal wordings once, so three implementations can differ in style but not in behavior |
+| `quickstart.md` | ✅ | 149 lines. Developer onboarding |
+
+**Declared File Operations** (authored surface only):
+
+| Slice | Entries | New | Modified | Added LOC |
+|---|---|---|---|---|
+| 1 (US1+US2, this branch) | 6 | 3 | 3 | ~505 template + ~250 test |
+| 2 (US3+US4, fresh branch) | 3 | 2 | 1 | ~530 template |
+
+#### Reviewability budget, measured (autopilot Step 7b, advisory)
+
+Both helpers were run by the orchestrator and reproduce the plan executor's
+numbers.
+
+| Helper | Result |
+|---|---|
+| `estimate-reviewable-loc` | `status: pass`, `projected: 0`, `new: 5`, `modified: 3`, `total_entries: 8`, `greenfield: false` |
+| `reviewability-gate` (setup, against `plan.md`) | `status: warn`, `pass: true`, `reviewable_loc: 530`, `production_files: 3`, `total_files: 6`, `primary_surfaces: 1`, **`blockers: []`** |
+
+`projected: 0` from the estimator is a floor, not a measurement: its
+production-file test recognizes none of this feature's path shapes. The gate's
+530 is the number to trust, and only the LOC dimension warns — production files
+(3 of 6), total files (6 of 15), and primary surfaces (1 of 1) all sit inside
+their warn thresholds.
+
+**Two scaffold-time claims are corrected here**, and the spec's Reviewability
+Notes and Reviewability Budget were amended to match rather than left to drift
+into Analyze:
+
+1. **~190 LOC per slice → 530.** Scoping counted the ported template body and
+   omitted the capture, export, and clipboard behavior each template carries,
+   plus the worked-example content every slot ships with.
+2. **The greenfield allowance does not apply.** The gate reports
+   `greenfield: false`, so the thresholds are the base 400 and 800, not 600 and
+   1200.
+
+Neither changes the delivery decision. 530 is comfortably below the 800 block, a
+warning proceeds on recorded scope and a recorded split, and both are recorded.
+No typed exception is claimed and FR-040's two sequential pull requests stand.
+
+#### Shared-behavior duplication, and why it stays
+
+Three templates need near-identical capture and export behavior, and there is no
+shared runtime to put it in — every artifact is one self-contained file. The plan
+keeps three copies rather than reaching for an abstraction, because every
+mechanism that could remove the duplication is prohibited here: a sibling script
+file breaks the single-file rule, a build step is excluded by the tech stack, and
+a generator is ART-007's scope. An abstraction would be a build step under
+another name, and the constitution prefers three similar lines to a premature
+one. Only one of the three is a near-copy in any case; code-approaches is a
+different shape. What is shared is the **specification, not the code**: the
+literal wordings, the four-coordinate item reference, and the single clipboard
+failure message are pinned once in the export-payload contract, and each template
+is verified against that one table.
+
+#### Layer 4 test design
+
+`tests/speckit-pro/unit/test-artifact-fill-regions.py`, registered at layer 4 in
+`tests/speckit-pro/suite-manifest.json`. Six checks: the roadmap floor as a
+literal subset check conditioned on catalog status; both-ways inventory agreement
+as two separate checks; inventory shape; **per-item anchors as its own assertion,
+per FR-036a**; and floor-literal-to-catalog closure. It parses with the gallery
+scanner's comment-collection idiom, so comment-shaped text inside a script is raw
+character data and never reaches the comment handler — a marker embedded in an
+export routine's string literal cannot declare a slot the body does not delimit.
+Slice 2 edits no test file: its cases key on catalog status, so the flips turn
+them on.
+
+**Slice 1 ordering, RED first:** fixture cases and pinned literals with
+unimplemented checks → run → RED → implement checks → register and regenerate
+docs → US1 template with its status flip in the same change, which is where the
+floor binds for the first time → US2 → payload refresh and closeout.
+
+#### Generated artifact contract
+
+Declared under its own heading, deliberately outside the block the estimator
+parses: ~22 mirror files plus 12 proof snapshots per slice, machine-written by
+`scripts/refresh-release-artifacts.py`. Two facts were checked against the
+ART-001 gallery commit rather than assumed — the payload build copies
+`artifact-gallery` as a whole directory so it needs no edit, and the runner
+manifest and its checksum must not move, because ART-002 edits no runner source.
 
 ---
 
