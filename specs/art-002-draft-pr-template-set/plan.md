@@ -189,7 +189,8 @@ and now carries its full reasoning in `research.md` D1.
   already contains slice 1's flips. No work is deferred to a follow-up
   specification except the generation of slot content, which is ART-007's.
 - **PR review packet source**: this plan supplies what changed and why (Summary,
-  the port worksheet), non-goals (the spec's Non-goals and the design concept's),
+  the port worksheet), non-goals (the spec's *Non-Goals* section, which carries
+  the design concept's),
   review order (*Slice 1 Ordering*), scope budget (this section), traceability
   (the port worksheet's FR column and the test design's), verification evidence
   (`quickstart.md`), known gaps (*Complexity Tracking*), and rollback notes (each
@@ -198,11 +199,14 @@ and now carries its full reasoning in `research.md` D1.
 
 ### Reviewability Projection
 
-The spec's Reviewability Budget records ~380 reviewable lines across the feature,
-inherited from the roadmap's pre-read projection of four files at roughly 95 lines
-each. Reading the contract and fixing the design raises that materially, and the
-plan is where the honest figure belongs. The derivation, so a reviewer can check
-it rather than take it:
+The roadmap's ART-002 entry records ~380 reviewable lines across the feature, a
+pre-read projection of four files at roughly 95 lines each, and scoping carried
+that into the spec as ~190 per slice. Reading the contract and fixing the design
+raises it materially, and the plan is where the honest figure belongs. The spec's
+Reviewability Notes and Reviewability Budget have since been amended to the
+figures derived here, so the two now agree; the roadmap entry is the pre-read
+projection and is left as the historical record it is. The derivation, so a
+reviewer can check it rather than take it:
 
 | File | Embedded (not reviewed) | Authored (reviewed) | Basis |
 |---|---|---|---|
@@ -231,14 +235,23 @@ setup-mode gate, which reads the declared figures rather than inferring them, is
 the one that returns the operative **warn**.
 
 Slice 1 therefore projects ~505 authored template lines plus three modified
-catalog and manifest lines; slice 2 projects ~530. The validation module (~250
-lines) is excluded, as the spec's budget already scopes it out. Both slices land
-in **warn**, and a warn proceeds here because the workflow file records the scope
-budget and the split decision, which is the condition that section already
-states. The stale sentence in the spec's Reviewability Notes — "Both slices are
-projected within the warn thresholds" — is now contradicted by this derivation
-and is carried into Analyze as a spec-amendment candidate rather than silently
-adopted or silently ignored.
+catalog and manifest lines; slice 2 projects ~530. The declared per-slice figure
+is stated as 530, the larger of the two. The validation module (~250 lines) is
+counted separately rather than folded into that figure, because it is
+repository-only test code on the harness/adapter surface rather than shipped
+template lines. That is a departure from the preset, which excludes generated,
+lock, and vendor artifacts and does not exclude test code, so the spec's
+Reviewability Budget names it as a departure and states the combined figure
+alongside it: **slice 1 is ~505 template lines plus ~250 test lines, ~755 in
+total; slice 2 is ~530.** Both readings sit below the 800 block, so the verdict
+is `warn` either way and the recorded gate evidence of 530 is the narrower of two
+stated numbers rather than the only one. Both slices land in **warn**, and a warn
+proceeds here because the workflow file records the scope budget and the split
+decision, which is the condition that section already states.
+
+The spec's Reviewability Notes and Reviewability Budget were amended to these
+figures during this phase rather than left to drift, so no spec-amendment
+candidate is outstanding.
 
 ## The Shared Behavior Decision
 
@@ -313,8 +326,8 @@ are one line of markup each, so they do not move the projection above.
 | Element | Where it goes | Requirement |
 |---|---|---|
 | The notice that what follows is sample content awaiting a fill | **Inside** the `feature-header` region, so a fill removes it | FR-014a |
-| One line saying what each export is for — prompt for a coding agent, Markdown for a pull-request comment | Beside the export pair | FR-019 |
-| One line saying recorded input is not saved and is lost on reload | Beside the export controls | FR-018a |
+| One line saying what each export is for — prompt for a coding agent, Markdown for a pull-request comment | Beside the export pair, **outside** every fill region | FR-019 |
+| One line saying recorded input is not saved and is lost on reload | Beside the export controls, **outside** every fill region | FR-018a |
 | The opt-in brand mark element | Header chrome, **outside** every fill region, so a fill cannot delete it | FR-035 |
 
 The two placements are opposite on purpose, and both are load-bearing: a notice
@@ -322,6 +335,26 @@ outside the regions would survive the fill and call a filled artifact sample
 content, and a mark inside one would be deleted the first time that region is
 filled. `spec-explainer` carries the first and the fourth only, having nothing to
 record and nothing to export.
+
+**The rest of the inside/outside ledger**, because two rows are the ones easy to
+get backwards and the others are the ones easy to forget. FR-011 states the rule:
+a fill replaces a whole region, so a filled artifact keeps only what sits outside
+every pair.
+
+| Also outside every pair | Also inside its own region |
+|---|---|
+| The slot inventory comment (FR-012) | The sample-content notice (FR-014a) |
+| Both export controls (FR-019) | Each diagram's text equivalent (FR-030a) |
+| The `role="status"` region (FR-024) | |
+| The clipboard fallback field (FR-025) | |
+| `code-approaches`' grouping element and its visible group label (FR-017) | |
+
+A region's own sample content and its per-item anchors are inside by definition;
+the right column lists only what is authored beyond them. The last row of the
+left column is the one this port can get wrong by following its own instruction
+too literally — see the `code-approaches` worksheet below. A misplacement in
+either column is silent: the shipped template passes every check, and the defect
+surfaces only in a filled artifact.
 
 ### implementation-plan (US1, slice 1) — upstream `16-implementation-plan.html`
 
@@ -396,6 +429,15 @@ record and nothing to export.
 - **Trap.** Wrap the existing approaches container in the native grouping element
   rather than replacing it, so the side-by-side layout FR-028 requires survives
   the addition of the single-choice control.
+- **The second half of that trap, and the easier one to miss.** The grouping
+  element and its visible group label go **outside** the `approaches` marker
+  pair, enclosing the region rather than sitting in it. "Wrap the existing
+  container" reads as wrapping the lifted grid, which is inside the pair — and a
+  grouping element inside the pair is deleted by the first fill, leaving every
+  filled artifact with ungrouped, unlabelled choices while the shipped template
+  still passes. The label is chrome, not feature content: it names the question
+  the reader is answering, not the approaches compared, so FR-015 does not make
+  it a slot. FR-017 now states this.
 - **Restyling cost — the trade-off markers.** Upstream draws two identical shapes
   separated only by hue. The non-color carrier already exists in the markup: a
   persistent column heading and a fixed column position. The port declares those

@@ -37,8 +37,8 @@ captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | **G3 PASS**. 6 artifacts, 1683 lines. Constitution Check passes on all six principles. Reviewability measured at 530 LOC per slice: warn, passing, zero blockers — two scaffold-time budget claims corrected in the spec against measured evidence |
 | Checklist | `/speckit-checklist` | ✅ Complete | **G4 PASS** — 0 `[Gap]` markers. 3 domains, 134 items, 25 gaps all remediated. 2 items escalated: anchor visibility 3/3, malformed-artifact ownership 2/3 with dissent logged |
 | Tasks | `/speckit-tasks` | ✅ Complete | **G5 PASS** — 79 tasks, 9 phases, 45 `[P]`, 48/48 FR coverage. Slice boundary gated at T048. Atomicity classifier returned `one-navigable-PR`, disagreeing with the recorded split; surfaced and resolved in favour of FR-040 |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
-| Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
+| Analyze | `/speckit-analyze` | ✅ Complete | **G6 PASS** — 14 findings (0 critical, 4 high, 8 medium, 2 low), all 14 remediated, 0 remaining. `count-markers` reports 0 findings, 0 gaps, 0 clarifications. Three placement and traceability defects would have survived into filled artifacts silently; one roadmap budget-block staleness is left recorded rather than edited, because the setup-mode gate parses that block |
+| Confidence Gate | G6.5 | ✅ Complete | **PASS, advisory** — composite **0.93** against a 0.90 threshold, `recommended_action: proceed`. Lowest criterion is risk assessment at 0.86, and deliberately so. Terminal step of the `plan` stage |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
@@ -329,6 +329,15 @@ Declared reviewability budget: primary surface docs/process; ~380 reviewable
 LOC feature-wide, ~190 per slice; 4 net-new production files (2 per slice) plus
 the catalog modified once per slice. Within budget; the two-sequential-PR split
 is recorded.
+
+> **Superseded at Plan — see [Plan Results](#plan-results).** These are the
+> figures the spec carried at Specify time and they are recorded here as the
+> point-in-time state, not as current fact. The measured budget is **530
+> reviewable template lines per slice**, at a 400 warn and an 800 block with no
+> greenfield allowance, and the verdict is **warn, passing, zero blockers**. The
+> spec's Reviewability Notes and Reviewability Budget were amended to match. The
+> requirement count also moved: 40 FRs at Specify, 48 after three Clarify
+> sessions and three checklist domains.
 
 **G1 routing decision — proceed to Clarify.** A direct
 `grep -c "NEEDS CLARIFICATION" spec.md` returns **3**; the three markers are
@@ -688,6 +697,10 @@ docs/ai/specs/.process/ART-002-design-concept.md, when a choice needs its
 | `contracts/slot-inventory-contract.md` | ✅ | 185 lines |
 | `contracts/export-payload-contract.md` | ✅ | 160 lines. Pins the session-2 literal wordings once, so three implementations can differ in style but not in behavior |
 | `quickstart.md` | ✅ | 149 lines. Developer onboarding |
+
+Line counts above are as at the end of Plan. The Checklist and Analyze phases
+edited `plan.md` and both contracts afterwards, so the files on disk are longer;
+the table is the phase record, not a current inventory.
 
 **Declared File Operations** (authored surface only):
 
@@ -1122,9 +1135,50 @@ Focus on:
 
 ### Analysis Results
 
+**G6 PASS** — 13 findings, 13 remediated, 0 remaining. No CRITICAL. Constitution
+alignment clean on all six principles; `run-all.py --layer 1` 1447/1447 and the
+full suite 7226/7226 both green before and after remediation. The marker helper
+`count-markers` reports `{"type":"findings","total":0}` in both loops; every
+finding below came from cross-artifact reading rather than a written marker.
+
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| A1 | HIGH | The `code-approaches` grouping element FR-017 requires had no placement rule, and "wrap the existing approaches container" put it inside the `approaches` fill region, where the first fill deletes it. Every filled artifact would carry ungrouped, unlabelled choices while the shipped template still passed. | FR-017 now requires it outside the marker pair; recorded in the plan's worksheet, T052, T055, and both contracts |
+| A2 | HIGH | The inside/outside rule was stated for 5 elements and missing for 5 more — the export controls, the FR-019 purpose line, the FR-018a not-saved line, the clipboard fallback field, and the grouping element. Same silent failure mode as A1. | FR-011 now states the general rule and lists both columns; plan, tasks, and both contracts carry the full ledger |
+| A3 | HIGH | FR-035a (title names the feature) contradicted FR-015 and the "feature-specific content outside a slot" edge case: a title is head metadata no fill region can enclose, so a filled artifact would announce `NIMBUS-101` as its window identity. | FR-035a reconciles the two and hands the title rewrite to ART-007; recorded in *Dependencies* and named as deferred work in T047 and T079 |
+| A4 | HIGH | `plan.md` *Reviewability Projection* still described the spec as recording ~380 lines and quoted a spec sentence that no longer existed, calling the correction an open spec-amendment candidate after the spec had already been amended. | Rewritten to attribute ~380 to the roadmap's pre-read projection and to state that the spec now agrees |
+| A5 | MEDIUM | SC-002 and SC-005 were cited by zero tasks, while the PR packet requires mapping every success criterion to files and evidence. | Cited in T026, T046, T056, T070, T078, and a full SC coverage table added to `tasks.md` |
+| A6 | MEDIUM | T003's acceptance check `grep -rl 'NIMBUS' docs/ai/specs/ specs/` was self-falsifying: the pin was recorded in this workflow file at task generation, so the grep now matches this feature's own records. | Scoped to exclude ART-002's own records; the corrected command verified to return nothing |
+| A7 | MEDIUM | `plan.md` cited "the spec's Non-goals", which did not exist. The design concept's five Non-goals reached no downstream artifact, and "no dedicated acceptance-harness page" appeared nowhere at all. | `spec.md` gains a *Non-Goals* section restating all of them plus the no-persistence non-goal |
+| A8 | MEDIUM | File counts disagreed: the spec said "~7 across the feature; 6 per slice" and `tasks.md` said "six authored files per slice", but the plan declares 6 for slice 1 and 3 for slice 2, with 8 distinct files feature-wide. | Corrected in `spec.md` Reviewability Budget, the `tasks.md` header, and T006 |
+| A9 | MEDIUM | `plan.md` claimed the ~250-line validation module was excluded "as the spec's budget already scopes it out"; the spec excluded only generated payload artifacts and named the validation as a review surface. | The exclusion is now stated in the spec's budget and described the same way in both files |
+| A10 | MEDIUM | Slice 2 had no docs-site bootstrap. T002's install is per worktree, T048 cuts slice 2 on a fresh branch, and T076 ran `reference:generate` against dependencies that need not be present. | T076 runs its own `pnpm --dir docs-site install --frozen-lockfile`; T002's scope note corrected |
+| A11 | MEDIUM | The *Specify Results* budget block recorded ~380 / ~190 per slice / "within budget" with no supersession pointer, unlike the Setup Gate block above it. | Supersession note added, matching this file's own convention |
+| A12 | LOW | "Phase 2 depends on T004 for nothing and on T002 only for T015" was garbled, and the Phase 7/8 dependency line omitted T003, whose pinned sample feature the slice-2 tasks hardcode. | Both lines rewritten |
+| A13 | LOW | The *Plan Results* artifact table records line counts from the end of Plan; the checklist and analyze phases have since grown `plan.md` and both contracts. | Labelled as a phase record rather than a current inventory |
+
+**Verified against the repository, not assumed.** All four catalog entries match
+what the spec claims (`source.file`, `exports`, `stage`, `status: planned`); the
+canonical blocks measure 318 and 140 lines exactly; `payloads.py` copies
+`artifact-gallery` as a whole directory name, so T005's premise holds; the
+attribution header's five labels and the single upstream repository name are in
+`SPA-CONTRACT.md` where FR-003 says; the prohibited-construct list matches the
+spec's Assumptions item for item; the suite-manifest entry shape matches T014;
+every path the plan and tasks name exists; the 7226 / 1447 / 5593 / 186 baseline
+in `quickstart.md` and T001 is exact; and the FR-036 floor traces entry by entry
+to the roadmap's ART-002 scope prose.
+
+**Slice integrity holds.** No task in T049–T079 is named as a prerequisite of any
+task in T001–T047. The only cross-slice reference was T002 naming T076 as a
+consumer, which A10 resolved. T048 gates the boundary explicitly and no task in
+Phases 7, 8, or 9 may start before it passes.
+
+**One item left for the operator, not escalated to consensus.** The roadmap's
+ART-002 *Reviewability Budget* block still reads 380 / within budget / one
+vertical slice / greenfield. It is stale against the measured 530-per-slice warn,
+and it was deliberately not edited: `reviewability-gate` parses that block in
+setup mode, so rewriting it during Analyze would change a helper's input for no
+gain. The correction is recorded in the spec, the plan, and twice in this file.
 
 ---
 
@@ -1135,10 +1189,58 @@ are unchanged; this section records the verdict so a later session can read it.
 
 | Field | Value |
 |-------|-------|
-| Mode | <!-- advisory (default) or strict --> |
-| Composite confidence | <!-- 0.00-1.00 --> |
-| Verdict | <!-- proceed / remediate / stop --> |
-| Evidence | <!-- what the score was computed from --> |
+| Mode | advisory (default; no `--strict` flag, no local config override) |
+| Composite confidence | 0.93 |
+| Verdict | proceed |
+| Evidence | See the emit and its per-criterion reasoning below |
+
+### Pre-Implement Confidence
+
+```text
+📊 Confidence: 0.93
+
+- Task understanding: 0.96
+- Approach clarity: 0.94
+- Requirements alignment: 0.95
+- Risk assessment: 0.86
+- Completeness: 0.94
+```
+
+**Task understanding, 0.96.** The four upstream sources were fetched and read
+rather than assumed, and the decisive claim about them — zero prohibited
+constructs — was verified twice by independent implementations that agreed on
+byte counts, script counts, and the three text-node false positives. Every slot,
+every dropped region, and every authored-fresh region is enumerated and traced.
+
+**Approach clarity, 0.94.** The port worksheet, the section-to-slot mapping, the
+Layer 4 test design, and the literal export wordings are all concrete enough to
+implement without re-deciding anything. The deduction is for the one structural
+compromise: three near-duplicate behavior implementations with no shared runtime.
+Behavior is pinned by a single contract table, but style can still drift.
+
+**Requirements alignment, 0.95.** 48 of 48 requirements carry tasks, verified
+programmatically against a coverage table with no dangling task IDs. All five
+consensus outcomes landed in artifacts, both placement rules are correct and
+unswapped, and the design concept's Non-goals hold and are now restated in the
+spec.
+
+**Risk assessment, 0.86 — the lowest score, and the honest one.** Four open
+risks. The reviewability budget moved twice during the run, and on the inclusive
+reading that counts the test module, slice 1 is ~755 against an 800 block, which
+is tight rather than comfortable. The roadmap's own budget block is knowingly
+stale and deliberately not edited. The atomicity classifier disagreed with the
+recorded split. And the hardest implementation work is unproven: restyling an
+attribute-heavy drawing without flattening its deliberate hierarchy, and getting
+three duplicated capture-and-export implementations to behave identically.
+
+**Completeness, 0.94.** Tasks are decomposed to 79 items across 9 phases with the
+slice boundary genuinely gated. The deduction is inherent to the stage: runtime
+behavior has no automated verification by design, so the manual acceptance
+runbook is the only thing that exercises it.
+
+**Verdict: proceed.** Advisory mode never blocks, and nothing here argues for
+stopping. The score is deliberately not higher, because the risks above are real
+and the next stage is where they get tested.
 
 ---
 

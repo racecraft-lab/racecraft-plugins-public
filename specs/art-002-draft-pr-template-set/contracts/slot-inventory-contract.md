@@ -30,6 +30,16 @@ HTML comments:
 - The region carries inert content and per-item anchors only. It never carries a
   reader-input control, because the agent replaces the whole region and would
   delete one.
+- The same reasoning reaches past controls to anything a filled artifact still
+  needs. Template chrome sits **outside** every pair: the inventory comment, the
+  brand mark, both export controls, the line saying what each export is for, the
+  line saying recorded input is not saved, the `role="status"` region, the
+  clipboard fallback field, and `code-approaches`' grouping element with its
+  visible group label — which encloses the `approaches` region rather than
+  sitting in it. Two authored elements sit **inside** on purpose, each because it
+  must not survive a fill: the sample-content notice and each diagram's text
+  equivalent. Getting either direction wrong is silent, because the shipped
+  template still passes every check and the defect appears only after a fill.
 
 ## The slot name
 

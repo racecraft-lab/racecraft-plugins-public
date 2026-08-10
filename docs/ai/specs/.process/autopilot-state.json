@@ -3,8 +3,8 @@
   "spec_id": "ART-002",
   "feature_dir": "specs/art-002-draft-pr-template-set",
   "branch": "art-002-draft-pr-template-set",
-  "status": "in_progress",
-  "active_step": "Phase 6: Analyze",
+  "status": "completed",
+  "active_step": null,
   "updated_at": "2026-08-10T00:00:00Z",
   "stage": "plan",
   "prior_run_note": "completed_archived",
@@ -108,15 +108,15 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "not_started"
+      "status": "skipped: executor reported zero unresolved items"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "not_started"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement",
@@ -215,5 +215,24 @@
       "plan setup gate: warn/pass, 530 LOC, zero blockers",
       "operator-ratified split (FR-040)"
     ]
+  },
+  "confidence_gate": {
+    "mode": "advisory",
+    "composite": 0.93,
+    "threshold": 0.9,
+    "pass": true,
+    "verdict": "proceed",
+    "criteria": {
+      "task_understanding": 0.96,
+      "approach_clarity": 0.94,
+      "requirements_alignment": 0.95,
+      "risk_assessment": 0.86,
+      "completeness": 0.94
+    }
+  },
+  "stage_boundary": {
+    "reached": true,
+    "terminal_step": "Phase 6.5: Confidence Gate",
+    "resume": "/speckit-pro:speckit-autopilot docs/ai/specs/.process/ART-002-workflow.md --stage implement"
   }
 }

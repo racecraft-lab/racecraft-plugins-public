@@ -171,6 +171,13 @@ native grouping element carrying a visible group label as its accessible name,
 plus one optional labelled reason field. Selecting a second approach replaces the
 first, and an export carries only the current selection.
 
+The grouping element and its label enclose the `approaches` fill region from
+outside, like the export controls and the status region beside them. Placed
+inside, the first fill deletes both, and every filled artifact carries ungrouped,
+unlabelled choices while the shipped template still passes. The label names the
+question the reader is answering rather than the approaches compared, so it is
+chrome rather than feature content.
+
 **A trap this port must avoid.** Upstream `04-code-understanding.html` runs an
 accordion script that force-closes every other `details.snippet` when one opens.
 That behavior must not reach the objection disclosures — it would close a reader's

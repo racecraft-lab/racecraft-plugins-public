@@ -397,7 +397,22 @@ the contract governs and the disagreement is a defect in this specification.
   turning FR-013's both-ways agreement into a check on a file no one authored.
   A writer that sets text through the document rather than through string
   assembly satisfies this by construction. After any fill, FR-013 MUST still hold.
-  [US1] [US2] [US3] [US4]
+
+  A fill replaces a whole region, so what sits inside a pair is exactly what a
+  fill may destroy, and everything a filled artifact still needs MUST sit outside
+  every pair. Template chrome is therefore outside: the slot inventory (FR-012),
+  the brand mark (FR-035), both export controls and the line saying what each one
+  is for (FR-019), the line saying recorded input is not saved (FR-018a), the
+  status region and the clipboard fallback field (FR-024, FR-025), and the
+  single-choice control's grouping element with its visible group label (FR-017).
+  A region's own worked-example content and its per-item anchors are inside by
+  definition — they are what a fill replaces. Beyond those, exactly two authored
+  elements sit **inside** a region on purpose, each because it must not survive a
+  fill: the sample-content notice (FR-014a) and each diagram's text equivalent
+  (FR-030a). Getting one of these backwards is silent —
+  the shipped template passes every check in this specification, and the defect
+  appears only in a filled artifact, where a reader has no way to know something
+  was deleted. [US1] [US2] [US3] [US4]
 - **FR-012**: Each template MUST document its own slot inventory in a single
   HTML comment placed immediately after its attribution header and outside every
   fill region, carrying none of the attribution header's own labels or literals
@@ -510,7 +525,14 @@ the contract governs and the disagreement is a defect in this specification.
   optional; an export names the absence of a reason rather than omitting it or
   blocking on it. Requiring a reason would either strand the reader's real
   conclusion or pressure filler text, and there is no submission to enforce it
-  against. [US3]
+  against.
+
+  The grouping element and its label MUST enclose the `approaches` fill region
+  from outside rather than sit inside it, under FR-011's rule. They are template
+  chrome, not feature content: the group label names the question the reader is
+  answering, not the approaches being compared. Placed inside, the first fill
+  would delete both, and every filled artifact would carry ungrouped, unlabelled
+  choices while the shipped template still passed. [US3]
 - **FR-017a**: Controls serving the same function across the items of one list
   MUST be identified consistently — same structure, same labelling, same exposed
   state — which follows from building them all from one routine rather than
@@ -763,8 +785,21 @@ the contract governs and the disagreement is a defect in this specification.
   canonical block supplies either one — the head block carries the policy
   declaration, the typeface request, and the theme script and nothing else — so
   both are the template's own obligation, and both are what a reader's assistive
-  technology takes its pronunciation and its window identity from. [US1] [US2]
-  [US3] [US4]
+  technology takes its pronunciation and its window identity from.
+
+  The title names the feature, which makes it the one place this feature puts
+  feature-specific text outside a fill region, and that needs reconciling with
+  FR-015 rather than leaving the two to contradict each other. It is not a slot:
+  FR-015 governs delimited regions of rendered content, and a document title is
+  head metadata a fill region cannot enclose. So the shipped title names the
+  invented sample feature, correctly, while the artifact is a sample — and a
+  filled artifact would keep naming it unless something updates it. Nothing in
+  this feature can, because nothing here fills anything. The obligation is
+  therefore handed to ART-007 and recorded under *Dependencies*: it MUST rewrite
+  the title alongside the regions it fills. Until it does, a filled artifact
+  carries the right content under a stale window identity, which is the exact
+  harm the "Feature-specific content outside a slot" edge case describes.
+  [US1] [US2] [US3] [US4]
 - **FR-035b**: Each template MUST carry exactly one top-level heading and MUST
   NOT skip a heading rank, so the outline a reader navigates by matches the
   document they see. Because a later authoring agent replaces a whole region
@@ -823,6 +858,29 @@ the contract governs and the disagreement is a defect in this specification.
   US3 and US4 and theirs, and branches from a state that already contains the
   first. [US1] [US2] [US3] [US4]
 
+### Non-Goals
+
+Carried from the design concept, which is the source of truth for what this
+feature is not. Each pull request description restates these, so they are stated
+here rather than left in a scoping document a reviewer may not open.
+
+- **Authoring logic that populates the fill regions.** That is ART-007. This
+  feature delivers the regions, their inventory, and the capture affordances; it
+  fills nothing.
+- **Any edit to a shared foundation file** — the brand token file, the canonical
+  head block, the contract document, the routing signal vocabulary, the upstream
+  notice, or any catalog entry other than the four status values (FR-008,
+  FR-009).
+- **Vendoring upstream template bytes.** Upstream sources are fetched read-only
+  at implement time and only branded derivatives are committed.
+- **A dedicated acceptance-harness page.** The manual browser checks are recorded
+  as numbered steps in the feature's acceptance runbook instead (FR-038). ART-001
+  built a harness; this feature deliberately does not repeat that.
+- **Automated browser testing.** Repository tests stay on the Python standard
+  library, so the render, console, keyboard, and clipboard checks stay manual.
+- **Persisting what a reader records.** Input lives for the life of the tab; the
+  export is how work leaves the document (FR-018a).
+
 ### Reviewability Notes
 
 - No typed reviewability exception is claimed. Each slice sits **above the warn
@@ -845,19 +903,33 @@ the contract governs and the disagreement is a defect in this specification.
 - **Primary surface**: docs/process — the shipped gallery templates
 - **Secondary surfaces, if any**: seed/config (the routing catalog's status
   values); harness/adapter (the fill-region validation)
-- **Projected reviewable LOC**: ~530 per slice, measured from the plan's declared
-  file operations rather than estimated from scope, and excluding declared
-  generated payload artifacts
+- **Projected reviewable LOC**: ~530 per slice of authored template lines,
+  measured from the plan's declared file operations rather than estimated from
+  scope. Two things sit outside that figure, and both are named here so the plan
+  and this budget agree on what the number covers. The first is the preset's own
+  exclusion: declared generated payload artifacts. The second is a departure from
+  it, stated as one rather than left to be inferred — the ~250-line
+  repository-only validation module slice 1 carries is counted on the
+  harness/adapter surface instead of inside a shipped-template line count,
+  because the two are read by different reviewers for different reasons. The
+  preset excludes generated, lock, and vendor artifacts and does not exclude test
+  code, so the combined figure is stated too and a reviewer may use either:
+  **slice 1's full authored surface is ~505 template lines plus a ~250-line
+  validation module, ~755 in total; slice 2's is ~530.** Both sit below the 800
+  block, so the verdict is `warn` on either reading and the recorded gate
+  evidence of 530 is the narrower of two numbers rather than the only one.
 - **Projected production files**: 4 net-new template files across the feature (2
   per slice), plus the routing catalog modified once per slice — 3 production
   files per slice
-- **Projected total files**: ~7 across the feature; 6 per slice, excluding
-  declared generated payload artifacts
+- **Projected total authored files**: 8 distinct files across the feature — 6 in
+  slice 1 and 3 in slice 2, the routing catalog being the one file both slices
+  edit. Declared generated payload artifacts are excluded.
 - **Budget result**: **warn, passing, zero blockers.** Measured at 530 reviewable
   LOC per slice against a 400 warn and an 800 block; 3 production files against a
-  6-file warn; 6 total files against a 15-file warn; one primary surface. Only
-  the LOC dimension warns. A warning proceeds when the workflow records the scope
-  budget and the split decision, and it records both.
+  6-file warn; 6 authored files in slice 1 and 3 in slice 2 against a 15-file
+  warn; one primary surface. Only the LOC dimension warns. A warning proceeds
+  when the workflow records the scope budget and the split decision, and it
+  records both.
 - **Split decision**: Split into two vertical slices delivered as two sequential
   pull requests, per the design concept's Q10 and its follow-up. Slice 1 is the
   two templates the draft-PR stage routes unconditionally (US1, US2), each
@@ -1048,3 +1120,14 @@ the contract governs and the disagreement is a defect in this specification.
   browser is introduced, so it would ship as dead code; and it would be
   triplicated across three templates that have no shared runtime, against a
   reviewability budget already warning.
+
+- **Handed to ART-007 — the document title.** FR-035a requires each template to
+  carry a page title naming the artifact and the feature. A title is head
+  metadata, so no fill region encloses it and no fill replaces it. ART-007 MUST
+  therefore rewrite the title alongside the regions it fills, to the real
+  feature's identifier and name. Left alone, a filled artifact reads correctly
+  and announces the invented sample feature as its window identity, which is
+  wrong in the one place a reader is least likely to check and which assistive
+  technology reads aloud. This is the only feature-specific text this feature
+  places outside a fill region, and it is named rather than left implicit for
+  that reason.
