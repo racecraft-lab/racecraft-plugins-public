@@ -32,7 +32,7 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | G1 pass — 4 FRs, 2 user stories, 6 success criteria, 0 markers |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
@@ -85,7 +85,7 @@ Each phase requires **human review and approval** before proceeding:
 | Field | Value |
 |-------|-------|
 | Feature dir | pinned via `.specify/feature.json` (gitignored) to `specs/art-012-implementation-notes-capture` |
-| `ON_FEATURE_BRANCH` | **true** (asserted by orchestrator; the upstream `^[0-9]{3}-` regex does not match this repo's namespaced spec IDs, so `check-prerequisites` reports `on_feature_branch: false` — the branch is real and `feature.json` is the sanctioned resolution path) |
+| `ON_FEATURE_BRANCH` | **true** — the 2.23.0 runner's `check-prerequisites` reports `on_feature_branch: true` for this namespaced branch (`branch` check detail: `worktree=true,feature=true`). The `feature.json` pin still serves the vendored `check-prerequisites.sh` path the `/speckit-*` phase commands call internally, whose `^[0-9]{3}-` regex does not match this repo's namespaced spec IDs. |
 | `before_specify` → `speckit.git.feature` (`optional: false`) | **SKIP** — the branch already exists and is checked out in this worktree; the hook's purpose is satisfied |
 
 ### Reviewability Setup Gate (recorded at scaffold time)
@@ -108,6 +108,37 @@ allowance (warn 400 / block 800).
 scope (reporting contract → orchestrator append → consumer hand-off) has no
 horizontal layering to re-slice.
 
+### Phase 0 Prerequisites (recorded at run time, 2026-08-10)
+
+Stage resolution (Step 0.6c): `Stage: plan (auto-detect) — auto-detect: the
+first non-terminal planning phase is Specify, which is ⏳ Pending`. The state
+slot was reclaimed from `docs/ai/specs/.process/ART-006-workflow.md`
+(prior status: `completed_archived`).
+
+| Check | Result |
+|-------|--------|
+| `check-prerequisites` | `all_pass: true` — CLI `specify 0.11.8`, project initialized, constitution present, all SpecKit commands installed, workflow file exists, `branch: art-012-implementation-notes-capture` (`worktree=true,feature=true`) |
+| `detect-commands` | stack `python`; `UNIT_TEST` / `FULL_VERIFY` = `python3 tests/speckit-pro/run-all.py`; `BUILD` / `TYPECHECK` / `LINT` = `N/A` (evidence: `tests/speckit-pro/run-all.py`) |
+| `detect-presets` | `speckit-pro-reviewability` v1.0.0 resolves spec/plan/tasks templates; 18 hook events configured |
+| `resolve-confidence-mode` | `advisory` (no `--strict` / `--advisory` flag, no local config file) |
+| Settings | no `.claude/speckit-pro.local.md` — defaults: consensus `tier-a`, gate-failure `stop`, auto-commit on |
+| Extensions installed | `archive`, `checkpoint`, `git`, `retrospective`, `speckit-utils`, `verify`, `verify-tasks` (all enabled) |
+| `PROJECT_IMPLEMENTATION_AGENT` | none detected in `.claude/agents/` (only `plugin-release-auditor`, `speckit-skill-reviewer`) → fallback `speckit-pro:phase-executor` |
+| Archive sweep | no-op — `specs/` holds only this run's current target, which the sweep excludes by contract; every prior spec is already archived |
+
+**G0 test-count baseline (preserve; do not recompute):** `python3
+tests/speckit-pro/run-all.py` → **7226/7226 passed** (L1 1447, L4 5593,
+L5 186), toolchain preflight ok. G7 verifies the count *increased* against
+this number, so a later `--stage implement` run in a fresh session MUST read
+it from here rather than re-measuring a tree that already contains this
+spec's additions.
+
+**Constitution validation:** the only runnable `PROJECT_COMMANDS` gate for
+this stack is the test suite, and it passes at the baseline above.
+`TYPECHECK`, `LINT`, and `BUILD` are `N/A` for a Markdown-plus-stdlib-Python
+surface, so no principle has an unrun check. Principles I–VI show no conflict
+with this spec's scope; re-verify after Plan.
+
 ---
 
 ## Specification Context
@@ -119,6 +150,7 @@ horizontal layering to re-slice.
 | **Spec ID** | ART-012 |
 | **Name** | Implementation-Notes Capture |
 | **Branch** | `art-012-implementation-notes-capture` |
+| **Stage** | plan |
 | **Dependencies** | ART-006 (Autopilot Staging) — complete, PR #422 |
 | **Enables** | ART-010 (Final-PR Writeup, Companions & Ready Flip) — writeup depth |
 | **Priority** | P2 |
@@ -218,17 +250,27 @@ both need a durable record to draw from, and today there is none.
 
 ### Specify Results
 
-<!-- Fill in after running the command -->
-
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | <!-- e.g., FR-001 through FR-020 --> |
-| User Stories | <!-- Count --> |
-| Acceptance Criteria | <!-- Count --> |
+| Functional Requirements | FR-001 through FR-004 (4) |
+| User Stories | 2 (US1 durable per-task record, P1; US2 one reporting field, P2) |
+| Acceptance Criteria | 8 acceptance scenarios (5 under US1, 3 under US2) + 7 edge cases |
+| Success Criteria | SC-001 through SC-006 (6) |
+| `[NEEDS CLARIFICATION]` markers | 0 |
+
+**G1 PASS.** Runner `validate-gate` returned
+`{"gate":"G1","pass":true,"reason":"spec.md exists with 0 markers","markers":0,"details":[]}`.
+An independent grep confirms zero markers, and a privacy grep confirms no
+absolute `/Users/` or `/home/` path leaked into the authored spec.
+
+The spec's own reviewability budget re-derives the same figures this workflow
+recorded at scaffold: primary surface harness/adapter, 115 projected reviewable
+LOC (modify-weighted), 3 production files, 6 total files, within budget, one
+slice, no exception claimed.
 
 ### Files Generated
 
-- [ ] `specs/art-012-implementation-notes-capture/spec.md`
+- [x] `specs/art-012-implementation-notes-capture/spec.md`
 
 ### SpecKit Traceability Markers
 
@@ -324,6 +366,39 @@ fail-open and logs a gap without blocking (Q4)?
   (docs/ai/specs/.process/ART-012-design-concept.md) if planning needs
   context beyond this prompt — it is the source of truth for every
   scoping decision (Q1–Q8) captured during grill-me.
+
+## Verified Repository Facts (recorded at Phase 0, 2026-08-10)
+
+Both were confirmed by reading the tree; plan against these, not against
+assumptions.
+
+- **The reporting contract is one shared edit; the append logic is two.**
+  `speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md` is shared:
+  the Codex SKILL.md links into the Claude copy
+  (`speckit-pro/codex-skills/speckit-autopilot/SKILL.md:921` and `:1063` both
+  point at `../../skills/speckit-autopilot/references/tdd-protocol.md`), so the
+  new `**Deviations/Edge cases/Surprises:**` line lands once, next to
+  `**Errors:**` at `tdd-protocol.md:139`, inside the `## Task Result: <TASK_ID>`
+  block that starts at `:124`. `phase-execution.md` is **mirrored**, not
+  shared: Codex carries its own
+  `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md`.
+  So the Phase 7 file-lifecycle and append steps must be written into **both**
+  `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`
+  (`### Phase 7: Implement (Task-Level Dispatch)` at `:788`) and the Codex
+  mirror. That is 3 production files, matching the roadmap's ~3 budget.
+  The Tasks Prompt below says "one shared edit, not two" — that is correct for
+  the reporting contract only, and does not extend to the append logic.
+
+- **Editing plugin source requires a payload rebuild.** `dist/claude/speckit-pro/`
+  and `dist/codex/speckit-pro/` are generated install payloads that mirror these
+  files (`dist/claude/speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md`
+  and `.../phase-execution.md` both exist; the Codex payload flattens
+  `codex-skills/.../references/*` into
+  `dist/codex/speckit-pro/skills/speckit-autopilot/references/`). Layer 1
+  enforces them via `validate-plugin-payload`, `validate-payload-completeness`,
+  and `validate-payload-conformance`. Regenerate with
+  `python3 scripts/build-plugin-payloads.py` — never hand-edit `dist/`
+  (AGENTS.md Editing Boundaries). Plan a task for this, or Layer 1 fails.
 
 ## Architecture Notes
 - **File location:** `specs/<branch>/.process/implementation-notes.md` —
