@@ -32,7 +32,7 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | spec.md + checklists/requirements.md written; 40 FRs, 4 user stories, 21 acceptance scenarios, 10 success criteria; 3 intentional `[NEEDS CLARIFICATION]` markers held for the three planned Clarify sessions |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
@@ -119,6 +119,72 @@ Each slice is end-to-end (templates → manifest rows → passing SPA checks) an
 independently green. The spec and plan cover both slices; tasks are ordered so
 slice 1 completes first, and the PR-time diff gate runs per slice.
 
+### Autopilot Pre-Flight Evidence (recorded 2026-08-10)
+
+**Resolved stage.** `plan` (auto-detect) — "the first non-terminal planning
+phase is Specify, which is ⏳ Pending". This invocation runs Specify through
+Analyze plus the G6.5 confidence gate, then stops at the stage boundary.
+Crossing into Implement requires an explicit `--stage implement`.
+
+**State-slot reclaim.** `autopilot-state.json` named
+`docs/ai/specs/.process/ART-006-workflow.md` with status `completed_archived`.
+The slot was re-initialised for ART-002 and the prior status recorded verbatim
+in `prior_run_note`. Reclaiming is normal single-slot operation, not an error.
+
+**Archive Sweep.** No candidates. `specs/` holds exactly one directory,
+`art-002-draft-pr-template-set`, which is the `--current-target` and is excluded
+by contract; ART-006 was archived in PR #424.
+
+**Tier-2 PROCESS relocation.** No eligible candidate. The only `specs/` entry is
+the current target and its `SPEC-MOC.md` already carries `structureVersion: 1`,
+so the already-current suppression applies.
+
+**Prerequisites** (runner `check-prerequisites`, `all_pass: true`):
+
+| Check | Result |
+|-------|--------|
+| SpecKit CLI | specify 0.11.8 |
+| Project init / constitution / commands | pass |
+| Branch | `art-002-draft-pr-template-set`, `is_worktree: true`, `on_feature_branch: true` |
+| Settings | none — defaults (`gate-failure: stop`, `auto-commit: true`) |
+| Capability coverage | advisory; acceptable fallbacks available |
+
+`on_feature_branch` now reports **true** because `.specify/feature.json` pins
+the feature directory. The Feature State table's note above (written at scaffold
+time when the helper reported `false`) is superseded by this measured result.
+
+**PROJECT_COMMANDS** (runner `detect-commands`, stack `python`, evidence
+`tests/speckit-pro/run-all.py`): `UNIT_TEST` and `FULL_VERIFY` are both
+`python3 tests/speckit-pro/run-all.py`; `BUILD`, `TYPECHECK`, `LINT`,
+`INTEGRATION_TEST` are `N/A`.
+
+**PRESET_CONVENTIONS** (runner `detect-presets`): preset
+`speckit-pro-reviewability` v1.0.0 supplies the top layer for the spec, plan,
+and tasks templates; 18 hook events configured.
+
+**MCP / capability enumeration.** Session exposes Context7 (library docs),
+Tavily (web research), RepoPrompt CE (codebase context), GitNexus (code graph),
+qmd (local vault), shadcn, and Claude-in-Chrome. Agent Teams are **not**
+available (`CLAUDE_CODE_ENABLE_AGENT_TEAMS` unset, Claude Code 2.1.226), so
+parallel fan-out uses batched background subagents in one message.
+
+**Confidence gate mode.** `advisory` (runner `resolve-confidence-mode`, default
+precedence — no flag, no local config).
+
+**Implementation agent.** `.claude/agents/` holds only
+`plugin-release-auditor.md` and `speckit-skill-reviewer.md`, neither an
+implementation agent, so `PROJECT_IMPLEMENTATION_AGENT` falls back to
+`speckit-pro:phase-executor`.
+
+**G0 test-count baseline.** `python3 tests/speckit-pro/run-all.py` →
+**7226/7226 passed** (L1 1447, L4 5593, L5 186). This is the baseline G7
+compares against; do not recompute it after planning.
+
+**Constitution validation.** The four principles the spec touches are verified
+by the same suite, which is green at baseline: I (Plugin Structure) via L1
+1447/1447, II (Cross-Platform Runtime & Script Safety) via L4 5593/5593, IV
+(Test Coverage Before Merge) and VI (KISS) via the full 7226/7226 run.
+
 ---
 
 ## Specification Context
@@ -133,6 +199,7 @@ slice 1 completes first, and the PR-time diff gate runs per slice.
 | **Dependencies** | ART-001 (brand kit, manifest schema, SPA contract — satisfied by PR #407, fix #409) |
 | **Enables** | ART-007 (Draft-PR Emission) |
 | **Priority** | P1 |
+| **Stage** | plan |
 
 ### Success Criteria Summary
 
@@ -238,17 +305,59 @@ Slice 2 (conditionally routed; branches after slice 1 merges):
 
 ### Specify Results
 
-<!-- Fill in after running the command -->
-
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | 40 (FR-001…FR-040) |
+| User Stories | 4 — US1 Implementation Plan (P1), US2 Spec Explainer (P2), US3 Code Approaches (P3), US4 Module Map (P4) |
+| Acceptance Criteria | 21 acceptance scenarios (6/5/5/5) + 10 success criteria (SC-001…SC-010) + 11 edge cases |
+
+FR grouping: artifact form (7), routing catalog (3), fill regions (5), reader
+capture (3), export affordances (7), per-template content (5), accessibility
+(5), verification and delivery (5). Every FR carries `[USn]` tags: US1 on 35
+FRs, US2 on 27, US3 on 34, US4 on 35.
+
+Declared reviewability budget: primary surface docs/process; ~380 reviewable
+LOC feature-wide, ~190 per slice; 4 net-new production files (2 per slice) plus
+the catalog modified once per slice. Within budget; the two-sequential-PR split
+is recorded.
+
+**G1 routing decision — proceed to Clarify.** A direct
+`grep -c "NEEDS CLARIFICATION" spec.md` returns **3**; the three markers are
+deliberate, one per planned Clarify session. Runner helper `validate-gate`
+reported `{"gate":"G1","markers":0,"pass":true}` because it matches the bare
+`[NEEDS CLARIFICATION]` token and this spec uses the colon form
+`[NEEDS CLARIFICATION: …]`. The routing outcome is the same either way and G2's
+check is a substring grep, which does catch the colon form. Recorded as a
+non-blocking helper diagnostic, not a gate failure.
+
+Deliberately open markers carried into Clarify:
+
+| # | Section / FR | Held for |
+|---|--------------|----------|
+| 1 | Functional Requirements → Fill regions, FR-015 | Session 1 — exact slot inventory, granularity, and source artifact per slot; names must not be invented before the upstream sources are read |
+| 2 | Functional Requirements → What the reader records, FR-018 | Session 2 — disclosure vs revealed objection fields, which items an export lists, empty-state export text, how an export names an item |
+| 3 | Functional Requirements → What each template presents, FR-030 | Session 3 — whether each upstream drawing mechanism survives brand re-styling without a prohibited construct |
 
 ### Files Generated
 
-- [ ] `specs/art-002-draft-pr-template-set/spec.md`
+- [x] `specs/art-002-draft-pr-template-set/spec.md` (573 lines)
+- [x] `specs/art-002-draft-pr-template-set/checklists/requirements.md` (64 lines)
+
+### Constitution Validation (initial, after Specify)
+
+`python3 tests/speckit-pro/run-all.py --layer 1` → **1447/1447 passed**,
+including `validate-moc-stale-index` and `validate-spec-index-determinism`, so
+the new spec files did not stale the SPEC-MOC generated index. Absolute-path
+and template-placeholder scans of both authored files: clean.
+
+### Hook Disposition (Specify)
+
+| Hook | Optional | Disposition |
+|------|----------|-------------|
+| `before_specify` → `speckit.git.feature` | false | **SKIP** — branch already exists and is checked out; the hook's purpose is satisfied |
+| `before_specify` → `speckit.archive.run` | true | Announced, not executed (sweep found no candidates) |
+| `after_specify` → `speckit.speckit-utils.doctor` | true | Announced, not executed |
+| `after_specify` → `speckit.git.commit` | true | Announced, not executed — the orchestrator owns commits |
 
 ### SpecKit Traceability Markers
 

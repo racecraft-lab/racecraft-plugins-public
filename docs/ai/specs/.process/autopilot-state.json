@@ -1,31 +1,41 @@
 {
-  "workflow_file": "docs/ai/specs/.process/ART-006-workflow.md",
-  "spec_id": "ART-006",
-  "feature_dir": "specs/art-006-autopilot-staging",
-  "branch": "art-006-autopilot-staging",
-  "status": "completed_archived",
-  "active_step": null,
-  "updated_at": "2026-08-09T00:00:00Z",
+  "workflow_file": "docs/ai/specs/.process/ART-002-workflow.md",
+  "spec_id": "ART-002",
+  "feature_dir": "specs/art-002-draft-pr-template-set",
+  "branch": "art-002-draft-pr-template-set",
+  "status": "in_progress",
+  "active_step": "Phase 2: Clarify - Fill-Region Slot Inventory",
+  "updated_at": "2026-08-10T00:00:00Z",
   "stage": "plan",
-  "prior_run_note": "Previous state pointed at ART-001 (completed_archived). autopilot-state.json is the current-in-flight pointer for one run and is overwritten per run; ART-001's durable record remains its own workflow file, which survives archive.",
+  "prior_run_note": "completed_archived",
   "settings": {
     "consensus_mode": "tier-a",
     "gate_failure": "stop",
     "auto_commit": true,
     "confidence_gate_mode": "advisory",
-    "agent_teams_available": true
+    "agent_teams_available": false
   },
   "archive_sweep": {
-    "status": "applied",
-    "reason": "ART-006 merged in PR #422; live-reader scan on the bare directory name found no dependent code",
-    "archived_specs": [
-      "art-006-autopilot-staging"
-    ]
+    "status": "no_candidates",
+    "reason": "specs/ contains exactly one directory, art-002-draft-pr-template-set, which is the --current-target and is excluded from sweep by contract; ART-006 was already archived in PR #424",
+    "archived_specs": []
   },
   "project_commands": {
     "UNIT_TEST": "python3 tests/speckit-pro/run-all.py",
     "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
-    "structural_suite": "python3 tests/speckit-pro/run-all.py --layer 1"
+    "structural_suite": "python3 tests/speckit-pro/run-all.py --layer 1",
+    "BUILD": "N/A",
+    "TYPECHECK": "N/A",
+    "LINT": "N/A",
+    "docs_reference": "pnpm --dir docs-site reference:generate"
+  },
+  "test_baseline_g0": {
+    "passed": 7226,
+    "total": 7226,
+    "l1": 1447,
+    "l4": 5593,
+    "l5": 186,
+    "captured_at_phase": "Phase 0: Prerequisites"
   },
   "plan": [
     {
@@ -41,177 +51,124 @@
       "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Stage State Representation",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Fill-Region Slot Inventory",
+      "status": "in_progress"
     },
     {
-      "step": "Phase 2: Clarify - Stage State Representation Consensus",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Fill-Region Slot Inventory Consensus",
+      "status": "not_started"
     },
     {
-      "step": "Phase 2: Clarify - Platform Parity And Enforcement Surface",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Export And Capture Interaction Details",
+      "status": "not_started"
     },
     {
-      "step": "Phase 2: Clarify - Platform Parity And Enforcement Surface Consensus",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Export And Capture Interaction Details Consensus",
+      "status": "not_started"
     },
     {
-      "step": "Phase 2: Clarify - Stage Boundary Semantics",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Upstream Port Fidelity",
+      "status": "not_started"
     },
     {
-      "step": "Phase 2: Clarify - Stage Boundary Semantics Consensus",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Upstream Port Fidelity Consensus",
+      "status": "not_started"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "completed"
+      "status": "not_started"
     },
     {
-      "step": "Phase 4: Checklist - state-management",
-      "status": "completed"
+      "step": "Phase 4: Checklist - accessibility",
+      "status": "not_started"
     },
     {
-      "step": "Phase 4: Checklist - state-management Consensus",
-      "status": "skipped: executor reported zero unresolved items"
+      "step": "Phase 4: Checklist - accessibility Consensus",
+      "status": "not_started"
     },
     {
-      "step": "Phase 4: Checklist - error-handling",
-      "status": "completed"
+      "step": "Phase 4: Checklist - ux",
+      "status": "not_started"
     },
     {
-      "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "skipped: executor reported zero unresolved items"
+      "step": "Phase 4: Checklist - ux Consensus",
+      "status": "not_started"
     },
     {
-      "step": "Phase 4: Checklist - api-contracts",
-      "status": "completed"
+      "step": "Phase 4: Checklist - security",
+      "status": "not_started"
     },
     {
-      "step": "Phase 4: Checklist - api-contracts Consensus",
-      "status": "skipped: executor reported zero unresolved items"
+      "step": "Phase 4: Checklist - security Consensus",
+      "status": "not_started"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "completed"
+      "status": "not_started"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "completed"
+      "status": "not_started"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "skipped: executor reported zero unresolved items"
+      "status": "not_started"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "completed"
+      "status": "not_started"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "completed"
+      "step": "Phase 7: Implement",
+      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "skipped: doctor extension not installed"
+      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     },
     {
       "step": "Post: Code Review",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     },
     {
       "step": "Post: Self-Review",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "skipped: generate-uat-skeleton operation is deferred in this repository"
+      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     },
     {
       "step": "Post: PR Creation",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     },
     {
       "step": "Post: Retrospective",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
     }
-  ],
-  "confidence_gate": {
-    "mode": "advisory",
-    "composite": 0.88,
-    "verdict": "proceed",
-    "test_baseline": {
-      "passed": 7052,
-      "total": 7052,
-      "l1": 1443,
-      "l4": 5423,
-      "l5": 186
-    }
-  },
-  "test_baseline_final": {
-    "passed": 7226,
-    "total": 7226,
-    "g0_baseline": 7052
-  },
-  "final_reviewability": {
-    "logic_lines": 340,
-    "prose_lines": 535,
-    "test_lines": 1152,
-    "human_reviewable_total": 2020,
-    "files": 29,
-    "declared": 459,
-    "declared_files": 17,
-    "verdict": "over declared budget; composition recorded; split decision deferred to human reviewer"
-  },
-  "pull_request": {
-    "number": 422,
-    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/422",
-    "state": "open",
-    "merged_by_agent": false
-  },
-  "follow_up": {
-    "roadmap_id": "ART-014",
-    "title": "Phase-Guard Enforcement Repair",
-    "reason": "workflow-identity check is inert; found during ART-006, deliberately not fixed here"
-  },
-  "archive": {
-    "archived_at": "2026-08-09",
-    "pull_request": 422,
-    "merge_commit": "5e184e332b8c8f8442cdbda37c3bdc45cb6d62ff",
-    "merged_at": "2026-08-09T17:50:51Z",
-    "cleanup_branch": "chore/archive-art-006-post-merge",
-    "cleanup_applied": true,
-    "source_spec_path_removed": "specs/art-006-autopilot-staging",
-    "process_evidence_preserved": [
-      "docs/ai/specs/.process/ART-006-workflow.md",
-      "docs/ai/specs/.process/ART-006-design-concept.md",
-      "docs/ai/specs/.process/ART-006-retrospective.md"
-    ],
-    "report": ".specify/memory/archive-reports/2026-08-09-art-006-post-merge-hygiene.md"
-  }
+  ]
 }
