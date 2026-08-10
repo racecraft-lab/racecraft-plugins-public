@@ -127,7 +127,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
 | ART-001 | Artifact Brand Kit & Gallery Foundation | ✅ Complete / Archived | [.process/ART-001-workflow.md](.process/ART-001-workflow.md) | PR #407 merged with follow-up fix PR #409; the brand kit, gallery manifest, SPA contract, and validator live outside `specs/**`. T026 and T027 ran on 2026-07-29, 12 of 12 manual scenarios passed; the harness is preserved at [.process/ART-001-acceptance-harness.html](.process/ART-001-acceptance-harness.html) |
-| ART-002 | Draft-PR Template Set | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
+| ART-002 | Draft-PR Template Set | 🔄 In Progress | [.process/ART-002-workflow.md](.process/ART-002-workflow.md) | Scaffolded 2026-08-10 on `art-002-draft-pr-template-set`; grill-me split: 2 vertical slices as two sequential PRs (always-routed templates first) |
 | ART-003 | Final-PR Template Set | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-004 | Gallery Completion: Design & Prototyping | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |

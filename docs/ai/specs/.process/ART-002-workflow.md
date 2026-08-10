@@ -1,0 +1,765 @@
+# SpecKit Workflow: ART-002 — Draft-PR Template Set
+
+**Template Version**: 1.0.0
+**Created**: 2026-08-10
+**Purpose**: Executable workflow for the ART-002 autopilot run. The prompts below are what each phase executes.
+
+---
+
+## Design Concept
+
+This workflow file was enriched from a Grill Me interview run during
+`/speckit-pro:speckit-scaffold-spec`. The full Q&A log, Goals, Non-goals, and Open
+Questions live at:
+
+```text
+docs/ai/specs/.process/ART-002-design-concept.md
+```
+
+Re-read it before each phase if you need to disambiguate a prompt. The
+Specify and Clarify Prompts below were populated from that interview,
+so the design concept doc is the source of truth for any decision
+captured during scoping.
+
+> **Note:** Grill Me is human-in-the-loop only. It is **not** part of
+> the autopilot loop. Once the workflow file is populated and autopilot
+> begins, clarifications happen via `/speckit-clarify` and the
+> consensus protocol — never via grill-me.
+
+---
+
+## Workflow Overview
+
+| Phase | Command | Status | Notes |
+|-------|---------|--------|-------|
+| Specify | `/speckit-specify` | ⏳ Pending | |
+| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Plan | `/speckit-plan` | ⏳ Pending | |
+| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
+| Implement | `/speckit-implement` | ⏳ Pending | |
+| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
+
+**Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
+
+G6.5 is advisory by default, so no phase of the main loop flips its row. Leaving
+it Pending is legitimate and does not make the rows below it read as out of
+order; record the verdict in [Phase 6.5](#phase-65-confidence-gate) when the
+gate runs.
+
+### Phase Gates (SpecKit Best Practice)
+
+Each phase requires **human review and approval** before proceeding:
+
+| Gate | Checkpoint | Approval Criteria |
+|------|------------|-------------------|
+| G1 | After Specify | All user stories clear, no `[NEEDS CLARIFICATION]` markers remain |
+| G2 | After Clarify | Ambiguities resolved, decisions documented |
+| G3 | After Plan | Architecture approved, constitution gates pass, dependencies identified |
+| G4 | After Checklist | All `[Gap]` markers addressed |
+| G5 | After Tasks | Task coverage verified, dependencies ordered |
+| G6 | After Analyze | No `CRITICAL` issues, `WARNING` items reviewed |
+| G6.5 | Before Implement | Composite confidence meets the autonomous implementation threshold |
+| G7 | After Each Implementation Phase | Tests pass, manual verification complete |
+
+---
+
+## Prerequisites
+
+### Constitution Validation
+
+**Before starting any workflow phase**, verify alignment with the project constitution (`.specify/memory/constitution.md`):
+
+| Principle | Requirement | Verification |
+|-----------|-------------|--------------|
+| I. Plugin Structure Compliance | Gallery artifacts and manifest keep their validated shape | `python3 tests/speckit-pro/run-all.py --layer 1` |
+| II. Cross-Platform Runtime & Script Safety | New test code is Python 3.11+ stdlib only; no Bash/`jq` | Layer 4 via `python3 tests/speckit-pro/run-all.py` |
+| IV. Test Coverage Before Merge | The fill-region test lands with the templates it covers | Repository suite green from the worktree |
+| VI. KISS, Simplicity & YAGNI | Ports change two blocks, one file, one status flip — nothing shared | Code review against `speckit-pro/artifact-gallery/SPA-CONTRACT.md` |
+
+**Constitution Check:** ✅ (verified at scaffold time; re-verify at G1)
+
+### Feature State (namespaced branch)
+
+| Field | Value |
+|-------|-------|
+| Feature dir | pinned via `.specify/feature.json` (gitignored) to `specs/art-002-draft-pr-template-set` |
+| `ON_FEATURE_BRANCH` | **true** (asserted by orchestrator; the upstream `^[0-9]{3}-` regex does not match this repo's namespaced spec IDs, so `check-prerequisites` reports `on_feature_branch: false` — the branch is real and `feature.json` is the sanctioned resolution path) |
+| `before_specify` → `speckit.git.feature` (`optional: false`) | **SKIP** — the branch already exists and is checked out in this worktree; the hook's purpose is satisfied |
+
+### Reviewability Setup Gate (recorded at scaffold time)
+
+Runner helper `reviewability-gate` in setup mode against the technical roadmap
+returned `status: "warn", pass: true` with the single warning
+`primary surfaces 3 exceeds warn threshold 1`. That count comes from the
+helper's whole-roadmap scan; ART-002's own recorded budget is one primary
+surface (docs/process — shipped templates). Warnings may proceed when the
+workflow records the scope budget and split decision, which the next two
+subsections do.
+
+**Scope budget (from the roadmap's ART-002 section):** projected 380
+reviewable production LOC, 4 production files (net-new), ~7 total files, one
+primary surface. Net-new-only work carries the 1.5x greenfield allowance
+(warn 600 / block 1200).
+
+**Split decision (grill-me Q10):** ART-002 is one spec delivered as **two
+vertical slices in two sequential PRs**:
+
+1. **Slice 1** — the two always-routed templates (`implementation-plan`,
+   `spec-explainer`), their manifest `status` flips, and their share of the
+   Layer 4 fill-region test. Lands on this branch
+   (`art-002-draft-pr-template-set`) as the first PR.
+2. **Slice 2** — the two conditional templates (`code-approaches`,
+   `module-map`), their manifest flips, and their test share. Branches from
+   main **after slice 1 merges**; not stacked.
+
+Each slice is end-to-end (templates → manifest rows → passing SPA checks) and
+independently green. The spec and plan cover both slices; tasks are ordered so
+slice 1 completes first, and the PR-time diff gate runs per slice.
+
+---
+
+## Specification Context
+
+### Basic Information
+
+| Field | Value |
+|-------|-------|
+| **Spec ID** | ART-002 |
+| **Name** | Draft-PR Template Set |
+| **Branch** | `art-002-draft-pr-template-set` |
+| **Dependencies** | ART-001 (brand kit, manifest schema, SPA contract — satisfied by PR #407, fix #409) |
+| **Enables** | ART-007 (Draft-PR Emission) |
+| **Priority** | P1 |
+
+### Success Criteria Summary
+
+- [ ] Four branded single-file SPA templates exist under
+      `speckit-pro/artifact-gallery/templates/`: `implementation-plan.html`,
+      `spec-explainer.html`, `code-approaches.html`, `module-map.html`.
+- [ ] Each embeds both canonical blocks byte-for-byte, carries a correct
+      upstream attribution header, contains no prohibited construct, and its
+      manifest entry's `status` is flipped `planned` → `shipped` (the only
+      manifest change).
+- [ ] Fill regions are marked with paired HTML comments
+      (`<!-- FILL:<slot>:START/END -->`), documented by an in-file header
+      inventory, and shipped with representative fictional sample content.
+- [ ] Export affordances match each entry's declared `exports`:
+      implementation-plan and module-map export reader objections tied to
+      their phase/module via inline per-item note fields; code-approaches
+      exports the radio-selected approach plus reason; spec-explainer carries
+      no export controls.
+- [ ] A Layer 4 fill-region test (Python stdlib HTML parse) asserts a
+      hardcoded roadmap-named slot floor per template plus both-ways
+      header-inventory/body-marker agreement.
+- [ ] ART-001's gallery scanner passes over all four artifacts; Layer 1 and
+      the full repository suite are green; release payloads are regenerated.
+- [ ] Manual `file://` render/console checks are recorded as UAT runbook
+      steps and executed by the operator.
+
+---
+
+## Phase 1: Specify
+
+**When to run:** At the start of a new feature specification. Focus on **WHAT** and **WHY**, not implementation details. Output: `specs/art-002-draft-pr-template-set/spec.md`
+
+### Specify Prompt
+
+```text
+/speckit-specify
+
+## Feature: Draft-PR Template Set (ART-002)
+
+### Problem Statement
+The staged review workflow's plan stage ends at a draft PR the operator
+reviews before implementation, but the gallery has no planning-review
+artifacts for that checkpoint. Port the four draft-PR templates as
+Racecraft-branded, self-contained single-file SPAs so ART-007's plan stage
+has documents to populate. Without them, the plan-stage review has no
+artifact surface and the reviewer falls back to raw markdown.
+
+### Users
+- The operator reviewing a draft PR at the plan-stage checkpoint (reads the
+  artifacts, records objections/choices, exports conclusions).
+- The ART-007 authoring agent (fills the documented fill regions from
+  spec.md / plan.md / tasks.md / the design concept).
+- Gallery browsers deciding which template fits (judge by rendered sample).
+
+### User Stories (grouped by slice; slice 1 lands first)
+Slice 1 (always-routed at draft-pr stage):
+- [US1] Implementation Plan template: phases, data-flow diagram, mockup
+  slots, risk register, task inventory; inline per-item objection capture;
+  exports ["prompt", "markdown"] carrying objections tied to their phase.
+- [US2] Spec Explainer template: TL;DR, goals/non-goals, collapsible
+  acceptance criteria, FAQ from clarify answers; declared read-only
+  (exports []), so it carries no export controls.
+
+Slice 2 (conditionally routed; branches after slice 1 merges):
+- [US3] Code Approaches template: side-by-side trade-off comparison; radio
+  group selects the winning approach plus one "why" field; exports
+  ["prompt", "markdown"] carrying the chosen approach and reason.
+- [US4] Module Map template: boxes-and-arrows with hot path highlighted;
+  inline per-module objection capture; exports ["prompt", "markdown"]
+  carrying objections tied to their module.
+
+### Constraints
+- Every artifact obeys speckit-pro/artifact-gallery/SPA-CONTRACT.md: one
+  HTML file, both canonical blocks embedded byte-for-byte with markers
+  (BRAND-KIT from brand-kit.css, GALLERY-HEAD from theme-toggle.html),
+  exact-label upstream attribution header agreeing with the manifest entry,
+  no prohibited constructs, fonts as the single permitted external request.
+- Manifest change is exactly four status flips planned → shipped. No shared
+  foundation file changes, no id/trigger/exports edits.
+- Fill regions: paired HTML comments FILL:<slot>:START/END; slot inventory
+  documented in an in-file header comment; representative fictional sample
+  content inside every slot (grill-me Q1-Q3).
+- Export affordances follow the SPA contract's export obligations: live-state
+  derivation, keyboard operability, text success feedback, clipboard failure
+  reveals a selectable field, labels name the destination ("Copy as prompt",
+  "Copy as Markdown").
+- Accessibility: WCAG AA obligations inherited from the brand kit; color
+  never the only carrier of meaning; kit focus-visible treatment; reduced
+  motion honored for any motion the template adds.
+- Diagram surfaces keep the upstream template's mechanism, restyled with
+  brand tokens (grill-me Q6, moderate confidence — confirm during Plan).
+- Test code: Python 3.11+ stdlib only, under tests/speckit-pro/unit/, named
+  for durable capability (never a spec ID).
+
+### Out of Scope
+- Generation/authoring logic that populates fill regions (ART-007).
+- Editing brand-kit.css, theme-toggle.html, SPA-CONTRACT.md, the signal
+  vocabulary, or any other manifest entry.
+- Vendoring upstream files; only branded derivatives are committed.
+- Automated browser testing; file:// render checks stay manual UAT steps.
+- A dedicated acceptance-harness page (standard UAT runbook instead).
+```
+
+### Specify Results
+
+<!-- Fill in after running the command -->
+
+| Metric | Value |
+|--------|-------|
+| Functional Requirements | |
+| User Stories | |
+| Acceptance Criteria | |
+
+### Files Generated
+
+- [ ] `specs/art-002-draft-pr-template-set/spec.md`
+
+### SpecKit Traceability Markers
+
+Use these markers in spec.md for traceability through later phases:
+
+| Marker | Purpose | Example |
+|--------|---------|---------|
+| `[US1]`, `[US2]` | User story reference | `[US1] Implementation Plan template` |
+| `[FR-001]` | Functional requirement | `[FR-001] Both canonical blocks embedded byte-for-byte` |
+| `[NEEDS CLARIFICATION]` | Flag for Clarify phase | `Slot inventory naming [NEEDS CLARIFICATION]` |
+| `[P]` | Parallel-safe task | `[P] Can run alongside other tasks` |
+| `[Gap]` | Missing coverage | `[Gap] No task covers export failure path` |
+
+---
+
+## Phase 2: Clarify
+
+**When to run:** When spec has areas that could be interpreted multiple ways. 10-20 minutes here saves hours of rework later.
+
+**Best Practice:** Maximum 5 targeted questions per Clarify session.
+
+### Clarify Prompts
+
+#### Session 1: Fill-Region Slot Inventory
+
+```text
+/speckit-clarify Focus on the fill-region slot inventory: the exact kebab-case
+slot names per template (the design concept's first Open Question), which
+roadmap-named slots form the hardcoded Layer 4 test floor for each of the four
+templates, and the header-inventory comment format the doc/body agreement
+check parses. Slot names follow the manifest id character rules
+(filename-safe kebab-case). The design concept (grill-me Q1, Q2, Q7) fixed
+the mechanism; this session fixes the names.
+```
+
+#### Session 2: Export and Capture Interaction Details
+
+```text
+/speckit-clarify Focus on the capture-and-export surfaces: the disclosure
+pattern for inline per-item objection fields in implementation-plan and
+module-map (grill-me Q4), the radio-group + reason composition in
+code-approaches (Q5), what each export emits when no objection/choice exists
+(the contract forbids inventing conclusions), and the exact success/failure
+feedback text pattern for clipboard operations over file://.
+```
+
+#### Session 3: Upstream Port Fidelity
+
+```text
+/speckit-clarify Focus on porting fidelity after fetching the four upstream
+files from anthropics/html-effectiveness: whether each upstream diagram
+mechanism survives branding cleanly (design concept Open Question 2; Q6 chose
+keep-upstream at moderate confidence), which upstream sections map to which
+fill slots, and any upstream construct on the SPA contract's prohibited list
+that the port must drop.
+```
+
+### Clarify Results
+
+| Session | Focus Area | Questions | Key Outcomes |
+|---------|------------|-----------|--------------|
+| 1 | | | |
+| 2 | | | |
+| 3 | | | |
+
+---
+
+## Phase 3: Plan
+
+**When to run:** After spec is finalized. Generates technical implementation blueprint. Output: `specs/art-002-draft-pr-template-set/plan.md`
+
+### Plan Prompt
+
+```text
+/speckit-plan
+
+## Tech Stack
+- Artifacts: hand-authored HTML + CSS + vanilla inline JavaScript, one file
+  per template, no build step, no bundler, no external resource except the
+  two font hosts the canonical head block already requests.
+- Brand system: tokens from the embedded BRAND-KIT block (--rc-* custom
+  properties; heading face is --rc-font-display, NOT --rc-font-heading).
+- Testing: Python 3.11+ stdlib only (html.parser, json, unittest) under
+  tests/speckit-pro/unit/; repository suite via
+  python3 tests/speckit-pro/run-all.py.
+- Docs: pnpm --dir docs-site reference:generate after any tracked
+  .md/.py/.sh change under tests/speckit-pro/ (deps already installed in
+  this worktree).
+
+## Constraints
+- Read speckit-pro/artifact-gallery/SPA-CONTRACT.md in full before
+  designing; the validated shape is normative. A port changes two embedded
+  blocks, one new artifact file, and exactly one catalog value (status).
+- Slice ordering is load-bearing: slice 1 (implementation-plan,
+  spec-explainer) must be complete and green before slice 2 work begins;
+  slice 2 ships from a fresh branch after slice 1 merges (two sequential
+  PRs — grill-me Q10 and its route follow-up).
+- Fetch upstream sources read-only at implement time from
+  anthropics/html-effectiveness (files: 16-implementation-plan.html,
+  14-research-feature-explainer.html, 01-exploration-code-approaches.html,
+  04-code-understanding.html — all verified present on main). Commit only
+  branded derivatives.
+- Release payloads: gallery files ship in the plugin payload; account for
+  the generated-artifact contract (scripts/refresh-release-artifacts.py)
+  in the plan's Declared File Operations.
+
+## Architecture Notes
+Decisions fixed by the grill-me interview (quote the design concept,
+docs/ai/specs/.process/ART-002-design-concept.md, when a choice needs its
+"why"):
+- Q1: fill regions are paired HTML comment markers FILL:<slot>:START/END —
+  chosen to reuse the gallery's validated marker-pair convention and stdlib
+  HTMLParser comment handling.
+- Q2: slot inventory lives in an in-file header comment (self-describing
+  artifact; no shared-file edits).
+- Q3: every slot ships with representative fictional sample content.
+- Q4: implementation-plan and module-map capture objections via an inline
+  per-item keyboard-reachable disclosure + labeled textarea; exports walk
+  non-empty notes with item anchors.
+- Q5: code-approaches uses one radio per approach + a single labeled reason
+  textarea; export reads live selection state and explains when nothing is
+  selected.
+- Q6: diagram surfaces keep the upstream mechanism, restyled with brand
+  tokens (confirm cleanliness after fetching upstream; escalate only on a
+  prohibited-construct conflict).
+- Q7: the Layer 4 test asserts a hardcoded roadmap-named slot floor per
+  template AND both-ways agreement between header inventory and body
+  markers.
+- Q9: manual browser checks become numbered UAT runbook steps.
+```
+
+### Plan Results
+
+| Artifact | Status | Notes |
+|----------|--------|-------|
+| `plan.md` | ⏳ | Technical context, execution flow |
+| `research.md` | ⏳ | Decision rationales (if needed) |
+| `data-model.md` | ⏳ | Entities and types |
+| `contracts/` | ⏳ | Slot inventory + export payload contracts |
+| `quickstart.md` | ⏳ | Developer onboarding |
+
+---
+
+## Phase 4: Domain Checklists
+
+**When to run:** After `/speckit-plan` — validates both spec AND plan together. Run multiple times for different domains.
+
+**Best Practice:** Don't guess which domains to check. Analyze the spec first, then generate enriched prompts with spec-specific focus areas.
+
+### Step 1: Analyze Spec for Recommended Domains
+
+Signals present in ART-002: user-facing artifact UI with forms/disclosures
+(**ux**), WCAG/keyboard/contrast obligations inherited from the brand kit
+(**accessibility**), executable documents with prohibited-construct and
+untrusted-input rules (**security**). Three domains; api-contracts,
+streaming, and data-integrity do not apply to static single-file artifacts.
+
+### Step 2: Run Enriched Checklist Prompts
+
+#### 1. accessibility Checklist
+
+Why this domain: the SPA contract carries explicit WCAG AA obligations
+(contrast pairings, focus-visible, color-not-sole-carrier, reduced motion,
+keyboard-operable exports) that every new interactive surface must satisfy.
+
+```text
+/speckit-checklist accessibility
+
+Focus on Draft-PR Template Set requirements:
+- Inline objection disclosures and textareas: keyboard reachability, visible
+  focus, programmatic labels (Q4).
+- Radio group + reason field in code-approaches: native single-choice
+  semantics, state exposed to AT (Q5).
+- Export controls: operable by keyboard, success reported in text, clipboard
+  failure reveals a selectable field.
+- Color pairings drawn only from the audited brand-kit table;
+  --rc-border-subtle never carries meaning; --rc-danger-text for red body
+  copy.
+- Pay special attention to: the hot-path highlight in module-map — color
+  must not be the only carrier of the highlight (WCAG 1.4.1).
+```
+
+#### 2. ux Checklist
+
+Why this domain: four reader-facing documents whose purpose is a review
+checkpoint; a stranded conclusion defeats the stage.
+
+```text
+/speckit-checklist ux
+
+Focus on Draft-PR Template Set requirements:
+- Sample content reads as clearly fictional yet representative, so a gallery
+  browser can judge fit at a glance (Q3).
+- Objection capture sits inline with the item it attaches to; the tie is
+  structural, not prose (Q4).
+- Export content rules: the reader's conclusion with enough context to act
+  on alone — artifact, spec, and anchor named; never inventing conclusions.
+- Theme toggle, brand mark opt-in, and offline typeface degradation behave
+  per the head block.
+- Pay special attention to: what each export emits when the reader recorded
+  nothing — explain, never fabricate.
+```
+
+#### 3. security Checklist
+
+Why this domain: gallery artifacts are executable documents with a
+prohibited-construct list, a policy declaration, and (downstream, ART-007)
+untrusted-input fill rules the templates' structure must not undermine.
+
+```text
+/speckit-checklist security
+
+Focus on Draft-PR Template Set requirements:
+- No prohibited construct in any port: base element, scheme-relative
+  reference, on* handler attributes, srcdoc, form with submission target,
+  ping (upstream constructs on this list are dropped, never ported).
+- Script bodies survive the lexical URL scan; no external reference outside
+  the two font hosts; assets only as image/font data: URIs.
+- Fill-region placement keeps future interpolated values out of the four
+  forbidden contexts (script body, style body, URL-valued attribute, event
+  handler) so ART-007's generator can fill slots safely.
+- Attribution headers agree with each manifest entry (repository + file).
+- Pay special attention to: sample content inside FILL regions must sit in
+  text positions, modeling the contract's text-position rule for ART-007.
+```
+
+### Checklist Results
+
+| Checklist | Items | Gaps | Spec References |
+|-----------|-------|------|-----------------|
+| accessibility | | | |
+| ux | | | |
+| security | | | |
+| **Total** | | | |
+
+### Addressing Gaps
+
+When checklist identifies `[Gap]` items:
+
+1. Review the gap — is it a genuine missing requirement?
+2. Update `spec.md` or `plan.md` to address it
+3. Re-run the checklist to verify coverage
+4. If the gap is intentionally out of scope, document why
+
+---
+
+## Phase 5: Tasks
+
+**When to run:** After checklists complete (all gaps resolved). Output: `specs/art-002-draft-pr-template-set/tasks.md`
+
+### Tasks Prompt
+
+```text
+/speckit-tasks
+
+## Task Structure
+- Small, testable chunks (1-2 hours each)
+- Clear acceptance criteria referencing FR-xxx
+- Dependency ordering: foundation → slice 1 stories → slice 2 stories →
+  validation; slice 1 (US1, US2) must be fully green before any slice 2
+  (US3, US4) task starts — the slices ship as two sequential PRs
+- Mark parallel-safe tasks explicitly with [P] (the two templates within a
+  slice are parallel-safe; the shared Layer 4 test file is not)
+- Organize by user story, not by technical layer
+
+## Implementation Phases
+1. Foundation (Layer 4 fill-region test scaffolding: floor lists + doc/body
+   agreement parser — written RED first)
+2. US1 Implementation Plan + US2 Spec Explainer (slice 1) — port, brand,
+   fill regions, exports/read-only, manifest flips, tests green
+3. Payload regeneration + slice 1 closeout (PR 1)
+4. US3 Code Approaches + US4 Module Map (slice 2, after slice 1 merges) —
+   port, brand, fill regions, exports, manifest flips, tests green (PR 2)
+
+## Constraints
+- Test file under tests/speckit-pro/unit/, named for capability (e.g.
+  fill-region validation), NEVER for the spec ID
+- Templates land at speckit-pro/artifact-gallery/templates/<id>.html with
+  <id> exactly the manifest id
+- Any task fetching upstream sources is read-only network access; upstream
+  bytes never staged
+- Bound task generation by the design concept's Non-goals: no authoring
+  logic, no shared-file edits, no browser automation
+```
+
+### Tasks Results
+
+| Metric | Value |
+|--------|-------|
+| **Total Tasks** | |
+| **Phases** | |
+| **Parallel Opportunities** | |
+| **User Stories Covered** | |
+
+---
+
+## Atomicity Route
+
+**When this is filled:** After the Tasks phase / gate G5, the autopilot SKILL runs
+the read-only atomicity classifier and records its decision here. This is a
+**placeholder** until then — leave the cells blank during scoping. The classifier
+emits one machine-readable decision; the SKILL is what writes it into this section
+(the script never writes a file of its own). This route is recorded only here in the
+workflow file — never in the spec map. It is read downstream by the layer-planner and
+multi-PR emission work that builds on top of it; recording it now wires no PR creation
+or branch splitting on its own.
+
+The grill-me interview already committed to a two-slice, two-sequential-PR
+delivery (see Reviewability Setup Gate above); the classifier's decision is
+expected to agree (`split-PR`). If it disagrees, surface the conflict at G5
+rather than silently following either.
+
+| Field | Value | Meaning |
+|-------|-------|---------|
+| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
+| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
+| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+
+To produce the decision, run the classifier against the feature directory:
+
+```text
+runner helper atomicity-route specs/art-002-draft-pr-template-set
+```
+
+---
+
+## Phase 6: Analyze
+
+**When to run:** Always run after generating tasks to catch issues.
+
+### Analyze Prompt
+
+```text
+/speckit-analyze
+
+Focus on:
+1. Constitution alignment — Python-stdlib-only test code, no Bash/jq, plugin
+   structure intact
+2. Coverage gaps — every FR and user story has tasks; both slices covered;
+   the Layer 4 floor covers all roadmap-named slots
+3. Consistency between task file paths and the real gallery/test layout
+4. Drift against the design concept
+   (docs/ai/specs/.process/ART-002-design-concept.md): the concept's Goals,
+   Non-goals, and Q1-Q10 decisions are the source of truth for scoping
+   decisions — if spec.md, plan.md, or tasks.md contradicts it without an
+   explicit revision note, the downstream artifact is wrong
+5. Slice integrity — no slice 2 task is a prerequisite of a slice 1 task
+```
+
+### Analyze Severity Levels
+
+| Severity | Meaning | Action Required |
+|----------|---------|-----------------|
+| `CRITICAL` | Blocks implementation, violates constitution | **Must fix before G6 gate** |
+| `HIGH` | Significant gap, impacts quality | Should fix |
+| `MEDIUM` | Improvement opportunity | Review and decide |
+| `LOW` | Minor inconsistency | Note for future |
+
+### Analysis Results
+
+| ID | Severity | Issue | Resolution |
+|----|----------|-------|------------|
+| | | | |
+
+---
+
+## Phase 6.5: Confidence Gate
+
+**When to run:** After Phase 6 commits and before Phase 7 begins. Gate semantics
+are unchanged; this section records the verdict so a later session can read it.
+
+| Field | Value |
+|-------|-------|
+| Mode | <!-- advisory (default) or strict --> |
+| Composite confidence | <!-- 0.00-1.00 --> |
+| Verdict | <!-- proceed / remediate / stop --> |
+| Evidence | <!-- what the score was computed from --> |
+
+---
+
+## Phase 7: Implement
+
+**When to run:** After tasks.md is generated and analyzed (no coverage gaps).
+
+### Implement Prompt
+
+```text
+/speckit-implement
+
+## Approach: TDD-First
+
+For each task, follow this cycle:
+
+1. **RED**: Write failing test defining expected behavior
+2. **GREEN**: Implement minimum code to make test pass
+3. **REFACTOR**: Clean up while tests still pass
+4. **VERIFY**: Manual verification of acceptance criteria
+
+### Pre-Implementation Setup
+
+Before starting any task:
+1. Verify the worktree suite is green:
+   python3 tests/speckit-pro/run-all.py
+2. Fetch the upstream reference files read-only from
+   anthropics/html-effectiveness (main): 16-implementation-plan.html and
+   14-research-feature-explainer.html for slice 1;
+   01-exploration-code-approaches.html and 04-code-understanding.html for
+   slice 2. Keep them outside the repository tree (session scratchpad);
+   never stage upstream bytes.
+3. Re-read speckit-pro/artifact-gallery/SPA-CONTRACT.md — the canonical
+   blocks are copied WITH their markers, byte for byte, from
+   brand-kit.css and theme-toggle.html.
+
+### Implementation Notes
+- The heading typeface token is --rc-font-display (NOT --rc-font-heading;
+  an undefined custom property fails silently).
+- Prohibited upstream constructs are dropped, never ported.
+- Slice discipline: complete and verify US1+US2 (slice 1) before touching
+  US3/US4. Slice 2 ships from a fresh branch after slice 1's PR merges.
+- After any tracked .md/.py/.sh change under tests/speckit-pro/, run
+  pnpm --dir docs-site reference:generate (deps installed in this worktree).
+- Shipped-byte changes (gallery files) require release-artifact
+  regeneration (scripts/refresh-release-artifacts.py) before closeout —
+  hand-editing generated payloads is prohibited.
+- Manual file:// checks per template (render, console clean, theme toggle,
+  exports, keyboard pass) are recorded as UAT runbook steps for the
+  operator, not automated.
+```
+
+### Implementation Progress
+
+| Phase | Tasks | Completed | Notes |
+|-------|-------|-----------|-------|
+| 1 - Foundation (L4 test RED) | | | |
+| 2 - Slice 1: US1 + US2 | | | |
+| 3 - Slice 1 closeout (PR 1) | | | |
+| 4 - Slice 2: US3 + US4 (PR 2) | | | |
+
+---
+
+## Post-Implementation Checklist
+
+The canonical closeout. Every row must reach Complete or an explicit
+`Skipped` before the run may report completion. Run it once per slice PR.
+
+| Canonical Item | Status | Evidence |
+|---|---|---|
+| Post: Doctor Extension Check | ⏳ Pending | |
+| Post: Verify Implementation | ⏳ Pending | |
+| Post: Verify Tasks Phantom Check | ⏳ Pending | |
+| Post: Code Review | ⏳ Pending | |
+| Post: Integration Suite | ⏳ Pending | |
+| Post: Reviewability Diff Gate | ⏳ Pending | |
+| Post: Self-Review | ⏳ Pending | |
+| Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: PR Body Generation | ⏳ Pending | |
+| Post: PR Creation | ⏳ Pending | |
+| Post: Review Remediation | ⏳ Pending | |
+| Post: Retrospective | ⏳ Pending | |
+
+- [ ] All tasks marked complete in tasks.md
+- [ ] Tests pass: `python3 tests/speckit-pro/run-all.py`
+- [ ] Docs references regenerated: `pnpm --dir docs-site reference:generate`
+- [ ] Release artifacts regenerated for shipped-byte changes
+- [ ] Manual verification recorded in the UAT runbook
+- [ ] PR created (never merged by the agent) with the release-note fence
+- [ ] Reviewed and merged by a human
+
+---
+
+## Lessons Learned
+
+### What Worked Well
+
+-
+
+### Challenges Encountered
+
+-
+
+### Patterns to Reuse
+
+-
+
+---
+
+## Project Structure Reference
+
+```
+racecraft-plugins-public/
+├── speckit-pro/
+│   └── artifact-gallery/
+│       ├── SPA-CONTRACT.md          # normative porting contract (read first)
+│       ├── manifest.json            # routing catalog — status flips only
+│       ├── brand-kit.css            # BRAND-KIT canonical block source
+│       ├── theme-toggle.html        # GALLERY-HEAD canonical block source
+│       ├── UPSTREAM-NOTICE.md       # MIT license text attribution points at
+│       └── templates/               # NEW — the four ported artifacts
+├── tests/speckit-pro/
+│   └── unit/
+│       ├── test-artifact-gallery.py # existing scanner (covers new artifacts)
+│       └── <fill-region test>       # NEW — capability-named, stdlib-only
+├── scripts/
+│   └── refresh-release-artifacts.py # payload regeneration for shipped bytes
+├── docs/ai/specs/
+│   ├── html-artifacts-technical-roadmap.md
+│   └── .process/                    # this workflow + the design concept
+└── specs/art-002-draft-pr-template-set/  # spec.md, plan.md, tasks.md, SPEC-MOC.md
+```
+
+---
+
+Template based on SpecKit best practices; populated for ART-002 from the technical roadmap and the grill-me design concept.
