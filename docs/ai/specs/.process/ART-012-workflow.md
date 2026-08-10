@@ -33,7 +33,7 @@ captured during scoping.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 4 FRs, 2 user stories, 6 success criteria, 0 markers |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Clarify | `/speckit-clarify` | ✅ Complete | G2 pass — 2 verification sessions, 7 findings, 2 consensus rounds, 0 markers |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -97,16 +97,22 @@ helper's whole-roadmap scan; ART-012's own recorded budget is one primary
 surface (harness/adapter). Warnings may proceed when the workflow records the
 scope budget and split decision, which the rest of this subsection does.
 
-**Scope budget (from the roadmap's ART-012 section):** projected ~115
-reviewable production LOC (modify-weighted), ~3 production files, ~6 total
-files, one primary surface. Modify-weighted work carries no greenfield
-allowance (warn 400 / block 800).
+**Scope budget:** projected ~155 reviewable production LOC (modify-weighted),
+5 production files, ~8 total files, one primary surface. Modify-weighted work
+carries no greenfield allowance (warn 400 / block 800). *Amended 2026-08-10 at
+Clarify session 1; the scaffold-time figures were ~115 LOC over ~3 production
+files, computed before the three-copy Task Result fact was known. See
+"Verified Repository Facts" under the Plan Prompt.* Every dimension remains
+under the warn line (400 LOC / 6 production files / 15 total files / 1 primary
+surface).
 
-**Split decision (grill-me slice-sizing):** one vertical slice, no split —
-`estimate-spec-size` with the spec's scoping signals returned
-`{"estimated_loc": 115, "status": "ok", "suggested_slices": 1}`, and the
-scope (reporting contract → orchestrator append → consumer hand-off) has no
-horizontal layering to re-slice.
+**Split decision (grill-me slice-sizing, re-confirmed at Clarify):** one
+vertical slice, no split. `estimate-spec-size` re-run with the corrected
+signals (2 user stories, 5 production files, 4 FRs, modify-weighted) returned
+`{"estimated_loc": 155, "suggested_slices": 1, "status": "ok"}` — verbatim
+output, not a hand-adjustment of the scaffold-time 115. The scope (reporting
+contract → orchestrator append → consumer hand-off) still has no horizontal
+layering to re-slice, and 155 sits far under the 400 warn ceiling.
 
 ### Phase 0 Prerequisites (recorded at run time, 2026-08-10)
 
@@ -163,8 +169,11 @@ with this spec's scope; re-verify after Plan.
       reading "None" when there is nothing to report.
 - [ ] `specs/<branch>/.process/implementation-notes.md` is created with a
       header at the start of Phase 7, before any task dispatches.
-- [ ] The orchestrator appends one entry per task, immediately after each
-      task completes — never batched, never overwritten on retry.
+- [ ] The orchestrator appends one entry per dispatched task attempt — for a
+      singly or sequentially dispatched task, immediately after it completes;
+      for a task inside a parallel run, when that run is collected, before the
+      next run dispatches. Never batched to phase end, never overwritten on
+      retry, never truncated on resume.
 - [ ] A failed append logs a gap and never blocks the task or the phase
       (fail-open, matching ART-007 and ART-009's precedent).
 - [ ] Both `speckit-pro/skills/speckit-autopilot/` and its
@@ -261,7 +270,7 @@ both need a durable record to draw from, and today there is none.
 **G1 PASS.** Runner `validate-gate` returned
 `{"gate":"G1","pass":true,"reason":"spec.md exists with 0 markers","markers":0,"details":[]}`.
 An independent grep confirms zero markers, and a privacy grep confirms no
-absolute `/Users/` or `/home/` path leaked into the authored spec.
+absolute home-directory path leaked into the authored spec.
 
 The spec's own reviewability budget re-derives the same figures this workflow
 recorded at scaffold: primary surface harness/adapter, 115 projected reviewable
@@ -327,10 +336,54 @@ fail-open and logs a gap without blocking (Q4)?
 
 ### Clarify Results
 
+Both sessions ran even though G1 recorded **zero** `[NEEDS CLARIFICATION]`
+markers. The default routing makes Clarify conditional on markers, but this
+workflow authored its sessions as *verification* passes — checking spec.md's
+wording against the settled Q1–Q8 decisions — and that intent is what they
+executed. Session 1 confirmed spec.md faithful on every check and still found
+a real defect, in the workflow file rather than the spec.
+
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|---------------|
-| 1 | Reporting Contract Wording | | |
-| 2 | Append Semantics | | |
+| 1 | Reporting Contract Wording | 2 raised (1 routed to consensus, 1 resolved from evidence) | spec.md verified faithful on all five session-1 checks: one combined field, existing block, literal "None", both platforms, nothing else changed. FR-001 needs no edit — naming `tdd-protocol.md:139` in a spec would violate the repo's own WHAT-not-HOW rule, and the Plan Prompt already pins the WHERE. **Defect found in the workflow file, not the spec:** the recorded "one shared edit / 3 production files" premise was wrong. Budget restated 115 → 155 LOC, 3 → 5 production files, from a re-run estimator. Field order settled: append after `**Errors:**`. |
+| 2 | Append Semantics | 5 raised (1 routed to consensus, 4 resolved from evidence) | spec.md verified faithful on all four session-2 probes (Q8 header-before-dispatch → FR-002; Q2 cadence → FR-003; Q5 retry-appends → FR-003 + SC-005; Q4 fail-open → FR-004). Five reconciliation gaps the interview never reached, all now closed: **FR-002 would have truncated the record on resume** (now create-if-absent); **"each task" excluded two routing branches** that never emit a task-result block (now every dispatched attempt, three append sites); **FR-004/SC-004 named no destination** so SC-004 was uncheckable (now named at WHAT level); **FR-002/003/004 carried no parity clause** while FR-001 did (new FR-005, parity owed on the record, not the wording); and the consensus item below. |
+
+### Consensus Resolution Log
+
+| # | Item | Categories | Analysts | Round | Outcome | Artifacts Edited |
+|---|------|-----------|----------|-------|---------|------------------|
+| 1 | Which authored copies of the `## Task Result: <TASK_ID>` block are in scope for the new reporting field? | `[codebase]`, `[spec]` | codebase-analyst, spec-context-analyst | 1 | **Both agree, high confidence → Option A: all three copies.** N=2 both-agree, no escape-hatch keyword, no `[security]` tag, so Round 2 was not triggered. Rule-out for a partial fix is FR-001's own sentence ("Both supported agent platforms MUST receive an identical reporting contract") plus the G6 drift check, **not** CI: `validate-codex-parity.py` checks agent-file existence, not template content, so a partial fix would pass green. Decisive precedent: commit `bb01ef28` patched this same Summary Format contract in both agent definitions in one commit because "agents follow their own output template over referenced contract prose." | `spec.md` Reviewability Budget; roadmap Reviewability Budget + Key Files; workflow Verified Repository Facts, Scope budget, Split decision, Architecture Notes, Tasks Prompt |
+
+| 2 | When does the append happen during a `[P]` parallel run, and do FR-003/SC-002 need restating to match the shipped Claude loop? | `[codebase]`, `[spec]` | codebase-analyst, spec-context-analyst | 1 | **Both agree, high confidence → Option B: two-branch cadence.** Singleton and sequential dispatch appends per task; a parallel run appends at collection, before the next run dispatches. Codex keeps its stronger per-result append unchanged. The decisive argument is not merely that no per-completion hook exists, but that `agent-teams-integration.md:325-328` (Design Principle #2) requires the parallel-subagents fallback to deliver "the same contract (same parallelism, same outputs)" as the Agent Teams path — so even a Teams-only hook could not become the contract. Background dispatch is documented at `:75-76` as "The next user message returns all N results together." Precedent for amending a settled grill-me answer mid-run via consensus rather than a new interview: `CAR-005-workflow.md:1348`, where a recorded guarantee was found unachievable and restated with a design-concept revision note. | Design Concept Q2 revision note + Goals bullet; `spec.md` US1 narrative, acceptance scenarios, FR-002/003/004, new FR-005, SC-001/002/004, edge cases, assumptions; workflow Success Criteria Summary, Architecture Notes, state-management checklist prompt |
+
+**Escalation call for item 2, recorded because it is a judgment, not a rule.**
+This narrows a durability guarantee the user personally selected in Q2 with a
+stated rationale, so I checked the stop conditions directly rather than taking
+either analyst's word. `consensus-protocol.md:299` reads
+"Security/**data-integrity** keyword detected → Always flag for human", and
+SC-002 is a data-durability criterion — but the section that defines that row
+is titled **Security Keywords** and enumerates a closed list (auth, token,
+secret, encryption, PII, credential, permission, password, authentication,
+authorization, session, cookie, jwt, api-key, access-control, `:315-322`).
+None fire here. The checkable contract therefore does not mandate a stop, and
+neither analyst recommended one. Proceeding was the call; the cost is stated
+in full in the Q2 revision note rather than smoothed over, and the plan stage
+ends before any code is written, so the operator can veto it at that boundary.
+
+Three caveats the analysts flagged rather than asserted were closed by direct
+check, not left open: `tests/speckit-pro/layer6-efficiency/fixtures-codex/implement-executor/fixture.json`
+does **not** pin the Task Result text (no `Task Result` or `**Errors:**`
+substring), so Layer 6 is not at risk; a tree-wide grep confirms the three
+authored copies of the Task Result block are the complete set; and Design
+Principle #2 plus the "returns all N results together" line were both read
+verbatim before being treated as decisive.
+
+One caveat is left open on purpose, because it is genuinely undocumented:
+`isolation: "worktree"` merge-back semantics are not described anywhere in this
+repo. It does not change the outcome — an executor-side append is unsafe for a
+shared file regardless, since N isolated copies each fork from the same
+pre-run state — but the orchestrator-writes-it decision rests on that reasoning
+rather than on a citable platform guarantee.
 
 ---
 
@@ -372,22 +425,46 @@ fail-open and logs a gap without blocking (Q4)?
 Both were confirmed by reading the tree; plan against these, not against
 assumptions.
 
-- **The reporting contract is one shared edit; the append logic is two.**
-  `speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md` is shared:
-  the Codex SKILL.md links into the Claude copy
-  (`speckit-pro/codex-skills/speckit-autopilot/SKILL.md:921` and `:1063` both
-  point at `../../skills/speckit-autopilot/references/tdd-protocol.md`), so the
-  new `**Deviations/Edge cases/Surprises:**` line lands once, next to
-  `**Errors:**` at `tdd-protocol.md:139`, inside the `## Task Result: <TASK_ID>`
-  block that starts at `:124`. `phase-execution.md` is **mirrored**, not
-  shared: Codex carries its own
+- **The reporting contract is THREE edits, not one. The append logic is two.
+  Five production files total.**
+
+  *Corrected 2026-08-10 by Clarify session 1 consensus. The superseded claim
+  read "The reporting contract is one shared edit… That is 3 production files."
+  It was wrong, and the rationale is preserved here because the error is
+  instructive: the injected copy is shared, but two agent definitions hard-code
+  their own duplicate of the same block.*
+
+  `grep -rln "Task Result: <TASK_ID>" speckit-pro/` returns exactly three
+  authored homes, and FR-001 requires *every* implementation task summary to
+  carry the new field, so all three are in scope:
+
+  | File | What changes | Note |
+  |---|---|---|
+  | `speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md` | Summary Format block (`:124-140`); add the line after `**Errors:**` at `:139` | Shared. Injected verbatim into every implementation dispatch prompt (`phase-execution.md:826-829`, `:918-925`); Codex reaches this same file via `codex-skills/speckit-autopilot/SKILL.md:921`. It is the only copy an implementation-routed agent without its own local block ever sees. |
+  | `speckit-pro/agents/implement-executor.md` | Summary Format block (`:139-158`) **and** the Terminal Deliverable enumeration at `:164` | **Two touchpoints.** `:164` is a hard `MUST` listing exactly four fields ("TDD Evidence / Test commands used / Files created/modified / Errors"). Patching the template alone ships a self-contradictory agent. This agent is the default implementation fallback (`phase-execution.md:911`) and the routed agent for test tasks. |
+  | `speckit-pro/codex-agents/implement-executor.toml` | Summary Format block (`:121-139`) only | Codex mirror. Confirmed to carry no Terminal Deliverable enumeration, so one touchpoint. |
+
+  Precedent: commit `bb01ef28` added a required line to this same Summary
+  Format contract in **both** agent definitions in one commit, for exactly this
+  reason — "Agents follow their own output template over referenced contract
+  prose." No Layer 1 test diffs Summary Format content across platforms
+  (`validate-codex-parity.py` checks agent-file existence, not content), so a
+  partial fix would pass CI and still violate FR-001. Enforcement here is
+  FR-001 plus the G6 Design-Concept drift check, not a red test.
+
+- **The append logic is mirrored, so it is two edits.** `phase-execution.md` is
+  **not** shared the way `tdd-protocol.md` is: Codex carries its own
   `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md`.
-  So the Phase 7 file-lifecycle and append steps must be written into **both**
+  The Phase 7 file-lifecycle and append steps must be written into **both**
   `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`
-  (`### Phase 7: Implement (Task-Level Dispatch)` at `:788`) and the Codex
-  mirror. That is 3 production files, matching the roadmap's ~3 budget.
-  The Tasks Prompt below says "one shared edit, not two" — that is correct for
-  the reporting contract only, and does not extend to the append logic.
+  (`### Phase 7: Implement (Task-Level Dispatch)` at `:788`) and that mirror.
+
+- **Field placement (Clarify Q2, resolved without consensus):** append the new
+  `**Deviations/Edge cases/Surprises:**` line **after** `**Errors:**`, making it
+  the block's last line in all three copies. `**Errors:**` is currently terminal
+  everywhere, so appending leaves every existing line byte-stable and
+  position-stable; inserting before it would shift an existing line for no gain.
+  No test anchors the field order, so the Layer 4 fixture test defines it.
 
 - **Editing plugin source requires a payload rebuild.** `dist/claude/speckit-pro/`
   and `dist/codex/speckit-pro/` are generated install payloads that mirror these
@@ -404,12 +481,26 @@ assumptions.
 - **File location:** `specs/<branch>/.process/implementation-notes.md` —
   already decided by the roadmap as "exhaust," not re-litigated here.
 - **Field placement (Q6):** extend the existing
-  `## Task Result: <TASK_ID>` block in `tdd-protocol.md` with a new
-  `**Deviations/Edge cases/Surprises:**` line next to `**Errors:**` —
-  do not introduce a second block.
-- **Append cadence (Q2):** the orchestrator appends inside the existing
-  Phase 7 Step 3 task loop in `phase-execution.md`, immediately after
-  processing each task's summary — not batched at phase end.
+  `## Task Result: <TASK_ID>` block with a new
+  `**Deviations/Edge cases/Surprises:**` line placed after `**Errors:**` —
+  do not introduce a second block. This lands in all three authored copies
+  of that block, not just `tdd-protocol.md`; see "Verified Repository Facts".
+- **Append cadence (Q2, as amended at Clarify session 2):** the orchestrator
+  appends inside the existing Phase 7 Step 3 task loop in `phase-execution.md`,
+  not batched at phase end. Two call-site shapes, because the loop has two:
+  the singleton/sequential branch waits on one result at a time
+  (`phase-execution.md:900-914`, `Wait for result.`), so it appends per task;
+  the parallel branch waits on the whole run
+  (`:888` `Wait for ALL to complete.`, `:875` for the Agent Teams path), so it
+  appends every task in the run at collection, before the next run dispatches.
+  The serial re-run fallback after a regression (`:894-898`) is per-task by
+  construction and needs no special handling. There are **three** append sites
+  in the routing, not one: the executor branch, the research branch, and the
+  orchestrator-direct verification branch — the latter two never carry the
+  reporting field, and their entries record that nothing was reported.
+- **Resume (new at Clarify session 2):** the file-lifecycle step is
+  create-if-absent, not create. A resumed Phase 7 re-opens the existing record
+  and appends; it must not truncate it or write a second header.
 - **Empty case (Q1/Q3):** every task always gets an entry with a fixed
   `### <TASK_ID>` heading; when nothing to report, the field literally
   reads "None." No separate whole-file summary marker.
@@ -497,14 +588,18 @@ Focus on Implementation-Notes Capture requirements:
 - Does spec.md require the file to exist (with header) from the very
   start of Phase 7, before any task dispatch, independent of how many
   tasks eventually run?
-- Does spec.md require appends to happen immediately after each task,
-  not batched at phase end?
+- Does spec.md require appends at the right granularity — immediately after
+  each singly or sequentially dispatched task, and at run collection for a
+  task inside a parallel run — and never batched to phase end? (FR-003 was
+  amended at Clarify session 2 to this two-branch cadence; the amendment is
+  deliberate and recorded in the Design Concept's Q2 revision note, so do
+  NOT report the two-branch wording as drift.)
 - Does spec.md require a retried task (parallel-run regression → serial
   re-run) to append a second entry rather than overwrite the first?
-- Pay special attention to: `--from-phase` resume behavior — if Phase 7
-  is resumed after a prior partial run, does the resumed run re-open the
-  existing file and continue appending, or does it need to detect and
-  skip already-completed tasks' entries to avoid a third duplicate?
+- `--from-phase` resume behavior was resolved at Clarify session 2: FR-002 is
+  create-if-absent, and no already-recorded-task detection is wanted — a
+  re-executed task appends another entry. Verify spec.md actually says both,
+  rather than re-opening the question.
 ```
 
 ### Checklist Results
@@ -550,11 +645,14 @@ When checklist identifies `[Gap]` items:
    immediate-append-per-task logic in phase-execution.md's Step 3 loop
    (Q2), including the fail-open path (Q4) and no-overwrite-on-retry
    behavior (Q5) — independently testable via the Layer 4 fixture
-3. User Story 2 (executor reporting contract, P1) — wire the new field
-   into every implementation-agent prompt path (implement-executor and
-   PROJECT_IMPLEMENTATION_AGENT both receive the shared tdd-protocol.md
-   injection, so this should be one shared edit, not two) — independently
-   testable via Layer 1 + Codex parity
+3. User Story 2 (executor reporting contract, P1) — wire the new field into
+   every authored copy of the `## Task Result: <TASK_ID>` block. There are
+   THREE, and this is four touchpoints, not one shared edit: the injected
+   `tdd-protocol.md` template; `speckit-pro/agents/implement-executor.md`'s own
+   template **and** its Terminal Deliverable four-field enumeration at `:164`;
+   and `speckit-pro/codex-agents/implement-executor.toml`'s own template. See
+   "Verified Repository Facts" above for the full table and the `bb01ef28`
+   precedent. Independently testable via Layer 1 + Codex parity.
 4. Polish — Codex mirror parity pass (`speckit-pro/codex-skills/speckit-autopilot/`),
    dispatch-prompt wording covered by Layer 1
 

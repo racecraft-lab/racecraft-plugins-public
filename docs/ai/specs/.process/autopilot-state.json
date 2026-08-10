@@ -4,7 +4,7 @@
   "feature_dir": "specs/art-012-implementation-notes-capture",
   "branch": "art-012-implementation-notes-capture",
   "status": "in_progress",
-  "active_step": "Phase 2: Clarify - Reporting Contract Wording",
+  "active_step": "Phase 3: Plan",
   "updated_at": "2026-08-10T00:00:00Z",
   "stage": "plan",
   "prior_run_note": "completed_archived",
@@ -42,23 +42,23 @@
     },
     {
       "step": "Phase 2: Clarify - Reporting Contract Wording",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Reporting Contract Wording Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Append Semantics",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Append Semantics Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
@@ -157,6 +157,11 @@
       "pass": true,
       "markers": 0,
       "reason": "spec.md exists with 0 markers"
+    },
+    "G2": {
+      "pass": true,
+      "markers": 0,
+      "reason": "0 [NEEDS CLARIFICATION] markers"
     }
   }
 }

@@ -752,10 +752,16 @@ boundary at a visible seam.
 notes record feeding the PR writeup and retrospective.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 115 (estimator: ok, modify-weighted) |
-Production files: ~3 |
-Total files: ~6 |
+Projected reviewable LOC: 155 (estimator: ok, modify-weighted) |
+Production files: 5 |
+Total files: ~8 |
 Budget result: within budget
+
+*Amended 2026-08-10 during the ART-012 run (Clarify session 1 consensus).
+Scoping recorded 115 LOC over ~3 production files, assuming the per-task
+`## Task Result:` block had a single authored home. It has three, so the two
+agent definitions below joined Key Files and the estimator was re-run rather
+than hand-adjusted. Every dimension stays under the warn line.*
 
 **Scope:**
 - One vertical slice — executor reporting contract → orchestrator append →
@@ -780,9 +786,11 @@ Layer 1 + Codex parity checks.
 its review-visible expression is the writeup's implementation-notes section.
 
 **Key Files:**
-- `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` — dispatch template
-- `speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md` — executor reporting contract
-- `speckit-pro/codex-skills/speckit-autopilot/` mirror
+- `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` — dispatch template, Phase 7 append loop
+- `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md` — Codex mirror of the append loop
+- `speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md` — executor reporting contract, injected into every dispatch
+- `speckit-pro/agents/implement-executor.md` — independent copy of the Task Result block, plus a four-field Terminal Deliverable enumeration that must be updated with it
+- `speckit-pro/codex-agents/implement-executor.toml` — Codex mirror of that agent definition
 
 ---
 

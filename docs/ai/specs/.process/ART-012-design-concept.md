@@ -24,9 +24,11 @@ stop_reason: "natural"
   cases, and surprises as part of its existing task summary — one combined
   field, not three mandatory sub-fields.
 - The orchestrator durably appends one entry per task to
-  `specs/<branch>/.process/implementation-notes.md`, immediately after each
-  task completes (not batched at phase end), so the record survives a
-  mid-phase interruption.
+  `specs/<branch>/.process/implementation-notes.md` — immediately after each
+  task completes when that task is dispatched singly or sequentially, and no
+  later than its parallel run's collection point otherwise, never batched at
+  phase end — so the record survives a mid-phase interruption. See the Q2
+  revision note for why the parallel case differs and what it costs.
 - A task with nothing to report still gets an entry — its field literally
   reads "None" — so the record is never silently absent for the whole spec.
 - The file is created with a header at the start of Phase 7, before any task
@@ -93,6 +95,39 @@ stop_reason: "natural"
   the run is interrupted before the phase finishes.
 
 **User's answer:** Immediately after each task completes (Recommended).
+
+> **Revision note — 2026-08-10, Clarify session 2 consensus.** The answer above
+> stands and is preserved verbatim; what follows fixes a granularity this
+> question never reached, and it narrows the guarantee, so read it before
+> relying on the "task 5 of 12" line.
+>
+> Q2 chose between "immediately after each task" and "batched once at the end
+> of Phase 7." That axis is unchanged: the chosen side wins, and the rejected
+> option's failure mode (losing every deviation when the phase is interrupted)
+> stays excluded. What the interview never surfaced is that Phase 7 dispatches
+> consecutive `[P]` parallel-safe tasks as one run and gives the orchestrator
+> **no turn until the whole run returns** — `phase-execution.md:888` "Wait for
+> ALL to complete." and `:875` "Wait for all teammates to complete." on the
+> Agent Teams path. So for a parallel run, appending per task is not
+> achievable, and no hook exists on either path.
+>
+> **Revised cadence:** a task dispatched singly or sequentially still appends
+> immediately. A task dispatched inside a parallel run has its entry appended
+> when that run is collected, before the next run dispatches.
+>
+> **What this costs, stated plainly:** the "a crash after task 5 of 12 still
+> leaves 5 real entries" illustration assumed sequential dispatch. If task 5 is
+> the first task of a three-task parallel run, a crash mid-run loses all three,
+> including task 5's own finished work. The loss window is bounded by one run
+> rather than the whole phase, which is why this is a narrowing rather than a
+> reversal — but it is a real narrowing, not a wording tidy-up.
+>
+> Codex is unaffected and keeps the literal stronger guarantee: its
+> `implement-executor` records each result as it arrives
+> (`codex-skills/speckit-autopilot/SKILL.md:322`). Making Claude match it would
+> mean rewriting Phase 7's parallel wait itself, which is outside this spec's
+> budget and Key Files; that is named as deferred follow-up work in spec.md's
+> Assumptions instead.
 
 ---
 
