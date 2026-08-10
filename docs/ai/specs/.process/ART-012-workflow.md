@@ -2,29 +2,7 @@
 
 **Template Version**: 1.0.0
 **Created**: 2026-08-10
-**Purpose**: Reusable template for executing SpecKit workflows. Copy-paste the prompts below into your AI coding agent.
-
----
-
-## How to Use This Template
-
-1. **Copy this template** to create a new workflow guide:
-
-   ```text
-   cp .github/skills/speckit/templates/workflow-template.md docs/ai/specs/ART-012-workflow.md
-   ```
-
-2. **Replace placeholders** throughout the document:
-   - `{{SPEC_ID}}` → Your spec identifier (e.g., `SPEC-001`)
-   - `{{SPEC_NAME}}` → Human-readable name (e.g., `User Authentication`)
-   - `{{SPEC_DESCRIPTION}}` → One-line description
-   - `{{BRANCH_NAME}}` → Feature branch name (e.g., `feature/user-auth`)
-
-3. **Populate the prompts** in each phase section with your project-specific details (tech stack, constraints, project structure, checklist domains)
-
-4. **Copy-paste prompts** into your AI coding agent as you execute each phase
-
-5. **Track progress** using the status table below
+**Purpose**: Executable workflow for the ART-012 autopilot run. The prompts below are what each phase executes.
 
 ---
 
