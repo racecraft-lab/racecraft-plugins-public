@@ -34,7 +34,7 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 4 FRs, 2 user stories, 6 success criteria, 0 markers |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass — 2 verification sessions, 7 findings, 2 consensus rounds, 0 markers |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Plan | `/speckit-plan` | ✅ Complete | G3 pass — 6 artifacts, 11 research decisions, 8 declared file ops |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -520,13 +520,70 @@ assumptions.
 
 ### Plan Results
 
+**G3 PASS.** `validate-gate` returned
+`{"gate":"G3","pass":true,"reason":"plan.md exists with 0 unresolved markers","markers":0,"details":[]}`.
+
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Entities and types |
-| `contracts/` | ⏳ | API specifications |
-| `quickstart.md` | ⏳ | Developer onboarding |
+| `plan.md` | ✅ | Technical context, execution flow, 8 Declared File Operations |
+| `research.md` | ✅ | 11 decisions (R1–R11), zero unresolved unknowns |
+| `data-model.md` | ✅ | Notes record, notes entry, task-result summary |
+| `contracts/task-result-reporting-field.md` | ✅ | Pins the new line across 4 touchpoints in 3 files |
+| `contracts/implementation-notes-record.md` | ✅ | Record format, lifecycle, append cadence |
+| `quickstart.md` | ✅ | Scenarios incl. the regeneration chain |
+
+**Constitution re-check after Plan:** pass on all six principles (v1.2.0);
+Complexity Tracking table empty, no violation to justify.
+
+#### Plan-phase reviewability budget (step 7b, advisory)
+
+`estimate-reviewable-loc` returned
+`{"status":"pass","projected":0,"declared_files":{"production":0,"new":1,"modified":7,"total_entries":8},"greenfield":false}`.
+
+**Read that `0` correctly — it is a classifier limitation, not a measurement.**
+All 8 declared entries parsed, but the helper's production-file heuristic only
+recognises `src/`, `app/`, `lib/`, `scripts/` prefixes or JS/TS/SQL extensions,
+and this spec's entire surface is Markdown and TOML under `speckit-pro/`. The
+authoritative projection remains **155** reviewable LOC from `estimate-spec-size`
+(recorded under the Reviewability Setup Gate above). Recorded as research R11 so
+neither number is read as the other. The helper is advisory and never blocks.
+
+#### Generated-artifact regeneration chain (three surfaces, two commands)
+
+Editing the five production files restales **three** generated surfaces, not
+one. The Plan phase found the second and third; both are real, and both were
+verified directly:
+
+1. **Install payloads** — `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`
+   mirror all five files. Layer 1 enforces via `validate-plugin-payload`,
+   `validate-payload-completeness`, `validate-payload-conformance`.
+2. **Installed-cache fixture and its proof hashes** —
+   `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/{claude,codex}/speckit-pro/`
+   carries byte copies of all five files, pinned by the per-product
+   `source_payload_tree_hash` values inside `proofs[]` in
+   `docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json`.
+3. **Docs reference** — `docs-site/src/content/docs/reference/tests.md` restales
+   when the new Layer 4 test file is added.
+
+**One command covers surfaces 1 and 2**, and it is *not*
+`scripts/build-plugin-payloads.py` alone:
+
+```text
+python3 scripts/refresh-release-artifacts.py
+```
+
+Its own docstring enumerates six steps — runner trust metadata, rebuild both
+payloads (the same `build_xplat008_payloads` the standalone builder calls),
+sync marketplace versions, content-sync the installed-cache fixtures, refresh
+the proof tree hashes, regenerate gate evidence — and states it is idempotent.
+It explicitly does **not** regenerate the docs reference, so surface 3 needs its
+own command after a `pnpm --dir docs-site install --frozen-lockfile`:
+
+```text
+pnpm --dir docs-site reference:generate
+```
+
+Never hand-edit `dist/`, the installed-cache fixture, or the proof JSON.
 
 ---
 
