@@ -11,7 +11,9 @@ each failure names its own group, so a regression in one never masks the other:
 * ``REPORTING FIELD`` — every authored ``## Task Result: <TASK_ID>`` block
   carries the combined reporting field described in
   ``specs/art-012-implementation-notes-capture/contracts/task-result-reporting-field.md``.
-  The group's check table is the empty seam marked below.
+  Its check table covers the field's text and position in the three authored
+  copies; a companion test guards the set of copies itself, because that one
+  asserts over the file tree rather than over any single document body.
 
 **Every body is whitespace-normalized before matching.** Runs of whitespace
 collapse to one space, so an asserted phrase may be hard-wrapped across lines in
@@ -44,10 +46,15 @@ CODEX_PHASE_EXECUTION = (
 AGENT_TEAMS_INTEGRATION = (
     "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md"
 )
+TDD_PROTOCOL = "speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md"
+CLAUDE_IMPLEMENT_EXECUTOR = "speckit-pro/agents/implement-executor.md"
+CODEX_IMPLEMENT_EXECUTOR = "speckit-pro/codex-agents/implement-executor.toml"
 
 CLAUDE_PHASE_7_HEADING = "### Phase 7: Implement (Task-Level Dispatch)"
 CODEX_PHASE_7_HEADING = "## Phase 7: Implement"
 USE_SITE_3_HEADING = "### Use site 3: Phase 7 `[P]` task team"
+SUMMARY_FORMAT_HEADING = "## Summary Format"
+TERMINAL_DELIVERABLE_HEADING = "### Terminal Deliverable"
 
 # Target key -> (repository-relative file, section heading or None for whole file).
 TARGETS = {
@@ -55,6 +62,16 @@ TARGETS = {
     "codex_phase7": (CODEX_PHASE_EXECUTION, CODEX_PHASE_7_HEADING),
     "agent_teams": (AGENT_TEAMS_INTEGRATION, None),
     "agent_teams_use_site_3": (AGENT_TEAMS_INTEGRATION, USE_SITE_3_HEADING),
+    # The Task Result block itself cannot be a section target: it sits inside a
+    # ``` fence in all three copies, and _section ignores fenced headings. Its
+    # enclosing "## Summary Format" heading can, and occurs once per file.
+    "tdd_protocol_summary": (TDD_PROTOCOL, SUMMARY_FORMAT_HEADING),
+    "claude_executor_summary": (CLAUDE_IMPLEMENT_EXECUTOR, SUMMARY_FORMAT_HEADING),
+    "codex_executor_summary": (CODEX_IMPLEMENT_EXECUTOR, SUMMARY_FORMAT_HEADING),
+    "claude_executor_terminal": (
+        CLAUDE_IMPLEMENT_EXECUTOR,
+        TERMINAL_DELIVERABLE_HEADING,
+    ),
 }
 
 RECORD_CONTRACT_GROUP = "RECORD CONTRACT"
@@ -72,6 +89,27 @@ WORKFLOW_FILE = "docs/ai/specs/.process/<SPEC_ID>-workflow.md"
 # First-dispatch anchors. The lifecycle step has to be documented ahead of these.
 CLAUDE_FIRST_DISPATCH = "Step 1: Parse tasks.md"
 CODEX_FIRST_DISPATCH = "Use `implement-executor`"
+
+# The reporting field's own literals, quoted from
+# specs/art-012-implementation-notes-capture/contracts/task-result-reporting-field.md
+# for the same reason: a drifting document fails, not a drifting test.
+ERRORS_LINE = "**Errors:** None (or describe)"
+REPORTING_FIELD_LINE = "**Deviations/Edge cases/Surprises:** None (or describe)"
+# The five fields the Claude agent's Terminal Deliverable prose must enumerate.
+# Four of them ship today; the fifth is what this feature adds.
+TERMINAL_DELIVERABLE_FIELDS = (
+    "TDD Evidence / Test commands used / Files created/modified / Errors"
+    " / Deviations/Edge cases/Surprises"
+)
+
+# Item 4's scope and expected answer: exactly these authored files under
+# speckit-pro/ carry a Task Result block. The generated copies under dist/ and
+# under the installed-cache fixture tree are regenerated from these three and
+# are never authored, so the scan must never leave speckit-pro/.
+PLUGIN_SOURCE_DIR = "speckit-pro"
+AUTHORED_TASK_RESULT_FILES = tuple(
+    sorted((TDD_PROTOCOL, CLAUDE_IMPLEMENT_EXECUTOR, CODEX_IMPLEMENT_EXECUTOR))
+)
 
 
 def _phase_execution_checks(target: str, platform: str) -> tuple[tuple[str, str, str, object], ...]:
@@ -130,6 +168,22 @@ def _phase_execution_checks(target: str, platform: str) -> tuple[tuple[str, str,
         (f"{platform} names the literal None value", target, "regex", r"(?i)literal\s+.?None"),
         (f"{platform} states None covers every nothing-to-report case", target, "regex",
          r"(?i)nothing[- ]to[- ]report"),
+    )
+
+
+def _reporting_field_checks(target: str, label: str) -> tuple[tuple[str, str, str, object], ...]:
+    """Contract items 1 and 2, which all three authored copies owe."""
+    return (
+        # Item 1 — the exact line.
+        (f"{label} carries the reporting field line", target, "contains", REPORTING_FIELD_LINE),
+        # Item 2, first half — it follows this file's own **Errors:** line.
+        # Normalization collapses the blank line between them to one space.
+        (f"{label} places the field immediately after its Errors line", target, "regex",
+         re.escape(ERRORS_LINE) + " " + re.escape(REPORTING_FIELD_LINE)),
+        # Item 2, second half — nothing follows it inside the block, so the
+        # fence that closes the block is the next thing after it.
+        (f"{label} makes the field the last field of the block", target, "regex",
+         re.escape(REPORTING_FIELD_LINE) + " ```"),
     )
 
 
@@ -195,17 +249,32 @@ RECORD_CONTRACT_CHECKS: tuple[tuple[str, str, str, object], ...] = (
 
 
 # ---------------------------------------------------------------------------
-# GROUP 2 of 2 — REPORTING FIELD.
+# GROUP 2 of 2 — REPORTING FIELD (contract items 1, 2, and 3 of
+# specs/art-012-implementation-notes-capture/contracts/task-result-reporting-field.md).
 #
-# SEAM: this tuple is deliberately empty. T006 fills it with the four items of
-# "What the Layer 4 test asserts" in
-# specs/art-012-implementation-notes-capture/contracts/task-result-reporting-field.md,
-# using the same (name, target, kind, value) shape and the same check kinds.
-# Targets for that group are the three files carrying an authored Task Result
-# block, so T006 also adds their entries to TARGETS. Do not merge the two
-# tuples: each group must be able to fail on its own and say which it was.
+# Item 4 of that contract asserts over the *set* of files carrying the block
+# rather than over any single document body, so it cannot take the
+# (name, target, kind, value) shape this table is keyed on. It lives in its own
+# test below and reports under this same group name.
 # ---------------------------------------------------------------------------
-REPORTING_FIELD_CHECKS: tuple[tuple[str, str, str, object], ...] = ()
+REPORTING_FIELD_CHECKS: tuple[tuple[str, str, str, object], ...] = (
+    *_reporting_field_checks("tdd_protocol_summary", "tdd-protocol Summary Format"),
+    *_reporting_field_checks(
+        "claude_executor_summary", "Claude implement-executor Summary Format"
+    ),
+    *_reporting_field_checks(
+        "codex_executor_summary", "Codex implement-executor Summary Format"
+    ),
+    # Item 3 — the Claude agent alone repeats its required fields in prose, and
+    # an agent follows its own hard MUST over a template it also carries. Left
+    # at four fields that MUST contradicts the template this group just fixed.
+    (
+        "Claude implement-executor Terminal Deliverable enumerates all five fields",
+        "claude_executor_terminal",
+        "regex",
+        r"Task Result above \(" + re.escape(TERMINAL_DELIVERABLE_FIELDS) + r"\)",
+    ),
+)
 
 
 def _section(body: str, heading_prefix: str) -> str:
@@ -240,6 +309,27 @@ def _section(body: str, heading_prefix: str) -> str:
 def _normalize(body: str) -> str:
     """Collapse whitespace so hard-wrapped prose matches a single-line phrase."""
     return re.sub(r"\s+", " ", body)
+
+
+def _task_result_files() -> tuple[str, ...]:
+    """Repository-relative paths under speckit-pro/ that carry a Task Result block.
+
+    A copy counts only when the block heading opens a line at column 0. Prose
+    that names the block inline in backticks is a reference to the contract, not
+    a copy of it, and owes nothing; both phase-execution.md and
+    agent-teams-integration.md mention it that way.
+    """
+    found = []
+    for path in (REPO_ROOT / PLUGIN_SOURCE_DIR).rglob("*"):
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue  # a binary or unreadable asset cannot carry the block
+        if any(line.startswith(TASK_RESULT_BLOCK) for line in text.splitlines()):
+            found.append(path.relative_to(REPO_ROOT).as_posix())
+    return tuple(sorted(found))
 
 
 class ImplementationNotesRecordTests(unittest.TestCase):
@@ -296,6 +386,23 @@ class ImplementationNotesRecordTests(unittest.TestCase):
 
     def test_reporting_field_is_documented_in_every_task_result_block(self) -> None:
         self._assert_group(REPORTING_FIELD_GROUP, REPORTING_FIELD_CHECKS)
+
+    def test_authored_task_result_copies_are_still_exactly_three(self) -> None:
+        """Reporting-field item 4: no fourth copy can skip the field unnoticed.
+
+        Scoped to speckit-pro/. Tree-wide the same block also appears in the
+        dist/ payload copies, the installed-cache fixture copies, and the
+        contract document's own worked example, none of which are authored
+        plugin source, so an unscoped count of three is false on a clean tree.
+        """
+        self.assertEqual(
+            _task_result_files(),
+            AUTHORED_TASK_RESULT_FILES,
+            f"[{REPORTING_FIELD_GROUP}] the authored Task Result copies under "
+            f"{PLUGIN_SOURCE_DIR}/ changed. Every copy owes the reporting field, so "
+            "add the new one to TARGETS and to REPORTING_FIELD_CHECKS, or drop the "
+            "removed one from AUTHORED_TASK_RESULT_FILES",
+        )
 
 
 def build_suite() -> unittest.TestSuite:
