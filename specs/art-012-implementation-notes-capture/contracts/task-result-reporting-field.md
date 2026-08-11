@@ -100,10 +100,30 @@ append instructions, never to this field.
    names `Deviations/Edge cases/Surprises` alongside the four existing fields.
 4. The set of files carrying a `## Task Result: <TASK_ID>` block **under
    `speckit-pro/`** is still exactly these three, so a fourth copy added later
-   cannot silently skip the field. Scope the search to `speckit-pro/`, the
-   authored plugin source. A tree-wide search also matches the generated payload
-   copies under `dist/` and the installed-cache fixture copies under
+   cannot silently skip the field.
+
+   **Two discriminators are required, and neither is sufficient alone.**
+
+   *Scope to `speckit-pro/`*, the authored plugin source. A tree-wide search
+   also matches the generated payload copies under `dist/` and the
+   installed-cache fixture copies under
    `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/`,
-   which are regenerated from these three and are never authored, so an
-   unscoped assertion of "exactly three" is false on a clean tree and would fail
-   the moment it ran.
+   which are regenerated from these three and are never authored. Measured on
+   the implemented tree: 12 files tree-wide against 3 scoped.
+
+   *Anchor at line start.* Match `^## Task Result: <TASK_ID>` as an actual
+   Markdown heading, not the bare substring. A file that CARRIES the template
+   writes the heading at column 0; a file that merely NAMES the block writes it
+   backticked inside a sentence. Two files name it without carrying it, both
+   because of FR-006, which is the requirement that teammates send that block:
+   `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` and
+   `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md`.
+   Those two must NOT grow the reporting field. Measured on the implemented
+   tree: a scoped substring search returns 5 files, a scoped line-anchored
+   search returns 3.
+
+   > **Revision note, 2026-08-11.** This item originally specified scoping
+   > alone, and was written before FR-006 existed. FR-006 necessarily causes
+   > other documents to name the block, which made a scoped substring search
+   > report 5 rather than 3. The item's intent is unchanged; only the mechanism
+   > is sharper. Caught during implementation, before the check was authored.
