@@ -302,21 +302,31 @@ records from the same run.
 
 ## R11. The plan-phase estimator projects 0 for this slice, and that is a heuristic gap
 
-**Decision**: use 162 projected reviewable LOC, from `estimate-spec-size`, as
-the authoritative budget figure. Read the plan-phase estimator's `projected`
-value as not applicable to this surface rather than as a measurement.
+**Decision**: use the `estimate-spec-size` projection as the authoritative
+budget figure. Read the plan-phase estimator's `projected` value as not
+applicable to this surface rather than as a measurement.
+
+> **Revision note, 2026-08-11.** This entry originally fixed the figure at 162
+> over five production files. The operator decision to restore the literal
+> per-task append guarantee added FR-006 and a sixth production file,
+> `agent-teams-integration.md`. Re-running the estimator with the amended shape
+> — 2 user stories, 6 files, 6 FRs, modify-weighted — returns
+> `{"estimated_loc": 190, "suggested_slices": 1, "status": "ok"}`. **190 is the
+> authoritative figure; 162 is superseded.** The reasoning below is unchanged:
+> the heuristic gap is a property of the surface, not of the file count, and the
+> verdict is still one slice, `ok`, far under the 400 warn line.
 
 **Rationale**: the plan-phase estimator counts a declared file as production
 only when its path starts with `src/`, `app/`, `lib/`, or `scripts/`, or ends in
 `.ts`, `.tsx`, `.js`, `.jsx`, `.mjs`, `.cjs`, or `.sql`, and it projects
 `production_files x 40`. None of this repository's plugin surface matches that
-heuristic: the five production files are Markdown and TOML under
+heuristic: the six production files are Markdown and TOML under
 `speckit-pro/`. The estimator will therefore report `production: 0` and
 `projected: 0` with `status: pass` and `greenfield: false`.
 
 This is a known shape mismatch between a JavaScript-oriented heuristic and a
 Markdown plugin repository. It cannot produce a false pass that matters here,
-because the real figure (162) is already far under the 400 warn line and the
+because the real figure (190) is already far under the 400 warn line and the
 diff-mode reviewability gate re-measures the actual diff at PR time.
 
 **Alternatives rejected**: inflate the declared list with generated payload

@@ -3,10 +3,10 @@
   "spec_id": "ART-012",
   "feature_dir": "specs/art-012-implementation-notes-capture",
   "branch": "art-012-implementation-notes-capture",
-  "status": "completed",
-  "active_step": null,
-  "updated_at": "2026-08-10T00:00:00Z",
-  "stage": "plan",
+  "status": "in_progress",
+  "active_step": "Phase 7: Implement (T001-T014)",
+  "updated_at": "2026-08-11T00:00:00Z",
+  "stage": "implement",
   "prior_run_note": "completed_archived",
   "settings": {
     "consensus_mode": "tier-a",
@@ -93,56 +93,96 @@
       "status": "completed"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "skipped: out of stage (stage=plan)"
+      "step": "Phase 7: Implement - T001 amendment cascade + budget verification",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement - T002 record-contract test (RED)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - T003+T004 phase-execution.md lifecycle + append contract",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - T005 phase-execution-codex.md mirror",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - T014 agent-teams-integration.md stale-claim correction",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - T006 reporting-field assertions (RED)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - T007+T008+T009 reporting field, three files",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - T010 regenerate payloads/fixtures/proofs",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - T011 regenerate docs test reference",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - T012 full verification gate + quickstart",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - T013 PR packet input verification",
+      "status": "pending"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "skipped: out of stage (stage=plan)"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "skipped: out of stage (stage=plan)"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "skipped: out of stage (stage=plan)"
+      "status": "pending"
     },
     {
       "step": "Post: Code Review",
-      "status": "skipped: out of stage (stage=plan)"
+      "status": "pending"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "skipped: out of stage (stage=plan)"
+      "status": "pending"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "skipped: out of stage (stage=plan)"
+      "status": "pending"
     },
     {
       "step": "Post: Self-Review",
-      "status": "skipped: out of stage (stage=plan)"
+      "status": "pending"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "skipped: out of stage (stage=plan)"
+      "status": "pending"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "skipped: out of stage (stage=plan)"
+      "status": "pending"
     },
     {
       "step": "Post: PR Creation",
-      "status": "skipped: out of stage (stage=plan)"
+      "status": "pending"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "skipped: out of stage (stage=plan)"
+      "status": "pending"
     },
     {
       "step": "Post: Retrospective",
-      "status": "skipped: out of stage (stage=plan)"
+      "status": "pending"
     }
   ],
   "test_baseline_g0": {
@@ -175,8 +215,8 @@
     },
     "G5": {
       "pass": true,
-      "task_count": 13,
-      "reason": "13 tasks found"
+      "task_count": 14,
+      "reason": "14 tasks found"
     },
     "G6": {
       "pass": true,
@@ -245,6 +285,21 @@
       "production_files": 6,
       "total_files": 9,
       "status": "ok"
+    },
+    "cascade": {
+      "date": "2026-08-11",
+      "note": "T001 cascaded the ratified 190/6/9 budget into plan.md, tasks.md, quickstart.md and research.md R11; added agent-teams-integration.md as the 9th declared file operation; aligned T002's contract-item enumeration with the amended contract (items 6b/6c) and relocated T014 into User Story 1",
+      "estimator_rerun": {
+        "estimated_loc": 190,
+        "suggested_slices": 1,
+        "status": "ok"
+      },
+      "estimator_inputs": {
+        "user_stories": 2,
+        "files": 6,
+        "frs": 6,
+        "new_vs_modify": "modify"
+      }
     }
   }
 }

@@ -71,34 +71,36 @@ surface: harness/adapter.
 per dispatched task attempt, ordered inside a loop that already waits on
 model-latency-bound agent dispatches.
 
-**Constraints**: Modify-only on the five production files; no new template or
+**Constraints**: Modify-only on the six production files; no new template or
 schema file. Appends are additive only, never a read-modify-write. Failure to
 write is fail-open and must not change any task or phase outcome. Parity is owed
 on the produced record, not on identical wording, because the two platforms'
 dispatch mechanics differ (FR-005). Generated payloads and installed-cache
 proofs are regenerated, never hand-edited.
 
-**Scale/Scope**: 5 production files modified across 4 reporting-contract
-touchpoints and 2 orchestrator touchpoints, 1 new test, 1 manifest
-registration, 1 regenerated docs reference page, plus the generated payload and
-proof surfaces listed below.
+**Scale/Scope**: 6 production files modified across 4 reporting-contract
+touchpoints, 2 orchestrator touchpoints, and 3 stale-claim correction sites,
+1 new test, 1 manifest registration, 1 regenerated docs reference page, plus
+the generated payload and proof surfaces listed below.
 
-**Reviewability Budget**: Primary surface harness/adapter; 162 projected
-reviewable LOC (modify-weighted); 5 production files; 8 total files; within
-budget on every dimension.
+**Reviewability Budget**: Primary surface harness/adapter; 190 projected
+reviewable LOC (modify-weighted); 6 production files; 9 total files; within
+budget on every dimension, with the file count at but not above the six-file
+warn line.
 
 ## Declared File Operations
 
-Eight tracked files change, five of them production. The two orchestrator files
+Nine tracked files change, six of them production. The two orchestrator files
 are a source and its platform mirror; the three reporting-contract files are the
 shared injected template plus the two agent definitions that hard-code their own
-copy of it.
+copy of it; the sixth carries the delivery statement the append cadence rests on.
 
 - MODIFIED speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md
 - MODIFIED speckit-pro/agents/implement-executor.md
 - MODIFIED speckit-pro/codex-agents/implement-executor.toml
 - MODIFIED speckit-pro/skills/speckit-autopilot/references/phase-execution.md
 - MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md
+- MODIFIED speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md
 - NEW tests/speckit-pro/unit/test-implementation-notes-record.py
 - MODIFIED tests/speckit-pro/suite-manifest.json
 - MODIFIED docs-site/src/content/docs/reference/tests.md
@@ -109,7 +111,13 @@ hand-editing them and the reviewability budget excludes generated artifacts.
 Regenerate them; never author them.
 
 * `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/` payload copies of the
-  five production files.
+  six production files. The split is not symmetric, so do not expect six
+  modified copies under each product. Three files ship to both:
+  `tdd-protocol.md`, `phase-execution.md`, and `agent-teams-integration.md`.
+  `agents/implement-executor.md` ships to `dist/claude/` only.
+  `codex-agents/implement-executor.toml` and `phase-execution-codex.md` ship to
+  `dist/codex/` only. That is four modified copies under `dist/claude/` and five
+  under `dist/codex/`.
 * `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/{claude,codex}/speckit-pro/`,
   refreshed from `dist/`.
 * The `source_payload_tree_hash` values in
@@ -129,7 +137,7 @@ block. That is a heuristic mismatch, not a measurement: the helper counts a file
 as production only when its path starts with `src/`, `app/`, `lib/`, or
 `scripts/`, or ends in a JavaScript, TypeScript, or SQL extension, and this
 repository's plugin surface is Markdown and TOML under `speckit-pro/`. The
-authoritative figure is 162, from `estimate-spec-size` with this spec's
+authoritative figure is 190, from `estimate-spec-size` with this spec's
 corrected signals. Research R11 records the full reasoning so a later phase does
 not read `projected: 0` as either a pass to celebrate or a bug to fix.
 
@@ -151,9 +159,10 @@ Both evaluations pass. Constitution v1.2.0.*
 
 * Primary review surface: harness/adapter. No secondary surface. The second
   platform's mirror is the same surface expressed twice, not a distinct one.
-* Within budget on every dimension: 162 reviewable LOC against a 400 warn line
-  and an 800 block line; 5 production files against warn 6 and block 8; 8 total
-  files against warn 15 and block 25; 1 primary surface.
+* Within budget on every dimension: 190 reviewable LOC against a 400 warn line
+  and an 800 block line; 6 production files against warn 6 and block 8; 9 total
+  files against warn 15 and block 25; 1 primary surface. The production-file
+  count sits at the warn line, not above it, so no exception is owed.
 * Split decision: one spec, no split. The slice is already a single vertical
   path, reporting contract to orchestrator append to consumer hand-off, with no
   horizontal layering to cut along. No follow-up spec ID is owed for a split.

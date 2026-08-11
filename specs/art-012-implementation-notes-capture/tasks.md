@@ -25,11 +25,11 @@ reviewability checkpoint task before implementation. If it expands beyond
 primary surface without a ratified exception, stop and split the spec instead
 of adding more implementation tasks.
 
-This list stays inside the recorded budget: **162 projected reviewable LOC**
-(modify-weighted), **5 production files**, **8 total tracked files**, **1
-primary surface** (harness/adapter). Split decision: one spec, no split. No
-reviewability exception is claimed. T001 verifies this before any production
-edit.
+This list stays inside the recorded budget: **190 projected reviewable LOC**
+(modify-weighted), **6 production files**, **9 total tracked files**, **1
+primary surface** (harness/adapter). The production-file count sits at the warn
+line, not above it. Split decision: one spec, no split. No reviewability
+exception is claimed. T001 verifies this before any production edit.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -104,12 +104,13 @@ file is touched.
 **Acceptance criteria**
 
 - The tracked files this list touches match `specs/art-012-implementation-notes-capture/plan.md`'s
-  eight Declared File Operations one for one: five production files, one new
+  nine Declared File Operations one for one: six production files, one new
   test, one manifest registration, one regenerated docs reference. No task
-  introduces a ninth tracked file.
-- Every budget dimension is under the warn line: 162 reviewable LOC against 400,
-  5 production files against 6, 8 total files against 15, 1 primary surface
-  against 1.
+  introduces a tenth tracked file.
+- Every budget dimension is at or under the warn line: 190 reviewable LOC
+  against 400, 6 production files against 6, 9 total files against 15, 1 primary
+  surface against 1. The production-file count is at the warn line rather than
+  under it, which is within budget and owes no exception.
 - The split decision is recorded as: one spec, no split, no exception claimed
   (`spec.md` Reviewability Notes and Reviewability Budget).
 - **Do not invoke `reviewability-gate` in tasks mode.** That mode is deferred on
@@ -121,8 +122,9 @@ file is touched.
 - The plan-phase estimator's `projected: 0` is recorded as a heuristic mismatch,
   not a measurement. Its production-file heuristic recognises only `src/`,
   `app/`, `lib/`, `scripts/` prefixes and JS/TS/SQL extensions, and this surface
-  is Markdown and TOML under `speckit-pro/`. The authoritative figure is 162
-  (research R11).
+  is Markdown and TOML under `speckit-pro/`. The authoritative figure is 190
+  (research R11, as revised 2026-08-11; the 162 it originally recorded is
+  superseded).
 - No task in this list crosses a Design Concept non-goal: no per-marker
   attribution (Q7), no running spec-level summary counter (Q3), no second
   reporting block (Q6). Confirm each before proceeding.
@@ -158,12 +160,23 @@ reads `None`.
   `tests/speckit-pro/unit/test-reviewability-marker-guidance.py`, the working
   precedent for a Layer 4 test asserting reference-document prose across both
   platform copies of `phase-execution*.md` (research R8).
-- Asserts, against both `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`
-  and `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md`,
-  items 1 through 5 and item 7 of "What the Layer 4 test asserts" in
-  `specs/art-012-implementation-notes-capture/contracts/implementation-notes-record.md`,
-  plus item 6 against the Claude document only. That contract file is the
-  authority for every literal string asserted.
+- Asserts every item of "What the Layer 4 test asserts" in
+  `specs/art-012-implementation-notes-capture/contracts/implementation-notes-record.md`.
+  That contract file is the authority for every literal string asserted, and for
+  which document each item targets. As amended on 2026-08-11 the list runs
+  1, 2, 3, 4, 5, 6, 6b, 6c, 7, and the targets are **not** uniform:
+  - Items 1 through 5, item 6, and item 7 assert against **both**
+    `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` and
+    `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md`.
+    Item 6 is the per-arrival cadence, and it is owed by both documents, not by
+    the Claude one alone.
+  - Item 6b, the FR-006 teammate report obligation, asserts against the **Claude
+    document only**. Agent Teams is a Claude-platform mechanism, and research R10
+    records that Codex workers already return their summaries.
+  - Item 6c asserts against a **third file**,
+    `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md`,
+    which T014 edits. This is why T014 is scheduled inside User Story 1 rather
+    than in Polish: the record-contract group cannot go fully GREEN without it.
 - Registered in `tests/speckit-pro/suite-manifest.json` under layer `4` as
   `{"path": "tests/speckit-pro/unit/test-implementation-notes-record.py", "label": "test-implementation-notes-record", "baseline": null}`,
   matching the shape of the neighbouring layer-4 entries. An unregistered test
@@ -329,6 +342,48 @@ Anchor by that text, not by line number: T003 shifts this file's numbering.
 - Not `[P]`: although it is a different file, it must mirror the exact rules
   T003 and T004 land, so it runs after both.
 
+- [ ] T014 [P] [US1] Correct the stale batched-delivery claims in `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md`
+
+**Why**: this file is the reason the append cadence was narrowed on a false
+premise. It asserts in three places that parallel results arrive as a batch,
+which the platform documentation contradicts. Left uncorrected, the next reader
+re-derives the same wrong conclusion. Contract item 6c asserts against this
+file, so User Story 1's record-contract group does not pass without it. The ID
+is out of sequence because the 2026-08-11 amendment appended it after the list
+was numbered.
+
+**Where** — three sites, anchored by text, not line number:
+
+1. The `### Within-message parallelism` paragraph asserting
+   `The next user message returns all N results together.`
+2. The axes-of-parallelism list item asserting `**Within-message batching**`,
+   ending `all results in next message`.
+3. The `### Use site 3: Phase 7 [P] task team` pseudocode line
+   `Lead waits for all to complete, merges results into COMPLETED_TASKS` — the
+   twin of the Path A line T004 rewrites. Missing it leaves an un-amended
+   collect-then-record model 400 lines after the corrected statement, on the
+   documented route from both Phase 7 entry points.
+
+**Acceptance criteria**
+
+- Each site states that background-subagent and teammate completions are
+  delivered per completion, citing the platform docs, and none of the three
+  still asserts batched arrival.
+- The correction is factual, not a mandate: sites that legitimately choose to
+  collect at a barrier — consensus collection, the post-implementation tracks,
+  and Phase 7's own TYPECHECK + UNIT_TEST safety net — keep that policy. Say so
+  explicitly, so the next reader does not over-apply the correction.
+- Use site 3's pseudocode names the per-arrival notes append while keeping the
+  barrier merge into `COMPLETED_TASKS` and the team cleanup line untouched.
+- Design Principle #2 is left intact; note only that it now requires both paths
+  to append per arrival rather than both to wait.
+- **Verify**: a grep for `returns all N results together` and for
+  `all results in next message` over the file returns nothing, and the Use site 3
+  block mentions the per-arrival append.
+- Covers FR-005; supports FR-003 and FR-006 by removing the contradiction.
+- `[P]`: a different file from every other production edit, with no shared
+  anchor text.
+
 **Checkpoint**: User Story 1 is complete and independently verifiable. The
 record-contract test passes on both platforms. The full suite is still RED on
 stale generated payloads and proof hashes until T010; that is expected.
@@ -445,7 +500,7 @@ block.
 
 ## Phase 5: Polish & Cross-Cutting Concerns
 
-**Purpose**: regenerate the three generated surfaces the five production edits
+**Purpose**: regenerate the three generated surfaces the six production edits
 restale, then verify the whole change end to end.
 
 - [ ] T010 [P] Regenerate the install payloads, installed-cache fixtures, and proof hashes by running `python3 scripts/refresh-release-artifacts.py`
@@ -463,15 +518,19 @@ restale, then verify the whole change end to end.
   byte-identical mirror
   `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json`.
   It is idempotent: a second run on the same source makes no further change.
-- `git status --short dist/` shows the five production files' payload copies
-  modified under both products. The Codex payload keeps the agent at
+- `git status --short dist/` shows the six production files' payload copies
+  modified, but **not six under each product** — the split is asymmetric.
+  `tdd-protocol.md`, `phase-execution.md`, and `agent-teams-integration.md` ship
+  to both, so four copies change under `dist/claude/` and five under
+  `dist/codex/`. The Codex payload keeps the agent at
   `dist/codex/speckit-pro/codex-agents/implement-executor.toml` and flattens the
   `codex-skills/.../references/*` documents into
   `dist/codex/speckit-pro/skills/speckit-autopilot/references/`.
 - **Never hand-edit** `dist/`, the installed-cache fixture, or either proof JSON
   (AGENTS.md Editing Boundaries). If a copy looks unchanged when it should not
   be, the comparison used timestamps rather than contents; compare by checksum.
-- Depends on T003, T004, T005, T007, T008, and T009, the five production files.
+- Depends on T003, T004, T005, T007, T008, T009, and T014, the six production
+  files.
 - `[P]` with T011: disjoint outputs and different toolchains. This script
   explicitly does not regenerate the docs reference.
 
@@ -515,7 +574,7 @@ restale, then verify the whole change end to end.
 - The packet's sources are present and current: `plan.md`'s six-step Review
   Order, `spec.md`'s Reviewability Budget and PR Review Packet Requirements,
   and `quickstart.md`'s verification evidence including the T012 results.
-- Traceability maps FR-001 through FR-005 and SC-001 through SC-006 onto the
+- Traceability maps FR-001 through FR-006 and SC-001 through SC-006 onto the
   changed files and the verification evidence above.
 - Rollback note: the feature has no flag and needs none. Reverting the six
   production file edits removes it completely and leaves no state behind,
@@ -527,44 +586,13 @@ restale, then verify the whole change end to end.
   fingerprint belong to the Post-Implementation Checklist's PR Body Generation
   step and the runner's packet helper. This task verifies inputs only.
 
-- [ ] T014 [P] Correct the stale batched-delivery claims in `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md`
+> **T014 has moved.** It is a User Story 1 task, listed after T005 in Phase 3.
+> Contract item 6c asserts against the file it edits, so the record-contract
+> group cannot pass without it. Its ID is out of document order because the
+> 2026-08-11 amendment appended it after the list was numbered; renumbering
+> would have invalidated every cross-reference to T001 through T013.
 
-**Why**: this file is the reason the append cadence was narrowed on a false
-premise. It asserts in three places that parallel results arrive as a batch,
-which the platform documentation contradicts. Left uncorrected, the next reader
-re-derives the same wrong conclusion.
-
-**Where** — three sites, anchored by text, not line number:
-
-1. The `### Within-message parallelism` paragraph asserting
-   `The next user message returns all N results together.`
-2. The axes-of-parallelism list item asserting `**Within-message batching**`,
-   ending `all results in next message`.
-3. The `### Use site 3: Phase 7 [P] task team` pseudocode line
-   `Lead waits for all to complete, merges results into COMPLETED_TASKS` — the
-   twin of the Path A line T004 rewrites. Missing it leaves an un-amended
-   collect-then-record model 400 lines after the corrected statement, on the
-   documented route from both Phase 7 entry points.
-
-**Acceptance criteria**
-
-- Each site states that background-subagent and teammate completions are
-  delivered per completion, citing the platform docs, and none of the three
-  still asserts batched arrival.
-- The correction is factual, not a mandate: sites that legitimately choose to
-  collect at a barrier — consensus collection, the post-implementation tracks,
-  and Phase 7's own TYPECHECK + UNIT_TEST safety net — keep that policy. Say so
-  explicitly, so the next reader does not over-apply the correction.
-- Use site 3's pseudocode names the per-arrival notes append while keeping the
-  barrier merge into `COMPLETED_TASKS` and the team cleanup line untouched.
-- Design Principle #2 is left intact; note only that it now requires both paths
-  to append per arrival rather than both to wait.
-- **Verify**: a grep for `returns all N results together` and for
-  `all results in next message` over the file returns nothing, and the Use site 3
-  block mentions the per-arrival append.
-- Covers FR-005; supports FR-003 and FR-006 by removing the contradiction.
-- `[P]`: a different file from every other production edit, with no shared
-  anchor text.
+---
 
 ---
 
@@ -595,10 +623,15 @@ re-derives the same wrong conclusion.
 - T003 before T004: both edit `phase-execution.md`, and the append contract
   builds on the lifecycle step
 - T005 after T003 and T004: it mirrors the exact rules those two land
+- T014 any time after T002, and in practice alongside T005: it is a different
+  file with no shared anchor, but contract item 6c asserts against it, so User
+  Story 1 is not GREEN until it lands
 - T007, T008, and T009 in any order, or together
 
 ### Parallel Opportunities
 
+- **User Story 1 implementation**: T014 runs alongside T005. Different files,
+  no shared anchor text, and neither reads the other's output
 - **User Story 2 implementation**: T007, T008, and T009 are three separate
   files with no ordering dependency between them
 - **Polish regeneration**: T010 and T011 target disjoint surfaces with different

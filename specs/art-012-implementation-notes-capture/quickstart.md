@@ -115,8 +115,12 @@ python3 scripts/refresh-release-artifacts.py
 git status --short dist/
 ```
 
-Expected: the five production files' payload copies show as modified under both
-`dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`. Never hand-edit them.
+Expected: the six production files' payload copies show as modified, four under
+`dist/claude/speckit-pro/` and five under `dist/codex/speckit-pro/`. The split is
+not symmetric: `tdd-protocol.md`, `phase-execution.md`, and
+`agent-teams-integration.md` ship to both products, `agents/implement-executor.md`
+to Claude only, and `codex-agents/implement-executor.toml` plus
+`phase-execution-codex.md` to Codex only. Never hand-edit them.
 
 One command covers both generated surfaces here, and it is **not**
 `python3 scripts/build-plugin-payloads.py` on its own: that builder rebuilds the

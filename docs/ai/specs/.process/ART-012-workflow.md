@@ -32,15 +32,15 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ✅ Complete | G1 pass — 4 FRs, 2 user stories, 6 success criteria, 0 markers |
+| Specify | `/speckit-specify` | ✅ Complete | G1 pass — 6 FRs after amendment, 2 user stories, 6 success criteria, 0 markers |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass — 2 verification sessions, 7 findings, 2 consensus rounds, 0 markers |
-| Plan | `/speckit-plan` | ✅ Complete | G3 pass — 6 artifacts, 11 research decisions, 8 declared file ops |
+| Plan | `/speckit-plan` | ✅ Complete | G3 pass — 6 artifacts, 11 research decisions, 9 declared file ops after amendment |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — 2 domains, 58 items, 14 gaps found and all remediated |
-| Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 13 tasks, 5 [P], route one-navigable-PR |
+| Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 14 tasks, 5 [P], route one-navigable-PR |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 pass — 13 findings, 0 CRITICAL, all remediated in 1 loop |
-| Confidence Gate | G6.5 | ✅ Complete | Advisory, composite 0.93 ≥ 0.90 → proceed |
-| Implement | `/speckit-implement` | ⏳ Pending | Out of stage — this run resolved `plan`; runs on `--stage implement` |
-| Post | Post-Implementation | ⏳ Pending | Out of stage — belongs to the implement stage |
+| Confidence Gate | G6.5 | ✅ Complete | Advisory, composite 0.95 ≥ 0.90 → proceed (re-emitted after the 2026-08-11 amendment; supersedes 0.93) |
+| Implement | `/speckit-implement` | 🔄 In Progress | Stage `implement` resolved 2026-08-11; T001 amendment cascade complete |
+| Post | Post-Implementation | ⏳ Pending | Runs after G7 |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -165,7 +165,7 @@ with this spec's scope; re-verify after Plan.
 | **Spec ID** | ART-012 |
 | **Name** | Implementation-Notes Capture |
 | **Branch** | `art-012-implementation-notes-capture` |
-| **Stage** | plan |
+| **Stage** | implement |
 | **Dependencies** | ART-006 (Autopilot Staging) — complete, PR #422 |
 | **Enables** | ART-010 (Final-PR Writeup, Companions & Ready Flip) — writeup depth |
 | **Priority** | P2 |
@@ -178,11 +178,22 @@ with this spec's scope; re-verify after Plan.
       reading "None" when there is nothing to report.
 - [ ] `specs/<branch>/.process/implementation-notes.md` is created with a
       header at the start of Phase 7, before any task dispatches.
-- [ ] The orchestrator appends one entry per dispatched task attempt — for a
-      singly or sequentially dispatched task, immediately after it completes;
-      for a task inside a parallel run, when that run is collected, before the
-      next run dispatches. Never batched to phase end, never overwritten on
-      retry, never truncated on resume.
+- [ ] The orchestrator appends one entry per dispatched task attempt, on the
+      turn that attempt's own result reaches it, before it dispatches further
+      work. One rule for every dispatch shape: a member of a parallel run does
+      not wait for the rest of its run. Never appended on a bare idle or
+      liveness signal. Never batched to phase end, never overwritten on retry,
+      never truncated on resume.
+
+      *Amended 2026-08-11.* This bullet previously deferred parallel-run
+      appends to "when that run is collected". The operator restored the
+      literal per-task guarantee after the batched-delivery premise behind that
+      wording was found to be false. See the Design Concept's Q2 revision
+      note 2.
+- [ ] Every dispatched attempt's summary reaches the orchestrator (FR-006):
+      Agent Teams teammates are instructed at dispatch to send their task
+      summary to the lead, so the Teams path has a payload to write rather than
+      a structurally empty entry.
 - [ ] A failed append logs a gap and never blocks the task or the phase
       (fail-open, matching ART-007 and ART-009's precedent).
 - [ ] Both `speckit-pro/skills/speckit-autopilot/` and its
@@ -1141,10 +1152,80 @@ Before starting any task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | | | |
-| 2 - User Story 1 | | | |
-| 3 - User Story 2 | | | |
-| 4 - Polish | | | |
+| 2 - Foundational | T001 | 1/1 | Amendment cascade + budget verification |
+| 3 - User Story 1 | T002, T003, T004, T005, T014 | 0/5 | |
+| 4 - User Story 2 | T006, T007, T008, T009 | 0/4 | |
+| 5 - Polish | T010, T011, T012, T013 | 0/4 | |
+
+### T001 — Reviewability Budget Verification And Amendment Cascade
+
+**Verdict: within budget. One spec, no split, no exception claimed.**
+
+The 2026-08-11 operator amendment was ratified in `spec.md` and this workflow
+file but never cascaded into the downstream planning artifacts. T001 found that
+drift and closed it before any production file was touched.
+
+| Dimension | Recorded | Warn | Block | Result |
+|---|---|---|---|---|
+| Reviewable LOC | 190 | 400 | 800 | Well under |
+| Production files | 6 | 6 | 8 | At the warn line, not above |
+| Total files | 9 | 15 | 25 | Well under |
+| Primary surfaces | 1 | 1 | >1 | At the line |
+
+**Estimator evidence, re-run rather than hand-adjusted.** Inputs
+`{"user_stories": 2, "files": 6, "frs": 6, "new_vs_modify": "modify"}` return
+`{"estimated_loc": 190, "suggested_slices": 1, "status": "ok"}` verbatim. This
+follows the A10 precedent set during Analyze: when the spec's shape changes, the
+estimator is re-fed, never held at a stale figure for the sake of consistency.
+
+**Drift closed.** `spec.md` already carried 190 / 6 / 9. These did not:
+
+| Artifact | Was | Now |
+|---|---|---|
+| `plan.md` Scale/Scope, Reviewability Budget, Constitution budget | 162 / 5 / 8 | 190 / 6 / 9 |
+| `plan.md` Declared File Operations | 8 entries, 5 production | 9 entries, 6 production |
+| `tasks.md` budget preamble, T001 and T010 criteria | 162 / 5 / 8 | 190 / 6 / 9 |
+| `quickstart.md` Scenario 4 expectation | five files, both products | six files, asymmetric split |
+| `research.md` R11 | fixed at 162 | dated revision note; 190 authoritative |
+
+The missing declared file operation was
+`speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md`,
+the sixth production file the amendment added. Without it the declared-operations
+block and the task list disagreed about the size of the change.
+
+**Two defects found beyond the numbers.**
+
+1. **`tasks.md` T002 enumerated the wrong contract items.** It named "items 1
+   through 5 and item 7, plus item 6 against the Claude document only". The
+   amended contract carries 1, 2, 3, 4, 5, 6, 6b, 6c, 7, item 6 is owed by
+   *both* platform documents, and 6b and 6c did not exist when T002 was written.
+   Left alone, the test would have been authored against a superseded list and
+   would have asserted nothing about FR-006 or the stale-claim correction.
+2. **T014 was scheduled in Polish but belongs to User Story 1.** Contract item
+   6c asserts against the file T014 edits, so the record-contract group could not
+   have gone GREEN in Phase 3 and T005's "the whole record-contract group passes"
+   checkpoint was unsatisfiable as written. T014 moved into User Story 1,
+   alongside T005. Its ID stays out of document order: renumbering would have
+   invalidated every cross-reference to T001 through T013.
+
+**Non-goals re-confirmed against the task list.** No per-marker attribution
+(Q7), no running spec-level summary counter (Q3), no second reporting block
+(Q6). No task crosses any of the three.
+
+**`reviewability-gate` tasks mode: not invoked.** It is deferred on the installed
+runner (`helper_id=reviewability-gate`, requested `mode=tasks`, exit 2,
+`status: deferred`). The committed fallback evidence chain was read instead: the
+setup-mode gate result recorded above, the plan-phase `estimate-reviewable-loc`
+verdict, and the operator's one-spec split decision.
+
+**Dist asymmetry recorded, having been checked rather than assumed.** The six
+production files do not produce six modified payload copies per product.
+`tdd-protocol.md`, `phase-execution.md`, and `agent-teams-integration.md` ship to
+both; `agents/implement-executor.md` to Claude only;
+`codex-agents/implement-executor.toml` and `phase-execution-codex.md` to Codex
+only. Four copies change under `dist/claude/`, five under `dist/codex/`. An
+earlier draft of this cascade asserted "both products carry five of six" by
+symmetry; a direct filesystem check disproved it before it was committed.
 
 ---
 
