@@ -167,10 +167,19 @@ def _phase_execution_checks(target: str, platform: str) -> tuple[tuple[str, str,
         (f"{platform} forbids batching entries to phase end", target, "regex", r"(?i)(never|not) batched"),
         (f"{platform} never appends on a bare idle signal", target, "regex",
          r"(?i)never\s+append[^.]{0,60}idle|idle[^.]{0,80}never"),
-        # Item 7 — all three routing branches, and the single None value.
-        (f"{platform} covers the executor routing branch", target, "contains", "implement-executor"),
-        (f"{platform} covers the research routing branch", target, "contains", "domain-researcher"),
-        (f"{platform} covers the verification routing branch", target, "contains", "orchestrator-direct"),
+        # Item 7 — all three routing branches, and the single None value. Each
+        # branch is asserted as its own row of the append-call-sites table, not
+        # as a bare mention: all three route names already appeared in the
+        # Claude Agent Routing Table before this contract existed, so a
+        # `contains` on the name alone stays green with the table deleted. The
+        # `[^|]*` gap cannot cross a cell boundary, so a row's route, its
+        # task-result-block answer, and its entry value must match together.
+        (f"{platform} routes the executor branch to the reported text", target, "regex",
+         r"\|[^|]*`implement-executor`[^|]*\|\s*Yes\s*\|\s*Reported text, or `None`\s*\|"),
+        (f"{platform} routes the research branch to None", target, "regex",
+         r"\|[^|]*`domain-researcher`[^|]*\|\s*No\s*\|\s*`None`\s*\|"),
+        (f"{platform} routes the verification branch to None", target, "regex",
+         r"\|[^|]*orchestrator-direct[^|]*\|\s*No\s*\|\s*`None`\s*\|"),
         (f"{platform} states all three branches append", target, "regex",
          r"(?i)three\s+(append\s+)?(call sites|routing branches|branches|routes)"),
         (f"{platform} names the literal None value", target, "regex", r"(?i)literal\s+.?None"),
@@ -385,7 +394,6 @@ class ImplementationNotesRecordTests(unittest.TestCase):
                     )
                 else:  # pragma: no cover - guards a typo in the check table
                     self.fail(f"[{group}] {name}: unknown check kind {kind!r}")
-                    return
                 if not satisfied:
                     self.fail(f"[{group}] {name}: {label}: {detail}")
 

@@ -41,9 +41,9 @@ the order the orchestrator collected them.
 | From | Event | To |
 |---|---|---|
 | Absent | Phase 7 starts | Header only |
-| Header only | Phase 7 is interrupted before any run is collected | Header only, and that is the correct terminal state |
+| Header only | Phase 7 is interrupted before any attempt's result arrives | Header only, and that is the correct terminal state |
 | Header only, or Header + N entries | A singly or sequentially dispatched attempt completes | Header + N+1 entries |
-| Header only, or Header + N entries | A parallel run of k tasks is collected | Header + N+k entries, written before the next run dispatches |
+| Header only, or Header + N entries | One member of a parallel run of k tasks reports | Header + N+1 entries, written on that arrival while the run's other members are still working |
 | Header + N entries | Phase 7 resumes from a partial run | Header + N entries, then appended to |
 
 There is no delete transition and no truncate transition. A spec whose tasks

@@ -32,7 +32,6 @@ the document.
 
 **Deviations/Edge cases/Surprises:** Two checks forced unbroken clauses because the regex gap-fillers are `[^.]` and no period may fall inside an asserted span. The FR-006 instruction went into the Path A block rather than the shared Step 3c template, because Path B subagents and foreground singletons already return their output to the orchestrator directly, so a send-to-the-lead obligation would be meaningless there. It was appended after the existing anchor line so the anchor text survives verbatim for the mirroring task. The append instruction was placed at both `Wait` lines individually rather than only at the safety-net convergence, because an instruction sitting at the convergence reads as "wait for the barrier, then append", which is the batching FR-003 forbids. No batched-delivery contradiction exists inside this file; the stale claim lived only in agent-teams-integration.md.
 
-
 ### T005
 
 **Deviations/Edge cases/Surprises:** The Codex platform turned out to already

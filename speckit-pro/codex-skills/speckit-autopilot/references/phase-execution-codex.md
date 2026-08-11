@@ -586,7 +586,9 @@ work. The bounded `wait_agent` loop already delivers each worker's summary
 individually, so a member of a cap-bounded `[P]` wave does not wait for the rest
 of its wave: its entry is written when that summary is consumed, not when the
 wave reaches its TYPECHECK and UNIT_TEST safety net. Never batched to phase end,
-and never deferred to a wave boundary.
+and never deferred to a wave boundary. Where several summaries are consumed on
+the same turn, each still gets its own entry on that turn, in the order they are
+presented.
 
 **Never append on a bare idle or liveness signal.** A status update, a
 `wait_agent` timeout, or a worker that stops without delivering its task summary

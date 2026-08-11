@@ -817,8 +817,9 @@ any task completes, and a spec carrying no implementation tasks at all, must
 both still leave a header-only record behind.
 
 The record is one file per spec, at
-`<FEATURE_DIR>/.process/implementation-notes.md`, alongside the rest of the
-feature's autopilot exhaust. Its first line is the header, and the header is
+`specs/<feature>/.process/implementation-notes.md`, alongside the rest of the
+feature's autopilot exhaust — the same `specs/<feature>/` this phase reads
+tasks.md from in Step 1. Its first line is the header, and the header is
 written exactly once:
 
 ```text
@@ -908,9 +909,11 @@ For each phase group in tasks.md:
         `## Task Result: <TASK_ID>` block to the lead when its
         task completes. The team's shared mailbox
         lets teammates coordinate ("I'm changing the auth
-        interface, heads up"). Wait for all teammates to complete.
+        interface, heads up").
         Append each teammate's entry as that report message
-        arrives, never on a bare idle or liveness notification.
+        arrives, without waiting for the rest of the run, and
+        never on a bare idle or liveness notification.
+        Only then wait for all teammates to complete.
         Clean up the team before the next run.
       else:
         # Path B: spawn all [P] tasks in ONE message, background
@@ -1035,6 +1038,8 @@ work. A member of a parallel run does not wait for the rest of its run: the
 platform delivers each worker's completion individually, so the entry is written
 when that worker reports, not when the run reaches the TYPECHECK and UNIT_TEST
 safety net. Never batched to phase end, and never deferred to a run boundary.
+Where several results do reach the orchestrator on the same turn, each still
+gets its own entry on that turn, in the order they are presented.
 
 **Never append on a bare idle or liveness signal.** A worker that stops without
 delivering a task summary has produced no result, which is a cue to request the
