@@ -5961,7 +5961,7 @@ class UpstreamAttributionTests(unittest.TestCase):
                     exists,
                     f"entry {entry['id']!r}: status {entry['status']!r} disagrees with artifact presence",
                 )
-        if any(path for path in _artifact_files(GALLERY_ROOT, "*.html")):
+        if _artifact_files(GALLERY_ROOT, "*.html"):
             self.assertTrue(
                 _attributable(GALLERY_ROOT, UPSTREAM),
                 "artifacts are shipped but none is paired with an upstream entry — G3, G4, G6 and G7 "

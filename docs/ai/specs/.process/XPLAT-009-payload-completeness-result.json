@@ -226,7 +226,7 @@
             "kind": "docs",
             "path": "artifact-gallery/templates/spec-explainer.html",
             "required": true,
-            "sha256": "60fb209cc854e325153edaebc374af59586d8e94183f4ecca34b1b8769f797a5",
+            "sha256": "7de2bca5f7e8968ec76b8cdf5fe7ab2099751858fb0b176f3dc8de17b3c60364",
             "source_path": "speckit-pro/artifact-gallery/templates/spec-explainer.html",
             "transform": "none"
           },
@@ -1227,7 +1227,7 @@
             "kind": "docs",
             "path": "artifact-gallery/templates/spec-explainer.html",
             "required": true,
-            "sha256": "60fb209cc854e325153edaebc374af59586d8e94183f4ecca34b1b8769f797a5",
+            "sha256": "7de2bca5f7e8968ec76b8cdf5fe7ab2099751858fb0b176f3dc8de17b3c60364",
             "source_path": "speckit-pro/artifact-gallery/templates/spec-explainer.html",
             "transform": "none"
           },
@@ -2034,7 +2034,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "cffa8a0763d774b90fdb316af45d3d361f903c2e9831ad40320486dfb9f75c7b",
+        "file_tree_hash": "43127fa5591ba8fe2bd042a06f5e9ad57878e57769a21d4a1198c1ee84e4e1c9",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
@@ -2144,7 +2144,7 @@
             "kind": "docs",
             "path": "artifact-gallery/templates/spec-explainer.html",
             "required": true,
-            "sha256": "60fb209cc854e325153edaebc374af59586d8e94183f4ecca34b1b8769f797a5",
+            "sha256": "7de2bca5f7e8968ec76b8cdf5fe7ab2099751858fb0b176f3dc8de17b3c60364",
             "source_path": "speckit-pro/artifact-gallery/templates/spec-explainer.html",
             "transform": "none"
           },
@@ -3298,7 +3298,7 @@
             "kind": "docs",
             "path": "artifact-gallery/templates/spec-explainer.html",
             "required": true,
-            "sha256": "60fb209cc854e325153edaebc374af59586d8e94183f4ecca34b1b8769f797a5",
+            "sha256": "7de2bca5f7e8968ec76b8cdf5fe7ab2099751858fb0b176f3dc8de17b3c60364",
             "source_path": "speckit-pro/artifact-gallery/templates/spec-explainer.html",
             "transform": "none"
           },
@@ -4357,7 +4357,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "0e4f10d80d3eb440fb8603678bb17cb31371cf89a2cdacd0387d0da62a664583",
+        "file_tree_hash": "7bbbdc612dfbcae64586f1103ce10891a78d9cb2093c4b1f47248432740b44f2",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
