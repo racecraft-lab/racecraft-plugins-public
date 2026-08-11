@@ -96,7 +96,41 @@ mirrors into it would misreport that surface in both directions.
 - NEW tests/speckit-pro/unit/test-artifact-fill-regions.py
 - MODIFIED speckit-pro/artifact-gallery/manifest.json
 - MODIFIED tests/speckit-pro/suite-manifest.json
+- MODIFIED tests/speckit-pro/unit/test-artifact-gallery.py
 - MODIFIED docs-site/src/content/docs/reference/tests.md
+
+**`test-artifact-gallery.py` was added to this list during implementation, and
+the omission was a real planning gap rather than scope creep.** ART-001 wrote
+three tests that assert its own world out loud: the `templates/` sweep is empty,
+no entry is paired with an artifact, and every upstream entry still reads
+`planned`. They exist because a green attribution gate that never ran reads
+exactly like one that did, so the vacuity is stated rather than left implied.
+They are correct for ART-001 and **false the moment ART-002 ships its first
+template** — unconditionally, not merely once the status flips.
+
+Nothing in planning caught this, because the plan reasoned about what ART-002
+*writes* and these are assertions about what the repository *does not yet
+contain*. The three are rewritten to state the new truth — the sweep equals the
+`shipped` identifier set, the paired set equals the shipped set at each origin,
+and an upstream entry reads `shipped` exactly when its artifact exists — plus a
+sharpened non-vacuity guard: once anything is ported, at least one entry must be
+paired, or G3, G4, G6 and G7 have quietly gone back to asserting nothing while
+still reporting green.
+
+They are **rewritten, never deleted**. Deleting a non-vacuity guard is how a
+check group silently stops binding, which is the same failure `check_c8` exists
+to prevent. Net effect on the suite is a strengthening: four checks that swept an
+empty set now bind on real artifacts for the first time.
+
+This is not an FR-009 violation. That requirement names the shared *foundation*
+files — the brand token file, the gallery head file, the contract document, the
+routing signal vocabulary, and the upstream notice. `test-artifact-gallery.py` is
+repository-only validation, and updating a test whose premise this feature
+invalidates is the ordinary cost of being the feature that invalidates it.
+
+All three replacements are keyed on `status`, so **slice 2 still needs no edit
+here** — each flip moves an identifier into both sides of an equality at once,
+exactly as `research.md` D8 arranges for the fill-region module.
 
 ### Slice 2 — US3 Code Approaches, US4 Module Map (PR 2, branch cut from slice 1, stacked on it)
 

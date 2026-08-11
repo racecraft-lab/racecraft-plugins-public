@@ -1342,13 +1342,92 @@ Before starting any task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Setup | T001-T006 | 🔄 | Baseline, canonical blocks, sample feature pinned |
-| 2 - Foundation (L4 test RED) | T007-T016 | ⏳ | |
-| 3 - Slice 1: US1 + US2 | T017-T040 | ⏳ | |
-| 4 - Slice 1 closeout (PR 1) | T041-T047 | ⏳ | |
+| 1 - Setup | T001-T006 | ✅ | Baseline 7226/7226, canonical blocks extracted, `NIMBUS-101` pinned |
+| 2 - Foundation (L4 test RED) | T007-T016 | ✅ | `test-artifact-fill-regions` 44/44, registered at layer 4 |
+| 3 - Slice 1: US1 + US2 | T017-T040 | ✅ | Two templates authored in parallel, both flips landed |
+| 4 - Slice 1 closeout (PR 1) | T041-T047 | 🔄 | T041-T046 done; T047 is the pull request |
 | 5 - Slice boundary | T048 | ⏳ | Branch cut, nothing merged |
 | 6 - Slice 2: US3 + US4 | T049-T073 | ⏳ | |
 | 7 - Slice 2 closeout (PR 2) | T074-T079 | ⏳ | |
+
+#### Phase 2-4 evidence
+
+| Task | Result |
+|---|---|
+| T007-T013 L4 module | `tests/speckit-pro/unit/test-artifact-fill-regions.py`, 1103 lines, **44/44 passing**. Six checks R1-R6, the parser, and six synthetic fixtures |
+| T014 registration | Added to `tests/speckit-pro/suite-manifest.json` at layer 4; `run-all.py --layer 4` dispatches it and its count appears in the layer total |
+| T015 docs reference | `pnpm --dir docs-site reference:generate` → `reference/tests.md` changed, +5/-3. Generated, never hand-edited |
+| T017-T028 implementation-plan | 1637 lines. 7 marker pairs, flat, each once; inventory and body agree both ways; 4 phase anchors; 2 scripts (canonical block + its own) |
+| T030-T039 spec-explainer | 773 lines. 6 marker pairs; **exactly 1 script element**, the canonical block's — FR-020's read-only property is structural |
+| T029/T040 catalog flips | `git diff` on `manifest.json` is **exactly two lines, both `status`**. Signal and export vocabularies untouched. FR-008 holds |
+| T041 scope conformance | No shared foundation file differs from `origin/main` — brand kit, head block, contract, upstream notice, brand voice all clean. FR-009 holds |
+| T042 payload refresh | `refresh-release-artifacts.py` run twice: run 1 wrote 22 files, run 2 reported "already consistent; no changes". **Idempotent.** `speckit-pro-runner.manifest.json` and its `.sha256` stayed clean, as required — this feature edits no runner source |
+| T043 docs re-check | Re-ran the generator after the templates landed: **no further change**, confirmed by running it rather than assuming it |
+| T045 guard provocations | Both fired with the right message and both were reverted. `status: shipped` with no file → D1 names the missing artifact. File present under `status: planned` → D2 names the orphan. The diff afterwards is again exactly the two intended flips |
+| T046 acceptance runbook | `specs/art-002-draft-pr-template-set/.process/acceptance-runbook.md`. Set A 18 steps, Set B 9 steps, each with an observable result. A9 and A10 carry the two timed observables (SC-005, SC-002) |
+
+**Independent verification, not agent self-report.** Each template was checked by
+an orchestrator-owned parse written separately from the ones the authoring agents
+ran: canonical blocks compared byte for byte against the extracted block files,
+marker pairs counted and proven flat, both-ways inventory agreement recomputed,
+prohibited constructs swept, heading ranks walked, and the inside/outside
+boundary checked element by element. Two implementations agreeing against the
+bytes is evidence; one implementation reporting on itself is not.
+
+Both templates place the boundary correctly, which is the failure mode that would
+otherwise stay silent: the brand mark, both export controls, the status region,
+the clipboard fallback field, and both export notices sit **outside** every marker
+pair, and the sample-content notice sits **inside** `feature-header`.
+
+**The reviewability figure moved again, and honestly.** The Layer 4 module is
+1103 lines against a planned ~250. That is not bloat: it is 25.1 lines per test
+against the 23.2 of `test-artifact-gallery.py` beside it, so the module is written
+at the density this repository actually uses. The plan's estimate assumed a terser
+style than the surrounding code. Recorded rather than smoothed over, because the
+same assumption will misprice the next test module too.
+
+#### Discovered during implementation — three ART-001 tests assert a world this feature ends
+
+**Found by running the existing gallery scanner against the first template
+rather than by reading the plan.** Nothing in Specify, Clarify, Plan, Checklist,
+or Analyze caught it, and the reason is worth recording: every phase reasoned
+about what ART-002 *writes*, and these are assertions about what the repository
+*does not yet contain*.
+
+`tests/speckit-pro/unit/test-artifact-gallery.py` carries three tests that state
+ART-001's world out loud:
+
+| Test | Asserted |
+|---|---|
+| `test_the_shipped_gallery_carries_no_artifact` | the `templates/` sweep is empty |
+| `test_the_shipped_gallery_pairs_no_entry_with_an_artifact` | no entry is paired with an artifact, so G3/G4/G6/G7 are vacuous |
+| `test_every_shipped_upstream_entry_is_planned` | every upstream entry still reads `planned` |
+
+They exist for a good reason — a green attribution gate that never ran reads
+exactly like one that did — and they are **unconditional**. The first two fail
+the moment a template file appears, before any status flip; the third fails at
+the flip. ART-002 is the change that makes all three false.
+
+**Resolution: rewritten to state the new truth, never deleted.** The sweep now
+equals the `shipped` identifier set, the paired set equals the shipped set at
+each origin, and an upstream entry reads `shipped` exactly when its artifact
+exists. The non-vacuity guard is kept and sharpened: once anything is ported, at
+least one entry must be paired, or those four checks have quietly gone back to
+asserting nothing while still reporting green. Deleting a non-vacuity guard is
+how a check group silently stops binding, which is the failure `check_c8` in the
+same file exists to prevent.
+
+**Net effect is a strengthening.** Four checks that swept an empty set now bind
+on real artifacts for the first time in the gallery's history.
+
+**Not an FR-009 violation.** That requirement names the shared *foundation*
+files — brand token file, gallery head file, contract document, routing signal
+vocabulary, upstream notice. This is repository-only validation, and it is added
+to `plan.md` *Declared File Operations* for slice 1 where it was missing.
+
+**Slice 2 still needs no test edit.** All three replacements are keyed on
+`status`, so each flip moves an identifier into both sides of an equality at
+once — the same arrangement `research.md` D8 makes for the fill-region module.
 
 #### Phase 1 setup evidence
 

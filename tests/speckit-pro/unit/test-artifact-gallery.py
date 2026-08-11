@@ -4918,10 +4918,12 @@ def _construct_documents(gallery_root: Path) -> list[tuple[str, str, list[_Eleme
     artifact and is fixable in none of them. The same is true of a prohibited
     construct and — more sharply — of the policy declaration, because the head
     block's marked region is copied verbatim into all 21 artifacts. A policy
-    deleted there is a policy deleted everywhere, and since ART-001 ships no
-    artifact, a templates-only sweep reaches nothing at all: every construct and
+    deleted there is a policy deleted everywhere, and while ART-001 shipped no
+    artifact a templates-only sweep reached nothing at all: every construct and
     directive check would pass on an empty set while the shipped bytes went
-    unread.
+    unread. ART-002 ports the first artifacts, so the sweep is no longer empty —
+    but the scoping stays, because the reason for it never depended on the
+    templates directory being empty.
 
     The canonical file is a **fragment**. Its region is what an artifact embeds,
     so it carries no ``head`` element of its own and no document order beyond the
@@ -5225,8 +5227,8 @@ GROUP_J_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
 class ProhibitedConstructTests(unittest.TestCase):
     """Group J against the shipped gallery.
 
-    ART-001 ships no artifact, so the ``templates/`` sweep is empty — but the
-    group is **not** vacuous here, and it must not be. J1-J6, J9 and J10 read
+    Under ART-001 the ``templates/`` sweep was empty — but the group was **not**
+    vacuous even then, and it must not be. J1-J6, J9 and J10 read
     ``_construct_documents``, which adds the canonical head block, because that
     block's region is copied verbatim into all 21 artifacts: a construct or a
     weakened directive there ships everywhere at once. Only J7 and J8 stay
@@ -5242,8 +5244,28 @@ class ProhibitedConstructTests(unittest.TestCase):
             with self.subTest(msg=name):
                 self.assertEqual(check(GALLERY_ROOT), [])
 
-    def test_the_shipped_gallery_carries_no_artifact(self) -> None:
-        self.assertEqual(_artifact_files(GALLERY_ROOT, "*.html"), [])
+    def test_the_shipped_gallery_carries_exactly_its_shipped_entries(self) -> None:
+        """The artifact sweep equals the ``shipped`` identifier set, both ways.
+
+        This replaces ART-001's ``carries_no_artifact``, which asserted the
+        sweep was empty. That was a true and useful statement while nothing was
+        ported, and ART-002 is the change that makes it false — so it is
+        rewritten to state the new truth rather than deleted, because deleting a
+        non-vacuity guard is how a group silently stops binding.
+
+        Stated as set equality against ``status`` so it needs no edit as further
+        templates ship: each flip moves an identifier into both sides at once.
+        D1 and D2 own the per-entry biconditional; this one owns the sweep, and
+        so it also catches a file under ``templates/`` that no entry names at
+        all.
+        """
+        shipped = {
+            entry["id"]
+            for entry in (_entries(GALLERY_ROOT) or [])
+            if isinstance(entry, dict) and entry.get("status") == SHIPPED and isinstance(entry.get("id"), str)
+        }
+        swept = {path.stem for path in _artifact_files(GALLERY_ROOT, "*.html")}
+        self.assertEqual(swept, shipped)
 
     def test_the_canonical_head_block_is_nonetheless_reached(self) -> None:
         """The scope fix, asserted rather than assumed.
@@ -5860,13 +5882,19 @@ GROUP_G_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
 
 
 class UpstreamAttributionTests(unittest.TestCase):
-    """Group G against the shipped gallery, where it is half vacuous.
+    """Group G against the shipped gallery.
 
-    G1, G2, and G5 read files this feature actually ships and are asserted
-    non-vacuous below. G3, G4, G6, and G7 sweep an empty set — ART-001 ports no
-    artifact, so no entry is paired with one — and that vacuity is asserted
-    rather than left implied, because a green attribution gate that never ran
-    reads exactly like one that did.
+    G1, G2, and G5 read files the gallery has always shipped and are asserted
+    non-vacuous below. G3, G4, G6, and G7 pair entries with artifacts, and under
+    ART-001 they swept an empty set — that vacuity was asserted rather than left
+    implied, because a green attribution gate that never ran reads exactly like
+    one that did.
+
+    ART-002 ports the first artifacts, so those four now bind for the first
+    time, and the assertion below inverts with them: it states which entries are
+    paired rather than that none are. The obligation is unchanged — say out loud
+    what this group is actually reading — and it is why the assertion was
+    rewritten rather than removed.
     """
 
     def test_group_g_passes_against_the_shipped_gallery(self) -> None:
@@ -5886,18 +5914,59 @@ class UpstreamAttributionTests(unittest.TestCase):
         self.assertIsNotNone(entries)
         self.assertEqual(len(entries), SEEDED_ENTRY_COUNT)
 
-    def test_the_shipped_gallery_pairs_no_entry_with_an_artifact(self) -> None:
-        """G3, G4, G6, and G7 are vacuous here — stated, not implied."""
+    def test_the_shipped_gallery_pairs_exactly_its_shipped_entries(self) -> None:
+        """Which entries G3, G4, G6, and G7 actually read — stated, not implied.
+
+        The pairing is keyed on artifact existence, and D1/D2 hold existence and
+        ``status`` equivalent, so the paired set is the shipped set at each
+        origin. Asserting the identifiers rather than merely a count is what
+        makes the statement survive a later template shipping under the wrong
+        origin.
+        """
         for origin in ORIGINS:
             with self.subTest(msg=origin):
-                self.assertEqual(_attributable(GALLERY_ROOT, origin), [])
+                paired = {entry["id"] for _, _, entry, _ in _attributable(GALLERY_ROOT, origin)}
+                shipped = {
+                    entry["id"]
+                    for entry in (_entries(GALLERY_ROOT) or [])
+                    if isinstance(entry, dict)
+                    and entry.get("status") == SHIPPED
+                    and isinstance(entry.get("source"), dict)
+                    and entry["source"].get("origin") == origin
+                }
+                self.assertEqual(paired, shipped)
 
-    def test_every_shipped_upstream_entry_is_planned(self) -> None:
-        """The reason the pairing above is empty: nothing is ported yet."""
+    def test_every_upstream_entry_status_agrees_with_its_artifact(self) -> None:
+        """The biconditional, read at the origin G3 depends on.
+
+        ART-001's version asserted every upstream entry was still ``planned``,
+        which was the reason the pairing above swept nothing. ART-002 flips the
+        first of them, so that statement is now false and this one replaces it:
+        an upstream entry reads ``shipped`` exactly when its artifact exists.
+
+        The non-vacuity guard is kept and sharpened. It is no longer enough that
+        some upstream entry exists — once anything is ported, at least one must
+        be paired, or G3, G4, G6, and G7 have quietly gone back to asserting
+        nothing while still reporting green.
+        """
         entries = _entries(GALLERY_ROOT)
         upstream = [entry for entry in entries if entry["source"]["origin"] == UPSTREAM]
         self.assertTrue(upstream, "no upstream entry at all — G3 would be vacuous for a second reason")
-        self.assertEqual({entry["status"] for entry in upstream}, {PLANNED})
+        for entry in upstream:
+            with self.subTest(msg=entry["id"]):
+                artifact = _artifact_path(GALLERY_ROOT, entry["id"])
+                exists = artifact is not None and artifact.is_file()
+                self.assertEqual(
+                    entry["status"] == SHIPPED,
+                    exists,
+                    f"entry {entry['id']!r}: status {entry['status']!r} disagrees with artifact presence",
+                )
+        if any(path for path in _artifact_files(GALLERY_ROOT, "*.html")):
+            self.assertTrue(
+                _attributable(GALLERY_ROOT, UPSTREAM),
+                "artifacts are shipped but none is paired with an upstream entry — G3, G4, G6 and G7 "
+                "would report green while reading an empty set",
+            )
 
 
 # --- Group G fixtures ------------------------------------------------------
