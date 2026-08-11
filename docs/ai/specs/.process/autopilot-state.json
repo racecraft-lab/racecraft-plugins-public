@@ -3,10 +3,10 @@
   "spec_id": "ART-002",
   "feature_dir": "specs/art-002-draft-pr-template-set",
   "branch": "art-002-draft-pr-template-set",
-  "status": "completed",
-  "active_step": null,
+  "status": "in_progress",
+  "active_step": "Phase 7: Implement",
   "updated_at": "2026-08-10T00:00:00Z",
-  "stage": "plan",
+  "stage": "implement",
   "prior_run_note": "completed_archived",
   "settings": {
     "consensus_mode": "tier-a",
@@ -120,55 +120,107 @@
     },
     {
       "step": "Phase 7: Implement",
-      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
+      "status": "pending"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
+      "status": "pending"
     },
     {
       "step": "Post: Code Review",
-      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
+      "status": "pending"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
+      "status": "pending"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
+      "status": "pending"
     },
     {
       "step": "Post: Self-Review",
-      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
+      "status": "pending"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
+      "status": "pending"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
+      "status": "pending"
     },
     {
       "step": "Post: PR Creation",
-      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
+      "status": "pending"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
+      "status": "pending"
     },
     {
       "step": "Post: Retrospective",
-      "status": "skipped: outside the resolved plan stage; run --stage implement to cross the boundary"
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement Slice 2",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Doctor Extension Check (slice 2)",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Implementation (slice 2)",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check (slice 2)",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review (slice 2)",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Integration Suite (slice 2)",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate (slice 2)",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Self-Review (slice 2)",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation (slice 2)",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Body Generation (slice 2)",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation (slice 2)",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Review Remediation (slice 2)",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Retrospective (slice 2)",
+      "status": "pending"
     }
   ],
   "reviewability_plan_phase": {
@@ -233,6 +285,20 @@
   "stage_boundary": {
     "reached": true,
     "terminal_step": "Phase 6.5: Confidence Gate",
-    "resume": "/speckit-pro:speckit-autopilot docs/ai/specs/.process/ART-002-workflow.md --stage implement"
+    "note": "plan stage closed; this file now steers the implement stage across both slices"
+  },
+  "delivery": {
+    "shape": "two stacked pull requests, both opened in one implement run",
+    "pr1": {
+      "head": "art-002-draft-pr-template-set",
+      "base": "main",
+      "tasks": "T001-T047"
+    },
+    "pr2": {
+      "head": "art-002-draft-pr-template-set-slice-2",
+      "base": "art-002-draft-pr-template-set",
+      "tasks": "T048-T079"
+    },
+    "supersedes": "FR-040's original merge-gated sequential shape; recorded in spec.md and research.md D7"
   }
 }

@@ -39,10 +39,27 @@ captured during scoping.
 | Tasks | `/speckit-tasks` | ✅ Complete | **G5 PASS** — 79 tasks, 9 phases, 45 `[P]`, 48/48 FR coverage. Slice boundary gated at T048. Atomicity classifier returned `one-navigable-PR`, disagreeing with the recorded split; surfaced and resolved in favour of FR-040 |
 | Analyze | `/speckit-analyze` | ✅ Complete | **G6 PASS** — 14 findings (0 critical, 4 high, 8 medium, 2 low), all 14 remediated, 0 remaining. `count-markers` reports 0 findings, 0 gaps, 0 clarifications. Three placement and traceability defects would have survived into filled artifacts silently; one roadmap budget-block staleness is left recorded rather than edited, because the setup-mode gate parses that block |
 | Confidence Gate | G6.5 | ✅ Complete | **PASS, advisory** — composite **0.93** against a 0.90 threshold, `recommended_action: proceed`. Lowest criterion is risk assessment at 0.86, and deliberately so. Terminal step of the `plan` stage |
-| Implement | `/speckit-implement` | ⏳ Pending | |
-| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
+| Implement | `/speckit-implement` | ⏳ Pending | Slice 1 — T001–T047, PR 1 into `main` |
+| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout, slice 1 |
+| Implement Slice 2 | `/speckit-implement` | ⏳ Pending | Slice 2 — T048–T079, PR 2 stacked on the slice-1 branch |
+| Post Slice 2 | Post-Implementation | ⏳ Pending | Canonical 12-item closeout, slice 2 |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
+
+**Two implementation rows, one run.** The `implement` stage's range covers both
+`Implement` rows and both `Post` rows. `Implement Slice 2` is an implementation
+row, not a post-implementation step. After the slice-1 `Post` row reaches
+Complete, the stage's work is **not** done: `Implement Slice 2` is still
+non-terminal, so selection re-enters at it. The run may only stop after
+`Post Slice 2` reaches its terminal step with PR 2 open. Ending the invocation
+with either slice-2 row non-terminal is a failed run, not a pause.
+
+**Slice 1's Review Remediation must not push after T048.** PR 2's base is the
+slice-1 branch at the commit PR 1 was opened from. A remediation commit landing
+on that branch afterwards moves PR 2's base and desynchronises its packet. Record
+slice 1's Review Remediation as a single bounded pass completed before the
+`Implement Slice 2` row starts, or mark it `⏭️ Skipped` with the evidence
+"deferred to the operator; remediating PR 1 after T048 would move PR 2's base".
 
 G6.5 is advisory by default, so no phase of the main loop flips its row. Leaving
 it Pending is legitimate and does not make the rows below it read as out of
@@ -114,7 +131,7 @@ primary surface. Net-new-only work carries the 1.5x greenfield allowance
 > passing, zero blockers**, and the split decision below is unaffected.
 
 **Split decision (grill-me Q10):** ART-002 is one spec delivered as **two
-vertical slices in two sequential PRs**:
+vertical slices in two stacked PRs**:
 
 1. **Slice 1** — the two always-routed templates (`implementation-plan`,
    `spec-explainer`), their manifest `status` flips, and their share of the
@@ -122,7 +139,8 @@ vertical slices in two sequential PRs**:
    (`art-002-draft-pr-template-set`) as the first PR.
 2. **Slice 2** — the two conditional templates (`code-approaches`,
    `module-map`), their manifest flips, and their test share. Branches from
-   main **after slice 1 merges**; not stacked.
+   the slice-1 branch once PR 1 is open, and stacks on it (PR 2's base is that
+   branch, not `main`).
 
 Each slice is end-to-end (templates → manifest rows → passing SPA checks) and
 independently green. The spec and plan cover both slices; tasks are ordered so
@@ -208,7 +226,7 @@ by the same suite, which is green at baseline: I (Plugin Structure) via L1
 | **Dependencies** | ART-001 (brand kit, manifest schema, SPA contract — satisfied by PR #407, fix #409) |
 | **Enables** | ART-007 (Draft-PR Emission) |
 | **Priority** | P1 |
-| **Stage** | plan |
+| **Stage** | implement |
 
 ### Success Criteria Summary
 
@@ -272,7 +290,7 @@ Slice 1 (always-routed at draft-pr stage):
   acceptance criteria, FAQ from clarify answers; declared read-only
   (exports []), so it carries no export controls.
 
-Slice 2 (conditionally routed; branches after slice 1 merges):
+Slice 2 (conditionally routed; branches from the slice-1 branch, stacked):
 - [US3] Code Approaches template: side-by-side trade-off comparison; radio
   group selects the winning approach plus one "why" field; exports
   ["prompt", "markdown"] carrying the chosen approach and reason.
@@ -649,7 +667,7 @@ Carry it into Plan and Tasks as its own task, not as a floor entry.
   blocks, one new artifact file, and exactly one catalog value (status).
 - Slice ordering is load-bearing: slice 1 (implementation-plan,
   spec-explainer) must be complete and green before slice 2 work begins;
-  slice 2 ships from a fresh branch after slice 1 merges (two sequential
+  slice 2 ships from a branch cut from slice 1's branch and stacked on it (two
   PRs — grill-me Q10 and its route follow-up).
 - Fetch upstream sources read-only at implement time from
   anthropics/html-effectiveness (files: 16-implementation-plan.html,
@@ -738,7 +756,7 @@ into Analyze:
 
 Neither changes the delivery decision. 530 is comfortably below the 800 block, a
 warning proceeds on recorded scope and a recorded split, and both are recorded.
-No typed exception is claimed and FR-040's two sequential pull requests stand.
+No typed exception is claimed and FR-040's two stacked pull requests stand.
 
 #### Shared-behavior duplication, and why it stays
 
@@ -945,7 +963,7 @@ When checklist identifies `[Gap]` items:
 - Clear acceptance criteria referencing FR-xxx
 - Dependency ordering: foundation → slice 1 stories → slice 2 stories →
   validation; slice 1 (US1, US2) must be fully green before any slice 2
-  (US3, US4) task starts — the slices ship as two sequential PRs
+  (US3, US4) task starts — the slices ship as two stacked PRs
 - Mark parallel-safe tasks explicitly with [P] (the two templates within a
   slice are parallel-safe; the shared Layer 4 test file is not)
 - Organize by user story, not by technical layer
@@ -956,7 +974,7 @@ When checklist identifies `[Gap]` items:
 2. US1 Implementation Plan + US2 Spec Explainer (slice 1) — port, brand,
    fill regions, exports/read-only, manifest flips, tests green
 3. Payload regeneration + slice 1 closeout (PR 1)
-4. US3 Code Approaches + US4 Module Map (slice 2, after slice 1 merges) —
+4. US3 Code Approaches + US4 Module Map (slice 2, branch cut from slice 1) —
    port, brand, fill regions, exports, manifest flips, tests green (PR 2)
 
 ## Constraints
@@ -1038,7 +1056,24 @@ This section predicted `split-PR`. The classifier returned **`one-navigable-PR`*
 so the disagreement is reported here as this workflow file requires, rather than
 either answer being adopted quietly.
 
-**The recorded split stands.** Delivery remains two sequential pull requests.
+**Amended 2026-08-11 — the split stands, the merge gate does not.** The two-slice
+split and its membership are unchanged. What changed is the second slice's base:
+PR 2 now targets the slice-1 branch instead of a `main` that already contains it.
+The operator asked for one `--stage implement` invocation that executes all 79
+tasks and ends with both pull requests open, and agents never merge pull requests
+in this repository, so a merge-gated boundary makes that outcome unreachable.
+This is an operator decision superseding the grill-me Q10 follow-up, recorded
+here and in FR-040 rather than applied silently. The classifier's
+`one-navigable-PR` reading is still not followed: one pull request would carry
+both slices' authored lines toward the 800-line block threshold.
+
+Stacking also turned out to be the only shape that satisfies D8 without a merge.
+The Layer 4 validation module lands whole in slice 1, and six slice-2 tasks state
+their acceptance against checks that module implements, so a slice 2 branched
+from `main` before slice 1 merged could not evaluate them. The slices were never
+independent; the original plan concealed that behind the merge gate.
+
+**The recorded split stands.** Delivery remains two pull requests.
 Three reasons, in order of weight:
 
 1. **It is an operator decision, already ratified and already encoded.** The
@@ -1307,7 +1342,25 @@ Before starting any task:
 ## Post-Implementation Checklist
 
 The canonical closeout. Every row must reach Complete or an explicit
-`Skipped` before the run may report completion. Run it once per slice PR.
+`Skipped` before the run may report completion. Run it once per slice PR — the
+table below is slice 1's, and the second table after it is slice 2's.
+
+| Canonical Item | Status | Evidence |
+|---|---|---|
+| Post: Doctor Extension Check | ⏳ Pending | |
+| Post: Verify Implementation | ⏳ Pending | |
+| Post: Verify Tasks Phantom Check | ⏳ Pending | |
+| Post: Code Review | ⏳ Pending | |
+| Post: Integration Suite | ⏳ Pending | |
+| Post: Reviewability Diff Gate | ⏳ Pending | |
+| Post: Self-Review | ⏳ Pending | |
+| Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: PR Body Generation | ⏳ Pending | |
+| Post: PR Creation | ⏳ Pending | |
+| Post: Review Remediation | ⏳ Pending | |
+| Post: Retrospective | ⏳ Pending | |
+
+### Slice 2 closeout (PR 2)
 
 | Canonical Item | Status | Evidence |
 |---|---|---|

@@ -114,6 +114,9 @@ because slice 1 adds a tracked `.py` file under the test tree. Commit it.
 `.sh` file there. Run the command anyway and confirm the empty result rather than
 assuming it.
 
+In slice 2 the scope diff is taken against `art-002-draft-pr-template-set`, not
+`origin/main`, because that branch is PR 2's base.
+
 ---
 
 ## Manual acceptance, per template

@@ -21,9 +21,9 @@ roadmap-named slot floor per template, both-ways agreement between each file's
 inventory and its markers, and — as its own assertion — that every repeated item
 in a list slot carries the anchor an objection or a selection attaches to.
 
-Delivery is two sequential pull requests. Slice 1 is the two templates the
+Delivery is two stacked pull requests opened in one run. Slice 1 is the two templates the
 draft-PR stage routes unconditionally plus the whole Layer 4 test. Slice 2 is the
-two conditional templates and branches from a state that already contains slice 1.
+two conditional templates and branches from slice 1's branch and targets it.
 
 ## Technical Context
 
@@ -70,7 +70,7 @@ of the form the Codex payload build rewrites. Every color pairing drawn from the
 brand kit's published audit; `--rc-border-subtle` never carries meaning; the
 heading face is `--rc-font-display`.
 
-**Scale/Scope**: 4 artifacts, 21 fill slots, 2 sequential pull requests, 1 new
+**Scale/Scope**: 4 artifacts, 21 fill slots, 2 stacked pull requests, 1 new
 validation module.
 
 **Reviewability Budget**: Primary surface: docs/process (the shipped gallery
@@ -98,7 +98,7 @@ mirrors into it would misreport that surface in both directions.
 - MODIFIED tests/speckit-pro/suite-manifest.json
 - MODIFIED docs-site/src/content/docs/reference/tests.md
 
-### Slice 2 — US3 Code Approaches, US4 Module Map (PR 2, fresh branch after slice 1 merges)
+### Slice 2 — US3 Code Approaches, US4 Module Map (PR 2, branch cut from slice 1, stacked on it)
 
 - NEW speckit-pro/artifact-gallery/templates/code-approaches.html
 - NEW speckit-pro/artifact-gallery/templates/module-map.html
@@ -183,10 +183,11 @@ and now carries its full reasoning in `research.md` D1.
   threshold and below the 800-line block threshold, at three production-file
   entries against a six-file warn and six authored files against a fifteen-file
   warn. The single review surface named above is unchanged.
-- **Split decision**: two vertical slices in two sequential pull requests, as
-  FR-040 fixes. Slice 1 is US1 and US2 with their two status flips and the whole
-  Layer 4 module; slice 2 is US3 and US4 with theirs, branched from a state that
-  already contains slice 1's flips. No work is deferred to a follow-up
+- **Split decision**: two vertical slices in two stacked pull requests, as
+  FR-040 fixes after its recorded supersession. Slice 1 is US1 and US2 with their
+  two status flips and the whole Layer 4 module, targeting `main`; slice 2 is US3
+  and US4 with theirs, branched from slice 1's branch, which already carries its
+  flips and its validation module, and targeting that branch. No work is deferred to a follow-up
   specification except the generation of slot content, which is ART-007's.
 - **PR review packet source**: this plan supplies what changed and why (Summary,
   the port worksheet), non-goals (the spec's *Non-Goals* section, which carries
@@ -605,7 +606,7 @@ parallel with anything: they are one file, and it is the file both templates are
 measured by.
 
 Slice 2 repeats steps 4–6 for the two conditional templates from a fresh branch
-cut after slice 1 merges, so it starts from a catalog that already carries slice
+cut from slice 1's branch, so it starts from a catalog that already carries slice
 1's flips (FR-040). It does not reapply them.
 
 ## Project Structure
@@ -663,4 +664,4 @@ outside the install-facing plugin directory.
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |---|---|---|
 | Capture-and-export behavior duplicated across three artifacts | Each artifact is one self-contained file by contract, with no shared runtime, no sibling asset, and no build step. Duplication is what the contract leaves. | A shared script file is a prohibited sibling asset. A build step that inlines a common source is prohibited by name. A generator that stamps the routine in is a build step renamed, and is ART-007's scope rather than this feature's. The constitution prefers three similar lines to a premature abstraction, and only one of the three is a near-copy of another. |
-| Projected review size lands in **warn** on both slices | Every slot must ship worked example content (FR-014), both drawings are ported rather than simplified (FR-030), and the capture affordances ship working in this feature rather than being deferred (FR-016a). Removing any one of those would put the slice under 400 lines and break a requirement. | Splitting into four single-template pull requests was rejected: FR-040 fixes two sequential pull requests, and a per-template split would put the Layer 4 module in its own pull request, landing validation that binds nothing. Deferring worked content to ART-007 was rejected by FR-014 — it leaves a gallery browser judging a template by an empty frame. |
+| Projected review size lands in **warn** on both slices | Every slot must ship worked example content (FR-014), both drawings are ported rather than simplified (FR-030), and the capture affordances ship working in this feature rather than being deferred (FR-016a). Removing any one of those would put the slice under 400 lines and break a requirement. | Splitting into four single-template pull requests was rejected: FR-040 fixes two stacked pull requests, and a per-template split would put the Layer 4 module in its own pull request, landing validation that binds nothing. Deferring worked content to ART-007 was rejected by FR-014 — it leaves a gallery browser judging a template by an empty frame. |

@@ -11,8 +11,8 @@ stage routes — implementation plan, spec explainer, code approaches, module ma
 as Racecraft-branded self-contained single-file artifacts with documented fill
 regions, so the plan-stage review checkpoint has documents to populate instead of
 raw markdown. Each artifact obeys `speckit-pro/artifact-gallery/SPA-CONTRACT.md`;
-the routing catalog change is exactly four status flips; delivery is two
-sequential slices. Scoping decisions are recorded in
+the routing catalog change is exactly four status flips; delivery is two stacked
+slices. Scoping decisions are recorded in
 `docs/ai/specs/.process/ART-002-design-concept.md` (Q1-Q10)."
 
 ## User Scenarios & Testing *(mandatory)*
@@ -37,7 +37,8 @@ Three people read these artifacts, and they read them differently:
 The four stories below are ordered by delivery. **Slice 1** is US1 and US2 — the
 two templates the draft-PR stage routes unconditionally, so nothing downstream
 works without them. **Slice 2** is US3 and US4 — the two templates that route
-only when their signal is present. Slice 2 branches after slice 1 merges.
+only when their signal is present. Slice 2 branches from slice 1's branch once
+PR 1 is open, and its pull request targets that branch.
 
 ### User Story 1 - [US1] Implementation Plan template (Priority: P1)
 
@@ -252,8 +253,9 @@ screenshot.
   shipped fictional content after the artifact is filled, where it reads as the
   project's own data. Every feature-specific region is a slot.
 - **Second slice sees a changed catalog.** Slice 2 edits the same catalog file
-  slice 1 already edited. It must branch from a state that already contains slice
-  1's flips rather than reapplying them.
+  slice 1 already edited. Its branch is cut from slice 1's branch, so the two
+  flips are already present and slice 2 reapplies neither. The scope check that
+  proves it measures against the slice-1 branch, not against `main`.
 
 ## Clarifications
 
@@ -853,10 +855,30 @@ the contract governs and the disagreement is a defect in this specification.
 - **FR-039**: Because these files ship inside the plugin payload, each slice MUST
   account for the generated artifact contract, so every shipped copy stays
   byte-identical to its source on both platforms. [US1] [US2] [US3] [US4]
-- **FR-040**: Delivery MUST be two sequential pull requests. The first carries
-  US1 and US2, their two status flips, and their validation. The second carries
-  US3 and US4 and theirs, and branches from a state that already contains the
-  first. [US1] [US2] [US3] [US4]
+- **FR-040**: Delivery MUST be two stacked pull requests, both opened in one
+  implementation run and neither merged by an agent. The first carries US1 and
+  US2, their two status flips, and their validation, and targets `main`. The
+  second carries US3 and US4 and theirs, is cut from the first slice's branch at
+  the commit that pull request was opened from, and targets that branch rather
+  than `main`, so its diff shows only its own two templates. The operator merges
+  the first pull request, then the second. [US1] [US2] [US3] [US4]
+
+> **Supersession of FR-040, recorded 2026-08-11.** FR-040 previously required two
+> *sequential* pull requests, the second branching from a `main` that already
+> contained the first. That shape came from the grill-me Q10 follow-up, which
+> offered three routes — two sequential PRs, one navigable PR, stacked PRs — and
+> rejected stacking for known stacked-branch synchronization friction in this
+> repository. Stacked-in-one-run was never evaluated against the constraint that
+> now governs: one `--stage implement` invocation must execute all 79 tasks and
+> end with both pull requests open, and agents never merge pull requests here, so
+> a merge-gated boundary stalls the run at T048 by construction. Stacking is the
+> only shape satisfying all three constraints at once. A slice 2 branched from
+> `main` cannot see slice 1's Layer 4 validation module, which D8 lands whole in
+> slice 1 and which six slice-2 tasks state their acceptance against; and one
+> combined pull request approaches the 800-line block threshold. The two-slice
+> split, its membership, its per-slice reviewability budget, and D8's
+> single-module design are unchanged. Only the base branch of the second pull
+> request and the timing of the human merge change.
 
 ### Non-Goals
 
@@ -930,15 +952,18 @@ here rather than left in a scoping document a reviewer may not open.
   warn; one primary surface. Only the LOC dimension warns. A warning proceeds
   when the workflow records the scope budget and the split decision, and it
   records both.
-- **Split decision**: Split into two vertical slices delivered as two sequential
-  pull requests, per the design concept's Q10 and its follow-up. Slice 1 is the
-  two templates the draft-PR stage routes unconditionally (US1, US2), each
-  end-to-end and independently reviewable. Slice 2 is the two conditionally
-  routed templates (US3, US4) and branches after slice 1 merges. Stacked branches
-  were rejected for their known synchronization friction in this repository, and
-  a single pull request was rejected because the advisory size estimator returned
-  a warning at an estimated 560 lines. ART-002 remains one specification; the
-  split is a delivery decision, not a decomposition into two specifications.
+- **Split decision**: Split into two vertical slices delivered as two stacked
+  pull requests, per the design concept's Q10 and its follow-up as superseded by
+  FR-040. Slice 1 is the two templates the draft-PR stage routes unconditionally
+  (US1, US2), each end-to-end and independently reviewable. Slice 2 is the two
+  conditionally routed templates (US3, US4) and branches from slice 1's branch,
+  with its pull request targeting that branch. Stacking was adopted under
+  FR-040's recorded supersession: it is what lets one implementation run open
+  both pull requests without a human merge in the middle. A single pull request
+  was rejected because the advisory size estimator returned a warning at an
+  estimated 560 lines and the combined figure approaches the 800-line block
+  threshold. ART-002 remains one specification; the split is a delivery decision,
+  not a decomposition into two specifications.
 
 ### PR Review Packet Requirements *(mandatory)*
 
@@ -1074,8 +1099,9 @@ here rather than left in a scoping document a reviewer may not open.
 - Shipped sample content is fictional and reads as such. It is not treated as
   project data by any consumer, because the authoring agent replaces whole
   delimited regions rather than merging into them.
-- Slice 2 branches after slice 1 merges, so it starts from a routing catalog that
-  already carries slice 1's two flips.
+- Slice 2 branches from slice 1's branch, so it starts from a routing catalog
+  that already carries slice 1's two flips and from a tree that already carries
+  slice 1's Layer 4 validation module.
 - The draft-PR stage that routes these artifacts already exists, having shipped
   with ART-006. This feature delivers documents for that stage to route; it wires
   nothing.

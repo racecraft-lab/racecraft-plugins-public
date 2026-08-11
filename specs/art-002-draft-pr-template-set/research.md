@@ -226,11 +226,13 @@ classes in both:
 
 ---
 
-## D7 — Two sequential pull requests; not stacked, not one
+## D7 — Two stacked pull requests; not one, not merge-gated
 
 **Decision.** Slice 1 is `implementation-plan` and `spec-explainer` with their two
-status flips and the whole Layer 4 module. Slice 2 is `code-approaches` and
-`module-map` with theirs, branched from a state that already contains slice 1.
+status flips and the whole Layer 4 module, on `art-002-draft-pr-template-set`
+targeting `main`. Slice 2 is `code-approaches` and `module-map` with theirs, on
+`art-002-draft-pr-template-set-slice-2` cut from slice 1's branch and targeting
+it.
 
 **Rationale.** Both slices are end-to-end and independently reviewable: templates,
 their catalog rows, and passing checks. Slice 1 leads because the draft-PR stage
@@ -242,9 +244,16 @@ them, while slice 2's two are routed only when their signal is present.
 - *One pull request.* Rejected — the advisory size estimator returned a warning at
   an estimated 560 lines, and this plan's own derivation puts the combined figure
   near 1040 authored lines, which would cross the 800-line block threshold.
-- *Stacked branches.* Rejected for their known synchronization friction in this
-  repository. A fresh branch after merge starts from a catalog that already
-  carries slice 1's flips, with nothing to reapply and nothing to rebase.
+- *A fresh branch cut from `main` after slice 1 merges.* **Originally chosen;
+  superseded 2026-08-11.** It was preferred over stacking for stacked branches'
+  known synchronization friction in this repository. It is now disqualified: it
+  requires a human merge inside the implementation run, and agents never merge
+  pull requests here, so the run stops at the boundary with slice 2 unstarted.
+  The friction it avoided is also smaller than assumed — the two slices share
+  exactly one authored file, `speckit-pro/artifact-gallery/manifest.json`, and
+  their edits in it sit eleven lines apart. Stacking additionally satisfies D8
+  for free: slice 2's branch contains slice 1's Layer 4 module, which a branch
+  cut from `main` before the merge would not.
 - *A different split — the three exporting templates against the read-only one.*
   Rejected — it puts three of the four in one pull request and defeats the point,
   and it separates templates by implementation shape rather than by whether the
