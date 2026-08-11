@@ -32,10 +32,12 @@ files. Because all five ship as plugin payload, the work is not complete until
 the install payloads and the installed-cache proof are regenerated (research
 R9).
 
-Nothing here changes how Phase 7 dispatches or waits. That boundary is what
-keeps the slice at one primary surface, and it is also what forces the
-two-branch append cadence: a parallel run gives the orchestrator no turn until
-the whole run returns, so that run's entries are written at collection.
+Nothing here changes how Phase 7 dispatches or how long it waits before its
+verification barrier. Workers are still spawned together and the post-run
+TYPECHECK + UNIT_TEST safety net still runs where it always did. What changes is
+only when each notes entry is written: on the turn that worker's own result
+arrives, because the platform delivers background-subagent completions and
+teammate reports per worker rather than as a batch.
 
 ## Technical Context
 
@@ -155,11 +157,12 @@ Both evaluations pass. Constitution v1.2.0.*
 * Split decision: one spec, no split. The slice is already a single vertical
   path, reporting contract to orchestrator append to consumer hand-off, with no
   horizontal layering to cut along. No follow-up spec ID is owed for a split.
-* Deferred work that is named rather than absorbed: making a parallel run's
-  per-task results durable before the run completes would mean rewriting how
-  Phase 7 waits for parallel work. That is dispatch machinery this spec does not
-  touch. It is recorded in spec.md's Assumptions and in the Design Concept's Q2
-  revision note.
+* Per-task durability inside a parallel run is delivered here, not deferred.
+  An earlier draft deferred it on the belief that a parallel run's results
+  arrived as one batch; the platform documentation says otherwise, and the
+  behaviour was observed directly. See the Design Concept's Q2 revision note 2.
+  Delivering it required no change to dispatch machinery — only to when each
+  entry is written, plus the teammate report obligation of FR-006.
 * PR review packet source: `specs/art-012-implementation-notes-capture/spec.md`
   (what changed, why, non-goals, scope budget, traceability), this plan (review
   order and verification), and `specs/art-012-implementation-notes-capture/quickstart.md`
@@ -269,20 +272,25 @@ call site, not a fourth site:
 | Verification task run orchestrator-direct | No | `None` |
 | Executor that omitted the field, or returned it unreadable | Yes, but incomplete | `None` |
 
-Cadence follows the loop's own two branches:
+One cadence, every dispatch shape:
 
-* **Singly or sequentially dispatched**: append immediately after that result is
-  read, before the next dispatch.
-* **Inside a parallel run**: append every task in the run when the run is
-  collected, in collection order, before the next run is dispatched.
-* **Serial re-run after a regression**: per-task by construction, and it appends
-  a second entry under the same task ID rather than touching the first.
+* **Append on arrival.** Whenever an attempt's own result reaches the
+  orchestrator, that attempt's entry is written before anything else is
+  dispatched or answered. This is identical for a singleton, a sequential run,
+  and a member of a parallel run — a parallel run's members report
+  independently, so there is nothing to wait for.
+* **Never on a bare idle signal.** A worker that stops without delivering a task
+  summary has not produced a result. Treat that as a cue to request the summary;
+  appending on it would write an empty entry and would double-count an attempt
+  when the worker is later woken and finishes.
+* **Serial re-run after a regression**: unchanged, and it appends a second entry
+  under the same task ID rather than touching the first.
 
 Writes are additive only. No entry already written is rewritten, reordered, or
 removed, which is what makes SC-005 checkable. Each entry is also written
-independently of every other. An append that fails inside a collected parallel
-run costs that one entry: the run's remaining entries are still appended and
-the next run is still dispatched.
+independently of every other. An append that fails costs that one entry: every
+other attempt's entry is still written as its own result arrives, and the next
+dispatch still happens.
 
 ### Failure behavior (FR-004)
 
@@ -306,8 +314,8 @@ Four properties make the fail-open path safe to rely on.
   second failure in its own run output and carries on. It does not try a third
   destination, retry, or escalate, so the failure path cannot recurse.
 * **Failures do not spread.** Each append stands alone. A failure recorded for
-  one attempt does not stop the remaining attempts in the same collection batch
-  from being appended, and does not stop the next run from being dispatched.
+  one attempt does not stop any other attempt's entry from being appended, and
+  does not stop the next dispatch.
 
 This shape matches the repository's existing failure semantics rather than
 inventing one. `speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md`
@@ -318,11 +326,20 @@ error in a way that would block the step it precedes.
 
 ### Platform parity (FR-005)
 
-Both platforms produce the same header, the same entry format, and the same
-additive-only and fail-open behavior. Claude's document describes a barrier
-collection for parallel runs; the Codex mirror keeps its existing per-result
-cadence, which is stronger and already shipped. Copying Claude's barrier
-language into the Codex document would describe machinery Codex does not have.
+Both platforms produce the same header, the same entry format, the same
+per-arrival timing, and the same additive-only and fail-open behavior. Codex
+already harvests each result as it arrives, so its document needs only the
+append instruction, not a cadence change. Claude's document gains the same
+per-arrival instruction on both of its parallel paths. Parity now holds in the
+strong direction: neither platform is capped to the weaker of the two.
+
+Within Claude, the two parallel paths need different wiring for the same
+outcome. Background subagents return their summaries to the orchestrator, so
+their arrival is the trigger directly. Agent Teams teammates are independent
+sessions that report to each other, not to the caller, so FR-006 requires them
+to be told at dispatch to send their task summary to the lead on completion;
+the lead appends on that message. Without it the record would be structurally
+empty on the Teams path while identical on paper.
 
 ## Review Order
 

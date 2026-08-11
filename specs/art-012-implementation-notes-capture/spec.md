@@ -16,11 +16,11 @@ The autopilot orchestrator runs the implement phase. Before it dispatches any
 task it opens a notes record for the spec with a header naming that spec,
 creating it if absent and re-opening it if a previous partial run already
 started one. As each task finishes, it writes that task's entry straight into
-the record rather than holding results in memory until the phase ends. Where
-tasks are dispatched as a parallel group, the orchestrator regains control only
-once the whole group returns, so that group's entries are written together at
-that point, before the next group is dispatched. If the run is interrupted,
-everything from every group already collected is already on disk.
+the record rather than holding results in memory until the phase ends. This
+holds for tasks dispatched as a parallel group too: each task's result reaches
+the orchestrator on its own, so its entry is written then, without waiting for
+the rest of its group. If the run is interrupted, everything finished up to that
+moment is already on disk.
 
 **Why this priority**: This is the durability the whole feature exists to
 deliver. Without it, deviations discovered during implementation vanish when
@@ -40,24 +40,35 @@ which case each entry simply records that nothing was reported.
    for this spec, **When** the phase begins, **Then** the record exists with a
    header identifying the spec, before any task has been dispatched.
 2. **Given** the implement phase is running with the record already created,
-   **When** an individually or sequentially dispatched task completes, **Then**
-   one entry for that task is appended to the record immediately, identified by
-   that task's ID.
-3. **Given** a phase with ten sequentially dispatched tasks is interrupted after
-   four of them have completed, **When** the record is read afterwards, **Then**
-   it contains the header and exactly four entries, one per completed task.
+   **When** any dispatched task completes, **Then** one entry for that task is
+   appended to the record on the turn its result arrives, identified by that
+   task's ID, before further work is dispatched.
+3. **Given** a phase with ten tasks is interrupted after four of them have
+   completed, **When** the record is read afterwards, **Then** it contains the
+   header and exactly four entries, one per completed task.
 4. **Given** a group of tasks dispatched together as one parallel run, **When**
-   that run's results are collected, **Then** every task in the run has its
-   entry appended before the next run is dispatched; and **When** the phase is
-   interrupted before that run is collected, **Then** the record contains no
-   entry for any task in it, including tasks that had already finished.
-5. **Given** a task is re-run after an earlier attempt regressed, **When** the
+   one member of that run completes while the others are still working,
+   **Then** that member's entry is appended at once, without waiting for the
+   rest; and **When** the phase is interrupted at that moment, **Then** the
+   record contains that member's entry and no entry for the members still
+   running.
+5. **Given** a dispatch path whose workers are independent sessions that do not
+   return their summaries to the orchestrator, **When** a worker completes its
+   attempt, **Then** it sends its complete task summary to the orchestrator, and
+   **Then** the entry written from it carries the same reported content an
+   otherwise identical attempt would carry on any other dispatch path.
+6. **Given** a worker that stops and signals it is idle without having sent a
+   task summary, **When** the orchestrator receives that signal, **Then** no
+   entry is appended for it, and **When** that same worker later completes the
+   attempt and sends its summary, **Then** exactly one entry exists for that
+   attempt.
+7. **Given** a task is re-run after an earlier attempt regressed, **When** the
    second attempt completes, **Then** a second entry for that task ID is
    appended and the earlier entry is left exactly as written.
-6. **Given** the notes record cannot be written for any reason, **When** the
+8. **Given** the notes record cannot be written for any reason, **When** the
    phase attempts to create it or append an entry, **Then** a gap is recorded
    and neither the task nor the phase changes its outcome.
-7. **Given** a phase is resumed after a partial run left a record with entries
+9. **Given** a phase is resumed after a partial run left a record with entries
    in it, **When** the resumed phase starts, **Then** the existing record and
    all its entries survive unchanged, no second header is written, and new
    entries are appended after the existing ones.
@@ -112,24 +123,27 @@ task was uneventful.
   unwritable too. Nothing further is attempted, nothing blocks, and the second
   failure shows up only in the run's own output. The fallback stops there, so
   the failure path cannot loop.
-- One task's entry fails to append while its parallel run is being collected.
-  Every other task in that run is still appended, and the next run is still
-  dispatched. One unwritable entry costs one entry, not a run and not a phase.
+- One task's entry fails to append. Every other task's entry is still written
+  as its own result arrives, and the next dispatch still happens. One unwritable
+  entry costs one entry, not a run and not a phase.
+- A worker on an independent-session dispatch path finishes its attempt but its
+  summary never reaches the orchestrator, because the run ended first or the
+  message was lost. An entry is still written for that attempt recording that
+  nothing was reported, so the attempt is not silently missing. This is the one
+  place the record can be thinner than the work done, and it is visible as a
+  "nothing reported" entry rather than as an absence.
 - A task is re-run after an earlier attempt regressed. Two entries carry the
   same task ID, the first showing the failed attempt and the second the
   successful one, and both are kept as history.
-- Several tasks run in parallel and finish out of order. Their entries are
-  written together when the orchestrator collects that run, in the order the
-  results are collected, which need not match the order the tasks appear in the
-  task list. A task ID says which task an entry belongs to; an entry's position
-  says when it was recorded, not where its task sits in the task list. Entries
-  from an earlier run always precede entries from a later one, because the next
-  run is not dispatched until the previous one has been recorded.
-- The phase is interrupted while a parallel run is still in flight. That run
-  contributes no entries at all, including for tasks inside it that had already
-  finished, because the orchestrator never regained control to write them.
-  Every earlier collected run is intact. This is the one place the record is
-  lossier than per-task writing would be; it is bounded by a single run.
+- Several tasks run in parallel and finish out of order. Each entry is written
+  as that task's own result arrives, so entries appear in completion order,
+  which need not match the order the tasks appear in the task list. A task ID
+  says which task an entry belongs to; an entry's position says when it was
+  recorded, not where its task sits in the task list.
+- The phase is interrupted while a parallel run is still in flight. Every task
+  in that run that had already finished has its entry on disk; only the tasks
+  still working are missing. The record is never lossier than the work actually
+  completed.
 - A task is dispatched to a path that returns no reporting field at all — a
   verification-only command or a research task, neither of which produces the
   task-result block the field lives in. An entry is still appended, recording
@@ -177,19 +191,26 @@ task was uneventful.
   reporting field at all, and attempts whose reported field cannot be read out
   of the summary returned. Both record that nothing was reported. Neither is a
   failure to write, so neither takes FR-004's gap path.
-  Timing depends on how the attempt was dispatched:
-  - Dispatched singly or as part of a sequential run: the append MUST happen
-    immediately after that attempt completes.
-  - Dispatched as part of a parallel run: the append MUST happen no later than
-    the orchestrator's next turn after that run — the point at which it regains
-    control over any of that run's results — and MUST complete before the next
-    run is dispatched.
+  **The append MUST happen on the turn that attempt's own result reaches the
+  orchestrator, before it dispatches further work or answers anything else.**
+  This holds however the attempt was dispatched — singly, in a sequential run,
+  or inside a parallel run — because a parallel run's results are delivered per
+  attempt rather than as a batch. An attempt whose result arrives while others
+  in the same run are still working MUST NOT wait for them. Where several
+  results arrive on the same turn, each gets its own entry on that turn, in the
+  order they are presented.
+
+  The orchestrator MUST NOT treat a bare liveness or idle signal as a result. A
+  signal that an executor stopped, with no task summary attached, is a cue to
+  request that summary, never an append trigger — an executor may go idle and
+  later resume the same attempt, and appending on idle would record one attempt
+  as two.
 
   Writes MUST be additive only: a re-run task appends a further entry, and no
   entry already written MUST be rewritten, reordered, or removed. Every entry
   MUST be appended after everything already in the record, so the record's
   document order is the order entries were appended, which is the order the
-  orchestrator collected the attempts. Entries carry no timestamp and no attempt
+  attempts' results arrived. Entries carry no timestamp and no attempt
   number, so document order is the record's only ordering signal: where two
   entries share a task ID, the earlier-positioned entry MUST be the earlier
   attempt.
@@ -204,15 +225,29 @@ task was uneventful.
   destination is the unwritable path, the orchestrator MUST surface that second
   failure in its own run output, carry on, and MUST NOT retry, escalate, or
   block. Entries are written independently, so a failure recorded for one
-  attempt MUST NOT stop the remaining attempts in the same collection batch
-  from being appended, and MUST NOT stop the next run from being dispatched.
-- **FR-005**: Both supported agent platforms MUST produce the same *record*:
-  the same header, the same per-task entry format, and the same additive-only
-  and fail-open behavior of FR-002 through FR-004. The *moment* of append MAY
-  differ where the platforms' dispatch mechanics differ. Identical instructions
-  are not required and are not achievable: one platform collects a parallel run
-  at a barrier while the other harvests each result as it arrives, so parity is
-  owed on the artifact, not on the wording.
+  attempt MUST NOT stop any other attempt's entry from being appended, and
+  MUST NOT stop the next dispatch.
+- **FR-005**: Both supported agent platforms, and every dispatch path within a
+  platform, MUST produce the same *record*: the same header, the same per-task
+  entry format, the same per-arrival append timing of FR-003, and the same
+  additive-only and fail-open behavior of FR-002 through FR-004. Identical
+  *wording* is not required — the platforms describe their dispatch differently
+  — but the produced record MUST NOT differ, and in particular MUST NOT depend
+  on which parallel dispatch mechanism a run happened to use.
+- **FR-006**: Every dispatched attempt's task summary MUST reach the
+  orchestrator. Where the dispatch mechanism returns an executor's summary to
+  the orchestrator automatically, that is sufficient. Where it does not — a
+  dispatch mechanism whose workers are independent sessions that report to each
+  other rather than to the caller — the executor MUST be instructed, at dispatch
+  time, to send its complete task summary to the orchestrator when its attempt
+  completes, and the orchestrator MUST treat the arrival of that summary as the
+  append trigger of FR-003.
+
+  Without this the record would be silently empty on such a path: entries would
+  exist with nothing reported in them, while an otherwise identical run on
+  another path produced full entries. That failure is invisible in the record
+  itself, which is why the delivery obligation is stated as a requirement rather
+  than left to the implementation.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -224,38 +259,39 @@ task was uneventful.
 - **Primary surface**: harness/adapter
 - **Secondary surfaces, if any**: N/A — the second agent platform's mirror is
   the same harness/adapter surface expressed twice, not a distinct surface.
-- **Projected reviewable LOC**: 162 (modify-weighted; excludes tests, docs, and
+- **Projected reviewable LOC**: 190 (modify-weighted; excludes tests, docs, and
   generated artifacts). Advisory estimator run against this spec's current shape
-  — 2 user stories, 5 production files, 5 functional requirements,
-  modify-weighted — returns `{"estimated_loc": 162, "suggested_slices": 1,
+  — 2 user stories, 6 production files, 6 functional requirements,
+  modify-weighted — returns `{"estimated_loc": 190, "suggested_slices": 1,
   "status": "ok"}`, quoted verbatim.
 
   *Amendment history, so no reader mistakes a superseded figure for a
   correction.* Scoping recorded 115 over 3 production files, on the wrong
   premise that the per-task Task Result block had one authored home; it has
   three. Clarify session 1 corrected the file count to 5 and the projection to
-  155. Clarify session 2 then added FR-005, a platform-parity clause carrying no
-  further production file, which moves the projection to 162. Each figure is the
-  estimator's own output for the inputs true at the time, never a hand
-  adjustment. The verdict never changed: one slice, `ok`, far under the 400 warn
-  line.
-- **Projected production files**: 5
-- **Projected total files**: 8
+  155. Clarify session 2 added FR-005, moving it to 162. The 2026-08-11 operator
+  decision to restore the literal per-task guarantee added FR-006 and a sixth
+  production file, moving it to 190. Each figure is the estimator's own output
+  for the inputs true at the time, never a hand adjustment. The verdict never
+  changed: one slice, `ok`, comfortably inside every threshold.
+- **Projected production files**: 6
+- **Projected total files**: 9
 - **Budget result**: within budget
 
-  *Amended 2026-08-10 (Clarify session 1 consensus).* Scoping recorded 115 LOC
-  over 3 production files, on the premise that the per-task Task Result block
-  had one authored home. It has three: the shared, injected
-  `speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md`, plus
-  independent hard-coded copies in `speckit-pro/agents/implement-executor.md`
-  and `speckit-pro/codex-agents/implement-executor.toml`. FR-001 requires
-  *every* implementation task summary to carry the field, so all three are in
-  scope, and the two orchestrator-side files bring the total to 5. The figures
-  above are the estimator's verbatim output for the corrected signals, not a
-  hand-adjustment of the old ones. Every dimension stays under the warn line
-  (400 LOC / 6 production files / 15 total files / 1 primary surface); the two
-  added files are further instances of the same harness/adapter surface, so the
-  primary-surface count is unchanged.
+  The six production files are the three authored copies of the per-task Task
+  Result block — the shared, injected
+  `speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md` plus the
+  independent copies in `speckit-pro/agents/implement-executor.md` and
+  `speckit-pro/codex-agents/implement-executor.toml` — and the three
+  orchestration documents that carry the append instruction and the delivery
+  statement behind it. All six are the same harness/adapter surface, so the
+  primary-surface count stays at one.
+
+  Against the warn thresholds, this slice sits inside every one of them: the LOC
+  projection is well under the 400 line, the file count is at but not above the
+  six-file line, the total-file count is well under the fifteen-file line, and
+  the surface count is at the single-surface line. Nothing here approaches a
+  block threshold.
 - **Split decision**: Remains one spec. The scope is already a single thin
   vertical slice — executor reporting contract, then orchestrator append, then
   hand-off to the downstream consumer — with no horizontal layering to cut
@@ -299,14 +335,15 @@ task was uneventful.
   whose append failed is excluded from N, and a run whose record could never be
   created is measured by its gaps rather than by this count. A fail-open run is
   not read as a violation of this criterion.
-- **SC-002**: An implement phase interrupted after k of N task attempts leaves
-  a record containing the header and one entry for every attempt whose dispatch
-  run the orchestrator had already collected at the moment of interruption —
-  exactly k entries when every completed attempt ran singly or sequentially. A
-  phase interrupted before any run is collected leaves the header alone. Where
-  creating the record or appending an entry failed and was recorded as a gap
-  under FR-004, the gap stands in the record's or the entry's place, so a
-  fail-open run is not read as a violation of this criterion.
+- **SC-002**: An implement phase interrupted after k of N task attempts have
+  completed leaves a record containing the header and **exactly k entries**,
+  regardless of how those attempts were dispatched — including attempts that
+  completed inside a parallel run whose other members were still running at the
+  moment of interruption. A phase interrupted before any attempt completes
+  leaves the header alone. Where creating the record or appending an entry
+  failed and was recorded as a gap under FR-004, the gap stands in the record's
+  or the entry's place, so a fail-open run is not read as a violation of this
+  criterion.
 - **SC-003**: In a run where every executor reports nothing, 100% of entries
   read "None". The record is never absent, and never empty of entries, for a
   spec whose tasks completed. Where creating the record or appending its
@@ -383,10 +420,13 @@ task was uneventful.
   recoverable the way every other artifact in that directory is, through the
   commit history that carried it. This feature copies the record nowhere else
   and maintains no index to it.
-- Scope boundary: making a parallel run's per-task results durable *before* the
-  run completes would require changing how the implement phase waits for
-  parallel work, which is dispatch machinery this feature does not touch. It is
-  named here as deferred follow-up work rather than absorbed into this spec.
+- Per-task durability inside a parallel run is IN scope and is delivered, not
+  deferred. An earlier draft of this spec deferred it, on the belief that a
+  parallel run's results were delivered to the orchestrator as one batch. That
+  belief was wrong: the platform delivers each worker's completion on its own.
+  Nothing about dispatch shape changes to get this — workers are still spawned
+  together and the post-run verification barrier still runs — only the moment
+  each entry is written.
 - The fail-open precedent this spec follows is recorded intent rather than
   shipped code: the sibling specs whose artifact generation is described as
   fail-open are themselves not yet implemented. The behavior is still the right

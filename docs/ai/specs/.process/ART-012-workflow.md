@@ -97,14 +97,20 @@ helper's whole-roadmap scan; ART-012's own recorded budget is one primary
 surface (harness/adapter). Warnings may proceed when the workflow records the
 scope budget and split decision, which the rest of this subsection does.
 
-**Scope budget:** projected ~162 reviewable production LOC (modify-weighted),
-5 production files, ~8 total files, one primary surface. Modify-weighted work
-carries no greenfield allowance (warn 400 / block 800). *Amended 2026-08-10 at
-Clarify session 1; the scaffold-time figures were ~115 LOC over ~3 production
-files, computed before the three-copy Task Result fact was known. See
-"Verified Repository Facts" under the Plan Prompt.* Every dimension remains
-under the warn line (400 LOC / 6 production files / 15 total files / 1 primary
-surface).
+**Scope budget:** projected ~190 reviewable production LOC (modify-weighted),
+6 production files, ~9 total files, one primary surface. Modify-weighted work
+carries no greenfield allowance (warn 400 / block 800).
+
+*Amended twice.* At Clarify session 1 the scaffold-time ~115 LOC over ~3
+production files became ~155 over 5, once the three-copy Task Result fact was
+known; session 2 added FR-005, moving it to ~162. On 2026-08-11 the operator
+restored the literal per-task append guarantee, which added FR-006 and a sixth
+production file, moving it to ~190. See "Verified Repository Facts" under the
+Plan Prompt and the Design Concept's Q2 revision note 2.
+
+Every dimension sits inside its warn threshold: the LOC projection well under
+the 400 line, the file count at but not above the six-file line, the total-file
+count well under the fifteen-file line, and one primary surface.
 
 **Split decision (grill-me slice-sizing, re-confirmed at Clarify):** one
 vertical slice, no split. `estimate-spec-size` re-run with the corrected
@@ -371,6 +377,28 @@ a real defect, in the workflow file rather than the spec.
 
 | 2 | When does the append happen during a `[P]` parallel run, and do FR-003/SC-002 need restating to match the shipped Claude loop? | `[codebase]`, `[spec]` | codebase-analyst, spec-context-analyst | 1 | **Both agree, high confidence → Option B: two-branch cadence.** Singleton and sequential dispatch appends per task; a parallel run appends at collection, before the next run dispatches. Codex keeps its stronger per-result append unchanged. The decisive argument is not merely that no per-completion hook exists, but that `agent-teams-integration.md:325-328` (Design Principle #2) requires the parallel-subagents fallback to deliver "the same contract (same parallelism, same outputs)" as the Agent Teams path — so even a Teams-only hook could not become the contract. Background dispatch is documented at `:75-76` as "The next user message returns all N results together." Precedent for amending a settled grill-me answer mid-run via consensus rather than a new interview: `CAR-005-workflow.md:1348`, where a recorded guarantee was found unachievable and restated with a design-concept revision note. | Design Concept Q2 revision note + Goals bullet; `spec.md` US1 narrative, acceptance scenarios, FR-002/003/004, new FR-005, SC-001/002/004, edge cases, assumptions; workflow Success Criteria Summary, Architecture Notes, state-management checklist prompt |
 
+| 3 | **Operator decision, 2026-08-11: restore the literal per-task append guarantee.** Supersedes item 2 entirely. | n/a — operator ratification, not a consensus round | none dispatched for the decision itself; a 7-agent verify/design/refute workflow checked how to implement it | n/a | **Item 2's premise was false.** It rested on `agent-teams-integration.md:75-76` ("The next user message returns all N results together") and on reading `phase-execution.md:888` as a platform constraint. The platform documentation says the opposite: `code.claude.com/docs/en/sub-agents` — *"A background subagent's results reach Claude as a completion notification in a later turn"*; `code.claude.com/docs/en/agent-teams` — *"when a teammate finishes and stops, it automatically notifies the lead"* and *"The lead doesn't need to poll for updates."* It was also observed directly twice in this run: two background agents dispatched in one message notified separately, minutes apart, with unrelated work done between them. The earlier analysis checked `Monitor` and `TaskStop` and was right that no *polling* primitive exists; it missed that the platform *pushes*. Design Principle #2 now cuts the other way: since both paths can append per arrival, it requires both to. | Design Concept Q2 revision note 2; `spec.md` FR-003/FR-005/SC-002, new FR-006, US1 narrative, scenarios, edge cases, assumptions, budget; `plan.md`; `research.md` R3/R10; both contracts; `quickstart.md`; `tasks.md` (T004 + new T014); roadmap budget and Key Files; this file |
+
+**Three adversarial reviewers were run against the restored design, and all
+three returned refuted.** None overturned the decision; each improved it. Two
+independently found the same defect: appending on the Agent Teams path's idle
+notification would write **structurally empty entries**, because teammates are
+independent sessions whose output never returns to the lead — the signal carries
+no payload. One added that idle is not completion, so a teammate that goes idle
+after a coordination message and is later woken would be recorded as two
+attempts, breaking SC-002's exact count. That is why **FR-006** exists: teammates
+are told at dispatch to send their task summary to the lead, and the append
+triggers on that message, never on the bare signal. Without the refute pass this
+amendment would have shipped a regression the record itself could not reveal.
+
+The third reviewer found two more: `agent-teams-integration.md` carries **three**
+stale batch claims rather than the one originally scoped (the third is inside the
+`Use site 3` pseudocode, on the documented route from both Phase 7 entry points),
+and the reviewability gate's setup mode parses the **last** matching phrase in a
+file — so this spec's own threshold parenthetical was being read as data, making
+`spec.md` return `status: "block", production_files: 15`. Both are fixed; the
+gate now reads `pass, production_files: 6, total_files: 9, reviewable_loc: 190`.
+
 **Escalation call for item 2, recorded because it is a judgment, not a rule.**
 This narrows a durability guarantee the user personally selected in Q2 with a
 stated rationale, so I checked the stop conditions directly rather than taking
@@ -444,8 +472,8 @@ rather than on a citable platform guarantee.
 Both were confirmed by reading the tree; plan against these, not against
 assumptions.
 
-- **The reporting contract is THREE edits, not one. The append logic is two.
-  Five production files total.**
+- **The reporting contract is THREE edits, not one. The append logic is two,
+  plus one stale-claim correction. Six production files total.**
 
   *Corrected 2026-08-10 by Clarify session 1 consensus. The superseded claim
   read "The reporting contract is one shared edit… That is 3 production files."
@@ -470,6 +498,14 @@ assumptions.
   (`validate-codex-parity.py` checks agent-file existence, not content), so a
   partial fix would pass CI and still violate FR-001. Enforcement here is
   FR-001 plus the G6 Design-Concept drift check, not a red test.
+
+- **A third orchestration file joined on 2026-08-11.**
+  `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md`
+  asserts in three places that parallel results arrive as one batch — at its
+  `### Within-message parallelism` paragraph, in its axes-of-parallelism list,
+  and in the `### Use site 3: Phase 7 [P] task team` pseudocode. That claim is
+  false and is what narrowed the append cadence before the operator restored it.
+  Correcting all three is task T014.
 
 - **The append logic is mirrored, so it is two edits.** `phase-execution.md` is
   **not** shared the way `tdd-protocol.md` is: Codex carries its own
@@ -510,19 +546,26 @@ assumptions.
   `**Deviations/Edge cases/Surprises:**` line placed after `**Errors:**` —
   do not introduce a second block. This lands in all three authored copies
   of that block, not just `tdd-protocol.md`; see "Verified Repository Facts".
-- **Append cadence (Q2, as amended at Clarify session 2):** the orchestrator
-  appends inside the existing Phase 7 Step 3 task loop in `phase-execution.md`,
-  not batched at phase end. Two call-site shapes, because the loop has two:
-  the singleton/sequential branch waits on one result at a time
-  (`phase-execution.md:900-914`, `Wait for result.`), so it appends per task;
-  the parallel branch waits on the whole run
-  (`:888` `Wait for ALL to complete.`, `:875` for the Agent Teams path), so it
-  appends every task in the run at collection, before the next run dispatches.
-  The serial re-run fallback after a regression (`:894-898`) is per-task by
-  construction and needs no special handling. There are **three** append sites
-  in the routing, not one: the executor branch, the research branch, and the
-  orchestrator-direct verification branch — the latter two never carry the
-  reporting field, and their entries record that nothing was reported.
+- **Append cadence (Q2, restored 2026-08-11 by operator decision):** the
+  orchestrator appends inside the existing Phase 7 Step 3 task loop, on the turn
+  each attempt's own result arrives, before dispatching further work. One rule
+  for every dispatch shape — singleton, sequential run, and member of a parallel
+  run alike — because the platform delivers worker completions individually
+  rather than as a batch. Dispatch shape does not change: workers are still
+  spawned together in one message and the post-run TYPECHECK + UNIT_TEST safety
+  net still runs at the barrier where it always did.
+  There are **three** append call sites in the routing — the executor branch,
+  the research branch, and the orchestrator-direct verification branch — and the
+  latter two never carry the reporting field, so their entries record that
+  nothing was reported. A bare idle or liveness signal with no task summary is
+  never an append trigger.
+- **Agent Teams needs a payload channel (FR-006, new 2026-08-11):** teammates
+  are independent sessions whose output never returns to the lead, so their idle
+  notification is a signal without a task summary. Teammates must be told at
+  dispatch to send their `## Task Result: <TASK_ID>` block to the lead on
+  completion, and the lead appends on that message's arrival. Without it the
+  Teams path would write structurally empty entries while the background path on
+  an identical run wrote full ones.
 - **Resume (new at Clarify session 2):** the file-lifecycle step is
   create-if-absent, not create. A resumed Phase 7 re-opens the existing record
   and appends; it must not truncate it or write a second header.
@@ -670,12 +713,13 @@ Focus on Implementation-Notes Capture requirements:
 - Does spec.md require the file to exist (with header) from the very
   start of Phase 7, before any task dispatch, independent of how many
   tasks eventually run?
-- Does spec.md require appends at the right granularity — immediately after
-  each singly or sequentially dispatched task, and at run collection for a
-  task inside a parallel run — and never batched to phase end? (FR-003 was
-  amended at Clarify session 2 to this two-branch cadence; the amendment is
-  deliberate and recorded in the Design Concept's Q2 revision note, so do
-  NOT report the two-branch wording as drift.)
+- Does spec.md require appends at the right granularity — on the turn each
+  attempt's own result arrives, before further work is dispatched, on every
+  dispatch shape, and never batched to phase end or deferred to a run boundary?
+  (FR-003 was narrowed at Clarify session 2 and then RESTORED on 2026-08-11 by
+  operator decision, after the premise behind narrowing it proved false. Both
+  states are recorded in the Design Concept's Q2 revision notes 1 and 2, so do
+  NOT report the per-arrival wording as drift.)
 - Does spec.md require a retried task (parallel-run regression → serial
   re-run) to append a second entry rather than overwrite the first?
 - `--from-phase` resume behavior was resolved at Clarify session 2: FR-002 is
@@ -940,9 +984,11 @@ File Operations have a task, and every path named in tasks.md exists in the tree
 or is correctly marked NEW. Layer 1 re-run after the edits: 1447/1447, unchanged
 from the G0 baseline.
 
-Neither authorised amendment was reported as drift: Q2's two-branch cadence
-(dated revision note under Q2) and the 3 → 5 production files / 115 → 155 LOC
-restatement (Consensus Resolution Log item 1) are both correctly carried.
+Neither authorised amendment was reported as drift: Q2's cadence change (dated
+revision note under Q2, later superseded by note 2) and the 3 → 5 production
+files / 115 → 155 LOC restatement (Consensus Resolution Log item 1) were both
+correctly carried at the time this ran. Analyze predates the 2026-08-11 operator
+decision; see Consensus Resolution Log item 3 for what changed after it.
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
@@ -1007,6 +1053,46 @@ documented classifier limitation, not a measurement.
 `recommended_action: "proceed"`. In advisory mode this would not have blocked
 even below threshold, so the score is recorded as information for the operator
 rather than as a hurdle the run cleared.
+
+---
+
+### Confidence Gate re-run — 2026-08-11, after the operator amendment
+
+The composite below supersedes the 0.93 recorded above. It is a fresh emit
+rather than an edit of the old one: the gate reads the **last** matching
+confidence block in this file, so appending is what updates it, and both
+readings stay visible.
+
+| Field | Value |
+|-------|-------|
+| Mode | advisory |
+| Composite confidence | 0.95 |
+| Verdict | proceed |
+| Threshold | 0.90 |
+| Evidence | Everything behind the 0.93 emit, plus: the operator ratified the open decision, three adversarial reviewers ran against the restored design and their findings were all applied, and the reviewability gate now parses this spec correctly (`pass`, 6 production files) where it previously returned `block` on a parse artifact |
+
+📊 Confidence: 0.95
+- Task understanding: 0.98
+- Approach clarity: 0.96
+- Requirements alignment: 0.96
+- Risk assessment: 0.92
+- Completeness: 0.93
+
+**Risk assessment rose from 0.85 to 0.92.** The 0.85 was an *unratified* risk,
+not an unmanaged one: the cadence narrowing contradicted a decision the operator
+had made personally, and only they could close it. They closed it, in the
+direction that removes the risk rather than accepting it — the record is now
+lossless per attempt on every dispatch path. It is not 1.00 because the Agent
+Teams payload channel (FR-006) is a new obligation on a shipped surface, and it
+is the one part of this design that adds behaviour rather than correcting a
+document.
+
+**Completeness fell slightly, 0.94 to 0.93.** The scope grew by a sixth
+production file and a fourteenth task after all four checklist and analyze
+passes had already run. Those passes validated the narrowed design; the restored
+design has been checked by three adversarial reviewers rather than by a fresh
+checklist sweep. That is a real, if small, difference in coverage, and it is
+recorded rather than smoothed over.
 
 ---
 

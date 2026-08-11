@@ -137,7 +137,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
 | ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Pending | - | Blocked by ART-003, ART-007, ART-012 |
 | ART-011 | Scaffold Integration | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
-| ART-012 | Implementation-Notes Capture | 🔄 In Progress | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | Scaffolded 2026-08-10 on `art-012-implementation-notes-capture`; grill-me converged naturally, 8 questions, no split (scaffold estimator: 115 LOC, ok; re-estimated 155 at Clarify session 1, then 162 at Analyze once FR-005 existed — see the Reviewability Budget below) |
+| ART-012 | Implementation-Notes Capture | 🔄 In Progress | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | Scaffolded 2026-08-10 on `art-012-implementation-notes-capture`; grill-me converged naturally, 8 questions, no split (scaffold estimator: 115 LOC, ok; re-estimated 155 at Clarify session 1, 162 at Analyze once FR-005 existed, then 190 on 2026-08-11 when the operator restored the literal per-task guarantee, adding FR-006 and a sixth production file — see the Reviewability Budget below) |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
 | ART-014 | Phase-Guard Enforcement Repair | ⏳ Ready | - | No dependencies; found during ART-006, which deliberately did not fix it |
 | ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
@@ -752,16 +752,19 @@ boundary at a visible seam.
 notes record feeding the PR writeup and retrospective.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 162 (estimator: ok, modify-weighted) |
-Production files: 5 |
-Total files: ~8 |
+Projected reviewable LOC: 190 (estimator: ok, modify-weighted) |
+Production files: 6 |
+Total files: ~9 |
 Budget result: within budget
 
-*Amended 2026-08-10 during the ART-012 run (Clarify session 1 consensus).
-Scoping recorded 115 LOC over ~3 production files, assuming the per-task
+*Amended twice during the ART-012 run. 2026-08-10, Clarify session 1: scoping
+recorded 115 LOC over ~3 production files, assuming the per-task
 `## Task Result:` block had a single authored home. It has three, so the two
-agent definitions below joined Key Files and the estimator was re-run rather
-than hand-adjusted. Every dimension stays under the warn line.*
+agent definitions below joined Key Files. 2026-08-11, operator decision: the
+literal per-task append guarantee was restored after the premise behind
+narrowing it turned out to be a stale claim about batched result delivery. That
+added FR-006 and a sixth production file. The estimator was re-run at each step
+rather than hand-adjusted. Every dimension stays inside its warn threshold.*
 
 **Scope:**
 - One vertical slice — executor reporting contract → orchestrator append →
@@ -791,6 +794,7 @@ its review-visible expression is the writeup's implementation-notes section.
 - `speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md` — executor reporting contract, injected into every dispatch
 - `speckit-pro/agents/implement-executor.md` — independent copy of the Task Result block, plus a four-field Terminal Deliverable enumeration that must be updated with it
 - `speckit-pro/codex-agents/implement-executor.toml` — Codex mirror of that agent definition
+- `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` — corrects three stale claims that parallel results arrive batched; that error is what narrowed the append cadence before the operator restored it
 
 ---
 

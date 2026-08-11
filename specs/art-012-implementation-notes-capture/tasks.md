@@ -141,7 +141,7 @@ dispatched task attempt, additively and fail-open, on both agent platforms.
 passes its record-contract assertion group against both platform documents.
 Manually: run autopilot's implement phase for a spec with several tasks,
 interrupt it partway, and read the record. It exists, carries its header, and
-holds exactly one entry per attempt whose dispatch run was already collected.
+holds exactly one entry per attempt that completed, whatever its dispatch shape.
 This story is verifiable with User Story 2 absent, in which case every entry
 reads `None`.
 
@@ -249,11 +249,24 @@ Anchor by that text, not by line number: T003 shifts this file's numbering.
   their entries record that nothing was reported. Appending only on the executor
   branch leaves research and verification attempts silently missing, which
   SC-001 counts as a violation.
-- **Two-branch cadence**, because the loop has two branches. Dispatched singly
-  or as part of a sequential run: append immediately after that attempt's result
-  is read, before the next dispatch. Dispatched inside a parallel run: append
-  every task in that run when the run is collected, in collection order, and
-  always before the next run is dispatched. Never batched to phase end.
+- **Per-arrival cadence, one rule for every dispatch shape.** Append on the turn
+  that attempt's own result reaches the orchestrator, before dispatching further
+  work. A member of a parallel run does not wait for the rest of its run — the
+  platform delivers each worker's completion individually. Never batched to phase
+  end, never deferred to a run boundary.
+- **Never append on a bare idle or liveness signal.** A worker that stops without
+  delivering a task summary has produced no result; that is a cue to request the
+  summary. Appending on it writes an empty entry, and double-counts the attempt
+  when the worker is later woken and finishes.
+- **Give the Agent Teams path a payload (FR-006).** Teammates are independent
+  sessions whose final output never returns to the lead, so their idle
+  notification is a signal with no task summary attached. Add to the teammate
+  dispatch instruction that each teammate MUST send its complete
+  `## Task Result: <TASK_ID>` block to the lead when its task completes, and make
+  the lead's append trigger the arrival of that message. Without this the Teams
+  path writes structurally empty entries while the background-subagent path on
+  the identical run writes full ones — a silent parity break that the record
+  itself cannot reveal.
 - **Serial re-run after a regression**: appends a further entry under the same
   task ID and leaves the earlier entry exactly as written.
 - **The literal `None`** is the single value for every nothing-to-report case:
@@ -304,10 +317,11 @@ Anchor by that text, not by line number: T003 shifts this file's numbering.
 - Same fail-open contract with all four properties: gap in the workflow file
   naming the attempt or lifecycle step and the failed operation, no retry,
   exactly one fallback level, blast radius of one entry.
-- **Cadence wording differs by design.** Codex keeps its existing, stronger
-  per-result cadence and does not adopt the Claude document's barrier language,
-  which would describe dispatch machinery Codex does not have. FR-005 owes
-  parity on the produced record, not on identical wording (research R10).
+- **Same per-arrival cadence, less wiring needed.** Codex already harvests each
+  result as it arrives, so its document gains the append instruction without any
+  cadence change, and it needs no FR-006 report obligation — its workers already
+  return their summaries. FR-005 owes parity on the produced record and on the
+  timing; instruction wording still differs (research R10).
 - Covers FR-002, FR-003, FR-004, FR-005; SC-001 through SC-006 on the Codex
   platform.
 - **Verify**: the Codex-document assertions turn GREEN and the whole
@@ -503,15 +517,54 @@ restale, then verify the whole change end to end.
   and `quickstart.md`'s verification evidence including the T012 results.
 - Traceability maps FR-001 through FR-005 and SC-001 through SC-006 onto the
   changed files and the verification evidence above.
-- Rollback note: the feature has no flag and needs none. Reverting the five
+- Rollback note: the feature has no flag and needs none. Reverting the six
   production file edits removes it completely and leaves no state behind,
   because the record is exhaust that nothing depends on to make progress.
-- Deferred work is named rather than absorbed: making a parallel run's per-task
-  results durable before the run completes would mean rewriting how Phase 7
-  waits for parallel work, which is dispatch machinery this spec does not touch.
+- Per-task durability inside a parallel run is delivered here, not deferred. An
+  earlier draft deferred it on a false premise about batched result delivery;
+  see the Design Concept's Q2 revision note 2.
 - **Do not hand-author the packet body.** Packet generation and its protected
   fingerprint belong to the Post-Implementation Checklist's PR Body Generation
   step and the runner's packet helper. This task verifies inputs only.
+
+- [ ] T014 [P] Correct the stale batched-delivery claims in `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md`
+
+**Why**: this file is the reason the append cadence was narrowed on a false
+premise. It asserts in three places that parallel results arrive as a batch,
+which the platform documentation contradicts. Left uncorrected, the next reader
+re-derives the same wrong conclusion.
+
+**Where** — three sites, anchored by text, not line number:
+
+1. The `### Within-message parallelism` paragraph asserting
+   `The next user message returns all N results together.`
+2. The axes-of-parallelism list item asserting `**Within-message batching**`,
+   ending `all results in next message`.
+3. The `### Use site 3: Phase 7 [P] task team` pseudocode line
+   `Lead waits for all to complete, merges results into COMPLETED_TASKS` — the
+   twin of the Path A line T004 rewrites. Missing it leaves an un-amended
+   collect-then-record model 400 lines after the corrected statement, on the
+   documented route from both Phase 7 entry points.
+
+**Acceptance criteria**
+
+- Each site states that background-subagent and teammate completions are
+  delivered per completion, citing the platform docs, and none of the three
+  still asserts batched arrival.
+- The correction is factual, not a mandate: sites that legitimately choose to
+  collect at a barrier — consensus collection, the post-implementation tracks,
+  and Phase 7's own TYPECHECK + UNIT_TEST safety net — keep that policy. Say so
+  explicitly, so the next reader does not over-apply the correction.
+- Use site 3's pseudocode names the per-arrival notes append while keeping the
+  barrier merge into `COMPLETED_TASKS` and the team cleanup line untouched.
+- Design Principle #2 is left intact; note only that it now requires both paths
+  to append per arrival rather than both to wait.
+- **Verify**: a grep for `returns all N results together` and for
+  `all results in next message` over the file returns nothing, and the Use site 3
+  block mentions the per-arrival append.
+- Covers FR-005; supports FR-003 and FR-006 by removing the contradiction.
+- `[P]`: a different file from every other production edit, with no shared
+  anchor text.
 
 ---
 
@@ -598,7 +651,7 @@ Task: "Regenerate the generated docs test reference at docs-site/src/content/doc
 
 1. T001 → scope confirmed
 2. Add User Story 1 → the record exists, survives interruption, and carries one
-   entry per collected attempt (MVP)
+   entry per completed attempt (MVP)
 3. Add User Story 2 → those entries carry real content instead of `None`
 4. Regenerate the three generated surfaces, then run the full gate
 
@@ -617,11 +670,12 @@ because User Story 1 is the MVP.
 |---|---|
 | FR-001 reporting field, one combined field, literal `None`, both platforms | T006, T007, T008, T009 |
 | FR-002 record exists with header before dispatch, create-if-absent, never truncate | T002, T003, T005 |
-| FR-003 one entry per dispatched attempt, two-branch cadence, additive only, ordering | T002, T004, T005 |
+| FR-003 one entry per dispatched attempt, per-arrival cadence, never on a bare idle signal, additive only, ordering | T002, T004, T005 |
 | FR-004 fail-open gap, no retry, one fallback level, blast radius of one entry | T002, T004, T005 |
-| FR-005 both platforms produce the same record | T002, T005, T008 |
+| FR-005 both platforms and every dispatch path produce the same record and timing | T002, T004, T005, T008 |
+| FR-006 every attempt's summary reaches the orchestrator; teammates are told to send theirs | T004, T014 |
 | SC-001 N attempts produce N entries, all task-ID identified | T002, T004, T005 |
-| SC-002 interrupted phase leaves header plus collected entries | T002, T003, T004 |
+| SC-002 interrupted phase leaves header plus exactly k entries | T002, T003, T004 |
 | SC-003 100% of entries read `None` when nothing is reported | T003, T004, T006, T007, T008, T009 |
 | SC-004 forced write failure changes no outcome and is readable as a gap | T002, T004, T005 |
 | SC-005 no entry's text changes after it is written | T002, T004, T005 |

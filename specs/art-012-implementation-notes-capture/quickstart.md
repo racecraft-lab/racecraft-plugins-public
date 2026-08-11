@@ -80,8 +80,9 @@ the create-if-absent rule, the additive-only rule, and the fail-open rule with
 its four properties: the gap names the attempt or lifecycle step plus the
 operation that failed, the write is never retried, the fallback is exactly one
 level deep, and the blast radius is the single entry that failed. The
-Claude file additionally describes the two-branch cadence; the Codex file keeps
-its own per-result cadence. Wording differs there by design, per FR-005.
+Both files describe the same per-arrival cadence; the Claude file additionally
+carries the FR-006 teammate report obligation, which the Codex path does not
+need. Wording differs by design, per FR-005; the produced record does not.
 
 ## Scenario 3: The automated contract check passes
 
@@ -168,7 +169,7 @@ autopilot's implement phase for any spec with several tasks and read
 
 * It exists and carries its header, even if the phase was interrupted before any
   task finished.
-* It holds one `### <TASK_ID>` entry per collected attempt, including research
+* It holds one `### <TASK_ID>` entry per completed attempt, including research
   and verification attempts, whose entries read `None`.
 * A retried task has two entries, and the first is unchanged.
 * Resuming the phase appends after the existing entries and writes no second

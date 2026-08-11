@@ -24,11 +24,11 @@ stop_reason: "natural"
   cases, and surprises as part of its existing task summary — one combined
   field, not three mandatory sub-fields.
 - The orchestrator durably appends one entry per task to
-  `specs/<branch>/.process/implementation-notes.md` — immediately after each
-  task completes when that task is dispatched singly or sequentially, and no
-  later than its parallel run's collection point otherwise, never batched at
-  phase end — so the record survives a mid-phase interruption. See the Q2
-  revision note for why the parallel case differs and what it costs.
+  `specs/<branch>/.process/implementation-notes.md`, on the turn that task's own
+  result arrives and before further work is dispatched — inside a parallel run
+  as much as anywhere else, never batched at phase end — so the record survives
+  a mid-phase interruption. See the Q2 revision notes: note 1 narrowed this on a
+  false premise, note 2 restored it and records the one addition it requires.
 - A task with nothing to report still gets an entry — its field literally
   reads "None" — so the record is never silently absent for the whole spec.
 - The file is created with a header at the start of Phase 7, before any task
@@ -128,6 +128,51 @@ stop_reason: "natural"
 > mean rewriting Phase 7's parallel wait itself, which is outside this spec's
 > budget and Key Files; that is named as deferred follow-up work in spec.md's
 > Assumptions instead.
+
+> **Revision note 2 — 2026-08-11, operator decision. This SUPERSEDES revision
+> note 1 above and restores Q2's original answer in full.** Both prior states
+> are preserved deliberately: note 1 records why the guarantee was narrowed, and
+> this note records why the narrowing was wrong.
+>
+> **The premise of note 1 was false.** It rested on
+> `agent-teams-integration.md:75-76` — "The next user message returns all N
+> results together" — and on reading `phase-execution.md:888` "Wait for ALL to
+> complete." as a platform constraint. Neither survives contact with the
+> platform's own documentation. `code.claude.com/docs/en/sub-agents` states: *"A
+> background subagent's results reach Claude as a completion notification in a
+> later turn."* Singular, per subagent. `code.claude.com/docs/en/agent-teams`
+> states: *"Idle notifications: when a teammate finishes and stops, it
+> automatically notifies the lead"* and *"The lead doesn't need to poll for
+> updates."* Delivery is per-completion push on both paths. It was also observed
+> directly: in the session that produced this spec, two background agents
+> dispatched in one message notified separately, minutes apart, with unrelated
+> work done in between — twice. The repo's claim is stale, and correcting it is
+> now in this spec's scope.
+>
+> The earlier analysis was careful, not careless: it checked `Monitor` and
+> `TaskStop` and correctly found no *polling* primitive. It missed that the
+> platform *pushes*.
+>
+> **Restored cadence:** every attempt's entry is appended on the turn that
+> attempt's own result arrives, before further work is dispatched — inside a
+> parallel run as much as anywhere else. Q2's original illustration holds again:
+> a crash after task 5 of 12 leaves 5 real entries, whichever way those tasks
+> were dispatched.
+>
+> **What this costs, since it is not free.** The Agent Teams path needs one
+> genuine addition. Teammates are independent sessions whose final output never
+> returns to the lead, so the idle notification carries a *signal* but no
+> *payload*. Appending on a bare idle signal would write systematically empty
+> entries on that path, and would double-count an attempt when a teammate goes
+> idle mid-task and is later woken. So teammates must now be told at dispatch to
+> send their task summary to the lead on completion, and the append triggers on
+> that summary's arrival, never on the idle signal alone. That obligation is
+> recorded as FR-006. It is the only part of this reversal that adds work rather
+> than removing it, and it is what makes the guarantee real on both paths
+> instead of nominal on one.
+>
+> Dispatch shape is unchanged: workers are still spawned together in one
+> message, and the post-run verification barrier still runs where it always did.
 
 ---
 

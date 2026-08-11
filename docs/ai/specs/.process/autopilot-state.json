@@ -211,15 +211,15 @@
   },
   "confidence_gate": {
     "mode": "advisory",
-    "composite": 0.93,
+    "composite": 0.95,
     "threshold": 0.9,
     "verdict": "proceed",
     "criteria": {
-      "task_understanding": 0.97,
-      "approach_clarity": 0.95,
-      "requirements_alignment": 0.95,
-      "risk_assessment": 0.85,
-      "completeness": 0.94
+      "task_understanding": 0.98,
+      "approach_clarity": 0.96,
+      "requirements_alignment": 0.96,
+      "risk_assessment": 0.92,
+      "completeness": 0.93
     },
     "test_baseline": {
       "passed": 7226,
@@ -227,6 +227,24 @@
       "l1": 1447,
       "l4": 5593,
       "l5": 186
+    },
+    "note": "re-run 2026-08-11 after the operator amendment restoring the per-task append guarantee; supersedes the 0.93 emit"
+  },
+  "amendment": {
+    "date": "2026-08-11",
+    "decision": "operator restored the literal per-task append guarantee",
+    "supersedes": "Clarify session 2 consensus narrowing",
+    "reason": "agent-teams-integration.md:75-76 claimed batched result delivery; platform docs and direct observation show per-completion push",
+    "added": [
+      "FR-006 teammate report obligation",
+      "T014 stale-claim correction",
+      "6th production file"
+    ],
+    "budget": {
+      "reviewable_loc": 190,
+      "production_files": 6,
+      "total_files": 9,
+      "status": "ok"
     }
   }
 }

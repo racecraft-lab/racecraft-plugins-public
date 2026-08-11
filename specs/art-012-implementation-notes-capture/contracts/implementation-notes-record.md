@@ -85,11 +85,13 @@ append, so an interrupted-before-any-task run still leaves a header-only record.
 
 | Dispatch shape | When the entry is appended |
 |---|---|
-| Singly, or as part of a sequential run | Immediately after that attempt's result is read, before the next dispatch |
-| Inside a parallel run | When the run is collected, every task in the run, in collection order, before the next run is dispatched |
-| Serial re-run after a regression | Immediately, as a further entry under the same task ID |
+| Singly, or as part of a sequential run | On the turn that attempt's result arrives, before the next dispatch |
+| Inside a parallel run, background subagents | On the turn that attempt's own result arrives, without waiting for the rest of the run |
+| Inside a parallel run, Agent Teams | On the turn that teammate's task summary arrives (FR-006), without waiting for the rest of the team |
+| Serial re-run after a regression | On arrival, as a further entry under the same task ID |
+| Any bare idle or liveness signal with no task summary | Never. Request the summary instead |
 
-Never batched to phase end.
+Never batched to phase end, and never deferred to a run boundary.
 
 ### Coverage (FR-003, SC-001)
 
@@ -129,19 +131,20 @@ progress.
 | Gap content | Names the task ID, or the lifecycle step when creation failed, plus which operation failed |
 | Retry | None. One attempt, then the gap |
 | Fallback depth | Exactly one level. If the workflow file is itself unwritable, the failure is surfaced in the run's own output and the run carries on. No third destination, no recursion |
-| Blast radius | One entry. Other entries in the same collection batch are still appended, and the next run is still dispatched |
+| Blast radius | One entry. Every other attempt's entry is still written as its own result arrives, and the next dispatch still happens |
 
 A reporting-content problem is not a write failure. A missing or unreadable
 field produces a `None` entry, not a gap.
 
 ### Platform parity (FR-005)
 
-Both platforms produce the same header, the same entry format, and the same
-additive-only and fail-open behavior. The *moment* of append may differ where
-dispatch mechanics differ: one platform collects a parallel run at a barrier,
-the other harvests each result as it arrives and keeps its stronger per-result
-cadence. Parity is owed on this file, not on the instruction wording that
-produces it.
+Both platforms, and every dispatch path within a platform, produce the same
+header, the same entry format, the same per-arrival timing, and the same
+additive-only and fail-open behavior. Instruction wording still differs — the
+platforms describe their dispatch differently, and the Agent Teams path needs
+the FR-006 report obligation that the others do not — but the produced record
+must not differ, and must not depend on which parallel dispatch mechanism a run
+happened to use.
 
 ### Not in this contract
 
@@ -169,7 +172,15 @@ produces it.
 5. Both describe the failure path as fail-open with a gap recorded in the
    workflow file, not retried, bounded to one fallback level, and scoped to the
    one entry that failed.
-6. The Claude document describes the two-branch cadence, per-attempt for
-   singleton and sequential dispatch and at-collection for a parallel run.
+6. Both documents describe the per-arrival cadence: an entry is appended on the
+   turn its attempt's result arrives, on every dispatch shape, and never on a
+   bare idle signal.
+6b. The Claude document instructs teammates to send their task summary to the
+   lead on completion (FR-006), so the Agent Teams path has a payload to write.
+6c. `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md`
+   states that background-subagent and teammate completions arrive as
+   per-completion notifications, contains neither `returns all N results
+   together` nor `all results in next message`, and its Use site 3 pseudocode
+   names the per-arrival append.
 7. Both cover all three routing branches, so research and verification attempts
    are not silently missing from the record.

@@ -67,35 +67,55 @@ grouping "things that went wrong". Rejected: same semantics, larger diff.
 
 ---
 
-## R3. Append cadence has two branches, because the Phase 7 loop has two
+## R3. Append cadence is per-arrival, on every dispatch shape
 
-**Decision**: a task dispatched singly or sequentially gets its entry appended
-immediately after its result is read. A task dispatched inside a parallel run
-gets its entry appended when that run is collected, before the next run is
-dispatched.
+**Decision**: every attempt's entry is appended on the turn that attempt's own
+result reaches the orchestrator, before further work is dispatched. This holds
+for a singleton, a sequential run, and a member of a parallel run alike. A bare
+idle or liveness signal carrying no task summary is never an append trigger.
 
-**Rationale**: the singleton and sequential branch of the Phase 7 loop waits on
-one result at a time (`speckit-pro/skills/speckit-autopilot/references/phase-execution.md:900-914`,
-"Wait for result."). The parallel branch waits on the whole run
-(`:888` "Wait for ALL to complete.", `:875` on the Agent Teams path), so the
-orchestrator gets no turn until every task in the run returns. Appending per
-task inside a parallel run is not achievable, and no per-completion hook exists
-on either path.
+**Rationale**: the platform delivers worker completions individually, not as a
+batch. `code.claude.com/docs/en/sub-agents` states that "a background subagent's
+results reach Claude as a completion notification in a later turn" — singular,
+per subagent. `code.claude.com/docs/en/agent-teams` states that "when a teammate
+finishes and stops, it automatically notifies the lead" and that "the lead
+doesn't need to poll for updates". So the orchestrator does get a turn per
+attempt, and per-attempt durability is achievable on both parallel paths.
 
-`speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md:325-328`
-(Design Principle #2) requires the parallel-subagents fallback to deliver the
-same contract as the Agent Teams path, so even a Teams-only hook could not
-become the contract.
+The `Wait for ALL to complete.` line at
+`speckit-pro/skills/speckit-autopilot/references/phase-execution.md:888`, and
+`Wait for all teammates to complete.` at `:875`, remain accurate as *site
+collection policy* for the verification barrier. They were never platform
+constraints. The barrier stays; only the notes append moves earlier.
 
-**Cost, stated plainly**: a crash mid-run loses that run's entries, including
-tasks inside it that had already finished. The loss window is one run rather
-than the whole phase. This narrows the Q2 guarantee and is recorded as such in
-the Design Concept's dated revision note under Q2 and in spec.md's Assumptions
-as deferred follow-up work.
+**Superseded reasoning, preserved.** An earlier revision of this decision held
+that per-attempt append inside a parallel run was unachievable, citing those two
+lines plus
+`speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md:75-76`
+("The next user message returns all N results together"). That third citation is
+factually wrong and is corrected by this spec. The earlier analysis checked
+`Monitor` and `TaskStop` and was right that no *polling* primitive exists; it
+missed that the platform *pushes*. The narrowed cadence it produced is reversed
+by operator decision, recorded in the Design Concept's Q2 revision note 2.
 
-**Alternatives rejected**: rewrite the parallel wait so each result lands as it
-arrives. That is dispatch machinery this spec does not touch, and it is outside
-the reviewability budget.
+**Design Principle #2 now cuts the other way.**
+`agent-teams-integration.md:325-328` requires the parallel-subagents fallback to
+deliver the same contract as the Agent Teams path. When the fallback was thought
+to be the weaker path, that argued for narrowing both. Since both can deliver
+per-arrival, the same principle requires both to do so.
+
+**Cost**: one genuine addition, on the Agent Teams path only. Teammates are
+independent sessions whose output never returns to the caller, so their idle
+notification is a signal without a payload. FR-006 therefore requires teammates
+to be told at dispatch to send their task summary to the lead on completion, and
+the append triggers on that message. Without it, the Teams path would write
+structurally empty entries while looking identical in the instructions.
+
+**Alternatives rejected**: trigger the append on the teammate idle notification
+itself. Rejected on two counts — it carries no task summary, so entries would
+record nothing; and idle is not completion, so a teammate that goes idle after a
+coordination message and is later woken would be recorded as two attempts,
+breaking SC-002's exact count and FR-003's ordering rule.
 
 **Serial re-run**: the fallback after a parallel-run regression
 (`phase-execution.md:894-898`) is per-task by construction and needs no special
@@ -264,16 +284,19 @@ surface needs `pnpm --dir docs-site install --frozen-lockfile` once per worktree
 the same additive-only and fail-open behavior. The instruction text may differ
 where dispatch mechanics differ.
 
-**Rationale**: FR-005 states this directly, and it is achievable where identical
-wording is not. Claude's Phase 7 collects a parallel run at a barrier; Codex's
-`implement-executor` records each result as it arrives
-(`speckit-pro/codex-skills/speckit-autopilot/SKILL.md:322`). Codex keeps its
-stronger per-result cadence unchanged. Writing Claude's barrier language into
-the Codex mirror would describe machinery Codex does not have.
+**Rationale**: FR-005 states this directly. Codex's `implement-executor`
+already records each result as it arrives
+(`speckit-pro/codex-skills/speckit-autopilot/SKILL.md:322`), so its document
+needs the append instruction but no cadence change. Claude's document gains the
+same per-arrival instruction on both parallel paths. The platforms now agree on
+timing as well as on the record, so parity holds in the strong direction rather
+than by capping the faster platform to the slower one.
 
-**Alternatives rejected**: copy Claude's cadence prose verbatim into
-`phase-execution-codex.md`. Rejected: it would be false on that platform, and
-FR-005 says parity is owed on the artifact.
+**Alternatives rejected**: leave Claude at a barrier cadence and rely on
+FR-005's older "the moment of append MAY differ" escape hatch. Rejected: the
+escape hatch existed only to absorb a limitation that turned out not to exist,
+and keeping it would have left the two platforms producing measurably different
+records from the same run.
 
 ---
 
