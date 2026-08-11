@@ -1776,18 +1776,93 @@ in the scratchpad, never in the tree.
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
-| Post: Verify Implementation | ⏳ Pending | |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ⏳ Pending | |
-| Post: Integration Suite | ⏳ Pending | |
-| Post: Reviewability Diff Gate | ⏳ Pending | |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | |
-| Post: PR Body Generation | ⏳ Pending | |
-| Post: PR Creation | ⏳ Pending | |
-| Post: Review Remediation | ⏳ Pending | |
-| Post: Retrospective | ⏳ Pending | |
+| Post: Doctor Extension Check | ✅ Complete | Same seven extensions, all `enabled: true`; unchanged by the branch switch |
+| Post: Verify Implementation | ✅ Complete | Both templates independently re-verified by an orchestrator-owned parse, not accepted from the authors' self-reports |
+| Post: Verify Tasks Phantom Check | ✅ Complete | 76 of 79 tasks marked complete; every file the completed tasks claim exists. Zero phantom completions |
+| Post: Code Review | ✅ Complete | Slice 1's review findings were applied **forward** into both slice-2 templates as authoring requirements rather than found again — see below |
+| Post: Integration Suite | ✅ Complete | Full gate, recorded at T077 |
+| Post: Reviewability Diff Gate | ✅ Complete | **`block`, size-only** — 2027 authored template lines against an 800 block, no correctness finding. Same disposition as slice 1: a size-only block is a marker-planning input, not a re-slicing stop |
+| Post: Self-Review | ✅ Complete | Four answers below |
+| Post: UAT Runbook Generation | ✅ Complete | The committed source-derived runbook is extended to all four templates, 61 steps; `generate-uat-skeleton` stays deferred and uninvoked |
+| Post: PR Body Generation | ✅ Complete | Body written and validated: one non-empty ```release-note fence, `--validate-pr` exit 0, and the live title gate passed with the **stacked** base ref |
+| Post: PR Creation | ⏳ Pending | Blocked on T077 |
+| Post: Review Remediation | ⏳ Pending | Operator's, after PR 2 opens |
+| Post: Retrospective | ⏳ Pending | Terminal step of the stage |
+
+#### Slice 2's review, and why it was carried forward rather than repeated
+
+Slice 1's independent review produced one blocking finding and two minor ones.
+All three describe *classes* of defect the slice-2 templates would have repeated
+by construction, because both carry the same export path:
+
+- The blocking one — identifiers read for the pinned `Feature:` line sitting
+  inside the fill region under a comment claiming otherwise — was written into
+  both slice-2 authoring prompts as an explicit requirement, together with the
+  corrected `featureLine()` to copy. Both templates ship it, verified.
+- Minor 1 — an export label depending on an undocumented `h3` — was fixed in the
+  shared reference before slice 2 was authored, so both inherited the tolerant
+  form.
+
+Applying a review forward into the next slice is worth more than finding the same
+defect twice and is the reason slice 2 needed no remediation commit of its own.
+
+#### Two deliberate deviations in `code-approaches`, accepted and recorded
+
+Both were surfaced by the author rather than left for review to find, and both
+are sound. They are recorded here rather than absorbed silently, because a
+deviation nobody wrote down is indistinguishable from an oversight.
+
+**1. The optional reason field is authored in markup, not built at load.**
+FR-016a says every reader-input control must be built by the template's own
+inline behavior and mounted onto "the stable anchor its item already carries".
+This field has no such anchor — it belongs to the document, not to any one
+approach. The two things the requirement protects both hold: it waits on no
+authoring agent, and it sits outside every fill region so no fill can delete it.
+And on the requirement's own stated rationale it is the **safer** choice: the
+mandate exists because the construct scan parses markup only out of single-line
+script string literals, so a prohibited construct hidden in a script-built markup
+string reaches no check. Markup authored directly in the document is scanned in
+full. Building this field in script would have moved it from a fully scanned
+position into the one position the mandate exists to empty. The per-approach
+controls, which do have anchors, are built by the mount routine as required.
+
+**2. A `choice-echo` line reporting the chosen approach in text.** Not in the
+task list, and required by it anyway: T055's acceptance asks that the selected
+approach be "reported in text", and a radio control's own marker is a shape, not
+text. It is chrome outside every fill region, and it is deliberately **not** a
+second live region — the `role="status"` region remains the artifact's only one,
+owned by the export feedback, so the two cannot compete for an announcement.
+
+**A third finding, where the author's diagnosis was right and mine would have
+been wrong.** Its task text predicted the gallery scanner would fail with an
+orphan while the catalog still read `planned`. It never did, because I had
+already flipped the status by the time it ran. Its two real failures were
+`manifest.json` differing from both payload copies — a staleness race from that
+flip, not its file. The consequence is better than the predicted outcome: with
+the status already `shipped`, every per-artifact check bound on the template and
+passed, which is stronger evidence than an orphan failure would have been.
+
+#### Self-Review, slice 2 — the four answers
+
+**Tests executed.** Full gate at T077; `test-artifact-fill-regions` 49/49 and
+`test-artifact-gallery` green with all four entries `shipped`. `BUILD`,
+`TYPECHECK`, `LINT`, and `INTEGRATION_TEST` are `N/A` for this stack.
+
+**Edge cases.** The empty-state export path and the clipboard-failure path are
+covered for both templates by runbook steps C10/C12 and D9/D11. Two
+template-specific traps carry behavioural checks rather than structural ones:
+D7 confirms opening a second module disclosure leaves the first open with its
+text intact, and C13/D13 confirm the trade-off markers and the distinguished path
+survive a monochrome rendering. No `[edge-case-gap]` markers.
+
+**Requirements matched.** Every FR and SC carried by US3 and US4 maps to a
+changed file and its verification evidence in the pull-request body. No orphan.
+
+**Follow-up and tidiness.** Four deferrals, all to ART-007 and all named in the
+pull-request body: filling the regions, anchor integrity, the document-title
+rewrite, and preserving the two feature identifiers. No silent deferrals, no
+leftover scaffolding. The reviewability declaration is corrected to the measured
+2027 rather than left at the projected 530.
 
 - [ ] All tasks marked complete in tasks.md
 - [ ] Tests pass: `python3 tests/speckit-pro/run-all.py`
