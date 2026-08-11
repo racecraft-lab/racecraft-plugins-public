@@ -1444,10 +1444,13 @@ construction. Same-length hex replacement preserved canonical byte-for-byte
 formatting; the passing suite proves it, since the validator raises on
 non-canonical input.
 
-**What this means beyond ART-012.** The plan's Declared File Operations names
-three generated surfaces. There are four. The fourth is undocumented, has no
-regeneration tooling, and fails with a message that names a digest rather than
-the file to fix. Any future change to an agent definition or a Codex agent TOML
+**What this means beyond ART-012.** The plan's Declared File Operations named
+three generated surfaces when this was found. There are four. *(Updated: the
+fourth is now declared there, added when the post-implementation audit found
+that T001's "no tenth tracked file" property and T013's "scope held exactly"
+had both been certified against the incomplete list.)* It still has no
+regeneration tooling, and it fails with a message that names a digest rather
+than the file to fix. Any future change to an agent definition or a Codex agent TOML
 hits it. That is worth a follow-up: either extend
 `refresh-release-artifacts.py` to cover the corpus, or document the manual
 recompute. **Deliberately not fixed here** — building regeneration tooling is
@@ -1533,26 +1536,26 @@ The canonical closeout. Every row must reach Complete or an explicit
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
-| Post: Verify Implementation | ⏳ Pending | |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ⏳ Pending | |
-| Post: Integration Suite | ⏳ Pending | |
-| Post: Reviewability Diff Gate | ⏳ Pending | |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | |
-| Post: PR Body Generation | ⏳ Pending | |
-| Post: PR Creation | ⏳ Pending | |
-| Post: Review Remediation | ⏳ Pending | |
-| Post: Retrospective | ⏳ Pending | |
+| Post: Doctor Extension Check | ✅ Complete | All seven extensions present and enabled in `.specify/extensions/.registry` |
+| Post: Verify Implementation | ✅ Complete | Audit confirmed all six production edits present with their contract text; 0 surviving findings |
+| Post: Verify Tasks Phantom Check | ✅ Complete | Phantom auditor found the completion claim lived only in the harness; `tasks.md` now shows 14 checked, 0 unchecked |
+| Post: Code Review | ✅ Complete | 6 auditors plus adversarial refutation (workflow `wf_85510f0d-cf3`); Copilot returned no blocking issues |
+| Post: Integration Suite | ✅ Complete | Full suite 7309/7309 above the 7226 baseline; L1 1447, L4 5676, L5 186 |
+| Post: Reviewability Diff Gate | ✅ Complete | `final-reviewability-backstop` deferred; setup-mode gate on committed evidence returns `pass`, 6 production files, 9 total, 190 LOC, 1 surface, no blockers or warnings |
+| Post: Self-Review | ✅ Complete | Four dimensions recorded above; two deferrals stated in the PR body rather than dropped |
+| Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` deferred on the installed runner; no committed skeleton exists, so `uat-runbook-author` was not spawned. Fail-open and logged. `quickstart.md` carries the source-derived acceptance path |
+| Post: PR Body Generation | ✅ Complete | Packet emitted via `pr-packet-output`, validated `status=passed`, `pr_blocked=false`, `writes_state=false`; release-note fence supplied as packet input |
+| Post: PR Creation | ✅ Complete | PR #426, base `main`, opened with packet title and packet-owned body file; CI 10 checks pass |
+| Post: Review Remediation | ✅ Complete | Copilot: no blocking issues, no inline comments. Audit findings remediated in `834e5e7a`, `9af715c9`, and the closeout commit. Monitor left armed for human comments |
+| Post: Retrospective | ✅ Complete | Recorded above: cascade failure identified as the run's recurring defect shape, with three prioritised follow-ups |
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] Linting passes: N/A (no lint config for Markdown reference docs beyond structural tests)
-- [ ] Tests pass: `python3 tests/speckit-pro/run-all.py`
-- [ ] Build succeeds: N/A (no build step; payload/proof regeneration accounted per the generated artifact contract)
-- [ ] Manual verification complete
-- [ ] PR created and reviewed
-- [ ] Merged to main branch
+- [x] All tasks marked complete in tasks.md — 14 checked, 0 unchecked
+- [x] Linting passes: N/A (no lint config for Markdown reference docs beyond structural tests)
+- [x] Tests pass: `python3 tests/speckit-pro/run-all.py` → 7309/7309
+- [x] Build succeeds: N/A (no build step; payload/proof regeneration accounted per the generated artifact contract)
+- [x] Manual verification complete — quickstart scenarios 1 through 5, plus the full gate and path hygiene
+- [x] PR created and reviewed — #426, CI 10 checks pass, Copilot no blocking issues
+- [ ] Merged to main branch — **left open deliberately. Only a human merges.**
 
 ---
 
@@ -1560,15 +1563,54 @@ The canonical closeout. Every row must reach Complete or an explicit
 
 ### What Worked Well
 
--
+- **Test first, with an inventory as its deliverable.** The RED test returned the
+  exact literal strings and regexes each follow-on task had to produce, grouped
+  by target file. That turned three writer dispatches from exploratory into
+  deterministic, and the inventory itself carried two traps forward that would
+  otherwise have cost silent failures.
+- **Refusing to append on a bare idle signal, in the orchestrator's own conduct.**
+  Two executors went idle without reporting; both were asked for their summary
+  instead. Both replies contained substantive findings an idle notification would
+  have recorded as an empty entry.
+- **Adversarial audit after implementation, not before.** A green suite was not
+  evidence of a correct change. Two defects that would have shipped sat in
+  artifacts no test asserts against.
+- **Executors that pushed back.** One refused an instruction to leave a line
+  byte-identical, correctly, because that line carried the very claim the task
+  existed to remove.
 
 ### Challenges Encountered
 
--
+- **Cascade failure was the run's recurring defect shape.** Four separate defects
+  were one decision landing correctly in one artifact and never reaching the
+  artifacts that quote it. See the Retrospective table. The final instance was
+  self-inflicted after the audit: adding four checks restaled the measured-results
+  table written one commit earlier.
+- **A fourth generated surface nobody had accounted for.** The Layer 6 corpus
+  digest chain, four levels deep, with no tooling and an error message that names
+  a digest rather than a file.
+- **Runner input schemas cost several retries.** `mode_name` not `mode`,
+  `files`/`frs` not `production_files`/`functional_requirements`, `changed_files`
+  as an in-repo path not an array. Each failed loudly, which is the right
+  behavior, but the fixture requests under `tests/speckit-pro/unit/fixtures/`
+  are the fastest way to get the shape right and should be read first.
+- **Concurrent writers in one worktree made diff-based scope checks unsound.**
+  Own-file diffs were not stable across two consecutive commands.
 
 ### Patterns to Reuse
 
--
+- **Have the test author return its assertion inventory.** Cheap, and it makes
+  every downstream edit deterministic.
+- **Ask for the summary; never infer from the signal.** Applies to the
+  orchestrator exactly as it applies to the feature.
+- **Audit adversarially after the gate is green,** with refuters defaulting to
+  "this finding is wrong". Twelve findings, zero survivors at HEAD, and the value
+  was entirely in the eight that had already been fixed and the one new defect
+  the synthesis found on its own.
+- **Verify a claim about the tree by asking the tree.** The dist-asymmetry claim,
+  the twelve-match breakdown, and the digest chain were all settled by running
+  something, not by reasoning about it. Two of the three contradicted the
+  reasonable guess.
 
 ---
 

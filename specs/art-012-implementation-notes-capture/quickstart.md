@@ -172,13 +172,19 @@ Expected: zero failures, total above 7226.
 These are the values this run actually produced, not predictions. A later run
 that disagrees with them has found a regression or a genuine change in scope.
 
+**Read a disagreement carefully before calling it a regression.** A total that
+is *higher* with zero failures means checks were added, which is a change in
+scope and not a fault. Only a failure, or a total that drops, is a regression.
+This table was itself restated once during this run, after a later commit added
+two Layer 4 checks per platform and left the first capture four short.
+
 | Check | Expected | Measured |
 |---|---|---|
-| Full suite | zero failures, above 7226 | **7305 / 7305** |
+| Full suite | zero failures, above 7226 | **7309 / 7309** |
 | Layer 1 | pass | 1447 / 1447 |
-| Layer 4 | pass | 5672 / 5672 |
+| Layer 4 | pass | 5676 / 5676 |
 | Layer 5 | pass | 186 / 186 |
-| Record-contract test | pass | 79 / 79 |
+| Record-contract test | pass | 83 / 83 |
 | Scenario 1, first grep | 4 hits across 3 files | 1, 1, 2 |
 | Scenario 1, second grep | exactly 3 files | 3 |
 | Scenario 4, `dist/claude/` | modified copies | 4 |
