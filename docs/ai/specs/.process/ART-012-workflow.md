@@ -37,10 +37,10 @@ captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass — 6 artifacts, 11 research decisions, 8 declared file ops |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — 2 domains, 58 items, 14 gaps found and all remediated |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 13 tasks, 5 [P], route one-navigable-PR |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
-| Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
-| Implement | `/speckit-implement` | ⏳ Pending | |
-| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
+| Analyze | `/speckit-analyze` | ✅ Complete | G6 pass — 13 findings, 0 CRITICAL, all remediated in 1 loop |
+| Confidence Gate | G6.5 | ✅ Complete | Advisory, composite 0.93 ≥ 0.90 → proceed |
+| Implement | `/speckit-implement` | ⏳ Pending | Out of stage — this run resolved `plan`; runs on `--stage implement` |
+| Post | Post-Implementation | ⏳ Pending | Out of stage — belongs to the implement stage |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -97,7 +97,7 @@ helper's whole-roadmap scan; ART-012's own recorded budget is one primary
 surface (harness/adapter). Warnings may proceed when the workflow records the
 scope budget and split decision, which the rest of this subsection does.
 
-**Scope budget:** projected ~155 reviewable production LOC (modify-weighted),
+**Scope budget:** projected ~162 reviewable production LOC (modify-weighted),
 5 production files, ~8 total files, one primary surface. Modify-weighted work
 carries no greenfield allowance (warn 400 / block 800). *Amended 2026-08-10 at
 Clarify session 1; the scaffold-time figures were ~115 LOC over ~3 production
@@ -109,10 +109,13 @@ surface).
 **Split decision (grill-me slice-sizing, re-confirmed at Clarify):** one
 vertical slice, no split. `estimate-spec-size` re-run with the corrected
 signals (2 user stories, 5 production files, 4 FRs, modify-weighted) returned
-`{"estimated_loc": 155, "suggested_slices": 1, "status": "ok"}` — verbatim
-output, not a hand-adjustment of the scaffold-time 115. The scope (reporting
+`{"estimated_loc": 162, "suggested_slices": 1, "status": "ok"}` for the
+spec's current shape (2 user stories, 5 production files, 5 FRs, modify) —
+verbatim output at every step, never a hand adjustment. The figure moved
+115 → 155 → 162 as the inputs were corrected: 155 when Clarify session 1 fixed
+the file count to 5, then 162 when session 2 added FR-005. The scope (reporting
 contract → orchestrator append → consumer hand-off) still has no horizontal
-layering to re-slice, and 155 sits far under the 400 warn ceiling.
+layering to re-slice, and 162 sits far under the 400 warn ceiling.
 
 ### Phase 0 Prerequisites (recorded at run time, 2026-08-10)
 
@@ -240,12 +243,17 @@ both need a durable record to draw from, and today there is none.
 - No per-marker attribution — flat file, task ID only (Design Concept Q7).
 - File is created with a header at the start of Phase 7, before any task
   dispatches (Design Concept Q8).
-- Reviewability budget: ~115 reviewable LOC (modify-weighted), ~3
-  production files, ~6 total files, primary surface harness/adapter.
-  Advisory `estimate-spec-size` run during scoping (2 in-scope user
-  stories, 3 production files, 4 FRs, modify-weighted) returned
-  `{"estimated_loc": 115, "status": "ok", "suggested_slices": 1}` — one
+- Reviewability budget: ~162 reviewable LOC (modify-weighted), 5
+  production files, ~8 total files, primary surface harness/adapter.
+  Advisory `estimate-spec-size` re-run at Clarify session 1 (2 in-scope
+  user stories, 5 production files, 4 FRs, modify-weighted) returned
+  `{"estimated_loc": 162, "suggested_slices": 1, "status": "ok"}` — one
   vertical slice, no split.
+  *Corrected 2026-08-10 at Analyze: this prompt was authored at scaffold
+  time and read "~115 reviewable LOC ... ~3 production files, ~6 total
+  files" from a scoping run fed 3 production files, which returned
+  `{"estimated_loc": 115, "status": "ok", "suggested_slices": 1}`. That
+  premise was superseded by the three-copy Task Result finding.*
 
 ### Out of Scope
 - Generating the PR writeup itself (ART-010).
@@ -261,9 +269,9 @@ both need a durable record to draw from, and today there is none.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | FR-001 through FR-004 (4) |
+| Functional Requirements | FR-001 through FR-005 (5) — *the table first recorded FR-001 through FR-004 (4); Clarify session 2 added FR-005, the platform-parity clause. Corrected 2026-08-10 at Analyze.* |
 | User Stories | 2 (US1 durable per-task record, P1; US2 one reporting field, P2) |
-| Acceptance Criteria | 8 acceptance scenarios (5 under US1, 3 under US2) + 7 edge cases |
+| Acceptance Criteria | 10 acceptance scenarios (7 under US1, 3 under US2) + 12 edge cases — *first recorded as 8 scenarios (5 under US1) + 7 edge cases; Clarify session 2's resume, retry, and fail-open reconciliations added the rest. Corrected 2026-08-10 at Analyze.* |
 | Success Criteria | SC-001 through SC-006 (6) |
 | `[NEEDS CLARIFICATION]` markers | 0 |
 
@@ -273,9 +281,16 @@ An independent grep confirms zero markers, and a privacy grep confirms no
 absolute home-directory path leaked into the authored spec.
 
 The spec's own reviewability budget re-derives the same figures this workflow
-recorded at scaffold: primary surface harness/adapter, 115 projected reviewable
-LOC (modify-weighted), 3 production files, 6 total files, within budget, one
-slice, no exception claimed.
+records under the Reviewability Setup Gate: primary surface harness/adapter, 162
+projected reviewable LOC (modify-weighted), 5 production files, 8 total files,
+within budget, one slice, no exception claimed.
+
+*Corrected 2026-08-10 at Analyze. This paragraph was written at G1, before
+Clarify session 1 found the three-copy Task Result fact, and read "115 projected
+reviewable LOC (modify-weighted), 3 production files, 6 total files". Those are
+the superseded scaffold-time figures. The amendment itself is recorded in the
+Consensus Resolution Log item 1 and in spec.md's Reviewability Budget; this row
+had simply not been carried forward with the rest.*
 
 ### Files Generated
 
@@ -410,9 +425,13 @@ rather than on a citable platform guarantee.
   per the project's standing same-agents-both-platforms convention.
 
 ## Constraints
-- Reviewability budget ~115 LOC (modify-weighted), primary surface
-  harness/adapter, ~3 production files, ~6 total files (see Specify
-  Prompt's Constraints section for the full budget and estimator output).
+- Reviewability budget ~162 LOC (modify-weighted), primary surface
+  harness/adapter, 5 production files, ~8 total files (see the Reviewability
+  Setup Gate above for the full budget and estimator output).
+  *Corrected 2026-08-10 at Analyze: this prompt was authored at scaffold time
+  and read "~115 LOC ... ~3 production files, ~6 total files", the figures
+  Clarify session 1 superseded. Consensus Resolution Log item 1 lists the blocks
+  the amendment was meant to reach; this one was missed.*
 - Modify-only: this spec edits `phase-execution.md` and `tdd-protocol.md`
   in place; it does not add new template/schema files.
 - Reference the Design Concept doc
@@ -474,8 +493,14 @@ assumptions.
   `dist/codex/speckit-pro/skills/speckit-autopilot/references/`). Layer 1
   enforces them via `validate-plugin-payload`, `validate-payload-completeness`,
   and `validate-payload-conformance`. Regenerate with
-  `python3 scripts/build-plugin-payloads.py` — never hand-edit `dist/`
+  `python3 scripts/refresh-release-artifacts.py` — never hand-edit `dist/`
   (AGENTS.md Editing Boundaries). Plan a task for this, or Layer 1 fails.
+  *Corrected 2026-08-10 at Analyze: this line named
+  `python3 scripts/build-plugin-payloads.py`, which rebuilds the payloads only
+  and leaves the installed-cache fixtures and proof hashes stale. See
+  "Generated-artifact regeneration chain" under Plan Results, which found the
+  second and third surfaces and named the one command that covers surfaces 1
+  and 2.*
 
 ## Architecture Notes
 - **File location:** `specs/<branch>/.process/implementation-notes.md` —
@@ -544,7 +569,7 @@ Complexity Tracking table empty, no violation to justify.
 All 8 declared entries parsed, but the helper's production-file heuristic only
 recognises `src/`, `app/`, `lib/`, `scripts/` prefixes or JS/TS/SQL extensions,
 and this spec's entire surface is Markdown and TOML under `speckit-pro/`. The
-authoritative projection remains **155** reviewable LOC from `estimate-spec-size`
+authoritative projection remains **162** reviewable LOC from `estimate-spec-size`
 (recorded under the Reviewability Setup Gate above). Recorded as research R11 so
 neither number is read as the other. The helper is advisory and never blocks.
 
@@ -854,7 +879,7 @@ fallback evidence chain rather than treating the deferral as a gate failure.
    budget and split decision the warning requires.
 2. **Plan-phase `estimate-reviewable-loc`** — `status: "pass"`, 8 declared entries
    parsed. Its `projected: 0` is a classifier limitation on a Markdown/TOML
-   surface, not a measurement; the authoritative projection is 155 LOC.
+   surface, not a measurement; the authoritative projection is 162 LOC.
 3. **Split decision** — one vertical slice, no split, from `estimate-spec-size`
    re-run at Clarify with corrected signals.
 
@@ -905,9 +930,35 @@ Focus on:
 
 ### Analysis Results
 
+**G6 PASS.** 13 findings, zero CRITICAL, all 13 remediated in one loop.
+`count-markers` in findings mode over `specs/art-012-implementation-notes-capture`
+returned `{"type":"findings","total":0,"critical":0,"high":0,"medium":0,"low":0}`
+before and after remediation. Constitution v1.2.0 re-checked: pass on all six
+principles, no new violation, Complexity Tracking still empty. Coverage
+re-confirmed: all 5 FRs and all 6 SCs map to tasks, all 8 of plan.md's Declared
+File Operations have a task, and every path named in tasks.md exists in the tree
+or is correctly marked NEW. Layer 1 re-run after the edits: 1447/1447, unchanged
+from the G0 baseline.
+
+Neither authorised amendment was reported as drift: Q2's two-branch cadence
+(dated revision note under Q2) and the 3 → 5 production files / 115 → 155 LOC
+restatement (Consensus Resolution Log item 1) are both correctly carried.
+
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| A1 | HIGH | `quickstart.md` Scenario 4 ran `scripts/build-plugin-payloads.py` and then described refreshing the installed-cache fixture and both proof hashes by hand — the exact command T010 forbids, and a hand-edit of generated artifacts that AGENTS.md treats as blocking. T012 requires the quickstart scenarios to pass, so the two artifacts could not both be satisfied. | Scenario 4 now runs `python3 scripts/refresh-release-artifacts.py` and states why the standalone builder is insufficient. |
+| A2 | HIGH | `research.md` R9's Decision still recorded the superseded two-step regeneration (builder, then refresh fixture and hash). `plan.md` cites R9 as the authority for the opposite rule. | R9's Decision restated on `refresh-release-artifacts.py`, with the builder's actual scope (one `build_xplat008_payloads` call) as the reason it is not sufficient alone. |
+| A3 | HIGH | `plan.md` named `scripts/build-plugin-payloads.py` as the build command in Technical Context and again in the Declared File Operations generated-surfaces block. | Both now name `scripts/refresh-release-artifacts.py`; the generated-surfaces block states that one idempotent command covers all three listed outputs. |
+| A4 | HIGH | T004's "Where" listed three dispatch anchors and omitted the Agent Teams parallel path (`Wait for all teammates to complete.`, `phase-execution.md:875`). That is the `AGENT_TEAMS_AVAILABLE` branch of the same parallel run; tasks dispatched through it would have produced no entries at all, which SC-001 counts as a violation. The Design Concept's Q2 revision note and research R3 both cite `:875` alongside `:888`. | T004's "Where" now lists four dispatch-shape anchors including the Agent Teams path, names the `# Safety net for either path` convergence where one instruction covers both parallel paths, and separates dispatch-shape anchors from the three routing call sites. |
+| A5 | HIGH | Three blocks in this workflow file still carried the superseded budget (115 LOC / 3 production files / 6 total): the Specify Prompt Constraints, the G1 Specify Results paragraph, and the Plan Prompt Constraints. `spec.md` and the roadmap both said 155 / 5 / 8. | All three restated to 155 / 5 / ~8, each with a dated correction note preserving the superseded figures and pointing at Consensus Resolution Log item 1. |
+| A6 | MEDIUM | `contracts/task-result-reporting-field.md` assertion 4 and T006 item (4) required "the set of files carrying a `## Task Result: <TASK_ID>` block is still exactly those three" with no scope. Tree-wide the block also appears in 2 `dist/` payload copies and 2 installed-cache fixture copies, so the assertion is false on a clean tree and the Layer 4 test would fail the moment it ran. `quickstart.md` already scoped its grep to `speckit-pro/`. | Both now scope the assertion to `speckit-pro/` and name the generated copies as the reason. |
+| A7 | MEDIUM | `quickstart.md` Scenario 2 expected the fail-open rule with "its three properties", omitting the property that the gap names the attempt or lifecycle step plus the failed operation. FR-004, `plan.md`, both contracts, T004 and T005 all state four, and the omitted one is exactly what SC-004 checks. | Scenario 2 now expects four properties, naming the gap-identifiability property first. |
+| A8 | MEDIUM | SC-001's fail-open exclusion covered only a failed append, while SC-002 and SC-003 both covered "creating the record or appending an entry". A run whose record could never be created left SC-001 asserting an entry count against a file that does not exist. | SC-001's clause now matches SC-002 and SC-003's wording and states that such a run is measured by its gaps. |
+| A9 | MEDIUM | The Specify Results metrics table recorded "FR-001 through FR-004 (4)" and "8 acceptance scenarios (5 under US1, 3 under US2) + 7 edge cases". `spec.md` now carries 5 FRs, 10 acceptance scenarios (7 under US1) and 12 edge cases after Clarify session 2. | Both rows corrected to the counted values, each with a dated note naming the superseded figures and the session that changed them. |
+| A10 | LOW | `spec.md`'s Reviewability Budget described the 155 estimator run as using "this spec's corrected shape — 2 user stories, 5 production files, 4 functional requirements". That run predates FR-005, so the spec now carries 5. | The clause now dates the run to Clarify session 1, notes FR-005 is a parity clause adding no production file, and records the verbatim 5-FR re-run `{"estimated_loc": 162, "suggested_slices": 1, "status": "ok"}` — same verdict, same single slice. **Orchestrator override:** the executor re-ran the estimator, got 162, then kept 155 "so every artifact quotes one number". That inverts the rule it was applying — the roadmap's own ART-015 precedent is that the estimator is re-fed rather than hand-held, and this run had already corrected a stale 102 to 115 at scaffold review for the same reason. Re-running with the spec's current shape (2 stories, 5 files, 5 FRs, modify) returns `{"estimated_loc": 162, "suggested_slices": 1, "status": "ok"}`, so **162 is now the recorded figure in all three homes** and consistency is preserved by updating them together. The verdict is unchanged: one slice, `ok`, far under the 400 warn line. |
+| A11 | LOW | The roadmap's ART-012 status row read "(estimator: 115 LOC, ok)" with no pointer to the amendment, though the roadmap's own Reviewability Budget block was already correct. | Row now reads "scaffold estimator: 115 LOC, ok; re-estimated 155 at Clarify session 1" and points at the budget block. |
+| A12 | LOW | Verified Repository Facts still said "Regenerate with `python3 scripts/build-plugin-payloads.py`", superseded ~90 lines later by the Plan Results regeneration chain. | Corrected in place with a dated note pointing at that chain. |
+| A13 | LOW | `plan.md` introduced its routing table as "three call sites" and then listed four rows; the fourth is a value case on the first site. | Lead-in now says so explicitly. |
 
 ---
 
@@ -918,10 +969,44 @@ are unchanged; this section records the verdict so a later session can read it.
 
 | Field | Value |
 |-------|-------|
-| Mode | <!-- advisory (default) or strict --> |
-| Composite confidence | <!-- 0.00-1.00 --> |
-| Verdict | <!-- proceed / remediate / stop --> |
-| Evidence | <!-- what the score was computed from --> |
+| Mode | advisory (resolved at Step 0.6b: no `--strict` / `--advisory` flag, no local config) |
+| Composite confidence | 0.93 |
+| Verdict | proceed |
+| Threshold | 0.90 |
+| Evidence | Six planning gates green (G1–G6), full suite 7226/7226 at the G0 baseline, 5 FRs and 6 SCs all task-mapped, 8/8 declared file operations tasked, three consensus rounds resolved, 14 checklist gaps and 13 analyze findings all remediated |
+
+Orchestrator synthesis. The per-criterion scores below are the gate's input; the
+one below 0.90 is deliberate and explained.
+
+📊 Confidence: 0.93
+- Task understanding: 0.97
+- Approach clarity: 0.95
+- Requirements alignment: 0.95
+- Risk assessment: 0.85
+- Completeness: 0.94
+
+**Why risk assessment is the lowest score.** Not because a risk is unmanaged —
+each identified one is bounded and recorded — but because one carries an open
+question only the operator can close. The two-branch append cadence narrows a
+durability guarantee the operator personally chose in Design Concept Q2, and
+that narrowing was resolved by consensus rather than ratified by them. The
+checkable stop conditions did not fire and both analysts recommended proceeding,
+so the run continued; but until the operator reads the Q2 revision note and
+either accepts it or asks for the lossless alternative, the risk is open rather
+than closed. The plan stage ends here, before any code is written, which is
+exactly the boundary where that call belongs.
+
+The other risks are bounded and recorded, not open: the parallel-run loss window
+is one run rather than the whole phase; concurrent writers are documented as
+uncoordinated by design, with no lock added because it would contradict the
+no-block rule for exhaust; the three generated surfaces each have a task and two
+commands cover them; and the plan-phase estimator's `projected: 0` is a
+documented classifier limitation, not a measurement.
+
+**Gate result.** Composite 0.93 ≥ threshold 0.90 → `pass: true`,
+`recommended_action: "proceed"`. In advisory mode this would not have blocked
+even below threshold, so the score is recorded as information for the operator
+rather than as a hurdle the run cleared.
 
 ---
 

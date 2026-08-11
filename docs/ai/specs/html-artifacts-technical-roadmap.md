@@ -137,7 +137,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
 | ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Pending | - | Blocked by ART-003, ART-007, ART-012 |
 | ART-011 | Scaffold Integration | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
-| ART-012 | Implementation-Notes Capture | 🔄 In Progress | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | Scaffolded 2026-08-10 on `art-012-implementation-notes-capture`; grill-me converged naturally, 8 questions, no split (estimator: 115 LOC, ok) |
+| ART-012 | Implementation-Notes Capture | 🔄 In Progress | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | Scaffolded 2026-08-10 on `art-012-implementation-notes-capture`; grill-me converged naturally, 8 questions, no split (scaffold estimator: 115 LOC, ok; re-estimated 155 at Clarify session 1, then 162 at Analyze once FR-005 existed — see the Reviewability Budget below) |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
 | ART-014 | Phase-Guard Enforcement Repair | ⏳ Ready | - | No dependencies; found during ART-006, which deliberately did not fix it |
 | ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
@@ -752,7 +752,7 @@ boundary at a visible seam.
 notes record feeding the PR writeup and retrospective.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 155 (estimator: ok, modify-weighted) |
+Projected reviewable LOC: 162 (estimator: ok, modify-weighted) |
 Production files: 5 |
 Total files: ~8 |
 Budget result: within budget

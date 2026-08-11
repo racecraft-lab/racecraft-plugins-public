@@ -98,5 +98,12 @@ append instructions, never to this field.
    field of the Task Result block.
 3. `speckit-pro/agents/implement-executor.md`'s Terminal Deliverable enumeration
    names `Deviations/Edge cases/Surprises` alongside the four existing fields.
-4. The set of files carrying a `## Task Result: <TASK_ID>` block is still exactly
-   these three, so a fourth copy added later cannot silently skip the field.
+4. The set of files carrying a `## Task Result: <TASK_ID>` block **under
+   `speckit-pro/`** is still exactly these three, so a fourth copy added later
+   cannot silently skip the field. Scope the search to `speckit-pro/`, the
+   authored plugin source. A tree-wide search also matches the generated payload
+   copies under `dist/` and the installed-cache fixture copies under
+   `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/`,
+   which are regenerated from these three and are never authored, so an
+   unscoped assertion of "exactly three" is false on a clean tree and would fail
+   the moment it ran.

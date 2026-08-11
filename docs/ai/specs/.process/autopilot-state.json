@@ -3,8 +3,8 @@
   "spec_id": "ART-012",
   "feature_dir": "specs/art-012-implementation-notes-capture",
   "branch": "art-012-implementation-notes-capture",
-  "status": "in_progress",
-  "active_step": "Phase 6: Analyze",
+  "status": "completed",
+  "active_step": null,
   "updated_at": "2026-08-10T00:00:00Z",
   "stage": "plan",
   "prior_run_note": "completed_archived",
@@ -82,67 +82,67 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "skipped: executor reported zero unresolved items"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "pending"
+      "status": "skipped: out of stage (stage=plan)"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "skipped: out of stage (stage=plan)"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "skipped: out of stage (stage=plan)"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "skipped: out of stage (stage=plan)"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "skipped: out of stage (stage=plan)"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "skipped: out of stage (stage=plan)"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "skipped: out of stage (stage=plan)"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "skipped: out of stage (stage=plan)"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "skipped: out of stage (stage=plan)"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "skipped: out of stage (stage=plan)"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "skipped: out of stage (stage=plan)"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "skipped: out of stage (stage=plan)"
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "skipped: out of stage (stage=plan)"
     }
   ],
   "test_baseline_g0": {
@@ -177,6 +177,10 @@
       "pass": true,
       "task_count": 13,
       "reason": "13 tasks found"
+    },
+    "G6": {
+      "pass": true,
+      "reason": "0 CRITICAL/HIGH findings"
     }
   },
   "plan_reviewability": {
@@ -204,5 +208,25 @@
     "status": "deferred",
     "exit_code": 2,
     "fallback": "setup-mode warn/pass + plan-phase estimate-reviewable-loc pass + one-slice split decision"
+  },
+  "confidence_gate": {
+    "mode": "advisory",
+    "composite": 0.93,
+    "threshold": 0.9,
+    "verdict": "proceed",
+    "criteria": {
+      "task_understanding": 0.97,
+      "approach_clarity": 0.95,
+      "requirements_alignment": 0.95,
+      "risk_assessment": 0.85,
+      "completeness": 0.94
+    },
+    "test_baseline": {
+      "passed": 7226,
+      "total": 7226,
+      "l1": 1447,
+      "l4": 5593,
+      "l5": 186
+    }
   }
 }

@@ -212,8 +212,17 @@ the repository's editing boundaries.
 ## R9. Editing plugin source pulls two generated surfaces with it
 
 **Decision**: after editing the five plugin files, run
-`python3 scripts/build-plugin-payloads.py`, then refresh the installed-cache
-fixture and its proof hash. Never hand-edit either.
+`python3 scripts/refresh-release-artifacts.py`, which covers both surfaces in
+one idempotent pass. Never hand-edit either.
+
+`python3 scripts/build-plugin-payloads.py` on its own is **not** sufficient: its
+whole body is the `build_xplat008_payloads` call, so it rebuilds `dist/` and
+leaves the installed-cache fixtures and the proof hashes stale, which fails
+Layer 4. `refresh-release-artifacts.py` calls the same builder as step 2 of six
+and then content-syncs the fixtures and refreshes the proof tree hashes. Its
+docstring states both the six steps and the idempotence, and states that it does
+**not** regenerate the docs reference — that surface keeps its own command,
+below.
 
 **Rationale**: two generated surfaces mirror these files.
 
@@ -270,7 +279,7 @@ FR-005 says parity is owed on the artifact.
 
 ## R11. The plan-phase estimator projects 0 for this slice, and that is a heuristic gap
 
-**Decision**: keep 155 projected reviewable LOC, from `estimate-spec-size`, as
+**Decision**: use 162 projected reviewable LOC, from `estimate-spec-size`, as
 the authoritative budget figure. Read the plan-phase estimator's `projected`
 value as not applicable to this surface rather than as a measurement.
 
@@ -284,7 +293,7 @@ heuristic: the five production files are Markdown and TOML under
 
 This is a known shape mismatch between a JavaScript-oriented heuristic and a
 Markdown plugin repository. It cannot produce a false pass that matters here,
-because the real figure (155) is already far under the 400 warn line and the
+because the real figure (162) is already far under the 400 warn line and the
 diff-mode reviewability gate re-measures the actual diff at PR time.
 
 **Alternatives rejected**: inflate the declared list with generated payload

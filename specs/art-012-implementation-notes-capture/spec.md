@@ -224,11 +224,21 @@ task was uneventful.
 - **Primary surface**: harness/adapter
 - **Secondary surfaces, if any**: N/A — the second agent platform's mirror is
   the same harness/adapter surface expressed twice, not a distinct surface.
-- **Projected reviewable LOC**: 155 (modify-weighted; excludes tests, docs, and
-  generated artifacts). Advisory estimator re-run at Clarify with this spec's
-  corrected shape — 2 user stories, 5 production files, 4 functional
-  requirements, modify-weighted — returns `{"estimated_loc": 155,
-  "suggested_slices": 1, "status": "ok"}`.
+- **Projected reviewable LOC**: 162 (modify-weighted; excludes tests, docs, and
+  generated artifacts). Advisory estimator run against this spec's current shape
+  — 2 user stories, 5 production files, 5 functional requirements,
+  modify-weighted — returns `{"estimated_loc": 162, "suggested_slices": 1,
+  "status": "ok"}`, quoted verbatim.
+
+  *Amendment history, so no reader mistakes a superseded figure for a
+  correction.* Scoping recorded 115 over 3 production files, on the wrong
+  premise that the per-task Task Result block had one authored home; it has
+  three. Clarify session 1 corrected the file count to 5 and the projection to
+  155. Clarify session 2 then added FR-005, a platform-parity clause carrying no
+  further production file, which moves the projection to 162. Each figure is the
+  estimator's own output for the inputs true at the time, never a hand
+  adjustment. The verdict never changed: one slice, `ok`, far under the 400 warn
+  line.
 - **Projected production files**: 5
 - **Projected total files**: 8
 - **Budget result**: within budget
@@ -283,10 +293,12 @@ task was uneventful.
 - **SC-001**: After an implement phase in which N dispatched task attempts
   complete, the record contains exactly N entries, and 100% of them are
   identified by a task ID. N counts every dispatched attempt, including
-  verification-only and research attempts that carry no reporting field. An
-  attempt whose append failed and was recorded as a gap under FR-004 is
-  excluded from N, with that gap standing in the entry's place, so a fail-open
-  run is not read as a violation of this criterion.
+  verification-only and research attempts that carry no reporting field. Where
+  creating the record or appending an entry failed and was recorded as a gap
+  under FR-004, the gap stands in the record's or the entry's place: an attempt
+  whose append failed is excluded from N, and a run whose record could never be
+  created is measured by its gaps rather than by this count. A fail-open run is
+  not read as a violation of this criterion.
 - **SC-002**: An implement phase interrupted after k of N task attempts leaves
   a record containing the header and one entry for every attempt whose dispatch
   run the orchestrator had already collected at the moment of interruption —

@@ -25,7 +25,7 @@ reviewability checkpoint task before implementation. If it expands beyond
 primary surface without a ratified exception, stop and split the spec instead
 of adding more implementation tasks.
 
-This list stays inside the recorded budget: **155 projected reviewable LOC**
+This list stays inside the recorded budget: **162 projected reviewable LOC**
 (modify-weighted), **5 production files**, **8 total tracked files**, **1
 primary surface** (harness/adapter). Split decision: one spec, no split. No
 reviewability exception is claimed. T001 verifies this before any production
@@ -107,7 +107,7 @@ file is touched.
   eight Declared File Operations one for one: five production files, one new
   test, one manifest registration, one regenerated docs reference. No task
   introduces a ninth tracked file.
-- Every budget dimension is under the warn line: 155 reviewable LOC against 400,
+- Every budget dimension is under the warn line: 162 reviewable LOC against 400,
   5 production files against 6, 8 total files against 15, 1 primary surface
   against 1.
 - The split decision is recorded as: one spec, no split, no exception claimed
@@ -121,7 +121,7 @@ file is touched.
 - The plan-phase estimator's `projected: 0` is recorded as a heuristic mismatch,
   not a measurement. Its production-file heuristic recognises only `src/`,
   `app/`, `lib/`, `scripts/` prefixes and JS/TS/SQL extensions, and this surface
-  is Markdown and TOML under `speckit-pro/`. The authoritative figure stays 155
+  is Markdown and TOML under `speckit-pro/`. The authoritative figure is 162
   (research R11).
 - No task in this list crosses a Design Concept non-goal: no per-marker
   attribution (Q7), no running spec-level summary counter (Q3), no second
@@ -216,11 +216,23 @@ Anchor by heading text, not by line number.
 - [ ] T004 [US1] Add the Phase 7 append contract to `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`
 
 **Where**: inside the Step 3 heading `Task-Level Execution Loop` and the
-`Agent Routing Table` heading that follows it. The three
-anchors are the sequential branch that reads `Wait for result.`, the parallel
-branch that reads `Wait for ALL to complete.`, and the serial re-run fallback
-after a parallel-run regression. Anchor by that text, not by line number: T003
-shifts this file's numbering.
+`Agent Routing Table` heading that follows it. Four **dispatch-shape** anchors,
+which are a different set from the three **routing** call sites in the
+acceptance criteria below — the dispatch shape decides *when* an entry is
+appended, the routing branch decides *what value* it carries:
+
+1. The singleton and sequential branch that reads `Wait for result.`
+2. The parallel background-subagent path that reads `Wait for ALL to complete.`
+3. The parallel Agent Teams path that reads
+   `Wait for all teammates to complete.` — **do not skip this one.** It is the
+   `AGENT_TEAMS_AVAILABLE` branch of the same parallel run, so tasks dispatched
+   through it would otherwise produce no entries at all, which SC-001 counts as
+   a violation. Both parallel paths converge at the
+   `# Safety net for either path` comment, so one append instruction placed at
+   that convergence covers both.
+4. The serial re-run fallback after a parallel-run regression.
+
+Anchor by that text, not by line number: T003 shifts this file's numbering.
 
 **Acceptance criteria**
 
@@ -338,9 +350,12 @@ reads `None` when the task was uneventful.
   the Task Result block; (3)
   `speckit-pro/agents/implement-executor.md`'s Terminal Deliverable enumeration
   names `Deviations/Edge cases/Surprises` alongside the four existing fields;
-  (4) the set of files carrying a `## Task Result: <TASK_ID>` block is still
-  exactly those three, so a fourth copy added later cannot silently skip the
-  field.
+  (4) the set of files carrying a `## Task Result: <TASK_ID>` block **under
+  `speckit-pro/`** is still exactly those three, so a fourth copy added later
+  cannot silently skip the field. Scope that assertion to `speckit-pro/`: a
+  tree-wide search also matches the generated `dist/` payload copies and the
+  installed-cache fixture copies, so an unscoped "exactly three" fails on a
+  clean tree.
 - Python 3.11+ standard library only. No new manifest entry: T002 already
   registered this file.
 - **RED verified**: running the file directly fails with real assertion errors

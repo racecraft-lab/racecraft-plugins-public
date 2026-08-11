@@ -77,8 +77,9 @@ grep -n 'implementation-notes.md' \
 Expected in **both** files: the record path, the
 `# Implementation Notes: <SPEC_ID>` header, the `### <TASK_ID>` entry heading,
 the create-if-absent rule, the additive-only rule, and the fail-open rule with
-its three properties: no retry, one level of fallback, and a blast radius of the
-single entry that failed. The
+its four properties: the gap names the attempt or lifecycle step plus the
+operation that failed, the write is never retried, the fallback is exactly one
+level deep, and the blast radius is the single entry that failed. The
 Claude file additionally describes the two-branch cadence; the Codex file keeps
 its own per-result cadence. Wording differs there by design, per FR-005.
 
@@ -109,18 +110,23 @@ Covers the repository's generated-artifact contract. Skipping this is the most
 likely way to finish the feature and still fail CI.
 
 ```bash
-python3 scripts/build-plugin-payloads.py
+python3 scripts/refresh-release-artifacts.py
 git status --short dist/
 ```
 
 Expected: the five production files' payload copies show as modified under both
 `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`. Never hand-edit them.
 
-Then refresh the installed-cache fixture from `dist/` and update the
-`source_payload_tree_hash` in both
+One command covers both generated surfaces here, and it is **not**
+`python3 scripts/build-plugin-payloads.py` on its own: that builder rebuilds the
+payloads only and leaves the installed-cache fixtures and the proof hashes
+stale. `refresh-release-artifacts.py` rebuilds both payloads, content-syncs
+`tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/{claude,codex}/speckit-pro/`,
+and refreshes the `source_payload_tree_hash` values in both
 `docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json` and its mirror
-`tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json`.
-The two files must stay byte-identical JSON.
+`tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json`,
+which must stay byte-identical JSON. It is idempotent: a second run on the same
+source makes no further change.
 
 If a file copy looks unchanged when it should not be, the copy compared
 timestamps rather than contents. Compare by checksum.
