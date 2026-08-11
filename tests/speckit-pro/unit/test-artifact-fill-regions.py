@@ -237,6 +237,7 @@ class _FillRegionCollector(HTMLParser):
         self.markers: list[tuple[str, str]] = []
         self.regions: dict[str, list[_RegionElement]] = {}
         self.identifiers: list[str] = []
+        self.unbalanced: dict[str, str] = {}
         self._open: str | None = None
         self._stack: list[str] = []
 
@@ -252,6 +253,18 @@ class _FillRegionCollector(HTMLParser):
             self._stack = []
             self.regions.setdefault(slot, [])
         elif self._open == slot:
+            # Anything still open here was opened inside the region and closes
+            # outside it, so the pair does not delimit a whole subtree. R7 reads
+            # this; the depth counter it walks over the markers alone cannot see
+            # it, because the markers themselves are perfectly paired.
+            #
+            # ``html.parser`` performs no implicit closing, so a region that
+            # omitted an optional end tag — ``</li>``, ``</p>``, ``</td>`` —
+            # would read as one leaving an element open. Every gallery template
+            # writes its end tags, and the failure is loud rather than silent, so
+            # the stricter reading is the one worth holding.
+            if self._stack:
+                self.unbalanced.setdefault(slot, self._stack[0])
             self._open = None
             self._stack = []
 
@@ -266,9 +279,18 @@ class _FillRegionCollector(HTMLParser):
         self._record(tag, attrs)
 
     def handle_endtag(self, tag: str) -> None:
-        if self._open is not None and tag in self._stack:
+        if self._open is None:
+            return
+        if tag in self._stack:
             while self._stack and self._stack.pop() != tag:
                 continue
+        elif tag not in VOID_ELEMENTS:
+            # The other direction of the same defect: this end tag closes an
+            # element the region never opened, so the element began outside the
+            # START marker and ends inside the pair. Recorded rather than
+            # ignored, because a fill that replaces the region deletes this end
+            # tag and leaves its start tag unclosed.
+            self.unbalanced.setdefault(self._open, tag)
 
     def _record(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attributes = {name.lower(): (value if value is not None else "") for name, value in attrs}
@@ -280,7 +302,7 @@ class _FillRegionCollector(HTMLParser):
 
 
 class _Template(NamedTuple):
-    """One shipped template, parsed once and shared by every check."""
+    """One shipped template and the single parse every check reads it through."""
 
     identifier: str
     relative: str
@@ -731,10 +753,27 @@ def check_r7(gallery_root: Path) -> list[str]:
     Walked as a depth counter over the markers in document order rather than by
     comparing offsets, so an END arriving before its own START is reported as the
     disorder it is instead of reading as a negative-width region.
+
+    **Flatness against the element tree as well as against the markers.** A pair
+    can be well formed and still not delimit a whole subtree: put one boundary
+    inside an element and the other outside it, and the region overlaps that
+    element rather than nesting within it. Every other check accepts such a
+    document — the markers read one START before one END, the slot is named in
+    the inventory, and the depth counter never leaves zero — yet replacing the
+    region deletes an unmatched tag and the fill emits malformed markup. Both
+    orientations count, and the parser already knows about each: an element
+    opened inside the region leaves the region's tag stack non-empty at its END,
+    and one opened before the START arrives as an end tag the stack never held.
     """
     templates, _ = _templates(gallery_root)
     failures: list[str] = []
     for template in templates:
+        failures.extend(
+            f"{template.relative}: the region '{slot}' and a <{tag}> element overlap rather than nest — "
+            "one boundary of the pair falls inside that element and the other falls outside it, so "
+            "replacing the region deletes an unmatched tag and leaves the document malformed"
+            for slot, tag in sorted(template.collector.unbalanced.items())
+        )
         depth = 0
         open_slots: list[str] = []
         for slot, boundary in template.collector.markers:
@@ -1179,6 +1218,35 @@ class FillRegionFixtureTests(FillRegionFixtureCase):
         self.write(_template_path("implementation-plan"), nested)
 
         self.assertReports(check_r7(self.gallery), "implementation-plan", "risk-register")
+        self.assertEqual(check_r2(self.gallery), [])
+        self.assertEqual(check_r3(self.gallery), [])
+
+    def test_r7_detects_a_pair_that_does_not_delimit_a_whole_subtree(self) -> None:
+        """The second defect only R7 sees, and the marker walk alone cannot.
+
+        The pair is well formed and well ordered, so the depth counter never
+        leaves zero. What is wrong is the element tree: the ``<div>`` opens
+        before the START marker and closes before the END one, so the region
+        carries an end tag for an element it never opened and replacing the
+        region leaves that ``<div>`` unclosed. Asserted alongside the other
+        checks passing, for the same reason the nesting case is.
+        """
+        self.build()
+        path = self.gallery / _template_path("implementation-plan")
+        text = path.read_text(encoding="utf-8")
+        crossing = text.replace(
+            _prose_region("mockups"),
+            '<div class="panel">\n'
+            "<!-- FILL:mockups:START -->\n"
+            "<p>Sample mockups content awaiting a fill.</p>\n"
+            "</div>\n"
+            "<!-- FILL:mockups:END -->",
+            1,
+        )
+        self.assertNotEqual(crossing, text, "fixture did not perturb the template")
+        self.write(_template_path("implementation-plan"), crossing)
+
+        self.assertReports(check_r7(self.gallery), "implementation-plan", "mockups", "div")
         self.assertEqual(check_r2(self.gallery), [])
         self.assertEqual(check_r3(self.gallery), [])
 
