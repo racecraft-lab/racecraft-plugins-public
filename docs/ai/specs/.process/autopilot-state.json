@@ -4,7 +4,7 @@
   "feature_dir": "specs/art-012-implementation-notes-capture",
   "branch": "art-012-implementation-notes-capture",
   "status": "in_progress",
-  "active_step": "Post-Implementation",
+  "active_step": "Post: Review Remediation",
   "updated_at": "2026-08-11T00:00:00Z",
   "stage": "implement",
   "prior_run_note": "completed_archived",
@@ -138,7 +138,7 @@
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Implementation",
@@ -154,27 +154,27 @@
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "skipped: generate-uat-skeleton deferred on the installed runner; no committed skeleton, so uat-runbook-author was not spawned"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
@@ -308,5 +308,15 @@
         "new_vs_modify": "modify"
       }
     }
+  },
+  "pr": {
+    "number": 426,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/426",
+    "title": "feat(art-012): Capture implementation notes during autopilot implementation",
+    "base": "main",
+    "head": "art-012-implementation-notes-capture",
+    "packet_id": "art-012",
+    "packet_validation": "passed",
+    "pr_blocked": false
   }
 }
