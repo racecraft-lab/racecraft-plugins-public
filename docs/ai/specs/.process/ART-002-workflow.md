@@ -1364,7 +1364,7 @@ Before starting any task:
 | T042 payload refresh | `refresh-release-artifacts.py` run twice: run 1 wrote 22 files, run 2 reported "already consistent; no changes". **Idempotent.** `speckit-pro-runner.manifest.json` and its `.sha256` stayed clean, as required — this feature edits no runner source |
 | T043 docs re-check | Re-ran the generator after the templates landed: **no further change**, confirmed by running it rather than assuming it |
 | T045 guard provocations | Both fired with the right message and both were reverted. `status: shipped` with no file → D1 names the missing artifact. File present under `status: planned` → D2 names the orphan. The diff afterwards is again exactly the two intended flips |
-| T046 acceptance runbook | `specs/art-002-draft-pr-template-set/.process/acceptance-runbook.md`. Set A 18 steps, Set B 9 steps, each with an observable result. A9 and A10 carry the two timed observables (SC-005, SC-002) |
+| T046 acceptance runbook | `specs/art-002-draft-pr-template-set/.process/uat-runbook.md`. Set A 18 steps, Set B 9 steps, each with an observable result. A9 and A10 carry the two timed observables (SC-005, SC-002) |
 
 **Independent verification, not agent self-report.** Each template was checked by
 an orchestrator-owned parse written separately from the ones the authoring agents
@@ -1570,18 +1570,46 @@ table below is slice 1's, and the second table after it is slice 2's.
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
-| Post: Verify Implementation | ⏳ Pending | |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ⏳ Pending | |
-| Post: Integration Suite | ⏳ Pending | |
-| Post: Reviewability Diff Gate | ⏳ Pending | |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | |
-| Post: PR Body Generation | ⏳ Pending | |
-| Post: PR Creation | ⏳ Pending | |
+| Post: Doctor Extension Check | ✅ Complete | All seven extensions present and `enabled: true` in `.specify/extensions/.registry` — archive 1.1.0, checkpoint, git, retrospective, speckit-utils, verify, verify-tasks. No post-implementation item needs a skip marker |
+| Post: Verify Implementation | ✅ Complete | Full suite 7289/7289. Every authored file independently re-verified by an orchestrator-owned parse rather than accepted from an agent's self-report |
+| Post: Verify Tasks Phantom Check | ✅ Complete | 46 tasks marked complete (T001–T046); every file those tasks claim to create exists on disk. Zero phantom completions |
+| Post: Code Review | ⏳ Pending | Independent reviewer dispatched against `a493e444` with the contracts as its standard; findings land here before PR creation |
+| Post: Integration Suite | ✅ Complete | **7289/7289** (L1 1447, L4 5656, L5 186) against a 7226 pre-change baseline. **+63**, so the count grew as G7 requires |
+| Post: Reviewability Diff Gate | ✅ Complete | **`block`, size-only** — `reviewable LOC 1494 exceeds block threshold 800`, no correctness finding. Recorded in full above with the disposition to continue |
+| Post: Self-Review | ✅ Complete | Four answers below |
+| Post: UAT Runbook Generation | ✅ Complete | Skeleton helper `generate-uat-skeleton` is **deferred** on the installed runner and was not invoked. A committed source-derived runbook exists at `specs/art-002-draft-pr-template-set/.process/uat-runbook.md` and is reused, so the `uat-runbook-author` agent was correctly not spawned — it rewrites a skeleton, and there is no skeleton |
+| Post: PR Body Generation | ✅ Complete | Body written and validated: exactly one non-empty ```release-note fence, `compose-release-notes.py --validate-pr` exit 0 |
+| Post: PR Creation | ⏳ Pending | Blocked on Code Review returning |
 | Post: Review Remediation | ⏳ Pending | |
 | Post: Retrospective | ⏳ Pending | |
+
+#### Self-Review — the four answers
+
+**Tests executed.** `python3 tests/speckit-pro/run-all.py` → **7289/7289**, exit
+0. `BUILD`, `TYPECHECK`, `LINT`, and `INTEGRATION_TEST` are `N/A` for this stack
+(runner `detect-commands`), so `UNIT_TEST` and `FULL_VERIFY` are the same command
+and both ran. Layer 1 1447/1447 proves the new `templates/` subdirectory
+disturbed neither the plugin layout nor the generated spec index.
+
+**Edge cases.** The Layer 4 module's six synthetic fixtures are all non-happy
+paths: a missing floor slot, an inventory entry with no marker pair, a marker
+pair absent from the inventory, a malformed inventory line, a repeated item with
+no anchor, a duplicated anchor. Both catalog guards were provoked live and
+reverted (T045). The empty-state export path and the clipboard-failure path are
+specified verbatim and covered by runbook steps A9 and A11. No
+`[edge-case-gap]` markers.
+
+**Requirements matched.** 58 coverage rows in `tasks.md`, 54 citing at least one
+slice-1 task, and **zero rows citing no task at all**. No orphan requirement.
+
+**Follow-up and tidiness.** Four deferrals, each naming its follow-up and each
+landing in the pull request body: US3 and US4 → slice 2; region filling → ART-007;
+anchor integrity in a filled artifact → ART-007; document-title rewrite on fill →
+ART-007. **No silent deferrals.** No leftover scaffolding or debug code in the
+diff. One tidiness lapse of my own, caught and corrected: a temporary file written
+into the repository tree during a gate run was swept by the suite and produced a
+spurious failure; it was removed and the gate re-run clean. Throwaway files belong
+in the scratchpad, never in the tree.
 
 ### Slice 2 closeout (PR 2)
 
