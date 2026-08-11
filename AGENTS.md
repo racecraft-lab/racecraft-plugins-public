@@ -66,15 +66,24 @@ A fresh worktree holds only tracked files. Three facts cover every surface:
 - Define the generated-artifact merge driver once per clone:
 
   ```bash
-  git config merge.generated.name "keep one side; regenerate after merge"
-  git config merge.generated.driver true
+  git config merge.generated.name "keep ours; regenerate after merge"
+  git config merge.generated.driver "exit 0"
   ```
 
   `.gitattributes` marks every generated path `merge=generated` so git stops
   text-merging content hashes and payload copies, which is the cause of nearly
-  every merge conflict in this repository. Git will not run driver code from a
-  cloned repository, so this cannot be committed. Skipping it leaves the rules
-  inert and merges behave as they did before, so it fails safe.
+  every merge conflict in this repository. The driver keeps git's "ours" side
+  verbatim and never mixes the two: the current branch during
+  `git merge origin/main`, the upstream during a rebase. Which one survives does
+  not matter, because regenerating is the correctness step.
+
+  Use `"exit 0"`, with the quotes, rather than `true`. Git runs a one-word
+  driver directly, so `true` needs that executable on PATH; a two-word command
+  runs through git's own shell and needs only builtins.
+
+  Git will not run driver code from a cloned repository, so this cannot be
+  committed. Skipping it leaves the rules inert and merges behave as they did
+  before, so it fails safe.
 
 ## Merging Main
 

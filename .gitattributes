@@ -10,11 +10,13 @@ speckit-pro/speckit_pro_runner/**/*.py text eol=lf
 # The correct merge result is always "regenerate from the merged source", which
 # git cannot do per file.
 #
-# The `generated` driver keeps one side verbatim and reports success, so a
+# The `generated` driver keeps git's "ours" side verbatim, reports success, and
+# never mixes the two. Which side that is depends on the operation: the current
+# branch during `git merge origin/main`, the upstream during a rebase. Which one
+# survives does not matter, because regenerating is the correctness step. The
 # merge completes with zero conflicts and these files are stale by
-# construction. Regenerating is the next step, and CI's artifact-consistency
-# job fails the pull request if it is skipped — so a stale regeneration cannot
-# land.
+# construction. CI's artifact-consistency job fails the pull request if the
+# regeneration is skipped, so a stale artifact cannot land.
 #
 # The driver is defined in local config, because git will not run driver code
 # from a cloned repository. Without that one-time setup these rules are inert
