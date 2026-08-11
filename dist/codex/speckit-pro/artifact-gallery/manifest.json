@@ -20,7 +20,7 @@
       "stage": "draft-pr",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "16-implementation-plan.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": ["prompt", "markdown"]
     },
     {
@@ -31,7 +31,7 @@
       "stage": "draft-pr",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "14-research-feature-explainer.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": []
     },
     {
