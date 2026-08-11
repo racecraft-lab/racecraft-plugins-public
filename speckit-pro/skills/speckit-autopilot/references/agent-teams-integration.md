@@ -529,14 +529,28 @@ For each phase group in tasks.md (US1, US2, …):
     Each teammate claims a [P] task; teammates message each other when
       they need to coordinate (e.g., "I'm changing the auth interface,
       heads up")
+    Each teammate is told at dispatch to send its complete
+      `## Task Result: <TASK_ID>` block to the lead on completion
     Lead appends each teammate's implementation-notes entry as that
-      teammate's summary arrives (notifications land per completion,
-      not as one batch)
+      report message arrives (reports land per completion, not as one
+      batch), never on a bare idle notification
     Lead merges results into COMPLETED_TASKS once the whole run is in
     Clean up the team before the next parallel run
   For singleton runs:
     Spawn one implement-executor subagent (no team needed)
 ```
+
+**The idle notification is a signal, not a payload.** A teammate is an
+independent session whose final output does not return to the lead, so
+its automatic idle notification carries no task summary. That is why the
+dispatch line above exists: teammates are told to *send* their
+`## Task Result: <TASK_ID>` block, and the lead appends on the arrival
+of that report. Appending on the bare idle signal instead writes a
+structurally empty entry, and double-counts the attempt if the teammate
+is later woken and finishes. The batched-subagent path has no equivalent
+gap — a background subagent's result returns to its parent directly — so
+this obligation is Agent-Teams-only, and without it the two paths would
+produce different records from the same run.
 
 **Arrival cadence:** the lead is notified per completion, not once for
 the whole run. Per [Anthropic's Agent Teams docs](https://code.claude.com/docs/en/agent-teams#context-and-communication):
