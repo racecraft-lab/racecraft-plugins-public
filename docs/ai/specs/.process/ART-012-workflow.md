@@ -1199,13 +1199,40 @@ narrative lives here instead. Correct per research R6 — a second value would
 break SC-003 — but worth naming so a reader of the record does not mistake
 `None` for "nothing happened".
 
-**5. A concurrency instruction of the orchestrator's was wrong.** Each parallel
-writer was told to verify that `git diff --stat` showed only its own file. That
-check cannot hold for concurrent agents sharing one worktree, and two executors
-correctly refused to treat a peer's legitimate diff as their own scope creep.
-The right mechanism was `isolation: "worktree"` on the parallel dispatch. The
-instruction was retracted mid-run and scope was verified by diff content
-instead.
+**5. A concurrency instruction of the orchestrator's was wrong, in two ways.**
+Each parallel writer was told to verify that `git diff --stat` showed only its
+own file. That check cannot hold for concurrent agents sharing one worktree, and
+two executors correctly refused to treat a peer's legitimate diff as their own
+scope creep.
+
+The second failure is subtler and only one executor caught it: a worker's own
+diff is not stable across two consecutive commands. One executor ran a
+successful diff check, then ran a second immediately after and got zero added
+lines, because the orchestrator had committed its file between the two. Nothing
+was wrong with the work; the verification instrument was simply not sound under
+concurrency.
+
+The right mechanism was `isolation: "worktree"` on the parallel dispatch, which
+gives each writer its own working copy. The instruction was retracted mid-run
+and scope was verified by diff content instead. Recorded because the
+phase-execution documents this feature edits are the same documents that
+instruct future parallel dispatch, and `isolation: "worktree"` is already in
+their `[P]` template — the orchestrator did not follow its own guidance here.
+
+**6. Contract item 4 of the reporting-field contract was falsified by this
+spec's own FR-006, and caught before the check was authored.** The item asserted
+that exactly three files under `speckit-pro/` carry a Task Result block. FR-006
+is the requirement that teammates send that block by name, so implementing it
+made two orchestration documents mention it in prose, and a scoped substring
+search began returning five. The contract already warned about the `dist/` and
+installed-cache copies; it could not have anticipated that the spec's own new
+requirement would break the same assertion a second way. Fixed by adding a
+line-start anchor: a file that carries the template writes the heading at
+column 0, a file that merely names the block writes it backticked inside a
+sentence. Measured 12 tree-wide, 5 scoped by substring, 3 scoped and anchored.
+This is an argument for authoring a test against the tree the feature actually
+produces rather than against the tree that existed when the contract was
+written.
 
 ### T001 — Reviewability Budget Verification And Amendment Cascade
 
