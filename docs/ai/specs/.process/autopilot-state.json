@@ -4,7 +4,7 @@
   "feature_dir": "specs/art-012-implementation-notes-capture",
   "branch": "art-012-implementation-notes-capture",
   "status": "in_progress",
-  "active_step": "Phase 5: Tasks",
+  "active_step": "Phase 6: Analyze",
   "updated_at": "2026-08-10T00:00:00Z",
   "stage": "plan",
   "prior_run_note": "completed_archived",
@@ -78,11 +78,11 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -172,6 +172,11 @@
       "pass": true,
       "markers": 0,
       "reason": "0 [Gap] markers"
+    },
+    "G5": {
+      "pass": true,
+      "task_count": 13,
+      "reason": "13 tasks found"
     }
   },
   "plan_reviewability": {
@@ -179,5 +184,25 @@
     "projected": 0,
     "declared_entries": 8,
     "note": "classifier does not count Markdown/TOML under speckit-pro/; authoritative projection is 155 from estimate-spec-size"
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [],
+    "warnings": []
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "route is one-navigable-PR, not split-PR"
+  },
+  "tasks_reviewability": {
+    "mode": "tasks",
+    "helper_id": "reviewability-gate",
+    "status": "deferred",
+    "exit_code": 2,
+    "fallback": "setup-mode warn/pass + plan-phase estimate-reviewable-loc pass + one-slice split decision"
   }
 }

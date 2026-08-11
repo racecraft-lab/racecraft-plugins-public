@@ -36,7 +36,7 @@ captured during scoping.
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass — 2 verification sessions, 7 findings, 2 consensus rounds, 0 markers |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass — 6 artifacts, 11 research decisions, 8 declared file ops |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — 2 domains, 58 items, 14 gaps found and all remediated |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 13 tasks, 5 [P], route one-navigable-PR |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -777,12 +777,23 @@ When checklist identifies `[Gap]` items:
 
 ### Tasks Results
 
+**G5 PASS.** `validate-gate` returned
+`{"gate":"G5","pass":true,"reason":"13 tasks found","markers":0,"task_count":13}`.
+
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 13 (T001–T013) |
+| **Phases** | 4 populated — Foundational (1), US1 (4), US2 (4), Polish (4). Setup is deliberately 0: modify-only change, no bootstrap. |
+| **Parallel Opportunities** | 5 `[P]` — T007/T008/T009 (three separate reporting-contract files), T010/T011 (disjoint generated surfaces, different toolchains). Four deliberate exclusions are tabulated: T003/T004 same file, T002/T006 same file, T005 mirror-content dependency, T012 depends on both regenerations. |
+| **User Stories Covered** | US1 (P1, MVP) and US2 (P2); a Requirement Coverage table maps all 5 FRs and all 6 SCs to tasks |
+
+All five production files have tasks: `phase-execution.md` (T003 + T004),
+`phase-execution-codex.md` (T005), `tdd-protocol.md` (T007),
+`implement-executor.toml` (T008), `implement-executor.md` (T009, both
+touchpoints including the Terminal Deliverable enumeration). The new Layer 4
+test is T002, registered in `suite-manifest.json` by the same task — without
+that registration it would never run. Both regeneration commands have tasks
+(T010, T011), and no task invokes `build-plugin-payloads.py` alone.
 
 ---
 
@@ -801,12 +812,56 @@ The decision answers "can this change be split into multiple small PRs safely?" 
 inspecting the change's structural seams (independent additive capabilities), not its
 line count. Surface the four fields the SKILL extracts from the emitted decision:
 
+Recorded 2026-08-10 after G5. Classifier output, verbatim:
+`{"route":"one-navigable-PR","releasable":true,"signals":["change-shape:modify-heavy"],"hints":[],"warnings":[]}`
+
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
-| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+| **Route** | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| **Releasable** | `true` | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
+| **Signals** | `change-shape:modify-heavy` | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
+| **Warnings** | none | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+
+## Layer Plan
+
+**Status: `skipped` — the route is not `split-PR`.** The layer planner runs only
+for a split route. `one-navigable-PR` means this ships as a single reviewable PR,
+so no layer plan is produced and no PR marker plan is required. Recorded as
+`layer_plan.status = "skipped"` in `autopilot-state.json`, and the run continues
+with route context.
+
+## Tasks-Phase Reviewability Boundary
+
+**The runner's `reviewability-gate` tasks mode is deferred on this installation.**
+Confirmed once, not retried: a `read_only` request with `mode_name: "tasks"`
+returned `code: "invalid_input"`, `message: "read-only helper rejected the request
+inputs"`, `details.exit_code: 2`. Setup mode is the only active mode. Per the
+autopilot contract this is recorded and the run continues on the committed
+fallback evidence chain rather than treating the deferral as a gate failure.
+
+| Deferred-mode diagnostic | Value |
+|---|---|
+| Helper ID | `reviewability-gate` |
+| Requested mode | `tasks` |
+| Result | `invalid_input`, exit code 2, inputs rejected |
+| Deferral reason | tasks mode is not implemented on the installed runner; setup mode only |
+
+**Fallback evidence chain, all three current and all non-blocking:**
+
+1. **Setup-mode gate at scaffold** — `status: "warn", pass: true`, single warning
+   `primary surfaces 3 exceeds warn threshold 1`, which is a whole-roadmap scan
+   artifact rather than this spec's own count. Recorded above with the scope
+   budget and split decision the warning requires.
+2. **Plan-phase `estimate-reviewable-loc`** — `status: "pass"`, 8 declared entries
+   parsed. Its `projected: 0` is a classifier limitation on a Markdown/TOML
+   surface, not a measurement; the authoritative projection is 155 LOC.
+3. **Split decision** — one vertical slice, no split, from `estimate-spec-size`
+   re-run at Clarify with corrected signals.
+
+`pass`, `warn`, and honoured exceptions are all marker-planning inputs, so the
+boundary is satisfied and no manual re-slicing stop applies. No correctness stop
+condition is present: marker state is not malformed or stale, no verification
+failed, no packet is invalid, and there is no non-size safety finding.
 
 To produce the decision, run the classifier against the feature directory:
 
