@@ -3,8 +3,8 @@
   "spec_id": "ART-002",
   "feature_dir": "specs/art-002-draft-pr-template-set",
   "branch": "art-002-draft-pr-template-set-slice-2",
-  "status": "in_progress",
-  "active_step": "Phase 7: Implement Slice 2",
+  "status": "completed",
+  "active_step": null,
   "updated_at": "2026-08-10T00:00:00Z",
   "stage": "implement",
   "prior_run_note": "completed_archived",
@@ -168,11 +168,11 @@
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement Slice 2",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check (slice 2)",
@@ -212,15 +212,15 @@
     },
     {
       "step": "Post: PR Creation (slice 2)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation (slice 2)",
-      "status": "pending"
+      "status": "skipped: deferred to the operator; PR 2 has just opened and carries no reviewer comments yet"
     },
     {
       "step": "Post: Retrospective (slice 2)",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "reviewability_plan_phase": {
@@ -299,7 +299,8 @@
     "pr2": {
       "head": "art-002-draft-pr-template-set-slice-2",
       "base": "art-002-draft-pr-template-set",
-      "tasks": "T048-T079"
+      "tasks": "T048-T079",
+      "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/427"
     },
     "supersedes": "FR-040's original merge-gated sequential shape; recorded in spec.md and research.md D7"
   },
