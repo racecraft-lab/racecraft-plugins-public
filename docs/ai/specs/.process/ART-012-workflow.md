@@ -1157,6 +1157,56 @@ Before starting any task:
 | 4 - User Story 2 | T006, T007, T008, T009 | 0/4 | |
 | 5 - Polish | T010, T011, T012, T013 | 0/4 | |
 
+### Phase 7 — Findings From Dogfooding The Contract
+
+The Implement Prompt asks this run to report its own deviations the way the
+feature teaches every other executor to report them. Running the contract
+against itself surfaced things no amount of reading it would have.
+
+**1. The idle notification is real, and it fired three times.** Two executors
+went idle without delivering a task summary. Each time the orchestrator
+requested the summary rather than appending, exactly as FR-003 and FR-006
+prescribe. Both replies contained substantive reported deviations that an idle
+signal would have recorded as an empty entry. This is the defect the amendment's
+adversarial reviewers predicted, observed live while building the fix for it.
+
+**2. The contract has no handling for a late-arriving fuller summary.** One
+executor's first summary crossed with the orchestrator's request for it, then
+re-sent a fuller version of the same attempt. The additive-only rule (FR-003,
+SC-005) forbids rewriting the entry already written, and appending a second
+entry under the same task ID would falsely assert a second attempt, since
+document position is the only ordering signal and two same-ID entries mean two
+tries. The record therefore keeps the first summary and the extra detail is
+recorded here instead.
+
+This is a real gap, and deliberately **not** fixed in this slice. Fixing it
+needs either an entry revision mechanism, which breaks additive-only outright,
+or an attempt-versus-report distinction, which is the per-marker attribution
+that Design Concept Q7 rules out. Both exceed the budget and neither is required
+by any success criterion. Recorded for ART-010, the downstream consumer, which
+is where the cost of a slightly stale entry would actually be felt.
+
+**3. Every entry before the reporting field exists reads `None`.** T001 and T002
+recorded `None` not because nothing happened but because
+`**Deviations/Edge cases/Surprises:**` does not exist in any template until
+T007 through T009 land. That is precisely User Story 1's claim that the story is
+verifiable with User Story 2 absent, demonstrating itself in passing.
+
+**4. An orchestrator-direct task loses its narrative by design.** T001 found and
+closed significant drift, and its entry reads `None`, because the contract's
+route table assigns `None` to every route that emits no task-result block. The
+narrative lives here instead. Correct per research R6 — a second value would
+break SC-003 — but worth naming so a reader of the record does not mistake
+`None` for "nothing happened".
+
+**5. A concurrency instruction of the orchestrator's was wrong.** Each parallel
+writer was told to verify that `git diff --stat` showed only its own file. That
+check cannot hold for concurrent agents sharing one worktree, and two executors
+correctly refused to treat a peer's legitimate diff as their own scope creep.
+The right mechanism was `isolation: "worktree"` on the parallel dispatch. The
+instruction was retracted mid-run and scope was verified by diff content
+instead.
+
 ### T001 — Reviewability Budget Verification And Amendment Cascade
 
 **Verdict: within budget. One spec, no split, no exception claimed.**
