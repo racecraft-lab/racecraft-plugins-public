@@ -42,3 +42,23 @@ FR-006 instruction went into the Path A block rather than the shared Step 3c
 template, appended after the existing anchor line so the anchor text survives
 verbatim for the mirroring task. No batched-delivery contradiction exists
 inside this file; the stale claim lived only in agent-teams-integration.md.
+
+### T005
+
+**Deviations/Edge cases/Surprises:** The Codex platform turned out to already
+run the per-arrival model natively, which is stronger corroboration than
+research R10 predicted. Its bounded `wait_agent` loop consumes one worker's
+actual summary at a time and already states that a status update or a timeout
+alone is not the result, and the Codex SKILL.md implement row already says to
+record each result as it arrives and then start the next parallel task. So the
+cadence was written as riding that existing loop rather than as a change to it,
+and the never-append-on-idle rule was anchored to this document's own
+vocabulary of status updates and `wait_agent` timeouts rather than to Claude's
+teammate-idle framing. B25 and B26 were verified before writing: the Codex
+`domain-researcher.toml` agent exists and the Codex SKILL.md routing table
+already names both `domain-researcher` and `orchestrator-direct`, so naming
+them in Phase 7 restates this platform's own routing rather than importing the
+Claude side. No FR-006 clause and no Agent Teams section were added, because
+Codex workers already return their summaries through the harvest loop. The
+`# Implementation Notes: <SPEC_ID>` literal had to stay fenced, since as a
+shallower heading in raw text it would have truncated the section scope.
