@@ -552,15 +552,23 @@ gap — a background subagent's result returns to its parent directly — so
 this obligation is Agent-Teams-only, and without it the two paths would
 produce different records from the same run.
 
-**Arrival cadence:** the lead is notified per completion, not once for
-the whole run. Per [Anthropic's Agent Teams docs](https://code.claude.com/docs/en/agent-teams#context-and-communication):
+**Arrival cadence:** teammates finish independently, so the lead hears
+from them one at a time rather than once for the whole run. Per
+[Anthropic's Agent Teams docs](https://code.claude.com/docs/en/agent-teams#context-and-communication):
 *"when a teammate finishes and stops, it automatically notifies the
-lead"*, and *"the lead doesn't need to poll for updates."* So the lead
-appends each task's implementation-notes entry on the turn that
-teammate's notification lands, rather than holding every entry to the
-end of the run. The two barriers here are deliberate and stay: the
-merge into `COMPLETED_TASKS` and the TYPECHECK + UNIT_TEST check below
-both need the whole run finished before they mean anything.
+lead"*, and *"the lead doesn't need to poll for updates."*
+
+This paragraph settles **timing**; the one above settles **trigger**, and
+they must be read together. Timing: each teammate's arrival is its own
+turn, so entries are written as the run proceeds rather than held to its
+end. Trigger: the write happens on that teammate's task-result report,
+never on the bare idle notification, which carries no summary. A teammate
+that goes idle without reporting has not produced a result, and the lead
+requests the report rather than writing an entry.
+
+The two barriers here are deliberate and stay: the merge into
+`COMPLETED_TASKS` and the TYPECHECK + UNIT_TEST check below both need the
+whole run finished before they mean anything.
 
 **Why teams here adds value over batched subagents:**
 `[P]` tasks may need light coordination ("did anyone register the new

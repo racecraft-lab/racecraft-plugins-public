@@ -58,11 +58,21 @@ hits are Scenario 2's subject, not extra copies of the template.
 Then confirm nothing else grew a copy of the block:
 
 ```bash
-grep -rln 'Task Result: <TASK_ID>' speckit-pro/
+grep -rln '^## Task Result: <TASK_ID>' speckit-pro/
 ```
 
 Expected: exactly those three files. A fourth would be a copy that silently
 skips the field.
+
+**The `^` anchor is load-bearing; do not drop it.** A file that CARRIES the
+template writes the heading at column 0. A file that merely NAMES the block
+writes it backticked inside a sentence, and two documents do exactly that
+because FR-006 requires teammates to send that block by name. Without the
+anchor this command returns five files, not three, and the two extras are
+correct as they stand and must never grow the reporting field. Scoping to
+`speckit-pro/` is equally load-bearing: tree-wide the anchored search returns
+twelve, because `dist/`, the installed-cache fixtures, and this feature's own
+contract document all carry copies.
 
 ## Scenario 2: Both platforms describe the same record
 
@@ -79,7 +89,8 @@ Expected in **both** files: the record path, the
 the create-if-absent rule, the additive-only rule, and the fail-open rule with
 its four properties: the gap names the attempt or lifecycle step plus the
 operation that failed, the write is never retried, the fallback is exactly one
-level deep, and the blast radius is the single entry that failed. The
+level deep, and the blast radius is the single entry that failed.
+
 Both files describe the same per-arrival cadence; the Claude file additionally
 carries the FR-006 teammate report obligation, which the Codex path does not
 need. Wording differs by design, per FR-005; the produced record does not.
@@ -155,6 +166,33 @@ python3 tests/speckit-pro/run-all.py
 ```
 
 Expected: zero failures, total above 7226.
+
+### Measured result, 2026-08-11
+
+These are the values this run actually produced, not predictions. A later run
+that disagrees with them has found a regression or a genuine change in scope.
+
+| Check | Expected | Measured |
+|---|---|---|
+| Full suite | zero failures, above 7226 | **7305 / 7305** |
+| Layer 1 | pass | 1447 / 1447 |
+| Layer 4 | pass | 5672 / 5672 |
+| Layer 5 | pass | 186 / 186 |
+| Record-contract test | pass | 79 / 79 |
+| Scenario 1, first grep | 4 hits across 3 files | 1, 1, 2 |
+| Scenario 1, second grep | exactly 3 files | 3 |
+| Scenario 4, `dist/claude/` | modified copies | 4 |
+| Scenario 4, `dist/codex/` | modified copies | 5 |
+| Path hygiene | no output | no output |
+
+**The first run was not green.** It reported 7305 / 7310, with five failures in
+the Layer 6 Codex qualification corpus. That corpus binds a sha256 over agent
+source bytes, and editing `codex-agents/implement-executor.toml` restaled it.
+It is a fourth generated surface that `refresh-release-artifacts.py` does not
+cover and that has no regeneration tooling. If you edit any agent definition and
+see `source digest does not match role source bytes`, that is this, and
+`specs/art-012-implementation-notes-capture/plan.md` §Declared File Operations
+describes the four-level digest chain you need to refresh.
 
 What each layer catches if a step above was skipped:
 

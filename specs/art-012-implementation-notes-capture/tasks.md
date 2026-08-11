@@ -99,7 +99,7 @@ file is touched.
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T001 Verify the reviewability budget against this task list's file scope and record the split decision in `docs/ai/specs/.process/ART-012-workflow.md` before implementation
+- [x] T001 Verify the reviewability budget against this task list's file scope and record the split decision in `docs/ai/specs/.process/ART-012-workflow.md` before implementation
 
 **Acceptance criteria**
 
@@ -151,7 +151,7 @@ reads `None`.
 
 > **NOTE: Write this test FIRST and verify it FAILS before implementation**
 
-- [ ] T002 [US1] Create the Layer 4 record-contract test at `tests/speckit-pro/unit/test-implementation-notes-record.py` and register it in `tests/speckit-pro/suite-manifest.json`
+- [x] T002 [US1] Create the Layer 4 record-contract test at `tests/speckit-pro/unit/test-implementation-notes-record.py` and register it in `tests/speckit-pro/suite-manifest.json`
 
 **Acceptance criteria**
 
@@ -191,7 +191,7 @@ reads `None`.
 
 ### Implementation for User Story 1
 
-- [ ] T003 [US1] Add the Phase 7 record-lifecycle step to `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`
+- [x] T003 [US1] Add the Phase 7 record-lifecycle step to `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`
 
 **Where**: a new step at the start of the Phase 7 section headed
 `Phase 7: Implement (Task-Level Dispatch)`, ahead of the
@@ -226,7 +226,7 @@ Anchor by heading text, not by line number.
   fail-open, and Codex-document assertions stay RED until T004 and T005.
 - Not `[P]`: same file as T004.
 
-- [ ] T004 [US1] Add the Phase 7 append contract to `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`
+- [x] T004 [US1] Add the Phase 7 append contract to `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`
 
 **Where**: inside the Step 3 heading `Task-Level Execution Loop` and the
 `Agent Routing Table` heading that follows it. Four **dispatch-shape** anchors,
@@ -314,7 +314,7 @@ Anchor by that text, not by line number: T003 shifts this file's numbering.
   T005.
 - Not `[P]`: same file as T003, and it builds on the step T003 adds.
 
-- [ ] T005 [US1] Mirror the lifecycle and append steps into `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md`
+- [x] T005 [US1] Mirror the lifecycle and append steps into `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md`
 
 **Where**: inside `## Phase 7: Implement` in that file.
 
@@ -342,7 +342,7 @@ Anchor by that text, not by line number: T003 shifts this file's numbering.
 - Not `[P]`: although it is a different file, it must mirror the exact rules
   T003 and T004 land, so it runs after both.
 
-- [ ] T014 [P] [US1] Correct the stale batched-delivery claims in `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md`
+- [x] T014 [P] [US1] Correct the stale batched-delivery claims in `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md`
 
 **Why**: this file is the reason the append cadence was narrowed on a false
 premise. It asserts in three places that parallel results arrive as a batch,
@@ -407,7 +407,7 @@ reads `None` when the task was uneventful.
 
 > **NOTE: Write these assertions FIRST and verify they FAIL before implementation**
 
-- [ ] T006 [US2] Add the reporting-field assertion group to `tests/speckit-pro/unit/test-implementation-notes-record.py`
+- [x] T006 [US2] Add the reporting-field assertion group to `tests/speckit-pro/unit/test-implementation-notes-record.py`
 
 **Acceptance criteria**
 
@@ -434,7 +434,7 @@ reads `None` when the task was uneventful.
 
 ### Implementation for User Story 2
 
-- [ ] T007 [P] [US2] Add the reporting field to the shared Summary Format block in `speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md`
+- [x] T007 [P] [US2] Add the reporting field to the shared Summary Format block in `speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md`
 
 **Acceptance criteria**
 
@@ -451,7 +451,7 @@ reads `None` when the task was uneventful.
 - `[P]`: different file from T008 and T009, with no ordering dependency between
   the three.
 
-- [ ] T008 [P] [US2] Add the reporting field to the Summary Format block in `speckit-pro/codex-agents/implement-executor.toml`
+- [x] T008 [P] [US2] Add the reporting field to the Summary Format block in `speckit-pro/codex-agents/implement-executor.toml`
 
 **Acceptance criteria**
 
@@ -466,7 +466,7 @@ reads `None` when the task was uneventful.
   rather than a description of dispatch mechanics.
 - `[P]`: different file from T007 and T009.
 
-- [ ] T009 [P] [US2] Add the reporting field to both touchpoints in `speckit-pro/agents/implement-executor.md`
+- [x] T009 [P] [US2] Add the reporting field to both touchpoints in `speckit-pro/agents/implement-executor.md`
 
 **Acceptance criteria**
 
@@ -503,7 +503,7 @@ block.
 **Purpose**: regenerate the three generated surfaces the six production edits
 restale, then verify the whole change end to end.
 
-- [ ] T010 [P] Regenerate the install payloads, installed-cache fixtures, and proof hashes by running `python3 scripts/refresh-release-artifacts.py`
+- [x] T010 [P] Regenerate the install payloads, installed-cache fixtures, and proof hashes by running `python3 scripts/refresh-release-artifacts.py`
 
 **Acceptance criteria**
 
@@ -534,7 +534,7 @@ restale, then verify the whole change end to end.
 - `[P]` with T011: disjoint outputs and different toolchains. This script
   explicitly does not regenerate the docs reference.
 
-- [ ] T011 [P] Regenerate the generated docs test reference at `docs-site/src/content/docs/reference/tests.md`
+- [x] T011 [P] Regenerate the generated docs test reference at `docs-site/src/content/docs/reference/tests.md`
 
 **Acceptance criteria**
 
@@ -548,7 +548,7 @@ restale, then verify the whole change end to end.
 - Depends on T002, which creates the test file and its manifest entry.
 - `[P]` with T010.
 
-- [ ] T012 Run the full verification gate and the quickstart scenarios in `specs/art-012-implementation-notes-capture/quickstart.md`
+- [x] T012 Run the full verification gate and the quickstart scenarios in `specs/art-012-implementation-notes-capture/quickstart.md`
 
 **Acceptance criteria**
 
@@ -567,7 +567,7 @@ restale, then verify the whole change end to end.
 - Depends on T010 and T011. This is the first and only task that runs the full
   suite.
 
-- [ ] T013 Verify the PR review packet inputs are complete and current in `specs/art-012-implementation-notes-capture/plan.md`, `specs/art-012-implementation-notes-capture/spec.md`, and `specs/art-012-implementation-notes-capture/quickstart.md`
+- [x] T013 Verify the PR review packet inputs are complete and current in `specs/art-012-implementation-notes-capture/plan.md`, `specs/art-012-implementation-notes-capture/spec.md`, and `specs/art-012-implementation-notes-capture/quickstart.md`
 
 **Acceptance criteria**
 
