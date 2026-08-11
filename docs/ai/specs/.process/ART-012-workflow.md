@@ -1234,6 +1234,57 @@ This is an argument for authoring a test against the tree the feature actually
 produces rather than against the tree that existed when the contract was
 written.
 
+### T012 — A Fourth Generated Surface, Previously Unhit
+
+The full suite came back **7305 of 7310** on its first run, with five failures
+that were not flaky and not environmental. They were caused by this change, and
+they exposed a coupling no artifact in this spec accounted for.
+
+**What broke.** `tests/speckit-pro/layer6-efficiency` carries a Codex
+qualification corpus that binds a **sha256 digest over agent source bytes**.
+T008 edited `speckit-pro/codex-agents/implement-executor.toml`, which
+invalidated that digest, and the failure surfaced as four crashed Layer 4 tests
+reporting `source digest does not match role source bytes`.
+
+**It is a chain, not a single hash.** Fixing the source digest exposed a second
+level, and the structure is four deep:
+
+1. the agent source file's bytes, digested into
+2. `fixtures-codex/<role>/fixture.json`'s `source_digest`, whose own bytes are
+   digested into
+3. the `fixture_byte_digests` list over all twelve governed roles, which with
+   the corpus ID, version, and partition binding is digested into
+4. `corpus-manifest.json`'s `corpus_digest`.
+
+Both JSON files must additionally be canonical JSON plus a trailing LF, which
+the validator checks separately. Two stale bindings existed, both over the same
+TOML, and one stale `corpus_digest`.
+
+**Why nobody had hit it.** The corpus was introduced on 2026-07-26 in `#386`.
+This spec's `ac3b2ce6` is the **first change to any agent source since**, which
+is why no precedent commit shows how to update it and why no regeneration script
+exists. `scripts/refresh-release-artifacts.py` does not cover this surface.
+
+**How it was fixed.** By hand, narrowly, which the test tree's own `AGENTS.md`
+sanctions: *"Keep fixture changes narrow and explain why generated or proof data
+changed."* The two source digests were replaced with the real hash, then
+`corpus_digest` was recomputed **using the validator's own `digest`,
+`canonical_bytes`, `_fixture_bytes` and `GOVERNED_ROLE_ORDER`** rather than a
+reimplementation, so the recorded value cannot disagree with the checker by
+construction. Same-length hex replacement preserved canonical byte-for-byte
+formatting; the passing suite proves it, since the validator raises on
+non-canonical input.
+
+**What this means beyond ART-012.** The plan's Declared File Operations names
+three generated surfaces. There are four. The fourth is undocumented, has no
+regeneration tooling, and fails with a message that names a digest rather than
+the file to fix. Any future change to an agent definition or a Codex agent TOML
+hits it. That is worth a follow-up: either extend
+`refresh-release-artifacts.py` to cover the corpus, or document the manual
+recompute. **Deliberately not fixed here** — building regeneration tooling is
+well outside this spec's budget and its reviewability boundary, and the fix
+belongs to whoever owns the Layer 6 corpus.
+
 ### T001 — Reviewability Budget Verification And Amendment Cascade
 
 **Verdict: within budget. One spec, no split, no exception claimed.**

@@ -92,3 +92,11 @@ the intended edit against all four targets and confirming 10 of 10 turn green.
 ### T011
 
 **Deviations/Edge cases/Surprises:** None
+
+### T007+T008+T009
+
+**Deviations/Edge cases/Surprises:** None
+
+### T012
+
+**Deviations/Edge cases/Surprises:** None
