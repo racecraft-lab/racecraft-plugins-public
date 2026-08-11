@@ -62,3 +62,25 @@ Claude side. No FR-006 clause and no Agent Teams section were added, because
 Codex workers already return their summaries through the harvest loop. The
 `# Implementation Notes: <SPEC_ID>` literal had to stay fenced, since as a
 shallower heading in raw text it would have truncated the section scope.
+
+### T006
+
+**Deviations/Edge cases/Surprises:** The tree-wide match count for contract
+item 4 is 12, not the 7 the dispatch predicted, and the twelfth is the contract
+file itself, whose "Resulting block" example prints the heading at column 0.
+That match is the argument for scoping in to `speckit-pro/` rather than
+excluding known generated directories: an exclusion list built from `dist/` and
+the fixture path would have missed the contract document and reported four.
+Scoping could not be narrowed to the Task Result block itself, because that
+block sits inside a fence in all three files and the section helper
+deliberately ignores fenced headings, returning empty; `## Summary Format`
+occurs exactly once per file and was used instead. Item 2 needed no new check
+kind and not even the `before` kind: two regexes built with `re.escape` from
+the contract's own literals assert adjacency and last-ness, where `before`
+would have proven only ordering. Item 4 could not take the four-tuple shape the
+other checks use, because it asserts over a set of files rather than a document
+body, so it is a separate method reporting under the same group label. Item 4
+is also green from birth by design, being an invariant guard against a future
+fourth copy rather than a red-first assertion, so the RED evidence covers items
+1 through 3 only. Satisfiability was proven rather than assumed by simulating
+the intended edit against all four targets and confirming 10 of 10 turn green.

@@ -104,12 +104,16 @@ append instructions, never to this field.
 
    **Two discriminators are required, and neither is sufficient alone.**
 
-   *Scope to `speckit-pro/`*, the authored plugin source. A tree-wide search
-   also matches the generated payload copies under `dist/` and the
-   installed-cache fixture copies under
+   *Scope IN to `speckit-pro/`*, the authored plugin source. Do not instead
+   exclude the directories known to hold copies — that approach is what fails.
+   Measured on the implemented tree, the 12 tree-wide matches are 3 authored,
+   4 under `dist/`, 4 under
    `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/`,
-   which are regenerated from these three and are never authored. Measured on
-   the implemented tree: 12 files tree-wide against 3 scoped.
+   and **1 in this contract file itself**, because the "Resulting block" example
+   above prints the heading at column 0. An exclusion list built from `dist/`
+   and the fixture path would have missed that twelfth match and reported four.
+   Scoping in to the authored source is immune to it, and to whatever the next
+   unanticipated copy turns out to be.
 
    *Anchor at line start.* Match `^## Task Result: <TASK_ID>` as an actual
    Markdown heading, not the bare substring. A file that CARRIES the template
