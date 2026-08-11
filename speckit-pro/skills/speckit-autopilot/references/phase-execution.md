@@ -809,6 +809,39 @@ pattern — recommended by Anthropic's BrowseComp architecture
 and Research system — routes each task to a specialized agent
 from the orchestrator level.
 
+#### Phase 7 Setup: Open the Implementation-Notes Record
+
+Run this before Step 1, so the record exists before the first task is
+dispatched. It is not deferred to the first append: a phase interrupted before
+any task completes, and a spec carrying no implementation tasks at all, must
+both still leave a header-only record behind.
+
+The record is one file per spec, at
+`<FEATURE_DIR>/.process/implementation-notes.md`, alongside the rest of the
+feature's autopilot exhaust. Its first line is the header, and the header is
+written exactly once:
+
+```text
+# Implementation Notes: <SPEC_ID>
+```
+
+- **Create if absent**: when the record is not there, create its `.process/`
+  directory too if that directory is also absent, then create the file with the
+  header as its only content. An absent directory is a thing to create, never a
+  failure to report.
+- **Never truncate**: when the record is already there, leave every existing
+  byte as found and append after the existing content. Do not write a second
+  header. This is the resumed-phase case, and the entries already in the file
+  are the whole point of the record.
+- **Check the record's own path**, in the working copy this run executes in,
+  never a state file, an index, or anything carried over from the session that
+  wrote the record. A resume in a fresh session then behaves exactly like a
+  resume in the session that started the run.
+- **Fail-open**: if creation fails, record a gap in
+  `docs/ai/specs/.process/<SPEC_ID>-workflow.md` naming this setup step and the
+  operation that failed, do not retry, and carry on into Step 1. The task and
+  phase outcomes are exactly what they would have been had the write succeeded.
+
 #### Step 1: Parse tasks.md
 
 ```text
@@ -870,9 +903,14 @@ For each phase group in tasks.md:
         (max 5 per Anthropic's 3-5 sweet spot — partition into
         multiple teams if the run is larger). Use Sonnet teammates.
         Each teammate claims one [P] task and runs it with the
-        Agent prompt template below. The team's shared mailbox
+        Agent prompt template below, plus one Teams-only line:
+        each teammate MUST send its complete
+        `## Task Result: <TASK_ID>` block to the lead when its
+        task completes. The team's shared mailbox
         lets teammates coordinate ("I'm changing the auth
         interface, heads up"). Wait for all teammates to complete.
+        Append each teammate's entry as that report message
+        arrives, never on a bare idle or liveness notification.
         Clean up the team before the next run.
       else:
         # Path B: spawn all [P] tasks in ONE message, background
@@ -886,14 +924,20 @@ For each phase group in tasks.md:
           )
         # All N tasks dispatched in ONE assistant message
         Wait for ALL to complete.
+        Each background subagent's completion arrives on its own
+        turn; append that task's entry then, without waiting for
+        the rest of the run.
 
       # Safety net for either path: verify no regression
+      # (every arrived attempt's entry is already appended by now)
       Run Command("<TYPECHECK> && <UNIT_TEST>") in the orchestrator.
       If FAIL:
         Log regression to workflow file.
         Re-run the tasks SERIALLY (one foreground agent each):
         for task in tasks_in_run:
           Agent(subagent_type: <routed agent>, ..., prompt: ...)
+          On that result, append a further entry under the same
+          task ID; the earlier entry stays exactly as written.
         After serial re-run, run TYPECHECK + UNIT_TEST again.
         If still failing, surface to user.
 
@@ -910,8 +954,13 @@ For each phase group in tasks.md:
            "verify", "run", "check", "build", "lint")
         e. implement-executor — default fallback
 
+      All five branches append an entry; c and d emit no
+      task-result block, so their entries record None.
+
       Foreground dispatch: Agent(..., prompt: ...)
       Wait for result.
+      Append this task's entry on the turn that result arrives,
+      before the next dispatch.
 
   # Step 3c: Agent prompt template (used for parallel + singleton)
   Agent(
@@ -959,6 +1008,52 @@ For each phase group in tasks.md:
   TaskUpdate: "<Phase 7: group name>" → completed
 ```
 
+#### Append Contract: One Entry Per Dispatched Attempt
+
+Every attempt Step 3 dispatched gets one entry in the record the Phase 7 setup
+step opened, appended after everything already in the file:
+
+```text
+### <TASK_ID>
+
+**Deviations/Edge cases/Surprises:** <reported text, or None>
+```
+
+`<TASK_ID>` is the task's ID exactly as `tasks.md` writes it, and one blank line
+separates the entry from the content before it.
+
+**Per-arrival cadence, one rule for every dispatch shape.** Append on the turn
+that attempt's own result reaches the orchestrator, before dispatching further
+work. A member of a parallel run does not wait for the rest of its run: the
+platform delivers each worker's completion individually, so the entry is written
+when that worker reports, not when the run reaches the TYPECHECK and UNIT_TEST
+safety net. Never batched to phase end, and never deferred to a run boundary.
+
+**Never append on a bare idle or liveness signal.** A worker that stops without
+delivering a task summary has produced no result, which is a cue to request the
+summary rather than to write an entry. Appending on it writes an empty entry,
+and double-counts the attempt once the worker is woken and finishes.
+
+**Additive only.** No entry already written is rewritten, reordered, or removed,
+and the record is never read back to update a counter or to find a previous
+entry. The serial re-run after a parallel regression appends a further entry
+under the same task ID and leaves the earlier one exactly as written; two
+entries sharing a task ID are correct history, not a defect. Document order is
+append order, so position is the record's only ordering signal, and where two
+entries share a task ID the earlier-positioned one is the earlier attempt.
+
+**Fail-open.** A failure to append is recorded as a gap in
+`docs/ai/specs/.process/<SPEC_ID>-workflow.md`, never in the
+implementation-notes record that just failed, and the gap names the attempt and
+the operation that failed so a reader can tell which write was lost. The write
+is not retried: one attempt, then the gap. The fallback is exactly one level
+deep, so when the workflow file is itself the unwritable path, surface that
+second failure in the run's own output and carry on, with no third destination
+and no recursion. The blast radius is one entry: every other attempt in the same
+run is still appended as its own result arrives, and the next dispatch still
+happens. A reporting-content problem is not a write failure. A missing or
+unreadable field produces a `None` entry, not a gap.
+
 #### Step 4: Final Verification
 
 After all phase groups complete:
@@ -982,6 +1077,26 @@ Every agent receiving implementation work gets the TDD protocol
 injected. Agent selection is about DOMAIN EXPERTISE — the
 implement-executor is a TDD specialist, the project agent brings
 domain knowledge. Both follow identical discipline.
+
+**Three append call sites in the routing, not one.** The routing branch decides
+what an entry carries, which is a different axis from the dispatch shape that
+decides when it is written:
+
+| Route | Task-result block? | Entry value |
+|-------|--------------------|-------------|
+| `implement-executor`, project agent | Yes | Reported text, or `None` |
+| `domain-researcher` research | No | `None` |
+| orchestrator-direct verification | No | `None` |
+
+Appending only on the executor branch leaves research and verification attempts
+silently missing from the record.
+
+**The literal `None`** is the single value for every nothing-to-report case: the
+executor reported `None`, the executor omitted the field, the field cannot be
+read out of the summary it returned, or the route emits no task-result block at
+all. No distinct marker and no route field, because a second value would make
+the record unreadable as a count of what was reported the moment a run contains
+one research task.
 
 **Gate:** G7 — full verification suite
 (build + typecheck + lint + unit tests + integration tests)
