@@ -54,7 +54,7 @@ own failure patterns.
 
 ## Worktree Preflight
 
-A fresh worktree holds only tracked files. Two facts cover every surface:
+A fresh worktree holds only tracked files. Three facts cover every surface:
 
 - The repository test suite needs no bootstrap. Run
   `python3 tests/speckit-pro/run-all.py` directly.
@@ -63,6 +63,45 @@ A fresh worktree holds only tracked files. Two facts cover every surface:
   including the `pnpm --dir docs-site reference:generate` that the scoped
   `tests/speckit-pro/` and `docs-site/` rules require after a tracked
   `.md`, `.py`, or `.sh` change under the test tree.
+- Define the generated-artifact merge driver once per clone:
+
+  ```bash
+  git config merge.generated.name "keep one side; regenerate after merge"
+  git config merge.generated.driver true
+  ```
+
+  `.gitattributes` marks every generated path `merge=generated` so git stops
+  text-merging content hashes and payload copies, which is the cause of nearly
+  every merge conflict in this repository. Git will not run driver code from a
+  cloned repository, so this cannot be committed. Skipping it leaves the rules
+  inert and merges behave as they did before, so it fails safe.
+
+## Merging Main
+
+Generated artifacts are a pure function of the source tree, so a merge never
+produces a correct one. **Regenerate; do not hand-resolve.**
+
+```bash
+git merge origin/main            # generated paths resolve without conflict
+python3 scripts/refresh-release-artifacts.py
+pnpm --dir docs-site reference:generate
+```
+
+Then run the suite. CI's `artifact-consistency` job fails the pull request if
+the regeneration was skipped, so a stale artifact cannot land.
+
+Two generated surfaces are **not** covered by `refresh-release-artifacts.py`
+and need their own step when their inputs changed:
+
+- The spec index (`generate-spec-index`) after adding or retitling a spec.
+  Regenerate with untracked files moved aside: the generator scans the
+  filesystem rather than the git index, so an untracked path becomes a
+  committed backlink that passes locally and fails on a clean checkout.
+- The Layer 6 Codex qualification corpus in
+  `tests/speckit-pro/layer6-efficiency/fixtures-codex/`, which binds a sha256
+  chain over agent source bytes and has no regeneration script. Editing any
+  agent definition restales it; the failure reads
+  `source digest does not match role source bytes`.
 
 ## Source Of Truth
 
