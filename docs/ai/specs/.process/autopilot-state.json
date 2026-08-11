@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/ART-002-workflow.md",
   "spec_id": "ART-002",
   "feature_dir": "specs/art-002-draft-pr-template-set",
-  "branch": "art-002-draft-pr-template-set",
-  "status": "in_progress",
-  "active_step": "Phase 7: Implement",
+  "branch": "art-002-draft-pr-template-set-slice-2",
+  "status": "completed",
+  "active_step": null,
   "updated_at": "2026-08-10T00:00:00Z",
   "stage": "implement",
   "prior_run_note": "completed_archived",
@@ -120,7 +120,7 @@
     },
     {
       "step": "Phase 7: Implement",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -160,67 +160,67 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "skipped: deferred to the operator; remediating PR 1 after T048 would move PR 2's base"
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement Slice 2",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check (slice 2)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Implementation (slice 2)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check (slice 2)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review (slice 2)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite (slice 2)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Reviewability Diff Gate (slice 2)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Self-Review (slice 2)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: UAT Runbook Generation (slice 2)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Body Generation (slice 2)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Creation (slice 2)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation (slice 2)",
-      "status": "pending"
+      "status": "skipped: deferred to the operator; PR 2 has just opened and carries no reviewer comments yet"
     },
     {
       "step": "Post: Retrospective (slice 2)",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "reviewability_plan_phase": {
@@ -292,12 +292,15 @@
     "pr1": {
       "head": "art-002-draft-pr-template-set",
       "base": "main",
-      "tasks": "T001-T047"
+      "tasks": "T001-T047",
+      "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/425",
+      "opened_from_commit": "2889e7c6f28064d91ec0bed7c1295a1b84e45881"
     },
     "pr2": {
       "head": "art-002-draft-pr-template-set-slice-2",
       "base": "art-002-draft-pr-template-set",
-      "tasks": "T048-T079"
+      "tasks": "T048-T079",
+      "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/427"
     },
     "supersedes": "FR-040's original merge-gated sequential shape; recorded in spec.md and research.md D7"
   },
@@ -358,5 +361,17 @@
     "all_fixed_before_pr": true,
     "blocking": "feature-id and feature-name sit inside the feature-header fill region while the export routine reads both for the pinned Feature: header line, and a comment asserted they were chrome outside every region. Every export from a filled artifact would have emitted a hollow 'Feature:  '. No check could see it.",
     "resolution": "Comment corrected and split; the preservation obligation recorded in the template's slot inventory and in spec.md Dependencies; featureLine() degrades to the single h1 and then to a pinned 'Feature: not named in this document', with that wording pinned in the export-payload contract."
+  },
+  "reviewability_post_implementation_slice_2": {
+    "status": "block",
+    "block_kind": "size_only",
+    "reviewable_loc": 2027,
+    "declared_before": 530,
+    "correctness_findings": [],
+    "disposition": "continue",
+    "measured": {
+      "code-approaches": 1025,
+      "module-map": 1002
+    }
   }
 }
