@@ -1248,6 +1248,52 @@ This is an argument for authoring a test against the tree the feature actually
 produces rather than against the tree that existed when the contract was
 written.
 
+### Self-Review (mandatory, non-gating)
+
+**Tests executed.** Of the five canonical commands, three are `N/A` on this
+repository: BUILD, TYPECHECK and LINT have no configured command. UNIT_TEST and
+FULL_VERIFY are the same command, `python3 tests/speckit-pro/run-all.py`, which
+ran and reported **7305 of 7305**, above the recorded 7226 baseline. The
+feature's own Layer 4 test reports **79 of 79**. Layer 1 payload validators pass,
+including `validate-codex-parity`. Evidence: this file, §T012.
+
+**Edge cases.** Every non-happy path named in the contract has an assertion:
+record already present (never truncate, no second header), record absent
+(create, including its `.process/` directory), a run with zero implementation
+tasks (header-only record), a retried task (a further entry under the same ID,
+earlier entry untouched), a route emitting no task-result block (literal `None`),
+an executor omitting the field (literal `None`), a write failure (gap in the
+workflow file, no retry, one fallback level, blast radius of one entry), and a
+bare idle signal (never append). No `[edge-case-gap]` markers.
+
+One edge case is **documented but not asserted**: the fallback destination being
+itself unwritable. The contract says to surface it in the run's own output and
+carry on. That is a behavior of the running orchestrator with no artifact to
+inspect, so a document-prose test cannot verify it beyond confirming the rule is
+stated, which it does.
+
+**Requirements matched.** All six functional requirements and all six success
+criteria map onto tasks, verified by grep against `tasks.md`: FR-001 appears in 7
+places, FR-002 in 4, FR-003 in 5, FR-004 in 4, FR-005 in 5, FR-006 in 6; SC-001
+in 7, SC-002 in 3, SC-003 in 5, SC-004 in 3, SC-005 in 3, SC-006 in 5. No orphan
+requirement and no task without a requirement.
+
+**Follow-up and tidiness.** Two deferred items, both stated in the PR body rather
+than dropped silently:
+
+1. **The Layer 6 corpus has no regeneration tooling.** Recorded in §T012. Belongs
+   to whoever owns that corpus; building it here would breach this spec's budget.
+2. **The contract has no handling for a late-arriving fuller summary.** Recorded
+   in the Phase 7 findings. Fixing it requires either breaking additive-only or
+   adding the per-marker attribution Design Concept Q7 rules out.
+
+No leftover scaffolding in the diff. The scratchpad verbose test runner was
+deliberately **not** committed: it duplicates what the house `run_counted` helper
+suppresses, and adding a second reporting path to the repository was not asked
+for. The one temporary in-tree file needed for a runner input was removed and the
+worktree verified clean before push. No debug code, no commented-out blocks, no
+`TODO` introduced.
+
 ### T013 — PR Packet Inputs, And Projection Against Actual
 
 **Packet sources present and current.** `plan.md` carries its six-step Review
