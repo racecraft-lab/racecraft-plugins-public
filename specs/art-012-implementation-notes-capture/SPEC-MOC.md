@@ -37,8 +37,5 @@ the slice artifacts in the body below.
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/state-management.md](checklists/state-management.md)
 - [.process/implementation-notes.md](.process/implementation-notes.md)
-- [.process/pr-packets/art-012.json](.process/pr-packets/art-012.json)
-- [.process/pr-packets/art-012/body.md](.process/pr-packets/art-012/body.md)
-- [.process/pr-packets/art-012/validation.json](.process/pr-packets/art-012/validation.json)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->
