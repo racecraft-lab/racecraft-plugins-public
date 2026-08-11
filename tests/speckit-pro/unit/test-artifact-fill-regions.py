@@ -712,6 +712,51 @@ def check_r6(gallery_root: Path) -> list[str]:
     ]
 
 
+def check_r7(gallery_root: Path) -> list[str]:
+    """R7 — regions are flat: no marker pair encloses another.
+
+    Its own check because **no other one can see this defect**. A nested pair is
+    still exactly one START and one END with START before END, so R2 accepts it,
+    and its slot is still named in the inventory, so R3 accepts it too. Both
+    directions of the agreement hold on a document that violates the contract.
+
+    The harm is the one this whole convention exists to prevent, and it is
+    silent. A fill replaces a whole region, so filling the outer slot deletes the
+    inner one entirely — its content, its anchors, and its marker pair — while
+    the inventory goes on naming it. The next fill of the inner slot then finds
+    no region to replace and does nothing, and no check reports either event.
+
+    Walked as a depth counter over the markers in document order rather than by
+    comparing offsets, so an END arriving before its own START is reported as the
+    disorder it is instead of reading as a negative-width region.
+    """
+    templates, _ = _templates(gallery_root)
+    failures: list[str] = []
+    for template in templates:
+        depth = 0
+        open_slots: list[str] = []
+        for slot, boundary in template.collector.markers:
+            if boundary == START:
+                if depth > 0:
+                    failures.append(
+                        f"{template.relative}: FILL:{slot}:START opens inside '{open_slots[-1]}', but regions "
+                        "are flat — filling the enclosing slot would delete this one, its anchors, and its "
+                        "own markers, while the inventory went on naming it"
+                    )
+                depth += 1
+                open_slots.append(slot)
+            else:
+                if depth == 0:
+                    failures.append(
+                        f"{template.relative}: FILL:{slot}:END closes a region that is not open, so the "
+                        "body's markers do not nest consistently"
+                    )
+                    continue
+                depth -= 1
+                open_slots.pop()
+    return failures
+
+
 FILL_REGION_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
     ("R1", check_r1),
     ("R2", check_r2),
@@ -719,6 +764,7 @@ FILL_REGION_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
     ("R4", check_r4),
     ("R5", check_r5),
     ("R6", check_r6),
+    ("R7", check_r7),
 )
 
 
@@ -1102,6 +1148,44 @@ class FillRegionFixtureTests(FillRegionFixtureCase):
         self.write(MANIFEST_FILE, "{ not valid json")
 
         self.assertReports(check_r6(self.gallery), MANIFEST_FILE)
+
+    # -- R7 --
+
+    def test_r7_detects_a_region_nested_inside_another(self) -> None:
+        """The defect R2 and R3 both accept, which is why R7 exists.
+
+        Asserted here as well as detected: the same document that fails R7 must
+        pass R2 and R3, or the claim that no other check sees this is untrue and
+        R7 is redundant.
+        """
+        self.build()
+        path = self.gallery / _template_path("implementation-plan")
+        text = path.read_text(encoding="utf-8")
+        moved = _prose_region("risk-register")
+        # Move a **documented** region inside another rather than inventing an
+        # undocumented one: an undocumented region is R3's defect, and nesting it
+        # would prove only that R3 works.
+        nested = text.replace(moved + "\n", "", 1).replace(
+            "<p>Sample mockups content awaiting a fill.</p>",
+            "<p>Sample mockups content awaiting a fill.</p>\n" + moved,
+            1,
+        )
+        self.assertNotEqual(nested, text, "fixture did not perturb the template")
+        self.write(_template_path("implementation-plan"), nested)
+
+        self.assertReports(check_r7(self.gallery), "implementation-plan", "risk-register")
+        self.assertEqual(check_r2(self.gallery), [])
+        self.assertEqual(check_r3(self.gallery), [])
+
+    def test_r7_detects_an_end_marker_that_closes_nothing(self) -> None:
+        self.build()
+        path = self.gallery / _template_path("spec-explainer")
+        stray = path.read_text(encoding="utf-8").replace(
+            "<!-- FILL:tldr:START -->", "<!-- FILL:tldr:END -->\n<!-- FILL:tldr:START -->", 1
+        )
+        self.write(_template_path("spec-explainer"), stray)
+
+        self.assertReports(check_r7(self.gallery), "spec-explainer", "tldr")
 
 
 # Registered cases, in check order. A case not named here is a case the suite

@@ -299,9 +299,9 @@ canonical regions from its total:
 |---|---|---|---|---|---|
 | `implementation-plan.html` | 1637 | 458 | **1179** | ~320 | 3.7x |
 | `spec-explainer.html` | 773 | 458 | **315** | ~185 | 1.7x |
-| `test-artifact-fill-regions.py` | 1127 | — | **1127** | ~250 | 4.5x |
+| `test-artifact-fill-regions.py` | 1127 | — | **1211** | ~250 | 4.8x |
 
-**Slice 1 is 1494 authored template lines, or 2621 counting the validation
+**Slice 1 is 1494 authored template lines, or 2705 counting the validation
 module** — against a projected 505 and 755. The 800 block threshold is exceeded
 on either reading.
 

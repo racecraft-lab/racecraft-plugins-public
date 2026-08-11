@@ -958,8 +958,8 @@ here rather than left in a scoping document a reviewer may not open.
 > measured. The projection was wrong by roughly 3x. Measured, subtracting each
 > file's 458 embedded canonical lines: `implementation-plan.html` authored
 > **1179** against a projected ~320; `spec-explainer.html` **315** against ~185;
-> the validation module **1127** against ~250. **Slice 1 is 1494 authored
-> template lines, or 2621 counting the module** — against ~505 and ~755.
+> the validation module **1211** against ~250. **Slice 1 is 1494 authored
+> template lines, or 2705 counting the module** — against ~505 and ~755.
 >
 > The declaration in `plan.md` is corrected to 1494 and the gate re-run, because
 > `reviewability-gate` in setup mode reads the last declared "reviewable LOC"

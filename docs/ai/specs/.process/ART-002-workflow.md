@@ -1354,7 +1354,7 @@ Before starting any task:
 
 | Task | Result |
 |---|---|
-| T007-T013 L4 module | `tests/speckit-pro/unit/test-artifact-fill-regions.py`, 1103 lines, **44/44 passing**. Six checks R1-R6, the parser, and six synthetic fixtures |
+| T007-T013 L4 module | `tests/speckit-pro/unit/test-artifact-fill-regions.py`, **49/49 passing**. Checks R1-R6 as specified, plus R7 added after the executor surfaced the flatness gap; the parser and its synthetic fixtures |
 | T014 registration | Added to `tests/speckit-pro/suite-manifest.json` at layer 4; `run-all.py --layer 4` dispatches it and its count appears in the layer total |
 | T015 docs reference | `pnpm --dir docs-site reference:generate` → `reference/tests.md` changed, +5/-3. Generated, never hand-edited |
 | T017-T028 implementation-plan | 1637 lines. 7 marker pairs, flat, each once; inventory and body agree both ways; 4 phase anchors; 2 scripts (canonical block + its own) |
@@ -1386,6 +1386,57 @@ at the density this repository actually uses. The plan's estimate assumed a ters
 style than the surrounding code. Recorded rather than smoothed over, because the
 same assumption will misprice the next test module too.
 
+#### A seventh check, added because the executor surfaced a gap instead of filling it silently
+
+The Layer 4 executor reported that **flatness is required by the contract and
+enforced by nothing.** It declined to invent a check for it, which was the right
+call — it was given six checks to implement, and quietly adding a seventh would
+have hidden the finding inside a green result.
+
+The gap is real and was verified rather than taken on trust. Flatness is a MUST
+in two places (`contracts/slot-inventory-contract.md:27` "Regions are **flat**.
+No pair may enclose another", and `spec.md:468`), and **no check could see a
+violation**: a nested pair is still exactly one START and one END with START
+before END, so R2 accepts it, and its slot is still named in the inventory, so R3
+accepts it too. Both directions of the agreement hold on a document that breaks
+the contract.
+
+**R7 was added.** It walks the markers in document order as a depth counter and
+reports a START opening inside an open region, or an END closing nothing. Its
+fixture asserts the point directly: the same document that fails R7 **passes R2
+and R3**, which is what makes R7 non-redundant rather than merely plausible.
+
+Writing that fixture caught a mistake of my own worth recording. The first
+attempt nested an *undocumented* slot, and R3 fired — correctly, because an
+undocumented region is R3's defect. The fixture proved R3 worked and said nothing
+about R7. It now moves a **documented** region inside another, which is the only
+shape that isolates the property.
+
+The harm R7 closes is the silent one this whole convention exists to prevent:
+filling the outer slot deletes the inner region entirely — content, anchors, and
+markers — while the inventory goes on naming it, and the later fill of the inner
+slot then finds nothing to replace and does nothing. Neither event is reported by
+anything else.
+
+Module is **49/49**, and R7 reports clean against both shipped templates. Added
+before slice 2 rather than after, because slice 2 authors two more templates
+against this contract and would otherwise author them unchecked.
+
+#### Two smaller executor findings, both correct
+
+**The task list under-specified the attribution literals.** T011 named seven;
+`contracts/slot-inventory-contract.md` prohibits eight — the eighth being the
+licence-text reference, `UPSTREAM-NOTICE.md`, which is the one most easily missed
+because it is a bare filename rather than a labelled field. The executor followed
+the **contract**, which governs. T011's list was incomplete, and the check is
+correctly stricter than the task that specified it.
+
+**Per-template checks iterate the four identifiers the floor names**, not every
+shipped catalog entry. That is the right scope: binding ART-003, ART-004, and
+ART-005's future templates to a fill-region contract their own designs never read
+would be a reach this feature has no standing to make. Conditioning stays on
+catalog `status`, never on file presence.
+
 #### Reviewability, measured after implementation — the projection was wrong by ~3x
 
 **The number in every earlier block on this page is a projection. This one is a
@@ -1397,9 +1448,9 @@ reports safe with authority.
 |---|---|---|---|
 | `implementation-plan.html` authored | ~320 | **1179** | 3.7x |
 | `spec-explainer.html` authored | ~185 | **315** | 1.7x |
-| `test-artifact-fill-regions.py` | ~250 | **1127** | 4.5x |
+| `test-artifact-fill-regions.py` | ~250 | **1211** | 4.8x |
 | **Slice 1 template lines** | ~505 | **1494** | |
-| **Slice 1 inclusive of the module** | ~755 | **2621** | |
+| **Slice 1 inclusive of the module** | ~755 | **2705** | |
 
 Authored lines are each file's total minus its two embedded canonical regions
 (458 lines), which a reviewer never reads and which validation compares byte for
