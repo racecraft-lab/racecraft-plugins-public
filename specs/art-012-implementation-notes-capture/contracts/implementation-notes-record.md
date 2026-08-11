@@ -43,6 +43,19 @@ Separated from the preceding content by one blank line.
 
 `<TASK_ID>` is the task's ID exactly as `tasks.md` writes it, for example `T007`.
 
+**One entry per task, even when several tasks share a dispatch.** An
+orchestrator may batch related tasks into a single worker — three one-line edits
+to three files, or two edits to one file — and that is a sensible dispatch
+choice. It does not change the record: each task named in `tasks.md` gets its
+own entry under its own ID. A compound heading such as `### T007+T008+T009` is a
+defect, because SC-001 requires every attempt to be identifiable by task ID and
+a reader cannot recover three IDs from one heading. When one worker covers
+several tasks, split its reported text across their entries, or repeat the
+shared text under each, whichever reads more honestly.
+
+This case was found by running the contract against itself: the first run of
+this feature batched two dispatches that way and produced two compound headings.
+
 ## Worked example
 
 ```text

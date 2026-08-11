@@ -24,24 +24,14 @@ clarification was written into the file rather than only into this report, on
 the grounds that a note reaching only the orchestrator reaches nobody reading
 the document.
 
-### T003+T004
+### T003
 
-**Deviations/Edge cases/Surprises:** The Layer 4 test's section extractor
-terminates on any heading at or shallower than the section's own level when
-that heading sits outside a code fence. The record's own literals
-`# Implementation Notes: <SPEC_ID>` and `### <TASK_ID>` are exactly that shape,
-so writing either at line start unfenced truncates the Phase 7 section and
-fails every check after it, with no error naming the cause. Both had to go
-inside fences; this nearly cost about 25 checks silently. The lifecycle heading
-is `#### Phase 7 Setup:` rather than a Phase 7 "Step 0" because the document
-already owns a global `Step 0.x` namespace and a live cross-reference to
-`Step 0.9` sits inside Phase 7's own pseudocode, which a second Step 0 would
-have collided with. Two checks forced unbroken clauses because the regex
-gap-fillers are `[^.]` and no period may fall inside an asserted span. The
-FR-006 instruction went into the Path A block rather than the shared Step 3c
-template, appended after the existing anchor line so the anchor text survives
-verbatim for the mirroring task. No batched-delivery contradiction exists
-inside this file; the stale claim lived only in agent-teams-integration.md.
+**Deviations/Edge cases/Surprises:** The Layer 4 test's section extractor terminates on any heading at or shallower than the section's own level when that heading sits outside a code fence. The record's own literals `# Implementation Notes: <SPEC_ID>` and `### <TASK_ID>` are exactly that shape, so writing either at line start unfenced truncates the Phase 7 section and fails every check after it, with no error naming the cause. Both had to go inside fences; this nearly cost about 25 checks silently. The lifecycle heading is `#### Phase 7 Setup:` rather than a Phase 7 "Step 0" because the document already owns a global `Step 0.x` namespace and a live cross-reference to `Step 0.9` sits inside Phase 7's own pseudocode, which a second Step 0 would have collided with.
+
+### T004
+
+**Deviations/Edge cases/Surprises:** Two checks forced unbroken clauses because the regex gap-fillers are `[^.]` and no period may fall inside an asserted span. The FR-006 instruction went into the Path A block rather than the shared Step 3c template, because Path B subagents and foreground singletons already return their output to the orchestrator directly, so a send-to-the-lead obligation would be meaningless there. It was appended after the existing anchor line so the anchor text survives verbatim for the mirroring task. The append instruction was placed at both `Wait` lines individually rather than only at the safety-net convergence, because an instruction sitting at the convergence reads as "wait for the barrier, then append", which is the batching FR-003 forbids. No batched-delivery contradiction exists inside this file; the stale claim lived only in agent-teams-integration.md.
+
 
 ### T005
 
@@ -93,7 +83,15 @@ the intended edit against all four targets and confirming 10 of 10 turn green.
 
 **Deviations/Edge cases/Surprises:** None
 
-### T007+T008+T009
+### T007
+
+**Deviations/Edge cases/Surprises:** None
+
+### T008
+
+**Deviations/Edge cases/Surprises:** None
+
+### T009
 
 **Deviations/Edge cases/Surprises:** None
 

@@ -573,6 +573,13 @@ appended after everything already in the file:
 `<TASK_ID>` is the task's ID exactly as the task list writes it, and one blank
 line separates the entry from the content before it.
 
+**One entry per task, even when several tasks share one dispatch.** Batching
+related tasks into a single worker is a sensible dispatch choice and does not
+change the record: each task named in the task list gets its own entry under its
+own ID. Never write a compound heading such as `### T007+T008+T009`, because a
+reader cannot recover three task IDs from one heading. Split the worker's
+reported text across those entries, or repeat the shared text under each.
+
 **Per-arrival cadence, one rule for every dispatch shape.** Append on the turn
 that attempt's own result reaches the parent session, before dispatching further
 work. The bounded `wait_agent` loop already delivers each worker's summary

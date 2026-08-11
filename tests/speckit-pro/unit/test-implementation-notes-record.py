@@ -139,6 +139,14 @@ def _phase_execution_checks(target: str, platform: str) -> tuple[tuple[str, str,
          r"(?i)rewritten,\s*reordered,\s*or removed"),
         (f"{platform} appends a further entry on a re-run", target, "regex",
          r"(?i)(further|another|additional|new|second) entry under the same task ID"),
+        # Item 4b — one entry per task even when a dispatch batches several.
+        # SC-001 requires every attempt to be identifiable by task ID, which a
+        # compound heading defeats. Found by running this contract against the
+        # run that built it: two batched dispatches produced compound headings.
+        (f"{platform} requires one entry per task when a dispatch batches several",
+         target, "regex", r"(?i)one entry per task[^.]{0,60}dispatch"),
+        (f"{platform} forbids a compound task-ID heading", target, "regex",
+         r"(?i)(never|not|no)[^.]{0,40}compound heading"),
         # Item 5 — fail-open.
         (f"{platform} states the failure path is fail-open", target, "regex", r"(?i)fail[- ]open"),
         (f"{platform} sends the gap to the workflow file", target, "contains", WORKFLOW_FILE),
