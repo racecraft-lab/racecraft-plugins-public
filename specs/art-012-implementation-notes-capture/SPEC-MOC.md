@@ -37,5 +37,6 @@ the slice artifacts in the body below.
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/state-management.md](checklists/state-management.md)
 - [.process/implementation-notes.md](.process/implementation-notes.md)
+- [.process/uat-results.md](.process/uat-results.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->
