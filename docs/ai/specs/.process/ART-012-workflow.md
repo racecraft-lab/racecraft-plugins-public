@@ -39,8 +39,8 @@ captured during scoping.
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 14 tasks, 5 [P], route one-navigable-PR |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 pass — 13 findings, 0 CRITICAL, all remediated in 1 loop |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory, composite 0.95 ≥ 0.90 → proceed (re-emitted after the 2026-08-11 amendment; supersedes 0.93) |
-| Implement | `/speckit-implement` | 🔄 In Progress | Stage `implement` resolved 2026-08-11; T001 amendment cascade complete |
-| Post | Post-Implementation | ⏳ Pending | Runs after G7 |
+| Implement | `/speckit-implement` | ✅ Complete | G7 pass — 14 tasks, 6 production files, full suite 7305/7305 above the 7226 baseline |
+| Post | Post-Implementation | 🔄 In Progress | Runs the canonical closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -1153,9 +1153,9 @@ Before starting any task:
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
 | 2 - Foundational | T001 | 1/1 | Amendment cascade + budget verification |
-| 3 - User Story 1 | T002, T003, T004, T005, T014 | 0/5 | |
-| 4 - User Story 2 | T006, T007, T008, T009 | 0/4 | |
-| 5 - Polish | T010, T011, T012, T013 | 0/4 | |
+| 3 - User Story 1 | T002, T003, T004, T005, T014 | 5/5 | Record-contract group GREEN on both platforms |
+| 4 - User Story 2 | T006, T007, T008, T009 | 4/4 | Reporting field in all three authored templates |
+| 5 - Polish | T010, T011, T012, T013 | 4/4 | G7 pass: 7305/7305, above the 7226 baseline |
 
 ### Phase 7 — Findings From Dogfooding The Contract
 
@@ -1219,6 +1219,20 @@ phase-execution documents this feature edits are the same documents that
 instruct future parallel dispatch, and `isolation: "worktree"` is already in
 their `[P]` template — the orchestrator did not follow its own guidance here.
 
+**5b. The orchestrator's own agent lifecycle cost the record one narrative, and
+the contract handled it exactly as designed.** The executor for T007 through
+T009 was reaped before it delivered its task summary. Its work was already
+verified and committed, so nothing was lost from the change itself, but its
+entry reads `None` because the field could not be read from a summary that
+never arrived. That is the contract's prescribed value for an executor whose
+field is absent or unreadable, and it is the right value: the record honestly
+says nothing was reported rather than inventing content or leaving a hole.
+
+It is also a real cost, and it was the orchestrator's doing rather than the
+executor's. Reaping an agent is a lifecycle decision; requesting its summary
+first is a one-message step. The lesson for anyone operating this loop is that
+the two orderings are not equivalent, and only one of them preserves the record.
+
 **6. Contract item 4 of the reporting-field contract was falsified by this
 spec's own FR-006, and caught before the check was authored.** The item asserted
 that exactly three files under `speckit-pro/` carry a Task Result block. FR-006
@@ -1233,6 +1247,45 @@ sentence. Measured 12 tree-wide, 5 scoped by substring, 3 scoped and anchored.
 This is an argument for authoring a test against the tree the feature actually
 produces rather than against the tree that existed when the contract was
 written.
+
+### T013 — PR Packet Inputs, And Projection Against Actual
+
+**Packet sources present and current.** `plan.md` carries its six-step Review
+Order, `spec.md` carries the Reviewability Budget and the PR Review Packet
+Requirements, and `quickstart.md` carries six scenarios including the T012
+evidence. Traceability holds: every requirement FR-001 through FR-006 and every
+criterion SC-001 through SC-006 is mapped onto tasks in `tasks.md`.
+
+**Scope held exactly.** The production diff touches the six declared files and
+no others. A diff of `speckit-pro/` filtered against the declared six returns
+nothing outside them.
+
+**Projection against actual, reported rather than quietly dropped.**
+
+| | Projected | Actual |
+|---|---|---|
+| Production files | 6 | 6 |
+| Reviewable LOC | 190 | 269 added, 9 removed |
+
+The actual added-line count exceeds the estimator's projection by about 40%.
+This is not a budget breach and no exception is owed: the warn line is 400 and
+the block line is 800, so 269 sits comfortably inside both, and the file count
+matched exactly. It is recorded because a reader comparing the PR against the
+spec will notice the difference, and the honest explanation is that
+`estimate-spec-size` is a forward heuristic keyed on counts of stories, files
+and requirements, never a measurement of the prose those requirements turn into.
+Research R11 already says the estimator does not model this surface; this is the
+same limitation seen from the other end, after the fact.
+
+The distribution is also uneven in a way the per-file projection could not
+anticipate. The two orchestration documents carry 211 of the 269 added lines
+between them, because the append contract is prose that states a rule and its
+four fail-open properties, while the three reporting-contract files needed one
+template line each.
+
+**Rollback.** The feature has no flag and needs none. Reverting the six
+production file edits removes it completely and leaves no state behind, because
+the record is exhaust that nothing depends on to make progress.
 
 ### T012 — A Fourth Generated Surface, Previously Unhit
 

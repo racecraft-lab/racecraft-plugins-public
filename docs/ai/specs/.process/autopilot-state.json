@@ -4,7 +4,7 @@
   "feature_dir": "specs/art-012-implementation-notes-capture",
   "branch": "art-012-implementation-notes-capture",
   "status": "in_progress",
-  "active_step": "Phase 7: Implement (T001-T014)",
+  "active_step": "Post-Implementation",
   "updated_at": "2026-08-11T00:00:00Z",
   "stage": "implement",
   "prior_run_note": "completed_archived",
@@ -98,43 +98,43 @@
     },
     {
       "step": "Phase 7: Implement - T002 record-contract test (RED)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - T003+T004 phase-execution.md lifecycle + append contract",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - T005 phase-execution-codex.md mirror",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - T014 agent-teams-integration.md stale-claim correction",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - T006 reporting-field assertions (RED)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - T007+T008+T009 reporting field, three files",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - T010 regenerate payloads/fixtures/proofs",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - T011 regenerate docs test reference",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - T012 full verification gate + quickstart",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - T013 PR packet input verification",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -221,6 +221,13 @@
     "G6": {
       "pass": true,
       "reason": "0 CRITICAL/HIGH findings"
+    },
+    "G7": {
+      "pass": true,
+      "passed": 7305,
+      "total": 7305,
+      "baseline": 7226,
+      "reason": "full suite 7305/7305, above the recorded 7226 baseline"
     }
   },
   "plan_reviewability": {
