@@ -84,3 +84,7 @@ is also green from birth by design, being an invariant guard against a future
 fourth copy rather than a red-first assertion, so the RED evidence covers items
 1 through 3 only. Satisfiability was proven rather than assumed by simulating
 the intended edit against all four targets and confirming 10 of 10 turn green.
+
+### T010
+
+**Deviations/Edge cases/Surprises:** None

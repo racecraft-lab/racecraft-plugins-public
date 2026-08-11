@@ -72,10 +72,23 @@ choice for inter-phase dependencies.
 
 When the orchestrator needs to fan out N parallel subagents (consensus,
 post-impl tracks, `[P]` tasks), it spawns all N **in a single assistant
-message**, each with `run_in_background: true`. The next user message
-returns all N results together. This is the canonical Anthropic pattern
-for parallel subagent dispatch — and it's why all our parallel sites
-spawn within one tool turn rather than serially.
+message**, each with `run_in_background: true`. This is the canonical
+Anthropic pattern for parallel subagent dispatch — and it's why all our
+parallel sites spawn within one tool turn rather than serially.
+
+Spawning together buys concurrency, not synchronized arrival. Results
+come back **per completion**. Per [Anthropic's sub-agent docs](https://code.claude.com/docs/en/sub-agents#run-subagents-in-foreground-or-background):
+
+> *"A background subagent's results reach Claude as a completion
+> notification in a later turn."*
+
+That is one notification per subagent, on whatever turn that subagent
+finishes. A site may still choose to hold every result until the last
+one lands — consensus collection and the post-implementation tracks
+both do, and both are right to. The correction is that such a barrier
+is a policy the site chose, not a delivery guarantee the platform hands
+it. Work belonging to a single result (appending that task's
+implementation-notes entry) runs when that result arrives.
 
 ### Agent Teams have different blocking semantics
 
@@ -114,7 +127,10 @@ will use:
    foreground (sequential); within each phase, consensus or task fan-out
    uses background batching.
 2. **Within-message batching** — N background subagents in one tool
-   turn → N parallel concurrent contexts → all results in next message.
+   turn → N parallel concurrent contexts. The batching is in the
+   dispatch, not the arrival: results come back per completion, one
+   notification per subagent as each finishes ([sub-agent docs](https://code.claude.com/docs/en/sub-agents#run-subagents-in-foreground-or-background);
+   see §Within-message parallelism above).
 3. **Persistent teams** — created by the lead, live independently of
    the lead's foreground/background subagent state, sync at task
    completion boundaries.
@@ -325,7 +341,9 @@ Every Agent Teams use site in speckit-pro MUST:
 2. **Provide a parallel-subagents fallback** that delivers the same
    contract (same parallelism, same outputs). Sequential fallback is
    never acceptable — the whole point of these workstreams is
-   parallelism.
+   parallelism. Because both paths deliver results per completion
+   rather than as a batch, "same contract" means both append
+   per-arrival work as each result lands; it does not mean both wait.
 3. **Reuse existing plugin subagent definitions as teammate types** per
    [Anthropic's "Use subagent definitions for teammates"](https://code.claude.com/docs/en/agent-teams#use-subagent-definitions-for-teammates).
    Do not duplicate agent files; teammates inherit `tools` and `model`
@@ -511,11 +529,38 @@ For each phase group in tasks.md (US1, US2, …):
     Each teammate claims a [P] task; teammates message each other when
       they need to coordinate (e.g., "I'm changing the auth interface,
       heads up")
-    Lead waits for all to complete, merges results into COMPLETED_TASKS
+    Each teammate is told at dispatch to send its complete
+      `## Task Result: <TASK_ID>` block to the lead on completion
+    Lead appends each teammate's implementation-notes entry as that
+      report message arrives (reports land per completion, not as one
+      batch), never on a bare idle notification
+    Lead merges results into COMPLETED_TASKS once the whole run is in
     Clean up the team before the next parallel run
   For singleton runs:
     Spawn one implement-executor subagent (no team needed)
 ```
+
+**The idle notification is a signal, not a payload.** A teammate is an
+independent session whose final output does not return to the lead, so
+its automatic idle notification carries no task summary. That is why the
+dispatch line above exists: teammates are told to *send* their
+`## Task Result: <TASK_ID>` block, and the lead appends on the arrival
+of that report. Appending on the bare idle signal instead writes a
+structurally empty entry, and double-counts the attempt if the teammate
+is later woken and finishes. The batched-subagent path has no equivalent
+gap — a background subagent's result returns to its parent directly — so
+this obligation is Agent-Teams-only, and without it the two paths would
+produce different records from the same run.
+
+**Arrival cadence:** the lead is notified per completion, not once for
+the whole run. Per [Anthropic's Agent Teams docs](https://code.claude.com/docs/en/agent-teams#context-and-communication):
+*"when a teammate finishes and stops, it automatically notifies the
+lead"*, and *"the lead doesn't need to poll for updates."* So the lead
+appends each task's implementation-notes entry on the turn that
+teammate's notification lands, rather than holding every entry to the
+end of the run. The two barriers here are deliberate and stay: the
+merge into `COMPLETED_TASKS` and the TYPECHECK + UNIT_TEST check below
+both need the whole run finished before they mean anything.
 
 **Why teams here adds value over batched subagents:**
 `[P]` tasks may need light coordination ("did anyone register the new

@@ -155,10 +155,12 @@ For your assigned task:
 - path/to/file (created/modified)
 
 **Errors:** None (or describe)
+
+**Deviations/Edge cases/Surprises:** None (or describe)
 ```
 
 For every externally-sourced fact in your output, include the grounding evidence note: `Capability path: <need> -> <selected capability/source>; Evidence: <citations or local file refs>; Confidence: <high|medium|low>`. If nothing grounds a claim, say so instead of asserting it.
 
 ### Terminal Deliverable
 
-Your final message MUST be the complete structured Task Result above (TDD Evidence / Test commands used / Files created/modified / Errors). Never end a turn on an intermediate thought or plan — the harness returns your last message as your result, and a half-finished thought forces the orchestrator to resume you. When your remaining turn budget is nearly exhausted, STOP expanding scope and emit the complete report from the work done so far, stating precisely what is done and what remains, marking any unverified claims as unverified.
+Your final message MUST be the complete structured Task Result above (TDD Evidence / Test commands used / Files created/modified / Errors / Deviations/Edge cases/Surprises). Never end a turn on an intermediate thought or plan — the harness returns your last message as your result, and a half-finished thought forces the orchestrator to resume you. When your remaining turn budget is nearly exhausted, STOP expanding scope and emit the complete report from the work done so far, stating precisely what is done and what remains, marking any unverified claims as unverified.

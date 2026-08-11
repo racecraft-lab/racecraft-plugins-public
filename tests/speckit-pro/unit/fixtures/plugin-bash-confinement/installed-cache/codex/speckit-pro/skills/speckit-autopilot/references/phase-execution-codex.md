@@ -529,9 +529,103 @@ plan-declared file/test scope, tasks, reviewability evidence, and hazard route.
 Missing, malformed, stale, or fingerprint-mismatched marker plans are
 correctness stops at marker-required boundaries.
 
+**Open the implementation-notes record before the first task is dispatched.**
+This is parent-session work, not delegated work, and it runs ahead of the first
+`spawn_agent` call rather than lazily on the first append: a phase interrupted
+before any task completes, and a spec carrying no implementation tasks at all,
+must both still leave a header-only record behind. The record is one file per
+spec at `<FEATURE_DIR>/.process/implementation-notes.md`, beside the rest of the
+feature's autopilot exhaust. Its first line is the header, written exactly once:
+
+```text
+# Implementation Notes: <SPEC_ID>
+```
+
+- **Create if absent**: create the `.process/` directory too when that directory
+  is also absent, then create the file with the header as its only content. An
+  absent directory is a thing to create, never a failure to report.
+- **Never truncate**: when the record is already there, leave every existing
+  byte as found and append after the existing content. Do not write a second
+  header. This is the resumed-phase case, and the entries already in the file
+  are the whole point of the record.
+- **Check the record's own path** in the working copy this run executes in,
+  never a state file, an index, or anything carried over from the session that
+  wrote the record, so a resume in a fresh session behaves exactly like a resume
+  in the session that started the run.
+- **Fail-open**: when creation fails, record a gap in
+  `docs/ai/specs/.process/<SPEC_ID>-workflow.md` naming this setup step and the
+  operation that failed, do not retry, and carry on into dispatch. Task and
+  phase outcomes are exactly what they would have been had the write succeeded.
+
 Use `implement-executor` for test and implementation tasks unless Step 0.11
 found a more specific project implementation agent. The parent session dispatches
 all workers directly; subagents do not spawn nested agents.
+
+Every attempt the parent session dispatched gets one entry in that record,
+appended after everything already in the file:
+
+```text
+### <TASK_ID>
+
+**Deviations/Edge cases/Surprises:** <reported text, or None>
+```
+
+`<TASK_ID>` is the task's ID exactly as the task list writes it, and one blank
+line separates the entry from the content before it.
+
+**Per-arrival cadence, one rule for every dispatch shape.** Append on the turn
+that attempt's own result reaches the parent session, before dispatching further
+work. The bounded `wait_agent` loop already delivers each worker's summary
+individually, so a member of a cap-bounded `[P]` wave does not wait for the rest
+of its wave: its entry is written when that summary is consumed, not when the
+wave reaches its TYPECHECK and UNIT_TEST safety net. Never batched to phase end,
+and never deferred to a wave boundary.
+
+**Never append on a bare idle or liveness signal.** A status update, a
+`wait_agent` timeout, or a worker that stops without delivering its task summary
+is not a result: it is a cue to keep polling, or to ask for the summary, and not
+a cue to write an entry. Appending on one writes an empty entry, then
+double-counts the attempt once that worker's real summary arrives.
+
+**Additive only.** No entry already written is rewritten, reordered, or removed,
+and the record is never read back to update a counter or to find a previous
+entry. The serial re-run after a regression appends a further entry under the
+same task ID and leaves the earlier one exactly as written; two entries sharing
+a task ID are correct history, not a defect. Document order is append order, so
+position is the record's only ordering signal, and where two entries share a
+task ID the earlier-positioned one is the earlier attempt.
+
+**Fail-open on an append too.** A failed append is recorded as a gap in the
+run's workflow file, never in the implementation-notes record that just failed,
+and the gap names the attempt and the operation that failed so a reader can tell
+which write was lost. The write is not retried: one attempt, then the gap. The
+fallback is exactly one level deep, so when the workflow file is itself the
+unwritable path, surface that second failure in the run's own output and carry
+on, with no third destination and no recursion. The blast radius is one entry:
+every other attempt in the same wave is still appended as its own result
+arrives, and the next dispatch still happens. A reporting-content problem is not
+a write failure, so a missing or unreadable field produces a `None` entry rather
+than a gap.
+
+**Three append call sites in the routing, not one.** The routing branch decides
+what an entry carries, which is a different axis from the dispatch shape that
+decides when it is written:
+
+| Route | Task-result block? | Entry value |
+| ----- | ------------------ | ----------- |
+| `implement-executor` or project implementation agent | Yes | Reported text, or `None` |
+| Research routed to `domain-researcher` | No | `None` |
+| Verification run orchestrator-direct | No | `None` |
+
+Appending only on the executor branch leaves research and verification attempts
+silently missing from the record.
+
+**The literal `None`** is the single value for every nothing-to-report case: the
+executor reported `None`, the executor omitted the field, the field cannot be
+read out of the summary it returned, or the route emits no task-result block at
+all. No distinct marker and no route field, because a second value would make
+the record unreadable as a count of what was reported the moment a wave contains
+one research task.
 
 When a current `pr_marker_plan` is available, execute, checkpoint, and record
 Phase 7 evidence in marker order. Run each marker's tasks according to
