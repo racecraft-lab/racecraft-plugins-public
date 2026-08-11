@@ -136,7 +136,7 @@
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite",
@@ -347,5 +347,16 @@
         "measured": 2621
       }
     }
+  },
+  "code_review_slice_1": {
+    "commit_reviewed": "a493e444",
+    "findings": {
+      "blocking": 1,
+      "major": 0,
+      "minor": 2
+    },
+    "all_fixed_before_pr": true,
+    "blocking": "feature-id and feature-name sit inside the feature-header fill region while the export routine reads both for the pinned Feature: header line, and a comment asserted they were chrome outside every region. Every export from a filled artifact would have emitted a hollow 'Feature:  '. No check could see it.",
+    "resolution": "Comment corrected and split; the preservation obligation recorded in the template's slot inventory and in spec.md Dependencies; featureLine() degrades to the single h1 and then to a pinned 'Feature: not named in this document', with that wording pinned in the export-payload contract."
   }
 }

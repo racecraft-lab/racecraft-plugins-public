@@ -56,6 +56,31 @@ identifier is what lets a reader who has left the document find the spec again,
 which is the obligation `SPA-CONTRACT.md` states as naming "the artifact, the
 spec, and the location the conclusion attaches to".
 
+### When a fill deletes what the header line reads
+
+The `Feature:` line is read from live state, and in `implementation-plan` and
+`module-map` the elements it reads sit **inside** the `feature-header` region —
+necessarily, because the export may carry nothing the reader could not see
+(FR-023) and a template may not hold feature-specific content outside a slot
+(FR-015). The authoring agent is therefore obliged to preserve those identifiers,
+and that obligation is recorded in `spec.md` *Dependencies*.
+
+A template MUST NOT assume the obligation was met. If the identifiers are gone it
+falls back to the document's single top-level heading, which FR-035b requires a
+filled region to keep, and only if that is absent too does the line read:
+
+```text
+Feature: not named in this document
+```
+
+Pinned here for the same reason as the empty-state bodies: three templates would
+otherwise each invent their own phrasing for it. **The fallback is a backstop for
+a violated obligation, not a licence to violate it** — a heading is not
+guaranteed to carry the feature's identifier, so a fill that drops the ids still
+loses information. What the fallback prevents is the silent form: a hollow
+`Feature:  ` that names nothing while reading exactly like a line that named
+something.
+
 ## The item reference line
 
 Each item an export carries is named by four coordinates read from live state —

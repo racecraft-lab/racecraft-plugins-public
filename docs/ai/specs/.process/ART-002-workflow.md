@@ -1422,6 +1422,30 @@ Module is **49/49**, and R7 reports clean against both shipped templates. Added
 before slice 2 rather than after, because slice 2 authors two more templates
 against this contract and would otherwise author them unchecked.
 
+**Independently verified against the real templates, and the provenance recorded
+straight.** The code reviewer was explicit that it did *not* find this — its
+non-vacuity probing covered R1-R6 and none of its seven mutations happened to
+nest a pair — and declined to have it recorded as independent discovery. It ran
+verification instead, against the **shipped** templates rather than the synthetic
+gallery, which is stronger evidence than the fixture:
+
+| mutation of `implementation-plan.html` | fires |
+|---|---|
+| the whole documented `risk-register` region moved inside `mockups` | **R7 only** — R1-R6 all pass |
+| a stray `FILL:phases:END` before its START | R1, R2, R7 |
+| baseline, unmutated | nothing |
+
+The first row is the claim, reproduced on real bytes: a nested pair is one START
+and one END in the right order with its slot named in the inventory, so both
+directions of the agreement accept a document that breaks the contract, and R7 is
+the only check that sees it.
+
+**One R7 edge the reviewer checked rather than assumed, and it is covered.** An
+END whose slot name differs from the currently open one decrements and pops
+without complaint, so R7 alone would miss that particular disorder — but R2
+reports both slots' malformed sequences, and a duplicated same-slot pair is
+likewise R2's. No gap, and R7 is deliberately not widened to duplicate R2's job.
+
 #### Two smaller executor findings, both correct
 
 **The task list under-specified the attribution literals.** T011 named seven;
@@ -1624,7 +1648,7 @@ table below is slice 1's, and the second table after it is slice 2's.
 | Post: Doctor Extension Check | ✅ Complete | All seven extensions present and `enabled: true` in `.specify/extensions/.registry` — archive 1.1.0, checkpoint, git, retrospective, speckit-utils, verify, verify-tasks. No post-implementation item needs a skip marker |
 | Post: Verify Implementation | ✅ Complete | Full suite 7289/7289. Every authored file independently re-verified by an orchestrator-owned parse rather than accepted from an agent's self-report |
 | Post: Verify Tasks Phantom Check | ✅ Complete | 46 tasks marked complete (T001–T046); every file those tasks claim to create exists on disk. Zero phantom completions |
-| Post: Code Review | ⏳ Pending | Independent reviewer dispatched against `a493e444` with the contracts as its standard; findings land here before PR creation |
+| Post: Code Review | ✅ Complete | **1 blocking, 0 major, 2 minor**, all three fixed before PR creation. Findings and remediation below |
 | Post: Integration Suite | ✅ Complete | **7289/7289** (L1 1447, L4 5656, L5 186) against a 7226 pre-change baseline. **+63**, so the count grew as G7 requires |
 | Post: Reviewability Diff Gate | ✅ Complete | **`block`, size-only** — `reviewable LOC 1494 exceeds block threshold 800`, no correctness finding. Recorded in full above with the disposition to continue |
 | Post: Self-Review | ✅ Complete | Four answers below |
@@ -1633,6 +1657,90 @@ table below is slice 1's, and the second table after it is slice 2's.
 | Post: PR Creation | ⏳ Pending | Blocked on Code Review returning |
 | Post: Review Remediation | ⏳ Pending | |
 | Post: Retrospective | ⏳ Pending | |
+
+#### Code review — one blocking finding, and it was a real one
+
+**The independent reviewer found a defect my own verification missed, and the
+reason it was missed is worth more than the fix.** I checked the inside/outside
+boundary by walking the *authored elements* in the ledger — brand mark, export
+controls, status region, fallback field, the two export notices, the
+sample-content notice. Every one was correctly placed. What I never checked was
+the other direction: **elements the script reads by identifier**. The ledger
+enumerates what the template writes, not what its behavior depends on, and the
+defect lived in the gap between those two.
+
+**The finding.** `implementation-plan.html` carries `id="feature-id"` and
+`id="feature-name"` **inside** the `feature-header` fill region, and the export
+routine reads both to build the pinned `Feature:` header line. A comment three
+lines above their declaration asserted they were "template chrome, outside every
+fill region, so a fill cannot remove it" — false for both. The reviewer
+demonstrated it rather than asserting it, filling the region with plausible
+agent-authored markup and reading the header back:
+
+```text
+shipped  ->  Feature: NIMBUS-101 Offline Draft Sync
+filled   ->  Feature:
+```
+
+Every export from every filled artifact — prompt and Markdown, populated and
+empty — would have lost the feature's identity, with **nothing failing**. R1-R7
+and all 487 gallery checks pass with the defect present, because no check
+inspects inside/outside placement. This is exactly the silent failure FR-011
+names, arriving by a route the ledger did not cover.
+
+**Why the fix is an obligation rather than a relocation.** Moving the identifiers
+out is not available. Three requirements close every other option: the export must
+name the feature; FR-023 forbids exporting any value the reader could not see,
+ruling out a hidden attribute that survives the fill; and FR-015 forbids
+feature-specific content outside a slot, ruling out a duplicate in chrome, which
+would survive still reading `NIMBUS-101` — the exact harm that rule exists to
+prevent. The feature's identity is rendered content, so it lives where rendered
+content lives, and the fill inherits the obligation to keep it findable.
+
+**What landed:**
+
+1. The false comment is corrected and split honestly — two of the four
+   identifiers genuinely are chrome, two are not, and the comment now says which
+   and why.
+2. The obligation is recorded where ART-007 will actually read it: the template's
+   **own slot inventory** line for `feature-header`, and `spec.md` *Dependencies*
+   beside the anchor-integrity and document-title handoffs.
+3. `featureLine()` degrades honestly instead of silently — falling back to the
+   document's single top-level heading, which FR-035b requires a filled region to
+   keep, and only then to a pinned `Feature: not named in this document`. The
+   wording is pinned in `contracts/export-payload-contract.md` rather than
+   invented per template, and the contract states plainly that the fallback is a
+   backstop for a violated obligation, never a licence to violate it.
+
+Verified against the reviewer's own mutation: ids intact →
+`Feature: NIMBUS-101 Offline Draft Sync`; ids dropped →
+`Feature: Telemetry Replay Buffer`; ids and heading both gone →
+`Feature: not named in this document`.
+
+**Minor 1 — the same root cause, smaller blast radius.** `labelOf` queried `h3`
+specifically, an undocumented structural dependency on region contents. A fill
+titling its items with an `h4` would have degraded every export's item line to the
+anchor slug, restating the anchor where FR-023 requires the item's visible label.
+Now accepts any heading rank, and the `phases` inventory line states the heading
+obligation.
+
+**Minor 2 — two stale docstrings** in the Layer 4 module still describing a
+gallery that ships no template, plus an ordinal the executor flagged on its way
+out ("seventh literal" for what is the eighth). All corrected.
+
+**What the reviewer checked and found clean**, recorded because a finding list
+without an account of coverage cannot be told from a shallow pass: every pinned
+export string compared character by character against the contract; the item
+reference line's two spaces; FR-016a control construction (no markup string
+assembled anywhere in either authored script); anchor resolution by identifier
+lookup only; the whitespace rule; disclosure independence and the absence of the
+upstream accordion trap; colour never the sole carrier across severity, deferred
+edges, the persistence node, and outbox states; a full prohibited-construct sweep
+of both files; the spec-explainer read-only claim; every other inside/outside
+placement; the manifest's two-line diff; and byte-identical payload mirrors. It
+also ran seven mutation probes against the shipped templates to prove R1-R6 are
+not vacuous, and an adversarial pass on the three rewritten gallery tests
+concluding they are genuinely stronger and weaker in no reachable state.
 
 #### Self-Review — the four answers
 
@@ -1653,8 +1761,10 @@ specified verbatim and covered by runbook steps A9 and A11. No
 **Requirements matched.** 58 coverage rows in `tasks.md`, 54 citing at least one
 slice-1 task, and **zero rows citing no task at all**. No orphan requirement.
 
-**Follow-up and tidiness.** Four deferrals, each naming its follow-up and each
-landing in the pull request body: US3 and US4 → slice 2; region filling → ART-007;
+**Follow-up and tidiness.** Five deferrals, each naming its follow-up and each
+landing in the pull request body — the fifth added by the code review, the
+obligation on ART-007 to preserve the two identifiers every export reads. The
+other four: US3 and US4 → slice 2; region filling → ART-007;
 anchor integrity in a filled artifact → ART-007; document-title rewrite on fill →
 ART-007. **No silent deferrals.** No leftover scaffolding or debug code in the
 diff. One tidiness lapse of my own, caught and corrected: a temporary file written

@@ -8,9 +8,9 @@
   Copyright (c) 2026 Anthropic PBC
 -->
 <!--
-  Slot: feature-header | Fills: the feature identifier, its name, and the one-line intent | Source: spec.md
+  Slot: feature-header | Fills: the feature identifier, its name, and the one-line intent; keep id="feature-id" on the identifier and id="feature-name" on the name, because every export reads them to name the feature | Source: spec.md
   Slot: plan-stats | Fills: phase count, file count, projected size, and the flag the work sits behind | Source: plan.md
-  Slot: phases | Fills: one entry per planned phase, each with its own anchor | Source: plan.md
+  Slot: phases | Fills: one entry per planned phase, each with its own anchor and a heading of any rank carrying the phase's visible label | Source: plan.md
   Slot: data-flow | Fills: the drawing of the data path, its caption, and its text equivalent | Source: plan.md
   Slot: mockups | Fills: the interface sketches the plan commits to, one panel each | Source: design-concept.md
   Slot: risk-register | Fills: one row per risk, its severity, and its mitigation | Source: plan.md, research.md
@@ -1408,6 +1408,22 @@ h1 {
   /* Template chrome, outside every fill region, so a fill cannot remove it. */
   var PHASE_LIST_ID = 'plan-phase-list';
   var ARTIFACT_TITLE_ID = 'artifact-title';
+
+  /* These two are the opposite case and the comment above does NOT cover them:
+     both live INSIDE the feature-header region, so a fill replaces them.
+
+     That is not a misplacement to correct by moving them out. It is forced. The
+     export must name the feature (export-payload-contract.md), it may carry
+     nothing the reader cannot see in the rendered document (FR-023), and a
+     template may not carry feature-specific content outside a slot (FR-015).
+     Those three together mean the only place the feature's identity can be read
+     from is inside the region that renders it.
+
+     So the authoring agent must preserve both identifiers when it fills
+     feature-header. That obligation is recorded where the agent will actually
+     read it: this file's own slot inventory, and spec.md *Dependencies* beside
+     the anchor-integrity and document-title obligations. featureLine() below
+     degrades honestly rather than silently if a fill drops them anyway. */
   var FEATURE_ID_ID = 'feature-id';
   var FEATURE_NAME_ID = 'feature-name';
 
@@ -1440,9 +1456,35 @@ h1 {
   }
 
   function labelOf(anchor) {
-    var heading = anchor.querySelector('h3');
-    var source = heading ? heading.textContent : anchor.id;
+    /* Any heading rank, not h3 alone. The slot inventory promises each phase an
+       anchor and a heading; it does not promise a rank, and FR-035b lets a
+       filled region choose the ranks it keeps. Reading only h3 would silently
+       degrade an export's item line to the anchor slug for a fill that titled
+       its items with an h4 — restating the anchor where FR-023 requires the
+       item's own visible label. */
+    var heading = anchor.querySelector('h1, h2, h3, h4, h5, h6');
+    var source = heading ? heading.textContent : anchor.textContent || anchor.id;
     return source.replace(/\s+/g, ' ').trim();
+  }
+
+  function featureLine() {
+    /* The one line whose inputs a fill can delete — see FEATURE_ID_ID above.
+       If the identifiers survive, this is exactly the pinned form. If they do
+       not, fall back to the document's single top-level heading, which FR-035b
+       requires a filled region to keep, rather than emitting a hollow
+       "Feature:" that names nothing and reads as though it did. In the shipped
+       document the two are the same element, so the fallback and the primary
+       path agree by construction. */
+    var identifier = textOf(FEATURE_ID_ID);
+    var name = textOf(FEATURE_NAME_ID);
+    if (!name) {
+      var heading = document.querySelector('h1');
+      name = heading ? heading.textContent.replace(/\s+/g, ' ').trim() : '';
+    }
+    if (!identifier && !name) {
+      return 'Feature: not named in this document';
+    }
+    return 'Feature: ' + (identifier ? identifier + ' ' + name : name).trim();
   }
 
   /* An item carries a note when its field holds at least one non-whitespace
@@ -1538,7 +1580,7 @@ h1 {
   function payload(kind, notes) {
     var lines = [
       'Artifact: ' + textOf(ARTIFACT_TITLE_ID),
-      'Feature: ' + textOf(FEATURE_ID_ID) + ' ' + textOf(FEATURE_NAME_ID),
+      featureLine(),
       ''
     ];
     if (notes.length === 0) {

@@ -10,11 +10,13 @@ checks below are what keep that inventory true.
 
 **Every check function takes the gallery root as a parameter**, for the reason
 the gallery scanner records at length: a check that reads ``GALLERY_ROOT`` for
-itself can only ever run against the source tree, and the source tree ships no
-template until the first catalog entry flips. Every per-template check would pass
-by vacuity and prove nothing. Taking the root as an argument is what lets the
-fixture cases exercise the same functions against synthetic galleries built in a
-temporary directory, where the templates they describe actually exist.
+itself can only ever run against the source tree. That mattered acutely while
+this module landed, when the tree shipped no template at all and every
+per-template check would have passed by vacuity; it still matters now that two
+templates ship, because the other two entries read ``planned`` until slice 2
+flips them. Taking the root as an argument is what lets the fixture cases
+exercise the same functions against synthetic galleries built in a temporary
+directory, where every template they describe exists.
 
 **The per-template checks are gated on the catalog's ``status``, never on file
 presence.** The contract binds the two in both directions — a file exists if and
@@ -143,7 +145,7 @@ SOURCE_ARTIFACTS: tuple[str, ...] = (
 # scanner's group G, which owns the header itself. They are pinned again here
 # rather than imported because that module's filename is not an importable
 # identifier, and reaching it through ``importlib`` would couple two Layer 4
-# modules for seven short strings. R4 uses them in one direction only — the
+# modules for eight short strings. R4 uses them in one direction only — the
 # inventory must carry **none** of them — so drift here can make R4 stricter or
 # laxer about what an inventory may say, and can never change what a header must
 # contain.
@@ -156,7 +158,7 @@ UPSTREAM_REPOSITORY = "anthropics/html-effectiveness"
 UPSTREAM_COPYRIGHT = "Copyright (c) 2026 Anthropic PBC"
 UPSTREAM_LICENSE_REFERENCE = "UPSTREAM-NOTICE.md"
 
-# The licence-text reference is the seventh literal the contract names and the
+# The licence-text reference is the eighth literal the contract names and the
 # one most easily left out, because it is a bare filename rather than a labelled
 # field. It belongs here for the same reason as the rest: an inventory mentioning
 # it would be read as the attribution header, and the artifact would then fail
@@ -965,10 +967,13 @@ class FillRegionFixtureCase(unittest.TestCase):
 class FillRegionFixtureTests(FillRegionFixtureCase):
     """Every check against a synthetic gallery carrying exactly one defect.
 
-    These exist because the real gallery ships no template while this module
-    lands. A check exercised only against the real tree would pass by vacuity and
-    prove nothing, and there would be no way to make this module genuinely fail
-    before the first template is authored.
+    These were written while the real gallery shipped no template at all, when a
+    check exercised only against the real tree would have passed by vacuity and
+    there would have been no way to make this module genuinely fail. Two
+    templates ship now, so the real-gallery cases do bind — but the fixtures stay
+    the only place a *defect* is exercised, because the shipped templates are
+    required to be correct and a suite that only ever sees correct input cannot
+    tell a working check from one that reports nothing.
     """
 
     # -- the accept path --

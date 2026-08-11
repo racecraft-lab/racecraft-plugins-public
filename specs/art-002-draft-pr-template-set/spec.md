@@ -1172,6 +1172,43 @@ here rather than left in a scoping document a reviewer may not open.
   triplicated across three templates that have no shared runtime, against a
   reviewability budget already warning.
 
+- **Handed to ART-007 — the two identifiers every export reads to name the
+  feature.** `implementation-plan` carries `id="feature-id"` and
+  `id="feature-name"` on the identifier and the name inside its `feature-header`
+  region, and its export routine reads both to build the pinned
+  `Feature: <feature id> <feature name>` line. Both sit **inside** a fill region,
+  so a fill replaces them, and ART-007 MUST preserve both identifiers on the
+  elements carrying the real feature's identifier and name.
+
+  **This placement is forced, not an oversight, which is why it becomes an
+  obligation rather than a defect to move.** Three requirements close every other
+  option. The export must name the feature
+  (`contracts/export-payload-contract.md`). FR-023 forbids an export carrying any
+  value the reader could not see in the rendered document, which rules out a
+  hidden attribute the fill would survive. And FR-015 forbids a template carrying
+  feature-specific content outside a slot, which rules out a duplicate of the
+  feature's name in chrome — it would survive the fill still reading `NIMBUS-101`,
+  the exact harm that rule exists to prevent. The feature's identity is rendered
+  content, so it lives where rendered content lives, and the fill that replaces
+  it inherits the obligation to keep it findable.
+
+  Discovered in review rather than in planning, and worth recording as such: the
+  shipped template passes every check in this specification with the identifiers
+  in place, so nothing would have failed. A fill that dropped them would have
+  produced `Feature:  ` on every export — prompt and Markdown, populated and
+  empty — with no signal anywhere. That is precisely the silent inside/outside
+  failure FR-011 names, arriving through a route the inside/outside ledger did not
+  cover, because the ledger enumerates *authored elements* and these are
+  *identifiers the behavior reads*.
+
+  The template degrades honestly rather than silently if a fill drops them
+  anyway: the export falls back to the document's single top-level heading, which
+  FR-035b requires a filled region to keep, and emits
+  `Feature: not named in this document` only if that is absent too. The fallback
+  is a backstop for a violated obligation, never a licence to violate it — a
+  heading is not guaranteed to carry the identifier, so a fill that drops the ids
+  still loses information.
+
 - **Handed to ART-007 — the document title.** FR-035a requires each template to
   carry a page title naming the artifact and the feature. A title is head
   metadata, so no fill region encloses it and no fill replaces it. ART-007 MUST
