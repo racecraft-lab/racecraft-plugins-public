@@ -39,9 +39,9 @@ captured during scoping.
 | Tasks | `/speckit-tasks` | ✅ Complete | **G5 PASS** — 79 tasks, 9 phases, 45 `[P]`, 48/48 FR coverage. Slice boundary gated at T048. Atomicity classifier returned `one-navigable-PR`, disagreeing with the recorded split; surfaced and resolved in favour of FR-040 |
 | Analyze | `/speckit-analyze` | ✅ Complete | **G6 PASS** — 14 findings (0 critical, 4 high, 8 medium, 2 low), all 14 remediated, 0 remaining. `count-markers` reports 0 findings, 0 gaps, 0 clarifications. Three placement and traceability defects would have survived into filled artifacts silently; one roadmap budget-block staleness is left recorded rather than edited, because the setup-mode gate parses that block |
 | Confidence Gate | G6.5 | ✅ Complete | **PASS, advisory** — composite **0.93** against a 0.90 threshold, `recommended_action: proceed`. Lowest criterion is risk assessment at 0.86, and deliberately so. Terminal step of the `plan` stage |
-| Implement | `/speckit-implement` | 🔄 In Progress | Slice 1 — T001–T047, PR 1 into `main`. Setup T001–T006 complete; baseline 7226/7226 confirmed against the recorded G0 |
-| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout, slice 1 |
-| Implement Slice 2 | `/speckit-implement` | ⏳ Pending | Slice 2 — T048–T079, PR 2 stacked on the slice-1 branch |
+| Implement | `/speckit-implement` | ✅ Complete | Slice 1 — T001–T047 all done. **PR #425** open into `main`, ready for review. Full suite 7294/7294 |
+| Post | Post-Implementation | ✅ Complete | Canonical 12-item closeout, slice 1. Code review found 1 blocking defect, fixed before PR creation |
+| Implement Slice 2 | `/speckit-implement` | 🔄 In Progress | Slice 2 — T048 done, branch cut at `2889e7c6`; T049–T079 under way |
 | Post Slice 2 | Post-Implementation | ⏳ Pending | Canonical 12-item closeout, slice 2 |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -1654,9 +1654,9 @@ table below is slice 1's, and the second table after it is slice 2's.
 | Post: Self-Review | ✅ Complete | Four answers below |
 | Post: UAT Runbook Generation | ✅ Complete | Skeleton helper `generate-uat-skeleton` is **deferred** on the installed runner and was not invoked. A committed source-derived runbook exists at `specs/art-002-draft-pr-template-set/.process/uat-runbook.md` and is reused, so the `uat-runbook-author` agent was correctly not spawned — it rewrites a skeleton, and there is no skeleton |
 | Post: PR Body Generation | ✅ Complete | Body written and validated: exactly one non-empty ```release-note fence, `compose-release-notes.py --validate-pr` exit 0 |
-| Post: PR Creation | ⏳ Pending | Blocked on Code Review returning |
-| Post: Review Remediation | ⏳ Pending | |
-| Post: Retrospective | ⏳ Pending | |
+| Post: PR Creation | ✅ Complete | **PR #425**, `art-002-draft-pr-template-set` → `main`, opened ready for review (not draft). Title and release-note fence both validated through the live gate before creation |
+| Post: Review Remediation | ⏭️ Skipped | Deferred to the operator; remediating PR 1 after T048 would move PR 2's base. The pre-creation code review already ran and its one blocking finding was fixed **before** the pull request opened, so this row covers only post-creation reviewer comments |
+| Post: Retrospective | ⏳ Pending | Runs once at the end of the stage, after PR 2 |
 
 #### Code review — one blocking finding, and it was a real one
 

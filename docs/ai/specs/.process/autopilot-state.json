@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/ART-002-workflow.md",
   "spec_id": "ART-002",
   "feature_dir": "specs/art-002-draft-pr-template-set",
-  "branch": "art-002-draft-pr-template-set",
+  "branch": "art-002-draft-pr-template-set-slice-2",
   "status": "in_progress",
-  "active_step": "Phase 7: Implement",
+  "active_step": "Phase 7: Implement Slice 2",
   "updated_at": "2026-08-10T00:00:00Z",
   "stage": "implement",
   "prior_run_note": "completed_archived",
@@ -120,7 +120,7 @@
     },
     {
       "step": "Phase 7: Implement",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -160,11 +160,11 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "skipped: deferred to the operator; remediating PR 1 after T048 would move PR 2's base"
     },
     {
       "step": "Post: Retrospective",
@@ -172,7 +172,7 @@
     },
     {
       "step": "Phase 7: Implement Slice 2",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Doctor Extension Check (slice 2)",
@@ -292,7 +292,9 @@
     "pr1": {
       "head": "art-002-draft-pr-template-set",
       "base": "main",
-      "tasks": "T001-T047"
+      "tasks": "T001-T047",
+      "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/425",
+      "opened_from_commit": "2889e7c6f28064d91ec0bed7c1295a1b84e45881"
     },
     "pr2": {
       "head": "art-002-draft-pr-template-set-slice-2",
