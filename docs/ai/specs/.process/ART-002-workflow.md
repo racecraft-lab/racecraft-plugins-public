@@ -39,7 +39,7 @@ captured during scoping.
 | Tasks | `/speckit-tasks` | ✅ Complete | **G5 PASS** — 79 tasks, 9 phases, 45 `[P]`, 48/48 FR coverage. Slice boundary gated at T048. Atomicity classifier returned `one-navigable-PR`, disagreeing with the recorded split; surfaced and resolved in favour of FR-040 |
 | Analyze | `/speckit-analyze` | ✅ Complete | **G6 PASS** — 14 findings (0 critical, 4 high, 8 medium, 2 low), all 14 remediated, 0 remaining. `count-markers` reports 0 findings, 0 gaps, 0 clarifications. Three placement and traceability defects would have survived into filled artifacts silently; one roadmap budget-block staleness is left recorded rather than edited, because the setup-mode gate parses that block |
 | Confidence Gate | G6.5 | ✅ Complete | **PASS, advisory** — composite **0.93** against a 0.90 threshold, `recommended_action: proceed`. Lowest criterion is risk assessment at 0.86, and deliberately so. Terminal step of the `plan` stage |
-| Implement | `/speckit-implement` | ⏳ Pending | Slice 1 — T001–T047, PR 1 into `main` |
+| Implement | `/speckit-implement` | 🔄 In Progress | Slice 1 — T001–T047, PR 1 into `main`. Setup T001–T006 complete; baseline 7226/7226 confirmed against the recorded G0 |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout, slice 1 |
 | Implement Slice 2 | `/speckit-implement` | ⏳ Pending | Slice 2 — T048–T079, PR 2 stacked on the slice-1 branch |
 | Post Slice 2 | Post-Implementation | ⏳ Pending | Canonical 12-item closeout, slice 2 |
@@ -1000,10 +1000,18 @@ When checklist identifies `[Gap]` items:
 | **User Stories Covered** | 4 — US1 13 tasks, US2 11, US3 11, US4 14 |
 | **FR coverage** | 48/48, verified programmatically against a `## Requirement Coverage` table; no row cites a non-existent task ID |
 
-**Slice boundary.** Slice 1 is T001-T047. **T048 gates it**: confirm PR 1 merged,
-cut the slice-2 branch from merged main, verify the catalog already carries slice
-1's two flips and the test file is present and unmodified. No task in the last
-three phases may start before T048 passes. Slice 2 is T049-T079.
+**Slice boundary.** Slice 1 is T001-T047. **T048 gates it**: with PR 1 open and
+green, cut the slice-2 branch from the tip of the slice-1 branch — the exact
+commit PR 1 was opened from — and verify the catalog already carries slice 1's
+two flips and the test file is present and unmodified. Nothing is merged here.
+No task in the last three phases may start before T048 passes, and no commit
+after it may land on the slice-1 branch. Slice 2 is T049-T079.
+
+> **Amended 2026-08-11 with the stacked delivery.** This paragraph read
+> "confirm PR 1 merged, cut the slice-2 branch from merged main" when tasks were
+> generated. That was the merge-gated shape FR-040 superseded, and it is
+> unreachable in one implementation run because agents never merge pull requests
+> here. The membership of each slice is unchanged; only the base moved.
 
 **Three judgement calls the executor surfaced, all correct.**
 
@@ -1317,7 +1325,9 @@ Before starting any task:
   an undefined custom property fails silently).
 - Prohibited upstream constructs are dropped, never ported.
 - Slice discipline: complete and verify US1+US2 (slice 1) before touching
-  US3/US4. Slice 2 ships from a fresh branch after slice 1's PR merges.
+  US3/US4. Slice 2 ships from a branch cut from the slice-1 branch once PR 1 is
+  open, and stacks on it — PR 2's base is that branch, never `main`, and no
+  merge happens inside this run.
 - After any tracked .md/.py/.sh change under tests/speckit-pro/, run
   pnpm --dir docs-site reference:generate (deps installed in this worktree).
 - Shipped-byte changes (gallery files) require release-artifact
@@ -1332,10 +1342,74 @@ Before starting any task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation (L4 test RED) | | | |
-| 2 - Slice 1: US1 + US2 | | | |
-| 3 - Slice 1 closeout (PR 1) | | | |
-| 4 - Slice 2: US3 + US4 (PR 2) | | | |
+| 1 - Setup | T001-T006 | 🔄 | Baseline, canonical blocks, sample feature pinned |
+| 2 - Foundation (L4 test RED) | T007-T016 | ⏳ | |
+| 3 - Slice 1: US1 + US2 | T017-T040 | ⏳ | |
+| 4 - Slice 1 closeout (PR 1) | T041-T047 | ⏳ | |
+| 5 - Slice boundary | T048 | ⏳ | Branch cut, nothing merged |
+| 6 - Slice 2: US3 + US4 | T049-T073 | ⏳ | |
+| 7 - Slice 2 closeout (PR 2) | T074-T079 | ⏳ | |
+
+#### Phase 1 setup evidence
+
+| Task | Result |
+|---|---|
+| T001 pre-change baseline | `python3 tests/speckit-pro/run-all.py` → **7226/7226 passed**, zero failures (L1 1447, L4 5593, L5 186). Identical to the G0 baseline recorded at Phase 0, so there is **no drift** and the recorded baseline is preserved rather than recomputed, per the resume protocol. Every later count grows against it |
+| T002 docs-site dependencies | Already installed in this worktree; `docs-site/node_modules` present. T048 switches branches inside this same worktree, so T076 inherits it |
+| T003 sample feature pinned | `NIMBUS-101 — Offline Draft Sync`. The scoped grep `grep -rl 'NIMBUS' docs/ai/specs/ specs/ \| grep -v 'ART-002\|art-002'` returns nothing, so the identifier sits outside every namespace this repository's roadmap uses |
+| T004 canonical blocks extracted | `BRAND-KIT` 318 lines / 11268 bytes from `brand-kit.css`; `GALLERY-HEAD` 140 lines / 8958 bytes from `theme-toggle.html`, markers included. `git status --short speckit-pro/artifact-gallery/` clean — neither source file was modified |
+| T005 payload build reading | `speckit-pro/speckit_pro_runner/gates/payloads.py:303` and `:320` list `artifact-gallery` as a **whole directory name** in the copy list for both the Claude and Codex payloads, not as an enumerated file list. A new `templates/` subdirectory is therefore carried with no source change. T005's premise holds and no escalation is required |
+| T006 reviewability checkpoint | Recorded below |
+
+#### T006 reviewability checkpoint, recorded before implementation
+
+| Field | Value |
+|---|---|
+| Reviewable template LOC per slice | ~530, measured, against a 400 warn and an 800 block |
+| Greenfield allowance | **Not applied** — the gate reports `greenfield: false` |
+| Production files | 3 (against a 6-file warn) |
+| Authored files | 6 in slice 1, 3 in slice 2 (against a 15-file warn) |
+| Slice 1's validation module | ~250 lines, counted separately on the harness surface; counted in, slice 1 is ~755 and still below the 800 block |
+| Primary surfaces | 1 |
+| Verdict | **warn**, passing, zero blockers |
+| `Reviewability-Exception` pragma | **None claimed** |
+
+**Split decision.** Two stacked pull requests. Slice 1 is US1 and US2 on
+`art-002-draft-pr-template-set`, targeting `main`. Slice 2 is US3 and US4 on
+`art-002-draft-pr-template-set-slice-2`, cut from the slice-1 branch at the
+commit PR 1 was opened from and targeting **that branch**, never `main`.
+
+**FR-040's supersession, recorded with its reason rather than the old shape
+being silently dropped.** FR-040 originally required two *sequential* pull
+requests, the second branching from a `main` that already contained the first.
+That shape is unreachable in one implementation run, because agents never merge
+pull requests in this repository, so the merge gate would stall the run at T048
+by construction. Stacking is the only shape that satisfies all three governing
+constraints at once, and it is also the only shape that satisfies `research.md`
+D8 without a merge: the Layer 4 validation module lands whole in slice 1, and six
+slice-2 tasks state their acceptance against checks that module implements, so a
+slice 2 cut from `main` before slice 1 merged could not evaluate them. The
+slices were never independent. The two-slice split, its membership, its per-slice
+budget, and D8's single-module design are all unchanged.
+
+#### Pre-flight on both pull request titles (run early, so neither creation fails late)
+
+Both titles were validated through the **live** release-readiness gate before any
+template was authored, because a title rejection at `gh pr create` time is
+expensive and entirely avoidable.
+
+| PR | Title | Base | Gate |
+|---|---|---|---|
+| 1 | `feat(speckit-pro): add the implementation-plan and spec-explainer gallery templates` | `main` | `status: ok`, exit 0 |
+| 2 | `feat(speckit-pro): add the code-approaches and module-map gallery templates` | `art-002-draft-pr-template-set` | `status: ok`, exit 0 |
+
+PR 2's base is deliberately included in the check. A non-`main` base ref is the
+one input this stacked delivery introduces that the original plan never exercised,
+and the gate accepts it.
+
+The release-note fence shape was validated the same way:
+`compose-release-notes.py --validate-pr` returns
+`{"outcome":"release_note_validation_passed","reason":"valid release-note fence"}`.
 
 ---
 
