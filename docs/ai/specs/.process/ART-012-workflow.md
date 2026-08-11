@@ -40,7 +40,7 @@ captured during scoping.
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 pass — 13 findings, 0 CRITICAL, all remediated in 1 loop |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory, composite 0.95 ≥ 0.90 → proceed (re-emitted after the 2026-08-11 amendment; supersedes 0.93) |
 | Implement | `/speckit-implement` | ✅ Complete | G7 pass — 14 tasks, 6 production files, full suite 7305/7305 above the 7226 baseline |
-| Post | Post-Implementation | 🔄 In Progress | Runs the canonical closeout |
+| Post | Post-Implementation | ✅ Complete | PR #426 open, CI green on 10 checks, audit findings remediated |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -1247,6 +1247,76 @@ sentence. Measured 12 tree-wide, 5 scoped by substring, 3 scoped and anchored.
 This is an argument for authoring a test against the tree the feature actually
 produces rather than against the tree that existed when the contract was
 written.
+
+### Retrospective
+
+**What this run shipped.** A durable per-task implementation-notes record, a
+combined reporting field in all three authored Task Result templates, and a
+correction to three stale claims that had misled the spec's own earlier draft.
+Six production files, 269 added production lines, a new Layer 4 test, and PR
+#426. Full suite 7309 of 7309 against a 7226 baseline; CI green on ten checks;
+Copilot review returned no blocking issues.
+
+**The single most valuable thing that happened.** An adversarial audit run after
+implementation found eight defects, five of them real and four introduced by
+this run. Two would have shipped: the quickstart's verification command returned
+five files where it asserted three, and the record this feature produced violated
+the contract this feature ships. Neither was catchable by the test suite, because
+both artifacts sit outside what the tests assert. A green suite was not evidence
+of a correct change, and the only thing that found them was a reviewer told to
+assume the work was wrong.
+
+**What kept going wrong, in one sentence.** Every significant defect in this run
+was a *cascade failure*: a decision was made correctly in one artifact and never
+propagated to the others that depended on it.
+
+| Decision | Landed in | Missed |
+|---|---|---|
+| Operator amendment to 190/6/9 | spec.md, workflow | plan.md, tasks.md, quickstart, research |
+| FR-006 makes other files name the block | contract, test | quickstart Scenario 1 |
+| Corpus digests are a generated surface | the fix itself | plan.md Declared File Operations |
+| FR-006 reachability paragraph | agent-teams Use site 3 | contradicted the paragraph below it |
+
+The pattern is not carelessness at the point of change; each individual edit was
+correct. It is that no mechanism ties an artifact to the artifacts that quote it.
+The Layer 4 test catches drift between the two platform documents because someone
+wrote an assertion for it. Nothing catches drift between a contract and the
+quickstart that demonstrates it.
+
+**Concrete follow-ups, in priority order.**
+
+1. **The Layer 6 Codex qualification corpus has no regeneration tooling.** It
+   binds a sha256 over agent source bytes through a four-level chain, fails with
+   a message naming a digest rather than a file, and is not covered by
+   `refresh-release-artifacts.py`. The next person to edit any agent definition
+   hits it with no precedent to follow. Either extend the refresh script or
+   document the manual recompute.
+2. **A spec-artifact consistency check would have caught three of the four
+   cascades above.** The numbers in `plan.md`, `tasks.md` and `quickstart.md`
+   are quotations of `spec.md`; a cheap check that they agree would have turned
+   T001's manual archaeology into a gate.
+3. **The record contract still has no answer for a late-arriving fuller
+   summary.** Additive-only forbids revising an entry, and a second entry falsely
+   implies a second attempt. Left open deliberately; the fixes cost more than the
+   problem.
+
+**What worked, and is worth repeating.** Writing the test first and having it
+return a complete inventory of every asserted string made the three writer
+dispatches deterministic rather than exploratory, and that inventory caught two
+traps (the fenced-heading truncation and the internal-period spans) before they
+cost anything. Requiring a task summary rather than accepting an idle signal
+produced findings no idle notification would have carried, twice. And dogfooding
+the contract was not decorative: it produced the compound-heading defect, the
+orchestrator-direct narrative loss, and the late-summary gap, none of which were
+visible from reading the contract.
+
+**What I would do differently.** Dispatch parallel writers with
+`isolation: "worktree"`. Three agents shared one worktree, which made every
+`git diff` scope check unsound and cost two executors real effort reasoning about
+diffs that were not theirs. The instruction to verify scope by file count was
+mine and was wrong. Also: request an executor's summary before reaping it. One
+executor was stopped before reporting, and its entry reads `None` for no better
+reason than my own lifecycle ordering.
 
 ### Self-Review (mandatory, non-gating)
 

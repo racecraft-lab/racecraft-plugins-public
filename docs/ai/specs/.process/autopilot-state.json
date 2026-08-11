@@ -3,8 +3,8 @@
   "spec_id": "ART-012",
   "feature_dir": "specs/art-012-implementation-notes-capture",
   "branch": "art-012-implementation-notes-capture",
-  "status": "in_progress",
-  "active_step": "Post: Review Remediation",
+  "status": "completed",
+  "active_step": null,
   "updated_at": "2026-08-11T00:00:00Z",
   "stage": "implement",
   "prior_run_note": "completed_archived",
@@ -142,15 +142,15 @@
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite",
@@ -178,11 +178,11 @@
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "test_baseline_g0": {
@@ -318,5 +318,21 @@
     "packet_id": "art-012",
     "packet_validation": "passed",
     "pr_blocked": false
+  },
+  "post_implementation_audit": {
+    "method": "6 auditors/reviewers, adversarial refutation, workflow wf_85510f0d-cf3",
+    "raw_findings": 8,
+    "real_defects": 5,
+    "introduced_by_this_run": 4,
+    "would_have_shipped": [
+      "quickstart Scenario 1 returned 5 files where it asserts 3",
+      "the produced record used compound task-ID headings, violating its own contract"
+    ]
+  },
+  "final_gate": {
+    "suite": "7309/7309",
+    "baseline": 7226,
+    "ci": "10 checks pass",
+    "copilot_review": "no blocking issues"
   }
 }
