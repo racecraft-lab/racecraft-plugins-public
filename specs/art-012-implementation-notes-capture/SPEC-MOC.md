@@ -9,11 +9,11 @@ up: "[HTML artifacts and staged review roadmap](../../docs/ai/specs/html-artifac
 related: []                  # list of relative markdown links; carried, unenforced in v1
 status: "In Progress"        # carried, unenforced in v1
 rank:                        # carried, unenforced in v1
-spec_id: "ART-002"           # namespace-matches the containing directory
+spec_id: "ART-012"           # namespace-matches the containing directory
 structureVersion: 1          # keep in sync with the lint scripts' hardcoded literal
 ---
 
-# ART-002 — Map of Content
+# ART-012 — Map of Content
 
 Navigation map for this spec. The `up:` link above points to the parent technical
 roadmap. As this spec is decomposed into slices, add relative Markdown links to
@@ -31,12 +31,12 @@ the slice artifacts in the body below.
 - [tasks.md](tasks.md)
 - [data-model.md](data-model.md)
 - [research.md](research.md)
-- [contracts/export-payload-contract.md](contracts/export-payload-contract.md)
-- [contracts/slot-inventory-contract.md](contracts/slot-inventory-contract.md)
-- [checklists/accessibility.md](checklists/accessibility.md)
+- [contracts/implementation-notes-record.md](contracts/implementation-notes-record.md)
+- [contracts/task-result-reporting-field.md](contracts/task-result-reporting-field.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)
-- [checklists/security.md](checklists/security.md)
-- [checklists/ux.md](checklists/ux.md)
-- [.process/uat-runbook.md](.process/uat-runbook.md)
+- [checklists/state-management.md](checklists/state-management.md)
+- [.process/implementation-notes.md](.process/implementation-notes.md)
+- [.process/uat-results.md](.process/uat-results.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

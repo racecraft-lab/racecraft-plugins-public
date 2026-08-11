@@ -326,11 +326,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 6927,
+              "byte_count": 7018,
               "kind": "agent",
               "path": "agents/implement-executor.md",
               "required": true,
-              "sha256": "e5ae7f409d4c487e06790afa6b2b8609407a3a31f9dd8fc0358e21b72893d921",
+              "sha256": "b1db1366cd22a7cc8e95750ef5a4a6f97228930ca2c4fa047c316cdae134a348",
               "source_path": "speckit-pro/agents/implement-executor.md",
               "transform": "none"
             },
@@ -659,11 +659,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 38544,
+              "byte_count": 41820,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/agent-teams-integration.md",
               "required": true,
-              "sha256": "8e61606021945921f29dde0b6fa69a4a220a9beae98e6742442940ca3eb9713f",
+              "sha256": "318c1242793a8a43d870c45f54f11b764d07f68d524104f44fc0f2863e5a725a",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
               "transform": "none"
             },
@@ -713,11 +713,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 56092,
+              "byte_count": 62891,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution.md",
               "required": true,
-              "sha256": "133883df077f283b2da789db41785ff141ee9b18f6a12edd3285a7962d70496f",
+              "sha256": "0e1440d471bfe268b531aa2c0c4849a39fd6531eb8faa8ab434ba16876716cb0",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
               "transform": "none"
             },
@@ -758,11 +758,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 4465,
+              "byte_count": 4522,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/tdd-protocol.md",
               "required": true,
-              "sha256": "c86c3c35849688a43618ff4f17ae2404db1c620167f046b884319092eb67975a",
+              "sha256": "8adb64da32985b74ede38b442c5caa3886c802b1151f631053e42e64eebf2dd6",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md",
               "transform": "none"
             },
@@ -1345,11 +1345,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 6927,
+              "byte_count": 7018,
               "kind": "agent",
               "path": "agents/implement-executor.md",
               "required": true,
-              "sha256": "e5ae7f409d4c487e06790afa6b2b8609407a3a31f9dd8fc0358e21b72893d921",
+              "sha256": "b1db1366cd22a7cc8e95750ef5a4a6f97228930ca2c4fa047c316cdae134a348",
               "source_path": "speckit-pro/agents/implement-executor.md",
               "transform": "none"
             },
@@ -1678,11 +1678,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 38544,
+              "byte_count": 41820,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/agent-teams-integration.md",
               "required": true,
-              "sha256": "8e61606021945921f29dde0b6fa69a4a220a9beae98e6742442940ca3eb9713f",
+              "sha256": "318c1242793a8a43d870c45f54f11b764d07f68d524104f44fc0f2863e5a725a",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
               "transform": "none"
             },
@@ -1732,11 +1732,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 56092,
+              "byte_count": 62891,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution.md",
               "required": true,
-              "sha256": "133883df077f283b2da789db41785ff141ee9b18f6a12edd3285a7962d70496f",
+              "sha256": "0e1440d471bfe268b531aa2c0c4849a39fd6531eb8faa8ab434ba16876716cb0",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
               "transform": "none"
             },
@@ -1777,11 +1777,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 4465,
+              "byte_count": 4522,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/tdd-protocol.md",
               "required": true,
-              "sha256": "c86c3c35849688a43618ff4f17ae2404db1c620167f046b884319092eb67975a",
+              "sha256": "8adb64da32985b74ede38b442c5caa3886c802b1151f631053e42e64eebf2dd6",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md",
               "transform": "none"
             },
@@ -2264,7 +2264,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "7933b2bf675a8f56a196a0dc79655d8ede43ca3a8d86075fad05ed335b1696fc",
+          "file_tree_hash": "b9b40bf0c5f8935ddb1e8d7289b0c688aa670c6ffc3c49b41b0f181ff6889982",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2457,11 +2457,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 5794,
+              "byte_count": 5851,
               "kind": "agent",
               "path": "codex-agents/implement-executor.toml",
               "required": true,
-              "sha256": "7a95370adcc423203d64c1440e9f0a17af3a1a9ca2a3a6262fa6ceb8efab6148",
+              "sha256": "b4bbd4a690defd926ec2a71b3c3bbba016c683a4f98db013ce2993220d5f427b",
               "source_path": "speckit-pro/codex-agents/implement-executor.toml",
               "transform": "none"
             },
@@ -2745,11 +2745,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 38544,
+              "byte_count": 41820,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/agent-teams-integration.md",
               "required": true,
-              "sha256": "8e61606021945921f29dde0b6fa69a4a220a9beae98e6742442940ca3eb9713f",
+              "sha256": "318c1242793a8a43d870c45f54f11b764d07f68d524104f44fc0f2863e5a725a",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
               "transform": "none"
             },
@@ -2808,20 +2808,20 @@
               "transform": "none"
             },
             {
-              "byte_count": 32509,
+              "byte_count": 38347,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution-codex.md",
               "required": true,
-              "sha256": "2b60b041ff08468d16f902b14fc8e969848b099ccc796cf5863b556cd77076b5",
+              "sha256": "302b5af312780e7d6affed45e309389b158755bb71c0b2befaa8c86819b29f84",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
               "transform": "path_normalization"
             },
             {
-              "byte_count": 56092,
+              "byte_count": 62891,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution.md",
               "required": true,
-              "sha256": "133883df077f283b2da789db41785ff141ee9b18f6a12edd3285a7962d70496f",
+              "sha256": "0e1440d471bfe268b531aa2c0c4849a39fd6531eb8faa8ab434ba16876716cb0",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
               "transform": "none"
             },
@@ -2889,11 +2889,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 4465,
+              "byte_count": 4522,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/tdd-protocol.md",
               "required": true,
-              "sha256": "c86c3c35849688a43618ff4f17ae2404db1c620167f046b884319092eb67975a",
+              "sha256": "8adb64da32985b74ede38b442c5caa3886c802b1151f631053e42e64eebf2dd6",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md",
               "transform": "none"
             },
@@ -3629,11 +3629,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 5794,
+              "byte_count": 5851,
               "kind": "agent",
               "path": "codex-agents/implement-executor.toml",
               "required": true,
-              "sha256": "7a95370adcc423203d64c1440e9f0a17af3a1a9ca2a3a6262fa6ceb8efab6148",
+              "sha256": "b4bbd4a690defd926ec2a71b3c3bbba016c683a4f98db013ce2993220d5f427b",
               "source_path": "speckit-pro/codex-agents/implement-executor.toml",
               "transform": "none"
             },
@@ -3917,11 +3917,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 38544,
+              "byte_count": 41820,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/agent-teams-integration.md",
               "required": true,
-              "sha256": "8e61606021945921f29dde0b6fa69a4a220a9beae98e6742442940ca3eb9713f",
+              "sha256": "318c1242793a8a43d870c45f54f11b764d07f68d524104f44fc0f2863e5a725a",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md",
               "transform": "none"
             },
@@ -3980,20 +3980,20 @@
               "transform": "none"
             },
             {
-              "byte_count": 32509,
+              "byte_count": 38347,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution-codex.md",
               "required": true,
-              "sha256": "2b60b041ff08468d16f902b14fc8e969848b099ccc796cf5863b556cd77076b5",
+              "sha256": "302b5af312780e7d6affed45e309389b158755bb71c0b2befaa8c86819b29f84",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
               "transform": "path_normalization"
             },
             {
-              "byte_count": 56092,
+              "byte_count": 62891,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution.md",
               "required": true,
-              "sha256": "133883df077f283b2da789db41785ff141ee9b18f6a12edd3285a7962d70496f",
+              "sha256": "0e1440d471bfe268b531aa2c0c4849a39fd6531eb8faa8ab434ba16876716cb0",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
               "transform": "none"
             },
@@ -4061,11 +4061,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 4465,
+              "byte_count": 4522,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/tdd-protocol.md",
               "required": true,
-              "sha256": "c86c3c35849688a43618ff4f17ae2404db1c620167f046b884319092eb67975a",
+              "sha256": "8adb64da32985b74ede38b442c5caa3886c802b1151f631053e42e64eebf2dd6",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/tdd-protocol.md",
               "transform": "none"
             },
@@ -4620,7 +4620,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "7010ec053a587e6525da7534ba5391eae598e496093c58cad00b07a7c02748d8",
+          "file_tree_hash": "157df2d4f07a54ee655ba28b4975bec51bf78d4046f00ccb7c50ef624d474f90",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
