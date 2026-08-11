@@ -300,5 +300,52 @@
       "tasks": "T048-T079"
     },
     "supersedes": "FR-040's original merge-gated sequential shape; recorded in spec.md and research.md D7"
+  },
+  "reviewability_post_implementation": {
+    "measured": true,
+    "helper": "reviewability-gate",
+    "mode": "setup",
+    "target": "specs/art-002-draft-pr-template-set/plan.md",
+    "status": "block",
+    "pass": false,
+    "reviewable_loc": 1494,
+    "production_files": 3,
+    "total_files": 6,
+    "primary_surface_count": 1,
+    "greenfield": false,
+    "blockers": [
+      "reviewable LOC 1494 exceeds block threshold 800"
+    ],
+    "warnings": [
+      "reviewable LOC 1494 exceeds warn threshold 400"
+    ],
+    "block_kind": "size_only",
+    "correctness_findings": [],
+    "disposition": "continue",
+    "disposition_reason": "Every blocker is the LOC dimension. The autopilot contract treats a valid current size-only block as a marker-planning input and explicitly not a manual re-slicing stop; correctness stops are reserved for malformed or stale marker state, failed verification, invalid packet, unsafe output, unusable gate evidence, and non-size safety findings, none of which are present.",
+    "marker_plan": null,
+    "marker_plan_reason": "Delivery is branch-split, not marker-split. The marker mechanism divides one branch's commits across several pull requests; this run ships two branches and two stacked pull requests per FR-040. Writing a pr-marker-plan structure would fabricate state for a topology this run does not use.",
+    "projection_error": {
+      "implementation_plan_authored": {
+        "projected": 320,
+        "measured": 1179
+      },
+      "spec_explainer_authored": {
+        "projected": 185,
+        "measured": 315
+      },
+      "validation_module": {
+        "projected": 250,
+        "measured": 1127
+      },
+      "slice_1_template_lines": {
+        "projected": 505,
+        "measured": 1494
+      },
+      "slice_1_inclusive": {
+        "projected": 755,
+        "measured": 2621
+      }
+    }
   }
 }

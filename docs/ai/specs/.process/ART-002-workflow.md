@@ -1386,6 +1386,76 @@ at the density this repository actually uses. The plan's estimate assumed a ters
 style than the surrounding code. Recorded rather than smoothed over, because the
 same assumption will misprice the next test module too.
 
+#### Reviewability, measured after implementation — the projection was wrong by ~3x
+
+**The number in every earlier block on this page is a projection. This one is a
+measurement**, and it is materially worse. Recorded here rather than smoothed
+over, because a stale declaration behind a green gate is worse than no gate: it
+reports safe with authority.
+
+| | Projected | Measured | |
+|---|---|---|---|
+| `implementation-plan.html` authored | ~320 | **1179** | 3.7x |
+| `spec-explainer.html` authored | ~185 | **315** | 1.7x |
+| `test-artifact-fill-regions.py` | ~250 | **1127** | 4.5x |
+| **Slice 1 template lines** | ~505 | **1494** | |
+| **Slice 1 inclusive of the module** | ~755 | **2621** | |
+
+Authored lines are each file's total minus its two embedded canonical regions
+(458 lines), which a reviewer never reads and which validation compares byte for
+byte.
+
+**The gate could not have caught this on its own, and that is worth knowing.**
+`reviewability-gate` in setup mode does not measure the tree — it reads the last
+number matching "reviewable LOC" in the target file
+(`speckit_pro_runner/helpers/read_only.py:967`). It is a **declaration checker**.
+It reported `warn / 530 / zero blockers` for as long as the declaration said 530,
+and it would have kept reporting that through PR creation.
+
+**The declaration is corrected to 1494 and the gate re-run.** It now returns:
+
+| Field | Value |
+|---|---|
+| `status` | **`block`** |
+| `blockers` | `["reviewable LOC 1494 exceeds block threshold 800"]` |
+| `warnings` | `["reviewable LOC 1494 exceeds warn threshold 400"]` |
+| `production_files` | 3 (of 8 block) |
+| `total_files` | 6 (of 25 block) |
+| `primary_surface_count` | 1 |
+| `greenfield` | `false` |
+
+**This is a size-only block, and the run continues.** Every blocker is the LOC
+dimension; there is no correctness finding, no failed verification, no malformed
+state, and no safety finding. The autopilot contract is explicit that a valid
+current size-only block is a marker-planning input and **not** a manual
+re-slicing stop, and that correctness stops are reserved for the other
+categories. The pull request is opened with the real figure stated in its scope
+budget.
+
+**`pr_marker_plan` stays `null`, and that is accurate rather than evasive.** The
+marker-plan mechanism splits one branch's commits into several pull requests.
+This delivery is **branch-split**, not marker-split: two branches, two pull
+requests, the second stacked on the first, ratified by the operator and recorded
+as FR-040. Writing a `pr-marker-plan.v1` structure here to satisfy a checker
+would be fabricating state for a topology this run does not use.
+
+**Splitting further would not help.** The dominant cost is a single file at 1179
+authored lines, and a template cannot be usefully halved — half a template is
+neither reviewable nor testable. What a reviewer should know instead is what the
+lines are: most of `implementation-plan.html` is worked-example content and its
+styling, which FR-014 and FR-014a require (no slot may ship as an empty frame).
+It reads far faster per line than 1179 lines of behaviour would.
+
+**Why the projection missed, so the next one is better.** It scaled ART-001's
+single artifact, which authored 308 lines — but that artifact has no fill
+regions, no inventory, no per-item anchors, no capture affordance, no export
+path, no status region, no clipboard fallback, and no worked content for seven
+slots. Every one of those is a requirement added *after* the projection was
+written. The estimate scaled a file against requirements it never had to meet.
+The validation module missed differently and more simply: it was sized in the
+abstract instead of against the 23.2 lines-per-test density of the file it sits
+beside, and at 25.1 it matches that density almost exactly.
+
 #### Discovered during implementation — three ART-001 tests assert a world this feature ends
 
 **Found by running the existing gallery scanner against the first template

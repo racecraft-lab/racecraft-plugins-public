@@ -952,6 +952,31 @@ here rather than left in a scoping document a reviewer may not open.
   warn; one primary surface. Only the LOC dimension warns. A warning proceeds
   when the workflow records the scope budget and the split decision, and it
   records both.
+
+> **Superseded by measurement, recorded 2026-08-11.** Every figure in this
+> section is a **plan-phase projection**, and slice 1's has now been authored and
+> measured. The projection was wrong by roughly 3x. Measured, subtracting each
+> file's 458 embedded canonical lines: `implementation-plan.html` authored
+> **1179** against a projected ~320; `spec-explainer.html` **315** against ~185;
+> the validation module **1127** against ~250. **Slice 1 is 1494 authored
+> template lines, or 2621 counting the module** — against ~505 and ~755.
+>
+> The declaration in `plan.md` is corrected to 1494 and the gate re-run, because
+> `reviewability-gate` in setup mode reads the last declared "reviewable LOC"
+> number rather than measuring the tree, so a stale declaration would have kept
+> reporting `warn` with authority through pull-request creation. The gate now
+> returns **`block`**, with `["reviewable LOC 1494 exceeds block threshold 800"]`
+> as its only blocker.
+>
+> **This is a size-only block and the delivery is unchanged.** No correctness
+> finding, no failed verification, no safety finding. The autopilot contract
+> treats a valid current size-only block as a marker-planning input rather than a
+> manual re-slicing stop. Splitting further would not help: the dominant cost is
+> one template at 1179 authored lines, and half a template is neither reviewable
+> nor testable. The projection missed because it scaled ART-001's 308-line
+> artifact, which carries no fill regions, no inventory, no anchors, no capture,
+> no export path, and no worked content — every one of those a requirement this
+> specification added after the projection was written.
 - **Split decision**: Split into two vertical slices delivered as two stacked
   pull requests, per the design concept's Q10 and its follow-up as superseded by
   FR-040. Slice 1 is the two templates the draft-PR stage routes unconditionally

@@ -288,6 +288,60 @@ The spec's Reviewability Notes and Reviewability Budget were amended to these
 figures during this phase rather than left to drift, so no spec-amendment
 candidate is outstanding.
 
+#### Measured at implementation — the projection above was wrong by roughly 3x
+
+Everything above this heading is the **plan-phase projection**. Slice 1 has now
+been authored and measured, and the projection did not survive contact with the
+requirements. The measurement, taken by subtracting each file's two embedded
+canonical regions from its total:
+
+| File | Total | Embedded | Authored | Projected | Ratio |
+|---|---|---|---|---|---|
+| `implementation-plan.html` | 1637 | 458 | **1179** | ~320 | 3.7x |
+| `spec-explainer.html` | 773 | 458 | **315** | ~185 | 1.7x |
+| `test-artifact-fill-regions.py` | 1127 | — | **1127** | ~250 | 4.5x |
+
+**Slice 1 is 1494 authored template lines, or 2621 counting the validation
+module** — against a projected 505 and 755. The 800 block threshold is exceeded
+on either reading.
+
+**Why the projection missed, stated so the next estimate is better.** It was
+built by scaling ART-001's single artifact, which authored 308 lines. But
+ART-001's artifact carries no fill regions, no inventory, no per-item anchors, no
+capture affordance, no export path, no status region, no clipboard fallback, and
+no worked-example content for seven slots. Every one of those is a requirement
+this feature added *after* the projection was written — FR-011 through FR-025 and
+FR-035a/b are almost entirely absent from the artifact the calibration point was
+taken from. The estimate scaled a file against requirements it never had to
+satisfy. The validation module missed for a different and simpler reason: it was
+sized in the abstract rather than against the 23.2 lines-per-test density of the
+`test-artifact-gallery.py` it sits beside, and at 25.1 it matches that density
+almost exactly.
+
+**What this does and does not change.**
+
+- The **declared figure is corrected here to the measured one**, because the
+  setup-mode gate reads the last declared number in this file and would otherwise
+  keep reporting a `warn` derived from a figure now known to be wrong. A gate
+  reading a stale declaration is worse than no gate: it reports green with
+  authority.
+- The gate consequently returns **`block` on the size dimension alone**, with no
+  correctness finding. Under the autopilot contract a size-only block is a
+  marker-planning input and explicitly **not** a manual re-slicing stop, so the
+  run continues and the pull request is opened with the real number stated in its
+  scope budget rather than the projected one.
+- The **two-slice split still stands.** It is an operator-ratified decision
+  recorded as FR-040, and splitting further would not help the dominant cost:
+  the largest single file is one template, which cannot be usefully halved — a
+  half-template is neither reviewable nor testable.
+- **Reviewers should know what the number is made of.** Of the 1179 authored
+  lines in `implementation-plan.html`, the majority is worked-example content and
+  its styling rather than logic. That is a requirement (FR-014, FR-014a: no slot
+  may ship as an empty frame), not incidental bulk. It reviews far faster per line
+  than 1179 lines of behaviour would.
+
+**Declared reviewable LOC per slice, measured: 1494.**
+
 ## The Shared Behavior Decision
 
 Three templates need behavior that is nearly the same: mount a capture control
