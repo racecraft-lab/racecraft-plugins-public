@@ -340,7 +340,30 @@ almost exactly.
   may ship as an empty frame), not incidental bulk. It reviews far faster per line
   than 1179 lines of behaviour would.
 
-**Declared reviewable LOC per slice, measured: 1494.**
+#### Slice 2, measured — the same miss, slightly worse
+
+| File | Total | Embedded | Authored | Projected | Ratio |
+|---|---|---|---|---|---|
+| `code-approaches.html` | 1483 | 458 | **1025** | ~230 | 4.5x |
+| `module-map.html` | 1460 | 458 | **1002** | ~300 | 3.3x |
+
+**Slice 2 is 2027 authored template lines** against a projected 530. The cause is
+identical to slice 1's and needs no separate diagnosis: the projection scaled an
+ART-001 artifact that carries none of the fill-region, inventory, anchor,
+capture, export, status-region, fallback-field, or worked-content requirements
+this specification added afterwards. Two independent slices missing by 3-4.5x on
+the same reasoning is the evidence that the *method* was wrong, not the
+arithmetic.
+
+`module-map` came closest, at 3.3x, which is consistent with it being the
+template whose upstream source needed the least restyling — its drawing already
+used classes. `code-approaches` is the worst at 4.5x despite being the smallest
+slot count, because a grouped single-choice control with an optional reason field
+and a full export path is behavior, and behavior is what the projection had no
+basis for at all.
+
+**Declared reviewable LOC per slice, measured: slice 1 is 1494 and slice 2 is
+2027. The operative figure for the current slice is 2027.**
 
 ## The Shared Behavior Decision
 

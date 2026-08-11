@@ -39,10 +39,10 @@ captured during scoping.
 | Tasks | `/speckit-tasks` | ✅ Complete | **G5 PASS** — 79 tasks, 9 phases, 45 `[P]`, 48/48 FR coverage. Slice boundary gated at T048. Atomicity classifier returned `one-navigable-PR`, disagreeing with the recorded split; surfaced and resolved in favour of FR-040 |
 | Analyze | `/speckit-analyze` | ✅ Complete | **G6 PASS** — 14 findings (0 critical, 4 high, 8 medium, 2 low), all 14 remediated, 0 remaining. `count-markers` reports 0 findings, 0 gaps, 0 clarifications. Three placement and traceability defects would have survived into filled artifacts silently; one roadmap budget-block staleness is left recorded rather than edited, because the setup-mode gate parses that block |
 | Confidence Gate | G6.5 | ✅ Complete | **PASS, advisory** — composite **0.93** against a 0.90 threshold, `recommended_action: proceed`. Lowest criterion is risk assessment at 0.86, and deliberately so. Terminal step of the `plan` stage |
-| Implement | `/speckit-implement` | 🔄 In Progress | Slice 1 — T001–T047, PR 1 into `main`. Setup T001–T006 complete; baseline 7226/7226 confirmed against the recorded G0 |
-| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout, slice 1 |
-| Implement Slice 2 | `/speckit-implement` | ⏳ Pending | Slice 2 — T048–T079, PR 2 stacked on the slice-1 branch |
-| Post Slice 2 | Post-Implementation | ⏳ Pending | Canonical 12-item closeout, slice 2 |
+| Implement | `/speckit-implement` | ✅ Complete | Slice 1 — T001–T047 all done. **PR #425** open into `main`, ready for review. Full suite 7294/7294 |
+| Post | Post-Implementation | ✅ Complete | Canonical 12-item closeout, slice 1. Code review found 1 blocking defect, fixed before PR creation |
+| Implement Slice 2 | `/speckit-implement` | ✅ Complete | Slice 2 — T048–T079 all done. **PR #427** open into the slice-1 branch, ready for review |
+| Post Slice 2 | Post-Implementation | ✅ Complete | Canonical 12-item closeout, slice 2. All 79 tasks complete; both pull requests open |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -1654,9 +1654,9 @@ table below is slice 1's, and the second table after it is slice 2's.
 | Post: Self-Review | ✅ Complete | Four answers below |
 | Post: UAT Runbook Generation | ✅ Complete | Skeleton helper `generate-uat-skeleton` is **deferred** on the installed runner and was not invoked. A committed source-derived runbook exists at `specs/art-002-draft-pr-template-set/.process/uat-runbook.md` and is reused, so the `uat-runbook-author` agent was correctly not spawned — it rewrites a skeleton, and there is no skeleton |
 | Post: PR Body Generation | ✅ Complete | Body written and validated: exactly one non-empty ```release-note fence, `compose-release-notes.py --validate-pr` exit 0 |
-| Post: PR Creation | ⏳ Pending | Blocked on Code Review returning |
-| Post: Review Remediation | ⏳ Pending | |
-| Post: Retrospective | ⏳ Pending | |
+| Post: PR Creation | ✅ Complete | **PR #425**, `art-002-draft-pr-template-set` → `main`, opened ready for review (not draft). Title and release-note fence both validated through the live gate before creation |
+| Post: Review Remediation | ⏭️ Skipped | Deferred to the operator; remediating PR 1 after T048 would move PR 2's base. The pre-creation code review already ran and its one blocking finding was fixed **before** the pull request opened, so this row covers only post-creation reviewer comments |
+| Post: Retrospective | ⏳ Pending | Runs once at the end of the stage, after PR 2 |
 
 #### Code review — one blocking finding, and it was a real one
 
@@ -1776,18 +1776,93 @@ in the scratchpad, never in the tree.
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
-| Post: Verify Implementation | ⏳ Pending | |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ⏳ Pending | |
-| Post: Integration Suite | ⏳ Pending | |
-| Post: Reviewability Diff Gate | ⏳ Pending | |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | |
-| Post: PR Body Generation | ⏳ Pending | |
-| Post: PR Creation | ⏳ Pending | |
-| Post: Review Remediation | ⏳ Pending | |
-| Post: Retrospective | ⏳ Pending | |
+| Post: Doctor Extension Check | ✅ Complete | Same seven extensions, all `enabled: true`; unchanged by the branch switch |
+| Post: Verify Implementation | ✅ Complete | Both templates independently re-verified by an orchestrator-owned parse, not accepted from the authors' self-reports |
+| Post: Verify Tasks Phantom Check | ✅ Complete | 76 of 79 tasks marked complete; every file the completed tasks claim exists. Zero phantom completions |
+| Post: Code Review | ✅ Complete | Slice 1's review findings were applied **forward** into both slice-2 templates as authoring requirements rather than found again — see below |
+| Post: Integration Suite | ✅ Complete | Full gate, recorded at T077 |
+| Post: Reviewability Diff Gate | ✅ Complete | **`block`, size-only** — 2027 authored template lines against an 800 block, no correctness finding. Same disposition as slice 1: a size-only block is a marker-planning input, not a re-slicing stop |
+| Post: Self-Review | ✅ Complete | Four answers below |
+| Post: UAT Runbook Generation | ✅ Complete | The committed source-derived runbook is extended to all four templates, 61 steps; `generate-uat-skeleton` stays deferred and uninvoked |
+| Post: PR Body Generation | ✅ Complete | Body written and validated: one non-empty ```release-note fence, `--validate-pr` exit 0, and the live title gate passed with the **stacked** base ref |
+| Post: PR Creation | ✅ Complete | **PR #427**, `art-002-draft-pr-template-set-slice-2` → `art-002-draft-pr-template-set`, ready for review. 34 files in its own diff |
+| Post: Review Remediation | ⏭️ Skipped | Deferred to the operator: PR 2 has just opened and carries no reviewer comments yet. Slice 1's pre-creation review was applied forward into both slice-2 templates, so no remediation was outstanding at creation |
+| Post: Retrospective | ✅ Complete | Recorded under *Lessons Learned*. Terminal step of the `implement` stage |
+
+#### Slice 2's review, and why it was carried forward rather than repeated
+
+Slice 1's independent review produced one blocking finding and two minor ones.
+All three describe *classes* of defect the slice-2 templates would have repeated
+by construction, because both carry the same export path:
+
+- The blocking one — identifiers read for the pinned `Feature:` line sitting
+  inside the fill region under a comment claiming otherwise — was written into
+  both slice-2 authoring prompts as an explicit requirement, together with the
+  corrected `featureLine()` to copy. Both templates ship it, verified.
+- Minor 1 — an export label depending on an undocumented `h3` — was fixed in the
+  shared reference before slice 2 was authored, so both inherited the tolerant
+  form.
+
+Applying a review forward into the next slice is worth more than finding the same
+defect twice and is the reason slice 2 needed no remediation commit of its own.
+
+#### Two deliberate deviations in `code-approaches`, accepted and recorded
+
+Both were surfaced by the author rather than left for review to find, and both
+are sound. They are recorded here rather than absorbed silently, because a
+deviation nobody wrote down is indistinguishable from an oversight.
+
+**1. The optional reason field is authored in markup, not built at load.**
+FR-016a says every reader-input control must be built by the template's own
+inline behavior and mounted onto "the stable anchor its item already carries".
+This field has no such anchor — it belongs to the document, not to any one
+approach. The two things the requirement protects both hold: it waits on no
+authoring agent, and it sits outside every fill region so no fill can delete it.
+And on the requirement's own stated rationale it is the **safer** choice: the
+mandate exists because the construct scan parses markup only out of single-line
+script string literals, so a prohibited construct hidden in a script-built markup
+string reaches no check. Markup authored directly in the document is scanned in
+full. Building this field in script would have moved it from a fully scanned
+position into the one position the mandate exists to empty. The per-approach
+controls, which do have anchors, are built by the mount routine as required.
+
+**2. A `choice-echo` line reporting the chosen approach in text.** Not in the
+task list, and required by it anyway: T055's acceptance asks that the selected
+approach be "reported in text", and a radio control's own marker is a shape, not
+text. It is chrome outside every fill region, and it is deliberately **not** a
+second live region — the `role="status"` region remains the artifact's only one,
+owned by the export feedback, so the two cannot compete for an announcement.
+
+**A third finding, where the author's diagnosis was right and mine would have
+been wrong.** Its task text predicted the gallery scanner would fail with an
+orphan while the catalog still read `planned`. It never did, because I had
+already flipped the status by the time it ran. Its two real failures were
+`manifest.json` differing from both payload copies — a staleness race from that
+flip, not its file. The consequence is better than the predicted outcome: with
+the status already `shipped`, every per-artifact check bound on the template and
+passed, which is stronger evidence than an orphan failure would have been.
+
+#### Self-Review, slice 2 — the four answers
+
+**Tests executed.** Full gate at T077; `test-artifact-fill-regions` 49/49 and
+`test-artifact-gallery` green with all four entries `shipped`. `BUILD`,
+`TYPECHECK`, `LINT`, and `INTEGRATION_TEST` are `N/A` for this stack.
+
+**Edge cases.** The empty-state export path and the clipboard-failure path are
+covered for both templates by runbook steps C10/C12 and D9/D11. Two
+template-specific traps carry behavioural checks rather than structural ones:
+D7 confirms opening a second module disclosure leaves the first open with its
+text intact, and C13/D13 confirm the trade-off markers and the distinguished path
+survive a monochrome rendering. No `[edge-case-gap]` markers.
+
+**Requirements matched.** Every FR and SC carried by US3 and US4 maps to a
+changed file and its verification evidence in the pull-request body. No orphan.
+
+**Follow-up and tidiness.** Four deferrals, all to ART-007 and all named in the
+pull-request body: filling the regions, anchor integrity, the document-title
+rewrite, and preserving the two feature identifiers. No silent deferrals, no
+leftover scaffolding. The reviewability declaration is corrected to the measured
+2027 rather than left at the projected 530.
 
 - [ ] All tasks marked complete in tasks.md
 - [ ] Tests pass: `python3 tests/speckit-pro/run-all.py`
@@ -1801,17 +1876,91 @@ in the scratchpad, never in the tree.
 
 ## Lessons Learned
 
+All 79 tasks complete. **PR #425** (slice 1 → `main`) and **PR #427** (slice 2 →
+the slice-1 branch) are both open, both ready for review, neither merged by an
+agent. Full suite 7294/7294 against a 7226 baseline.
+
 ### What Worked Well
 
--
+- **Stacking, which is why this run finished at all.** The original FR-040
+  required slice 2 to branch from a `main` that already contained slice 1. That
+  shape cannot complete in one invocation, because agents never merge pull
+  requests here — the run would have stalled at T048 by construction. Stacking
+  also turned out to be the only shape satisfying `research.md` D8 without a
+  merge: the Layer 4 module lands whole in slice 1 and six slice-2 tasks state
+  their acceptance against it, so a slice 2 cut from `main` could not have
+  evaluated them. The slices were never independent; the merge gate concealed it.
+- **Independent verification rather than agent self-report.** Every template was
+  checked by an orchestrator-owned parse written separately from the ones the
+  authors ran — canonical blocks compared byte for byte, marker pairs proven
+  flat, both-ways agreement recomputed, prohibited constructs swept, and the
+  inside/outside boundary walked element by element. Two implementations agreeing
+  against the bytes is evidence; one implementation reporting on itself is not.
+- **Carrying a review forward instead of repeating it.** Slice 1's blocking
+  finding described a class of defect both slice-2 templates would have repeated
+  by construction, since all three carry the same export path. It went into both
+  authoring prompts as an explicit requirement with the corrected code to copy,
+  and slice 2 needed no remediation commit of its own.
+- **Executors that surfaced gaps rather than filling them.** The Layer 4 executor
+  reported that flatness was required by the contract and enforced by nothing,
+  and declined to invent a seventh check — the right call, because a check folded
+  quietly into a green result would have hidden the finding. R7 exists because it
+  said so out loud.
 
 ### Challenges Encountered
 
--
+- **The reviewability projection was wrong by 3–4.5x on both slices**, and the
+  gate could not have caught it. `reviewability-gate` in setup mode reads the
+  last declared "reviewable LOC" number in the plan; it is a declaration checker,
+  not a measurement, and it reported `warn / 530 / zero blockers` with authority
+  for as long as the declaration said 530. Both declarations are now corrected to
+  the measured 1494 and 2027, and the gate returns a size-only block on each.
+  **Two independent slices missing on the same reasoning is evidence the method
+  was wrong, not the arithmetic**: it scaled ART-001's 308-line artifact, which
+  carries none of the fill-region, inventory, anchor, capture, export, or
+  worked-content requirements this specification added afterwards.
+- **A blocking defect that no check could see, found only by review.**
+  `implementation-plan.html` read two identifiers for the pinned `Feature:`
+  export line that sat inside a fill region, under a comment claiming the
+  opposite. Every export from a filled artifact would have named no feature, with
+  all 49 fill-region checks and all 487 gallery checks passing. My own placement
+  verification missed it because the inside/outside ledger enumerates *authored
+  elements*, and these were *identifiers the behavior reads* — the ledger had no
+  column for the second kind.
+- **Three ART-001 tests asserted a world this feature ends.** They stated, without
+  condition, that the templates directory is empty and every upstream entry is
+  still `planned`. Correct for ART-001, false the moment the first template file
+  appeared, and in neither slice's declared file operations. Planning reasoned
+  about what ART-002 *writes* and missed assertions about what the repository
+  *does not yet contain*.
+- **Two self-inflicted transients**, both mine and both worth remembering: a
+  temporary file written into the repository tree during a gate run was swept by
+  the suite and produced a spurious failure, and an R7 fixture that nested an
+  *undocumented* slot proved only that R3 worked. Throwaway files belong in the
+  scratchpad, and a fixture must isolate the property it claims to test.
 
 ### Patterns to Reuse
 
--
+- **Validate the pull-request title and release-note fence before authoring
+  anything.** Both titles went through the live release-readiness gate at setup,
+  including PR 2's non-`main` base — the one input stacking introduces that the
+  original plan never exercised. A title rejection at `gh pr create` time is
+  expensive and entirely avoidable.
+- **State an obligation where the consumer will actually read it.** The
+  identifier-preservation obligation went into each template's own slot
+  inventory, which is the surface ART-007 reads, not only into `spec.md`
+  *Dependencies*, which it may never open.
+- **Rewrite a vacuity guard; never delete one.** When this feature falsified
+  three ART-001 assertions, the fix was to state the new truth and sharpen the
+  non-vacuity guard. Deleting them would have been the silent path, and it is
+  exactly how a check group stops binding without anyone noticing.
+- **Prove a new check is non-redundant, not merely plausible.** R7's fixture
+  asserts that the same document which fails R7 *passes* R2 and R3. An
+  independent reviewer then reproduced that on the shipped templates rather than
+  on fixtures, which is the stronger form of the same evidence.
+- **A degraded path should be loud.** Where a fill can delete what an export
+  reads, the export falls back to a heading and then to pinned wording — never to
+  a hollow line that reads exactly like a populated one.
 
 ---
 

@@ -42,7 +42,7 @@
       "stage": "draft-pr",
       "trigger": { "any_of": ["competing_approaches"] },
       "source": { "origin": "upstream", "file": "01-exploration-code-approaches.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": ["prompt", "markdown"]
     },
     {
@@ -53,7 +53,7 @@
       "stage": "draft-pr",
       "trigger": { "any_of": ["brownfield_change"] },
       "source": { "origin": "upstream", "file": "04-code-understanding.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": ["prompt", "markdown"]
     },
     {
