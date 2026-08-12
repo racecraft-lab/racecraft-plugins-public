@@ -21,8 +21,9 @@ input.
 **Spec ID prefix:** `ART-###`
 **Status:** Active; dependency graph approved 2026-07-28; ART-001, ART-002,
 ART-006 and ART-012 are complete and archived; ART-002 shipped in PRs #425,
-#427 and #430, which unblocks ART-007; ART-012 shipped in PR #426; ART-003
-through ART-005, ART-007, ART-009 and ART-011 are ready; ART-014 and ART-015
+#427 and #430, which unblocks ART-007; ART-012 shipped in PR #426; ART-003 is in
+progress, scaffolded 2026-08-12 as three stacked slices; ART-004, ART-005,
+ART-007, ART-009 and ART-011 are ready; ART-014 and ART-015
 were opened from ART-006 findings and are ready with no dependencies
 
 ---
@@ -128,7 +129,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 |------|------|--------|---------------|------------|
 | ART-001 | Artifact Brand Kit & Gallery Foundation | ✅ Complete / Archived | [.process/ART-001-workflow.md](.process/ART-001-workflow.md) | PR #407 merged with follow-up fix PR #409; the brand kit, gallery manifest, SPA contract, and validator live outside `specs/**`. T026 and T027 ran on 2026-07-29, 12 of 12 manual scenarios passed; the harness is preserved at [.process/ART-001-acceptance-harness.html](.process/ART-001-acceptance-harness.html) |
 | ART-002 | Draft-PR Template Set | ✅ Complete / Archived | [.process/ART-002-workflow.md](.process/ART-002-workflow.md) | Shipped as two stacked slices — PR #425 (`implementation-plan`, `spec-explainer`) and PR #427 (`code-approaches`, `module-map`) — then PR #430 recorded the acceptance result; archived 2026-08-12. All four templates and the manifest live outside `specs/**`. The runbook ran against `4ecb1b4b` with every executed step passing and 15 of its 61 steps recorded as *not executed*; it is preserved at [.process/ART-002-uat-runbook.md](.process/ART-002-uat-runbook.md) |
-| ART-003 | Final-PR Template Set | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
+| ART-003 | Final-PR Template Set | 🔄 In Progress | [.process/ART-003-workflow.md](.process/ART-003-workflow.md) | Scaffolded 2026-08-12. Re-sliced at scaffold into three stacked slices, one template per PR — `pr-writeup`, then `annotated-diff`, then `flowchart` — on ART-002's realized measurement rather than the original 285 estimate. Slice 1 is ready for autopilot. ART-001 dependency satisfied by PR #407 |
 | ART-004 | Gallery Completion: Design & Prototyping | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
@@ -279,14 +280,34 @@ always; code-approaches + module map conditional — chosen in the PRD interview
 **Goal:** Port the three delivery templates as branded single-file SPAs ready
 for the implement stage's post-implementation generation.
 
-**Reviewability Budget:** Primary surface: docs/process (shipped templates) |
-Projected reviewable LOC: 285 (estimator: ok) |
-Production files: 3 (net-new) |
-Total files: ~6 |
-Budget result: within budget
+**Reviewability Budget:** Re-declared 2026-08-12 at scaffold. The original
+single-slice estimate of 285 was contradicted by the only realized measurement
+of this work class: ART-002's slice 1 shipped two templates of the same kind and
+measured 1494 reviewable LOC, a hard block that forced a mid-implement re-slice.
+ART-003 therefore ships as **three stacked slices, one template per PR**, each
+declared on its own.
+
+| Slice | Template | Upstream lines | Projected reviewable LOC | Result |
+|---|---|---|---|---|
+| 1 | `pr-writeup` | 595 | ~750 | warn |
+| 2 | `annotated-diff` | 638 | ~780 | warn |
+| 3 | `flowchart` | 395 | ~410 | warn |
+
+Primary surface: docs/process (shipped templates) |
+Production files: 1 per slice (net-new) |
+Total files: ~4 per slice |
+Budget result: warning accepted per slice — no slice reaches the 800 block, so
+no exception pragma is required. Each slice re-measures and re-declares at its
+own Plan phase, which is where the gate can actually read one spec's number; the
+projections derive from ART-002's realized ~2.2x multiplier over upstream line
+count, discounting the 458 canonical block lines a reviewer never reads.
 
 **Scope:**
-- One vertical slice — three templates → manifest rows → passing SPA checks (INVEST: Small, net-new).
+- Three vertical slices, one template each → its manifest row → passing SPA
+  checks (INVEST: Small, net-new). Stacked in roadmap order: `pr-writeup` from
+  `main`, `annotated-diff` from slice 1, `flowchart` from slice 2. All three
+  append to the same manifest entry block and the same fill-region test
+  literals, so stacking is what keeps them conflict-free.
 - Branded derivatives of upstream 17 (PR writeup: motivation, before/after,
   file-by-file explanation, dedicated implementation-notes section slot), 03
   (annotated diff: unified diff with margin annotations, severity tags, jump
