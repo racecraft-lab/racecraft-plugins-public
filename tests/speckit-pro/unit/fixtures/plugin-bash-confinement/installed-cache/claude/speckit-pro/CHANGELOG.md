@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.24.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.23.0...speckit-pro-v2.24.0) (2026-08-12)
+
+
+### Features
+
+* **art-012:** Capture implementation notes during autopilot implementation ([#426](https://github.com/racecraft-lab/racecraft-plugins-public/issues/426)) ([1916d8c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1916d8c917eea4892035daafe4c02d2558e203f3))
+* **speckit-pro:** add the code-approaches and module-map gallery templates ([#427](https://github.com/racecraft-lab/racecraft-plugins-public/issues/427)) ([4ecb1b4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4ecb1b4b441cbb85015586612190a7bc340f0c9c))
+* **speckit-pro:** add the implementation-plan and spec-explainer gallery templates ([#425](https://github.com/racecraft-lab/racecraft-plugins-public/issues/425)) ([a9e8d30](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a9e8d30764fd1dc28ea07734d4dbe7c0952e1294))
+
 ## [2.23.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.22.1...speckit-pro-v2.23.0) (2026-08-09)
 
 
