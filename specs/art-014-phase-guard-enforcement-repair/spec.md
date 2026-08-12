@@ -251,6 +251,25 @@ labels itself as not yet wired.
   expected-commit append contract together with its not-yet-wired status on the
   Claude side, and stating the `workflow_file` authority in the workflow-file
   protocol reference on both platforms.
+- **FR-013a**: The Claude skill document's authority bullet MUST be corrected in
+  three specific respects, each of which becomes false when this change lands.
+  It currently calls the field "the authority" without qualification, but the
+  comparison skips on an absent field and on an unresolvable repository root. It
+  claims the run "fails with" an exact full string, but FR-009 makes that string
+  a prefix with both paths appended. Its lead-in claims repairing the workflow
+  file to match is the correct move, which is true of the marker-evidence bullet
+  beside it but false of the identity bullet, whose repair re-points the run or
+  reclaims the state slot, rewriting the state from the invocation instead.
+- **FR-013b**: The division of labour between the skill document and the protocol
+  reference MUST be: the skill document keeps the quotable sentence and names
+  both skip conditions, because an operator whose run halts greps the skill body
+  for the sentence they just saw; the protocol reference owns the branch order
+  and the reason behind each verdict. The skill document MUST NOT become a second
+  copy of the requirement truth table, and MUST NOT be reduced to a bare pointer
+  that removes the quotable sentence.
+- **FR-013c**: The references index entry naming the workflow-file protocol MUST
+  be updated on both platforms, so the new content is reachable from the index
+  rather than only by full-text search.
 
 ### Reviewability Notes *(if applicable)*
 

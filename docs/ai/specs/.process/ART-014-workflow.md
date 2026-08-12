@@ -481,6 +481,68 @@ and printing a blank path. FR-005 now requires an explicit check.
 tracked now; the difference is exactly this specification's own in-flight
 workflow file. SC-002 pins the denominator to the baseline commit.
 
+### Session 3 Staged Documentation Prose
+
+Drafted during Clarify, applied during Implement. Clarify settles wording; it
+does not edit shipped files. Phase 7 uses these verbatim.
+
+**Word budgets, measured.** Claude autopilot `SKILL.md` body is 6213 of 8000
+words, so 1787 spare and length is not a constraint. Codex autopilot `SKILL.md`
+body is 7795 of 8000, so 205 spare, which is why the Codex side gets a
+four-word descriptor amendment rather than prose.
+
+**1. Replace the Claude `SKILL.md` authority block**, correcting the three false
+statements FR-013a names. The lead-in loses its repair claim, which moves into
+the marker-evidence bullet where it is still true:
+
+```text
+That precedence is scoped to the status table and does not generalize. The
+state file stays authoritative for two things the coverage guard enforces
+directly:
+
+- **Which workflow file is active.** When the state names a `workflow_file` and
+  a repository root resolves, that value is the authority. A mismatch fails with
+  a message that opens with the exact sentence "supplied workflow does not match
+  autopilot state workflow_file authority" and appends both compared paths. The
+  comparison is skipped when the state names no `workflow_file`, because a state
+  naming none asserts no authority, and skipped again when no repository root
+  resolves. A malformed state value fails, and so does a supplied workflow that
+  resolves outside the repository. Branch order and the reason behind each
+  verdict live in
+  [`references/workflow-file-protocol.md`](./references/workflow-file-protocol.md).
+- **PR Marker Plan Evidence status**, which must equal
+  `pr_marker_plan.status` exactly. Repairing the workflow file to match the
+  state is the correct move here.
+```
+
+The FR-004a asymmetry survives the compression on purpose: "malformed **state**
+value" is the state side, "supplied workflow that resolves outside the
+repository" is the supplied side. Do not blur them into one phrase about values.
+
+**2. New `## workflow_file State Authority` section** in
+`references/workflow-file-protocol.md`, placed after the `Stage` section and
+before PR Marker Plan Evidence, so the two precedence rules sit adjacent and
+their opposite directions are visible together. It carries the five ordered
+branches from FR-004d, the FR-004a asymmetry, and the FR-004b byte-exact rule.
+
+**3. Condensed mirror** of the same section appended to
+`codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md`.
+
+**4. Claude-side expected-commit paragraph** (FR-013, Q7/Q8) placed directly
+after the guard invocation block, mirroring where Codex carries it, and citing
+**ART-016** for its not-yet-wired status. The Claude tree carries no
+`--expected-base-commit` or `--expected-head-commit` string today; the only
+occurrences are the three Codex files.
+
+**5. References index descriptors** amended on both platforms (FR-013c).
+
+**6. No Layer 1 assertion and no `CODEX-PARITY-NOTES.md` entry** for the main
+Q5 decision. That file's stated scope is recording where the two variants are
+deliberately *not* mirrors and listing the strings the validator pins. This
+change is parity-restoring and pins nothing, so an entry would make that ledger
+wrong. (The narrower question of whether to pin the authority sentence is with
+consensus.)
+
 ### Corpus Regression Evidence
 
 Captured before any implementation work, because the BEFORE half can only be
