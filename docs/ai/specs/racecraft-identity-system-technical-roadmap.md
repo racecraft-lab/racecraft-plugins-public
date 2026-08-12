@@ -89,7 +89,7 @@ Repo + docs             Plugin + packaging
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| BRAND-001 | Brand brief and concept exploration | ⏳ Ready | `.process/BRAND-001-workflow.md` | Scaffolded 2026-07-16 and parked; all seven phases still pending. Ready for autopilot from Phase 1 |
+| BRAND-001 | Brand brief and concept exploration | ⏳ Pending | `.process/BRAND-001-workflow.md` | Scaffolded 2026-07-16 and parked; all seven phases still pending. Unblocked and ready for autopilot from Phase 1 |
 | BRAND-002 | Rationale-blind critique and human selection | ⏳ Pending | — | Blocked by BRAND-001 |
 | BRAND-003 | Canonical SVG master production | ⏳ Pending | — | Blocked by BRAND-002 |
 | BRAND-004 | Deterministic SVG validation and export pipeline | ⏳ Pending | — | Blocked by BRAND-003 |
