@@ -22,8 +22,9 @@ input.
 **Status:** Active; dependency graph approved 2026-07-28; ART-001, ART-002,
 ART-006 and ART-012 are complete and archived; ART-002 shipped in PRs #425,
 #427 and #430, which unblocks ART-007; ART-012 shipped in PR #426; ART-003
-through ART-005, ART-007, ART-009 and ART-011 are ready; ART-014 and ART-015
-were opened from ART-006 findings and are ready with no dependencies
+through ART-005, ART-007, ART-009 and ART-011 are ready; ART-014 is in progress,
+scaffolded 2026-08-12 as one slice; ART-015 was opened from ART-006 findings and
+is ready with no dependencies
 
 ---
 
@@ -139,7 +140,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-011 | Scaffold Integration | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
 | ART-012 | Implementation-Notes Capture | ✅ Complete / Archived | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | PR #426; archived 2026-08-12. The record contract and the executor reporting field live on both platforms outside `specs/**`. Budget re-estimated at every amendment (115 at scaffold → 155 → 162 → 190 once the operator restored the literal per-task guarantee), and the final six production files matched the declaration exactly |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
-| ART-014 | Phase-Guard Enforcement Repair | ⏳ Ready | - | No dependencies; found during ART-006, which deliberately did not fix it |
+| ART-014 | Phase-Guard Enforcement Repair | 🔄 In Progress | [.process/ART-014-workflow.md](.process/ART-014-workflow.md) | Scaffolded 2026-08-12, one slice. Both defects reproduced by execution during scoping; the corpus baseline is 54 of 54 workflow files exiting 0 under `--rule status-evidence`. Budget re-declared at scaffold from ~120 to 235 reviewable LOC after the interview added two documentation files. No dependencies; found during ART-006, which deliberately did not fix it |
 | ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -845,11 +846,19 @@ behavior — interview decision.
 enforce the authority its documentation already promises, and decide explicitly
 which of the guard's other advisory checks should stay advisory.
 
-**Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: ~120 (estimator: ok, modify-weighted) |
-Production files: ~2 |
-Total files: ~5 |
-Budget result: within budget
+**Reviewability Budget:** Re-declared 2026-08-12 at scaffold. The original ~120
+predates two decisions the grill-me interview took: documenting the
+`--expected-*-commit` contract on the Claude side, and stating the `workflow_file`
+authority in both platforms' `workflow-file-protocol` references. Those add two
+authored documentation files.
+
+Primary surface: harness/adapter |
+Projected reviewable LOC: 235 (estimator: ok, modify-weighted; signals 3 stories,
+5 files, 13 FRs) |
+Production files: 4 (the guard, `SKILL.md`, and both `workflow-file-protocol`
+references) |
+Test files: 1 | Generated, never hand-edited: 4 |
+Budget result: within budget, one slice, no split
 
 **Problem:** `speckit-pro/skills/speckit-autopilot/SKILL.md:756-757` documents
 `autopilot-state.json.workflow_file` as authoritative and quotes the failure
@@ -882,7 +891,9 @@ reports `pass`:
   never had to satisfy them — assess that blast radius before choosing between a
   dedicated key and widening the existing one.
 - Audit the remaining advisory keys and record, per key, whether advisory is
-  intentional. 11 of 19 problem keys cannot move the exit code under `--rule`;
+  intentional. Measured 2026-08-12 at scaffold: 12 of 20 problem keys cannot move
+  the exit code under `--rule`. The "11 of 19" this entry originally recorded
+  predates ART-006 adding `stage_mirror_errors`;
   `SKILL.md` already justifies the coverage lists as deliberately advisory
   because the existing workflow corpus predates them, so the audit's job is to
   separate the deliberate from the accidental, not to arm everything.
