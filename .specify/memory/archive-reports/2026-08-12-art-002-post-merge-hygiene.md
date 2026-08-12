@@ -11,6 +11,12 @@
 
 ## Provenance
 
+**Every date in this report is UTC**, matching the merge timestamps GitHub
+records. The cleanup ran on 2026-08-12 UTC, during the evening of 2026-08-11 US
+Eastern. The archive date is therefore the day *after* the last feature merge,
+which is correct rather than a typo: #430 merged at `2026-08-12T00:56:19Z` and
+this archive necessarily followed it.
+
 ART-002 shipped across **three** merged pull requests: two feature slices and a
 follow-up that recorded the acceptance result. All three are merged; no ART-002
 pull request remains open.
@@ -245,7 +251,7 @@ git checkout 425364b7be34d5b88605012d0492c0e97bdbefaf -- specs/art-002-draft-pr-
 | Artifact | Change |
 |---|---|
 | `.specify/memory/{spec,plan,changelog}.md` | Append shipped behavior, architecture, provenance, and cleanup state |
-| `.specify/memory/archive-reports/2026-08-11-art-002-post-merge-hygiene.md` | This report |
+| `.specify/memory/archive-reports/2026-08-12-art-002-post-merge-hygiene.md` | This report |
 | `docs/ai/specs/.process/ART-002-uat-runbook.md` | Preserve the acceptance record from the feature `.process/` directory |
 | `docs/ai/specs/.process/ART-002-workflow.md` | Repoint the two acceptance-runbook references |
 | `docs/ai/specs/html-artifacts-technical-roadmap.md` | Mark ART-002 complete/archived; clear the "in progress" prose; unblock ART-007 |
@@ -287,7 +293,7 @@ git checkout 425364b7be34d5b88605012d0492c0e97bdbefaf -- specs/art-002-draft-pr-
 ## Verification Results
 
 See the shared **Verification Results** section of the ART-012 report for this
-cleanup, `2026-08-11-art-012-post-merge-hygiene.md`. Both specs are archived in
+cleanup, `2026-08-12-art-012-post-merge-hygiene.md`. Both specs are archived in
 one commit on one branch, so the checks ran once over the combined change and
 are recorded once rather than duplicated.
 

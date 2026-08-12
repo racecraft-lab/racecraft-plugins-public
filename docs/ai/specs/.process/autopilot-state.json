@@ -5,7 +5,7 @@
   "branch": "art-012-implementation-notes-capture",
   "status": "completed_archived",
   "active_step": null,
-  "updated_at": "2026-08-11T00:00:00Z",
+  "updated_at": "2026-08-12T02:30:00Z",
   "stage": "implement",
   "prior_run_note": "completed_archived",
   "settings": {
@@ -339,7 +339,7 @@
     "copilot_review": "no blocking issues"
   },
   "archive": {
-    "archived_at": "2026-08-11",
+    "archived_at": "2026-08-12",
     "pull_request": 426,
     "merge_commit": "1916d8c917eea4892035daafe4c02d2558e203f3",
     "merged_at": "2026-08-11T21:51:02Z",
@@ -350,7 +350,7 @@
       "docs/ai/specs/.process/ART-012-workflow.md",
       "docs/ai/specs/.process/ART-012-design-concept.md"
     ],
-    "report": ".specify/memory/archive-reports/2026-08-11-art-012-post-merge-hygiene.md",
+    "report": ".specify/memory/archive-reports/2026-08-12-art-012-post-merge-hygiene.md",
     "also_archived_in_this_cleanup": {
       "spec_id": "ART-002",
       "pull_requests": [
@@ -366,7 +366,7 @@
         "docs/ai/specs/.process/ART-002-design-concept.md",
         "docs/ai/specs/.process/ART-002-uat-runbook.md"
       ],
-      "report": ".specify/memory/archive-reports/2026-08-11-art-002-post-merge-hygiene.md"
+      "report": ".specify/memory/archive-reports/2026-08-12-art-002-post-merge-hygiene.md"
     }
   }
 }

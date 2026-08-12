@@ -2333,7 +2333,7 @@ git checkout 5e184e332b8c8f8442cdbda37c3bdc45cb6d62ff -- specs/art-006-autopilot
 The detailed archive and verification record is stored in
 `.specify/memory/archive-reports/2026-08-09-art-006-post-merge-hygiene.md`.
 
-## 2026-08-11 — ART-002 Draft-PR Template Set archived
+## 2026-08-12 — ART-002 Draft-PR Template Set archived
 
 Merged across three pull requests and archived from
 `chore/archive-art-post-merge`:
@@ -2379,9 +2379,9 @@ git checkout 425364b7be34d5b88605012d0492c0e97bdbefaf -- specs/art-002-draft-pr-
 ```
 
 The detailed archive and verification record is stored in
-`.specify/memory/archive-reports/2026-08-11-art-002-post-merge-hygiene.md`.
+`.specify/memory/archive-reports/2026-08-12-art-002-post-merge-hygiene.md`.
 
-## 2026-08-11 — ART-012 Implementation-Notes Capture archived
+## 2026-08-12 — ART-012 Implementation-Notes Capture archived
 
 Merged in PR #426 at `1916d8c917eea4892035daafe4c02d2558e203f3`, then archived
 from `chore/archive-art-post-merge` in the same commit as ART-002.
@@ -2419,4 +2419,4 @@ git checkout 1916d8c917eea4892035daafe4c02d2558e203f3 -- specs/art-012-implement
 ```
 
 The detailed archive and verification record is stored in
-`.specify/memory/archive-reports/2026-08-11-art-012-post-merge-hygiene.md`.
+`.specify/memory/archive-reports/2026-08-12-art-012-post-merge-hygiene.md`.

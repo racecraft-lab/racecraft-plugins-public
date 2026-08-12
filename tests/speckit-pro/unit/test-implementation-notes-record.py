@@ -4,7 +4,7 @@
 Both contracts named below shipped in ART-012 and were archived with that
 spec's folder after PR #426 merged. Recover either one with the ``git show``
 command recorded in
-``.specify/memory/archive-reports/2026-08-11-art-012-post-merge-hygiene.md``.
+``.specify/memory/archive-reports/2026-08-12-art-012-post-merge-hygiene.md``.
 
 Two assertion groups live in this file. They pass or fail independently and
 each failure names its own group, so a regression in one never masks the other:

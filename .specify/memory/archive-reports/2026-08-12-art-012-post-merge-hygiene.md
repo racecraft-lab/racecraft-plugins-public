@@ -11,6 +11,10 @@
 
 ## Provenance
 
+**Every date in this report is UTC**, matching the merge timestamps GitHub
+records. The cleanup ran on 2026-08-12 UTC, during the evening of 2026-08-11 US
+Eastern, which is why the archive date falls a day after this spec's own merge.
+
 ART-012 shipped in one pull request with no follow-up fix.
 
 - **Source spec path**: `specs/art-012-implementation-notes-capture/`
@@ -226,7 +230,7 @@ ninth commands above.
 | Artifact | Change |
 |---|---|
 | `.specify/memory/{spec,plan,changelog}.md` | Append shipped behavior, architecture, provenance, and cleanup state |
-| `.specify/memory/archive-reports/2026-08-11-art-012-post-merge-hygiene.md` | This report |
+| `.specify/memory/archive-reports/2026-08-12-art-012-post-merge-hygiene.md` | This report |
 | `tests/speckit-pro/unit/test-implementation-notes-record.py` | Repoint five contract citations out of the removed folder (comments only) |
 | `docs/ai/specs/.process/autopilot-state.json` | Mark ART-012 completed/archived and record the applied sweep |
 | `docs/ai/specs/html-artifacts-technical-roadmap.md` | Mark ART-012 complete/archived; clear the "in progress" prose |
