@@ -98,7 +98,14 @@ constitution (`.specify/memory/constitution.md`):
 | **Dependencies** | None. Found during ART-006, which deliberately did not fix it |
 | **Enables** | Trustworthy phase-guard verdicts |
 | **Priority** | P2 |
-| **Stage** | full |
+
+No `Stage` row at scaffold. Absence means no stage has been resolved yet, which
+`autopilot-state-status.schema.json` states is normal rather than an error. A
+bare `/speckit-pro:speckit-autopilot` invocation resolves the stage itself; pass
+`--stage plan` if you want the run to stop after Analyze for review before any
+code is written. The row is written here when a stage is resolved, because this
+table is the authoritative durable store and `autopilot-state.json.stage` only
+mirrors it for the active run.
 
 ### Reviewability Budget And Split Decision
 
