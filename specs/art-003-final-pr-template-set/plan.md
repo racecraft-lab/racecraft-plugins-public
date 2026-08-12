@@ -82,7 +82,7 @@ export kinds. Three literals added to shared validation and one catalog value
 changed.
 
 **Reviewability Budget**: Primary surface docs/process; projected reviewable LOC
-750; 1 production file; 13 total files; budget result warn. Decomposed and
+758; 1 production file; 13 total files; budget result warn. Decomposed and
 measured below, not scaled from a multiplier.
 
 ## Declared File Operations
@@ -142,8 +142,8 @@ Each is measured by one instrument, at a named checkpoint, with a stop rule.
 | C1 | Document-section CSS — the six titled sections and page chrome | ≤ 150 |
 | C2 | Question and export CSS — disclosures, controls, status, fallback | ≤ 97 |
 | C3 | Export and question-capture JavaScript | ≤ 288 |
-| C4 | Markup — seven regions, sample content, six question mount points | ≤ 215 |
-| C5 | Authored total (C1 + C2 + C3 + C4) | ≤ 750, hard stop below 800 |
+| C4 | Markup — seven regions, sample content, six question mount points | ≤ 223 |
+| C5 | Authored total (C1 + C2 + C3 + C4) | ≤ 758, hard stop below 800 |
 
 C1 is the only one that can miss. C3 is measured against three shipped
 implementations of the same routine and is a floor rather than an estimate. C2
@@ -215,11 +215,11 @@ acceptance criterion and a recorded result.
 |---|---|---|---|
 | **M1** | the six sections' CSS is written, before any question or export CSS | `css ≤ 150` | **Stop.** Do not proceed to M2. Apply the reduction levers below and re-measure. |
 | **M2** | the question and export CSS is written | `css ≤ 247` | Stop. Reduce, re-measure. |
-| **M3** | the export routine and all markup are written, before the pull request | `authored ≤ 750` | Stop. Reduce, re-measure. Escalate above 800. |
+| **M3** | the export routine and all markup are written, before the pull request | `authored ≤ 758` | Stop. Reduce, re-measure. Escalate above 800. |
 
 M1 is the checkpoint that matters. It is the earliest moment the ceiling can
 fail and the cheapest moment to fix it, and putting it before the export work
-means a failure surfaces with roughly 150 lines written rather than 750. The
+means a failure surfaces with roughly 150 lines written rather than 758. The
 three shipped templates that missed this ceiling had no such checkpoint.
 
 **Review instruction.** The pull-request body records all four numbers and the
@@ -244,9 +244,16 @@ Named now so that a failure at M1 has a plan rather than a negotiation:
    single `flex-wrap`.
 4. **No hover-only refinement.** A hover state carries no meaning under FR-032,
    so it is decoration paid for in lines.
-5. **Inherit rather than restate.** The kit already applies the typeface tokens
-   to `body` and `h1`–`h6`. A port that writes ordinary headings and paragraphs
-   gets them free; naming them again is lines for nothing.
+5. **Inherit rather than restate.** The kit already assigns every heading level
+   its own typeface: the display token on `h1` and `h2`, and the body token at
+   weight 600 from `h3` down, because the brand system reserves the geometric
+   display face for the top of the page. It is one assignment per level, not one
+   token across all six — restating it as the latter is what leads a port to name
+   `--rc-font-display` on an `h3` and reintroduce a fidelity defect the kit
+   records as already caught against the brand source. A port that writes
+   ordinary headings and paragraphs gets the right face for each level free;
+   naming any of them again is lines for nothing and a chance to name the wrong
+   one.
 
 If all five are applied and M1 still exceeds 150, the ceiling has failed on
 evidence rather than on discipline. That is the point at which the exception
@@ -273,22 +280,56 @@ is checkable without being permanent.
 
 ### The re-declared figure
 
-**750 authored lines**, decomposed:
+**758 authored lines**, decomposed:
 
 | Component | Lines | Basis |
 |---|---|---|
 | Export and question-capture JavaScript | 288 | The shipped precedent's 293, less 19 for resolving six named sections by id instead of walking a list container (FR-023c), plus 13 for the stale-settle guard (FR-026a), plus 1 rounding. |
 | Question and export CSS | 97 | Measured off `module-map`'s own selectors: the objection disclosure block and the export controls, status, and fallback, excluding the panel chrome that belongs to C1. |
 | Six document sections' CSS | 150 | Against `spec-explainer`'s measured 169 for six regions, less the rules this port does not need. |
-| Markup | 215 | Seven regions with sample content held to the demonstrating minimum, six question mount points, and the export chrome. |
-| **Total** | **750** | |
+| Markup | 223 | Seven regions with sample content held to the demonstrating minimum, six question mount points, and the export chrome. Raised from 215 at Checklist; see below. |
+| **Total** | **758** | |
 
 Excluded: the 458 canonical lines a reviewer never reads because they are
 byte-verified copies (`BRAND-KIT` 318, `GALLERY-HEAD` 140, both measured).
 
-**Headroom is 50 lines, or 6.3%.** That is the honest risk statement. The
-decomposition holds or the slice blocks; there is no third outcome and no slack
-absorbing an overrun.
+**Markup moved from 215 to 222 at Checklist, and the total from 750 to 757.**
+The earlier markup figure assumed `file-by-file` would ship two sample items,
+which rested on FR-018 reading `MINIMUM_ITEMS = 2` in the fill-region validation
+as the count a list region ships. It is a floor: the rule fails only on
+`len(anchored) < 2` (`test-artifact-fill-regions.py:711`), and no cap exists
+anywhere in the module. Two is also below every shipped anchored list —
+`modules` 5, `phases` 4, `approaches` 3. FR-018 now fixes `file-by-file` at
+three, which is the low end of that convention and the smallest count that shows
+the region is heterogeneous rather than a list of source files.
+
+Seven lines buy it, both measured rather than estimated:
+
+- **+6** for the third `file-by-file` item, at the 6.0 authored lines per
+  anchored repeated entry `implementation-plan`'s `phases` region ships (24
+  lines, 4 items).
+- **+1** for FR-018a's sample notice, one markup line reusing the muted-paragraph
+  rule FR-019a's standing sentence already requires, so it adds no CSS rule.
+
+`non-goals` and `verification` stay at two: they carry no per-item anchor, so no
+rule counts them, and `verification` teaches through FR-018's both-states rule
+instead of through length, which costs nothing. **Nothing was shrunk elsewhere to
+absorb the seven lines.**
+
+**A further line was charged at Checklist by the accessibility pass, taking
+markup to 223 and the total to 758.** Without scripting the export region would
+stay on screen offering an action nothing can perform, which is the FR-028
+failure arriving by another road: a reader who cannot see a result cannot tell a
+broken copy from a silent one. The region therefore ships hidden and the routine
+that already runs at load reveals it. The hidden state is an attribute on a
+container line that exists anyway, so the charge is the single reveal statement.
+Every other remediation in that pass cost nothing — each fixed wording, an
+inventory value FR-014 already makes mandatory, or the placement of a guard
+FR-026a already budgets.
+
+**Headroom is 42 lines, or 5.3%**, down from 50. That is the honest risk
+statement. The decomposition holds or the slice blocks; there is no third outcome
+and no slack absorbing an overrun.
 
 **Budget result: warn.** Above the 400 warn threshold, below the 800 block
 threshold. No `Reviewability-Exception` pragma is claimed and none is available:
@@ -451,4 +492,4 @@ block is last on purpose. Append nothing after it.
 - **Secondary surfaces**: seed/config (one catalog value), harness/adapter (three literals in the fill-region validation)
 - **Projected production files**: 1
 - **Projected total files**: 13
-- **Projected reviewable LOC**: 750
+- **Projected reviewable LOC**: 758

@@ -9,7 +9,7 @@
   "stage_basis": "auto-detect: the first non-terminal planning phase is Specify, which is \u23f3 Pending",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-012-workflow.md",
-  "active_step": "Phase 4: Checklist - accessibility",
+  "active_step": "Phase 4: Checklist - ux Consensus",
   "updated_at": "2026-08-12T18:00:00Z",
   "settings": {
     "consensus_mode": "tier-a",
@@ -98,19 +98,19 @@
     },
     {
       "step": "Phase 4: Checklist - accessibility",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - accessibility Consensus",
-      "status": "pending"
+      "status": "skipped: zero unresolved items"
     },
     {
       "step": "Phase 4: Checklist - ux",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - ux Consensus",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
@@ -204,6 +204,12 @@
       "pass": true,
       "markers": 0,
       "reason": "plan.md exists with 0 unresolved markers"
+    },
+    "G4": {
+      "pass": true,
+      "markers": 0,
+      "reason": "0 [Gap] across spec, plan and all four checklists \u2014 verified by direct scan",
+      "caveat": "G4 itself counts only spec.md and plan.md and never opens checklists/; its PASS is not evidence"
     }
   },
   "spec_metrics": {
@@ -293,5 +299,21 @@
       "workflow read 1 from the superseded table header + separator + '| 1'"
     ],
     "all_three_artifacts_declare": 750
+  },
+  "checklist": {
+    "domains": 3,
+    "gaps_found": 33,
+    "gaps_closed": 33,
+    "budget_moved": {
+      "from": 750,
+      "to": 758,
+      "markup": "215->223",
+      "headroom": 42,
+      "charges": "ux +7 measured, accessibility +1"
+    },
+    "unresolved_routed": [
+      "[codebase] CHK023 FR-021 outward reference",
+      "[ambiguous] CHK028 no colour-distinction list"
+    ]
   }
 }

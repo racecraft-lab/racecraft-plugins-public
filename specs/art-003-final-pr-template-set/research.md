@@ -188,7 +188,7 @@ lines: the file-count strip, the prompt echo, the TL;DR block, the first two
 "where to focus" items, the whole rollout section, and the table-of-contents
 sidebar together with the two-column layout it requires.
 
-That 141 is the difference between roughly 750 and roughly 890, and therefore the
+That 141 is the difference between roughly 758 and roughly 899, and therefore the
 difference between warn and block. The sidebar is the largest single item,
 because dropping it also drops the layout it forces.
 

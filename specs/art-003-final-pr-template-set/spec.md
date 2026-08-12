@@ -138,6 +138,22 @@ nothing from the four empty fields.
   draws survives without color.
 - **A brand typeface unavailable.** Heading rank still reads, because hierarchy
   rides on semantic level, size, and weight rather than on typeface identity.
+- **Scripting unavailable.** US1 survives whole: all six sections, their sample
+  content, the headings, and the standing intro are markup and stay readable. US2
+  does not, and the degradation is uneven — the six question controls are built
+  at load, so they simply do not appear, while the two export controls sit in
+  markup and would remain on screen offering an action nothing can perform. A
+  control that cannot act is worse than an absent one, because a reader who
+  cannot see a result has no way to tell a broken copy from a silent one, and
+  this is the same failure FR-028 exists to prevent arriving by a different road.
+  The artifact MUST therefore ship the export region hidden and let the script
+  reveal it, so the affordance appears only where it works. **This costs one
+  line**: the hidden state is an attribute on a container line that exists
+  anyway, and revealing it is a single statement in a routine that already runs
+  at load. That one line is charged against the 50 lines of headroom and is
+  recorded in the Budget below. The remaining degradation — no question controls,
+  so no questions to export — is an accepted one rather than a defect, because
+  US1 is P1 and delivers its value alone.
 
 ## Requirements *(mandatory)*
 
@@ -195,11 +211,15 @@ nothing from the four empty fields.
   carry `id="feature-id"` on the feature identifier and `id="feature-name"` on
   the feature name, because both exports read them to name the change. The
   artifact's own kind MUST carry `id="artifact-title"` and MUST sit outside every
-  region, so no fill can delete it. All four shipped templates already do this;
-  `spec-explainer` carries the region even though it declares no exports. Without
-  it the feature's identity would live outside every region, so a generated
-  artifact could never correct the fictional sample and every export would name
-  the wrong change.
+  region, so no fill can delete it. **Three** shipped templates already do this —
+  `module-map`, `code-approaches`, and `implementation-plan`. `spec-explainer` is
+  the precedent for carrying the *region* while declaring no exports, and it is
+  not the precedent for the ids: it carries none of the three, and it places its
+  artifact kind *inside* the region, where the first fill deletes it. That is
+  survivable only because it exports nothing, and this artifact exports two
+  kinds. Without the ids the feature's identity would live outside every region,
+  so a generated artifact could never correct the fictional sample and every
+  export would name the wrong change.
 
 #### What the port keeps and drops
 
@@ -222,6 +242,11 @@ nothing from the four empty fields.
   pending state MUST be readable as a word, not as a check glyph's fill.
 - **FR-011e**: Each of the six reader-facing sections MUST carry its heading
   outside its marker pair, so a fill replaces content and never the section title.
+  Each heading MUST read as a plain-English reader label rather than as a
+  restatement of its slot name, because FR-023b exports
+  `<slot> / <section heading>` and a heading echoing its slot collapses that line
+  to the same word twice, leaving a reader who has left the artifact no more than
+  the slot name they already had.
 - **FR-012**: Each region MUST be delimited by exactly one pair of HTML comment
   markers, `FILL:<slot>:START` before `FILL:<slot>:END`.
 - **FR-013**: Regions MUST be flat: no pair may enclose another, and each pair
@@ -255,17 +280,98 @@ nothing from the four empty fields.
 - **FR-017b**: The `implementation-notes` inventory line's `Fills:` value MUST
   carry both the filter and the empty case, because that line is the only
   agent-facing instruction the artifact holds for this region: one entry per task
-  that reported something, in the record's order, or one sentence saying why none
-  did. It costs nothing, since FR-014 already makes the line mandatory, and it
-  must contain no pipe.
-- **FR-018**: Every region MUST ship representative fictional sample content held
-  to the minimum that demonstrates its shape: non-empty everywhere, expansive
-  nowhere. A prose region ships one short paragraph. A region holding a repeated
-  list ships exactly the two items the validation requires, except
-  `implementation-notes`, which ships three so the retry pair FR-019 requires can
-  be shown **non-adjacent**, as a real re-run appends it. Every region MUST use
-  the same invented feature, following `spec-explainer`, which holds one across
-  all of its regions.
+  that reported something, in the record's order, or one sentence naming which of
+  FR-019b's three cases obtains. The three MUST be **named** on that line — every
+  task reported nothing, no task recorded an entry, the record was unavailable —
+  rather than gestured at, because SC-011 holds the inventory to being sufficient
+  read alone, and an agent told only to say "which case obtains" writes "No
+  notes." and loses the distinction FR-019b exists to preserve. It costs no line,
+  since FR-014 already makes the line mandatory and it stays one line, and it must
+  contain no pipe.
+- **FR-017c**: The `before-after` inventory line's `Fills:` value MUST instruct
+  the authoring agent to keep each panel's statement opening with the word naming
+  that panel. FR-018 fixes this for the **shipped sample**; the inventory is what
+  fixes it for **every fill after the first**, and the two panels are the one
+  place in this artifact where a distinction could otherwise fall back to column
+  position or panel colour, which FR-032 forbids. The carrier sits inside the
+  marker pair and cannot be moved outside it — FR-012 allows one pair per region
+  and FR-013 requires that pair to delimit a whole subtree — so an inventory
+  instruction is the only thing that can protect it, exactly as `file-by-file`'s
+  line protects its item anchors and `verification`'s line protects its state
+  words. It costs no line, since FR-014 already makes the line mandatory and it
+  stays one line, and it must contain no pipe.
+- **FR-018**: Every one of the seven regions MUST ship representative fictional
+  sample content held to the minimum that demonstrates its shape: non-empty
+  everywhere, expansive nowhere. The artifact ships four shapes, and each has its
+  own minimum:
+  - **Prose** (`motivation`): one short paragraph.
+  - **An anchored repeated list** (`file-by-file`, the only slot the fill-region
+    validation binds as a list): **three items**. Two is the validation's
+    *floor*, not the count it requires — it fails a list slot only on
+    `len(anchored) < 2`, and nothing anywhere caps the number. Two is also below
+    every shipped anchored list in the gallery (`modules` 5, `phases` 4,
+    `approaches` 3), so three is the low end of the shipped convention rather
+    than a new low. The reason is the reader's, not the gate's: this region
+    exists to say what *each* changed file does, and a real change is
+    heterogeneous. Two items show at most two kinds, and an authoring agent
+    reading the sample as its model learns the region lists source files. Three
+    show a production file, its test, and a config or manifest value — the shape
+    of this slice's own change. A fourth adds an instance, not a kind, and is
+    paid for in lines; upstream's six is a real pull request's file list, not a
+    template's demonstrating minimum.
+  - **An unanchored repeated list** (`non-goals`, `verification`): **two items**.
+    These carry no per-item anchor under FR-020a, so no validation rule counts
+    them, and each is a homogeneous statement where a third adds an instance
+    rather than a kind. `verification` in particular does its teaching through
+    FR-011d's state word rather than through length, which the both-states rule
+    below buys for nothing. `implementation-notes` is the exception at three, for
+    the reason below.
+  - **A two-panel comparison** (`before-after`): one short statement per panel,
+    each **opening with the word naming its panel**, so which panel is which
+    survives the single `flex-wrap` that stacks them on a narrow viewport and
+    survives a monochrome rendering under FR-032. This is the only section with
+    bespoke layout, so it is capped on content as well as on CSS.
+  - **The header** (`feature-header`): the invented feature's identifier and its
+    name, carrying the two ids FR-011a fixes, plus FR-018a's notice and nothing
+    else.
+
+  `implementation-notes` is unanchored and would take two by the rule above, and
+  ships **three** instead. Three is the count at which the retry pair FR-019
+  requires can be shown **non-adjacent**, as a real re-run appends it after the
+  intervening tasks' entries. Two would force a choice between showing two
+  distinct tasks and showing the retry, and an adjacent pair would model the case
+  wrongly.
+
+  `verification`'s two items MUST show **both states** — one passed and one
+  pending — because FR-011d requires that state to read as a word, and two items
+  in the same state leave the other word undemonstrated. This is what lets the
+  region teach at two rather than at three, and it costs no line.
+
+  Every region MUST use the same invented feature, named once and reused,
+  following `spec-explainer`, which holds one across all of its regions.
+
+  **Line cost of this requirement against the budget**: seven, all markup, all
+  declared in the Reviewability Budget below. Six for `file-by-file`'s third
+  item, measured at the 6.0 authored lines per anchored repeated entry that
+  `implementation-plan`'s `phases` region ships (24 lines, 4 items); one for
+  FR-018a's sentence. Every other clause here constrains the wording of content
+  already budgeted and costs nothing.
+- **FR-018a**: The artifact MUST say in visible text that its content is
+  invented, in one sentence naming the invented feature, placed **inside**
+  `feature-header`'s marker pair so the first fill removes it. All four shipped
+  gallery templates carry this sentence and all four place it there. Without it a
+  reader opening the file cold reads a complete and plausible write-up of a change
+  that never happened, with nothing on the page saying otherwise — and this is the
+  one gallery template whose subject matter is a finished pull request, so the
+  fiction is the most credible. It reuses the muted-paragraph rule FR-019a's
+  standing sentence already requires, so it adds no CSS rule of its own.
+- **FR-018b**: The two `implementation-notes` entries sharing a task identifier
+  MUST read as a **sequence**: the second states what the re-run changed, so the
+  pair reads as history rather than as a line printed twice. FR-019a's standing
+  sentence tells a reader that a task *can* appear more than once; it cannot tell
+  them that *these two* are that case. Two entries with interchangeable text would
+  make the sample model the accident FR-019c declines to mark visually, which is
+  the one reading the whole design exists to prevent.
 - **FR-019**: The `implementation-notes` region MUST render only the eventful
   entries of the implementation record, in the record's own append order, each
   under the task identifier it was recorded against. Two entries sharing a task
@@ -281,8 +387,14 @@ nothing from the four empty fields.
   uses that element for structural claims, not only for blurbs. Contrast
   `spec-explainer`'s sample notice, which correctly sits *inside*
   `feature-header`'s pair because it describes the sample and should die with the
-  fill. This one sentence is what lets a reader tell an empty region from a broken
-  one, and a repeated task identifier from a duplicate.
+  fill — which this artifact ships too, under FR-018a. This one sentence is what
+  lets a reader tell an empty region from a broken one, and a repeated task
+  identifier from a duplicate.
+  The sentence MUST be phrased as the region's **standing rule** rather than as
+  an assertion about the entries below it. It survives every fill, including
+  FR-019b's third case, where the record was never read and no filter ran; a
+  sentence asserting that what follows was filtered would be false there, sitting
+  directly above a sentence saying the record was unavailable.
 - **FR-019b**: When no entry survives the filter, the fill MUST state which case
   obtains in one sentence — every task reported nothing, no task recorded an
   entry, or the record was unavailable — rather than leaving the region empty or
@@ -333,6 +445,18 @@ nothing from the four empty fields.
   control: a keyboard-reachable disclosure plus a labelled text field, matching
   the pattern the gallery's existing templates already ship, so a reviewer meets
   one interaction across the gallery.
+- **FR-021a**: Two properties of that pattern are stated here rather than left to
+  "matching", because both are accessibility obligations and a port that met the
+  shape while missing them would still read as compliant. The disclosure's own
+  control MUST state **in text** whether its section currently carries a
+  question, so a recorded question is findable without opening all six and so the
+  carried/not-carried state survives a monochrome rendering under FR-032. The
+  text field's visible label MUST be programmatically associated with the field;
+  **placeholder text does not satisfy this**, because it is not an accessible
+  name, and it vanishes the moment the reviewer types. Both cost no line: the
+  routine all three shipped export-carrying templates run already writes the
+  state into the disclosure's own accessible name and already builds a real label
+  bound to the field.
 - **FR-022**: The artifact MUST carry exactly one export control per declared
   export kind, and its catalog entry declares two: an instruction for a coding
   agent, and a record for a pull-request comment. Each control MUST be labelled
@@ -359,10 +483,18 @@ nothing from the four empty fields.
   section rather than inserted after its heading, so it follows the content the
   reader is questioning.
 - **FR-023c**: The export routine MUST collect its items from a pinned list of
-  the slot names in document order, resolving each section by its `sec-<slot>` id
-  directly, rather than by walking a container's children. Each item carries its
-  own slot name. This survives a fill that restructures a section, never depends
-  on DOM order, and concatenates no value into a selector string.
+  the slot names in document order, resolving each section from the `sec-<slot>`
+  id directly, rather than by walking a container's children. Each item carries
+  its own slot name. This survives a fill that restructures a section, never
+  depends on DOM order, and concatenates no value into a selector string.
+  **That id identifies the section's heading, not the section** — FR-023b says so
+  in its own words — so the routine MUST resolve from the heading to the section
+  that heading labels, and MUST mount the question control at that section's end.
+  Mounting it on the resolved element itself would place it immediately after the
+  heading, which is the one placement FR-023b forbids, and the tab order would
+  then put every question ahead of the content it questions. Stating the
+  resolution target costs no line: the routine needs one expression to reach its
+  mount point either way, and this fixes which one it is.
 - **FR-024**: An export MUST carry enough context to be acted on away from the
   artifact: the artifact, the change it belongs to, and the location each
   question attaches to.
@@ -382,16 +514,56 @@ nothing from the four empty fields.
   places the first kind's payload in the fallback field after the second kind
   copied successfully. **This defect is present in all three export-carrying
   templates ART-002 shipped** — each runs the same unguarded settle, and none
-  carries a currency check — and this artifact MUST NOT reproduce it. The
-  synchronous refusal path and the no-clipboard-interface path stay unguarded and
-  MUST say why: both run inside the same synchronous turn that issued the token,
-  so neither can be stale.
+  carries a currency check — and this artifact MUST NOT reproduce it.
+- **FR-026b**: The currency check MUST be scoped by **effect, not by path**: it
+  sits where a status write or a fallback reveal actually lands, and every path
+  reaches those effects through it. Scoping it by path is not sufficient here,
+  and the reason is a property of the precedent this slice reuses rather than a
+  hypothetical. In all three shipped export-carrying templates the status write
+  is deferred behind a short timer — the region is cleared and rewritten so a
+  repeated identical message is announced a second time — and the focus move to
+  the fallback field is deferred behind a longer one. So the two paths the
+  invocation-currency rule would exempt as "synchronous" decide synchronously but
+  **land asynchronously**, in a later turn, after a second invocation may have
+  completed. A first export refused synchronously would then move focus into a
+  field the second export already re-hid, which is focus theft and which FR-026a
+  forbids in the words "move no focus". Scoping the check by effect makes the
+  exemption unnecessary rather than merely safer: the two synchronous paths carry
+  the current token and pass the same check, so no path is unguarded and none
+  needs a rationale for being so. This is a relocation of the guard, not an
+  addition — the same two check sites FR-026a already budgets 13 lines for, moved
+  from the settle callbacks to the effects those callbacks schedule — so it costs
+  no line beyond that allowance.
 - **FR-027**: Every export control MUST be reachable and operable by keyboard
   alone, and MUST report its outcome in text rather than by color or animation
-  alone.
-- **FR-028**: When clipboard access fails or is refused, the artifact MUST reveal
-  the exported text in a selectable field and say so, rather than reporting
-  success or failing silently.
+  alone. The artifact MUST carry exactly one live status region for that
+  reporting, present from load rather than created on demand, and that region
+  MUST sit outside every fill region. The placement is the requirement, not a
+  preference: a status region a fill could delete would make every later failure
+  silent, which is the defect FR-028 exists to prevent. It costs no line, because
+  the region must exist either way and this fixes only where it sits.
+- **FR-028**: When clipboard access fails or is refused, the artifact MUST take
+  all four steps of the contract's failure path: (1) reveal the same exported
+  text in a field the reader can select; (2) keep that field **focusable and not
+  disabled**, give it an accessible name, and move focus to it; (3) report the
+  single failure message; and (4) **not** report success. Step 2 is not
+  decoration — focus arriving at an inert or unnamed control strands a reader who
+  cannot see the reveal, and a disabled field cannot be focused at all. Failing
+  silently and reporting success are the same defect wearing different clothes:
+  the reader believes they hold text they do not hold.
+- **FR-028a**: Three obligations attach to that path. Each is already satisfied
+  by the routine shape all three shipped export-carrying templates run, so none
+  costs a line against the budget. The artifact MUST NOT make a **second copy
+  attempt** through any deprecated interface after the first fails, because that
+  attempt's result is ambiguous and reporting an uncertain success is exactly
+  what the contract forbids. Every invocation MUST re-hide the fallback field
+  before it attempts its copy, so a later successful export never leaves an
+  earlier failure's payload on screen beside a success message — FR-026a governs
+  only the concurrent case, and this is the sequential one. The failure path MUST
+  leave the browser console silent, which means the rejection is handled rather
+  than left to surface as an unhandled rejection; FR-003 and SC-001 scope console
+  silence to opening and reading, so without this clause the export path is
+  unbound.
 - **FR-029**: When no question has been written, an export MUST say in text that
   there is nothing to export rather than produce an empty or invented document.
 - **FR-029a**: The artifact's export literals MUST be pinned in a contract
@@ -410,20 +582,74 @@ nothing from the four empty fields.
   add that comparison, because FR-039a fixes its shared-validation change at
   three literals. Both facts are recorded gaps, including that this slice's own
   contract will dangle the same way when ART-003 is archived.
+- **FR-029b**: That failure message MUST be the **only** one, covering every
+  failure mode, and it MUST assert **no cause**. Byte-identity does not secure
+  this on its own: it fixes the wording of one message and constrains neither how
+  many failure messages exist nor the addition of a more diagnostic variant for a
+  mode that looks distinguishable. None of them is. The artifact cannot tell a
+  refused permission from an unfocused document from a browser policy from an
+  absent interface, so naming one would be a guess presented as a diagnosis. The
+  constraint costs no line, because it forbids messages rather than requiring
+  them.
+- **FR-029c**: No string literal inside the artifact's script may name the
+  local-file scheme. Feedback text says "opened from a filesystem" instead. This
+  is a validation requirement, not a wording preference: the gallery scanner's
+  URL-shaped pattern treats a script string literal that opens with a scheme and
+  a colon, or that carries a scheme followed by two slashes anywhere, as an
+  external reference and fails the file. The clipboard call itself is not a
+  scanned call site; the wording is. It costs no line, because the same string
+  slot carries either form.
 
 #### Accessibility
 
 - **FR-030**: Every foreground and background pairing the artifact uses MUST come
   from the kit's audited set. Colors introduced outside the embedded block are
   outside the audit and MUST NOT be relied on.
+- **FR-030a**: The pairings the artifact actually uses MUST be **recorded with
+  the acceptance evidence** under FR-042, each traced to the audited row that
+  clears it and to the role that row permits — body text, large text, or
+  meaningful non-text. Without the list FR-030 is a claim a reviewer can only
+  take on trust, because the audit lives in a header that does not ship and the
+  artifact carries only token names. The record sits in the evidence rather than
+  in the artifact **on purpose**: `spec-explainer` keeps its equivalent audit as
+  an in-file comment, which is the shipped precedent, but that comment is
+  authored CSS lines and this slice has 19 lines of margin on the document-CSS
+  ceiling and 50 on the total. Recording it beside the render evidence discharges
+  the same obligation at zero cost to the artifact.
 - **FR-031**: The artifact MUST NOT use the subtle border token for any boundary
   that conveys meaning; a meaningful boundary uses the strong border token.
+- **FR-031a**: For this artifact that rule resolves to a **checkable outcome
+  rather than a judgement**: the subtle border token MUST appear nowhere in the
+  authored CSS. Every boundary this template draws — a section from the page, a
+  before/after panel from its neighbour, a question disclosure, a text field, a
+  code sample — separates content from its surroundings and therefore carries
+  meaning, which is the one role that token is audited against. `spec-explainer`,
+  the shipped comparator for this document class, records the same outcome for
+  the same reason. Stating the outcome matters because the judgement version has
+  to be re-made at every boundary by whoever reviews it, and a boundary wrongly
+  judged decorative fails at 1.13:1 rather than visibly. The outcome version is a
+  search, costs no line, and removes lines if anything.
 - **FR-032**: No status, action, or distinction the artifact draws may be carried
   by color alone. Each MUST also be available as text, shape, glyph, or position,
   and MUST survive a monochrome print or screenshot.
 - **FR-033**: Where the artifact names a heading typeface explicitly it MUST use
-  the display token, and heading rank MUST ride on semantic heading level, size,
-  and weight rather than on typeface identity.
+  the display token, and **only on the first two heading levels**, which are the
+  levels the embedded block assigns it. From the third level down the block
+  assigns the body token at a heavier weight, and it records that applying the
+  display face to every level was a fidelity defect caught against the brand
+  source. Naming the display token below the second level would therefore
+  reintroduce a defect the kit already fixed. Heading rank MUST ride on semantic
+  heading level, size, and weight rather than on typeface identity, so hierarchy
+  survives the brand face being unavailable.
+- **FR-033a**: The heading typeface token is `--rc-font-display`. No other
+  heading-typeface custom property is defined anywhere in the embedded block, and
+  an undefined custom property fails **silently**: the declaration falls through
+  to whatever fallback it named, so a typo renders plausibly and is invisible to
+  review. The artifact MUST reference no custom property the embedded block does
+  not define. The cheapest way to satisfy both this and FR-033 is to name no
+  heading typeface at all and inherit the block's own assignments, which is the
+  reduction lever `plan.md` records; every heading the artifact writes as an
+  ordinary heading gets the right face for its level free.
 - **FR-034**: The artifact MUST add no positive tab index and MUST trap focus
   nowhere, and MUST NOT suppress the kit's focus indicator without an equivalent
   replacement.
@@ -478,7 +704,7 @@ expensive templates draw a graph, mockups, timelines and comparison tables.
 `pr-writeup` is a document of six titled prose-and-list sections, so its
 structural analogue is `spec-explainer`.
 
-Holding component CSS to that document class is what puts this slice at ~750 and
+Holding component CSS to that document class is what puts this slice at ~758 and
 in warn. Failing to hold it puts it at 984 or above and in block. **This is a
 design constraint, not a prediction**, and the three templates that actually
 carry both exports did not hold it.
@@ -494,7 +720,7 @@ Budget below.
 
 - **Primary surface**: docs/process (a shipped template file)
 - **Secondary surfaces, if any**: seed/config (one catalog value), harness/adapter (three literals in the fill-region validation)
-- **Projected reviewable LOC**: **~750**, decomposed and measured rather than
+- **Projected reviewable LOC**: **~758**, decomposed and measured rather than
   scaled from a multiplier:
   - export and question-capture JavaScript **~288** — the shipped precedent's 294,
     less 19 for collecting six named sections instead of walking a list container
@@ -502,7 +728,28 @@ Budget below.
     stale-settle guard
   - question and export CSS **~97**, measured off the precedent's own selectors
   - six document sections **~150** CSS, against `spec-explainer`'s 171 total
-  - markup **~215**
+  - markup **~223**
+
+  **The markup figure moved from 215 to 222 at Checklist, and the total with it,
+  from 750 to 757.** The earlier figure rested on a misreading of the
+  fill-region validation: FR-018 read `MINIMUM_ITEMS = 2` as the count a list
+  region must ship, when the rule fails only on `len(anchored) < 2` and nothing
+  caps it. Two is below every shipped anchored list in the gallery. Seven lines
+  buy the correction: six for `file-by-file`'s third item, measured at the 6.0
+  authored lines per anchored repeated entry `implementation-plan`'s `phases`
+  ships, and one for FR-018a's sample notice, which reuses an existing rule and
+  adds no CSS. Nothing was shrunk elsewhere to absorb them. Headroom to the 800
+  block falls from 50 lines to **43**.
+
+  **One further line was charged at Checklist, taking markup to 223 and the total
+  to 758.** The accessibility pass found that the export region would stay on
+  screen offering an action nothing can perform when scripting is unavailable,
+  and closed it by shipping that region hidden and revealing it from the routine
+  that already runs at load. The hidden state is an attribute on a container line
+  that exists anyway; the reveal is the one new statement. Headroom to the 800
+  block is now **42**. Every other accessibility remediation in that pass cost
+  nothing, because each fixed wording, an inventory value already mandatory, or
+  the placement of a guard already budgeted.
 
   Excludes the 458 lines of canonical embedded blocks a reviewer never reads
   because they are byte-verified copies (`brand-kit.css` `BRAND-KIT` block = 318,
@@ -521,7 +768,7 @@ Budget below.
   declared, and the ceiling is checked by one calibrated measuring instrument at
   three checkpoints with a stop rule. The first checkpoint fires after the six
   sections' CSS and **before** any export work, so an overrun surfaces at roughly
-  150 lines written rather than at 750.
+  150 lines written rather than at 758.
 - **Basis for the projection**: measured against the four shipped templates
   rather than fitted to one aggregate figure. Authored lines are what the gate
   counts, and the predictor is the `exports` declaration, not slot count and not
@@ -577,9 +824,10 @@ Budget below.
 
 ### Key Entities
 
-- **The artifact**: one HTML file carrying six reader-facing sections, an
-  attribution header, a slot inventory, sample content, per-section question
-  fields, and two export controls.
+- **The artifact**: one HTML file carrying six reader-facing sections plus a
+  `feature-header` chrome region, an attribution header, a slot inventory, sample
+  content declared as invented, per-section question fields, and two export
+  controls.
 - **A fill region**: a named span of the artifact an authoring agent replaces
   later, delimited by one paired comment marker and described by one inventory
   line.
@@ -630,8 +878,9 @@ Budget below.
   criterion is a true declaration and a recorded ruling, not clearing the
   threshold.)
 - **SC-011**: An authoring agent reading only the artifact's own inventory can
-  name all six regions and what fills each, with zero regions undocumented and
-  zero documented slots lacking a region.
+  name all **seven** regions and what fills each, with zero regions undocumented
+  and zero documented slots lacking a region, and can name all three of
+  FR-019b's empty cases from the `implementation-notes` line alone.
 
 ## Assumptions
 

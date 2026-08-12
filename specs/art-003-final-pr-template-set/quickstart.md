@@ -135,7 +135,7 @@ print("authored",len(L)-len(canon),"| css",n["css"],"| js",n["js"],"| markup",n[
 |---|---|---|
 | **M1** | the six sections' CSS is written, before any question or export CSS | `css` ≤ 150 |
 | **M2** | the question and export CSS is written | `css` ≤ 247 |
-| **M3** | the export routine and all markup are written | `authored` ≤ 750 |
+| **M3** | the export routine and all markup are written | `authored` ≤ 758 |
 
 Record all four numbers in the pull-request body with the checkpoint each was
 taken at.
@@ -169,10 +169,12 @@ install, and nothing in the console. Only a person can check that.
 | Step | Expected |
 |---|---|
 | 1. Load the file. | The page renders in full. The console reports **nothing** — no error, no warning, no failed load. |
-| 2. Look for the six sections. | `motivation`, `before-after`, `file-by-file`, `non-goals`, `verification`, `implementation-notes` each appear as their own titled section, each carrying representative sample content. |
-| 3. Read `implementation-notes`. | Each note appears under the task identifier it was recorded against, in append order. Three entries, with the retry pair **non-adjacent**. The standing intro sentence is present above the region. |
-| 4. Read the retry pair. | Both entries render. Neither is visually grouped with the other and neither carries an attempt ordinal. |
-| 5. Read `verification`. | Each item's passed-or-pending state reads as a **word**. Nothing depends on a glyph's fill. |
+| 2. Look for the six sections. | `motivation`, `before-after`, `file-by-file`, `non-goals`, `verification`, `implementation-notes` each appear as their own titled section, each carrying representative sample content. The page header says in words that the content is invented and names the invented feature. |
+| 3. Read `implementation-notes`. | Each note appears under the task identifier it was recorded against, in append order. Three entries, with the retry pair **non-adjacent**. The standing intro sentence is present above the region, phrased as the region's rule rather than as a claim about the entries below it. |
+| 4. Read the retry pair. | Both entries render. Neither is visually grouped with the other and neither carries an attempt ordinal. The second entry says what the re-run changed, so the pair reads as history rather than as a line printed twice. |
+| 5. Read `verification`. | Two items, **one passed and one pending**, each state reading as a **word**. Nothing depends on a glyph's fill. |
+| 5a. Read `file-by-file`. | Three items — a production file, its test, and a config or manifest value — each carrying its own `file-by-file-<slug>` anchor. |
+| 5b. Read `before-after`. | Each panel's statement opens with the word naming it, so which is which survives the stacked narrow-viewport layout and a greyscale print. |
 | 6. Switch the theme. | Both themes render every section legibly. No meaning is lost either way. |
 | 7. Tab through the page. | Every interactive element is reachable in normal focus order with a visible focus indicator. No element is skipped and focus is never trapped. |
 | 8. Screenshot in greyscale, or print to greyscale. | Every distinction the artifact draws survives. Nothing is carried by hue alone. |

@@ -266,12 +266,30 @@ The same trap was live in `spec.md`, where `…285 reviewable LOC. ART-002's sli
 declare the same number.
 
 ```text
-Projected reviewable LOC: 750
+Projected reviewable LOC: 758
 ```
 
 Slice 1, measured and decomposed: 288 export and question-capture JS, 97 question
-and export CSS, 150 document-section CSS, 215 markup. Excludes the 458 canonical
-block lines. Warn, 50 lines of headroom to the 800 block.
+and export CSS, 150 document-section CSS, 223 markup. Excludes the 458 canonical
+block lines. Warn, 42 lines of headroom to the 800 block.
+
+**Moved from 750 at Checklist, and the movement is the point.** The ux domain
+charged 7 lines and the accessibility domain 1, both measured rather than
+estimated: 6 lines for a third `file-by-file` sample entry (priced at 6.0
+authored lines per anchored entry, measured from `phases`' 24 lines across 4
+items), 1 for a sample notice telling a reader the content is invented, and 1 for
+revealing the export region only where scripting can serve it.
+
+Nothing was shrunk elsewhere to absorb them and no requirement was dropped. Every
+artifact now declares 758: `spec.md`, `plan.md` (its constraints, decomposition
+table, Technical Context, and the Declared Figures block the parser reads last),
+`quickstart.md`'s measurement gate, `research.md`'s arithmetic, and this file.
+
+The reconciliation itself was a near miss worth recording. The plan's gate-read
+declaration and Technical Context were still reading 750 while a sibling had
+already moved the decomposition to 757 — the exact stale-declaration failure this
+section warns about, arriving from three executors editing one budget block
+concurrently rather than from anyone's carelessness.
 
 ---
 

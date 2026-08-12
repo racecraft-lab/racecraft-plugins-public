@@ -89,33 +89,60 @@ header stays the first comment a scanner recognises as one.
 ```text
 Slot: feature-header | Fills: the feature identifier and its name; keep id="feature-id" on the identifier and id="feature-name" on the name, because both exports read them to name the change | Source: spec.md
 Slot: motivation | Fills: one short paragraph saying why the change was made | Source: spec.md
-Slot: before-after | Fills: the two panels comparing the behaviour before the change with the behaviour after it | Source: spec.md, plan.md
+Slot: before-after | Fills: the two panels comparing the behaviour before the change with the behaviour after it; open each panel's statement with the word naming that panel, because which panel is which must not rest on its position or its colour | Source: spec.md, plan.md
 Slot: file-by-file | Fills: one item per changed file saying what it does; keep an id of the form file-by-file-<slug> on each item, because an exported question names it | Source: plan.md, tasks.md
 Slot: non-goals | Fills: one item per thing the change deliberately leaves out | Source: design-concept.md, spec.md
 Slot: verification | Fills: one item per check that was run, each stating its passed or pending state as a word rather than as a glyph | Source: spec.md, tasks.md
-Slot: implementation-notes | Fills: one entry per task that reported something, in the record's order, with a retried task appearing more than once; or one sentence saying which case obtains when none did | Source: implementation-notes.md
+Slot: implementation-notes | Fills: one entry per task that reported something, in the record's order, with a retried task appearing more than once; or, when none did, one sentence naming which case obtains — every task reported nothing, no task recorded an entry, or the record was unavailable | Source: implementation-notes.md
 ```
 
 Every `Source:` value is a member of the closed set once `implementation-notes.md`
 is added. The set is bare filenames of per-feature SpecKit artifacts regardless of
 directory, which `design-concept.md` already demonstrates.
 
-The `implementation-notes` line carries both the filter and the empty case
-because that line is the only agent-facing instruction the artifact holds for the
-region. It costs nothing, since FR-014 already makes the line mandatory.
+The `implementation-notes` line carries the filter and **all three** of the empty
+cases by name, because that line is the only agent-facing instruction the
+artifact holds for the region and SC-011 holds the inventory to being sufficient
+read alone. An agent told only to say "which case obtains" writes "No notes." and
+loses the distinction. It costs no line, since FR-014 already makes the line
+mandatory and it stays one line.
 
 ### Sample content
 
-Non-empty everywhere, expansive nowhere. Prose regions ship one short paragraph.
-A region holding a repeated list ships exactly the two items the validation
-requires — except `implementation-notes`, which ships **three**, so the retry pair
-can be shown **non-adjacent**, as a real re-run appends it. Two entries would
-force a choice between showing distinct tasks and showing the retry, and an
-adjacent pair would model the case wrongly. `implementation-notes` is not a list
-slot, so no validation rule caps or floors its item count.
+Non-empty everywhere, expansive nowhere. Four shapes, four minima (FR-018):
+
+| Shape | Regions | Sample |
+|---|---|---|
+| Prose | `motivation` | one short paragraph |
+| Anchored repeated list | `file-by-file` | **three** items |
+| Unanchored repeated list | `non-goals`, `verification` | **two** items |
+| Unanchored repeated list, retry exception | `implementation-notes` | **three** entries |
+| Two-panel comparison | `before-after` | one statement per panel, each opening with the word naming its panel |
+| Header | `feature-header` | the identifier, the name, and the invented-content notice |
+
+`MINIMUM_ITEMS = 2` in the fill-region validation is a **floor, not a count**: R5
+fails only on `len(anchored) < 2` and nothing caps the number. It binds
+`file-by-file` alone, because that is this template's only list slot. Two is
+below every shipped anchored list in the gallery (`modules` 5, `phases` 4,
+`approaches` 3), so `file-by-file` ships three — the low end of the convention,
+and the smallest count that shows the region is heterogeneous (a production file,
+its test, a config value) rather than a list of source files.
+
+`implementation-notes` ships three so the retry pair can be shown
+**non-adjacent**, as a real re-run appends it. Two entries would force a choice
+between showing distinct tasks and showing the retry, and an adjacent pair would
+model the case wrongly. It is not a list slot, so no validation rule caps or
+floors its count.
+
+`verification`'s two items show **one passed and one pending**, so FR-011d's
+state word is demonstrated in both of its values. That is what lets the region
+teach at two rather than three, at no line cost.
 
 Every region uses the same invented feature, following `spec-explainer`, which
-holds one across all of its regions.
+holds one across all of its regions — and the artifact **says so in visible
+text**, in one sentence inside `feature-header`'s pair, as all four shipped
+templates do (FR-018a). Without it a reader opening the file cold reads a
+plausible write-up of a change that never happened.
 
 ### Notes rendering
 
@@ -247,7 +274,7 @@ The artifact path is **derived, not stored**: the consumer composes
 |---|---|
 | FR-001 – FR-010 (single-file contract, canonical blocks, attribution) | `speckit-pro/artifact-gallery/templates/pr-writeup.html` |
 | FR-011 – FR-020a (regions, inventory, sample content, notes rendering) | same file, plus the inventory comment |
-| FR-021 – FR-029 (question capture, exports, fallback, empty state) | same file, script region |
+| FR-021 – FR-029c, less FR-029a (question capture, exports, the four-step failure path, fallback, empty state, one no-cause message, the scheme-naming rule) | same file, script region |
 | FR-029a (pinned literals) | `specs/art-003-final-pr-template-set/contracts/export-payload-contract.md` |
 | FR-030 – FR-036 (accessibility) | same file, style region and markup |
 | FR-037 (one catalog value) | `speckit-pro/artifact-gallery/manifest.json` |

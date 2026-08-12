@@ -247,9 +247,23 @@ invocation changes no status text, reveals no fallback text, and moves no focus.
 resolving after a fast failure is the mirror case: it would overwrite the failure
 message with "Copied" while the fallback field still holds the other kind's text.
 
-The synchronous refusal path and the no-clipboard-interface path stay unguarded,
-and an implementation must **say why**: both run inside the same synchronous turn
-that issued the token, so neither can be stale.
+**The check is scoped by effect, not by path.** It sits where a status write or a
+fallback reveal actually lands, and every path reaches those effects through it.
+Scoping by path is not sufficient, and the reason is a property of the shipped
+implementations rather than a hypothesis about them: in all three, the status
+write is deferred behind a short timer — the region is cleared and rewritten so a
+repeated identical message is announced again — and the focus move to the
+fallback field is deferred behind a longer one. The two paths a
+"synchronous" exemption would release therefore **decide synchronously and land
+asynchronously**, in a later turn, after a second invocation may already have
+completed and re-hidden the fallback. A first export refused synchronously would
+then pull focus into a field the second export had hidden, which is focus theft
+and which this section's own words forbid.
+
+Scoping by effect makes the exemption unnecessary rather than merely safer: the
+two synchronous paths carry the current token and pass the same check, so no path
+is unguarded and none needs a rationale for being so. This is where the guard
+sits, not an extra guard.
 
 All three templates ART-002 shipped run the same unguarded settle and none carries
 a currency check. Without the guard, a rejected first copy announces a failure
