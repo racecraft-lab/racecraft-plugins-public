@@ -199,7 +199,14 @@ labels itself as not yet wired.
   branch and is reported with the identity message instead of the malformed one.
 - **FR-006**: When the repository root cannot be resolved, the guard MUST skip the
   comparison rather than report an error, matching the precedent the same file
-  already sets for an extracted copy.
+  already sets for an extracted copy. Both skip branches, this one and FR-003,
+  leave the run indistinguishable from one that ran the comparison and passed it,
+  because a skip and a satisfied comparison both report no authority error and
+  both exit zero. That equivalence is accepted rather than overlooked: the exit
+  code carries the verdict, not whether the verdict was computed. The
+  compensating evidence is the FR-012 negative control and the deliberately
+  mismatched corpus canary, each of which fails if the comparison silently
+  stopped running.
 - **FR-007**: The guard MUST report identity failures under a new
   `workflow_authority_errors` problem key, and that key MUST be the only key added
   to the `status-evidence` rule tuple.
@@ -207,9 +214,16 @@ labels itself as not yet wired.
   `status-evidence` rule tuple, because it is produced at four other sites by the
   checkpoint-binding validation and widening it would arm every PR Marker Plan
   Evidence binding check at once.
-- **FR-009**: The identity failure message MUST open with the sentence the shipped
-  documentation already quotes, unmodified, and MUST append both compared paths
-  after it.
+- **FR-009**: The identity failure message reported under
+  `workflow_authority_errors` MUST open with the sentence the shipped
+  documentation already quotes, unmodified (`supplied workflow does not match
+  autopilot state workflow_file authority`), and MUST append both compared paths
+  after it. This governs the new key only. The identity message the gated
+  pull-request-head path already emits under `workflow_checkpoint_errors` keeps
+  the bare sentence, because FR-002 freezes that path and a committed test
+  asserts that exact list element. After this change the guard therefore carries
+  two identity messages whose text differs, which follows from FR-002 rather than
+  being an oversight.
 - **FR-010**: The guard MUST carry a classification record naming every problem key
   it can emit, using a closed three-value vocabulary: `gated`,
   `advisory-deliberate`, or `advisory-accidental`. Two values are insufficient,

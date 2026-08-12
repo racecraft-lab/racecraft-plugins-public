@@ -949,10 +949,56 @@ Focus on ART-014 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| error-handling | | | |
+| error-handling | 32 | 6 found, 6 remediated, 0 remaining | FR-002, FR-004a, FR-006, FR-009, plan D1/D2/D5 |
 | data-integrity | | | |
 | security | | | |
 | **Total** | | | |
+
+#### Domain 1 Findings, error-handling
+
+Six gaps, all closed with evidence, no new requirement identifiers minted and no
+consensus routing needed. Two involve committed tests and are worth recording in
+full, because both bound how the implementation may be written.
+
+**The guard will carry two identity messages, not one.** After this change the
+untouched gated path still emits the bare sentence while the new block emits the
+prefixed one with both paths appended. Read without scoping, FR-009 looked like
+an instruction to rewrite the gated message, which would contradict FR-002. It is
+not a stylistic point: `tests/speckit-pro/unit/test-autopilot-phase-coverage.py`
+asserts that sentence against `report["workflow_checkpoint_errors"]`, which is a
+**list**, so the assertion is an exact element match and appending paths to the
+gated message would fail it. FR-009 is now scoped to the message reported under
+`workflow_authority_errors`, and FR-002's "leave the gated path alone" is what
+keeps a committed test green rather than merely being a scoping preference.
+
+**One existing test does resolve a repository root, contradicting the simpler
+story.** The plan's earlier reasoning was that existing fixtures stay green
+because no repository marker resolves above a system temporary directory. That
+holds for `test-autopilot-bookkeeping-guard.py` but not for
+`test-autopilot-phase-coverage.py`, which runs `git init` on its temporary root,
+so the new comparison genuinely executes there. It stays green for a different
+and better reason: that fixture sets `workflow_file` to `workflow.md` and writes
+the workflow at exactly that relative path, so the comparison matches. That file
+owns the only committed coverage of the FR-002 gated error paths, which is why
+identifying it mattered.
+
+**Placement is tighter than "first line".** The helper runs immediately after the
+existing `read_text(workflow)` call, not before it. Above that line the spec's own
+missing-file edge case would become false, since the input-error exit depends on
+the read happening first.
+
+**No branch may raise.** Every operation the comparison performs now has a stated
+outcome. Verified against Python 3.11.0: `Path.resolve()` raises `RuntimeError` on
+a symlink loop, `read_text` raises `OSError` with `ELOOP` on the same input, and
+`resolve()` on a merely nonexistent path does not raise. The plan's argument
+rests on `read_text` running first rather than on version-specific `resolve()`
+behaviour, which is the durable form of the claim.
+
+**Skips are indistinguishable from passes at the exit code, and that is
+accepted.** The property was previously stated only inside a fixture rationale
+and the canary rationale. It is now stated where the skip requirements are
+defined, naming the compensating evidence, so a reader does not mistake it for an
+oversight.
 
 ### Addressing Gaps
 

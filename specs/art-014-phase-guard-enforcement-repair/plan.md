@@ -167,7 +167,7 @@ failure:
 | 6 | the two references differ | fail, identity mismatch | FR-004, FR-004b |
 | 7 | otherwise | pass, return `[]` | — |
 
-Four details are load-bearing and each has a specific failure mode if got wrong:
+Five details are load-bearing and each has a specific failure mode if got wrong:
 
 **Branch 1 tests key membership, not value.** Use `"workflow_file" not in state`,
 never `state.get("workflow_file") is None`. The spec's edge cases classify an
@@ -195,6 +195,35 @@ normalized repository-relative form. Only the supplied side has spelling freedom
 `str.lower()`, no `os.path.samefile`, no `Path.samefile`. Byte-exact is the only
 rule that returns the same verdict on the case-insensitive filesystem this
 repository is developed on and the case-sensitive one it is tested on.
+
+**No branch raises; every outcome is a return.** The helper must report through
+its return value and never by propagating an exception, because `build_report`
+has no handler for one and an uncaught exception prints a traceback instead of
+the JSON report the autopilot parses. Each operation the helper performs was
+checked against an invoked result rather than assumed:
+
+- `"workflow_file" not in state` cannot raise. `load_state` rejects a non-object
+  state with `ValidationError` at `validate-autopilot-phase-coverage.py:324`,
+  before `build_report` reaches the helper, so the argument is always a mapping.
+- `_repository_root` walks parents calling `Path.exists()`, which returns `False`
+  rather than raising even on a pathological path. Measured: `Path.exists()` on a
+  symlink loop returned `False`.
+- `Path.resolve()` is the one operation that can raise. Measured on Python
+  3.11.0: resolving a path through a symlink loop raised `RuntimeError`, while
+  resolving a merely nonexistent path did not raise. The design must not depend
+  on that staying true across interpreter versions, and it does not have to.
+  `read_text(workflow)` runs first, and a path that was read successfully was
+  traversable, so by the time the helper resolves the supplied workflow the loop
+  case has already exited with the input-error code. Measured: reading through
+  the same symlink loop raised `OSError` (`ELOOP`), which `read_text` converts to
+  `ValidationError`. `repo_root.resolve()` is safe for the same reason, because
+  `load_state` already read a file beneath that root. This is why the call order
+  fixed in D2 is load-bearing rather than cosmetic, and it is what keeps the
+  specification's symlink-traversal allowance in FR-004a free of a crash path.
+- `relative_to()` raises `ValueError` for a non-subpath, which is branch 5 by
+  design rather than an escape.
+- `_is_normalized_repo_path` accepts any object and returns `False` for a
+  non-string, so branch 4 cannot raise on a malformed value.
 
 Messages:
 
@@ -229,10 +258,20 @@ references in the guard are the definition at `:1298` and the single unpacking
 call at `:4022`, so widening the return touches exactly one call site. Widen it
 to a **3-tuple**, `(text, checkpoint_errors, authority_errors)`:
 
-- The helper is called unconditionally on the first line, and its result becomes
-  the third element on every return path, including the two early returns. That
-  satisfies the settled constraint that the two early returns stop returning `[]`
-  and start returning the helper's errors.
+- The helper is called unconditionally, immediately after the existing
+  `read_text(workflow)` call and before the marker-plan and expected-commit gate,
+  and its result becomes the third element on every return path, including the
+  two early returns. That satisfies FR-001's placement and the settled constraint
+  that the two early returns stop returning `[]` and start returning the helper's
+  errors. Keeping `read_text` first is deliberate. It is what makes the
+  specification's missing-supplied-workflow edge case true as written: reading
+  the supplied workflow stays the first statement of the function, so a supplied
+  path that cannot be read raises `ValidationError` and the run exits with the
+  input-error code before the comparison is reached. The observable outcome is
+  the same under either order, because that exception propagates out of
+  `build_report` before any report prints, but only this order matches what the
+  specification says happens, and only this order discharges the no-raise
+  argument in D1.
 - The **second** element keeps carrying exactly what it carries today, and keeps
   folding into `workflow_checkpoint_errors`.
 
@@ -248,7 +287,13 @@ exists to prevent.
 
 **Accepted consequence.** On the gated path only, a mismatch is reported twice:
 once by the helper under `workflow_authority_errors`, and once by the untouched
-identity check at `:1333-1336` under `workflow_checkpoint_errors`. This is
+identity check at `:1333-1336` under `workflow_checkpoint_errors`. The two are
+not the same string. The helper's message carries the FR-009 prefix followed by
+both compared paths; the untouched check keeps the bare sentence, because
+`test_changed_file_manifest_must_match_base_to_head` in
+`tests/speckit-pro/unit/test-autopilot-phase-coverage.py` asserts that exact list
+element in `workflow_checkpoint_errors`. The gated text is therefore load-bearing
+and FR-002 freezes it, which is why FR-009 is scoped to the new key. This is
 deliberate. Removing the second occurrence would change gated-path semantics and
 would also remove the early return that currently short-circuits the PR-head byte
 comparison. Duplication is the price of FR-002 and is recorded here so it is not
@@ -348,6 +393,22 @@ and stay green only because branch 2 skips: no `.git` resolves above a system
 temporary directory on either platform. Re-run them. If any turns red, the
 correct fix is to make that fixture's `workflow_file` repository-relative against
 a root it controls, never to weaken the helper.
+
+A second file needs the same re-run, and for the opposite reason.
+`tests/speckit-pro/unit/test-autopilot-phase-coverage.py` owns the only committed
+coverage of the gated pull-request-head error paths FR-002 freezes, and its
+`test_changed_file_manifest_must_match_base_to_head` runs `git init` on its
+temporary root so the gated path can work at all. Branch 2 therefore does **not**
+skip there. Every validator run inside that fixture resolves a repository root
+and newly flows through branches 3 to 6 for real. It stays green by
+construction, because the fixture sets the state's `workflow_file` to
+`workflow.md` and writes the supplied workflow at that same repository-relative
+path, so the comparison matches and the runs that assert exit zero keep
+asserting it. That is a fixture detail rather than an intent, which is why it is
+recorded as a verification step on the same terms as the paragraph above. Re-run
+the file, expect green, and if it turns red repair the fixture rather than the
+helper. The file is verified rather than modified, so it stays out of the
+Declared File Operations list.
 
 ### D6. Documentation
 
