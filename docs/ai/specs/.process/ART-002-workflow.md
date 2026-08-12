@@ -1364,7 +1364,7 @@ Before starting any task:
 | T042 payload refresh | `refresh-release-artifacts.py` run twice: run 1 wrote 22 files, run 2 reported "already consistent; no changes". **Idempotent.** `speckit-pro-runner.manifest.json` and its `.sha256` stayed clean, as required — this feature edits no runner source |
 | T043 docs re-check | Re-ran the generator after the templates landed: **no further change**, confirmed by running it rather than assuming it |
 | T045 guard provocations | Both fired with the right message and both were reverted. `status: shipped` with no file → D1 names the missing artifact. File present under `status: planned` → D2 names the orphan. The diff afterwards is again exactly the two intended flips |
-| T046 acceptance runbook | `specs/art-002-draft-pr-template-set/.process/uat-runbook.md`. Set A 18 steps, Set B 9 steps, each with an observable result. A9 and A10 carry the two timed observables (SC-005, SC-002) |
+| T046 acceptance runbook | `ART-002-uat-runbook.md`, beside this file (moved out of the spec folder by the post-merge archive). Set A 18 steps, Set B 9 steps, each with an observable result. A9 and A10 carry the two timed observables (SC-005, SC-002) |
 
 **Independent verification, not agent self-report.** Each template was checked by
 an orchestrator-owned parse written separately from the ones the authoring agents
@@ -1652,7 +1652,7 @@ table below is slice 1's, and the second table after it is slice 2's.
 | Post: Integration Suite | ✅ Complete | **7289/7289** (L1 1447, L4 5656, L5 186) against a 7226 pre-change baseline. **+63**, so the count grew as G7 requires |
 | Post: Reviewability Diff Gate | ✅ Complete | **`block`, size-only** — `reviewable LOC 1494 exceeds block threshold 800`, no correctness finding. Recorded in full above with the disposition to continue |
 | Post: Self-Review | ✅ Complete | Four answers below |
-| Post: UAT Runbook Generation | ✅ Complete | Skeleton helper `generate-uat-skeleton` is **deferred** on the installed runner and was not invoked. A committed source-derived runbook exists at `specs/art-002-draft-pr-template-set/.process/uat-runbook.md` and is reused, so the `uat-runbook-author` agent was correctly not spawned — it rewrites a skeleton, and there is no skeleton |
+| Post: UAT Runbook Generation | ✅ Complete | Skeleton helper `generate-uat-skeleton` is **deferred** on the installed runner and was not invoked. A committed source-derived runbook exists at `ART-002-uat-runbook.md`, beside this file (moved out of the spec folder by the post-merge archive), and is reused, so the `uat-runbook-author` agent was correctly not spawned — it rewrites a skeleton, and there is no skeleton |
 | Post: PR Body Generation | ✅ Complete | Body written and validated: exactly one non-empty ```release-note fence, `compose-release-notes.py --validate-pr` exit 0 |
 | Post: PR Creation | ✅ Complete | **PR #425**, `art-002-draft-pr-template-set` → `main`, opened ready for review (not draft). Title and release-note fence both validated through the live gate before creation |
 | Post: Review Remediation | ⏭️ Skipped | Deferred to the operator; remediating PR 1 after T048 would move PR 2's base. The pre-creation code review already ran and its one blocking finding was fixed **before** the pull request opened, so this row covers only post-creation reviewer comments |

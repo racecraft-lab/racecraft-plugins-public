@@ -2511,3 +2511,90 @@ temporary directory as an opaque value, and two reference the preserved workflow
 file. Historical workflow, design-concept and retrospective evidence remains
 under `docs/ai/specs/.process/`. Detailed provenance, canonical artifact
 locations, and recovery commands live in the dated ART-006 archive report.
+
+## ART-002 Draft-PR Template Set (merged, archived)
+
+The first four upstream HTML-effectiveness templates became Racecraft-branded,
+self-contained single-file artifacts registered in the gallery routing manifest:
+`implementation-plan` and `spec-explainer` in slice 1, `code-approaches` and
+`module-map` in slice 2. Each carries declared fill regions, an export
+affordance matching its catalog entry's declared export kinds, and no external
+reference of any kind.
+
+Three properties are what the next spec depends on. The export contract holds
+character for character, including the two spaces before each anchor and the
+exact status wording, and an empty phase produces no line, no placeholder and no
+count. Nothing a reader records survives a reload, because all four templates
+make zero non-theme `setItem` calls — the property holds by construction rather
+than by observation. The `module-map` drawing stays reachable to assistive
+technology: it carries an accessible name and deliberately no `role="img"`, so
+upstream's single-image marking is gone and all seventeen internal labels remain
+reachable.
+
+Stacking the two slices is why the run finished. The original requirement had
+slice 2 branch from a `main` already containing slice 1, a shape that cannot
+complete in one invocation because agents never merge pull requests here.
+Stacking was also the only shape that let six slice-2 tasks state their
+acceptance against a Layer 4 module that lands whole in slice 1. The slices were
+never independent; the merge gate had concealed it.
+
+The manual half of verification ran against the slice-2 merge commit and was
+recorded in a third pull request. Every executed step passed and no template
+changed. Fifteen of the sixty-one steps are recorded as *not executed* — the
+disconnected reload, reduced motion, the focus indicator and the greyscale
+filter — each with the substitute that was run in its place. No step is recorded
+as a pass on evidence covering only part of what it expects.
+
+### Cleanup Note
+
+The active ART-002 folder was removed after merge provenance for all three pull
+requests and a tree-wide live-reader scan on the bare directory name. Every
+match outside the folder was preserved documentation or a generated index.
+The acceptance runbook was **moved rather than deleted**, to
+`docs/ai/specs/.process/ART-002-uat-runbook.md`: the preserved workflow file
+cites it twice, and fifteen of its steps are still owed against templates that
+ART-003, ART-004 and ART-005 extend. Historical workflow and design-concept
+evidence remains under `docs/ai/specs/.process/`; the retrospective is inline in
+the workflow file. Detailed provenance, canonical artifact locations and
+recovery commands live in the dated ART-002 archive report.
+
+## ART-012 Implementation-Notes Capture (merged, archived)
+
+An autopilot implementation phase now leaves a durable record of what actually
+happened rather than only what was planned. Every implementation executor
+reports deviations from plan, discovered edge cases and surprises as one
+combined field in its existing task summary; the orchestrator appends one entry
+per task to the feature's `.process/implementation-notes.md` on the turn that
+task completes, so the record survives a mid-phase interruption. A task with
+nothing to report writes an explicit "None" entry, which keeps silence
+distinguishable from an unreported task. The record is consumed downstream by
+ART-010's writeup and by the retrospective extension.
+
+The contract exists once and is documented on both platforms, with a Layer 4
+test asserting that the two platform documents agree rather than trusting them
+to. An operator amendment reversed a Clarify consensus that had narrowed the
+per-task guarantee on the strength of a claim that teammate results arrive
+batched; platform documentation and direct observation both show per-completion
+push, so the literal guarantee was restored and the stale claim corrected.
+
+A green suite was not evidence of a correct change. An adversarial audit run
+after implementation found five real defects, four introduced by the run, two of
+which would have shipped: a quickstart command returning five files where it
+asserted three, and the record this feature produced violating the contract this
+feature ships. Neither was catchable by the suite, because both artifacts sit
+outside what the tests assert.
+
+### Cleanup Note
+
+The active ART-012 folder was removed after PR #426 merge provenance and a
+tree-wide live-reader scan on the bare directory name. One match sat outside
+preserved documentation and was checked by reading the execution path rather
+than by pattern: the feature's own Layer 4 test cites its two contracts in
+comments, but its target table contains no `specs/` path and its only file reads
+are plugin source, so the test passes with the folder absent. Those five
+citations were shortened so none points at a deleted path. The contracts were
+**not** relocated, because the CAR-003 test — live code reading the file — does
+not apply. Historical workflow and design-concept evidence remains under
+`docs/ai/specs/.process/`; the retrospective is inline in the workflow file.
+Detailed provenance, canonical artifact locations and recovery commands live in
+the dated ART-012 archive report.

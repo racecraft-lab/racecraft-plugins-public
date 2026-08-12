@@ -19,11 +19,11 @@ input.
 **Source PRD:** [../../prd-html-artifacts.md](../../prd-html-artifacts.md)
 **Roadmap MOC:** [html-artifacts-roadmap-MOC.md](html-artifacts-roadmap-MOC.md)
 **Spec ID prefix:** `ART-###`
-**Status:** Active; dependency graph approved 2026-07-28; ART-001 is complete
-and archived after PR #407 and its follow-up fix PR #409; ART-006 is complete
-and archived after PR #422, which unblocks ART-007, ART-009, ART-011 and
-ART-012; ART-002 through ART-005 are ready; ART-014 and ART-015 were opened from
-ART-006 findings and are ready with no dependencies
+**Status:** Active; dependency graph approved 2026-07-28; ART-001, ART-002,
+ART-006 and ART-012 are complete and archived; ART-002 shipped in PRs #425,
+#427 and #430, which unblocks ART-007; ART-012 shipped in PR #426; ART-003
+through ART-005, ART-007, ART-009 and ART-011 are ready; ART-014 and ART-015
+were opened from ART-006 findings and are ready with no dependencies
 
 ---
 
@@ -127,17 +127,17 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
 | ART-001 | Artifact Brand Kit & Gallery Foundation | ✅ Complete / Archived | [.process/ART-001-workflow.md](.process/ART-001-workflow.md) | PR #407 merged with follow-up fix PR #409; the brand kit, gallery manifest, SPA contract, and validator live outside `specs/**`. T026 and T027 ran on 2026-07-29, 12 of 12 manual scenarios passed; the harness is preserved at [.process/ART-001-acceptance-harness.html](.process/ART-001-acceptance-harness.html) |
-| ART-002 | Draft-PR Template Set | 🔄 In Progress | [.process/ART-002-workflow.md](.process/ART-002-workflow.md) | Scaffolded 2026-08-10 on `art-002-draft-pr-template-set`; grill-me split: 2 vertical slices as two sequential PRs (always-routed templates first) |
+| ART-002 | Draft-PR Template Set | ✅ Complete / Archived | [.process/ART-002-workflow.md](.process/ART-002-workflow.md) | Shipped as two stacked slices — PR #425 (`implementation-plan`, `spec-explainer`) and PR #427 (`code-approaches`, `module-map`) — then PR #430 recorded the acceptance result; archived 2026-08-12. All four templates and the manifest live outside `specs/**`. The runbook ran against `4ecb1b4b` with every executed step passing and 15 of its 61 steps recorded as *not executed*; it is preserved at [.process/ART-002-uat-runbook.md](.process/ART-002-uat-runbook.md) |
 | ART-003 | Final-PR Template Set | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-004 | Gallery Completion: Design & Prototyping | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
-| ART-007 | Draft-PR Emission | ⏳ Pending | - | Blocked by ART-002; ART-006 dependency satisfied by PR #422 |
+| ART-007 | Draft-PR Emission | ⏳ Ready | - | Both dependencies satisfied: ART-002 by PRs #425/#427/#430, ART-006 by PR #422 |
 | ART-008 | Feedback Sweep | ⏳ Pending | - | Blocked by ART-007 |
 | ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
-| ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Pending | - | Blocked by ART-003, ART-007, ART-012 |
+| ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Pending | - | Blocked by ART-003 and ART-007; ART-012 dependency satisfied by PR #426 |
 | ART-011 | Scaffold Integration | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
-| ART-012 | Implementation-Notes Capture | 🔄 In Progress | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | Scaffolded 2026-08-10 on `art-012-implementation-notes-capture`; grill-me converged naturally, 8 questions, no split (scaffold estimator: 115 LOC, ok; re-estimated 155 at Clarify session 1, 162 at Analyze once FR-005 existed, then 190 on 2026-08-11 when the operator restored the literal per-task guarantee, adding FR-006 and a sixth production file — see the Reviewability Budget below) |
+| ART-012 | Implementation-Notes Capture | ✅ Complete / Archived | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | PR #426; archived 2026-08-12. The record contract and the executor reporting field live on both platforms outside `specs/**`. Budget re-estimated at every amendment (115 at scaffold → 155 → 162 → 190 once the operator restored the literal per-task guarantee), and the final six production files matched the declaration exactly |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
 | ART-014 | Phase-Guard Enforcement Repair | ⏳ Ready | - | No dependencies; found during ART-006, which deliberately did not fix it |
 | ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
