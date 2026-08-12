@@ -9,7 +9,7 @@
   "stage_basis": "auto-detect: the first non-terminal planning phase is Specify, which is \u23f3 Pending",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-012-workflow.md",
-  "active_step": "Phase 2: Clarify - Fill-region inventory and granularity",
+  "active_step": "Phase 2: Clarify - Export payload shape",
   "updated_at": "2026-08-12T18:00:00Z",
   "settings": {
     "consensus_mode": "tier-a",
@@ -70,15 +70,15 @@
     },
     {
       "step": "Phase 2: Clarify - Fill-region inventory and granularity",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Fill-region inventory and granularity Consensus",
-      "status": "pending"
+      "status": "skipped: executor returned zero unresolved items"
     },
     {
       "step": "Phase 2: Clarify - Export payload shape",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Export payload shape Consensus",
@@ -224,6 +224,27 @@
         "projected": 0
       },
       "treat_as": "known-blind diagnostic, never as evidence"
+    }
+  },
+  "clarify": {
+    "session_1": {
+      "focus": "fill-region inventory and granularity",
+      "questions": 5,
+      "consensus": "skipped - zero unresolved items; orchestrator verified every load-bearing claim",
+      "outcomes": [
+        "feature-header seventh slot with feature-id/feature-name (FR-011a)",
+        "implementation-notes.md added to the closed source set (FR-017/017a)",
+        "file-by-file is the only list slot; implementation-notes excluded because duplicate anchors break FR-019 (FR-020/020a)",
+        "port mapping settled; drops worth ~141 lines are the size lever (FR-011b-e)",
+        "three peer findings recorded as known gaps, none built"
+      ],
+      "markers_closed": [
+        "spec.md:211 source reachability",
+        "spec.md:230 list-slot membership"
+      ],
+      "markers_open": [
+        "reviewability boundary - belongs to Plan"
+      ]
     }
   }
 }

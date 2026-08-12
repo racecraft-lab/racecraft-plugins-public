@@ -568,9 +568,70 @@ so a reader can tell a filtered record from an empty one.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Fill-region inventory and granularity | | |
+| 1 | Fill-region inventory and granularity | 5 | See below. Consensus **skipped**: the executor returned zero unresolved items, and the orchestrator independently verified every load-bearing claim against the tree. |
 | 2 | Export payload shape | | |
 | 3 | Implementation-notes rendering edges | | |
+
+#### Session 1 outcomes
+
+Resolved 2026-08-12. Two of the spec's three annotated clarification markers are
+now closed; the third (the reviewability boundary) belongs to Plan and stays open
+deliberately.
+
+1. **A seventh slot ships.** `feature-header` joins the six reader-facing
+   regions, carrying `id="feature-id"` and `id="feature-name"`, with
+   `id="artifact-title"` as chrome outside every region. All four shipped
+   templates already do this, and `spec-explainer` carries the region even though
+   it declares no exports. Verified: each shipped template has both
+   `feature-header` markers; the three export-carrying ones also carry the two
+   ids. The floor does not name it, and R1 explicitly accepts a template with more
+   slots than the floor names, so a seventh slot is legal. Without it the feature's
+   identity would sit outside every region, so a generated artifact could never
+   correct the fictional sample and every export would name the wrong change.
+   Cost: +13 authored lines. Recorded as FR-011a.
+2. **The declared implementation-notes source cannot pass as written.** R4 splits
+   `Source:` on commas and requires exact membership in a five-name closed set
+   (`spec.md`, `plan.md`, `tasks.md`, `research.md`, `design-concept.md`). The
+   design concept's `specs/<feature>/.process/implementation-notes.md` fails both
+   ways — it is a path, and it is not a member. Resolution: add a bare
+   `implementation-notes.md` to the set. The set is bare filenames of per-feature
+   artifacts regardless of directory, which `design-concept.md` already
+   demonstrates. Naming an existing member instead was rejected: every candidate
+   points an authoring agent at a file holding no notes, breaking the one
+   interface this slice owes ART-010. Recorded as FR-017 and FR-017a, with the
+   full seven-slot source table.
+3. **Exactly one slot becomes a list slot: `file-by-file`.** Four slots render
+   repeated items, but list-slot membership is about item-level addressability,
+   not repetition. `implementation-notes` MUST stay out, and this is decisive
+   rather than preferential: FR-019 requires two entries under one task identifier
+   to both render, and the validation rejects a duplicate anchor outright because
+   "a fragment resolving to two items resolves to neither". A list-slot row would
+   make FR-019 unsatisfiable. `verification` and `non-goals` stay out on the
+   shipped precedent of `key-files` and `goals`. Recorded as FR-020 and FR-020a.
+4. **The port mapping is settled, and the drops are the size lever.** Five
+   upstream regions map, `non-goals` is seeded from a fragment of `#focus`, and
+   `implementation-notes` alone is authored fresh. Dropped: the file-count strip,
+   the prompt echo, the TL;DR, two "where to focus" items, all of `#rollout`, and
+   the table-of-contents sidebar with its two-column layout — together worth about
+   141 authored lines, which is the difference between ~750 and ~890, and therefore
+   between warn and block. Two restyles are forced rather than optional: upstream's
+   six-class syntax highlighting carries meaning by hue alone, and the test-state
+   glyph needs a word. Recorded as FR-011b through FR-011e.
+5. **All three peer findings are recorded as known gaps, and none is built.**
+   Notably, the recommendation *against* a general shipped-entry guard is correct:
+   the module's own docstring records the floor-scoped universe as a deliberate
+   decision, so widening it would contradict a recorded decision inside the file
+   being edited. `FLOOR["pr-writeup"]` closes the gap for this template, which is
+   what FR-038 already prescribes.
+
+**Peer-finding D was neutralised by the answer to (3), not deferred.** The
+optional-end-tag defect can only reach a slot whose grouping element sits outside
+the marker pair, and `file-by-file` is the only such slot here. Its items are
+`<details>` elements, which mandate an end tag, so the hazard cannot arise.
+FR-020 now states that requirement explicitly rather than relying on it.
+
+This slice's whole change to shared validation is three literals: the floor row,
+the list-slot row, and the source-set member.
 
 ---
 

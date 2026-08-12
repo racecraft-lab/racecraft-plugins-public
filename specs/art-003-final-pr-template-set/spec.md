@@ -183,13 +183,45 @@ nothing from the four empty fields.
 
 #### The six regions a reviewer reads
 
-- **FR-011**: The artifact MUST ship six fill regions: `motivation`,
-  `before-after`, `file-by-file`, `non-goals`, `verification`, and
+- **FR-011**: The artifact MUST ship six **reader-facing** fill regions:
+  `motivation`, `before-after`, `file-by-file`, `non-goals`, `verification`, and
   `implementation-notes`. The first four of those named by the roadmap
   (`motivation`, `before-after`, `file-by-file`, `implementation-notes`) are the
   set pinned as the floor; `non-goals` and `verification` ship because the
   catalog entry shipped in ART-001 already promises a reader "what it
   deliberately leaves out, and how it was verified".
+- **FR-011a**: The artifact MUST additionally ship a `feature-header` region,
+  which is not a reader-facing section and is not pinned in the floor. It MUST
+  carry `id="feature-id"` on the feature identifier and `id="feature-name"` on
+  the feature name, because both exports read them to name the change. The
+  artifact's own kind MUST carry `id="artifact-title"` and MUST sit outside every
+  region, so no fill can delete it. All four shipped templates already do this;
+  `spec-explainer` carries the region even though it declares no exports. Without
+  it the feature's identity would live outside every region, so a generated
+  artifact could never correct the fictional sample and every export would name
+  the wrong change.
+
+#### What the port keeps and drops
+
+- **FR-011b**: The port maps upstream `#why`'s heading and lede to `motivation`,
+  promotes the before/after panel block nested inside `#why` into its own titled
+  `before-after` section, maps `#tour` to `file-by-file`, maps `#tests` to
+  `verification`, and maps the page header's eyebrow and title to
+  `feature-header`. `non-goals` is seeded from `#focus`'s third item, "What I
+  deliberately did not do", restructured as its own titled section.
+  `implementation-notes` is authored fresh and has no upstream counterpart.
+- **FR-011c**: The port MUST drop the upstream file-count strip, the prompt echo,
+  the TL;DR block, the first two "where to focus" items, the whole rollout
+  section, and the table-of-contents sidebar together with the two-column layout
+  it requires. Each maps to no fill region, and together they are the line lever
+  that holds this port to the document-template class.
+- **FR-011d**: The port MUST NOT carry upstream's multi-class syntax highlighting
+  into its code samples; it uses the single muted-comment span the gallery's
+  shipped templates use, because the upstream classes introduce colors outside the
+  audited set and carry meaning by hue alone. A verification item's passed-or-
+  pending state MUST be readable as a word, not as a check glyph's fill.
+- **FR-011e**: Each of the six reader-facing sections MUST carry its heading
+  outside its marker pair, so a fill replaces content and never the section title.
 - **FR-012**: Each region MUST be delimited by exactly one pair of HTML comment
   markers, `FILL:<slot>:START` before `FILL:<slot>:END`.
 - **FR-013**: Regions MUST be flat: no pair may enclose another, and each pair
@@ -207,14 +239,19 @@ nothing from the four empty fields.
   labels or literals, so the header stays the first comment a scanner recognises
   as one.
 - **FR-017**: Every `Source:` value in the inventory MUST name only members of
-  the closed set of source artifacts the fill-region validation recognises.
-  [NEEDS CLARIFICATION: the fixed decision declares the `implementation-notes`
-  slot's source as `specs/<feature>/.process/implementation-notes.md`, which is
-  neither a member of that closed set (`spec.md`, `plan.md`, `tasks.md`,
-  `research.md`, `design-concept.md`) nor written as a bare filename. How does
-  that line satisfy the check: extend the closed vocabulary with a bare
-  `implementation-notes.md`, name a member that already exists, or something
-  else? The rendering decision itself is fixed and is not reopened by this.]
+  the closed set of source artifacts the fill-region validation recognises. The
+  validation MUST gain `implementation-notes.md` as a member of that set, written
+  as a bare filename like every existing member, so the `implementation-notes`
+  slot can name the record it actually renders. The set is bare filenames of
+  per-feature SpecKit artifacts regardless of directory, which is already true of
+  `design-concept.md`. Naming an existing member instead was rejected: every
+  candidate points an authoring agent at a file containing no notes, which breaks
+  the one interface this slice owes ART-010.
+- **FR-017a**: The seven slots declare these sources: `feature-header` →
+  `spec.md`; `motivation` → `spec.md`; `before-after` → `spec.md, plan.md`;
+  `file-by-file` → `plan.md, tasks.md`; `non-goals` → `design-concept.md,
+  spec.md`; `verification` → `spec.md, tasks.md`; `implementation-notes` →
+  `implementation-notes.md`.
 - **FR-018**: Every region MUST ship representative fictional sample content held
   to the minimum that demonstrates its shape: non-empty everywhere, expansive
   nowhere. A prose region ships one short paragraph. A region holding a repeated
@@ -223,17 +260,23 @@ nothing from the four empty fields.
   entries of the implementation record, in the record's own append order, each
   under the task identifier it was recorded against. Two entries sharing a task
   identifier both render, because that is a retry and correct history.
-- **FR-020**: Any region holding a repeated list MUST place its grouping element
-  outside the marker pair, so the container survives a fill, and MUST give every
-  repeated item at the region's own top level a stable, unique anchor of the form
-  `<slot>-<item-slug>` in kebab-case.
-  [NEEDS CLARIFICATION: which of the six slots hold a repeated list rather than
-  prose, and at what granularity each is addressed. `file-by-file` and
-  `implementation-notes` both read as list-shaped, but the design concept defers
-  per-slot granularity until the upstream source has been read, on the recorded
-  ground that slot shapes must not be invented before it. This decides which rows
-  the list-slot literal gains and therefore which regions owe two anchored sample
-  items.]
+- **FR-020**: `file-by-file` holds a repeated list whose items an export must be
+  able to name, and it is the only slot that gains a list-slot row. Its grouping
+  element MUST sit outside the marker pair so the container survives a fill, and
+  every repeated item at the region's own top level MUST carry a stable, unique
+  anchor of the form `file-by-file-<item-slug>` in kebab-case. Its items MUST be
+  elements that require an end tag, because the fill-region parser performs no
+  implied closing and an unclosed item would report as nested and silently vanish
+  from the region's top level.
+- **FR-020a**: `verification`, `non-goals`, and `implementation-notes` also render
+  repeated items, and each keeps its grouping element **inside** its marker pair
+  and carries no per-item anchor, following `key-files` in `module-map` and
+  `goals` in `spec-explainer`. `implementation-notes` in particular MUST NOT be
+  anchored per item: FR-019 requires two entries under one task identifier to both
+  render, and a per-item anchor derived from that identifier would collide, which
+  the validation rejects because a fragment resolving to two items resolves to
+  neither. `motivation` is prose and `before-after` is a fixed two-panel
+  comparison; neither is a list.
 
 #### Attaching and exporting a question
 
@@ -297,7 +340,11 @@ nothing from the four empty fields.
   naming the four slots the roadmap names, so the floor literal keeps tracing to
   one document.
 - **FR-039**: The fill-region validation MUST gain a list-slot row for this
-  template if and only if the template holds a repeated list, per FR-020.
+  template naming `file-by-file` and no other slot, per FR-020 and FR-020a.
+- **FR-039a**: The fill-region validation MUST gain `implementation-notes.md` as
+  a member of its closed source-artifact set, per FR-017. These three literals —
+  the floor row, the list-slot row, and the source-set member — are the whole of
+  this slice's change to shared validation.
 - **FR-040**: The full repository suite MUST pass with zero failures, including
   the gallery scanner, the fill-region validation, and Layer 1 structural
   validation.
@@ -337,7 +384,7 @@ to the operator.]
 ### Reviewability Budget *(mandatory)*
 
 - **Primary surface**: docs/process (a shipped template file)
-- **Secondary surfaces, if any**: seed/config (one catalog value), harness/adapter (two literals in the fill-region validation)
+- **Secondary surfaces, if any**: seed/config (one catalog value), harness/adapter (three literals in the fill-region validation)
 - **Projected reviewable LOC**: two branches, decided at Plan. **~750** if
   component CSS is held to the document-template class; **~1000–1200** on the
   trajectory of the three shipped templates that carry both exports and did not
@@ -392,6 +439,10 @@ to the operator.]
   files and verification evidence.
 - Deferred work MUST name the follow-up spec or issue. Slices 2 and 3, the
   generation step, and the ready flip are all named deferrals here.
+- Known gaps MUST name all three carried out of Clarify session 1: the payload
+  documents no fill-region grammar, the validation binds only the templates its
+  floor names so a shipped non-floor template is never parsed, and no check reads
+  a catalog entry's `exports` against the artifact.
 - Review order MUST put the authored markup ahead of the embedded canonical
   blocks, which are byte-verified copies rather than material to read.
 
@@ -515,3 +566,22 @@ to the operator.]
   own `status`.
 - Any change to another catalog entry, including the two this feature's later
   slices will flip.
+- A general guard binding any catalog entry that reads `shipped` to the
+  fill-region checks. Today the validation resolves its universe by intersecting
+  the catalog with its floor, so a shipped template the floor does not name is
+  never parsed at all — a port with no regions and no inventory passes every check
+  green. That restriction is recorded as a deliberate decision inside the module
+  itself, on the ground that binding a later template would hold it to a contract
+  its own design never read. Widening it here would contradict a recorded decision
+  in the file being edited. This slice closes the gap for `pr-writeup` alone, by
+  adding its floor row.
+- An artifact-side gate on a catalog entry's declared `exports`. No check reads
+  that field against the artifact body, so an entry can declare an export kind the
+  artifact does not ship and stay green. Closing it means binding all four
+  already-shipped templates, which is a change to shared validation rather than a
+  port.
+- Recording the fill-region grammar in the shipped payload. The contract document
+  documents none of it — the payload contains no occurrence of the marker syntax
+  anywhere — and amending that document is out of scope here. The grammar is
+  stated normatively in this spec, and each shipped template documents its own
+  inventory, which is what an authoring agent actually reads.
