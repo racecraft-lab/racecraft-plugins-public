@@ -17,7 +17,8 @@
     "canary_before_exit": 0,
     "canary_expectation_after": 1,
     "denominator": 54,
-    "note": "state written inside the repo; root derives from the state path"
+    "note": "root derives from the state path AS SUPPLIED plus cwd, not merely from where the file lives; a relative path from a subdirectory resolves no root and every comparison would skip",
+    "state_path_form": "relative, cwd at repository root; root resolved as \".\""
   },
   "feature_dir": "specs/art-014-phase-guard-enforcement-repair",
   "gates": {
@@ -211,6 +212,6 @@
     "passed": 7378,
     "total": 7378
   },
-  "updated_at": "2026-08-12T20:26:03Z",
+  "updated_at": "2026-08-12T20:47:46Z",
   "workflow_file": "docs/ai/specs/.process/ART-014-workflow.md"
 }

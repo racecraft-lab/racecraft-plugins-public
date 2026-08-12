@@ -408,9 +408,24 @@ metadata keys (`status`, `workflow_file`, `state_file`, `plan_step_count`), and
 assert the remaining key set is covered by `PROBLEM_KEY_INTENT`, naming any key
 that is missing. Deriving the set from a second hardcoded list is forbidden,
 because a parallel list drifts exactly as the classification record itself could.
-Verified during planning that one report emits all keys regardless of state
-content, so a single report suffices. Also assert every verdict is drawn from the
-closed vocabulary and every reason is non-empty.
+Also assert every verdict is drawn from the closed vocabulary and every reason is
+non-empty.
+
+**The invariant that single report depends on, and its limit.** One report
+suffices only because every per-check function returns its full key set on every
+return path, including its early returns, so a key is never conditionally absent
+from the report. That is what makes the derived set the complete set rather than
+a sample. It was verified during planning and re-verified during Checklist two
+ways: by comparing the report key sets produced by a thin synthesized state and
+by the tracked current-run state, which are identical at 24 keys, 20 problem plus
+4 metadata; and by reading every problem-key return in the guard, all of which
+are uniform per function. Record it here because it is a property of the code the
+test relies on rather than a property the test checks. The limit follows
+directly: a key added by a future specification is caught only if it is emitted
+the same unconditional way. A future key emitted only under some state shapes
+would be absent from this fixture's report and would pass unclassified, and the
+correct response then is to extend the fixture to a state shape that emits it,
+never to relax the assertion.
 
 **Latent regression to verify, not to paper over.** The existing
 `RuleScopingTests._run` writes an **absolute** path into the state's
@@ -510,6 +525,14 @@ comparable:
   the repository root is derived from the **state** path, so a state in a scratch
   directory outside the tree resolves no root, every comparison skips under
   FR-006, and all 54 files report a pass while proving nothing;
+- the state path **passed in a form the root walk can resolve from**, which is a
+  second condition rather than a restatement of the first. Per FR-006a the walk
+  reads the state path as supplied, not a resolved form, so a relative state
+  argument has a parents chain that terminates at the working directory. Writing
+  the file inside the repository and then naming it relatively from a
+  subdirectory resolves no root and produces the same 54 vacuous passes. Pass it
+  absolute, or relative with the working directory at the repository root, and
+  record which was used;
 - the same invocation;
 - the deliberately mismatched canary in the same harness.
 

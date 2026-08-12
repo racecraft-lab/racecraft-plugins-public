@@ -565,10 +565,30 @@ the baseline tree.
 {"workflow_file": "<repo-relative path>", "spec_id": "<id>", "plan": [{"step": "Specify"}]}
 ```
 
-Written to a path **inside the repository**. This is load-bearing: the repository
-root is derived from the state path, so a state in a scratch directory outside
-the tree resolves no root, the comparison skips under FR-006, and every file
-reports a pass while proving nothing.
+Written to a path **inside the repository**, and passed to the guard in a form
+from which a repository root actually resolves. Both halves are load-bearing, and
+the second is subtler than it first appeared.
+
+The repository root is derived from the state path **as supplied**, not from a
+resolved form. So the condition is not merely "the file lives inside the
+repository": it is that the path as passed, combined with the working directory,
+lets the parent walk find a repository marker. Measured on this tree:
+
+| State path as supplied | Working directory | Root resolves |
+|---|---|---|
+| relative | repository root | yes, as `.` |
+| absolute | anywhere | yes |
+| relative | a subdirectory such as `docs/` | **no** |
+
+**The before-half run used the relative form with the working directory at the
+repository root**, so the root resolved as `.` and the measurement is valid. It
+was one directory change away from being silently vacuous, which is worth stating
+plainly rather than leaving as an implicit precondition. The after-half must use
+the same discipline, and the recorded evidence must say which form it used.
+
+This correction supersedes the looser phrasing recorded when the before-half was
+captured, which said only that the state must sit inside the repository. That
+condition is necessary and not sufficient.
 
 **Invocation:**
 

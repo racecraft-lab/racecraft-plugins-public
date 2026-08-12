@@ -215,6 +215,46 @@ labels itself as not yet wired.
   compensating evidence is the FR-012 negative control and the deliberately
   mismatched corpus canary, each of which fails if the comparison silently
   stopped running.
+- **FR-006a**: The artifacts MUST record which inputs can induce the FR-006 skip,
+  and on what basis that inducibility is accepted, because a skip is
+  indistinguishable from a pass and an unrecorded way to reach one is an
+  unrecorded way to disable the check. Three inputs reach it, and none of them is
+  the state's `workflow_file` value:
+  - **Where the state file lives.** Root resolution walks upward from the state
+    file's directory looking for a repository marker, so a state file outside any
+    repository resolves no root.
+  - **How the state path is spelled, together with the working directory.** The
+    walk operates on the state path as supplied rather than on a resolved form.
+    Measured during Checklist: a relative state argument has a parents chain that
+    terminates at the working directory itself, so from any working directory
+    other than the repository root it resolves no root and the comparison skips
+    while the state file sits untouched inside the repository. The documented
+    invocation is safe because it runs with the working directory at the
+    repository or worktree root, which is a condition of that invocation rather
+    than a property of the guard.
+  - **Where the supplied workflow lives, at the autopilot's convention level
+    only.** At the guard's own boundary the supplied path cannot induce either
+    skip, because FR-003 reads the state's content and root resolution reads the
+    state path. But the documented invocation derives the state argument from the
+    supplied workflow's own directory, so a workflow supplied from outside any
+    repository drags the state path outside with it. In that combination FR-004d
+    reaches FR-006's skip before FR-004c's failure, and no error is produced at
+    all. FR-004c's out-of-boundary failure is therefore reachable only when a
+    root resolved, which is what its own wording already requires; this records
+    the consequence rather than changing the branch order.
+
+  **Accepted, and why.** Every one of those three inputs is chosen by the caller
+  invoking the guard, and that same caller also selects `--rule` and decides
+  whether to run the guard at all. Reaching a skip therefore grants no capability
+  the caller did not already hold, so this is not a privilege boundary. The
+  threat this guard addresses is the one User Story 1 describes: a maintainer
+  making a mistake about which specification they are resuming. The residual
+  exposure is accordingly operator error, not an adversary, and the honest
+  statement of it is that a caller who invokes the guard incorrectly gets a
+  silent pass. The compensating controls remain the two named in FR-006: an
+  induced skip inside the FR-012 fixture turns the negative control green when it
+  must be red, and an induced skip inside the corpus harness leaves the canary at
+  zero, which the evidence protocol reads as the repair not having taken.
 - **FR-007**: The guard MUST report identity failures under a new
   `workflow_authority_errors` problem key, and that key MUST be the only key added
   to the `status-evidence` rule tuple.
@@ -335,7 +375,12 @@ hand-edited, and excluded from the reviewable count.
   repository-relative `workflow_file`; the fact that the state file is written to
   a path **inside** the repository, because the repository root is derived from
   the state path and a state outside the tree makes every comparison skip; the
-  exact guard invocation; the before and after counts; and one deliberately
+  fact that writing it inside the repository is necessary but **not sufficient**,
+  because per FR-006a the root walk reads the state path as passed, so the
+  harness MUST also pass it in a form the walk can resolve from, meaning an
+  absolute path or a relative one with the working directory at the repository
+  root, and MUST record which; the exact guard invocation; the before and after
+  counts; and one deliberately
   mismatched canary run inside the same harness that exits non-zero with a
   non-empty `workflow_authority_errors`. The canary is what distinguishes 54
   genuine passes from 54 silent skips. The before count stands as measured,
@@ -409,7 +454,22 @@ hand-edited, and excluded from the reviewable count.
   Runs happen inside a git worktree where the repository marker is a file, and
   root resolution is assumed to succeed there.
 - The `--rule` scoping mechanism is deliberate and stays as it is. This change
-  registers a key within that mechanism rather than altering it.
+  registers a key within that mechanism rather than altering it. A consequence
+  worth stating rather than discovering: because the new key is registered in
+  `status-evidence` and nowhere else, a caller who selects a different rule does
+  not consult it and exits zero even while the report carries a non-empty
+  authority error. Measured during Checklist against the pre-change guard, using
+  an existing `status-evidence` key as the stand-in: the same report that exits
+  non-zero under `--rule status-evidence` exits zero under `--rule coverage`,
+  while its printed status still reads `fail`. This is accepted on the same basis
+  as FR-006a. The exit code exists to serve whichever caller chose the rule, that
+  caller could equally decline to run the guard, and two properties bound the
+  consequence: the full report is printed on every invocation, so the finding is
+  visible even when it does not gate, and omitting `--rule` gates on every
+  emitted key, the new one included. Arming the key under a second rule is
+  therefore unnecessary, and adding a rule of its own was rejected during scoping
+  because any caller still passing only `--rule status-evidence` would silently
+  opt out.
 - Making `workflow_file` a mandatory state field is a migration rather than a
   repair, so absence stays permitted. The tracked state file that lacks the field
   must keep validating.
