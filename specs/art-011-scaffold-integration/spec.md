@@ -117,14 +117,52 @@ However the run ended, chained or declined, planning finished or planning broke,
 - **FR-003**: The pass MUST be seeded from the roadmap entry's Scope text and its `Depends On` chain, both of which are required inputs, and from any `Key Files` section when the entry has one, which is an optional hint (Q6, Q12). When the `Key Files` section is absent or differently named, the pass MUST degrade to the required seed and continue rather than reporting a gap or skipping.
 - **FR-004**: The dispatch instructions MUST require chasing each `Depends On` spec into git history for artifacts removed by archive sweeps, so a normative contract deleted at archive time is still reachable (Q6).
 - **FR-005**: The dispatch instructions MUST use the literal Field Guide words "blindspot pass" and "unknown unknowns", and MUST state the operator's structural position: the operator has read this roadmap entry and its scope, and has not necessarily read the affected code area or the archived artifacts of its dependencies (Q14). Scaffold MUST NOT ask the operator about their familiarity before the pass.
-- **FR-006**: The pass MUST return at most five findings, ranked by impact and surprise, and MUST always state how many findings it set aside, including when the number is zero (Q13). The cap MUST NOT be operator-configurable. The set-aside count MUST be stated in words the operator cannot miss, in the shape of "Showing the 5 highest-impact findings; N more were set aside", "Showing all N findings; none were set aside", or "The blindspot pass raised no unknown unknowns"; the exact strings are confirmed through the UAT runbook. [NEEDS CLARIFICATION: what counts as "returns nothing usable" for the fail-open trigger in FR-007, and how it is distinguished in the operator output and the design-concept header line from a pass that ran successfully and raised zero findings]
-- **FR-007**: The pass MUST fail open. If the dispatch fails or returns nothing usable, scaffold MUST continue into the interview with nothing seeded, and MUST record the gap and its reason in both the operator output and the design concept (Q18). Scaffold MUST NOT treat the dispatch outcome as a gate, and MUST NOT retry-then-halt.
+
+  The dispatch block MUST be identical on both platforms and MUST carry the whole framing, because the shipped `codebase-analyst` description frames the agent for autopilot consensus resolution rather than for this technique. Assembled only from decisions already closed:
+
+  ```text
+  You are running a blindspot pass for <SPEC-ID>: surface the unknown unknowns
+  in this roadmap entry before its scoping interview.
+
+  The operator has read this roadmap entry and its scope. They have not
+  necessarily read the affected code area, or the archived artifacts of its
+  dependencies.
+
+  Seed (required): the Scope text below, and each spec named in Depends On.
+  Seed (optional hint, may be absent): the Key Files section.
+  For each Depends On spec whose artifacts are not in the working tree, chase
+  it into git history rather than reporting it absent.
+
+  Return at most 5 findings, ranked by impact then surprise. Each finding:
+  N. **<Title>** - 1-3 sentences, plus a repo-relative file or path pointer.
+     Impact: <what requirement or design decision this would change if true>
+     Surprise: <why the roadmap entry's own text does not already say this>
+  Then state how many findings you set aside, including when that number is 0.
+  If you find nothing, reply exactly: The blindspot pass raised no unknown unknowns.
+  ```
+
+  The git-history chase is executable on both platforms: the Claude agent does not disallow `Bash`, and the Codex mirror runs `sandbox_mode = "read-only"`, which permits reads.
+- **FR-006**: The pass MUST return at most five findings, ranked by impact and surprise, and MUST always state how many findings it set aside, including when the number is zero (Q13). The cap MUST NOT be operator-configurable. The set-aside count MUST be stated in words the operator cannot miss, in the shape of "Showing the 5 highest-impact findings; N more were set aside", "Showing all N findings; none were set aside", or "The blindspot pass raised no unknown unknowns"; the exact strings are confirmed through the UAT runbook.
+
+  **Usable reply, defined.** A reply is usable when it contains at least one finding in the fixed shape, **or** the literal sentence `The blindspot pass raised no unknown unknowns.` The dispatch instructions MUST require that sentence when the pass finds nothing, so a silent empty reply can never be mistaken for a clean pass. This yields three disjoint outcomes with no judgement call: the pass **ran** (a finding or the sentinel came back), it **returned nothing usable** (a reply came back carrying neither), or it **did not run** (no reply at all — dispatch error, timeout, or empty return).
+
+  **Ranking MUST be reviewable.** Each finding states one line of impact rationale (which requirement or design decision it would change if true) and one line of surprise rationale (why the roadmap entry's own text does not already say it). Findings are ordered by impact, with surprise as the tiebreak. No numeric score is assigned: FR-023 forbids new executable machinery, so a scoring scheme would be unenforceable. Reviewable means a reader can check each rationale against the roadmap text, not that two runs produce identical lists.
+- **FR-007**: The pass MUST fail open. If the dispatch fails or returns nothing usable, as FR-006 defines it, scaffold MUST continue into the interview with nothing seeded, and MUST record the gap and its reason in both the operator output and the design concept (Q18). Scaffold MUST NOT treat the dispatch outcome as a gate, and MUST NOT retry-then-halt. **"Nothing seeded" means no findings are seeded, not that the labelled scope block is omitted**: the block MUST still travel in all three FR-006 outcomes, carrying only its status line in the degraded two. FR-008 makes that block the sole channel into the interview, so omitting it would leave FR-010's "did not run" record with no mechanism to be written at all.
 
 #### Interview seeding and the design-concept record
 
-- **FR-008**: Findings MUST reach the interview by being appended as a labelled block to the `scope` argument scaffold already passes (Q3). Scaffold MUST NOT add a new interview argument, change what the interview produces, or edit the grill-me skill on either platform.
+- **FR-008**: Findings MUST reach the interview by being appended as a labelled block to the `scope` argument scaffold already passes (Q3). Scaffold MUST NOT add a new interview argument, change what the interview produces, or edit the grill-me skill on either platform. The block MUST use one shape in both places it appears, the operator output and the seeded `scope` string, so the two records cannot drift:
+
+  ```text
+  --- BLIND-SPOT PASS FINDINGS ---
+  <the numbered findings, or the FR-006 status line for the outcome>
+  <the set-aside line>
+  Record the Blind-spot pass line in the design concept's header blockquote.
+  Treat each finding as a candidate question; any finding not reached becomes an Open Question.
+  --- END BLIND-SPOT PASS FINDINGS ---
+  ```
 - **FR-009**: Findings the interview resolves MUST become entries in the design concept's existing question-and-answer record; findings it does not reach MUST become Open Questions (Q3, Q19). No finding may be dropped silently.
-- **FR-010**: The design concept MUST carry one line in its existing header blockquote recording either how many findings were surfaced and how many were set aside, or that the pass did not run and why (Q19). Scaffold MUST NOT add a new section to the design concept, and MUST NOT write a separate findings artifact such as `.process/<SPEC-ID>-blind-spots.md`: the design concept is the only home for findings (Q8).
+- **FR-010**: The design concept MUST carry one line in its existing header blockquote, under the key `**Blind-spot pass:**`, recording exactly one of the three FR-006 outcomes: how many findings were surfaced and how many were set aside; that the pass returned nothing usable, with the reason; or that the pass did not run, with the reason (Q19). A later reader MUST be able to tell a spec that was scanned and found little from one that was never scanned. Adding this key needs no change to the interview's output schema: the blockquote already tolerates keys beyond the four its reference documents, as this spec's own design concept shows by carrying a size-estimate line. Scaffold MUST NOT add a new section to the design concept, and MUST NOT write a separate findings artifact such as `.process/<SPEC-ID>-blind-spots.md`: the design concept is the only home for findings (Q8).
 - **FR-011**: Presentation of the findings to the operator MUST be informational. The run MUST flow straight into the interview with no confirmation, curation step, or continue/abort prompt between the findings and the first question (Q16).
 
 #### Chain hand-off

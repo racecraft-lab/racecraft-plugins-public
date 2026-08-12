@@ -499,8 +499,39 @@ Q1, Q4, Q5, Q9, Q10, Q11, and Q20 fixed placement and content. Resolve:
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
 | 1 | Description reword and trigger routing | 5 asked, 4 resolved from evidence, 1 routed to consensus | FR-021 marker resolved. New FR-021a (byte-identity is a requirement, not an accident) and FR-021b (three Layer 2 cases per platform). `agents/openai.yaml` evaluated and deliberately excluded, recorded in FR-022. Two Assumptions corrected: Layer 2 is a manual live gate outside `FULL_VERIFY`, and the edit restales four generated artifacts covered by `refresh-release-artifacts.py`. Spec 23 → 25 normative items |
-| 2 | Blind-spot pass contract | | |
+| 2 | Blind-spot pass contract | 5 asked, 5 resolved from evidence, 0 routed to consensus | FR-006 marker resolved by defining a usable reply mechanically. FR-005 gained the literal dispatch block, FR-006 gained the reviewable-ranking rule, FR-007 gained the block-still-travels clause, FR-008 gained the one-shape finding format, FR-010 became a three-state record. Spec 25 normative items |
 | 3 | Chain confirmation and closing report | | |
+
+#### Session 2 — the sentinel, and the hole it exposed
+
+The marker asked how to tell three outcomes apart: the pass ran and found
+nothing, it returned something unusable, or it never ran. The resolution makes
+that mechanical rather than a judgement call. The dispatch instructions require
+the literal sentence `The blindspot pass raised no unknown unknowns.` when the
+pass finds nothing, so a reply is **usable** if it carries a finding or that
+sentinel, **unusable** if it carries neither, and the pass **did not run** if no
+reply came back at all. Three disjoint tests, no interpretation.
+
+Chasing that distinction exposed a genuine hole. FR-007 said the degraded path
+continues "with nothing seeded", and FR-008 makes the seeded scope block the
+sole channel into the interview, while FR-010 has the interview write the
+header-blockquote record because the scope block asked it to. Read together,
+those three meant the "did not run" record had **no mechanism to be written at
+all** — the one case where the record matters most was the one case that could
+not produce it. FR-007 now states that "nothing seeded" means no findings are
+seeded, and that the labelled block still travels in all three outcomes carrying
+only its status line.
+
+Adding the `**Blind-spot pass:**` key needs no schema change, and this run is its
+own proof: the design concept written earlier already carries a size-estimate
+line that the interview's four-key reference does not document, and nothing
+rejected it.
+
+Ranking is specified as **reviewable rather than deterministic**. Each finding
+carries one line of impact rationale and one of surprise rationale, ordered by
+impact with surprise as tiebreak, and no numeric score — FR-023 forbids new
+executable machinery, so a scoring scheme would be unenforceable, and identical
+output across two runs is not a property an LLM pass can promise.
 
 #### Session 1 — the binding constraint
 
