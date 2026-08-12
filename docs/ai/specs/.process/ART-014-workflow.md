@@ -449,8 +449,71 @@ assertion to validate-codex-skills.py, and updating CODEX-PARITY-NOTES.md.
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
 | 1 | The Advisory Audit | 5 open items, all resolved from evidence, 0 routed to consensus | Verdict vocabulary widened from two values to three after the audit found an accidentally-advisory key. FR-010 rewritten, FR-010a and FR-010b added, FR-011 tightened to derive the key set from a real report. Both spec markers cleared. ART-016 and ART-017 opened in the roadmap. Spec 13 → 15 normative requirements, 0 markers |
-| 2 | Comparison Semantics And The Corpus Contract | | |
+| 2 | Comparison Semantics And The Corpus Contract | 5 asked, 4 resolved from evidence, 1 routed to consensus | Added FR-004a (asymmetric resolution), FR-004b (byte-exact, no case folding), FR-004c (out-of-boundary fails), FR-004d (branch ordering). Amended FR-005 (explicit whitespace check), FR-012 (two controls, one fixture, `.git` marker as a file), SC-002 (denominator pinned to the baseline commit), and the PR packet requirements (reproducible corpus harness plus a mismatch canary). Spec 15 → 19 normative requirements |
 | 3 | Documentation Truth And Platform Reach | | |
+
+#### Session 2 Findings
+
+Three findings, each of which would have produced evidence that looked green and
+proved nothing.
+
+**The corpus proof could have been vacuous.** The repository root is derived from
+the **state** path, not the workflow path. A harness that synthesizes its state
+into a scratch directory outside the tree resolves no root, FR-006 skips, and all
+54 files report a pass while the comparison never runs. The recorded reproducer
+must therefore write its state inside the repository and carry a deliberately
+mismatched canary in the same harness. The canary is the only thing that
+distinguishes 54 genuine passes from 54 silent skips.
+
+**The negative control could have passed for the wrong reason**, for the same
+underlying cause: a `tempfile` fixture with no repository marker skips the
+comparison, so both controls pass and the negative one proves nothing. FR-012 now
+requires the fixture to write a `.git` marker as a file, which arms the check and
+exercises the worktree case at once.
+
+**A whitespace-only `workflow_file` slips past the malformed branch.** Verified:
+`_is_normalized_repo_path("  ")` and `_is_normalized_repo_path(" ")` both return
+`True`, because a run of spaces is a valid POSIX path part. FR-005's whitespace
+requirement was being satisfied only by accident, landing in the mismatch branch
+and printing a blank path. FR-005 now requires an explicit check.
+
+**Corpus counts, verified independently.** 54 files at baseline `3af4764e`, 55
+tracked now; the difference is exactly this specification's own in-flight
+workflow file. SC-002 pins the denominator to the baseline commit.
+
+### Consensus Resolution Log
+
+| # | Phase / Session | Item | Categories | Round | Analysts | Verdict | Applied |
+|---|---|---|---|---|---|---|---|
+| 1 | Clarify S2 | When the supplied workflow resolves outside a successfully resolved repository root, does the guard fail or skip? | `[codebase] [security]` | 1 | all 3 (security always fans out) | **FAIL**, unanimous 3 of 3, all high confidence, no escape to Round 2 | FR-004c and FR-004d added to `spec.md` |
+
+**Why unanimous rather than close.** The three lenses converged from independent
+evidence. The codebase lens found five existing call sites using the shape
+`repo_root and _repo_file(...) is None → append error`, where the `and`
+short-circuit already separates "root unavailable" from "path escapes an
+available root" and grants the free pass only to the first. The spec-context lens
+found the same branch already coded inside the very function being modified, at
+`:1322-1325`, failing rather than skipping, and established that none of the
+eleven recorded interview decisions poses this scenario: Q4 settled "root cannot
+be resolved", which is a different fact. The security lens grounded it externally
+in CWE-706, CWE-22, CWE-59, OWASP's fail-securely rule, CWE-636, Zip Slip, and
+PEP 706, the last being the closest available precedent, since Python's core team
+faced the identical operation in `tarfile` after CVE-2007-4559 and chose to raise
+and terminate rather than skip.
+
+**A divergence the panel resolved.** The session-2 executor and the spec-context
+lens both held that the out-of-boundary case should reuse the existing sentence
+at `:1325`, while the codebase lens argued for the FR-009 documented prefix. The
+reuse position wins on the narrower reading: FR-009's contract governs the
+identity-mismatch message specifically, and a distinct sentence tells a
+maintainer what is actually wrong, since an out-of-boundary path has no
+repository-relative form to print in a mismatch message.
+
+**The YAGNI objection was tested and failed.** Constitution principle VI bars
+error handling for impossible scenarios. This branch is not that: once FR-001's
+unconditional resolution exists, `Path.relative_to()` raises `ValueError` on any
+non-subpath by ordinary Python semantics, so the branch is mechanically reached.
+The only alternative to handling it is an unhandled exception.
 
 #### Session 1 Findings
 

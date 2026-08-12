@@ -134,6 +134,18 @@ labels itself as not yet wired.
 - **A workflow file in the corpus is mid-repair and legitimately failing.** The
   regression proof must not be wired into the committed suite, or unrelated pull
   requests turn red.
+- **The supplied path or the state value differs only in letter case.** Treated as
+  a mismatch on every platform. A mis-cased state value fails the comparison
+  identically everywhere. A mis-cased supplied path fails as a mismatch on a
+  case-insensitive filesystem and as an unreadable file on a case-sensitive one.
+  Both are non-zero exits, so the halt is platform-independent even though the
+  error class is not.
+- **The supplied workflow file does not exist on disk.** The guard already exits
+  with the input-error code before any identity comparison, because reading the
+  supplied workflow is the first statement of the function that hosts the
+  comparison. No authority error is produced and this change adds no path for one.
+  This is the supplied side; the first bullet above covers the file the state
+  names.
 
 ## Requirements *(mandatory)*
 
@@ -149,9 +161,42 @@ labels itself as not yet wired.
   comparison and report no authority error.
 - **FR-004**: When the state carries a `workflow_file` naming a different workflow
   than the supplied one, the guard MUST report an authority error.
+- **FR-004a**: The comparison MUST derive the supplied workflow's
+  repository-relative reference by resolving it against the repository root, so a
+  correct workflow supplied under a different spelling, including one traversing a
+  symlink, still matches. The `workflow_file` value the state carries MUST be
+  compared as the literal string it holds, without filesystem resolution, because
+  it is machine-written and already constrained to a normalized
+  repository-relative form. The asymmetry is deliberate: only the supplied side
+  has spelling freedom.
+- **FR-004c**: When the supplied workflow resolves to a location outside a
+  successfully resolved repository root, the guard MUST report an authority error
+  rather than skip. This is a different fact from FR-006: there the repository
+  could not be found at all, whereas here it was found and the supplied path does
+  not live under it. A completed evaluation with an out-of-boundary result is the
+  case the check exists to catch, not an absence of information. The error MUST
+  reuse the sentence the same file already emits for this condition, "workflow
+  file is outside the authorized repository", rather than the FR-009 prefix, which
+  governs the identity-mismatch message only. It MUST be reported under
+  `workflow_authority_errors` so it can move the exit code.
+- **FR-004d**: The branches MUST be evaluated in this order, because an earlier
+  skip must win over a later failure: absent `workflow_file` skips (FR-003), then
+  an unresolvable repository root skips (FR-006), then a malformed value fails
+  (FR-005), then an out-of-boundary resolution fails (FR-004c), then a mismatch
+  fails (FR-004).
+- **FR-004b**: The comparison MUST be a byte-exact comparison of the two POSIX
+  references, with no case folding and no filesystem identity test such as
+  `samefile`. Byte-exact is the only rule that returns the same verdict on a
+  case-insensitive filesystem and a case-sensitive one, which this repository
+  requires because it runs on macOS locally and Linux in continuous integration.
 - **FR-005**: When the state carries a malformed `workflow_file`, including a
   non-string value or an empty or whitespace-only string, the guard MUST report an
-  authority error.
+  authority error. The whitespace-only case MUST be rejected by an explicit check
+  rather than delegated to the existing normalized-path helper, because that
+  helper accepts a whitespace-only string as a valid path part. Verified:
+  `_is_normalized_repo_path("  ")` and `_is_normalized_repo_path(" ")` both return
+  `True`, so without an explicit check such a value falls through to the mismatch
+  branch and is reported with the identity message instead of the malformed one.
 - **FR-006**: When the repository root cannot be resolved, the guard MUST skip the
   comparison rather than report an error, matching the precedent the same file
   already sets for an extracted copy.
@@ -189,6 +234,18 @@ labels itself as not yet wired.
 - **FR-012**: The test suite MUST include a negative control proving that a state
   naming a different specification exits non-zero under the autopilot's own
   invocation, and a matching positive control proving a correct state exits zero.
+  The two MUST be separate test methods sharing one fixture builder whose only
+  difference is the state's `workflow_file` value, so each failure names its own
+  claim and the pair is a controlled comparison. The fixture MUST create a
+  repository-root marker in its temporary root, written as a file rather than a
+  directory, because without a resolvable root the comparison skips under FR-006
+  and both controls pass vacuously; writing the marker as a file also exercises
+  the worktree case. The state's `workflow_file` MUST be repository-relative
+  against that root. The negative control MUST assert a non-zero exit, a non-empty
+  `workflow_authority_errors`, and the FR-009 message prefix. The positive control
+  MUST assert a zero exit and an empty `workflow_authority_errors`. Any new test
+  case class MUST be registered with the suite builder, which enumerates its
+  classes explicitly.
 - **FR-013**: The shipped documentation MUST describe this guard truthfully on
   both platforms, which means quoting the message as a prefix, stating the
   expected-commit append contract together with its not-yet-wired status on the
@@ -231,6 +288,18 @@ hand-edited, and excluded from the reviewable count.
 - The PR description MUST record the corpus regression evidence as a before and
   after pair, because that proof is a one-time recorded run rather than a
   committed test.
+- The recorded corpus evidence MUST be reproducible from the workflow file alone.
+  That requires recording the baseline commit and the command that produces the
+  54-file list; the exact synthesized state shape, including a `plan` array and a
+  repository-relative `workflow_file`; the fact that the state file is written to
+  a path **inside** the repository, because the repository root is derived from
+  the state path and a state outside the tree makes every comparison skip; the
+  exact guard invocation; the before and after counts; and one deliberately
+  mismatched canary run inside the same harness that exits non-zero with a
+  non-empty `workflow_authority_errors`. The canary is what distinguishes 54
+  genuine passes from 54 silent skips. The before count stands as measured,
+  because before the change the comparison did not run at all and the state's
+  location could not have affected it.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -254,9 +323,13 @@ hand-edited, and excluded from the reviewable count.
 - **SC-001**: A run whose state names a different specification stops instead of
   proceeding. Measured as a non-zero exit under the autopilot's own invocation,
   where the same scenario exits zero today.
-- **SC-002**: All 54 workflow files in the process corpus measured at the baseline
-  commit still exit zero under the autopilot's own invocation when the state names
-  the matching workflow. The before and after counts are both 54 of 54.
+- **SC-002**: All 54 workflow files that `git ls-tree` lists under the process
+  directory as `*-workflow.md` at the baseline commit still exit zero under the
+  autopilot's own invocation when the state names the matching workflow. The
+  before and after counts are both 54 of 54. The denominator is pinned to the
+  baseline commit so it cannot drift as new specifications land. The tracked
+  corpus now holds 55 such files; the additional one is this specification's own
+  in-flight workflow, which is excluded and named as excluded.
 - **SC-003**: A maintainer who hits the failure can identify both disagreeing
   files from the message alone, without opening either file.
 - **SC-004**: Every problem key the guard emits carries a recorded verdict, so the
