@@ -442,10 +442,15 @@ nothing from the four empty fields.
 #### Attaching and exporting a question
 
 - **FR-021**: Each of the six sections MUST carry its own inline question
-  control: a keyboard-reachable disclosure plus a labelled text field, matching
-  the pattern the gallery's existing templates already ship, so a reviewer meets
-  one interaction across the gallery.
-- **FR-021a**: Two properties of that pattern are stated here rather than left to
+  control: a keyboard-reachable disclosure plus a labelled text field, following
+  the shape the gallery's shipped **objection** controls use — `module-map` and
+  `implementation-plan`, and those two only — so a reviewer meets one interaction
+  across the gallery. `code-approaches` is not a precedent here: it ships a
+  single-choice selection control and no disclosure at all. FR-021a states which
+  properties of that shape are independently testable, because an outward
+  reference is acceptable for interaction shape and is not acceptable for an
+  obligation a reviewer must be able to check on its own terms.
+- **FR-021a**: Three properties of that pattern are stated here rather than left to
   "matching", because both are accessibility obligations and a port that met the
   shape while missing them would still read as compliant. The disclosure's own
   control MUST state **in text** whether its section currently carries a
@@ -457,6 +462,23 @@ nothing from the four empty fields.
   routine all three shipped export-carrying templates run already writes the
   state into the disclosure's own accessible name and already builds a real label
   bound to the field.
+  The third property is **when** that text is computed. The control MUST
+  recompute it on every change to the field, not once at mount and not only when
+  the disclosure is next opened or closed, so a reader scanning a collapsed
+  summary sees the field's current content rather than its value at the last
+  toggle. This is the substance of the state requirement rather than a refinement
+  of it: a summary fixed at mount reports "no question recorded" over a section
+  that carries one, which is worse than reporting nothing, and the accessible-name
+  channel is the only place this artifact carries the state at all. It costs no
+  line — the shipped routine's input listener already calls the same refresh the
+  mount call does.
+- **FR-021b**: The disclosure MUST carry no ARIA role, `aria-expanded`, or
+  `aria-pressed`. Its open and closed state is exposed natively, and the current
+  HTML-ARIA mapping does not permit those attributes on a `summary` acting as its
+  parent's summary. Forcing a role here has been observed to remove the exposed
+  state rather than add it. Stated as a prohibition because "match the shipped
+  pattern" reads as permission to add markup that looks more accessible and is
+  less so.
 - **FR-022**: The artifact MUST carry exactly one export control per declared
   export kind, and its catalog entry declares two: an instruction for a coding
   agent, and a record for a pull-request comment. Each control MUST be labelled

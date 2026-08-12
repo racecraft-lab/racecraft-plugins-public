@@ -300,7 +300,7 @@ concurrently rather than from anyone's carelessness.
 | Specify | `/speckit-specify` | ✅ Complete | 42 FRs, 2 user stories; budget corrected to a block |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions; consensus skipped, zero unresolved |
 | Plan | `/speckit-plan` | ✅ Complete | G3 PASS; declared 750, warn; CSS ceiling adopted as a checkable constraint |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Three domains: accessibility, ux, error-handling |
+| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 33 gaps closed; consensus settled 2 items at zero cost |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
@@ -1028,6 +1028,83 @@ Focus on Final-PR Template Set requirements:
 ```
 
 ### Checklist Results
+
+Completed 2026-08-12. **G4 PASS**, but see the caveat below — the gate's verdict
+is not the evidence. Three domains, **33 gaps found and 33 closed**, verified by
+direct scan of `spec.md`, `plan.md`, and all four checklist files.
+
+| Domain | Items | Gaps | Line cost | Consensus |
+|---|---|---|---|---|
+| accessibility | 39 | 14 | +1 | skipped, zero unresolved |
+| ux | 34 | 10 | +7 | 2 items routed |
+| error-handling | 40 | 9 | 0 | skipped, zero unresolved |
+
+**G4 cannot see checklist gaps, and this run proves it.** The gate's body counts
+`spec.md` and `plan.md` only and never opens `checklists/`
+(`speckit_pro_runner/helpers/read_only.py:906-914`). Mid-run it returned
+`pass, "0 [Gap] markers"` while `accessibility.md` held 14 correctly-formatted
+ones. The sibling `count-markers` helper *does* scan the directory; the gate
+ignores that path. Phase 4 was therefore closed on a direct scan, never on G4.
+
+A second counting hazard, found by the error-handling executor: `[Gap]` is
+matched as a bare literal, so the checklist template's own illustrated
+`[Gap, Spec §FR-005]` form goes uncounted while prose mentions of the bare token
+get counted. Its first draft counted 3 where 9 existed. This is the same shape as
+the `[NEEDS CLARIFICATION]` blind spot recorded at Phase 1.
+
+#### Consensus — the two items ux left open
+
+Three analysts, category-routed. Both items closed.
+
+**CHK023 — FR-021 pointed outward instead of stating a property.** Resolved by a
+2-of-3 with the third not contradicting.
+
+All three agreed FR-021a already stated the carried/not-carried property and the
+placeholder prohibition. The codebase lens found a **third property stated
+nowhere**: *when* the summary text is computed. Verified independently — no
+refresh-timing language exists in `spec.md` or the contract, while the shipped
+routine recomputes on every input event and says so in its own comment. The
+domain lens supplies why it is load-bearing rather than a refinement: WCAG 4.1.2
+is explicitly about assistive technology keeping *up to date* on a control's
+status, and a summary fixed at mount reports "no question recorded" over a
+section that carries one. Added as FR-021a's third property.
+
+Two further corrections came out of the same round. The precedent was narrowed to
+`module-map` and `implementation-plan`: `code-approaches` ships a radio selection
+and **no disclosure at all**, so citing "the gallery's existing templates" was
+wrong (verified: 0 `details`, 1 radio). And FR-021b now *prohibits* ARIA on the
+disclosure, because the HTML-ARIA mapping does not permit `aria-expanded` on a
+`summary` acting as its parent's summary, and forcing a role has been observed to
+remove the exposed state rather than add it. "Match the shipped pattern" reads as
+permission to add markup that looks more accessible and is less so.
+
+**CHK028 — no colour-distinction list. Closed with no change made**, 2-of-3.
+
+The domain lens established that an enumerated inventory is **not** a recognised
+technique for WCAG 1.4.1, whose verification model is per-instance sufficient
+techniques plus one holistic monochrome pass — and SC-006 already *is* that pass.
+The spec-context lens independently reached the same conclusion from the
+constitution's KISS principle, and corrected a misreading this orchestrator
+would otherwise have carried: ART-002's three colour-only carriers were caught by
+a Clarify-phase audit of the *upstream* file before any code existed, not by
+review of shipped bytes. The audit was the mechanism; the per-FR remedies were its
+output. A consolidated list would re-index that audit, not re-run it.
+
+The codebase lens dissented, arguing from structural symmetry that FR-030a,
+FR-031a and FR-033a all carry lettered siblings and FR-032 alone does not. That
+is the weakest of the three grounds: symmetry is not a requirement, and the other
+two lenses show the standard does not ask for the list and the constitution argues
+against it. Recorded rather than discarded, because the observation is true and a
+future reader may reasonably wonder why FR-032 stands alone.
+
+It also corrected a smaller thing worth keeping: `SC-011`'s "sufficient read
+alone" binds the **slot inventory** for an *authoring agent's* fill task. It says
+nothing about a reviewer's colour audit, so it does not create the tension the
+checklist item assumed.
+
+**Line cost of the entire consensus round: 0.** Both resolutions are spec prose
+and checklist text; the recompute behaviour is inherited by copying the shipped
+routine. The budget stays at 758 with 42 lines of headroom.
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|

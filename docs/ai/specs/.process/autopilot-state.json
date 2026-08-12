@@ -9,7 +9,7 @@
   "stage_basis": "auto-detect: the first non-terminal planning phase is Specify, which is \u23f3 Pending",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-012-workflow.md",
-  "active_step": "Phase 4: Checklist - ux Consensus",
+  "active_step": "Phase 5: Tasks",
   "updated_at": "2026-08-12T18:00:00Z",
   "settings": {
     "consensus_mode": "tier-a",
@@ -110,7 +110,7 @@
     },
     {
       "step": "Phase 4: Checklist - ux Consensus",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
@@ -122,7 +122,7 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",
@@ -314,6 +314,13 @@
     "unresolved_routed": [
       "[codebase] CHK023 FR-021 outward reference",
       "[ambiguous] CHK028 no colour-distinction list"
-    ]
+    ],
+    "consensus": {
+      "items": 2,
+      "analysts": 3,
+      "CHK023": "closed - added FR-021a third property (live recompute), narrowed FR-021 precedent, added FR-021b ARIA prohibition",
+      "CHK028": "closed, no change - enumerated list is not a WCAG 1.4.1 technique; SC-006 is the holistic pass; codebase lens dissented on structural symmetry",
+      "line_cost": 0
+    }
   }
 }

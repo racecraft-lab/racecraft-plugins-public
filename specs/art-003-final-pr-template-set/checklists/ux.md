@@ -58,7 +58,7 @@ in the same pass. The findings and their line costs are recorded in the Notes.
 
 ## Question Capture & Export Legibility
 
-- [ ] CHK023 - Is the question disclosure's own summary text required to state whether that section currently carries a question, rather than only "matching the pattern"? [Clarity, Spec §FR-021 — routed to consensus, see Notes]
+- [x] CHK023 - Is the question disclosure's own summary text required to state whether that section currently carries a question, rather than only "matching the pattern"? **Closed by consensus**: FR-021a already stated the property; consensus found a third property missing and added it (live recompute), narrowed FR-021's precedent to the two templates that actually share the shape, and added FR-021b prohibiting ARIA. [Resolved, Spec §FR-021, §FR-021a, §FR-021b]
 - [x] CHK024 - Are the export control labels pinned as literals rather than described ("names its destination")? [Measurability, Spec §FR-022, §FR-023b]
 - [x] CHK025 - Is the exported reference line's form specified precisely enough that two implementations would emit the same bytes? [Clarity, Spec §FR-023b]
 - [x] CHK026 - Is the placement of the question control relative to its section's content stated with its reading-order reason, given that it departs from the recovered contract's letter? [Consistency, Spec §FR-023b]
@@ -66,7 +66,7 @@ in the same pass. The findings and their line costs are recorded in the Notes.
 
 ## Non-Colour, Keyboard, and Theme Legibility
 
-- [ ] CHK028 - Is every distinction the artifact draws enumerated, so "no meaning by colour alone" can be checked against a list rather than by inspection? [Measurability, Spec §FR-032, §SC-006 — routed to consensus, see Notes]
+- [x] CHK028 - Is every distinction the artifact draws enumerated, so "no meaning by colour alone" can be checked against a list rather than by inspection? **Closed by consensus, no change made**: an enumerated inventory is not a recognised technique for WCAG 1.4.1, whose verification model is per-instance plus one holistic monochrome pass. The per-instance requirements already bind (FR-011d, FR-018, FR-017c, FR-019c, FR-019d, FR-021a, FR-027) and SC-006 already is the holistic pass. accessibility.md CHK020 records the same six-item cross-reference; reusing it avoids a second list that could drift. [Resolved, Spec §FR-032, §SC-006]
 - [x] CHK029 - Are keyboard reachability requirements stated for the question controls and the export controls, and not only for the page as a whole? [Coverage, Spec §FR-021, §FR-027, §FR-034]
 - [x] CHK030 - Are theme legibility requirements stated for both themes as an acceptance condition rather than as an aspiration? [Measurability, Spec §FR-042, §US1-4]
 - [x] CHK031 - Is the behaviour under a reduced-motion preference scoped to motion this artifact introduces, distinct from motion the canonical blocks own? [Clarity, Spec §FR-035]
