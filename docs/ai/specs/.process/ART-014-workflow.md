@@ -35,8 +35,8 @@ doubt them, and record any drift.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 13 FRs, 3 user stories, 12 acceptance scenarios. G1 helper passed; 2 markers found by hand, routed to Clarify |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | 3 sessions. Required: 2 open markers |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 3 consensus items all resolved in Round 1, 0 markers remain |
+| Plan | `/speckit-plan` | 🔄 In Progress | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -450,7 +450,7 @@ assertion to validate-codex-skills.py, and updating CODEX-PARITY-NOTES.md.
 |---------|------------|-----------|--------------|
 | 1 | The Advisory Audit | 5 open items, all resolved from evidence, 0 routed to consensus | Verdict vocabulary widened from two values to three after the audit found an accidentally-advisory key. FR-010 rewritten, FR-010a and FR-010b added, FR-011 tightened to derive the key set from a real report. Both spec markers cleared. ART-016 and ART-017 opened in the roadmap. Spec 13 → 15 normative requirements, 0 markers |
 | 2 | Comparison Semantics And The Corpus Contract | 5 asked, 4 resolved from evidence, 1 routed to consensus | Added FR-004a (asymmetric resolution), FR-004b (byte-exact, no case folding), FR-004c (out-of-boundary fails), FR-004d (branch ordering). Amended FR-005 (explicit whitespace check), FR-012 (two controls, one fixture, `.git` marker as a file), SC-002 (denominator pinned to the baseline commit), and the PR packet requirements (reproducible corpus harness plus a mismatch canary). Spec 15 → 19 normative requirements |
-| 3 | Documentation Truth And Platform Reach | | |
+| 3 | Documentation Truth And Platform Reach | 5 asked, 3 resolved from evidence, 2 routed to consensus | Found three statements in the shipped authority block that this change makes false, not one. Added FR-013a, FR-013b, FR-013c. Both consensus items resolved without adding scope: the second failure sentence needs no new requirement, and no documentation assertion is added. Spec 19 → 22 normative requirements |
 
 #### Session 2 Findings
 
@@ -594,6 +594,65 @@ change, the repair did not take regardless of what the other 54 report.
 | # | Phase / Session | Item | Categories | Round | Analysts | Verdict | Applied |
 |---|---|---|---|---|---|---|---|
 | 1 | Clarify S2 | When the supplied workflow resolves outside a successfully resolved repository root, does the guard fail or skip? | `[codebase] [security]` | 1 | all 3 (security always fans out) | **FAIL**, unanimous 3 of 3, all high confidence, no escape to Round 2 | FR-004c and FR-004d added to `spec.md` |
+| 2 | Clarify S3 | Must the shipped documentation quote the second failure sentence, "workflow file is outside the authorized repository"? | `[security] [spec]` | 1 | all 3 (security always fans out) | **OMIT**, 2 of 3. Codebase high, spec-context high, security dissenting at high | No new FR. FR-013's enumeration stays closed |
+| 3 | Clarify S3 | Should a test pin the `workflow_file` authority sentence in both protocol references? | `[spec] [codebase]` | 1 | codebase, spec-context | **NO-ASSERT**. Spec-context high; codebase ASSERT at medium, having explicitly deferred the deciding spec-intent signal to spec-context | Recorded as a deferred idea below, not implemented |
+
+**Item 2, why OMIT beat a well-argued MENTION.** The security lens made the
+strongest external case in this run, grounded in CWE-1059, NIST SP 800-61r2,
+OWASP fail-securely, and a structurally identical precedent in GCC 14, which
+promoted implicit-function-declaration from warning to error and used the
+documentation update as the vehicle for the promised clarity. It also supplied
+the risk evidence: operators who cannot find an explanation for a security halt
+disable the control, which is the documented SELinux pattern.
+
+It lost on repository-specific evidence, not on quality. The spec's author typed
+the FR-004c sentence verbatim and then wrote FR-013's three-item enumeration
+seventy lines later without it. That enumeration then survived the commit that
+introduced FR-004c, which edited FR-012 thirteen lines away, and survived a
+session dedicated entirely to documentation truthfulness. Independently, of the
+three problem keys already gated before this change, only one is named anywhere
+in shipped prose: in this codebase gated does not imply documented, so silence
+about a specific error string is the norm rather than a defect.
+
+**What OMIT does and does not settle.** It settles that no requirement compels
+*quoting the literal string*. It does not remove the obligation to describe the
+branch: FR-013b requires the protocol reference to carry the branch order and the
+reason behind each verdict, and the out-of-boundary case is one of those
+branches. The staged reference prose therefore still documents that branch, and
+names the message inside a description it must contain anyway. That is an
+editorial choice with no requirement behind it and no measurable cost in an
+uncapped reference file, and it is the part of the security lens's argument that
+survives the majority verdict.
+
+**Item 3, why this is not a genuine tie.** The codebase lens found real
+precedent for asserting, including the fact that `workflow-file-protocol.md` is
+already pinned in `tests/speckit-pro/unit/test-reviewability-marker-guidance.py`
+under a content requirement with no companion test requirement. It capped itself
+at medium and said plainly that the remaining signal, whether this author meant
+to scope testing out of FR-013, belonged to another lens. Spec-context supplied
+that signal at high confidence: design-concept Q11 chose the shared reference
+precisely to avoid duplicating a sentence into two files "that nothing asserts
+agree", so prose-parity risk was considered and answered with placement rather
+than a test. US2's automated Independent Test and US3's manual-review Independent
+Test have differed since the first commit and survived three clarify passes.
+
+It also corrected a premise this orchestrator had accepted: a documentation pin
+would **not** have caught the ART-014 defect. The mismatch sentence was quoted
+verbatim in `SKILL.md` throughout the defect's entire life, so an `assertIn`
+would have passed the whole time. The defect was an inert code path, which
+FR-010 and FR-011 already cover. A prose pin defends against trim survival, a
+real but different risk.
+
+**Deferred idea, not filed as a roadmap entry.** Pinning the authority sentence
+in both protocol references is a reasonable test-hygiene improvement, and
+`CODEX-PARITY-NOTES.md` documents a real 1,070-to-500-line trim showing the risk
+is not hypothetical. It is deferred rather than implemented because the declared
+budget names a closed set of five authored files, and this repository has its own
+recorded lesson, ART-015, about signals growing without re-running the estimator.
+It is recorded here and in the pull request's known gaps rather than as a roadmap
+entry, because unlike ART-016 and ART-017 no shipped artifact cites it, and
+creating an entry nothing references would itself be the scope growth the verdict
+rejected.
 
 **Why unanimous rather than close.** The three lenses converged from independent
 evidence. The codebase lens found five existing call sites using the shape
