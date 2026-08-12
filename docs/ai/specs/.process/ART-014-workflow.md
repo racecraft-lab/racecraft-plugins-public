@@ -36,8 +36,8 @@ doubt them, and record any drift.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 13 FRs, 3 user stories, 12 acceptance scenarios. G1 helper passed; 2 markers found by hand, routed to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 3 consensus items all resolved in Round 1, 0 markers remain |
-| Plan | `/speckit-plan` | 🔄 In Progress | |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Plan | `/speckit-plan` | ✅ Complete | G3 pass, 0 markers. plan.md + research.md + quickstart.md; data-model and contracts justifiably skipped |
+| Checklist | `/speckit-checklist` | 🔄 In Progress | 3 domains: error-handling, data-integrity, security |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
@@ -799,11 +799,64 @@ blueprint. Output: `specs/art-014-phase-guard-enforcement-repair/plan.md`
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Likely N/A; this spec adds no entities |
-| `contracts/` | ⏳ | Likely N/A; no new API surface |
-| `quickstart.md` | ⏳ | Developer onboarding |
+| `plan.md` | ✅ | 8 design sections, an ordered 8-step implementation sequence, all 22 requirements mapped |
+| `research.md` | ✅ | Not an unknowns burndown, since Clarify left zero markers. Records the three seams the settled inputs did not determine, each found by reading code |
+| `data-model.md` | ⏭️ Skipped | The spec's Key Entities are conceptual vocabulary, not persisted structures. No state field added, no schema touched. The one new construct is a source constant fully specified in the plan |
+| `contracts/` | ⏭️ Skipped | No external interface change: no new flag, no new `--rule` value, no schema file touched. The report gains one key, an additive change to an unversioned stdout payload, whose enforced record is the FR-011 completeness test |
+| `quickstart.md` | ✅ | Seven runnable validation scenarios mapped to success criteria |
+
+**Gate G3:** ✅ PASS, `plan.md exists with 0 unresolved markers`. Privacy scan
+across the feature directory is clean.
+
+#### Plan Findings
+
+Three findings, two of which would have shipped a defect.
+
+**1. The return shape is a seam the constraints underdetermined.** Today
+`build_report` folds this function's entire error list into
+`workflow_checkpoint_errors`, including the gated path's own errors. Re-keying
+the whole return is the small diff and is wrong twice: it moves the gated
+comparison's reporting key, which FR-002 forbids, and it newly arms every
+gated-path error under `status-evidence` for the Codex flow, which is precisely
+the blast radius FR-008 exists to prevent. The plan specifies a three-tuple so
+the new key carries only identity errors. `build_report` is the sole consumer, so
+this touches one call site.
+
+**2. `state.get("workflow_file") is None` would reintroduce the bug.** FR-003
+skips on an absent field, and the edge cases classify an explicit `null` as
+malformed, which fails. `.get()` collapses those two into one value, so a nulled
+field would become a silent opt-out. Verified: `"workflow_file" not in state`
+distinguishes them and `.get(...) is None` does not. The plan requires the
+membership test.
+
+**3. A latent fragility in the existing controls.** The current `RuleScopingTests`
+fixture writes an absolute `workflow_file` into a temp root with no repository
+marker. After this change all three methods newly flow through the helper and
+stay green only because no `.git` resolves above a system temp directory, which
+is an environmental accident rather than a correctness property. Verified by
+walking the parents of a real temp directory: no marker found. The plan requires
+re-running them and, if red, fixing the fixture rather than the helper.
+
+**Parser correction applied.** The declared-operations block uses `MODIFIED`, not
+`MODIFY`. The parser accepts only `^\s*[-*]\s+(NEW|MODIFIED)\s+([^\s]+)\s*$`, so
+`MODIFY` is silently dropped and the estimate degrades to no input. Verified: all
+5 entries now parse.
+
+**A third inert governance check, recorded not fixed.** The plan-phase
+`estimate-reviewable-loc` returns `projected: 0, production: 0` against 5 declared
+files. `is_production_file` matches a path prefix of `src/`, `app/`, `lib/`, or
+`scripts/`, or a JS, TS, or SQL extension. This repository's Python guard lives at
+`speckit-pro/skills/speckit-autopilot/scripts/…`, which does not *start* with
+`scripts/`, and `.py` is absent from the extension list, so **every Python file in
+this repository scores as non-production** and the plan-phase budget gate is
+structurally blind to the repo's primary language. This is adjacent to ART-015 but
+distinct: ART-015 is about never re-invoking the estimator, whereas this is the
+estimator mis-classifying its input. It is recorded here and in the pull request's
+known gaps rather than opened as a roadmap entry, on the same rule applied to the
+deferred documentation pin: nothing shipped cites it, so creating an entry would
+be unrequested scope. The slice remains governed by the spec's own slice-estimator
+figures, 235 reviewable LOC across 4 production files, and both estimators agree
+the slice is within budget.
 
 ---
 

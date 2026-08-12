@@ -1,5 +1,5 @@
 {
-  "active_step": "Phase 3: Plan",
+  "active_step": "Phase 4: Checklist - error-handling",
   "archive_sweep": {
     "actions_taken": [],
     "eligible_specs": [],
@@ -34,6 +34,10 @@
       "note": "3 routed items, all resolved in Round 1; none reached [HUMAN REVIEW NEEDED]",
       "pass": true,
       "sessions": 3
+    },
+    "G3": {
+      "markers": 0,
+      "pass": true
     }
   },
   "plan": [
@@ -74,11 +78,11 @@
       "step": "Phase 2: Clarify - Documentation Truth And Platform Reach Consensus"
     },
     {
-      "status": "in_progress",
+      "status": "completed",
       "step": "Phase 3: Plan"
     },
     {
-      "status": "pending",
+      "status": "in_progress",
       "step": "Phase 4: Checklist - error-handling"
     },
     {
@@ -170,6 +174,14 @@
       "step": "Post: Retrospective"
     }
   ],
+  "plan_reviewability": {
+    "declared_entries": 5,
+    "modified": 5,
+    "note": "production 0 is an is_production_file heuristic gap, not a real zero; it prefix-matches src/|app/|lib/|scripts/ or JS/TS/SQL extensions, so no Python file in this repo scores as production. Slice governed by the spec slice-estimator: 235 LOC / 4 production files.",
+    "production": 0,
+    "projected": 0,
+    "status": "pass"
+  },
   "prior_run_note": "completed_archived",
   "project_commands": {
     "BUILD": "N/A",
@@ -199,6 +211,6 @@
     "passed": 7378,
     "total": 7378
   },
-  "updated_at": "2026-08-12T19:26:24Z",
+  "updated_at": "2026-08-12T19:44:09Z",
   "workflow_file": "docs/ai/specs/.process/ART-014-workflow.md"
 }
