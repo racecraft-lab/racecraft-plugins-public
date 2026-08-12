@@ -3,8 +3,10 @@
 **Status**: Active — not yet implemented
 **Source**: Approved logo, plugin-metadata, and launch-version research from 2026-07-16
 **Created**: 2026-07-16
-**Last updated**: 2026-07-16
-**Target window**: Soft launch in the first week of August 2026
+**Last updated**: 2026-08-12
+**Target window**: Soft launch over Labor Day weekend 2026, September 5 to 7.
+Revised 2026-08-12. The original first-week-of-August window was not met and the
+work was parked; no phase of BRAND-001 has run.
 
 ---
 
