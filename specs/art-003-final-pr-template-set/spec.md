@@ -310,29 +310,48 @@ nothing from the four empty fields.
 
 ### Reviewability Notes *(if applicable)*
 
-**This slice is projected to exceed the 800 block threshold, and the resolution
-is unresolved.** No `Reviewability-Exception` pragma is claimed, because none of
-the accepted classes (`refactor`, `infra`, `upgrade`) honestly describes net-new
-template work. Splitting further is not available either: a self-contained HTML
-artifact cannot be divided across two pull requests and still render from
-`file://`, so one template per PR is already the thinnest vertical slice this
-work admits. [NEEDS CLARIFICATION: how slice 1 clears the reviewability
-boundary — accepted block with recorded justification, a new exception class
-that fits net-new artifact work, or a mechanism not yet identified. Resolution
-belongs to Plan and to the operator, not to this spec.]
+No `Reviewability-Exception` pragma is claimed, and none is available: the
+accepted classes are `refactor`, `infra`, and `upgrade`, and none honestly
+describes net-new template work. Splitting further is not available either,
+because a self-contained HTML artifact cannot be divided across two pull
+requests and still render from `file://`. One template per PR is already the
+thinnest vertical slice this work admits.
+
+The slice therefore clears the boundary on cost discipline or not at all.
+Decomposing the four shipped templates locates that cost: the export
+affordance floor is ~280 lines of JavaScript and is irreducible, but **component
+CSS is the larger line item** at 450–663 lines, and `spec-explainer` renders six
+regions in 171. The difference is subject matter, not restraint — the three
+expensive templates draw a graph, mockups, timelines and comparison tables.
+`pr-writeup` is a document of six titled prose-and-list sections, so its
+structural analogue is `spec-explainer`.
+
+Holding component CSS to that document class is what puts this slice at ~750 and
+in warn. Failing to hold it puts it at 984 or above and in block. **This is a
+design constraint on Plan, not a prediction**, and the three templates that
+actually carry both exports did not hold it. [NEEDS CLARIFICATION: whether Plan
+commits to the document-class CSS ceiling as an explicit checkable constraint
+and re-declares at ~750, or accepts the block and refers the exception question
+to the operator.]
 
 ### Reviewability Budget *(mandatory)*
 
 - **Primary surface**: docs/process (a shipped template file)
 - **Secondary surfaces, if any**: seed/config (one catalog value), harness/adapter (two literals in the fill-region validation)
-- **Projected reviewable LOC**: **~1000–1200**, excluding the 458 lines of
-  canonical embedded blocks a reviewer never reads because they are byte-verified
-  copies (`brand-kit.css` `BRAND-KIT` block = 318, `theme-toggle.html`
-  `GALLERY-HEAD` block = 140; both measured)
+- **Projected reviewable LOC**: two branches, decided at Plan. **~750** if
+  component CSS is held to the document-template class; **~1000–1200** on the
+  trajectory of the three shipped templates that carry both exports and did not
+  hold it. Both figures exclude the 458 lines of canonical embedded blocks a
+  reviewer never reads because they are byte-verified copies (`brand-kit.css`
+  `BRAND-KIT` block = 318, `theme-toggle.html` `GALLERY-HEAD` block = 140; both
+  measured)
 - **Projected production files**: 1 (net-new: the artifact itself)
 - **Projected total files**: ~4
-- **Budget result**: **block** (above the 800 block threshold), unresolved — see
-  Reviewability Notes
+- **Budget result**: **block until Plan commits.** The unconstrained trajectory
+  is a block; the constrained one is a warn. This spec declares the
+  unconstrained figure because no design commitment has been made yet, and a
+  spec must not book a number the design has not agreed to. See Reviewability
+  Notes.
 - **Basis for the projection**: measured against the four shipped templates
   rather than fitted to one aggregate figure. Authored lines are what the gate
   counts, and the predictor is the `exports` declaration, not slot count and not
@@ -423,8 +442,13 @@ belongs to Plan and to the operator, not to this spec.]
   fill-region validation binds this template rather than passing vacuously.
 - **SC-009**: Exactly one catalog value changes across the whole slice, and zero
   shared foundation files are edited.
-- **SC-010**: The finished change measures under 800 reviewable production LOC,
-  the threshold above which it would be blocked.
+- **SC-010**: The finished change's reviewable production LOC is measured against
+  the gate rather than estimated, before the pull request is opened, and the
+  figure declared at Plan is the measured one. Zero pull requests open carrying a
+  stale or undeclared size figure, and zero carry an unrecorded boundary
+  resolution. (This slice is projected to exceed the 800 block threshold, so the
+  criterion is a true declaration and a recorded ruling, not clearing the
+  threshold.)
 - **SC-011**: An authoring agent reading only the artifact's own inventory can
   name all six regions and what fills each, with zero regions undocumented and
   zero documented slots lacking a region.
@@ -451,10 +475,18 @@ belongs to Plan and to the operator, not to this spec.]
   resolved there by reusing the shipped "walk the non-empty notes with item
   anchors" shape. It is recorded here as a deferral rather than as an open
   question.
-- The reviewability projection is an estimate derived from a two-template sample
-  and is re-measured at Plan. Landing above the warn threshold is expected and
-  accepted; landing at or above the block threshold would require a re-slice, not
-  an exception.
+- The reviewability projection is measured against the four shipped templates
+  individually, not fitted to one aggregate figure, and it is re-declared at
+  Plan against the real port. Exceeding the block threshold is expected on the
+  measured evidence. Re-slicing is **not** an available response: a
+  self-contained HTML artifact cannot be divided across two pull requests and
+  still render from the local-file scheme, so one template per PR is already the
+  thinnest vertical slice this work admits.
+- The feature is not shrunk to chase the size number. Six fill regions and both
+  export kinds are decisions the interview fixed and the shipped catalog entry
+  already promises; dropping either would resolve the number by breaking a
+  commitment. The size boundary is resolved at Plan and by the operator, not by
+  reducing scope here.
 - Slices 2 and 3 stack on this branch after this pull request is open. Nothing in
   this slice may be shaped to suit them, and no merge happens inside the run.
 

@@ -31,8 +31,9 @@
 
 ## Notes
 
-Two `[NEEDS CLARIFICATION]` markers remain deliberately, and both are held open
-for `/speckit-clarify` rather than guessed here.
+Three `[NEEDS CLARIFICATION]` markers remain deliberately, which is the command's
+maximum. All three are held open for `/speckit-clarify` and `/speckit-plan`
+rather than guessed here.
 
 1. **FR-017 — the `implementation-notes` source vocabulary.** The fixed decision
    declares that slot's source as a path under a feature's process directory. The
@@ -51,14 +52,31 @@ for `/speckit-clarify` rather than guessed here.
    anchored sample items and which rows the list-slot literal gains. Guessing it
    would fix the shape of two regions on no evidence.
 
-Two further items from the design concept's open questions are recorded in the
-spec as **deferrals rather than markers**, because each has a named owner and a
-settled resolution path:
+3. **Reviewability Notes — how slice 1 clears the size boundary.** The budget was
+   re-measured at Phase 0 against the four shipped templates individually rather
+   than fitted to one aggregate figure, and the projection moved from ~750 to
+   roughly 1000–1200, which exceeds the 800 block threshold. The predictor is the
+   `exports` declaration, not slot count and not upstream size: the only shipped
+   template under the block declares no exports, while all three carrying both
+   export kinds land between 1003 and 1222. `pr-writeup` carries both, so its
+   comparators are `module-map` (1003) and `code-approaches` (1026). Neither
+   standing remedy fits. The valid exception classes are only `refactor`, `infra`,
+   and `upgrade`, none of which describes a net-new artifact; and re-slicing is
+   unavailable, because a self-contained HTML artifact cannot be divided across
+   two pull requests and still render from the local-file scheme. The resolution
+   is the operator's call at Plan, and this planning run terminates at G6.5 before
+   any code is written, so nothing is sunk before the ruling.
 
-- The serialized payload shape of the two exports resolves at Plan, reusing the
-  shipped "walk the non-empty notes with item anchors" shape (Assumptions).
-- The reviewability projection is re-measured and re-declared at Plan
-  (Reviewability Budget, Split decision).
+One further item from the design concept's open questions is recorded in the spec
+as a **deferral rather than a marker**, because it has a named owner and a settled
+resolution path: the serialized payload shape of the two exports resolves at Plan,
+reusing the shipped "walk the non-empty notes with item anchors" shape
+(Assumptions).
+
+**Scope was not reduced to chase the size number.** Six fill regions and both
+export kinds are fixed interview decisions, and the catalog entry shipped in
+ART-001 already promises both. Dropping either would resolve the projection by
+breaking a commitment, so the spec records the overage and hands it on.
 
 Both remaining open questions in the design concept concern slices 2 and 3 and
 are out of this spec's scope by construction.

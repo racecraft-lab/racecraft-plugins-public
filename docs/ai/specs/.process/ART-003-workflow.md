@@ -152,6 +152,60 @@ figure, and this planning-stage run terminates at G6.5 before any
 implementation. No code is written and nothing is sunk before the operator
 rules on it.
 
+#### Refinement — the cost decomposition, and a way under the block
+
+Decomposing the same four templates with both canonical spans excised first
+(the naive split double-counts, because `GALLERY-HEAD` carries its own `script`
+and `style`) locates the cost precisely:
+
+| Template | Authored | CSS | JS | Markup | `exports` |
+|---|---|---|---|---|---|
+| `spec-explainer` | 316 | 171 | **0** | 147 | `[]` |
+| `module-map` | 1003 | 450 | 294 | 261 | both |
+| `code-approaches` | 1026 | 473 | 299 | 256 | both |
+| `implementation-plan` | 1222 | 663 | 278 | 283 | both |
+
+Two things follow, and they point in opposite directions.
+
+**The export floor is real and irreducible.** `spec-explainer` carries zero
+authored JavaScript — its only script is the theme toggle inside the canonical
+head block. The three templates that export both kinds each spend 278–299 lines
+on it. Keeping both exports costs about 280 lines and no restraint reduces that,
+which is why dropping an export was never the lever and is still not on offer.
+
+**Component CSS, not JavaScript, is the largest line item** — 450 to 663 lines,
+more than the exports cost. And `spec-explainer` renders six fill regions in
+**171**. That gap is not discipline; it is subject matter. `module-map` draws a
+graph, `implementation-plan` draws mockups, phase timelines and a risk register,
+`code-approaches` draws comparison tables. Each needs bespoke layout CSS.
+
+`pr-writeup` is a **document**: six titled prose-and-list sections. Its
+structural analogue is `spec-explainer` (`tldr`, `goals`, `non-goals`,
+`acceptance-criteria`, `clarification-faq`), not the three that draw diagrams.
+
+That yields a target rather than a prediction:
+
+```text
+  ~171   component CSS at the document-template class (spec-explainer's figure)
+  ~40    CSS for the question-capture and export controls spec-explainer has none of
+  ~280   export + question-capture JS (measured floor of the three)
+  ~260   markup: six regions, sample content, six question controls
+  ─────
+  ~750   authored  →  warn, under the 800 block
+```
+
+**State this as a constraint on Plan, not as a settled projection.** The
+measured floor of the three templates that actually carry both exports is
+`450 + 278 + 256 = 984`, still above the block. The ~750 target holds only if
+component CSS stays in the document class, and the three existing export
+carriers did not hold it. Plan must therefore either commit to that CSS
+discipline as an explicit, checkable design constraint and re-declare at ~750,
+or accept the block and take the exception question to the operator.
+
+The scaffold's original ~750 turns out to be close to right, for a reason it did
+not know: it was the correct figure for a document-class template, reached by an
+argument that happened to average the wrong population.
+
 ---
 
 ## Workflow Overview
