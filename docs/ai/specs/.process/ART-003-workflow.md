@@ -90,6 +90,68 @@ gate is a declaration checker, not a tree measurement
 number for you — that is exactly how ART-002 reached PR creation believing it
 was at 530.
 
+#### Correction — measured at Phase 0, 2026-08-12
+
+**The table above is wrong. Slice 1 will block.** The autopilot re-derived the
+model from the realized tree instead of from ART-002's single aggregate figure,
+and the projection moved from ~750 to roughly 1000–1200.
+
+Two measurement errors caused it. First, `M` was fitted to one aggregate number
+rather than to the four shipped templates individually, and the per-template
+spread is 0.83 to 2.26 — wide enough that a mean carries no predictive weight.
+Second, and decisively, the fit pooled templates that do not belong in one
+population.
+
+Every shipped template is `458` canonical lines plus authored lines
+(`brand-kit.css` `BRAND-KIT` block = 318, `theme-toggle.html` `GALLERY-HEAD`
+block = 140; both measured, and their sum is the constant the formula already
+used). Authored lines are what the gate counts:
+
+| Template | `exports` | Slots | Upstream lines | Authored (reviewable) |
+|---|---|---|---|---|
+| `spec-explainer` | `[]` | 6 | 382 | **316** |
+| `module-map` | `["prompt","markdown"]` | 5 | 492 | **1003** |
+| `code-approaches` | `["prompt","markdown"]` | 3 | 454 | **1026** |
+| `implementation-plan` | `["prompt","markdown"]` | 7 | 702 | **1222** |
+
+The split is not slot count and not upstream size. It is `exports`. The one
+template under the 800 block declares `exports: []`; all three that carry
+`["prompt","markdown"]` land between 1003 and 1222, and each spends 414–435
+lines on export and question-capture JavaScript. `spec-explainer` is cheap
+because it has no export affordance to build, so it is not a comparator for
+`pr-writeup`.
+
+`pr-writeup` declares `["prompt","markdown"]` and six slots. Its nearest
+comparators are `module-map` and `code-approaches`. **No template carrying both
+exports has ever landed under 800 reviewable LOC.**
+
+Upstream `17-pr-writeup.html` sharpens this rather than softening it: 596 lines,
+of which 346 are CSS that the brand kit replaces, leaving 250 markup lines
+carried over. It contains **zero `<script>` and zero `<button>` tags** — six
+`<details>` disclosures and nothing else. Every line of export and
+question-capture behaviour is authored fresh here, with no upstream counterpart
+to port. That is the 414–435 JS lines the three comparators each needed.
+
+The design concept's size lever (Q11, sample content held to the demonstrating
+minimum) is real but far too small to close a 200–400 line gap; sample content
+is tens of lines, not hundreds.
+
+**What this does not change.** The three-slice split still stands and is still
+right: one template per PR is already the thinnest vertical slice this work
+admits, because a single self-contained HTML artifact cannot be split across two
+PRs and still render from `file://`. Re-slicing further is not available.
+
+**What it does change.** Slice 1 needs an accepted block or a typed
+`Reviewability-Exception`, and the valid classes are only
+`refactor | infra | upgrade` — none of which honestly describes a net-new
+artifact. The design concept already flagged this tension as an open question.
+It is now the decision this stage hands to the operator.
+
+**Where it gets decided.** Phase 3 (Plan) re-declares against the measured
+figure, and this planning-stage run terminates at G6.5 before any
+implementation. No code is written and nothing is sunk before the operator
+rules on it.
+
 ---
 
 ## Workflow Overview
