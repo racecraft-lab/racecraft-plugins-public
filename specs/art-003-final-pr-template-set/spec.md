@@ -150,8 +150,8 @@ nothing from the four empty fields.
   reveal it, so the affordance appears only where it works. **This costs one
   line**: the hidden state is an attribute on a container line that exists
   anyway, and revealing it is a single statement in a routine that already runs
-  at load. That one line is charged against the 50 lines of headroom and is
-  recorded in the Budget below. The remaining degradation — no question controls,
+  at load. That one line takes the total from 757 to 758 and the headroom to 42,
+  and is recorded in the Budget below. The remaining degradation — no question controls,
   so no questions to export — is an accepted one rather than a defect, because
   US1 is P1 and delivers its value alone.
 
@@ -451,7 +451,7 @@ nothing from the four empty fields.
   reference is acceptable for interaction shape and is not acceptable for an
   obligation a reviewer must be able to check on its own terms.
 - **FR-021a**: Three properties of that pattern are stated here rather than left to
-  "matching", because both are accessibility obligations and a port that met the
+  "matching", because each is an accessibility obligation and a port that met the
   shape while missing them would still read as compliant. The disclosure's own
   control MUST state **in text** whether its section currently carries a
   question, so a recorded question is findable without opening all six and so the
@@ -596,7 +596,9 @@ nothing from the four empty fields.
   recorded per-template pattern — the shipped templates already vary that noun
   between "objection" and "approach", so this is the same move rather than a
   divergence.
-  This slice MUST author its own `contracts/export-payload-contract.md`, because
+  This slice MUST author its own `contracts/export-payload-contract.md` — which
+  Plan did, recovering it from the deleted ART-002 document, so the task that
+  remains is keeping it in step with what ships rather than writing it — because
   **the document all three shipped templates name in a source comment no longer
   exists**: ART-002's copy was deleted when that feature was archived, so every
   shipped template now carries a pinning reference that resolves nowhere.
@@ -744,10 +746,10 @@ Budget below.
 - **Secondary surfaces, if any**: seed/config (one catalog value), harness/adapter (three literals in the fill-region validation)
 - **Projected reviewable LOC**: **~758**, decomposed and measured rather than
   scaled from a multiplier:
-  - export and question-capture JavaScript **~288** — the shipped precedent's 294,
-    less 19 for collecting six named sections instead of walking a list container
-    and for a comment with no counterpart here, plus 13 for FR-026a's
-    stale-settle guard
+  - export and question-capture JavaScript **~288** — the shipped precedent's 293
+    as the plan's instrument measures it, less 19 for collecting six named
+    sections instead of walking a list container and for a comment with no
+    counterpart here, plus 13 for FR-026a's stale-settle guard, plus 1 rounding
   - question and export CSS **~97**, measured off the precedent's own selectors
   - six document sections **~150** CSS, against `spec-explainer`'s 171 total
   - markup **~223**
@@ -804,9 +806,9 @@ Budget below.
   | `implementation-plan` | `["prompt","markdown"]` | 7 | 1222 |
 
   The one template under the block declares no exports. All three carrying
-  `["prompt","markdown"]` land between 1003 and 1222, each spending 414–435 lines
+  `["prompt","markdown"]` land between 1003 and 1222, each spending 277–298 lines
   on export and question-capture JavaScript. `pr-writeup` carries both exports
-  and six slots, so its comparators are `module-map` and `code-approaches`.
+  and seven slots, so its comparators are `module-map` and `code-approaches`.
   Upstream `17-pr-writeup.html` sharpens this: 596 lines, 346 of them CSS the
   brand kit replaces, and **zero `<script>` and zero `<button>` tags** — six
   `<details>` disclosures and nothing else. Every line of export behaviour is
@@ -830,7 +832,15 @@ Budget below.
   files and verification evidence.
 - Deferred work MUST name the follow-up spec or issue. Slices 2 and 3, the
   generation step, and the ready flip are all named deferrals here.
-- Known gaps MUST name all five carried out of Clarify. From session 1: the
+- Known gaps MUST name all seven the pull request carries: the five out of
+  Clarify below, plus the two Phase 0 added, which `research.md` § "Known gaps
+  carried into the pull request" enumerates and `plan.md` repeats. The two are:
+  the plan-phase estimator reports `pass` with a projection of zero on this slice
+  and on every slice whose production surface is `.html`, `.json`, `.md`, or
+  `.py`, so its green line reads as reassurance it cannot supply; and the setup
+  gate's declaration parser takes the **last** match of its phrases in a file, so
+  nothing may be appended after `plan.md`'s Declared Figures block without
+  silently changing the declared size. From session 1: the
   payload documents no fill-region grammar; the validation binds only the
   templates its floor names, so a shipped non-floor template is never parsed; and
   no check reads a catalog entry's `exports` against the artifact. From session 2:

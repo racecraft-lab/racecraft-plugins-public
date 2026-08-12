@@ -9,7 +9,7 @@
   "stage_basis": "auto-detect: the first non-terminal planning phase is Specify, which is \u23f3 Pending",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-012-workflow.md",
-  "active_step": "Phase 6: Analyze",
+  "active_step": "Phase 6.5: Confidence Gate",
   "updated_at": "2026-08-12T18:00:00Z",
   "settings": {
     "consensus_mode": "tier-a",
@@ -126,15 +126,15 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "skipped: analyze reported zero unresolved items"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement",
@@ -215,6 +215,11 @@
       "pass": true,
       "task_count": 40,
       "reason": "40 tasks found"
+    },
+    "G6": {
+      "pass": true,
+      "markers": 0,
+      "reason": "0 CRITICAL/HIGH findings"
     }
   },
   "spec_metrics": {
@@ -353,5 +358,23 @@
     "required": false,
     "reason": "reviewability evidence is warn at 758 against an 800 block, not a size block, so no marker split is planned",
     "note": "recorded as plain prose rather than as a pr_marker_plan object: that key is schema-validated (pr-marker-plan.v1/v2) and an object written only to say 'not needed' fails the coverage guard"
+  },
+  "analyze": {
+    "findings": 11,
+    "by_severity": {
+      "critical": 1,
+      "high": 3,
+      "medium": 4,
+      "low": 3
+    },
+    "remediated": 11,
+    "unresolved": 0,
+    "line_cost": 0,
+    "critical": "FR-011c had zero task coverage - the ~141-line drop lever was true only by omission",
+    "coverage": {
+      "requirement_to_task": "72/72",
+      "task_to_requirement": "35/40, five infra tasks trace to none"
+    },
+    "orchestrator_error_corrected": "414-435 JS lines was a naive pre-excision count sweeping in the canonical theme script; measured 277/293/298"
   }
 }

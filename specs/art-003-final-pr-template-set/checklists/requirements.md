@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,9 +31,13 @@
 
 ## Notes
 
-Three `[NEEDS CLARIFICATION]` markers remain deliberately, which is the command's
-maximum. All three are held open for `/speckit-clarify` and `/speckit-plan`
-rather than guessed here.
+**All three markers are now closed and `spec.md` carries none.** They were held
+open at this pass for `/speckit-clarify` and `/speckit-plan` rather than guessed
+here; the record of what each one asked, and how it was settled, is below. Read
+items 1 to 3 as history rather than as open work.
+
+Three `[NEEDS CLARIFICATION]` markers remained deliberately at the time of this
+pass, which is the command's maximum.
 
 1. **FR-017 — the `implementation-notes` source vocabulary.** The fixed decision
    declares that slot's source as a path under a feature's process directory. The
@@ -82,3 +86,19 @@ Both remaining open questions in the design concept concern slices 2 and 3 and
 are out of this spec's scope by construction.
 
 Items marked incomplete require spec updates before `/speckit-plan`.
+
+## Settled after this pass
+
+This checklist ran before Clarify and Plan, so three of its figures are history
+rather than the current position. Recorded here so a reader does not act on them:
+
+- **The size projection.** Item 3 above hands on a projection of roughly
+  1000–1200. Plan re-measured against the four shipped templates with one
+  calibrated instrument and re-declared **758** against the 800 block, headroom
+  42, decomposed 288 export JavaScript + 97 question and export CSS + 150 section
+  CSS + 223 markup. The operator ruling item 3 anticipated was therefore never
+  needed, and no exception pragma is claimed.
+- **The region count.** "Six fill regions" above counts the reader-facing
+  sections. Clarify session 1 added `feature-header` under FR-011a, so the
+  artifact ships **seven** regions: six a reviewer reads, plus one chrome region.
+- **The markers.** All three are closed and `spec.md` carries none.

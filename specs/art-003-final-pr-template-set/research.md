@@ -103,8 +103,9 @@ script is the theme toggle inside the canonical head block. The three templates
 carrying both export kinds spend 293, 298, and 277. The floor is a property of
 the routine, not of the author.
 
-Upstream `17-pr-writeup.html` supplies none of it: 596 lines, of which 346 are CSS
-the brand kit replaces, and **zero `<script>` and zero `<button>` tags** — six
+Upstream `17-pr-writeup.html` supplies none of it: 596 lines by direct count at
+this phase, correcting the design concept's 595, of which 346 are CSS the brand
+kit replaces, and **zero `<script>` and zero `<button>` tags** — six
 `<details>` disclosures and nothing else. Every line of export behaviour is
 authored fresh with no upstream counterpart to port.
 

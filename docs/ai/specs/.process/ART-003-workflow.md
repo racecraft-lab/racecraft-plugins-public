@@ -120,10 +120,19 @@ used). Authored lines are what the gate counts:
 
 The split is not slot count and not upstream size. It is `exports`. The one
 template under the 800 block declares `exports: []`; all three that carry
-`["prompt","markdown"]` land between 1003 and 1222, and each spends 414–435
+`["prompt","markdown"]` land between 1003 and 1222, and each spends **277–298**
 lines on export and question-capture JavaScript. `spec-explainer` is cheap
 because it has no export affordance to build, so it is not a comparator for
 `pr-writeup`.
+
+> **Corrected at Analyze.** This paragraph and the one below originally read
+> 414–435. That was a naive count taken before the canonical spans were excised,
+> so it swept in the theme-toggle script that ships inside `GALLERY-HEAD` and
+> charged a copied block to authored work. The measured figures are 277, 293 and
+> 298. The error inflated the JS line item by roughly 140 and never reached a
+> declared budget — the decomposition that produced C3 = 288 was built from the
+> corrected numbers — but it survived here for several phases and is exactly the
+> kind of figure a later slice would have reused without re-measuring.
 
 `pr-writeup` declares `["prompt","markdown"]` and six slots. Its nearest
 comparators are `module-map` and `code-approaches`. **No template carrying both
@@ -134,7 +143,7 @@ of which 346 are CSS that the brand kit replaces, leaving 250 markup lines
 carried over. It contains **zero `<script>` and zero `<button>` tags** — six
 `<details>` disclosures and nothing else. Every line of export and
 question-capture behaviour is authored fresh here, with no upstream counterpart
-to port. That is the 414–435 JS lines the three comparators each needed.
+to port. That is the 277–298 JS lines the three comparators each needed.
 
 The design concept's size lever (Q11, sample content held to the demonstrating
 minimum) is real but far too small to close a 200–400 line gap; sample content
@@ -302,7 +311,7 @@ concurrently rather than from anyone's carelessness.
 | Plan | `/speckit-plan` | ✅ Complete | G3 PASS; declared 750, warn; CSS ceiling adopted as a checkable constraint |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 33 gaps closed; consensus settled 2 items at zero cost |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 PASS, 40 tasks; M1/M2/M3 checkpoints emitted as real tasks |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ✅ Complete | G6 PASS; 11 findings, all remediated at zero line cost |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
@@ -1288,6 +1297,66 @@ Focus on:
 | `LOW` | Minor inconsistency | Note for future |
 
 ### Analysis Results
+
+Completed 2026-08-12. **G6 PASS** — 0 CRITICAL/HIGH findings remain. Eleven
+findings raised (1 critical, 3 high, 4 medium, 3 low), all eleven remediated,
+zero routed to consensus. Every fix landed in planning prose under `specs/`, so
+**all eleven cost 0 of the 42 lines of headroom** — the budget measures
+`pr-writeup.html` alone, and that file does not exist yet.
+
+**The critical finding was a coverage hole in the largest size lever.** FR-011c
+requires dropping six upstream constructs worth about 141 authored lines, and it
+appeared nowhere in `tasks.md` — not the requirement id, not one of the six drop
+terms. It was true only by omission. That is a worse failure mode than it sounds:
+a faithful porter carries a section *over* rather than leaving it behind, and
+nothing would have caught it until M1 or M3, which report a number rather than a
+diagnosis. A reviewer seeing "css 168, over by 18" would then have to work out
+which section should never have existed. Closed by adding a by-name verification
+to T012, before the tasks that open the upstream file, plus the layout
+consequence to T020. A verification, not a new build task.
+
+**FR-036 was the other uncovered requirement, and it is vacuous here** — the
+pre-paint theme application and the theme control both arrive inside
+`GALLERY-HEAD` and are never authored, and neither the question controls nor the
+export routine branches on appearance. Recorded in T028 as a stated finding with
+a negative check that it *stays* vacuous. Saying so is the coverage; silence was
+not.
+
+**A figure this orchestrator wrote was wrong by roughly 140 lines.** The claim
+that the three export-carrying templates each spend 414–435 lines on export
+JavaScript was a naive count taken before the canonical spans were excised, so it
+swept in the theme-toggle script shipping inside `GALLERY-HEAD` and charged a
+copied block to authored work. The measured figures are 277, 293 and 298. It
+never reached a declared budget — C3 = 288 was derived from the corrected numbers
+— but it survived several phases in prose and is precisely the sort of figure a
+later slice would have reused without re-measuring. Corrected in `spec.md` by
+Analyze and in this file by the orchestrator, with the original recorded.
+
+Six further drifts, all from three executors editing one budget block in
+parallel: a headroom figure stale by two revisions (50 where 42 was settled), a
+known-gaps count reading five against seven in three other artifacts, C3 derived
+from two different precedent baselines (294 recorded versus 293 measured, both
+reaching 288 but unlabelled), "six slots" surviving FR-011a's settled seven, a
+two-item pronoun left behind when FR-021a gained its third property, and a
+requirements checklist still carrying the superseded 1000–1200 projection.
+
+**The declaration parser did not fire this time.** Verified by running the
+regex rather than reading: `spec.md` resolves to 758 on one match, `plan.md` on
+the last of two. The decomposition sums exactly — 288 + 97 + 150 + 223 = 758 —
+and C1 + C2 = 247 matches the M2 gate.
+
+**Coverage, both directions.** Requirement to task moved from 70/72 to **72/72**.
+Task to requirement is 35/40, with T001, T002, T003, T011 and T036 tracing to no
+requirement — baseline run, upstream fetch, dependency install, count
+reconfirmation, docs regen. All infrastructure rather than behaviour, reported as
+such rather than given manufactured links. Kept distinct from those: T021, T030,
+T034, T031 and T032 carry no explicit requirement string but each unambiguously
+implements a numbered one, so explicit-citation coverage and content coverage are
+reported separately.
+
+72 requirements, no id collisions, no duplicate definitions, every lettered family
+contiguous from "a". No behavioural contradiction between `tasks.md` and
+`spec.md`. Layer 1 passes 1447/1447, matching the G0 baseline exactly.
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|

@@ -217,3 +217,11 @@ move no requirement stated). Neither needed a runbook edit.
 `data-model.md`'s traceability row was widened from `FR-021 – FR-029` to
 `FR-021 – FR-029c, less FR-029a` so the three new requirements map to the script
 region rather than falling outside the table.
+
+**The baseline this pass measured against has since moved, and this domain's
+zero still holds.** The figures above — a 750 total, 215 markup, 50 lines of
+headroom — were the position when this domain ran. The ux domain then charged 7
+and the accessibility domain 1, so the settled figures are **758 total, 223
+markup, 42 headroom**. Every line cost recorded in the table above is still
+zero; none of the nine fixes was re-priced, because each forbids lines or reuses
+a routine already inside the C3 baseline.
