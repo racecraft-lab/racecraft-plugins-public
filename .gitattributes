@@ -1,2 +1,54 @@
 **/.process/** linguist-generated=true
 speckit-pro/speckit_pro_runner/**/*.py text eol=lf
+
+# ---------------------------------------------------------------------------
+# Generated artifacts: never text-merge them.
+#
+# Every path below is a pure function of the source tree. A three-way text
+# merge of a content hash, a payload copy, or a generated index does not
+# produce a merged artifact; it produces a wrong one that reads as plausible.
+# The correct merge result is always "regenerate from the merged source", which
+# git cannot do per file.
+#
+# The `generated` driver keeps git's "ours" side verbatim, reports success, and
+# never mixes the two. Which side that is depends on the operation: the current
+# branch during `git merge origin/main`, the upstream during a rebase. Which one
+# survives does not matter, because regenerating is the correctness step. The
+# merge completes with zero conflicts and these files are stale by
+# construction. CI's artifact-consistency job fails the pull request if the
+# regeneration is skipped, so a stale artifact cannot land.
+#
+# The driver is defined in local config, because git will not run driver code
+# from a cloned repository. Without that one-time setup these rules are inert
+# and merges behave exactly as they do today, so this fails safe. See the
+# Worktree Preflight section of AGENTS.md.
+#
+# This list mirrors CHECK_WORKTREE_PATHS in scripts/refresh-release-artifacts.py.
+# Keep the two in step: a path CI checks but git still text-merges is the exact
+# failure this block removes.
+# ---------------------------------------------------------------------------
+
+dist/**                                                                   merge=generated
+.claude-plugin/marketplace.json                                           merge=generated
+.agents/plugins/marketplace.json                                          merge=generated
+docs-site/src/content/docs/reference/**                                   merge=generated
+speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json           merge=generated
+speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256                  merge=generated
+tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/** merge=generated
+tests/speckit-pro/unit/fixtures/plugin-bash-confinement/*proof*.json       merge=generated
+docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json               merge=generated
+docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json         merge=generated
+docs/ai/specs/.process/XPLAT-009-zero-bash-guard-result.json              merge=generated
+docs/ai/specs/.process/XPLAT-009-release-readiness-result.json            merge=generated
+
+# Generated the same way and conflicting the same way, but outside
+# CHECK_WORKTREE_PATHS because a different generator owns each.
+#
+# The Layer 6 corpus binds a sha256 chain over agent source bytes and has no
+# regeneration script at all; refresh-release-artifacts.py does not cover it.
+# The MOC index zones are rewritten by generate-spec-index. autopilot-state.json
+# is a single run's own pointer, so "merging" two runs' state is never right.
+tests/speckit-pro/layer6-efficiency/fixtures-codex/**                     merge=generated
+docs/ai/specs/*-MOC.md                                                    merge=generated
+specs/*/SPEC-MOC.md                                                       merge=generated
+docs/ai/specs/.process/autopilot-state.json                               merge=generated
