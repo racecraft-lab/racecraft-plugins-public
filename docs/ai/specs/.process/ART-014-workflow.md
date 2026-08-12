@@ -950,7 +950,7 @@ Focus on ART-014 requirements:
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
 | error-handling | 32 | 6 found, 6 remediated, 0 remaining | FR-002, FR-004a, FR-006, FR-009, plan D1/D2/D5 |
-| data-integrity | | | |
+| data-integrity | 24 | 7 found, 7 remediated, 0 remaining | Edge Cases, SC-002, SC-006, US2 AS1, Key Entities, plan D1/D5/D8 |
 | security | | | |
 | **Total** | | | |
 
@@ -999,6 +999,50 @@ accepted.** The property was previously stated only inside a fixture rationale
 and the canary rationale. It is now stated where the skip requirements are
 defined, naming the compensating evidence, so a reader does not mistake it for an
 oversight.
+
+#### Domain 2 Findings, data-integrity
+
+Seven gaps, all closed by edit. Two corrected claims that were simply false, and
+one is a process defect affecting the gate this phase reports to.
+
+**A claim this run had asserted was wrong.** The spec's edge case read "Both must
+remain valid after this change" of the two tracked state slots. Measured: the
+legacy `.specify/autopilot-state.json` exits **2** today with
+`autopilot state must contain a plan array`, so it does not validate now and did
+not before, for a reason unrelated to this change. The claim is replaced by the
+narrower true one, that this change adds no *new* failure to either slot. FR-003's
+absent-field skip is unaffected and still correct: the comparison runs first,
+skips because the field is absent, and the exit 2 arrives later from the missing
+plan array.
+
+**The absent-field skip had no verification evidence anywhere.** It is the branch
+that keeps a tracked state file working, and neither control in the FR-012 pair
+exercises it, because both set `workflow_file`. The plan now requires a third
+method, deliberately outside the FR-012 pair so that pair keeps its
+single-variable framing, asserted against a repository-marked fixture root so the
+skip can be attributed to the absent field rather than to an unresolvable root.
+
+**The denominator was reproducible only from this workflow file.** The baseline
+commit and the command that yields 54 now appear in the plan as well, so the
+figure can be re-derived from the spec directory alone. SC-002's present-tense
+"the tracked corpus now holds 55" was also retensed into a drift-proof rule, since
+another specification's workflow landing before this one merges would have
+falsified the sentence.
+
+**Vocabulary drift inside the spec.** FR-010 fixes a closed three-value
+vocabulary while an acceptance scenario and the entity definition each still
+offered two, which FR-010b actively falsified for the three keys it marks
+`advisory-accidental`. Both now defer to FR-010's vocabulary.
+
+**A fourth silently-inert governance check, and this one gates G4.**
+`count-markers` matches the literal token `\[Gap\]`. The combined form
+`[Gap, Spec §A]` and the style the checklist skill's own examples demonstrate,
+`[Coverage, Gap]`, both count as zero. A checklist full of real findings therefore
+reads as clean, and the documentation teaches the invisible form. The executor hit
+this directly: its first count returned `total: 0` against seven real gaps.
+Audited for this feature: every marker written here used the standalone `[Gap]`
+form, and the feature directory now contains no `Gap` token of any form, so the
+zero reported at G4 is genuine rather than an artifact of the pattern.
 
 ### Addressing Gaps
 

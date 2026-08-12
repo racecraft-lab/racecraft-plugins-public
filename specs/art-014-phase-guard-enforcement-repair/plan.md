@@ -167,7 +167,7 @@ failure:
 | 6 | the two references differ | fail, identity mismatch | FR-004, FR-004b |
 | 7 | otherwise | pass, return `[]` | — |
 
-Five details are load-bearing and each has a specific failure mode if got wrong:
+Six details are load-bearing and each has a specific failure mode if got wrong:
 
 **Branch 1 tests key membership, not value.** Use `"workflow_file" not in state`,
 never `state.get("workflow_file") is None`. The spec's edge cases classify an
@@ -182,6 +182,22 @@ both return `True`, because a run of spaces is a valid POSIX path part. Without
 its own check, a whitespace-only value falls through to branch 6 and is reported
 as an identity mismatch with a blank path, which is the wrong error class and an
 unreadable message.
+
+**Branch 4's rule is the existing helper's, and it is stricter than "looks like a
+path".** `_is_normalized_repo_path` accepts a value only when it is a non-empty
+`str`, contains no backslash anywhere, does not begin with `/`, does not begin
+with a Windows drive prefix matching `^[A-Za-z]:`, round-trips through
+`PurePosixPath` unchanged, and has no path part equal to `""`, `"."`, or `".."`.
+Measured against the working tree, each of these is therefore malformed: a
+Windows-style `docs\ai\x-workflow.md`, a drive-absolute `C:/repo/x.md`, a
+POSIX-absolute `/repo/docs/x-workflow.md`, a traversing `../x-workflow.md`, a
+same-directory `./x-workflow.md`, a doubled-separator `docs//x-workflow.md`, and
+a trailing-separator `docs/x/`. A repository-relative
+`docs/ai/specs/.process/ART-014-workflow.md` is accepted. Case is not folded, so
+`A/B.MD` is accepted too, which is what keeps branch 4 consistent with FR-004b
+rather than quietly normalizing a mis-cased value into a match. This is the rule
+FR-004a means when it says the state value is already constrained to a normalized
+repository-relative form; branch 4 is where that constraint is enforced on read.
 
 **Resolution is asymmetric, by FR-004a.** The **supplied** side is resolved
 against the repository root and rendered as POSIX
@@ -376,6 +392,17 @@ empty `workflow_authority_errors`.
 
 Two separate methods, so each failure names its own claim.
 
+**Absent-field skip (FR-003).** Neither control exercises branch 1, because both
+set `workflow_file` and differ only in its value; the existing `RuleScopingTests`
+sets it too and reaches branch 2 rather than branch 1. Add a third method,
+deliberately outside the FR-012 controlled pair so that pair keeps differing in
+exactly one value, asserting that a state carrying no `workflow_file` key at all
+exits zero with an empty `workflow_authority_errors` against the same
+repository-marked fixture root. Branch 1 is the branch that keeps a tracked state
+slot carrying no `workflow_file` working, and it is the one skip the corpus
+evidence cannot demonstrate, because every synthesized corpus state sets the
+field. Without this method the absent-field guarantee rests on reading the code.
+
 **Completeness test (FR-011)**: build a **real** report, subtract the four
 metadata keys (`status`, `workflow_file`, `state_file`, `plan_step_count`), and
 assert the remaining key set is covered by `PROBLEM_KEY_INTENT`, naming any key
@@ -470,9 +497,13 @@ The before-half is already measured and recorded in the workflow file: 54 of 54
 exit 0, and the canary exits 0. Reuse that exact harness so the pair is
 comparable:
 
-- denominator pinned to the baseline commit, so it cannot drift as new
-  specifications land, with this specification's own in-flight workflow excluded
-  by construction because it is not in the baseline tree;
+- denominator pinned to the baseline commit `3af4764e`, whose file list is
+  produced by `git ls-tree -r --name-only 3af4764e -- docs/ai/specs/.process/`
+  filtered to names ending `-workflow.md`, and which returns 54. Recording the
+  commit here rather than only in the workflow file is what makes the denominator
+  reproducible from the authored artifacts alone. It cannot drift as new
+  specifications land, and this specification's own in-flight workflow is
+  excluded by construction because it is not in the baseline tree;
 - the same synthesized state shape, including the `plan` array and a
   repository-relative `workflow_file`;
 - the state written to a path **inside** the repository. This is load-bearing:

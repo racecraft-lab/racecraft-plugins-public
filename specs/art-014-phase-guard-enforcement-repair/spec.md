@@ -72,7 +72,8 @@ report without adding it to the record and confirm the test fails.
 
 1. **Given** the guard's report, **When** the classification record is compared
    against it, **Then** every emitted problem key appears in the record with a
-   verdict of gated or deliberately advisory and a one-line reason.
+   verdict drawn from the closed three-value vocabulary FR-010 fixes (`gated`,
+   `advisory-deliberate`, or `advisory-accidental`) and a one-line reason.
 2. **Given** a new problem key added to the report but not to the record,
    **When** the test suite runs, **Then** it fails and names the missing key.
 3. **Given** the classification record, **When** the counts are read, **Then**
@@ -129,8 +130,15 @@ labels itself as not yet wired.
   malformed rather than absent, so an emptied field cannot become a silent opt-out.
 - **Two tracked state slots disagree about whether the field exists at all.**
   `.specify/autopilot-state.json` carries no `workflow_file`;
-  `docs/ai/specs/.process/autopilot-state.json` names a workflow. Both must remain
-  valid after this change.
+  `docs/ai/specs/.process/autopilot-state.json` names a workflow. This change MUST
+  add no new failure to either, which is a narrower and truer claim than both
+  remaining valid. Measured before the change: the older slot already exits with
+  the input-error code on any invocation, because it carries no `plan` array and
+  that rejection lands before any report is printed. Its comparison verdict is
+  therefore never observable, and FR-003's absent-field skip adds nothing to that
+  outcome either way. The current-run slot exits zero, and its `workflow_file`
+  names the supplied workflow, so the comparison newly runs against it and
+  matches.
 - **A workflow file in the corpus is mid-repair and legitimately failing.** The
   regression proof must not be wired into the committed suite, or unrelated pull
   requests turn red.
@@ -342,12 +350,14 @@ hand-edited, and excluded from the reviewable count.
   field is present.
 - **Workflow file**: The per-specification record the autopilot executes against.
   The supplied one is compared against the one the state names.
-- **Problem key**: A named bucket of findings the guard emits. Twenty exist. Eight
-  are reachable by a named rule and can move the exit code; twelve are advisory.
+- **Problem key**: A named bucket of findings the guard emits. Twenty exist before
+  this change. Eight are reachable by a named rule and can move the exit code;
+  twelve are advisory. SC-006 fixes the post-change split.
 - **Rule**: A named selection of problem keys that scopes the exit code. The
   autopilot always selects `status-evidence`.
-- **Problem-key classification record**: The new per-key verdict of gated or
-  deliberately advisory, with a reason, enforced by a test rather than by prose.
+- **Problem-key classification record**: The new per-key verdict, drawn from the
+  closed three-value vocabulary FR-010 fixes, with a reason, enforced by a test
+  rather than by prose.
 
 ## Success Criteria *(mandatory)*
 
@@ -361,8 +371,11 @@ hand-edited, and excluded from the reviewable count.
   autopilot's own invocation when the state names the matching workflow. The
   before and after counts are both 54 of 54. The denominator is pinned to the
   baseline commit so it cannot drift as new specifications land. The tracked
-  corpus now holds 55 such files; the additional one is this specification's own
-  in-flight workflow, which is excluded and named as excluded.
+  corpus held 55 such files when this criterion was written, the one addition
+  being this specification's own in-flight workflow, which is named as excluded.
+  Any file absent from the baseline tree is excluded by construction, so a
+  further specification landing before this one merges moves the working-tree
+  count without moving the denominator or falsifying this criterion.
 - **SC-003**: A maintainer who hits the failure can identify both disagreeing
   files from the message alone, without opening either file.
 - **SC-004**: Every problem key the guard emits carries a recorded verdict, so the

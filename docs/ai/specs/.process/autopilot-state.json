@@ -1,5 +1,5 @@
 {
-  "active_step": "Phase 4: Checklist - data-integrity",
+  "active_step": "Phase 4: Checklist - security",
   "archive_sweep": {
     "actions_taken": [],
     "eligible_specs": [],
@@ -90,15 +90,15 @@
       "step": "Phase 4: Checklist - error-handling Consensus"
     },
     {
-      "status": "in_progress",
+      "status": "completed",
       "step": "Phase 4: Checklist - data-integrity"
     },
     {
-      "status": "pending",
+      "status": "completed",
       "step": "Phase 4: Checklist - data-integrity Consensus"
     },
     {
-      "status": "pending",
+      "status": "in_progress",
       "step": "Phase 4: Checklist - security"
     },
     {
@@ -211,6 +211,6 @@
     "passed": 7378,
     "total": 7378
   },
-  "updated_at": "2026-08-12T20:06:37Z",
+  "updated_at": "2026-08-12T20:26:03Z",
   "workflow_file": "docs/ai/specs/.process/ART-014-workflow.md"
 }
