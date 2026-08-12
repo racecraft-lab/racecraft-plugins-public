@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 """Contracts for the autopilot implementation-notes record.
 
+Both contracts named below shipped in ART-012 and were archived with that
+spec's folder after PR #426 merged. Recover either one with the ``git show``
+command recorded in
+``.specify/memory/archive-reports/2026-08-11-art-012-post-merge-hygiene.md``.
+
 Two assertion groups live in this file. They pass or fail independently and
 each failure names its own group, so a regression in one never masks the other:
 
 * ``RECORD CONTRACT`` — Phase 7 documents the record described in
-  ``specs/art-012-implementation-notes-capture/contracts/implementation-notes-record.md``
-  on both agent platforms, and the Agent Teams reference no longer contradicts
-  its per-arrival cadence.
+  ``implementation-notes-record.md`` on both agent platforms, and the Agent
+  Teams reference no longer contradicts its per-arrival cadence.
 * ``REPORTING FIELD`` — every authored ``## Task Result: <TASK_ID>`` block
   carries the combined reporting field described in
-  ``specs/art-012-implementation-notes-capture/contracts/task-result-reporting-field.md``.
+  ``task-result-reporting-field.md``.
   Its check table covers the field's text and position in the three authored
   copies; a companion test guards the set of copies itself, because that one
   asserts over the file tree rather than over any single document body.
@@ -91,8 +95,8 @@ CLAUDE_FIRST_DISPATCH = "Step 1: Parse tasks.md"
 CODEX_FIRST_DISPATCH = "Use `implement-executor`"
 
 # The reporting field's own literals, quoted from
-# specs/art-012-implementation-notes-capture/contracts/task-result-reporting-field.md
-# for the same reason: a drifting document fails, not a drifting test.
+# task-result-reporting-field.md for the same reason: a drifting document
+# fails, not a drifting test.
 ERRORS_LINE = "**Errors:** None (or describe)"
 REPORTING_FIELD_LINE = "**Deviations/Edge cases/Surprises:** None (or describe)"
 # The five fields the Claude agent's Terminal Deliverable prose must enumerate.
@@ -206,7 +210,7 @@ def _reporting_field_checks(target: str, label: str) -> tuple[tuple[str, str, st
 
 # ---------------------------------------------------------------------------
 # GROUP 1 of 2 — RECORD CONTRACT (contract items 1, 2, 3, 4, 5, 6, 6b, 6c, 7 of
-# specs/art-012-implementation-notes-capture/contracts/implementation-notes-record.md).
+# implementation-notes-record.md).
 # ---------------------------------------------------------------------------
 RECORD_CONTRACT_CHECKS: tuple[tuple[str, str, str, object], ...] = (
     *_phase_execution_checks("claude_phase7", "Claude phase-execution"),
@@ -267,7 +271,7 @@ RECORD_CONTRACT_CHECKS: tuple[tuple[str, str, str, object], ...] = (
 
 # ---------------------------------------------------------------------------
 # GROUP 2 of 2 — REPORTING FIELD (contract items 1, 2, and 3 of
-# specs/art-012-implementation-notes-capture/contracts/task-result-reporting-field.md).
+# task-result-reporting-field.md).
 #
 # Item 4 of that contract asserts over the *set* of files carrying the block
 # rather than over any single document body, so it cannot take the

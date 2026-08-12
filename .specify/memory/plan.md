@@ -1915,3 +1915,86 @@ The cleanup removes the merged ART-006 active spec, marks the process state
 archived, regenerates and checks the SpecKit index, validates project state JSON
 and diff hygiene, and runs the structural and full deterministic suites. ART-007,
 ART-009, ART-011 and ART-012 are unblocked by ART-006's completion.
+
+## ART-002 Draft-PR Template Set Cleanup
+
+One relocation was required, and it is the same judgment ART-001 made. The
+acceptance runbook under the feature's `.process/` directory is forward-looking
+evidence rather than run exhaust: the preserved workflow file cites its path
+twice, so deleting it would have left two dangling pointers inside a file this
+archive keeps, and fifteen of its sixty-one steps are still owed against four
+templates that ART-003, ART-004, ART-005 and ART-009 all build on. It moved to
+`docs/ai/specs/.process/ART-002-uat-runbook.md` and both citations were
+repointed. The runbook's own body references nothing but two Layer 4 test files,
+so the move breaks no relative path.
+
+Everything else shipped outside `specs/**`: the four gallery templates, the
+routing manifest, both Layer 4 tests, the suite manifest, the installed-cache
+fixtures and their regenerated proofs. After the removal a tree-wide search on
+the bare directory name found no live code, test, script, workflow or docs-site
+reader depending on the folder. Both Layer 4 tests read the templates and
+manifest under `speckit-pro/`, never the spec folder.
+
+The feature `quickstart.md`, `research.md`, `data-model.md`, the two contracts
+and the four checklists are run exhaust and were removed with the folder. All
+are recoverable at the third pull request's merge commit, which is the last
+commit holding the complete folder.
+
+Both slices overran their declared reviewability budget — 1494 and 2027 measured
+against 530 declared — and both gate results are size-only blocks with no
+correctness finding. The cause is structural: a self-contained single-file
+artifact has no shared runtime to factor out, so each template carries its own
+copy of the branded head block and export path by design. The declarations were
+corrected to the measured figures rather than left at the projection.
+
+### Testing and Cleanup
+
+The cleanup relocates one runbook, repoints two references, removes the merged
+ART-002 active spec, regenerates and checks the SpecKit index, validates project
+state JSON and diff hygiene, and runs the structural and full deterministic
+suites. ART-007's last dependency is discharged.
+
+## ART-012 Implementation-Notes Capture Cleanup
+
+No relocation was required. Every shipped surface — both platform phase-execution
+references, the TDD protocol, the Agent Teams reference, both implement-executor
+definitions, the Layer 4 test and the Layer 6 corpus fixtures — was authored
+outside `specs/**`.
+
+The one match that needed reading rather than pattern-matching was the feature's
+own Layer 4 test, which cites its two contracts five times. The CAR-003 lesson
+is that a joined-path search cannot see a path assembled from components, so the
+question was settled by tracing the execution path instead: the module's target
+table contains no `specs/` entry, and its only two file reads are a glob over
+the plugin source tree and lookups keyed on that table. The test passes with the
+folder absent. The citations were still shortened to the contract filenames, and
+the module docstring gained one sentence naming the archive report as the
+recovery route, so nothing points at a deleted path.
+
+The contracts were deliberately **not** relocated into the test tree. CAR-003
+and G56R-003 both did relocate, and the distinguishing condition is stated in
+the CAR-003 report: those specs pointed live code at their contracts, so
+archiving would have deleted load-bearing files. Here the contracts are the
+documented authority for literals the test pins, and nothing reads them at
+runtime.
+
+The feature's own `implementation-notes.md` and `uat-results.md` left with the
+folder. The roadmap's ratified decision says the raw record is exhaust and its
+review-visible expression is the writeup's implementation-notes section, and the
+preserved workflow file annotates the same file the same way. Every live mention
+of `implementation-notes.md` elsewhere in the tree is the shipped contract
+pattern, never this instance.
+
+Three follow-ups were recorded in the run's retrospective and deliberately left
+unfixed, none of them yet a roadmap spec: the Layer 6 Codex qualification corpus
+still has no regeneration tooling, a spec-artifact consistency check would have
+caught three of the four cascade failures the run produced, and the record
+contract has no answer for a late-arriving fuller summary.
+
+### Testing and Cleanup
+
+The cleanup removes the merged ART-012 active spec, repoints five test comments,
+marks the process state archived, regenerates and checks the SpecKit index and
+the docs-site test reference, validates project state JSON and diff hygiene, and
+runs the structural and full deterministic suites. ART-010 stays blocked by
+ART-003 and ART-007.

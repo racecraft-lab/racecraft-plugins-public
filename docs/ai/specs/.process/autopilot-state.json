@@ -3,7 +3,7 @@
   "spec_id": "ART-012",
   "feature_dir": "specs/art-012-implementation-notes-capture",
   "branch": "art-012-implementation-notes-capture",
-  "status": "completed",
+  "status": "completed_archived",
   "active_step": null,
   "updated_at": "2026-08-11T00:00:00Z",
   "stage": "implement",
@@ -16,9 +16,12 @@
     "agent_teams_available": true
   },
   "archive_sweep": {
-    "status": "completed",
-    "reason": "no-op: specs/ holds only the current target art-012-implementation-notes-capture, which the sweep excludes by contract; every prior spec is already archived",
-    "archived_specs": []
+    "status": "applied",
+    "reason": "ART-012 merged in PR #426 and ART-002 in PRs #425/#427/#430; a live-reader scan on both bare directory names found no dependent code, so both folders left active specs/ in one cleanup",
+    "archived_specs": [
+      "art-002-draft-pr-template-set",
+      "art-012-implementation-notes-capture"
+    ]
   },
   "project_commands": {
     "UNIT_TEST": "python3 tests/speckit-pro/run-all.py",
@@ -334,5 +337,36 @@
     "baseline": 7226,
     "ci": "10 checks pass",
     "copilot_review": "no blocking issues"
+  },
+  "archive": {
+    "archived_at": "2026-08-11",
+    "pull_request": 426,
+    "merge_commit": "1916d8c917eea4892035daafe4c02d2558e203f3",
+    "merged_at": "2026-08-11T21:51:02Z",
+    "cleanup_branch": "chore/archive-art-post-merge",
+    "cleanup_applied": true,
+    "source_spec_path_removed": "specs/art-012-implementation-notes-capture",
+    "process_evidence_preserved": [
+      "docs/ai/specs/.process/ART-012-workflow.md",
+      "docs/ai/specs/.process/ART-012-design-concept.md"
+    ],
+    "report": ".specify/memory/archive-reports/2026-08-11-art-012-post-merge-hygiene.md",
+    "also_archived_in_this_cleanup": {
+      "spec_id": "ART-002",
+      "pull_requests": [
+        425,
+        427,
+        430
+      ],
+      "merge_commit": "425364b7be34d5b88605012d0492c0e97bdbefaf",
+      "merged_at": "2026-08-12T00:56:19Z",
+      "source_spec_path_removed": "specs/art-002-draft-pr-template-set",
+      "process_evidence_preserved": [
+        "docs/ai/specs/.process/ART-002-workflow.md",
+        "docs/ai/specs/.process/ART-002-design-concept.md",
+        "docs/ai/specs/.process/ART-002-uat-runbook.md"
+      ],
+      "report": ".specify/memory/archive-reports/2026-08-11-art-002-post-merge-hygiene.md"
+    }
   }
 }

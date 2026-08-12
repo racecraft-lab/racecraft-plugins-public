@@ -2332,3 +2332,91 @@ git checkout 5e184e332b8c8f8442cdbda37c3bdc45cb6d62ff -- specs/art-006-autopilot
 
 The detailed archive and verification record is stored in
 `.specify/memory/archive-reports/2026-08-09-art-006-post-merge-hygiene.md`.
+
+## 2026-08-11 — ART-002 Draft-PR Template Set archived
+
+Merged across three pull requests and archived from
+`chore/archive-art-post-merge`:
+
+- PR #425 at `a9e8d30764fd1dc28ea07734d4dbe7c0952e1294` — slice 1,
+  `implementation-plan` and `spec-explainer`
+- PR #427 at `4ecb1b4b441cbb85015586612190a7bc340f0c9c` — slice 2,
+  `code-approaches` and `module-map`
+- PR #430 at `425364b7be34d5b88605012d0492c0e97bdbefaf` — the recorded
+  acceptance result
+
+Shipped four Racecraft-branded, self-contained single-file gallery templates
+with declared fill regions and export affordances, four catalog entries flipped
+to `shipped`, and two Layer 4 tests covering fill regions and the gallery
+manifest. Every pinned export string holds character for character; all four
+templates make zero non-theme `setItem` calls; the `module-map` drawing keeps an
+accessible name with no `role="img"`, so all seventeen internal labels stay
+reachable.
+
+CI was clean on all three: 21 pass and 1 skip on #425 and #427, 26 pass and 4
+skip on #430, zero failures.
+
+The acceptance runbook was preserved by relocation rather than deleted, at
+`docs/ai/specs/.process/ART-002-uat-runbook.md`. Every executed step passed;
+fifteen of sixty-one steps are recorded as *not executed* across four kinds of
+check, each with its substitute, and no step is a pass on partial evidence.
+
+Both slices ran over the declared 530-LOC reviewability budget at 1494 and 2027
+measured, both size-only blocks with no correctness finding.
+
+ART-002's completion discharges ART-007's last dependency.
+
+### Recovery Commands
+
+```text
+git show 425364b7be34d5b88605012d0492c0e97bdbefaf:specs/art-002-draft-pr-template-set/spec.md
+git show 425364b7be34d5b88605012d0492c0e97bdbefaf:specs/art-002-draft-pr-template-set/plan.md
+git show 425364b7be34d5b88605012d0492c0e97bdbefaf:specs/art-002-draft-pr-template-set/tasks.md
+git show 425364b7be34d5b88605012d0492c0e97bdbefaf:specs/art-002-draft-pr-template-set/research.md
+git show 425364b7be34d5b88605012d0492c0e97bdbefaf:specs/art-002-draft-pr-template-set/data-model.md
+git show 425364b7be34d5b88605012d0492c0e97bdbefaf:specs/art-002-draft-pr-template-set/quickstart.md
+git checkout 425364b7be34d5b88605012d0492c0e97bdbefaf -- specs/art-002-draft-pr-template-set
+```
+
+The detailed archive and verification record is stored in
+`.specify/memory/archive-reports/2026-08-11-art-002-post-merge-hygiene.md`.
+
+## 2026-08-11 — ART-012 Implementation-Notes Capture archived
+
+Merged in PR #426 at `1916d8c917eea4892035daafe4c02d2558e203f3`, then archived
+from `chore/archive-art-post-merge` in the same commit as ART-002.
+
+Shipped a durable per-task implementation-notes record appended on the turn each
+task completes, a combined deviations/edge-cases/surprises field in all three
+authored Task Result templates, an explicit "None" entry so silence stays
+distinguishable from an unreported task, the same contract documented on both
+the Claude and Codex distributions, a Layer 4 test asserting the two platform
+documents agree, and a correction to a stale batched-delivery claim in the Agent
+Teams reference. Six production files, 269 added production lines. CI clean: 21
+pass, 1 skip, zero failures.
+
+An operator amendment reversed a Clarify consensus that had narrowed the
+per-task append guarantee, restoring the literal guarantee and adding FR-006 and
+a sixth production file. An adversarial audit run after implementation found
+five real defects, four introduced by the run, two of which would have shipped
+green — including the record this feature produced violating the contract this
+feature ships.
+
+Known gaps carried forward, none yet a roadmap spec: the Layer 6 Codex
+qualification corpus has no regeneration tooling; a spec-artifact consistency
+check would have caught three of the run's four cascade failures; and the record
+contract has no answer for a late-arriving fuller summary.
+
+### Recovery Commands
+
+```text
+git show 1916d8c917eea4892035daafe4c02d2558e203f3:specs/art-012-implementation-notes-capture/spec.md
+git show 1916d8c917eea4892035daafe4c02d2558e203f3:specs/art-012-implementation-notes-capture/plan.md
+git show 1916d8c917eea4892035daafe4c02d2558e203f3:specs/art-012-implementation-notes-capture/tasks.md
+git show 1916d8c917eea4892035daafe4c02d2558e203f3:specs/art-012-implementation-notes-capture/contracts/implementation-notes-record.md
+git show 1916d8c917eea4892035daafe4c02d2558e203f3:specs/art-012-implementation-notes-capture/contracts/task-result-reporting-field.md
+git checkout 1916d8c917eea4892035daafe4c02d2558e203f3 -- specs/art-012-implementation-notes-capture
+```
+
+The detailed archive and verification record is stored in
+`.specify/memory/archive-reports/2026-08-11-art-012-post-merge-hygiene.md`.
