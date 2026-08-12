@@ -4,9 +4,9 @@
   "workflow_file": "docs/ai/specs/.process/ART-011-workflow.md",
   "feature_dir": "specs/art-011-scaffold-integration",
   "branch": "art-011-scaffold-integration",
-  "status": "in_progress",
+  "status": "awaiting_review",
   "stage": "plan",
-  "active_step": "Phase 6: Analyze",
+  "active_step": "Plan stage complete - awaiting operator review before --stage implement",
   "updated_at": "2026-08-12T18:00:00Z",
   "prior_run_note": "Reclaimed the single state slot from docs/ai/specs/.process/ART-012-workflow.md (prior status: completed_archived). Reclaiming is normal operation - one slot, many specs.",
   "settings": {
@@ -107,15 +107,15 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "skipped: executor reported zero unresolved items"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement",
@@ -201,6 +201,18 @@
       "task_count": 47,
       "markers": 0,
       "reason": "47 tasks, 16 of 16 edit sites covered, zero boundary crossings"
+    },
+    "G6": {
+      "verdict": "pass",
+      "findings": {
+        "critical": 0,
+        "high": 3,
+        "medium": 3,
+        "low": 2,
+        "remediated": 8,
+        "outstanding": 0
+      },
+      "reason": "0 CRITICAL/HIGH findings outstanding after remediation"
     }
   },
   "archive_sweep": {
@@ -289,5 +301,12 @@
       }
     },
     "outcome": "continue - no size-only block, no correctness block, no stale marker state; marker planning not required for a non-split route"
+  },
+  "confidence_gate": {
+    "mode": "advisory",
+    "composite_confidence": 0.88,
+    "verdict": "proceed",
+    "recorded_at": "Phase 6.5 section of the workflow file",
+    "evidence": "G1-G6 all pass, zero markers/gaps/findings, 31 FRs + 12 SCs + 4 stories all tasked, contracts fix exact strings with byte-identical shared blocks, suite 7378/7378. Held below 0.95 by three under-determined wordings, one stipulated deadline, and an unresolvable-before-implementation Layer 2 routing risk."
   }
 }

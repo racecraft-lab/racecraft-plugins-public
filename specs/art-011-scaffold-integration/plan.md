@@ -131,12 +131,14 @@ Run against this table, `estimate-reviewable-loc` returns:
 
 ```json
 {"tool":"estimate-reviewable-loc","status":"pass","projected":0,
- "declared_files":{"production":0,"new":0,"modified":4,"total_entries":4},
- "greenfield":false,"thresholds":{"warn":400,"block":800}}
+ "declared_files":{"production":0,"new":0,"modified":5,"total_entries":5},
+ "greenfield":false,"thresholds":{"warn":400,"block":800,
+ "greenfield_multiplier":1.5,"base_warn":400,"base_block":800}}
 ```
 
-The table parsed correctly — all four entries were read, `modified: 4`,
-`total_entries: 4` — so this is **not** a formatting failure. The projection is 0
+The table parsed correctly — all five entries were read, `modified: 5`,
+`total_entries: 5`, matching the five rows above — so this is **not** a
+formatting failure. The projection is 0
 because the helper classifies production files by a fixed heuristic at
 `speckit-pro/speckit_pro_runner/helpers/read_only.py:4185-4186`: a path is
 production only when it starts with `src/`, `app/`, `lib/`, or `scripts/`, or
@@ -264,7 +266,7 @@ a list rather than a description.
 | C2 | New `### 3.6 Blind-Spot Pass (IN the Worktree)` | after Step 3.5's closing paragraph, before `### 4. Run Grill Me Interview` | Insert. Do **not** renumber Steps 4–8 | FR-001–FR-007, FR-011 |
 | C3 | Step 4 grill-me invocation | the `Skill("grill-me", args: {...})` block, `scope:` line | Amend so `scope` carries the roadmap text **plus** the labelled findings block | FR-008, FR-009, FR-010 |
 | C3a | Step 4 post-interview verification | the existing `Must contain Goals, Non-goals, Design Tree (Q&A log), and Open Questions` assertion | Extend by one key: verify the `**Blind-spot pass:**` line is present in the header blockquote and `Edit` it in when absent | FR-010a |
-| C4 | Step 7 report, **two lines** | `**Review both files first**` and `**Ready to run:**` with the command under it | Soften the first to `**Review both files**`. Relabel the second to `**If you stop here, run:**` and add the `--stage plan` token to its command. Neither line is validator-pinned; only the `## Scaffold Complete` heading is | FR-013, FR-015c |
+| C4 | `## Scaffold Complete` report, **two lines** | `**Review both files first**` and `**Ready to run:**` with the command under it | Soften the first to `**Review both files**`. Relabel the second to `**If you stop here, run:**` and add the `--stage plan` token to its command. Neither line is validator-pinned; only the `## Scaffold Complete` heading is | FR-013, FR-015c |
 | C5 | New `### 9. Chain into the Planning Stage` | after Step 8's closing `**NEVER push to main.**` paragraph | Insert. Carries the printed what-accepting-does line **before** the confirmation, and the printed invocation **before** running it on accept | FR-012, FR-013, FR-013a, FR-014, FR-015, FR-015b, FR-015c |
 | C6 | New `### 10. Closing Report` | after C5 | Insert. **Instruct the reader to read `WORKFLOW_TERMINAL_STATUSES` from `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`; do not write the six status literals into this file.** Carries a next-step rule for **all three** headings and the four render triggers | FR-016–FR-020 |
 
@@ -374,7 +376,7 @@ word cap and the five pinned scaffold strings in
 `tests/speckit-pro/layer1-structural/validate-codex-skills.py`, and Codex parity
 in `tests/speckit-pro/layer1-structural/validate-codex-parity.py`.
 
-**3. Hand verification of the two things no test covers:**
+**3. Hand verification of the three things no test covers:**
 
 - **Description length**: measure the final string on both platforms. Expected exactly **1015** characters, 9 under the cap, no angle brackets.
 - **Description byte-identity (FR-021a)**: diff the two frontmatter description values directly. No automated test compares them (research.md R7), so this is a required manual step, not an inference.

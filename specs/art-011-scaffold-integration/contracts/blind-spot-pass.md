@@ -404,5 +404,20 @@ The run flows straight from the findings into the first interview question. **No
 confirmation, no curation step, no continue/abort prompt** between the two (Q16,
 FR-011).
 
-This is what keeps scaffold at exactly one confirmation outside the interview —
-the chain — which is the seam that separates interactive from autonomous.
+This is what keeps **this feature's** confirmation budget at exactly one — the
+chain, and only when the chain is attempted — which is the seam that separates
+interactive from autonomous.
+
+**The budget counts what this feature adds, not every prompt in the run.** An
+unqualified "one confirmation outside the interview" is false against the shipped
+files it would be measured on: both variants already stop for explicit approval
+before running any documented bootstrap command (Step 3.5), and Claude
+additionally asks whether to reuse or recreate an existing worktree (Step 3), so
+a Claude run on the worktree-reuse path reaches the chain having already asked
+twice. None of those is this feature's, none is removed, and none is counted
+here. On Codex the ordinary run adds **none**, because the FR-013a check fails
+and nothing is asked (`chain-handoff.md` §3, §4).
+
+This matches the design concept's dated Q16 revision note, which leaves the
+informational-findings decision intact and corrects only its supporting count,
+and it is the same universe `spec.md` SC-007 and `chain-handoff.md` §4 state.

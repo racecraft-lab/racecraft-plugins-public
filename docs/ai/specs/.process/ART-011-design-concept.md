@@ -608,7 +608,15 @@ absolute count; it was that this feature should not add a second gate between th
 findings and the first interview question. It does not.
 
 Downstream: `spec.md` SC-007 and SC-011 scoped to this feature's flow, US3
-scenario 5 scoped identically, `contracts/chain-handoff.md` §4 matched.
+scenario 5 scoped identically, `contracts/chain-handoff.md` §4 matched, and
+`contracts/blind-spot-pass.md` §10 rescoped.
+
+*That last entry was missing from this list when the note was first written, and
+the omission is exactly why §10 kept the falsified "exactly one confirmation
+outside the interview" wording until the Analyze phase caught it. A revision
+note's downstream list is load-bearing: an artifact absent from it does not get
+swept. Enumerate every file that repeats the corrected claim, not only the ones
+that motivated the correction.*
 
 ## Decisions recorded without a question
 

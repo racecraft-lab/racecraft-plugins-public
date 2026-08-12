@@ -70,8 +70,8 @@ scaffold-side code. The design concept quotes the parts ART-011 depends on
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass. plan.md, research.md, two contracts. 14 edit sites; measured surface 2 production files / 300 LOC, 1 slice |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass. 3 domains, 158 items, 42 gaps, all closed. Spec 28 → 31 normative items. Two false success criteria caught and corrected |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass. 47 tasks, 16 of 16 edit sites, zero boundary crossings. Route `one-navigable-PR`, layer plan skipped |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | |
-| Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
+| Analyze | `/speckit-analyze` | ✅ Complete | G6 pass. 8 findings (0 critical, 3 high, 3 medium, 2 low), all remediated, none routed to consensus |
+| Confidence Gate | G6.5 | ✅ Complete | Advisory mode. Verdict recorded in Phase 6.5 below |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
@@ -1146,9 +1146,40 @@ Focus on:
 
 ### Analysis Results
 
+**8 findings: 0 CRITICAL, 3 HIGH, 3 MEDIUM, 2 LOW. All remediated, none routed
+to consensus. G6 pass.**
+
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| A1 | HIGH | `contracts/blind-spot-pass.md` §10 still carried the falsified Q16 claim, "keeps scaffold at exactly one confirmation outside the interview" — the exact formulation the design concept's second revision note identifies as untrue. It also dropped "only when the chain is attempted", which is what makes the ordinary Codex run add none | §10 rescoped to the budget this feature adds, naming the three pre-existing prompts it excludes, and cross-referencing the revision note |
+| A2 | HIGH | `contracts/chain-handoff.md` §1 still said the `## Scaffold Complete` report "stays inside Step 7". The contract is the designated transcription source, so this was the one copy an implementer would actually read — `spec.md`, `plan.md`, and `tasks.md` had all been corrected | §1's Claude row rewritten to "top-level heading sitting between Step 7 and Step 8", with the instruction to anchor on the literal heading string |
+| A3 | HIGH | `spec.md`'s Reviewability Budget still carried the superseded 187 LOC and ~7 total files, against the canonical 322 and 9. Its stated rationale — that the reviewable surface does not grow with the FR count — is falsified by the plan's own measured series | Set to 322 and 9, rationale replaced with the series 187 at 13 FRs, 300 at 28, 322 at 31, and the closing Assumption changed from conditional to in-slice |
+| A4 | MEDIUM | `plan.md`'s recorded estimator output said `modified: 4, total_entries: 4` while its own table has five rows | Helper re-run against the current table; JSON and prose updated to 5. The "not a formatting failure" argument survives unchanged |
+| A5 | MEDIUM | `checklists/ux.md` said the FR count moves 29 to 30; the ux domain's own FR-015c is the 31st | Corrected to 30 to 31, crediting error-handling's FR-010a for the prior step |
+| A6 | MEDIUM | `checklists/requirements.md` falsified its own gate: the "no markers remain" box was unchecked and its notes claimed three remain. Zero remain | Box checked; the three converted to resolved entries naming where each closed |
+| A7 | LOW | `plan.md` said "the two things no test covers" above three bullets | Corrected to three |
+| A8 | LOW | Residual Step-7 mislabels in `plan.md`'s C4 site cell and a `tasks.md` note attributing the error to prose that now disowns it | Both repointed at the literal heading and the three agreeing artifacts |
+
+#### What Analyze verified rather than changed
+
+Coverage is complete: all 31 requirements, 12 success criteria, and 4 user
+stories map to tasks, including the three degraded paths most likely to be
+specified and never tasked. Every number appearing in more than one file was
+re-measured rather than trusted: 47 tasks, 16 edit sites, 2 production files,
+the Codex body at exactly 3250 words through the validator's own word-count
+helper, and the description at 975 today against a 1015 target. The guard
+predicate quoted in FR-013a really is verbatim. Every shared fenced block diffs
+byte-identical between the spec and its owning contract, which converts an
+assertion the checklists had made into evidence.
+
+#### A note on my own revision note
+
+A1 exists because the revision note I wrote listed the downstream artifacts that
+*motivated* the correction and not every artifact that *repeats* the corrected
+claim. `contracts/blind-spot-pass.md` §10 was absent from that list, so nothing
+swept it, and the falsified wording survived two more phases. The note now names
+it and says plainly why the omission mattered. A revision note's downstream list
+is load-bearing, not commentary.
 
 ---
 
@@ -1159,10 +1190,38 @@ are unchanged; this section records the verdict so a later session can read it.
 
 | Field | Value |
 |-------|-------|
-| Mode | |
-| Composite confidence | |
-| Verdict | |
-| Evidence | |
+| Mode | **advisory** — resolved at Step 0.6b from no flag and no local config, and read here rather than re-resolved |
+| Composite confidence | **0.88** |
+| Verdict | **proceed** |
+| Evidence | See below |
+
+**What the score was computed from.**
+
+Raising it: every gate from G1 to G6 passed, with zero markers, zero gaps, and
+zero findings at any severity. Coverage is measured rather than asserted — all 31
+requirements, 12 success criteria, and 4 user stories map to tasks, including the
+three degraded paths. The two contracts fix exact strings and every shared fenced
+block diffs byte-identical against the spec, so most of implementation is
+transcription rather than interpretation. The full suite is green at 7378/7378,
+and the roadmap's own budget declaration proved conservative: 2 production files
+against a declared ~4, 322 LOC against a 400 ceiling, one slice.
+
+Holding it below 0.95: three of the sixteen edit sites carry deliberately
+under-determined wording, recorded in `tasks.md` rather than guessed — the
+replacement Codex Hard Constraint sentence, the what-accepting-does line, and the
+three literal Layer 2 queries. The five-minute wait deadline is stipulated with
+no repository precedent. And the single largest residual risk is not resolvable
+before implementation: the reworded description introduces the word "planning",
+which the sibling autopilot description already claims, and only a live Layer 2
+run can show whether routing degrades. That run is a manual gate outside
+`FULL_VERIFY`, so a regression there will not surface on its own.
+
+Advisory mode means this verdict does not gate Phase 7. It is recorded so a later
+session reads the same judgement rather than re-deriving it.
+
+**Stage boundary.** This is the terminal step of the `plan` stage. Crossing into
+implementation requires an explicit `--stage implement`; a bare invocation
+re-resolves `plan` and re-enters here.
 
 ---
 

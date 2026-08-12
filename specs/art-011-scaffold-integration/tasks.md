@@ -340,7 +340,7 @@ mirror pass, is cheaper than reconciling two independent drafts.
 - **There is no Layer 4 fixture to write.** Nothing this feature adds is executable — every change is prose in two `SKILL.md` files (FR-023, Q21) — so no fixture can assert against the two behaviours directly. This is a recorded design decision, not an omitted task.
 - **UAT is not a task in this file.** The run is strictly interactive, so UAT happens at UAT time against the runbook. The five ux-domain confirmations plan.md lists (the sentinel's one-word spelling surviving in emitted output, the printed line preceding the confirmation, the one command appearing identically in three places, every heading ending on a defined next step, and the closing report rendering on the Codex ordinary path) belong to the UAT runbook and the PR packet, not here.
 - Commit after each task or logical group. Do not merge; PR creation and review are separate.
-- The `## Scaffold Complete` report is a top-level `##` heading sitting **between** Steps 7 and 8 in the Claude file, not nested inside Step 7 as plan.md's prose describes. The anchors are still unique, so T016 cites the literal strings rather than a step number.
+- The `## Scaffold Complete` report is a top-level `##` heading sitting **between** Steps 7 and 8 in the Claude file, not nested inside Step 7. spec.md FR-016, plan.md § Execution Flow, and `contracts/chain-handoff.md` §1 all now say so; earlier drafts of the plan and the contract said "inside Step 7", which would send an implementer to the wrong anchor. The anchors are still unique, so T016 cites the literal strings rather than a step number.
 
 ## Where a task is deliberately under-determined
 

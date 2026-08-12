@@ -92,7 +92,9 @@ survives.
 | CHK032, CHK034 | The ordinary Codex ending rendered under `## Stopped Before Planning` above a line opening "the chain was not offered because ...", leading with a negation and a technical condition the operator did not cause and cannot fix from inside the session. Contract §8.3 required only neutrality about fault, which is weaker than the first-class outcome FR-015a claims; and the remedy lived in contract prose rather than in anything the operator sees | `spec.md` FR-018 and `contracts/chain-handoff.md` §8.3 reword the rooting row to lead with what is finished, and require the string be platform-identical so distinguishing the causes cannot become a fifth SC-011 divergence. The remedy now travels inside the FR-015c hand-off command. **This refines rather than reverses the error-handling domain's CHK024/CHK025 fix**: the row still names the rooting cause specifically, still closes on "nothing was rolled back", and the three no-chain paths still behave identically per §6 |
 | CHK039 | On acceptance the operator was told nothing — the next output belonged to another skill and arrived with no statement that the confirmation took effect. It was the one branch point in the run with no required statement of what just happened, against ART-006's own "visible seam" framing | `spec.md` FR-014 and `contracts/chain-handoff.md` §5 require the invocation be printed verbatim immediately before it runs, which also puts one string in front of the operator on both branches |
 
-Ripples were carried into `plan.md` in the same pass: the FR count moves 29 to 30,
+Ripples were carried into `plan.md` in the same pass: the FR count moves 30 to 31
+(this domain's FR-015c is the last requirement added; the error-handling domain's
+FR-010a took it from 29 to 30),
 the `checklists/` tree gains `ux.md`, rows C4, C5, C6, X5, and X7 gain the new
 content (no new edit site — the count stays 16), the traceability table gains an
 FR-015c row with its UAT check, the Codex body-word projection is restated, and

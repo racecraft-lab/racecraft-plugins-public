@@ -23,7 +23,7 @@ Ready.
 
 | Platform | Where the chain and closing report go |
 |---|---|
-| Claude | New `### 9. Chain into the Planning Stage` and `### 10. Closing Report`, appended after Step 8. The existing `## Scaffold Complete` report stays inside Step 7, ahead of Step 8 |
+| Claude | New `### 9. Chain into the Planning Stage` and `### 10. Closing Report`, appended after Step 8. The existing `## Scaffold Complete` report stays exactly where it is: a **top-level `##` heading sitting between Step 7 and Step 8**, not a subsection of Step 7. Anchor on the literal heading string, never on a step number |
 | Codex | The existing `## Output` section is top-level and already follows Step 8, so the chain and closing report **extend that section** rather than becoming new numbered steps |
 
 FR-016 is the requirement both arrangements satisfy: the existing report prints
