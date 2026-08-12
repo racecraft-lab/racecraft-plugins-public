@@ -953,17 +953,41 @@ Why this domain: the shipped file is what a reader browses to decide whether the
 /speckit-checklist ux
 
 Focus on Final-PR Template Set requirements:
-- Every one of the six regions carries sample content, and a reader opening the
+- Every one of the seven regions carries sample content, and a reader opening the
   file cold can tell what each region is for.
-- Sample content is held to the demonstrating minimum: two items in a list
-  region, one instance per state, one short paragraph for prose.
+- Sample content is held to the demonstrating minimum, where the minimum is a
+  FLOOR of two anchored items in a list region and the shipped convention is
+  three to five; one instance per state; one short paragraph for prose.
 - The implementation-notes region reads as a record of what happened, and a
   reader can tell a filtered record from a genuinely empty one.
-- A retry entry under an already-used task ID is visually distinguishable from
-  the first attempt.
+- A reader meeting the same task identifier twice can tell it is a retry rather
+  than a broken page, using the region's standing intro sentence.
 - Pay special attention to: the tension between sample content rich enough to
-  teach the template and a 2.11x line multiplier. Both are hard requirements.
+  teach the template and 50 lines of headroom to the block. Both are hard
+  requirements.
 ```
+
+> **Three corrections applied 2026-08-12**, after Clarify and Plan superseded the
+> text this prompt was scaffolded with. Recorded rather than silently rewritten,
+> because each was wrong in a way worth remembering.
+>
+> 1. **Six regions became seven.** `feature-header` ships too (FR-011a).
+> 2. **"Two items in a list region" misread the gate.** `MINIMUM_ITEMS = 2` is a
+>    floor — R5 fails only on `len(anchored) < MINIMUM_ITEMS`
+>    (`test-artifact-fill-regions.py:711`) and nothing anywhere caps the count.
+>    No shipped anchored list carries two: `phases` 4, `approaches` 3, `modules`
+>    5. Two-item regions are the *unanchored* panel regions, where two reads as a
+>    deliberate A/B pair. Writing "exactly two" into a requirement would have
+>    shipped this template's only list slot thinner than every precedent.
+> 3. **The retry bullet asked for the opposite of what was settled.** FR-019c
+>    explicitly rejects visual distinction and any attempt ordinal: grouping would
+>    reorder the record and violate append order, and an ordinal would assert a
+>    field the record does not carry. FR-019a's standing sentence carries the
+>    legibility instead, so the real question is whether that sentence does the
+>    job — which is what the bullet now asks.
+>
+> The discarded 2.11x multiplier is gone from the last bullet; the budget is
+> decomposed and measured, not scaled.
 
 #### 3. error-handling Checklist
 
