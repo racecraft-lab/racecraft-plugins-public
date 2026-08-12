@@ -6,7 +6,7 @@
   "branch": "art-011-scaffold-integration",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 5: Tasks",
+  "active_step": "Phase 6: Analyze",
   "updated_at": "2026-08-12T18:00:00Z",
   "prior_run_note": "Reclaimed the single state slot from docs/ai/specs/.process/ART-012-workflow.md (prior status: completed_archived). Reclaiming is normal operation - one slot, many specs.",
   "settings": {
@@ -103,11 +103,11 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -195,6 +195,12 @@
       "verdict": "pass",
       "gaps": 0,
       "reason": "42 gaps raised across 3 domains, 42 remediated, 0 outstanding"
+    },
+    "G5": {
+      "verdict": "pass",
+      "task_count": 47,
+      "markers": 0,
+      "reason": "47 tasks, 16 of 16 edit sites covered, zero boundary crossings"
     }
   },
   "archive_sweep": {
@@ -251,5 +257,37 @@
       "frs": 31,
       "note": "re-measured after checklist phase added FR-002a, FR-010a, FR-015c and split others. Surface still 2 production files; rise is FR granularity."
     }
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "warnings": [],
+    "hints": [],
+    "exit_code": 0
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "layer planner runs only for a split-PR route; this route is one-navigable-PR"
+  },
+  "tasks_reviewability": {
+    "helper_id": "reviewability-gate",
+    "requested_mode": "tasks",
+    "status": "deferred",
+    "deferral_reason": "installed runner supports setup mode only",
+    "fallback_evidence": {
+      "setup_mode_gate": "warn, no blockers, diagnosed roadmap-wide artifact",
+      "plan_phase_estimator": "pass, projected 0, structurally blind to Markdown surfaces",
+      "operator_split_decision": "one vertical slice, unchanged since scaffold",
+      "measured_size": {
+        "estimated_loc": 322,
+        "suggested_slices": 1,
+        "status": "ok",
+        "frs": 31
+      }
+    },
+    "outcome": "continue - no size-only block, no correctness block, no stale marker state; marker planning not required for a non-split route"
   }
 }

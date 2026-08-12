@@ -69,8 +69,8 @@ scaffold-side code. The design concept quotes the parts ART-011 depends on
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions, 2 consensus rounds. All 3 markers resolved; G2 clean. Spec 23 → 28 normative items |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass. plan.md, research.md, two contracts. 14 edit sites; measured surface 2 production files / 300 LOC, 1 slice |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass. 3 domains, 158 items, 42 gaps, all closed. Spec 28 → 31 normative items. Two false success criteria caught and corrected |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | G5 pass. 47 tasks, 16 of 16 edit sites, zero boundary crossings. Route `one-navigable-PR`, layer plan skipped |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
@@ -996,10 +996,33 @@ cross one of these boundaries:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 47 (T001–T047, sequential, no gaps or duplicates) |
+| **Phases** | 9 — Setup 3, Foundational 3, US1 5, US2 4, US3 6, US4 5, Codex mirror 8, Cross-cutting 4, Verification and Polish 9 |
+| **Parallel Opportunities** | 4 (`T002`, `T003` read-only preflight; `T037` fixtures, `T038` roadmap). Rare by construction: all 16 edit sites live in two files written in a fixed order |
+| **User Stories Covered** | 4 of 4 — US1 6 tasks, US2 6, US3 10, US4 6 (28 story-labelled; the other 19 are setup, foundational, cross-cutting, and verification) |
+
+**G5: pass**, 47 tasks, 0 markers. Edit-site coverage is 16 of 16. Boundary
+check: zero crossings — no task creates or edits an agent definition, touches a
+grill-me directory, adds a third production file, adds a script or runner helper,
+widens `allowed-tools`, edits a roadmap beyond the ART-011 declaration, or
+creates a `references/` directory.
+
+**A plan anchor was wrong and is corrected.** `plan.md` placed the
+`## Scaffold Complete` report "inside Step 7". It is a top-level `##` heading
+sitting **between** Step 7 and Step 8 in the shipped file, so an implementer
+following the plan would have looked for it under the wrong anchor. The tasks
+cite literal heading strings rather than step numbers, and both `plan.md` and
+`spec.md` FR-016 now say so.
+
+**Four places are deliberately left under-determined**, each recorded in
+`tasks.md` rather than papered over: the replacement wording for the Codex Hard
+Constraint (the contract fixes that it becomes conditional, not what it says);
+the line describing what accepting the chain does (three facts fixed, wording
+not); the three literal Layer 2 query strings (intent, ASCII-only rule, and the
+negative case's deciding signal are all fixed, the queries are authored at
+implementation time and confirmed by the eval run); and the five operator status
+lines, whose shape is fixed and whose exact text is confirmed through the UAT
+runbook.
 
 ---
 
@@ -1020,10 +1043,51 @@ line count. Surface the four fields the SKILL extracts from the emitted decision
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
-| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+| **Route** | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| **Releasable** | `true` | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
+| **Signals** | `change-shape:modify-heavy` | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
+| **Warnings** | *(none)* | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+
+Recorded 2026-08-12, exit 0, no hints. The reading matches the spec's own shape:
+every one of the sixteen edit sites modifies existing prose in one of two files,
+and nothing is destructive or concurrency-sensitive.
+
+## Layer Plan
+
+`layer_plan.status = skipped`. The layer planner runs only for a `split-PR`
+route; this route is `one-navigable-PR`, so the planner was not invoked and the
+run continues with route context carried forward. No PR emission or branch
+splitting is wired by this record.
+
+## Tasks-Phase Reviewability Boundary
+
+Runner helper `reviewability-gate` supports **setup mode only** on the installed
+runner; tasks mode is deferred and was not invoked.
+
+| Field | Value |
+|-------|-------|
+| Helper ID | `reviewability-gate` |
+| Requested mode | `tasks` |
+| Deferral reason | Not implemented on the installed runner — the read-only helper returns `reviewability-gate read-only runner supports setup mode only` for any mode other than `setup` |
+
+Continuing on the committed fallback evidence chain, as the skill directs:
+
+1. **Setup-mode gate, recorded at scaffold:** `status: warn`, no blockers. Its
+   single warning was diagnosed as a roadmap-wide artifact rather than a finding
+   about this spec, and both the raw result and ART-011's real budget are
+   recorded above.
+2. **Plan-phase `estimate-reviewable-loc`, from step 7b:** `status: pass`,
+   `projected: 0` — structurally blind to a Markdown-shipping repository, as
+   recorded above, so it is evidence of "not over budget" rather than a measured
+   figure.
+3. **Operator-ratified split decision:** one vertical slice, taken at scaffold
+   through the grill-me slice-sizing branch and unchanged since. The measured
+   `estimate-spec-size` figure is **322 LOC at 31 FRs**, `suggested_slices: 1`,
+   `status: ok`, against a 400 warn ceiling.
+
+No size-only block, no correctness block, no stale marker state, and no
+unusable gate evidence. Marker planning is not required for a
+`one-navigable-PR` route.
 
 To produce the decision, run the classifier against the feature directory:
 

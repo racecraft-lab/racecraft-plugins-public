@@ -268,8 +268,12 @@ a list rather than a description.
 | C5 | New `### 9. Chain into the Planning Stage` | after Step 8's closing `**NEVER push to main.**` paragraph | Insert. Carries the printed what-accepting-does line **before** the confirmation, and the printed invocation **before** running it on accept | FR-012, FR-013, FR-013a, FR-014, FR-015, FR-015b, FR-015c |
 | C6 | New `### 10. Closing Report` | after C5 | Insert. **Instruct the reader to read `WORKFLOW_TERMINAL_STATUSES` from `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`; do not write the six status literals into this file.** Carries a next-step rule for **all three** headings and the four render triggers | FR-016–FR-020 |
 
-The `## Scaffold Complete` report stays exactly where it is, inside Step 7 and
-ahead of Step 8, so C5 and C6 append after the end of the procedure. That
+The `## Scaffold Complete` report stays exactly where it is: a **top-level
+heading between Step 7 and Step 8**, not a subsection of Step 7 — an earlier
+draft of this plan said "inside Step 7", which is wrong and would send an
+implementer looking for it under the wrong anchor. It sits ahead of Step 8, so
+C5 and C6 append after the end of the procedure. Anchor on the literal heading
+strings, never on a step number. That
 ordering is what satisfies FR-016: the operator is told what scaffold produced
 before being asked whether to continue.
 
