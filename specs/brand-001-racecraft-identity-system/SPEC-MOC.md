@@ -3,7 +3,7 @@ up: "[Racecraft Identity System Implementation Roadmap](../../docs/ai/specs/race
 related:
   - "[Design Concept](../../docs/ai/specs/.process/BRAND-001-design-concept.md)"
   - "[Workflow](../../docs/ai/specs/.process/BRAND-001-workflow.md)"
-status: "Scaffolded for autonomous execution"
+status: "pending" # Scaffolded for autonomous execution
 rank: 1
 spec_id: "BRAND-001"
 structureVersion: 1
