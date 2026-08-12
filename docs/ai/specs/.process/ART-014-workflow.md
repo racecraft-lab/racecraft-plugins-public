@@ -481,6 +481,52 @@ and printing a blank path. FR-005 now requires an explicit check.
 tracked now; the difference is exactly this specification's own in-flight
 workflow file. SC-002 pins the denominator to the baseline commit.
 
+### Corpus Regression Evidence
+
+Captured before any implementation work, because the BEFORE half can only be
+measured against unmodified code. Reproducible from this section alone, which is
+what the PR packet requirements demand.
+
+**Denominator, pinned to the baseline commit:**
+
+```text
+git ls-tree -r --name-only 3af4764e -- docs/ai/specs/.process/ | grep -- '-workflow\.md$'
+```
+
+54 files. The working tree tracks 55; the extra one is this specification's own
+in-flight `ART-014-workflow.md`, excluded by construction because it is not in
+the baseline tree.
+
+**Synthesized state shape**, one per corpus file:
+
+```json
+{"workflow_file": "<repo-relative path>", "spec_id": "<id>", "plan": [{"step": "Specify"}]}
+```
+
+Written to a path **inside the repository**. This is load-bearing: the repository
+root is derived from the state path, so a state in a scratch directory outside
+the tree resolves no root, the comparison skips under FR-006, and every file
+reports a pass while proving nothing.
+
+**Invocation:**
+
+```text
+python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py \
+  --workflow <corpus file> --state <in-repo state> --rule status-evidence
+```
+
+**Results:**
+
+| Run | Expectation | BEFORE (measured 2026-08-12) | AFTER |
+|---|---|---|---|
+| 54 corpus files, state names the matching workflow | exit 0 | **54 of 54 exit 0** | pending |
+| Canary: state names a *different* workflow | exit 1 after the repair | **exit 0**, `workflow_checkpoint_errors` empty, `workflow_authority_errors` absent | pending |
+
+The canary is the whole point of the harness. Fifty-four passes prove nothing on
+their own, because a skipped comparison and a satisfied comparison both exit 0.
+The canary is the run that must change from 0 to 1; if it still exits 0 after the
+change, the repair did not take regardless of what the other 54 report.
+
 ### Consensus Resolution Log
 
 | # | Phase / Session | Item | Categories | Round | Analysts | Verdict | Applied |

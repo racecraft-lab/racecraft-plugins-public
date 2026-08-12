@@ -10,6 +10,15 @@
     "ran": true
   },
   "branch": "art-014-phase-guard-enforcement-repair",
+  "corpus_regression": {
+    "baseline_commit": "3af4764e",
+    "before_pass": 54,
+    "before_total": 54,
+    "canary_before_exit": 0,
+    "canary_expectation_after": 1,
+    "denominator": 54,
+    "note": "state written inside the repo; root derives from the state path"
+  },
   "feature_dir": "specs/art-014-phase-guard-enforcement-repair",
   "gates": {
     "G1": {
@@ -182,6 +191,6 @@
     "passed": 7378,
     "total": 7378
   },
-  "updated_at": "2026-08-12T19:00:20Z",
+  "updated_at": "2026-08-12T19:05:50Z",
   "workflow_file": "docs/ai/specs/.process/ART-014-workflow.md"
 }
