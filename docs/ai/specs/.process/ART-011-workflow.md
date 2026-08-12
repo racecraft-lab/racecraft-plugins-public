@@ -1219,9 +1219,22 @@ run can show whether routing degrades. That run is a manual gate outside
 Advisory mode means this verdict does not gate Phase 7. It is recorded so a later
 session reads the same judgement rather than re-deriving it.
 
-**Stage boundary.** This is the terminal step of the `plan` stage. Crossing into
-implementation requires an explicit `--stage implement`; a bare invocation
-re-resolves `plan` and re-enters here.
+**Stage boundary.** This is the terminal step of the `plan` stage.
+
+Measured after recording the verdict, rather than assumed: with the six planning
+rows and the `Confidence Gate` row all terminal, `resolve-autopilot-stage`
+returns `stage: implement`, `planning_complete: true`, `recorded_stage: plan`,
+with basis `auto-detect: every planning phase and the confidence gate are
+terminal`. So a **bare** invocation now crosses into implementation. The crossing
+is reported through that basis line rather than silent, which is the documented
+intent, but it is not refused.
+
+An earlier draft of this section claimed a bare invocation re-resolves `plan` and
+re-enters here. That is true only while the `Confidence Gate` row is
+**non-terminal** — after a strict-mode stop, for instance. It is not true now,
+and the difference matters because it is the literal instruction an operator
+follows. Pass `--stage implement` to be explicit about the crossing; pass
+`--stage plan` if the intent is to re-enter planning.
 
 ---
 
