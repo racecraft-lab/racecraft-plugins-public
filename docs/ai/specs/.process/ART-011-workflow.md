@@ -498,9 +498,42 @@ Q1, Q4, Q5, Q9, Q10, Q11, and Q20 fixed placement and content. Resolve:
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Description reword and trigger routing | | |
+| 1 | Description reword and trigger routing | 5 asked, 4 resolved from evidence, 1 routed to consensus | FR-021 marker resolved. New FR-021a (byte-identity is a requirement, not an accident) and FR-021b (three Layer 2 cases per platform). `agents/openai.yaml` evaluated and deliberately excluded, recorded in FR-022. Two Assumptions corrected: Layer 2 is a manual live gate outside `FULL_VERIFY`, and the edit restales four generated artifacts covered by `refresh-release-artifacts.py`. Spec 23 → 25 normative items |
 | 2 | Blind-spot pass contract | | |
 | 3 | Chain confirmation and closing report | | |
+
+#### Session 1 — the binding constraint
+
+The description is **975 of 1024 characters**, so the entire reword had 49
+characters to work in. That single fact decided the session: it forced "ready for
+autopilot" out of the capability sentence, ruled out any wording that names both
+new capabilities while keeping it (every such wording measures 1025–1050), and
+made `agents/openai.yaml` and `when_to_use` non-options rather than choices.
+
+The cap is confirmed twice over. `tests/speckit-pro/layer1-structural/validate-skills.py`
+enforces it locally, and it is the Agent Skills platform contract — the clarify
+executor could not confirm the platform half and correctly refused to assert it,
+and the domain researcher then confirmed it against two independent sources. The
+separate 1,536 figure is a different mechanism (`description` + `when_to_use`
+combined, as truncated in the skill listing) and does not apply here;
+`when_to_use` is also outside the open standard's allowed field list, so it is
+not a safe way to buy budget.
+
+### Consensus Resolution Log
+
+| # | Question | Tags | Analysts | Round | Outcome | Artifacts updated |
+|---|----------|------|----------|-------|---------|-------------------|
+| 1 | Which description wording ships: change only the capability sentence (Option A, 1015 chars, docs-site untouched), or also compress sentence 1 to keep "ready for autopilot" (Option B, more headroom, restales the generated docs page)? | `[codebase]`, `[domain]` | codebase-analyst, domain-researcher | 1 | **Both agree, Option A.** codebase-analyst at high confidence: the drop is cap-forced rather than stylistic (three tested wordings that keep the phrase all exceeded 1024), and Option B reopens a decision Q7 already closed. domain-researcher at medium confidence, on a different axis: under progressive disclosure the model cannot read a skill body until after selecting the skill, so a capability absent from the description carries **zero** routing signal, not merely less — which makes naming the two new capabilities worth more than a relational claim about a sibling skill. Verified independently before applying: 1015 chars, +9 headroom, no angle brackets, only sentence 3 differs, boundary clause byte-identical | `spec.md` FR-021 (marker resolved), new FR-021a, new FR-021b |
+
+**Residual risk carried forward, not closed.** The word "planning" is new to
+scaffold's description and the sibling autopilot description already claims it,
+while scaffold's existing boundary clause is scoped to "run a populated workflow"
+prompts rather than to plan-stage prompts. Neither analyst could settle the
+routing consequence, because only a live Layer 2 run can. The documented
+mitigation is precondition contrast rather than word-avoidance: scaffold creates
+a workflow file that does not yet exist, autopilot consumes one that does. FR-021b's
+negative case is written to test exactly that near-miss, and the Layer 2 run is a
+scheduled manual gate rather than something `run-all.py` will catch.
 
 ---
 
