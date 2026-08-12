@@ -24,7 +24,8 @@ ART-006 and ART-012 are complete and archived; ART-002 shipped in PRs #425,
 #427 and #430, which unblocks ART-007; ART-012 shipped in PR #426; ART-003
 through ART-005, ART-007, ART-009 and ART-011 are ready; ART-014 is in progress,
 scaffolded 2026-08-12 as one slice; ART-015 was opened from ART-006 findings and
-is ready with no dependencies
+is ready with no dependencies; ART-016 and ART-017 were opened from ART-014
+findings on 2026-08-12 and are ready
 
 ---
 
@@ -142,6 +143,8 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
 | ART-014 | Phase-Guard Enforcement Repair | 🔄 In Progress | [.process/ART-014-workflow.md](.process/ART-014-workflow.md) | Scaffolded 2026-08-12, one slice. Both defects reproduced by execution during scoping; the corpus baseline is 54 of 54 workflow files exiting 0 under `--rule status-evidence`. Budget re-declared at scaffold from ~120 to 235 reviewable LOC after the interview added two documentation files. No dependencies; found during ART-006, which deliberately did not fix it |
 | ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
+| ART-016 | Claude-Side Live PR Commit Authority | ⏳ Ready | - | No dependencies; opened from ART-014, which documents the gap and names this entry in the shipped Claude `SKILL.md` |
+| ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ⏳ Ready | - | Blocked by ART-014, which adds the classification record these verdicts live in. Opened from ART-014's advisory audit; the defect was reproduced by execution |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -994,6 +997,98 @@ defect from the model to the absent trigger.
 - `speckit-pro/skills/speckit-autopilot/references/gate-validation.md` — G3/G5 gates
 - `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` — gate recording
 - `speckit-pro/codex-skills/speckit-autopilot/` mirror
+
+---
+
+### ART-016: Claude-Side Live PR Commit Authority
+
+**Priority:** P3 | **Depends On:** none | **Enables:** the PR-head byte comparison on Claude
+
+**Goal:** Let the Claude autopilot supply `--expected-base-commit` and
+`--expected-head-commit` from live pull-request metadata, so the phase guard's
+PR-head byte comparison runs on both platforms instead of only on Codex.
+
+**Problem:** The Codex distribution instructs appending both flags from live PR
+metadata when `pr-marker-plan.v2` declares a changed-file manifest, in
+`codex-skills/speckit-autopilot/SKILL.md`, `references/phase-execution-codex.md`,
+and `references/task-list-canonical-codex.md`. No equivalent instruction or
+runtime step exists anywhere in the Claude tree, so the byte comparison is
+unreachable there. ART-014 documents the gap and states the not-yet-wired status
+in the shipped Claude documentation; this entry closes it.
+
+**Scope:**
+- Fetch `baseRefOid` and `headRefOid` from live PR metadata immediately before
+  validation, never from the workflow, state, or manifest.
+- Wire them into the Step 1.1 guard invocation on the Claude side.
+- Give missing, stale, or mismatched authority a blocking failure path, matching
+  the obligation the Codex contract already states.
+- Remove the not-yet-wired caveat ART-014 added to the Claude `SKILL.md`.
+
+**Out of Scope:**
+- Any change to the comparison the flags feed.
+- The workflow-identity check, which ART-014 owns.
+
+**Verification:** A Layer 4 test proving the Claude invocation carries both flags
+when a changed-file manifest is declared, and a negative control proving a stale
+head OID blocks.
+
+**Key Decisions:**
+**Split from ART-014 (2026-08-12):** the operator chose to document the contract
+on the Claude side during ART-014 rather than defer the prose, but the runtime
+fetch is a `gh` call plus a blocking failure path, which does not fit a
+harness-slice budget. ART-014 therefore ships an honest caveat naming this entry.
+
+**Key Files:**
+- `speckit-pro/skills/speckit-autopilot/SKILL.md` — the caveat to remove
+- `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` — the invocation
+- `tests/speckit-pro/unit/` — the flag and failure-path coverage
+
+---
+
+### ART-017: Arm The Accidentally-Advisory State Bookkeeping Checks
+
+**Priority:** P3 | **Depends On:** ART-014 | **Enables:** honest state bookkeeping
+
+**Goal:** Register `in_progress_errors`, `duplicate_state_steps`, and
+`state_order_errors` under a rule the autopilot's own invocation consults, so the
+three state-file invariants they check can actually fail a run.
+
+**Problem:** All three are produced by `validate_state` in
+`speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`,
+alongside two keys that *are* gated under the `coverage` rule. `SKILL.md`
+justifies advisory status on the grounds that the existing workflow corpus
+predates the checks. That is true of the coverage lists and false of these three:
+they are invariants of the state file the current run just wrote, so no legacy
+artifact can violate them. Proven by execution during ART-014's Clarify phase
+against a state with two steps marked `in_progress`: the check fires and names
+both steps, exits 1 with no `--rule`, and exits **0** under the
+`--rule status-evidence` invocation the autopilot always issues.
+
+**Scope:**
+- Decide the right rule for each of the three keys, which may not be the same rule.
+- Register them and prove each moves the exit code.
+- Flip their `PROBLEM_KEY_INTENT` verdicts from `advisory-accidental` to `gated`.
+
+**Out of Scope:**
+- The nine remaining advisory keys, whose verdicts ART-014 records separately.
+- Re-litigating the `--rule` scoping mechanism.
+
+**Verification:** A negative control per armed key proving a non-zero exit under
+the autopilot's own invocation, plus a corpus regression proving no
+previously-passing specification starts failing. ART-014 measured the three keys
+clean across the live corpus and on its own run state, so the regression cost is
+expected to be zero.
+
+**Key Decisions:**
+**Found by ART-014's advisory audit, deliberately not armed there (2026-08-12):**
+ART-014's interview fixed the outcome as arm-only-the-identity-key, because every
+armed key needs its own negative control and corpus proof and therefore its own
+slice.
+
+**Key Files:**
+- `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` — `validate_state`, `RULE_PROBLEM_KEYS`, `PROBLEM_KEY_INTENT`
+- `speckit-pro/skills/speckit-autopilot/SKILL.md` — the advisory justification to narrow
+- `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` — the negative controls
 
 ---
 

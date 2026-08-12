@@ -448,9 +448,50 @@ assertion to validate-codex-skills.py, and updating CODEX-PARITY-NOTES.md.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | The Advisory Audit | | |
+| 1 | The Advisory Audit | 5 open items, all resolved from evidence, 0 routed to consensus | Verdict vocabulary widened from two values to three after the audit found an accidentally-advisory key. FR-010 rewritten, FR-010a and FR-010b added, FR-011 tightened to derive the key set from a real report. Both spec markers cleared. ART-016 and ART-017 opened in the roadmap. Spec 13 → 15 normative requirements, 0 markers |
 | 2 | Comparison Semantics And The Corpus Contract | | |
 | 3 | Documentation Truth And Platform Reach | | |
+
+#### Session 1 Findings
+
+The audit produced one substantive discovery, reproduced by execution rather
+than argued from the source.
+
+**`in_progress_errors`, `duplicate_state_steps`, and `state_order_errors` are
+advisory by accident, not by design.** All three come from `validate_state`,
+which also produces two keys that *are* gated under the `coverage` rule, so the
+split is per-key rather than per-function. `SKILL.md` justifies advisory status
+on the grounds that the existing workflow corpus predates the checks. That
+reasoning holds for the coverage lists and fails for these three: they are
+invariants of the state file the current run just wrote, so no legacy artifact
+can violate them.
+
+Negative control, run against a state file with two steps marked `in_progress`:
+
+| Invocation | `in_progress_errors` | Exit |
+|---|---|---|
+| no `--rule` | fires, naming both steps | 1 |
+| `--rule status-evidence` (what the autopilot issues) | fires, naming both steps | **0** |
+
+A working check, wholly inert under the real invocation. That is the same shape
+as the workflow-identity defect this specification repairs. All three keys are
+empty against this run's live state and across the corpus, so arming them later
+carries no measured regression cost. Per the scoping decision to arm only the
+identity key, ART-014 records the verdict and ART-017 arms them.
+
+**Marker resolutions.** The `ART-0NN` placeholder resolves to **ART-016**, and
+the two-state-slot question resolves to record-only, because the slots have
+different writers: the workflow-directory slot is the current run pointer, while
+`.specify/autopilot-state.json` is the older slot still rewritten by post-merge
+archive hygiene. Both roadmap entries were created by this change, so no shipped
+document cites an identifier that does not exist.
+
+**Executor note.** The `clarify-executor` subagent signalled idle without
+returning its question set, twice, so the orchestrator performed session 1's
+analysis directly in the main session. Rule 5 already assigns the orchestrator
+the answering and editing role; only the question-drafting step was lost. Every
+finding above carries its own `file:line` or execution evidence and none of it
+depends on the subagent's output.
 
 ---
 

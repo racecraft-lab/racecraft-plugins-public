@@ -166,10 +166,26 @@ labels itself as not yet wired.
   documentation already quotes, unmodified, and MUST append both compared paths
   after it.
 - **FR-010**: The guard MUST carry a classification record naming every problem key
-  it can emit as either gated or deliberately advisory, each with a one-line
-  reason.
+  it can emit, using a closed three-value vocabulary: `gated`,
+  `advisory-deliberate`, or `advisory-accidental`. Two values are insufficient,
+  because the audit found a key that is advisory by accident rather than by
+  design (see FR-010b).
+- **FR-010a**: Each classification entry MUST carry a reason that states why the
+  verdict holds. Restating the key name is not a reason. An
+  `advisory-deliberate` entry MUST say what makes advisory status correct for
+  that key; an `advisory-accidental` entry MUST name the follow-up roadmap entry
+  that will arm it.
+- **FR-010b**: The classification record MUST mark `in_progress_errors`,
+  `duplicate_state_steps`, and `state_order_errors` as `advisory-accidental`. The
+  shipped justification for advisory status is that the existing workflow corpus
+  predates the checks, which is true of the coverage lists but false of these
+  three: they are invariants of the state file the current run just wrote, so no
+  legacy artifact can violate them. This specification records the verdict and
+  does not arm them.
 - **FR-011**: The test suite MUST fail when the guard's report emits a problem key
-  absent from that classification record.
+  absent from that classification record. The test MUST derive the emitted key set
+  from a real report rather than from a second hardcoded list, because a parallel
+  list can drift out of step exactly as the classification record itself could.
 - **FR-012**: The test suite MUST include a negative control proving that a state
   naming a different specification exits non-zero under the autopilot's own
   invocation, and a matching positive control proving a correct state exits zero.
@@ -282,13 +298,21 @@ hand-edited, and excluded from the reviewable count.
   because the process directory holds live data and an in-flight specification
   mid-repair can legitimately fail the guard.
 - Wiring the Claude flow to fetch live pull-request commit values is a separate
-  specification. This change documents the gap rather than closing it.
-  [NEEDS CLARIFICATION: the follow-up roadmap entry for the Claude-side live
-  pull-request commit fetch does not exist yet, so the note added to the shipped
-  documentation carries a placeholder identifier that must be replaced with the
-  real one before merge. Which identifier should it name?]
-- The two tracked autopilot state slots may both remain, because permitting an
-  absent `workflow_file` makes their divergence harmless for this repair.
-  [NEEDS CLARIFICATION: whether the two tracked state slots are read by different
-  callers is unresolved. Should this change record that finding as a follow-up
-  roadmap entry, or is no record needed?]
+  specification. This change documents the gap rather than closing it. Resolved
+  during Clarify: the follow-up is **ART-016, Claude-Side Live PR Commit
+  Authority**, created in the technical roadmap by this change so the note added
+  to the shipped documentation cites an entry that exists. A shipped document
+  naming an identifier that does not exist would repeat the defect class this
+  specification repairs.
+- The two tracked autopilot state slots both remain. Resolved during Clarify by
+  evidence rather than judgment: they are written by different callers, so
+  converging them is not this change's business and no follow-up entry is needed.
+  `docs/ai/specs/.process/autopilot-state.json` is the current autopilot run
+  slot, which every documented invocation names as
+  `<workflow-dir>/autopilot-state.json`. `.specify/autopilot-state.json` is the
+  older slot, still tracked and still rewritten by post-merge archive hygiene:
+  four archive reports list it among the files they update, and the CAR-003
+  workflow recorded its marker plan there. This change records the finding only.
+  It also confirms FR-003 rather than complicating it, because the older slot
+  legitimately carries no `workflow_file`, which is exactly why skipping on
+  absence is required rather than merely convenient.
