@@ -6,7 +6,7 @@
   "branch": "art-011-scaffold-integration",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 4: Checklist - ux",
+  "active_step": "Phase 5: Tasks",
   "updated_at": "2026-08-12T18:00:00Z",
   "prior_run_note": "Reclaimed the single state slot from docs/ai/specs/.process/ART-012-workflow.md (prior status: completed_archived). Reclaiming is normal operation - one slot, many specs.",
   "settings": {
@@ -95,15 +95,15 @@
     },
     {
       "step": "Phase 4: Checklist - ux",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - ux Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",
@@ -190,6 +190,11 @@
       "verdict": "pass",
       "markers": 0,
       "reason": "plan.md exists with 0 unresolved markers; all six constitution gates pass"
+    },
+    "G4": {
+      "verdict": "pass",
+      "gaps": 0,
+      "reason": "42 gaps raised across 3 domains, 42 remediated, 0 outstanding"
     }
   },
   "archive_sweep": {
@@ -238,6 +243,13 @@
       "production_files": 2,
       "reviewable_loc": 300
     },
-    "reconciliation": "surface shrank, LOC rose with FR granularity (13 FRs reproduces 187 exactly). Both under the 400 warn ceiling. Roadmap entry is in the Declared File Operations table for correction."
+    "reconciliation": "surface shrank, LOC rose with FR granularity (13 FRs reproduces 187 exactly). Both under the 400 warn ceiling. Roadmap entry is in the Declared File Operations table for correction.",
+    "estimate_spec_size_final": {
+      "estimated_loc": 322,
+      "suggested_slices": 1,
+      "status": "ok",
+      "frs": 31,
+      "note": "re-measured after checklist phase added FR-002a, FR-010a, FR-015c and split others. Surface still 2 production files; rise is FR granularity."
+    }
   }
 }

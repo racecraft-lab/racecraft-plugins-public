@@ -73,16 +73,17 @@ or edited agent definition (FR-002); no widening of scaffold's `allowed-tools`
 
 **Scale/Scope**: 16 edit sites across 2 production files (7 Claude, 9 Codex),
 plus 3 new trigger cases in each of 2 test fixtures, plus one roadmap
-reviewability-declaration amendment. 29 functional requirements, 12 success
+reviewability-declaration amendment. 31 functional requirements, 12 success
 criteria, 4 user stories. The error-handling checklist domain added FR-010a and
-its two edit sites, C3a and X4a; the production surface is unchanged at two
-files.
+its two edit sites, C3a and X4a; the ux domain added FR-015c and widened C4, C5,
+C6, X5, and X7 without creating a site. The production surface is unchanged at
+two files throughout.
 
 **Reviewability Budget**: harness/adapter (primary); docs/process (secondary);
-projected reviewable LOC **300** against a 400 warn ceiling; 2 production files;
+projected reviewable LOC **322** against a 400 warn ceiling; 2 production files;
 9 changed files in the diff of which 4 are generated; **within budget**, one
 slice, no split. The plan-phase estimator returns 0 for structural reasons
-explained below; 300 is the measured `estimate-spec-size` figure and is the one
+explained below; 322 is the measured `estimate-spec-size` figure and is the one
 to review against.
 
 ## Declared File Operations
@@ -121,7 +122,7 @@ reduced the surface when Q2 chose to reuse `codebase-analyst` rather than author
 a dedicated agent, and Q3 chose the existing `scope` channel rather than a new
 grill-me argument. Together those two decisions removed the two files the roadmap
 anticipated. The roadmap entry should be amended to **2 production files** and
-**300 LOC**, both of which stay well under the warn thresholds, so nothing is
+**322 LOC**, both of which stay well under the warn thresholds, so nothing is
 blocked either way.
 
 ### What the estimator actually returned, and why it is 0
@@ -152,8 +153,8 @@ just this one.
 **Consequences, stated plainly:**
 
 - The table is **not** adjusted to game the heuristic. Declaring these files under a `scripts/` path or renaming them to match an extension would produce a number by lying about the surface, and the instruction was to fill the table accurately.
-- The figure to review against is `estimate-spec-size`, which is what spec.md already cites and what the design concept ran. Measured in this worktree at both inputs: 4 user stories, 2 files, modify-weighted, **13 FRs → `{estimated_loc: 187, suggested_slices: 1, status: "ok"}`** (reproducing spec.md's 187 exactly), and at the spec's final **28 FRs → `{estimated_loc: 300, suggested_slices: 1, status: "ok"}`**.
-- 300 is the honest figure and is the one carried into the Reviewability Budget above. It is higher than 187 only because the FR count grew from 13 to 28 during three clarify sessions; the production surface did not move. Both figures are under the 400 warn ceiling and both return one slice, so the split decision is unchanged either way.
+- The figure to review against is `estimate-spec-size`, which is what spec.md already cites and what the design concept ran. Measured in this worktree at both inputs: 4 user stories, 2 files, modify-weighted, **13 FRs → `{estimated_loc: 187, suggested_slices: 1, status: "ok"}`** (reproducing spec.md's 187 exactly), at the plan-time **28 FRs → `{estimated_loc: 300, suggested_slices: 1, status: "ok"}`**, and at the spec's final **31 FRs → `{estimated_loc: 322, suggested_slices: 1, status: "ok"}`** after the checklist phase added FR-010a and FR-015c and corrected a pre-existing undercount of the suffixed FRs.
+- 322 is the honest figure and is the one carried into the Reviewability Budget above. It is higher than 187 only because the FR count grew from 13 to 31 across three clarify sessions and three checklist domains; the production surface did not move. Both figures are under the 400 warn ceiling and both return one slice, so the split decision is unchanged either way.
 - `status: "pass"` from the plan-phase estimator is real and nothing is blocked. It just carries no information about this change.
 
 This is a tooling gap in `estimate-reviewable-loc`, not a defect in this feature.
@@ -181,7 +182,7 @@ empty.
 **Reviewability requirements the constitution's plan gate additionally demands**:
 
 - **Primary review surface**: harness/adapter — the two `speckit-pro` skill definitions. **Secondary**: docs/process — this feature's own spec artifacts and the roadmap status line.
-- **Budget**: 300 reviewable LOC (measured `estimate-spec-size`), 2 production files, 9 total changed files of which 4 are generated. All three are under the warn thresholds (400 LOC, 6 production files, 15 total files). One primary surface. **Within budget.**
+- **Budget**: 322 reviewable LOC (measured `estimate-spec-size`), 2 production files, 9 total changed files of which 4 are generated. All three are under the warn thresholds (400 LOC, 6 production files, 15 total files). One primary surface. **Within budget.**
 - **Split decision**: remains one spec. The four behaviours are one operator flow through one pair of files. Splitting would ship a pass whose findings go nowhere, or a report with nothing to report. The estimator returns one suggested slice.
 - **PR review packet source**: spec.md § PR Review Packet Requirements, which fixes the nine required sections and names the two deferrals (ART-007 for draft-PR creation; the archive-hygiene question of where the ART-006 contract should live).
 
@@ -191,7 +192,7 @@ empty.
 
 ```text
 specs/art-011-scaffold-integration/
-├── spec.md              # 29 FRs, 12 SCs, 0 open markers (28 at plan time; +FR-010a from the checklist phase)
+├── spec.md              # 31 FRs, 12 SCs, 0 open markers (28 at plan time; +FR-010a and +FR-015c from the checklist phase, and a pre-existing undercount corrected)
 ├── plan.md              # This file (/speckit-plan command output)
 ├── research.md          # Phase 0 output — 11 grounded decisions
 ├── contracts/           # Phase 1 output
@@ -200,7 +201,8 @@ specs/art-011-scaffold-integration/
 ├── checklists/
 │   ├── requirements.md   # written by the Specify phase, unchanged here
 │   ├── api-contracts.md  # Checklist phase — contract boundaries
-│   └── error-handling.md # Checklist phase — degraded, declined, and interrupted paths
+│   ├── error-handling.md # Checklist phase — degraded, declined, and interrupted paths
+│   └── ux.md             # Checklist phase — the operator sequence, the confirmation budget, the two reports
 ├── SPEC-MOC.md          # navigation marker (written by scaffold, unchanged)
 └── tasks.md             # Phase 2 output (/speckit-tasks — NOT created by /speckit-plan)
 ```
@@ -235,7 +237,7 @@ tests/speckit-pro/
 
 docs/ai/specs/
 └── html-artifacts-technical-roadmap.md       # MODIFIED — ART-011 reviewability
-                                              # declaration: ~4 files/162 LOC -> 2 files/300 LOC
+                                              # declaration: ~4 files/162 LOC -> 2 files/322 LOC
 
 dist/claude/, dist/codex/                     # REGENERATED — not hand-edited
 tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/
@@ -262,9 +264,9 @@ a list rather than a description.
 | C2 | New `### 3.6 Blind-Spot Pass (IN the Worktree)` | after Step 3.5's closing paragraph, before `### 4. Run Grill Me Interview` | Insert. Do **not** renumber Steps 4–8 | FR-001–FR-007, FR-011 |
 | C3 | Step 4 grill-me invocation | the `Skill("grill-me", args: {...})` block, `scope:` line | Amend so `scope` carries the roadmap text **plus** the labelled findings block | FR-008, FR-009, FR-010 |
 | C3a | Step 4 post-interview verification | the existing `Must contain Goals, Non-goals, Design Tree (Q&A log), and Open Questions` assertion | Extend by one key: verify the `**Blind-spot pass:**` line is present in the header blockquote and `Edit` it in when absent | FR-010a |
-| C4 | Step 7 report closing line | `**Review both files first**` | Soften to `**Review both files**` | FR-013 |
-| C5 | New `### 9. Chain into the Planning Stage` | after Step 8's closing `**NEVER push to main.**` paragraph | Insert | FR-012, FR-013, FR-013a, FR-014, FR-015, FR-015b |
-| C6 | New `### 10. Closing Report` | after C5 | Insert. **Instruct the reader to read `WORKFLOW_TERMINAL_STATUSES` from `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`; do not write the six status literals into this file** | FR-016–FR-020 |
+| C4 | Step 7 report, **two lines** | `**Review both files first**` and `**Ready to run:**` with the command under it | Soften the first to `**Review both files**`. Relabel the second to `**If you stop here, run:**` and add the `--stage plan` token to its command. Neither line is validator-pinned; only the `## Scaffold Complete` heading is | FR-013, FR-015c |
+| C5 | New `### 9. Chain into the Planning Stage` | after Step 8's closing `**NEVER push to main.**` paragraph | Insert. Carries the printed what-accepting-does line **before** the confirmation, and the printed invocation **before** running it on accept | FR-012, FR-013, FR-013a, FR-014, FR-015, FR-015b, FR-015c |
+| C6 | New `### 10. Closing Report` | after C5 | Insert. **Instruct the reader to read `WORKFLOW_TERMINAL_STATUSES` from `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`; do not write the six status literals into this file.** Carries a next-step rule for **all three** headings and the four render triggers | FR-016–FR-020 |
 
 The `## Scaffold Complete` report stays exactly where it is, inside Step 7 and
 ahead of Step 8, so C5 and C6 append after the end of the procedure. That
@@ -285,9 +287,9 @@ sites sit in the frontmatter or under `## What to Do`, well clear of it.
 | X3 | New `### 3.6 Blind-spot pass (in the worktree)` | after Step 3.5's closing paragraph, before `### 4. Run the Grill Me interview` | Insert, same content as C2 in Codex idiom | FR-001–FR-007, FR-011 |
 | X4 | Step 4 grill-me input description | the `Invoke $grill-me ... with a setup-mode marker` bullet list | Amend so the scope input carries the labelled findings block. **Do not disturb the five pinned picker strings in this same step** | FR-008, FR-009, FR-010 |
 | X4a | Step 4 close, after the `If grill-me aborts` paragraph | no existing anchor — the Codex variant performs **no** post-interview verification read today | Insert the same verification C3a extends: read the design concept, confirm the `**Blind-spot pass:**` key, write the line when absent | FR-010a |
-| X5 | `## Output` next-step instruction | the `the exact next step: start a new Codex task rooted at that worktree...` bullet | Amend to add the conditional chain while keeping new-task guidance for the ordinary case | FR-022 site 2 |
+| X5 | `## Output` next-step instruction | the `the exact next step: start a new Codex task rooted at that worktree...` bullet | Amend to add the conditional chain while keeping new-task guidance for the ordinary case. That guidance **is** the Codex hand-off command's rooting precondition, so it must survive as part of the command rather than as commentary | FR-022 site 2, FR-015c |
 | X6 | `## Output` parent-checkout prohibition | `Never hand off only the inner workflow path from the parent checkout. Do not suggest running autopilot from main, a detached checkout, or any workspace root other than the generated spec worktree.` | **Keep both sentences verbatim.** Preface them to apply when the chain does not fire | FR-022 site 3 |
-| X7 | `## Output` extension | after X6 | Insert the pre-chain check, the confirmation, the chain, and the closing report. **Same frozenset constraint as C6: read the shipped set, never write the six literals here** | FR-012–FR-020 |
+| X7 | `## Output` extension | after X6 | Insert the pre-chain check, the printed what-accepting-does line, the confirmation, the printed invocation, the chain, and the closing report. **Same frozenset constraint as C6: read the shipped set, never write the six literals here** | FR-012–FR-020 |
 | X8 | `## Output` citation | `see openai/codex#7480` | Replace with the official Codex skills documentation, corroborated by `openai/codex#11817` | incidental defect |
 
 FR-016 is satisfied differently here and the plan follows the spec rather than
@@ -372,7 +374,7 @@ in `tests/speckit-pro/layer1-structural/validate-codex-parity.py`.
 
 - **Description length**: measure the final string on both platforms. Expected exactly **1015** characters, 9 under the cap, no angle brackets.
 - **Description byte-identity (FR-021a)**: diff the two frontmatter description values directly. No automated test compares them (research.md R7), so this is a required manual step, not an inference.
-- **Codex body word count**: confirm it stayed under 8000. Baseline 3250, projected additions 700–900.
+- **Codex body word count**: confirm it stayed under 8000. Baseline 3250, projected additions 850–1,100 after the ux domain added the two printed lines and the hand-off command's fixed form. Still roughly half the cap.
 
 **4. Layer 2 trigger evals — scheduled manual gate, not part of FULL_VERIFY.**
 Layer 2 is declared `"default": false` in `tests/speckit-pro/suite-manifest.json`,
@@ -396,6 +398,15 @@ verbatim, the single-confirmation count (SC-007), the decline path leaving
 everything pushed (SC-006), and the closing report's artifact index matching disk
 (SC-009).
 
+The ux checklist domain added five operator-facing confirmations to the same run,
+none of which any fixture can reach either:
+
+- The sentinel prints with its **one-word** spelling intact while scaffold's own lines stay hyphenated (FR-006). The failure mode is a silent normalisation, so read the emitted string rather than the source.
+- The printed what-accepting-does line appears **before** the confirmation, and the invocation appears **before** the chain runs (FR-013, FR-014).
+- One command, three appearances: the Scaffold Complete report's `**If you stop here, run:**` line, the confirmation's alternative, and the closing report's next step are byte-identical per platform (FR-015c).
+- Each of the three headings ends on a defined next step, `## Planning Complete` included (FR-018).
+- The closing report renders on the Codex ordinary path — pre-chain check fails, nothing asked — and its outcome line leads with what is finished (FR-017, FR-018).
+
 ## Traceability — requirement to edit site
 
 | Requirement group | Claude sites | Codex sites | Verified by |
@@ -404,7 +415,7 @@ everything pushed (SC-006), and the closing report's artifact index matching dis
 | FR-008–FR-010 (seeding and the record) | C3 | X4 | UAT; Layer 1 pinned-string survival |
 | FR-010a (record verified, not assumed) | C3a | X4a | UAT: delete the header line from the design concept before the verification read and confirm scaffold rewrites it |
 | FR-012–FR-015b (chain hand-off) | C5 | X2, X5, X6, X7 | UAT; ART-006 §3 conformance review |
-| FR-013 (report line softened) | C4 | not applicable | diff review |
+| FR-013, FR-015c (the two Scaffold Complete report lines; the hand-off command's fixed form) | C4, C5 | X5, X7 | UAT: decline on each platform and confirm the command printed in the report, in the confirmation's alternative, and in the closing report's next step are one string |
 | FR-016–FR-020 (closing report) | C6 | X7 | UAT; ART-006 §4 conformance review |
 | FR-021, FR-021a (description) | C1 | X1 | `validate-skills.py`; hand diff |
 | FR-021b (Layer 2 cases) | fixture | fixture | Layer 2 manual gate |

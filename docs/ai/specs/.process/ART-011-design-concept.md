@@ -585,6 +585,31 @@ This follows the project's established handling of a corrected premise, matching
 the pattern used in `CAR-005-design-concept.md`: amend in place with a dated
 note, leave the decision intact.
 
+### 2026-08-12 — Q16's "exactly one confirmation" rationale corrected
+
+Q16's recorded reasoning says the informational-findings choice "keeps scaffold
+at exactly one confirmation — the chain — which is the seam that actually
+separates interactive from autonomous." The **decision stands**: findings are
+informational and flow straight into the interview. The supporting count does
+not.
+
+Scaffold already stops for the operator twice before this feature adds anything.
+Step 3 asks whether to reuse or recreate an existing worktree, and Step 3.5 waits
+for explicit approval before running any documented bootstrap command — and this
+repository does document a Worktree Preflight, so that second prompt is live
+here, not hypothetical. On the worktree-reuse path, which is the very path the
+Codex chain depends on for coverage, Claude reaches the chain having already
+asked twice.
+
+Corrected: the confirmation budget this feature is accountable for is **what it
+adds** — exactly one, the chain, and only when the chain is attempted. Q16's
+argument survives intact under that reading, because the point was never the
+absolute count; it was that this feature should not add a second gate between the
+findings and the first interview question. It does not.
+
+Downstream: `spec.md` SC-007 and SC-011 scoped to this feature's flow, US3
+scenario 5 scoped identically, `contracts/chain-handoff.md` §4 matched.
+
 ## Decisions recorded without a question
 
 Both were named at the closing checkpoint and accepted with the wrap-up:

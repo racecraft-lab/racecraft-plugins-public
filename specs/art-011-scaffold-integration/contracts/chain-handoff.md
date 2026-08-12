@@ -5,7 +5,8 @@ check, the confirmation, the invocation form, and the closing report's layout, s
 the two `SKILL.md` variants can be written as transcription and reviewed against
 a specification.
 
-Scope: FR-012 through FR-020, plus FR-022's three Codex amendment sites.
+Scope: FR-012 through FR-020, including FR-015c, plus FR-022's three Codex
+amendment sites.
 Upstream normative source: the ART-006 chain contract, recovered at
 `git show 5e184e33:specs/art-006-autopilot-staging/contracts/scaffold-autopilot-chain.md`
 and its sibling `contracts/stage-invocation.md`.
@@ -127,10 +128,27 @@ opposite instructions. That line has no Codex equivalent.
 free-text reply, and must **not** chain by default when confirmation is
 unavailable.
 
-**Confirmation budget** (SC-007): outside the interview, a scaffold run asks for
-**at most one** confirmation, and for **exactly one** whenever the chain is
-attempted. It asks **none** when the FR-013a check fails, which on Codex CLI is
-the ordinary case.
+**One printed line before the question** (FR-013). The operator must be told what
+accepting does, immediately before being asked. §1's ordering informs the choice
+about the **past**; nothing else informs it about the **future**, and neither the
+question text nor the two option labels defines "the planning stage". Three facts,
+no more: accepting runs the six planning phases in this same session without
+further prompts; those phases commit as they go; declining leaves everything
+already pushed exactly as it is. Printed, not asked — no options, and it does not
+count against the budget below.
+
+**Confirmation budget** (SC-007): this feature adds **at most one** confirmation,
+and **exactly one** whenever the chain is attempted. It adds **none** when the
+FR-013a check fails, which on Codex CLI is the ordinary case.
+
+**What the budget counts, and what it does not.** A scaffold run already stops for
+the operator before this feature adds anything: the grill-me questions; the Step
+3.5 bootstrap approval, required by both variants before any documented preflight
+command; and, on Claude only, the Step 3 reuse-or-recreate question. On the
+worktree-reuse path a Claude run therefore reaches the chain having already asked
+twice, which is why the budget counts **additions** rather than prompts. It is a
+cap on this feature, not headroom: FR-013 adds the only one, FR-011 forbids one at
+the findings stage, and §8.4 forbids one to offer the implement stage.
 
 ## 5. Invocation on acceptance
 
@@ -151,6 +169,14 @@ Read literally, that table would produce a chain invoking a bare path. The
 runnable line prefixes the argv with the Codex skill invocation form,
 `$speckit-autopilot`, which is what the whole Codex skill set already uses. The
 argv itself is unchanged from the contract.
+
+**The hand-off is printed before it is run** (FR-014). On acceptance, print the
+invocation above verbatim, then run it. Otherwise the accepted path is the only
+branch point where the operator is told nothing: the next output belongs to
+another skill and arrives with no statement that the confirmation took effect.
+ART-006 calls this boundary a visible seam; one printed line is what makes it one.
+It also puts the same string in front of the operator on both branches — what is
+running now on accept, what to run later on decline.
 
 **Stage token**: the literal lowercase `plan`, from the contract's closed
 vocabulary of `plan`, `implement`, `full`. No aliases, no alternate casing, no
@@ -177,6 +203,32 @@ On Codex, case 2 is defensive rather than ordinary: `request_user_input`
 availability is already a hard prerequisite of the interview step, which stops
 the run when the feature is not enabled.
 
+### 6.1 The hand-off command — one fixed form (FR-015c)
+
+This string carries the whole ending of every no-chain run, which on Codex CLI is
+the ordinary run. Unlike the §5 chain invocation and the §9.0 resume command,
+nothing fixed its shape; it was the last unspecified operator-facing string in the
+feature.
+
+| Platform | Hand-off command |
+|---|---|
+| Claude Code | `/speckit-pro:speckit-autopilot <workflow-file> --stage plan` |
+| Codex CLI | start a new Codex task rooted at the spec worktree, then `$speckit-autopilot <workflow-file> --stage plan` |
+
+**The Codex precondition is part of the command, not commentary.** A Claude
+operator can run the §5 invocation where they stand. A Codex operator reaching
+this ending is by definition rooted outside the worktree (§3), so a bare
+invocation hands them a command the Workflow Worktree Binding guard stops — a
+hand-off that fails on the platform where it is the normal ending. It is the same
+instruction §7's second amendment site keeps for this case.
+
+**The Scaffold Complete report's `Ready to run:` line is brought into this form.**
+It prints the invocation with no stage token, so a declining operator sees two
+different commands for one action a screen apart; and it prints as an instruction
+immediately before a confirmation offering to carry it out — the conflict §4's
+companion edit half-fixed. The command gains `--stage plan`, and the label becomes
+`**If you stop here, run:**`. Nothing else in that report changes.
+
 ## 7. The three Codex sites that contradict the chain
 
 All three **must be amended, not worked around** (FR-022). None is string-pinned
@@ -193,9 +245,16 @@ exists to respect. It is prefaced, never rewritten.
 
 ## 8. The closing report
 
-**One report, rendered once the chain resolves**: after the planning stage on
-acceptance, immediately on decline (Q5, FR-017). It is **printed, not written to
-a file** (FR-017).
+**One report, rendered on every terminal condition** (Q5, FR-017): after the
+planning stage on acceptance, and immediately on each of the three §6 no-chain
+paths. It is **printed, not written to a file** (FR-017).
+
+**All four triggers are named because two are not choices.** "Once the chain
+resolves ... immediately on decline" names two, while §6 has three no-chain causes
+and the heading table below presumes a report on all of them. On Codex the unnamed
+§2-rooting-fail path is the **ordinary** run (§3), so a two-item list would leave
+the most common Codex ending with no report owed: a run stopping after a printed
+command, with no outcome, no index, and no statement that nothing was rolled back.
 
 **Contents, closed at four elements, in this order** (FR-018):
 
@@ -227,9 +286,30 @@ sentence at §8.1. The outcome line, the artifact index, and the next step are
 **derived** — none is a fixed string, and each has its own rule at §8.2, §8.3,
 and §9.
 
+`<one command>` denotes one fixed string, not one bare invocation: on the three
+no-chain paths that string is the §6.1 hand-off command, whose Codex form states
+the rooting precondition as part of the command rather than as commentary beside
+it. The slot stays one line per heading. Widening the general definition would
+loosen §8.4's implement command and §9.0's resume command, neither of which
+admits a precondition clause; splitting the slot would contradict the four-element
+close, and §9.0 already folds a derived multi-part value into one slot.
+
 **The set-aside findings count MUST NOT appear here.** The list is closed at four
 elements. That count lives in the design concept's header record (FR-010) and in
 the seeded block (FR-008), and the artifact index points at the file carrying it.
+
+**What this report adds that §1's earlier one cannot.** The two overlap on paths
+by design — SC-009 forces the scaffold-owned artifacts into the index — so the
+overlap is bounded by requiring each element to carry something new: the outcome
+names the branch, undecided when the first report printed; the draft-PR line
+answers a question the first never raises; the index is existence-tested against
+disk rather than narrated from intent, and grows by the planning artifacts on
+accept; the next step is conditioned on the branch. **The two reports must not
+restate the same fields**: no worktree path, no remote line, no bootstrap result
+here — the first report gave all three and the closed list admits none of them.
+The pushed branch appears once, as an index entry, not as a repeated header field.
+Redundancy beyond this trains the operator to skim the report carrying the
+outcome.
 
 ### 8.1 The draft-PR line
 
@@ -291,7 +371,7 @@ is where they are told apart:
 |---|---|
 | The operator declined | the run stopped at the operator's request, and nothing was rolled back |
 | No structured confirmation mechanism was available | the chain was not offered because the session exposes no structured confirmation mechanism, and nothing was rolled back |
-| The §2 rooting test failed | the chain was not offered because the workflow file is not inside the current checkout, and nothing was rolled back |
+| The §2 rooting test failed | planning was not started in this session because the workflow file is outside the current checkout; everything scaffold owns is finished and pushed, and nothing was rolled back |
 | The §2 cleanliness test failed | the chain was not offered because the checkout has uncommitted changes, and nothing was rolled back |
 
 **This does not reopen §6.** The three paths still behave identically: no chain,
@@ -302,13 +382,44 @@ cause is what that classification already permits.
 **The two §2 failures are separated because their remedies differ.** A dirty
 checkout is fixed in place, after which the printed hand-off command works as
 given. A mis-rooted session cannot be corrected from inside itself on Codex, so
-the operator's next action is a new session rooted at the worktree. Reporting
-only "the pre-chain check failed" would name a condition without naming its
-remedy.
+the operator's next action is a new session rooted at the worktree — which §6.1
+makes part of the Codex hand-off command, so the remedy reaches the operator
+inside what they are shown rather than only in this contract. Reporting only "the
+pre-chain check failed" would name a condition without naming its remedy.
 
 Every line closes on **nothing was rolled back**, which is true on all three
-paths and is the fact the operator most needs. On Codex the rooting row is the
-**ordinary** outcome (§3), and its wording is deliberately neutral about fault.
+paths and is the fact the operator most needs.
+
+**The rooting row reads as an ending, not an apology.** On Codex it is the
+**ordinary** outcome (§3), reached by an operator who did nothing wrong and who,
+from inside that session, can do nothing about it. Neutrality about fault is
+weaker than what §3 claims: a line opening "the chain was not offered because ..."
+leads with a negation and a technical condition, which reads as an apology for a
+run that succeeded at everything it owns. The wording above leads with what is
+finished. **The string is identical on both platforms** — a platform-forked
+outcome line would be a fifth divergence outside SC-011's closed list — and it is
+true on both, because a Claude session failing the same test is in the same
+position.
+
+### 8.4 The completed case — the next step is the implement stage
+
+The heading vocabulary has three values and the next step is **derived**, so each
+heading owes a rule. §8.3 fixes the declined one and §9.0 the interrupted one;
+without this, the run that went best would end on an undefined line. The value is
+the §5 invocation with the stage token advanced to the literal lowercase
+`implement`, the next member of ART-006 §3's closed vocabulary, which the
+autopilot documents as a resume in a fresh session:
+
+| Platform | Next step under `## Planning Complete` |
+|---|---|
+| Claude Code | `/speckit-pro:speckit-autopilot <workflow-file> --stage implement` |
+| Codex CLI | `$speckit-autopilot <workflow-file> --stage implement` |
+
+The workflow file path is the same sole hand-off token §5 fixes, so nothing new
+crosses the boundary. **Never chain into the implement stage, and never ask a
+second confirmation to offer it**: the §4 budget is one confirmation and the chain
+it authorises is the plan stage only. The implement stage is named as the
+operator's next command, never as scaffold's next action.
 
 ## 9. Completion is read from the workflow file
 

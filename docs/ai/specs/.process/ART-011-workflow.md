@@ -68,8 +68,8 @@ scaffold-side code. The design concept quotes the parts ART-011 depends on
 | Specify | `/speckit-specify` | ✅ Complete | 23 FRs, 4 user stories, 21 acceptance scenarios, 12 success criteria. G1 routed to Clarify on 3 markers |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions, 2 consensus rounds. All 3 markers resolved; G2 clean. Spec 23 → 28 normative items |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass. plan.md, research.md, two contracts. 14 edit sites; measured surface 2 production files / 300 LOC, 1 slice |
-| Checklist | `/speckit-checklist` | 🔄 In Progress | 3 domains: api-contracts, error-handling, ux |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Checklist | `/speckit-checklist` | ✅ Complete | G4 pass. 3 domains, 158 items, 42 gaps, all closed. Spec 28 → 31 normative items. Two false success criteria caught and corrected |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -809,7 +809,7 @@ Focus on Scaffold Integration requirements:
 |-----------|-------|------|-----------------|
 | api-contracts | 63 | 17 raised, 17 remediated, 0 outstanding (1 amended at consensus) | FR-002a (new), FR-005, FR-006, FR-010, FR-013a, FR-014, FR-018, FR-019; `contracts/blind-spot-pass.md` §2/§4.1/§5/§6/§9, `contracts/chain-handoff.md` §2/§8/§9; `plan.md` rows C6 and X7 |
 | error-handling | 51 | 11 raised, 11 remediated, 0 outstanding, 0 routed to consensus | FR-003, FR-005, FR-007, FR-008, **new FR-010a**, FR-018, FR-019, Edge Cases; `contracts/blind-spot-pass.md` §3/§4.1/§7/§8/**new §9.1**, `contracts/chain-handoff.md` §8.3/§9/§9.0; `plan.md` new edit sites C3a and X4a. Spec 29 → 30 normative items |
-| ux | | | |
+| ux | 44 | 14 raised, 14 remediated, 0 outstanding, 3 wording items routed to consensus and all 3 confirmed | SC-007, SC-011, FR-006, FR-008, FR-013, FR-014, FR-017, FR-018, **new FR-015c**, US3 scenario 5; `contracts/chain-handoff.md` §4/**new §6.1**/§8/§8.3/**new §8.4**; `contracts/blind-spot-pass.md` §6/§8. Spec 30 → 31 normative items |
 
 #### error-handling — two self-corrections worth more than the gaps
 
@@ -845,7 +845,48 @@ confirmation mechanism, failed pre-chain check — were indistinguishable, shari
 one heading with only decline carrying a fixed outcome line; each now has its
 own, with the rooting failure split from the cleanliness failure because their
 remedies differ.
-| **Total** | | | |
+| **Total** | 158 | 42 raised, 42 remediated, 0 outstanding | 4 consensus rounds across the phase, every one resolved in Round 1 |
+
+#### ux — a second false success criterion, and the operator's last screen
+
+**SC-007 was factually false, and it was mine.** It read "outside the interview,
+a scaffold run asks the operator for at most one confirmation". The shipped
+skills already stop for the operator twice before this feature adds anything:
+Step 3 asks whether to reuse or recreate an existing worktree, and Step 3.5 waits
+for explicit approval before running any documented bootstrap command. This
+repository *does* document a Worktree Preflight, so the second prompt is live
+here rather than hypothetical, and on the worktree-reuse path — the path the
+Codex chain depends on for coverage — Claude reaches the chain having asked
+twice. Verified directly in both variants. SC-007 and SC-011 now count what this
+feature adds, and the design concept carries a dated note correcting Q16's
+supporting count while leaving its decision intact.
+
+**The hand-off command had no fixed form**, despite carrying the whole ending of
+every no-chain run, which is now the ordinary Codex run. Worse, the existing
+report printed that command without `--stage plan`, as an instruction sitting
+immediately before a confirmation offering to run it. New FR-015c fixes the
+command; the label becomes `**If you stop here, run:**`, echoing the
+confirmation's own `Stop here` option so the report names the alternative in the
+choice's own vocabulary instead of issuing a competing order. No validator pins
+that label — only the `## Scaffold Complete` heading is pinned.
+
+**Consensus confirmed all three wording items at high confidence** and corrected
+my framing of one. I had described the Codex hand-off as prose awkwardly stuffed
+into a slot specified as one command. That was not an open conflict: FR-015c had
+already ruled the rooting precondition part of the command rather than commentary
+beside it, so what remained was a stale description of the slot, now fixed in
+both the spec and the contract. Widening the slot generally would have loosened
+two other commands that admit no precondition; splitting it would have broken the
+four-element close.
+
+**One domain reworded another domain's landed string, and that was checked rather
+than waved through.** The ux domain rewrote the rooting-failure outcome line to
+lead with what is finished rather than what did not happen. Consensus confirmed
+it against `git diff` rather than reconstruction: the cause clause still names
+the same condition, "nothing was rolled back" survives verbatim, exactly one row
+changed per artifact, and no platform fork was introduced. It also noted honestly
+that the new string still opens with a session-scoped negation, so "leads with
+what is finished" is approximate rather than literal.
 
 #### api-contracts — what the domain actually caught
 

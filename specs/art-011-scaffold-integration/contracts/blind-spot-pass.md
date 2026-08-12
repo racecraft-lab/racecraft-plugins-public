@@ -243,6 +243,16 @@ a finding nor the sentinel`, `dispatch error: <message>`, `empty return`, or
 run**, and the same `<reason>` clause is reused verbatim in the §9 header line so
 the printed record and the durable record cannot give different reasons.
 
+**The one-word spelling inside the sentinel is deliberate. Do not normalise it.**
+`The blindspot pass raised no unknown unknowns.` carries the Field Guide term §4
+requires verbatim, and this section echoes it unchanged so one string does both
+jobs. Everywhere scaffold speaks in its own voice — the two degraded lines above,
+the §9 header key `**Blind-spot pass:**`, and this contract's prose — the term is
+hyphenated, so one run can show the operator both spellings. It reads as a typo
+and is not. The sentinel is matched **literally**: normalising it to `blind-spot`
+breaks §5's usable-reply test silently, classifying the reply as **returned
+nothing usable** on exactly the runs where the pass worked.
+
 ## 7. Fail-open
 
 The pass **must fail open** (Q18, FR-007). If the dispatch fails or returns
@@ -296,6 +306,19 @@ so repeating it would state the same fact twice. It is omitted in the two
 degraded outcomes, which have no set-aside count to state. The delimiters and the
 two closing instructions never vary, so the block keeps one shape in all three
 outcomes — which is what lets §7 promise it still travels.
+
+**Two of the block's lines address the interview, and the operator sees them.**
+One shape in both places is what stops the printed and seeded records from
+drifting, and the cost is that `Record the Blind-spot pass line in the design
+concept's header blockquote.` and the sentence after it print to the operator as
+imperatives that are not the operator's task. That cost is accepted, not
+overlooked: the lines sit inside delimiters marking the whole block as machinery,
+they are two lines against up to five findings, and they truthfully tell the
+operator what is about to be done with what they just read — the one thing §10
+otherwise leaves implicit as the run flows straight into the first question. **Do
+not resolve the awkwardness by forking the two copies**, softening the imperatives
+in one, or dropping them from the printed half. Any of those is the drift §8
+exists to prevent.
 
 **Platform note (research.md R6)**: on Codex this edit lands in the same step as
 five strings pinned by
