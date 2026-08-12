@@ -215,6 +215,24 @@ labels itself as not yet wired.
   compensating evidence is the FR-012 negative control and the deliberately
   mismatched corpus canary, each of which fails if the comparison silently
   stopped running.
+- **FR-006b**: Repository-root resolution MUST resolve the state path before
+  walking its parents, so that whether the comparison evaluates depends on where
+  the state file is rather than on how the caller spelled the path and which
+  directory they ran from. This closes a short-circuit of the same kind the
+  roadmap's own scope item names: a root resolution returning nothing for a file
+  genuinely inside the repository stops the comparison from running just as
+  surely as the marker-plan precondition did.
+  - The change does not alter the FR-006 verdict. A state file genuinely outside
+    any repository still resolves no root and still skips, because there is
+    genuinely no marker to find. Only the spelling artifact is removed.
+  - It is safe for every existing caller. Resolution is shared with two other
+    call sites, and every consumer already normalizes the value independently
+    before use, so no path that resolves today changes behaviour. One helper in
+    the same file already applies this defensive normalization to the same value,
+    which is the local precedent being extended rather than a new convention.
+  - Verification MUST include a control proving that a state file inside the
+    repository, named by a relative path from a subdirectory, now resolves a root
+    and evaluates the comparison. Before the repair that input skipped.
 - **FR-006a**: The artifacts MUST record which inputs can induce the FR-006 skip,
   and on what basis that inducibility is accepted, because a skip is
   indistinguishable from a pass and an unrecorded way to reach one is an
@@ -223,15 +241,15 @@ labels itself as not yet wired.
   - **Where the state file lives.** Root resolution walks upward from the state
     file's directory looking for a repository marker, so a state file outside any
     repository resolves no root.
-  - **How the state path is spelled, together with the working directory.** The
-    walk operates on the state path as supplied rather than on a resolved form.
-    Measured during Checklist: a relative state argument has a parents chain that
-    terminates at the working directory itself, so from any working directory
-    other than the repository root it resolves no root and the comparison skips
-    while the state file sits untouched inside the repository. The documented
-    invocation is safe because it runs with the working directory at the
-    repository or worktree root, which is a condition of that invocation rather
-    than a property of the guard.
+  - **How the state path is spelled, together with the working directory.**
+    **Closed by FR-006b.** Before that repair the walk operated on the state path
+    as supplied rather than on a resolved form, so a relative state argument had a
+    parents chain terminating at the working directory itself: from any working
+    directory other than the repository root it resolved no root and the
+    comparison skipped while the state file sat untouched inside the repository.
+    Safety then rested on a condition of the invocation rather than a property of
+    the guard, which is a fragile place to put it. FR-006b removes this input from
+    the list; it is retained here as a record of what was closed and why.
   - **Where the supplied workflow lives, at the autopilot's convention level
     only.** At the guard's own boundary the supplied path cannot induce either
     skip, because FR-003 reads the state's content and root resolution reads the

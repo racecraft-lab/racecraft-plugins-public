@@ -1,5 +1,5 @@
 {
-  "active_step": "Phase 4: Checklist - security",
+  "active_step": "Phase 5: Tasks",
   "archive_sweep": {
     "actions_taken": [],
     "eligible_specs": [],
@@ -38,6 +38,13 @@
     },
     "G3": {
       "markers": 0,
+      "pass": true
+    },
+    "G4": {
+      "domains": 3,
+      "gaps_found": 19,
+      "gaps_remaining": 0,
+      "items": 83,
       "pass": true
     }
   },
@@ -99,15 +106,15 @@
       "step": "Phase 4: Checklist - data-integrity Consensus"
     },
     {
-      "status": "in_progress",
+      "status": "completed",
       "step": "Phase 4: Checklist - security"
     },
     {
-      "status": "pending",
+      "status": "completed",
       "step": "Phase 4: Checklist - security Consensus"
     },
     {
-      "status": "pending",
+      "status": "in_progress",
       "step": "Phase 5: Tasks"
     },
     {
@@ -202,6 +209,17 @@
     "consensus_mode": "tier-a",
     "gate_failure": "stop"
   },
+  "slice_estimate": {
+    "estimated_loc": 317,
+    "signals": {
+      "files": 5,
+      "frs": 24,
+      "new_vs_modify": "modify",
+      "user_stories": 3
+    },
+    "status": "ok",
+    "suggested_slices": 1
+  },
   "spec_id": "ART-014",
   "stage": "full",
   "status": "in_progress",
@@ -212,6 +230,6 @@
     "passed": 7378,
     "total": 7378
   },
-  "updated_at": "2026-08-12T20:47:46Z",
+  "updated_at": "2026-08-12T21:07:02Z",
   "workflow_file": "docs/ai/specs/.process/ART-014-workflow.md"
 }

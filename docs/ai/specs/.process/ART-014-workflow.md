@@ -37,8 +37,8 @@ doubt them, and record any drift.
 | Specify | `/speckit-specify` | ✅ Complete | 13 FRs, 3 user stories, 12 acceptance scenarios. G1 helper passed; 2 markers found by hand, routed to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 3 consensus items all resolved in Round 1, 0 markers remain |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass, 0 markers. plan.md + research.md + quickstart.md; data-model and contracts justifiably skipped |
-| Checklist | `/speckit-checklist` | 🔄 In Progress | 3 domains: error-handling, data-integrity, security |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 83 items, 19 gaps all closed. 2 security items routed to consensus, both resolved |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -149,7 +149,17 @@ decision is what the warn path requires.
 |---|---|---|---|
 | Roadmap-declared (~120 LOC, 2 production, 5 total, modify-weighted) | 120 | 1 | ok |
 | Grill-me initial (3 stories, 3 files, 13 FRs, modify) | 195 | 1 | ok |
-| **Adopted — after Q8 and Q11 added authored files (3, 5, 13, modify)** | **235** | **1** | **ok** |
+| After Q8 and Q11 added authored files (3, 5, 13, modify) | 235 | 1 | ok |
+| **Adopted — after Clarify and Checklist grew the requirement set to 24 (3, 5, 24, modify)** | **317** | **1** | **ok** |
+
+**Third amendment, recorded at the security consensus.** The requirement count
+rose from 13 to 24 across three clarify sessions and three checklist domains, and
+the estimator was re-run rather than left stale, which is the failure ART-015
+exists to prevent. The figure moves 235 to 317, still one slice and still under
+the 400 ceiling. **No file was added**: every new requirement lands in the five
+already-declared files, and FR-006b in particular is a single-line change to the
+guard, which is production file one of four. The growth is requirement density
+rather than surface area, which is the shape a repair specification should have.
 
 **Split decision: one slice, no split.** The work is vertical. It cuts
 end-to-end through guard logic, error reporting, rule registration, tests, and
@@ -616,6 +626,50 @@ change, the repair did not take regardless of what the other 54 report.
 | 1 | Clarify S2 | When the supplied workflow resolves outside a successfully resolved repository root, does the guard fail or skip? | `[codebase] [security]` | 1 | all 3 (security always fans out) | **FAIL**, unanimous 3 of 3, all high confidence, no escape to Round 2 | FR-004c and FR-004d added to `spec.md` |
 | 2 | Clarify S3 | Must the shipped documentation quote the second failure sentence, "workflow file is outside the authorized repository"? | `[security] [spec]` | 1 | all 3 (security always fans out) | **OMIT**, 2 of 3. Codebase high, spec-context high, security dissenting at high | No new FR. FR-013's enumeration stays closed |
 | 3 | Clarify S3 | Should a test pin the `workflow_file` authority sentence in both protocol references? | `[spec] [codebase]` | 1 | codebase, spec-context | **NO-ASSERT**. Spec-context high; codebase ASSERT at medium, having explicitly deferred the deciding spec-intent signal to spec-context | Recorded as a deferred idea below, not implemented |
+| 4 | Checklist, security | Should repository-root resolution resolve the state path before walking, or is the spelling-dependent skip acceptable? | `[security]` | 1 | all 3 | **RESOLVE**, 2 of 3. Security high, codebase medium, spec-context dissenting at high on scope grounds | FR-006b added; FR-006a's second inducing input marked closed |
+| 5 | Checklist, security | Should the spec accept that a caller passing a different `--rule` bypasses the newly armed key? | `[security]` | 1 | all 3 | **ACCEPT**, 2 of 3. Spec-context high, codebase high, security dissenting at medium | No change; already ratified in Assumptions |
+
+**Item 4, why the scope objection lost.** The spec-context lens argued ACCEPT
+well: the roadmap's Scope lists three items, none of which is touching a shared
+resolution helper, and this project has a standing practice of recording a
+residual risk and deferring the fix, which produced ART-016 and ART-017.
+
+Two things outweighed it. First, the codebase lens dismantled the premise the
+acceptance rested on. The security checklist declined to propose a fix because
+the helper is shared, but tracing all three call sites shows **no consumer depends
+on the unresolved form**: every one already normalizes independently before use,
+at `:689`, `:973`, `:1267`, `:1323`, `:1581`, and `:3456`, and `_read_repo_bytes`
+already applies exactly this defensive normalization to exactly this value. No
+test locks the current behaviour in either, because every fixture builds absolute
+temporary paths. The blast radius of changing it is not large; the blast radius of
+**not** changing it is, because a false-negative root silently disables 16
+`repo_root`-gated conditions in `validate_projection_integrity`, not just this
+comparison.
+
+Second, the scope objection reads the roadmap too narrowly. Its first Scope item
+is "un-short-circuit the comparison". A root resolution that returns nothing for a
+file genuinely inside the repository is another short-circuit that stops the
+comparison from running, of the same kind as the marker-plan precondition this
+specification already exists to remove. Closing it is inside the stated scope
+rather than beyond it, and it costs no additional file: the guard is already
+production file one of four.
+
+**A correction to the panel's own record.** The codebase lens stated that this
+project's corpus-evidence harness had already produced vacuous passes through this
+exact defect. It did not. The before-half run used the relative form with the
+working directory at the repository root, so the root resolved as `.` and the 54
+of 54 measurement stands, as re-verified. The hazard was real and narrowly missed,
+which is a good argument for FR-006b, but it was not realised and the record
+should not say it was.
+
+**Item 5, why ACCEPT was straightforward.** The `--rule` mechanism is documented
+as deliberately caller-scoped in three independent first-party places that
+predate this specification, and 12 of the 20 existing problem keys already carry
+the identical bypass, including `checkpoint_source_fingerprint_errors`, the key
+this guard's identity errors are folded into today. The dissent rated itself
+medium and stated that its dividing line was a synthesis across sources rather
+than a rule any one source states. Both alternatives were weighed and rejected
+during the original interview.
 
 **Item 2, why OMIT beat a well-argued MENTION.** The security lens made the
 strongest external case in this run, grounded in CWE-1059, NIST SP 800-61r2,
@@ -971,8 +1025,8 @@ Focus on ART-014 requirements:
 |-----------|-------|------|-----------------|
 | error-handling | 32 | 6 found, 6 remediated, 0 remaining | FR-002, FR-004a, FR-006, FR-009, plan D1/D2/D5 |
 | data-integrity | 24 | 7 found, 7 remediated, 0 remaining | Edge Cases, SC-002, SC-006, US2 AS1, Key Entities, plan D1/D5/D8 |
-| security | | | |
-| **Total** | | | |
+| security | 27 | 6 found, 6 remediated, 0 remaining | FR-006a, FR-006b, Assumptions, plan D5/D8 |
+| **Total** | **83** | **19 found, 19 remediated, 0 remaining** | |
 
 #### Domain 1 Findings, error-handling
 
