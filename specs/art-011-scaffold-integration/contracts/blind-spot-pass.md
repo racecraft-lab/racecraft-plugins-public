@@ -43,9 +43,28 @@ pattern rather than invented (research.md R3):
 | Claude | `speckit-pro:codebase-analyst` | `Agent(subagent_type: "speckit-pro:codebase-analyst", run_in_background: true, ...)`, then **await completion before the interview begins** |
 | Codex | `codebase-analyst` | `spawn_agent`, then a bounded `wait_agent` loop until the actual summary is delivered — a status update or a timeout alone is **not** the result — then `close_agent` only when that action is exposed |
 
-The await is normative. The Claude agent definition carries `background: true`, so
-a dispatch that is not awaited returns an identifier rather than findings, and
-FR-001, FR-002, and FR-011 all become unsatisfiable at once.
+The await is normative (FR-002a). The Claude agent definition carries
+`background: true`, so a dispatch that is not awaited returns an identifier
+rather than findings, and FR-001, FR-002, and FR-011 all become unsatisfiable at
+once.
+
+**The bound, stated. A poll is not the deadline.** The shipped Codex rule is that
+"a `wait_agent` timeout is one bounded mailbox poll, not proof that an agent is
+stuck" (`speckit-pro/codex-skills/speckit-autopilot/SKILL.md`), and that a status
+update, an unrelated mailbox wake, or a terminal status without a delivered
+result is likewise not the result. So the loop keeps polling across those.
+Abandonment is governed by **one execution deadline for the whole pass**:
+
+| Bound | Value | On expiry |
+|---|---|---|
+| Per-poll `wait_agent` timeout | whatever the surface provides | keep polling; **not** a verdict |
+| Pass execution deadline | **5 minutes from dispatch** (Codex checks this via consecutive expired `wait_agent` polls; the poll count is not an independent trigger, and no Claude-side poll construct exists). Stipulated, not precedented — tunable through UAT, and lengthen rather than shorten | abandon the wait; record the §5 **did not run** outcome with reason `wait deadline expired` |
+
+This gives "no reply at all" exactly one observation point on each platform: the
+await returned without a summary, or the deadline expired. It is never inferred
+from a dispatch still running. A summary arriving after the deadline does **not**
+retroactively change the recorded outcome, because the interview has already
+started and FR-011 forbids interrupting it.
 
 ## 3. Seed
 
@@ -103,23 +122,65 @@ Two properties of this block are load-bearing and must not be paraphrased:
 - The literal Field Guide words **"blindspot pass"** and **"unknown unknowns"** (Q14, FR-005).
 - The operator's structural position, stated as fact rather than asked. Scaffold **must not** ask the operator about their familiarity before the pass (Q14, FR-005).
 
+### 4.1 Payload assembly — what follows the block, in what order
+
+The block is the whole of the framing. The §3 seed material is appended **below**
+it, in this order and under these literal labels (FR-005):
+
+```text
+Scope:
+<the roadmap entry's Scope text>
+
+Depends On:
+<the roadmap entry's Depends On chain>
+
+Key Files:
+<the Key Files section — this label and its text are omitted entirely when the entry has none>
+```
+
+The block's own words "the Scope text below" refer to exactly this appended
+material, so the order is part of the contract rather than a formatting
+preference. **Nothing else is appended**: no operator commentary, no prior
+findings, no spec text.
+
 ## 5. Reply classification — three disjoint outcomes, no judgement call
 
 A reply is **usable** when it contains at least one finding in the fixed shape,
 **or** the literal sentence `The blindspot pass raised no unknown unknowns.`
 
-| Outcome | Test | Header line records |
-|---|---|---|
-| **Ran** | a finding **or** the sentinel came back | how many findings were surfaced and how many set aside |
-| **Returned nothing usable** | a reply came back carrying neither | that the pass returned nothing usable, with the reason |
-| **Did not run** | no reply at all — dispatch error, timeout, or empty return | that the pass did not run, with the reason |
+| Outcome | Test | Operator status line (§6) | Header line (§9) |
+|---|---|---|---|
+| **Ran** | a finding **or** the sentinel came back | one of the three set-aside shapes | `ran — N findings surfaced, M set aside` |
+| **Returned nothing usable** | a reply came back carrying neither | the "returned nothing usable" shape | `returned nothing usable — <reason>` |
+| **Did not run** | no reply at all — dispatch error, empty return, or the §2 **execution deadline** expiring | the "did not run" shape | `did not run — <reason>` |
+
+**A single expired `wait_agent` poll is not the third outcome.** §2 fixes that
+boundary: a poll expiring is a cue to keep polling; only the pass execution
+deadline expiring abandons the wait.
+
+**"A finding in the fixed shape"** means a numbered item carrying a title and at
+least one of the two rationale lines. A numbered title with neither rationale
+line does not satisfy the test, because §6's reviewability property *is* the
+rationale and a bare title gives the operator nothing to check against the
+roadmap entry.
 
 Requiring the sentinel is what makes a silent empty reply impossible to mistake
-for a clean pass. The three tests are disjoint and mechanical.
+for a clean pass. The three tests are disjoint and mechanical, and each maps to
+exactly one operator string and exactly one header line — the mapping above is
+the single place that correspondence is stated, so §6 and §9 cannot disagree
+with it.
 
 ## 6. Cap, ranking, and the set-aside count
 
 **Cap**: at most five findings. **Not operator-configurable** (Q13, FR-006).
+
+**Scaffold enforces the cap on what it renders.** The dispatch block asks for at
+most five, but the reply is model output and cannot be relied on to obey. When
+more than five come back, scaffold shows the first five **in the analyst's own
+order**, counts the remainder, and states that count through the truncation
+string below. Scaffold must **not** re-rank, merge, or rewrite findings to fit:
+the ranking is the analyst's, and FR-023 forbids the machinery a re-rank would
+need.
 
 **Ranking is reviewable, not deterministic** (FR-006). Each finding carries one
 line of impact rationale and one line of surprise rationale, ordered by impact
@@ -137,8 +198,26 @@ Showing all N findings; none were set aside
 The blindspot pass raised no unknown unknowns.
 ```
 
+The third of these is the **sentinel echoed verbatim**. It is one string doing
+two jobs — the analyst's signal to scaffold and scaffold's line to the operator —
+and that is deliberate, so no second wording for "found nothing" can be invented.
+
 A truncation the operator cannot see reads as "that was everything", so the count
 is part of the contract rather than a nicety.
+
+**The two degraded outcomes get one status line each** (FR-006), so §8's block
+placeholder resolves in all three outcomes rather than only the first:
+
+```text
+The blind-spot pass returned nothing usable; continuing without findings. Reason: <reason>
+The blind-spot pass did not run; continuing without findings. Reason: <reason>
+```
+
+`<reason>` is one short clause naming what was observed — `reply carried neither
+a finding nor the sentinel`, `dispatch error: <message>`, `empty return`, or
+`wait deadline expired`. **Exactly one of the five status lines is emitted per
+run**, and the same `<reason>` clause is reused verbatim in the §9 header line so
+the printed record and the durable record cannot give different reasons.
 
 ## 7. Fail-open
 
@@ -192,6 +271,21 @@ absent ``. All five must survive verbatim.
 One line in the design concept's **existing** header blockquote, under the key
 `**Blind-spot pass:**`, recording exactly one of the three §5 outcomes (Q19,
 FR-010).
+
+**One shape per outcome, fixed.** SC-004 requires a reader to tell the outcomes
+apart from the header alone, which free-form prose cannot guarantee:
+
+```text
+> **Blind-spot pass:** ran — N findings surfaced, M set aside
+> **Blind-spot pass:** returned nothing usable — <reason>
+> **Blind-spot pass:** did not run — <reason>
+```
+
+The word immediately after the key is the discriminator, drawn from the closed
+set `ran`, `returned nothing usable`, `did not run`. `<reason>` is the same
+clause §6's status line carried. A pass that ran and raised nothing is the first
+shape with `N` and `M` both zero — which is exactly what distinguishes it from a
+pass that never ran, and is the distinction SC-004 exists to preserve.
 
 **Prohibitions** (FR-010, Q8):
 

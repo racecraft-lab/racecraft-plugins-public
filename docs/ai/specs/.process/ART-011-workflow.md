@@ -802,10 +802,50 @@ Focus on Scaffold Integration requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-contracts | | | |
+| api-contracts | 63 | 17 raised, 17 remediated, 0 outstanding (1 amended at consensus) | FR-002a (new), FR-005, FR-006, FR-010, FR-013a, FR-014, FR-018, FR-019; `contracts/blind-spot-pass.md` §2/§4.1/§5/§6/§9, `contracts/chain-handoff.md` §2/§8/§9; `plan.md` rows C6 and X7 |
 | error-handling | | | |
 | ux | | | |
 | **Total** | | | |
+
+#### api-contracts — what the domain actually caught
+
+Three of the seventeen were substantive rather than tidying.
+
+**The wait had no bound, and an expired poll was being read as a verdict.** The
+shipped Codex rule is explicit that "a `wait_agent` timeout is one bounded
+mailbox poll, not proof that an agent is stuck", and that interruption needs a
+separate execution deadline. Without the fix, a slow but healthy scan on a large
+repository would have been recorded as a pass that never ran, which is the
+fail-open path silently eating a real result.
+
+**The pre-chain predicate had already drifted in the one place it must not.**
+The requirement said the workflow path must "resolve inside" the checkout while
+the guard's own step 2 says "exists inside", and the contract then claimed the
+paraphrase was verbatim. Sharing a predicate is worthless if the two are worded
+independently; both now carry the guard's wording, and canonicalise-and-compare
+is explicitly banned.
+
+**Two of the three FR-006 outcomes had no header-line shape.** The seeded block
+carried a placeholder reading "the FR-006 status line for the outcome" that was
+unresolvable in exactly the two degraded cases the outcome contract exists to
+describe.
+
+**Consensus amended the fix, not just ratified it.** The first remediation set
+the deadline at "5 minutes or 3 consecutive expired polls, whichever comes
+first". That bundled two different defects: five minutes is merely unprecedented,
+but the poll count was **structurally mis-scoped** — "poll" has no Claude-side
+referent, so a whichever-comes-first rule would let Codex abandon earlier than
+Claude whenever its per-poll timeout is short, a behavioural divergence outside
+the four-item list SC-011 permits. The poll count is now a Codex-only cue for
+checking the single deadline.
+
+The five-minute value stays, marked as **stipulated rather than precedented**:
+this repository states the same deadline requirement in three shipped places and
+fixes a number in none of them, so there is no house value to inherit. It is
+chosen against the harm asymmetry, since a late reply is non-retroactive and too
+short a deadline permanently discards a real result, while too long only costs
+patience in an interruptible foreground run. Recorded as UAT-tunable, lengthen
+rather than shorten.
 
 ### Addressing Gaps
 

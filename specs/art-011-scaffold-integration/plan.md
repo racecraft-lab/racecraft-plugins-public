@@ -259,7 +259,7 @@ a list rather than a description.
 | C3 | Step 4 grill-me invocation | the `Skill("grill-me", args: {...})` block, `scope:` line | Amend so `scope` carries the roadmap text **plus** the labelled findings block | FR-008, FR-009, FR-010 |
 | C4 | Step 7 report closing line | `**Review both files first**` | Soften to `**Review both files**` | FR-013 |
 | C5 | New `### 9. Chain into the Planning Stage` | after Step 8's closing `**NEVER push to main.**` paragraph | Insert | FR-012, FR-013, FR-013a, FR-014, FR-015, FR-015b |
-| C6 | New `### 10. Closing Report` | after C5 | Insert | FR-016–FR-020 |
+| C6 | New `### 10. Closing Report` | after C5 | Insert. **Instruct the reader to read `WORKFLOW_TERMINAL_STATUSES` from `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`; do not write the six status literals into this file** | FR-016–FR-020 |
 
 The `## Scaffold Complete` report stays exactly where it is, inside Step 7 and
 ahead of Step 8, so C5 and C6 append after the end of the procedure. That
@@ -281,13 +281,24 @@ sites sit in the frontmatter or under `## What to Do`, well clear of it.
 | X4 | Step 4 grill-me input description | the `Invoke $grill-me ... with a setup-mode marker` bullet list | Amend so the scope input carries the labelled findings block. **Do not disturb the five pinned picker strings in this same step** | FR-008, FR-009, FR-010 |
 | X5 | `## Output` next-step instruction | the `the exact next step: start a new Codex task rooted at that worktree...` bullet | Amend to add the conditional chain while keeping new-task guidance for the ordinary case | FR-022 site 2 |
 | X6 | `## Output` parent-checkout prohibition | `Never hand off only the inner workflow path from the parent checkout. Do not suggest running autopilot from main, a detached checkout, or any workspace root other than the generated spec worktree.` | **Keep both sentences verbatim.** Preface them to apply when the chain does not fire | FR-022 site 3 |
-| X7 | `## Output` extension | after X6 | Insert the pre-chain check, the confirmation, the chain, and the closing report | FR-012–FR-020 |
+| X7 | `## Output` extension | after X6 | Insert the pre-chain check, the confirmation, the chain, and the closing report. **Same frozenset constraint as C6: read the shipped set, never write the six literals here** | FR-012–FR-020 |
 | X8 | `## Output` citation | `see openai/codex#7480` | Replace with the official Codex skills documentation, corroborated by `openai/codex#11817` | incidental defect |
 
 FR-016 is satisfied differently here and the plan follows the spec rather than
 forcing symmetry: the Codex scaffold report is a top-level `## Output` section
 that already follows Step 8, so the chain and closing report **extend that
 section** rather than becoming new numbered steps.
+
+**Terminal-status constraint (FR-020, ART-006 §4)**: C6 and X7 are the only two
+sites where the completion test is written, and both carry the same prohibition.
+The vocabulary is owned by the `WORKFLOW_TERMINAL_STATUSES` frozenset in
+`speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`.
+Each variant must instruct its reader to **read that frozenset**, and must not
+write the six status literals into the `SKILL.md` body. Two of the six differ
+only by a Unicode variation selector and render identically, so a hand copy is
+both forbidden and easy to get wrong. `contracts/chain-handoff.md` §9.1 carries
+no list either, deliberately, so there is nothing on the transcription path to
+copy from.
 
 **Pinned-string constraint (research.md R6)**: X2, X5, X6, and X8 are all safe —
 none of those sentences is string-pinned by
@@ -413,16 +424,21 @@ named, and they are):
 Three places. Each is resolved here rather than left to the implementer, and each
 resolution is recorded so a reviewer can disagree with it explicitly.
 
-**1. The dispatch must be awaited, and the spec never says so.** FR-002 fixes the
-engine and FR-011 fixes the flow, but neither states that scaffold waits for the
-analyst's summary before the interview starts. It matters because the Claude
-agent definition carries `background: true`: a background dispatch returns an
-identifier, not an answer. Without an explicit await, FR-001's "immediately
-before the interview" and FR-011's "flow straight into the interview" are both
-unsatisfiable. **Resolution**: copy the house consensus pattern — Claude
-dispatches with `run_in_background: true` and then awaits completion; Codex uses
-a bounded `wait_agent` loop until the actual summary arrives, treating a status
-update or timeout as not-the-result (research.md R3).
+**1. The dispatch must be awaited.** FR-002 fixes the engine and FR-011 fixes the
+flow, but neither stated that scaffold waits for the analyst's summary before the
+interview starts. It matters because the Claude agent definition carries
+`background: true`: a background dispatch returns an identifier, not an answer.
+Without an explicit await, FR-001's "immediately before the interview" and
+FR-011's "flow straight into the interview" are both unsatisfiable.
+**Resolution**: copy the house consensus pattern — Claude dispatches with
+`run_in_background: true` and then awaits completion; Codex uses a bounded
+`wait_agent` loop until the actual summary arrives, treating a status update or
+an expired poll as not-the-result (research.md R3). **This has since been
+promoted into the spec as FR-002a**, which also fixes the missing bound: a poll
+expiring is a cue to keep polling, and abandonment is governed by one pass
+execution deadline of five minutes from dispatch, platform-general. The plan
+no longer under-determines this; the entry is kept because the reasoning is the
+audit trail for why FR-002a exists.
 
 **2. The Codex runnable invocation is not what the contract table shows.**
 ART-006 §3 lists the Codex chain invocation as `<workflow-file> --stage plan`,
@@ -433,6 +449,11 @@ Codex chain that invokes a bare path. **Resolution**: the runnable Codex line is
 `$speckit-autopilot` followed by that argv, which is the invocation form the
 whole Codex skill set already uses and the form X8's corrected citation
 documents. The argv itself is unchanged from the contract (research.md R1).
+**This is a deviation from a normative source, not a quotation of one, and all
+three artifacts now say so**: spec.md FR-014 carries a per-platform table with a
+`Provenance` column marking the Codex row as a recorded deviation, and
+`contracts/chain-handoff.md` §5 carries the same record. A reviewer reconciling
+this spec against ART-006 §3 will find the two rows differ by design.
 
 **3. The new Claude step numbers are unallocated.** FR-012 places the chain
 "after Step 8" and the prompt forbids renumbering Steps 1–8, but the spec never
