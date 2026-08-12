@@ -500,9 +500,27 @@ in a follow-up nobody has filed.
 Executed against `4ecb1b4b`, the commit that merged the second slice, with all
 four templates shipped. **No step failed. No fix was required.**
 
-Six checks could not be executed as written; each is recorded below as *not
+Four kinds of check could not be executed as written, covering **fifteen of the
+sixty-one steps**: the disconnected reload (4), reduced motion (4), the focus
+indicator (4), and the greyscale filter (3). Each is recorded below as *not
 executed* with the substitute that was run instead. None of them is a pass, and
 a later run by a person still owes them.
+
+The closing list names six items rather than four, because it also carries the
+filesystem departure described in the next section, which is global rather than
+per-step, and a real screen-reader read, which is stronger than any step
+requires.
+
+**No step is recorded as a pass on evidence that covers only part of what it
+expects.** Where a step expects two things and only one was verified, the step is
+*not executed* and the verified half is recorded as the substitute. B4's
+reachable-set finding and A15's severity column are real results, and neither is
+a pass, because each step also asks for something a machine could not judge.
+
+One departure is of method rather than expectation, and is the reason A1, B1, C1
+and D1 still read as a pass: those four were run over HTTP rather than from the
+filesystem, which changes how the step was performed, not what it expects. The
+next section records it.
 
 ## How this run departed from the instructions
 
@@ -514,9 +532,11 @@ of their own, so behaviour is the same — but the runbook's central instruction
 the one thing this run could not follow, and the offline-from-disk claim
 therefore rests on the substitute in A2 rather than on A1.
 
-Anything needing an operating-system setting (reduced motion), a real assistive
-technology, a disconnected network, or a human eye on a focus ring is likewise
-recorded as not executed.
+Anything needing an operating-system setting (reduced motion), a disconnected
+network, a greyscale filter, or a human eye on a focus ring is likewise recorded
+as not executed. The two drawings are the one exception: their steps permit the
+accessibility inspector, which is what was used, so they are recorded as a pass
+even though no real screen reader was involved.
 
 ## Set A — Implementation Plan
 
@@ -525,7 +545,7 @@ recorded as not executed.
 | A1 | pass | All seven regions rendered. Console empty across two loads. |
 | A2 | not executed | Network was not disconnected. **Substitute:** the request log for a full load holds the document, one font stylesheet, and three font files, and nothing else. |
 | A3 | pass | Theme flipped `dark` → `light` on activation; storage available, so the choice persists. |
-| A4 | not executed | Focus rings were not observed by eye. **Substitute:** zero positive `tabindex`; twelve focusable elements in document order. |
+| A4 | not executed | Focus rings were not observed by eye. **Substitute:** zero positive `tabindex`; twelve focusable elements in document order; `:focus-visible` declares `outline: 2px solid var(--rc-link)` with a 2px offset for every focusable element type. That the indicator is *declared* is not evidence that it is *perceivable*. |
 | A5 | pass | All seven regions carry content; none empty. |
 | A5a | pass | `NIMBUS-101` visible; the rendered header states the content is a worked example. |
 | A5b | pass | Both lines present above the controls: one naming the destinations, one reading "Nothing you type here is saved." |
@@ -537,8 +557,8 @@ recorded as not executed.
 | A11 | pass | `Copy failed. The text is in the field below. Select it and copy it by hand.` Fallback revealed, focused, not disabled, labelled. No success reported. |
 | A12 | pass | After reload every field was empty and every disclosure closed. |
 | A13 | not executed | The OS setting was not changed. **Substitute:** a `prefers-reduced-motion` block exists; the file declares one transition, zero animations, zero keyframes. |
-| A14 | pass | The drawing carries `role="img"` and a `<title>`. The dashed edge's caption states its convention in words. |
-| A15 | pass | Severity is a text column in the risk table, not a hue. |
+| A14 | pass | The drawing carries `role="img"` and an accessible name via `aria-labelledby` → `<title>`. The dashed edge's caption states its convention in words. The same information is carried as text in the same region: the `FILL:data-flow` START and END markers bracket both the drawing and the **What the drawing says** prose that narrates it. Read with the accessibility inspector, which the step permits. |
+| A15 | not executed | No greyscale filter applied. **Substitute:** severity is a text column in the risk table, not a hue. The drawing's inverted persistence node was **not** judged against its siblings. |
 | A16 | pass | Exactly one `h1`; no skipped rank. |
 
 ## Set B — Spec Explainer
@@ -548,7 +568,7 @@ recorded as not executed.
 | B1 | pass | All six regions rendered; console empty. |
 | B2 | not executed | As A2; same substitute, same result. |
 | B3 | pass | Shared theme control, byte-identical to Set A's. |
-| B4 | pass | Focus reaches the theme control and four disclosure controls, and **nothing else** — no field, no button, no copy affordance. Zero positive `tabindex`. |
+| B4 | not executed | Focus rings were not observed by eye (as A4). **Substitute:** focus reaches the theme control and four disclosure controls, and **nothing else** — no field, no button, no copy affordance. Zero positive `tabindex`; the shared `:focus-visible` outline is declared. The reachable-set finding is solid; only the visibility half is unverified. |
 | B5 | pass | All six regions carry content. |
 | B5a | pass | `NIMBUS-101` visible; header states the content is sample. |
 | B6 | pass | Four disclosures, none carrying note text. |
@@ -563,7 +583,7 @@ recorded as not executed.
 | C1 | pass | All three regions rendered; console empty. |
 | C2 | not executed | As A2. |
 | C3 | pass | Shared theme control. |
-| C4 | pass | Zero positive `tabindex`; no trap. Focus ring itself not observed (as A4). |
+| C4 | not executed | Focus ring not observed (as A4). **Substitute:** zero positive `tabindex`; no trap; the shared `:focus-visible` outline is declared. |
 | C5 | pass | All three regions carry content; `NIMBUS-101` visible. |
 | C5a | pass | Both lines present. |
 | C6 | pass | A single `fieldset` whose legend is the question, **Which approach should this change take?** Three radios share one name; each label names its own approach. The `fieldset` encloses both markers of the `approaches` region, so it wraps the region from outside. |
@@ -584,7 +604,7 @@ recorded as not executed.
 | D1 | pass | All five regions rendered; console empty. |
 | D2 | not executed | As A2. |
 | D3 | pass | Shared theme control. |
-| D4 | pass | Zero positive `tabindex`; five objection disclosures, each after its own module. Focus ring not observed (as A4). |
+| D4 | not executed | Focus ring not observed (as A4). **Substitute:** zero positive `tabindex`; five objection disclosures, each after its own module; the shared `:focus-visible` outline is declared. |
 | D5 | pass | All five regions carry content. |
 | D5a | pass | `NIMBUS-101` visible; the not-saved line present. |
 | D6 | pass | Summary moved to `note recorded`; a whitespace-only field still read `no note recorded`. |
@@ -593,7 +613,7 @@ recorded as not executed.
 | D9 | pass (verified statically) | The renderer stalled under unrelated machine load partway through this set. All four pinned strings were instead confirmed present verbatim in the committed source. |
 | D10 | pass, under 3 s | Nothing retyped. |
 | D11 | pass | The cause-neutral message; field focused. |
-| D12 | pass | The graph carries a `<title>` and **no** `role="img"`, so upstream's single-image marking did not survive and all seventeen internal labels stay reachable. |
+| D12 | pass | The graph carries an accessible name via `aria-labelledby` → `<title>`, and **no** `role="img"`, so upstream's single-image marking did not survive and all seventeen internal labels stay reachable. The same information is carried as text in the same region: the `FILL:module-graph` START and END markers bracket both the drawing and the **What the drawing says** prose. Read with the accessibility inspector, which the step permits. |
 | D13 | not executed | No greyscale filter applied. **Substitute:** the distinguished path is carried by `stroke-width` 3 against 1.5 and by six `ON PATH` text tags. No hue is load-bearing. |
 | D14 | not executed | As A13. |
 | D15 | pass (verified statically) | All four templates make zero non-theme `setItem` calls, so nothing a reader records can outlive a reload. |
@@ -609,4 +629,7 @@ recorded as not executed.
    all, since it is the SC-010 evidence.
 5. **Tab through each document** and confirm the focus indicator is visible
    (A4, B4, C4, D4).
-6. **Read the two drawings with a real screen reader** (A14, D12).
+6. **Read the two drawings with a real screen reader** (A14, D12). These two are
+   recorded as a pass, and are the only entry in this list that is not a gap in
+   coverage: the step permits the accessibility inspector, and that is what was
+   used. A real screen reader is stronger than the runbook asks for.
