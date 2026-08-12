@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -32,13 +32,20 @@
 ## Notes
 
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
-- **Two `[NEEDS CLARIFICATION]` markers remain**, both in the Assumptions section
-  and both carried forward deliberately from the design concept's Open Questions.
-  Neither blocks planning; both are routed to `/speckit-clarify`:
+- **Both `[NEEDS CLARIFICATION]` markers are now resolved.** They sat in the
+  Assumptions section, carried forward deliberately from the design concept's
+  Open Questions, and neither blocked planning. Clarify closed both, and the
+  Assumptions section now records each answer rather than the question:
   1. The follow-up roadmap identifier for the Claude-side live pull-request commit
-     fetch. The shipped note carries a placeholder until that entry exists.
-  2. Whether the two tracked autopilot state slots are read by different callers,
-     and therefore whether both should continue to exist.
+     fetch is **ART-016, Claude-Side Live PR Commit Authority**, created in the
+     technical roadmap by this change so the note added to the shipped
+     documentation cites an entry that exists. The placeholder is gone.
+  2. The two tracked autopilot state slots **are** read by different callers, so
+     both remain and no follow-up entry is needed. This change records the
+     finding only. It confirms FR-003 rather than complicating it, because the
+     older slot legitimately carries no `workflow_file`.
+  Re-measured during Analyze: the marker count across `spec.md` and `plan.md` is
+  zero.
 - **Audience caveat on "written for non-technical stakeholders".** The users of
   this feature are maintainers of the tooling itself, so the domain vocabulary
   (problem key, rule, state record, workflow file) is the stakeholder vocabulary.

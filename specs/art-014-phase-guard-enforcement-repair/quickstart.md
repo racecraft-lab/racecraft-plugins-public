@@ -122,8 +122,10 @@ committed docs-site test reference page. That is the one command needing the
 **Proves**: SC-002. The before-half is already measured and recorded in the
 workflow file under "Corpus Regression Evidence": 54 of 54 exit 0, canary exits 0.
 
-Reuse that harness unchanged so the two halves are comparable. Four properties
-are load-bearing:
+Reuse that harness unchanged so the two halves are comparable. Five properties
+are load-bearing: the four harness conditions T025 names, plus the canary, which
+T025 carries in its acceptance rather than in that four. Same harness either way;
+the two artifacts only divide it differently.
 
 1. The denominator is pinned to the baseline commit, listed with `git ls-tree`
    against that commit, so it cannot drift as new specifications land. This
@@ -135,7 +137,16 @@ are load-bearing:
    derived from the **state** path, so a state in a scratch directory outside the
    tree resolves no root, every comparison skips under FR-006, and all 54 files
    report a pass while proving nothing.
-4. The harness includes the deliberately mismatched canary.
+4. The state path is **passed in a form the root walk can resolve from**: either
+   absolute, or relative with the working directory at the repository root. Record
+   which. This is a second condition, not a restatement of the third. Property 3
+   was necessary but not sufficient for the before-half, because the walk then
+   read the state path as supplied, so a state file sitting inside the repository
+   but named relatively from a subdirectory resolved no root and produced the same
+   54 vacuous passes. FR-006b closes that input in the repaired guard, so the
+   after-half does not depend on the spelling; the condition stays because the two
+   halves must run the identical harness to be comparable.
+5. The harness includes the deliberately mismatched canary.
 
 **Expected**: 54 of 54 still exit 0, and the canary flips from 0 to 1 with a
 non-empty `workflow_authority_errors`.

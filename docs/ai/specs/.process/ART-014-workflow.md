@@ -39,9 +39,9 @@ doubt them, and record any drift.
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass, 0 markers. plan.md + research.md + quickstart.md; data-model and contracts justifiably skipped |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 83 items, 19 gaps all closed. 2 security items routed to consensus, both resolved |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass, 27 tasks across 6 phases, 0 markers. One scope gap found and fixed: the plan declared 5 files, FR-013c needs a 6th |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | |
+| Analyze | `/speckit-analyze` | ✅ Complete | G6 pass. 9 findings (0 critical, 2 high, 5 medium, 2 low), all remediated, 0 after 2 loops, nothing reopened |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Implement | `/speckit-implement` | 🔄 In Progress | 27 tasks across 6 phases |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -1265,10 +1265,10 @@ Focus on:
 
 | Field | Value |
 |-------|-------|
-| Mode | |
-| Composite confidence | |
-| Verdict | |
-| Evidence | |
+| Mode | `advisory`, resolved at Step 0.6b |
+| Composite confidence | none computed |
+| Verdict | `soft_skip`, treated as proceed |
+| Evidence | The helper reports `no confidence emit found` against a 0.90 threshold. No synthesizer emitted a `Confidence: X.XX` line, because all five consensus items resolved in Round 1 on analyst verdicts rather than through a synthesizer scoring pass. Under advisory mode a `soft_skip` proceeds; under strict mode this would have stopped for an operator decision. |
 
 ---
 

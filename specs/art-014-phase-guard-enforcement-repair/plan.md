@@ -50,12 +50,16 @@ comparison per run.
 gated pull-request-head byte comparison must keep its current preconditions,
 semantics, and reporting key. Exactly one problem key may be armed.
 
-**Scale/Scope**: One authored guard of 4116 lines, five authored files, four
+**Scale/Scope**: One authored guard of 4116 lines, six authored files, four
 generated copies refreshed by repository tooling.
 
 **Reviewability Budget**: Primary surface harness/adapter, secondary surface
-docs/process; 235 projected reviewable LOC; 4 production files; 9 total files;
-within budget.
+docs/process; 337 projected reviewable LOC; 5 production files; 10 total files;
+within budget. Re-declared during Tasks, from 235 LOC across 4 production files
+and 9 total, when the Declared File Operations below gained its sixth entry and
+the estimator was re-run on the grown requirement set. See spec.md's Reviewability
+Budget revision note. Every verdict is unchanged: one slice, within budget, no
+typed exception.
 
 ## Declared File Operations
 
@@ -65,6 +69,14 @@ within budget.
 - MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md
 - MODIFIED speckit-pro/codex-skills/speckit-autopilot/SKILL.md
 - MODIFIED tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py
+
+The Codex `SKILL.md` entry was added during Tasks. FR-013c requires the
+references index amended "on both platforms", and the only references-index entry
+naming the protocol document on the Codex side lives in that file, so the
+requirement could not be satisfied within the five entries this list originally
+carried. Dropping the requirement would have violated the specification and
+editing the file silently would have violated the declaration, so the declaration
+was corrected instead and the estimator re-run. T021 performs the edit.
 
 Four further tracked copies of the guard are **generated, never hand-edited**:
 `dist/claude`, `dist/codex`, and the two installed-cache proofs under
@@ -156,7 +168,12 @@ of errors. It performs no I/O beyond the repository-root walk that
 `_repository_root` already does.
 
 Branch order is fixed by FR-004d, because an earlier skip must win over a later
-failure:
+failure. The table below has seven rows where FR-004d names five branches, which
+is one order counted at two levels rather than a disagreement: FR-004d names the
+branches carrying a requirement-level verdict, and the implementation refines them
+by splitting malformed into rows 3 and 4, which must be separate for the reason
+given below the table, and by making the pass explicit as row 7. D6.2 and D6.3
+have the documentation carry FR-004d's five; the code carries all seven.
 
 | # | Condition | Verdict | Requirement |
 |---|---|---|---|
@@ -527,13 +544,17 @@ comparable:
   directory outside the tree resolves no root, every comparison skips under
   FR-006, and all 54 files report a pass while proving nothing;
 - the state path **passed in a form the root walk can resolve from**, which is a
-  second condition rather than a restatement of the first. Per FR-006a the walk
-  reads the state path as supplied, not a resolved form, so a relative state
-  argument has a parents chain that terminates at the working directory. Writing
-  the file inside the repository and then naming it relatively from a
-  subdirectory resolves no root and produces the same 54 vacuous passes. Pass it
-  absolute, or relative with the working directory at the repository root, and
-  record which was used;
+  second condition rather than a restatement of the first. When the before-half
+  was measured the walk read the state path as supplied, not a resolved form, so
+  a relative state argument had a parents chain terminating at the working
+  directory: writing the file inside the repository and then naming it relatively
+  from a subdirectory resolved no root and produced the same 54 vacuous passes.
+  FR-006b closes that in the repaired guard, so the after-half does not depend on
+  the spelling. Keep the condition for both halves regardless. Reusing the
+  identical harness is what makes the pair comparable, and recording the form
+  used is what lets a reader distinguish a genuine after-half pass from one the
+  old walk would also have produced. Pass it absolute, or relative with the
+  working directory at the repository root, and record which was used;
 - the same invocation;
 - the deliberately mismatched canary in the same harness.
 
