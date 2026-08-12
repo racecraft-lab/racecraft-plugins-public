@@ -158,7 +158,7 @@ rules on it.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | 42 FRs, 2 user stories; budget corrected to a block |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Run session 1 **after** the upstream source is fetched |
 | Plan | `/speckit-plan` | ⏳ Pending | Re-declare the reviewability budget here |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Three domains: accessibility, ux, error-handling |
@@ -371,17 +371,40 @@ lets them hand their questions back without retyping them from memory.
 
 ### Specify Results
 
-<!-- Fill in after running the command -->
+Completed 2026-08-12. **G1 PASS** — `spec.md` exists, gate reports 0 markers.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | 42 unique (`FR-001`…) |
+| User Stories | 2 (`US1` read, `US2` hand questions back) |
+| Acceptance Criteria | Measurable Outcomes section, plus per-story acceptance |
+| Spec length | 458 lines |
+| Absolute paths | 0 (privacy scan clean) |
+
+**Orchestrator correction applied to `spec.md`.** The executor wrote the
+Reviewability Budget before the measured correction reached it, so it recorded
+the stale `~750` and a `warn` result. The orchestrator rewrote both the
+Reviewability Notes and the Reviewability Budget to the measured `~1000–1200`
+and a `block` result, with the four-template evidence table and the upstream
+`17-pr-writeup.html` composition inline. See the Slice Plan correction above.
+
+**Gate blind spot worth carrying.** G1 and G2 count the bare literal
+`[NEEDS CLARIFICATION]` (`speckit_pro_runner/helpers/read_only.py:885`). The
+spec uses the annotated `[NEEDS CLARIFICATION: <text>]` form, which that pattern
+does not match, so both gates report 0 and pass no matter how many annotated
+markers the spec carries. The three open markers below are therefore **not**
+gate-enforced and must be resolved by hand in Clarify:
+
+1. `spec.md:211` — whether the `implementation-notes` region's declared source
+   is reachable at authoring time.
+2. `spec.md:230` — which of the six slots hold a repeated list rather than
+   prose, which decides `LIST_SLOTS` membership and the `MINIMUM_ITEMS` rule.
+3. Reviewability Notes — how slice 1 clears the boundary, given that no valid
+   exception class fits and no further split is available.
 
 ### Files Generated
 
-- [ ] `specs/art-003-final-pr-template-set/spec.md`
+- [x] `specs/art-003-final-pr-template-set/spec.md`
 
 ### SpecKit Traceability Markers
 
