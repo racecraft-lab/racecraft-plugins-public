@@ -6,7 +6,7 @@
   "branch": "art-011-scaffold-integration",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 2: Clarify - Chain Confirmation and Closing Report",
+  "active_step": "Phase 3: Plan",
   "updated_at": "2026-08-12T18:00:00Z",
   "prior_run_note": "Reclaimed the single state slot from docs/ai/specs/.process/ART-012-workflow.md (prior status: completed_archived). Reclaiming is normal operation - one slot, many specs.",
   "settings": {
@@ -67,15 +67,15 @@
     },
     {
       "step": "Phase 2: Clarify - Chain Confirmation and Closing Report",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Chain Confirmation and Closing Report Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - api-contracts",
@@ -180,6 +180,11 @@
         "markers": 0
       },
       "discrepancy": "validate-gate counts the literal regex [NEEDS CLARIFICATION] (read_only.py:885); the active spec template prescribes the colon form (spec-template.md:98-99), so template-shaped markers are never counted. G1 decided on the true count."
+    },
+    "G2": {
+      "verdict": "pass",
+      "markers": 0,
+      "reason": "all 3 [NEEDS CLARIFICATION] markers resolved across 3 clarify sessions"
     }
   },
   "archive_sweep": {

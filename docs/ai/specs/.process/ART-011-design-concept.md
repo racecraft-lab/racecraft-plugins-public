@@ -541,6 +541,50 @@ the pass and the chain.
 
 ---
 
+## Revision Notes
+
+### 2026-08-12 — Q4's platform-equality premise corrected
+
+Q4 chose an in-session chain and did not split by platform. The **decision
+stands**; its unexamined **premise** does not. Q4 assumed both platforms may
+attempt the chain under the same condition, and that is factually wrong.
+
+Three shipped facts, each verified during Clarify session 3:
+
+- The Codex scaffold's Hard Constraints say `Do not run the autopilot at the
+  end`, and its Output section requires a new task rooted at the worktree while
+  forbidding hand-off from the parent checkout.
+- The Codex autopilot's Workflow Worktree Binding guard is fail-closed and runs
+  before any read or mutation, stopping whenever the supplied workflow path is
+  not inside the current checkout.
+- A Codex task's workspace root is fixed when the task starts and cannot be
+  changed from within the session. Scaffold necessarily begins before the
+  worktree exists, so the ordinary Codex session is rooted at the parent
+  checkout. Confirmed externally: the CLI exposes no mid-session working-directory
+  command, and two open upstream issues describe exactly this gap.
+
+Corrected, superseding Q4's unconditional wording:
+
+1. **Codex** attempts the chain only when the workflow path already resolves
+   inside the current checkout — deliberately the same predicate the autopilot
+   guard itself applies, so the two can never disagree. Otherwise scaffold asks
+   nothing and prints the hand-off command.
+2. **Claude** is unchanged. Q4's premise holds there, because Claude's scaffold
+   already relocates into the worktree and runs each step from it.
+3. A **fourth** permitted platform divergence joins the three FR-022 and SC-011
+   already list: whether the chain is attempted at all.
+
+The honest consequence: on Codex the one-command experience is now the exception
+rather than the rule. That is a platform capability limit rather than a design
+retreat, and the alternative was worse — an unconditional Codex chain either
+stops at the guard, making the single confirmation a false promise, or, when a
+stale same-named workflow file sits in the parent checkout, runs planning phases
+and commits into `main`.
+
+This follows the project's established handling of a corrected premise, matching
+the pattern used in `CAR-005-design-concept.md`: amend in place with a dated
+note, leave the decision intact.
+
 ## Decisions recorded without a question
 
 Both were named at the closing checkpoint and accepted with the wrap-up:
