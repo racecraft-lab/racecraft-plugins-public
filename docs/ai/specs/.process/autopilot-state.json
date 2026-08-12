@@ -1,372 +1,187 @@
 {
-  "workflow_file": "docs/ai/specs/.process/ART-012-workflow.md",
-  "spec_id": "ART-012",
-  "feature_dir": "specs/art-012-implementation-notes-capture",
-  "branch": "art-012-implementation-notes-capture",
-  "status": "completed_archived",
-  "active_step": null,
-  "updated_at": "2026-08-12T02:30:00Z",
-  "stage": "implement",
-  "prior_run_note": "completed_archived",
-  "settings": {
-    "consensus_mode": "tier-a",
-    "gate_failure": "stop",
-    "auto_commit": true,
-    "confidence_gate_mode": "advisory",
-    "agent_teams_available": true
-  },
+  "active_step": "Phase 2: Clarify - The Advisory Audit",
   "archive_sweep": {
-    "status": "applied",
-    "reason": "ART-012 merged in PR #426 and ART-002 in PRs #425/#427/#430; a live-reader scan on both bare directory names found no dependent code, so both folders left active specs/ in one cleanup",
-    "archived_specs": [
-      "art-002-draft-pr-template-set",
-      "art-012-implementation-notes-capture"
-    ]
+    "actions_taken": [],
+    "eligible_specs": [],
+    "files_modified": [],
+    "invocation": "--sweep --current-target specs/art-014-phase-guard-enforcement-repair --dry-run",
+    "mode": "dry_run",
+    "notes": "brand-001 not eligible (scaffold only, no spec.md/plan.md, MOC status pending). ART-002/ART-012 already archived via PR #431; dated reports exist. Cleanup gate 7 would block apply on a non-main branch regardless.",
+    "ran": true
   },
-  "project_commands": {
-    "UNIT_TEST": "python3 tests/speckit-pro/run-all.py",
-    "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
-    "TYPECHECK": "N/A",
-    "LINT": "N/A",
-    "BUILD": "N/A"
+  "branch": "art-014-phase-guard-enforcement-repair",
+  "feature_dir": "specs/art-014-phase-guard-enforcement-repair",
+  "gates": {
+    "G1": {
+      "helper_markers": 0,
+      "note": "helper regex \\[NEEDS CLARIFICATION\\] misses the template-prescribed colon form; routed to Clarify on the true count",
+      "pass": true,
+      "true_markers": 2
+    }
   },
   "plan": [
     {
-      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
-      "status": "completed"
+      "status": "completed",
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility"
     },
     {
-      "step": "Phase 0: Prerequisites",
-      "status": "completed"
+      "status": "completed",
+      "step": "Phase 0: Prerequisites"
     },
     {
-      "step": "Phase 1: Specify",
-      "status": "completed"
+      "status": "completed",
+      "step": "Phase 1: Specify"
     },
     {
-      "step": "Phase 2: Clarify - Reporting Contract Wording",
-      "status": "completed"
+      "status": "in_progress",
+      "step": "Phase 2: Clarify - The Advisory Audit"
     },
     {
-      "step": "Phase 2: Clarify - Reporting Contract Wording Consensus",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 2: Clarify - The Advisory Audit Consensus"
     },
     {
-      "step": "Phase 2: Clarify - Append Semantics",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 2: Clarify - Comparison Semantics And The Corpus Contract"
     },
     {
-      "step": "Phase 2: Clarify - Append Semantics Consensus",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 2: Clarify - Comparison Semantics And The Corpus Contract Consensus"
     },
     {
-      "step": "Phase 3: Plan",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 2: Clarify - Documentation Truth And Platform Reach"
     },
     {
-      "step": "Phase 4: Checklist - error-handling",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 2: Clarify - Documentation Truth And Platform Reach Consensus"
     },
     {
-      "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 3: Plan"
     },
     {
-      "step": "Phase 4: Checklist - state-management",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 4: Checklist - error-handling"
     },
     {
-      "step": "Phase 4: Checklist - state-management Consensus",
-      "status": "skipped: executor reported zero unresolved items"
+      "status": "pending",
+      "step": "Phase 4: Checklist - error-handling Consensus"
     },
     {
-      "step": "Phase 5: Tasks",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 4: Checklist - data-integrity"
     },
     {
-      "step": "Phase 6: Analyze",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 4: Checklist - data-integrity Consensus"
     },
     {
-      "step": "Phase 6: Analyze - Consensus",
-      "status": "skipped: executor reported zero unresolved items"
+      "status": "pending",
+      "step": "Phase 4: Checklist - security"
     },
     {
-      "step": "Phase 6.5: Confidence Gate",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 4: Checklist - security Consensus"
     },
     {
-      "step": "Phase 7: Implement - T001 amendment cascade + budget verification",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 5: Tasks"
     },
     {
-      "step": "Phase 7: Implement - T002 record-contract test (RED)",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 6: Analyze"
     },
     {
-      "step": "Phase 7: Implement - T003+T004 phase-execution.md lifecycle + append contract",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 6: Analyze - Consensus"
     },
     {
-      "step": "Phase 7: Implement - T005 phase-execution-codex.md mirror",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 6.5: Confidence Gate"
     },
     {
-      "step": "Phase 7: Implement - T014 agent-teams-integration.md stale-claim correction",
-      "status": "completed"
+      "status": "pending",
+      "step": "Phase 7: Implement"
     },
     {
-      "step": "Phase 7: Implement - T006 reporting-field assertions (RED)",
-      "status": "completed"
+      "status": "pending",
+      "step": "Post: Doctor Extension Check"
     },
     {
-      "step": "Phase 7: Implement - T007+T008+T009 reporting field, three files",
-      "status": "completed"
+      "status": "pending",
+      "step": "Post: Verify Implementation"
     },
     {
-      "step": "Phase 7: Implement - T010 regenerate payloads/fixtures/proofs",
-      "status": "completed"
+      "status": "pending",
+      "step": "Post: Verify Tasks Phantom Check"
     },
     {
-      "step": "Phase 7: Implement - T011 regenerate docs test reference",
-      "status": "completed"
+      "status": "pending",
+      "step": "Post: Code Review"
     },
     {
-      "step": "Phase 7: Implement - T012 full verification gate + quickstart",
-      "status": "completed"
+      "status": "pending",
+      "step": "Post: Integration Suite"
     },
     {
-      "step": "Phase 7: Implement - T013 PR packet input verification",
-      "status": "completed"
+      "status": "pending",
+      "step": "Post: Reviewability Diff Gate"
     },
     {
-      "step": "Post: Doctor Extension Check",
-      "status": "completed"
+      "status": "pending",
+      "step": "Post: Self-Review"
     },
     {
-      "step": "Post: Verify Implementation",
-      "status": "completed"
+      "status": "pending",
+      "step": "Post: UAT Runbook Generation"
     },
     {
-      "step": "Post: Verify Tasks Phantom Check",
-      "status": "completed"
+      "status": "pending",
+      "step": "Post: PR Body Generation"
     },
     {
-      "step": "Post: Code Review",
-      "status": "completed"
+      "status": "pending",
+      "step": "Post: PR Creation"
     },
     {
-      "step": "Post: Integration Suite",
-      "status": "completed"
+      "status": "pending",
+      "step": "Post: Review Remediation"
     },
     {
-      "step": "Post: Reviewability Diff Gate",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Self-Review",
-      "status": "completed"
-    },
-    {
-      "step": "Post: UAT Runbook Generation",
-      "status": "skipped: generate-uat-skeleton deferred on the installed runner; no committed skeleton, so uat-runbook-author was not spawned"
-    },
-    {
-      "step": "Post: PR Body Generation",
-      "status": "completed"
-    },
-    {
-      "step": "Post: PR Creation",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Review Remediation",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Retrospective",
-      "status": "completed"
+      "status": "pending",
+      "step": "Post: Retrospective"
     }
   ],
+  "prior_run_note": "completed_archived",
+  "project_commands": {
+    "BUILD": "N/A",
+    "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
+    "INTEGRATION_TEST": "N/A",
+    "LINT": "N/A",
+    "LINT_FIX": "N/A",
+    "SINGLE_FILE_INTEGRATION": "N/A",
+    "SINGLE_FILE_TEST": "N/A",
+    "TYPECHECK": "N/A",
+    "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
+  },
+  "settings": {
+    "agent_teams_available": true,
+    "auto_commit": true,
+    "confidence_gate_mode": "advisory",
+    "consensus_mode": "tier-a",
+    "gate_failure": "stop"
+  },
+  "spec_id": "ART-014",
+  "stage": "full",
+  "status": "in_progress",
   "test_baseline_g0": {
-    "passed": 7226,
-    "total": 7226,
     "l1": 1447,
-    "l4": 5593,
-    "l5": 186
+    "l4": 5745,
+    "l5": 186,
+    "passed": 7378,
+    "total": 7378
   },
-  "gates": {
-    "G1": {
-      "pass": true,
-      "markers": 0,
-      "reason": "spec.md exists with 0 markers"
-    },
-    "G2": {
-      "pass": true,
-      "markers": 0,
-      "reason": "0 [NEEDS CLARIFICATION] markers"
-    },
-    "G3": {
-      "pass": true,
-      "markers": 0,
-      "reason": "plan.md exists with 0 unresolved markers"
-    },
-    "G4": {
-      "pass": true,
-      "markers": 0,
-      "reason": "0 [Gap] markers"
-    },
-    "G5": {
-      "pass": true,
-      "task_count": 14,
-      "reason": "14 tasks found"
-    },
-    "G6": {
-      "pass": true,
-      "reason": "0 CRITICAL/HIGH findings"
-    },
-    "G7": {
-      "pass": true,
-      "passed": 7305,
-      "total": 7305,
-      "baseline": 7226,
-      "reason": "full suite 7305/7305, above the recorded 7226 baseline"
-    }
-  },
-  "plan_reviewability": {
-    "status": "pass",
-    "projected": 0,
-    "declared_entries": 8,
-    "note": "classifier does not count Markdown/TOML under speckit-pro/; authoritative projection is 155 from estimate-spec-size"
-  },
-  "atomicity_route": {
-    "route": "one-navigable-PR",
-    "releasable": true,
-    "signals": [
-      "change-shape:modify-heavy"
-    ],
-    "hints": [],
-    "warnings": []
-  },
-  "layer_plan": {
-    "status": "skipped",
-    "reason": "route is one-navigable-PR, not split-PR"
-  },
-  "tasks_reviewability": {
-    "mode": "tasks",
-    "helper_id": "reviewability-gate",
-    "status": "deferred",
-    "exit_code": 2,
-    "fallback": "setup-mode warn/pass + plan-phase estimate-reviewable-loc pass + one-slice split decision"
-  },
-  "confidence_gate": {
-    "mode": "advisory",
-    "composite": 0.95,
-    "threshold": 0.9,
-    "verdict": "proceed",
-    "criteria": {
-      "task_understanding": 0.98,
-      "approach_clarity": 0.96,
-      "requirements_alignment": 0.96,
-      "risk_assessment": 0.92,
-      "completeness": 0.93
-    },
-    "test_baseline": {
-      "passed": 7226,
-      "total": 7226,
-      "l1": 1447,
-      "l4": 5593,
-      "l5": 186
-    },
-    "note": "re-run 2026-08-11 after the operator amendment restoring the per-task append guarantee; supersedes the 0.93 emit"
-  },
-  "amendment": {
-    "date": "2026-08-11",
-    "decision": "operator restored the literal per-task append guarantee",
-    "supersedes": "Clarify session 2 consensus narrowing",
-    "reason": "agent-teams-integration.md:75-76 claimed batched result delivery; platform docs and direct observation show per-completion push",
-    "added": [
-      "FR-006 teammate report obligation",
-      "T014 stale-claim correction",
-      "6th production file"
-    ],
-    "budget": {
-      "reviewable_loc": 190,
-      "production_files": 6,
-      "total_files": 9,
-      "status": "ok"
-    },
-    "cascade": {
-      "date": "2026-08-11",
-      "note": "T001 cascaded the ratified 190/6/9 budget into plan.md, tasks.md, quickstart.md and research.md R11; added agent-teams-integration.md as the 9th declared file operation; aligned T002's contract-item enumeration with the amended contract (items 6b/6c) and relocated T014 into User Story 1",
-      "estimator_rerun": {
-        "estimated_loc": 190,
-        "suggested_slices": 1,
-        "status": "ok"
-      },
-      "estimator_inputs": {
-        "user_stories": 2,
-        "files": 6,
-        "frs": 6,
-        "new_vs_modify": "modify"
-      }
-    }
-  },
-  "pr": {
-    "number": 426,
-    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/426",
-    "title": "feat(art-012): Capture implementation notes during autopilot implementation",
-    "base": "main",
-    "head": "art-012-implementation-notes-capture",
-    "packet_id": "art-012",
-    "packet_validation": "passed",
-    "pr_blocked": false
-  },
-  "post_implementation_audit": {
-    "method": "6 auditors/reviewers, adversarial refutation, workflow wf_85510f0d-cf3",
-    "raw_findings": 8,
-    "real_defects": 5,
-    "introduced_by_this_run": 4,
-    "would_have_shipped": [
-      "quickstart Scenario 1 returned 5 files where it asserts 3",
-      "the produced record used compound task-ID headings, violating its own contract"
-    ]
-  },
-  "final_gate": {
-    "suite": "7309/7309",
-    "baseline": 7226,
-    "ci": "10 checks pass",
-    "copilot_review": "no blocking issues"
-  },
-  "archive": {
-    "archived_at": "2026-08-12",
-    "pull_request": 426,
-    "merge_commit": "1916d8c917eea4892035daafe4c02d2558e203f3",
-    "merged_at": "2026-08-11T21:51:02Z",
-    "cleanup_branch": "chore/archive-art-post-merge",
-    "cleanup_applied": true,
-    "source_spec_path_removed": "specs/art-012-implementation-notes-capture",
-    "process_evidence_preserved": [
-      "docs/ai/specs/.process/ART-012-workflow.md",
-      "docs/ai/specs/.process/ART-012-design-concept.md"
-    ],
-    "report": ".specify/memory/archive-reports/2026-08-12-art-012-post-merge-hygiene.md",
-    "also_archived_in_this_cleanup": {
-      "spec_id": "ART-002",
-      "pull_requests": [
-        425,
-        427,
-        430
-      ],
-      "merge_commit": "425364b7be34d5b88605012d0492c0e97bdbefaf",
-      "merged_at": "2026-08-12T00:56:19Z",
-      "source_spec_path_removed": "specs/art-002-draft-pr-template-set",
-      "process_evidence_preserved": [
-        "docs/ai/specs/.process/ART-002-workflow.md",
-        "docs/ai/specs/.process/ART-002-design-concept.md",
-        "docs/ai/specs/.process/ART-002-uat-runbook.md"
-      ],
-      "report": ".specify/memory/archive-reports/2026-08-12-art-002-post-merge-hygiene.md"
-    }
-  }
+  "updated_at": "2026-08-12T18:24:27Z",
+  "workflow_file": "docs/ai/specs/.process/ART-014-workflow.md"
 }

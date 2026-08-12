@@ -34,8 +34,8 @@ doubt them, and record any drift.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Specify | `/speckit-specify` | ✅ Complete | 13 FRs, 3 user stories, 12 acceptance scenarios. G1 helper passed; 2 markers found by hand, routed to Clarify |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | 3 sessions. Required: 2 open markers |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -82,7 +82,36 @@ constitution (`.specify/memory/constitution.md`):
 | VI. KISS, Simplicity & YAGNI | One new helper, one new problem key, one classification map. No abstraction layer, no configurability nobody asked for | Code review against the design concept's Non-goals |
 | I. Plugin Structure Compliance | Editing the guard restales generated payloads; the artifact contract is accounted for before the work is called done | `python3 scripts/refresh-release-artifacts.py`, then CI `artifact-consistency` |
 
-**Constitution Check:** ⏳ (mark before proceeding to G1)
+**Constitution Check:** ✅ PASS, recorded 2026-08-12 before Phase 1.
+
+`python3 tests/speckit-pro/run-all.py` returned **7378/7378 passed, zero
+failures** (L1 1447, L4 5745, L5 186; toolchain preflight ok). That satisfies
+principle IV's quality gate, and principles I and II by way of the Layer 1 and
+Layer 4 gates inside the same run. Principle VI is a review-time judgment and is
+checked at Analyze and Code Review, not by a command.
+
+**G0 test-count baseline: 7378.** Captured here before any implementation work,
+which is what makes the G7 comparison meaningful. Preserve it. Do not recompute
+it in a later session, including a `--stage implement` resume: a baseline
+recaptured after this run's own tests would compare the tree against itself and
+pass unconditionally. If a later observation differs, record it as a
+non-blocking drift diagnostic naming both numbers and keep this value.
+
+### Environment Recorded At Phase 0
+
+| Field | Value |
+|-------|-------|
+| Branch | `art-014-phase-guard-enforcement-repair` (worktree) |
+| `on_feature_branch` | `false`. Non-numeric branch; SpecKit resolves the feature directory through `.specify/feature.json` → `specs/art-014-phase-guard-enforcement-repair` |
+| PROJECT_COMMANDS | `UNIT_TEST` and `FULL_VERIFY` = `python3 tests/speckit-pro/run-all.py`; BUILD, TYPECHECK, LINT are `N/A` for this stack |
+| PRESET_CONVENTIONS | `speckit-pro-reviewability` v1.0.0 supplies the spec, plan, and tasks templates |
+| Extensions | all 8 installed: agent-context, archive, checkpoint, git, retrospective, speckit-utils, verify, verify-tasks |
+| `PROJECT_IMPLEMENTATION_AGENT` | `speckit-pro:phase-executor` (fallback; the two project agents are a release auditor and a skill reviewer, neither an implementation agent) |
+| `CONFIDENCE_GATE_MODE` | `advisory` |
+| `AGENT_TEAMS_AVAILABLE` | `true` |
+| Stage | `full`, source `argv`, basis `explicit --stage full` |
+| State slot | reclaimed from `docs/ai/specs/.process/ART-012-workflow.md`; `prior_run_note` = `completed_archived` |
+| Coverage guard | exit 0, report `status: pass`, all problem keys empty |
 
 ---
 
@@ -98,14 +127,14 @@ constitution (`.specify/memory/constitution.md`):
 | **Dependencies** | None. Found during ART-006, which deliberately did not fix it |
 | **Enables** | Trustworthy phase-guard verdicts |
 | **Priority** | P2 |
+| **Stage** | full |
 
-No `Stage` row at scaffold. Absence means no stage has been resolved yet, which
-`autopilot-state-status.schema.json` states is normal rather than an error. A
-bare `/speckit-pro:speckit-autopilot` invocation resolves the stage itself; pass
-`--stage plan` if you want the run to stop after Analyze for review before any
-code is written. The row is written here when a stage is resolved, because this
-table is the authoritative durable store and `autopilot-state.json.stage` only
-mirrors it for the active run.
+Resolved 2026-08-12 from an explicit `--stage full`. Auto-detect would have
+returned `plan`, because on a fresh scaffold the first non-terminal planning
+phase is always Specify; the operator chose the full range so the run continues
+through Implement and the post-implementation closeout. This row is the
+authoritative durable store; `autopilot-state.json.stage` mirrors it for the
+active run only.
 
 ### Reviewability Budget And Split Decision
 
@@ -279,19 +308,46 @@ platforms inherit the repair and both inherit the new failure.
 
 ### Specify Results
 
-<!-- Fill in after running the command -->
-
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
-| `[NEEDS CLARIFICATION]` markers | |
-| Gate G1 | |
+| Functional Requirements | FR-001 through FR-013 (13) |
+| User Stories | 3 (US1 mismatched workflow halts P1, US2 advisory status recorded P2, US3 documentation truthful P3) |
+| Acceptance Criteria | 12 acceptance scenarios, 8 measurable success criteria |
+| `[NEEDS CLARIFICATION]` markers | **2** (see the gate note below) |
+| Gate G1 | Helper reported `pass: true, markers: 0`. Verified by hand as a **false pass**; routed to Clarify on the true count |
+| Privacy scan | clean, no absolute paths in `spec.md` |
+| Reviewability budget carried into spec | 235 reviewable LOC, 4 production files, 9 total, one slice, within budget |
+
+**G1 gate note: the marker counter has a false-pass bug, and it is the same
+defect class this spec exists to repair.** `validate-gate` counts the pattern
+`\[NEEDS CLARIFICATION\]`, with the closing bracket immediately after the word.
+The preset spec template prescribes the colon form and demonstrates it twice in
+its own example requirements: `[NEEDS CLARIFICATION: auth method not specified
+- email/password, SSO, OAuth?]`. The colon form never matches, so the gate
+counted 0 against a file that carries 2. Measured on this spec:
+
+| Pattern | Matches in `spec.md` |
+|---|---|
+| `\[NEEDS CLARIFICATION\]` (what the gate counts) | 0 |
+| `\[NEEDS CLARIFICATION:` (what the template emits) | 2 |
+
+Phase 2 is conditional on G1 detecting markers, so taking the gate at its word
+would have skipped Clarify entirely and silently dropped both open questions.
+The autopilot proceeded on the true count. This is out of scope for ART-014,
+which owns the phase-coverage guard rather than the runner's gate helper, and it
+is recorded here as a follow-up candidate.
+
+The two markers are the design concept's own Open Questions, so they are
+expected rather than a defect in the spec:
+
+1. Which roadmap identifier replaces the `ART-0NN` placeholder in the
+   documentation note about the unwired Claude-side commit fetch.
+2. Whether the two tracked autopilot state slots are read by different callers,
+   and so whether this change records the finding only or also converges them.
 
 ### Files Generated
 
-- [ ] `specs/art-014-phase-guard-enforcement-repair/spec.md`
+- [x] `specs/art-014-phase-guard-enforcement-repair/spec.md` (293 lines)
 
 ### SpecKit Traceability Markers
 
