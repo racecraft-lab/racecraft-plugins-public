@@ -116,9 +116,14 @@ every step was performed rather than what any step expects; and a real screen
 reader is stronger than any step requires, since A14 and D12 permit the
 accessibility inspector.
 
-Review of #430 found three verdicts stated ahead of their evidence and one of
-those — A15 — was found by this repository's own follow-up rather than by the
-review. All were corrected before merge.
+Review of #430 charged that three focus-indicator verdicts — B4, C4 and D4 —
+recorded a pass on evidence covering only part of what the step expects. A
+follow-up in the same session found a **fourth** instance the review had not
+flagged, A15, of the identical shape. All four moved to *not executed* before
+merge, with their verified halves kept as substitutes. A4 was the same check
+already recorded honestly, and is the convention the other four were matched to.
+A14 and D12 were the opposite case: the verdicts were correct and the record was
+incomplete, so they kept their pass and gained the missing evidence.
 
 ## Runbook Relocation
 
