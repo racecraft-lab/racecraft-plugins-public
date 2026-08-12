@@ -301,7 +301,7 @@ concurrently rather than from anyone's carelessness.
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions; consensus skipped, zero unresolved |
 | Plan | `/speckit-plan` | ✅ Complete | G3 PASS; declared 750, warn; CSS ceiling adopted as a checkable constraint |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 33 gaps closed; consensus settled 2 items at zero cost |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | G5 PASS, 40 tasks; M1/M2/M3 checkpoints emitted as real tasks |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -1172,12 +1172,31 @@ ordering and the TDD test specifications.
 
 ### Tasks Results
 
+Completed 2026-08-12. **G5 PASS** — 40 tasks found.
+
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 40 (T001–T040), all carrying an inline verification clause |
+| **Phases** | 5: Setup 3, Foundational 8, US1 10, US2 9, Polish 10 |
+| **Parallel Opportunities** | 6 `[P]`, each on a genuinely disjoint file. 29 of 40 tasks edit the single HTML file, so most work is necessarily sequential. |
+| **User Stories Covered** | US1 and US2. US2 depends on US1 inherently: every question attaches to a section that must already exist. |
+
+**The three measurement checkpoints landed as real tasks, in the required order.**
+T021 is M1 (`css ≤ 150`), the last task of US1 and before every export task — the
+load-bearing one, since a failure surfaces at roughly 150 lines written rather
+than 750. T030 is M2 (`css ≤ 247`). T034 is M3 (`authored ≤ 758`). Each names the
+stop rule and points at the single instrument recorded in `plan.md` and
+`quickstart.md`; no second instrument was written.
+
+**Two facts the task list records that an implementer would otherwise hit blind:**
+
+1. **An expected intermediate red.** From T005 until the T031 catalog flip, the
+   artifact exists while its entry still reads `planned`, so a full-suite run in
+   that window reports an orphan. That is the both-directions contract working as
+   designed, not a regression. Targeted verification is named per task; the full
+   suite is required green only at T039.
+2. The single cross-story dependency is inherent rather than incidental, and is
+   labelled as such so nobody tries to parallelise it away.
 
 ---
 
@@ -1196,12 +1215,26 @@ The decision answers "can this change be split into multiple small PRs safely?" 
 inspecting the change's structural seams (independent additive capabilities), not its
 line count. Surface the four fields the SKILL extracts from the emitted decision:
 
+Recorded 2026-08-12 from the read-only classifier. Advisory: it writes nothing
+and blocks nothing.
+
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
-| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+| **Route** | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| **Releasable** | `true` | `true`, or `false` for a destructive-migration or concurrency-sensitive change. |
+| **Signals** | `change-shape:modify-heavy` | The decisive detector findings behind the route and releasability reading. |
+| **Warnings** | none | Any release-safety warning attached to the change. |
+
+**Layer plan: skipped.** The planner runs only for a `split-PR` route, and this
+is `one-navigable-PR`, so `layer_plan.status = skipped` with that reason. No PR
+emission or branch creation is wired by recording this.
+
+The classifier agreeing with the slice decision is a coincidence worth not
+over-reading. It answers "can this change be split into multiple small PRs
+safely?" from structural seams, and slice 1 has none: one artifact file, one
+catalog value, three test literals. The three-slice split was decided on
+reviewability grounds at a level above this classifier, and its `one-navigable-PR`
+verdict is about slice 1 internally, not about ART-003 as a whole.
 
 To produce the decision, run the classifier against the feature directory:
 

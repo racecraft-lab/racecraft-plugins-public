@@ -9,7 +9,7 @@
   "stage_basis": "auto-detect: the first non-terminal planning phase is Specify, which is \u23f3 Pending",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-012-workflow.md",
-  "active_step": "Phase 5: Tasks",
+  "active_step": "Phase 6: Analyze",
   "updated_at": "2026-08-12T18:00:00Z",
   "settings": {
     "consensus_mode": "tier-a",
@@ -122,11 +122,11 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -210,6 +210,11 @@
       "markers": 0,
       "reason": "0 [Gap] across spec, plan and all four checklists \u2014 verified by direct scan",
       "caveat": "G4 itself counts only spec.md and plan.md and never opens checklists/; its PASS is not evidence"
+    },
+    "G5": {
+      "pass": true,
+      "task_count": 40,
+      "reason": "40 tasks found"
     }
   },
   "spec_metrics": {
@@ -322,5 +327,30 @@
       "CHK028": "closed, no change - enumerated list is not a WCAG 1.4.1 technique; SC-006 is the holistic pass; codebase lens dissented on structural symmetry",
       "line_cost": 0
     }
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [],
+    "warnings": []
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "route is one-navigable-PR, not split-PR"
+  },
+  "tasks_reviewability": {
+    "mode": "tasks",
+    "helper_id": "reviewability-gate",
+    "status": "deferred",
+    "reason": "tasks mode is deferred on the installed runner; not invoked",
+    "fallback_evidence": "setup-mode gate warn at 758 against plan.md; plan-phase estimate-reviewable-loc pass (known blind, projected 0); operator-ratified three-slice split recorded in the workflow Slice Plan",
+    "verdict": "warn - continues to marker planning inputs; no manual re-slicing stop"
+  },
+  "pr_marker_plan": {
+    "status": "not_required",
+    "reason": "reviewability evidence is warn, not a size block; no marker split needed"
   }
 }
