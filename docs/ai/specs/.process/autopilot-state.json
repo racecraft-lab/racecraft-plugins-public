@@ -9,7 +9,7 @@
   "stage_basis": "auto-detect: the first non-terminal planning phase is Specify, which is \u23f3 Pending",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-012-workflow.md",
-  "active_step": "Phase 2: Clarify - Export payload shape",
+  "active_step": "Phase 3: Plan",
   "updated_at": "2026-08-12T18:00:00Z",
   "settings": {
     "consensus_mode": "tier-a",
@@ -78,23 +78,23 @@
     },
     {
       "step": "Phase 2: Clarify - Export payload shape",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Export payload shape Consensus",
-      "status": "pending"
+      "status": "skipped: executor returned zero unresolved items"
     },
     {
       "step": "Phase 2: Clarify - Implementation-notes rendering edges",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Implementation-notes rendering edges Consensus",
-      "status": "pending"
+      "status": "skipped: executor returned zero unresolved items"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - accessibility",
@@ -194,6 +194,11 @@
       "pass": true,
       "markers": 0,
       "reason": "spec.md exists with 0 markers"
+    },
+    "G2": {
+      "pass": true,
+      "markers": 0,
+      "reason": "clarify complete; one annotated marker remains by design (CSS ceiling, owned by Plan)"
     }
   },
   "spec_metrics": {
@@ -245,6 +250,18 @@
       "markers_open": [
         "reviewability boundary - belongs to Plan"
       ]
+    },
+    "session_2": {
+      "focus": "export payload shape",
+      "questions": 5,
+      "consensus": "skipped - zero unresolved",
+      "key": "stale-settle guard FR-026a; sec-<slot> coordinates FR-023b; pinned slot list FR-023c; dangling export-payload-contract found"
+    },
+    "session_3": {
+      "focus": "implementation-notes rendering edges",
+      "questions": 5,
+      "consensus": "skipped - zero unresolved",
+      "key": "empty state is a fill obligation FR-019b; standing intro outside the pair FR-019a; no retry grouping FR-019c; three-entry sample"
     }
   }
 }

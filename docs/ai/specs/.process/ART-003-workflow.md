@@ -248,7 +248,7 @@ helper's `pass/0` as a known-blind diagnostic with this reason beside it.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 42 FRs, 2 user stories; budget corrected to a block |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Run session 1 **after** the upstream source is fetched |
+| Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions; consensus skipped, zero unresolved |
 | Plan | `/speckit-plan` | ⏳ Pending | Re-declare the reviewability budget here |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Three domains: accessibility, ux, error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -569,8 +569,77 @@ so a reader can tell a filtered record from an empty one.
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
 | 1 | Fill-region inventory and granularity | 5 | See below. Consensus **skipped**: the executor returned zero unresolved items, and the orchestrator independently verified every load-bearing claim against the tree. |
-| 2 | Export payload shape | | |
-| 3 | Implementation-notes rendering edges | | |
+| 2 | Export payload shape | 5 | See below. Consensus **skipped**: zero unresolved items; orchestrator verified the dangling contract, the byte-identical failure message, and the unguarded settle directly. |
+| 3 | Implementation-notes rendering edges | 5 | See below. Consensus **skipped**: zero unresolved items; orchestrator verified every record-contract citation directly. |
+
+#### Session 2 outcomes — export payload shape
+
+1. **Both exports serialize the same structure, differing in one lead line.**
+   The `markdown` kind names its **destination, not its encoding**, and the
+   ART-008 sweep reads the raw comment body where line structure survives. Adding
+   markdown syntax would cost 8–12 lines and break the one-parser property across
+   four templates. FR-023a.
+2. **A question's coordinate is `sec-<slot>`, the id its heading already
+   carries.** Because FR-011e puts headings outside the marker pair, no exported
+   coordinate except the feature-header ids can be deleted by a fill — stronger
+   than every shipped precedent, whose item anchors sit *inside* a fill region.
+   The control mounts at the end of its section rather than after the heading, so
+   it follows the content being questioned. FR-023b.
+3. **Collection is a pinned slot list resolved by id, not a container walk.**
+   Cheaper by 19 lines, survives a fill that restructures a section, and
+   concatenates nothing into a selector. FR-023c.
+4. **The stale-settle race is guarded, and it is a real defect in all three
+   shipped templates.** Verified: each runs the same unguarded
+   `writeText(text).then(...)`, and none carries any currency check. Two exports
+   invoked in quick succession let the first rejection announce a failure that did
+   not happen and put the *first* kind's payload in the fallback field after the
+   *second* copied successfully. Both settle paths need the guard, since a slow
+   success after a fast failure is the mirror case. Cost +13, fully paid by the
+   −19 above. FR-026a.
+5. **The pinning contract these templates cite no longer exists.** All three
+   shipped templates name `contracts/export-payload-contract.md` in a source
+   comment; ART-002's copy was deleted when that feature was archived, so the
+   reference resolves nowhere in the tree. This slice authors its own at Plan,
+   which SpecKit emits anyway. Honest consequence recorded: this slice's contract
+   will dangle the same way when ART-003 is archived. FR-029a.
+
+The recommendation *against* a cross-template agreement test was accepted:
+FR-039a already fixes this slice's shared-validation change at three literals, so
+adding a fourth would contradict a requirement in the same spec.
+
+#### Session 3 outcomes — implementation-notes rendering edges
+
+1. **The empty case is a fill obligation, not shipped markup.** Nothing in the
+   artifact reads the record at render time, so the template cannot tell "every
+   task reported nothing" from "no task recorded an entry" from "the record was
+   unavailable" — but the authoring agent can. Shipping a hidden empty-state
+   element would be ~9 lines of markup dead in every real fill. All three states
+   are real: two of the three dispatch routes write `None` permanently, the record
+   is opened before the first task so an interrupted phase leaves a header-only
+   file, it is fail-open so absence is possible, and its read window is bounded to
+   the feature directory so a post-archive fill finds nothing. FR-019b.
+2. **A standing one-sentence intro sits outside the marker pair.** This is the
+   only region whose content is a *filtered view of an external record*, so the
+   statement is true of every fill rather than of this sample and must survive
+   fills. Verified: all six `section-intro` uses in `implementation-plan` sit
+   outside their pairs, while `spec-explainer`'s sample notice correctly sits
+   *inside* `feature-header`'s pair because it describes the sample. One line,
+   zero marginal CSS. FR-019a.
+3. **A retry pair gets no visual grouping and no attempt ordinal.** Grouping
+   would be *incorrect*, not merely costly: a serial re-run appends after the
+   intervening tasks' entries, so collapsing the pair would reorder the record and
+   violate FR-019's append order. An ordinal would assert a field the record does
+   not carry. FR-019c.
+4. **The sample ships three entries with the retry pair non-adjacent.** Two
+   entries would force a choice between showing distinct tasks and showing the
+   retry, and an adjacent pair would model the case wrongly. `implementation-notes`
+   is not a list slot, so no validation rule caps or floors its item count. Cost
+   +4 lines; FR-018 amended so the third entry is not read as a violation.
+5. **Entries are list items with the task identifier in bold**, inside a grouping
+   list within the marker pair, following `goals` in `spec-explainer`. Bold rather
+   than a mono span: it is the named precedent, survives monochrome, and adds no
+   CSS rule. The list item also satisfies FR-020's end-tag requirement for free.
+   FR-019d.
 
 #### Session 1 outcomes
 

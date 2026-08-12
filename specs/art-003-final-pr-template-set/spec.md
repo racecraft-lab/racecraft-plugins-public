@@ -252,14 +252,63 @@ nothing from the four empty fields.
   `file-by-file` → `plan.md, tasks.md`; `non-goals` → `design-concept.md,
   spec.md`; `verification` → `spec.md, tasks.md`; `implementation-notes` →
   `implementation-notes.md`.
+- **FR-017b**: The `implementation-notes` inventory line's `Fills:` value MUST
+  carry both the filter and the empty case, because that line is the only
+  agent-facing instruction the artifact holds for this region: one entry per task
+  that reported something, in the record's order, or one sentence saying why none
+  did. It costs nothing, since FR-014 already makes the line mandatory, and it
+  must contain no pipe.
 - **FR-018**: Every region MUST ship representative fictional sample content held
   to the minimum that demonstrates its shape: non-empty everywhere, expansive
   nowhere. A prose region ships one short paragraph. A region holding a repeated
-  list ships exactly the two items the validation requires.
+  list ships exactly the two items the validation requires, except
+  `implementation-notes`, which ships three so the retry pair FR-019 requires can
+  be shown **non-adjacent**, as a real re-run appends it. Every region MUST use
+  the same invented feature, following `spec-explainer`, which holds one across
+  all of its regions.
 - **FR-019**: The `implementation-notes` region MUST render only the eventful
   entries of the implementation record, in the record's own append order, each
   under the task identifier it was recorded against. Two entries sharing a task
   identifier both render, because that is a retry and correct history.
+- **FR-019a**: Because this region shows a **filtered view of an external
+  record** rather than what an author wrote, the section MUST carry a standing
+  one-sentence intro **outside** its marker pair, stating that only tasks with
+  something to report appear, that they appear in the record's order, and that a
+  retried task appears more than once. Outside the pair is required, not
+  stylistic: the sentence is true of every fill rather than of this sample, so it
+  must survive fills exactly as FR-011e's headings do. All six `section-intro`
+  uses in `implementation-plan` sit outside their pairs, and the gallery already
+  uses that element for structural claims, not only for blurbs. Contrast
+  `spec-explainer`'s sample notice, which correctly sits *inside*
+  `feature-header`'s pair because it describes the sample and should die with the
+  fill. This one sentence is what lets a reader tell an empty region from a broken
+  one, and a repeated task identifier from a duplicate.
+- **FR-019b**: When no entry survives the filter, the fill MUST state which case
+  obtains in one sentence — every task reported nothing, no task recorded an
+  entry, or the record was unavailable — rather than leaving the region empty or
+  keeping the sample. The artifact ships **no** separate empty-state element,
+  because nothing in it reads the record at render time: the template cannot
+  distinguish the cases and the authoring agent can. All three states are real
+  rather than hypothetical. Two of the three dispatch routes in the record
+  contract write `None` permanently, so a spec whose implementation tasks are all
+  research or verification yields an all-`None` record; the record is opened
+  before the first task is dispatched precisely so an interrupted phase and a
+  task-free spec both leave a header-only record; the record is fail-open, so
+  absence is possible; and the record's read window is bounded to the feature
+  directory, so a fill attempted after archive finds nothing at the declared path.
+- **FR-019c**: A retry pair MUST NOT be visually grouped or carry a derived
+  attempt ordinal. Grouping would be incorrect, not merely costly: a serial re-run
+  appends after the intervening tasks' entries, so collapsing the pair together
+  would reorder the record and violate FR-019's append order. An ordinal would
+  assert a field the record does not carry. FR-019a's standing sentence already
+  tells the reader a task can appear more than once, which is what an ordinal
+  would have bought.
+- **FR-019d**: Each entry MUST take the form of a list item whose task identifier
+  leads in bold, inside a grouping list that sits within the marker pair,
+  following the `goals` region in `spec-explainer`. Bold rather than a mono span:
+  it is the named precedent, it survives monochrome per FR-032, and it adds no
+  class and no CSS rule. The list item also satisfies FR-020's end-tag
+  requirement without a special case.
 - **FR-020**: `file-by-file` holds a repeated list whose items an export must be
   able to name, and it is the only slot that gains a list-slot row. Its grouping
   element MUST sit outside the marker pair so the container survives a fill, and
@@ -290,6 +339,30 @@ nothing from the four empty fields.
   with its destination rather than its mechanism.
 - **FR-023**: An export MUST walk only the non-empty question fields, and MUST
   carry each question together with the anchor of the section it attaches to.
+- **FR-023a**: Both exports MUST serialize the same structure and differ in
+  exactly one line. Each opens with the artifact title, then the feature
+  identifier and name, then a blank line, then a single lead line naming the
+  kind, then one blank-line-separated block per non-empty question. Neither
+  export emits markdown syntax: the `markdown` kind names its **destination, not
+  its encoding**, and the ART-008 sweep reads the raw comment body where the line
+  structure survives. That a pull-request comment renders the two header lines as
+  one paragraph is a recorded gap, not a defect this slice fixes.
+- **FR-023b**: A question's reference line MUST read
+  `<slot> / <section heading>  (#<anchor>)` with two spaces before the
+  parenthesis, matching the form the three export-carrying templates already
+  emit. The anchor MUST be the `sec-<slot>` id the section's heading already
+  carries for its `aria-labelledby` — the gallery's existing section-anchor
+  convention. Because FR-011e places every heading outside its marker pair, no
+  exported coordinate other than the feature-header identifiers can be deleted by
+  a fill, which is stronger than every shipped precedent, whose item anchors sit
+  inside a fill region. Each question control MUST be appended to the end of its
+  section rather than inserted after its heading, so it follows the content the
+  reader is questioning.
+- **FR-023c**: The export routine MUST collect its items from a pinned list of
+  the slot names in document order, resolving each section by its `sec-<slot>` id
+  directly, rather than by walking a container's children. Each item carries its
+  own slot name. This survives a fill that restructures a section, never depends
+  on DOM order, and concatenates no value into a selector string.
 - **FR-024**: An export MUST carry enough context to be acted on away from the
   artifact: the artifact, the change it belongs to, and the location each
   question attaches to.
@@ -297,6 +370,22 @@ nothing from the four empty fields.
   and MUST NOT carry any value the reviewer could not have inspected on screen.
 - **FR-026**: An export MUST be derived from the artifact's live state at the
   moment it is invoked, never from a value fixed when the file was written.
+- **FR-026a**: When two exports are invoked before the first completes, the
+  artifact MUST report the outcome of the later invocation only. Each invocation
+  MUST carry a token compared against the current one when its copy settles, and
+  a settle belonging to a superseded invocation MUST change no status text, reveal
+  no fallback text, and move no focus. **Both** settle paths need the guard, not
+  only the rejection path: a slow success resolving after a fast failure would
+  overwrite the failure message with "Copied" while the fallback field still holds
+  the other kind's text.
+  Without this, a rejected first copy announces a failure that did not happen and
+  places the first kind's payload in the fallback field after the second kind
+  copied successfully. **This defect is present in all three export-carrying
+  templates ART-002 shipped** — each runs the same unguarded settle, and none
+  carries a currency check — and this artifact MUST NOT reproduce it. The
+  synchronous refusal path and the no-clipboard-interface path stay unguarded and
+  MUST say why: both run inside the same synchronous turn that issued the token,
+  so neither can be stale.
 - **FR-027**: Every export control MUST be reachable and operable by keyboard
   alone, and MUST report its outcome in text rather than by color or animation
   alone.
@@ -305,6 +394,22 @@ nothing from the four empty fields.
   success or failing silently.
 - **FR-029**: When no question has been written, an export MUST say in text that
   there is nothing to export rather than produce an empty or invented document.
+- **FR-029a**: The artifact's export literals MUST be pinned in a contract
+  document this slice authors, and the clipboard-failure message MUST be
+  byte-identical to the one the three export-carrying templates already ship
+  (verified identical across all three). The empty-state bodies and the two lead
+  lines are authored fresh in this artifact's own noun, "question", following the
+  recorded per-template pattern — the shipped templates already vary that noun
+  between "objection" and "approach", so this is the same move rather than a
+  divergence.
+  This slice MUST author its own `contracts/export-payload-contract.md`, because
+  **the document all three shipped templates name in a source comment no longer
+  exists**: ART-002's copy was deleted when that feature was archived, so every
+  shipped template now carries a pinning reference that resolves nowhere.
+  Nothing compares the copies of the failure message, and this slice does **not**
+  add that comparison, because FR-039a fixes its shared-validation change at
+  three literals. Both facts are recorded gaps, including that this slice's own
+  contract will dangle the same way when ART-003 is archived.
 
 #### Accessibility
 
@@ -375,30 +480,43 @@ structural analogue is `spec-explainer`.
 
 Holding component CSS to that document class is what puts this slice at ~750 and
 in warn. Failing to hold it puts it at 984 or above and in block. **This is a
-design constraint on Plan, not a prediction**, and the three templates that
-actually carry both exports did not hold it. [NEEDS CLARIFICATION: whether Plan
-commits to the document-class CSS ceiling as an explicit checkable constraint
-and re-declares at ~750, or accepts the block and refers the exception question
-to the operator.]
+design constraint, not a prediction**, and the three templates that actually
+carry both exports did not hold it.
+
+Clarify closed most of the distance. The port drops are now fixed requirements
+worth about 141 lines (FR-011c), the export routine's shape is settled and its
+collection strategy is 19 lines cheaper than the precedent (FR-023c), and the
+remaining figure is decomposed and measured against shipped selectors rather than
+scaled from a multiplier. What is left open is a single ceiling, carried in the
+Budget below.
 
 ### Reviewability Budget *(mandatory)*
 
 - **Primary surface**: docs/process (a shipped template file)
 - **Secondary surfaces, if any**: seed/config (one catalog value), harness/adapter (three literals in the fill-region validation)
-- **Projected reviewable LOC**: two branches, decided at Plan. **~750** if
-  component CSS is held to the document-template class; **~1000–1200** on the
-  trajectory of the three shipped templates that carry both exports and did not
-  hold it. Both figures exclude the 458 lines of canonical embedded blocks a
-  reviewer never reads because they are byte-verified copies (`brand-kit.css`
-  `BRAND-KIT` block = 318, `theme-toggle.html` `GALLERY-HEAD` block = 140; both
-  measured)
+- **Projected reviewable LOC**: **~750**, decomposed and measured rather than
+  scaled from a multiplier:
+  - export and question-capture JavaScript **~288** — the shipped precedent's 294,
+    less 19 for collecting six named sections instead of walking a list container
+    and for a comment with no counterpart here, plus 13 for FR-026a's
+    stale-settle guard
+  - question and export CSS **~97**, measured off the precedent's own selectors
+  - six document sections **~150** CSS, against `spec-explainer`'s 171 total
+  - markup **~215**
+
+  Excludes the 458 lines of canonical embedded blocks a reviewer never reads
+  because they are byte-verified copies (`brand-kit.css` `BRAND-KIT` block = 318,
+  `theme-toggle.html` `GALLERY-HEAD` block = 140; both measured).
 - **Projected production files**: 1 (net-new: the artifact itself)
-- **Projected total files**: ~4
-- **Budget result**: **block until Plan commits.** The unconstrained trajectory
-  is a block; the constrained one is a warn. This spec declares the
-  unconstrained figure because no design commitment has been made yet, and a
-  spec must not book a number the design has not agreed to. See Reviewability
-  Notes.
+- **Projected total files**: ~5 (the artifact, the catalog, the validation, this
+  slice's export-payload contract, and the spec)
+- **Budget result**: **warn**, above the 400 warn threshold and below the 800
+  block. Component CSS is the only dimension that can miss the figure; the export
+  floor cannot, because it is measured against three shipped implementations of
+  the same routine. [NEEDS CLARIFICATION: whether Plan adopts the ~150-line
+  document-section CSS ceiling as an explicit, checkable constraint. The
+  decomposition holds only if it does, and the three shipped templates that carry
+  both exports each spent 450 to 663 on component CSS.]
 - **Basis for the projection**: measured against the four shipped templates
   rather than fitted to one aggregate figure. Authored lines are what the gate
   counts, and the predictor is the `exports` declaration, not slot count and not
@@ -439,10 +557,17 @@ to the operator.]
   files and verification evidence.
 - Deferred work MUST name the follow-up spec or issue. Slices 2 and 3, the
   generation step, and the ready flip are all named deferrals here.
-- Known gaps MUST name all three carried out of Clarify session 1: the payload
-  documents no fill-region grammar, the validation binds only the templates its
-  floor names so a shipped non-floor template is never parsed, and no check reads
-  a catalog entry's `exports` against the artifact.
+- Known gaps MUST name all five carried out of Clarify. From session 1: the
+  payload documents no fill-region grammar; the validation binds only the
+  templates its floor names, so a shipped non-floor template is never parsed; and
+  no check reads a catalog entry's `exports` against the artifact. From session 2:
+  nothing compares the clipboard-failure message shared across what will be four
+  templates, and the document all three shipped templates name as pinning it was
+  deleted when ART-002 was archived, so those references resolve nowhere — a
+  condition this slice's own contract will reach when ART-003 is archived. Also
+  from session 2: pasted into a pull-request comment, the export's two header
+  lines render as one paragraph, which is cosmetic for the automated reader and
+  visible only to a human.
 - Review order MUST put the authored markup ahead of the embedded canonical
   blocks, which are byte-verified copies rather than material to read.
 
