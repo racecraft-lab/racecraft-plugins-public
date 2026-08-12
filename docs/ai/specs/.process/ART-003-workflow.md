@@ -144,7 +144,39 @@ Each phase requires **human review and approval** before proceeding:
 | V. Conventional Commits | `<type>(<lowercase-scope>): <plain English description>` | CI `validate-pr-title` |
 | VI. KISS, Simplicity & YAGNI | Anchor content held to the demonstrating minimum; no affordance the entry does not declare | Code review + the reviewability diff gate |
 
-**Constitution Check:** ⏳ (mark before proceeding to G1)
+**Constitution Check:** ✅ 2026-08-12. Every verification command above ran green
+on a clean tree at `23936e14`. The suite is the shared gate for I, II, and IV;
+V and VI are review-time gates and carry no pre-phase command.
+
+### Phase 0 Prerequisites Record
+
+Resolved 2026-08-12. Runner: `python3 -m speckit_pro_runner` (Python 3.11.0),
+run from the worktree root.
+
+| Field | Value |
+|---|---|
+| Stage | `plan` — auto-detect: the first non-terminal planning phase is Specify, which is ⏳ Pending |
+| Terminal step | G6.5 confidence gate, then the stage-boundary commit. Implement needs its own `--stage implement` invocation. |
+| `check-prerequisites` | `all_pass: true`; CLI `specify 0.11.8`; `is_worktree: true` |
+| `ON_FEATURE_BRANCH` | **true** (asserted by the orchestrator). The runner reports `false` because the vendored `^[0-9]{3}-` regex does not match this repo's namespaced spec IDs. The branch is real; `.specify/feature.json` is the sanctioned resolution path. |
+| Feature dir | pinned via `.specify/feature.json` (gitignored) to `specs/art-003-final-pr-template-set` |
+| `PROJECT_COMMANDS` | `UNIT_TEST` / `FULL_VERIFY` = `python3 tests/speckit-pro/run-all.py`; `TYPECHECK`, `LINT`, `BUILD`, `INTEGRATION_TEST` = N/A |
+| `PRESET_CONVENTIONS` | `speckit-pro-reviewability` 1.0.0; spec, plan, and tasks templates all resolve |
+| Settings | `.claude/speckit-pro.local.md` absent — defaults: consensus `tier-a`, gate-failure `stop`, auto-commit on |
+| `CONFIDENCE_GATE_MODE` | `advisory` (default; no flag, no local config) |
+| `AGENT_TEAMS_AVAILABLE` | true |
+| **G0 test baseline** | **7378/7378** (L1 1447, L4 5745, L5 186). Do not recompute at a later stage; G7 verifies an increase against this number. |
+| Archive sweep | No eligible candidates. `specs/` holds only this target and `specs/brand-001-racecraft-identity-system`, whose SPEC-MOC records `status: pending` — scaffolded, never executed, no merged PR. |
+| Tier-2 relocation | None. Both spec directories carry `structureVersion: 1` and keep PROCESS artifacts under `.process/`. |
+| State slot | Reclaimed from `docs/ai/specs/.process/ART-012-workflow.md` (`prior_run_note: completed_archived`). |
+| Coverage guard | `validate-autopilot-phase-coverage.py --rule status-evidence` → `status: pass`, exit 0, 33 plan steps, zero problems in every rule. |
+
+**Capability discovery.** Read/research capabilities available and fed down to
+subagents: Read, Glob, Grep, Bash, WebFetch, WebSearch, Context7
+(`mcp__context7__*`) for library documentation, Tavily (`mcp__tavily-mcp__*`)
+for web research, RepoPrompt and GitNexus for codebase structure. The upstream
+templates are fetched over HTTP, so `WebFetch` is the capability that gates
+Clarify session 1.
 
 ---
 
@@ -160,6 +192,7 @@ Each phase requires **human review and approval** before proceeding:
 | **Dependencies** | ART-001 (shipped, PR #407) |
 | **Enables** | ART-010 (Final-PR Writeup, Companions & Ready Flip) |
 | **Priority** | P1 |
+| **Stage** | plan |
 
 ### Success Criteria Summary
 
