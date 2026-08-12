@@ -63,6 +63,7 @@ within budget.
 - MODIFIED speckit-pro/skills/speckit-autopilot/SKILL.md
 - MODIFIED speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md
 - MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md
+- MODIFIED speckit-pro/codex-skills/speckit-autopilot/SKILL.md
 - MODIFIED tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py
 
 Four further tracked copies of the guard are **generated, never hand-edited**:

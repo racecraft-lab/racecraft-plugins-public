@@ -1,5 +1,5 @@
 {
-  "active_step": "Phase 5: Tasks",
+  "active_step": "Phase 6: Analyze",
   "archive_sweep": {
     "actions_taken": [],
     "eligible_specs": [],
@@ -8,6 +8,14 @@
     "mode": "dry_run",
     "notes": "brand-001 not eligible (scaffold only, no spec.md/plan.md, MOC status pending). ART-002/ART-012 already archived via PR #431; dated reports exist. Cleanup gate 7 would block apply on a non-main branch regardless.",
     "ran": true
+  },
+  "atomicity_route": {
+    "releasable": true,
+    "route": "one-navigable-PR",
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "warnings": []
   },
   "branch": "art-014-phase-guard-enforcement-repair",
   "corpus_regression": {
@@ -46,7 +54,16 @@
       "gaps_remaining": 0,
       "items": 83,
       "pass": true
+    },
+    "G5": {
+      "markers": 0,
+      "pass": true,
+      "task_count": 27
     }
+  },
+  "layer_plan": {
+    "reason": "route is one-navigable-PR, not split-PR",
+    "status": "skipped"
   },
   "plan": [
     {
@@ -114,11 +131,11 @@
       "step": "Phase 4: Checklist - security Consensus"
     },
     {
-      "status": "in_progress",
+      "status": "completed",
       "step": "Phase 5: Tasks"
     },
     {
-      "status": "pending",
+      "status": "in_progress",
       "step": "Phase 6: Analyze"
     },
     {
@@ -210,9 +227,9 @@
     "gate_failure": "stop"
   },
   "slice_estimate": {
-    "estimated_loc": 317,
+    "estimated_loc": 337,
     "signals": {
-      "files": 5,
+      "files": 6,
       "frs": 24,
       "new_vs_modify": "modify",
       "user_stories": 3
@@ -223,6 +240,22 @@
   "spec_id": "ART-014",
   "stage": "full",
   "status": "in_progress",
+  "tasks_reviewability": {
+    "deferral_reason": "installed runner supports setup mode only; tasks mode is registered but deferred",
+    "fallback_evidence": {
+      "operator_ratified_split_decision": "one slice, no split",
+      "plan_phase_estimate_reviewable_loc": "pass, projected 0 (is_production_file heuristic does not match Python paths in this repo)",
+      "setup_mode_at_scaffold": "warn, pass true, blockers []",
+      "slice_estimator": {
+        "estimated_loc": 337,
+        "status": "ok",
+        "suggested_slices": 1
+      }
+    },
+    "helper_id": "reviewability-gate",
+    "mode_requested": "tasks",
+    "status": "deferred"
+  },
   "test_baseline_g0": {
     "l1": 1447,
     "l4": 5745,
@@ -230,6 +263,6 @@
     "passed": 7378,
     "total": 7378
   },
-  "updated_at": "2026-08-12T21:07:02Z",
+  "updated_at": "2026-08-12T21:26:11Z",
   "workflow_file": "docs/ai/specs/.process/ART-014-workflow.md"
 }

@@ -38,8 +38,8 @@ doubt them, and record any drift.
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 3 consensus items all resolved in Round 1, 0 markers remain |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass, 0 markers. plan.md + research.md + quickstart.md; data-model and contracts justifiably skipped |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 83 items, 19 gaps all closed. 2 security items routed to consensus, both resolved |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | G5 pass, 27 tasks across 6 phases, 0 markers. One scope gap found and fixed: the plan declared 5 files, FR-013c needs a 6th |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
@@ -1178,10 +1178,10 @@ When checklist identifies `[Gap]` items:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 27 (T001-T027) |
+| **Phases** | 6: Setup 1, Foundational 5, US1 6, US2 3, US3 7, Polish 5 |
+| **Parallel Opportunities** | 2 (T019, T020 — the only genuinely different-file pair) |
+| **User Stories Covered** | 3 of 3 (US1 6 tasks, US2 3, US3 7) |
 
 ---
 
@@ -1193,10 +1193,14 @@ the read-only atomicity classifier and records its decision here. This is a
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change. |
-| **Signals** | | The decisive detector findings behind the route and releasability reading. |
-| **Warnings** | | Any release-safety warning attached to the change. |
+| **Route** | `one-navigable-PR` | The change is one reviewable unit; no split seam was detected. |
+| **Releasable** | `true` | Not a destructive migration and not concurrency-sensitive. |
+| **Signals** | `change-shape:modify-heavy` | Every declared operation modifies an existing file; nothing is net-new. |
+| **Warnings** | none | No release-safety risk attached. |
+
+Because the route is not `split-PR`, layer planning is recorded as
+`layer_plan.status = skipped` and the run continues with route context, per the
+protocol's non-split branch.
 
 To produce the decision, run the classifier against the feature directory:
 
