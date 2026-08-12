@@ -6,7 +6,7 @@
   "branch": "art-011-scaffold-integration",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 4: Checklist - error-handling",
+  "active_step": "Phase 4: Checklist - ux",
   "updated_at": "2026-08-12T18:00:00Z",
   "prior_run_note": "Reclaimed the single state slot from docs/ai/specs/.process/ART-012-workflow.md (prior status: completed_archived). Reclaiming is normal operation - one slot, many specs.",
   "settings": {
@@ -87,15 +87,15 @@
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "pending"
+      "status": "skipped: executor reported zero unresolved items"
     },
     {
       "step": "Phase 4: Checklist - ux",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - ux Consensus",

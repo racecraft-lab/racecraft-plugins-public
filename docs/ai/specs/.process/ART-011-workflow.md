@@ -277,9 +277,14 @@ what to do next.
    `codebase-analyst` on both platforms, unmodified (Q2) — scaffold's declared
    `allowed-tools` is `Read Edit Write Skill Agent ToolSearch`, so it has no
    Grep/Glob/Bash of its own but does hold `Agent`. Seeded from the roadmap
-   entry's Scope text and its `Depends On` chain — both required, both present
-   in every entry of all eleven roadmaps — plus any `Key Files*` section when
-   one exists (Q6, Q12). The prompt must chase `Depends On` specs into git
+   entry's Scope text and its dependency chain, plus any `Key Files*` section
+   when one exists (Q6, Q12). *(Corrected during the error-handling checklist:
+   this originally read "both present in every entry of all eleven roadmaps",
+   which is false. The `**Depends On:**` label appears 104 times across ten
+   roadmaps, while pr-size-governance spells the same field `**Deps:**` on all
+   14 of its entries, 12 of them naming real chains. The seed reads a renamed
+   variant as the chain, and appends a literal `none` only when no declaration
+   exists in any spelling.)* The prompt must chase `Depends On` specs into git
    history for artifacts removed by archive sweeps, use the literal Field Guide
    words "blindspot pass" and "unknown unknowns", and state the operator's
    structural position: they have read this roadmap entry and its scope, and
@@ -803,8 +808,43 @@ Focus on Scaffold Integration requirements:
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
 | api-contracts | 63 | 17 raised, 17 remediated, 0 outstanding (1 amended at consensus) | FR-002a (new), FR-005, FR-006, FR-010, FR-013a, FR-014, FR-018, FR-019; `contracts/blind-spot-pass.md` §2/§4.1/§5/§6/§9, `contracts/chain-handoff.md` §2/§8/§9; `plan.md` rows C6 and X7 |
-| error-handling | | | |
+| error-handling | 51 | 11 raised, 11 remediated, 0 outstanding, 0 routed to consensus | FR-003, FR-005, FR-007, FR-008, **new FR-010a**, FR-018, FR-019, Edge Cases; `contracts/blind-spot-pass.md` §3/§4.1/§7/§8/**new §9.1**, `contracts/chain-handoff.md` §8.3/§9/§9.0; `plan.md` new edit sites C3a and X4a. Spec 29 → 30 normative items |
 | ux | | | |
+
+#### error-handling — two self-corrections worth more than the gaps
+
+The domain's own mid-remediation reversals were the most valuable output, because
+each first attempt was wrong in a way that would have shipped.
+
+**The dependency seed was built on a false premise, and mine was the false
+premise.** The spec claimed the Scope text and the `Depends On` chain are "both
+present in every entry of all eleven roadmaps". Measured: the `**Depends On:**`
+label appears 104 times across ten roadmaps, and pr-size-governance carries it on
+**none** of its 14 entries, spelling the same field `**Deps:**` with 12 of those
+naming real chains. I verified this independently. The first remediation would
+have treated `**Deps:**` as an absent field and written a literal `none` into the
+dispatch payload for entries that declare several dependencies — a false
+statement rather than a missing one, silently disabling the archived-dependency
+archaeology on precisely the roadmap that needs it most. The fix now splits a
+renamed variant, which is read as the chain, from genuine absence, which appends
+`none`. Both branches are live paths.
+
+**The completion test would have mislabelled the ordinary run.** The first fix
+required a recorded `PASS` at the confidence gate. G6.5 is advisory by default,
+where a `NO_DATA` result soft-skips and a `FAIL` still proceeds, so requiring
+`PASS` would have inverted the closing report's heading on a normal successful
+run. The test is now a recorded verdict **plus** a `Confidence Gate` row that is
+not blocked, which is the file-readable fact that separates a strict-mode stop
+from an advisory run that proceeded.
+
+Two smaller results: the design-concept record was best-effort, with nothing
+re-reading the file, so a missing record was indistinguishable from a pass that
+never ran; FR-010a now has scaffold verify the key and write the line itself from
+values it already holds. And the three no-chain endings — decline, no
+confirmation mechanism, failed pre-chain check — were indistinguishable, sharing
+one heading with only decline carrying a fixed outcome line; each now has its
+own, with the rooting failure split from the cleanliness failure because their
+remedies differ.
 | **Total** | | | |
 
 #### api-contracts — what the domain actually caught

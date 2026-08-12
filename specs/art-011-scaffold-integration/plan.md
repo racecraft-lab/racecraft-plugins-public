@@ -71,10 +71,12 @@ or edited agent definition (FR-002); no widening of scaffold's `allowed-tools`
 (FR-002); no new executable machinery (FR-023); Layer 2 case queries ASCII-only
 (FR-021b).
 
-**Scale/Scope**: 14 edit sites across 2 production files (6 Claude, 8 Codex),
+**Scale/Scope**: 16 edit sites across 2 production files (7 Claude, 9 Codex),
 plus 3 new trigger cases in each of 2 test fixtures, plus one roadmap
-reviewability-declaration amendment. 28 functional requirements, 12 success
-criteria, 4 user stories.
+reviewability-declaration amendment. 29 functional requirements, 12 success
+criteria, 4 user stories. The error-handling checklist domain added FR-010a and
+its two edit sites, C3a and X4a; the production surface is unchanged at two
+files.
 
 **Reviewability Budget**: harness/adapter (primary); docs/process (secondary);
 projected reviewable LOC **300** against a 400 warn ceiling; 2 production files;
@@ -189,14 +191,16 @@ empty.
 
 ```text
 specs/art-011-scaffold-integration/
-├── spec.md              # 28 FRs, 12 SCs, 0 open markers (input to this phase)
+├── spec.md              # 29 FRs, 12 SCs, 0 open markers (28 at plan time; +FR-010a from the checklist phase)
 ├── plan.md              # This file (/speckit-plan command output)
 ├── research.md          # Phase 0 output — 11 grounded decisions
 ├── contracts/           # Phase 1 output
 │   ├── blind-spot-pass.md      # dispatch, finding shape, seeded block, header line
 │   └── chain-handoff.md        # pre-chain check, confirmation, invocation, closing report
 ├── checklists/
-│   └── requirements.md  # written by the Specify phase, unchanged here
+│   ├── requirements.md   # written by the Specify phase, unchanged here
+│   ├── api-contracts.md  # Checklist phase — contract boundaries
+│   └── error-handling.md # Checklist phase — degraded, declined, and interrupted paths
 ├── SPEC-MOC.md          # navigation marker (written by scaffold, unchanged)
 └── tasks.md             # Phase 2 output (/speckit-tasks — NOT created by /speckit-plan)
 ```
@@ -217,8 +221,8 @@ preconditions. A separate file would restate that content without adding a step.
 
 ```text
 speckit-pro/                                  # plugin source, ships to both installers
-├── skills/speckit-scaffold-spec/SKILL.md     # MODIFIED — Claude variant, 6 edit sites
-├── codex-skills/speckit-scaffold-spec/SKILL.md  # MODIFIED — Codex variant, 8 edit sites
+├── skills/speckit-scaffold-spec/SKILL.md     # MODIFIED — Claude variant, 7 edit sites
+├── codex-skills/speckit-scaffold-spec/SKILL.md  # MODIFIED — Codex variant, 9 edit sites
 ├── agents/codebase-analyst.md                # read unmodified — the pass engine (Claude)
 ├── codex-agents/codebase-analyst.toml        # read unmodified — the pass engine (Codex)
 └── skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py
@@ -257,6 +261,7 @@ a list rather than a description.
 | C1 | Frontmatter `description` | line 3 | Replace **sentence 3 only**. Sentences 1, 2, 4, 5 stay byte-identical | FR-021, FR-021a |
 | C2 | New `### 3.6 Blind-Spot Pass (IN the Worktree)` | after Step 3.5's closing paragraph, before `### 4. Run Grill Me Interview` | Insert. Do **not** renumber Steps 4–8 | FR-001–FR-007, FR-011 |
 | C3 | Step 4 grill-me invocation | the `Skill("grill-me", args: {...})` block, `scope:` line | Amend so `scope` carries the roadmap text **plus** the labelled findings block | FR-008, FR-009, FR-010 |
+| C3a | Step 4 post-interview verification | the existing `Must contain Goals, Non-goals, Design Tree (Q&A log), and Open Questions` assertion | Extend by one key: verify the `**Blind-spot pass:**` line is present in the header blockquote and `Edit` it in when absent | FR-010a |
 | C4 | Step 7 report closing line | `**Review both files first**` | Soften to `**Review both files**` | FR-013 |
 | C5 | New `### 9. Chain into the Planning Stage` | after Step 8's closing `**NEVER push to main.**` paragraph | Insert | FR-012, FR-013, FR-013a, FR-014, FR-015, FR-015b |
 | C6 | New `### 10. Closing Report` | after C5 | Insert. **Instruct the reader to read `WORKFLOW_TERMINAL_STATUSES` from `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`; do not write the six status literals into this file** | FR-016–FR-020 |
@@ -279,6 +284,7 @@ sites sit in the frontmatter or under `## What to Do`, well clear of it.
 | X2 | Hard Constraint | `Do not run the autopilot at the end. Setup stops once the workflow is ready, committed, and pushed.` | Amend to be conditional on the session's rooting rather than absolute | FR-022 site 1 |
 | X3 | New `### 3.6 Blind-spot pass (in the worktree)` | after Step 3.5's closing paragraph, before `### 4. Run the Grill Me interview` | Insert, same content as C2 in Codex idiom | FR-001–FR-007, FR-011 |
 | X4 | Step 4 grill-me input description | the `Invoke $grill-me ... with a setup-mode marker` bullet list | Amend so the scope input carries the labelled findings block. **Do not disturb the five pinned picker strings in this same step** | FR-008, FR-009, FR-010 |
+| X4a | Step 4 close, after the `If grill-me aborts` paragraph | no existing anchor — the Codex variant performs **no** post-interview verification read today | Insert the same verification C3a extends: read the design concept, confirm the `**Blind-spot pass:**` key, write the line when absent | FR-010a |
 | X5 | `## Output` next-step instruction | the `the exact next step: start a new Codex task rooted at that worktree...` bullet | Amend to add the conditional chain while keeping new-task guidance for the ordinary case | FR-022 site 2 |
 | X6 | `## Output` parent-checkout prohibition | `Never hand off only the inner workflow path from the parent checkout. Do not suggest running autopilot from main, a detached checkout, or any workspace root other than the generated spec worktree.` | **Keep both sentences verbatim.** Preface them to apply when the chain does not fire | FR-022 site 3 |
 | X7 | `## Output` extension | after X6 | Insert the pre-chain check, the confirmation, the chain, and the closing report. **Same frozenset constraint as C6: read the shipped set, never write the six literals here** | FR-012–FR-020 |
@@ -396,6 +402,7 @@ everything pushed (SC-006), and the closing report's artifact index matching dis
 |---|---|---|---|
 | FR-001–FR-007, FR-011 (blind-spot pass) | C2 | X3 | UAT; Layer 1 structure |
 | FR-008–FR-010 (seeding and the record) | C3 | X4 | UAT; Layer 1 pinned-string survival |
+| FR-010a (record verified, not assumed) | C3a | X4a | UAT: delete the header line from the design concept before the verification read and confirm scaffold rewrites it |
 | FR-012–FR-015b (chain hand-off) | C5 | X2, X5, X6, X7 | UAT; ART-006 §3 conformance review |
 | FR-013 (report line softened) | C4 | not applicable | diff review |
 | FR-016–FR-020 (closing report) | C6 | X7 | UAT; ART-006 §4 conformance review |

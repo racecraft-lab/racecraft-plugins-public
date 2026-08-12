@@ -5,7 +5,8 @@ the exact decision boundaries the two `SKILL.md` variants must carry, so the
 implementation is a transcription rather than an interpretation, and so a
 reviewer can diff prose against a specification.
 
-Scope: FR-001 through FR-011. Consumed by `tasks.md` and by the UAT runbook.
+Scope: FR-001 through FR-011, including FR-002a, FR-010a. Consumed by `tasks.md`
+and by the UAT runbook.
 
 ## 1. Placement and mandate
 
@@ -70,14 +71,36 @@ started and FR-011 forbids interrupting it.
 
 | Seed element | Status | Behaviour when absent |
 |---|---|---|
-| The roadmap entry's Scope text | **required** | Present in every entry of all eleven roadmaps |
-| Each spec named in `Depends On` | **required** | Present in every entry of all eleven roadmaps |
-| The `Key Files` section | **optional hint** | Degrade to the required seed and continue. Never report a gap, never skip (Q12, FR-003) |
+| The roadmap entry's Scope text | **required** | Every entry carries scope text in its body, which is what Step 2 already extracts. The `**Scope:**` label itself is not universal, so read the entry's scope text rather than matching a heading |
+| The entry's dependency chain | **required when the entry declares one, under any heading** | Read a renamed variant such as `**Deps:**` as the chain. Only when no declaration exists in any spelling, append the label with the literal `none` and continue on the Scope text alone. Never skip, never report a gap, never infer a chain (FR-003) |
+| The `Key Files` section | **optional hint** | Omit the label entirely and continue. Never report a gap, never skip (Q12, FR-003) |
 
 `Key Files` is optional because the heading is not standardized: html-artifacts
 uses `**Key Files:**`, cross-platform-plugin-runtime uses `**Key Files To Audit:**`
 and `**Key Files Likely To Change:**`, harness-engineering-uplift carries it on 9
 of 15 entries, and pr-size-governance has none at all across its 14 entries.
+
+**The dependency chain is not universal either, and an earlier draft of this
+contract claimed it was.** Measured across the roadmaps in `docs/ai/specs/`, the
+`**Depends On:**` label appears 104 times. pr-size-governance carries it on
+**none** of its 14 entries — it spells the same field `**Deps:**`, 14 times, with
+12 of those naming real chains such as `PRSG-002, PRSG-003`. reviewer-experience
+carries the standard label on 2 of 6 entries, cicd-release-pipeline on 6 of 9,
+and both agent-routing roadmaps on 12 of 19. So **both** branches above are live
+paths rather than defensive ones, and the two must not be collapsed: reading
+`**Deps:**` as an absent field would put `none` in the payload for an entry that
+names several dependencies, which is a false statement rather than a missing one
+and would silently disable the FR-004 archaeology on exactly the roadmap that
+most needs it.
+
+The two absent-field behaviours differ on purpose. `Key Files` is a hint whose
+absence carries no information, and the §4 block already tells the analyst it may
+be absent, so its label is dropped. A missing `Depends On` **is** information: the
+analyst is instructed by FR-004 to chase dependencies into git history, and an
+entry that declares no dependencies must be distinguishable from a payload that
+lost the section. The literal `none` also keeps the §4 block's fixed sentence
+"each spec named in Depends On" satisfiable, which matters because that block is
+byte-identical across both platforms and must not be varied per entry.
 
 **Archived-dependency chase (FR-004)**: the dispatch instructions must require
 chasing each `Depends On` spec into git history when its artifacts are not in the
@@ -132,7 +155,7 @@ Scope:
 <the roadmap entry's Scope text>
 
 Depends On:
-<the roadmap entry's Depends On chain>
+<the entry's dependency chain, read under whatever heading it carries — the literal `none` only when the entry declares no dependencies under any heading>
 
 Key Files:
 <the Key Files section — this label and its text are omitted entirely when the entry has none>
@@ -141,7 +164,8 @@ Key Files:
 The block's own words "the Scope text below" refer to exactly this appended
 material, so the order is part of the contract rather than a formatting
 preference. **Nothing else is appended**: no operator commentary, no prior
-findings, no spec text.
+findings, no spec text. The literal `none` is the resolved value of a contracted
+label rather than added material, so it does not widen that prohibition.
 
 ## 5. Reply classification — three disjoint outcomes, no judgement call
 
@@ -241,6 +265,12 @@ Omitting the block in the degraded path would leave the "did not run" record wit
 no mechanism to be written at all — the one case where the record matters most
 would be the one case that could not produce it.
 
+**Both sinks are scaffold's duty.** The operator-output half is the §6 status
+line, which scaffold prints. The durable half is the §9 header line, which the
+interview writes from the block's instruction and which **§9.1 has scaffold
+verify and, when absent, write itself**. Sending the block is necessary for the
+record; §9.1 is what makes it sufficient.
+
 ## 8. The seeded scope block — one shape, two appearances
 
 Findings reach the interview by being appended as a labelled block to the `scope`
@@ -253,11 +283,19 @@ the seeded `scope` string — so the two records cannot drift:
 ```text
 --- BLIND-SPOT PASS FINDINGS ---
 <the numbered findings, or the FR-006 status line for the outcome>
-<the set-aside line>
+<the set-aside line, present only when findings are shown>
 Record the Blind-spot pass line in the design concept's header blockquote.
 Treat each finding as a candidate question; any finding not reached becomes an Open Question.
 --- END BLIND-SPOT PASS FINDINGS ---
 ```
+
+**The second line is the only conditional one.** It is present in the two §6
+shapes that show findings. It is omitted when the sentinel came back, because §6
+makes the sentinel one string doing two jobs and it is already on the line above,
+so repeating it would state the same fact twice. It is omitted in the two
+degraded outcomes, which have no set-aside count to state. The delimiters and the
+two closing instructions never vary, so the block keeps one shape in all three
+outcomes — which is what lets §7 promise it still travels.
 
 **Platform note (research.md R6)**: on Codex this edit lands in the same step as
 five strings pinned by
@@ -301,6 +339,41 @@ demonstrates by carrying a size-estimate line that nothing rejected.
 resolves becomes an entry in the existing question-and-answer record; a finding
 it does not reach becomes an Open Question. **No finding may be dropped
 silently.**
+
+### 9.1 Scaffold verifies the header line landed, and writes it when it did not
+
+The interview is the writer of first resort — §8's block asks it to record the
+line, and Q19 chose that channel precisely so no grill-me file is edited. But the
+request is one imperative sentence inside a prose block handed to another skill,
+and the durable record is what separates fail-open from a silent skip (§7). So
+the record must not rest on that sentence alone (FR-010a).
+
+**After the interview returns, scaffold reads the design concept for the
+`**Blind-spot pass:**` key and writes the §9 line itself when the key is
+absent.** It needs no second derivation: at the moment it rendered the §6 status
+line it already held the outcome, the `<reason>` clause, and, for the **ran**
+outcome, `N` and `M`. The line it writes is the same line from the same values,
+which is the same reason §6 and §9 share one `<reason>` clause.
+
+| Platform | The read this extends |
+|---|---|
+| Claude | Step 4 already re-reads the design concept and asserts Goals, Non-goals, Design Tree, and Open Questions are present. This adds one key to that existing assertion |
+| Codex | Step 4 performs no verification read today, so this creates one |
+
+That asymmetry is a difference in the two files' **current text**, not a
+behavioural divergence, so it adds nothing to SC-011's closed list — after the
+edit both platforms verify and repair identically.
+
+**Inside the existing envelope**: `Read` to check and `Edit` to insert one line
+into the existing header blockquote. No new tool grant (FR-002), no new
+executable machinery (FR-023), no new section and no separate findings artifact
+(§9 prohibitions), no grill-me edit on either platform (§8).
+
+**When the interview does not return, nothing is owed.** Both variants stop the
+run when no interactive runtime is available, so no design concept exists and the
+§6 operator status line is the only record. That is correct rather than a gap:
+the run does not continue, so there is no later reader for a durable record to
+serve.
 
 ## 10. Presentation is informational
 

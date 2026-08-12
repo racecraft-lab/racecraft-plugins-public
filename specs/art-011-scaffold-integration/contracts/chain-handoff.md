@@ -274,13 +274,41 @@ the run's own plan and checklist phases recorded, so the enumeration still comes
 from a read rather than a directory listing. Never infer a path from convention,
 and never list a path that was not tested.
 
-### 8.3 The decline case
+### 8.3 The decline case, and the two no-chain paths that look like it
 
 When the operator declines and no planning-stage artifacts exist:
 
 - the outcome line states that the run stopped **at the operator's request** and that **nothing was rolled back**;
 - the index lists **only** the scaffold-owned artifacts and the pushed branch;
 - the next step is the hand-off command.
+
+The index and the next step are the same on all three §6 no-chain paths, because
+no planning stage ran on any of them. **The outcome line is not.** One heading
+covers a deliberate stop and two the operator did not choose, so the outcome line
+is where they are told apart:
+
+| No-chain cause | Outcome line states |
+|---|---|
+| The operator declined | the run stopped at the operator's request, and nothing was rolled back |
+| No structured confirmation mechanism was available | the chain was not offered because the session exposes no structured confirmation mechanism, and nothing was rolled back |
+| The §2 rooting test failed | the chain was not offered because the workflow file is not inside the current checkout, and nothing was rolled back |
+| The §2 cleanliness test failed | the chain was not offered because the checkout has uncommitted changes, and nothing was rolled back |
+
+**This does not reopen §6.** The three paths still behave identically: no chain,
+hand-off command printed, nothing rolled back. The outcome line is classified at
+§8 as a **derived** field rather than a fixed string, so deriving it from the
+cause is what that classification already permits.
+
+**The two §2 failures are separated because their remedies differ.** A dirty
+checkout is fixed in place, after which the printed hand-off command works as
+given. A mis-rooted session cannot be corrected from inside itself on Codex, so
+the operator's next action is a new session rooted at the worktree. Reporting
+only "the pre-chain check failed" would name a condition without naming its
+remedy.
+
+Every line closes on **nothing was rolled back**, which is true on all three
+paths and is the fact the operator most needs. On Codex the rooting row is the
+**ordinary** outcome (§3), and its wording is deliberately neutral about fault.
 
 ## 9. Completion is read from the workflow file
 
@@ -291,7 +319,26 @@ file (ART-006 §4, Q10, FR-019).
 **The completion test, two conditions, both in the one artifact:**
 
 1. Every planning-phase row in `## Workflow Overview` — Specify, Clarify, Plan, Checklist, Tasks, Analyze — carries a terminal status.
-2. A `G6.5` confidence-gate verdict is recorded in the file.
+2. A `G6.5` confidence-gate verdict is recorded in the file, **and** the
+   `Confidence Gate` row does not carry a blocked status.
+
+**Condition 2 needs the second clause, and it must not instead demand a PASS.**
+Presence alone would let the strict-mode gate stop — the failure this whole
+section exists to report — pass the test and render under `## Planning Complete`.
+But a PASS-only test breaks the **ordinary** case: G6.5 is advisory by default,
+and in advisory mode `NO_DATA` soft-skips while `FAIL` logs its breakdown and
+proceeds to Phase 7 (`references/gate-validation.md` §G6.5). Planning really did
+complete on those runs, so requiring PASS would file the default-mode success as
+incomplete.
+
+The blocked-row clause separates the two using only what the file carries: after
+a strict-mode stop the six planning rows are terminal and the `Confidence Gate`
+row is left blocked, while an advisory run that proceeded leaves it un-flipped
+and legitimately pending
+(`references/phase-execution.md`, the two consequences under the stage-range
+table). This keeps ART-006 §4's condition intact and adds only the disqualifier
+its own "a `G6.5` PASS with a non-terminal planning row is a contradiction" note
+already implies.
 
 **The `Stage` row is corroborating, not the test.** ART-006 §4 is explicit: the
 `Stage` entry records what was *resolved*, not what *completed*, so a file showing
@@ -319,6 +366,37 @@ lowercase phase vocabulary — `specify`, `clarify`, `plan`, `checklist`, `tasks
 `analyze`. It comes from the same single read the completion test performs, so
 naming the phases that finished and naming the phase to resume from are two
 renderings of one result rather than two reads that could disagree.
+
+A phase that **failed** rather than finished derives correctly without a special
+case: the §9.1 terminal set holds only Complete and Skipped variants, while
+`Blocked` is an open status, so a failed row is the first non-terminal row.
+
+**When every planning row is terminal, `--from-phase` is omitted entirely.**
+`## Planning Incomplete` can be reached with all six rows terminal, because
+condition 2 is the other half of the test — and that is the strict-mode gate
+stop, where the row the operator must act on is `Confidence Gate`. That row is
+**not** a planning-phase row under ART-006 §4's enumeration and has **no token**
+in the shipped `--from-phase` vocabulary, so it must never be named as
+`<phase>`:
+
+| State | Resume command |
+|---|---|
+| A planning row is non-terminal | the §5 invocation plus `--from-phase <phase>` |
+| All six planning rows terminal, condition 2 unmet | the §5 invocation with `--stage plan` and **no** `--from-phase` |
+
+The second row is shipped behaviour rather than a workaround: the autopilot
+re-resolves the stage from this same status table, the `Confidence Gate` row sits
+inside the plan stage's range, and a bare invocation therefore re-enters at the
+gate
+(`speckit-pro/skills/speckit-autopilot/references/phase-execution.md`, stage
+range table and the two consequences below it). The value is still derived from
+one read, and the report's phase list already tells the operator all six
+finished.
+
+**`<phase>` is one of the six tokens or absent.** No third possibility: the
+autopilot range-checks `--from-phase` against an explicitly named stage before
+any phase work begins and stops on a value outside that range, so an invented
+token yields a command that fails instead of resuming.
 
 ### 9.1 Terminal-status vocabulary — read, never re-declared
 
