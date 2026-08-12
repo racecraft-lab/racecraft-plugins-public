@@ -404,7 +404,7 @@ Budget result: expected within budget
 | Resource | Detail |
 |---|---|
 | Source plugin | `speckit-pro/` is authoritative; generated payloads are rebuilt, not hand-edited. |
-| Documentation | Astro 6.4.6 and Starlight 0.40.0 under `docs-site/`. |
+| Documentation | Astro and Starlight under `docs-site/` (see `docs-site/package.json` for pinned versions). |
 | Existing identity | Legacy wordmarks/marks/favicons exist; no SpecKit Pro-specific mark exists. |
 | Release automation | Release Please owns source versions and refreshes generated artifacts. |
 | Validation | Python-authoritative SpecKit Pro suite plus docs reference and site validation. |
