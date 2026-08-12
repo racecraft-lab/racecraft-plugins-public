@@ -508,15 +508,20 @@ Budget below.
   because they are byte-verified copies (`brand-kit.css` `BRAND-KIT` block = 318,
   `theme-toggle.html` `GALLERY-HEAD` block = 140; both measured).
 - **Projected production files**: 1 (net-new: the artifact itself)
-- **Projected total files**: ~5 (the artifact, the catalog, the validation, this
-  slice's export-payload contract, and the spec)
+- **Projected total files**: **13**, measured by the setup gate. An earlier count
+  of ~5 was wrong: it counted the change surface plus this spec and omitted the
+  SpecKit planning artifacts the same pull request carries. Still below the 15
+  warn threshold, so the budget result is unchanged.
 - **Budget result**: **warn**, above the 400 warn threshold and below the 800
   block. Component CSS is the only dimension that can miss the figure; the export
   floor cannot, because it is measured against three shipped implementations of
-  the same routine. [NEEDS CLARIFICATION: whether Plan adopts the ~150-line
-  document-section CSS ceiling as an explicit, checkable constraint. The
-  decomposition holds only if it does, and the three shipped templates that carry
-  both exports each spent 450 to 663 on component CSS.]
+  the same routine.
+- **CSS ceiling**: adopted at Plan as an explicit, checkable constraint, which
+  resolves the last open question this spec carried. Five numeric constraints are
+  declared, and the ceiling is checked by one calibrated measuring instrument at
+  three checkpoints with a stop rule. The first checkpoint fires after the six
+  sections' CSS and **before** any export work, so an overrun surfaces at roughly
+  150 lines written rather than at 750.
 - **Basis for the projection**: measured against the four shipped templates
   rather than fitted to one aggregate figure. Authored lines are what the gate
   counts, and the predictor is the `exports` declaration, not slot count and not
@@ -537,12 +542,11 @@ Budget below.
   brand kit replaces, and **zero `<script>` and zero `<button>` tags** — six
   `<details>` disclosures and nothing else. Every line of export behaviour is
   authored fresh with no upstream counterpart to port.
-- **Split decision**: This spec **is** the split, and it remains correct even
-  though it does not clear the boundary. ART-003 originally declared one slice at
-  285 reviewable LOC. ART-002's slice 1 shipped two templates of the same kind
-  and measured 1494, a hard block that forced a re-slice mid-implement. ART-003
-  was re-declared at scaffold as three stacked slices, one template per pull
-  request. This spec covers slice 1 (`pr-writeup`) only; `annotated-diff` and
+- **Split decision**: This spec **is** the split. ART-003 originally declared one
+  slice at 285 lines. The earlier feature's first slice shipped two templates of
+  the same kind and measured 1494, a hard block that forced a re-slice
+  mid-implement. ART-003 was re-declared at scaffold as three stacked slices, one
+  template per pull request. This spec covers slice 1 (`pr-writeup`) only; `annotated-diff` and
   `flowchart` are slices 2 and 3, cut from their predecessor after each prior
   pull request is open. **Re-measure and re-declare at this slice's Plan phase**
   — the setup gate reads a declaration rather than measuring the tree and will

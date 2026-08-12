@@ -9,7 +9,7 @@
   "stage_basis": "auto-detect: the first non-terminal planning phase is Specify, which is \u23f3 Pending",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-012-workflow.md",
-  "active_step": "Phase 3: Plan",
+  "active_step": "Phase 4: Checklist - accessibility",
   "updated_at": "2026-08-12T18:00:00Z",
   "settings": {
     "consensus_mode": "tier-a",
@@ -94,11 +94,11 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - accessibility",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - accessibility Consensus",
@@ -199,6 +199,11 @@
       "pass": true,
       "markers": 0,
       "reason": "clarify complete; one annotated marker remains by design (CSS ceiling, owned by Plan)"
+    },
+    "G3": {
+      "pass": true,
+      "markers": 0,
+      "reason": "plan.md exists with 0 unresolved markers"
     }
   },
   "spec_metrics": {
@@ -263,5 +268,30 @@
       "consensus": "skipped - zero unresolved",
       "key": "empty state is a fill obligation FR-019b; standing intro outside the pair FR-019a; no retry grouping FR-019c; three-entry sample"
     }
+  },
+  "plan_reviewability": {
+    "declared": 750,
+    "result": "warn",
+    "headroom_to_block": 50,
+    "decomposition": {
+      "js": 288,
+      "control_css": 97,
+      "section_css": 150,
+      "markup": 215
+    },
+    "css_ceiling": "adopted as a checkable constraint; 5 numeric constraints, 3 checkpoints, stop rule",
+    "estimate_reviewable_loc_live": {
+      "status": "pass",
+      "projected": 0,
+      "production": 0,
+      "greenfield": false,
+      "note": "blind as predicted; greenfield resolved false (2 NEW + 2 MODIFIED), so thresholds are base 400/800 not 600/1200"
+    },
+    "declaration_parser_traps_fixed": [
+      "spec.md read 2 from 'reviewable LOC. ART-002'",
+      "workflow read 17 from 'reviewable LOC.' + '17-pr-writeup.html'",
+      "workflow read 1 from the superseded table header + separator + '| 1'"
+    ],
+    "all_three_artifacts_declare": 750
   }
 }

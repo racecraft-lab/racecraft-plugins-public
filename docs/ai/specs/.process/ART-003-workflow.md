@@ -77,11 +77,15 @@ reviewable ≈ (upstream_lines × M) − 458 canonical block lines
 ART-002 realized M ≈ 2.2
 ```
 
-| Slice | Upstream lines | M to clear the 800 block | Projected reviewable LOC |
+| Slice | Upstream lines | M to clear the 800 block | Projected authored lines |
 |---|---|---|---|
 | 1 `pr-writeup` | 595 | ≤ 2.11 | ~750 (warn) |
 | 2 `annotated-diff` | 638 | ≤ 1.97 | ~780 (warn) |
 | 3 `flowchart` | 395 | ≤ 3.19 | ~410 (warn) |
+
+> The column above deliberately avoids the phrase the declaration parser matches.
+> This table is superseded, and a superseded figure must never be the last match
+> in the file. See the closing declaration at the end of this section.
 
 Each slice lands in warn, none in block, and no `Reviewability-Exception` pragma
 is needed. **Re-measure and re-declare at each slice's Plan phase.** The setup
@@ -123,7 +127,7 @@ because it has no export affordance to build, so it is not a comparator for
 
 `pr-writeup` declares `["prompt","markdown"]` and six slots. Its nearest
 comparators are `module-map` and `code-approaches`. **No template carrying both
-exports has ever landed under 800 reviewable LOC.**
+exports has ever landed under the 800 block.**
 
 Upstream `17-pr-writeup.html` sharpens this rather than softening it: 596 lines,
 of which 346 are CSS that the brand kit replaces, leaving 250 markup lines
@@ -241,6 +245,34 @@ The authoritative figure for this slice is the measurement above, and the
 re-declaration at Plan must cite that, never the helper's output. Record the
 helper's `pass/0` as a known-blind diagnostic with this reason beside it.
 
+#### Closing declaration — the figure this file declares
+
+**Nothing may be appended after this block.** The declaration parser takes the
+**last** phrase match in the whole file
+(`speckit_pro_runner/helpers/read_only.py:967`), so any later paragraph that
+happens to put a number within forty non-digit characters of the phrase silently
+becomes this file's declared figure.
+
+That is not hypothetical. Both traps were live in this file and were caught by
+running the real parser rather than reading the prose:
+
+- A sentence ending `…under 800 reviewable LOC.` followed by
+  ``Upstream `17-pr-writeup.html`…`` made the file declare **17**.
+- The superseded slice table's column header, followed by its separator row and
+  the leading `| 1` of the next row, made it declare **1**.
+
+The same trap was live in `spec.md`, where `…285 reviewable LOC. ART-002's slice
+1…` made the spec declare **2**. All three are fixed, and all three artifacts now
+declare the same number.
+
+```text
+Projected reviewable LOC: 750
+```
+
+Slice 1, measured and decomposed: 288 export and question-capture JS, 97 question
+and export CSS, 150 document-section CSS, 215 markup. Excludes the 458 canonical
+block lines. Warn, 50 lines of headroom to the 800 block.
+
 ---
 
 ## Workflow Overview
@@ -249,7 +281,7 @@ helper's `pass/0` as a known-blind diagnostic with this reason beside it.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 42 FRs, 2 user stories; budget corrected to a block |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions; consensus skipped, zero unresolved |
-| Plan | `/speckit-plan` | ⏳ Pending | Re-declare the reviewability budget here |
+| Plan | `/speckit-plan` | ✅ Complete | G3 PASS; declared 750, warn; CSS ceiling adopted as a checkable constraint |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Three domains: accessibility, ux, error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -735,11 +767,18 @@ the list-slot row, and the source-set member.
     pnpm --dir docs-site reference:generate
 
 ## Constraints
-- Reviewability: this slice must land under 800 reviewable production LOC, and
-  the budget is ~750. Upstream 17-pr-writeup.html is 595 lines, so the shipped
-  file must hold a multiplier at or under 2.11x once the 458 canonical block
-  lines are discounted. Dropping upstream sections that map to no fill region is
-  the lever that holds it (design concept Q3).
+- Reviewability: this slice must land under 800 reviewable production LOC. The
+  budget is ~750, and it is now DECOMPOSED and measured, not scaled from a
+  multiplier. Ignore any upstream-line multiplier: that model was refitted at
+  Phase 0 and discarded. The decomposition, from spec.md's Reviewability Budget:
+  export and question-capture JS ~288, question and export CSS ~97, six document
+  sections ~150 CSS, markup ~215.
+  Component CSS is the ONLY dimension that can miss the figure. The export floor
+  cannot, because it is measured against three shipped implementations of the
+  same routine. Adopt the ~150-line document-section CSS ceiling as an explicit,
+  checkable constraint in this plan and say how it is checked, or state plainly
+  that you are accepting a block and refer the exception question to the
+  operator. That single decision is the last open marker in spec.md.
 - Re-declare the measured reviewability figure in this plan. The setup gate
   reads the last "reviewable LOC" number in its target and will otherwise keep
   reporting a stale pass all the way to PR creation
@@ -770,12 +809,22 @@ docs/ai/specs/.process/ART-003-design-concept.md when a choice needs its "why".
 - Q3: keep the upstream mechanism and structure, restyle entirely to brand
   tokens, drop upstream sections that map to no fill region, author fresh what
   the stage needs.
-- Q4: six fill regions. FLOOR["pr-writeup"] names only the roadmap's four
-  (motivation, before-after, file-by-file, implementation-notes), keeping the
-  floor literal sourced from one document as the comment at
-  tests/speckit-pro/unit/test-artifact-fill-regions.py:81 requires. The other two
-  are bound both ways by the test's R2/R3 inventory agreement. module-map is the
-  precedent: five slots shipped, one in FLOOR.
+- Q4, AS SETTLED BY CLARIFY: SEVEN fill regions, not six. The six reader-facing
+  ones plus feature-header, which carries id="feature-id" and id="feature-name"
+  because both exports read them to name the change. Every shipped template
+  already ships that region. FLOOR["pr-writeup"] still names only the roadmap's
+  four (motivation, before-after, file-by-file, implementation-notes), keeping
+  the floor literal sourced from one document as the comment at
+  tests/speckit-pro/unit/test-artifact-fill-regions.py:81 requires. The rest are
+  bound both ways by R2/R3 inventory agreement, and R1 explicitly accepts a
+  template carrying more slots than the floor names.
+- Clarify settled the whole slot, source, list-slot, port-mapping, export-shape
+  and notes-rendering surface. spec.md FR-011a through FR-039a are the binding
+  record; read them before planning and do not re-derive any of it. In
+  particular: file-by-file is the ONLY list slot; implementation-notes must NOT
+  be one, because a per-item anchor would collide on the retry case FR-019
+  requires. The port's dropped upstream sections (FR-011c) are worth ~141 lines
+  and are the single largest size lever.
 - Q5: implementation-notes renders only the non-None entries from ART-012's
   record, in append order, each under its task ID, retries included.
 - Q10: one question-capture widget per section, matching the disclosure plus
@@ -787,6 +836,66 @@ docs/ai/specs/.process/ART-003-design-concept.md when a choice needs its "why".
 ```
 
 ### Plan Results
+
+Completed 2026-08-12. **G3 PASS** — `plan.md` exists with 0 unresolved markers.
+
+Artifacts: `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, and
+`contracts/export-payload-contract.md` (FR-029a). No source file touched.
+
+**The CSS ceiling was adopted as a checkable constraint**, which closes the last
+open question the spec carried. Five numeric constraints are declared (document
+section CSS ≤ 150, question and export CSS ≤ 97, JS ≤ 288, markup ≤ 215, total
+≤ 750), checked by one measuring instrument at three checkpoints with a stop
+rule. The instrument is calibrated against all four shipped templates, where it
+reproduces their recorded figures within two lines and is internally consistent
+in a way the recorded pass is not — the recorded numbers double-count the two
+`<style>` delimiters.
+
+The load-bearing checkpoint fires after the six sections' CSS and **before** any
+export work, so an overrun surfaces at roughly 150 lines written rather than at
+750. A committed test was considered and rejected on record: it would consume the
+budget it protects, it is wrong for slices 2 and 3 (a document-class ceiling does
+not fit diagram-class templates), and it would add a fourth literal to a
+shared-validation change FR-039a fixes at three.
+
+**Declared figure: 750**, warn, 50 lines of headroom.
+
+Two corrections the plan made to this file's own predictions, both verified:
+
+1. **`greenfield` resolves false, not true.** Phase 0 predicted greenfield
+   thresholds of 600/1200 on the assumption that every declared entry would be
+   `NEW`. The plan declares two `NEW` and two `MODIFIED`, and neither modified
+   path is generated, so the run is not greenfield and the thresholds are the
+   base 400/800. Confirmed live: `greenfield: false`. The blindness itself stands
+   exactly as recorded — `projected: 0`, `production: 0`.
+2. **Total files is 13, not ~5.** The spec counted the change surface plus itself
+   and omitted the SpecKit planning artifacts the same pull request carries. Still
+   under the 15 warn threshold, so the budget result is unchanged.
+
+**Declared File Operations:** NEW `templates/pr-writeup.html`; MODIFIED
+`manifest.json`; MODIFIED `tests/speckit-pro/unit/test-artifact-fill-regions.py`;
+NEW `contracts/export-payload-contract.md`. Generated-artifact obligations are
+recorded in prose rather than as entries, because the gate's own rule excludes
+generated paths.
+
+**Constitution gates (v1.2.0), both passes:** I, II, IV, VI pass; III not
+engaged; V deferred to the PR title. No violation claimed. Complexity Tracking
+records two justified departures from shipped precedent: the FR-026a currency
+guard and the FR-023b control placement.
+
+**Verification:** suite 7378/7378, exactly the G0 baseline. Path hygiene clean
+across all five artifacts.
+
+**The recovered contract was used.** This slice's contract is built from the
+ART-002 document recovered from `85fd92e0^`, carrying forward all seven pinned
+literals, the header-line fallback reasoning, the item reference form, the
+empty-state denial rationale, the single no-cause failure message, the four-step
+failure path, and the scheme-naming rule. The conflict with FR-023b is resolved
+as a **named divergence with its justification** rather than silently: the
+capture control follows the content it questions, which honours the contract's
+stated reading-order rationale while departing from its letter, because the
+anchor's role changed from list item to section heading. The accordion warning is
+recorded as considered and inapplicable, since upstream ships no script at all.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
