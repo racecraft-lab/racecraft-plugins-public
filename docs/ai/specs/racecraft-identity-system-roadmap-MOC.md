@@ -1,10 +1,10 @@
 ---
-up: ""
+up: "[Racecraft Identity System Implementation Roadmap](racecraft-identity-system-technical-roadmap.md)"
 related:
   - "[PRD](../../prd-racecraft-identity-system.md)"
   - "[Technical roadmap](racecraft-identity-system-technical-roadmap.md)"
   - "[Interactive Documentation roadmap](interactive-documentation-technical-roadmap.md)"
-status: "BRAND-001 in progress; BRAND-002 through BRAND-007 planned"
+status: "BRAND-001 scaffolded and ready, not started; BRAND-002 through BRAND-007 planned"
 rank: 1
 spec_id: "racecraft-identity-system"
 structureVersion: 1

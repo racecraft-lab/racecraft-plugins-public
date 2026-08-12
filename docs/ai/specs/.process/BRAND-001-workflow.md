@@ -74,7 +74,8 @@ ambiguity. Do not rerun the interview inside autopilot.
 
 ### Worktree and branch
 
-- Repository root: `/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/brand-001-racecraft-identity-system`
+- Worktree: `.worktrees/brand-001-racecraft-identity-system`, relative to the
+  repository root
 - Branch: `brand-001-racecraft-identity-system`
 - Starting commit: `1df48912`
 - No repository-specific dependency bootstrap was documented for this planning
