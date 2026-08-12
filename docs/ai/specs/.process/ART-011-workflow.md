@@ -65,8 +65,8 @@ scaffold-side code. The design concept quotes the parts ART-011 depends on
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Specify | `/speckit-specify` | ✅ Complete | 23 FRs, 4 user stories, 21 acceptance scenarios, 12 success criteria. G1 routed to Clarify on 3 markers |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | 3 sessions; each of the 3 markers routes to one of them |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -112,7 +112,44 @@ Each phase requires **human review and approval** before proceeding:
 | IV. Test Coverage Before Merge | Layer 1, Layer 2 trigger evals, Layer 8 parity all green | `python3 tests/speckit-pro/run-all.py` |
 | VI. KISS, Simplicity & YAGNI | No skip flag, no new agent, no configurable cap — all three declined in the interview (Q13, Q17, Q2) | Code review against the design concept's Non-goals |
 
-**Constitution Check:** ⏳ (mark before proceeding to G1)
+**Constitution Check:** ✅ (2026-08-12, before G1)
+
+`python3 tests/speckit-pro/run-all.py` → **7378/7378 passed** at commit `779c3f59`
+(L1 1447, L4 5745, L5 186; toolchain preflight ok). Principles I, II, and IV are
+discharged by that run. Principle VI is a review-time check against the design
+concept's Non-goals and is re-verified at Analyze.
+
+### Pre-Flight Evidence (Phase 0)
+
+| Check | Result |
+|-------|--------|
+| `check-prerequisites` | `all_pass: true` — CLI `specify 0.11.8`, project initialized, constitution present, all SpecKit commands installed, workflow file exists, `branch: art-011-scaffold-integration` (`worktree=true,feature=true`) |
+| `detect-commands` | stack `python`, source `test_runner_script`. `FULL_VERIFY` = `UNIT_TEST` = `python3 tests/speckit-pro/run-all.py`; `TYPECHECK`, `LINT`, `BUILD`, `INTEGRATION_TEST` all `N/A` |
+| `detect-presets` | `speckit-pro-reviewability` v1.0.0 resolves spec/plan/tasks templates; 18 hook events configured |
+| Extensions | all 8 installed and enabled: `archive`, `git`, `checkpoint`, `retrospective`, `verify`, `verify-tasks`, `agent-context`, `speckit-utils` |
+| Settings | no `.claude/speckit-pro.local.md` — defaults apply (`gate-failure: stop`) |
+| `resolve-confidence-mode` | `advisory` (no flag, no local config) → `CONFIDENCE_GATE_MODE=advisory` |
+| `resolve-autopilot-stage` | `stage: plan`, `source: auto-detect`, `recorded_stage: null`, `planning_complete: false`, `confidence_gate_status: ⏳ Pending` |
+| State-slot reclaim | slot named `docs/ai/specs/.process/ART-012-workflow.md` (prior status `completed_archived`, recorded verbatim in `prior_run_note`). Re-initialised for ART-011 **before** the Step 1.1 guard, per Step 0.6d |
+| Coverage guard | `--rule status-evidence` → `status: pass`, exit 0, `plan_step_count: 33`, every error array empty |
+| `PROJECT_IMPLEMENTATION_AGENT` | `speckit-pro:phase-executor` (fallback). `.claude/agents/` holds `plugin-release-auditor` and `speckit-skill-reviewer` — neither is an implementation agent. **`speckit-skill-reviewer` is a direct fit for `Post: Code Review` in the implement stage**, since it reviews exactly one changed `SKILL.md` plus its Codex mirror |
+| `AGENT_TEAMS_AVAILABLE` | **false.** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set and Claude Code is 2.1.228, but this build exposes no `TeamCreate` tool and documents the `Agent` tool's `team_name` parameter as deprecated and ignored. Parallel work therefore uses batched background subagents in one message — same wall-clock, no team coordination |
+| Archive Sweep | **0 eligible.** `specs/` holds only the excluded target and `specs/brand-001-racecraft-identity-system`, which is not eligible: its `SPEC-MOC.md:6` reads `status: "pending"` and its roadmap row reads "Scaffolded 2026-07-16 and parked; all seven phases still pending". ART-002/006/012 are already absent, consistent with the three most recent archive reports |
+
+**Recorded deviation — archive sweep ran read-only.** The skill applies the sweep
+on a feature branch and reserves `--dry-run` for protected branches. This run
+used read-only discovery instead: archiving another spec would add unrelated file
+moves to ART-011's diff, which the repository's own editing boundaries forbid.
+The sweep found nothing eligible, so the two paths have the same outcome here.
+
+### Feature State (namespaced branch)
+
+| Field | Value |
+|-------|-------|
+| Feature dir | pinned via `.specify/feature.json` (gitignored) to `specs/art-011-scaffold-integration` |
+| `ON_FEATURE_BRANCH` | **true.** Before the pin, `check-prerequisites` reported `worktree=true,feature=false`; after it, `worktree=true,feature=true`. The pin serves the vendored `check-prerequisites.sh` path the `/speckit-*` phase commands call internally, whose `^[0-9]{3}-` regex does not match this repo's namespaced spec IDs. Same setup ART-012 recorded at its own lines 83-89 |
+| `before_specify` → `speckit.git.feature` (`optional: false`) | **SKIP** — the branch already exists and is checked out in this worktree; the hook's purpose is already satisfied |
+| G0 test baseline | **7378** via `python3 tests/speckit-pro/run-all.py` at `779c3f59`. Recorded once here; G7 compares against it and it is **not** recomputed later in the run |
 
 ---
 
@@ -125,6 +162,7 @@ Each phase requires **human review and approval** before proceeding:
 | **Spec ID** | ART-011 |
 | **Name** | Scaffold Integration |
 | **Branch** | `art-011-scaffold-integration` |
+| **Stage** | plan |
 | **Dependencies** | ART-006 (Autopilot Staging, shipped in PR #422) |
 | **Enables** | One-command operator experience; the closing report's PR line lights up when ART-007 lands |
 | **Priority** | P1 |
@@ -323,17 +361,46 @@ what to do next.
 
 ### Specify Results
 
-<!-- Fill in after running the command -->
+Completed 2026-08-12.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | 23 (FR-001…FR-023): blind-spot pass 7, seeding + design-concept record 4, chain hand-off 4, closing report 5, cross-cutting 3 |
+| User Stories | 4 — US1/US2/US3 at P1, US4 at P2, each with an Independent Test |
+| Acceptance Criteria | 21 Given/When/Then scenarios; 12 success criteria (SC-001…SC-012) each mapped to AC-11.1…AC-11.4 |
+| Edge cases | 11 |
+| Key entities | 6 |
+| Design-concept traceability | all 21 Q-numbers cited |
+| Privacy scan | clean — zero absolute home paths in either authored file |
+
+### G1 — Routing Decision
+
+**3 `[NEEDS CLARIFICATION]` markers remain, so Clarify runs.** All three are
+routed to an already-planned session; none is a new session.
+
+| # | FR | Routed to | Substance |
+|---|----|-----------|-----------|
+| 1 | FR-006 | Session 2 (Blind-Spot Pass Contract) | What counts as "returns nothing usable" for the fail-open trigger, and how that is distinguished from a pass that ran and raised zero findings |
+| 2 | FR-021 | Session 1 (Description Reword) | The exact reworded description per platform and how many Layer 2 cases it needs. This is design-concept Open Question 2, whose own next step named `/speckit-clarify` |
+| 3 | FR-022 | Session 3 (Chain Confirmation) | **New, and material.** `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md:449-453` tells the operator to "start a new Codex task rooted at that worktree" and "Never hand off only the inner workflow path from the parent checkout". An in-session Codex chain from a parent-rooted session contradicts that. Design-concept Q4 fixed in-session invocation without reaching this constraint |
+
+**Deterministic gate discrepancy, recorded.** Runner helper `validate-gate`
+returned `{"gate":"G1","pass":true,"markers":0}` while the spec carries three
+markers. The helper counts the literal regex `\[NEEDS CLARIFICATION\]`
+(`speckit_pro_runner/helpers/read_only.py:885`), which matches only a bare
+bracketed marker. The active spec template prescribes the colon form —
+`[NEEDS CLARIFICATION: auth method not specified …]`
+(`.specify/presets/speckit-pro-reviewability/templates/spec-template.md:98-99`) —
+so the helper cannot count a marker written the way the template asks for it.
+G1 was therefore decided on the true count, not the helper's. This is the same
+class of defect as ART-014: a gate reporting an authority it does not exercise.
+It is **not** in ART-011's scope; it is raised here as evidence for a follow-up
+roadmap entry.
 
 ### Files Generated
 
-- [ ] `specs/art-011-scaffold-integration/spec.md`
+- [x] `specs/art-011-scaffold-integration/spec.md` (23 FRs, 209 lines)
+- [x] `specs/art-011-scaffold-integration/checklists/requirements.md` (authoring-quality checklist emitted by the command)
 
 ### SpecKit Traceability Markers
 
