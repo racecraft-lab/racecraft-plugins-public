@@ -67,8 +67,8 @@ scaffold-side code. The design concept quotes the parts ART-011 depends on
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 23 FRs, 4 user stories, 21 acceptance scenarios, 12 success criteria. G1 routed to Clarify on 3 markers |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions, 15 questions, 2 consensus rounds. All 3 markers resolved; G2 clean. Spec 23 → 28 normative items |
-| Plan | `/speckit-plan` | 🔄 In Progress | |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Plan | `/speckit-plan` | ✅ Complete | G3 pass. plan.md, research.md, two contracts. 14 edit sites; measured surface 2 production files / 300 LOC, 1 slice |
+| Checklist | `/speckit-checklist` | 🔄 In Progress | 3 domains: api-contracts, error-handling, ux |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
@@ -641,11 +641,63 @@ insertions at known seams rather than a restructure.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Field Guide technique provenance; ART-006 contract recovery |
-| `data-model.md` | ⏳ | Likely not applicable — no data entities |
-| `contracts/` | ⏳ | Candidate: the blind-spot finding shape and the closing report contract |
-| `quickstart.md` | ⏳ | Likely not applicable — no developer-facing surface |
+| `plan.md` | ✅ | 447 lines; 14 edit sites (6 Claude, 8 Codex), each with a named anchor and requirement mapping |
+| `research.md` | ✅ | 355 lines |
+| `data-model.md` | ⏭ Not produced | The six key entities are prose artifacts with fixed textual shapes, not data entities; their shapes live in `contracts/`. Reason recorded in `plan.md` |
+| `contracts/` | ✅ | `blind-spot-pass.md` (218 lines), `chain-handoff.md` (266 lines) |
+| `quickstart.md` | ⏭ Not produced | Verification is the Layer 2 manual gate plus UAT, both already carrying exact commands in the plan's verification section. Reason recorded in `plan.md` |
+
+**G3: pass**, 0 unresolved markers. All six constitution gates pass on both the
+initial and post-design checks, with Complexity Tracking intentionally empty.
+Repository suite green at 7378/7378.
+
+#### Reviewability reconciliation, and a third blind tool
+
+Declared in the roadmap: ~4 production files, 162 LOC. **Measured: 2 production
+files, 300 LOC** (`estimate-spec-size` at 4 stories, 2 files, 28 FRs,
+modify-weighted; `status: ok`, 1 slice). The LOC rise is FR granularity, not
+surface growth — feeding the original 13-FR input back into the estimator
+reproduces 187 exactly. Both figures sit under the 400 warn ceiling, the surface
+shrank from the declaration, and the roadmap entry is in the Declared File
+Operations table to be corrected.
+
+The plan-phase helper `estimate-reviewable-loc` returned
+`projected: 0, production: 0, status: pass` while correctly parsing all five
+declared entries. That is not a formatting fault in the table: the helper's
+`is_production_file` counts a path only when it starts with `src/`, `app/`,
+`lib/`, or `scripts/`, or ends in `.ts/.tsx/.js/.jsx/.mjs/.cjs/.sql`. A plugin
+repository whose shipped artifacts are Markdown scores zero by construction, so
+the advisory budget cannot see this spec at all and would not see an oversized
+one either.
+
+That is the **third** gate this run found reporting a benign value on input it
+cannot actually assess, after G1's marker regex missing the template's own
+marker form. Both are ART-014-shaped: enforcement narrower than the authority
+the surrounding documentation implies. Neither is in ART-011's scope; both are
+recorded here as evidence for a follow-up entry.
+
+#### Three places the spec under-determined the implementation
+
+All three were found and closed during planning, and each would have produced a
+broken implementation if it had reached coding.
+
+1. **The dispatch has to be awaited, and no requirement said so.**
+   `speckit-pro/agents/codebase-analyst.md:14` carries `background: true`, so an
+   unawaited dispatch returns an identifier rather than findings — which makes
+   FR-001, FR-002, and FR-011 jointly unsatisfiable. The plan adopts the house
+   consensus pattern: Claude awaits after a background dispatch, Codex uses a
+   bounded wait loop in which a status update or a timeout is explicitly not a
+   result.
+2. **The Codex invocation in the ART-006 contract is not runnable as written.**
+   Contract §3's Codex row reads `<workflow-file> --stage plan` with no leading
+   token, because the companion argv document covers argv only and states the
+   command token has no Codex counterpart. Taken literally, the chain would
+   invoke a bare path. Resolved to `$speckit-autopilot <workflow-file> --stage plan`,
+   leaving argv unchanged.
+3. **New Claude step numbers were unallocated**, while FR-012 forbids
+   renumbering. Resolved to `3.6` for the pass, `9` for the chain, and `10` for
+   the closing report; on Codex the chain and report extend the existing Output
+   section instead.
 
 ---
 

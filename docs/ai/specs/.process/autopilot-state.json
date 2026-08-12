@@ -6,7 +6,7 @@
   "branch": "art-011-scaffold-integration",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 3: Plan",
+  "active_step": "Phase 4: Checklist - api-contracts",
   "updated_at": "2026-08-12T18:00:00Z",
   "prior_run_note": "Reclaimed the single state slot from docs/ai/specs/.process/ART-012-workflow.md (prior status: completed_archived). Reclaiming is normal operation - one slot, many specs.",
   "settings": {
@@ -75,11 +75,11 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - api-contracts",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - api-contracts Consensus",
@@ -185,6 +185,11 @@
       "verdict": "pass",
       "markers": 0,
       "reason": "all 3 [NEEDS CLARIFICATION] markers resolved across 3 clarify sessions"
+    },
+    "G3": {
+      "verdict": "pass",
+      "markers": 0,
+      "reason": "plan.md exists with 0 unresolved markers; all six constitution gates pass"
     }
   },
   "archive_sweep": {
@@ -206,5 +211,33 @@
   },
   "agent_teams_available": false,
   "agent_teams_evidence": "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 and Claude Code 2.1.228, but no TeamCreate tool in this build and the Agent tool documents team_name as deprecated/ignored. Using batched background subagents.",
-  "project_implementation_agent": "speckit-pro:phase-executor"
+  "project_implementation_agent": "speckit-pro:phase-executor",
+  "plan_reviewability": {
+    "estimate_reviewable_loc": {
+      "projected": 0,
+      "production": 0,
+      "status": "pass",
+      "note": "structurally blind here: is_production_file counts only src/|app/|lib/|scripts/ prefixes or .ts/.tsx/.js/.jsx/.mjs/.cjs/.sql suffixes, so a Markdown-shipping plugin repo scores 0 by construction. Advisory only; never blocks."
+    },
+    "estimate_spec_size": {
+      "estimated_loc": 300,
+      "suggested_slices": 1,
+      "status": "ok",
+      "inputs": {
+        "user_stories": 4,
+        "files": 2,
+        "frs": 28,
+        "new_vs_modify": "modify"
+      }
+    },
+    "roadmap_declared": {
+      "production_files": "~4",
+      "reviewable_loc": 162
+    },
+    "measured": {
+      "production_files": 2,
+      "reviewable_loc": 300
+    },
+    "reconciliation": "surface shrank, LOC rose with FR granularity (13 FRs reproduces 187 exactly). Both under the 400 warn ceiling. Roadmap entry is in the Declared File Operations table for correction."
+  }
 }
