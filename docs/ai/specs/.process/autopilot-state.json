@@ -202,5 +202,28 @@
     "lines": 458,
     "annotated_clarification_markers": 3,
     "note": "G1/G2 count the bare [NEEDS CLARIFICATION] literal only; the annotated form is not gate-enforced"
+  },
+  "reviewability_evidence": {
+    "authoritative": "measurement of the four shipped templates, recorded in the workflow Slice Plan correction",
+    "measured_authored_lines": {
+      "spec-explainer": 316,
+      "module-map": 1003,
+      "code-approaches": 1026,
+      "implementation-plan": 1222
+    },
+    "decomposition_note": "export JS floor ~280 and irreducible; component CSS 450-663 is the larger item; spec-explainer renders six regions in 171 CSS with 0 authored JS",
+    "slice1_projection": {
+      "constrained_document_class_css": 750,
+      "unconstrained": "1000-1200",
+      "block_threshold": 800
+    },
+    "estimate_reviewable_loc_is_blind": {
+      "reason": "projected = production_file_count * 40 (read_only.py:1042); is_production_file returns False for the html template, manifest.json and the test module",
+      "expected_output": {
+        "status": "pass",
+        "projected": 0
+      },
+      "treat_as": "known-blind diagnostic, never as evidence"
+    }
   }
 }

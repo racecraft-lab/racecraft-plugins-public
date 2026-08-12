@@ -206,6 +206,41 @@ The scaffold's original ~750 turns out to be close to right, for a reason it did
 not know: it was the correct figure for a document-class template, reached by an
 argument that happened to average the wrong population.
 
+#### The plan-phase estimator cannot see this, and will report green
+
+Autopilot step 7b runs `estimate-reviewable-loc` after G3. **Do not read its
+result as evidence about this slice.** It is structurally blind here, for two
+independent reasons, both verified at
+`speckit_pro_runner/helpers/read_only.py:1016-1051`:
+
+1. **It counts files, not content.** The projection is literally
+   `projected = production_file_count * 40` (`:1042`). No file is opened and no
+   line is counted. A 40-line artifact and a 1200-line artifact project
+   identically.
+2. **It classifies none of this slice's paths as production.** `is_production_file`
+   returns `False` for all three:
+
+   ```text
+   speckit-pro/artifact-gallery/templates/pr-writeup.html      production=False
+   speckit-pro/artifact-gallery/manifest.json                  production=False
+   tests/speckit-pro/unit/test-artifact-fill-regions.py        production=False
+   ```
+
+So `production = 0`, `projected = 0`, and because every declared entry is `NEW`
+the run is `greenfield` (`warn=600`, `block=1200`). The helper will emit
+**`status: "pass"`, `projected: 0`** against a measured 750 to 1200.
+
+This is not a new bug and not a reason to stop. ART-012 recorded the identical
+result (`plan_reviewability: {"status": "pass", "projected": 0}`), and step 7b is
+advisory by contract — it never blocks. The hazard is only that a green line in
+the log reads as reassurance. **It is not.** It is the same shape of false
+comfort that let ART-002 reach PR creation believing it was at 530: a
+declaration-checking gate reporting `pass` on a number nobody measured.
+
+The authoritative figure for this slice is the measurement above, and the
+re-declaration at Plan must cite that, never the helper's output. Record the
+helper's `pass/0` as a known-blind diagnostic with this reason beside it.
+
 ---
 
 ## Workflow Overview
