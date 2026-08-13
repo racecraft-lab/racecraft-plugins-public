@@ -1,13 +1,13 @@
 {
-  "workflow_file": "docs/ai/specs/.process/ART-003-slice-2-workflow.md",
-  "spec_id": "ART-003-slice-2",
-  "feature_dir": "specs/art-003-final-pr-template-set-slice-2",
-  "branch": "art-003-final-pr-template-set-slice-2",
+  "workflow_file": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
+  "spec_id": "ART-003-slice-3",
+  "feature_dir": "specs/art-003-final-pr-template-set-slice-3",
+  "branch": "art-003-final-pr-template-set-slice-3",
   "status": "in_progress",
   "stage": "full",
-  "active_step": "Phase 7: Implement",
-  "prior_run_note": "completed_pr_open",
-  "reclaimed_from": "docs/ai/specs/.process/ART-003-workflow.md",
+  "active_step": "Phase 1: Specify",
+  "prior_run_note": "in_progress",
+  "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-2-workflow.md",
   "settings": {
     "consensus_mode": "tier-a",
     "gate_failure": "stop",
@@ -19,14 +19,14 @@
     "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py"
   },
   "test_baseline_g0": {
-    "passed": 7379,
-    "total": 7379,
+    "passed": 7380,
+    "total": 7380,
     "l1": 1447,
-    "l4": 5746,
+    "l4": 5747,
     "l5": 186
   },
-  "base_branch": "art-003-final-pr-template-set",
-  "stacked_on_pr": 435,
+  "base_branch": "art-003-final-pr-template-set-slice-2",
+  "stacked_on_pr": 436,
   "plan": [
     {
       "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
@@ -38,79 +38,71 @@
     },
     {
       "step": "Phase 1: Specify",
-      "status": "completed"
+      "status": "in_progress"
     },
     {
-      "step": "Phase 2: Clarify - Slot inventory and hunk granularity",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Slot inventory and the diagram's text equivalent",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - Slot inventory and hunk granularity Consensus",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Slot inventory and the diagram's text equivalent Consensus",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - Export payload and objection shape",
-      "status": "completed"
+      "step": "Phase 2: Clarify - The disclosure mechanism",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - Export payload and objection shape Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Diff rendering edges",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Diff rendering edges Consensus",
-      "status": "completed"
+      "step": "Phase 2: Clarify - The disclosure mechanism Consensus",
+      "status": "pending"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - accessibility",
-      "status": "skipped: slice 1 ran all three domains against the same contract; findings carried into this spec at Specify and Clarify"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - accessibility Consensus",
-      "status": "skipped: slice 1 ran all three domains against the same contract; findings carried into this spec at Specify and Clarify"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - ux",
-      "status": "skipped: slice 1 ran all three domains against the same contract; findings carried into this spec at Specify and Clarify"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - ux Consensus",
-      "status": "skipped: slice 1 ran all three domains against the same contract; findings carried into this spec at Specify and Clarify"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "skipped: slice 1 ran all three domains against the same contract; findings carried into this spec at Specify and Clarify"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "skipped: slice 1 ran all three domains against the same contract; findings carried into this spec at Specify and Clarify"
+      "status": "pending"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "skipped: cross-artifact consistency verified inline \u2014 all three artifacts declare 750, verified by running the parser; coverage checked at Plan"
+      "status": "pending"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "skipped: no analyze phase run"
+      "status": "pending"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "skipped: advisory; slice 1's recorded verdict and this slice's stronger measurement basis carry forward"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement",
-      "status": "in_progress"
+      "status": "pending"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -160,23 +152,5 @@
       "step": "Post: Retrospective",
       "status": "pending"
     }
-  ],
-  "gates": {
-    "G1": {
-      "pass": true,
-      "markers": 0
-    },
-    "G2": {
-      "pass": true,
-      "markers": 0
-    },
-    "G3": {
-      "pass": true,
-      "markers": 0
-    },
-    "G5": {
-      "pass": true,
-      "task_count": 41
-    }
-  }
+  ]
 }
