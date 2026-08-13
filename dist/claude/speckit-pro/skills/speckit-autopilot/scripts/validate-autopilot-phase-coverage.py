@@ -904,7 +904,19 @@ def _repository_root(path: Path) -> Path | None:
     # *is* rather than on how the caller spelled the path and which directory they
     # ran from. A relative path's parents chain terminates at the working
     # directory, which found no marker for a file sitting inside the repository.
-    resolved = path.resolve()
+    #
+    # A resolution failure is treated as an unresolvable root, which is the same
+    # verdict this function already returns when no marker is found and which the
+    # callers already handle. The alternative is an exception escaping into
+    # ``main()``, which catches only ``ValidationError`` and would print a
+    # traceback where the autopilot expects a JSON report. Reaching this today
+    # requires the state file to be readable while its own path will not resolve,
+    # because ``load_state`` runs first; that ordering is a property of the caller
+    # rather than of this function, so the guard does not depend on it holding.
+    try:
+        resolved = path.resolve()
+    except (OSError, RuntimeError):
+        return None
     for candidate in (resolved.parent, *resolved.parents):
         if (candidate / ".git").exists():
             return candidate

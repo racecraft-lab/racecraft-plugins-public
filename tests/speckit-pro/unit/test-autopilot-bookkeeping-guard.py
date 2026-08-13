@@ -377,6 +377,28 @@ class WorkflowAuthorityTests(unittest.TestCase):
         self.assertFalse(errors[0].startswith(self.AUTHORITY_PREFIX), errors[0])
 
 
+class RepositoryRootResolutionTests(unittest.TestCase):
+    """A resolution failure must skip, never escape as a traceback."""
+
+    def test_unresolvable_path_returns_none_instead_of_raising(self) -> None:
+        """`main()` catches only ValidationError, so anything else prints a
+        traceback where the autopilot expects a JSON report. Today this is hard
+        to reach because ``load_state`` reads the state file first, but that is
+        a property of the caller, not of this function, and four call sites rely
+        on it. The guard makes the function safe on its own terms.
+        """
+        import os
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            a, b = root / "loop_a", root / "loop_b"
+            os.symlink(b, a)
+            os.symlink(a, b)
+            # Whether resolve() raises on a loop is platform and version
+            # dependent; either way the contract is the same, never raise.
+            self.assertIsNone(validator._repository_root(a / "state.json"))
+
+
 class ProblemKeyClassificationTests(unittest.TestCase):
     """FR-011: every problem key the guard emits carries a recorded verdict.
 
@@ -502,6 +524,7 @@ def build_suite() -> unittest.TestSuite:
         StateStatusSchemaTests,
         RuleScopingTests,
         WorkflowAuthorityTests,
+        RepositoryRootResolutionTests,
         ProblemKeyClassificationTests,
     ):
         suite.addTests(loader.loadTestsFromTestCase(case))
