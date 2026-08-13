@@ -42,7 +42,7 @@ doubt them, and record any drift.
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 pass. 9 findings (0 critical, 2 high, 5 medium, 2 low), all remediated, 0 after 2 loops, nothing reopened |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ✅ Complete | 27 tasks, G7 pass. Full gate 7385/7385, +7 over the 7378 baseline, zero failures |
-| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
+| Post | Post-Implementation | 🔄 In Progress | 10 of 12 done; PR #433 open. Review remediation and retrospective remain |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -1661,16 +1661,16 @@ The canonical closeout. Every row must reach Complete or an explicit
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
-| Post: Verify Implementation | ⏳ Pending | |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ⏳ Pending | |
-| Post: Integration Suite | ⏳ Pending | |
-| Post: Reviewability Diff Gate | ⏳ Pending | |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | |
-| Post: PR Body Generation | ⏳ Pending | |
-| Post: PR Creation | ⏳ Pending | |
+| Post: Doctor Extension Check | ✅ Complete | 4 pass, 1 warn (unrelated parked spec) |
+| Post: Verify Implementation | ✅ Complete | Pass on substance; canary reproduced across a7369749^ and a7369749 |
+| Post: Verify Tasks Phantom Check | ✅ Complete | Reported honestly that it cannot judge unticked tasks; list has since been ticked 27 of 27 |
+| Post: Code Review | ✅ Complete | approve-with-comments, zero blocking; both comments acted on |
+| Post: Integration Suite | ✅ Complete | 7393/7393, zero failures, +15 over the 7378 baseline |
+| Post: Reviewability Diff Gate | ✅ Complete | Over by +350 LOC, warn band, root cause diagnosed and recorded in the PR |
+| Post: Self-Review | ✅ Complete | 4 questions; 3 findings became code changes rather than known gaps |
+| Post: UAT Runbook Generation | ✅ Complete | Skipped fail-open, helper deferred; quickstart's 7 scenarios are the acceptance basis |
+| Post: PR Body Generation | ✅ Complete | One release-note fence, zero absolute paths |
+| Post: PR Creation | ✅ Complete | PR #433 open against main |
 | Post: Review Remediation | ⏳ Pending | |
 | Post: Retrospective | ⏳ Pending | |
 

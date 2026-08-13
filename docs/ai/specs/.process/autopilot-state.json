@@ -1,5 +1,5 @@
 {
-  "active_step": "Post: Doctor Extension Check",
+  "active_step": "Post: Review Remediation",
   "archive_sweep": {
     "actions_taken": [],
     "eligible_specs": [],
@@ -218,43 +218,43 @@
       "step": "Phase 7: Implement"
     },
     {
-      "status": "pending",
+      "status": "completed",
       "step": "Post: Doctor Extension Check"
     },
     {
-      "status": "pending",
+      "status": "completed",
       "step": "Post: Verify Implementation"
     },
     {
-      "status": "pending",
+      "status": "completed",
       "step": "Post: Verify Tasks Phantom Check"
     },
     {
-      "status": "pending",
+      "status": "completed",
       "step": "Post: Code Review"
     },
     {
-      "status": "pending",
+      "status": "completed",
       "step": "Post: Integration Suite"
     },
     {
-      "status": "pending",
+      "status": "completed",
       "step": "Post: Reviewability Diff Gate"
     },
     {
-      "status": "pending",
+      "status": "completed",
       "step": "Post: Self-Review"
     },
     {
-      "status": "pending",
+      "status": "completed",
       "step": "Post: UAT Runbook Generation"
     },
     {
-      "status": "pending",
+      "status": "completed",
       "step": "Post: PR Body Generation"
     },
     {
-      "status": "pending",
+      "status": "completed",
       "step": "Post: PR Creation"
     },
     {
@@ -273,6 +273,20 @@
     "production": 0,
     "projected": 0,
     "status": "pass"
+  },
+  "pr": {
+    "additions": 7837,
+    "authored_files": 6,
+    "base": "main",
+    "changed_files": 50,
+    "deletions": 495,
+    "draft": false,
+    "head": "art-014-phase-guard-enforcement-repair",
+    "number": 433,
+    "release_note_fence": 1,
+    "state": "OPEN",
+    "title_contract": "validate-pr-workflow-contract status passed, exit 0",
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/433"
   },
   "prior_run_note": "completed_archived",
   "project_commands": {
@@ -320,7 +334,7 @@
   },
   "spec_id": "ART-014",
   "stage": "full",
-  "status": "in_progress",
+  "status": "completed_pr_open",
   "tasks_reviewability": {
     "deferral_reason": "installed runner supports setup mode only; tasks mode is registered but deferred",
     "fallback_evidence": {
@@ -346,10 +360,10 @@
   },
   "test_baseline_g7": {
     "l1": 1447,
-    "l4": 5752,
+    "l4": 5760,
     "l5": 186,
-    "passed": 7385,
-    "total": 7385
+    "passed": 7393,
+    "total": 7393
   },
   "uat_runbook": {
     "acceptance_basis_used_instead": "specs/art-014-phase-guard-enforcement-repair/quickstart.md, 7 runnable scenarios mapped to success criteria",
@@ -369,6 +383,6 @@
     ],
     "status": "skipped"
   },
-  "updated_at": "2026-08-13T00:42:20Z",
+  "updated_at": "2026-08-13T01:14:46Z",
   "workflow_file": "docs/ai/specs/.process/ART-014-workflow.md"
 }
