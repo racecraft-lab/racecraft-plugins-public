@@ -72,7 +72,7 @@ or edited agent definition (FR-002); no widening of scaffold's `allowed-tools`
 (FR-021b).
 
 **Scale/Scope**: 16 edit sites across 2 production files (7 Claude, 9 Codex),
-plus 3 new trigger cases in each of 2 test fixtures, plus one roadmap
+plus 4 new trigger cases in each of 2 test fixtures, plus one roadmap
 reviewability-declaration amendment. 31 functional requirements, 12 success
 criteria, 4 user stories. The error-handling checklist domain added FR-010a and
 its two edit sites, C3a and X4a; the ux domain added FR-015c and widened C4, C5,
@@ -325,7 +325,9 @@ must survive verbatim.
 Added to `tests/speckit-pro/layer2-trigger/evals/speckit-scaffold-spec-trigger.json`
 and `tests/speckit-pro/layer2-trigger/codex-evals/speckit-scaffold-spec-trigger.json`
 **only**, in the existing `{query, should_trigger}` shape, taking each from 16
-entries to 19 (10 positive, 9 negative).
+entries to 20 (10 positive, 10 negative). The fourth case was added after an
+independent review observed that the explicit-precondition negative tests the
+easy form of the misroute; the short bare form is the likely one.
 
 | Case | `should_trigger` | Tests |
 |---|---|---|

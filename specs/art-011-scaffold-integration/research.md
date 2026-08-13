@@ -286,8 +286,11 @@ uses the literal character. Nothing else differs.
 explains why. A new query containing an em dash would have to be written
 differently in each file to preserve each file's convention, or would silently
 change one file's convention. An ASCII query is written identically in both and
-leaves the existing divergence exactly as it is. Post-change: 19 entries each,
-10 positive and 9 negative.
+leaves the existing divergence exactly as it is. Post-change: 20 entries each,
+10 positive and 10 negative. *(Originally 19 with a single negative. A fourth
+case was added after implementation, on an independent review's finding that the
+one negative stated its precondition explicitly and so tested the easy form of
+the misroute rather than the likely one.)*
 
 **Runner constraints, from spec.md Assumptions and confirmed against
 `tests/speckit-pro/suite-manifest.json`**: Layer 2 is declared `"default": false`,
