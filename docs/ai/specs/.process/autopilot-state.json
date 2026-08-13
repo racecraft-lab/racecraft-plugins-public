@@ -4,10 +4,10 @@
   "workflow_file": "docs/ai/specs/.process/ART-011-workflow.md",
   "feature_dir": "specs/art-011-scaffold-integration",
   "branch": "art-011-scaffold-integration",
-  "status": "completed_pr_open",
+  "status": "completed_archived",
   "stage": "implement",
-  "active_step": "PR #434 open; review remediation pending human review",
-  "updated_at": "2026-08-12T18:00:00Z",
+  "active_step": "Post: Archive \u2014 merged in PR #434 and archived 2026-08-13",
+  "updated_at": "2026-08-13T21:45:00Z",
   "prior_run_note": "Reclaimed the single state slot from docs/ai/specs/.process/ART-012-workflow.md (prior status: completed_archived). Reclaiming is normal operation - one slot, many specs.",
   "settings": {
     "source": "defaults - no .claude/speckit-pro.local.md present",
@@ -340,6 +340,27 @@
     "packet_helpers": "pr-packet-output / validate-pr-packet-* are golden_only on the installed runner; title, body and changed-file scope validated through the repository's own validators instead, recorded as a deviation",
     "number": 434,
     "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/434",
-    "state": "OPEN"
+    "state": "MERGED",
+    "merge_commit": "6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b"
+  },
+  "archive": {
+    "archived_at": "2026-08-13",
+    "cleanup_applied": true,
+    "cleanup_branch": "art-011-post-merge-hygiene",
+    "cleanup_gate_7_note": "Gate 7 names main as the normal cleanup branch. This archive ran on art-011-post-merge-hygiene, cut from main at 4ed7309a, because this repository forbids committing directly to main and lands every change through a pull request. Same shape as PR #438, PR #431 and PR #424.",
+    "merge_commit": "6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b",
+    "merged_at": "2026-08-13T21:06:20Z",
+    "process_evidence_preserved": [
+      "docs/ai/specs/.process/ART-011-workflow.md",
+      "docs/ai/specs/.process/ART-011-design-concept.md"
+    ],
+    "pull_request": 434,
+    "report": ".specify/memory/archive-reports/2026-08-13-art-011-post-merge-hygiene.md",
+    "source_spec_path_removed": "specs/art-011-scaffold-integration",
+    "retrospective_note": "No ART-011 retrospective exists. ART-011-workflow.md records Post: Retrospective as pending; this state file previously claimed the step completed and was wrong.",
+    "open_followups": [
+      "Layer 2 trigger evaluation for speckit-scaffold-spec (task T044) never ran; the description changed from 975 to 1013 characters in this feature.",
+      "ART-019 slice D owns the 984-line skill body and supersedes ART-011 FR-022."
+    ]
   }
 }

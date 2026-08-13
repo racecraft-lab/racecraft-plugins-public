@@ -2080,3 +2080,66 @@ content, updates the technical roadmap to Complete / Archived, unblocks ART-017,
 and runs the full deterministic suite. No `refresh-release-artifacts.py` run is
 required, because nothing under `speckit-pro/` changes in this archive. ART-010
 stays blocked by ART-003 and ART-007.
+
+## ART-011 Scaffold Integration
+
+### Dependencies
+
+ART-006 (the plan stage the hand-off names), shipped in PR #422. ART-007 is **not**
+a dependency: the closing report omits the draft-PR line until a producer exists.
+
+### Shipped Surface
+
+Two production files, both prose:
+
+- `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`
+- `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`
+
+Plus updated Layer 2 trigger fixtures in
+`tests/speckit-pro/layer2-trigger/evals/speckit-scaffold-spec-trigger.json` and
+its `codex-evals/` mirror (currently 20 entries: 10 positive, 10 negative), and the
+regenerated payload copies under `dist/claude`, `dist/codex`, and the installed-cache proofs.
+
+### Architecture Note
+
+The feature shipped inverted from its design. Scaffold cannot invoke the
+autopilot: `speckit-autopilot/SKILL.md` carries `disable-model-invocation: true`,
+which blocks the `Skill` tool entirely, and the flag is deliberate — it exists to
+stop a seven-phase auto-committing run from being model-triggerable. Scaffold
+prints the hand-off command instead, and the whole post-planning apparatus the
+chain implied became unreachable and was deleted.
+
+The hand-off check is the autopilot's own Workflow Worktree Binding predicate
+reproduced word for word, not an equivalent-looking rewrite, because using the
+guard's own test is what guarantees the two can never disagree. Both its commands
+are read-only, so the check adds no script, helper, or tool grant.
+
+### Testing Strategy
+
+There is none the suite can run. This is prose inside two existing files, so the
+repository suite stayed at 7396 for the whole feature and CI green proves only
+that nothing else broke. The one property a body rewrite could plausibly disturb
+is triggering, and Layer 2 is marked `default: false`, `live_only: true`,
+`execution: print-commands` in `tests/speckit-pro/suite-manifest.json` — it does
+not execute in CI. Verification was therefore manual UAT plus two rounds of code
+review, which is weaker than a test and is recorded as such.
+
+### Follow-Ups Opened
+
+- **ART-019** — align the plugin and its skills to official Anthropic and OpenAI
+  documentation. Opened 2026-08-13 from a seven-surface conformance audit. Its
+  slice D owns this skill's size and **supersedes ART-011's FR-022**, which
+  forbade `speckit-scaffold-spec` gaining a `references/` directory.
+- **ART-015** — the spec-size re-estimation trigger. This run is a second data
+  point: declared 162 reviewable LOC, estimated 322 at the final 31 FRs, and
+  shipped 1160 production changed lines across 2 files.
+
+### Testing and Cleanup
+
+The cleanup removes the merged ART-011 active spec, marks the process state
+archived, regenerates and checks the SpecKit index and the roadmap map of content,
+updates the technical roadmap to Complete / Archived, and runs the full
+deterministic suite. No `refresh-release-artifacts.py` run is required, because
+nothing under `speckit-pro/` changes in this archive. Layer 2 trigger evaluation
+for `speckit-scaffold-spec` remains owed to the operator and is not closed by this
+cleanup.
