@@ -74,5 +74,9 @@
   {
     "query": "SPEC-016 already has a committed workflow file with every prompt filled in, so resume it at the planning phase and run the plan stage against that existing file",
     "should_trigger": false
+  },
+  {
+    "query": "start planning for SPEC-016",
+    "should_trigger": false
   }
 ]
