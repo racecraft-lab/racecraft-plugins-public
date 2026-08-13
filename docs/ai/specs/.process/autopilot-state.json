@@ -3,13 +3,13 @@
   "spec_id": "ART-003",
   "feature_dir": "specs/art-003-final-pr-template-set",
   "branch": "art-003-final-pr-template-set",
-  "status": "in_progress",
+  "status": "completed_pr_open",
   "stage": "implement",
   "stage_source": "auto-detect",
   "stage_basis": "auto-detect: the first non-terminal planning phase is Specify, which is \u23f3 Pending",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-012-workflow.md",
-  "active_step": "Phase 7: Implement",
+  "active_step": null,
   "updated_at": "2026-08-12T18:00:00Z",
   "settings": {
     "consensus_mode": "tier-a",
@@ -138,7 +138,7 @@
     },
     {
       "step": "Phase 7: Implement",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -154,31 +154,31 @@
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
@@ -484,5 +484,37 @@
     "layer4_alone_overcounts": "running --layer 4 in isolation reports 13 failures where a full run reports 8; the full-suite number is the floor",
     "fr_031a_self_reference": "naming --rc-border-subtle in a CSS comment to explain its absence fails FR-031a's own search; spec-explainer.html:501 ships that same mistake",
     "suite_leaves_untracked_debris": "a failing suite run leaves an untracked plugin-bash-confinement cache dir; it escapes a dist-scoped status check and the spec-index generator bakes untracked paths into committed SPEC-MOC backlinks. Check bare git status before the index regen."
+  },
+  "pr": {
+    "number": 435,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/435",
+    "title": "feat(art-003): add the pull request write-up artifact to the gallery",
+    "base": "main",
+    "head": "art-003-final-pr-template-set",
+    "merged": false,
+    "note": "created, never merged - merging is the operator's call"
+  },
+  "final_gate": {
+    "suite": "7379/7379",
+    "baseline": 7378,
+    "delta": "+1 in Layer 4",
+    "reviewability": {
+      "measured": 735,
+      "declared": 758,
+      "block": 800,
+      "result": "warn"
+    },
+    "checkpoints": {
+      "M1": "131 <= 150",
+      "M2": "227 <= 247",
+      "M3": "735 <= 758"
+    },
+    "code_review": "1 serious (artifact title vs catalog), 2 minor, all fixed",
+    "artifact_consistency": "generated artifacts match the source tree"
+  },
+  "slices_remaining": {
+    "slice_2": "annotated-diff, branch art-003-final-pr-template-set-slice-2 cut from slice 1",
+    "slice_3": "flowchart, branch art-003-final-pr-template-set-slice-3 cut from slice 2",
+    "blocker": "each needs its own interactive scaffold; scaffold-spec mandates grill-me, which is human-in-the-loop only and which autopilot is forbidden from invoking. They cannot be started autonomously."
   }
 }
