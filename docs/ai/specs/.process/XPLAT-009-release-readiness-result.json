@@ -434,11 +434,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 49915,
+              "byte_count": 50347,
               "kind": "docs",
               "path": "artifact-gallery/templates/pr-writeup.html",
               "required": true,
-              "sha256": "88c0cd422a88529bae849107f6969063dd508f8e338a0fb52bc1b5e8e81610cf",
+              "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
               "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
               "transform": "none"
             },
@@ -1462,11 +1462,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 49915,
+              "byte_count": 50347,
               "kind": "docs",
               "path": "artifact-gallery/templates/pr-writeup.html",
               "required": true,
-              "sha256": "88c0cd422a88529bae849107f6969063dd508f8e338a0fb52bc1b5e8e81610cf",
+              "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
               "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
               "transform": "none"
             },
@@ -2282,7 +2282,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "ae33b0e9c61ed42dfdd5e42d1bbe86e17f22eefc51702b6856f80c6136e2a4da",
+          "file_tree_hash": "0f123be7a71ec9cf23d8dad4a57f2e8a9f0ff856fe49c27d88a30875b75ea267",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2403,11 +2403,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 49915,
+              "byte_count": 50347,
               "kind": "docs",
               "path": "artifact-gallery/templates/pr-writeup.html",
               "required": true,
-              "sha256": "88c0cd422a88529bae849107f6969063dd508f8e338a0fb52bc1b5e8e81610cf",
+              "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
               "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
               "transform": "none"
             },
@@ -3584,11 +3584,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 49915,
+              "byte_count": 50347,
               "kind": "docs",
               "path": "artifact-gallery/templates/pr-writeup.html",
               "required": true,
-              "sha256": "88c0cd422a88529bae849107f6969063dd508f8e338a0fb52bc1b5e8e81610cf",
+              "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
               "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
               "transform": "none"
             },
@@ -4656,7 +4656,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "fbce10e9aef7b59df7623bed378cd3f98555b31360a8a658bb834b8bd7d3fd5e",
+          "file_tree_hash": "af92777a10ca4c8e53ecd75fb306352a0860cd8ac9191f109a43c54ef0603a90",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

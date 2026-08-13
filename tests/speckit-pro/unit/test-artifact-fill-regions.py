@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Layer-4 validation for the fill regions a draft-PR template ships.
+"""Layer-4 validation for the fill regions a gallery template ships.
 
 `speckit-pro/artifact-gallery/manifest.json` says which templates exist and
 `test-artifact-gallery.py` holds everything about the artifact itself. This
@@ -12,9 +12,9 @@ checks below are what keep that inventory true.
 the gallery scanner records at length: a check that reads ``GALLERY_ROOT`` for
 itself can only ever run against the source tree. That mattered acutely while
 this module landed, when the tree shipped no template at all and every
-per-template check would have passed by vacuity; it still matters now that two
-templates ship, because the other two entries read ``planned`` until slice 2
-flips them. Taking the root as an argument is what lets the fixture cases
+per-template check would have passed by vacuity; it still matters now that
+templates ship, because any entry a later slice has not yet flipped still reads
+``planned``. Taking the root as an argument is what lets the fixture cases
 exercise the same functions against synthetic galleries built in a temporary
 directory, where every template they describe exists.
 
@@ -26,11 +26,12 @@ Keying on file presence instead would pass in the one state the contract calls a
 failure: an artifact present without its flip. A ``shipped`` entry whose file is
 missing is therefore *reported* here rather than skipped.
 
-**The universe of per-template checks is the four templates the floor names**,
-not every entry in the catalog. The floor and the list-slot literal are pinned
-from the roadmap, which names those four and no others; a later template flipping
-to ``shipped`` belongs to the specification that ships it, and binding it here
-would hold it to a contract its own design never read.
+**The universe of per-template checks is the templates the floor names**, not
+every entry in the catalog. The floor and the list-slot literal are pinned from
+the roadmap, which names those and no others; a later template flipping to
+``shipped`` belongs to the specification that ships it, and that specification is
+what adds its rows below. Binding it here ahead of that would hold it to a
+contract its own design never read.
 
 **Marker-shaped text inside a ``script`` element is not a marker.** Comments are
 collected through ``html.parser``, which reads a script element's content as raw
@@ -78,8 +79,8 @@ SHIPPED = "shipped"
 # Both are held here and neither is read back out of a template. A set derived
 # from the file under validation asserts only that the file equals itself.
 
-# The floor traces to the roadmap's scope for the draft-PR template set, and to
-# nothing else, so a reader can tell why each entry is there. It is a **floor,
+# The floor traces to the roadmap's scope for the template sets that have shipped,
+# and to nothing else, so a reader can tell why each entry is there. It is a **floor,
 # not an equality**: a template may carry more slots than the roadmap names, and
 # the both-ways agreement of R2 and R3 is what binds the remainder.
 FLOOR: dict[str, tuple[str, ...]] = {
@@ -1011,9 +1012,9 @@ class FillRegionFixtureTests(FillRegionFixtureCase):
 
     These were written while the real gallery shipped no template at all, when a
     check exercised only against the real tree would have passed by vacuity and
-    there would have been no way to make this module genuinely fail. Two
-    templates ship now, so the real-gallery cases do bind — but the fixtures stay
-    the only place a *defect* is exercised, because the shipped templates are
+    there would have been no way to make this module genuinely fail. Templates
+    ship now, so the real-gallery cases do bind — but the fixtures stay the only
+    place a *defect* is exercised, because the shipped templates are
     required to be correct and a suite that only ever sees correct input cannot
     tell a working check from one that reports nothing.
     """
