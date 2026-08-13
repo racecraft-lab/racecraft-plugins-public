@@ -23,7 +23,7 @@ records.
   anchor for every command below
 - **CI run URL**:
   <https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/31720702244>
-- **CI outcome on the final head** (`34e8e7eb`): 20 pass, 1 skipping, 0 failures
+- **CI outcome on the final head** (`34e8e7eb`): 20 pass, 1 skipped, 0 failures
 - **Metadata gates**: `artifact-consistency=pass`, `validate-docs=pass`,
   `test (speckit-pro)=pass`, `validate-release-note=pass`,
   `validate-pr-title=pass`
