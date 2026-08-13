@@ -40,7 +40,7 @@ were opened from ART-014 findings on 2026-08-12 and are ready
 
 ## Roadmap Overview
 
-The effort is decomposed into **13 specifications** across **6 dependency
+The roadmap currently tracks **19 specifications** overall; **13** of them are mapped into **6 dependency
 tiers**:
 
 | Tier | Specs | Purpose | Parallelization |
@@ -146,6 +146,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-016 | Claude-Side Live PR Commit Authority | ⏳ Ready | - | No dependencies; opened from ART-014, which documents the gap and names this entry in the shipped Claude `SKILL.md` |
 | ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ⏳ Ready | - | ART-014 dependency satisfied by PR #433, which added the classification record these verdicts live in. Opened from ART-014's advisory audit; the defect was reproduced by execution |
 | ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready | - | No dependencies; opened from ART-014's retrospective. Three helpers report clean on input they should catch, each hit live during that run |
+| ART-019 | Documented Best-Practice Alignment | ⏳ Ready | - | No dependencies; opened 2026-08-13 from a seven-surface audit against the live official docs. Zero documented rules broken; the gap is that the repo's gates are blind to the documented metrics. Ships as ordered child slices |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -1188,6 +1189,122 @@ typo fix and lose the pattern that makes them worth fixing.
 - `speckit-pro/speckit_pro_runner/helpers/read_only.py` — all three matchers
 - `speckit-pro/skills/speckit-coach/templates/spec-template.md` — the prescribed colon form
 - `tests/speckit-pro/unit/` — the three missing negative controls
+
+---
+
+### ART-019: Documented Best-Practice Alignment
+
+**Priority:** P2 | **Depends On:** None | **Enables:** every future skill change, by restoring headroom and making the documented limits measurable
+
+**Goal:** Own this plugin's conformance to official Anthropic and OpenAI
+documentation as a standing concern rather than a one-time cleanup: close the
+divergences a full audit measured, and add the gates that make each documented
+limit observable so the same drift cannot recur silently.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: ~1400 across the whole inventory (estimator: block as one spec) |
+Production files: ~25 |
+Total files: ~40 |
+Budget result: **over budget as one spec.** Ships as the ordered child slices below,
+each independently releasable under the 400-LOC ceiling. Two of them are builds and
+take their own spec IDs when scoped.
+
+**Problem:** A seven-surface audit against the live official documentation
+(`code.claude.com/docs/en/{skills,sub-agents,plugins,plugin-marketplaces,plugins-reference,hooks,slash-commands,tools-reference,model-config}`,
+`learn.chatgpt.com/docs/{build-skills,agent-configuration/subagents}`,
+`agentskills.io/specification`, and *The Complete Guide to Building Skills for
+Claude*) checked roughly 60 documented rules and found **zero broken**. Every
+`SKILL.md` is named exactly, every folder is kebab-case and matches its frontmatter
+`name`, no skill folder carries a `README.md`, no reserved name is used, no
+frontmatter carries XML angle brackets, every description is under the 1024-character
+cap, no plugin agent sets a field the docs forbid, and
+`claude plugin validate ./dist/claude/speckit-pro --strict` passes clean.
+
+The gap is not compliance. It is that **the repository's own gates are blind to the
+metrics the documentation actually states**, so the plugin's worst divergences report
+green.
+
+1. **No gate measures `SKILL.md` line count**, which is the documented unit:
+   *"Keep `SKILL.md` under 500 lines. Move detailed reference material to separate
+   files."* The only size gate is an 8000-word ceiling. Measured against the
+   documented limit: `skills/speckit-autopilot` 884 lines (77% over) with 1595 words
+   of headroom under the internal gate, and `codex-skills/speckit-autopilot` 1122
+   lines (124% over). `skills/speckit-scaffold-spec` sits at 497, three lines under,
+   with nothing that would flag the crossing — and ART-011 takes it to 984.
+2. **The description gate silently under-measures.** `validate-skills.py`'s
+   `description:\s*"([^"]*)"` stops at the first escaped quote inside a YAML
+   double-quoted scalar. `speckit-install` is truly 710 characters and the gate sees
+   308; `speckit-upgrade` is 713 and the gate sees 376. The suite reports 124/124
+   while measuring under half of two descriptions, so an over-cap description would
+   ship. No Codex gate measures description length at all, and
+   `codex-skills/speckit-coach` sits at 1011 of 1024.
+3. **Shipped reference prose misstates the plugin's own behaviour.**
+   `references/agent-teams-integration.md` asserts that none of speckit-pro's agents
+   set `background: true`; three do. The same file's "inherit the operator's full
+   session surface" principle does not survive the documented background-subagent
+   tool filter, which reaches nearly every dispatch.
+4. **One documented capability is absent entirely.** The guide's third testing area
+   is comparison against a skill-disabled baseline. Nothing in eight test layers
+   compares skill-on to skill-off, and `tool_calls` is measured nowhere.
+5. **The Codex 8000-word cap is this repository's invention**, not a documented Codex
+   limit. It is load-bearing for scoping and should be re-anchored to the documented
+   under-500-lines guidance or justified in its own right.
+
+**Scope:**
+- **A. Shipped-reference accuracy.** Correct the false `background: true` claim and
+  qualify the tool-surface principle against the documented background filter. Ship
+  first: pure accuracy, no dependencies, corrects the claims most likely to mislead
+  a future author.
+- **B. Gate correctness.** Replace the description regex with a real scalar parse,
+  add a line-count assertion measured on `dist/`, and add the missing Codex
+  description gate. Each new gate MUST be proven to fail against a fixture
+  reproducing today's state before it is trusted.
+- **C. Autopilot body split.** Move `## Critical: Execution Rules` to a new
+  `references/execution-rules.md` and fold the two Step sections into the existing
+  `references/phase-execution.md` and `post-implementation.md`, leaving ~455 lines.
+- **D. Scaffold body split.** The same treatment for both scaffold variants, which
+  ART-011 leaves at 984 and 928 lines. Supersedes ART-011's FR-022, which forbade a
+  `references/` directory for that spec's own size reasons.
+- **E. Frontmatter and agent hygiene.** Widen the frontmatter key allowlist to the
+  documented set, and land the agent-definition corrections atomically with the
+  Layer 6 Codex digest regeneration, which has no regeneration script.
+- **F. Manifest validation wiring.** Add the marketplace `description` that makes
+  `claude plugin validate . --strict` pass, and gate it. Highest conformance per line
+  in the inventory.
+- **G. Trigger-eval coverage.** Close the per-skill fixture gaps. Acceptance is
+  fixture structure and a roster assertion, never a measured rate.
+
+**Out of Scope:**
+- Any behavioural change. Slices C and D are moves; a diff that changes what an agent
+  would do has failed its own contract.
+- Functional-eval grading and the skill-on/skill-off baseline harness. Both are
+  builds rather than realignments, both exceed the ceiling on their own, and each
+  takes its own spec ID when scoped.
+- `color` on plugin agents. The plugins-reference field list omits it while the
+  subagents page documents it with an allowlist; the docs are ambiguous and the
+  reading must be settled empirically before anything asserts either.
+
+**Verification:** Per slice, the full suite at its recorded baseline, and for every
+new gate a fixture proving it fails against today's tree. Slices C and D additionally
+require a byte-identity proof that every fenced block and table surviving the move is
+unchanged, and a re-measured line count for both platform variants recorded in the
+spec. Layer 2 trigger evals re-run by the operator for each moved skill, because the
+body changes even though the description does not.
+
+**Key Decisions:**
+**Opened 2026-08-13 from a seven-surface conformance audit**, after ART-011 review
+surfaced that `speckit-scaffold-spec` had grown past the documented size guidance
+with every gate green. The audit's finding is that this is systemic rather than local:
+the metrics the documentation states are not the metrics this repository measures.
+**Zero documented rules are broken**, so this entry is scoped as realignment and gate
+correctness, not compliance repair.
+
+**Key Files:**
+- `tests/speckit-pro/layer1-structural/validate-skills.py` — the under-measuring description gate
+- `tests/speckit-pro/layer1-structural/validate-codex-skills.py` — the undocumented 8000-word cap
+- `speckit-pro/skills/speckit-autopilot/SKILL.md`, `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` — 884 and 1122 lines
+- `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` — the false agent claim
+- `.claude-plugin/marketplace.json` — the absent optional `description`
 
 ---
 
