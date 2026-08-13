@@ -40,7 +40,7 @@ findings on 2026-08-12 and are ready
 
 ## Roadmap Overview
 
-The effort is decomposed into **19 specifications** across **6 dependency
+The roadmap currently tracks **19 specifications** overall; **13** of them are mapped into **6 dependency
 tiers**:
 
 | Tier | Specs | Purpose | Parallelization |
