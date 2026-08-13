@@ -10,8 +10,8 @@
 <!--
   Slot: feature-header | Fills: the feature's identifier, its name, and the sentence declaring the content invented | Source: spec.md
   Slot: flow-summary | Fills: one paragraph naming the operational flow drawn below and the point in it this change turns on | Source: plan.md
-  Slot: flow-diagram | Fills: the drawing, its caption, and the prose stating the flow's order and its branching, together in one region so a fill cannot update the picture and leave the words stale; every drawn node links to the entry of the same slug in nodes | Source: plan.md
-  Slot: nodes | Fills: one entry per drawn node, anchored nodes-<node-slug>, giving that node's label, its role, what the step does and how it fails; each is the link target of the node of the same slug in the drawing | Source: plan.md
+  Slot: flow-diagram | Fills: the drawing, its caption, and the prose stating the flow's order and its branching, together in one region so a fill cannot update the picture and leave the words stale; every drawn node links to href="#nodes-<node-slug>-detail", which is the body of the matching entry in nodes and never the entry element itself, because a browser opens a closed disclosure only when the fragment names something inside it; a fill replaces this whole region, so keep the sample's own element names, every one of which is load bearing: class="diagram" with tabindex="0" and role="group" and an aria-label is the only element that scrolls and the only reason a drawing wider than the viewport is reachable from the keyboard, and class="fc-shape", class="fc-label", class="fc-role", class="fc-edge", class="fc-edge-fail", class="fc-arrowhead" and class="fc-link" are what carry role by shape and branch by stroke pattern rather than by colour, as the legend outside this region promises | Source: plan.md
+  Slot: nodes | Fills: one entry per drawn node, a details element anchored nodes-<node-slug> carrying name="flow-node" so exactly one entry is open at a time as the legend outside this region promises, with the open attribute on the first entry alone, giving that node's label, its role, what the step does and how it fails; each entry's body is a div anchored nodes-<node-slug>-detail carrying tabindex="-1" so activating a node in the drawing moves focus rather than only scrolling, and it is the link target of the node of the same slug in the drawing | Source: plan.md
 -->
 <html lang="en">
 <head>
@@ -728,7 +728,7 @@ h1 {
     </div>
 
 <!-- FILL:flow-diagram:START -->
-    <figure class="diagram" tabindex="0">
+    <figure class="diagram" tabindex="0" role="group" aria-label="The replay path, drawn as a flowchart">
       <!-- Named through its own title element, and deliberately NOT marked as a
            single image the way upstream and the gallery's other diagram are.
            That marking makes every descendant presentational, which would take
@@ -817,43 +817,43 @@ h1 {
 <!-- FILL:nodes:START -->
       <details class="node" name="flow-node" id="nodes-connection-returns" open>
         <summary>Connection returns <span class="node-role">start</span></summary>
-        <div class="node-body" id="nodes-connection-returns-detail">
+        <div class="node-body" id="nodes-connection-returns-detail" tabindex="-1">
           <p>The device regains a usable connection and the sync worker wakes. Nothing is sent yet. It fails when the connection is reported up but no request completes, in which case the worker sleeps and the whole flow starts again from here.</p>
         </div>
       </details>
       <details class="node" name="flow-node" id="nodes-drain-the-outbox">
         <summary>Drain the outbox <span class="node-role">step</span></summary>
-        <div class="node-body" id="nodes-drain-the-outbox-detail">
+        <div class="node-body" id="nodes-drain-the-outbox-detail" tabindex="-1">
           <p>Reads every queued draft in the device sequence it was written in, so replay order matches write order. It fails when the outbox holds an entry whose draft has since been deleted locally, which is dropped with a log line rather than stopping the drain.</p>
         </div>
       </details>
       <details class="node" name="flow-node" id="nodes-version-unchanged">
         <summary>Version unchanged? <span class="node-role">decision</span></summary>
-        <div class="node-body" id="nodes-version-unchanged-detail">
+        <div class="node-body" id="nodes-version-unchanged-detail" tabindex="-1">
           <p>Compares the version the draft was written against with the version the server now holds. Yes means nobody edited it elsewhere; no means it diverged while the device was offline. It fails when the server cannot report a version at all, which is treated as no.</p>
         </div>
       </details>
       <details class="node" name="flow-node" id="nodes-merge-the-draft">
         <summary>Merge the draft <span class="node-role">step</span></summary>
-        <div class="node-body" id="nodes-merge-the-draft-detail">
+        <div class="node-body" id="nodes-merge-the-draft-detail" tabindex="-1">
           <p>Keeps both copies and records which is which, rather than choosing between them. It fails when the two copies cannot be reconciled without losing text, in which case both are kept and the draft is marked for a person to read.</p>
         </div>
       </details>
       <details class="node" name="flow-node" id="nodes-write-acknowledged">
         <summary>Write acknowledged? <span class="node-role">decision</span></summary>
-        <div class="node-body" id="nodes-write-acknowledged-detail">
+        <div class="node-body" id="nodes-write-acknowledged-detail" tabindex="-1">
           <p>The branch this change turns on. It waits for the drafts table to acknowledge the write before the outbox entry is cleared. It fails when the acknowledgement arrives after the wait ends, which the change makes a no rather than a silent yes.</p>
         </div>
       </details>
       <details class="node" name="flow-node" id="nodes-stop-and-report">
         <summary>Stop and report <span class="node-role">end · failure</span></summary>
-        <div class="node-body" id="nodes-stop-and-report-detail">
+        <div class="node-body" id="nodes-stop-and-report-detail" tabindex="-1">
           <p>The failure ending. The outbox entry is left in place so the next run retries it, and the reason is surfaced where a person will see it. Nothing is discarded here; a draft that reaches this ending is still on the device.</p>
         </div>
       </details>
       <details class="node" name="flow-node" id="nodes-drafts-in-sync">
         <summary>Drafts in sync <span class="node-role">end · success</span></summary>
-        <div class="node-body" id="nodes-drafts-in-sync-detail">
+        <div class="node-body" id="nodes-drafts-in-sync-detail" tabindex="-1">
           <p>The success ending. Every queued draft is in the drafts table, the outbox is empty, and the device and the server hold the same version. This is the only ending that clears the queue.</p>
         </div>
       </details>

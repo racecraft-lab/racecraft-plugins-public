@@ -425,11 +425,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 38672,
+              "byte_count": 39909,
               "kind": "docs",
               "path": "artifact-gallery/templates/flowchart.html",
               "required": true,
-              "sha256": "28a0c737fd9caf857a3ffb23ca616f5b75f6607d98803e01f8fceeb53f5f2a55",
+              "sha256": "468778d6fe624eb83a772046b829c9c361445dd0e90a47d57dbaa8ee25f2885e",
               "source_path": "speckit-pro/artifact-gallery/templates/flowchart.html",
               "transform": "none"
             },
@@ -1471,11 +1471,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 38672,
+              "byte_count": 39909,
               "kind": "docs",
               "path": "artifact-gallery/templates/flowchart.html",
               "required": true,
-              "sha256": "28a0c737fd9caf857a3ffb23ca616f5b75f6607d98803e01f8fceeb53f5f2a55",
+              "sha256": "468778d6fe624eb83a772046b829c9c361445dd0e90a47d57dbaa8ee25f2885e",
               "source_path": "speckit-pro/artifact-gallery/templates/flowchart.html",
               "transform": "none"
             },
@@ -2318,7 +2318,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "99b9041a877d2a9196b657d2f6a127d7a359ac707c94fbe7147086ac850ae80d",
+          "file_tree_hash": "c3fa0fa7dc41e8c016accc4d59c75f2df1d9571eecad4e0f966ad8e4f88b8e8a",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2430,11 +2430,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 38672,
+              "byte_count": 39909,
               "kind": "docs",
               "path": "artifact-gallery/templates/flowchart.html",
               "required": true,
-              "sha256": "28a0c737fd9caf857a3ffb23ca616f5b75f6607d98803e01f8fceeb53f5f2a55",
+              "sha256": "468778d6fe624eb83a772046b829c9c361445dd0e90a47d57dbaa8ee25f2885e",
               "source_path": "speckit-pro/artifact-gallery/templates/flowchart.html",
               "transform": "none"
             },
@@ -3629,11 +3629,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 38672,
+              "byte_count": 39909,
               "kind": "docs",
               "path": "artifact-gallery/templates/flowchart.html",
               "required": true,
-              "sha256": "28a0c737fd9caf857a3ffb23ca616f5b75f6607d98803e01f8fceeb53f5f2a55",
+              "sha256": "468778d6fe624eb83a772046b829c9c361445dd0e90a47d57dbaa8ee25f2885e",
               "source_path": "speckit-pro/artifact-gallery/templates/flowchart.html",
               "transform": "none"
             },
@@ -4728,7 +4728,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "e35c3430d388f9cc546f6e4dbfa1146ad26508d1ab9cbdd46d3f74d447d5f949",
+          "file_tree_hash": "2d1a73a877e5459155c4aeef29bea2d7834c7eeb7a014735403425903550ab24",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
