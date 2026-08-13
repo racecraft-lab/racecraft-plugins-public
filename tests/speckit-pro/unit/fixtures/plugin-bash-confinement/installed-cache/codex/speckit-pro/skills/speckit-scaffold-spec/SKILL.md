@@ -129,8 +129,10 @@ else should be derived from the repository.
   speckit-pro plugin root directory.
 - Do not leave placeholder tokens such as `SPEC_ID`, `SPEC_NAME`, or empty
   phase prompts in the generated workflow.
-- Do not run the autopilot at the end. Setup stops once the workflow is ready,
-  committed, and pushed.
+- Do not run the autopilot at the end unless this session is rooted at the spec
+  worktree, the `## Output` pre-chain check passes, and the operator accepts the
+  single confirmation it offers. On every other rooting, setup stops once the
+  workflow is ready, committed, and pushed.
 - Always run the `$grill-me` interview before writing the workflow file. The
   Design Concept doc is a required setup output, not optional. Setup must not
   attempt to fabricate design-concept content if grill-me aborts.
@@ -258,12 +260,230 @@ Report what was bootstrapped — or that the project documents nothing — in th
 scaffold summary. Never skip this silently: an unbootstrapped worktree is how
 spec sessions end up running without the project's tooling.
 
+### 3.6 Blind-spot pass (in the worktree)
+
+**This step is mandatory.** Every `$speckit-scaffold-spec` invocation runs the
+blind-spot pass from the worktree, immediately before the grill-me interview.
+There is no skip flag, no skip argument, and no documented path that reaches the
+interview without attempting the pass. Mandatory to **attempt**, not to succeed:
+the pass fails open, as the end of this step sets out.
+
+**Engine.** The pass runs on the already-shipped read-only `codebase-analyst`,
+consumed unmodified. Do not add or edit an agent definition on either platform.
+Never add Grep, Glob, or Bash to this skill's tool surface: this step needs
+**no new tool grant**.
+
+**Dispatch, then await.** Dispatch with `spawn_agent`, using the bare identifier
+`codebase-analyst`, then poll `wait_agent` in a bounded loop until the actual
+summary is delivered. A status update, an unrelated mailbox wake, or a terminal
+status without a delivered result is **not** the result. Call `close_agent` only
+when that action is exposed. The await completes BEFORE the interview starts.
+
+**The bound. A single expired poll is not the deadline.** Abandonment is governed
+by one execution deadline for the whole pass:
+
+| Bound | Value | On expiry |
+| ----- | ----- | --------- |
+| Per-poll timeout | whatever the surface provides | keep waiting; **not** a verdict |
+| Pass execution deadline | **5 minutes from dispatch** | abandon the wait and record the `did not run` outcome with reason `wait deadline expired` |
+
+Consecutive expired polls are the loop's **cue to check the five-minute
+execution deadline**, not a second independently-triggering bound, and this cue
+has no Claude-side counterpart. "No reply at
+all" has one observation point: the loop ended without a summary, or the deadline
+expired. Never infer it from a dispatch still running. A summary arriving
+**after** the deadline does not change the recorded outcome.
+
+**Seed.** Read three things from the roadmap entry step 2 already parsed:
+
+| Seed element | Status | When absent |
+| ------------ | ------ | ----------- |
+| The entry's Scope text | **required** | The `**Scope:**` label is not universal, so read the scope text rather than matching a heading |
+| The entry's dependency chain | **required when the entry declares one, under any heading** | Read a renamed variant such as `**Deps:**` as the chain. Only when no declaration exists in any spelling, append the label with the literal `none`. Never skip, never report a gap, never infer a chain |
+| The `Key Files` section | **optional hint** | Omit the label entirely and continue. Never report a gap, never skip |
+
+**The two absent-field behaviours differ on purpose. Do not collapse them.**
+`Key Files` is a hint whose absence carries no information, so its label is
+dropped. A missing `Depends On` **is** information, so the literal `none` is
+written instead: reading a renamed `**Deps:**` as absent would put `none` in the
+payload for an entry that names several — a false statement rather than a
+missing one.
+
+**Payload assembly.** Two parts, in this order: the dispatch block, then the
+appended seed material under these literal labels:
+
+```text
+Scope:
+<the roadmap entry's Scope text>
+
+Depends On:
+<the entry's dependency chain, read under whatever heading it carries — the literal `none` only when the entry declares no dependencies under any heading>
+
+Key Files:
+<the Key Files section — this label and its text are omitted entirely when the entry has none>
+```
+
+The block's own words "the Scope text below" refer to exactly this appended
+material, so the order is fixed. **Nothing else is appended**: no operator
+commentary, no prior findings, no spec text. Each `Depends On` spec whose
+artifacts are not in the working tree is chased into git history rather than
+reported absent — an archive sweep removes files, not history.
+
+**The dispatch block, carried verbatim.** It is byte-identical to the Claude
+copy: the shipped `codebase-analyst` description frames the agent for autopilot
+consensus resolution, so this block carries the whole framing. Send it first,
+then the appended material. Do not paraphrase it, and do not normalise the
+one-word `blindspot pass` or `unknown unknowns`. Never ask the operator about
+their familiarity: their structural position is stated as fact, not asked.
+
+```text
+You are running a blindspot pass for <SPEC-ID>: surface the unknown unknowns
+in this roadmap entry before its scoping interview.
+
+The operator has read this roadmap entry and its scope. They have not
+necessarily read the affected code area, or the archived artifacts of its
+dependencies.
+
+Seed (required): the Scope text below, and each spec named in Depends On.
+Seed (optional hint, may be absent): the Key Files section.
+For each Depends On spec whose artifacts are not in the working tree, chase
+it into git history rather than reporting it absent.
+
+Return at most 5 findings, ranked by impact then surprise. Each finding:
+N. **<Title>** - 1-3 sentences, plus a repo-relative file or path pointer.
+   Impact: <what requirement or design decision this would change if true>
+   Surprise: <why the roadmap entry's own text does not already say this>
+Then state how many findings you set aside, including when that number is 0.
+If you find nothing, reply exactly: The blindspot pass raised no unknown unknowns.
+```
+
+**Classify the reply. Three disjoint outcomes, no judgement call.** A reply is
+**usable** when it carries at least one finding in the fixed shape, **or** the
+literal sentence `The blindspot pass raised no unknown unknowns.`
+
+| Outcome | Test |
+| ------- | ---- |
+| **Ran** | a finding in the fixed shape **or** the sentinel came back |
+| **Returned nothing usable** | a reply came back carrying neither |
+| **Did not run** | no reply at all — dispatch error, empty return, or the execution deadline expiring |
+
+**"A finding in the fixed shape"** means a numbered item carrying a title and at
+least one of the two rationale lines; a numbered title with neither fails the
+test. **A single expired poll is not the third outcome** — only the pass
+execution deadline expiring abandons the wait.
+
+**Cap, ranking, and the set-aside count.** At most five findings, and the cap is
+**not operator-configurable**. **Scaffold enforces the cap on what it renders**,
+because the reply is model output and cannot be relied on to obey: when more than
+five come back, show the first five **in the analyst's own order**, count the
+remainder, and state that count through the truncation string below. Never
+re-rank, merge, or rewrite findings to fit — the ranking is the analyst's,
+ordered by impact with surprise as the tiebreak. **No numeric score** is
+assigned.
+
+**Always state the set-aside count, including when it is zero**, in one of these
+three shapes:
+
+```text
+Showing the 5 highest-impact findings; N more were set aside
+Showing all N findings; none were set aside
+The blindspot pass raised no unknown unknowns.
+```
+
+The third is the **sentinel echoed verbatim** — one string doing two jobs, the
+analyst's signal and scaffold's line to the operator — so no second wording for
+"found nothing" can be invented.
+
+**The two degraded outcomes get one status line each:**
+
+```text
+The blind-spot pass returned nothing usable; continuing without findings. Reason: <reason>
+The blind-spot pass did not run; continuing without findings. Reason: <reason>
+```
+
+`<reason>` is one short clause naming what was observed, drawn from this
+vocabulary: `reply carried neither a finding nor the sentinel`,
+`dispatch error: <message>`, `empty return`, or `wait deadline expired`.
+**Exactly one of the five status lines above is emitted per run**, and the same
+`<reason>` clause is reused verbatim in the design-concept header line below, so
+the printed record and the durable record cannot give different reasons.
+
+**The one-word spelling inside the sentinel is deliberate. Do not normalise it.**
+Where scaffold speaks in its own voice — the two degraded lines above and the
+`**Blind-spot pass:**` header key below — the term is hyphenated, so one run can
+show both spellings. It reads as a typo and is not. The sentinel is matched
+**literally**: normalising it to `blind-spot` breaks the usable-reply test
+silently, on exactly the runs where the pass worked.
+
+**Fail open.** Do **not** treat the dispatch outcome as a gate, and do **not**
+retry-then-halt. If the dispatch fails or returns nothing usable, continue into
+the interview with nothing seeded, and record the gap and its reason in **both**
+sinks: the operator status line above, which scaffold prints, and the
+design-concept header line below, which step 4 verifies and repairs.
+
+**"Nothing seeded" means no findings are seeded. It does not mean the labelled
+block is omitted.** The block still travels in all three outcomes, carrying only
+its status line in the degraded two; omitting it there would leave the "did not
+run" record with no mechanism to be written at all.
+
+**The seeded block — one shape, two appearances.** Findings reach the interview
+as a labelled block appended to the scope input step 4 **already** passes. The
+block uses one shape in both places it appears — the operator output and the
+seeded scope string — so the two records cannot drift:
+
+```text
+--- BLIND-SPOT PASS FINDINGS ---
+<the numbered findings, or the FR-006 status line for the outcome>
+<the set-aside line, present only when findings are shown>
+Record the Blind-spot pass line in the design concept's header blockquote.
+Treat each finding as a candidate question; any finding not reached becomes an Open Question.
+--- END BLIND-SPOT PASS FINDINGS ---
+```
+
+**The second line is the only conditional one.** It is present in the two shapes
+that show findings, and omitted when the sentinel came back (that sentinel is
+already the line above it) and in the two degraded outcomes, which have no
+set-aside count. The delimiters and the two closing instructions **never vary**,
+which is what lets the block keep one shape in all three outcomes.
+
+**Two of the block's lines address the interview, and the operator sees them.**
+That cost is accepted rather than overlooked. **Do not resolve it by forking the
+two copies**, softening the imperatives in one, or dropping them from the printed
+half: any of those is the drift one shape exists to prevent. The second closing
+instruction is how no finding is dropped silently — one the interview resolves
+becomes an entry in the existing question-and-answer record, and one it does not
+reach becomes an Open Question.
+
+**The design-concept record.** One line in the design concept's **existing**
+header blockquote, under the key `**Blind-spot pass:**` — hyphenated, because
+that is scaffold's own voice — recording exactly one of the three outcomes:
+
+```text
+> **Blind-spot pass:** ran — N findings surfaced, M set aside
+> **Blind-spot pass:** returned nothing usable — <reason>
+> **Blind-spot pass:** did not run — <reason>
+```
+
+The word immediately after the key is the discriminator, drawn from the closed
+set `ran`, `returned nothing usable`, `did not run`. `<reason>` is the **same
+clause** the status line above carried. A pass that ran and raised nothing is the
+first shape with `N` and `M` both zero, which is what distinguishes it from one
+that never ran. This key needs no schema change. Do **not** add a section to the
+design concept, do **not** write a separate findings artifact — specifically not
+`.process/<SPEC-ID>-blind-spots.md` — and do **not** change what the interview
+produces.
+
+**Presentation is informational.** The run flows straight from the findings into
+the first interview question. **No confirmation, no curation step, no
+continue/abort prompt** between the two.
+
 ### 4. Run the Grill Me interview (in the worktree)
 
 Before writing the workflow file, run an iterative scoping interview so the
 Specify and Clarify prompts can be enriched from human-validated answers. Use
 the spec scope description from the technical roadmap (and any constraints,
-dependencies, or stated tools) as the input.
+dependencies, or stated tools) as the input, with the step 3.6 BLIND-SPOT PASS
+FINDINGS block appended below it.
 
 Invoke `$grill-me` from inside the worktree with a setup-mode marker so it
 knows to:
@@ -272,6 +492,12 @@ knows to:
   `docs/ai/specs/.process/SPEC-<ID>-design-concept.md` inside the worktree
 - Surface the key answers (Goals, Non-goals, major design decisions) back to
   this skill so step 6 can fold them into the workflow prompts
+
+The labelled block is the **only** channel the pass uses into the interview, and
+it travels in all three step 3.6 outcomes — carrying only its status line in the
+degraded two. Do not add a new interview argument, do not change what the
+interview produces, and never edit any file under the grill-me skill on either
+platform. The scope input already exists; this appends to it.
 
 Codex grill-me uses a picker-first HITL guard: it must call
 `request_user_input` for each Grill Me question. In Codex Default mode this
@@ -287,6 +513,23 @@ native picker is a config prerequisite failure. Do not try to drive grill-me fro
 
 If grill-me aborts (no interactive runtime), stop setup and report the
 condition. Do not synthesize design-concept content yourself.
+
+After the interview returns, verify the durable record and repair it when
+absent:
+
+1. Read `docs/ai/specs/.process/SPEC-<ID>-design-concept.md` in the worktree and
+   confirm it carries the `**Blind-spot pass:**` key in its header blockquote.
+2. If the key is missing, edit the step 3.6 header line into that existing header
+   blockquote from the values already held at the moment the status line was
+   rendered — the outcome, the `<reason>` clause, and N and M for the `ran`
+   outcome. Nothing is derived a second time.
+
+The interview is the writer of first resort, but the request is one sentence
+inside a prose block handed to another skill, so verify rather than assume. Read
+to check and edit to repair: no new tool grant, no new machinery, no new section,
+no separate findings artifact, and no grill-me edit. When the interview does not
+return, nothing is owed — the run stops, so no design concept exists to carry a
+record and the step 3.6 status line is the only one.
 
 ### 5. Copy the workflow template into the worktree
 
@@ -443,14 +686,315 @@ Finish with a concise scaffold report that includes:
   `no documented bootstrap`
 - the absolute worktree root from `git rev-parse --show-toplevel` run inside
   the worktree
-- the exact next step: start a new Codex task rooted at that worktree, then run
+- the exact next step: when the chain below fires, the invocation it printed;
+  otherwise start a new Codex task rooted at that worktree, then run
   `$speckit-autopilot` with the workflow path relative to the worktree root
   (Codex skills are invoked via `$skill-name`, not via any
-  `/<plugin>:<skill>` slash command — see openai/codex#7480)
+  `/<plugin>:<skill>` slash command — see the official Codex skills
+  documentation at https://learn.chatgpt.com/docs/build-skills, corroborated by
+  openai/codex#11817)
+
+When the chain below does not fire, the two sentences that follow hold without
+exception.
 
 Never hand off only the inner workflow path from the parent checkout. Do not
 suggest running autopilot from main, a detached checkout, or any workspace root
 other than the generated spec worktree.
+
+**The chain into the planning stage.** It extends this section rather than
+becoming a new numbered step, and it sits after step 8, once the design concept,
+the workflow file, the SPEC-MOC marker, and the roadmap status flip are all
+committed and pushed. Placing it earlier is rejected for a stated reason: a
+chained planning stage that fails or is interrupted must never leave the roadmap
+claiming the spec is still Ready.
+
+**Run the pre-chain check first. Two read-only tests, and both must pass.** If
+any part fails, do not ask; print the hand-off command instead.
+
+```text
+1. Resolve the current checkout with `git rev-parse --show-toplevel`.
+2. If the supplied workflow path exists inside that checkout, continue.
+3. Confirm `git status --porcelain` is clean in the same checkout that
+   step 1 resolved.
+```
+
+Step 2 is the Workflow Worktree Binding guard's own sentence, reproduced word for
+word. Use those words. Do not paraphrase them as "resolves inside", "is under",
+or "belongs to".
+
+**This is an existence test on the supplied path. It is not a comparison of
+directories.** Do not implement it by canonicalising the workflow path and
+comparing its parent, its repository root, or its worktree root against the
+current checkout root. A stale same-named workflow file in the parent checkout
+passes every such comparison and passes the guard, so planning phases would
+commit there — usually main, which this skill may never touch.
+
+**What the check must NOT test: the most recent commit.** After step 8 the newest
+commit is the roadmap status flip rather than the workflow-file commit, so a
+last-commit test would fail on every correct run. Both commands already run at
+step 3.5, so this check adds no machinery.
+
+**Attempt the chain only when that check passes.** Otherwise ask nothing at all
+and print the hand-off command. A Codex task's workspace root is fixed when the
+task starts, and a scaffold run necessarily begins before the worktree exists, so
+the ordinary Codex session is rooted at the parent checkout: **on Codex the
+printed hand-off is the ordinary outcome, not a degraded one.** The condition is
+not dead code: re-scaffolding through the existing-worktree reuse path starts a
+correctly rooted session, and the chain then fires.
+
+**Print one line before asking.** State three facts and no more: accepting runs
+the six planning phases in this same session without further prompts; those
+phases commit as they go; declining leaves everything already pushed exactly as
+it is. It is printed, not asked — no options — and does not count against the
+budget below.
+
+**Then ask exactly one confirmation, structured.** Use `request_user_input` when
+it is present:
+
+```text
+Question: Scaffold is complete and pushed. Start the planning stage now?
+Options, two, mutually exclusive, in this order:
+  1. Start planning (Recommended)
+  2. Stop here
+```
+
+The recommended answer comes first, per house convention; declining is fully
+non-destructive. Never fall back to parsing a free-text reply, and never chain by
+default when the structured confirmation is unavailable. **The budget counts what
+this step adds**: exactly one confirmation when the chain is attempted, none when
+the pre-chain check fails. Step 3.5's bootstrap approval and the grill-me
+questions are pre-existing, are not counted, and are not removed.
+
+**On acceptance, print the invocation verbatim, then run it:**
+
+```text
+$speckit-autopilot <workflow-file> --stage plan
+```
+
+Without that line the accepted path is the only branch point where the operator
+is told nothing. The leading `$speckit-autopilot` token is a **deviation** from
+ART-006's stage-invocation table, which begins the Codex row at the workflow
+path; the argv is unchanged, and the prefix is the invocation form this whole
+skill set already uses.
+
+The stage token is the literal lowercase `plan`, from the closed vocabulary
+`plan`, `implement`, `full`. No aliases, no alternate casing, no long-form
+spellings. The workflow file path is the **sole** hand-off token: never pass a
+state file, branch name, feature directory, or environment variable across the
+boundary.
+
+**The three no-chain paths.** Do not chain, and print the hand-off command
+instead, in all three of these cases:
+
+```text
+1. The operator declines.
+2. No structured confirmation mechanism is available in the session.
+3. The pre-chain check above fails.
+```
+
+In every case **nothing is rolled back**: the operator loses one command and no
+work.
+
+**The hand-off command has one fixed form:**
+
+| Platform | Hand-off command |
+| -------- | ---------------- |
+| Claude Code | `/speckit-pro:speckit-autopilot <workflow-file> --stage plan` |
+| Codex CLI | start a new Codex task rooted at the spec worktree, then `$speckit-autopilot <workflow-file> --stage plan` |
+
+The Codex rooting instruction is **part of the command, not commentary beside
+it**: an operator reaching this ending is by definition rooted outside the
+worktree, so a bare invocation hands them a command the guard stops.
+
+**The closing report — one report, rendered on every terminal condition the run
+can reach.** Four triggers, all four named because two of them are not choices:
+
+```text
+1. After the planning stage, on acceptance.
+2. Immediately, when the operator declined.
+3. Immediately, when no structured confirmation mechanism was available.
+4. Immediately, when the pre-chain check failed.
+```
+
+Trigger 4 is the **ordinary** Codex run, not an edge case: a two-item
+accept-or-decline list would leave the most common Codex ending with no report
+owed. The report is **printed, not written to a file.** The set-aside findings
+count **must not** appear in it; the list below is closed at four elements, that
+count lives in the design concept's header record and in the seeded block, and
+the artifact index points at the file carrying it.
+
+**Contents, closed at four elements, in this order:**
+
+```text
+## <heading>
+
+**Outcome:** <one line>
+**Draft PR:** none, because draft-PR creation is not part of this release
+
+**Artifacts:**
+- <repo-relative path>     (one line each; only paths that exist)
+
+**Next step:** <one command>
+```
+
+**The heading is a closed three-value vocabulary, one per terminal condition.** A
+two-value vocabulary would force one of them under a false heading:
+
+| Terminal condition | Heading |
+| ------------------ | ------- |
+| The operator declined, or the chain never fired | `## Stopped Before Planning` |
+| The chain fired and the completion test passes | `## Planning Complete` |
+| The chain fired and the completion test does not pass | `## Planning Incomplete` |
+
+**Fixed, conditional, and derived.** The heading is selected from the closed set
+above and the draft-PR line is conditional. The outcome line, the artifact index,
+and the next step are **derived** — none is a fixed string, and each has its own
+rule below. `<one command>` denotes one fixed string, not a bare invocation: on
+the three no-chain paths it is the hand-off command above, whose Codex form
+carries the rooting precondition. The slot stays one line per heading.
+
+**The two reports must not restate the same fields**: no worktree path, no remote
+line, and no bootstrap result here — the scaffold report above gave all three and
+the closed list admits none of them. The pushed branch appears once, as an index
+entry, never as a repeated header field.
+
+**The outcome line, one per no-chain cause.** `## Stopped Before Planning` covers
+a deliberate stop and two endings the operator did not choose, so the outcome
+line is where they are told apart. The index and the next step are the same on
+all three, since no planning stage ran:
+
+| No-chain cause | Outcome line states |
+| -------------- | ------------------- |
+| The operator declined | the run stopped at the operator's request, and nothing was rolled back |
+| No structured confirmation mechanism was available | the chain was not offered because the session exposes no structured confirmation mechanism, and nothing was rolled back |
+| The rooting test failed | planning was not started in this session because the workflow file is outside the current checkout; everything scaffold owns is finished and pushed, and nothing was rolled back |
+| The cleanliness test failed | the chain was not offered because the checkout has uncommitted changes, and nothing was rolled back |
+
+This does not reopen the three no-chain paths: they still behave identically — no
+chain, hand-off command printed, nothing rolled back. The two check failures are
+told apart because their remedies differ: a dirty checkout is fixed in place,
+while a mis-rooted session's remedy is the new session the Codex hand-off command
+already names. Every line closes on **nothing was rolled back**, the fact the
+operator most needs.
+
+**The rooting row reads as an ending, not an apology.** On Codex it is the
+ordinary outcome, reached by an operator who did nothing wrong, so the wording
+leads with what is finished rather than with a negation. **The string is
+identical on both platforms**: a platform-forked outcome line would be a
+divergence outside the closed list of permitted differences.
+
+**The draft-PR line.** Show the URL when the run produced one. Otherwise state
+plainly that there is none:
+
+```text
+**Draft PR:** none, because draft-PR creation is not part of this release
+```
+
+Never omit the line silently, and never fabricate or guess a URL. For every run
+in this release "none" is the expected value, because draft-PR creation belongs
+to a later spec.
+
+**The artifact index enumerates what the run actually produced** — the
+scaffold-owned artifacts plus whatever the planning stage wrote, including the
+conditionally produced research artifact, the contract artifacts, and the
+checklist domains this spec chose. It **must not print a path that does not
+exist, and must not omit an artifact that does.** The set varies per spec, so a
+derived index stays true where a fixed list would not; exactness in both
+directions is unverifiable against an open set, so the candidates are fixed:
+
+| Group | Candidates |
+| ----- | ---------- |
+| Scaffold-owned | `docs/ai/specs/.process/<SPEC-ID>-design-concept.md`, `docs/ai/specs/.process/<SPEC-ID>-workflow.md`, `specs/<feature>/SPEC-MOC.md`, the pushed branch name |
+| Planning-stage | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md`, each file under `contracts/`, each file under `checklists/` — all relative to `specs/<feature>/` |
+
+Nothing outside this set is listed, so an unexpected file is a change to this
+list rather than a silent omission.
+
+**The existence test is a read of the candidate path, and nothing more.** A path
+that reads is listed; a path that does not read is omitted. This is the only
+existence test inside this skill's declared grant, and it adds no machinery.
+Never add Grep, Glob, or Bash to widen that grant.
+
+The two directory-valued members, `contracts/` and `checklists/`, are the one
+place a plain read is insufficient: for those the candidate paths are the
+artifact names the run's own plan and checklist phases recorded, so the
+enumeration still comes from a read. Never infer a path from convention, and
+never list a path that was not tested.
+
+**The next step, one rule per heading, so no heading ends on an undefined line.**
+Under `## Stopped Before Planning` it is the hand-off command above. Under
+`## Planning Complete` it is the chain invocation with the stage token advanced
+to the literal lowercase `implement`, the next member of the closed vocabulary:
+
+```text
+$speckit-autopilot <workflow-file> --stage implement
+```
+
+The workflow file path is the same sole hand-off token, so nothing new crosses
+the boundary. **Never chain into the implement stage, and never ask a second
+confirmation to offer it.** The one confirmation this section spends authorises
+the plan stage only; the implement stage is named as the operator's next command,
+never as scaffold's next action.
+
+Under `## Planning Incomplete` it is the resume command, which **is** the next
+step rather than a fifth element — the list is closed at four:
+
+```text
+$speckit-autopilot <workflow-file> --stage plan --from-phase <phase>
+```
+
+`<phase>` is **derived, not chosen**: the first planning-phase row in
+`## Workflow Overview` without a terminal status, named in the autopilot's own
+lowercase phase vocabulary — `specify`, `clarify`, `plan`, `checklist`, `tasks`,
+`analyze`. It comes from the same read the completion test performs, so naming
+the phases that finished and naming the phase to resume from cannot disagree. A
+phase that **failed** rather than finished is simply the first non-terminal row.
+
+**When every planning row is terminal, omit `--from-phase` entirely.**
+`## Planning Incomplete` is reachable with all six rows terminal, because the
+second completion condition is the other half of the test — the strict-mode gate
+stop, where the row the operator must act on is `Confidence Gate`. That row is
+**not** a planning-phase row and has **no token** in the shipped `--from-phase`
+vocabulary, so it must never be named as `<phase>`; the next step is then the
+same invocation with `--stage plan` and no `--from-phase`. That is shipped
+behaviour rather than a workaround: the autopilot re-resolves the stage from this
+same status table and the `Confidence Gate` row sits inside the plan stage's
+range, so a bare invocation re-enters at the gate. `<phase>` is one of the six
+tokens or absent, with no third possibility — the autopilot range-checks the
+value and stops on one outside the range.
+
+**Completion is read from the workflow file.** When the chained planning stage
+fails, stalls, or is interrupted, completion is determined **by reading the
+workflow file** — no live session, and no state file. Two conditions, both in
+that one artifact:
+
+```text
+1. Every planning-phase row in `## Workflow Overview` — Specify, Clarify,
+   Plan, Checklist, Tasks, Analyze — carries a terminal status.
+2. A `G6.5` confidence-gate verdict is recorded in the file, AND the
+   `Confidence Gate` row does not carry a blocked status.
+```
+
+**Condition 2 needs its second clause, and must not instead demand a PASS.**
+Presence alone would let a strict-mode gate stop — the very failure this report
+exists to name — render under `## Planning Complete`. But a PASS-only test breaks
+the **ordinary** case: G6.5 is advisory by default, where `NO_DATA` soft-skips
+and `FAIL` logs its breakdown and proceeds, so requiring a PASS would file a
+default-mode success as incomplete. The blocked-row clause tells the two apart
+using only what the file already carries. **The `Stage` row is corroborating, not
+the test**: it records what was *resolved*, not what *completed*.
+
+**Read the terminal-status vocabulary; never re-declare it.** It is owned by the
+`WORKFLOW_TERMINAL_STATUSES` frozenset in
+`speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`.
+Read it there. **Do not write the status literals into this file**: two of them
+differ only by a Unicode variation selector and render identically, so a hand
+copy is both prohibited and easy to get wrong. A worktree or branch reused from
+an earlier scaffold run, carrying a partially complete workflow file, is
+evaluated by that same read.
+
+**The report names which planning phases reached a terminal status**, and gives
+the resume command above.
 
 ## Failure Handling
 

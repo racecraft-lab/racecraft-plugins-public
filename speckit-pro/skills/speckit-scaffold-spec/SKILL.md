@@ -952,3 +952,140 @@ finished rather than with a negation. **The string is identical on both
 platforms** — a platform-forked outcome line would be a divergence outside the
 closed list of permitted differences — and it is true on both, because a Claude
 session failing the same test is in the same position.
+
+**The draft-PR line.** Show the URL when the run produced one. Otherwise state
+plainly that there is none:
+
+```text
+**Draft PR:** none, because draft-PR creation is not part of this release
+```
+
+Never omit the line silently, and never fabricate or guess a URL. For every run
+in this release "none" is the expected value, because draft-PR creation belongs
+to a later spec.
+
+**The artifact index enumerates what the run actually produced** — the
+scaffold-owned artifacts plus whatever the planning stage wrote, including the
+conditionally produced research artifact, the contract artifacts, and the
+checklist domains this spec chose. It **must not print a path that does not
+exist, and must not omit an artifact that does.** The set genuinely varies per
+spec, so a derived index stays true where a fixed list would not.
+
+**Derived from a closed candidate set.** Exactness in both directions is
+unverifiable against an open set, so the candidates are fixed here:
+
+| Group | Candidates |
+| ----- | ---------- |
+| Scaffold-owned | `docs/ai/specs/.process/<SPEC-ID>-design-concept.md`, `docs/ai/specs/.process/<SPEC-ID>-workflow.md`, `specs/<feature>/SPEC-MOC.md`, the pushed branch name |
+| Planning-stage | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md`, each file under `contracts/`, each file under `checklists/` — all relative to `specs/<feature>/` |
+
+Nothing outside this set is listed, so an unexpected file is a change to this
+list rather than a silent omission.
+
+**The existence test is a read of the candidate path, and nothing more.** A path
+that reads is listed; a path that does not read is omitted. This is the only
+existence test inside this skill's declared grant, and it adds no machinery.
+Never add Grep, Glob, or Bash to widen that grant.
+
+The two directory-valued members, `contracts/` and `checklists/`, are the one
+place a plain read is insufficient. For those, the candidate paths are the
+artifact names the run's own plan and checklist phases recorded, so the
+enumeration still comes from a read rather than a directory listing. Never infer
+a path from convention, and never list a path that was not tested.
+
+**The next step, one rule per heading, so no heading ends on an undefined
+line.** Under `## Stopped Before Planning` the value is the Step 9 hand-off
+command.
+
+Under `## Planning Complete` it is the Step 9 invocation with the stage token
+advanced to the literal lowercase `implement`, the next member of the closed
+vocabulary:
+
+| Platform | Next step under `## Planning Complete` |
+| -------- | -------------------------------------- |
+| Claude Code | `/speckit-pro:speckit-autopilot <workflow-file> --stage implement` |
+| Codex CLI | `$speckit-autopilot <workflow-file> --stage implement` |
+
+The workflow file path is the same sole hand-off token, so nothing new crosses
+the boundary. **Never chain into the implement stage, and never ask a second
+confirmation to offer it.** The one confirmation Step 9 spends authorises the
+plan stage only. The implement stage is named as the operator's next command,
+never as scaffold's next action.
+
+Under `## Planning Incomplete` it is the resume command, which **is** the next
+step rather than a fifth element — the list is closed at four:
+
+| Platform | Resume command |
+| -------- | -------------- |
+| Claude Code | `/speckit-pro:speckit-autopilot <workflow-file> --stage plan --from-phase <phase>` |
+| Codex CLI | `$speckit-autopilot <workflow-file> --stage plan --from-phase <phase>` |
+
+`<phase>` is **derived, not chosen**: the first planning-phase row in
+`## Workflow Overview` without a terminal status, named in the autopilot's own
+lowercase phase vocabulary — `specify`, `clarify`, `plan`, `checklist`, `tasks`,
+`analyze`. It comes from the same single read the completion test below performs,
+so naming the phases that finished and naming the phase to resume from are two
+renderings of one result rather than two reads that could disagree. A phase that
+**failed** rather than finished needs no special case: it is simply the first
+non-terminal row.
+
+**When every planning row is terminal, omit `--from-phase` entirely.**
+`## Planning Incomplete` is reachable with all six rows terminal, because the
+second completion condition is the other half of the test — that is the
+strict-mode gate stop, where the row the operator must act on is
+`Confidence Gate`. That row is **not** a planning-phase row and has **no token**
+in the shipped `--from-phase` vocabulary, so it must never be named as
+`<phase>`:
+
+| State | Resume command |
+| ----- | -------------- |
+| A planning row is non-terminal | the invocation above, with `--from-phase <phase>` |
+| All six planning rows terminal, second condition unmet | the invocation with `--stage plan` and **no** `--from-phase` |
+
+The second row is shipped behaviour rather than a workaround: the autopilot
+re-resolves the stage from this same status table, the `Confidence Gate` row
+sits inside the plan stage's range, and a bare invocation therefore re-enters at
+the gate. `<phase>` is one of the six tokens or absent, with no third
+possibility — the autopilot range-checks `--from-phase` and stops on a value
+outside that range, so an invented token yields a command that fails instead of
+resuming.
+
+**Completion is read from the workflow file.** When the chained planning stage
+fails, stalls, or is interrupted, completion is determined **by reading the
+workflow file** — no live session, and no state file. Two conditions, both in
+that one artifact:
+
+```text
+1. Every planning-phase row in `## Workflow Overview` — Specify, Clarify,
+   Plan, Checklist, Tasks, Analyze — carries a terminal status.
+2. A `G6.5` confidence-gate verdict is recorded in the file, AND the
+   `Confidence Gate` row does not carry a blocked status.
+```
+
+**Condition 2 needs its second clause, and must not instead demand a PASS.**
+Presence alone would let a strict-mode gate stop — the very failure this report
+exists to name — render under `## Planning Complete`. But a PASS-only test
+breaks the **ordinary** case: G6.5 is advisory by default, and in advisory mode
+`NO_DATA` soft-skips while `FAIL` logs its breakdown and proceeds to the next
+phase. Planning really did complete on those runs, so requiring a PASS would
+file the default-mode success as incomplete. The blocked-row clause tells the
+two apart using only what the file already carries.
+
+**The `Stage` row is corroborating, not the test.** It records what was
+*resolved*, not what *completed*, so a file showing `Stage: plan` with Tasks
+still pending is a run in flight rather than a finished one.
+
+**Read the terminal-status vocabulary; never re-declare it.** It is owned by the
+`WORKFLOW_TERMINAL_STATUSES` frozenset in
+`speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`.
+Read it there. **Do not write the status literals into this file**: two of them
+differ only by a Unicode variation selector and render identically, so a hand
+copy is both prohibited and easy to get wrong.
+
+The reuse case is the same read: a worktree or branch reused from an earlier
+scaffold run, carrying a partially complete workflow file, is evaluated by
+terminal status on every planning row plus a recorded confidence-gate verdict,
+from the file.
+
+**The report names which planning phases reached a terminal status**, and gives
+the resume command above.
