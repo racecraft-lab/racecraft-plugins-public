@@ -41,7 +41,7 @@ doubt them, and record any drift.
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass, 27 tasks across 6 phases, 0 markers. One scope gap found and fixed: the plan declared 5 files, FR-013c needs a 6th |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 pass. 9 findings (0 critical, 2 high, 5 medium, 2 low), all remediated, 0 after 2 loops, nothing reopened |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
-| Implement | `/speckit-implement` | 🔄 In Progress | 27 tasks across 6 phases |
+| Implement | `/speckit-implement` | ✅ Complete | 27 tasks, G7 pass. Full gate 7385/7385, +7 over the 7378 baseline, zero failures |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -609,15 +609,35 @@ python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-co
 
 **Results:**
 
-| Run | Expectation | BEFORE (measured 2026-08-12) | AFTER |
+| Run | Expectation | BEFORE (measured 2026-08-12) | AFTER (measured 2026-08-12) |
 |---|---|---|---|
-| 54 corpus files, state names the matching workflow | exit 0 | **54 of 54 exit 0** | pending |
-| Canary: state names a *different* workflow | exit 1 after the repair | **exit 0**, `workflow_checkpoint_errors` empty, `workflow_authority_errors` absent | pending |
+| 54 corpus files, state names the matching workflow | exit 0 | **54 of 54 exit 0** | **54 of 54 exit 0**, zero input errors, `workflow_authority_errors` present and empty on all 54 |
+| Canary: state names a *different* workflow | exit 1 after the repair | **exit 0**, `workflow_checkpoint_errors` empty, `workflow_authority_errors` absent | **exit 1**, `workflow_checkpoint_errors` empty, `workflow_authority_errors` non-empty |
 
 The canary is the whole point of the harness. Fifty-four passes prove nothing on
 their own, because a skipped comparison and a satisfied comparison both exit 0.
 The canary is the run that must change from 0 to 1; if it still exits 0 after the
 change, the repair did not take regardless of what the other 54 report.
+
+**After-half conditions, recorded so the pair is comparable.** The state path was
+supplied in the **relative form with the working directory at the repository
+root**, the same form the before-half used. The file was written to
+`art-014-corpus-state.json` at the repository root and deleted when the run
+finished. A repository root did resolve from it, which the
+empty-but-**present** `workflow_authority_errors` key on all 54 confirms: a
+skipped comparison leaves the key absent, exactly as the before-half canary
+recorded. Every one of the 54 returned a full 25-key report rather than the
+input-error object, so no recorded pass is an input error in disguise.
+
+The canary supplied `docs/ai/specs/.process/ART-001-workflow.md` while the state
+named `docs/ai/specs/.process/ART-002-workflow.md`, and the armed key reported:
+
+```text
+supplied workflow does not match autopilot state workflow_file authority: supplied docs/ai/specs/.process/ART-001-workflow.md, state names docs/ai/specs/.process/ART-002-workflow.md
+```
+
+The before-half emitted no such message because the comparison never ran. That
+absence-to-message flip, not the unchanged 54, is what shows the repair took.
 
 ### Consensus Resolution Log
 
@@ -1324,15 +1344,313 @@ reason, the fixture is wrong, not the guard.
   verify the two installed-cache proofs and both dist/ copies moved with it.
 ```
 
+### Pre-Change Baseline, Recorded By T001
+
+Captured before any source edit, because the contrast this records is
+unmeasurable once the repair lands. Measured 2026-08-12 on the
+`art-014-phase-guard-enforcement-repair` worktree, macOS, CPython 3.11.
+
+**Suite is green before the change.**
+
+```text
+python3 tests/speckit-pro/run-all.py --layer 4
+→ speckit-pro test suite: 5745/5745 passed
+→ L4: 5745/5745
+→ PASS test-autopilot-bookkeeping-guard (17/17)
+```
+
+**The defect, reproduced once under the autopilot's own invocation.** The
+fixture is the T002 shape: a temporary root carrying a `.git` **file** marker, a
+supplied workflow at the repository-relative `docs/supplied-workflow.md`, the
+state written beside it and passed **absolute**, and the state's `workflow_file`
+set to the repository-relative `docs/a-different-workflow.md`, which names a
+different specification.
+
+```text
+python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py \
+  --workflow <supplied workflow> --state <state> --rule status-evidence
+```
+
+| Observation | Measured before the change |
+|---|---|
+| Exit code | **0** — the mismatched run reports success |
+| `workflow_authority_errors` in the report | **absent from the report entirely** |
+| Printed `status` field | `fail`, on unrelated pre-existing coverage debt |
+
+The last row is worth separating from the first two. The report's own `status`
+already reads `fail`, yet the exit code is 0, because `--rule status-evidence`
+scopes the exit code to three keys and the coverage debt is not one of them.
+That is the `--rule` behaviour spec.md's Assumptions records, not a second
+defect, and it is why the exit code rather than the printed status is the
+measurement of record for SC-001.
+
+**Pre-change counts, re-derived rather than copied.** Both were re-measured
+against the report above, not read from an earlier artifact.
+
+| Count | Measured | Spec Assumptions | Agreement |
+|---|---|---|---|
+| Emitted problem keys (report keys minus the four metadata keys `status`, `workflow_file`, `state_file`, `plan_step_count`) | 20 | 20 | ✅ |
+| Keys reachable by a named rule (`RULE_PROBLEM_KEYS`) | 8 | 8 | ✅ |
+| — of those, `status-evidence` | 3 | 3 | ✅ |
+| — of those, `coverage` | 5 | 5 | ✅ |
+| Advisory keys (emitted minus reachable) | 12 | 12 | ✅ |
+
+The 20 emitted keys, in sorted order: `changed_file_manifest_errors`,
+`checkpoint_evidence_errors`, `checkpoint_file_errors`,
+`checkpoint_source_fingerprint_errors`, `completed_phase_pending_fields`,
+`duplicate_state_steps`, `emission_mapping_errors`, `in_progress_errors`,
+`marker_plan_status_errors`, `missing_state_post_items`,
+`missing_state_prefixes`, `missing_workflow_post_items`,
+`missing_workflow_sections`, `missing_workflow_tokens`,
+`projection_status_errors`, `stage_mirror_errors`, `state_order_errors`,
+`state_status_errors`, `workflow_checkpoint_errors`,
+`workflow_status_evidence_errors`.
+
+**No drift to report.** Every re-derived count matches the spec's Assumptions,
+so nothing here needed reporting as a disagreement.
+
+### Post-Change Measurements, Recorded By T008 And T012
+
+Measured on the same worktree, macOS, CPython 3.11, against the same T002
+fixture the baseline above used. The "before" halves come from that baseline, so
+each contrast sits in one place.
+
+**The two halves, observed.** tasks.md predicts a three-stage progression of the
+same negative control. Each stage was run and recorded rather than reasoned
+about.
+
+| After | Negative-control exit | `workflow_authority_errors` | Suite |
+|---|---|---|---|
+| T002 and T003 written, before any guard edit | 0 | key absent entirely | 17/19 |
+| T009 and T010 added, still before T007 | 0 | key absent entirely | 17/21 |
+| T007 complete (key merged) | **0** | **non-empty**, the identity message | 20/21 |
+| T008 complete (key registered) | **1** | non-empty | **21/21** |
+
+The third row is the one that matters for review. Detection and gating are
+separate halves, and the mismatch was fully reported for a whole stage while the
+run still exited 0. A reviewer who reverts T008 alone returns to that row.
+
+The FR-006b control (T003) turns green one stage earlier, at T007 rather than
+T008, because it asserts key presence and non-emptiness and deliberately asserts
+no exit code. tasks.md places it at the T008 checkpoint; the observed flip is at
+T007. That is a precision correction to the task note, not a behaviour
+difference: FR-006b is about whether the comparison evaluates, which is settled
+once the key is merged.
+
+**Post-change counts, re-derived from a real report rather than copied.**
+
+| Count | Before | After | SC-006 pins | Agreement |
+|---|---|---|---|---|
+| Emitted problem keys | 20 | 21 | 20 → 21 | ✅ |
+| Keys reachable by a named rule | 8 | 9 | 8 → 9 | ✅ |
+| — of those, `status-evidence` | 3 | 4 | 3 → 4 | ✅ |
+| — of those, `coverage` | 5 | 5 | unchanged | ✅ |
+| Advisory keys | 12 | 12 | unchanged | ✅ |
+
+`workflow_authority_errors` is the only key added, and it appears in exactly one
+rule tuple, `status-evidence`. `workflow_checkpoint_errors` appears in no tuple,
+which FR-008 requires. The advisory set is unchanged member for member, so no
+existing key changed reachability.
+
+**T011: the two existing files that newly flow through the comparison.** Both
+were re-run rather than reasoned about, because both stay green for reasons that
+are fixture details rather than intents.
+
+| File | Before | After | Why it stays green |
+|---|---|---|---|
+| `tests/speckit-pro/unit/test-autopilot-phase-coverage.py` | 39/39 | 39/39 | Its `git init` root means the comparison genuinely evaluates there. The fixture sets `workflow_file` to `workflow.md` and writes the supplied workflow at that same repository-relative path, so the comparison matches. |
+| `RuleScopingTests` in `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` | 3/3 | 3/3 | An absolute `workflow_file` and no repository marker, so the unresolvable-root skip still wins before the malformed check can fire. |
+
+The phase-coverage "before" figure was taken after the comparison went
+unconditional and before the key was merged, which is the window where a break
+would have shown. Neither file needed a fixture repair, so neither was modified
+and neither enters the Declared File Operations.
+
+**T012: the Scenario 3 branch walk.** One input varied at a time against the
+T002 fixture. Temporary paths are elided as `<tmp>`. The exit column separates
+the two non-zero codes, because a control asserting only "non-zero" would be
+satisfied by an unrelated input failure: 1 is a rule violation and 2 is an input
+error, which prints `status: input_error` and no report at all.
+
+| Vary | Exit | Observed verdict |
+|---|---|---|
+| baseline, state names the supplied workflow | 0 | empty list |
+| remove the `workflow_file` **key** | 0 | empty list |
+| `workflow_file` = JSON `null` | 1 | **malformed**, not identity |
+| `workflow_file` = `""` | 1 | malformed |
+| `workflow_file` = `"  "` | 1 | **malformed**, not identity |
+| `workflow_file` = number `42` | 1 | malformed |
+| `workflow_file` = a list | 1 | malformed |
+| delete the `.git` marker | 0 | empty list |
+| state names a different workflow | 1 | identity mismatch |
+| supply a workflow outside the temporary root | 1 | `workflow file is outside the authorized repository` |
+| control: supplied workflow does not exist | **2** | `input_error`, `could not read file: <tmp>/docs/no-such-workflow.md` |
+
+Every malformed row printed the same sentence:
+`autopilot state workflow_file is not a normalized repository-relative path`. The
+identity row printed
+`supplied workflow does not match autopilot state workflow_file authority:
+supplied docs/supplied-workflow.md, state names docs/a-different-workflow.md`.
+
+**The two rows that could have passed for the wrong reason, checked rather than
+assumed.**
+
+- The whitespace row. `_is_normalized_repo_path("  ")` and
+  `_is_normalized_repo_path(" ")` were both called directly and both return
+  `True`, because a run of spaces is a valid POSIX path part. Without branch 3's
+  explicit check the value would clear branch 4 and land in branch 6, reported as
+  an identity mismatch against a blank path: the wrong error class and an
+  unreadable message. The observed malformed verdict is therefore attributable to
+  branch 3 existing and preceding branch 4, not to branch 4 catching it.
+- The `null` row. Branch 1 tests key membership. Had it tested
+  `state.get("workflow_file") is None`, a nulled field would have taken the skip
+  and exited 0 with an empty list, which is the silent opt-out FR-005 exists to
+  prevent. The observed exit 1 is what distinguishes the two spellings.
+
+The last two rows also confirm the ordering claim from the opposite direction:
+an unreadable supplied workflow raises before the comparison is reached, so it
+exits 2 rather than producing any authority verdict. That is `read_text` staying
+the first statement of `_authorized_workflow_text`.
+
+### Documentation Truth Read-Through, Recorded By T022
+
+The verification of record for SC-007. The consensus panel resolved that no
+automated assertion is added (Consensus item 3, NO-ASSERT), so this manual
+read-through is the whole of the evidence.
+
+**Method.** The statement set was enumerated by search rather than from memory of
+the files edited, so the claim "zero shipped statements promise unperformed
+enforcement" is checkable rather than asserted:
+
+```text
+grep -rn "validate-autopilot-phase-coverage\|workflow_file authority\|supplied workflow does not match\|workflow_authority_errors\|coverage guard" speckit-pro/ --include="*.md"
+```
+
+Thirty hits across eight shipped files, on both platforms. Each was read and
+given a verdict.
+
+| # | Location | Statement | Verdict |
+|---|---|---|---|
+| 1 | CC `SKILL.md` §Workflow File Update Protocol | The authority bullet: identity is authoritative when the state names a `workflow_file` and a root resolves; mismatch opens with the exact sentence and appends both paths; both skip conditions named; malformed state value and out-of-boundary supplied workflow both fail | **True**, and rewritten this phase (T016). Quotes the message as a **prefix**, not an exact full string |
+| 2 | CC `SKILL.md` §Workflow File Update Protocol | "Repairing the workflow file to match the state is the correct move here" | **True**, and now scoped to the PR Marker Plan Evidence bullet only (T016). It was false of the identity bullet, whose repair rewrites the state instead |
+| 3 | CC `SKILL.md` Step 1.1 | Expected-commit append contract, both OIDs fetched live, blocking on missing or stale authority | **True as a contract, labelled not-yet-wired** (T017). States plainly that the Claude flow does not fetch those values yet and cites **ART-016** |
+| 4 | CC `SKILL.md` Step 0.6d | "The guard's workflow-identity check is **inert** under every invocation the phase loop issues: run against a state file naming a different specification it exits **0** and reports `pass`" — and, below it, "the guard is **equally inert** for all of them" | **Was false → corrected in this run.** This is the exact behavior ART-014 repairs; after T008 that invocation exits 1 with a non-empty `workflow_authority_errors`. Found by this read-through, not by Clarify, whose FR-013a inventory was scoped to the authority block. See the correction note below |
+| 5 | CC `SKILL.md` §References | Workflow File Protocol descriptor | **True**, amended to name the `workflow_file` state authority (T018) |
+| 6 | CC `references/workflow-file-protocol.md` | New `## workflow_file State Authority` section: five ordered branches with a reason each, resolution asymmetry, byte-exact rule | **True** (T019). Branch order and messages verified against the helper at `validate-autopilot-phase-coverage.py` branches 1-7 |
+| 7 | CDX `references/workflow-file-protocol-codex.md` | Condensed mirror of the same section | **True** (T020). Five branches and the byte-exact rule survive the compression |
+| 8 | CDX `SKILL.md` §References | Workflow File Update Protocol for Codex descriptor | **True**, amended to name the `workflow_file` state authority (T021) |
+| 9 | CDX `SKILL.md` Step 1.1, `references/phase-execution-codex.md`, `references/task-list-canonical-codex.md` | The expected-commit append contract, three sites | **True and wired on Codex.** This is the platform that supplies live commit values, so no caveat is owed here |
+| 10 | Both platforms, five sites | The invocation contract: `--rule status-evidence` scopes the exit code to the bookkeeping rule, the full report still prints, exit 0 required to advance | **True.** `RULE_PROBLEM_KEYS["status-evidence"]` now carries four keys and the report still prints every key |
+| 11 | Both platforms, three sites | A status row contradicting a gate verdict recorded elsewhere fails the guard (`workflow_status_evidence_errors`); a two-sided `Stage` disagreement fails as `stage_mirror_errors` | **True.** Both keys are registered in `status-evidence` |
+| 12 | Both platforms, two sites | The guard matches post-implementation checkpoints by exact name equality, so a `skipped:`-prefixed name reads as missing | **True**, and untouched by this change |
+
+**Count of shipped statements promising unperformed enforcement: zero.** Row 4
+was the one false statement, and it is corrected rather than carried.
+
+**Roadmap identifiers verified before citation.** ART-016 (`Claude-Side Live PR
+Commit Authority`, ⏳ Ready, no dependencies) and ART-017 (`Arm The
+Accidentally-Advisory State Bookkeeping Checks`, ⏳ Ready, blocked by ART-014)
+both exist in `docs/ai/specs/html-artifacts-technical-roadmap.md`. A shipped
+document naming an identifier that does not exist would repeat the defect class
+this specification repairs, so this was checked rather than assumed.
+
+**The Step 0.6d correction, recorded in full.** The replaced text read:
+
+```text
+- **This runs before the Step 1 coverage guard, not after.** The guard's
+  workflow-identity check is inert under every invocation the phase loop
+  issues: run against a state file naming a different specification it exits
+  **0** and reports `pass`. Ordering re-initialisation after the guard
+  therefore leaves the slot unprotected, not merely late — nothing downstream
+  would catch the stale identity.
+- The trigger is **unscoped by stage**. Any stage can be the one that finds a
+  foreign slot, and the guard is equally inert for all of them.
+```
+
+The ordering directive it justifies is unchanged and still correct. Only its
+reason inverts. Before this change, reclaim-before-guard mattered because the
+guard would not catch a stale identity at all. Now it matters more: the guard
+halts a run whose state names a different specification, so ordering
+re-initialisation after the guard would stop every legitimate reclaim at Step
+1.1 before the slot is rewritten. Reclaiming first rewrites `workflow_file` from
+the target, and the comparison then finds two references that agree — which is
+also why this repair does not break the reclaim path.
+
+Confirmed Claude-only. A case-insensitive search for `inert` and `reclaim`
+across `codex-skills/` returns one unrelated hit about confidence-mode flag
+inertness. The Codex flow states the correct ordering already, running the guard
+after writing or repairing `autopilot-state.json`, and never claimed inertness.
+
+**One observation, deliberately not edited.** The Claude Step 2 loop instructs
+that on a nonzero guard exit the operator should "repair the plan and the
+workflow status table". That remediation hint is now incomplete for one failure
+mode, because an identity mismatch is repaired by re-pointing the run or
+reclaiming the slot rather than by editing the plan or the status table. It is
+not a false claim about what the guard does, so it does not fail the User Story 3
+test, and it is recorded here rather than edited. Widening the read-through into
+adjacent remediation prose is the scope creep this phase's own non-goals warn
+against.
+
 ### Implementation Progress
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | | | |
-| 2 - US1 Registration | | | |
-| 3 - US2 Audit Map | | | |
-| 4 - US3 Documentation | | | |
-| 5 - Polish | | | |
+| 1 - Setup | T001 | ✅ 1/1 | Pre-change baseline recorded before any source edit |
+| 2 - Foundational | T002-T006 | ✅ 5/5 | Controls RED first for the right reason; helper, root resolution, and the three-tuple widening |
+| 3 - US1 Registration | T007-T012 | ✅ 6/6 | Both by-design reds turned green; the canary now exits 1 |
+| 4 - US2 Audit Map | T013-T015 | ✅ 3/3 | 21 keys classified; the completeness test proven to bite |
+| 5 - US3 Documentation | T016-T022 | ✅ 7/7 | Staged prose applied on both platforms; the read-through found and corrected a fourth false statement outside the authority block |
+| 6 - Polish | T023-T027 | ✅ 4/4 + T026 to post-impl | 28 generated paths refreshed; after-half 54/54; gate 7385/7385 |
+
+#### The Repair, Proven
+
+The canary recorded before any code changed has flipped. Same invocation, same
+inputs, opposite verdict:
+
+| Run | Before | After |
+|---|---|---|
+| State names a different workflow, `--rule status-evidence` | exit **0** | exit **1** |
+| State names the supplied workflow | exit 0 | exit **0** |
+| `workflow_checkpoint_errors` (gated path, FR-002) | `[]` | `[]`, still unarmed |
+| Rule-reachable keys | 8 | **9** (`status-evidence` 4, `coverage` 5) |
+
+The message is the one the shipped documentation has quoted since before ART-006
+found the defect, now carrying both compared paths:
+
+```text
+supplied workflow does not match autopilot state workflow_file authority:
+supplied docs/ai/specs/.process/ART-006-workflow.md,
+state names docs/ai/specs/.process/CAR-001-workflow.md
+```
+
+#### Classification Record, Verified
+
+21 entries against 21 emitted keys, with **zero unclassified and zero classified
+keys that are never emitted**. Split: 9 `gated`, 9 `advisory-deliberate`, 3
+`advisory-accidental`. The three accidental entries are `in_progress_errors`,
+`duplicate_state_steps`, and `state_order_errors`, each naming ART-017 as the
+entry that will arm them. Their reasons state why the shipped corpus-predates
+justification cannot apply: all three are invariants of the state file the
+current run just wrote, so no legacy artifact can violate them.
+
+**T015, the bite proof.** Run as a probe against the module rather than by
+editing shipped source, so the guard carries no residue. With the real report the
+completeness check finds nothing missing and passes. With one throwaway key
+injected it fails and names the offender:
+
+```text
+the guard emits problem keys with no PROBLEM_KEY_INTENT verdict:
+a_future_unclassified_key
+```
+
+That discharges SC-005: a future specification cannot add a problem key without
+recording a verdict for it.
+
+**Executor note.** The US2 executor stopped mid-verification while diagnosing a
+Layer 4 baseline, after completing T013 and T014. The orchestrator verified its
+output independently and performed T015 directly. Nothing was assumed from the
+incomplete report; the map, the counts, and the bite were each re-derived from a
+real report in the main session.
 
 ---
 

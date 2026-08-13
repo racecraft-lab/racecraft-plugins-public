@@ -1,5 +1,5 @@
 {
-  "active_step": "Phase 7: Implement",
+  "active_step": "Post: Doctor Extension Check",
   "archive_sweep": {
     "actions_taken": [],
     "eligible_specs": [],
@@ -75,6 +75,57 @@
       "findings_total": 9,
       "high": 0,
       "pass": true
+    },
+    "G7": {
+      "baseline": 7378,
+      "delta": 7,
+      "failures": 0,
+      "pass": true,
+      "suite": "7385/7385"
+    }
+  },
+  "implement_progress": {
+    "digest_reconciliation": {
+      "explanation": "orchestrator removed the throwaway mid-run; the bookkeeping test runs 74th of 76 and saw the cleaned guard",
+      "post_removal": "ccd47fe3",
+      "pre_removal": "f6eebb2b"
+    },
+    "orchestrator_error": {
+      "correction": "the classification map was intact throughout; mtime moved 19:39 to 19:42 between reads",
+      "what": "reported the guard as reverted after grepping it mid-write while the executor was still flushing"
+    },
+    "outstanding": {
+      "t015_suite_level_bite_proof": {
+        "evidence": "Layer 4 run with the throwaway held in place for its full duration: FAIL test-autopilot-bookkeeping-guard (23/24, 1 failed), suite 5745/5752.",
+        "note": "the runner's summary reports the failure count, not the assertion text; the key is named at unit level. Both levels now verified.",
+        "restoration": "guard restored byte-exact from backup to digest ccd47fe3; 0 residue; 24/24; canary exit 1; generated copies re-synced and refresh reports already consistent",
+        "status": "CLOSED"
+      }
+    },
+    "phase_2_checkpoint": "T001-T006 complete; controls RED for the right reason",
+    "polish": {
+      "t023": "28 generated paths differ from HEAD, not the 18 predicted before the documentation edits; each platform restales SKILL.md and the protocol reference alongside the guard",
+      "t024": "pnpm install and reference:generate both exit 0; 7 pages rewritten, zero diff, which is correct since the change added cases inside an existing file",
+      "t025": "after-half 54 of 54 exit 0 with workflow_authority_errors present and empty on all 54; canary flipped exit 0 to exit 1",
+      "t027": "full gate 7385/7385, zero failures, +7 over the 7378 baseline"
+    },
+    "us1": "T007-T012 complete; canary flipped 0 -> 1, gated path untouched",
+    "us2": "T013-T015 complete; 21 keys classified, completeness test proven to bite",
+    "us2_incident": {
+      "detected_by": "the completeness test itself, failing with 'the guard emits problem keys with no PROBLEM_KEY_INTENT verdict: throwaway_bite_check_errors'",
+      "note": "the control this specification adds caught its own author's residue within minutes of being written",
+      "resolution": "orchestrator removed the residue; suite returned to 24/24 and the emitted/classified counts to 21/21/0",
+      "what": "the US2 executor added T015's throwaway key to the shipped guard to prove the completeness test bites, then terminated before removing it"
+    },
+    "us3": "T016-T022 complete; T022 found and corrected a Step 0.6d statement asserting the identity check is inert",
+    "verified_now": {
+      "bookkeeping_guard": "24/24",
+      "canary_exit": 1,
+      "classified": 21,
+      "emitted": 21,
+      "phase_coverage": "39/39",
+      "positive_exit": 0,
+      "unclassified": 0
     }
   },
   "layer_plan": {
@@ -163,7 +214,7 @@
       "step": "Phase 6.5: Confidence Gate"
     },
     {
-      "status": "in_progress",
+      "status": "completed",
       "step": "Phase 7: Implement"
     },
     {
@@ -235,6 +286,20 @@
     "TYPECHECK": "N/A",
     "UNIT_TEST": "python3 tests/speckit-pro/run-all.py"
   },
+  "regeneration_surface": {
+    "breakdown": {
+      "dist_guard_copies": 2,
+      "installed_cache_guard_copies": 2,
+      "installed_cache_proof_fixtures": 11,
+      "xplat009_evidence_json": 3
+    },
+    "consequence": "sole cause of the 6 test-speckit-pro-gates failures at the Phase 2 checkpoint",
+    "correction_required": true,
+    "file_count": 18,
+    "measured_by": "python3 scripts/refresh-release-artifacts.py --check",
+    "note": "T023 must regenerate all 18, not the 4 it names. The --check run leaves the tree untouched, verified.",
+    "tasks_md_t023_named": 4
+  },
   "settings": {
     "agent_teams_available": true,
     "auto_commit": true,
@@ -279,6 +344,13 @@
     "passed": 7378,
     "total": 7378
   },
-  "updated_at": "2026-08-12T21:50:06Z",
+  "test_baseline_g7": {
+    "l1": 1447,
+    "l4": 5752,
+    "l5": 186,
+    "passed": 7385,
+    "total": 7385
+  },
+  "updated_at": "2026-08-13T00:31:25Z",
   "workflow_file": "docs/ai/specs/.process/ART-014-workflow.md"
 }

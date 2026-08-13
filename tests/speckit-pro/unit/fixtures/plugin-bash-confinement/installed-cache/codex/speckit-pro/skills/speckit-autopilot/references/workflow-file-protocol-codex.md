@@ -27,3 +27,44 @@ Implement (final).
 If consensus was used during a phase, add entries to the **Consensus
 Resolution Log** with `Round`, `Routed Categories`, `Outcome`, and
 `Analysts Used` columns.
+
+## `workflow_file` State Authority
+
+`autopilot-state.json.workflow_file` names the workflow a run is authorized
+against. The Step 1.1 coverage guard compares the supplied workflow to that value
+and reports a disagreement as `workflow_authority_errors`, which is registered in
+the `status-evidence` rule and so fails the guard rather than merely printing.
+This one is **state-file-wins**, the opposite direction from the workflow-file
+precedence that governs the Workflow Overview status table.
+
+Five branches, in this order, because an earlier skip must win over a later
+failure:
+
+1. **No `workflow_file` key in the state** — skip. A state naming no workflow
+   asserts no authority. Key membership decides this rather than a null test, so
+   an explicitly nulled field stays malformed instead of becoming a silent
+   opt-out.
+2. **No repository root resolves from the state file's location** — skip. Without
+   a root there is no boundary to resolve the supplied workflow against.
+3. **Malformed value** — not a string, empty, whitespace-only, or not a
+   normalized repository-relative path. Fails with `autopilot state
+   workflow_file is not a normalized repository-relative path`. The value is
+   machine-written, so a shape it should never take means the state is
+   untrustworthy. Whitespace-only is checked explicitly, because a run of spaces
+   is a valid POSIX path part.
+4. **Supplied workflow resolves outside the repository root** — fails with
+   `workflow file is outside the authorized repository`. The root was found and
+   the path does not live under it, which is a different fact from branch 2.
+5. **The two references differ** — fails with `supplied workflow does not match
+   autopilot state workflow_file authority`, both compared paths appended, so the
+   maintainer can tell which side to repair.
+
+Anything reaching the end passes. Both skips are indistinguishable from a pass at
+the exit code, which carries the verdict rather than whether it was computed.
+
+Resolution is **asymmetric**: the supplied workflow is resolved against the
+repository root and rendered POSIX, so the right file under a different spelling
+still matches, while the state value is compared as the literal string it holds.
+The comparison itself is **byte-exact**, with no case folding and no `samefile`,
+because byte-exact is the only rule returning the same verdict on a
+case-insensitive filesystem and a case-sensitive one.

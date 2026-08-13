@@ -59,6 +59,45 @@ phase, and write the other later. On disagreement the workflow file wins and the
 mirror is repaired from it — the Step 1.1 coverage guard reports a two-sided
 mismatch as `stage_mirror_errors` and fails.
 
+## `workflow_file` State Authority
+
+`autopilot-state.json.workflow_file` names the workflow a run is authorized
+against. The Step 1.1 coverage guard compares the supplied `--workflow` against
+that value and reports a disagreement as `workflow_authority_errors`, which is
+registered in the `status-evidence` rule and so fails the guard rather than
+merely printing. This is **state-file-wins**, the opposite direction from the
+`Stage` rule above, which is why the two sit adjacent here.
+
+**Five branches, in this order.** The order is load-bearing: an earlier skip must
+win over a later failure.
+
+| # | Condition | Verdict | Why |
+| --- | --- | --- | --- |
+| 1 | The state carries no `workflow_file` key | **skip** | A state naming no workflow asserts no authority. Membership of the key decides this, not whether the value is null — an explicitly nulled field is malformed, and folding the two together would make `null` a silent opt-out |
+| 2 | No repository root resolves from the state file's location | **skip** | Without a root there is no boundary to resolve the supplied workflow against. This matches the precedent the same guard already sets for an extracted copy |
+| 3 | The value is malformed: not a string, empty, whitespace-only, or not a normalized repository-relative path | **fail** — `autopilot state workflow_file is not a normalized repository-relative path` | The value is machine-written, so a shape it should never take means the state is untrustworthy rather than that the workflow is wrong. Whitespace-only is checked explicitly and ahead of the normalized-path helper, because a run of spaces is a valid POSIX path part and would otherwise reach branch 5 and be reported as a mismatch against a blank path |
+| 4 | The supplied workflow resolves outside the repository root | **fail** — `workflow file is outside the authorized repository` | The root was found and the supplied path does not live under it. That is a completed evaluation with an out-of-boundary result, which is the case the check exists to catch — a different fact from branch 2, where the repository could not be found at all |
+| 5 | The two references differ | **fail** — `supplied workflow does not match autopilot state workflow_file authority`, with both compared paths appended | This is a run resuming the wrong specification. Both paths are printed because the maintainer cannot otherwise tell which side to repair: re-point the run, or reclaim the state slot and let the next invocation rewrite it |
+
+Anything reaching the end passes and reports no authority error. Both skips leave
+the run indistinguishable from one that ran the comparison and passed it, because
+a skip and a satisfied comparison both report no error and both exit zero. The
+exit code carries the verdict, not whether the verdict was computed.
+
+**Resolution is asymmetric.** The **supplied** workflow is resolved against the
+repository root and rendered POSIX, so the right file named under a different
+spelling — including one traversing a symlink — still matches. The **state**
+value is compared as the literal string it holds, with no filesystem resolution,
+because it is machine-written and branch 3 has already constrained its shape.
+Only the supplied side has spelling freedom.
+
+**The comparison is byte-exact**, on the two POSIX references, with no case
+folding and no filesystem identity test such as `samefile`. Case is deliberately
+not folded: byte-exact is the only rule that returns the same verdict on a
+case-insensitive filesystem and a case-sensitive one, which this repository
+requires because it is developed on macOS and tested on Linux. Folding case would
+let a mis-cased state value pass locally and fail in continuous integration.
+
 ## PR Marker Plan Evidence
 
 When reviewability sizing is marker-planning input, persist marker state as
