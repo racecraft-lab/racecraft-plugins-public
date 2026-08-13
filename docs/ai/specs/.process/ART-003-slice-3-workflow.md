@@ -77,13 +77,13 @@ picture.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Slot inventory after the upstream read |
-| Plan | `/speckit-plan` | ⏳ Pending | Re-declare from measurement |
-| Checklist | `/speckit-checklist` | ⏳ Pending | accessibility carries the weight here |
+| Specify | `/speckit-specify` | ✅ Complete | G1 PASS; 55 FRs |
+| Clarify | `/speckit-clarify` | ✅ Complete | G2 PASS; zero-script disclosure settled |
+| Plan | `/speckit-plan` | ⏭️ Skipped | budget comfortable at 460/800; component ceilings and the checkpoint carried in spec.md |
+| Checklist | `/speckit-checklist` | ⏭️ Skipped | accessibility resolved inline at Clarify; see FR-019a through FR-024a |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
-| Confidence Gate | G6.5 | ⏳ Pending | advisory |
+| Analyze | `/speckit-analyze` | ⏭️ Skipped | declaration verified by running the parser; single spec artifact |
+| Confidence Gate | G6.5 | ⏭️ Skipped | advisory; slices 1 and 2 verdicts carry forward |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 

@@ -5,7 +5,7 @@
   "branch": "art-003-final-pr-template-set-slice-3",
   "status": "in_progress",
   "stage": "full",
-  "active_step": "Phase 1: Specify",
+  "active_step": "Phase 5: Tasks",
   "prior_run_note": "in_progress",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-2-workflow.md",
   "settings": {
@@ -38,67 +38,67 @@
     },
     {
       "step": "Phase 1: Specify",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Slot inventory and the diagram's text equivalent",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Slot inventory and the diagram's text equivalent Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - The disclosure mechanism",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - The disclosure mechanism Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 4: Checklist - accessibility",
-      "status": "pending"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 4: Checklist - accessibility Consensus",
-      "status": "pending"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 4: Checklist - ux",
-      "status": "pending"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 4: Checklist - ux Consensus",
-      "status": "pending"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "pending"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "pending"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 7: Implement",
@@ -152,5 +152,13 @@
       "step": "Post: Retrospective",
       "status": "pending"
     }
-  ]
+  ],
+  "gates": {
+    "G1": {
+      "pass": true
+    },
+    "G2": {
+      "pass": true
+    }
+  }
 }

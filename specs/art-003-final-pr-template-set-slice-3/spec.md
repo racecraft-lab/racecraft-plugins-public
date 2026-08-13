@@ -368,24 +368,105 @@ away.
   held to the minimum that demonstrates the shape. No region ships empty.
 - **FR-043**: The sample content MUST declare itself as invented in the rendered
   page, so a reader opening the file cold does not read it as a real flow.
-- **FR-044**: The template's slot inventory MUST be complete and MUST agree in
-  both directions with the regions the body delimits. [NEEDS CLARIFICATION: the
-  full slot inventory — each slot's name, its granularity, and its `Source:`
-  artifact — is deferred to Clarify, after the upstream source is read
-  read-only from the session scratchpad. The design concept defers it explicitly,
-  on the ground that slot names must not be invented before the upstream source
-  is read. The floor row this template contributes to the shared validation
-  traces to the roadmap's scope for it — a clickable operational-flow diagram —
-  and to nothing else, which points at a single-entry row on the precedent of
-  `module-map`'s.]
-- **FR-045**: [NEEDS CLARIFICATION: whether this template needs a list-slot row
-  at all — that is, whether its nodes are individually addressable repeated
-  items. The design concept leaves this open explicitly: nothing durable is
-  produced, so there is no export anchor forcing addressability, and the shared
-  list-slot literal may legitimately carry no row for this template. If it does
-  carry one, that region ships at least the two anchored items the shared
-  validation requires, each anchored as `<slot>-<item-slug>` and unique in the
-  document.]
+- **FR-044**: The slot inventory MUST be complete and MUST agree in both
+  directions with the regions the body delimits. It carries exactly four slots:
+  `feature-header` (`Source: spec.md`), `flow-summary`, `flow-diagram` and
+  `nodes` (each `Source: plan.md`). **No new `Source:` member is added.**
+  `plan.md` is where this process records an operational flow, and it is what the
+  gallery's only other diagram slot already declares. Slice 2 added the first
+  non-filename member over a recorded dissent; nothing here clears that bar.
+  The floor row is single-entry — `flow-diagram` and nothing else — because the
+  roadmap's scope for this template is a clickable operational-flow diagram, on
+  the precedent of the module-map template's single-entry row.
+- **FR-044a**: `flow-diagram` MUST delimit the drawing, its caption, **and** the
+  prose stating the flow's order and its branching, in **one** region. Two
+  renderings the same fill replaces together cannot drift, which satisfies FR-033
+  by construction rather than by discipline. The per-node detail sits in `nodes`
+  instead, because the list-slot check requires every element at that region's own
+  top level to carry a conforming anchor, and a figure masquerading as a list item
+  would be dishonest.
+- **FR-044b**: Both inventory lines MUST state the binding between the two
+  regions — that each node in the drawing links to the entry of the same slug in
+  `nodes` — and FR-015's byte search MUST be extended to assert that every
+  in-document link the drawing carries resolves to an id present in the shipped
+  file. This is the one part of FR-033 the region structure does not close by
+  construction, so it is closed by hand.
+
+- **FR-045**: `flowchart` MUST contribute a list-slot row: its `nodes` region
+  holds individually addressable repeated items, anchored `nodes-<item-slug>`,
+  unique in the document, at the region's own top level, with the grouping element
+  enclosing the region. At least the two anchored items the shared validation
+  requires MUST ship.
+  The design concept left this open on the ground that nothing durable is
+  produced, so no export anchors to a node. **That is true and is not the deciding
+  fact.** The list-slot check asserts that a *fragment resolves*, and this
+  artifact's disclosure **is** fragment resolution: each node in the drawing is an
+  in-document link whose target is that node's entry. An entry a later fill emits
+  without its anchor, or with an anchor a second entry repeats, silently breaks
+  the link from the drawing — the exact defect the shared check names when it says
+  a fragment resolving to two items resolves to neither. The row is therefore
+  needed for a **stronger** reason than the one that put the other rows there.
+  `nodes` MUST NOT be added to the floor: floor membership would prove only that a
+  region of that name exists, never that its items are addressable, which is the
+  reason already recorded for the one other list slot that is not a floor entry.
+- **FR-041a**: The disclosure MUST be built from native elements and MUST add
+  **no authored script**. Each interactive node in the drawing is an in-document
+  link to that node's entry in `nodes`; each entry is a disclosure element in one
+  **exclusive** group, so exactly one node's detail is open at a time and that
+  state is the element's own. The artifact's only script remains the theme control
+  the shared head block builds, so the authored-script count matches
+  `spec-explainer`'s zero rather than merely approaching it.
+- **FR-041b**: The per-node detail MUST sit **below** the drawing in reading
+  order, not in a panel beside it. The design concept says "beside the diagram"
+  because upstream swaps one panel's content; with one disclosure per node there
+  is nothing to swap, and FR-034 requires only that the detail be disclosed in the
+  page.
+- **FR-018a**: The drawing MUST be inline vector markup with a fixed view box,
+  defining **exactly one** arrowhead marker whose fill names a brand-kit token
+  through a class rather than a literal. Upstream defines three and hard-codes a
+  colour into each, which is the trap FR-007 names.
+- **FR-019a**: The drawing MUST be named through its own title element referenced
+  by `aria-labelledby`, and **MUST NOT carry `role="img"`**. That role makes every
+  descendant presentational, which would remove this drawing's interactive nodes
+  from the accessibility tree and defeat FR-036 and FR-038 outright. The gallery's
+  existing `role="img"` usage is on a non-interactive drawing; the rule is
+  `role="img"` for a static graphic, an accessible name alone for an interactive
+  one.
+- **FR-042a**: The sample drawing MUST ship **seven** nodes: one entry terminal,
+  two process steps, two decisions, one failure terminal and one success terminal.
+  That is the smallest set demonstrating every node role, every edge kind, a
+  branch, a rejoin and two distinct endings — the demonstrating minimum, against
+  upstream's twelve.
+- **FR-020a**: Node role MUST be carried by **shape** — rectangle for a process
+  step, diamond for a decision, stadium for a terminal — with the role also
+  written as a word wherever the shape alone would not name it, reusing the node's
+  existing second text line.
+- **FR-021a**: Node state MUST be carried by the disclosure's own expanded state,
+  which is programmatic, singular within the exclusive group, and not colour. The
+  drawn node carries only the focus indicator FR-037 requires, reinforced by a
+  **stroke-weight** change because an outline on an inline vector child is not
+  uniformly reliable — and stroke weight is not a hue.
+- **FR-022a**: Edge kind MUST be carried by **stroke pattern and word together**:
+  the ordinary next step solid and unlabelled, the affirmative branch solid and
+  labelled with the affirming word, the failure branch dashed and labelled with the
+  failing word. Upstream dashes its failure edge but distinguishes its affirmative
+  edge by hue alone, which does not survive the port.
+- **FR-023a**: The legend MUST NOT be a fill region. It describes the drawing
+  conventions this template fixes, not content a later fill supplies, and a legend
+  a fill could rewrite could disagree with the drawing it explains. Its entries
+  MUST be words; no swatch may carry meaning.
+- **FR-024a**: The drawing's caption MUST state that nothing in it is marked by
+  colour and that it reads the same in a monochrome print, as the gallery's other
+  diagram already does. That sentence is the claim the monochrome evidence is
+  checked against.
+- **FR-041c**: The zero-script disclosure rests on fragment navigation revealing a
+  closed disclosure element. Sources disagree on whether every current browser
+  honours it, and this is **recorded rather than assumed**: if the reveal does not
+  fire, the link still lands the reader on the right node's summary and one
+  keystroke opens it, so the control is one keystroke short rather than dead. The
+  manual render MUST confirm the behaviour, and the zero-script property MUST NOT
+  be claimed as verified until it does.
+
 - **FR-046**: Every region the body delimits MUST be named in the inventory, and
   every slot the inventory names MUST be delimited by exactly one marker pair
   with its start before its end. Regions MUST be flat — no pair may enclose
