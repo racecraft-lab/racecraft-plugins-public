@@ -244,6 +244,7 @@ RULE_PROBLEM_KEYS = {
         "workflow_status_evidence_errors",
         "state_status_errors",
         "stage_mirror_errors",
+        "workflow_authority_errors",
     ),
     "coverage": (
         "missing_workflow_sections",
@@ -252,6 +253,231 @@ RULE_PROBLEM_KEYS = {
         "missing_state_prefixes",
         "missing_state_post_items",
     ),
+}
+# Why every problem key is or is not armed, recorded per key rather than left to
+# be inferred from ``RULE_PROBLEM_KEYS`` above. Verdicts are drawn from a closed
+# three-value vocabulary. Two values would not do: an audit of this map's own
+# subject found keys that are advisory by accident rather than by design, which
+# is how an inert check survived unnoticed.
+#
+#   gated                -- reachable by a named rule, so it can move the exit code
+#   advisory-deliberate  -- reported only, and that is the correct verdict for it
+#   advisory-accidental  -- reported only, and that is a defect with a named follow-up
+#
+# A reason restating the key name records nothing. An ``advisory-deliberate``
+# reason says what makes advisory status correct for that key; an
+# ``advisory-accidental`` reason names the follow-up that will arm it.
+#
+# ``tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py`` derives the
+# emitted key set from a real report and fails when a key is missing here, so a
+# key cannot be added to the report without a verdict.
+PROBLEM_KEY_INTENT: dict[str, dict[str, str]] = {
+    # --- gated: armed by ``--rule status-evidence``, the invocation the
+    # autopilot issues at every phase transition. ---
+    "workflow_status_evidence_errors": {
+        "verdict": "gated",
+        "reason": (
+            "The bookkeeping rule itself. An overview row may not claim a terminal "
+            "status unless a gate verdict is recorded elsewhere in the same file, "
+            "which is what keeps the status table honest across compactions and "
+            "manual phase runs."
+        ),
+    },
+    "state_status_errors": {
+        "verdict": "gated",
+        "reason": (
+            "The state's top-level status is a closed enum with a contract schema. "
+            "A retired spelling misreports the run's disposition to every consumer "
+            "that reads the state file instead of the workflow."
+        ),
+    },
+    "stage_mirror_errors": {
+        "verdict": "gated",
+        "reason": (
+            "The workflow file is the durable authority and the state carries a "
+            "mirror of it for the active run. Absence on either side is legal, so "
+            "only a genuine two-sided disagreement reports, and that means the "
+            "operator-facing document and the machine-readable record describe "
+            "different runs."
+        ),
+    },
+    "workflow_authority_errors": {
+        "verdict": "gated",
+        "reason": (
+            "A state naming a workflow other than the one supplied means the run is "
+            "proceeding against a different specification. This is the one key ART-014 "
+            "arms, and the failure it exists to stop."
+        ),
+    },
+    # --- gated: armed by ``--rule coverage``. Kept out of the status-evidence
+    # tuple because most of the tracked workflow corpus predates these structural
+    # requirements and a blocking guard would make those specifications
+    # unresumable. Dropping ``--rule`` gates on them once a spec is migrated. ---
+    "missing_workflow_sections": {
+        "verdict": "gated",
+        "reason": (
+            "The workflow must carry a section for every phase the main loop drives, "
+            "so a phase cannot be executed against a file with nowhere to record it. "
+            "Scoped to the coverage rule because the pre-existing corpus predates the "
+            "section list."
+        ),
+    },
+    "missing_workflow_tokens": {
+        "verdict": "gated",
+        "reason": (
+            "The workflow must carry the row and gate tokens the loop writes its "
+            "verdicts into, or those verdicts land nowhere. Scoped to the coverage "
+            "rule because the pre-existing corpus predates the token list."
+        ),
+    },
+    "missing_workflow_post_items": {
+        "verdict": "gated",
+        "reason": (
+            "The workflow must list every post-implementation step, or a step can be "
+            "skipped without leaving a gap anyone can see. Scoped to the coverage rule "
+            "because the pre-existing corpus predates the post-step list."
+        ),
+    },
+    "missing_state_prefixes": {
+        "verdict": "gated",
+        "reason": (
+            "The state plan must carry a step for every phase, or the run has no slot "
+            "to record that phase's progress into. Scoped to the coverage rule because "
+            "the pre-existing corpus predates the phase list."
+        ),
+    },
+    "missing_state_post_items": {
+        "verdict": "gated",
+        "reason": (
+            "The state plan must carry every post-implementation step for the same "
+            "reason the workflow must list them: an absent slot cannot record a skip. "
+            "Scoped to the coverage rule because the pre-existing corpus predates the "
+            "post-step list."
+        ),
+    },
+    # --- advisory-accidental: reported only, and that is a defect. All three come
+    # from ``validate_state``, which also produces two keys that ARE gated under
+    # the coverage rule, so the split is per key rather than per function. The
+    # shipped justification for advisory status is that the existing corpus
+    # predates the check; that holds for the coverage lists and fails here,
+    # because these are invariants of the state file the current run just wrote
+    # and no legacy artifact can violate them. Recorded, not armed: arming is
+    # ART-017's scope. ---
+    "in_progress_errors": {
+        "verdict": "advisory-accidental",
+        "reason": (
+            "Two plan steps cannot both be in progress in a state file this run just "
+            "wrote, so the corpus-predates justification cannot apply. Measured during "
+            "the ART-014 audit: against a state with two steps in progress the check "
+            "fires and names both, and the run still exits 0 under the scoped "
+            "invocation. ART-014 records the verdict; ART-017 arms it."
+        ),
+    },
+    "duplicate_state_steps": {
+        "verdict": "advisory-accidental",
+        "reason": (
+            "A plan step repeated inside a state file this run just wrote is an "
+            "invariant of that file, not a property of any legacy artifact, so the "
+            "corpus-predates justification cannot apply. ART-014 records the verdict; "
+            "ART-017 arms it."
+        ),
+    },
+    "state_order_errors": {
+        "verdict": "advisory-accidental",
+        "reason": (
+            "The checkpoint ordering is an invariant of the state file this run just "
+            "wrote, so the corpus-predates justification cannot apply. ART-014 records "
+            "the verdict; ART-017 arms it."
+        ),
+    },
+    # --- advisory-deliberate: reported only, and correctly so. ---
+    "workflow_checkpoint_errors": {
+        "verdict": "advisory-deliberate",
+        "reason": (
+            "It carries the frozen pull-request-head byte comparison, which is only "
+            "meaningful once a pr_marker_plan exists. Arming the key would arm every "
+            "error folded into it at once, which is why the workflow-identity "
+            "comparison was given its own key instead of being merged in here."
+        ),
+    },
+    "changed_file_manifest_errors": {
+        "verdict": "advisory-deliberate",
+        "reason": (
+            "The manifest is compared against external pull-request base and head "
+            "authority passed in through --expected-base-commit and "
+            "--expected-head-commit. The per-phase invocation supplies neither, so the "
+            "comparison falls back to the local HEAD, which is exactly the self-sourced "
+            "authority the marker-plan contract forbids. Reporting a self-sourced "
+            "comparison is defensible; stopping a run on one is not."
+        ),
+    },
+    "checkpoint_evidence_errors": {
+        "verdict": "advisory-deliberate",
+        "reason": (
+            "It validates checkpoint evidence against the schema as committed at the "
+            "authorized pull-request head. The per-phase invocation names no head, so "
+            "the authority the check is written against is absent."
+        ),
+    },
+    "checkpoint_file_errors": {
+        "verdict": "advisory-deliberate",
+        "reason": (
+            "It reports where checkpoint evidence in the worktree differs from the same "
+            "file at the authorized pull-request head. A worktree that has legitimately "
+            "moved ahead of the last pushed head differs by construction, so the "
+            "difference is a fact to surface rather than a stop."
+        ),
+    },
+    "checkpoint_source_fingerprint_errors": {
+        "verdict": "advisory-deliberate",
+        "reason": (
+            "Several of its checks compare a checkpoint's recorded tasks.md "
+            "fingerprints against that file as it stands now, so the key goes non-empty "
+            "whenever tasks.md changes after a checkpoint was written, which is what "
+            "ordinary implementation does. It is a staleness signal to read, not a "
+            "condition to halt on."
+        ),
+    },
+    "emission_mapping_errors": {
+        "verdict": "advisory-deliberate",
+        "reason": (
+            "Each marker's emission_mapping is validated against the stage that marker "
+            "has reached, and several fields are valid only after emission. A plan read "
+            "part-way through emission therefore carries mappings that do not yet "
+            "satisfy the finished shape, by design."
+        ),
+    },
+    "marker_plan_status_errors": {
+        "verdict": "advisory-deliberate",
+        "reason": (
+            "It enforces the pr_marker_plan status contract, which models in-flight "
+            "states explicitly: the emitting status requires both emitted and "
+            "unfinished marker mappings to be present at once. The per-phase state "
+            "carries no marker plan at all, and the multi-PR emission flow that owns "
+            "one moves it through those in-flight values."
+        ),
+    },
+    "projection_status_errors": {
+        "verdict": "advisory-deliberate",
+        "reason": (
+            "It cross-checks the optional phase_results projection against the plan "
+            "array. Nothing in the shipped skill writes phase_results and the tracked "
+            "live state does not carry it, so the slot belongs to pull-request assembly "
+            "rather than to the per-phase loop this invocation gates. stage_mirror_errors "
+            "carries the gated half of the same idea, for the mirror the per-phase run "
+            "does write."
+        ),
+    },
+    "completed_phase_pending_fields": {
+        "verdict": "advisory-deliberate",
+        "reason": (
+            "It flags a phase_results entry marked completed whose payload still "
+            "contains the word pending, matched as a case-folded substring anywhere in "
+            "free-form evidence prose. That is a drafting smell worth surfacing and a "
+            "poor stop condition, because evidence legitimately mentioning a pending "
+            "item trips it."
+        ),
+    },
 }
 STATE_STATUS_SCHEMA_PATH = (
     Path(__file__).resolve().parents[1] / "contracts" / "autopilot-state-status.schema.json"
@@ -674,7 +900,24 @@ def _pending_value_paths(value: Any, path: str) -> list[str]:
 
 
 def _repository_root(path: Path) -> Path | None:
-    for candidate in (path.parent, *path.parents):
+    # Resolve before walking, so whether a root is found depends on where the file
+    # *is* rather than on how the caller spelled the path and which directory they
+    # ran from. A relative path's parents chain terminates at the working
+    # directory, which found no marker for a file sitting inside the repository.
+    #
+    # A resolution failure is treated as an unresolvable root, which is the same
+    # verdict this function already returns when no marker is found and which the
+    # callers already handle. The alternative is an exception escaping into
+    # ``main()``, which catches only ``ValidationError`` and would print a
+    # traceback where the autopilot expects a JSON report. Reaching this today
+    # requires the state file to be readable while its own path will not resolve,
+    # because ``load_state`` runs first; that ordering is a property of the caller
+    # rather than of this function, so the guard does not depend on it holding.
+    try:
+        resolved = path.resolve()
+    except (OSError, RuntimeError):
+        return None
+    for candidate in (resolved.parent, *resolved.parents):
         if (candidate / ".git").exists():
             return candidate
     return None
@@ -1295,52 +1538,139 @@ def _canonical_schema(
     return schema, errors
 
 
+def _workflow_authority_errors(
+    workflow: Path,
+    state_path: Path,
+    state: dict[str, Any],
+) -> list[str]:
+    """Check the supplied workflow against the authority the state names.
+
+    Branch order is fixed, because an earlier skip must win over a later failure.
+    No branch raises: ``build_report`` has no handler, and an uncaught exception
+    would print a traceback instead of the JSON report the autopilot parses.
+    """
+    # 1. Key membership, never ``.get(...) is None``. A state that names no
+    # workflow asserts no authority, but an explicitly nulled field is malformed,
+    # and ``.get`` collapses those two verdicts into a silent opt-out.
+    if "workflow_file" not in state:
+        return []
+    # 2. No repository root, no boundary to resolve the supplied workflow against.
+    repo_root = _repository_root(state_path)
+    if repo_root is None:
+        return []
+    state_workflow_ref = state["workflow_file"]
+    # 3. The whitespace check is explicit, and precedes branch 4, because a run of
+    # spaces is a valid POSIX path part: ``_is_normalized_repo_path("  ")`` returns
+    # True, so such a value would otherwise fall through to branch 6 and be
+    # reported as an identity mismatch against a blank path.
+    if not isinstance(state_workflow_ref, str) or not state_workflow_ref.strip():
+        return [
+            "autopilot state workflow_file is not a normalized repository-relative path"
+        ]
+    # 4. Case is deliberately not folded here, which is what keeps this consistent
+    # with the byte-exact rule below rather than normalizing a mis-cased value
+    # into a match.
+    if not _is_normalized_repo_path(state_workflow_ref):
+        return [
+            "autopilot state workflow_file is not a normalized repository-relative path"
+        ]
+    # 5. Resolution is asymmetric: only the supplied side is resolved, because only
+    # it has spelling freedom. The state value is machine-written and branch 4 has
+    # already constrained it. A non-subpath raises ValueError, which is this
+    # branch by design rather than an escape.
+    #
+    # ``resolve`` itself raises OSError or RuntimeError on a path it cannot
+    # traverse, which is what ``_repository_root`` guards for the same reason. An
+    # unresolvable supplied path is the same absence of information branch 2
+    # covers -- one side of the comparison cannot be established, which is not
+    # evidence of a mismatch -- so it skips rather than escaping into
+    # ``build_report``, which has no handler.
+    try:
+        workflow_ref = workflow.resolve().relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return ["workflow file is outside the authorized repository"]
+    except (OSError, RuntimeError):
+        return []
+    # The sibling gated path re-checks ``_is_normalized_repo_path`` on its own
+    # derived reference here; this branch deliberately does not, and the omission
+    # is safe rather than missing. ``workflow`` is already a readable regular file
+    # by this point, because ``read_text`` runs before this helper is called and
+    # raises otherwise, and resolving both sides before ``relative_to`` leaves no
+    # ``.``, ``..``, or empty segment able to survive into ``workflow_ref``. Stated
+    # so the asymmetry with the gated path is not later "repaired" as a gap.
+    # 6. Byte-exact, with no case folding and no ``samefile``: the only rule that
+    # returns the same verdict on a case-insensitive filesystem and a
+    # case-sensitive one, so the outcome does not depend on where it runs.
+    if state_workflow_ref != workflow_ref:
+        return [
+            "supplied workflow does not match autopilot state workflow_file authority: "
+            f"supplied {workflow_ref}, state names {state_workflow_ref}"
+        ]
+    # 7. The two references agree.
+    return []
+
+
 def _authorized_workflow_text(
     workflow: Path,
     state_path: Path,
     state: dict[str, Any],
     expected_head_commit: str | None,
-) -> tuple[str, list[str]]:
+) -> tuple[str, list[str], list[str]]:
     worktree_text = read_text(workflow)
+    # Unconditional, and deliberately after the read above: a supplied workflow
+    # that cannot be read has already raised, so nothing below can be reached with
+    # an untraversable path. Everything from here down is the gated
+    # pull-request-head comparison, whose preconditions and reporting key are
+    # unchanged -- which is why these findings travel in their own slot rather
+    # than folding into the gated one.
+    authority_errors = _workflow_authority_errors(workflow, state_path, state)
     marker_plan = state.get("pr_marker_plan")
     if not (
         isinstance(marker_plan, dict)
         and marker_plan.get("schema_version") == "pr-marker-plan.v2"
     ):
-        return worktree_text, []
+        return worktree_text, [], authority_errors
     if expected_head_commit is None:
-        return worktree_text, []
+        return worktree_text, [], authority_errors
     repo_root = _repository_root(state_path)
     if repo_root is None:
-        return worktree_text, ["workflow repository root is unavailable"]
+        return worktree_text, ["workflow repository root is unavailable"], authority_errors
     if not isinstance(expected_head_commit, str) or not re.fullmatch(
         r"[0-9a-f]{40}", expected_head_commit
     ):
         return worktree_text, [
             "pr-marker-plan.v2 workflow validation requires external expected_head_commit authority"
-        ]
+        ], authority_errors
     try:
         workflow_ref = workflow.resolve().relative_to(repo_root.resolve()).as_posix()
     except ValueError:
-        return worktree_text, ["workflow file is outside the authorized repository"]
+        return worktree_text, [
+            "workflow file is outside the authorized repository"
+        ], authority_errors
     if not _is_normalized_repo_path(workflow_ref):
-        return worktree_text, ["workflow file reference is not repository-relative"]
+        return worktree_text, [
+            "workflow file reference is not repository-relative"
+        ], authority_errors
     state_workflow_ref = state.get("workflow_file")
     if not _is_normalized_repo_path(state_workflow_ref):
         return worktree_text, [
             "autopilot state workflow_file is not a normalized repository-relative path"
-        ]
+        ], authority_errors
     if state_workflow_ref != workflow_ref:
         return worktree_text, [
             "supplied workflow does not match autopilot state workflow_file authority"
-        ]
+        ], authority_errors
     committed_bytes = _git_file_at_commit(repo_root, expected_head_commit, workflow_ref)
     if committed_bytes is None:
-        return worktree_text, ["workflow is absent from the authorized PR head"]
+        return worktree_text, [
+            "workflow is absent from the authorized PR head"
+        ], authority_errors
     try:
         committed_text = committed_bytes.decode("utf-8")
     except UnicodeDecodeError:
-        return worktree_text, ["workflow at the authorized PR head is not UTF-8"]
+        return worktree_text, [
+            "workflow at the authorized PR head is not UTF-8"
+        ], authority_errors
     try:
         worktree_bytes = workflow.read_bytes()
     except OSError:
@@ -1348,7 +1678,7 @@ def _authorized_workflow_text(
     errors = []
     if worktree_bytes != committed_bytes:
         errors.append("workflow differs from the authorized PR head")
-    return committed_text, errors
+    return committed_text, errors, authority_errors
 
 
 def _phase_evidence_owner(
@@ -4019,8 +4349,8 @@ def build_report(
     expected_head_commit: str | None = None,
 ) -> dict[str, Any]:
     state_data = load_state(state)
-    workflow_text, workflow_authority_errors = _authorized_workflow_text(
-        workflow, state, state_data, expected_head_commit,
+    workflow_text, workflow_checkpoint_errors, workflow_authority_errors = (
+        _authorized_workflow_text(workflow, state, state_data, expected_head_commit)
     )
     plan_steps = extract_plan_steps(state_data)
 
@@ -4029,7 +4359,7 @@ def build_report(
         workflow_text, state_data,
     )
     workflow_checkpoint_result["workflow_checkpoint_errors"].extend(
-        workflow_authority_errors
+        workflow_checkpoint_errors
     )
     state_result = validate_state(plan_steps)
     status_result = validate_state_status(state_data)
@@ -4053,6 +4383,11 @@ def build_report(
         **status_result,
         **stage_result,
         **workflow_checkpoint_result,
+        # Its own key, never folded into the gated path's. Folding would report it
+        # under a key FR-002 freezes, and would newly arm every gated-path error
+        # along with it. Present on every run, empty on a skip and on a pass, so
+        # the classification record can never see it conditionally absent.
+        "workflow_authority_errors": workflow_authority_errors,
         **state_result,
         **projection_result,
         **manifest_result,

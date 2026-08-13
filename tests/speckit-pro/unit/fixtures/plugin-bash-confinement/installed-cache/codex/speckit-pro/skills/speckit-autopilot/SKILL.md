@@ -1051,7 +1051,8 @@ PR URL.
   Items 10-19 table plus supporting-row mapping, parallel group dispatch (Doctor/Code Review/Verify-chain),
   extension availability rules
 - [Workflow File Update Protocol for Codex](./references/workflow-file-protocol-codex.md) —
-  Per-phase section updates + Constitution + Consensus Log
+  Per-phase section updates + Constitution + Consensus Log +
+  `workflow_file` state authority
 - [Error Recovery for Codex](./references/error-recovery-codex.md) — Resume
   protocol, common issues, context window management
 
