@@ -36,8 +36,9 @@ Two honest consequences, recorded rather than left to be discovered:
 
 - Nothing compares the copies of the failure message across the four templates.
   This slice does **not** add that comparison, because FR-039a fixes its change to
-  shared validation at three literals. Verified by hand instead: the message is
-  byte-identical in all three shipped templates as of 2026-08-12.
+  shared validation at three literals. Verified by hand instead: with `pr-writeup`
+  now carrying `shipped`, the message is byte-identical in all four
+  export-carrying templates, re-checked 2026-08-13.
 - **This document will dangle the same way when ART-003 is archived.** Naming the
   problem is not solving it. A durable home for the pinned literals is a change to
   shared foundation files and belongs to a spec that owns them.

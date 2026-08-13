@@ -64,7 +64,7 @@
       "stage": "final-pr",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "17-pr-writeup.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": ["prompt", "markdown"]
     },
     {

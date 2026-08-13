@@ -480,17 +480,706 @@ details:focus-visible,
   color: var(--rc-text);
 }
 /* BRAND-KIT:END */
+
+/* ==========================================================================
+ * Template styling — pr-writeup
+ * ==========================================================================
+ * Everything below sits outside the canonical block above and is this template's
+ * own. It introduces no colour value: every rule names a token the kit defines,
+ * so every pairing is one the kit's published audit already measured. The list of
+ * pairings this template uses is recorded with the acceptance evidence rather
+ * than restated here, at no cost to the size ceiling.
+ *
+ * Every boundary drawn below uses --rc-border-strong, because each one separates
+ * content from its surroundings and therefore carries meaning. The decorative
+ * border token is used for nothing here and is named nowhere.
+ *
+ * No heading typeface is named. The kit assigns the display face to h1 and h2 and
+ * the body face at a heavier weight from h3 down, so a heading written as an
+ * ordinary heading gets the right face for its level free.
+ *
+ * There is no per-section selector and no two-column page layout: the six
+ * sections are structurally identical, and the sidebar that would have forced a
+ * second column is dropped rather than ported.
+ * ========================================================================== */
+
+body {
+  margin: 0;
+  padding: 3.5rem 1.5rem 6rem;
+}
+
+.page {
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+header {
+  margin-bottom: 2rem;
+}
+
+h1 {
+  margin: 0 0 0.75rem;
+}
+
+/* One rule for all six section headings. */
+h2 {
+  margin: 2.5rem 0 0.75rem;
+}
+
+p {
+  margin: 0 0 0.75rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  font-family: var(--rc-font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rc-text-muted);
+}
+
+/* The muted paragraph, written once and used wherever a sentence is secondary
+ * to the content beside it: the notice saying this content is invented, which
+ * sits inside feature-header's pair and dies with the first fill; the standing
+ * sentence above implementation-notes; and the export section's three. All but
+ * the first sit outside every pair and survive every fill. */
+.note {
+  margin: 0 0 0.75rem;
+  color: var(--rc-text-muted);
+  font-size: 0.9375rem;
+}
+
+ul.points {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+ul.points li {
+  margin-bottom: 0.5rem;
+}
+
+/* before-after is the only section needing bespoke layout, and it is capped at
+ * one layout rule plus one panel rule. flex-wrap is the whole of the responsive
+ * behaviour: the panels stack on a narrow viewport, and each panel's statement
+ * opens with the word naming it, so which panel is which never rests on column
+ * position or on panel colour. */
+.ba {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.ba .panel {
+  flex: 1 1 16rem;
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.625rem;
+  background: var(--rc-surface-raised);
+  padding: 0.875rem 1rem;
+}
+
+.ba .panel p {
+  margin: 0;
+}
+
+/* The native disclosure. file-by-file's items are <details> because the fill
+ * parser performs no implied closing and each item needs a mandatory end tag, and
+ * the question controls added later are <details> too — so this one rule set
+ * serves both uses and neither writes its own. The kit's :focus-visible rule
+ * already reaches summary, so the indicator is inherited and nothing suppresses
+ * it. The native marker is kept rather than replaced by a styled caret, which
+ * carries no meaning and is decoration paid for in lines. Nothing here animates,
+ * so there is nothing for a reduced-motion preference to suppress. */
+details {
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.625rem;
+  background: var(--rc-surface-raised);
+  margin: 0.75rem 0;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+}
+
+details .body {
+  padding: 0 1rem 1rem;
+}
+
+details .body p {
+  margin: 0;
+  color: var(--rc-text-muted);
+}
+
+/* The question controls and the export chrome.
+ *
+ * The disclosure itself is styled by the `details`, `summary` and `details
+ * .body` rules above: they were written once for file-by-file's items and are
+ * shared here rather than repeated, which is the single largest avoidable cost
+ * across the two CSS ceilings. A question control therefore supplies only its
+ * label and its field, and inherits its frame, its padding and its focus
+ * indicator. Nothing below animates, so a reduced-motion preference has nothing
+ * here to suppress, and no rule carries a status or a distinction by colour. */
+
+.question-label,
+.fallback-label {
+  display: block;
+  margin: 0 0 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--rc-text-muted);
+}
+
+/* One control doing one job in two places, so one rule set carries both and
+ * only what genuinely differs is written again below. */
+.question-field,
+.fallback-field {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--rc-text);
+  background: var(--rc-surface-raised);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.375rem;
+  resize: vertical;
+}
+
+.question-field {
+  font-family: var(--rc-font-body);
+}
+
+/* The export text is read and selected by hand from here, so it is set in the
+ * mono face on the sunken surface: a reader dragging a selection can see where
+ * the text ends. */
+.fallback-field {
+  font-family: var(--rc-font-mono);
+  font-size: 0.8125rem;
+  background: var(--rc-surface-sunken);
+}
+
+.export {
+  margin-top: 2.5rem;
+  padding: 1.5rem;
+  background: var(--rc-surface-raised);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.75rem;
+}
+
+/* The section heading rule above opens every section with 2.5rem of space; this
+ * one sits inside a panel that already carries the separation. */
+.export h2 {
+  margin: 0 0 0.75rem;
+}
+
+.export-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.25rem 0 0;
+}
+
+.export-button {
+  font-family: var(--rc-font-body);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.625rem 1rem;
+  color: var(--rc-text);
+  background: var(--rc-surface-muted);
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.375rem;
+  cursor: pointer;
+}
+
+/* Height is reserved so the fallback below does not jump when a message
+ * arrives. The outcome is carried by the text itself, never by the colour it is
+ * set in and never by movement. */
+.export-status {
+  margin: 1rem 0 0;
+  min-height: 1.5rem;
+  font-size: 0.875rem;
+  color: var(--rc-text);
+}
+
+.fallback {
+  margin-top: 1rem;
+}
 </style>
 </head>
 <body>
 <div class="page">
 
   <header>
+    <span data-rc-brand-mark></span>
+    <p class="eyebrow" id="artifact-title">Pull request write-up</p>
+<!-- FILL:feature-header:START -->
+    <p class="eyebrow" id="feature-id">NIMBUS-101</p>
+    <h1 id="feature-name">Offline Draft Sync</h1>
+    <p class="note">Sample content. Every region of this write-up is a worked example
+      built on the invented feature NIMBUS-101 Offline Draft Sync, and each one is
+      replaced when the template is filled with a real feature.</p>
+<!-- FILL:feature-header:END -->
   </header>
 
   <main>
+
+    <section aria-labelledby="sec-motivation">
+      <h2 id="sec-motivation">Why this change was made</h2>
+<!-- FILL:motivation:START -->
+      <p>Every keystroke in the draft editor went straight to the server, so a connection
+        that dropped mid-sentence lost whatever had been typed since the last write that
+        landed. Authors on conference wifi worked around it by drafting somewhere else and
+        pasting in, which is the point at which the editor stopped being the place the work
+        happens. NIMBUS-101 puts a local queue in front of the network so the editor never
+        blocks on it.</p>
+<!-- FILL:motivation:END -->
+    </section>
+
+    <section aria-labelledby="sec-before-after">
+      <h2 id="sec-before-after">How it behaved, and how it behaves now</h2>
+<!-- FILL:before-after:START -->
+      <div class="ba">
+        <div class="panel">
+          <p><b>Before.</b> Each keystroke was a write to the server, and a dropped
+            connection lost everything typed since the last one that landed.</p>
+        </div>
+        <div class="panel">
+          <p><b>After.</b> Each keystroke is a write to a local queue, and the queue
+            replays in the order the edits were made once the connection returns.</p>
+        </div>
+      </div>
+<!-- FILL:before-after:END -->
+    </section>
+
+    <section aria-labelledby="sec-file-by-file">
+      <h2 id="sec-file-by-file">What each changed file does</h2>
+      <div class="files">
+<!-- FILL:file-by-file:START -->
+        <details id="file-by-file-draft-queue" open>
+          <summary>packages/editor/src/draft-queue.ts — new</summary>
+          <div class="body">
+            <p>The queue itself. Holds edits in the order they were made, replays them one
+              at a time when the connection returns, and stops at the first clash rather
+              than merging past it.</p>
+          </div>
+        </details>
+        <details id="file-by-file-draft-queue-test">
+          <summary>packages/editor/src/draft-queue.test.ts — new</summary>
+          <div class="body">
+            <p>Covers replay order, the stop-at-first-clash boundary, and a queue that
+              survives the tab being closed and reopened on the same device.</p>
+          </div>
+        </details>
+        <details id="file-by-file-editor-config">
+          <summary>config/editor.json — changed</summary>
+          <div class="body">
+            <p>Turns the queue on behind offline_drafts and sets how many edits it holds
+              before it asks the author to reconnect.</p>
+          </div>
+        </details>
+<!-- FILL:file-by-file:END -->
+      </div>
+    </section>
+
+    <section aria-labelledby="sec-non-goals">
+      <h2 id="sec-non-goals">What this change deliberately leaves out</h2>
+<!-- FILL:non-goals:START -->
+      <ul class="points">
+        <li><b>Not background sync.</b> Nothing is sent from a closed tab. The queue
+          replays when the author comes back to the draft.</li>
+        <li><b>Not shared editing while offline.</b> Two authors still cannot work on one
+          draft with either of them disconnected.</li>
+      </ul>
+<!-- FILL:non-goals:END -->
+    </section>
+
+    <section aria-labelledby="sec-verification">
+      <h2 id="sec-verification">How it was checked</h2>
+<!-- FILL:verification:START -->
+      <ul class="points">
+        <li><b>Passed.</b> Unit tests over replay order, the stop-at-first-clash boundary,
+          and a queue reopened in a new tab — fourteen cases, all green.</li>
+        <li><b>Pending.</b> The manual run that drops the connection mid-sentence and
+          reconnects, which is booked for the staging soak on Thursday.</li>
+      </ul>
+<!-- FILL:verification:END -->
+    </section>
+
+    <section aria-labelledby="sec-implementation-notes">
+      <h2 id="sec-implementation-notes">What happened while it was built</h2>
+      <p class="note">Only tasks that reported something appear here, in the order the
+        record was written, and a task that was retried appears more than once.</p>
+<!-- FILL:implementation-notes:START -->
+      <ul class="points">
+        <li><b>T007.</b> The queue was written against the editor's existing save call,
+          which turned out to debounce. The debounce had to move behind the queue so the
+          order of the edits stays the author's rather than the timer's.</li>
+        <li><b>T009.</b> Clash detection needs the stored copy's version, which the read
+          endpoint did not return. Added it there rather than fetching the draft a second
+          time on every replay.</li>
+        <li><b>T007.</b> Re-run after the debounce move. This run replayed against a real
+          connection instead of a stub, and that is what surfaced the ordering defect the
+          first run had hidden.</li>
+      </ul>
+<!-- FILL:implementation-notes:END -->
+    </section>
+
+    <!-- Template chrome, outside every fill region: a fill cannot reach the
+         status region, so no later failure can be silenced by one. The region
+         ships hidden and the load routine reveals it, so the copy controls
+         appear only where they work — with scripting unavailable the six
+         sections stay readable and nothing offers a copy that cannot happen. -->
+    <section class="export" id="export" aria-labelledby="sec-export" hidden>
+      <h2 id="sec-export">Take your questions with you</h2>
+      <p class="note">Copy as prompt hands your questions to a coding agent. Copy as Markdown
+        drops them into a pull-request comment.</p>
+      <p class="note">Nothing you type here is saved. Reload this document, or close the tab,
+        and every question is gone.</p>
+      <p class="note">If a copy does not reach your clipboard — some browsers refuse one in a
+        document opened from a filesystem — the same text appears in a field below, ready to
+        select and copy by hand.</p>
+      <div class="export-controls">
+        <button class="export-button" type="button" id="copy-prompt">Copy as prompt</button>
+        <button class="export-button" type="button" id="copy-markdown">Copy as Markdown</button>
+      </div>
+      <p class="export-status" id="export-status" role="status"></p>
+      <div class="fallback" id="fallback" hidden>
+        <label class="fallback-label" for="fallback-field">The export text, ready to select and copy by hand</label>
+        <textarea class="fallback-field" id="fallback-field" rows="10" spellcheck="false" aria-describedby="export-status"></textarea>
+      </div>
+    </section>
+
   </main>
 
 </div>
+<script>
+(function () {
+  'use strict';
+
+  /* The six reader-facing sections, pinned in document order. Each is resolved
+     from the id its own heading already carries for aria-labelledby, rather
+     than by walking a container's children: a fill that restructures a section
+     cannot move its question control off it, the collection never depends on
+     DOM order, and no value is concatenated into a selector string. Each item
+     carries its own slot name, which is what an export reference line opens
+     with. */
+  var SLOTS = [
+    'motivation',
+    'before-after',
+    'file-by-file',
+    'non-goals',
+    'verification',
+    'implementation-notes'
+  ];
+
+  /* Template chrome, outside every fill region, so a fill cannot remove it. */
+  var ARTIFACT_TITLE_ID = 'artifact-title';
+
+  /* These two are the opposite case and the comment above does NOT cover them:
+     both live INSIDE the feature-header region, so a fill replaces them.
+
+     That is forced rather than misplaced. An export must name the feature, it
+     may carry nothing the reader could not see in the rendered document, and a
+     template may not hold feature-specific content outside a slot. Those three
+     together mean the only place the feature's identity can be read from is the
+     region that renders it. So the authoring agent must preserve both
+     identifiers when it fills feature-header, and that obligation is recorded
+     where the agent will actually read it: this file's own slot inventory.
+     featureLine() below degrades honestly if a fill drops them anyway. */
+  var FEATURE_ID_ID = 'feature-id';
+  var FEATURE_NAME_ID = 'feature-name';
+
+  var STATE_QUESTION = 'question recorded';
+  var STATE_NO_QUESTION = 'no question recorded';
+
+  /* Pinned in contracts/export-payload-contract.md. Four templates emit these
+     from four separate copies of this routine, so the wording is fixed there
+     rather than left to each of them. COPY_FAILED is byte-identical to the one
+     the three shipped templates carry; the empty bodies and the two leads are
+     written in this artifact's own noun, which is the recorded per-template
+     pattern rather than a divergence. */
+  var EMPTY_PROMPT = 'No question was recorded. There is nothing here to act on. Do not treat this as approval.';
+  var EMPTY_MARKDOWN = 'No question was recorded. This record is not an approval.';
+  var COPY_FAILED = 'Copy failed. The text is in the field below. Select it and copy it by hand.';
+
+  /* The one line that separates the two kinds when something was recorded. The
+     header lines and the reference lines are identical across both, and neither
+     kind emits markdown syntax: the markdown kind names its destination, not
+     its encoding, and the downstream sweep reads the raw comment body where the
+     line structure survives. */
+  var PROMPT_LEAD = 'Act on each question recorded below. The value in parentheses is the anchor of the section it attaches to.';
+  var MARKDOWN_LEAD = 'Questions recorded while reading this pull-request write-up.';
+
+  var ANNOUNCE_DELAY = 60;
+  var FOCUS_DELAY = 120;
+
+  var items = [];
+  var region = document.getElementById('export');
+  var status = document.getElementById('export-status');
+  var fallback = document.getElementById('fallback');
+  var fallbackField = document.getElementById('fallback-field');
+
+  /* THE CURRENCY TOKEN. Every invocation takes the next one; every effect
+     compares the token it was issued against the current value, and a settle
+     belonging to a superseded invocation writes no status text, reveals no
+     fallback text, and moves no focus.
+
+     The comparison is scoped BY EFFECT, NOT BY PATH, and that placement is the
+     whole of the fix. Both effects are deferred: the status region is cleared
+     and rewritten behind a short timer, so a repeated identical message is
+     announced a second time, and the focus move sits behind a longer one. A
+     check written at the settle callbacks would therefore pass and then LAND in
+     a later turn, after a second invocation had already re-hidden the field —
+     pulling focus into a hidden field, which is focus theft. Placing it at the
+     four points below leaves no path unguarded and needs no exemption: the
+     synchronous refusal and the no-clipboard path carry the current token and
+     pass the same check. Both settle directions are guarded, because a slow
+     success landing after a fast failure is the mirror case and would overwrite
+     the failure message while the fallback still held the other kind's text.
+
+     All three shipped export-carrying templates run this settle unguarded. This
+     one must not reproduce it. */
+  var invocation = 0;
+
+  function textOf(identifier) {
+    var element = document.getElementById(identifier);
+    return element ? element.textContent.replace(/\s+/g, ' ').trim() : '';
+  }
+
+  function featureLine() {
+    /* The one line whose inputs a fill can delete. If the identifiers survive,
+       this is exactly the pinned form; if they do not, fall back to the
+       document's single top-level heading rather than emit a hollow line that
+       names nothing while reading as though it named something. */
+    var identifier = textOf(FEATURE_ID_ID);
+    var name = textOf(FEATURE_NAME_ID);
+    if (!name) {
+      var heading = document.querySelector('h1');
+      name = heading ? heading.textContent.replace(/\s+/g, ' ').trim() : '';
+    }
+    if (!identifier && !name) {
+      return 'Feature: not named in this document';
+    }
+    return 'Feature: ' + (identifier ? identifier + ' ' + name : name).trim();
+  }
+
+  /* A section carries a question when its field holds at least one
+     non-whitespace character, and only then. Whitespace alone is not one. */
+  function questionOf(item) {
+    return item.field.value.trim();
+  }
+
+  /* Read afresh on every call, so the summary reports the field value NOW
+     rather than its value when the disclosure was last opened or collapsed. A
+     summary fixed at mount would report no question over a section that carries
+     one, and this accessible name is the only place the artifact carries that
+     state at all. */
+  function refresh(item) {
+    var state = questionOf(item) === '' ? STATE_NO_QUESTION : STATE_QUESTION;
+    item.summary.textContent = 'Question on ' + item.label + ': ' + state;
+  }
+
+  /* Built as document elements: each element created, each attribute set by
+     name, each string set through the text-valued property. No control markup
+     is assembled as a string anywhere in this file.
+
+     The disclosure keeps its native marker, so a pairing that reports open and
+     closed from the marker keeps doing so, and it carries no ARIA role, no
+     aria-expanded and no aria-pressed: the mapping does not permit them on a
+     summary acting as its parent's summary, and forcing one has been observed
+     to remove the exposed state rather than add it. Nothing here closes a
+     disclosure it did not open. */
+  function mount(slot) {
+    var heading = document.getElementById('sec-' + slot);
+    var section = heading ? heading.closest('section') : null;
+    if (!section) {
+      return;
+    }
+
+    var label = heading.textContent.replace(/\s+/g, ' ').trim();
+    var fieldId = 'question-' + slot;
+
+    var details = document.createElement('details');
+    var summary = document.createElement('summary');
+    details.appendChild(summary);
+
+    /* The same inner element file-by-file's items use, so the padding rule
+       written for those serves these too and neither writes its own. */
+    var body = document.createElement('div');
+    body.className = 'body';
+    details.appendChild(body);
+
+    /* A real label bound to the field. Placeholder text is not an accessible
+       name and vanishes the moment the reviewer types. */
+    var fieldLabel = document.createElement('label');
+    fieldLabel.className = 'question-label';
+    fieldLabel.setAttribute('for', fieldId);
+    fieldLabel.textContent = 'Your question about ' + label;
+    body.appendChild(fieldLabel);
+
+    var field = document.createElement('textarea');
+    field.className = 'question-field';
+    field.setAttribute('id', fieldId);
+    field.setAttribute('rows', '3');
+    body.appendChild(field);
+
+    var item = { slot: slot, label: label, field: field, summary: summary };
+    field.addEventListener('input', function () {
+      refresh(item);
+    });
+    refresh(item);
+
+    /* Appended to the END of the section the heading labels, so the control
+       follows the content it questions and tab order follows reading order.
+       Mounting it on the heading would put every question ahead of the content
+       the reader has not read yet. No positive tab index is set anywhere. */
+    section.appendChild(details);
+    items.push(item);
+  }
+
+  function recorded() {
+    var found = [];
+    var index;
+    for (index = 0; index < items.length; index += 1) {
+      var question = questionOf(items[index]);
+      if (question !== '') {
+        found.push({ slot: items[index].slot, label: items[index].label, question: question });
+      }
+    }
+    return found;
+  }
+
+  /* Every value below is read from the rendered document at the moment of
+     invocation, never from a constant written when this file was authored, and
+     none of it is anything the reader could not have inspected on screen. A
+     section the reviewer skipped contributes no line, no placeholder and no
+     count. Two spaces precede the parenthesis on the reference line, and the
+     anchor is the id the section heading already carries. */
+  function payload(kind, questions) {
+    var lines = [
+      'Artifact: ' + textOf(ARTIFACT_TITLE_ID),
+      featureLine(),
+      ''
+    ];
+    if (questions.length === 0) {
+      lines.push(kind === 'prompt' ? EMPTY_PROMPT : EMPTY_MARKDOWN);
+      return lines.join('\n');
+    }
+    lines.push(kind === 'prompt' ? PROMPT_LEAD : MARKDOWN_LEAD);
+    var index;
+    for (index = 0; index < questions.length; index += 1) {
+      lines.push('');
+      lines.push(questions[index].slot + ' / ' + questions[index].label + '  (#sec-' + questions[index].slot + ')');
+      lines.push(questions[index].question);
+    }
+    return lines.join('\n');
+  }
+
+  /* Names what the produced text actually carries, so it cannot imply a
+     conclusion the text does not contain. */
+  function successMessage(count) {
+    if (count === 0) {
+      return 'Copied. The text says no question was recorded.';
+    }
+    if (count === 1) {
+      return 'Copied. 1 question is on the clipboard.';
+    }
+    return 'Copied. ' + count + ' questions are on the clipboard.';
+  }
+
+  /* Cleared and written afresh, because a status region whose text did not
+     change is not announced a second time. The clear is itself a status write,
+     so it sits behind the check as well as the write it schedules. */
+  function announce(token, message) {
+    if (!status || token !== invocation) {
+      return;
+    }
+    status.textContent = '';
+    window.setTimeout(function () {
+      if (token !== invocation) {
+        return;
+      }
+      status.textContent = message;
+    }, ANNOUNCE_DELAY);
+  }
+
+  /* All four steps of the failure path: the same text revealed in a field the
+     reader can select, that field kept focusable and not disabled and given
+     focus, the single failure message reported, and success not reported. One
+     message for every mode, asserting no cause — this document cannot tell a
+     refused permission from an unfocused page from a browser policy from an
+     absent interface. The text is placed through the field value, never as
+     markup, and no second copy attempt is made through any interface. */
+  function reveal(token, text) {
+    announce(token, COPY_FAILED);
+    if (!fallback || !fallbackField || token !== invocation) {
+      return;
+    }
+    fallbackField.value = text;
+    fallback.hidden = false;
+    window.setTimeout(function () {
+      if (token !== invocation) {
+        return;
+      }
+      fallbackField.focus();
+    }, FOCUS_DELAY);
+  }
+
+  function copy(kind) {
+    var questions = recorded();
+    var text = payload(kind, questions);
+    invocation += 1;
+    var token = invocation;
+    /* Re-hidden before every attempt, so a later success never leaves an
+       earlier failure's payload on screen beside a success message. */
+    if (fallback) {
+      fallback.hidden = true;
+    }
+    var clipboard = window.navigator ? window.navigator.clipboard : null;
+    if (clipboard && typeof clipboard.writeText === 'function') {
+      try {
+        clipboard.writeText(text).then(
+          function () {
+            announce(token, successMessage(questions.length));
+          },
+          function () {
+            reveal(token, text);
+          }
+        );
+        return;
+      } catch (refused) {
+        reveal(token, text);
+        return;
+      }
+    }
+    reveal(token, text);
+  }
+
+  function wire(identifier, kind) {
+    var control = document.getElementById(identifier);
+    if (control) {
+      control.addEventListener('click', function () {
+        copy(kind);
+      });
+    }
+  }
+
+  var slot;
+  for (slot = 0; slot < SLOTS.length; slot += 1) {
+    mount(SLOTS[slot]);
+  }
+  wire('copy-prompt', 'prompt');
+  wire('copy-markdown', 'markdown');
+
+  /* The one line that reveals the export region. Everything it reveals is
+     markup that already exists, so scripting adds the affordance rather than
+     building it. */
+  if (region) {
+    region.hidden = false;
+  }
+})();
+</script>
 </body>
 </html>
