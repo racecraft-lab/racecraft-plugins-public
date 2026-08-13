@@ -573,10 +573,20 @@ p {
   padding: 0.375rem 0;
 }
 
-/* Three cells in document order: number, marker, code. */
+/* Three cells in document order: number, marker, code.
+ *
+ * The row is a BLOCK with inline-block cells, and it must stay that way. Grid
+ * and flex both blockify their items, and a plain-text copy puts a newline
+ * between block boxes, so `display: grid` here splits every copied row in two:
+ * the marker alone on one line, its code on the next. A whole-hunk copy then
+ * yields twice the lines and no valid patch fragment. Inline-level boxes do not
+ * break, so the fixed columns are carried by widths on the two cells instead of
+ * by grid tracks. `box-sizing: border-box` is what keeps those widths equal to
+ * the track sizes they replaced. Nothing here wraps -- the code cell is
+ * `white-space: pre` and .diff scrolls -- so a row is always one line and needs
+ * no hanging indent. Verified by an actual paste, per FR-019c and T039. */
 .diff-row {
-  display: grid;
-  grid-template-columns: 3.25rem 1.25rem 1fr;
+  display: block;
   font-size: 0.8125rem;
   line-height: 1.7;
 }
@@ -584,6 +594,9 @@ p {
 /* Excluded from a selection, so a copied row pastes as a valid unified-diff line:
  * the marker travels with the code and the number does not. */
 .diff-row .ln {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 3.25rem;
   padding: 0 0.5rem;
   text-align: right;
   color: var(--rc-text-muted);
@@ -592,6 +605,9 @@ p {
 }
 
 .diff-row .mk {
+  display: inline-block;
+  box-sizing: border-box;
+  width: 1.25rem;
   text-align: center;
   white-space: pre;
   color: var(--rc-text);
