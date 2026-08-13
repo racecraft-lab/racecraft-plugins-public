@@ -2,6 +2,17 @@
 
 **Input**: Design documents from `specs/art-011-scaffold-integration/`
 
+> **Amendment, 2026-08-13.** This is a phase record and is retained as written.
+> After it was produced, an independent review found that scaffold cannot invoke
+> the autopilot (`speckit-pro/skills/speckit-autopilot/SKILL.md:11` carries
+> `disable-model-invocation: true`), so the in-session chain became a printed
+> hand-off on both platforms. Everything below describing a chain, a chained
+> planning stage, the `## Planning Complete` / `## Planning Incomplete` headings,
+> the completion test, or the `--from-phase` resume command is **superseded**.
+> The decision and its full downstream list are revision note 3 in
+> `docs/ai/specs/.process/ART-011-design-concept.md`; the shipped `SKILL.md`
+> files are authoritative.
+
 **Prerequisites**: plan.md (required), spec.md (required for user stories),
 research.md, `contracts/blind-spot-pass.md`, `contracts/chain-handoff.md`,
 `docs/ai/specs/.process/ART-011-design-concept.md` including its two Revision
