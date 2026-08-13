@@ -225,10 +225,23 @@ the shipped templates already vary that noun between "objection" and "approach".
 
 Each invocation carries a token compared against the current one when its copy
 settles. A settle belonging to a superseded invocation changes no status text,
-reveals no fallback text, and moves no focus. **Both** settle paths are guarded.
-The synchronous refusal path and the no-clipboard-interface path stay unguarded
-and say why: both run inside the same synchronous turn that issued the token, so
-neither can be stale.
+reveals no fallback text, and moves no focus.
+
+**The guard is scoped by effect, not by path** (FR-026b). An earlier draft of
+this section exempted the synchronous refusal and no-clipboard paths on the
+ground that both run inside the turn that issued the token, so neither could be
+stale. That reasoning was wrong, and the accessibility checklist caught it: the
+status write defers behind an announce delay and the focus move behind a focus
+delay, in this artifact and in all three shipped templates. Those paths *decide*
+synchronously and *land* asynchronously, so a synchronously-refused first export
+could still pull focus into a fallback the second export had already hidden —
+the exact focus theft the requirement forbids.
+
+Placing the check at the two **effect** sites removes the need for any exemption:
+every path reaches a status write or a fallback reveal through one of four
+comparisons — on entry to the announce routine, inside its deferred callback, on
+entry to the reveal routine, and inside its focus timer. The synchronous paths
+carry the current token and pass the same check by construction.
 
 ---
 

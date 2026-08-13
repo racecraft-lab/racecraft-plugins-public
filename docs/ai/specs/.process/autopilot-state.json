@@ -451,6 +451,26 @@
       "fr_011c_drops": "all six verified absent by name; zero grid, columns or nav in authored CSS",
       "deviation_accepted": "no code sample shipped; FR-011d is a prohibition, the file-by-file Fills value never mentions code, and a code block would exceed the 6.0-line per-entry basis",
       "budget_remaining_for_group_c": 479
+    },
+    "group_c": {
+      "tasks": "T022-T030",
+      "status": "complete",
+      "M2": {
+        "criterion": "css <= 247",
+        "measured": {
+          "authored": 727,
+          "css": 227,
+          "js": 326,
+          "markup": 174
+        },
+        "result": "HELD",
+        "headroom": 20
+      },
+      "m3_position": "authored 727 already inside the 758 ceiling with 31 spare; no later task adds authored lines",
+      "vs_declared": "JS 326 against ~288 (+38); markup 174 against ~223 (-49); net 31 under",
+      "currency_guard": "scoped by effect at 4 sites: announce entry, announce deferred callback, reveal entry, focus timer. Proven dynamically in BOTH settle directions under a stubbed DOM; the shipped defect reproduces in both directions on module-map and in neither here.",
+      "failure_message": "byte-identical to all three shipped templates, verified by sha1 of the whole declaration",
+      "stale_doc_fixed": "data-model.md Invocation currency said the synchronous paths stay unguarded, contradicting FR-026b; rewritten with the reasoning that was wrong and why"
     }
   },
   "hazards": {
@@ -462,6 +482,7 @@
       "rule": "never git add -A in this run despite the skill's phase-7 default"
     },
     "layer4_alone_overcounts": "running --layer 4 in isolation reports 13 failures where a full run reports 8; the full-suite number is the floor",
-    "fr_031a_self_reference": "naming --rc-border-subtle in a CSS comment to explain its absence fails FR-031a's own search; spec-explainer.html:501 ships that same mistake"
+    "fr_031a_self_reference": "naming --rc-border-subtle in a CSS comment to explain its absence fails FR-031a's own search; spec-explainer.html:501 ships that same mistake",
+    "suite_leaves_untracked_debris": "a failing suite run leaves an untracked plugin-bash-confinement cache dir; it escapes a dist-scoped status check and the spec-index generator bakes untracked paths into committed SPEC-MOC backlinks. Check bare git status before the index regen."
   }
 }
