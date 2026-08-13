@@ -402,7 +402,7 @@ Clarify session 1.
 | **Dependencies** | ART-001 (shipped, PR #407) |
 | **Enables** | ART-010 (Final-PR Writeup, Companions & Ready Flip) |
 | **Priority** | P1 |
-| **Stage** | plan |
+| **Stage** | implement |
 
 ### Success Criteria Summary
 

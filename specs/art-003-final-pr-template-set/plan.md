@@ -82,7 +82,7 @@ export kinds. Three literals added to shared validation and one catalog value
 changed.
 
 **Reviewability Budget**: Primary surface docs/process; projected reviewable LOC
-758; 1 production file; 13 total files; budget result warn. Decomposed and
+758; 1 production file; 14 total files; budget result warn. Decomposed and
 measured below, not scaled from a multiplier.
 
 ## Declared File Operations
@@ -344,7 +344,11 @@ thinnest vertical slice this work admits. `annotated-diff` and `flowchart` are
 slices 2 and 3, cut from their predecessor after each prior pull request is open.
 Deferred work is named there; nothing in this slice is shaped to suit them.
 
-**Total files corrects the spec's ~5 to 13.** The spec enumerated the change's
+**Total files corrects the spec's ~5 to 14.** *(Corrected from 13 at T011: the
+count enumerated the three checklists the Checklist phase would add and missed
+`checklists/requirements.md`, which the Specify phase had already written. Same
+class of omission this paragraph was written to fix, one level down. Still below
+the 15 warn threshold, so the budget result is unchanged.)* The spec enumerated the change's
 own surface plus `spec.md` and did not count the SpecKit planning artifacts the
 same pull request carries. The honest list: the artifact, the catalog, the
 validation, this slice's export-payload contract, `spec.md`, `plan.md`,
@@ -401,7 +405,7 @@ design; both passes are recorded here and neither changed a verdict.
 - **Primary and secondary surfaces.** Stated in the Declared Figures block below
   and in Technical Context. One primary surface; two secondary.
 - **Budget position.** `warn` — above 400 authored lines, below 800; 1 production
-  file against a 6 warn and 8 block; 13 total files against a 15 warn and 25
+  file against a 6 warn and 8 block; 14 total files against a 15 warn and 25
   block; one primary surface. Recorded above with its decomposition.
 - **Split decision.** Recorded above: this spec is the split, slices 2 and 3 are
   the named follow-ups, and no further split is available.
@@ -491,5 +495,5 @@ block is last on purpose. Append nothing after it.
 - **Primary surface**: docs/process
 - **Secondary surfaces**: seed/config (one catalog value), harness/adapter (three literals in the fill-region validation)
 - **Projected production files**: 1
-- **Projected total files**: 13
+- **Projected total files**: 14
 - **Projected reviewable LOC**: 758

@@ -3,13 +3,13 @@
   "spec_id": "ART-003",
   "feature_dir": "specs/art-003-final-pr-template-set",
   "branch": "art-003-final-pr-template-set",
-  "status": "awaiting_review",
-  "stage": "plan",
+  "status": "in_progress",
+  "stage": "implement",
   "stage_source": "auto-detect",
   "stage_basis": "auto-detect: the first non-terminal planning phase is Specify, which is \u23f3 Pending",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-012-workflow.md",
-  "active_step": null,
+  "active_step": "Phase 7: Implement",
   "updated_at": "2026-08-12T18:00:00Z",
   "settings": {
     "consensus_mode": "tier-a",
@@ -138,55 +138,55 @@
     },
     {
       "step": "Phase 7: Implement",
-      "status": "skipped: planning-stage run; implementation stage not in range"
+      "status": "in_progress"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "skipped: planning-stage run; implementation stage not in range"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "skipped: planning-stage run; implementation stage not in range"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "skipped: planning-stage run; implementation stage not in range"
+      "status": "pending"
     },
     {
       "step": "Post: Code Review",
-      "status": "skipped: planning-stage run; implementation stage not in range"
+      "status": "pending"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "skipped: planning-stage run; implementation stage not in range"
+      "status": "pending"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "skipped: planning-stage run; implementation stage not in range"
+      "status": "pending"
     },
     {
       "step": "Post: Self-Review",
-      "status": "skipped: planning-stage run; implementation stage not in range"
+      "status": "pending"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "skipped: planning-stage run; implementation stage not in range"
+      "status": "pending"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "skipped: planning-stage run; implementation stage not in range"
+      "status": "pending"
     },
     {
       "step": "Post: PR Creation",
-      "status": "skipped: planning-stage run; implementation stage not in range"
+      "status": "pending"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "skipped: planning-stage run; implementation stage not in range"
+      "status": "pending"
     },
     {
       "step": "Post: Retrospective",
-      "status": "skipped: planning-stage run; implementation stage not in range"
+      "status": "pending"
     }
   ],
   "gates": {
@@ -408,11 +408,27 @@
       "mode": "advisory",
       "recommended_action": "proceed",
       "exit_code": 0
-    }
+    },
+    "read_not_rerun": "G6.5 belongs to the plan stage; the recorded verdict (0.90, proceed with reservations) is read, never re-scored"
   },
   "stage_boundary": {
-    "stage": "plan",
-    "completed": true,
-    "next": "a separate --stage implement invocation is required; this run does not cross the boundary"
+    "plan_stage": "completed and pushed at cf3d2f63",
+    "implement_stage": "entered by explicit --stage implement invocation"
+  },
+  "test_baseline_g0_policy": "preserved from the plan stage, not recomputed; G7 verifies an increase against 7378",
+  "implement": {
+    "group_a": {
+      "tasks": "T004-T011",
+      "status": "complete",
+      "artifact_lines": 496,
+      "authored": 38,
+      "css": 1,
+      "js": 0,
+      "markup": 37,
+      "byte_identity": "BRAND-KIT and GALLERY-HEAD verified by sha256, diff, and a live red-green on the A4 drift checker",
+      "literals_added": 3,
+      "deviation": "T011 found total files is 14 not 13; requirements.md from Specify was uncounted. Budget unchanged, still below the 15 warn threshold.",
+      "expected_red_incomplete": "tasks.md documented only the D2 orphan; the real floor is 8 failures in 3 families (D2, payload parity, release-readiness+bash-confinement fixtures). Documented at T005-T031 note."
+    }
   }
 }
