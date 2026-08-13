@@ -849,7 +849,8 @@ it**: a Codex task's workspace root is fixed when the task starts, and a scaffol
 run necessarily begins before the worktree exists, so that operator is by
 definition rooted outside it and a bare invocation would hand them a command the
 Workflow Worktree Binding guard stops. **On Codex the printed hand-off is the
-ordinary outcome, not a degraded one.**
+ordinary outcome, not a degraded one.** The Codex CLI row of the table above is
+recorded for cross-platform parity only; never print it from this variant.
 
 The stage token is the literal lowercase `plan`, from the closed vocabulary
 `plan`, `implement`, `full`. No aliases, no alternate casing, no long-form
