@@ -20,12 +20,12 @@ input.
 **Roadmap MOC:** [html-artifacts-roadmap-MOC.md](html-artifacts-roadmap-MOC.md)
 **Spec ID prefix:** `ART-###`
 **Status:** Active; dependency graph approved 2026-07-28; ART-001, ART-002,
-ART-006 and ART-012 are complete and archived; ART-002 shipped in PRs #425,
-#427 and #430, which unblocks ART-007; ART-012 shipped in PR #426; ART-011 and
-ART-014 are in progress, ART-014 scaffolded 2026-08-12 as one slice; ART-003
-through ART-005, ART-007 and ART-009 are ready; ART-015 was opened from ART-006
-findings and is ready with no dependencies; ART-016, ART-017 and ART-018 were
-opened from ART-014 findings on 2026-08-12 and are ready
+ART-006, ART-012 and ART-014 are complete and archived; ART-002 shipped in PRs #425,
+#427 and #430, which unblocks ART-007; ART-012 shipped in PR #426; ART-014 shipped
+in PR #433 and archived 2026-08-13, which unblocks ART-017; ART-011 is in progress;
+ART-003 through ART-005, ART-007 and ART-009 are ready; ART-015 was opened from
+ART-006 findings and is ready with no dependencies; ART-016, ART-017 and ART-018
+were opened from ART-014 findings on 2026-08-12 and are ready
 
 ---
 
@@ -141,10 +141,10 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-011 | Scaffold Integration | 🔄 In Progress | [.process/ART-011-workflow.md](.process/ART-011-workflow.md) | Scaffolded 2026-08-12 on `art-011-scaffold-integration`; grill-me ran 21 questions to a natural stop. One vertical slice (estimator: 187 LOC at scaffold, re-measured 322 at the final 31 FRs, 1 slice, ok). Production surface narrowed from ~4 files to the two scaffold `SKILL.md` variants: the blind-spot pass reuses the shipped read-only `codebase-analyst` and grill-me is untouched. ART-007 is not a dependency — the closing report omits the draft-PR line until a producer exists |
 | ART-012 | Implementation-Notes Capture | ✅ Complete / Archived | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | PR #426; archived 2026-08-12. The record contract and the executor reporting field live on both platforms outside `specs/**`. Budget re-estimated at every amendment (115 at scaffold → 155 → 162 → 190 once the operator restored the literal per-task guarantee), and the final six production files matched the declaration exactly |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
-| ART-014 | Phase-Guard Enforcement Repair | 🔄 In Progress | [.process/ART-014-workflow.md](.process/ART-014-workflow.md) | Scaffolded 2026-08-12, one slice. Both defects reproduced by execution during scoping; the corpus baseline is 54 of 54 workflow files exiting 0 under `--rule status-evidence`. Budget re-declared at scaffold from ~120 to 235 reviewable LOC after the interview added two documentation files. No dependencies; found during ART-006, which deliberately did not fix it |
+| ART-014 | Phase-Guard Enforcement Repair | ✅ Complete / Archived | [.process/ART-014-workflow.md](.process/ART-014-workflow.md) | PR #433; archived 2026-08-13. The guard, its tests, and both platforms' authority documentation live outside `specs/**`. Declared 337 reviewable LOC and shipped 906 added across six authored files, 488 across the five production ones; the overrun is the classification record and the tests, and it argues for ART-015. Found during ART-006, which deliberately did not fix it. Opened ART-016, ART-017 and ART-018 |
 | ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
 | ART-016 | Claude-Side Live PR Commit Authority | ⏳ Ready | - | No dependencies; opened from ART-014, which documents the gap and names this entry in the shipped Claude `SKILL.md` |
-| ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ⏳ Ready | - | Blocked by ART-014, which adds the classification record these verdicts live in. Opened from ART-014's advisory audit; the defect was reproduced by execution |
+| ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ⏳ Ready | - | ART-014 dependency satisfied by PR #433, which added the classification record these verdicts live in. Opened from ART-014's advisory audit; the defect was reproduced by execution |
 | ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready | - | No dependencies; opened from ART-014's retrospective. Three helpers report clean on input they should catch, each hit live during that run |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
