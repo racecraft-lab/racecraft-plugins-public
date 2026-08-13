@@ -88,6 +88,7 @@ FLOOR: dict[str, tuple[str, ...]] = {
     "code-approaches": ("approaches",),
     "module-map": ("module-graph",),
     "pr-writeup": ("motivation", "before-after", "file-by-file", "implementation-notes"),
+    "annotated-diff": ("hunks",),
 }
 
 # The slots whose items an objection or a selection attaches to, and which
@@ -102,6 +103,7 @@ LIST_SLOTS: dict[str, tuple[str, ...]] = {
     "code-approaches": ("approaches",),
     "module-map": ("modules",),
     "pr-writeup": ("file-by-file",),
+    "annotated-diff": ("hunks",),
 }
 
 # The two anchored items a list slot needs at a minimum. One item shows a reader
@@ -142,6 +144,7 @@ SOURCE_ARTIFACTS: tuple[str, ...] = (
     "research.md",
     "design-concept.md",
     "implementation-notes.md",
+    "git-diff",
 )
 
 # The attribution header's own labels and literals, mirrored from the gallery
