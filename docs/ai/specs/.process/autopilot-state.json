@@ -5,7 +5,7 @@
   "branch": "art-003-final-pr-template-set-slice-2",
   "status": "in_progress",
   "stage": "full",
-  "active_step": "Phase 0: Prerequisites",
+  "active_step": "Phase 2: Clarify",
   "prior_run_note": "completed_pr_open",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-workflow.md",
   "settings": {
@@ -34,19 +34,19 @@
     },
     {
       "step": "Phase 0: Prerequisites",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 1: Specify",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Slot inventory and hunk granularity",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Slot inventory and hunk granularity Consensus",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Export payload and objection shape",
@@ -160,5 +160,11 @@
       "step": "Post: Retrospective",
       "status": "pending"
     }
-  ]
+  ],
+  "gates": {
+    "G1": {
+      "pass": true,
+      "markers": 0
+    }
+  }
 }

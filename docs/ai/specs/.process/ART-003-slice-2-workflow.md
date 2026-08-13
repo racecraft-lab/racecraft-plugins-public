@@ -95,7 +95,7 @@ last phrase match in the whole file.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | G1 PASS; 76 FRs, 3 markers held for Clarify |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Session 1 runs **after** the upstream source is read |
 | Plan | `/speckit-plan` | ⏳ Pending | Re-declare the budget; adopt a CSS ceiling as a checkable constraint |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Three domains: accessibility, ux, error-handling |
