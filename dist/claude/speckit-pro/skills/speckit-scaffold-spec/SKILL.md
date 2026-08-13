@@ -957,7 +957,7 @@ The candidates above must be the filenames Steps 4 and 5 actually wrote, so an
 `ART-011` run tests `ART-011-design-concept.md`. Never test a literally
 `SPEC-`-prefixed name for a spec whose identity does not begin with `SPEC-`:
 that path was never written, the read fails, and the report silently omits its
-own primary artifact — the one omission FR-018 forbids outright.
+own primary artifact — the one omission this index may never make.
 
 **The existence test is a read of the candidate path, and nothing more.** A path
 that reads is listed; a path that does not read is omitted. This is the only
