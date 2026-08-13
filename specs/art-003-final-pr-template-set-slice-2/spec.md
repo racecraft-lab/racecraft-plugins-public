@@ -762,25 +762,28 @@ measurement of this exact work class on this branch: it shipped 735 authored
 lines — 227 CSS, 334 JavaScript, 174 markup — against a declared 758. That
 replaces every earlier estimate derived from an upstream-line multiplier.
 
-Decomposed against slice 1's realized figures:
+Decomposed against slice 1's realized figures, and **re-declared at Plan** as
+this section instructs. Each component below is now a measured span in a shipped
+file rather than a target, and the ceiling beside it is what the Plan-phase
+checkpoints hold it to. The working is in `plan.md`.
 
-| Component | Target | Basis |
-|---|---|---|
-| Export and objection-capture JavaScript | ~330 | slice 1's 334, same routine and the same four-site currency guard; two hunk mounts instead of six section mounts, offset by deriving items from live anchors rather than a pinned list |
-| CSS | ~240 | slice 1's 227 plus a margin for the diff-specific structure a document template never carried |
-| Markup | ~185 | fewer regions than slice 1's seven, but each hunk carries diff rows rather than a paragraph |
-| **Total** | **755** | warn, with 45 lines of headroom below the 800 block |
+| Component | Measured | Ceiling | Basis |
+|---|---|---|---|
+| Export and objection-capture JavaScript | 342 | 345 | slice 1's 334, less its pinned six-slot list, plus `module-map`'s item derivation — `labelOf`, the anchor-keyed mount, and the container walk. Slice 1's four-site currency guard is copied whole; `module-map`'s unguarded settle is not copied at all |
+| CSS | 274 | 275 | slice 1's 227 less the two blocks that do not carry — the bullet-list rules and the before/after panel rules, 32 lines together — plus 79 lines of diff-specific rules enumerated one at a time |
+| Markup | 122 | 130 | two regions rather than slice 1's seven, and the objection controls cost no markup because they are built at load; each hunk carries diff rows rather than a paragraph |
+| **Total** | **738** | **750** | warn, with 50 lines of headroom below the 800 block |
 
-**CSS is the risk, and it is sharper here than on slice 1.** A diff view needs
-line-state, gutter, hunk-header, and severity styling that a document of titled
-prose sections never had. The sensitivity is unforgiving:
+**CSS is still the risk.** A diff view needs line-state, gutter, hunk-header, and
+severity styling that a document of titled prose sections never had. The
+sensitivity, rebased on the components above:
 
 | CSS lines | Total | Result |
 |---|---|---|
-| 200 | 715 | warn, 85 spare |
-| 240 | 755 | warn, 45 spare — the declared target |
-| 280 | 795 | warn, 5 spare |
-| 320 | 835 | **block** |
+| 200 | 675 | warn, 125 spare |
+| 275 | 750 | warn, 50 spare — the declared target |
+| 320 | 795 | warn, 5 spare |
+| 326 | 801 | **block** |
 
 Upstream `03-code-review-pr.html` measures 638 lines: 389 of them CSS, 237
 markup, and 12 lines of script in a single element, with three disclosure
@@ -792,8 +795,9 @@ authored fresh with slice 1's routine as its only precedent.
 **A CSS ceiling is adopted at Plan as an explicit, checkable constraint**, using
 the measuring instrument slice 1's quickstart already records rather than a
 second one. The first checkpoint fires after the diff CSS and **before** any
-export work, so an overrun surfaces at roughly 240 lines written rather than at
-755.
+export work, at 150 authored CSS lines, so an overrun surfaces with roughly 150
+lines written rather than 750. A second holds total CSS at 275, a third holds the
+export routine at 345, and the last holds the authored total at 750.
 
 The figure below excludes the 458 lines of canonical embedded blocks a reviewer
 never reads because they are byte-verified copies: the brand-kit block at 318
@@ -806,9 +810,12 @@ lines and the gallery-head block at 140.
   same artifact shape and re-measured at Plan by the setup gate. Below the warn
   threshold of 15 either way.
 - **Budget result**: warn — above the warn threshold and below the block
-  threshold. CSS is the only dimension that can miss the figure; the export floor
-  cannot, because it is measured against four shipped implementations of the same
-  routine.
+  threshold. CSS is the dimension most likely to miss the figure. An earlier
+  draft of this line said the export routine could not miss, because it is
+  measured against shipped implementations of itself. **That claim is withdrawn
+  at Plan on slice 1's own evidence**: slice 1 made it, declared its routine at
+  288, and shipped 334. The routine is therefore held by a checkpoint of its own
+  here rather than trusted.
 - **Split decision**: This spec **is** the split. ART-003 was re-declared at
   scaffold as three stacked slices, one template per pull request, after the
   earlier feature's first slice shipped two templates of the same kind and
@@ -824,7 +831,7 @@ the phrase near any other number silently becomes the declared figure. That trap
 fired three times on slice 1 — on a spec identifier, on a filename, and on a
 table header. Nothing below repeats the phrase.
 
-- **Projected reviewable LOC**: **755**
+- **Projected reviewable LOC**: **750**
 
 ### PR Review Packet Requirements *(mandatory)*
 
