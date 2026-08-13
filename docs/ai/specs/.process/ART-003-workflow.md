@@ -313,7 +313,7 @@ concurrently rather than from anyone's carelessness.
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 PASS, 40 tasks; M1/M2/M3 checkpoints emitted as real tasks |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 PASS; 11 findings, all remediated at zero line cost |
 | Confidence Gate | G6.5 | ✅ Complete | advisory, composite 0.90, proceed with reservations |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Implement | `/speckit-implement` | ✅ Complete | G7 PASS, 40/40 tasks; suite 7379/7379, +1 over baseline |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
