@@ -522,18 +522,23 @@ Known hazards, carried forward from slice 1 and already paid for once:
 
 ## Post-Implementation Checklist
 
-- [ ] Post: Doctor Extension Check
-- [ ] Post: Verify Implementation
-- [ ] Post: Verify Tasks Phantom Check
-- [ ] Post: Code Review
-- [ ] Post: Integration Suite
-- [ ] Post: Reviewability Diff Gate
-- [ ] Post: Self-Review
-- [ ] Post: UAT Runbook Generation
-- [ ] Post: PR Body Generation
-- [ ] Post: PR Creation
-- [ ] Post: Review Remediation
-- [ ] Post: Retrospective
+The canonical closeout. Every row must reach Complete or an explicit `Skipped`
+before the run may report completion.
+
+| Canonical Item | Status | Evidence |
+|---|---|---|
+| Post: Doctor Extension Check | ⏳ Pending | |
+| Post: Verify Implementation | ⏳ Pending | |
+| Post: Verify Tasks Phantom Check | ⏳ Pending | |
+| Post: Code Review | ⏳ Pending | |
+| Post: Integration Suite | ⏳ Pending | |
+| Post: Reviewability Diff Gate | ⏳ Pending | |
+| Post: Self-Review | ⏳ Pending | |
+| Post: UAT Runbook Generation | ⏳ Pending | |
+| Post: PR Body Generation | ⏳ Pending | |
+| Post: PR Creation | ⏳ Pending | |
+| Post: Review Remediation | ⏳ Pending | |
+| Post: Retrospective | ⏳ Pending | |
 
 **The pull request bases on `art-003-final-pr-template-set`, never on `main`.**
 
