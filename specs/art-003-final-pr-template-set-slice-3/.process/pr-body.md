@@ -95,23 +95,26 @@ reachable but only by spending nothing on decoration.
 - Title compared to the catalog entry by a **run, not a reading** — `Flowchart` on
   both sides.
 - Seven in-document node links, zero unresolved.
+- The **manual render ran** against the shipped bytes on a real `file://` URL in
+  Chrome 151: **51/51**, including the fragment reveal on all seven nodes, which
+  is the property this slice refused to claim without one.
 
 ## Known gaps
 
-1. **The manual render could not be run.** Browser automation refuses `file://`,
-   and opening from the filesystem is this artifact's whole premise. Unconfirmed:
-   console silence on load, both themes, network unavailable, storage refused, the
-   monochrome rendering the colour requirement names as its evidence, and keyboard
-   reach with a visible focus indicator on each of the seven nodes.
-2. **The fragment reveal is not confirmed, and the zero-script property is
-   therefore not claimed as verified.** The disclosure relies on fragment
-   navigation opening a closed `<details>`, and sources disagree on browser
-   coverage. The structure is built for it — each link targets an element *inside*
-   the disclosure, so the disclosure is an ancestor of the target, which is what
-   the reveal algorithm walks. **Worst case it degrades rather than breaks**: the
-   link lands the reader on the right node's summary and one keystroke opens it.
-   The measured `js 0` is a fact about the file; whether the reveal fires is not
-   yet a fact.
+1. **Chrome only.** The manual render has now been run, against the shipped bytes
+   on a real `file://` URL: **51 of 51 checks pass**, covering console silence,
+   both themes, network unavailable, storage refused, scripting unavailable, the
+   monochrome rendering, the sixteen-stop tab order with a visible indicator at
+   every stop, and zero clipboard calls across every activation. It ran on Chrome
+   151 only, and `<details name>` exclusive grouping is exactly the kind of
+   behaviour that differs between engines, so Firefox and WebKit are unverified.
+2. **The fragment reveal is confirmed, on Chrome.** Activating each of the seven
+   node links by keyboard opens that node's closed `<details>`, leaves exactly one
+   open, sets `:target`, and scrolls it into view — seven for seven. The
+   zero-script property therefore holds in practice and not only on paper. The
+   caveat in gap 1 applies: this is one engine. **Worst case elsewhere it degrades
+   rather than breaks** — the link still lands the reader on the right node's
+   summary and one keystroke opens it.
 3. **No check asserts an artifact's title matches its catalog entry** — how slice
    1's defect reached review with a green suite.
 4. **No check reads a catalog entry's `exports` against the artifact**, which is

@@ -213,11 +213,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 50015,
+            "byte_count": 50893,
             "kind": "docs",
             "path": "artifact-gallery/templates/annotated-diff.html",
             "required": true,
-            "sha256": "bc0e88b38338092c8049b7fabf74de92307d0aa06672a4aabe0231c177ead233",
+            "sha256": "14e8c61e6fc297d2dcb1142ded5e4284d79812dbfaa310d38fe74c1ee6caa100",
             "source_path": "speckit-pro/artifact-gallery/templates/annotated-diff.html",
             "transform": "none"
           },
@@ -1259,11 +1259,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 50015,
+            "byte_count": 50893,
             "kind": "docs",
             "path": "artifact-gallery/templates/annotated-diff.html",
             "required": true,
-            "sha256": "bc0e88b38338092c8049b7fabf74de92307d0aa06672a4aabe0231c177ead233",
+            "sha256": "14e8c61e6fc297d2dcb1142ded5e4284d79812dbfaa310d38fe74c1ee6caa100",
             "source_path": "speckit-pro/artifact-gallery/templates/annotated-diff.html",
             "transform": "none"
           },
@@ -2124,7 +2124,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "94af9f2853faf6fc2697a6b519cc146e721c8c4f47508b6544d2a08b66ce8810",
+        "file_tree_hash": "99b9041a877d2a9196b657d2f6a127d7a359ac707c94fbe7147086ac850ae80d",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
@@ -2221,11 +2221,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 50015,
+            "byte_count": 50893,
             "kind": "docs",
             "path": "artifact-gallery/templates/annotated-diff.html",
             "required": true,
-            "sha256": "bc0e88b38338092c8049b7fabf74de92307d0aa06672a4aabe0231c177ead233",
+            "sha256": "14e8c61e6fc297d2dcb1142ded5e4284d79812dbfaa310d38fe74c1ee6caa100",
             "source_path": "speckit-pro/artifact-gallery/templates/annotated-diff.html",
             "transform": "none"
           },
@@ -3420,11 +3420,11 @@
             "transform": "none"
           },
           {
-            "byte_count": 50015,
+            "byte_count": 50893,
             "kind": "docs",
             "path": "artifact-gallery/templates/annotated-diff.html",
             "required": true,
-            "sha256": "bc0e88b38338092c8049b7fabf74de92307d0aa06672a4aabe0231c177ead233",
+            "sha256": "14e8c61e6fc297d2dcb1142ded5e4284d79812dbfaa310d38fe74c1ee6caa100",
             "source_path": "speckit-pro/artifact-gallery/templates/annotated-diff.html",
             "transform": "none"
           },
@@ -4537,7 +4537,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "6115b1aecf113c5fbf1d1d08b9d0093852b7000473925c3e3f203a6f7cedc745",
+        "file_tree_hash": "e35c3430d388f9cc546f6e4dbfa1146ad26508d1ab9cbdd46d3f74d447d5f949",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
