@@ -85,11 +85,19 @@ a skip and a satisfied comparison both report no error and both exit zero. The
 exit code carries the verdict, not whether the verdict was computed.
 
 **Resolution is asymmetric.** The **supplied** workflow is resolved against the
-repository root and rendered POSIX, so the right file named under a different
-spelling — including one traversing a symlink — still matches. The **state**
-value is compared as the literal string it holds, with no filesystem resolution,
-because it is machine-written and branch 3 has already constrained its shape.
-Only the supplied side has spelling freedom.
+repository root and rendered POSIX, so the right file named absolutely, or
+relatively from any working directory, still matches. The **state** value is
+compared as the literal string it holds, with no filesystem resolution, because
+it is machine-written and branch 3 has already constrained its shape. Only the
+supplied side has spelling freedom.
+
+Resolution follows symlinks, so what is compared is where the supplied path
+**lands**, not how it was spelled. Name the workflow through a symlink and the
+comparison sees the target: a link at `docs/a-workflow.md` pointing at
+`docs/b-workflow.md` reports a branch 5 mismatch even when the state names
+`docs/a-workflow.md` and the run supplied that same path, and a link whose target
+resolves outside the repository reaches branch 4 instead. Keep workflow files and
+the state that names them as real paths inside one repository.
 
 **The comparison is byte-exact**, on the two POSIX references, with no case
 folding and no filesystem identity test such as `samefile`. Case is deliberately

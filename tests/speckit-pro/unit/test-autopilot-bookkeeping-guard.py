@@ -282,6 +282,11 @@ class WorkflowAuthorityTests(unittest.TestCase):
             report = json.loads(completed.stdout)
         self.assertIn("workflow_authority_errors", report)
         self.assertTrue(report["workflow_authority_errors"], report)
+        # The exit code too, and not only the report key. Reporting a finding the
+        # scoped invocation does not gate on is the defect this specification
+        # exists to close, so a control that stops at the key would still pass if
+        # the key left the ``status-evidence`` tuple.
+        self.assertEqual(completed.returncode, 1, report)
 
     def test_state_without_a_workflow_file_key_skips_the_comparison(self) -> None:
         """FR-003: a state that names no workflow asserts no authority.
@@ -398,6 +403,41 @@ class RepositoryRootResolutionTests(unittest.TestCase):
             # dependent; either way the contract is the same, never raise.
             self.assertIsNone(validator._repository_root(a / "state.json"))
 
+    def test_an_unresolvable_supplied_workflow_skips_instead_of_raising(self) -> None:
+        """The authority helper resolves a second path, and it must not raise either.
+
+        ``_repository_root`` is guarded, so the same fixture that proves that
+        guard also reaches the helper's own ``workflow.resolve()``. The state
+        file here is a real readable path inside a marked root, so the helper
+        gets past branches 1 and 2 and reaches the resolution of the *supplied*
+        workflow. A raise there escapes ``build_report``, which has no handler,
+        and then ``main()``, which catches only ``ValidationError`` -- printing a
+        traceback where the autopilot expects the JSON report.
+        """
+        import os
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / ".git").write_text(
+                "gitdir: ../elsewhere/.git/worktrees/fixture\n", encoding="utf-8"
+            )
+            state = root / "autopilot-state.json"
+            state.write_text(
+                json.dumps({"workflow_file": SUPPLIED_WORKFLOW_REF, "plan": []}),
+                encoding="utf-8",
+            )
+            a, b = root / "loop_a", root / "loop_b"
+            os.symlink(b, a)
+            os.symlink(a, b)
+            self.assertEqual(
+                validator._workflow_authority_errors(
+                    a / "supplied-workflow.md",
+                    state,
+                    {"workflow_file": SUPPLIED_WORKFLOW_REF},
+                ),
+                [],
+            )
+
 
 class ProblemKeyClassificationTests(unittest.TestCase):
     """FR-011: every problem key the guard emits carries a recorded verdict.
@@ -488,6 +528,33 @@ class ProblemKeyClassificationTests(unittest.TestCase):
             extraneous,
             "PROBLEM_KEY_INTENT classifies keys the guard never emits: "
             + ", ".join(extraneous),
+        )
+
+    def test_the_gated_verdict_agrees_with_the_rule_map(self) -> None:
+        """A `gated` verdict is a claim about ``RULE_PROBLEM_KEYS``, so check it there.
+
+        ``verdict == "gated"`` says a named rule can move the exit code on that
+        key, which is decided entirely by membership in ``RULE_PROBLEM_KEYS``.
+        Recording it by hand in a second place is how the two drift: arm a key in
+        the rule map and leave it advisory here, or retire it from the rule map
+        and leave the verdict behind, and every other assertion in this class
+        still passes. The record would then misdescribe exactly the property it
+        exists to make visible.
+        """
+        gated_by_record = {
+            key
+            for key, entry in validator.PROBLEM_KEY_INTENT.items()
+            if entry["verdict"] == "gated"
+        }
+        gated_by_rules = {
+            key for keys in validator.RULE_PROBLEM_KEYS.values() for key in keys
+        }
+        self.assertEqual(
+            gated_by_record,
+            gated_by_rules,
+            "PROBLEM_KEY_INTENT and RULE_PROBLEM_KEYS disagree about which keys are "
+            f"gated; recorded-only {sorted(gated_by_record - gated_by_rules)}, "
+            f"rule-only {sorted(gated_by_rules - gated_by_record)}",
         )
 
     def test_every_verdict_is_drawn_from_the_closed_vocabulary(self) -> None:

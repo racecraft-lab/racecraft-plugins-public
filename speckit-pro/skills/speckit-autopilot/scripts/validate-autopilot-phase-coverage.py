@@ -1578,10 +1578,19 @@ def _workflow_authority_errors(
     # it has spelling freedom. The state value is machine-written and branch 4 has
     # already constrained it. A non-subpath raises ValueError, which is this
     # branch by design rather than an escape.
+    #
+    # ``resolve`` itself raises OSError or RuntimeError on a path it cannot
+    # traverse, which is what ``_repository_root`` guards for the same reason. An
+    # unresolvable supplied path is the same absence of information branch 2
+    # covers -- one side of the comparison cannot be established, which is not
+    # evidence of a mismatch -- so it skips rather than escaping into
+    # ``build_report``, which has no handler.
     try:
         workflow_ref = workflow.resolve().relative_to(repo_root.resolve()).as_posix()
     except ValueError:
         return ["workflow file is outside the authorized repository"]
+    except (OSError, RuntimeError):
+        return []
     # The sibling gated path re-checks ``_is_normalized_repo_path`` on its own
     # derived reference here; this branch deliberately does not, and the omission
     # is safe rather than missing. ``workflow`` is already a readable regular file

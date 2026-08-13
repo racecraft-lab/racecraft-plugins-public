@@ -63,8 +63,15 @@ Anything reaching the end passes. Both skips are indistinguishable from a pass a
 the exit code, which carries the verdict rather than whether it was computed.
 
 Resolution is **asymmetric**: the supplied workflow is resolved against the
-repository root and rendered POSIX, so the right file under a different spelling
-still matches, while the state value is compared as the literal string it holds.
+repository root and rendered POSIX, so the right file named absolutely or
+relatively from any working directory still matches, while the state value is
+compared as the literal string it holds. Resolution follows symlinks, so what is
+compared is where the supplied path **lands**, not how it was spelled: a workflow
+named through a symlink reports a branch 5 mismatch against its target even when
+the state names the link, and a link resolving outside the repository reaches
+branch 4. Keep workflow files and the state that names them as real paths inside
+one repository.
+
 The comparison itself is **byte-exact**, with no case folding and no `samefile`,
 because byte-exact is the only rule returning the same verdict on a
 case-insensitive filesystem and a case-sensitive one.
