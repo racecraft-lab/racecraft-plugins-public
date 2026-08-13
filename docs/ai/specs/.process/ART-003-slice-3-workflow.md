@@ -81,11 +81,11 @@ picture.
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 PASS; zero-script disclosure settled |
 | Plan | `/speckit-plan` | ⏭️ Skipped | budget comfortable at 460/800; component ceilings and the checkpoint carried in spec.md |
 | Checklist | `/speckit-checklist` | ⏭️ Skipped | accessibility resolved inline at Clarify; see FR-019a through FR-024a |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | G5 PASS; 36 tasks, four phases, one measurement checkpoint |
 | Analyze | `/speckit-analyze` | ⏭️ Skipped | declaration verified by running the parser; single spec artifact |
 | Confidence Gate | G6.5 | ⏭️ Skipped | advisory; slices 1 and 2 verdicts carry forward |
-| Implement | `/speckit-implement` | ⏳ Pending | |
-| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
+| Implement | `/speckit-implement` | ✅ Complete | 408 authored, script 0; suite 7381/7381. Manual render is a named known gap, as on slices 1 and 2 |
+| Post | Post-Implementation | ✅ Complete | PR opened; manual render carried as a known gap |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 

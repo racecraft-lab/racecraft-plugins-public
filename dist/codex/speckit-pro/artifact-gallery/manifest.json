@@ -86,7 +86,7 @@
       "stage": "final-pr",
       "trigger": { "any_of": ["operational_flow_change"] },
       "source": { "origin": "upstream", "file": "13-flowchart-diagram.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": []
     },
     {

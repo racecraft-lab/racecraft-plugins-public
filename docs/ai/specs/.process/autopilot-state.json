@@ -3,9 +3,9 @@
   "spec_id": "ART-003-slice-3",
   "feature_dir": "specs/art-003-final-pr-template-set-slice-3",
   "branch": "art-003-final-pr-template-set-slice-3",
-  "status": "in_progress",
+  "status": "completed_pr_open",
   "stage": "full",
-  "active_step": "Phase 5: Tasks",
+  "active_step": null,
   "prior_run_note": "in_progress",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-2-workflow.md",
   "settings": {
@@ -86,7 +86,7 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
@@ -102,55 +102,55 @@
     },
     {
       "step": "Phase 7: Implement",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "gates": {
@@ -160,5 +160,21 @@
     "G2": {
       "pass": true
     }
+  },
+  "final": {
+    "authored": 408,
+    "css": 209,
+    "js": 0,
+    "markup": 199,
+    "declared": 460,
+    "block": 800,
+    "suite": "7381/7381",
+    "baseline": 7380,
+    "measured_zeros": {
+      "authored_script": 0,
+      "export_affordances": 0,
+      "control": "annotated-diff shows 1 and 12, so the search binds"
+    },
+    "unverified": "manual render \u2014 file:// navigation refused; FR-041c's fragment reveal not confirmed, and the zero-script property is NOT claimed as verified"
   }
 }
