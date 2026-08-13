@@ -429,6 +429,39 @@
       "literals_added": 3,
       "deviation": "T011 found total files is 14 not 13; requirements.md from Specify was uncounted. Budget unchanged, still below the 15 warn threshold.",
       "expected_red_incomplete": "tasks.md documented only the D2 orphan; the real floor is 8 failures in 3 families (D2, payload parity, release-readiness+bash-confinement fixtures). Documented at T005-T031 note."
+    },
+    "group_b": {
+      "tasks": "T012-T021",
+      "status": "complete",
+      "M1": {
+        "criterion": "css <= 150",
+        "measured": {
+          "authored": 279,
+          "css": 131,
+          "js": 0,
+          "markup": 148
+        },
+        "result": "HELD",
+        "headroom": 19,
+        "levers": "all five applied pre-emptively, none remedially"
+      },
+      "regions": 7,
+      "file_by_file_items": 3,
+      "implementation_notes_entries": 3,
+      "fr_011c_drops": "all six verified absent by name; zero grid, columns or nav in authored CSS",
+      "deviation_accepted": "no code sample shipped; FR-011d is a prohibition, the file-by-file Fills value never mentions code, and a code block would exceed the 6.0-line per-entry basis",
+      "budget_remaining_for_group_c": 479
     }
+  },
+  "hazards": {
+    "suite_writes_dist": {
+      "finding": "tests/speckit-pro/layer1-structural/validate-plugin-payload.py runs the real payload builder against the real tree, so every suite run rewrites dist/**/pr-writeup.html; with the source moved aside it DELETES the mirrors",
+      "impact": "the Group A commit used git add -A and absorbed two dist mirrors written by the suite rather than by refresh-release-artifacts.py, so they landed without trust metadata, cache proofs or payload evidence",
+      "masked_anything": "no - the mirrors are stale (496 lines vs source 737) so payload parity still fails at the documented floor of 8",
+      "handling": "dist restored to HEAD; explicit-path commits only for the rest of this run; T035 regenerates dist properly and MUST be verified byte-identical to source with metadata updated",
+      "rule": "never git add -A in this run despite the skill's phase-7 default"
+    },
+    "layer4_alone_overcounts": "running --layer 4 in isolation reports 13 failures where a full run reports 8; the full-suite number is the floor",
+    "fr_031a_self_reference": "naming --rc-border-subtle in a CSS comment to explain its absence fails FR-031a's own search; spec-explainer.html:501 ships that same mistake"
   }
 }

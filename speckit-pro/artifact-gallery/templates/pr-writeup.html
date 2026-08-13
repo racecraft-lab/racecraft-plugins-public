@@ -480,15 +480,256 @@ details:focus-visible,
   color: var(--rc-text);
 }
 /* BRAND-KIT:END */
+
+/* ==========================================================================
+ * Template styling — pr-writeup
+ * ==========================================================================
+ * Everything below sits outside the canonical block above and is this template's
+ * own. It introduces no colour value: every rule names a token the kit defines,
+ * so every pairing is one the kit's published audit already measured. The list of
+ * pairings this template uses is recorded with the acceptance evidence rather
+ * than restated here, at no cost to the size ceiling.
+ *
+ * Every boundary drawn below uses --rc-border-strong, because each one separates
+ * content from its surroundings and therefore carries meaning. The decorative
+ * border token is used for nothing here and is named nowhere.
+ *
+ * No heading typeface is named. The kit assigns the display face to h1 and h2 and
+ * the body face at a heavier weight from h3 down, so a heading written as an
+ * ordinary heading gets the right face for its level free.
+ *
+ * There is no per-section selector and no two-column page layout: the six
+ * sections are structurally identical, and the sidebar that would have forced a
+ * second column is dropped rather than ported.
+ * ========================================================================== */
+
+body {
+  margin: 0;
+  padding: 3.5rem 1.5rem 6rem;
+}
+
+.page {
+  max-width: 46rem;
+  margin: 0 auto;
+}
+
+header {
+  margin-bottom: 2rem;
+}
+
+h1 {
+  margin: 0 0 0.75rem;
+}
+
+/* One rule for all six section headings. */
+h2 {
+  margin: 2.5rem 0 0.75rem;
+}
+
+p {
+  margin: 0 0 0.75rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.5rem;
+  font-family: var(--rc-font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--rc-text-muted);
+}
+
+/* The muted paragraph, used twice and written once: the notice saying this
+ * content is invented, which sits inside feature-header's pair and dies with the
+ * first fill, and the standing sentence above implementation-notes, which sits
+ * outside its pair and survives every fill. */
+.note {
+  margin: 0 0 0.75rem;
+  color: var(--rc-text-muted);
+  font-size: 0.9375rem;
+}
+
+ul.points {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+ul.points li {
+  margin-bottom: 0.5rem;
+}
+
+/* before-after is the only section needing bespoke layout, and it is capped at
+ * one layout rule plus one panel rule. flex-wrap is the whole of the responsive
+ * behaviour: the panels stack on a narrow viewport, and each panel's statement
+ * opens with the word naming it, so which panel is which never rests on column
+ * position or on panel colour. */
+.ba {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.ba .panel {
+  flex: 1 1 16rem;
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.625rem;
+  background: var(--rc-surface-raised);
+  padding: 0.875rem 1rem;
+}
+
+.ba .panel p {
+  margin: 0;
+}
+
+/* The native disclosure. file-by-file's items are <details> because the fill
+ * parser performs no implied closing and each item needs a mandatory end tag, and
+ * the question controls added later are <details> too — so this one rule set
+ * serves both uses and neither writes its own. The kit's :focus-visible rule
+ * already reaches summary, so the indicator is inherited and nothing suppresses
+ * it. The native marker is kept rather than replaced by a styled caret, which
+ * carries no meaning and is decoration paid for in lines. Nothing here animates,
+ * so there is nothing for a reduced-motion preference to suppress. */
+details {
+  border: 1px solid var(--rc-border-strong);
+  border-radius: 0.625rem;
+  background: var(--rc-surface-raised);
+  margin: 0.75rem 0;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+}
+
+details .body {
+  padding: 0 1rem 1rem;
+}
+
+details .body p {
+  margin: 0;
+  color: var(--rc-text-muted);
+}
 </style>
 </head>
 <body>
 <div class="page">
 
   <header>
+    <span data-rc-brand-mark></span>
+    <p class="eyebrow" id="artifact-title">Pull request write-up</p>
+<!-- FILL:feature-header:START -->
+    <p class="eyebrow" id="feature-id">NIMBUS-101</p>
+    <h1 id="feature-name">Offline Draft Sync</h1>
+    <p class="note">Sample content. Every region of this write-up is a worked example
+      built on the invented feature NIMBUS-101 Offline Draft Sync, and each one is
+      replaced when the template is filled with a real feature.</p>
+<!-- FILL:feature-header:END -->
   </header>
 
   <main>
+
+    <section aria-labelledby="sec-motivation">
+      <h2 id="sec-motivation">Why this change was made</h2>
+<!-- FILL:motivation:START -->
+      <p>Every keystroke in the draft editor went straight to the server, so a connection
+        that dropped mid-sentence lost whatever had been typed since the last write that
+        landed. Authors on conference wifi worked around it by drafting somewhere else and
+        pasting in, which is the point at which the editor stopped being the place the work
+        happens. NIMBUS-101 puts a local queue in front of the network so the editor never
+        blocks on it.</p>
+<!-- FILL:motivation:END -->
+    </section>
+
+    <section aria-labelledby="sec-before-after">
+      <h2 id="sec-before-after">How it behaved, and how it behaves now</h2>
+<!-- FILL:before-after:START -->
+      <div class="ba">
+        <div class="panel">
+          <p><b>Before.</b> Each keystroke was a write to the server, and a dropped
+            connection lost everything typed since the last one that landed.</p>
+        </div>
+        <div class="panel">
+          <p><b>After.</b> Each keystroke is a write to a local queue, and the queue
+            replays in the order the edits were made once the connection returns.</p>
+        </div>
+      </div>
+<!-- FILL:before-after:END -->
+    </section>
+
+    <section aria-labelledby="sec-file-by-file">
+      <h2 id="sec-file-by-file">What each changed file does</h2>
+      <div class="files">
+<!-- FILL:file-by-file:START -->
+        <details id="file-by-file-draft-queue" open>
+          <summary>packages/editor/src/draft-queue.ts — new</summary>
+          <div class="body">
+            <p>The queue itself. Holds edits in the order they were made, replays them one
+              at a time when the connection returns, and stops at the first clash rather
+              than merging past it.</p>
+          </div>
+        </details>
+        <details id="file-by-file-draft-queue-test">
+          <summary>packages/editor/src/draft-queue.test.ts — new</summary>
+          <div class="body">
+            <p>Covers replay order, the stop-at-first-clash boundary, and a queue that
+              survives the tab being closed and reopened on the same device.</p>
+          </div>
+        </details>
+        <details id="file-by-file-editor-config">
+          <summary>config/editor.json — changed</summary>
+          <div class="body">
+            <p>Turns the queue on behind offline_drafts and sets how many edits it holds
+              before it asks the author to reconnect.</p>
+          </div>
+        </details>
+<!-- FILL:file-by-file:END -->
+      </div>
+    </section>
+
+    <section aria-labelledby="sec-non-goals">
+      <h2 id="sec-non-goals">What this change deliberately leaves out</h2>
+<!-- FILL:non-goals:START -->
+      <ul class="points">
+        <li><b>Not background sync.</b> Nothing is sent from a closed tab. The queue
+          replays when the author comes back to the draft.</li>
+        <li><b>Not shared editing while offline.</b> Two authors still cannot work on one
+          draft with either of them disconnected.</li>
+      </ul>
+<!-- FILL:non-goals:END -->
+    </section>
+
+    <section aria-labelledby="sec-verification">
+      <h2 id="sec-verification">How it was checked</h2>
+<!-- FILL:verification:START -->
+      <ul class="points">
+        <li><b>Passed.</b> Unit tests over replay order, the stop-at-first-clash boundary,
+          and a queue reopened in a new tab — fourteen cases, all green.</li>
+        <li><b>Pending.</b> The manual run that drops the connection mid-sentence and
+          reconnects, which is booked for the staging soak on Thursday.</li>
+      </ul>
+<!-- FILL:verification:END -->
+    </section>
+
+    <section aria-labelledby="sec-implementation-notes">
+      <h2 id="sec-implementation-notes">What happened while it was built</h2>
+      <p class="note">Only tasks that reported something appear here, in the order the
+        record was written, and a task that was retried appears more than once.</p>
+<!-- FILL:implementation-notes:START -->
+      <ul class="points">
+        <li><b>T007.</b> The queue was written against the editor's existing save call,
+          which turned out to debounce. The debounce had to move behind the queue so the
+          order of the edits stays the author's rather than the timer's.</li>
+        <li><b>T009.</b> Clash detection needs the stored copy's version, which the read
+          endpoint did not return. Added it there rather than fetching the draft a second
+          time on every replay.</li>
+        <li><b>T007.</b> Re-run after the debounce move. This run replayed against a real
+          connection instead of a stub, and that is what surfaced the ordering defect the
+          first run had hidden.</li>
+      </ul>
+<!-- FILL:implementation-notes:END -->
+    </section>
+
   </main>
 
 </div>
