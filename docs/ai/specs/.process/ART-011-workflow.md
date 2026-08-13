@@ -1554,6 +1554,82 @@ it. The flag sits in the frontmatter of the one skill the entire chain depends
 on. A blind-spot pass over ART-011's own scope — the feature this spec ships —
 is exactly the instrument that would have surfaced it.
 
+## Manual UAT — 2026-08-13
+
+No UAT runbook exists for this spec, so the acceptance evidence is a manual UAT
+run instead. This section is that evidence.
+
+### Method, and why it is valid
+
+The installed plugin cache is version 2.24.0 and does not contain this branch, so
+nothing that loads the skill by name tests this pull request. The UAT therefore
+**executes the branch's own prose literally**, which is exactly what the agent
+runtime does with these two files: it reads them and follows them. Two behaviours
+were driven against live repository state; the rest were rendered from the strings
+the skill fixes and diffed against the two contracts.
+
+Twenty-three agents across eight dimensions, each finding adversarially refuted
+before it was accepted.
+
+### Result
+
+**The two shipped `SKILL.md` files pass with zero confirmed defects at any
+severity.** Both variants execute end to end: the blind-spot dispatch, the seeded
+interview block, the hand-off command, and the closing report all render with no
+unresolvable slot, and neither file carries chaining residue.
+
+**Eight confirmed defects, all in the artifacts that describe the feature rather
+than the ones that run it** — four in `spec.md`, two in `contracts/chain-handoff.md`,
+one in the design concept, one in the roadmap entry. Two were blocking: FR-013
+mandated a printed line the shipped skills forbid, and the amendment block named
+FR-018 as amended when FR-018 had never been edited and still fixed a three-value
+heading vocabulary that amended FR-017 rules out. All eight are fixed.
+
+One of the eight was a real behavioural regression rather than a record error.
+FR-013 required a line explaining what "planning" means before the confirmation,
+because the question and both option labels name a term nothing defines for the
+operator. Removing the chain deleted that line instead of correcting it. It is
+restored on both variants with honest facts.
+
+### Exercised against live state
+
+| Behaviour | How | Result |
+| --------- | --- | ------ |
+| Blind-spot pass | Real dispatch of the shipped `codebase-analyst`, seeded from the real ART-014 roadmap entry using the verbatim prompt block | Ran; fields fillable for ART-014 and ART-003; parse table checked against all 15 entries and 10 other roadmaps |
+| Hand-off check | Both git commands run read-only in the worktree | All three tests pass; bare command form selected |
+| Guard sentence | `cmp` against the Codex autopilot's own guard | Byte-identical in all three files |
+| Stage vocabulary | Read from the shipped resolver | `AUTOPILOT_STAGES = ("plan", "implement", "full")`, enforced case-sensitively |
+| Cross-variant parity | Every fenced block and table diffed programmatically | All hand-off and report blocks and all five tables byte-identical |
+| Layer 6 corpus | Recomputed the analyst's sha256 against the manifest | Intact; this PR edits no agent definition |
+
+### What this method cannot cover
+
+- **Skill triggering.** Whether the reworded description pulls the right prompts
+  is a Layer 2 question. Those evals move the operator's installed skill directory
+  aside, so no agent may run them. They remain the operator's two commands.
+- **The real interview.** End-to-end seeding and the FR-010a header write need a
+  human answering grill-me, which by design cannot be automated.
+- **Live Codex behaviour.** The Codex variant was read, executed as prose, and
+  diffed, but not run. There is no Codex session here.
+- **A real scaffold run.** Creating a worktree, branch, and push against a scratch
+  spec would exercise the whole flow. It mutates the repository, so it is the
+  operator's call.
+
+### Peer review, same day
+
+An independent review running in another session raised four further items on this
+PR. Two were already fixed here. One was refuted: `AskUserQuestion` being absent
+from `allowed-tools` is not a defect, because in Claude Code that field is a
+pre-approval list rather than a tool restriction — the skill already relies on the
+same property for its git commands. One was real and current, and is the finding
+this UAT round would otherwise have missed: the closing report's artifact index
+existence-tests a `SPEC-`-prefixed filename, while every design-concept and
+workflow file in this repository is named for its roadmap identity
+(`ART-011-design-concept.md`). Thirty files on disk, none `SPEC-`-prefixed. Left
+uncorrected, the report would have silently omitted its own primary artifact. Both
+new sites and the Codex verify-and-repair read now state how the placeholder
+resolves.
+
 ## Project Structure Reference
 
 Only the paths this spec touches or reads.
