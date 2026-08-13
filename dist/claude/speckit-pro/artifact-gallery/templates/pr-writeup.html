@@ -11,7 +11,7 @@
   Slot: feature-header | Fills: the feature identifier and its name; keep id="feature-id" on the identifier and id="feature-name" on the name, because both exports read them to name the change | Source: spec.md
   Slot: motivation | Fills: one short paragraph saying why the change was made | Source: spec.md
   Slot: before-after | Fills: the two panels comparing the behaviour before the change with the behaviour after it; open each panel's statement with the word naming that panel, because which panel is which must not rest on its position or its colour | Source: spec.md, plan.md
-  Slot: file-by-file | Fills: one item per changed file saying what it does; keep an id of the form file-by-file-<slug> on each item, because an export must be able to name it | Source: plan.md, tasks.md
+  Slot: file-by-file | Fills: one item per changed file saying what it does; keep an id of the form file-by-file-<slug> on each item, because the fill-region validation requires this list slot's items to stay individually addressable | Source: plan.md, tasks.md
   Slot: non-goals | Fills: one item per thing the change deliberately leaves out | Source: design-concept.md, spec.md
   Slot: verification | Fills: one item per check that was run, each stating its passed or pending state as a word rather than as a glyph | Source: spec.md, tasks.md
   Slot: implementation-notes | Fills: one entry per task that reported something, in the record's order, with a retried task appearing more than once; or, when none did, one sentence naming which case obtains — every task reported nothing, no task recorded an entry, or the record was unavailable | Source: implementation-notes.md
