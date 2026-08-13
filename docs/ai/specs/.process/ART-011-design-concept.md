@@ -649,8 +649,8 @@ which is the lesson revision note 2 recorded:
 `speckit-pro/skills/speckit-scaffold-spec/SKILL.md` §9 and §10;
 `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md` `## Hard Constraints`
 and `## Output`; both variants' frontmatter `description`;
-`specs/art-011-scaffold-integration/spec.md` FR-013a, FR-014, FR-015, FR-015a,
-FR-015b, FR-017, FR-019, FR-020, SC-007, SC-010, SC-011;
+`specs/art-011-scaffold-integration/spec.md` FR-013, FR-013a, FR-014, FR-015,
+FR-015a, FR-015b, FR-017, FR-019, FR-020, SC-007, SC-010, SC-011;
 `contracts/chain-handoff.md` §2, §3, §5, §6, §8, §9; `plan.md`; `tasks.md`;
 `docs/ai/specs/.process/ART-011-workflow.md`; and the pull request body,
 including its `release-note` fence.
