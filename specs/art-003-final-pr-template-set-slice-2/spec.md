@@ -523,11 +523,29 @@ the normal case that rule was not aimed at. It is aimed at exactly this.
 - **FR-030a**: The artifact's export literals MUST match the contract slice 1
   authored at `specs/art-003-final-pr-template-set/contracts/export-payload-contract.md`.
   **This slice's noun is already the contract's noun.** Two shipped templates
-  capture objections, so the two empty-state bodies, the six feedback messages,
-  and the clipboard-failure message are reused **byte for byte** with no new row
-  and no new wording. Only the two lead lines are authored fresh, because each
-  names the location kind an objection attaches to and this artifact's is a hunk.
-  Slice 1 had to author six fresh literals in a new noun; this slice authors two.
+  capture objections, so the two empty-state bodies, the **three** objection
+  feedback messages, and the clipboard-failure message are reused **byte for
+  byte** with no new row and no new wording — **six literals in all**, verified
+  byte-identical between `module-map` and `implementation-plan`. An earlier
+  draft of this requirement said "six feedback messages"; six is the reusable
+  total (2 + 3 + 1), and the contract's Feedback table carries only three rows
+  for this noun. An implementer reading the old wording literally would have gone
+  looking for three strings that do not exist.
+  Four further strings outside the contract also reuse verbatim: the two
+  disclosure state words and the summary and field-label templates.
+  Only the two lead lines are authored fresh, because each names the location
+  kind an objection attaches to and this artifact's is a hunk.
+  Slice 1 had to author its whole literal set in a new noun; this slice authors
+  two lines.
+- **FR-030d**: The two authored leads are `Act on each objection recorded below.
+  The value in parentheses is the anchor of the hunk it attaches to.` for the
+  prompt kind, and `Objections recorded while reading this annotated diff.` for
+  the markdown kind. Each varies from the shipped pair by its noun alone.
+- **FR-030e**: The disclosure's state words MUST reuse the shipped pair rather
+  than cohere with this artifact's noun. `module-map` and `implementation-plan`
+  both render `Objection on <label>: no note recorded`, byte-identical, and
+  reusing it avoids the stutter a coherent pair would produce. Slice 1 made its
+  own pair cohere because its noun was new to the gallery; this one is not.
 - **FR-030b**: The clipboard-failure message MUST be the **only** failure
   message, covering every failure mode, and it MUST assert **no cause**. The
   artifact cannot tell a refused permission from an unfocused document from a
@@ -615,11 +633,29 @@ the normal case that rule was not aimed at. It is aimed at exactly this.
   only slots the roadmap names for this template.
 - **FR-042**: The fill-region validation MUST gain a list-slot row for this
   template naming `hunks` and no other slot.
-- **FR-042a**: Whether the validation's closed source-artifact set must also gain
-  a member depends on the inventory FR-011 defers. Slice 1's change to shared
-  validation was three literals; this slice's is **two, or three if the inventory
-  needs a source this repository's per-feature artifacts do not supply**. No
-  other change to shared validation is in scope.
+- **FR-042a**: The validation's closed source-artifact set MUST gain exactly one
+  member, **`git-diff`**, naming the change's own diff as the source for the
+  `hunks` region's row content. No existing member can honestly claim it: the
+  planning artifacts are written before the code, `tasks.md` names tasks rather
+  than code, and `implementation-notes.md` is a per-task deviation record — all
+  commentary on the build, none carrying the change's bytes. FR-017 admits no
+  exception, so some closed-set value is mandatory and none of the six fits.
+  `git-diff` is the first member that is not a per-feature file, deliberately: it
+  names a mechanism rather than a persisted artifact, which is why `diff.patch`
+  was rejected — that spelling implies a file no phase of this repository writes.
+  Membership is tested by plain string equality with no filename shape enforced,
+  so an extensionless value is legal.
+  This slice's change to shared validation is therefore **three** literals — the
+  floor row, the list-slot row, and this member — matching slice 1's count.
+- **FR-042b**: The **annotations'** source is the self-review block the workflow
+  log writes, which is not a file and has no stable name: the log's filename
+  varies per spec, unlike the six per-feature artifacts whose names are identical
+  in every feature directory. That obligation is therefore carried in the `hunks`
+  line's `Fills:` value rather than in `Source:`, which holds the change at three
+  literals and keeps `Source:` naming only things that exist as named artifacts.
+  **The `Fills:` text MUST name the self-review block explicitly.** Carrying the
+  obligation there while staying silent about where a finding's content comes
+  from would move the problem rather than solve it.
 - **FR-043**: The artifact MUST ship its export region hidden and reveal it from
   the routine that already runs at load, so the affordance appears only where
   scripting can perform it.
