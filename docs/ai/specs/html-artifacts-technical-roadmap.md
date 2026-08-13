@@ -137,7 +137,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-008 | Feedback Sweep | ⏳ Pending | - | Blocked by ART-007 |
 | ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
 | ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Pending | - | Blocked by ART-003 and ART-007; ART-012 dependency satisfied by PR #426 |
-| ART-011 | Scaffold Integration | 🔄 In Progress | [.process/ART-011-workflow.md](.process/ART-011-workflow.md) | Scaffolded 2026-08-12 on `art-011-scaffold-integration`; grill-me ran 21 questions to a natural stop. One vertical slice (estimator: 187 LOC, 1 slice, ok). Production surface narrowed from ~4 files to the two scaffold `SKILL.md` variants: the blind-spot pass reuses the shipped read-only `codebase-analyst` and grill-me is untouched. ART-007 is not a dependency — the closing report omits the draft-PR line until a producer exists |
+| ART-011 | Scaffold Integration | 🔄 In Progress | [.process/ART-011-workflow.md](.process/ART-011-workflow.md) | Scaffolded 2026-08-12 on `art-011-scaffold-integration`; grill-me ran 21 questions to a natural stop. One vertical slice (estimator: 187 LOC at scaffold, re-measured 322 at the final 31 FRs, 1 slice, ok). Production surface narrowed from ~4 files to the two scaffold `SKILL.md` variants: the blind-spot pass reuses the shipped read-only `codebase-analyst` and grill-me is untouched. ART-007 is not a dependency — the closing report omits the draft-PR line until a producer exists |
 | ART-012 | Implementation-Notes Capture | ✅ Complete / Archived | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | PR #426; archived 2026-08-12. The record contract and the executor reporting field live on both platforms outside `specs/**`. Budget re-estimated at every amendment (115 at scaffold → 155 → 162 → 190 once the operator restored the literal per-task guarantee), and the final six production files matched the declaration exactly |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
 | ART-014 | Phase-Guard Enforcement Repair | ⏳ Ready | - | No dependencies; found during ART-006, which deliberately did not fix it |
@@ -709,7 +709,7 @@ the reviewed draft PR.
 **Reviewability Budget:** Primary surface: harness/adapter |
 Projected reviewable LOC: 322 (estimator: ok, modify-weighted) |
 Production files: 2 |
-Total files: ~7 |
+Total files: 42 measured (2 production, 2 fixtures, 19 spec/doc, 19 generated) |
 Budget result: within budget
 
 **Scope:**

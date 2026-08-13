@@ -447,7 +447,7 @@ and the seeded `scope` string — so the two records cannot drift:
 
 ```text
 --- BLIND-SPOT PASS FINDINGS ---
-<the numbered findings, or the FR-006 status line for the outcome>
+<the numbered findings, or the status line for the outcome>
 <the set-aside line, present only when findings are shown>
 Record the Blind-spot pass line in the design concept's header blockquote.
 Treat each finding as a candidate question; any finding not reached becomes an Open Question.
@@ -792,7 +792,7 @@ landing there — usually main, which this skill may never commit to.
 newest commit is the roadmap status flip rather than the workflow-file commit,
 so a last-commit test would fail on every correct run.
 
-Both commands already run at Step 3.5, so this check adds no machinery.
+Both commands are read-only, so this check adds no machinery.
 
 **Print one line before asking.** State three facts and no more: accepting runs
 the six planning phases in this same session without further prompts; those
@@ -976,7 +976,7 @@ unverifiable against an open set, so the candidates are fixed here:
 
 | Group | Candidates |
 | ----- | ---------- |
-| Scaffold-owned | `docs/ai/specs/.process/<SPEC-ID>-design-concept.md`, `docs/ai/specs/.process/<SPEC-ID>-workflow.md`, `specs/<feature>/SPEC-MOC.md`, the pushed branch name |
+| Scaffold-owned | `docs/ai/specs/.process/SPEC-<ID>-design-concept.md`, `docs/ai/specs/.process/SPEC-<ID>-workflow.md`, `specs/<feature>/SPEC-MOC.md`, the pushed branch name |
 | Planning-stage | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md`, each file under `contracts/`, each file under `checklists/` — all relative to `specs/<feature>/` |
 
 Nothing outside this set is listed, so an unexpected file is a change to this

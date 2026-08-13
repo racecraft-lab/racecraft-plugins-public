@@ -35,7 +35,7 @@
 
 - [x] CHK018 - Are the three outcomes stated as disjoint with a mechanical test each, with no judgement call between them? [Clarity, Spec §FR-006, Contract blind-spot-pass §5]
 - [x] CHK019 - Are the three outcomes exhaustive over every reply the dispatch can produce, including a reply that arrives after the interview has begun? [Coverage, Spec §FR-006]
-- [x] CHK020 - Is an operator-facing status-line shape fixed for the **returned nothing usable** outcome? FR-008's block placeholder reads "the FR-006 status line for the outcome" for all three outcomes, but FR-006 fixes shapes only for the ran case. [Resolved] [Spec §FR-006, §FR-007]
+- [x] CHK020 - Is an operator-facing status-line shape fixed for the **returned nothing usable** outcome? FR-008's block placeholder reads "the status line for the outcome" for all three outcomes, but FR-006 fixes shapes only for the ran case. [Resolved] [Spec §FR-006, §FR-007]
 - [x] CHK021 - Is an operator-facing status-line shape fixed for the **did not run** outcome, including where its stated reason goes? [Resolved] [Spec §FR-006, §FR-007]
 - [x] CHK022 - Is a design-concept header-line shape fixed for each of the three outcomes? FR-010 fixes the key and the content each line must carry but no shape, while SC-004 requires a reader to tell the outcomes apart from the header alone. [Resolved] [Spec §FR-010, §SC-004]
 - [x] CHK023 - Is it stated that the sentinel sentence serves as both the analyst-to-scaffold signal and the operator-facing string, so an implementer does not invent a second wording for the operator? [Clarity, Spec §FR-006, Contract blind-spot-pass §4, §6]
@@ -60,7 +60,7 @@
 - [x] CHK036 - Does FR-013a state its consequence once rather than twice? The sentence "If any part fails, scaffold MUST NOT ask, and MUST print the hand-off command instead" appears twice in the same requirement, with "any part" and "any check" as competing subjects. [Conflict, Spec §FR-013a]
 - [x] CHK037 - Is the second test (`git status --porcelain` clean) scoped to the same checkout the first test resolved, so the two cannot be applied to different trees? [Clarity, Spec §FR-013a, Contract chain-handoff §2]
 - [x] CHK038 - Is the excluded test (the most recent commit) stated with the reason it is excluded, so an implementer does not reintroduce it as a strengthening? [Completeness, Spec §FR-013a]
-- [x] CHK039 - Is the no-new-machinery claim substantiated by naming where each command already runs, rather than asserted? [Traceability, Spec §FR-023, Contract chain-handoff §2]
+- [x] CHK039 - Is the no-new-machinery claim substantiated by what each command does — read-only, adding no script, helper, or tool grant — rather than asserted? [Traceability, Spec §FR-023, Contract chain-handoff §2]
 - [x] CHK040 - Is the stale-same-named-workflow hazard documented as the reason the predicate is path resolution rather than root identity? [Completeness, Spec §Edge Cases, Contract chain-handoff §2]
 
 ## Closing Report Field Contract

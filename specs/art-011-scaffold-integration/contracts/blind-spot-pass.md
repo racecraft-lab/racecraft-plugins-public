@@ -292,7 +292,7 @@ the seeded `scope` string — so the two records cannot drift:
 
 ```text
 --- BLIND-SPOT PASS FINDINGS ---
-<the numbered findings, or the FR-006 status line for the outcome>
+<the numbered findings, or the status line for the outcome>
 <the set-aside line, present only when findings are shown>
 Record the Blind-spot pass line in the design concept's header blockquote.
 Treat each finding as a candidate question; any finding not reached becomes an Open Question.

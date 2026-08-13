@@ -992,11 +992,11 @@
               "transform": "claude_guard_strip"
             },
             {
-              "byte_count": 52059,
+              "byte_count": 52042,
               "kind": "skill",
               "path": "skills/speckit-scaffold-spec/SKILL.md",
               "required": true,
-              "sha256": "78266cab7abe09ddfceef33990c32c2f36ce1c484df878cb1609fe24ec772cca",
+              "sha256": "72972c32b51440a4ab445b38d8342f55b62a4f3ac9ca8fb88e4d20dd46133599",
               "source_path": "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
               "transform": "claude_guard_strip"
             },
@@ -2011,11 +2011,11 @@
               "transform": "claude_guard_strip"
             },
             {
-              "byte_count": 52059,
+              "byte_count": 52042,
               "kind": "skill",
               "path": "skills/speckit-scaffold-spec/SKILL.md",
               "required": true,
-              "sha256": "78266cab7abe09ddfceef33990c32c2f36ce1c484df878cb1609fe24ec772cca",
+              "sha256": "72972c32b51440a4ab445b38d8342f55b62a4f3ac9ca8fb88e4d20dd46133599",
               "source_path": "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
               "transform": "claude_guard_strip"
             },
@@ -2264,7 +2264,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "2012a8a4337353d4cf195f7d032137e38211682c84585e78d9fba51b6b80c2d9",
+          "file_tree_hash": "4642563b25d9b7d8a8cedd34b2ed84c2fe5a660a67d4d509a4d90a45b06e92cd",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -3168,11 +3168,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 52622,
+              "byte_count": 52605,
               "kind": "skill",
               "path": "skills/speckit-scaffold-spec/SKILL.md",
               "required": true,
-              "sha256": "e2b1ce7c84565f8a44902c13e31fd57caeeb3fd63186eee4e07d9d32f83d8694",
+              "sha256": "42f7620313155b3351c4ed74842e8b2581ea67794fc188a179731ae3b2c36602",
               "source_path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
               "transform": "codex_overlay"
             },
@@ -4340,11 +4340,11 @@
               "transform": "path_normalization"
             },
             {
-              "byte_count": 52622,
+              "byte_count": 52605,
               "kind": "skill",
               "path": "skills/speckit-scaffold-spec/SKILL.md",
               "required": true,
-              "sha256": "e2b1ce7c84565f8a44902c13e31fd57caeeb3fd63186eee4e07d9d32f83d8694",
+              "sha256": "42f7620313155b3351c4ed74842e8b2581ea67794fc188a179731ae3b2c36602",
               "source_path": "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
               "transform": "codex_overlay"
             },
@@ -4620,7 +4620,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "0524d6b06dbb891474b071eee6bcab10d15c0eadc117de7ac0236b64f976dbc9",
+          "file_tree_hash": "63ea7b699cd55dd34353c1a7aeab2959184887952f2fc47c9c26a19fda211a37",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

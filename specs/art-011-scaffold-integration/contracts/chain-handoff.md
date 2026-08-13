@@ -69,8 +69,8 @@ prints the hand-off command rather than searching for the right worktree.
 commit is the roadmap status flip rather than the workflow-file commit, so a
 last-commit test would fail on every correct run (FR-013a).
 
-**No new machinery** (FR-023): both commands already run at Step 3.5 of both
-variants.
+**No new machinery** (FR-023): both commands are read-only, and neither adds a
+script, a helper, or a tool grant on either variant.
 
 ## 3. Per-platform chain condition
 
@@ -338,7 +338,7 @@ fixed here:
 
 | Group | Candidates |
 |---|---|
-| Scaffold-owned | `docs/ai/specs/.process/<SPEC-ID>-design-concept.md`, `docs/ai/specs/.process/<SPEC-ID>-workflow.md`, `specs/<feature>/SPEC-MOC.md`, the pushed branch name |
+| Scaffold-owned | `docs/ai/specs/.process/SPEC-<ID>-design-concept.md`, `docs/ai/specs/.process/SPEC-<ID>-workflow.md`, `specs/<feature>/SPEC-MOC.md`, the pushed branch name |
 | Planning-stage | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md`, each file under `contracts/`, each file under `checklists/` — all relative to `specs/<feature>/` |
 
 Nothing outside this set is listed, so an unexpected file is a change to this

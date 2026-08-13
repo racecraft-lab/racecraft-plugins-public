@@ -145,11 +145,16 @@ exactly that case. Testing path resolution rather than root identity is what
 makes the two agree by construction.
 
 **Second half of the check**: `git status --porcelain` clean in that checkout.
-This command already runs in Step 3.5 of both variants
+FR-023's no-new-machinery constraint holds because both commands are read-only
+git queries that add no script, no helper, and no tool grant — not because the
+skills ran them earlier. Neither is reliably already in hand at Step 9:
+`git status --porcelain` appears at Step 3.5 of both variants
 (`speckit-pro/skills/speckit-scaffold-spec/SKILL.md:249` and
-`speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md:254`), so FR-023's
-no-new-machinery constraint holds: the check reuses two commands the skills
-already run.
+`speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md:254`) but only
+conditionally, guarded by "After any bootstrap command", so it does not run on
+the common path where the project documents no bootstrap. `git rev-parse
+--show-toplevel` appears at Step 3.5 of neither variant. Step 9 therefore runs
+both itself.
 
 **Explicitly not tested**: the most recent commit. After Step 8 the newest commit
 is the roadmap status flip, not the workflow-file commit, so a last-commit test

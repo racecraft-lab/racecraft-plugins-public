@@ -433,7 +433,7 @@ seeded scope string — so the two records cannot drift:
 
 ```text
 --- BLIND-SPOT PASS FINDINGS ---
-<the numbered findings, or the FR-006 status line for the outcome>
+<the numbered findings, or the status line for the outcome>
 <the set-aside line, present only when findings are shown>
 Record the Blind-spot pass line in the design concept's header blockquote.
 Treat each finding as a candidate question; any finding not reached becomes an Open Question.
@@ -731,8 +731,8 @@ commit there — usually main, which this skill may never touch.
 
 **What the check must NOT test: the most recent commit.** After step 8 the newest
 commit is the roadmap status flip rather than the workflow-file commit, so a
-last-commit test would fail on every correct run. Both commands already run at
-step 3.5, so this check adds no machinery.
+last-commit test would fail on every correct run. Both commands are read-only,
+so this check adds no machinery.
 
 **Attempt the chain only when that check passes.** Otherwise ask nothing at all
 and print the hand-off command. A Codex task's workspace root is fixed when the
@@ -904,7 +904,7 @@ directions is unverifiable against an open set, so the candidates are fixed:
 
 | Group | Candidates |
 | ----- | ---------- |
-| Scaffold-owned | `docs/ai/specs/.process/<SPEC-ID>-design-concept.md`, `docs/ai/specs/.process/<SPEC-ID>-workflow.md`, `specs/<feature>/SPEC-MOC.md`, the pushed branch name |
+| Scaffold-owned | `docs/ai/specs/.process/SPEC-<ID>-design-concept.md`, `docs/ai/specs/.process/SPEC-<ID>-workflow.md`, `specs/<feature>/SPEC-MOC.md`, the pushed branch name |
 | Planning-stage | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md`, each file under `contracts/`, each file under `checklists/` — all relative to `specs/<feature>/` |
 
 Nothing outside this set is listed, so an unexpected file is a change to this

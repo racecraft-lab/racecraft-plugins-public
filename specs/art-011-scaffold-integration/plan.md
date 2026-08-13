@@ -175,7 +175,7 @@ empty.
 | Principle | Verdict | Evidence |
 |---|---|---|
 | I. Plugin Structure Compliance | PASS | No new plugin component. Two existing `SKILL.md` files are edited in place; both keep valid frontmatter and their existing directory layout. No test moves into the install-facing plugin directory. |
-| II. Cross-Platform Runtime & Script Safety | PASS, and strengthened | FR-023 forbids new executable machinery outright. This change adds zero scripts, zero Bash, zero `jq`. The FR-013a pre-chain check reuses `git rev-parse --show-toplevel` and `git status --porcelain`, both of which the skills already run at Step 3.5. |
+| II. Cross-Platform Runtime & Script Safety | PASS, and strengthened | FR-023 forbids new executable machinery outright. This change adds zero scripts, zero Bash, zero `jq`. The FR-013a pre-chain check uses `git rev-parse --show-toplevel` and `git status --porcelain`, both read-only git queries that add no script, helper, or tool grant. |
 | III. Semantic Versioning | PASS | No manual version edit. release-please owns the bump; `scripts/refresh-release-artifacts.py` syncs the marketplace registries. |
 | IV. Test Coverage Before Merge | PASS | No new Python helper, gate, or repository tool, so no Layer 4 unit coverage is owed. Both edited skills stay under Layer 1 structural validation, and FR-021b adds six new Layer 2 trigger cases. `python3 tests/speckit-pro/run-all.py` must pass with zero failures. |
 | V. Conventional Commits | PASS | Commits and the PR title use `feat(speckit-pro): ...`. The change adds capability to a shipped skill, so `feat` is the correct type and `speckit-pro` the correct scope. A `release-note` fence is required on a `feat` PR. |
