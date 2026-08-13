@@ -49,7 +49,7 @@
     the capability), not the text, and its Open Questions route this to
     `/speckit-clarify`. **Closed by** FR-021, which fixes the replacement capability
     sentence and the resulting 1015-character value against the 1024 cap, and FR-021b,
-    which fixes three cases per platform.
+    which fixes four cases per platform (two positive, two negative).
   - **FR-022** *(Resolved)* — the Codex variant's existing Output section instructs the
     operator to start a new Codex task rooted at the worktree and forbids handing off
     from the parent checkout, which an in-session chain from a parent-rooted Codex

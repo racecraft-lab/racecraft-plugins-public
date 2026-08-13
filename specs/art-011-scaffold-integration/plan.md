@@ -320,7 +320,7 @@ none of those sentences is string-pinned by
 one, because the five pinned Grill Me picker strings live in the same step. They
 must survive verbatim.
 
-### Test fixtures — three cases per platform, ASCII only
+### Test fixtures — four cases per platform, ASCII only
 
 Added to `tests/speckit-pro/layer2-trigger/evals/speckit-scaffold-spec-trigger.json`
 and `tests/speckit-pro/layer2-trigger/codex-evals/speckit-scaffold-spec-trigger.json`
