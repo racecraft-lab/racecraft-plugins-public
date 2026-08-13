@@ -1336,6 +1336,94 @@ Repository quality gates:
 
 ---
 
+## Post-Implementation Evidence
+
+### Reviewability Diff Gate — measured, and the number disagrees with the estimate
+
+`final-reviewability-backstop` is a deferred helper on the installed runner and
+was not invoked. This is the measured diff against `origin/main`, which is the
+committed evidence the skill directs the run to use instead.
+
+| Class | Files | Note |
+|---|---|---|
+| Production | **2** | Both scaffold `SKILL.md` variants. Exactly the declared surface |
+| Tests | 2 | The two Layer 2 fixtures |
+| Docs and spec | 17 | Spec artifacts, the workflow record, roadmap and MOC updates |
+| Generated | 19 | `dist/`, installed-cache copies, proof hashes. Excluded from review by the repository's own rules |
+| **Total** | **40** | 19 commits |
+
+**Production churn is 1160 changed lines (+1149 / −11), against a declared
+322.** Both figures are honest and they measure different things, which is worth
+stating rather than burying:
+
+- 322 is `estimate-spec-size`'s **forward projection** from structured signals —
+  4 stories, 2 files, 31 requirements, modify-weighted. It is a scoping heuristic
+  computed before any line was written, and the shared reference calls it a
+  forward guess.
+- 1160 is the **actual line count** of the shipped prose.
+
+Neither the plan-phase estimator nor the reviewability gate can reconcile them
+here, because both are built for code: `estimate-reviewable-loc` scored this
+change 0 by construction, since it recognises production only by `src/`, `app/`,
+`lib/`, `scripts/` prefixes or JS/TS/SQL suffixes. A plugin whose shipped
+artifacts are Markdown is invisible to it at any size.
+
+**Judgement, stated plainly for the reviewer rather than resolved by a tool.**
+This is one navigable PR by the recorded atomicity route, and the reviewer's real
+burden is two prose files read against two contracts that fix most of their
+strings verbatim. But 1160 lines is a large read by any measure, and a reviewer
+should know that going in. The 3.6x gap between the scoping estimate and the
+shipped reality is itself a finding: the estimator's per-file weighting assumes
+code density, and prose skill definitions carry far more lines per unit of
+behaviour. That belongs with the other estimator evidence in ART-014's scope.
+
+### Self-Review — the mandatory four-question audit
+
+**1. Does the implementation match the spec, or did it drift?** It matches, and
+the drift that did occur was caught and reconciled rather than absorbed. One real
+divergence: a fourth Layer 2 trigger case was added on an independent review's
+finding while four artifacts still specified three. The verify-implementation
+gate caught it; the requirement was amended toward the shipped fixtures and the
+reasoning recorded, and five stale references were chased across `spec.md`,
+`plan.md`, `tasks.md`, `research.md`, and a checklist.
+
+**2. What did I get wrong during the run?** Four things, all corrected in place.
+Two false success criteria of my own authoring: SC-007's confirmation count,
+falsified by two prompts the shipped skill already issues, and the claim that a
+dependency label is universal, falsified by 14 PRSG entries spelling it
+`**Deps:**`. A wrong anchor for the `## Scaffold Complete` report, described as
+inside Step 7 when it is a top-level heading between Steps 7 and 8. And a
+revision note whose downstream list named the artifacts that motivated the
+correction rather than every artifact repeating the corrected claim, which let a
+falsified sentence survive two more phases. I also mis-identified the Bash guard
+mid-implementation and passed that error to an executor, which corrected me.
+
+**3. What is genuinely unverified at merge time?** The routing consequence of the
+reworded description. Layer 2 is a live gate outside `FULL_VERIFY` and was
+deliberately not run from an agent, because its Claude runner moves the
+operator's installed skill directory aside. Until it runs, whether the newly
+introduced word "planning" pulls prompts away from the sibling autopilot skill is
+untested. Both behaviours this spec ships — the pass and the chain — are
+prompt-level, so no fixture asserts against them at all; UAT is their only
+evidence path.
+
+**4. What would I tell the next person touching these files?** The Codex variant
+sits at 7887 words against a hard 8000 cap. There are 113 words of headroom, and
+the next change to that file hits the ceiling immediately.
+
+### UAT Runbook
+
+`generate-uat-skeleton` is a deferred helper on the installed runner and was not
+invoked; no committed source-derived runbook exists for this spec. Recorded as
+**skipped with deferred-helper evidence**, which is the fail-open path the skill
+prescribes. The `uat-runbook-author` subagent was correctly not spawned, since it
+runs only when a skeleton exists.
+
+This matters more than usual here. Both shipped behaviours are prose an agent
+executes, so UAT is not a supplementary check — it is the only place the pass and
+the chain are observed working. The spec fixes the operator-facing strings
+precisely so a runbook can assert against them.
+
 ## Lessons Learned
 
 ### What Worked Well
