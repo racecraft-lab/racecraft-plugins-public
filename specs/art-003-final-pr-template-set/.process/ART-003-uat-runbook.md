@@ -72,13 +72,25 @@ at the console panel first, then read the page from top to bottom.
 
 **You should see:**
 
-- The console shows **nothing at all** — no red error lines, no yellow
-  warning lines, not even one mentioning the font address the page tries to
-  reach. (If a line *does* appear, mentioning `fonts.googleapis.com` or a
-  blocked/failed network request, write down its exact wording — that is a
-  real finding worth flagging, not something to wave off. The requirement is
-  that the console stays silent even though the page cannot actually reach
-  that font while you're offline.)
+- The console shows **exactly one red line**, and it names
+  `fonts.googleapis.com`:
+
+  ```text
+  Failed to load resource: net::ERR_INTERNET_DISCONNECTED
+  ```
+
+  That one line is expected here and is not a defect in this template. The
+  page's shared header links a font stylesheet hosted on the web, and the
+  browser itself reports any web address it cannot reach while you are
+  offline. Nothing the page could do would silence it: the message comes from
+  the browser, not from the page's own code. All seven templates in this
+  gallery share that header and all seven print this same line offline. Turn
+  your network back on and reload, and the console is completely silent.
+
+  **Anything else in the console is a real finding.** A second line, a line
+  naming any address other than `fonts.googleapis.com`, a yellow warning, or
+  any message mentioning the page's own file — write down its exact wording.
+  Those are the ones this step exists to catch.
 - The browser tab title reads "Pull Request Write-up — NIMBUS-101 Offline
   Draft Sync."
 - The page itself, top to bottom, shows: a small logo mark; the words "Pull
@@ -106,8 +118,10 @@ at the console panel first, then read the page from top to bottom.
   names where the text is going, not how it gets there.
 
 *Why this matters: this is the only way to confirm the page actually
-renders complete and silent when opened the plain way, which is the whole
-reason the template can be trusted to work for anyone who opens it later.*
+renders complete when opened the plain way, and that it adds no complaint of
+its own beyond the one the browser makes about a font it cannot reach. That
+is the whole reason the template can be trusted to work for anyone who opens
+it later.*
 
 ### Step 2 — Confirm the page still works with no network, and see what changes
 
@@ -552,7 +566,7 @@ directly.)
 
 | Step(s) | Proves | Spec reference |
 |---|---|---|
-| 1 | Opens fully from a filesystem with nothing missing and the console silent | SC-001 |
+| 1 | Opens fully from a filesystem with nothing missing, and adds no console message of its own (the shared header's font request is the one expected line while offline, and the console is silent once the network is back) | SC-001 |
 | 1, 2 | Stays fully readable and every control stays usable with no network; only the typeface changes | SC-002 |
 | 1 | Each of the six sections appears as its own titled section with real sample content, and the implementation notes render in the record's own order with a non-adjacent retried entry | US1 Acceptance Scenarios 3 and 5 |
 | 1 | The two export buttons are labeled by destination, not mechanism | US2 Acceptance Scenario 7 |
