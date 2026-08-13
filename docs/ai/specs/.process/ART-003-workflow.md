@@ -1641,17 +1641,80 @@ Project quality gates:
 
 ## Lessons Learned
 
+Written at close, PR #435 open.
+
 ### What Worked Well
 
--
+- **Measuring instead of scaling.** The projection moved from ~285 to
+  ~1000–1200 to a settled 758, and the artifact landed at 735. What made the
+  difference was refitting against the four shipped templates *individually*
+  rather than against one aggregate figure, which revealed the predictor was the
+  `exports` declaration and not slot count or upstream size.
+- **Checkpoints placed where a miss is cheap.** M1 fired before any export work,
+  so a ceiling miss would have surfaced at ~150 lines written rather than 735.
+  It passed on first measurement, but its value was that it *could* have failed
+  early.
+- **Challenging readiness rather than self-scoring it.** The G6.5 adversarial
+  pass returned WEAKENED with three serious findings and corrected the
+  orchestrator on a claim it had overstated. A gate graded by its own author
+  would have returned a clean pass and taught nothing.
+- **Proving a check binds before trusting it.** Byte identity was verified by
+  changing a character inside each canonical block to watch the drift checker
+  fire, then restoring. The fill-region checks were proved non-vacuous by
+  flipping a copy's status both ways. Both are the difference between "the check
+  passed" and "the check works".
+- **Verifying behaviour dynamically.** The currency guard was demonstrated under
+  a stubbed DOM in both settle directions, alongside the shipped defect
+  reproducing in both. That is evidence; a code reading would have been a claim.
 
 ### Challenges Encountered
 
--
+- **A defect shipped through a green suite and was caught only by independent
+  review.** The artifact's title disagreed with its catalog entry in case, so
+  every export opened with the wrong value. 7379 passing tests said nothing,
+  because nothing asserts that agreement. The lesson is not "review harder" — it
+  is that a manifest field with an artifact-side consumer and no artifact-side
+  gate is where defects will keep landing. Two such fields are now known:
+  `title` and `exports`.
+- **Four separate guardrails did not bind this work.** The setup gate reads the
+  last number in a whole file, so prose near an unrelated figure poisons it — it
+  fired three times here, on a spec ID, a filename, and a table header. G1 and
+  G2 count only the bare `[NEEDS CLARIFICATION]` literal and miss the annotated
+  form. The plan estimator projects file count times forty and classifies none of
+  this slice's file types as production. **G4 counts only `spec.md` and
+  `plan.md` and never opens `checklists/`**, so it returned PASS at zero while a
+  checklist held fourteen real gaps. None is broken exactly; together they left
+  the slice's size and gap state entirely to whoever was paying attention.
+- **The test suite is a writer.** `validate-plugin-payload.py` runs the real
+  payload builder, so every suite run rewrites `dist/**`, and with the source
+  moved aside it deletes the mirrors. A `git add -A` absorbed two of them into a
+  commit without the metadata the real generator updates alongside. Nothing was
+  masked, because the mirrors were stale, but the near miss was real.
+- **Documented expectations were incomplete in a dangerous direction.** The task
+  list named one expected-failure family where there were three. An executor
+  seeing eight failures with one documented would reasonably "fix" it by flipping
+  the catalog early — destroying the both-directions guarantee that flip exists
+  to prove.
+- **Parallel executors drifted one shared number.** Three checklist domains
+  edited one budget block concurrently and left the plan's gate-read declaration
+  at 750 while the decomposition had moved to 757. Caught, but only because
+  someone re-read the block after all three finished.
 
 ### Patterns to Reuse
 
--
+- **Never `git add -A` after a suite run in this repository.** Stage explicit
+  paths. Generated output belongs to its generator, and the generator signature
+  is 24 paths, not 2.
+- **Read a gate's source before trusting its verdict.** Every one of the four
+  blind spots above was found by reading the implementation rather than the
+  documentation.
+- **Run the declaration parser rather than reading the declaration.** The last
+  match in the file wins, and prose is enough to move it.
+- **When an executor flags a limitation, attempt it yourself before recording it
+  as blocked.** The render check was attempted and is genuinely blocked; that is
+  worth more than an unexamined deferral.
+- **State what was not verified, in the artifact that ships.** Nine acceptance
+  items and six known gaps are named in the PR rather than implied by silence.
 
 ---
 
