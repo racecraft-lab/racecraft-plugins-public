@@ -1,16 +1,18 @@
-Scaffolding a spec and planning it used to be two separate commands, with nothing in between that looked for what the roadmap author had not thought of. This change closes both halves.
+Scaffolding a spec and planning it used to be two separate commands, with nothing in between that looked for what the roadmap author had not thought of. This change closes that gap and makes the seam between the two explicit.
 
 ```release-note
-speckit-scaffold-spec now opens with a read-only blind-spot pass that surfaces unknown unknowns before the interview, seeds them into it, and can continue straight into the autopilot planning stage behind a single confirmation.
+speckit-scaffold-spec now opens with a read-only blind-spot pass that surfaces unknown unknowns before the interview, seeds them into it, and closes by handing off the exact command that starts the autopilot planning stage.
 ```
 
 ## What changed
 
 **A blind-spot pass runs before the interview.** Scaffold dispatches the already-shipped read-only `codebase-analyst` to scan the roadmap entry's scope and its dependency chain for hidden coupling, risky surfaces, and unstated assumptions. It returns at most five findings ranked by impact and surprise, and always says how many it set aside. The findings reach the interview through the `scope` argument grill-me already takes, so grill-me itself is untouched.
 
-**The run can continue into planning.** After everything scaffold owns is committed and pushed, one read-only check confirms the workflow file is where the autopilot will look for it, then a single confirmation offers to start the planning stage in the same session. Declining prints the exact command to start it later and rolls nothing back.
+**The run ends on an explicit hand-off.** After everything scaffold owns is committed and pushed, one read-only check works out whether the operator can run the autopilot from where they are or must re-root first, and selects the command's form accordingly. A single confirmation records whether they are continuing now. Either way the exact command is printed and nothing is rolled back.
 
-**One closing report.** It names the outcome, the draft-PR line, an index of what the run actually produced, and one next step.
+**Scaffold does not run the autopilot, and no longer says it will.** The first draft of this PR chained in-session. It could not work: `speckit-pro/skills/speckit-autopilot/SKILL.md:11` carries `disable-model-invocation: true`, which the skills docs define as "Only you can invoke the skill" and which `73dcbcc7` set deliberately to close that path. An independent review caught it before merge. The alternative — dropping the flag — would make a seven-phase autonomous run with auto-commits model-triggerable, which is the exact case the flag exists for. See "Known gaps" for what this cost.
+
+**One closing report.** It names the outcome, the draft-PR line, an index of what the run actually produced, and one next step, under the single heading `## Ready for Planning`.
 
 ## Why
 
@@ -26,6 +28,7 @@ Two capabilities the roadmap called for, from the PRD's acceptance criteria AC-1
 - **Normalizing the `Key Files` heading** across the eleven roadmaps. The pass degrades instead.
 - **A skip flag or a configurable findings cap.** Both were considered and declined.
 - **Any new executable machinery.** Every change is prose in two skill files.
+- **Changing `speckit-autopilot`'s frontmatter.** Its `disable-model-invocation` flag stays. Removing it was considered and declined.
 
 ## Review order
 
@@ -49,7 +52,8 @@ Every requirement cites the interview question it came from. The design concept 
 
 - Full suite **7378/7378**, equal to the recorded baseline. A prose-only change adds no runnable test, and the trigger cases it adds live in fixtures the suite does not execute, so equality is the correct result and proves no regression.
 - Layer 1 structural **1447/1447**, including the Codex skill validator and Layer 8 cross-platform parity.
-- Both skill descriptions measure exactly **1015 characters** against a hard 1024 cap and hash identically, so cross-platform parity holds by measurement.
+- Both skill descriptions measure exactly **1013 characters** against a hard 1024 cap and hash identically, so cross-platform parity holds by measurement.
+- **Ten shared fixed blocks verified byte-identical** across the two variants — the check block, the confirmation block, the report layout, the hand-off table, the candidate table, and the outcome table among them.
 - Generated artifacts refreshed; the zero-Bash guard passes.
 - Doctor passes. The verification gate passes. The phantom-completion check finds none.
 - An independent skill review found nothing at high severity.
@@ -58,9 +62,9 @@ Every requirement cites the interview question it came from. The design concept 
 
 - **The trigger evals have not been run.** They are a live gate outside the default suite, and the Claude runner moves the operator's installed skill directory aside, so no agent should run it. Until it runs, whether the word "planning" — new to scaffold's description and already claimed by the autopilot skill — pulls prompts away from autopilot is untested. Two negative cases per platform are in place to answer it, one stating its precondition and one deliberately short.
 - **No UAT runbook.** The skeleton generator is deferred on the installed runner. Both shipped behaviours are prose an agent executes, so UAT is their only observation point.
-- **The Codex file has 113 words of headroom** against its 8000-word cap. The next change to it hits the ceiling.
-- **Two next-step tables render differently across platforms.** The values are verified identical, so this is presentation rather than behaviour, but it means those two sites cannot be diffed line-for-line against the contract. Left for a follow-up rather than spending the remaining word budget.
-- **The chain is Codex-conditional.** A Codex task's workspace root is fixed when the task starts and scaffold runs before the worktree exists, so the ordinary Codex run prints the hand-off instead of chaining. This is a platform limit, not a design retreat; chaining unconditionally would either stop at the autopilot's own guard or, with a stale workflow file in the parent checkout, commit to `main`.
+- **The in-session chain is gone, and with it a lot of specified behaviour.** Removing it made the whole post-planning apparatus unreachable: the `## Planning Complete` and `## Planning Incomplete` headings, the completion test, the resume command and its `--from-phase` derivation, and the Confidence Gate discriminator. Four checklist domains hold resolved findings against rules that no longer ship. The requirements are marked superseded rather than deleted, so the record stays auditable, but a reviewer reading `spec.md` will meet requirements that describe behaviour this PR does not implement.
+- **The confirmation's job is now thin.** Both answers print the same command; the answer selects only how the report frames it. It was kept because it is operator-visible behaviour chosen at interview, but dropping it is a defensible call and a reviewer may want to make it.
+- **The Codex file now has 908 words of headroom** against its 8000-word cap, up from 113, because the removed apparatus was large.
 
 ## Rollback
 

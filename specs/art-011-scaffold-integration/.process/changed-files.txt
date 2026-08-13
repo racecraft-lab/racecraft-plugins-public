@@ -12,6 +12,8 @@ docs/ai/specs/html-artifacts-technical-roadmap.md
 docs/ai/specs/racecraft-identity-system-roadmap-MOC.md
 speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md
 speckit-pro/skills/speckit-scaffold-spec/SKILL.md
+specs/art-011-scaffold-integration/.process/changed-files.txt
+specs/art-011-scaffold-integration/.process/pr-body.md
 specs/art-011-scaffold-integration/SPEC-MOC.md
 specs/art-011-scaffold-integration/checklists/api-contracts.md
 specs/art-011-scaffold-integration/checklists/error-handling.md

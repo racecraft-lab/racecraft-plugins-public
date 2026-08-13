@@ -618,6 +618,55 @@ note's downstream list is load-bearing: an artifact absent from it does not get
 swept. Enumerate every file that repeats the corrected claim, not only the ones
 that motivated the correction.*
 
+### Revision note 3 — 2026-08-13 — Q4's in-session chain is not available on either platform
+
+**What Q4 recorded:** the run chains in-session into the autopilot's plan stage
+behind one confirmation, so a single invocation carries the operator from
+roadmap entry to planned spec.
+
+**What the evidence says.** Scaffold cannot invoke the autopilot. On Claude Code
+`speckit-pro/skills/speckit-autopilot/SKILL.md:11` carries
+`disable-model-invocation: true`, which the Claude Code skills documentation
+defines as "Only you can invoke the skill". It is not incidental: commit
+`73dcbcc7` added it deliberately "to close the model-invocation path", and the
+flag exists for precisely this class of skill — a seven-phase autonomous run
+that commits as it goes is the side effect an operator must trigger themselves.
+On Codex CLI no flag forbids it, but no skill in this plugin invokes a sibling
+skill from its body, so the mechanism is unverified; shipping an unverified
+invocation is worse than printing a command that always works.
+
+**What changed.** Both variants print the hand-off command and the operator runs
+it. The confirmation survives and records whether the operator is continuing
+now. The check that used to gate the chain now selects the hand-off's form.
+
+**Why this is a premise correction, not a reversal.** Q4 chose in-session
+chaining over a printed hand-off on the belief that both were available. One was
+not. This follows the same CAR-005 pattern as revision notes 1 and 2: the
+decision's *premise* was wrong, so the decision could not stand as recorded.
+
+**Downstream artifacts carrying the superseded claim** — enumerated in full,
+which is the lesson revision note 2 recorded:
+`speckit-pro/skills/speckit-scaffold-spec/SKILL.md` §9 and §10;
+`speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md` `## Hard Constraints`
+and `## Output`; both variants' frontmatter `description`;
+`specs/art-011-scaffold-integration/spec.md` FR-013a, FR-014, FR-015, FR-015a,
+FR-015b, FR-017, FR-019, FR-020, SC-007, SC-010, SC-011;
+`contracts/chain-handoff.md` §2, §3, §5, §6, §8, §9; `plan.md`; `tasks.md`;
+`docs/ai/specs/.process/ART-011-workflow.md`; and the pull request body,
+including its `release-note` fence.
+
+**The cost.** Removing the chain makes the whole post-planning apparatus
+unreachable — the `## Planning Complete` and `## Planning Incomplete` headings,
+the completion test, the resume command and its `--from-phase` derivation, and
+the Confidence Gate discriminator. Four checklist domains recorded resolved
+findings against those rules. That work is not wasted as a record, but it no
+longer ships.
+
+*Lesson: the interview asked whether to chain and how, never whether the
+platform permits it. A blind-spot pass over ART-011's own scope — which is the
+feature this spec ships — would plausibly have surfaced the flag, since it sits
+in the frontmatter of the one skill the whole chain depends on.*
+
 ## Decisions recorded without a question
 
 Both were named at the closing checkpoint and accepted with the wrap-up:

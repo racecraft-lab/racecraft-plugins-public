@@ -1499,6 +1499,61 @@ leaves 113 words for whoever comes next.
 
 ---
 
+## Post-Review Amendment — 2026-08-13
+
+An independent code review of PR #434 found nine issues. Three were applied
+directly, one was a stale count, one was blocking, and four were left to the
+author. This section records the outcome of all nine.
+
+### The blocking finding: the chain could not execute
+
+`speckit-pro/skills/speckit-autopilot/SKILL.md:11` carries
+`disable-model-invocation: true`. The Claude Code skills documentation defines
+it as "Only you can invoke the skill", and commit `73dcbcc7` added it
+deliberately "to close the model-invocation path". Scaffold's Step 9 acceptance
+branch said "print the invocation verbatim, then run it" — unexecutable. The
+operator would have accepted, been promised the six planning phases "in this
+same session without further prompts", and received a printed line and nothing
+else.
+
+The operator chose to demote both variants to a hand-off rather than remove the
+flag. Removing it would have made the autopilot model-triggerable — a
+seven-phase autonomous run with auto-commits, the exact case the flag documents
+— re-enabled preloading it into subagents, and added a third production file.
+
+Recorded in full as revision note 3 in the design concept, which enumerates
+every downstream artifact.
+
+### The four findings left to the author
+
+| Finding | Disposition |
+| ------- | ----------- |
+| Codex `$speckit-autopilot` self-invocation unverified | Resolved by the same amendment: neither platform invokes now |
+| The design-concept `**Blind-spot pass:**` key is outside grill-me's documented four-key blockquote | Accepted as-is. The fix crosses this spec's stated non-goal of not touching grill-me, and FR-010a's repair path already makes scaffold the writer of record. The real ART-011 design concept carries an undocumented fifth key, so the blockquote is extensible in practice |
+| The 5-minute pass deadline names no clock | Not a defect. `allowed-tools` is a pre-approval list, not a restriction, so the skill's existing git commands and `date` are available; the review read it as a tool grant |
+| An unresolvable ART-006 citation in Codex runtime prose | Removed with the section it sat in |
+
+### Verification after the amendment
+
+Suite 7378/7378, equal to the baseline. Layer 1 1447/1447. Ten shared fixed
+blocks verified byte-identical across the two variants. Both descriptions 1013
+characters, hash-identical. Claude body 6778 words, Codex 7092, against the 8000
+cap. Generated artifacts refreshed; the zero-Bash guard passes.
+
+One regression was caught and fixed during the work: the Codex mirror wrapped
+`Never add Grep, Glob, or Bash` such that `add Grep, Glob, or Bash…` fell on its
+own physical line, which the XPLAT-009 guard classifies per physical line. And a
+pre-existing Layer 4 contract test required the literal phrase `start a new
+Codex task rooted at that worktree`, which the rewrite had dropped; it was
+restored.
+
+### Lesson
+
+The interview asked whether to chain and how, never whether the platform permits
+it. The flag sits in the frontmatter of the one skill the entire chain depends
+on. A blind-spot pass over ART-011's own scope — the feature this spec ships —
+is exactly the instrument that would have surfaced it.
+
 ## Project Structure Reference
 
 Only the paths this spec touches or reads.

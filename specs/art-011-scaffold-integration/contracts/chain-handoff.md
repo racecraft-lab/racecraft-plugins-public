@@ -1,5 +1,28 @@
 # Contract: Chain Hand-off and Closing Report
 
+> **Amendment, 2026-08-13 — the chain became a hand-off, so this contract's
+> fixed strings changed.** Scaffold cannot invoke the autopilot: on Claude Code
+> that skill carries `disable-model-invocation: true`
+> (`speckit-pro/skills/speckit-autopilot/SKILL.md:11`), documented as "Only you
+> can invoke the skill" and set deliberately in `73dcbcc7`; on Codex CLI a skill
+> body invoking a sibling skill mid-session is unverified. Both variants now
+> print the command and the operator runs it. The shipped strings this document
+> fixes changed accordingly, and the shipped `SKILL.md` files are authoritative
+> where they differ from the sections below:
+>
+> - §2's check no longer gates the hand-off. It selects the hand-off's form.
+> - §3's per-platform chain condition is **void**: neither platform chains.
+> - §5's "invoke on acceptance" is now "print on every ending".
+> - §6's three no-chain paths are now the three ordinary endings.
+> - §8's heading vocabulary collapses from three values to the single fixed
+>   string `## Ready for Planning`, and the artifact index's planning-stage
+>   candidate group is removed, because no planning stage runs before the report.
+> - §9's completion test is **void**: it read the result of a chained planning
+>   stage, and none runs inside a scaffold session.
+>
+> §1, §4, and §7 stand unchanged. Sections are retained rather than deleted so
+> the amendment is auditable against what the run originally decided.
+
 **Documentation only.** This contract ships no code. It fixes the pre-chain
 check, the confirmation, the invocation form, and the closing report's layout, so
 the two `SKILL.md` variants can be written as transcription and reviewed against
