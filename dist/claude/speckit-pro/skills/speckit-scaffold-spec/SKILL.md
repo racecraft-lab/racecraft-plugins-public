@@ -1,6 +1,6 @@
 ---
 name: speckit-scaffold-spec
-description: "Use this skill when the user wants to set up, scaffold, bootstrap, prep, initialize, or prepare a SPEC-ID from the technical roadmap for autonomous execution. Triggers on: set up SPEC-XXX, scaffold SPEC-XXX, bootstrap SPEC-XXX for development, prep SPEC-XXX, initialize the workspace for SPEC-XXX, prepare SPEC-XXX for the autonomous run, create a spec branch and workflow for SPEC-XXX, generate the workflow file for SPEC-XXX, I need a workflow file generated for SPEC-XXX, fill the prompts from the roadmap, pre-fill the workflow template, start working on SPEC-XXX, populate the workflow file for SPEC-XXX. Opens with a blind-spot pass, creates the git worktree, spec branch, Design Concept doc, and populated workflow file, then can chain into planning. Strictly interactive — requires a human to answer the grill-me questions. Not for checking roadmap status (use /speckit-pro:speckit-status), running a populated workflow (use /speckit-pro:speckit-autopilot), or SDD coaching (use /speckit-pro:speckit-coach)."
+description: "Use this skill when the user wants to set up, scaffold, bootstrap, prep, initialize, or prepare a SPEC-ID from the technical roadmap for autonomous execution. Triggers on: set up SPEC-XXX, scaffold SPEC-XXX, bootstrap SPEC-XXX for development, prep SPEC-XXX, initialize the workspace for SPEC-XXX, prepare SPEC-XXX for the autonomous run, create a spec branch and workflow for SPEC-XXX, generate the workflow file for SPEC-XXX, I need a workflow file generated for SPEC-XXX, fill the prompts from the roadmap, pre-fill the workflow template, start working on SPEC-XXX, populate the workflow file for SPEC-XXX. Opens with a blind-spot pass, creates the git worktree, spec branch, Design Concept doc, and populated workflow file, then hands off to planning. Strictly interactive — requires a human to answer the grill-me questions. Not for checking roadmap status (use /speckit-pro:speckit-status), running a populated workflow (use /speckit-pro:speckit-autopilot), or SDD coaching (use /speckit-pro:speckit-coach)."
 argument-hint: "SPEC-ID (e.g., SPEC-009)"
 user-invocable: true
 allowed-tools: Read Edit Write Skill Agent ToolSearch
@@ -746,16 +746,28 @@ WORKTREE (not on main) to mark the spec as `🔄 In Progress`:
 **NEVER push to main.** The technical roadmap update will reach
 main when the spec's PR is merged.
 
-### 9. Chain into the Planning Stage
+### 9. Hand Off to the Planning Stage
 
-The chain sits here, after Step 8, once the design concept, the workflow file,
+The hand-off sits here, after Step 8, once the design concept, the workflow file,
 the SPEC-MOC marker, and the roadmap status flip are all committed and pushed.
-Placing it earlier is rejected for a stated reason: a chained planning stage
-that fails or is interrupted must never leave the roadmap claiming the spec is
-still Ready. Steps 4 through 8 keep their numbers.
+Placing it earlier is rejected for a stated reason: a planning stage that fails
+or is interrupted must never leave the roadmap claiming the spec is still Ready.
+Steps 4 through 8 keep their numbers.
 
-**Run the pre-chain check first. Two read-only tests, and both must pass.** If
-any part fails, do NOT ask; print the hand-off command instead.
+**Scaffold never invokes the autopilot. It prints the command; the operator runs
+it.** This is a platform fact rather than a preference. On Claude Code the
+autopilot skill carries `disable-model-invocation: true`, which the skills
+documentation defines as "Only you can invoke the skill" — a deliberate setting,
+because a seven-phase autonomous run that commits as it goes is exactly the kind
+of side effect an operator must trigger themselves. On Codex CLI no flag forbids
+it, but a skill body invoking a sibling skill mid-session is unverified, and
+shipping an unverified invocation would be worse than printing a command that
+always works. **Never state that accepting will run the planning phases in this
+session.**
+
+**Run the hand-off check first. Two read-only tests.** They do not gate the
+hand-off — one is always printed. They select its form and decide whether a
+warning travels with it.
 
 ```text
 1. Resolve the current checkout with `git rev-parse --show-toplevel`.
@@ -772,8 +784,9 @@ inside", "is under", or "belongs to".
 directories.** Do not implement it by canonicalising the workflow path and
 comparing its parent, its repository root, or its worktree root against the
 current checkout root. A stale same-named workflow file in the parent checkout
-passes every such comparison, so planning phases would run with their commits
-landing there — usually main, which this skill may never commit to.
+passes every such comparison, so an operator following the bare command would run
+planning with its commits landing there — usually main, which this skill may
+never commit to.
 
 **What the check must NOT test: the most recent commit.** After Step 8 the
 newest commit is the roadmap status flip rather than the workflow-file commit,
@@ -781,59 +794,34 @@ so a last-commit test would fail on every correct run.
 
 Both commands are read-only, so this check adds no machinery.
 
-**Print one line before asking.** State three facts and no more: accepting runs
-the six planning phases in this same session without further prompts; those
-phases commit as they go; declining leaves everything already pushed exactly as
-it is. It is printed, not asked — no options — and does not count against the
-budget below.
+**What each result selects:**
 
-**Then ask exactly one confirmation, structured.** Use `AskUserQuestion`:
+| Check result | Effect on the hand-off |
+| ------------ | ---------------------- |
+| Step 2 passes | print the platform's command as written below |
+| Step 2 fails | print it with the rooting instruction, on either platform — the operator is rooted outside the worktree whichever one they are on |
+| Step 3 fails | add one line naming the uncommitted changes as something to resolve first |
+
+**Then ask exactly one confirmation, structured.** It records whether the
+operator is continuing now. It does not decide whether anything runs, because
+nothing does. Use `AskUserQuestion`:
 
 ```text
-Question: Scaffold is complete and pushed. Start the planning stage now?
+Question: Scaffold is complete and pushed. Are you continuing into planning now?
 Options, two, mutually exclusive, in this order:
-  1. Start planning (Recommended)
+  1. Continue now (Recommended)
   2. Stop here
 ```
 
-The recommended answer comes first, per house convention. Declining is fully
-non-destructive: everything scaffold owns is already committed and pushed.
+The recommended answer comes first, per house convention. Both answers are fully
+non-destructive, and both print the same command; the answer selects only how the
+closing report frames it. Never fall back to parsing a free-text reply. When the
+session exposes no structured confirmation mechanism, skip the question and
+print the report — the hand-off does not depend on it.
 
-Never fall back to parsing a free-text reply, and never chain by default when
-the structured confirmation is unavailable.
-
-**The budget counts what this step adds**: exactly one confirmation when the
-chain is attempted, none when the pre-chain check fails. Step 3's
+**The budget counts what this step adds**: exactly one confirmation. Step 3's
 reuse-or-recreate question and Step 3.5's bootstrap approval are pre-existing,
 are not counted, and are not removed.
-
-**On acceptance, print the invocation verbatim, then run it:**
-
-```text
-/speckit-pro:speckit-autopilot <workflow-file> --stage plan
-```
-
-Without that line the accepted path is the only branch point where the operator
-is told nothing, because the next output belongs to another skill. It also puts
-the same string in front of them on both branches.
-
-The stage token is the literal lowercase `plan`, from the closed vocabulary
-`plan`, `implement`, `full`. No aliases, no alternate casing, no long-form
-spellings. The workflow file path is the **sole** hand-off token: never pass a
-state file, branch name, feature directory, or environment variable across the
-boundary.
-
-**The three no-chain paths.** Do not chain, and print the hand-off command
-instead, in all three of these cases:
-
-```text
-1. The operator declines.
-2. No structured confirmation mechanism is available in the session.
-3. The pre-chain check above fails.
-```
-
-In every case **nothing is rolled back**: the operator loses one command and no
-work.
 
 **The hand-off command has one fixed form:**
 
@@ -843,30 +831,32 @@ work.
 | Codex CLI | start a new Codex task rooted at the spec worktree, then `$speckit-autopilot <workflow-file> --stage plan` |
 
 The Codex rooting instruction is **part of the command, not commentary beside
-it**: a Codex operator reaching this ending is by definition rooted outside the
-worktree, so a bare invocation would hand them a command the Workflow Worktree
-Binding guard stops.
+it**: a Codex task's workspace root is fixed when the task starts, and a scaffold
+run necessarily begins before the worktree exists, so that operator is by
+definition rooted outside it and a bare invocation would hand them a command the
+Workflow Worktree Binding guard stops. **On Codex the printed hand-off is the
+ordinary outcome, not a degraded one.**
 
-Beyond the pre-chain check, the Claude chain is unconditional. Claude's
-autopilot ships **no** worktree-binding guard, so a mis-rooted Claude chain
-would resolve silently against the parent checkout rather than stopping — which
-is why the check is required here too.
+The stage token is the literal lowercase `plan`, from the closed vocabulary
+`plan`, `implement`, `full`. No aliases, no alternate casing, no long-form
+spellings. The workflow file path is the **sole** hand-off token: never pass a
+state file, branch name, feature directory, or environment variable across the
+boundary.
+
+**Nothing is rolled back on any path.** Everything scaffold owns is committed and
+pushed before this step runs, so the operator who stops here loses one command
+and no work.
 
 ### 10. Closing Report
 
-**One report, rendered on every terminal condition the run can reach.** Four
-triggers, all four named because two of them are not choices:
+**One report, rendered on every ending the run can reach.** Since scaffold never
+invokes the autopilot, every run ends here, and the report is always owed:
 
 ```text
-1. After the planning stage, on acceptance.
-2. Immediately, when the operator declined.
-3. Immediately, when no structured confirmation mechanism was available.
-4. Immediately, when the pre-chain check failed.
+1. The operator is continuing into planning now.
+2. The operator stopped here.
+3. No structured confirmation mechanism was available, so nothing was asked.
 ```
-
-Trigger 4 is the **ordinary** Codex run, not an edge case, which is why a
-two-item accept-or-decline list is insufficient: it would leave the most common
-Codex ending with no report owed.
 
 The report is **printed, not written to a file.**
 
@@ -884,22 +874,19 @@ The report is **printed, not written to a file.**
 **Next step:** <one command>
 ```
 
-**The heading is a closed three-value vocabulary, one per terminal condition.**
-A two-value vocabulary would force one condition under a heading that is
-false:
+**The heading is one fixed string, `## Ready for Planning`.** It is true on all
+three endings: scaffold's own work is finished and pushed, and the planning
+stage is the next command whether the operator runs it now or later. It leads
+with what is finished rather than with a negation, because none of the three
+endings is a failure and none is the operator's fault.
 
-| Terminal condition | Heading |
-| ------------------ | ------- |
-| The operator declined, or the chain never fired | `## Stopped Before Planning` |
-| The chain fired and the completion test passes | `## Planning Complete` |
-| The chain fired and the completion test does not pass | `## Planning Incomplete` |
-
-**Fixed, conditional, and derived.** The heading is selected from the closed set
-above. The draft-PR line is conditional. The outcome line, the artifact index,
-and the next step are **derived** — none is a fixed string, and each has its own
-rule below. `<one command>` denotes one fixed string, not a bare invocation: on
-the three no-chain paths it is the Step 9 hand-off command, whose Codex form
-carries the rooting precondition. The slot stays one line per heading.
+**Fixed, conditional, and derived.** The heading and the draft-PR line are
+fixed, except that the draft-PR line is conditional on a URL existing. The
+outcome line, the artifact index, and the next step are **derived** — each has
+its own rule below. `<one command>` denotes one fixed string, not a bare
+invocation: it is the Step 9 hand-off command in the form that step's check
+selected, so its Codex form carries the rooting precondition. The slot stays one
+line.
 
 **The set-aside findings count MUST NOT appear here.** The list is closed at
 four elements; that count lives in the design concept's header record and in the
@@ -907,38 +894,27 @@ seeded block, and the artifact index points at the file carrying it.
 
 **The two reports must not restate the same fields**: no worktree path, no
 remote line, and no bootstrap result here — the Scaffold Complete report already
-gave all three and the closed list admits none of them. The pushed branch
+gave all three, and the closed list admits none of them. The pushed branch
 appears once, as an index entry, never as a repeated header field.
 
-**The outcome line, one per no-chain cause.** `## Stopped Before Planning`
-covers a deliberate stop and two endings the operator did not choose, so the
+**The outcome line, one per ending.** One heading covers all three, so the
 outcome line is where they are told apart. The index and the next step are the
-same on all three, since no planning stage ran:
+same on all three, because no planning stage ran in any of them:
 
-| No-chain cause | Outcome line states |
-| -------------- | ------------------- |
-| The operator declined | the run stopped at the operator's request, and nothing was rolled back |
-| No structured confirmation mechanism was available | the chain was not offered because the session exposes no structured confirmation mechanism, and nothing was rolled back |
-| The rooting test failed | planning was not started in this session because the workflow file is outside the current checkout; everything scaffold owns is finished and pushed, and nothing was rolled back |
-| The cleanliness test failed | the chain was not offered because the checkout has uncommitted changes, and nothing was rolled back |
+| Ending | Outcome line states |
+| ------ | ------------------- |
+| The operator is continuing now | everything scaffold owns is committed and pushed, and the planning stage is the next command |
+| The operator stopped here | the run stopped at the operator's request, everything scaffold owns is committed and pushed, and nothing was rolled back |
+| No structured confirmation mechanism was available | the question was not asked because the session exposes none, everything scaffold owns is committed and pushed, and nothing was rolled back |
 
-This does not reopen the three no-chain paths: they still behave identically —
-no chain, hand-off command printed, nothing rolled back. The two check failures
-are told apart because their remedies differ: a dirty checkout is fixed in
-place, while a mis-rooted session cannot be corrected from inside itself on
-Codex, so its remedy is the new session the Codex hand-off command already
-names.
+Every line closes on **everything scaffold owns is committed and pushed**, the
+fact the operator most needs.
 
-Every line closes on **nothing was rolled back**, the fact the operator most
-needs.
-
-**The rooting row reads as an ending, not an apology.** On Codex it is the
-ordinary outcome, reached by an operator who did nothing wrong and can do
-nothing about it from inside that session, so the wording leads with what is
-finished rather than with a negation. **The string is identical on both
-platforms** — a platform-forked outcome line would be a divergence outside the
-closed list of permitted differences — and it is true on both, because a Claude
-session failing the same test is in the same position.
+**When Step 9's cleanliness test failed, the outcome line carries one added
+clause** naming the uncommitted changes as something to resolve before running
+the next command. It is a clause on an existing element rather than a fifth
+element, and it is the only check result that reaches this report as text — the
+rooting result reaches it inside the next-step command instead.
 
 **The draft-PR line.** Show the URL when the run produced one. Otherwise state
 plainly that there is none:
@@ -951,12 +927,10 @@ Never omit the line silently, and never fabricate or guess a URL. For every run
 in this release "none" is the expected value, because draft-PR creation belongs
 to a later spec.
 
-**The artifact index enumerates what the run actually produced** — the
-scaffold-owned artifacts plus whatever the planning stage wrote, including the
-conditionally produced research artifact, the contract artifacts, and the
-checklist domains this spec chose. It **must not print a path that does not
-exist, and must not omit an artifact that does.** The set genuinely varies per
-spec, so a derived index stays true where a fixed list would not.
+**The artifact index enumerates what the run actually produced.** It **must not
+print a path that does not exist, and must not omit an artifact that does.** The
+set genuinely varies per spec, so a derived index stays true where a fixed list
+would not.
 
 **Derived from a closed candidate set.** Exactness in both directions is
 unverifiable against an open set, so the candidates are fixed here:
@@ -964,115 +938,19 @@ unverifiable against an open set, so the candidates are fixed here:
 | Group | Candidates |
 | ----- | ---------- |
 | Scaffold-owned | `docs/ai/specs/.process/SPEC-<ID>-design-concept.md`, `docs/ai/specs/.process/SPEC-<ID>-workflow.md`, `specs/<feature>/SPEC-MOC.md`, the pushed branch name |
-| Planning-stage | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md`, each file under `contracts/`, each file under `checklists/` — all relative to `specs/<feature>/` |
 
 Nothing outside this set is listed, so an unexpected file is a change to this
-list rather than a silent omission.
+list rather than a silent omission. The planning-stage artifacts are **not**
+candidates: no planning stage runs before this report, so none of them exists
+yet.
 
 **The existence test is a read of the candidate path, and nothing more.** A path
 that reads is listed; a path that does not read is omitted. This is the only
 existence test inside this skill's declared grant, and it adds no machinery.
-Never add Grep, Glob, or Bash to widen that grant.
+Never add Grep, Glob, or Bash to widen that grant. Never infer a path from
+convention, and never list a path that was not tested.
 
-The two directory-valued members, `contracts/` and `checklists/`, are the one
-place a plain read is insufficient. For those, the candidate paths are the
-artifact names the run's own plan and checklist phases recorded, so the
-enumeration still comes from a read rather than a directory listing. Never infer
-a path from convention, and never list a path that was not tested.
-
-**The next step, one rule per heading, so no heading ends on an undefined
-line.** Under `## Stopped Before Planning` the value is the Step 9 hand-off
-command.
-
-Under `## Planning Complete` it is the Step 9 invocation with the stage token
-advanced to the literal lowercase `implement`, the next member of the closed
-vocabulary:
-
-| Platform | Next step under `## Planning Complete` |
-| -------- | -------------------------------------- |
-| Claude Code | `/speckit-pro:speckit-autopilot <workflow-file> --stage implement` |
-| Codex CLI | `$speckit-autopilot <workflow-file> --stage implement` |
-
-The workflow file path is the same sole hand-off token, so nothing new crosses
-the boundary. **Never chain into the implement stage, and never ask a second
-confirmation to offer it.** The one confirmation Step 9 spends authorises the
-plan stage only. The implement stage is named as the operator's next command,
-never as scaffold's next action.
-
-Under `## Planning Incomplete` it is the resume command, which **is** the next
-step rather than a fifth element — the list is closed at four:
-
-| Platform | Resume command |
-| -------- | -------------- |
-| Claude Code | `/speckit-pro:speckit-autopilot <workflow-file> --stage plan --from-phase <phase>` |
-| Codex CLI | `$speckit-autopilot <workflow-file> --stage plan --from-phase <phase>` |
-
-`<phase>` is **derived, not chosen**: the first planning-phase row in
-`## Workflow Overview` without a terminal status, named in the autopilot's own
-lowercase phase vocabulary — `specify`, `clarify`, `plan`, `checklist`, `tasks`,
-`analyze`. It comes from the same single read the completion test below performs,
-so naming the phases that finished and naming the phase to resume from are two
-renderings of one result rather than two reads that could disagree. A phase that
-**failed** rather than finished needs no special case: it is simply the first
-non-terminal row.
-
-**When every planning row is terminal, omit `--from-phase` entirely.**
-`## Planning Incomplete` is reachable with all six rows terminal, because the
-second completion condition is the other half of the test — that is the
-strict-mode gate stop, where the row the operator must act on is
-`Confidence Gate`. That row is **not** a planning-phase row and has **no token**
-in the shipped `--from-phase` vocabulary, so it must never be named as
-`<phase>`:
-
-| State | Resume command |
-| ----- | -------------- |
-| A planning row is non-terminal | the invocation above, with `--from-phase <phase>` |
-| All six planning rows terminal, second condition unmet | the invocation with `--stage plan` and **no** `--from-phase` |
-
-The second row is shipped behaviour rather than a workaround: the autopilot
-re-resolves the stage from this same status table, the `Confidence Gate` row
-sits inside the plan stage's range, and a bare invocation therefore re-enters at
-the gate. `<phase>` is one of the six tokens or absent, with no third
-possibility — the autopilot range-checks `--from-phase` and stops on a value
-outside that range, so an invented token yields a command that fails instead of
-resuming.
-
-**Completion is read from the workflow file.** When the chained planning stage
-fails, stalls, or is interrupted, completion is determined **by reading the
-workflow file** — no live session, and no state file. Two conditions, both in
-that one artifact:
-
-```text
-1. Every planning-phase row in `## Workflow Overview` — Specify, Clarify,
-   Plan, Checklist, Tasks, Analyze — carries a terminal status.
-2. A `G6.5` confidence-gate verdict is recorded in the file, AND the
-   `Confidence Gate` row does not carry a blocked status.
-```
-
-**Condition 2 needs its second clause, and must not instead demand a PASS.**
-Presence alone would let a strict-mode gate stop — the very failure this report
-exists to name — render under `## Planning Complete`. But a PASS-only test
-breaks the **ordinary** case: G6.5 is advisory by default, and in advisory mode
-`NO_DATA` soft-skips while `FAIL` logs its breakdown and proceeds to the next
-phase. Planning really did complete on those runs, so requiring a PASS would
-file the default-mode success as incomplete. The blocked-row clause tells the
-two apart using only what the file already carries.
-
-**The `Stage` row is corroborating, not the test.** It records what was
-*resolved*, not what *completed*, so a file showing `Stage: plan` with Tasks
-still pending is a run in flight rather than a finished one.
-
-**Read the terminal-status vocabulary; never re-declare it.** It is owned by the
-`WORKFLOW_TERMINAL_STATUSES` frozenset in
-`speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`.
-Read it there. **Do not write the status literals into this file**: two of them
-differ only by a Unicode variation selector and render identically, so a hand
-copy is both prohibited and easy to get wrong.
-
-The reuse case is the same read: a worktree or branch reused from an earlier
-scaffold run, carrying a partially complete workflow file, is evaluated by
-terminal status on every planning row plus a recorded confidence-gate verdict,
-from the file.
-
-**The report names which planning phases reached a terminal status**, and gives
-the resume command above.
+**The next step is the Step 9 hand-off command**, in the form that step's check
+selected. There is one rule because there is one heading. Scaffold names the
+planning stage as the operator's next command, never as its own next action, and
+never asks a second confirmation to offer it.
