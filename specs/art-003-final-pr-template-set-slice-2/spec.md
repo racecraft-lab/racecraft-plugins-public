@@ -253,18 +253,21 @@ empty field.
 
 #### The regions a reviewer reads
 
-- **FR-011**: The artifact MUST ship a `hunks` region holding the diff, and a
-  `feature-header` region carrying the change's identity. Both are fixed:
-  `hunks` by the design concept's Q6, which makes it a list slot, and
-  `feature-header` by the export payload contract, which reads the change's
-  identity out of it. [NEEDS CLARIFICATION: the rest of the slot inventory — the
-  remaining slot names, their granularity, and each slot's `Source:` value,
-  including whether the closed source-artifact set must gain a member for a slot
-  whose content comes from the change itself rather than from a SpecKit artifact.
-  Deferred here deliberately: the design concept's own Open Questions assign this
-  to a dedicated Clarify session on the stated ground that slot names must not be
-  invented before the upstream source is read, and the upstream is fetched
-  read-only at implement time.]
+- **FR-011**: The artifact MUST ship exactly **two** fill regions,
+  `feature-header` and `hunks`, and its inventory MUST read one line per slot:
+  - `Slot: feature-header | Fills: the feature identifier, its name, and the line naming the change under review; keep id="feature-id" on the identifier and id="feature-name" on the name, because both exports read them to name the change | Source: spec.md`
+  - `Slot: hunks | Fills: one entry per diff hunk the reviewer should read, each carrying a heading with the hunk's file path and new-file line range and an id of the form hunks-<file-path-slug>-l<start-line>, its diff rows, and its annotations; each annotation opens by naming in words the row or rows it comments on and carries a severity of blocking, major or minor only when it is a finding, taken from the self-review block the workflow log writes after implementation; a hunk carrying no annotation says so in words | Source: git-diff`
+
+  **No third region ships.** A `diff-summary` region was proposed and rejected on
+  evidence: the claim that every shipped template pairs `feature-header` with a
+  short orienting region is false. `code-approaches` runs `feature-header` →
+  `approaches` → `recommendation` with no orienting region, and it is the
+  gallery's thinnest inventory and this slice's nearest budget analog. Nothing in
+  this spec names a summary region, the roadmap names jump links as a **feature**
+  rather than a region, and FR-034 with its acceptance scenario already discharge
+  that obligation with links inline in `hunks`. The region would have cost 3 to 9
+  authored lines of the tightest headroom in the feature.
+
 - **FR-011a**: `feature-header` MUST carry `id="feature-id"` on the feature
   identifier and `id="feature-name"` on the feature name, because both exports
   read them to name the change. It is chrome rather than a reader-facing region
@@ -335,15 +338,58 @@ the normal case that rule was not aimed at. It is aimed at exactly this.
   line-number column against the code beside it, and an annotation against the
   row it attaches to. Each MUST also be available as text, shape, glyph, or
   position.
-- **FR-019c**: [NEEDS CLARIFICATION: the diff rendering model — how a margin
-  annotation attaches to the row or rows it comments on, what a clean hunk
-  renders in place of an annotation, whether individual line numbers are
-  addressable as fragments, and how a hunk wider than the viewport is contained
-  so the page itself never scrolls horizontally. Deferred to Clarify because each
-  answer follows from the upstream markup, which is read read-only at implement
-  time, and each has a direct and different cost against the line budget.]
-
-#### The two hunks, and why a floor and a cap coincide here
+- **FR-019c**: Each diff row MUST render three cells in document order — line
+  number, state marker, code — and the state marker MUST be a literal `+`, `-`,
+  or space **present as text in the document**, never as CSS generated content.
+  Generated content is placed on the clipboard by some engines and not others, and
+  FR-019 requires the marker to survive a copy. The line-number cell MUST set
+  `user-select: none` so a copied row pastes as a valid unified-diff line.
+  The artifact MUST carry one sentence naming the three markers, outside every
+  fill pair so no fill can delete it: blank-means-context is a learned convention,
+  not a self-evident one.
+  Two limits are recorded rather than solved. `+` and `-` are punctuation and are
+  not announced at default screen-reader verbosity. And the clipboard exclusion is
+  not uniform — Chrome still carries unselectable text on the paste-and-match
+  path — so the acceptance evidence MUST include an actual paste of one added, one
+  removed, and one context row rather than an assertion that it works.
+- **FR-019d**: Each hunk's diff MUST sit in a container with `overflow-x: auto`
+  carrying `tabindex="0"`, a role that accepts a name, and an accessible name
+  naming the hunk. The `tabindex` is required rather than inferred: Safari does
+  not make a scroll container keyboard-scrollable without it, and Chrome's
+  automatic behaviour is conditional. **All five `overflow-x: auto` containers
+  already shipped in this gallery lack it**, so this artifact is the first to do
+  it correctly; repairing the other five is out of scope and recorded as a gap.
+  The hunk header MUST be a heading **outside** the scroll container. That one
+  placement supplies the accessible name, distinguishes the header from its rows
+  by position rather than by fill, and removes the row-background paint problem a
+  block row inside a scroller otherwise has.
+  Two costs are accepted and recorded: two additional tab stops, and one named
+  region per hunk announced whether or not it currently overflows.
+- **FR-019e**: Individual diff rows MUST NOT be addressable as fragments. Every
+  anchored coordinate this artifact defines is a hunk, which is what the reference
+  line names and what a downstream sweep reads. Per-row fragments would add roughly
+  thirty tab stops between two hunks against the keyboard criterion, and satisfy no
+  requirement.
+  An annotation attaches to its rows by **position and text together**: it sits
+  immediately after that hunk's rows inside the same item, and opens by naming the
+  row or rows in words. That is the upstream mechanism unchanged; upstream carries
+  no physical margin, and a side margin would compete with the diff's own
+  horizontal containment so a wide hunk pushed the annotation off screen.
+  Each finding MUST carry a stable `id` and `tabindex="-1"`, and each jump link
+  MUST be an ordinary same-document link. FR-034's focus move is then supplied by
+  the platform — a fragment navigation moves focus when the target is focusable —
+  so the artifact MUST NOT script it.
+  No shipped template links between its own repeated items today (verified: zero
+  same-document fragment links across all five), so this is new behaviour for the
+  gallery rather than a ported one.
+- **FR-019f**: Severity MUST be rendered by a **single style rule shared by all
+  three words, with no selector branching on which word it is**. A branch is
+  exactly where colour, weight or fill re-enters as the ranking carrier, which is
+  the defect this requirement exists to prevent and which the upstream commits.
+  The word MUST be preceded by a fixed label naming it as a severity, so a
+  text-only reading cannot mistake it for emphasis. An annotation carrying no
+  severity carries no such element, which is why an absence cannot render as a
+  fourth level.
 
 - **FR-020**: The `hunks` region MUST ship **exactly two** hunks: one carrying at
   least one annotation, and one carrying none, so a reader sees both states.
@@ -431,17 +477,44 @@ the normal case that rule was not aimed at. It is aimed at exactly this.
 - **FR-023b**: An objection's reference line MUST read
   `<slot> / <item label>  (#<anchor>)` with two spaces before the parenthesis,
   matching the form every export-carrying template already emits. **This slice
-  returns to the item-anchored form** the three older templates use, because
-  capture here attaches to a repeated item rather than to a whole section. Slice
-  1's `sec-<slot>` section anchor was a named departure justified by its capture
-  granularity and does not carry over.
-  [NEEDS CLARIFICATION: what the anchor's slug and the item's visible label are
-  derived from for a hunk — a file path, a line range, both, or a caption the
-  authoring agent writes — and what the artifact renders when two hunks would
-  derive the same slug. Deferred to Clarify: the shape depends on how the
-  upstream renders a hunk header, and a colliding anchor is the one failure the
-  validation rejects outright, because a fragment resolving to two items resolves
-  to neither.]
+  returns to the item-anchored form** the three older templates use, because it
+  captures against a repeated item rather than a whole section. Slice 1's
+  `sec-<slot>` form was the exception, not the rule.
+
+  A hunk's **visible label** is its file path and new-file line range. Its
+  **anchor** is `hunks-<file-path-slug>-l<start>`, where the slug is the **whole
+  file path** with every run of characters outside `a-z0-9` replaced by one
+  hyphen and the edges stripped, and `<start>` is the hunk's new-file start line
+  prefixed by `l`.
+
+  Three properties decide this form. The **whole path**, not the file stem, so
+  two files sharing a name cannot collide — slice 1's `file-by-file` could use a
+  stem only because it had one item per file and no line dimension. The **start
+  line, not the range**, because the end moves with the context count while the
+  start does not, and FR-020c requires a stable anchor. The **`l` prefix**, so a
+  numeric segment cannot be read as another path segment.
+
+  A shortest-unique-trailing-segments form was considered and rejected: it is
+  shorter, but it requires evaluating uniqueness across the whole diff, and every
+  other inventory instruction in this gallery is decidable from one item alone.
+
+  **A colliding slug cannot arise from this derivation.** Two hunks in one file
+  are ordered and non-overlapping so their new-file start lines differ; two hunks
+  in different files differ in the path segment. The artifact therefore renders
+  nothing special for a collision and carries **no runtime disambiguation**. A
+  rename would be worse than useless: it would emit a fragment naming an id no
+  element carries, and would put a value in the export the reviewer never saw,
+  against FR-025. A cross-file collision is a fill defect the validation rejects
+  by name.
+
+  A caption MUST NOT be the slug's source. Verified empirically: `git diff` and
+  `diff -up` disagree on the function-context caption for the same input, so a
+  caption-derived slug's uniqueness depends on which tool produced the diff.
+- **FR-023f**: Every `hunks` item MUST carry a heading element. The export reads
+  an item's label from its first heading and falls back to the item's whole text;
+  for a hunk that fallback would drag every diff row, and every jump link's text,
+  into the exported reference line.
+
 - **FR-023c**: The export routine MUST derive its items from the anchors present
   in the region at the moment of invocation, so a fill that adds or removes hunks
   is carried without a code change, and it MUST concatenate no value into a

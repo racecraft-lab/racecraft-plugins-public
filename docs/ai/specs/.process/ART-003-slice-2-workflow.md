@@ -96,7 +96,7 @@ last phrase match in the whole file.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 PASS; 76 FRs, 3 markers held for Clarify |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Session 1 runs **after** the upstream source is read |
+| Clarify | `/speckit-clarify` | ✅ Complete | G2 PASS; 3 sessions, all markers closed; consensus split on one literal |
 | Plan | `/speckit-plan` | ⏳ Pending | Re-declare the budget; adopt a CSS ceiling as a checkable constraint |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Three domains: accessibility, ux, error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -562,3 +562,62 @@ it, and this template writes the same header line.
 ### Patterns to Reuse
 
 -
+
+
+---
+
+## Clarify — consensus record
+
+Three sessions, 15 questions. All three markers closed. Two items went to
+consensus and the analysts **split on one of them**, which is recorded rather
+than smoothed over.
+
+**No third region.** A `diff-summary` slot was proposed and rejected on evidence.
+The claim carrying it — that every shipped template pairs `feature-header` with a
+short orienting region — is false: `code-approaches` runs `feature-header` →
+`approaches` → `recommendation` with none, and it is this slice's nearest budget
+analog. The roadmap names jump links as a feature rather than a region, and the
+existing requirements already discharge that inline. Saved 3 to 9 lines of the
+tightest headroom in the feature.
+
+**`git-diff` joins the closed source set, over a documented dissent.** Both
+analysts agreed a member is required — the source rule admits no exception and
+none of the six existing members can honestly claim a hunk's rows. They split on
+the literal:
+
+- The spec-context lens read the project's standard as honesty about provenance
+  and chose `git-diff`, a mechanism rather than a file.
+- The codebase lens objected on shape: all six members are filenames with
+  extensions, the one prior extension explicitly preserved that shape, and
+  **`git-diff` fullmatches the slot-name grammar while no existing member does**,
+  making it shape-identical to the thing that grammar exists to distinguish it
+  from.
+
+Resolved toward honesty, because no filename is honest here: no file exists, and
+`diff.patch` would name one no phase writes. The shape objection is real but
+lands on readability rather than correctness — slot names and source values are
+checked by different code paths, so nothing can confuse them mechanically. The
+dissent is recorded because a future reader will notice the odd member and
+deserves to know it was argued rather than overlooked.
+
+**The anchor form was a genuine conflict between two sessions**, each having
+derived one independently. Resolved to the whole path slugified plus `-l<start>`:
+the whole path because two files sharing a name must not collide, the start line
+because the end moves with the context count, and the `l` prefix so a numeric
+segment cannot read as another path segment. The rejected alternative — shortest
+unique trailing segments — is shorter but requires evaluating uniqueness across
+the whole diff, where every other inventory instruction here is decidable from
+one item alone.
+
+**Findings that changed the artifact rather than the prose:**
+
+- The state marker must be **text, not CSS generated content**, because generated
+  content reaches the clipboard in some engines and not others.
+- All five shipped `overflow-x: auto` containers lack `tabindex="0"`, so none is
+  keyboard-scrollable in Safari. This artifact is the first to fix it; the other
+  five are a recorded gap.
+- Jump links need **no JavaScript**: a fragment navigation moves focus when the
+  target is focusable, so `tabindex="-1"` on each finding is the whole mechanism.
+- Severity must be one rule with **no per-word branch**, because a branch is
+  precisely where colour re-enters as the ranking carrier.
+- The export-literal count was wrong — three feedback messages, not six.

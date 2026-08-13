@@ -5,7 +5,7 @@
   "branch": "art-003-final-pr-template-set-slice-2",
   "status": "in_progress",
   "stage": "full",
-  "active_step": "Phase 2: Clarify",
+  "active_step": "Phase 3: Plan",
   "prior_run_note": "completed_pr_open",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-workflow.md",
   "settings": {
@@ -42,31 +42,31 @@
     },
     {
       "step": "Phase 2: Clarify - Slot inventory and hunk granularity",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Slot inventory and hunk granularity Consensus",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Export payload and objection shape",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Export payload and objection shape Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Diff rendering edges",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Diff rendering edges Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - accessibility",
@@ -163,6 +163,10 @@
   ],
   "gates": {
     "G1": {
+      "pass": true,
+      "markers": 0
+    },
+    "G2": {
       "pass": true,
       "markers": 0
     }
