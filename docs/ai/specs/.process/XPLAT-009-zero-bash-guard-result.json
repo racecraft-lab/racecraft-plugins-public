@@ -21,7 +21,7 @@
     ],
     "blocking_count": 0,
     "classified_counts": {
-      "negative_policy": 144
+      "negative_policy": 147
     },
     "feature_id": "XPLAT-009",
     "findings": [
@@ -330,8 +330,8 @@
     "schema_version": "1.0",
     "script_file_count": 0,
     "status": "pass",
-    "total_finding_count": 144,
-    "truncated_finding_count": 119
+    "total_finding_count": 147,
+    "truncated_finding_count": 122
   },
   "diagnostics": [],
   "exit_code": 0,

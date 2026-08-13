@@ -162,7 +162,7 @@ The sweep found nothing eligible, so the two paths have the same outcome here.
 | **Spec ID** | ART-011 |
 | **Name** | Scaffold Integration |
 | **Branch** | `art-011-scaffold-integration` |
-| **Stage** | plan |
+| **Stage** | implement |
 | **Dependencies** | ART-006 (Autopilot Staging, shipped in PR #422) |
 | **Enables** | One-command operator experience; the closing report's PR line lights up when ART-007 lands |
 | **Priority** | P1 |
