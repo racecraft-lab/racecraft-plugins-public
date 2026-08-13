@@ -222,6 +222,12 @@ Showing all N findings; none were set aside
 The blindspot pass raised no unknown unknowns.
 ```
 
+When five or fewer findings come back and the analyst still names a non-zero
+set-aside count, the second shape carries that count in place of `none`:
+`Showing all N findings; M more were set aside`. Without it the printed line
+would claim none were set aside while the §9 record states `M`, which is exactly
+the drift one vocabulary exists to prevent.
+
 The third of these is the **sentinel echoed verbatim**. It is one string doing
 two jobs — the analyst's signal to scaffold and scaffold's line to the operator —
 and that is deliberate, so no second wording for "found nothing" can be invented.

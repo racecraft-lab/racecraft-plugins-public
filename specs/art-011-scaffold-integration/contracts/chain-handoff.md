@@ -373,13 +373,13 @@ fixed here:
 | Group | Candidates |
 |---|---|
 | Scaffold-owned | `docs/ai/specs/.process/SPEC-<ID>-design-concept.md`, `docs/ai/specs/.process/SPEC-<ID>-workflow.md`, `specs/<feature>/SPEC-MOC.md`, the pushed branch name |
+| Planning-stage | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md`, each file under `contracts/`, each file under `checklists/` — all relative to `specs/<feature>/` |
 
 **`<ID>` resolves to the run's own roadmap identity, whatever its namespace.**
 An `ART-011` run tests `ART-011-design-concept.md`. A literally `SPEC-`-prefixed
 name is correct only for a spec whose identity begins with `SPEC-`; testing it
 otherwise reads a path the run never wrote, and the report omits its own primary
 artifact.
-| Planning-stage | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md`, each file under `contracts/`, each file under `checklists/` — all relative to `specs/<feature>/` |
 
 Nothing outside this set is listed, so an unexpected file is a change to this
 contract rather than a silent omission.
@@ -391,8 +391,10 @@ widening it with Grep, Glob, or Bash — and it adds no machinery (FR-023). The 
 directory-valued members, `contracts/` and `checklists/`, are the one place a
 plain read is insufficient; for those the candidate paths are the artifact names
 the run's own plan and checklist phases recorded, so the enumeration still comes
-from a read rather than a directory listing. Never infer a path from convention,
-and never list a path that was not tested.
+from a read rather than a directory listing. The pushed branch name is the one
+candidate that is not a path at all: it is listed from the branch the run pushed
+and needs no read, so the test never applies to it. Never infer a path from
+convention, and never list a path that was not tested.
 
 ### 8.3 The decline case, and the two no-chain paths that look like it
 

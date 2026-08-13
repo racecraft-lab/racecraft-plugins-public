@@ -389,6 +389,12 @@ Showing all N findings; none were set aside
 The blindspot pass raised no unknown unknowns.
 ```
 
+When five or fewer findings come back and the analyst still names a non-zero
+set-aside count, the second shape carries that count in place of `none`:
+`Showing all N findings; M more were set aside`. Without it the printed line
+would claim none were set aside while the design-concept record below states
+`M`, which is exactly the drift one vocabulary exists to prevent.
+
 The third is the **sentinel echoed verbatim** — one string doing two jobs, the
 analyst's signal and scaffold's line to the operator — so no second wording for
 "found nothing" can be invented.
@@ -787,7 +793,10 @@ run necessarily begins before the worktree exists, so that operator is by
 definition rooted outside it and a bare invocation would hand them a command the
 Workflow Worktree Binding guard stops. **On Codex the printed hand-off is the
 ordinary outcome, not a degraded one.** The leading `$speckit-autopilot` token is
-the invocation form this whole skill set already uses.
+the invocation form this whole skill set already uses: Codex skills are invoked
+via `$skill-name`, never via any `/<plugin>:<skill>` slash command — see
+openai/codex#7480. The Claude Code row of the table above is recorded for
+cross-platform parity only; never print it from this variant.
 
 The stage token is the literal lowercase `plan`, from the closed vocabulary
 `plan`, `implement`, `full`. No aliases, no alternate casing, no long-form
@@ -894,18 +903,21 @@ Nothing outside this set is listed, so an unexpected file is a change to this li
 rather than a silent omission. The planning-stage artifacts are **not**
 candidates: no planning stage runs before this report, so none of them exists yet.
 
-**`<ID>` is the roadmap identity in full, including whatever namespace prefix it
-carries.** The candidates above must be the filenames Steps 4 and 5 actually
-wrote. Never test a literally `SPEC-`-prefixed name for a spec whose identity
-does not begin with `SPEC-`: that path was never written, the read fails, and
-the report silently omits its own primary artifact — the one omission this
-index may never make.
+**The `SPEC-<ID>` token above is the roadmap identity in full, including whatever
+namespace prefix it carries — it is not a literal `SPEC-` joined to an
+identifier.** An `ART-011` run tests `ART-011-design-concept.md`. The candidates
+above must be the filenames Steps 4 and 5 actually wrote. Never test a literally
+`SPEC-`-prefixed name for a spec whose identity does not begin with `SPEC-`: that
+path was never written, the read fails, and the report silently omits its own
+primary artifact — the one omission this index may never make.
 
 **The existence test is a read of the candidate path, and nothing more.** A path
 that reads is listed; a path that does not read is omitted. This is the only
 existence test inside this skill's declared grant, and it adds no machinery.
 Never add Grep, Glob, or Bash to widen that grant. Never infer a path from
-convention, and never list a path that was not tested.
+convention, and never list a path that was not tested. The pushed branch name is
+the one candidate that is not a path: it is listed from the branch step 7 pushed
+and needs no read, so the test above never applies to it.
 
 **The next step is the hand-off command**, in the form the check selected. There
 is one rule because there is one heading. Scaffold names the planning stage as the
