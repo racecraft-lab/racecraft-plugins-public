@@ -272,8 +272,10 @@ is recorded so the constraint is checkable rather than accidental.
 
 ## R10. Layer 2 fixture shape and the ASCII rule
 
-**Decision**: Add three cases per platform to the two scaffold fixtures only,
-in the existing `{query, should_trigger}` shape, ASCII-only.
+**Decision**: Add four cases per platform to the two scaffold fixtures only,
+in the existing `{query, should_trigger}` shape, ASCII-only. Two positive, one
+per new capability phrase, and two negative testing the same boundary at two
+prompt lengths.
 
 **Measured**: both fixtures hold 16 entries, 8 positive and 8 negative, with
 exactly two keys per entry. The two files differ **only** in em-dash encoding:
