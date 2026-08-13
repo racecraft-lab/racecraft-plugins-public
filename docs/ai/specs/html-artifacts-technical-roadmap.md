@@ -20,11 +20,15 @@ input.
 **Roadmap MOC:** [html-artifacts-roadmap-MOC.md](html-artifacts-roadmap-MOC.md)
 **Spec ID prefix:** `ART-###`
 **Status:** Active; dependency graph approved 2026-07-28; ART-001, ART-002,
-ART-006 and ART-012 are complete and archived; ART-002 shipped in PRs #425,
-#427 and #430, which unblocks ART-007; ART-012 shipped in PR #426; ART-003 is in
-progress, scaffolded 2026-08-12 as three stacked slices; ART-004, ART-005,
-ART-007, ART-009 and ART-011 are ready; ART-014 and ART-015
-were opened from ART-006 findings and are ready with no dependencies
+ART-006, ART-011, ART-012 and ART-014 are complete and archived; ART-002 shipped in
+PRs #425, #427 and #430, which unblocks ART-007; ART-012 shipped in PR #426;
+ART-014 shipped in PR #433 and archived 2026-08-13, which unblocks ART-017;
+ART-011 shipped in PR #434 and archived 2026-08-13, and ART-019 supersedes its
+FR-022; ART-003 is in progress, scaffolded 2026-08-12 as three stacked slices and
+open as PRs #435, #436 and #439; ART-004, ART-005, ART-007 and ART-009 are ready;
+ART-015 was opened from ART-006 findings and is ready with no dependencies;
+ART-016, ART-017 and ART-018 were opened from ART-014 findings on 2026-08-12 and
+are ready; ART-019 was opened on 2026-08-13 and is ready with no dependencies
 
 ---
 
@@ -39,7 +43,7 @@ were opened from ART-006 findings and are ready with no dependencies
 
 ## Roadmap Overview
 
-The effort is decomposed into **13 specifications** across **6 dependency
+The roadmap currently tracks **19 specifications** overall; **13** of them are mapped into **6 dependency
 tiers**:
 
 | Tier | Specs | Purpose | Parallelization |
@@ -129,7 +133,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 |------|------|--------|---------------|------------|
 | ART-001 | Artifact Brand Kit & Gallery Foundation | ✅ Complete / Archived | [.process/ART-001-workflow.md](.process/ART-001-workflow.md) | PR #407 merged with follow-up fix PR #409; the brand kit, gallery manifest, SPA contract, and validator live outside `specs/**`. T026 and T027 ran on 2026-07-29, 12 of 12 manual scenarios passed; the harness is preserved at [.process/ART-001-acceptance-harness.html](.process/ART-001-acceptance-harness.html) |
 | ART-002 | Draft-PR Template Set | ✅ Complete / Archived | [.process/ART-002-workflow.md](.process/ART-002-workflow.md) | Shipped as two stacked slices — PR #425 (`implementation-plan`, `spec-explainer`) and PR #427 (`code-approaches`, `module-map`) — then PR #430 recorded the acceptance result; archived 2026-08-12. All four templates and the manifest live outside `specs/**`. The runbook ran against `4ecb1b4b` with every executed step passing and 15 of its 61 steps recorded as *not executed*; it is preserved at [.process/ART-002-uat-runbook.md](.process/ART-002-uat-runbook.md) |
-| ART-003 | Final-PR Template Set | 🔄 In Progress | [.process/ART-003-workflow.md](.process/ART-003-workflow.md) | Scaffolded 2026-08-12. Re-sliced at scaffold into three stacked slices, one template per PR — `pr-writeup`, then `annotated-diff`, then `flowchart` — on ART-002's realized measurement rather than the original 285 estimate. Slice 1 is ready for autopilot. ART-001 dependency satisfied by PR #407 |
+| ART-003 | Final-PR Template Set | 🔄 In Progress | [.process/ART-003-workflow.md](.process/ART-003-workflow.md) | Scaffolded 2026-08-12. Re-sliced at scaffold into three stacked slices, one template per PR — `pr-writeup`, then `annotated-diff`, then `flowchart` — on ART-002's realized measurement rather than the original 285 estimate. All three slices are built and open as stacked PRs #435, #436 and #439, each with its manual acceptance pass run against the shipped bytes. ART-001 dependency satisfied by PR #407 |
 | ART-004 | Gallery Completion: Design & Prototyping | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
@@ -137,11 +141,15 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-008 | Feedback Sweep | ⏳ Pending | - | Blocked by ART-007 |
 | ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
 | ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Pending | - | Blocked by ART-003 and ART-007; ART-012 dependency satisfied by PR #426 |
-| ART-011 | Scaffold Integration | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
+| ART-011 | Scaffold Integration | ✅ Complete / Archived | [.process/ART-011-workflow.md](.process/ART-011-workflow.md) | PR #434; archived 2026-08-13. The blind-spot pass and the planning hand-off live on both platforms outside `specs/**`. Shipped inverted from its design: scaffold cannot invoke the autopilot, which carries `disable-model-invocation: true`, so it prints the command instead — nine requirements amended, five superseded. Declared 162 reviewable LOC and estimated 322 at the final 31 FRs; shipped 1160 production changed lines across the two scaffold `SKILL.md` variants, a second data point for ART-015. Layer 2 trigger evaluation is still owed, and the 984-line result is what ART-019 slice D exists to repair |
 | ART-012 | Implementation-Notes Capture | ✅ Complete / Archived | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | PR #426; archived 2026-08-12. The record contract and the executor reporting field live on both platforms outside `specs/**`. Budget re-estimated at every amendment (115 at scaffold → 155 → 162 → 190 once the operator restored the literal per-task guarantee), and the final six production files matched the declaration exactly |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
-| ART-014 | Phase-Guard Enforcement Repair | ⏳ Ready | - | No dependencies; found during ART-006, which deliberately did not fix it |
+| ART-014 | Phase-Guard Enforcement Repair | ✅ Complete / Archived | [.process/ART-014-workflow.md](.process/ART-014-workflow.md) | PR #433; archived 2026-08-13. The guard, its tests, and both platforms' authority documentation live outside `specs/**`. Declared 337 reviewable LOC and shipped 906 added across six authored files, 488 across the five production ones; the overrun is the classification record and the tests, and it argues for ART-015. Found during ART-006, which deliberately did not fix it. Opened ART-016, ART-017 and ART-018 |
 | ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
+| ART-016 | Claude-Side Live PR Commit Authority | ⏳ Ready | - | No dependencies; opened from ART-014, which documents the gap and names this entry in the shipped Claude `SKILL.md` |
+| ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ⏳ Ready | - | ART-014 dependency satisfied by PR #433, which added the classification record these verdicts live in. Opened from ART-014's advisory audit; the defect was reproduced by execution |
+| ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready | - | No dependencies; opened from ART-014's retrospective. Three helpers report clean on input they should catch, each hit live during that run |
+| ART-019 | Documented Best-Practice Alignment | ⏳ Ready | - | No dependencies; opened 2026-08-13 from a seven-surface audit against the live official docs. Zero documented rules broken; the gap is that the repo's gates are blind to the documented metrics. Ships as ordered child slices |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -723,13 +731,16 @@ implement stage refreshes and flips it rather than opening a second PR.
 **Priority:** P1 | **Depends On:** ART-006 | **Enables:** one-command operator experience
 
 **Goal:** Make scaffold the single front door: blind-spot pass before
-grill-me, then chain into the autopilot plan stage so one invocation ends at
-the reviewed draft PR.
+grill-me, then hand off to the autopilot plan stage with the exact command that
+starts it. *(Amended 2026-08-13: the goal originally read "chain into the
+autopilot plan stage so one invocation ends at the reviewed draft PR". Scaffold
+cannot invoke the autopilot — that skill is user-invocable only — so it prints
+the command instead.)*
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 162 (estimator: ok, modify-weighted) |
-Production files: ~4 |
-Total files: ~7 |
+Projected reviewable LOC: 322 (estimator: ok, modify-weighted) |
+Production files: 2 |
+Total files: 42 measured (2 production, 2 fixtures, 19 spec/doc, 19 generated) |
 Budget result: within budget
 
 **Scope:**
@@ -739,9 +750,8 @@ Budget result: within budget
   and affected code area for unknown-unknowns — hidden coupling, risky
   surfaces, unstated assumptions; present findings and seed them into
   grill-me and the design concept's Open Questions.
-- After the workflow-file commit, chain in-session into the autopilot plan
-  stage per the ART-006 contract, with an explicit operator confirmation to
-  decline.
+- After the workflow-file commit, print the autopilot plan-stage hand-off
+  command per the ART-006 contract, behind one explicit operator confirmation.
 - Closing report: draft-PR URL, artifact index, next step.
 - Both platform variants.
 
@@ -866,11 +876,19 @@ behavior — interview decision.
 enforce the authority its documentation already promises, and decide explicitly
 which of the guard's other advisory checks should stay advisory.
 
-**Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: ~120 (estimator: ok, modify-weighted) |
-Production files: ~2 |
-Total files: ~5 |
-Budget result: within budget
+**Reviewability Budget:** Re-declared 2026-08-12 at scaffold. The original ~120
+predates two decisions the grill-me interview took: documenting the
+`--expected-*-commit` contract on the Claude side, and stating the `workflow_file`
+authority in both platforms' `workflow-file-protocol` references. Those add two
+authored documentation files.
+
+Primary surface: harness/adapter |
+Projected reviewable LOC: 235 (estimator: ok, modify-weighted; signals 3 stories,
+5 files, 13 FRs) |
+Production files: 4 (the guard, `SKILL.md`, and both `workflow-file-protocol`
+references) |
+Test files: 1 | Generated, never hand-edited: 4 |
+Budget result: within budget, one slice, no split
 
 **Problem:** `speckit-pro/skills/speckit-autopilot/SKILL.md:756-757` documents
 `autopilot-state.json.workflow_file` as authoritative and quotes the failure
@@ -903,7 +921,9 @@ reports `pass`:
   never had to satisfy them — assess that blast radius before choosing between a
   dedicated key and widening the existing one.
 - Audit the remaining advisory keys and record, per key, whether advisory is
-  intentional. 11 of 19 problem keys cannot move the exit code under `--rule`;
+  intentional. Measured 2026-08-12 at scaffold: 12 of 20 problem keys cannot move
+  the exit code under `--rule`. The "11 of 19" this entry originally recorded
+  predates ART-006 adding `stage_mirror_errors`;
   `SKILL.md` already justifies the coverage lists as deliberately advisory
   because the existing workflow corpus predates them, so the audit's job is to
   separate the deliberate from the accidental, not to arm everything.
@@ -1007,6 +1027,98 @@ defect from the model to the absent trigger.
 
 ---
 
+### ART-016: Claude-Side Live PR Commit Authority
+
+**Priority:** P3 | **Depends On:** none | **Enables:** the PR-head byte comparison on Claude
+
+**Goal:** Let the Claude autopilot supply `--expected-base-commit` and
+`--expected-head-commit` from live pull-request metadata, so the phase guard's
+PR-head byte comparison runs on both platforms instead of only on Codex.
+
+**Problem:** The Codex distribution instructs appending both flags from live PR
+metadata when `pr-marker-plan.v2` declares a changed-file manifest, in
+`codex-skills/speckit-autopilot/SKILL.md`, `references/phase-execution-codex.md`,
+and `references/task-list-canonical-codex.md`. No equivalent instruction or
+runtime step exists anywhere in the Claude tree, so the byte comparison is
+unreachable there. ART-014 documents the gap and states the not-yet-wired status
+in the shipped Claude documentation; this entry closes it.
+
+**Scope:**
+- Fetch `baseRefOid` and `headRefOid` from live PR metadata immediately before
+  validation, never from the workflow, state, or manifest.
+- Wire them into the Step 1.1 guard invocation on the Claude side.
+- Give missing, stale, or mismatched authority a blocking failure path, matching
+  the obligation the Codex contract already states.
+- Remove the not-yet-wired caveat ART-014 added to the Claude `SKILL.md`.
+
+**Out of Scope:**
+- Any change to the comparison the flags feed.
+- The workflow-identity check, which ART-014 owns.
+
+**Verification:** A Layer 4 test proving the Claude invocation carries both flags
+when a changed-file manifest is declared, and a negative control proving a stale
+head OID blocks.
+
+**Key Decisions:**
+**Split from ART-014 (2026-08-12):** the operator chose to document the contract
+on the Claude side during ART-014 rather than defer the prose, but the runtime
+fetch is a `gh` call plus a blocking failure path, which does not fit a
+harness-slice budget. ART-014 therefore ships an honest caveat naming this entry.
+
+**Key Files:**
+- `speckit-pro/skills/speckit-autopilot/SKILL.md` — the caveat to remove
+- `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` — the invocation
+- `tests/speckit-pro/unit/` — the flag and failure-path coverage
+
+---
+
+### ART-017: Arm The Accidentally-Advisory State Bookkeeping Checks
+
+**Priority:** P3 | **Depends On:** ART-014 | **Enables:** honest state bookkeeping
+
+**Goal:** Register `in_progress_errors`, `duplicate_state_steps`, and
+`state_order_errors` under a rule the autopilot's own invocation consults, so the
+three state-file invariants they check can actually fail a run.
+
+**Problem:** All three are produced by `validate_state` in
+`speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`,
+alongside two keys that *are* gated under the `coverage` rule. `SKILL.md`
+justifies advisory status on the grounds that the existing workflow corpus
+predates the checks. That is true of the coverage lists and false of these three:
+they are invariants of the state file the current run just wrote, so no legacy
+artifact can violate them. Proven by execution during ART-014's Clarify phase
+against a state with two steps marked `in_progress`: the check fires and names
+both steps, exits 1 with no `--rule`, and exits **0** under the
+`--rule status-evidence` invocation the autopilot always issues.
+
+**Scope:**
+- Decide the right rule for each of the three keys, which may not be the same rule.
+- Register them and prove each moves the exit code.
+- Flip their `PROBLEM_KEY_INTENT` verdicts from `advisory-accidental` to `gated`.
+
+**Out of Scope:**
+- The nine remaining advisory keys, whose verdicts ART-014 records separately.
+- Re-litigating the `--rule` scoping mechanism.
+
+**Verification:** A negative control per armed key proving a non-zero exit under
+the autopilot's own invocation, plus a corpus regression proving no
+previously-passing specification starts failing. ART-014 measured the three keys
+clean across the live corpus and on its own run state, so the regression cost is
+expected to be zero.
+
+**Key Decisions:**
+**Found by ART-014's advisory audit, deliberately not armed there (2026-08-12):**
+ART-014's interview fixed the outcome as arm-only-the-identity-key, because every
+armed key needs its own negative control and corpus proof and therefore its own
+slice.
+
+**Key Files:**
+- `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` — `validate_state`, `RULE_PROBLEM_KEYS`, `PROBLEM_KEY_INTENT`
+- `speckit-pro/skills/speckit-autopilot/SKILL.md` — the advisory justification to narrow
+- `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` — the negative controls
+
+---
+
 ## Decomposition Principles
 
 When breaking a feature into specs:
@@ -1045,6 +1157,177 @@ When breaking a feature into specs:
 | Python 3.11+ | pyenv (repo standard) |
 | Node ≥ 22.12 + pnpm | nvm v22.22.2 for docs-site work (ART-013) |
 | Browser check | open each template over `file://`; console must be clean |
+
+---
+
+### ART-018: Repair The Silently-Clean Governance Matchers
+
+**Priority:** P2 | **Depends On:** none | **Enables:** governance checks that can prove they detect
+
+**Goal:** Give three checks that currently report clean on dirty input a matcher
+that agrees with the format their own documentation prescribes, and a negative
+control proving each can detect the thing it counts.
+
+**Problem:** Three shipped helpers report zero, or report nothing, on input they
+are supposed to catch. All three were found during ART-014 by having to override
+them by hand.
+
+| Helper | Counts | The documented form | Observed |
+|---|---|---|---|
+| `validate-gate` | `\[NEEDS CLARIFICATION\]` | the spec template prescribes and demonstrates the colon form | reported 0 markers against a spec carrying 2 |
+| `count-markers` | literal `\[Gap\]` | the checklist skill's own examples show `[Coverage, Gap]` | an executor's first count returned 0 against 7 real gaps |
+| `estimate-reviewable-loc` | `is_production_file` prefix-matches `src/`, `app/`, `lib/`, `scripts/`, or a JS/TS/SQL extension | this repository's Python lives deeper than those prefixes | every Python file scores non-production; `projected: 0` against 6 declared files |
+
+The first two are the same defect verbatim: a counter narrower than the form the
+tooling itself teaches. The third differs in mechanism and consumer. They belong
+in one entry anyway, because what decides whether they ship together is the
+verification all three lack, and it is identical.
+
+**Scope:**
+- Widen each matcher to the form its own documentation prescribes, or make the
+  check report that it could not tell rather than reporting clean.
+- Give each a negative control: a fixture that is wrong in exactly one way, and
+  an assertion that the check finds it.
+- Where a skill's examples teach the invisible form, fix the examples too. A
+  matcher that disagrees with its own documentation will be re-broken otherwise.
+
+**Out of Scope:**
+- Changing what any of the three checks is *for*.
+- The `--rule` scoping mechanism, which is deliberate and documented.
+
+**Verification:** One negative control per helper, each proving the check moves
+from clean to a finding on a single wrong input. The governing principle, which
+ART-014 established the hard way: **a check that reports zero must be able to
+prove it can detect one.** Fifty-four corpus passes proved nothing until a canary
+separated a satisfied comparison from a skipped one; all three helpers sit in
+exactly that position today.
+
+**Key Decisions:**
+**Found during ART-014, filed from its retrospective (2026-08-12):** each was hit
+live and overridden by hand rather than inferred from reading. Filed as one entry
+on the operator's decision, because three separate entries would each read as a
+typo fix and lose the pattern that makes them worth fixing.
+
+**Key Files:**
+- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — all three matchers
+- `speckit-pro/skills/speckit-coach/templates/spec-template.md` — the prescribed colon form
+- `tests/speckit-pro/unit/` — the three missing negative controls
+
+---
+
+### ART-019: Documented Best-Practice Alignment
+
+**Priority:** P2 | **Depends On:** None | **Enables:** every future skill change, by restoring headroom and making the documented limits measurable
+
+**Goal:** Own this plugin's conformance to official Anthropic and OpenAI
+documentation as a standing concern rather than a one-time cleanup: close the
+divergences a full audit measured, and add the gates that make each documented
+limit observable so the same drift cannot recur silently.
+
+**Reviewability Budget:** Primary surface: harness/adapter |
+Projected reviewable LOC: ~1400 across the whole inventory (estimator: block as one spec) |
+Production files: ~25 |
+Total files: ~40 |
+Budget result: **over budget as one spec.** Ships as the ordered child slices below,
+each independently releasable under the 400-LOC ceiling. Two of them are builds and
+take their own spec IDs when scoped.
+
+**Problem:** A seven-surface audit against the live official documentation
+(`code.claude.com/docs/en/{skills,sub-agents,plugins,plugin-marketplaces,plugins-reference,hooks,slash-commands,tools-reference,model-config}`,
+`learn.chatgpt.com/docs/{build-skills,agent-configuration/subagents}`,
+`agentskills.io/specification`, and *The Complete Guide to Building Skills for
+Claude*) checked roughly 60 documented rules and found **zero broken**. Every
+`SKILL.md` is named exactly, every folder is kebab-case and matches its frontmatter
+`name`, no skill folder carries a `README.md`, no reserved name is used, no
+frontmatter carries XML angle brackets, every description is under the 1024-character
+cap, no plugin agent sets a field the docs forbid, and
+`claude plugin validate ./dist/claude/speckit-pro --strict` passes clean.
+
+The gap is not compliance. It is that **the repository's own gates are blind to the
+metrics the documentation actually states**, so the plugin's worst divergences report
+green.
+
+1. **No gate measures `SKILL.md` line count**, which is the documented unit:
+   *"Keep `SKILL.md` under 500 lines. Move detailed reference material to separate
+   files."* The only size gate is an 8000-word ceiling. Measured against the
+   documented limit: `skills/speckit-autopilot` 884 lines (77% over) with 1595 words
+   of headroom under the internal gate, and `codex-skills/speckit-autopilot` 1122
+   lines (124% over). `skills/speckit-scaffold-spec` sits at 497, three lines under,
+   with nothing that would flag the crossing — and ART-011 takes it to 984.
+2. **The description gate silently under-measures.** `validate-skills.py`'s
+   `description:\s*"([^"]*)"` stops at the first escaped quote inside a YAML
+   double-quoted scalar. `speckit-install` is truly 710 characters and the gate sees
+   308; `speckit-upgrade` is 713 and the gate sees 376. The suite reports 124/124
+   while measuring under half of two descriptions, so an over-cap description would
+   ship. No Codex gate measures description length at all, and
+   `codex-skills/speckit-coach` sits at 1011 of 1024.
+3. **Shipped reference prose misstates the plugin's own behaviour.**
+   `references/agent-teams-integration.md` asserts that none of speckit-pro's agents
+   set `background: true`; three do. The same file's "inherit the operator's full
+   session surface" principle does not survive the documented background-subagent
+   tool filter, which reaches nearly every dispatch.
+4. **One documented capability is absent entirely.** The guide's third testing area
+   is comparison against a skill-disabled baseline. Nothing in eight test layers
+   compares skill-on to skill-off, and `tool_calls` is measured nowhere.
+5. **The Codex 8000-word cap is this repository's invention**, not a documented Codex
+   limit. It is load-bearing for scoping and should be re-anchored to the documented
+   under-500-lines guidance or justified in its own right.
+
+**Scope:**
+- **A. Shipped-reference accuracy.** Correct the false `background: true` claim and
+  qualify the tool-surface principle against the documented background filter. Ship
+  first: pure accuracy, no dependencies, corrects the claims most likely to mislead
+  a future author.
+- **B. Gate correctness.** Replace the description regex with a real scalar parse,
+  add a line-count assertion measured on `dist/`, and add the missing Codex
+  description gate. Each new gate MUST be proven to fail against a fixture
+  reproducing today's state before it is trusted.
+- **C. Autopilot body split.** Move `## Critical: Execution Rules` to a new
+  `references/execution-rules.md` and fold the two Step sections into the existing
+  `references/phase-execution.md` and `post-implementation.md`, leaving ~455 lines.
+- **D. Scaffold body split.** The same treatment for both scaffold variants, which
+  ART-011 leaves at 984 and 928 lines. Supersedes ART-011's FR-022, which forbade a
+  `references/` directory for that spec's own size reasons.
+- **E. Frontmatter and agent hygiene.** Widen the frontmatter key allowlist to the
+  documented set, and land the agent-definition corrections atomically with the
+  Layer 6 Codex digest regeneration, which has no regeneration script.
+- **F. Manifest validation wiring.** Add the marketplace `description` that makes
+  `claude plugin validate . --strict` pass, and gate it. Highest conformance per line
+  in the inventory.
+- **G. Trigger-eval coverage.** Close the per-skill fixture gaps. Acceptance is
+  fixture structure and a roster assertion, never a measured rate.
+
+**Out of Scope:**
+- Any behavioural change. Slices C and D are moves; a diff that changes what an agent
+  would do has failed its own contract.
+- Functional-eval grading and the skill-on/skill-off baseline harness. Both are
+  builds rather than realignments, both exceed the ceiling on their own, and each
+  takes its own spec ID when scoped.
+- `color` on plugin agents. The plugins-reference field list omits it while the
+  subagents page documents it with an allowlist; the docs are ambiguous and the
+  reading must be settled empirically before anything asserts either.
+
+**Verification:** Per slice, the full suite at its recorded baseline, and for every
+new gate a fixture proving it fails against today's tree. Slices C and D additionally
+require a byte-identity proof that every fenced block and table surviving the move is
+unchanged, and a re-measured line count for both platform variants recorded in the
+spec. Layer 2 trigger evals re-run by the operator for each moved skill, because the
+body changes even though the description does not.
+
+**Key Decisions:**
+**Opened 2026-08-13 from a seven-surface conformance audit**, after ART-011 review
+surfaced that `speckit-scaffold-spec` had grown past the documented size guidance
+with every gate green. The audit's finding is that this is systemic rather than local:
+the metrics the documentation states are not the metrics this repository measures.
+**Zero documented rules are broken**, so this entry is scoped as realignment and gate
+correctness, not compliance repair.
+
+**Key Files:**
+- `tests/speckit-pro/layer1-structural/validate-skills.py` — the under-measuring description gate
+- `tests/speckit-pro/layer1-structural/validate-codex-skills.py` — the undocumented 8000-word cap
+- `speckit-pro/skills/speckit-autopilot/SKILL.md`, `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` — 884 and 1122 lines
+- `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` — the false agent claim
+- `.claude-plugin/marketplace.json` — the absent optional `description`
 
 ---
 

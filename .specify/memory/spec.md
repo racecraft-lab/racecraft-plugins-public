@@ -2598,3 +2598,193 @@ not apply. Historical workflow and design-concept evidence remains under
 `docs/ai/specs/.process/`; the retrospective is inline in the workflow file.
 Detailed provenance, canonical artifact locations and recovery commands live in
 the dated ART-012 archive report.
+
+---
+
+## ART-014 Phase-Guard Enforcement Repair
+
+[Source: specs/art-014-phase-guard-enforcement-repair] — archived 2026-08-13
+after PR #433 merged at `12d8c2d4`. Revision reason: merged-spec archival into
+project memory.
+
+### User Stories
+
+- **US1** — as a maintainer resuming an autopilot run, a run pointed at a
+  workflow the state file does not name must halt rather than proceed, so work
+  cannot advance against the wrong specification.
+- **US2** — as a maintainer reading a guard report, every problem key must carry
+  a recorded verdict stating whether it can fail a run, so advisory status is a
+  decision rather than an accident.
+- **US3** — as a maintainer reading the shipped documentation, every statement
+  about this guard must describe behavior the guard performs or label itself as
+  not yet wired.
+
+### Requirements
+
+Twenty-four functional requirements, FR-001 through FR-013c. The load-bearing
+set:
+
+- The identity comparison runs **unconditionally**, ahead of the
+  `pr-marker-plan.v2` and `--expected-head-commit` preconditions that previously
+  gated it (FR-001, FR-004a-d).
+- Findings report under `workflow_authority_errors`, registered in the
+  `status-evidence` rule tuple, which is the half that moves the exit code
+  (FR-007). Registration and evaluation are separate halves; only the first
+  produces a finding and only the second gates the run.
+- The gated `workflow_checkpoint_errors` path is frozen and unarmed (FR-002,
+  FR-008).
+- Five ordered branches: absent key skips, unresolvable root skips, malformed
+  value fails, out-of-boundary fails, mismatch fails. An earlier skip must win
+  over a later failure. Branch 4 also skips when resolution cannot traverse the
+  path at all (FR-003, FR-004c, FR-005).
+- Repository-root resolution resolves the state path before walking it, so the
+  check no longer depends on path spelling or working directory (FR-006b).
+- All 21 emitted problem keys carry a verdict from a closed three-value
+  vocabulary, enforced in both directions (FR-010, FR-010a, FR-010b, FR-011).
+
+### Success Criteria
+
+SC-001 through SC-008. SC-002 is the corpus regression: 54 of 54 workflow files
+still exit 0 after the change, measured against a denominator pinned to baseline
+commit `3af4764e`. SC-003 is the canary: a state naming a different
+specification must flip from exit 0 to exit 1.
+
+### Key Entities
+
+`workflow_authority_errors` (the armed problem key), `PROBLEM_KEY_INTENT` (the
+classification record), `RULE_PROBLEM_KEYS` (the rule-to-key map whose
+`status-evidence` tuple scopes the exit code), and
+`autopilot-state.json.workflow_file` (the authority the comparison enforces).
+
+### Edge Cases
+
+A state carrying no `workflow_file` key asserts no authority and skips; an
+explicitly nulled field is malformed rather than a silent opt-out, so branch 1
+tests key membership rather than value. A whitespace-only value is checked
+explicitly and ahead of the normalized-path helper, because a run of spaces is a
+valid POSIX path part and would otherwise be reported as a mismatch against a
+blank path. Resolution follows symlinks, so what is compared is where the
+supplied path lands, not how it was spelled. The comparison is byte-exact with
+no case folding, because byte-exact is the only rule returning the same verdict
+on a case-insensitive filesystem and a case-sensitive one.
+
+### Evidence Framing
+
+**A green result from this guard is not self-certifying.** A skipped comparison
+and a satisfied comparison both report no error and both exit zero, and the
+repaired guard writes `workflow_authority_errors` into the report
+unconditionally, so an empty value proves only that the repaired code is running.
+Presence separates repaired code from unrepaired code, where the key is absent
+entirely; it does not separate a satisfied comparison from a skipped one. To
+prove a comparison ran, vary an input and show the verdict change. Both shipped
+protocol references carry this warning.
+
+### Cleanup Note
+
+The active ART-014 folder was removed after PR #433 merge provenance and a
+tree-wide live-reader scan on the bare directory name. Four files matched outside
+the folder: two preserved `.process/` documents citing the branch in prose, the
+machine-written `autopilot-state.json`, and one live backlink in
+`html-artifacts-roadmap-MOC.md` that the spec index regenerates rather than
+receiving a hand edit.
+
+`quickstart.md` was **not** relocated, and the ART-002 precedent is why. That
+feature's acceptance runbook moved because the preserved workflow cited its path
+twice and fifteen of its sixty-one steps were still owed against four templates
+later specs build on. ART-014 fails both prongs: every surviving citation names
+`quickstart.md` by bare filename inside prose rather than by path, and all seven
+scenarios were executed on 2026-08-13 against head `800d1e7d` with every one
+passing. ART-002's own `quickstart.md` was likewise deleted with its folder. The
+ART-012 test-repointing step has no analogue, because ART-014 ships no
+`contracts/` directory and no test cites the spec folder.
+
+Historical workflow, design-concept and retrospective evidence remains under
+`docs/ai/specs/.process/`. Detailed provenance, canonical artifact locations and
+recovery commands live in the dated ART-014 archive report.
+
+## ART-011 Scaffold Integration
+
+Merged in PR #434 at `6437ecd2` on 2026-08-13 and archived the same day.
+
+### User Stories
+
+1. **Unknown unknowns surfaced before the interview** (P1) — a read-only
+   blind-spot pass runs before the first grill-me question.
+2. **Findings survive into the interview and the record** (P1) — what the pass
+   raises is seeded into the interview and traceable in the design concept.
+3. **One confirmation, then planned work or a clean stop** (P1).
+4. **One closing report that tells the truth** (P2).
+
+### Requirements
+
+31 functional requirements. The load-bearing set: FR-012 and FR-013a fix the
+hand-off check as the autopilot's own Workflow Worktree Binding predicate,
+reproduced word for word rather than paraphrased; FR-015c fixes the hand-off
+command's form per platform, with the Codex row carrying the rooting precondition
+**as part of the command**; FR-018 bounds the two reports so neither restates the
+other's fields; FR-023 forbids new executable machinery, which the change honours
+with zero scripts, zero Bash, and no new tool grant.
+
+**The amendment is the story.** The spec was written to *chain* in-session into
+the autopilot plan stage. That is not implementable: `speckit-autopilot/SKILL.md`
+carries `disable-model-invocation: true`, which blocks the `Skill` tool outright,
+and removing it would make a seven-phase auto-committing run model-triggerable.
+FR-013, FR-013a, FR-014, FR-015, FR-017, FR-018 and FR-022 were amended;
+FR-015a, FR-015b, FR-019 and FR-020 were superseded.
+
+### Success Criteria
+
+SC-001 through SC-012. SC-007 was amended to "exactly one operator confirmation,
+except when the session exposes no structured confirmation mechanism, where it
+adds none". SC-010 was superseded by the amendment and retained for the record.
+SC-012 held exactly: zero new production files, zero agent definitions, zero
+executable helpers, no new tool grant.
+
+### Key Entities
+
+The blind-spot pass (a dispatch to the shipped read-only `codebase-analyst`), the
+seed payload assembled from the roadmap entry, the closed set-aside vocabulary,
+the hand-off check, the hand-off command table, and the single closing report
+under the fixed heading `## Ready for Planning`.
+
+### Edge Cases
+
+The pass that does not run, the pass that returns nothing, more than five
+findings, an operator rooted outside the worktree, an unclean checkout, and a
+session that exposes no structured confirmation mechanism. Each has one stated
+outcome and one stated string.
+
+### Evidence Framing
+
+The suite cannot see this feature. It is prose inside two existing `SKILL.md`
+files, so the repository suite stayed at 7396 across the whole run and CI green
+proves only that nothing else broke. The properties that matter — does the skill
+still trigger, does the operator read the right command — are measured by Layer 2,
+which does not execute in CI. See the Cleanup Note.
+
+### Cleanup Note
+
+The active ART-011 folder was removed after PR #434 merge provenance and a
+tree-wide live-reader scan on the bare directory name. Five files matched outside
+the folder: two preserved `.process/` documents citing the branch in prose, the
+machine-written `autopilot-state.json`, the technical roadmap, and one live
+backlink in `html-artifacts-roadmap-MOC.md` that the spec index regenerates rather
+than receiving a hand edit.
+
+The `contracts/` directory was **not** relocated, and unlike ART-014 the question
+was live rather than moot. It resolves to delete on both prongs: no test, script,
+or shipped file reads `contracts/blind-spot-pass.md` or `contracts/chain-handoff.md`,
+and every surviving citation is a bare relative name inside a prose code span
+rather than a link or a resolvable path. The contracts' load-bearing content — the
+exact operator-facing strings — was transcribed into both shipped `SKILL.md`
+variants before merge, which is where the behaviour now lives.
+
+**Two gaps leave with this archive rather than closing.** Layer 2 trigger
+evaluation never ran while this feature rewrote the `description` from 975 to 1013
+characters, and the shipped skill is now 984 lines against a documented 500-line
+guidance. ART-019 owns the second and its slice D supersedes FR-022.
+
+Historical workflow and design-concept evidence remains under
+`docs/ai/specs/.process/`. No retrospective was produced. Detailed provenance,
+canonical artifact locations and recovery commands live in the dated ART-011
+archive report.

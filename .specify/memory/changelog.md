@@ -2420,3 +2420,125 @@ git checkout 1916d8c917eea4892035daafe4c02d2558e203f3 -- specs/art-012-implement
 
 The detailed archive and verification record is stored in
 `.specify/memory/archive-reports/2026-08-12-art-012-post-merge-hygiene.md`.
+
+---
+
+## 2026-08-13 — ART-014 Phase-Guard Enforcement Repair archived
+
+Merged in PR #433 at `12d8c2d48469df9293227cb2c28cf05a4847fc61`, then archived
+from `art-014-post-merge-hygiene`.
+
+Shipped the repair that makes the autopilot phase guard's workflow-identity
+check enforce the authority its documentation already promised. The comparison
+of the supplied `--workflow` against `autopilot-state.json.workflow_file` now
+runs unconditionally, rather than behind a `pr-marker-plan.v2` schema and an
+`--expected-head-commit` that a normal autopilot run supplies neither of, and its
+findings report under a new `workflow_authority_errors` key registered in the
+`status-evidence` tuple the autopilot always selects. Before the repair, a run
+resuming against the wrong specification exited 0 and reported pass. Also closed
+a third short-circuit found during Clarify: repository-root resolution walked the
+state path as supplied, so a state file genuinely inside the repository resolved
+no root when named relatively from a subdirectory, making the check depend on
+path spelling rather than on file location. Five production files, 488 added
+production lines, 24 functional requirements, 27 of 27 tasks. The suite moved
+from 7378 to 7396. CI clean on the final head: 20 pass, 1 skip, zero failures.
+
+Advisory status became a recorded decision rather than an accident. A
+`PROBLEM_KEY_INTENT` map classifies all 21 emitted problem keys under a closed
+three-value vocabulary, enforced by a test that derives the key set from a real
+report and fails in both directions — an unclassified emitted key, and a verdict
+recorded for a key the guard never emits.
+
+The load-bearing evidence is a canary, not a pass rate. A skipped comparison and
+a satisfied comparison both report no error and both exit zero, so 54 green
+corpus files proved nothing on their own; only the deliberately mismatched canary
+flipping from exit 0 to exit 1 established that the repair took. Applying that
+same principle downstream found four further defects that neither the suite nor
+CI could see, three of them in this feature's own paperwork, all fixed before
+merge: the corpus evidence overclaimed what a present-and-empty key proves, both
+protocol references undercounted their own branch table after a review fix added
+a third skip, a malformed roadmap row silently dropped ART-017's blocking
+dependency, and quickstart scenario 4 promised an observable its own commands
+cannot emit.
+
+Three follow-ups were opened from this run and are recorded on the HTML artifacts
+roadmap: ART-016 for Claude-side live pull-request commit authority, ART-017 to
+arm the three accidentally-advisory keys, and ART-018 to repair three governance
+matchers that report clean on input they should catch. ART-017 is unblocked by
+this merge.
+
+### Recovery Commands
+
+```text
+git show 12d8c2d48469df9293227cb2c28cf05a4847fc61:specs/art-014-phase-guard-enforcement-repair/spec.md
+git show 12d8c2d48469df9293227cb2c28cf05a4847fc61:specs/art-014-phase-guard-enforcement-repair/plan.md
+git show 12d8c2d48469df9293227cb2c28cf05a4847fc61:specs/art-014-phase-guard-enforcement-repair/tasks.md
+git show 12d8c2d48469df9293227cb2c28cf05a4847fc61:specs/art-014-phase-guard-enforcement-repair/research.md
+git show 12d8c2d48469df9293227cb2c28cf05a4847fc61:specs/art-014-phase-guard-enforcement-repair/quickstart.md
+git checkout 12d8c2d48469df9293227cb2c28cf05a4847fc61 -- specs/art-014-phase-guard-enforcement-repair
+```
+
+The detailed archive and verification record is stored in
+`.specify/memory/archive-reports/2026-08-13-art-014-post-merge-hygiene.md`.
+
+## 2026-08-13 — ART-011 Scaffold Integration archived
+
+Merged in PR #434 at `6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b` on
+2026-08-13T21:06:20Z by `fgabelmannjr`. CI on the final head `34cbd591`: 19 pass,
+1 skipped, 0 failures. The active folder is removed; 13 tracked files.
+
+`speckit-scaffold-spec` now opens with a read-only blind-spot pass, reusing the
+shipped `codebase-analyst`, and closes by handing the operator the exact command
+that starts the planning stage. Both platform variants ship the change. grill-me
+is untouched.
+
+The feature shipped inverted from its design. It was specified to *chain*
+in-session into the autopilot plan stage so one invocation would end at a reviewed
+draft PR. `speckit-autopilot/SKILL.md` carries `disable-model-invocation: true`,
+which blocks the `Skill` tool outright and exists precisely to stop a seven-phase
+auto-committing run from being model-triggerable. Scaffold was demoted to printing
+the command, and the post-planning apparatus the chain implied was deleted. Nine
+requirements were amended and five superseded; `contracts/chain-handoff.md` shipped
+with a banner stating that no section is unchanged.
+
+Two lessons are recorded rather than smoothed. A green `gh pr checks` is not
+evidence unless the **check count** is right: mid-review this PR reported clean
+while only 4 of 20 checks had run, because a conflicted PR cannot build
+`refs/pull/N/merge` and GitHub skips every `pull_request` workflow. And the
+feature took a skill from 497 lines — three under the documented ceiling — to 984.
+
+Two gaps leave with this archive rather than closing. Layer 2 trigger evaluation
+never ran while this feature rewrote the `description` from 975 to 1013
+characters, which is the string skill selection matches on; Layer 2 is
+`live_only` and does not execute in CI, and its runners are operator-only because
+they move the installed skill directory aside. ART-019 owns the size gap and its
+slice D supersedes FR-022.
+
+### Canonical Artifacts
+
+- `speckit-pro/skills/speckit-scaffold-spec/SKILL.md` and
+  `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`
+- `tests/speckit-pro/layer2-trigger/evals/speckit-scaffold-spec-trigger.json` and
+  its `codex-evals/` mirror
+- Generated payload copies under `dist/claude`, `dist/codex`, and the
+  installed-cache proofs
+
+Historical evidence stays under `docs/ai/specs/.process/`:
+`ART-011-design-concept.md` and `ART-011-workflow.md`. No retrospective was
+produced; the workflow file records that step as pending and the state file was
+wrong to claim otherwise.
+
+### Recovery Commands
+
+```text
+git show 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b:specs/art-011-scaffold-integration/spec.md
+git show 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b:specs/art-011-scaffold-integration/plan.md
+git show 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b:specs/art-011-scaffold-integration/tasks.md
+git show 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b:specs/art-011-scaffold-integration/research.md
+git show 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b:specs/art-011-scaffold-integration/contracts/chain-handoff.md
+git show 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b:specs/art-011-scaffold-integration/contracts/blind-spot-pass.md
+git checkout 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b -- specs/art-011-scaffold-integration
+```
+
+The detailed archive and verification record is stored in
+`.specify/memory/archive-reports/2026-08-13-art-011-post-merge-hygiene.md`.
