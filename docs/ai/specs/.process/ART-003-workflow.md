@@ -312,7 +312,7 @@ concurrently rather than from anyone's carelessness.
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 33 gaps closed; consensus settled 2 items at zero cost |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 PASS, 40 tasks; M1/M2/M3 checkpoints emitted as real tasks |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 PASS; 11 findings, all remediated at zero line cost |
-| Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
+| Confidence Gate | G6.5 | ✅ Complete | advisory, composite 0.90, proceed with reservations |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
@@ -1392,20 +1392,98 @@ ceiling from `spec-explainer`'s 169 (`plan.md:287,289`). So M1, M2 and M3 will
 measure in the same units the budget was written in, which is the only property
 that had to hold.
 
-What remains is cosmetic and is recorded rather than chased: the comparator
-tables in `plan.md` and in this file carry the +2 figures, so a reader comparing a
-table row against a checkpoint reading will see a two-line discrepancy with no
-explanation beside it. That is the same recorded-versus-measured units confusion
-Analyze caught as its sixth finding, surviving in one more place.
+**Correction to this orchestrator's first reading of that result.** I recorded the
++2 discrepancy as an unexplained residual. It is not: `plan.md:189-198` documents
+it precisely, naming the cause (the recorded pass counts the `<style>` and
+`</style>` delimiters into CSS, the instrument counts them as markup) and stating
+the double-count explicitly — "The recorded decomposition sums to 318 against a
+recorded total of 316 on `spec-explainer`, because the two delimiter lines are
+counted twice." The plan carries **both** tables on purpose and pins the ceilings
+to the measured column. My note claimed a gap in documentation that the document
+had already closed.
+
+One genuinely unexplained residual survives, and it is small: the `authored`
+total differs by a constant **+1** on every template, not only the CSS bucket by
+2. The delimiter-reclassification story accounts for the CSS-to-markup
+redistribution but not for why the total itself shifts. It changes nothing about
+which numbers gate M1 through M3, since those are checked against the measured
+column, but "the offset is constant and explained" is at present only
+half-explained.
+
+### Adversarial challenge — verdict WEAKENED
+
+Readiness was challenged rather than self-scored: an agent was tasked to **refute**
+the claim that planning is complete, not to confirm it. It returned **WEAKENED**
+with three findings ranked SERIOUS. All three concern the same thing — the 42-line
+headroom is arithmetic that has not been derived.
+
+**1. The C1 ceiling of 150 is asserted, not derived.** Its whole justification is
+one table cell: "Against `spec-explainer`'s measured 169 for six regions, less the
+rules this port does not need" (`plan.md:289`). No rule-by-rule ledger sums to a
+checkable −19. The plan concedes the point itself — "C1 is the only one that can
+miss" (`plan.md:148`) — and pre-builds an operator-escalation path for exactly
+this failure, which is not what a document does for a number it is confident in.
+**If C1 simply lands at `spec-explainer`'s own 169, that is a 19-line miss and
+headroom falls from 42 to 23.** And `before-after` is structure `spec-explainer`
+never paid for at all: lever 3 calls for a new grid or flex rule plus a panel rule
+with **no line count attached anywhere**. The real exposure may exceed 19, and no
+document in the corpus bounds it. That absence is the finding.
+
+**2. The same reduction lever is booked twice.** `research.md:78-82` says sharing
+one `details` rule set between `file-by-file`'s items and the six question
+disclosures is what pays for the 169→150 margin. `plan.md:238-241` scopes that
+same lever as "the single largest avoidable cost in **C1 plus C2**" — a joint
+saving across two budgets. If the saving is real but joint, C1 retains less of it
+than `research.md`'s derivation assumes, which compounds finding 1 rather than
+sitting beside it.
+
+**3. T027's mirror case has no described way to construct it.** FR-026a needs both
+settle paths verified, and the harder one is a slow success landing after a fast
+failure. Neither `tasks.md:105` nor `quickstart.md:195` describes a mechanism that
+deterministically produces that ordering; both say only "invoke both exports in
+quick succession", which does not. `quickstart.md:197-198` calls this "the check
+that proves FR-026a landed" and the one check with no precedent to compare
+against. So the single behaviour this artifact does better than all three shipped
+templates may go unverified in one direction, or the implementer invents an
+unspecified timing hack.
+
+Two MINOR findings recorded: T006, T008 and T010 each run a Layer 4 check inside
+the documented expected-red window without repeating the caveat, so an implementer
+must remember unaided to filter the expected orphan from a real failure; and T009
+depends on T004's extended source set while T004 is marked parallel and free to
+land late, which numeric ordering makes safe in practice but the document's own
+permission does not guarantee.
+
+**Attack 4 is UNFINISHED and is not certified.** The agent confirmed `check_d2`
+(`test-artifact-gallery.py:3021-3039`) is the check that fires in the T005→T031
+window and that its failure text matches the "orphan" framing, and ruled out two
+other candidates. It did not audit the rest of Group D, Groups E onward, or the
+fill-region module for any check that could fire harder in that window. The
+"expected intermediate red" claim is therefore **partially verified**, not proven.
 
 ### Verdict
 
 | Field | Value |
 |-------|-------|
 | Mode | `advisory` (resolved at Step 0.6b: no flag, no local config) |
-| Composite confidence | recorded below once the adversarial check returns |
-| Verdict | recorded below |
-| Evidence | G1–G6 all PASS; suite 7378/7378 matching the G0 baseline exactly; 72/72 requirement coverage; declared figure 758 verified through the parser in all three artifacts; decomposition sums; instrument calibrated above |
+| Composite confidence | **0.90** |
+| Criteria | task understanding 0.96 · approach clarity 0.94 · requirements alignment 0.96 · **risk assessment 0.75** · completeness 0.88 |
+| Verdict | **proceed with reservations** — advisory mode does not block, and nothing found is a correctness defect. The reservation is entirely the budget: three SERIOUS findings all say the 42-line headroom is unproven. |
+| Evidence | G1–G6 all PASS; suite 7378/7378 matching the G0 baseline exactly; 72/72 requirement coverage; 758 verified through the parser in all three artifacts; decomposition sums; instrument independently calibrated |
+
+The gate helper reads its composite from the emit line below, matched as
+`^📊 Confidence: ([01]\.[0-9]{2})$`. It takes the **last** such line in the file,
+so nothing further may be appended after this one.
+
+📊 Confidence: 0.90
+
+**What the operator should decide before authorising implementation.** None of
+this blocks, and none of it is a defect in what the artifact will do. It is a
+question about whether the slice fits. M1 was designed for exactly this
+uncertainty and fires before any export work, so a C1 miss surfaces at roughly 150
+lines written rather than 758 — the reservation is priced into the plan, not
+hidden from it. The honest summary is that the artifact is well specified and the
+budget is not yet proven, and the cheapest way to prove it is to run M1.
 
 ---
 

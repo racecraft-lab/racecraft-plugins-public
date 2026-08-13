@@ -3,13 +3,13 @@
   "spec_id": "ART-003",
   "feature_dir": "specs/art-003-final-pr-template-set",
   "branch": "art-003-final-pr-template-set",
-  "status": "in_progress",
+  "status": "awaiting_review",
   "stage": "plan",
   "stage_source": "auto-detect",
   "stage_basis": "auto-detect: the first non-terminal planning phase is Specify, which is \u23f3 Pending",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-012-workflow.md",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "active_step": null,
   "updated_at": "2026-08-12T18:00:00Z",
   "settings": {
     "consensus_mode": "tier-a",
@@ -134,7 +134,7 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement",
@@ -376,5 +376,43 @@
       "task_to_requirement": "35/40, five infra tasks trace to none"
     },
     "orchestrator_error_corrected": "414-435 JS lines was a naive pre-excision count sweeping in the canonical theme script; measured 277/293/298"
+  },
+  "confidence_gate": {
+    "mode": "advisory",
+    "composite": 0.9,
+    "threshold": 0.9,
+    "verdict": "proceed with reservations",
+    "criteria": {
+      "task_understanding": 0.96,
+      "approach_clarity": 0.94,
+      "requirements_alignment": 0.96,
+      "risk_assessment": 0.75,
+      "completeness": 0.88
+    },
+    "adversarial_challenge": {
+      "verdict": "WEAKENED",
+      "serious": 3,
+      "minor": 3,
+      "serious_findings": [
+        "C1 ceiling of 150 asserted not derived; a miss to spec-explainer's own 169 cuts headroom 42->23, and before-after's new rules are uncosted",
+        "the details-sharing reduction lever is booked against C1's margin in research.md and against C1+C2 jointly in plan.md",
+        "T027's mirror case (slow success after fast failure) has no described construction mechanism"
+      ],
+      "unfinished": "attack 4 (expected-intermediate-red) partially verified only; check_d2 confirmed, rest of Group D and the fill-region module unaudited"
+    },
+    "stage_terminal": true,
+    "helper_result": {
+      "pass": true,
+      "composite": 0.9,
+      "threshold": 0.9,
+      "mode": "advisory",
+      "recommended_action": "proceed",
+      "exit_code": 0
+    }
+  },
+  "stage_boundary": {
+    "stage": "plan",
+    "completed": true,
+    "next": "a separate --stage implement invocation is required; this run does not cross the boundary"
   }
 }
