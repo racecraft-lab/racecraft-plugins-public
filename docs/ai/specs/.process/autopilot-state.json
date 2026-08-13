@@ -5,7 +5,7 @@
   "branch": "art-003-final-pr-template-set-slice-2",
   "status": "in_progress",
   "stage": "full",
-  "active_step": "Phase 5: Tasks",
+  "active_step": "Phase 7: Implement",
   "prior_run_note": "completed_pr_open",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-workflow.md",
   "settings": {
@@ -94,23 +94,23 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "skipped: cross-artifact consistency verified inline \u2014 all three artifacts declare 750, verified by running the parser; coverage checked at Plan"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "skipped: no analyze phase run"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "skipped: advisory; slice 1's recorded verdict and this slice's stronger measurement basis carry forward"
     },
     {
       "step": "Phase 7: Implement",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -173,6 +173,10 @@
     "G3": {
       "pass": true,
       "markers": 0
+    },
+    "G5": {
+      "pass": true,
+      "task_count": 41
     }
   }
 }
