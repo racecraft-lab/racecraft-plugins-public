@@ -75,7 +75,7 @@
       "stage": "final-pr",
       "trigger": { "any_of": ["self_review_findings", "large_diff"] },
       "source": { "origin": "upstream", "file": "03-code-review-pr.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": ["prompt", "markdown"]
     },
     {
