@@ -1192,7 +1192,7 @@ typo fix and lose the pattern that makes them worth fixing.
 
 ### ART-019: Documented Best-Practice Alignment
 
-**Priority:** P2 | **Depends On:** none | **Enables:** every future skill change, by restoring headroom and making the documented limits measurable
+**Priority:** P2 | **Depends On:** None | **Enables:** every future skill change, by restoring headroom and making the documented limits measurable
 
 **Goal:** Own this plugin's conformance to official Anthropic and OpenAI
 documentation as a standing concern rather than a one-time cleanup: close the
