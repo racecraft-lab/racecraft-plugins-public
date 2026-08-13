@@ -1998,3 +1998,85 @@ marks the process state archived, regenerates and checks the SpecKit index and
 the docs-site test reference, validates project state JSON and diff hygiene, and
 runs the structural and full deterministic suites. ART-010 stays blocked by
 ART-003 and ART-007.
+
+---
+
+## ART-014 Phase-Guard Enforcement Repair
+
+[Source: specs/art-014-phase-guard-enforcement-repair] — archived 2026-08-13
+after PR #433 merged at `12d8c2d4`. Revision reason: merged-spec archival into
+project memory.
+
+### Dependencies
+
+None added. The guard remains Python 3.11+ standard library only, consistent
+with constitution principle II. No manifest, version, CLI flag, or state-schema
+change, so the rollback is a plain revert.
+
+### Shipped Surface
+
+Five production files, 488 added production lines:
+
+- `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`
+  — `_workflow_authority_errors` implementing the five ordered branches;
+  `_authorized_workflow_text` widened to a three-tuple across all eleven return
+  paths so the new key carries only identity errors while the gated path keeps
+  reporting to `workflow_checkpoint_errors`; `workflow_authority_errors` added to
+  the `status-evidence` tuple only; `PROBLEM_KEY_INTENT` classifying 21 keys as
+  9 gated, 9 advisory-deliberate and 3 advisory-accidental; and `_repository_root`
+  resolving before it walks, and failing closed rather than raising
+- `speckit-pro/skills/speckit-autopilot/SKILL.md` and its Codex mirror
+- `speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md` and
+  its Codex mirror — the `workflow_file` state-authority section carrying the
+  branch order, the reason behind each verdict, the asymmetric-resolution and
+  byte-exact rules, and the warning about what an empty key does and does not
+  prove
+
+`tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` grew from 17 to 35
+tests. Generated payloads under `dist/claude`, `dist/codex`, and the
+installed-cache proofs regenerate from source; the Layer 6 Codex qualification
+corpus was untouched because no agent definition changed.
+
+### Architecture Note
+
+Registration and evaluation are separate halves of this guard, and only the
+second moves the exit code. A check can run, produce a finding, and still leave
+the run green if its key is absent from the selected rule's tuple. That
+separation was the second of the two original defects, and it is the thing to
+verify first when a guard reports pass on input it should catch.
+
+### Testing Strategy
+
+TDD red-green-refactor with attribution assertions: a control asserts not merely
+that the guard failed, but that it failed for the named reason. The whitespace
+row must report malformed rather than the identity message, and the null row must
+not silently skip. Negative and positive controls share one fixture builder and
+vary exactly one value, because each is meaningless without the other.
+
+The corpus regression is a one-time recorded run and is deliberately **not**
+wired into the committed suite: the process directory holds live data, an
+in-flight specification mid-repair can legitimately fail the guard, and a
+committed corpus walk would turn CI red on unrelated pull requests.
+
+### Follow-Ups Opened
+
+- **ART-016** — Claude-side live pull-request commit authority. The Claude flow
+  does not yet fetch those values; the shipped `SKILL.md` says so and names the
+  entry.
+- **ART-017** — arm the three accidentally-advisory state bookkeeping checks.
+  Blocked by ART-014, which adds the classification record the verdicts live in.
+  **Unblocked by this merge.**
+- **ART-018** — repair three governance matchers that report clean on input they
+  should catch.
+- **ART-015** — the spec-size re-estimation trigger, which this run's overrun
+  argues for: declared 337 reviewable LOC, final 906 added across six authored
+  files and 488 across the five production ones.
+
+### Testing and Cleanup
+
+The cleanup removes the merged ART-014 active spec, marks the process state
+archived, regenerates and checks the SpecKit index and the roadmap map of
+content, updates the technical roadmap to Complete / Archived, unblocks ART-017,
+and runs the full deterministic suite. No `refresh-release-artifacts.py` run is
+required, because nothing under `speckit-pro/` changes in this archive. ART-010
+stays blocked by ART-003 and ART-007.
