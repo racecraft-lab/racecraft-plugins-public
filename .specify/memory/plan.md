@@ -2095,10 +2095,10 @@ Two production files, both prose:
 - `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`
 - `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`
 
-Plus three new positive trigger cases in each of
+Plus updated Layer 2 trigger fixtures in
 `tests/speckit-pro/layer2-trigger/evals/speckit-scaffold-spec-trigger.json` and
-its `codex-evals/` mirror, and the regenerated payload copies under `dist/claude`,
-`dist/codex`, and the installed-cache proofs.
+its `codex-evals/` mirror (currently 20 entries: 10 positive, 10 negative), and the
+regenerated payload copies under `dist/claude`, `dist/codex`, and the installed-cache proofs.
 
 ### Architecture Note
 
