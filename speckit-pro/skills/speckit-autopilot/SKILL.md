@@ -376,13 +376,13 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    `feature_dir`, `branch`, `status`, `stage`, and `plan`. Reclaiming is normal
    operation — one slot, many specs — and is **not** an error.
    - **This runs before the Step 1 coverage guard, not after.** The guard's
-     workflow-identity check is inert under every invocation the phase loop
-     issues: run against a state file naming a different specification it exits
-     **0** and reports `pass`. Ordering re-initialisation after the guard
-     therefore leaves the slot unprotected, not merely late — nothing downstream
-     would catch the stale identity.
+     workflow-identity check fails a run whose state names a different
+     specification, so ordering re-initialisation after the guard would turn
+     every legitimate reclaim into a guard halt — the run stops at Step 1.1
+     before the slot is rewritten. Reclaiming first rewrites `workflow_file`
+     from the target, and the guard then compares two references that agree.
    - The trigger is **unscoped by stage**. Any stage can be the one that finds a
-     foreign slot, and the guard is equally inert for all of them.
+     foreign slot, and the ordering holds for all of them.
    - Record the reclaimed run's `status` **verbatim** in `prior_run_note` before
      overwriting it, so `in_progress` stays distinguishable from `completed` or
      `completed_archived`. Surface it in the Step 0.6c report.
@@ -490,6 +490,17 @@ the failing checks as JSON on stdout; exit 2 is an input error. The guard
 also fails when a Workflow Overview status row contradicts a gate verdict
 recorded elsewhere in the same file, which is what keeps the status table
 honest across compactions and manual phase runs.
+
+**Expected-commit flags — contract stated, not yet wired here.** When
+`pr-marker-plan.v2` declares a changed-file manifest, the guard accepts
+`--expected-base-commit <live-baseRefOid> --expected-head-commit <live-headRefOid>`.
+Both OIDs must be fetched from live PR metadata immediately before every
+validation and never sourced from the workflow, state, or manifest itself, and
+missing, stale, or mismatched external PR authority is blocking. **The Claude
+flow does not fetch those values yet**, so the PR-head byte comparison the flags
+feed is unreachable on this platform and runs only on Codex today. This is a
+statement of the contract, not of current behavior. **ART-016** wires the fetch
+and removes this caveat.
 
 ## Step 2: Main Execution Loop
 
@@ -750,13 +761,21 @@ fails the Step 1.1 coverage guard.
 
 That precedence is scoped to the status table and does not generalize. The
 state file stays authoritative for two things the coverage guard enforces
-directly, and repairing the workflow file to match is the correct move in both:
+directly:
 
-- **Which workflow file is active.** `autopilot-state.json.workflow_file` is
-  the authority; a mismatch fails with "supplied workflow does not match
-  autopilot state workflow_file authority".
+- **Which workflow file is active.** When the state names a `workflow_file` and
+  a repository root resolves, that value is the authority. A mismatch fails with
+  a message that opens with the exact sentence "supplied workflow does not match
+  autopilot state workflow_file authority" and appends both compared paths. The
+  comparison is skipped when the state names no `workflow_file`, because a state
+  naming none asserts no authority, and skipped again when no repository root
+  resolves. A malformed state value fails, and so does a supplied workflow that
+  resolves outside the repository. Branch order and the reason behind each
+  verdict live in
+  [`references/workflow-file-protocol.md`](./references/workflow-file-protocol.md).
 - **PR Marker Plan Evidence status**, which must equal
-  `pr_marker_plan.status` exactly.
+  `pr_marker_plan.status` exactly. Repairing the workflow file to match the
+  state is the correct move here.
 
 **The `Stage` entry is workflow-file-wins.** The `Stage` row in the workflow
 file's `### Basic Information` table is the authoritative durable store of the
@@ -806,7 +825,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 - [Gate Validation](./references/gate-validation.md) — Programmatic gate checks (G0–G7), auto-fix loops, escalation
 - [Post-Implementation](./references/post-implementation.md) — 12-task post-impl sequence (incl. self-review, UAT runbook), integration suite, PR creation, review loop
 - [Task List Canonical](./references/task-list-canonical.md) — Task naming pattern + canonical post-implementation entries
-- [Workflow File Protocol](./references/workflow-file-protocol.md) — Per-phase update table + Consensus Resolution Log column schema
+- [Workflow File Protocol](./references/workflow-file-protocol.md) — Per-phase update table + `workflow_file` state authority (branch order, verdicts) + Consensus Resolution Log column schema
 - [Error Recovery](./references/error-recovery.md) — Resume, common issues, context-window management
 - [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor rules injected into implementation agent prompts
 - [Plugin Limitations](./references/plugin-limitations.md) — permissionMode/hooks/mcpServers caveats and capability fallback behavior

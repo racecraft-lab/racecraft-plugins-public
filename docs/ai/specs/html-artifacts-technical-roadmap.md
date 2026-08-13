@@ -22,8 +22,10 @@ input.
 **Status:** Active; dependency graph approved 2026-07-28; ART-001, ART-002,
 ART-006 and ART-012 are complete and archived; ART-002 shipped in PRs #425,
 #427 and #430, which unblocks ART-007; ART-012 shipped in PR #426; ART-003
-through ART-005, ART-007, ART-009 and ART-011 are ready; ART-014 and ART-015
-were opened from ART-006 findings and are ready with no dependencies
+through ART-005, ART-007, ART-009 and ART-011 are ready; ART-014 is in progress,
+scaffolded 2026-08-12 as one slice; ART-015 was opened from ART-006 findings and
+is ready with no dependencies; ART-016, ART-017 and ART-018 were opened from ART-014
+findings on 2026-08-12 and are ready
 
 ---
 
@@ -139,8 +141,11 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-011 | Scaffold Integration | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
 | ART-012 | Implementation-Notes Capture | ✅ Complete / Archived | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | PR #426; archived 2026-08-12. The record contract and the executor reporting field live on both platforms outside `specs/**`. Budget re-estimated at every amendment (115 at scaffold → 155 → 162 → 190 once the operator restored the literal per-task guarantee), and the final six production files matched the declaration exactly |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
-| ART-014 | Phase-Guard Enforcement Repair | ⏳ Ready | - | No dependencies; found during ART-006, which deliberately did not fix it |
+| ART-014 | Phase-Guard Enforcement Repair | 🔄 In Progress | [.process/ART-014-workflow.md](.process/ART-014-workflow.md) | Scaffolded 2026-08-12, one slice. Both defects reproduced by execution during scoping; the corpus baseline is 54 of 54 workflow files exiting 0 under `--rule status-evidence`. Budget re-declared at scaffold from ~120 to 235 reviewable LOC after the interview added two documentation files. No dependencies; found during ART-006, which deliberately did not fix it |
 | ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
+| ART-016 | Claude-Side Live PR Commit Authority | ⏳ Ready | - | No dependencies; opened from ART-014, which documents the gap and names this entry in the shipped Claude `SKILL.md` |
+| ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ⏳ Ready | - | Blocked by ART-014, which adds the classification record these verdicts live in. Opened from ART-014's advisory audit; the defect was reproduced by execution |
+| ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready | - | No dependencies; opened from ART-014's retrospective. Three helpers report clean on input they should catch, each hit live during that run |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -845,11 +850,19 @@ behavior — interview decision.
 enforce the authority its documentation already promises, and decide explicitly
 which of the guard's other advisory checks should stay advisory.
 
-**Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: ~120 (estimator: ok, modify-weighted) |
-Production files: ~2 |
-Total files: ~5 |
-Budget result: within budget
+**Reviewability Budget:** Re-declared 2026-08-12 at scaffold. The original ~120
+predates two decisions the grill-me interview took: documenting the
+`--expected-*-commit` contract on the Claude side, and stating the `workflow_file`
+authority in both platforms' `workflow-file-protocol` references. Those add two
+authored documentation files.
+
+Primary surface: harness/adapter |
+Projected reviewable LOC: 235 (estimator: ok, modify-weighted; signals 3 stories,
+5 files, 13 FRs) |
+Production files: 4 (the guard, `SKILL.md`, and both `workflow-file-protocol`
+references) |
+Test files: 1 | Generated, never hand-edited: 4 |
+Budget result: within budget, one slice, no split
 
 **Problem:** `speckit-pro/skills/speckit-autopilot/SKILL.md:756-757` documents
 `autopilot-state.json.workflow_file` as authoritative and quotes the failure
@@ -882,7 +895,9 @@ reports `pass`:
   never had to satisfy them — assess that blast radius before choosing between a
   dedicated key and widening the existing one.
 - Audit the remaining advisory keys and record, per key, whether advisory is
-  intentional. 11 of 19 problem keys cannot move the exit code under `--rule`;
+  intentional. Measured 2026-08-12 at scaffold: 12 of 20 problem keys cannot move
+  the exit code under `--rule`. The "11 of 19" this entry originally recorded
+  predates ART-006 adding `stage_mirror_errors`;
   `SKILL.md` already justifies the coverage lists as deliberately advisory
   because the existing workflow corpus predates them, so the audit's job is to
   separate the deliberate from the accidental, not to arm everything.
@@ -986,6 +1001,98 @@ defect from the model to the absent trigger.
 
 ---
 
+### ART-016: Claude-Side Live PR Commit Authority
+
+**Priority:** P3 | **Depends On:** none | **Enables:** the PR-head byte comparison on Claude
+
+**Goal:** Let the Claude autopilot supply `--expected-base-commit` and
+`--expected-head-commit` from live pull-request metadata, so the phase guard's
+PR-head byte comparison runs on both platforms instead of only on Codex.
+
+**Problem:** The Codex distribution instructs appending both flags from live PR
+metadata when `pr-marker-plan.v2` declares a changed-file manifest, in
+`codex-skills/speckit-autopilot/SKILL.md`, `references/phase-execution-codex.md`,
+and `references/task-list-canonical-codex.md`. No equivalent instruction or
+runtime step exists anywhere in the Claude tree, so the byte comparison is
+unreachable there. ART-014 documents the gap and states the not-yet-wired status
+in the shipped Claude documentation; this entry closes it.
+
+**Scope:**
+- Fetch `baseRefOid` and `headRefOid` from live PR metadata immediately before
+  validation, never from the workflow, state, or manifest.
+- Wire them into the Step 1.1 guard invocation on the Claude side.
+- Give missing, stale, or mismatched authority a blocking failure path, matching
+  the obligation the Codex contract already states.
+- Remove the not-yet-wired caveat ART-014 added to the Claude `SKILL.md`.
+
+**Out of Scope:**
+- Any change to the comparison the flags feed.
+- The workflow-identity check, which ART-014 owns.
+
+**Verification:** A Layer 4 test proving the Claude invocation carries both flags
+when a changed-file manifest is declared, and a negative control proving a stale
+head OID blocks.
+
+**Key Decisions:**
+**Split from ART-014 (2026-08-12):** the operator chose to document the contract
+on the Claude side during ART-014 rather than defer the prose, but the runtime
+fetch is a `gh` call plus a blocking failure path, which does not fit a
+harness-slice budget. ART-014 therefore ships an honest caveat naming this entry.
+
+**Key Files:**
+- `speckit-pro/skills/speckit-autopilot/SKILL.md` — the caveat to remove
+- `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` — the invocation
+- `tests/speckit-pro/unit/` — the flag and failure-path coverage
+
+---
+
+### ART-017: Arm The Accidentally-Advisory State Bookkeeping Checks
+
+**Priority:** P3 | **Depends On:** ART-014 | **Enables:** honest state bookkeeping
+
+**Goal:** Register `in_progress_errors`, `duplicate_state_steps`, and
+`state_order_errors` under a rule the autopilot's own invocation consults, so the
+three state-file invariants they check can actually fail a run.
+
+**Problem:** All three are produced by `validate_state` in
+`speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`,
+alongside two keys that *are* gated under the `coverage` rule. `SKILL.md`
+justifies advisory status on the grounds that the existing workflow corpus
+predates the checks. That is true of the coverage lists and false of these three:
+they are invariants of the state file the current run just wrote, so no legacy
+artifact can violate them. Proven by execution during ART-014's Clarify phase
+against a state with two steps marked `in_progress`: the check fires and names
+both steps, exits 1 with no `--rule`, and exits **0** under the
+`--rule status-evidence` invocation the autopilot always issues.
+
+**Scope:**
+- Decide the right rule for each of the three keys, which may not be the same rule.
+- Register them and prove each moves the exit code.
+- Flip their `PROBLEM_KEY_INTENT` verdicts from `advisory-accidental` to `gated`.
+
+**Out of Scope:**
+- The nine remaining advisory keys, whose verdicts ART-014 records separately.
+- Re-litigating the `--rule` scoping mechanism.
+
+**Verification:** A negative control per armed key proving a non-zero exit under
+the autopilot's own invocation, plus a corpus regression proving no
+previously-passing specification starts failing. ART-014 measured the three keys
+clean across the live corpus and on its own run state, so the regression cost is
+expected to be zero.
+
+**Key Decisions:**
+**Found by ART-014's advisory audit, deliberately not armed there (2026-08-12):**
+ART-014's interview fixed the outcome as arm-only-the-identity-key, because every
+armed key needs its own negative control and corpus proof and therefore its own
+slice.
+
+**Key Files:**
+- `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` — `validate_state`, `RULE_PROBLEM_KEYS`, `PROBLEM_KEY_INTENT`
+- `speckit-pro/skills/speckit-autopilot/SKILL.md` — the advisory justification to narrow
+- `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` — the negative controls
+
+---
+
 ## Decomposition Principles
 
 When breaking a feature into specs:
@@ -1024,6 +1131,61 @@ When breaking a feature into specs:
 | Python 3.11+ | pyenv (repo standard) |
 | Node ≥ 22.12 + pnpm | nvm v22.22.2 for docs-site work (ART-013) |
 | Browser check | open each template over `file://`; console must be clean |
+
+---
+
+### ART-018: Repair The Silently-Clean Governance Matchers
+
+**Priority:** P2 | **Depends On:** none | **Enables:** governance checks that can prove they detect
+
+**Goal:** Give three checks that currently report clean on dirty input a matcher
+that agrees with the format their own documentation prescribes, and a negative
+control proving each can detect the thing it counts.
+
+**Problem:** Three shipped helpers report zero, or report nothing, on input they
+are supposed to catch. All three were found during ART-014 by having to override
+them by hand.
+
+| Helper | Counts | The documented form | Observed |
+|---|---|---|---|
+| `validate-gate` | `\[NEEDS CLARIFICATION\]` | the spec template prescribes and demonstrates the colon form | reported 0 markers against a spec carrying 2 |
+| `count-markers` | literal `\[Gap\]` | the checklist skill's own examples show `[Coverage, Gap]` | an executor's first count returned 0 against 7 real gaps |
+| `estimate-reviewable-loc` | `is_production_file` prefix-matches `src/`, `app/`, `lib/`, `scripts/`, or a JS/TS/SQL extension | this repository's Python lives deeper than those prefixes | every Python file scores non-production; `projected: 0` against 6 declared files |
+
+The first two are the same defect verbatim: a counter narrower than the form the
+tooling itself teaches. The third differs in mechanism and consumer. They belong
+in one entry anyway, because what decides whether they ship together is the
+verification all three lack, and it is identical.
+
+**Scope:**
+- Widen each matcher to the form its own documentation prescribes, or make the
+  check report that it could not tell rather than reporting clean.
+- Give each a negative control: a fixture that is wrong in exactly one way, and
+  an assertion that the check finds it.
+- Where a skill's examples teach the invisible form, fix the examples too. A
+  matcher that disagrees with its own documentation will be re-broken otherwise.
+
+**Out of Scope:**
+- Changing what any of the three checks is *for*.
+- The `--rule` scoping mechanism, which is deliberate and documented.
+
+**Verification:** One negative control per helper, each proving the check moves
+from clean to a finding on a single wrong input. The governing principle, which
+ART-014 established the hard way: **a check that reports zero must be able to
+prove it can detect one.** Fifty-four corpus passes proved nothing until a canary
+separated a satisfied comparison from a skipped one; all three helpers sit in
+exactly that position today.
+
+**Key Decisions:**
+**Found during ART-014, filed from its retrospective (2026-08-12):** each was hit
+live and overridden by hand rather than inferred from reading. Filed as one entry
+on the operator's decision, because three separate entries would each read as a
+typo fix and lose the pattern that makes them worth fixing.
+
+**Key Files:**
+- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — all three matchers
+- `speckit-pro/skills/speckit-coach/templates/spec-template.md` — the prescribed colon form
+- `tests/speckit-pro/unit/` — the three missing negative controls
 
 ---
 
