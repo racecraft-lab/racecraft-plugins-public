@@ -623,11 +623,21 @@ change, the repair did not take regardless of what the other 54 report.
 supplied in the **relative form with the working directory at the repository
 root**, the same form the before-half used. The file was written to
 `art-014-corpus-state.json` at the repository root and deleted when the run
-finished. A repository root did resolve from it, which the
-empty-but-**present** `workflow_authority_errors` key on all 54 confirms: a
-skipped comparison leaves the key absent, exactly as the before-half canary
-recorded. Every one of the 54 returned a full 25-key report rather than the
+finished. Every one of the 54 returned a full 25-key report rather than the
 input-error object, so no recorded pass is an input error in disguise.
+
+**A correction to how this evidence was first framed**, made during the manual
+UAT of 2026-08-13. The original wording claimed the empty-but-**present**
+`workflow_authority_errors` key on all 54 confirmed that a repository root had
+resolved, "because a skipped comparison leaves the key absent". That inference
+does not hold within the after-half. The repaired guard writes the key into the
+report unconditionally, so a skipped comparison also yields present-and-empty at
+exit 0 — reproduced by running the identical mismatched canary with the state
+file outside the tree. Presence separates repaired code from unrepaired code, not
+a satisfied comparison from a skipped one. What actually establishes that these
+54 comparisons ran is that they and the canary used the identical state path and
+working directory, and the canary demonstrably resolved a root and emitted the
+identity message.
 
 The canary supplied `docs/ai/specs/.process/ART-001-workflow.md` while the state
 named `docs/ai/specs/.process/ART-002-workflow.md`, and the armed key reported:

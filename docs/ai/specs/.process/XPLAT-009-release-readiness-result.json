@@ -776,11 +776,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 8179,
+              "byte_count": 9292,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/workflow-file-protocol.md",
               "required": true,
-              "sha256": "36192fe9931117bfd832939fed31b9690447683ce47b39329706e7e1fc5c8612",
+              "sha256": "1d2e3930bd1da40941908906d684a9a5396e2da7731c25a3ac4219f2550718d2",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
               "transform": "none"
             },
@@ -1795,11 +1795,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 8179,
+              "byte_count": 9292,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/workflow-file-protocol.md",
               "required": true,
-              "sha256": "36192fe9931117bfd832939fed31b9690447683ce47b39329706e7e1fc5c8612",
+              "sha256": "1d2e3930bd1da40941908906d684a9a5396e2da7731c25a3ac4219f2550718d2",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
               "transform": "none"
             },
@@ -2264,7 +2264,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "37a64c83f8c69bc78ecd0309ce30ed59334265decf2495007934b90524cb41f4",
+          "file_tree_hash": "86425b1531672e097925f657ada32de3f8d8b748a117625ff4a35f9e2aacf163",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
@@ -2907,20 +2907,20 @@
               "transform": "none"
             },
             {
-              "byte_count": 4191,
+              "byte_count": 5096,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/workflow-file-protocol-codex.md",
               "required": true,
-              "sha256": "a088d6aa050fa1de6e04334831b65c7f1a3ad4ba9fb1e70d0c75f260a8391ef7",
+              "sha256": "089f715643bf9ba4d7b63c79e379f5a8908896ef6b0ea3a4128d554faf2bb620",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md",
               "transform": "path_normalization"
             },
             {
-              "byte_count": 8179,
+              "byte_count": 9292,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/workflow-file-protocol.md",
               "required": true,
-              "sha256": "36192fe9931117bfd832939fed31b9690447683ce47b39329706e7e1fc5c8612",
+              "sha256": "1d2e3930bd1da40941908906d684a9a5396e2da7731c25a3ac4219f2550718d2",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
               "transform": "none"
             },
@@ -4079,20 +4079,20 @@
               "transform": "none"
             },
             {
-              "byte_count": 4191,
+              "byte_count": 5096,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/workflow-file-protocol-codex.md",
               "required": true,
-              "sha256": "a088d6aa050fa1de6e04334831b65c7f1a3ad4ba9fb1e70d0c75f260a8391ef7",
+              "sha256": "089f715643bf9ba4d7b63c79e379f5a8908896ef6b0ea3a4128d554faf2bb620",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md",
               "transform": "path_normalization"
             },
             {
-              "byte_count": 8179,
+              "byte_count": 9292,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/workflow-file-protocol.md",
               "required": true,
-              "sha256": "36192fe9931117bfd832939fed31b9690447683ce47b39329706e7e1fc5c8612",
+              "sha256": "1d2e3930bd1da40941908906d684a9a5396e2da7731c25a3ac4219f2550718d2",
               "source_path": "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md",
               "transform": "none"
             },
@@ -4620,7 +4620,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "8a1fde9b9625951d1dd86ae482fda94f34fc7fc2a05bbdba6938de29d3efbca6",
+          "file_tree_hash": "9ee1ea9f01b682a1e891f79e31d4eb879bdefc5c4db93d60fba0719b90d83db1",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],

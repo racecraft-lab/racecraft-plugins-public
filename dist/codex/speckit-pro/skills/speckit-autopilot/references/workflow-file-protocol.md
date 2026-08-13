@@ -76,13 +76,21 @@ win over a later failure.
 | 1 | The state carries no `workflow_file` key | **skip** | A state naming no workflow asserts no authority. Membership of the key decides this, not whether the value is null — an explicitly nulled field is malformed, and folding the two together would make `null` a silent opt-out |
 | 2 | No repository root resolves from the state file's location | **skip** | Without a root there is no boundary to resolve the supplied workflow against. This matches the precedent the same guard already sets for an extracted copy |
 | 3 | The value is malformed: not a string, empty, whitespace-only, or not a normalized repository-relative path | **fail** — `autopilot state workflow_file is not a normalized repository-relative path` | The value is machine-written, so a shape it should never take means the state is untrustworthy rather than that the workflow is wrong. Whitespace-only is checked explicitly and ahead of the normalized-path helper, because a run of spaces is a valid POSIX path part and would otherwise reach branch 5 and be reported as a mismatch against a blank path |
-| 4 | The supplied workflow resolves outside the repository root | **fail** — `workflow file is outside the authorized repository` | The root was found and the supplied path does not live under it. That is a completed evaluation with an out-of-boundary result, which is the case the check exists to catch — a different fact from branch 2, where the repository could not be found at all |
+| 4 | The supplied workflow is resolved against the repository root | **fail** — `workflow file is outside the authorized repository` when it resolves outside; **skip** when it cannot be resolved at all | Outside the root is a completed evaluation with an out-of-boundary result, which is the case the check exists to catch — a different fact from branch 2, where the repository could not be found at all. Resolution itself raises on a path it cannot traverse, such as a symlink loop, and that is an absence of information rather than an out-of-boundary result, so it skips like branch 2 rather than reporting a mismatch it cannot substantiate. Through this guard's own call path that outcome is **defensive rather than reachable**: the supplied workflow is read before the comparison, so an untraversable path has already raised there. It exists so the helper cannot raise for a caller that reads in a different order, and so a future reordering does not turn a skip into a traceback |
 | 5 | The two references differ | **fail** — `supplied workflow does not match autopilot state workflow_file authority`, with both compared paths appended | This is a run resuming the wrong specification. Both paths are printed because the maintainer cannot otherwise tell which side to repair: re-point the run, or reclaim the state slot and let the next invocation rewrite it |
 
-Anything reaching the end passes and reports no authority error. Both skips leave
-the run indistinguishable from one that ran the comparison and passed it, because
-a skip and a satisfied comparison both report no error and both exit zero. The
-exit code carries the verdict, not whether the verdict was computed.
+Anything reaching the end passes and reports no authority error. **All three
+skips** — branch 1, branch 2, and the unresolvable-path outcome inside branch 4 —
+leave the run indistinguishable from one that ran the comparison and passed it,
+because a skip and a satisfied comparison both report no error and both exit
+zero. The exit code carries the verdict, not whether the verdict was computed.
+
+**This is the trap when reading corpus evidence.** The report always carries
+`workflow_authority_errors`, so an empty value proves only that the repaired
+guard is running, never that the comparison ran. Presence separates repaired code
+from unrepaired code, where the key is absent entirely. It does not separate a
+satisfied comparison from a skipped one. To prove a comparison ran, vary an input
+and show the verdict change.
 
 **Resolution is asymmetric.** The **supplied** workflow is resolved against the
 repository root and rendered POSIX, so the right file named absolutely, or

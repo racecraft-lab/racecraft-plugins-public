@@ -144,8 +144,8 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-014 | Phase-Guard Enforcement Repair | 🔄 In Progress | [.process/ART-014-workflow.md](.process/ART-014-workflow.md) | Scaffolded 2026-08-12, one slice. Both defects reproduced by execution during scoping; the corpus baseline is 54 of 54 workflow files exiting 0 under `--rule status-evidence`. Budget re-declared at scaffold from ~120 to 235 reviewable LOC after the interview added two documentation files. No dependencies; found during ART-006, which deliberately did not fix it |
 | ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
 | ART-016 | Claude-Side Live PR Commit Authority | ⏳ Ready | - | No dependencies; opened from ART-014, which documents the gap and names this entry in the shipped Claude `SKILL.md` |
-| ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ⏳ Ready | - |
-| ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready | - | No dependencies; opened from ART-014's retrospective. Three helpers report clean on input they should catch, each hit live during that run | Blocked by ART-014, which adds the classification record these verdicts live in. Opened from ART-014's advisory audit; the defect was reproduced by execution |
+| ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ⏳ Ready | - | Blocked by ART-014, which adds the classification record these verdicts live in. Opened from ART-014's advisory audit; the defect was reproduced by execution |
+| ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready | - | No dependencies; opened from ART-014's retrospective. Three helpers report clean on input they should catch, each hit live during that run |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 

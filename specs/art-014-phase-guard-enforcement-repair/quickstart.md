@@ -93,10 +93,20 @@ python3 tests/speckit-pro/run-all.py --layer 4
 **real** report carries a verdict.
 
 **Then prove the test bites.** Add a throwaway problem key to the report without
-adding it to `PROBLEM_KEY_INTENT` and rerun. The suite must fail and name the
-missing key. Revert the throwaway key afterwards. A completeness test that cannot
-fail is the same category of defect this specification exists to repair, so this
-step is not optional.
+adding it to `PROBLEM_KEY_INTENT` and rerun. The run must fail and the assertion
+must name the missing key. Revert the throwaway key afterwards. A completeness
+test that cannot fail is the same category of defect this specification exists to
+repair, so this step is not optional.
+
+**Neither command above prints that name**, so read the failure through a real
+stream rather than expecting it on stdout. `run_counted` builds its result object
+with `stream=None` (`tests/speckit-pro/lib/test_result.py:147`), which routes
+every traceback into a throwaway buffer, and `run-all.py:238` prints only
+`FAIL <label> (<passed>/<total>, <failed> failed)`. The observable those commands
+give you is the count dropping and the exit code moving. To see the key named,
+load the test module's own `build_suite()` and run it against a real stream. Test
+the second direction the same way: a verdict recorded in `PROBLEM_KEY_INTENT` for
+a key the guard never emits must also fail.
 
 ## Scenario 5 — Full gate
 

@@ -52,15 +52,28 @@ failure:
    machine-written, so a shape it should never take means the state is
    untrustworthy. Whitespace-only is checked explicitly, because a run of spaces
    is a valid POSIX path part.
-4. **Supplied workflow resolves outside the repository root** — fails with
-   `workflow file is outside the authorized repository`. The root was found and
-   the path does not live under it, which is a different fact from branch 2.
+4. **Supplied workflow resolved against the repository root** — two outcomes.
+   Outside the root fails with `workflow file is outside the authorized
+   repository`; the root was found and the path does not live under it, which is
+   a different fact from branch 2. A path resolution cannot traverse at all, such
+   as a symlink loop, skips instead: that is an absence of information, not an
+   out-of-boundary result. Through this guard's own call path that outcome is
+   defensive rather than reachable, because the supplied workflow is read before
+   the comparison and an untraversable path has already raised there. It exists
+   so the helper cannot raise for a caller that reads in a different order.
 5. **The two references differ** — fails with `supplied workflow does not match
    autopilot state workflow_file authority`, both compared paths appended, so the
    maintainer can tell which side to repair.
 
-Anything reaching the end passes. Both skips are indistinguishable from a pass at
+Anything reaching the end passes. All three skips — branches 1 and 2, and the
+unresolvable-path outcome inside branch 4 — are indistinguishable from a pass at
 the exit code, which carries the verdict rather than whether it was computed.
+
+When reading corpus evidence, note that the report always carries
+`workflow_authority_errors`. An empty value proves only that the repaired guard
+is running, never that the comparison ran; presence separates repaired code from
+unrepaired code, where the key is absent entirely. To prove a comparison ran,
+vary an input and show the verdict change.
 
 Resolution is **asymmetric**: the supplied workflow is resolved against the
 repository root and rendered POSIX, so the right file named absolutely or
