@@ -258,11 +258,11 @@
       "step": "Post: PR Creation"
     },
     {
-      "status": "pending",
+      "status": "in_progress",
       "step": "Post: Review Remediation"
     },
     {
-      "status": "pending",
+      "status": "completed",
       "step": "Post: Retrospective"
     }
   ],
@@ -313,6 +313,17 @@
     "measured_by": "python3 scripts/refresh-release-artifacts.py --check",
     "note": "T023 must regenerate all 18, not the 4 it names. The --check run leaves the tree untouched, verified.",
     "tasks_md_t023_named": 4
+  },
+  "retrospective": {
+    "adherence": "100%",
+    "artifact": "docs/ai/specs/.process/ART-014-retrospective.md",
+    "critical_findings": 0,
+    "followups_opened": [
+      "ART-016",
+      "ART-017",
+      "ART-018"
+    ],
+    "gate_reverified": "7393/7393"
   },
   "settings": {
     "agent_teams_available": true,
@@ -383,6 +394,6 @@
     ],
     "status": "skipped"
   },
-  "updated_at": "2026-08-13T01:14:46Z",
+  "updated_at": "2026-08-13T11:40:24Z",
   "workflow_file": "docs/ai/specs/.process/ART-014-workflow.md"
 }

@@ -42,7 +42,7 @@ doubt them, and record any drift.
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 pass. 9 findings (0 critical, 2 high, 5 medium, 2 low), all remediated, 0 after 2 loops, nothing reopened |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ✅ Complete | 27 tasks, G7 pass. Full gate 7385/7385, +7 over the 7378 baseline, zero failures |
-| Post | Post-Implementation | 🔄 In Progress | 10 of 12 done; PR #433 open. Review remediation and retrospective remain |
+| Post | Post-Implementation | ✅ Complete | 11 of 12 done; PR #433 open. Review remediation runs on a loop until the PR is reviewed |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -1671,8 +1671,8 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: UAT Runbook Generation | ✅ Complete | Skipped fail-open, helper deferred; quickstart's 7 scenarios are the acceptance basis |
 | Post: PR Body Generation | ✅ Complete | One release-note fence, zero absolute paths |
 | Post: PR Creation | ✅ Complete | PR #433 open against main |
-| Post: Review Remediation | ⏳ Pending | |
-| Post: Retrospective | ⏳ Pending | |
+| Post: Review Remediation | 🔄 In Progress | Loop job scheduled every 5 minutes against PR #433. First check: no comments, early gates pass |
+| Post: Retrospective | ✅ Complete | 100% adherence, 0 critical. Written to `.process/ART-014-retrospective.md`; opened ART-018 |
 
 Repository quality gates (constitution):
 
@@ -1694,15 +1694,52 @@ Repository quality gates (constitution):
 
 ### What Worked Well
 
--
+**Banking the canary before writing any code.** The single most valuable artifact
+of the run was a measurement taken before the first edit: a state naming a
+different specification, exiting 0. Everything afterwards had something to be
+measured against, and the claim "the defect is fixed" reduced to one number
+changing. Fifty-four corpus passes proved nothing on their own, because a skipped
+comparison and a satisfied one both exit 0.
+
+**Verifying agent reports rather than relaying them.** Every substantive claim in
+this run was re-derived in the main session before being acted on. That caught a
+symlink-loop crash report that was wrong, a "the guard was reverted" conclusion of
+my own drawn from a torn read, and a corpus-harness precondition I had stated too
+loosely.
+
+**Consensus that argued rather than voted.** Five items routed to three lenses.
+Two verdicts went against the recommendation the executor offered, one went
+against the orchestrator's own framing, and in every case the deciding evidence
+was something no single lens held.
 
 ### Challenges Encountered
 
--
+**The estimator was faithful and still wrong by 2x.** It was re-invoked at every
+amendment, which is precisely what ART-015 asks for, and still projected 337
+against a real 687. The miss is ART-015's own deferred second limitation: a
+requirement whose deliverable is bulk inside one existing file.
+
+**Three collaboration failures, all one shape.** A probe artifact left in shipped
+source; a stopped agent's byte-exact restore silently undoing an orchestrator fix;
+a torn read during a flush that looked like a reversion. Each was a write whose
+provenance the orchestrator could not see.
+
+**Stalling.** Twice I ended a turn with a summary instead of a dispatch. The rule
+is that a turn ends with a live agent or a finished run.
 
 ### Patterns to Reuse
 
--
+**A check that reports zero must be able to prove it can detect one.** This is the
+run's durable lesson and it generalizes past this spec. It is why the corpus
+harness carries a canary, why the completeness test was proven to bite, and why
+ART-018 exists.
+
+**Record the verdict, not just the value.** The classification map's worth is that
+every advisory key now states why advisory is correct for it. Three keys could not
+answer that question, which is how they were found.
+
+**Treat an agent stop as a write-invalidation event, not a pause.** Re-derive from
+the diff before building on anything that agent owned.
 
 ---
 

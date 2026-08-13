@@ -24,7 +24,7 @@ ART-006 and ART-012 are complete and archived; ART-002 shipped in PRs #425,
 #427 and #430, which unblocks ART-007; ART-012 shipped in PR #426; ART-003
 through ART-005, ART-007, ART-009 and ART-011 are ready; ART-014 is in progress,
 scaffolded 2026-08-12 as one slice; ART-015 was opened from ART-006 findings and
-is ready with no dependencies; ART-016 and ART-017 were opened from ART-014
+is ready with no dependencies; ART-016, ART-017 and ART-018 were opened from ART-014
 findings on 2026-08-12 and are ready
 
 ---
@@ -144,7 +144,8 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-014 | Phase-Guard Enforcement Repair | 🔄 In Progress | [.process/ART-014-workflow.md](.process/ART-014-workflow.md) | Scaffolded 2026-08-12, one slice. Both defects reproduced by execution during scoping; the corpus baseline is 54 of 54 workflow files exiting 0 under `--rule status-evidence`. Budget re-declared at scaffold from ~120 to 235 reviewable LOC after the interview added two documentation files. No dependencies; found during ART-006, which deliberately did not fix it |
 | ART-015 | Spec-Size Re-Estimation Trigger | ⏳ Ready | - | No dependencies; found during ART-006 — the estimator is sound but is never re-fed |
 | ART-016 | Claude-Side Live PR Commit Authority | ⏳ Ready | - | No dependencies; opened from ART-014, which documents the gap and names this entry in the shipped Claude `SKILL.md` |
-| ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ⏳ Ready | - | Blocked by ART-014, which adds the classification record these verdicts live in. Opened from ART-014's advisory audit; the defect was reproduced by execution |
+| ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ⏳ Ready | - |
+| ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready | - | No dependencies; opened from ART-014's retrospective. Three helpers report clean on input they should catch, each hit live during that run | Blocked by ART-014, which adds the classification record these verdicts live in. Opened from ART-014's advisory audit; the defect was reproduced by execution |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -1130,6 +1131,61 @@ When breaking a feature into specs:
 | Python 3.11+ | pyenv (repo standard) |
 | Node ≥ 22.12 + pnpm | nvm v22.22.2 for docs-site work (ART-013) |
 | Browser check | open each template over `file://`; console must be clean |
+
+---
+
+### ART-018: Repair The Silently-Clean Governance Matchers
+
+**Priority:** P2 | **Depends On:** none | **Enables:** governance checks that can prove they detect
+
+**Goal:** Give three checks that currently report clean on dirty input a matcher
+that agrees with the format their own documentation prescribes, and a negative
+control proving each can detect the thing it counts.
+
+**Problem:** Three shipped helpers report zero, or report nothing, on input they
+are supposed to catch. All three were found during ART-014 by having to override
+them by hand.
+
+| Helper | Counts | The documented form | Observed |
+|---|---|---|---|
+| `validate-gate` | `\[NEEDS CLARIFICATION\]` | the spec template prescribes and demonstrates the colon form | reported 0 markers against a spec carrying 2 |
+| `count-markers` | literal `\[Gap\]` | the checklist skill's own examples show `[Coverage, Gap]` | an executor's first count returned 0 against 7 real gaps |
+| `estimate-reviewable-loc` | `is_production_file` prefix-matches `src/`, `app/`, `lib/`, `scripts/`, or a JS/TS/SQL extension | this repository's Python lives deeper than those prefixes | every Python file scores non-production; `projected: 0` against 6 declared files |
+
+The first two are the same defect verbatim: a counter narrower than the form the
+tooling itself teaches. The third differs in mechanism and consumer. They belong
+in one entry anyway, because what decides whether they ship together is the
+verification all three lack, and it is identical.
+
+**Scope:**
+- Widen each matcher to the form its own documentation prescribes, or make the
+  check report that it could not tell rather than reporting clean.
+- Give each a negative control: a fixture that is wrong in exactly one way, and
+  an assertion that the check finds it.
+- Where a skill's examples teach the invisible form, fix the examples too. A
+  matcher that disagrees with its own documentation will be re-broken otherwise.
+
+**Out of Scope:**
+- Changing what any of the three checks is *for*.
+- The `--rule` scoping mechanism, which is deliberate and documented.
+
+**Verification:** One negative control per helper, each proving the check moves
+from clean to a finding on a single wrong input. The governing principle, which
+ART-014 established the hard way: **a check that reports zero must be able to
+prove it can detect one.** Fifty-four corpus passes proved nothing until a canary
+separated a satisfied comparison from a skipped one; all three helpers sit in
+exactly that position today.
+
+**Key Decisions:**
+**Found during ART-014, filed from its retrospective (2026-08-12):** each was hit
+live and overridden by hand rather than inferred from reading. Filed as one entry
+on the operator's decision, because three separate entries would each read as a
+typo fix and lose the pattern that makes them worth fixing.
+
+**Key Files:**
+- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — all three matchers
+- `speckit-pro/skills/speckit-coach/templates/spec-template.md` — the prescribed colon form
+- `tests/speckit-pro/unit/` — the three missing negative controls
 
 ---
 
