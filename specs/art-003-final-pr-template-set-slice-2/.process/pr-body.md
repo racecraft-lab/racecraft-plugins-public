@@ -40,6 +40,16 @@ pastes as a valid unified-diff line. Severity is one style rule with **no
 selector branching on which word it is** — a branch is exactly where colour
 re-enters as the ranking carrier, which is what upstream does.
 
+**The row is deliberately not a grid, and the paste is why.** Three fixed cells
+is a grid's job, and the row started as one. But grid blockifies its items, and
+a plain-text copy puts a newline between block boxes, so every copied row
+arrived split: the marker alone on one line, its code on the next, and a whole
+hunk copied as fourteen lines rather than seven. The row is now a block with
+inline-level cells carrying the column widths directly. The rendered geometry is
+byte-for-byte the same; only the clipboard changed. This is the one defect the
+manual acceptance pass found, and it was found by pasting rather than by
+reading — which is exactly why FR-019c asks for an actual paste.
+
 **Both scroll containers are keyboard-scrollable, and none of the five already
 shipped is.** Every existing `overflow-x: auto` container in this gallery lacks
 `tabindex="0"`, so none is scrollable by keyboard in Safari and every one is
@@ -82,16 +92,24 @@ together. M3 landed at 344 against 345 — inside the gate with one line to spar
 - The artifact title was compared to its catalog entry by a **run, not a reading**
   — `Annotated Diff` on both sides, zero characters of difference. Slice 1 shipped
   this wrong in sentence case and nothing asserts it.
+- The **manual acceptance pass ran**, against the shipped bytes on a real
+  `file://` URL in Chrome 151: **65/65**. The paste was performed rather than
+  asserted, on the plain-text and paste-and-match flavours and through the system
+  pasteboard, which is what caught the row defect above.
+- The paste fix was checked for regressions the same way: rendered geometry is
+  identical to the grid version — marker column, code column and row height all
+  unchanged — and the fill-region checks, the tab order and the export payloads
+  are untouched.
 
 ## Known gaps
 
-1. **Nine acceptance items need a person at a browser** and are not verified here:
-   console silence on load, the actual paste of an added, removed and context row
-   on both clipboard paths, fragment navigation moving focus, tab order and focus
-   indicator, no horizontal page scroll, both themes, greyscale legibility,
-   scripting-disabled degradation, and the screenshots. Chrome automation refuses
-   `file://` navigation, and serving over `http://` would be a false pass because
-   it changes the clipboard permission model so the failure path never fires.
+1. **Chrome only.** The manual acceptance pass has now been run, against the
+   shipped bytes on a real `file://` URL: **65 of 65 checks pass**, including the
+   actual paste on both clipboard flavours, both race directions, all three
+   clipboard-refusal modes, the nine-stop tab order, greyscale, both themes and
+   the scripting-disabled degradation. It ran on Chrome 151 only. The clipboard
+   serializer is precisely the thing that differs between engines — it is what
+   produced the defect this PR fixes — so Firefox and WebKit remain unverified.
 2. **One concurrency assertion cannot discriminate.** Checking only the status
    text passes even with the guard removed, because both settles carry the same
    delay and the later write lands last regardless. Only the fallback reveal and
