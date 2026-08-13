@@ -1,5 +1,21 @@
 {
   "active_step": "Post: Review Remediation",
+  "archive": {
+    "archived_at": "2026-08-13",
+    "cleanup_applied": true,
+    "cleanup_branch": "art-014-post-merge-hygiene",
+    "cleanup_gate_7_note": "Gate 7 names main as the normal cleanup branch. This archive ran on art-014-post-merge-hygiene, cut from main at the merge commit, because this repository forbids committing directly to main and lands every change through a pull request. Same shape as PR #431 and PR #424.",
+    "merge_commit": "12d8c2d48469df9293227cb2c28cf05a4847fc61",
+    "merged_at": "2026-08-13T16:36:13Z",
+    "process_evidence_preserved": [
+      "docs/ai/specs/.process/ART-014-workflow.md",
+      "docs/ai/specs/.process/ART-014-design-concept.md",
+      "docs/ai/specs/.process/ART-014-retrospective.md"
+    ],
+    "pull_request": 433,
+    "report": ".specify/memory/archive-reports/2026-08-13-art-014-post-merge-hygiene.md",
+    "source_spec_path_removed": "specs/art-014-phase-guard-enforcement-repair"
+  },
   "archive_sweep": {
     "actions_taken": [],
     "eligible_specs": [],
@@ -345,7 +361,7 @@
   },
   "spec_id": "ART-014",
   "stage": "full",
-  "status": "completed_pr_open",
+  "status": "completed_archived",
   "tasks_reviewability": {
     "deferral_reason": "installed runner supports setup mode only; tasks mode is registered but deferred",
     "fallback_evidence": {
@@ -394,6 +410,6 @@
     ],
     "status": "skipped"
   },
-  "updated_at": "2026-08-13T11:40:24Z",
+  "updated_at": "2026-08-13T17:05:00Z",
   "workflow_file": "docs/ai/specs/.process/ART-014-workflow.md"
 }

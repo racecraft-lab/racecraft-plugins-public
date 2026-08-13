@@ -2598,3 +2598,106 @@ not apply. Historical workflow and design-concept evidence remains under
 `docs/ai/specs/.process/`; the retrospective is inline in the workflow file.
 Detailed provenance, canonical artifact locations and recovery commands live in
 the dated ART-012 archive report.
+
+---
+
+## ART-014 Phase-Guard Enforcement Repair
+
+[Source: specs/art-014-phase-guard-enforcement-repair] — archived 2026-08-13
+after PR #433 merged at `12d8c2d4`. Revision reason: merged-spec archival into
+project memory.
+
+### User Stories
+
+- **US1** — as a maintainer resuming an autopilot run, a run pointed at a
+  workflow the state file does not name must halt rather than proceed, so work
+  cannot advance against the wrong specification.
+- **US2** — as a maintainer reading a guard report, every problem key must carry
+  a recorded verdict stating whether it can fail a run, so advisory status is a
+  decision rather than an accident.
+- **US3** — as a maintainer reading the shipped documentation, every statement
+  about this guard must describe behavior the guard performs or label itself as
+  not yet wired.
+
+### Requirements
+
+Twenty-four functional requirements, FR-001 through FR-013c. The load-bearing
+set:
+
+- The identity comparison runs **unconditionally**, ahead of the
+  `pr-marker-plan.v2` and `--expected-head-commit` preconditions that previously
+  gated it (FR-001, FR-004a-d).
+- Findings report under `workflow_authority_errors`, registered in the
+  `status-evidence` rule tuple, which is the half that moves the exit code
+  (FR-007). Registration and evaluation are separate halves; only the first
+  produces a finding and only the second gates the run.
+- The gated `workflow_checkpoint_errors` path is frozen and unarmed (FR-002,
+  FR-008).
+- Five ordered branches: absent key skips, unresolvable root skips, malformed
+  value fails, out-of-boundary fails, mismatch fails. An earlier skip must win
+  over a later failure. Branch 4 also skips when resolution cannot traverse the
+  path at all (FR-003, FR-004c, FR-005).
+- Repository-root resolution resolves the state path before walking it, so the
+  check no longer depends on path spelling or working directory (FR-006b).
+- All 21 emitted problem keys carry a verdict from a closed three-value
+  vocabulary, enforced in both directions (FR-010, FR-010a, FR-010b, FR-011).
+
+### Success Criteria
+
+SC-001 through SC-008. SC-002 is the corpus regression: 54 of 54 workflow files
+still exit 0 after the change, measured against a denominator pinned to baseline
+commit `3af4764e`. SC-003 is the canary: a state naming a different
+specification must flip from exit 0 to exit 1.
+
+### Key Entities
+
+`workflow_authority_errors` (the armed problem key), `PROBLEM_KEY_INTENT` (the
+classification record), `RULE_PROBLEM_KEYS` (the rule-to-key map whose
+`status-evidence` tuple scopes the exit code), and
+`autopilot-state.json.workflow_file` (the authority the comparison enforces).
+
+### Edge Cases
+
+A state carrying no `workflow_file` key asserts no authority and skips; an
+explicitly nulled field is malformed rather than a silent opt-out, so branch 1
+tests key membership rather than value. A whitespace-only value is checked
+explicitly and ahead of the normalized-path helper, because a run of spaces is a
+valid POSIX path part and would otherwise be reported as a mismatch against a
+blank path. Resolution follows symlinks, so what is compared is where the
+supplied path lands, not how it was spelled. The comparison is byte-exact with
+no case folding, because byte-exact is the only rule returning the same verdict
+on a case-insensitive filesystem and a case-sensitive one.
+
+### Evidence Framing
+
+**A green result from this guard is not self-certifying.** A skipped comparison
+and a satisfied comparison both report no error and both exit zero, and the
+repaired guard writes `workflow_authority_errors` into the report
+unconditionally, so an empty value proves only that the repaired code is running.
+Presence separates repaired code from unrepaired code, where the key is absent
+entirely; it does not separate a satisfied comparison from a skipped one. To
+prove a comparison ran, vary an input and show the verdict change. Both shipped
+protocol references carry this warning.
+
+### Cleanup Note
+
+The active ART-014 folder was removed after PR #433 merge provenance and a
+tree-wide live-reader scan on the bare directory name. Four files matched outside
+the folder: two preserved `.process/` documents citing the branch in prose, the
+machine-written `autopilot-state.json`, and one live backlink in
+`html-artifacts-roadmap-MOC.md` that the spec index regenerates rather than
+receiving a hand edit.
+
+`quickstart.md` was **not** relocated, and the ART-002 precedent is why. That
+feature's acceptance runbook moved because the preserved workflow cited its path
+twice and fifteen of its sixty-one steps were still owed against four templates
+later specs build on. ART-014 fails both prongs: every surviving citation names
+`quickstart.md` by bare filename inside prose rather than by path, and all seven
+scenarios were executed on 2026-08-13 against head `800d1e7d` with every one
+passing. ART-002's own `quickstart.md` was likewise deleted with its folder. The
+ART-012 test-repointing step has no analogue, because ART-014 ships no
+`contracts/` directory and no test cites the spec folder.
+
+Historical workflow, design-concept and retrospective evidence remains under
+`docs/ai/specs/.process/`. Detailed provenance, canonical artifact locations and
+recovery commands live in the dated ART-014 archive report.
