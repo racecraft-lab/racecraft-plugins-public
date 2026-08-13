@@ -1426,17 +1426,76 @@ precisely so a runbook can assert against them.
 
 ## Lessons Learned
 
+Written at PR creation, against PR #434.
+
 ### What Worked Well
 
--
+**Consensus amended answers instead of ratifying them.** Four rounds ran and all
+four resolved in Round 1, but two of them changed the answer rather than blessing
+it. The wait-deadline round found that "3 consecutive expired polls" was
+structurally mis-scoped, because "poll" has no Claude-side referent, so a
+whichever-comes-first rule would have let one platform abandon earlier than the
+other — a parity violation hiding inside what looked like a tuning constant. The
+chain round supplied a refinement nobody had proposed: condition on the guard's
+own predicate rather than an equivalent-looking root comparison, so the two can
+never disagree.
+
+**The contracts made implementation into transcription.** Fixing exact strings in
+`contracts/` meant the shared blocks could be verified byte-identical against the
+spec rather than reviewed for intent, and the skill reviewer confirmed that
+programmatically across both platforms.
+
+**Splitting the analysts by perspective paid off on the hardest question.** The
+Codex chain question needed one analyst who could read shipped code and one who
+could settle an external fact about the Codex CLI. Either alone would have
+produced a confident wrong answer.
 
 ### Challenges Encountered
 
--
+**Four of my own errors reached downstream artifacts before being caught.** Two
+false success criteria — SC-007's confirmation count, falsified by two prompts the
+shipped skill already issues, and the claim that the dependency label is
+universal, falsified by 14 entries spelling it `**Deps:**`. A wrong anchor for the
+`## Scaffold Complete` report. And a revision note whose downstream list named the
+artifacts that motivated the correction rather than every artifact repeating the
+corrected claim, which let a falsified sentence survive two more phases. Each was
+found by a later phase, which is the process working, but each was avoidable by
+measuring instead of generalising.
+
+**Three advisory gates report a benign value on input they cannot assess.** G1's
+marker count matches only a bare `[NEEDS CLARIFICATION]` and so missed all three
+markers written in the template's own colon form, reporting `pass, markers: 0`
+against a spec carrying three. `estimate-reviewable-loc` scores a
+Markdown-shipping plugin zero by construction. `reviewability-gate` setup mode
+reads the whole roadmap and returns the last entry's numbers. All three are
+ART-014-shaped, and this run is evidence for that spec rather than a place to fix
+them.
+
+**Prose specs defeat the LOC estimator in both directions.** The scoping estimate
+said 322; the shipped diff is 1160 production lines. Both are honest and they
+measure different things, but nothing in the toolchain reconciles them, so the
+budget was effectively unmeasured for this whole spec.
+
+**The Codex word cap became the binding design constraint late.** A faithful
+mirror measured 8224 against a hard 8000, and rationale prose had to be
+compressed to fit. That is a real cost paid in reviewer comprehension, and it
+leaves 113 words for whoever comes next.
 
 ### Patterns to Reuse
 
--
+- **Verify the tool before trusting its verdict.** Reading `is_production_file`
+  and the marker regex is what turned three silent passes into recorded findings.
+- **When a shipped constraint contradicts a closed interview decision, correct
+  the premise, not the decision.** The dated revision note kept the operator's
+  choice intact while fixing the assumption underneath it — and the second note's
+  omission proved that a revision note's downstream list is load-bearing, not
+  commentary.
+- **State a reduction plainly rather than letting it land silently.** The Codex
+  chain is now the exception rather than the rule, against what the interview
+  chose. Saying so in the PR is cheaper than a reviewer discovering it.
+- **Give a review's best finding effect immediately.** The extra short-form
+  negative eval case cost two lines and covers the misroute an operator would
+  actually produce.
 
 ---
 

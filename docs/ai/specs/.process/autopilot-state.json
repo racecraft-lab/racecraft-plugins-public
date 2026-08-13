@@ -4,9 +4,9 @@
   "workflow_file": "docs/ai/specs/.process/ART-011-workflow.md",
   "feature_dir": "specs/art-011-scaffold-integration",
   "branch": "art-011-scaffold-integration",
-  "status": "in_progress",
+  "status": "completed_pr_open",
   "stage": "implement",
-  "active_step": "Post: PR Creation",
+  "active_step": "PR #434 open; review remediation pending human review",
   "updated_at": "2026-08-12T18:00:00Z",
   "prior_run_note": "Reclaimed the single state slot from docs/ai/specs/.process/ART-012-workflow.md (prior status: completed_archived). Reclaiming is normal operation - one slot, many specs.",
   "settings": {
@@ -159,7 +159,7 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
@@ -167,7 +167,7 @@
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "gates": {
@@ -337,6 +337,9 @@
     "head": "art-011-scaffold-integration",
     "title_contract": "validate-pr-workflow-contract passed, exit 0",
     "release_note": "compose-release-notes.py --validate-pr passed: valid release-note fence",
-    "packet_helpers": "pr-packet-output / validate-pr-packet-* are golden_only on the installed runner; title, body and changed-file scope validated through the repository's own validators instead, recorded as a deviation"
+    "packet_helpers": "pr-packet-output / validate-pr-packet-* are golden_only on the installed runner; title, body and changed-file scope validated through the repository's own validators instead, recorded as a deviation",
+    "number": 434,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/434",
+    "state": "OPEN"
   }
 }
