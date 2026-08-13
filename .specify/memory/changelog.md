@@ -2420,3 +2420,63 @@ git checkout 1916d8c917eea4892035daafe4c02d2558e203f3 -- specs/art-012-implement
 
 The detailed archive and verification record is stored in
 `.specify/memory/archive-reports/2026-08-12-art-012-post-merge-hygiene.md`.
+
+---
+
+## 2026-08-13 — ART-014 Phase-Guard Enforcement Repair archived
+
+Merged in PR #433 at `12d8c2d48469df9293227cb2c28cf05a4847fc61`, then archived
+from `art-014-post-merge-hygiene`.
+
+Shipped the repair that makes the autopilot phase guard's workflow-identity
+check enforce the authority its documentation already promised. The comparison
+of the supplied `--workflow` against `autopilot-state.json.workflow_file` now
+runs unconditionally, rather than behind a `pr-marker-plan.v2` schema and an
+`--expected-head-commit` that a normal autopilot run supplies neither of, and its
+findings report under a new `workflow_authority_errors` key registered in the
+`status-evidence` tuple the autopilot always selects. Before the repair, a run
+resuming against the wrong specification exited 0 and reported pass. Also closed
+a third short-circuit found during Clarify: repository-root resolution walked the
+state path as supplied, so a state file genuinely inside the repository resolved
+no root when named relatively from a subdirectory, making the check depend on
+path spelling rather than on file location. Five production files, 488 added
+production lines, 24 functional requirements, 27 of 27 tasks. The suite moved
+from 7378 to 7396. CI clean on the final head: 20 pass, 1 skip, zero failures.
+
+Advisory status became a recorded decision rather than an accident. A
+`PROBLEM_KEY_INTENT` map classifies all 21 emitted problem keys under a closed
+three-value vocabulary, enforced by a test that derives the key set from a real
+report and fails in both directions — an unclassified emitted key, and a verdict
+recorded for a key the guard never emits.
+
+The load-bearing evidence is a canary, not a pass rate. A skipped comparison and
+a satisfied comparison both report no error and both exit zero, so 54 green
+corpus files proved nothing on their own; only the deliberately mismatched canary
+flipping from exit 0 to exit 1 established that the repair took. Applying that
+same principle downstream found four further defects that neither the suite nor
+CI could see, three of them in this feature's own paperwork, all fixed before
+merge: the corpus evidence overclaimed what a present-and-empty key proves, both
+protocol references undercounted their own branch table after a review fix added
+a third skip, a malformed roadmap row silently dropped ART-017's blocking
+dependency, and quickstart scenario 4 promised an observable its own commands
+cannot emit.
+
+Three follow-ups were opened from this run and are recorded on the HTML artifacts
+roadmap: ART-016 for Claude-side live pull-request commit authority, ART-017 to
+arm the three accidentally-advisory keys, and ART-018 to repair three governance
+matchers that report clean on input they should catch. ART-017 is unblocked by
+this merge.
+
+### Recovery Commands
+
+```text
+git show 12d8c2d48469df9293227cb2c28cf05a4847fc61:specs/art-014-phase-guard-enforcement-repair/spec.md
+git show 12d8c2d48469df9293227cb2c28cf05a4847fc61:specs/art-014-phase-guard-enforcement-repair/plan.md
+git show 12d8c2d48469df9293227cb2c28cf05a4847fc61:specs/art-014-phase-guard-enforcement-repair/tasks.md
+git show 12d8c2d48469df9293227cb2c28cf05a4847fc61:specs/art-014-phase-guard-enforcement-repair/research.md
+git show 12d8c2d48469df9293227cb2c28cf05a4847fc61:specs/art-014-phase-guard-enforcement-repair/quickstart.md
+git checkout 12d8c2d48469df9293227cb2c28cf05a4847fc61 -- specs/art-014-phase-guard-enforcement-repair
+```
+
+The detailed archive and verification record is stored in
+`.specify/memory/archive-reports/2026-08-13-art-014-post-merge-hygiene.md`.
