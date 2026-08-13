@@ -1369,12 +1369,43 @@ contiguous from "a". No behavioural contradiction between `tasks.md` and
 **When to run:** After Phase 6 commits and before Phase 7 begins. Gate semantics
 are unchanged; this section records the verdict so a later session can read it.
 
+### Instrument calibration — verified independently at G6.5
+
+The measurement instrument recorded in `plan.md` and `quickstart.md` was re-run
+by the orchestrator against all four shipped templates, rather than trusting the
+claim that it was calibrated. It holds, and the check produced a result worth
+keeping.
+
+| Template | Instrument (authored / css / js / markup) | Comparator table | Sums? |
+|---|---|---|---|
+| `spec-explainer` | 315 / 169 / 0 / 146 | 316 / 171 / 0 / 147 | instrument **sums exactly**; table **off by 2** |
+| `module-map` | 1002 / 448 / 293 / 261 | 1003 / 450 / 294 / 261 | instrument **sums exactly**; table **off by 2** |
+| `code-approaches` | 1025 / 471 / 298 / 256 | 1026 / 473 / 299 / 256 | instrument **sums exactly**; table **off by 2** |
+| `implementation-plan` | 1221 / 661 / 277 / 283 | 1222 / 663 / 278 / 283 | instrument **sums exactly**; table **off by 2** |
+
+**The instrument is the trustworthy set, and the budget already speaks its
+units.** Its three parts sum to its own authored total for every template; the
+comparator figures exceed theirs by exactly 2 in every case, because they
+double-count the two `<style>` delimiter lines. The decomposition derives from the
+instrument's numbers, not the table's — C3 from 293, and the 150 section-CSS
+ceiling from `spec-explainer`'s 169 (`plan.md:287,289`). So M1, M2 and M3 will
+measure in the same units the budget was written in, which is the only property
+that had to hold.
+
+What remains is cosmetic and is recorded rather than chased: the comparator
+tables in `plan.md` and in this file carry the +2 figures, so a reader comparing a
+table row against a checkpoint reading will see a two-line discrepancy with no
+explanation beside it. That is the same recorded-versus-measured units confusion
+Analyze caught as its sixth finding, surviving in one more place.
+
+### Verdict
+
 | Field | Value |
 |-------|-------|
-| Mode | |
-| Composite confidence | |
-| Verdict | |
-| Evidence | |
+| Mode | `advisory` (resolved at Step 0.6b: no flag, no local config) |
+| Composite confidence | recorded below once the adversarial check returns |
+| Verdict | recorded below |
+| Evidence | G1–G6 all PASS; suite 7378/7378 matching the G0 baseline exactly; 72/72 requirement coverage; declared figure 758 verified through the parser in all three artifacts; decomposition sums; instrument calibrated above |
 
 ---
 
