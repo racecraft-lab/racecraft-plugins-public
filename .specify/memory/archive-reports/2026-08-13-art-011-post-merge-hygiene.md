@@ -130,7 +130,7 @@ These live outside `specs/**` and are unaffected by this cleanup:
   `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md` — the blind-spot pass,
   the hand-off check, the hand-off command table, and the single closing report
 - `tests/speckit-pro/layer2-trigger/evals/speckit-scaffold-spec-trigger.json` and
-  its `codex-evals/` mirror — three new positive trigger cases each
+  its `codex-evals/` mirror — Layer 2 trigger fixture updated (currently 20 entries: 10 positive, 10 negative)
 - Generated payload copies under `dist/claude` and `dist/codex`, plus the
   installed-cache proofs and XPLAT-009 results, all regenerated from source
 
