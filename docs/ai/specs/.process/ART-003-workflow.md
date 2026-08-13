@@ -314,7 +314,7 @@ concurrently rather than from anyone's carelessness.
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 PASS; 11 findings, all remediated at zero line cost |
 | Confidence Gate | G6.5 | ✅ Complete | advisory, composite 0.90, proceed with reservations |
 | Implement | `/speckit-implement` | ✅ Complete | G7 PASS, 40/40 tasks; suite 7379/7379, +1 over baseline |
-| Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
+| Post | Post-Implementation | ✅ Complete | Review found and fixed one serious defect; PR opened |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -1484,6 +1484,60 @@ uncertainty and fires before any export work, so a C1 miss surfaces at roughly 1
 lines written rather than 758 — the reservation is priced into the plan, not
 hidden from it. The honest summary is that the artifact is well specified and the
 budget is not yet proven, and the cheapest way to prove it is to run M1.
+
+
+---
+
+## Self-Review — mandatory 4-question audit
+
+Recorded 2026-08-13, before the pull request. A reporting step; it gates nothing.
+
+**1. What did this change actually touch?** 44 files, 12691 insertions. The
+production surface is far smaller: one net-new artifact
+(`templates/pr-writeup.html`), one catalog value, three literals in the
+fill-region validation, and this slice's export-payload contract. Everything
+under `dist/`, the `plugin-bash-confinement` fixtures and the `XPLAT-009-*`
+proofs is generator output; the rest is planning exhaust under `specs/` and
+`docs/ai/specs/.process/`.
+
+**2. Is anything claimed but unverified?** Yes, and it is named rather than
+buried. Nine acceptance items cannot be verified from bytes and need a person at
+a browser: that the page renders, that the console is genuinely empty, offline
+behaviour, both themes, greyscale, keyboard traversal, the clipboard, a real
+refusal, and the concurrent invocation. I attempted the render check myself; the
+browser tool refuses `file://` navigation, so it is genuinely blocked rather than
+skipped. All nine are carried as executable steps in the acceptance runbook and
+as a known gap in the pull request.
+
+**3. Did anything land outside the declared file operations?** No. All four
+declared operations are present. The additions beyond them are the acceptance
+runbook and the planning artifacts every SpecKit run carries, which the file
+count already accounts for at 14.
+
+**4. Is the change reviewable?** Measured 735 authored lines against a declared
+758 and an 800 block — under its own declaration, in `warn`. All three
+measurement checkpoints passed on first measurement: M1 at 131 ≤ 150, M2 at
+227 ≤ 247, M3 at 735 ≤ 758.
+
+### What this run got wrong, recorded because it will recur
+
+**A defect shipped through implementation and a green suite; only independent
+review caught it.** The artifact rendered its kind in sentence case where the
+catalog carries title case, so every export opened with a value that did not
+match the gallery listing. 7379 passing tests said nothing about it, because
+**nothing asserts that an artifact's title agrees with its catalog entry** — the
+one manifest field with an artifact-side consumer and no artifact-side gate. That
+is the same shape as the `exports` gap already recorded as a known gap, found
+independently and one field over.
+
+**An orchestrator commit absorbed generated payload written by the test suite.**
+`validate-plugin-payload.py` runs the real payload builder, so every suite run
+rewrites `dist/**`. A `git add -A` swept two such mirrors into a commit without
+the trust metadata and cache proofs the real generator updates alongside them.
+Nothing was masked — the mirrors were stale, so parity still failed — and the
+proper regeneration later touched 24 paths rather than 2, which is how the two
+signatures are told apart. The rule that follows: never `git add -A` after a
+suite run in this repository.
 
 ---
 
