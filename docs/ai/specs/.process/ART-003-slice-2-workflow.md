@@ -69,8 +69,14 @@ replaces every earlier multiplier.
 | **Total** | **755** | warn; 45 lines of headroom to the 800 block |
 
 ```text
-Projected reviewable LOC: 755
+Projected reviewable LOC: 750
 ```
+
+**Re-declared at Plan from 755.** Plan measured each component itself rather
+than accepting this section's estimate and disagreed with two of three: CSS
+carry-over is 195 not 196, the diff-specific additions are 79 not 64, and markup
+is 122 not 130. Measured arithmetic is 274 + 342 + 122 = **738**, declared at 750
+with a stated margin, 50 lines under the block.
 
 **CSS is the risk, and it is a sharper risk here than on slice 1.** A diff view
 needs line-state, gutter and severity styling that a document template never had.
@@ -97,7 +103,7 @@ last phrase match in the whole file.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 PASS; 76 FRs, 3 markers held for Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 PASS; 3 sessions, all markers closed; consensus split on one literal |
-| Plan | `/speckit-plan` | ⏳ Pending | Re-declare the budget; adopt a CSS ceiling as a checkable constraint |
+| Plan | `/speckit-plan` | ✅ Complete | G3 PASS; re-declared 750 from measurement; four checkpoints incl. a JS one slice 1 lacked |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Three domains: accessibility, ux, error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
