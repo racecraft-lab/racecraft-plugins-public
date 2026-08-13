@@ -1735,3 +1735,130 @@ racecraft-plugins-public/
 
 Template based on SpecKit best practices. Populated for ART-014 by
 `/speckit-pro:speckit-scaffold-spec` on 2026-08-12.
+
+---
+
+## Post-Implementation: Reviewability Diff Gate And Self-Review
+
+Measured at `a7369749` against base `3af4764e`. The runner helper
+`final-reviewability-backstop` is registered `deferred` in
+`speckit_pro_runner/helpers/registry.py:373`, so it was not invoked as an active
+helper. The real diff was measured directly with `git diff --numstat` instead.
+
+### Diff Measurement — the six authored files
+
+| File | + | - |
+|---|---|---|
+| `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` | 323 | 16 |
+| `speckit-pro/skills/speckit-autopilot/SKILL.md` | 32 | 13 |
+| `speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md` | 39 | 0 |
+| `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` | 2 | 1 |
+| `speckit-pro/codex-skills/speckit-autopilot/references/workflow-file-protocol-codex.md` | 41 | 0 |
+| `tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` | 250 | 1 |
+| **Total (six authored)** | **687** | **31** |
+| Five production only (excludes the test file) | 437 | 30 |
+
+Excluded from the measurement: 28 generated paths (`dist/`,
+`tests/speckit-pro/unit/fixtures/plugin-bash-confinement/`,
+`docs/ai/specs/.process/XPLAT-009-*.json`) and 2 process records
+(`ART-014-workflow.md`, `autopilot-state.json`). The full commit touches 50
+paths; only 687 of its 7564 insertions are authored.
+
+### Budget Verdict — OVER the declaration, warn band, not blocking
+
+Declared: 337 projected reviewable LOC, 5 production files, 10 total, one slice,
+within budget, warn 400, block 800.
+
+| Framing | Real | vs 337 | vs warn 400 | vs block 800 |
+|---|---|---|---|---|
+| Six authored, added | 687 | **+350 (2.04x)** | over | under |
+| Six authored, added+removed | 718 | +381 (2.13x) | over | under |
+| Five production, added | 437 | +100 (1.30x) | over | under |
+| Five production, added+removed | 467 | +130 (1.39x) | over | under |
+
+**The projection was wrong, and by roughly double.** The verdict is
+convention-independent: every framing above lands over the declared 337 and over
+warn 400, and every framing stays under block 800. The declared figure came from
+the slice estimator's modify-weighted formula, `(3x25 + 6x40 + 24x15) / 2 =
+337.5`, which prices a MODIFIED file at about 20 effective LOC. Two files broke
+that price: `PROBLEM_KEY_INTENT` is a 225-line record classifying 21 keys
+(`validate-autopilot-phase-coverage.py:257-481`), and the new test classes add
+250 lines. That decomposition explains the overrun; it does not excuse it. The
+estimator's per-file weight does not model a requirement (FR-010) whose
+deliverable *is* prose volume inside one file.
+
+A second declaration miss, recorded for the same reason: the plan declared 10
+total files by counting `dist/claude`, `dist/codex`, and two fixture proofs as 4
+group entries. As files, those groups are 28 paths, and 14 further spec and
+roadmap artifacts also changed.
+
+### Self-Review — the mandatory four questions
+
+**1. Does the change do what the specification says, and only that?** Yes.
+Nothing unrequested shipped. Every hunk traces to a requirement: the guard's new
+key and helper to FR-001/FR-007
+(`validate-autopilot-phase-coverage.py:1529-1583`, `:4360`); the `.resolve()` in
+`_repository_root` to FR-006b (`:900-908`); the 225-line classification record to
+FR-010/FR-010a/FR-010b (`:257-481`); the Step 0.6c reclaim-ordering rewrite to
+FR-013, because the old text asserting the check "is inert under every invocation
+the phase loop issues" became false the moment it was armed
+(`speckit-pro/skills/speckit-autopilot/SKILL.md:376-385`); the expected-commit
+caveat to FR-013 (`SKILL.md:494-504`); the references-index line to FR-013c
+(`SKILL.md:828`, `codex-skills/.../SKILL.md:1053-1055`). The honest residue is
+imprecision in spec text, not shipped scope: FR-006b claims resolution "is shared
+with two other call sites" (`spec.md:230`), and `git show
+3af4764e:...validate-autopilot-phase-coverage.py` shows three (lines 1313, 1552,
+2005).
+
+**2. What is most likely to be wrong?** The single riskiest line is
+`resolved = path.resolve()` at `validate-autopilot-phase-coverage.py:905`.
+`_repository_root` is a shared helper with three pre-existing callers besides the
+new one (`:1607` the frozen PR-head comparison, `:1854`
+`validate_changed_file_manifest`, `:2307` `validate_projection_integrity`). All
+three now resolve a root for inputs that previously resolved none, so they
+evaluate where they used to skip. Under the scoped `--rule status-evidence`
+invocation this cannot move the exit code, because none of their keys is in that
+tuple. Under an invocation with no `--rule`, `passed = all(not values for values
+in problems.values())` at `:4367` gates *every* key, so a relatively-spelled
+state path can newly flip a previously-passing run to exit 1 on paths FR-002
+meant to freeze. FR-006b asserts the change "is safe for every existing caller"
+(`spec.md:227`); that assertion ships untested. Second-order, and a footnote
+rather than the headline: `_workflow_authority_errors`'s docstring states "No
+branch raises" (`:1533`), but `Path.resolve()` raises `OSError` on a symlink
+loop, and `build_report` has no handler, so that input would print a traceback
+instead of the JSON the autopilot parses.
+
+**3. What did we not test?** Two branches of the new five-branch contract have
+zero unit coverage. Branch 3, the malformed-value fail required by FR-005
+(`:1552-1560`), and branch 4, the outside-the-repository fail required by FR-004c
+(`:1568-1570`). No test asserts either message string: grep for `outside the
+authorized` and `not a normalized` across
+`tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` returns nothing. The
++7 test delta is exactly 4 `WorkflowAuthorityTests` plus 3
+`ProblemKeyClassificationTests`, and the corpus canary exercises branch 5 only,
+so nothing else reaches them. Both branches are reachable and both return a
+distinct operator-facing string. The second gap is FR-006b's safety claim for the
+three pre-existing `_repository_root` callers, which no test exercises.
+
+**4. What would a reviewer most want to know that the diff does not show?**
+Four things. First, the diff reads as 7564 insertions but only 687 lines are
+authored; the generated copies under `dist/` and the confinement fixtures
+quadruple the apparent size and are refreshed by
+`scripts/refresh-release-artifacts.py`. Second, the 54-of-54 corpus regression
+and the flipped canary are a one-time recorded run, not a committed test, so
+nothing in CI re-proves them. Third, `PROBLEM_KEY_INTENT` is never read at
+runtime: the only reference in the guard is its definition at `:274`, and the
+test suite is its sole consumer, so 225 shipped lines are inert data whose value
+is entirely as a review record. Fourth, under a `pr-marker-plan.v2` invocation
+carrying `--expected-head-commit`, a genuine mismatch now reports **twice** under
+two keys with two different message formats: the frozen text without paths at
+`:1621-1623` under `workflow_checkpoint_errors`, and the new text with both paths
+at `:1573-1576` under `workflow_authority_errors`. That duplication follows from
+FR-002's freeze and is intentional, but it is invisible from the hunks alone.
+
+### Blockers
+
+None. The overrun is warn-band and never approaches block 800. The self-review is
+reporting-only by the phase contract. The two untested branches and the untested
+FR-006b safety claim belong in the pull request's known-gaps section, which T026
+already reserves, rather than in a stop condition.

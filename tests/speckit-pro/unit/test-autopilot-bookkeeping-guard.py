@@ -314,6 +314,68 @@ class WorkflowAuthorityTests(unittest.TestCase):
         self.assertIn("workflow_authority_errors", report)
         self.assertEqual(report["workflow_authority_errors"], [])
 
+    def test_malformed_workflow_file_fails_as_malformed_not_as_a_mismatch(self) -> None:
+        """FR-005: a garbage value cannot become a silent opt-out.
+
+        Branch 3 of FR-004d's ordering, which no other test reaches. The two
+        assertions that matter are the exit code and the *attribution*: the
+        whitespace-only case must be caught by the explicit malformed check
+        rather than falling through to the identity branch, because
+        ``_is_normalized_repo_path`` accepts a run of spaces as a valid path
+        part. If it fell through, the operator would see the identity message
+        with a blank path in it and the verdict would be right by accident.
+        """
+        for label, value in (
+            ("whitespace only", "   "),
+            ("empty string", ""),
+            ("absolute path", "/etc/workflow.md"),
+            ("parent traversal", "../outside-workflow.md"),
+            ("explicit null", None),
+            ("non-string", 42),
+        ):
+            with self.subTest(malformed=label):
+                code, report = self._run(value)
+                self.assertEqual(code, 1, report)
+                errors = report["workflow_authority_errors"]
+                self.assertTrue(errors, report)
+                self.assertFalse(
+                    errors[0].startswith(self.AUTHORITY_PREFIX),
+                    f"{label} was reported as an identity mismatch rather than as "
+                    f"malformed: {errors[0]}",
+                )
+
+    def test_supplied_workflow_outside_the_repository_fails(self) -> None:
+        """FR-004c: a completed evaluation with an out-of-boundary result fails.
+
+        Branch 4 of FR-004d's ordering, which no other test reaches. This is the
+        branch a unanimous three-lens consensus settled as a failure rather than
+        a skip, on the grounds that a path escaping the root is an affirmative
+        anomaly and not the absence of information FR-006 covers. It reuses the
+        sentence the guard already emitted for this condition, so the assertion
+        deliberately checks that the identity prefix is *not* used.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw) / "repo"
+            root.mkdir()
+            _, state = self._plant(root, SUPPLIED_WORKFLOW_REF)
+            # A workflow that exists but resolves outside the resolved root.
+            outside = Path(raw) / "outside-workflow.md"
+            outside.write_text(
+                workflow(("Specify", "✅ Complete"), body="G1 gate: PASS"), encoding="utf-8"
+            )
+            completed = subprocess.run(
+                [sys.executable, str(VALIDATOR),
+                 "--workflow", str(outside), "--state", str(state),
+                 "--rule", "status-evidence"],
+                text=True, capture_output=True, check=False,
+            )
+            report = json.loads(completed.stdout)
+        self.assertEqual(completed.returncode, 1, report)
+        errors = report["workflow_authority_errors"]
+        self.assertTrue(errors, report)
+        self.assertIn("outside the authorized repository", errors[0])
+        self.assertFalse(errors[0].startswith(self.AUTHORITY_PREFIX), errors[0])
+
 
 class ProblemKeyClassificationTests(unittest.TestCase):
     """FR-011: every problem key the guard emits carries a recorded verdict.
@@ -388,6 +450,22 @@ class ProblemKeyClassificationTests(unittest.TestCase):
             missing,
             "the guard emits problem keys with no PROBLEM_KEY_INTENT verdict: "
             + ", ".join(missing),
+        )
+
+    def test_the_record_classifies_nothing_the_guard_never_emits(self) -> None:
+        """The other direction, which the completeness check alone does not cover.
+
+        A verdict recorded for a key the report never emits is dead weight that
+        reads as coverage. Checking only ``emitted - intent`` would let the record
+        accumulate entries for keys that were renamed or removed, and the record
+        would still look complete. Both directions together are what make the
+        record an accurate census rather than a superset.
+        """
+        extraneous = sorted(set(validator.PROBLEM_KEY_INTENT) - self.emitted)
+        self.assertFalse(
+            extraneous,
+            "PROBLEM_KEY_INTENT classifies keys the guard never emits: "
+            + ", ".join(extraneous),
         )
 
     def test_every_verdict_is_drawn_from_the_closed_vocabulary(self) -> None:

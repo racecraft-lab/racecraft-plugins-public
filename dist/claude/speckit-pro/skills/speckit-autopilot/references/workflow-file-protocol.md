@@ -94,9 +94,10 @@ Only the supplied side has spelling freedom.
 **The comparison is byte-exact**, on the two POSIX references, with no case
 folding and no filesystem identity test such as `samefile`. Case is deliberately
 not folded: byte-exact is the only rule that returns the same verdict on a
-case-insensitive filesystem and a case-sensitive one, which this repository
-requires because it is developed on macOS and tested on Linux. Folding case would
-let a mis-cased state value pass locally and fail in continuous integration.
+case-insensitive filesystem and a case-sensitive one, so the verdict does not
+depend on which kind of filesystem the run happens to sit on. Folding case, or
+testing filesystem identity, would let a mis-cased state value pass on one and
+fail on the other.
 
 ## PR Marker Plan Evidence
 

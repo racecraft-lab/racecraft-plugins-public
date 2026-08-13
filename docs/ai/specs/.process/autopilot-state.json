@@ -351,6 +351,24 @@
     "passed": 7385,
     "total": 7385
   },
-  "updated_at": "2026-08-13T00:31:25Z",
+  "uat_runbook": {
+    "acceptance_basis_used_instead": "specs/art-014-phase-guard-enforcement-repair/quickstart.md, 7 runnable scenarios mapped to success criteria",
+    "author_agent_rule": "uat-runbook-author is spawned only when a skeleton exists; none does",
+    "author_agent_spawned": false,
+    "committed_runbook_present": false,
+    "fail_open": true,
+    "reason": "generate-uat-skeleton is registered as deferred on the installed runner (helpers/registry.py:364, mode 'deferred'), so it must not be invoked as an active helper",
+    "scenarios": [
+      "negative control",
+      "positive control",
+      "skip and malformed branches",
+      "classification record cannot drift",
+      "full gate",
+      "corpus regression after-half",
+      "documentation truth"
+    ],
+    "status": "skipped"
+  },
+  "updated_at": "2026-08-13T00:42:20Z",
   "workflow_file": "docs/ai/specs/.process/ART-014-workflow.md"
 }

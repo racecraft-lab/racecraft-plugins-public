@@ -225,11 +225,22 @@ labels itself as not yet wired.
   - The change does not alter the FR-006 verdict. A state file genuinely outside
     any repository still resolves no root and still skips, because there is
     genuinely no marker to find. Only the spelling artifact is removed.
-  - It is safe for every existing caller. Resolution is shared with two other
-    call sites, and every consumer already normalizes the value independently
-    before use, so no path that resolves today changes behaviour. One helper in
-    the same file already applies this defensive normalization to the same value,
-    which is the local precedent being extended rather than a new convention.
+  - It is safe for every existing caller, in the sense that no path resolving a
+    root today changes the root it resolves. Resolution is shared with **three**
+    pre-existing call sites, and every consumer already normalizes the value
+    independently before use. One helper in the same file already applies this
+    defensive normalization to the same value, which is the local precedent being
+    extended rather than a new convention.
+  - **The safety claim is bounded, and the bound is stated rather than implied.**
+    The three pre-existing callers now resolve a root on inputs where they
+    previously resolved none, so each evaluates where it previously skipped. Under
+    the autopilot's own `--rule status-evidence` invocation that cannot move the
+    exit code, because none of their keys is in that tuple. Under an invocation
+    with no `--rule` every key gates, so a relatively-spelled state path can newly
+    surface findings those callers previously skipped. That is the correct
+    direction, since skipping was the defect, but it is a behaviour change beyond
+    the identity comparison and it is recorded here rather than left for a
+    reviewer to discover.
   - Verification MUST include a control proving that a state file inside the
     repository, named by a relative path from a subdirectory, now resolves a root
     and evaluates the comparison. Before the repair that input skipped.

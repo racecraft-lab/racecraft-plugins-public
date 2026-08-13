@@ -1570,9 +1570,16 @@ def _workflow_authority_errors(
         workflow_ref = workflow.resolve().relative_to(repo_root.resolve()).as_posix()
     except ValueError:
         return ["workflow file is outside the authorized repository"]
+    # The sibling gated path re-checks ``_is_normalized_repo_path`` on its own
+    # derived reference here; this branch deliberately does not, and the omission
+    # is safe rather than missing. ``workflow`` is already a readable regular file
+    # by this point, because ``read_text`` runs before this helper is called and
+    # raises otherwise, and resolving both sides before ``relative_to`` leaves no
+    # ``.``, ``..``, or empty segment able to survive into ``workflow_ref``. Stated
+    # so the asymmetry with the gated path is not later "repaired" as a gap.
     # 6. Byte-exact, with no case folding and no ``samefile``: the only rule that
-    # returns the same verdict on the case-insensitive filesystem this repository
-    # is developed on and the case-sensitive one it is tested on.
+    # returns the same verdict on a case-insensitive filesystem and a
+    # case-sensitive one, so the outcome does not depend on where it runs.
     if state_workflow_ref != workflow_ref:
         return [
             "supplied workflow does not match autopilot state workflow_file authority: "
