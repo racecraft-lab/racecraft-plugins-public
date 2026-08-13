@@ -707,8 +707,8 @@ grill-me, then chain into the autopilot plan stage so one invocation ends at
 the reviewed draft PR.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 162 (estimator: ok, modify-weighted) |
-Production files: ~4 |
+Projected reviewable LOC: 322 (estimator: ok, modify-weighted) |
+Production files: 2 |
 Total files: ~7 |
 Budget result: within budget
 

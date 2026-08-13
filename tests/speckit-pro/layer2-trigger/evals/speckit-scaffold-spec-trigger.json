@@ -32,6 +32,14 @@
     "should_trigger": true
   },
   {
+    "query": "scaffold SPEC-027 from the roadmap and open with a blind spot pass first, so I see the hidden coupling and unstated assumptions the roadmap author missed before the interview starts",
+    "should_trigger": true
+  },
+  {
+    "query": "set up SPEC-033 on its own branch and then chain straight into planning once I confirm, so it is one invocation instead of two",
+    "should_trigger": true
+  },
+  {
     "query": "show me the current roadmap status and which spec is unblocked next",
     "should_trigger": false
   },
@@ -61,6 +69,10 @@
   },
   {
     "query": "check the review comments on PR #15 and fix what's needed",
+    "should_trigger": false
+  },
+  {
+    "query": "SPEC-016 already has a committed workflow file with every prompt filled in, so resume it at the planning phase and run the plan stage against that existing file",
     "should_trigger": false
   }
 ]
