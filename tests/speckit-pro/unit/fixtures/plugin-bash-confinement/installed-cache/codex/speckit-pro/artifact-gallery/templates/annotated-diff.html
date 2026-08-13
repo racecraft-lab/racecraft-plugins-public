@@ -9,7 +9,7 @@
 -->
 <!--
   Slot: feature-header | Fills: the feature identifier, its name, and the line naming the change under review; keep id="feature-id" on the identifier and id="feature-name" on the name, because both exports read them to name the change | Source: spec.md
-  Slot: hunks | Fills: one entry per diff hunk the reviewer should read, each carrying a heading with the hunk's file path and new-file line range and an id of the form hunks-<file-path-slug>-l<start-line>, its diff rows, and its annotations; each annotation opens by naming in words the row or rows it comments on and carries a severity of blocking, major or minor only when it is a finding, taken from the self-review block the workflow log writes after implementation; a hunk carrying no annotation says so in words | Source: git-diff
+  Slot: hunks | Fills: one entry per diff hunk the reviewer should read, each carrying a heading with the hunk's file path and new-file line range and an id of the form hunks-<file-path-slug>-l<start-line>, its diff rows, and its annotations; each annotation opens by naming in words the row or rows it comments on and carries a severity of blocking, major or minor only when it is a finding, taken from the self-review block the workflow log writes after implementation; a hunk carrying no annotation says so in words, and where a hunk records more than one finding each finding takes an id and a link to its neighbour so a reader can walk them; a fill replaces this whole region, so keep the sample's own element names, every one of which is load bearing: class="hunk" frames an entry, class="diff" with tabindex="0" and role="group" and an aria-label is the only element that scrolls and the only reason a wide row is reachable from the keyboard, one class="diff-row" per line holding a class="ln" cell then a class="mk" marker cell then a code element is what makes a copied row paste as a valid unified-diff line, class="ann" frames an annotation and class="sev" carries its severity word | Source: git-diff
 -->
 <html lang="en">
 <head>
@@ -772,7 +772,8 @@ summary {
       <h2 id="sec-hunks">The diff, hunk by hunk</h2>
       <p class="note">Every row opens with its state in a fixed column: a plus for a line
         this change adds, a minus for a line it removes, and a space for a line carried
-        through unchanged. Each finding links to the next, so they can be read in turn.</p>
+        through unchanged. Where a hunk records more than one finding, each finding links
+        to its neighbour, so they can be read in turn.</p>
       <div class="hunks" id="hunk-list">
 <!-- FILL:hunks:START -->
         <div class="hunk" id="hunks-packages-editor-src-draft-queue-ts-l18">
