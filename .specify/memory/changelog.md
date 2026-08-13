@@ -2480,3 +2480,65 @@ git checkout 12d8c2d48469df9293227cb2c28cf05a4847fc61 -- specs/art-014-phase-gua
 
 The detailed archive and verification record is stored in
 `.specify/memory/archive-reports/2026-08-13-art-014-post-merge-hygiene.md`.
+
+## 2026-08-13 — ART-011 Scaffold Integration archived
+
+Merged in PR #434 at `6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b` on
+2026-08-13T21:06:20Z by `fgabelmannjr`. CI on the final head `34cbd591`: 19 pass,
+1 skipped, 0 failures. The active folder is removed; 13 tracked files.
+
+`speckit-scaffold-spec` now opens with a read-only blind-spot pass, reusing the
+shipped `codebase-analyst`, and closes by handing the operator the exact command
+that starts the planning stage. Both platform variants ship the change. grill-me
+is untouched.
+
+The feature shipped inverted from its design. It was specified to *chain*
+in-session into the autopilot plan stage so one invocation would end at a reviewed
+draft PR. `speckit-autopilot/SKILL.md` carries `disable-model-invocation: true`,
+which blocks the `Skill` tool outright and exists precisely to stop a seven-phase
+auto-committing run from being model-triggerable. Scaffold was demoted to printing
+the command, and the post-planning apparatus the chain implied was deleted. Nine
+requirements were amended and five superseded; `contracts/chain-handoff.md` shipped
+with a banner stating that no section is unchanged.
+
+Two lessons are recorded rather than smoothed. A green `gh pr checks` is not
+evidence unless the **check count** is right: mid-review this PR reported clean
+while only 4 of 20 checks had run, because a conflicted PR cannot build
+`refs/pull/N/merge` and GitHub skips every `pull_request` workflow. And the
+feature took a skill from 497 lines — three under the documented ceiling — to 984.
+
+Two gaps leave with this archive rather than closing. Layer 2 trigger evaluation
+never ran while this feature rewrote the `description` from 975 to 1013
+characters, which is the string skill selection matches on; Layer 2 is
+`live_only` and does not execute in CI, and its runners are operator-only because
+they move the installed skill directory aside. ART-019 owns the size gap and its
+slice D supersedes FR-022.
+
+### Canonical Artifacts
+
+- `speckit-pro/skills/speckit-scaffold-spec/SKILL.md` and
+  `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`
+- `tests/speckit-pro/layer2-trigger/evals/speckit-scaffold-spec-trigger.json` and
+  its `codex-evals/` mirror
+- Generated payload copies under `dist/claude`, `dist/codex`, and the
+  installed-cache proofs
+
+Historical evidence stays under `docs/ai/specs/.process/`:
+`ART-011-design-concept.md` and `ART-011-workflow.md`. No retrospective was
+produced; the workflow file records that step as pending and the state file was
+wrong to claim otherwise.
+
+### Recovery Commands
+
+```text
+git show 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b:specs/art-011-scaffold-integration/spec.md
+git show 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b:specs/art-011-scaffold-integration/plan.md
+git show 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b:specs/art-011-scaffold-integration/tasks.md
+git show 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b:specs/art-011-scaffold-integration/research.md
+git show 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b:specs/art-011-scaffold-integration/contracts/chain-handoff.md
+git show 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b:specs/art-011-scaffold-integration/contracts/blind-spot-pass.md
+git checkout 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b -- specs/art-011-scaffold-integration
+```
+
+The detailed archive and verification record is stored in
+`.specify/memory/archive-reports/2026-08-13-art-011-post-merge-hygiene.md`.

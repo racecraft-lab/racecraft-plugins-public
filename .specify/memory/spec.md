@@ -2701,3 +2701,90 @@ ART-012 test-repointing step has no analogue, because ART-014 ships no
 Historical workflow, design-concept and retrospective evidence remains under
 `docs/ai/specs/.process/`. Detailed provenance, canonical artifact locations and
 recovery commands live in the dated ART-014 archive report.
+
+## ART-011 Scaffold Integration
+
+Merged in PR #434 at `6437ecd2` on 2026-08-13 and archived the same day.
+
+### User Stories
+
+1. **Unknown unknowns surfaced before the interview** (P1) — a read-only
+   blind-spot pass runs before the first grill-me question.
+2. **Findings survive into the interview and the record** (P1) — what the pass
+   raises is seeded into the interview and traceable in the design concept.
+3. **One confirmation, then planned work or a clean stop** (P1).
+4. **One closing report that tells the truth** (P2).
+
+### Requirements
+
+31 functional requirements. The load-bearing set: FR-012 and FR-013a fix the
+hand-off check as the autopilot's own Workflow Worktree Binding predicate,
+reproduced word for word rather than paraphrased; FR-015c fixes the hand-off
+command's form per platform, with the Codex row carrying the rooting precondition
+**as part of the command**; FR-018 bounds the two reports so neither restates the
+other's fields; FR-023 forbids new executable machinery, which the change honours
+with zero scripts, zero Bash, and no new tool grant.
+
+**The amendment is the story.** The spec was written to *chain* in-session into
+the autopilot plan stage. That is not implementable: `speckit-autopilot/SKILL.md`
+carries `disable-model-invocation: true`, which blocks the `Skill` tool outright,
+and removing it would make a seven-phase auto-committing run model-triggerable.
+FR-013, FR-013a, FR-014, FR-015, FR-017, FR-018 and FR-022 were amended;
+FR-015a, FR-015b, FR-019 and FR-020 were superseded.
+
+### Success Criteria
+
+SC-001 through SC-012. SC-007 was amended to "exactly one operator confirmation,
+except when the session exposes no structured confirmation mechanism, where it
+adds none". SC-010 was superseded by the amendment and retained for the record.
+SC-012 held exactly: zero new production files, zero agent definitions, zero
+executable helpers, no new tool grant.
+
+### Key Entities
+
+The blind-spot pass (a dispatch to the shipped read-only `codebase-analyst`), the
+seed payload assembled from the roadmap entry, the closed set-aside vocabulary,
+the hand-off check, the hand-off command table, and the single closing report
+under the fixed heading `## Ready for Planning`.
+
+### Edge Cases
+
+The pass that does not run, the pass that returns nothing, more than five
+findings, an operator rooted outside the worktree, an unclean checkout, and a
+session that exposes no structured confirmation mechanism. Each has one stated
+outcome and one stated string.
+
+### Evidence Framing
+
+The suite cannot see this feature. It is prose inside two existing `SKILL.md`
+files, so the repository suite stayed at 7396 across the whole run and CI green
+proves only that nothing else broke. The properties that matter — does the skill
+still trigger, does the operator read the right command — are measured by Layer 2,
+which does not execute in CI. See the Cleanup Note.
+
+### Cleanup Note
+
+The active ART-011 folder was removed after PR #434 merge provenance and a
+tree-wide live-reader scan on the bare directory name. Five files matched outside
+the folder: two preserved `.process/` documents citing the branch in prose, the
+machine-written `autopilot-state.json`, the technical roadmap, and one live
+backlink in `html-artifacts-roadmap-MOC.md` that the spec index regenerates rather
+than receiving a hand edit.
+
+The `contracts/` directory was **not** relocated, and unlike ART-014 the question
+was live rather than moot. It resolves to delete on both prongs: no test, script,
+or shipped file reads `contracts/blind-spot-pass.md` or `contracts/chain-handoff.md`,
+and every surviving citation is a bare relative name inside a prose code span
+rather than a link or a resolvable path. The contracts' load-bearing content — the
+exact operator-facing strings — was transcribed into both shipped `SKILL.md`
+variants before merge, which is where the behaviour now lives.
+
+**Two gaps leave with this archive rather than closing.** Layer 2 trigger
+evaluation never ran while this feature rewrote the `description` from 975 to 1013
+characters, and the shipped skill is now 984 lines against a documented 500-line
+guidance. ART-019 owns the second and its slice D supersedes FR-022.
+
+Historical workflow and design-concept evidence remains under
+`docs/ai/specs/.process/`. No retrospective was produced. Detailed provenance,
+canonical artifact locations and recovery commands live in the dated ART-011
+archive report.
