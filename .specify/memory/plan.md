@@ -1998,3 +1998,148 @@ marks the process state archived, regenerates and checks the SpecKit index and
 the docs-site test reference, validates project state JSON and diff hygiene, and
 runs the structural and full deterministic suites. ART-010 stays blocked by
 ART-003 and ART-007.
+
+---
+
+## ART-014 Phase-Guard Enforcement Repair
+
+[Source: specs/art-014-phase-guard-enforcement-repair] — archived 2026-08-13
+after PR #433 merged at `12d8c2d4`. Revision reason: merged-spec archival into
+project memory.
+
+### Dependencies
+
+None added. The guard remains Python 3.11+ standard library only, consistent
+with constitution principle II. No manifest, version, CLI flag, or state-schema
+change, so the rollback is a plain revert.
+
+### Shipped Surface
+
+Five production files, 488 added production lines:
+
+- `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`
+  — `_workflow_authority_errors` implementing the five ordered branches;
+  `_authorized_workflow_text` widened to a three-tuple across all eleven return
+  paths so the new key carries only identity errors while the gated path keeps
+  reporting to `workflow_checkpoint_errors`; `workflow_authority_errors` added to
+  the `status-evidence` tuple only; `PROBLEM_KEY_INTENT` classifying 21 keys as
+  9 gated, 9 advisory-deliberate and 3 advisory-accidental; and `_repository_root`
+  resolving before it walks, and failing closed rather than raising
+- `speckit-pro/skills/speckit-autopilot/SKILL.md` and its Codex mirror
+- `speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md` and
+  its Codex mirror — the `workflow_file` state-authority section carrying the
+  branch order, the reason behind each verdict, the asymmetric-resolution and
+  byte-exact rules, and the warning about what an empty key does and does not
+  prove
+
+`tests/speckit-pro/unit/test-autopilot-bookkeeping-guard.py` grew from 17 to 35
+tests. Generated payloads under `dist/claude`, `dist/codex`, and the
+installed-cache proofs regenerate from source; the Layer 6 Codex qualification
+corpus was untouched because no agent definition changed.
+
+### Architecture Note
+
+Registration and evaluation are separate halves of this guard, and only the
+second moves the exit code. A check can run, produce a finding, and still leave
+the run green if its key is absent from the selected rule's tuple. That
+separation was the second of the two original defects, and it is the thing to
+verify first when a guard reports pass on input it should catch.
+
+### Testing Strategy
+
+TDD red-green-refactor with attribution assertions: a control asserts not merely
+that the guard failed, but that it failed for the named reason. The whitespace
+row must report malformed rather than the identity message, and the null row must
+not silently skip. Negative and positive controls share one fixture builder and
+vary exactly one value, because each is meaningless without the other.
+
+The corpus regression is a one-time recorded run and is deliberately **not**
+wired into the committed suite: the process directory holds live data, an
+in-flight specification mid-repair can legitimately fail the guard, and a
+committed corpus walk would turn CI red on unrelated pull requests.
+
+### Follow-Ups Opened
+
+- **ART-016** — Claude-side live pull-request commit authority. The Claude flow
+  does not yet fetch those values; the shipped `SKILL.md` says so and names the
+  entry.
+- **ART-017** — arm the three accidentally-advisory state bookkeeping checks.
+  Blocked by ART-014, which adds the classification record the verdicts live in.
+  **Unblocked by this merge.**
+- **ART-018** — repair three governance matchers that report clean on input they
+  should catch.
+- **ART-015** — the spec-size re-estimation trigger, which this run's overrun
+  argues for: declared 337 reviewable LOC, final 906 added across six authored
+  files and 488 across the five production ones.
+
+### Testing and Cleanup
+
+The cleanup removes the merged ART-014 active spec, marks the process state
+archived, regenerates and checks the SpecKit index and the roadmap map of
+content, updates the technical roadmap to Complete / Archived, unblocks ART-017,
+and runs the full deterministic suite. No `refresh-release-artifacts.py` run is
+required, because nothing under `speckit-pro/` changes in this archive. ART-010
+stays blocked by ART-003 and ART-007.
+
+## ART-011 Scaffold Integration
+
+### Dependencies
+
+ART-006 (the plan stage the hand-off names), shipped in PR #422. ART-007 is **not**
+a dependency: the closing report omits the draft-PR line until a producer exists.
+
+### Shipped Surface
+
+Two production files, both prose:
+
+- `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`
+- `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`
+
+Plus updated Layer 2 trigger fixtures in
+`tests/speckit-pro/layer2-trigger/evals/speckit-scaffold-spec-trigger.json` and
+its `codex-evals/` mirror (currently 20 entries: 10 positive, 10 negative), and the
+regenerated payload copies under `dist/claude`, `dist/codex`, and the installed-cache proofs.
+
+### Architecture Note
+
+The feature shipped inverted from its design. Scaffold cannot invoke the
+autopilot: `speckit-autopilot/SKILL.md` carries `disable-model-invocation: true`,
+which blocks the `Skill` tool entirely, and the flag is deliberate — it exists to
+stop a seven-phase auto-committing run from being model-triggerable. Scaffold
+prints the hand-off command instead, and the whole post-planning apparatus the
+chain implied became unreachable and was deleted.
+
+The hand-off check is the autopilot's own Workflow Worktree Binding predicate
+reproduced word for word, not an equivalent-looking rewrite, because using the
+guard's own test is what guarantees the two can never disagree. Both its commands
+are read-only, so the check adds no script, helper, or tool grant.
+
+### Testing Strategy
+
+There is none the suite can run. This is prose inside two existing files, so the
+repository suite stayed at 7396 for the whole feature and CI green proves only
+that nothing else broke. The one property a body rewrite could plausibly disturb
+is triggering, and Layer 2 is marked `default: false`, `live_only: true`,
+`execution: print-commands` in `tests/speckit-pro/suite-manifest.json` — it does
+not execute in CI. Verification was therefore manual UAT plus two rounds of code
+review, which is weaker than a test and is recorded as such.
+
+### Follow-Ups Opened
+
+- **ART-019** — align the plugin and its skills to official Anthropic and OpenAI
+  documentation. Opened 2026-08-13 from a seven-surface conformance audit. Its
+  slice D owns this skill's size and **supersedes ART-011's FR-022**, which
+  forbade `speckit-scaffold-spec` gaining a `references/` directory.
+- **ART-015** — the spec-size re-estimation trigger. This run is a second data
+  point: declared 162 reviewable LOC, estimated 322 at the final 31 FRs, and
+  shipped 1160 production changed lines across 2 files.
+
+### Testing and Cleanup
+
+The cleanup removes the merged ART-011 active spec, marks the process state
+archived, regenerates and checks the SpecKit index and the roadmap map of content,
+updates the technical roadmap to Complete / Archived, and runs the full
+deterministic suite. No `refresh-release-artifacts.py` run is required, because
+nothing under `speckit-pro/` changes in this archive. Layer 2 trigger evaluation
+for `speckit-scaffold-spec` remains owed to the operator and is not closed by this
+cleanup.
