@@ -703,8 +703,11 @@ implement stage refreshes and flips it rather than opening a second PR.
 **Priority:** P1 | **Depends On:** ART-006 | **Enables:** one-command operator experience
 
 **Goal:** Make scaffold the single front door: blind-spot pass before
-grill-me, then chain into the autopilot plan stage so one invocation ends at
-the reviewed draft PR.
+grill-me, then hand off to the autopilot plan stage with the exact command that
+starts it. *(Amended 2026-08-13: the goal originally read "chain into the
+autopilot plan stage so one invocation ends at the reviewed draft PR". Scaffold
+cannot invoke the autopilot — that skill is user-invocable only — so it prints
+the command instead.)*
 
 **Reviewability Budget:** Primary surface: harness/adapter |
 Projected reviewable LOC: 322 (estimator: ok, modify-weighted) |
@@ -719,9 +722,8 @@ Budget result: within budget
   and affected code area for unknown-unknowns — hidden coupling, risky
   surfaces, unstated assumptions; present findings and seed them into
   grill-me and the design concept's Open Questions.
-- After the workflow-file commit, chain in-session into the autopilot plan
-  stage per the ART-006 contract, with an explicit operator confirmation to
-  decline.
+- After the workflow-file commit, print the autopilot plan-stage hand-off
+  command per the ART-006 contract, behind one explicit operator confirmation.
 - Closing report: draft-PR URL, artifact index, next step.
 - Both platform variants.
 

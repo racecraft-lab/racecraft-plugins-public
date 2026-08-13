@@ -405,8 +405,9 @@ confirmation, no curation step, no continue/abort prompt** between the two (Q16,
 FR-011).
 
 This is what keeps **this feature's** confirmation budget at exactly one — the
-chain, and only when the chain is attempted — which is the seam that separates
-interactive from autonomous.
+hand-off — which is the seam that separates interactive from autonomous.
+*(Amended 2026-08-13: formerly "the chain, and only when the chain is attempted".
+Neither platform chains, and the confirmation is asked on every ending.)*
 
 **The budget counts what this feature adds, not every prompt in the run.** An
 unqualified "one confirmation outside the interview" is false against the shipped
@@ -415,8 +416,8 @@ before running any documented bootstrap command (Step 3.5), and Claude
 additionally asks whether to reuse or recreate an existing worktree (Step 3), so
 a Claude run on the worktree-reuse path reaches the chain having already asked
 twice. None of those is this feature's, none is removed, and none is counted
-here. On Codex the ordinary run adds **none**, because the FR-013a check fails
-and nothing is asked (`chain-handoff.md` §3, §4).
+here. The count is the same on both platforms and on every ending: **one**
+*(amended 2026-08-13; the check no longer gates the question)*.
 
 This matches the design concept's dated Q16 revision note, which leaves the
 informational-findings decision intact and corrects only its supporting count,

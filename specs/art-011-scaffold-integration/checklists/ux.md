@@ -1,5 +1,14 @@
 # UX Checklist: Scaffold Integration — blind-spot pass and autopilot chain
 
+> **Amendment, 2026-08-13.** This is a phase record, retained as written. After
+> it was produced, scaffold's in-session chain became a printed hand-off on both
+> platforms, because the autopilot skill is user-invocable only. Any item below
+> that resolves a finding about chaining, the `## Planning Complete` /
+> `## Planning Incomplete` headings, the completion test, or the `--from-phase`
+> resume command records work that no longer ships. See revision note 3 in
+> `docs/ai/specs/.process/ART-011-design-concept.md`; the shipped `SKILL.md`
+> files are authoritative.
+
 **Purpose**: Requirements-quality validation of the operator's experience end to end — the findings presentation, the single confirmation, the two reports and their relationship, the branch points the run can take, and whether the operator can tell at every stage what just happened and what happens next.
 **Created**: 2026-08-12
 **Feature**: [spec.md](../spec.md) · [plan.md](../plan.md) · [contracts/blind-spot-pass.md](../contracts/blind-spot-pass.md) · [contracts/chain-handoff.md](../contracts/chain-handoff.md)

@@ -1,5 +1,14 @@
 # Specification Quality Checklist: Scaffold Integration — blind-spot pass and autopilot chain
 
+> **Amendment, 2026-08-13.** This is a phase record, retained as written. After
+> it was produced, scaffold's in-session chain became a printed hand-off on both
+> platforms, because the autopilot skill is user-invocable only. Any item below
+> that resolves a finding about chaining, the `## Planning Complete` /
+> `## Planning Incomplete` headings, the completion test, or the `--from-phase`
+> resume command records work that no longer ships. See revision note 3 in
+> `docs/ai/specs/.process/ART-011-design-concept.md`; the shipped `SKILL.md`
+> files are authoritative.
+
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-08-12
 **Feature**: [spec.md](../spec.md)

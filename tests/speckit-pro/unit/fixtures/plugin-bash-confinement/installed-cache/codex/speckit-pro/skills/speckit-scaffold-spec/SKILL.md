@@ -516,8 +516,11 @@ condition. Do not synthesize design-concept content yourself.
 After the interview returns, verify the durable record and repair it when
 absent:
 
-1. Read `docs/ai/specs/.process/SPEC-<ID>-design-concept.md` in the worktree and
-   confirm it carries the `**Blind-spot pass:**` key in its header blockquote.
+1. Read `docs/ai/specs/.process/SPEC-<ID>-design-concept.md` in the worktree —
+   `<ID>` resolving to the run's own roadmap identity, so an `ART-011` run reads
+   `ART-011-design-concept.md` — and confirm it carries the
+   `**Blind-spot pass:**` key in its header blockquote. Reading a path the run
+   never wrote would report the key absent and repair a file that does not exist.
 2. If the key is missing, edit the step 3.6 header line into that existing header
    blockquote from the values already held at the moment the status line was
    rendered — the outcome, the `<reason>` clause, and N and M for the `ran`
@@ -744,6 +747,14 @@ this check adds no machinery.
 | Step 2 fails | print it with the rooting instruction, on either platform — the operator is rooted outside the worktree whichever one they are on |
 | Step 3 fails | add one line naming the uncommitted changes as something to resolve first |
 
+**Print one line before asking.** The question and both option labels name
+"planning", a term the operator has not been shown the meaning of. State three
+facts and no more: the planning stage runs the six SDD phases and commits as it
+goes; scaffold prints the command rather than running it, so the operator starts
+it themselves; and declining leaves everything already pushed exactly as it is.
+It is printed rather than asked, carries no options, and does not count against
+the budget below.
+
 **Then ask exactly one confirmation, structured.** It records whether the
 operator is continuing now. It does not decide whether anything runs, because
 nothing does. Use `request_user_input` when it is present:
@@ -882,6 +893,13 @@ unverifiable against an open set, so the candidates are fixed here:
 Nothing outside this set is listed, so an unexpected file is a change to this list
 rather than a silent omission. The planning-stage artifacts are **not**
 candidates: no planning stage runs before this report, so none of them exists yet.
+
+**`<ID>` resolves to the run's own roadmap identity, whatever its namespace.**
+The candidates above must be the filenames Steps 4 and 5 actually wrote, so an
+`ART-011` run tests `ART-011-design-concept.md`. Never test a literally
+`SPEC-`-prefixed name for a spec whose identity does not begin with `SPEC-`:
+that path was never written, the read fails, and the report silently omits its
+own primary artifact — the one omission FR-018 forbids outright.
 
 **The existence test is a read of the candidate path, and nothing more.** A path
 that reads is listed; a path that does not read is omitted. This is the only

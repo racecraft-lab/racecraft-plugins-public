@@ -20,8 +20,17 @@
 > - §9's completion test is **void**: it read the result of a chained planning
 >   stage, and none runs inside a scaffold session.
 >
-> §1, §4, and §7 stand unchanged. Sections are retained rather than deleted so
-> the amendment is auditable against what the run originally decided.
+> - §1's section title changed with the behaviour: the shipped heading is
+>   `### 9. Hand Off to the Planning Stage`, not `### 9. Chain into the Planning
+>   Stage`. Its placement rationale stands.
+> - §4's question and option strings changed, and its printed line now states
+>   what the operator actually gets. The one-confirmation rule stands.
+> - §7's Codex Hard Constraint is now **absolute**, not conditional on rooting.
+>
+> **No section of this contract is unchanged.** Sections are retained rather than
+> deleted so the amendment is auditable against what the run originally decided;
+> where any of them differs from the shipped `SKILL.md` files, the shipped files
+> are authoritative.
 
 **Documentation only.** This contract ships no code. It fixes the pre-chain
 check, the confirmation, the invocation form, and the closing report's layout, so
@@ -155,14 +164,16 @@ unavailable.
 accepting does, immediately before being asked. §1's ordering informs the choice
 about the **past**; nothing else informs it about the **future**, and neither the
 question text nor the two option labels defines "the planning stage". Three facts,
-no more: accepting runs the six planning phases in this same session without
+no more *(amended 2026-08-13)*: the planning stage runs the six SDD phases without
 further prompts; those phases commit as they go; declining leaves everything
 already pushed exactly as it is. Printed, not asked — no options, and it does not
 count against the budget below.
 
-**Confirmation budget** (SC-007): this feature adds **at most one** confirmation,
-and **exactly one** whenever the chain is attempted. It adds **none** when the
-FR-013a check fails, which on Codex CLI is the ordinary case.
+**Confirmation budget** (SC-007) *(amended 2026-08-13)*: this feature adds
+**exactly one** confirmation, on every platform and every ending. It adds
+**none** only when the session exposes no structured confirmation mechanism.
+The former "none when the FR-013a check fails, which on Codex CLI is the
+ordinary case" is void: the check no longer gates the question.
 
 **What the budget counts, and what it does not.** A scaffold run already stops for
 the operator before this feature adds anything: the grill-me questions; the Step
@@ -362,6 +373,12 @@ fixed here:
 | Group | Candidates |
 |---|---|
 | Scaffold-owned | `docs/ai/specs/.process/SPEC-<ID>-design-concept.md`, `docs/ai/specs/.process/SPEC-<ID>-workflow.md`, `specs/<feature>/SPEC-MOC.md`, the pushed branch name |
+
+**`<ID>` resolves to the run's own roadmap identity, whatever its namespace.**
+An `ART-011` run tests `ART-011-design-concept.md`. A literally `SPEC-`-prefixed
+name is correct only for a spec whose identity begins with `SPEC-`; testing it
+otherwise reads a path the run never wrote, and the report omits its own primary
+artifact.
 | Planning-stage | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md`, each file under `contracts/`, each file under `checklists/` — all relative to `specs/<feature>/` |
 
 Nothing outside this set is listed, so an unexpected file is a change to this
