@@ -175,7 +175,7 @@
       "export_affordances": 0,
       "control": "annotated-diff shows 1 and 12, so the search binds"
     },
-    "unverified": "manual render \u2014 file:// navigation refused; FR-041c's fragment reveal not confirmed, and the zero-script property is NOT claimed as verified"
+    "unverified": "Manual acceptance executed in full against the shipped bytes on file:// (see archive.acceptance_note); the automation tool cannot validate file:// directly"
   },
   "archive": {
     "archived_at": "2026-08-14",
