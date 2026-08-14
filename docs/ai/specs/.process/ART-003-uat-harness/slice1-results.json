@@ -1,0 +1,353 @@
+{
+  "name": "slice1 / pr-writeup",
+  "rows": [
+    {
+      "step": "1",
+      "claim": "console carries exactly one line offline",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "1",
+      "claim": "that one line is the shared header's font request, nothing else",
+      "ok": true,
+      "detail": "[\n  {\n    \"kind\": \"log.error\",\n    \"source\": \"network\",\n    \"text\": \"Failed to load resource: net::ERR_INTERNET_DISCONNECTED\",\n    \"url\": \"https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Geist:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap\"\n  }\n]"
+    },
+    {
+      "step": "1",
+      "claim": "the page itself adds no console message",
+      "ok": true,
+      "detail": "[\n  {\n    \"kind\": \"log.error\",\n    \"source\": \"network\",\n    \"text\": \"Failed to load resource: net::ERR_INTERNET_DISCONNECTED\",\n    \"url\": \"https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Geist:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap\"\n  }\n]"
+    },
+    {
+      "step": "1",
+      "claim": "with the network back, the console is completely silent",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "1",
+      "claim": "tab title",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "1",
+      "claim": "eyebrow artifact title",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "1",
+      "claim": "feature id",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "1",
+      "claim": "page heading",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "1",
+      "claim": "six sections in runbook order",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "1",
+      "claim": "no section is blank",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "1",
+      "claim": "implementation notes render in record order T007, T009, T007",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "1",
+      "claim": "the two T007 entries are not adjacent",
+      "ok": true,
+      "detail": "{'lead': 'Only tasks that reported something appear here, in the order the record was written, and a task that was retried appears more than once.', 'labels': ['T007', 'T009', 'T007'], 'adjacent': False}"
+    },
+    {
+      "step": "1",
+      "claim": "notes lead sentence explains ordering and repetition",
+      "ok": true,
+      "detail": "Only tasks that reported something appear here, in the order the record was written, and a task that was retried appears more than once."
+    },
+    {
+      "step": "1",
+      "claim": "export buttons named by destination",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "2",
+      "claim": "no webfont loaded while offline (generic fallback in use)",
+      "ok": true,
+      "detail": "{'family': '\"Space Grotesk\", \"Trebuchet MS\", \"Segoe UI\", system-ui, sans-serif', 'loaded': []}"
+    },
+    {
+      "step": "2",
+      "claim": "disclosure opens and closes with no network",
+      "ok": true,
+      "detail": "{'before': False, 'opened': True, 'closed': True}"
+    },
+    {
+      "step": "2",
+      "claim": "no horizontal page scroll",
+      "ok": true,
+      "detail": "[1280, 1280]"
+    },
+    {
+      "step": "3",
+      "claim": "light theme: every text node meets WCAG AA contrast",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "3",
+      "claim": "toggle switches theme",
+      "ok": true,
+      "detail": "dark"
+    },
+    {
+      "step": "3",
+      "claim": "toggle label is stable (names the action)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "3",
+      "claim": "dark theme: every text node meets WCAG AA contrast",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "3",
+      "claim": "before/after boxes stay outlined in dark theme",
+      "ok": true,
+      "detail": "2"
+    },
+    {
+      "step": "4",
+      "claim": "before/after carried by the words 'Before.' and 'After.'",
+      "ok": true,
+      "detail": "{'before': True, 'after': True, 'passed': True, 'pending': True, 't007': 2, 'sample': ['Before.', 'After.', 'Not background sync.', 'Not shared editing while offline.', 'Passed.', 'Pending.', 'T007.', 'T009.', 'T007.']}"
+    },
+    {
+      "step": "4",
+      "claim": "pass/pending carried by the words 'Passed.' and 'Pending.'",
+      "ok": true,
+      "detail": "{'before': True, 'after': True, 'passed': True, 'pending': True, 't007': 2, 'sample': ['Before.', 'After.', 'Not background sync.', 'Not shared editing while offline.', 'Passed.', 'Pending.', 'T007.', 'T009.', 'T007.']}"
+    },
+    {
+      "step": "4",
+      "claim": "repeated T007 label legible twice with identical bold text",
+      "ok": true,
+      "detail": "{'before': True, 'after': True, 'passed': True, 'pending': True, 't007': 2, 'sample': ['Before.', 'After.', 'Not background sync.', 'Not shared editing while offline.', 'Passed.', 'Pending.', 'T007.', 'T009.', 'T007.']}"
+    },
+    {
+      "step": "5",
+      "claim": "tab visits exactly the 12 enumerated controls, in order",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "5",
+      "claim": "the first stop is the theme toggle",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "5",
+      "claim": "the last two stops are the export buttons",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "5",
+      "claim": "no closed disclosure leaks its textarea into the tab ring",
+      "ok": true,
+      "detail": "[('BUTTON', 'Dark theme'), ('SUMMARY', 'Question on Why this change was made: no questio'), ('SUMMARY', 'Question on How it behaved, and how it behaves n'), ('SUMMARY', 'packages/editor/src/draft-queue.ts \u2014 new'), ('SUMMARY', 'packages/editor/src/draft-queue.test.ts \u2014 new'), ('SUMMARY', 'config/editor.json \u2014 changed'), ('SUMMARY', 'Question on What each changed file does: no ques'), ('SUMMARY', 'Question on What this change deliberately leaves'), ('SUMMARY', 'Question on How it was checked: no question reco'), ('SUMMARY', 'Question on What happened while it was built: no'), ('BUTTON', 'Copy as prompt'), ('BUTTON', 'Copy as Markdown')]"
+    },
+    {
+      "step": "5",
+      "claim": "every stop shows a visible focus indicator",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "5",
+      "claim": "shift+tab retraces the same controls in reverse, nothing skipped",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "6",
+      "claim": "unfilled control states 'no question recorded'",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "6",
+      "claim": "keyboard reaches the first question control",
+      "ok": true,
+      "detail": "SUMMARY / Question on Why this change was made: no question recorded"
+    },
+    {
+      "step": "6",
+      "claim": "Enter opens the control",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "6",
+      "claim": "Tab lands inside the textarea",
+      "ok": true,
+      "detail": "TEXTAREA#question-motivation"
+    },
+    {
+      "step": "6",
+      "claim": "textarea has a real label",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "6",
+      "claim": "typed text landed in the field",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "6",
+      "claim": "summary label updates the instant you type",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "7",
+      "claim": "status counts both questions",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "7",
+      "claim": "prompt export text is exactly as specified",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "7",
+      "claim": "reference lines carry exactly two spaces before '('",
+      "ok": true,
+      "detail": "Artifact: Pull Request Write-up\nFeature: NIMBUS-101 Offline Draft Sync\n\nAct on each question recorded below. The value in parentheses is the anchor of the section it attaches to.\n\nmotivation / Why this change was made  (#sec-motivation)\nWhy not queue on the server side instead?\n\nverification / How it was checked  (#sec-verification)\nWhat is the plan if the staging soak fails?"
+    },
+    {
+      "step": "7",
+      "claim": "empty sections contribute nothing",
+      "ok": true,
+      "detail": "Artifact: Pull Request Write-up\nFeature: NIMBUS-101 Offline Draft Sync\n\nAct on each question recorded below. The value in parentheses is the anchor of the section it attaches to.\n\nmotivation / Why this change was made  (#sec-motivation)\nWhy not queue on the server side instead?\n\nverification / How it was checked  (#sec-verification)\nWhat is the plan if the staging soak fails?"
+    },
+    {
+      "step": "8",
+      "claim": "markdown export differs in exactly one line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "8",
+      "claim": "the differing line is the markdown lead",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "8",
+      "claim": "no markdown syntax in the payload",
+      "ok": true,
+      "detail": "Artifact: Pull Request Write-up\nFeature: NIMBUS-101 Offline Draft Sync\n\nQuestions recorded while reading this pull-request write-up.\n\nmotivation / Why this change was made  (#sec-motivation)\nWhy not queue on the server side instead?\n\nverification / How it was checked  (#sec-verification)\nWhat is the plan if the staging soak fails?"
+    },
+    {
+      "step": "9",
+      "claim": "export reflects the edit made a moment earlier",
+      "ok": true,
+      "detail": "Artifact: Pull Request Write-up\nFeature: NIMBUS-101 Offline Draft Sync\n\nAct on each question recorded below. The value in parentheses is the anchor of the section it attaches to.\n\nmotivation / Why this change was made  (#sec-motivation)\nWhy not queue on the server side instead? \u2014 and is it too late to change that?\n\nverification / How it was checked  (#sec-verification)\nWhat is the plan if the staging soak fails?"
+    },
+    {
+      "step": "10",
+      "claim": "empty prompt status",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "10",
+      "claim": "empty prompt payload",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "10",
+      "claim": "empty markdown payload",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "11",
+      "claim": "failure is reported in words, never as success",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "11",
+      "claim": "fallback field is revealed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "11",
+      "claim": "fallback holds the full export text",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "11",
+      "claim": "focus moves into the fallback field",
+      "ok": true,
+      "detail": "TEXTAREA#fallback-field"
+    },
+    {
+      "step": "11",
+      "claim": "markdown refusal reveals the markdown-lead text",
+      "ok": true,
+      "detail": "Artifact: Pull Request Write-up\nFeature: NIMBUS-101 Offline Draft Sync\n\nQuestions recorded while reading this pull-request write-up.\n\nmotivation / Why this change was made  (#sec-motivation)\nWhy not q"
+    },
+    {
+      "step": "12",
+      "claim": "the later click reports success immediately",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "12",
+      "claim": "the superseded failure never overwrites the status",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "12",
+      "claim": "the superseded failure never reveals the fallback",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "12",
+      "claim": "the superseded failure never steals focus",
+      "ok": true,
+      "detail": "BUTTON#copy-markdown"
+    }
+  ]
+}

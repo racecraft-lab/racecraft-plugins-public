@@ -1,0 +1,323 @@
+{
+  "name": "slice3 / flowchart",
+  "rows": [
+    {
+      "step": "SC-001",
+      "claim": "console silent on load with the network available",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "US1-AS1",
+      "claim": "seven interactive nodes drawn",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "US1-AS1",
+      "claim": "seven edges drawn",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "US1-AS1",
+      "claim": "four edge labels drawn",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "US1-AS1",
+      "claim": "exactly one arrowhead marker",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "US1-AS1",
+      "claim": "every node has a non-zero box",
+      "ok": true,
+      "detail": "{'links': 7, 'edges': 7, 'edgeLabels': 4, 'markers': ['fc-arrow'], 'allLinksVisible': True, 'shapes': 7}"
+    },
+    {
+      "step": "US1-AS6",
+      "claim": "rendered title matches the catalog entry byte for byte",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "US1-AS6",
+      "claim": "document title",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-040",
+      "claim": "exactly one node open on first paint",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-040",
+      "claim": "the open node is the flow's first",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-040",
+      "claim": "the open detail renders non-empty",
+      "ok": true,
+      "detail": "{'count': 1, 'id': 'nodes-connection-returns', 'h': 119.59375, 'txt': 275}"
+    },
+    {
+      "step": "SC-005",
+      "claim": "no buttons/inputs beyond the shared theme toggle",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-041a",
+      "claim": "all seven disclosures share one exclusive group name",
+      "ok": true,
+      "detail": "['flow-node', 'flow-node', 'flow-node', 'flow-node', 'flow-node', 'flow-node', 'flow-node']"
+    },
+    {
+      "step": "FR-041c",
+      "claim": "fragment navigation REVEALS a closed disclosure (all 7 nodes)",
+      "ok": true,
+      "detail": "[\n {\n  \"node\": \"nodes-connection-returns\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-connection-returns\",\n  \"hash\": \"#nodes-connection-returns-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-connection-returns-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-drain-the-outbox\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-drain-the-outbox\",\n  \"hash\": \"#nodes-drain-the-outbox-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-drain-the-outbox-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-version-unchanged\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-version-unchanged\",\n  \"hash\": \"#nodes-version-unchanged-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-version-unchanged-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-merge-the-draft\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-merge-the-draft\",\n  \"hash\": \"#nodes-merge-the-draft-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-merge-the-draft-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-write-acknowledged\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-write-acknowledged\",\n  \"hash\": \"#nodes-write-acknowledged-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-write-acknowledged-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-stop-and-report\",\n  \"openCount\": 1,\n "
+    },
+    {
+      "step": "FR-041a",
+      "claim": "exactly one disclosure open after every activation",
+      "ok": true,
+      "detail": "[\n {\n  \"node\": \"nodes-connection-returns\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-connection-returns\",\n  \"hash\": \"#nodes-connection-returns-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-connection-returns-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-drain-the-outbox\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-drain-the-outbox\",\n  \"hash\": \"#nodes-drain-the-outbox-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-drain-the-outbox-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-version-unchanged\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-version-unchanged\",\n  \"hash\": \"#nodes-version-unchanged-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-version-unchanged-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-merge-the-draft\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-merge-the-draft\",\n  \"hash\": \"#nodes-merge-the-draft-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-merge-the-draft-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-write-acknowledged\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-write-acknowledged\",\n  \"hash\": \"#nodes-write-acknowledged-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-write-acknowledged-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-stop-and-report\",\n  \"openCount\": 1,\n "
+    },
+    {
+      "step": "FR-039",
+      "claim": "the activated detail becomes :target and is scrolled into view",
+      "ok": true,
+      "detail": "[\n {\n  \"node\": \"nodes-connection-returns\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-connection-returns\",\n  \"hash\": \"#nodes-connection-returns-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-connection-returns-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-drain-the-outbox\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-drain-the-outbox\",\n  \"hash\": \"#nodes-drain-the-outbox-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-drain-the-outbox-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-version-unchanged\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-version-unchanged\",\n  \"hash\": \"#nodes-version-unchanged-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-version-unchanged-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-merge-the-draft\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-merge-the-draft\",\n  \"hash\": \"#nodes-merge-the-draft-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-merge-the-draft-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-write-acknowledged\",\n  \"openCount\": 1,\n  \"openId\": \"nodes-write-acknowledged\",\n  \"hash\": \"#nodes-write-acknowledged-detail\",\n  \"isTarget\": true,\n  \"active\": \"nodes-write-acknowledged-detail\",\n  \"inView\": true\n },\n {\n  \"node\": \"nodes-stop-and-report\",\n  \"openCount\": 1,\n "
+    },
+    {
+      "step": "FR-039",
+      "claim": "activating a node link moves focus into that node's entry",
+      "ok": true,
+      "detail": "[\n {\n  \"node\": \"nodes-connection-returns\",\n  \"active\": \"nodes-connection-returns-detail\"\n },\n {\n  \"node\": \"nodes-drain-the-outbox\",\n  \"active\": \"nodes-drain-the-outbox-detail\"\n },\n {\n  \"node\": \"nodes-version-unchanged\",\n  \"active\": \"nodes-version-unchanged-detail\"\n },\n {\n  \"node\": \"nodes-merge-the-draft\",\n  \"active\": \"nodes-merge-the-draft-detail\"\n },\n {\n  \"node\": \"nodes-write-acknowledged\",\n  \"active\": \"nodes-write-acknowledged-detail\"\n },\n {\n  \"node\": \"nodes-stop-and-report\",\n  \"active\": \"nodes-stop-and-report-detail\"\n },\n {\n  \"node\": \"nodes-drafts-in-sync\",\n  \"active\": \"nodes-drafts-in-sync-detail\"\n }\n]"
+    },
+    {
+      "step": "FR-019a",
+      "claim": "the focusable drawing carries a role and an accessible name",
+      "ok": true,
+      "detail": "{'role': 'group', 'label': 'The replay path, drawn as a flowchart', 'tabindex': '0'}"
+    },
+    {
+      "step": "SC-005",
+      "claim": "no clipboard write occurred during any activation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "SC-005",
+      "claim": "no execCommand copy occurred",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-038",
+      "claim": "exactly one disclosure reports expanded=true to assistive tech",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-038",
+      "claim": "open and closed disclosures differ in no colour",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "SC-003",
+      "claim": "all node shapes share one fill (shape, not hue, carries role)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "SC-003",
+      "claim": "all node shapes share one stroke",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-020a",
+      "claim": "every node carries its role as a word",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "SC-003",
+      "claim": "failure edges are dashed and ordinary edges are not",
+      "ok": true,
+      "detail": "{'fail': ['7px, 5px', '7px, 5px'], 'plain': ['none', 'none', 'none', 'none', 'none'], 'labels': ['yes', 'no', 'yes', 'no']}"
+    },
+    {
+      "step": "FR-022a",
+      "claim": "edge labels are words",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-023",
+      "claim": "legend states all seven conventions in words",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-023",
+      "claim": "legend carries no meaning-bearing swatch",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-019a",
+      "claim": "the drawing does not carry role=img (which would hide its nodes)",
+      "ok": true,
+      "detail": "{'role': None, 'labelledby': 'flow-diagram-title', 'title': 'How a draft queued while NIMBUS-101 was offline reaches the drafts table when the connection returns, branching first at the version check and again at the write acknowledgement'}"
+    },
+    {
+      "step": "FR-019a",
+      "claim": "all seven nodes survive in the accessibility tree as named links",
+      "ok": true,
+      "detail": "named links found: 7"
+    },
+    {
+      "step": "FR-030",
+      "claim": "the text equivalent renders, unhidden and outside any disclosure",
+      "ok": true,
+      "detail": "{'h': 375, 'w': 736, 'display': 'block', 'visibility': 'visible', 'ariaHidden': False, 'hidden': False, 'inDetails': False, 'len': 1213}"
+    },
+    {
+      "step": "SC-002",
+      "claim": "with the drawing hidden, the prose still names every node",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "FR-026",
+      "claim": "the artifact introduces no motion of its own",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "COINED-TAB-ORDER",
+      "claim": "sixteen stops: toggle, drawing, 7 nodes, 7 summaries",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "COINED-TAB-ORDER",
+      "claim": "stop order by element kind",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-037",
+      "claim": "every stop shows a visible focus indicator",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "FR-037",
+      "claim": "a focused node also thickens its stroke (second carrier)",
+      "ok": true,
+      "detail": "strokeWidth=4px"
+    },
+    {
+      "step": "SC-004",
+      "claim": "keyboard alone reaches all seven nodes",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-025",
+      "claim": "page never scrolls horizontally at 320/480/768/1280",
+      "ok": true,
+      "detail": "{\n \"320\": {\n  \"page\": true,\n  \"fig\": {\n   \"scrollable\": true,\n   \"tabindex\": \"0\"\n  }\n },\n \"480\": {\n  \"page\": true,\n  \"fig\": {\n   \"scrollable\": true,\n   \"tabindex\": \"0\"\n  }\n },\n \"768\": {\n  \"page\": true,\n  \"fig\": {\n   \"scrollable\": false,\n   \"tabindex\": \"0\"\n  }\n },\n \"1280\": {\n  \"page\": true,\n  \"fig\": {\n   \"scrollable\": false,\n   \"tabindex\": \"0\"\n  }\n }\n}"
+    },
+    {
+      "step": "COINED-SCROLL-KEYBOARD",
+      "claim": "the drawing's scroll container is keyboard-focusable",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "COINED-SCROLL-KEYBOARD",
+      "claim": "arrow keys scroll the focused container",
+      "ok": true,
+      "detail": "{'before': {'focused': True, 'before': 0}, 'after': 240}"
+    },
+    {
+      "step": "FR-002",
+      "claim": "the toggle flips the theme and tracks aria-pressed",
+      "ok": true,
+      "detail": "{'theme': 'dark', 'bg': 'rgb(26, 26, 26)', 'pressed': 'true'}"
+    },
+    {
+      "step": "FR-047",
+      "claim": "offline: only the webfont request fails, nothing else",
+      "ok": true,
+      "detail": "[\n {\n  \"kind\": \"log.error\",\n  \"source\": \"network\",\n  \"text\": \"Failed to load resource: net::ERR_INTERNET_DISCONNECTED\",\n  \"url\": \"https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Geist:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap\"\n }\n]"
+    },
+    {
+      "step": "FR-047",
+      "claim": "offline: no webfont is applied",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "FR-047",
+      "claim": "offline: the whole drawing still renders",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-047",
+      "claim": "offline: disclosure still operates",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-048",
+      "claim": "storage refused: no uncaught exception reaches the console",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "FR-048",
+      "claim": "storage refused: the page still renders in full",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-048",
+      "claim": "storage refused: the theme control still flips both ways",
+      "ok": true,
+      "detail": "{'after1': 'dark', 'after2': 'light'}"
+    },
+    {
+      "step": "SC-006",
+      "claim": "scripting disabled: no dead control is offered (no button/input)",
+      "ok": true,
+      "detail": "button=False input=False"
+    },
+    {
+      "step": "SC-006",
+      "claim": "scripting disabled: all seven nodes and their prose still render",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "SC-006",
+      "claim": "scripting disabled: one node still open by markup alone",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

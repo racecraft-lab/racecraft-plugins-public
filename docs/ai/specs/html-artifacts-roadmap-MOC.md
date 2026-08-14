@@ -2,7 +2,7 @@
 up: "[HTML Artifacts & Staged Review Workflow Implementation Roadmap](html-artifacts-technical-roadmap.md)"
 related:
   - "[HTML Artifacts & Staged Review Workflow PRD](../../prd-html-artifacts.md)"
-status: "Active; ART-001, ART-002, ART-003, ART-006, ART-011, ART-012 and ART-014 complete/archived; ART-004, ART-005, ART-007, ART-009 and ART-015 through ART-019 ready"
+status: "Active; ART-001, ART-002, ART-003, ART-006, ART-011, ART-012 and ART-014 complete/archived; ART-004, ART-005, ART-007, ART-009 and ART-015 through ART-020 ready"
 rank:
 spec_id: "html-artifacts"
 structureVersion: 1
@@ -33,6 +33,7 @@ ad-hoc completion sets alongside.
 - [ART-003 Final-PR Template Set](html-artifacts-technical-roadmap.md#art-003-final-pr-template-set)
 - [ART-004 Gallery Completion — Design & Prototyping](html-artifacts-technical-roadmap.md#art-004-gallery-completion--design--prototyping)
 - [ART-005 Gallery Completion — Knowledge, Reports & Editors](html-artifacts-technical-roadmap.md#art-005-gallery-completion--knowledge-reports--editors)
+- [ART-020 Keyboard-Reachable Scroll Containers In The Shipped Gallery](html-artifacts-technical-roadmap.md#art-020-keyboard-reachable-scroll-containers-in-the-shipped-gallery)
 
 ### Workflow Staging
 

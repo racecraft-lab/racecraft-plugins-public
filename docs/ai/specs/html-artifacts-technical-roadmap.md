@@ -25,8 +25,10 @@ shipped in PRs #425, #427 and #430, which unblocks ART-007; ART-012 shipped in P
 #426; ART-014 shipped in PR #433 and archived 2026-08-13, which unblocks ART-017;
 ART-011 shipped in PR #434 and archived 2026-08-13, and ART-019 supersedes its
 FR-022; ART-003 shipped as three stacked slices in PRs #435, #436 and #439 and was
-archived 2026-08-14, leaving ART-010 blocked only by ART-007; ART-004, ART-005,
-ART-007 and ART-009 are ready;
+archived 2026-08-14, leaving ART-010 blocked only by ART-007, and its acceptance
+evidence and harness are preserved under `.process/`; ART-020 was opened
+2026-08-14 from a gallery accessibility gap ART-003 recorded and nobody owned;
+ART-004, ART-005, ART-007 and ART-009 are ready;
 ART-015 was opened from ART-006 findings and is ready with no dependencies;
 ART-016, ART-017 and ART-018 were opened from ART-014 findings on 2026-08-12 and
 are ready; ART-019 was opened on 2026-08-13 and is ready with no dependencies
@@ -44,7 +46,7 @@ are ready; ART-019 was opened on 2026-08-13 and is ready with no dependencies
 
 ## Roadmap Overview
 
-The roadmap currently tracks **19 specifications** overall; **13** of them are mapped into **6 dependency
+The roadmap currently tracks **20 specifications** overall; **13** of them are mapped into **6 dependency
 tiers**:
 
 | Tier | Specs | Purpose | Parallelization |
@@ -134,7 +136,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 |------|------|--------|---------------|------------|
 | ART-001 | Artifact Brand Kit & Gallery Foundation | ✅ Complete / Archived | [.process/ART-001-workflow.md](.process/ART-001-workflow.md) | PR #407 merged with follow-up fix PR #409; the brand kit, gallery manifest, SPA contract, and validator live outside `specs/**`. T026 and T027 ran on 2026-07-29, 12 of 12 manual scenarios passed; the harness is preserved at [.process/ART-001-acceptance-harness.html](.process/ART-001-acceptance-harness.html) |
 | ART-002 | Draft-PR Template Set | ✅ Complete / Archived | [.process/ART-002-workflow.md](.process/ART-002-workflow.md) | Shipped as two stacked slices — PR #425 (`implementation-plan`, `spec-explainer`) and PR #427 (`code-approaches`, `module-map`) — then PR #430 recorded the acceptance result; archived 2026-08-12. All four templates and the manifest live outside `specs/**`. The runbook ran against `4ecb1b4b` with every executed step passing and 15 of its 61 steps recorded as *not executed*; it is preserved at [.process/ART-002-uat-runbook.md](.process/ART-002-uat-runbook.md) |
-| ART-003 | Final-PR Template Set | ✅ Complete / Archived | [.process/ART-003-workflow.md](.process/ART-003-workflow.md) | Shipped as three stacked slices — PR #435 (`pr-writeup`), PR #436 (`annotated-diff`), PR #439 (`flowchart`) — and archived 2026-08-14. All three templates and the manifest live outside `specs/**`. Re-sliced at scaffold on ART-002's realized measurement rather than the original 285 estimate, and **every slice landed under its own declaration** (735/758, 724/750, 408/460) — the first ART spec where none overran. Manual acceptance ran in full against the shipped bytes: 176 checks, all passing, preserved as procedure at [.process/ART-003-uat-runbook.md](.process/ART-003-uat-runbook.md). No acceptance record was merged; the verdicts live only in the archive report |
+| ART-003 | Final-PR Template Set | ✅ Complete / Archived | [.process/ART-003-workflow.md](.process/ART-003-workflow.md) | Shipped as three stacked slices — PR #435 (`pr-writeup`), PR #436 (`annotated-diff`), PR #439 (`flowchart`) — and archived 2026-08-14. All three templates and the manifest live outside `specs/**`. Re-sliced at scaffold on ART-002's realized measurement rather than the original 285 estimate, and **every slice landed under its own declaration** (735/758, 724/750, 408/460) — the first ART spec where none overran. Manual acceptance ran in full against the shipped bytes: 176 checks, all passing. Procedure at [.process/ART-003-uat-runbook.md](.process/ART-003-uat-runbook.md), verdicts and scope limits at [.process/ART-003-uat-results.md](.process/ART-003-uat-results.md), and the CDP harness that executed them at [.process/ART-003-uat-harness/](.process/ART-003-uat-harness/), re-run against `main` before it was committed |
 | ART-004 | Gallery Completion: Design & Prototyping | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
@@ -151,6 +153,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-017 | Arm The Accidentally-Advisory State Bookkeeping Checks | ⏳ Ready | - | ART-014 dependency satisfied by PR #433, which added the classification record these verdicts live in. Opened from ART-014's advisory audit; the defect was reproduced by execution |
 | ART-018 | Repair The Silently-Clean Governance Matchers | ⏳ Ready | - | No dependencies; opened from ART-014's retrospective. Three helpers report clean on input they should catch, each hit live during that run |
 | ART-019 | Documented Best-Practice Alignment | ⏳ Ready | - | No dependencies; opened 2026-08-13 from a seven-surface audit against the live official docs. Zero documented rules broken; the gap is that the repo's gates are blind to the documented metrics. Ships as ordered child slices |
+| ART-020 | Keyboard-Reachable Scroll Containers In The Shipped Gallery | ⏳ Ready | - | No dependencies; opened 2026-08-14 from a gap ART-003 slice 2 recorded and nobody owned. Five `overflow-x: auto` containers across `code-approaches`, `implementation-plan` and `module-map` carry no `tabindex`, so a keyboard-only Safari reader cannot reach their clipped content. ART-003's own two templates already ship the fix; this repairs the rest and adds the Layer 4 assertion that stops ART-004 and ART-005 repeating it |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -1165,24 +1168,38 @@ When breaking a feature into specs:
 
 **Priority:** P2 | **Depends On:** none | **Enables:** governance checks that can prove they detect
 
-**Goal:** Give three checks that currently report clean on dirty input a matcher
+**Goal:** Give four checks that currently report clean on dirty input a matcher
 that agrees with the format their own documentation prescribes, and a negative
 control proving each can detect the thing it counts.
 
-**Problem:** Three shipped helpers report zero, or report nothing, on input they
-are supposed to catch. All three were found during ART-014 by having to override
-them by hand.
+**Problem:** Four shipped helpers report zero, or report nothing, on input they
+are supposed to catch. Three were found during ART-014 by having to override them
+by hand; the fourth was found during ART-003's archive.
 
 | Helper | Counts | The documented form | Observed |
 |---|---|---|---|
 | `validate-gate` | `\[NEEDS CLARIFICATION\]` | the spec template prescribes and demonstrates the colon form | reported 0 markers against a spec carrying 2 |
 | `count-markers` | literal `\[Gap\]` | the checklist skill's own examples show `[Coverage, Gap]` | an executor's first count returned 0 against 7 real gaps |
 | `estimate-reviewable-loc` | `is_production_file` prefix-matches `src/`, `app/`, `lib/`, `scripts/`, or a JS/TS/SQL extension | this repository's Python lives deeper than those prefixes | every Python file scores non-production; `projected: 0` against 6 declared files |
+| `count_tasks` / `count_done_tasks` | `^\s*-\s+\[[ xX]\]\s+T[0-9]` | `.specify/templates/tasks-template.md:52` prescribes `- [ ] T001`, but a decorated `- [ ] **T001**` is equally idiomatic and was authored | counted **0 of 36** tasks in ART-003 slice 3, which used the decorated form throughout |
 
 The first two are the same defect verbatim: a counter narrower than the form the
-tooling itself teaches. The third differs in mechanism and consumer. They belong
-in one entry anyway, because what decides whether they ship together is the
-verification all three lack, and it is identical.
+tooling itself teaches. The fourth is the same defect a third time, found during
+ART-003 rather than ART-014, and it reaches further because G7 consumes it:
+`read_only.py:935` gates on `remaining == 0 and total > 0`, so a file the counter
+cannot read produces `total: 0` and the gate reports a reason that names the wrong
+problem. The third differs in mechanism and consumer. They belong in one entry
+anyway, because what decides whether they ship together is the verification all
+four lack, and it is identical.
+
+**A second ART-003 observation belongs to this entry's verification rather than its
+scope.** Slice 1 recorded `G7 PASS, 40/40 tasks` in its workflow file. Slices 2 and
+3 declare G7 in their gate tables and record no G7 result at all, while merging with
+41-of-41 and 36-of-36 tasks unchecked. Slice 2's tasks were in the plain form, so
+the counter could read them and G7 would have failed loudly had it run. Whatever a
+widened matcher reports is worth nothing if the gate that consumes it is skipped, so
+the negative controls this entry adds should prove the check runs, not only that it
+detects.
 
 **Scope:**
 - Widen each matcher to the form its own documentation prescribes, or make the
@@ -1193,26 +1210,31 @@ verification all three lack, and it is identical.
   matcher that disagrees with its own documentation will be re-broken otherwise.
 
 **Out of Scope:**
-- Changing what any of the three checks is *for*.
+- Changing what any of the four checks is *for*.
 - The `--rule` scoping mechanism, which is deliberate and documented.
 
 **Verification:** One negative control per helper, each proving the check moves
 from clean to a finding on a single wrong input. The governing principle, which
 ART-014 established the hard way: **a check that reports zero must be able to
 prove it can detect one.** Fifty-four corpus passes proved nothing until a canary
-separated a satisfied comparison from a skipped one; all three helpers sit in
-exactly that position today.
+separated a satisfied comparison from a skipped one; all four helpers sit in
+exactly that position today. For the task counter, additionally prove that G7
+*ran*: ART-003 shipped two slices whose gate table declares G7 and whose records
+contain no G7 result.
 
 **Key Decisions:**
 **Found during ART-014, filed from its retrospective (2026-08-12):** each was hit
 live and overridden by hand rather than inferred from reading. Filed as one entry
-on the operator's decision, because three separate entries would each read as a
-typo fix and lose the pattern that makes them worth fixing.
+on the operator's decision, because separate entries would each read as a typo fix
+and lose the pattern that makes them worth fixing. **The task counter joined on
+2026-08-14** from ART-003's archive, which is the pattern recurring in a spec that
+had nothing to do with ART-014.
 
 **Key Files:**
-- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — all three matchers
+- `speckit-pro/speckit_pro_runner/helpers/read_only.py` — all four matchers; the task counters at `:4143` and `:4151`, and the G7 consumer at `:935`
 - `speckit-pro/skills/speckit-coach/templates/spec-template.md` — the prescribed colon form
-- `tests/speckit-pro/unit/` — the three missing negative controls
+- `.specify/templates/tasks-template.md` — the prescribed plain task-ID form
+- `tests/speckit-pro/unit/` — the four missing negative controls
 
 ---
 
@@ -1329,6 +1351,82 @@ correctness, not compliance repair.
 - `speckit-pro/skills/speckit-autopilot/SKILL.md`, `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` — 884 and 1122 lines
 - `speckit-pro/skills/speckit-autopilot/references/agent-teams-integration.md` — the false agent claim
 - `.claude-plugin/marketplace.json` — the absent optional `description`
+
+---
+
+### ART-020: Keyboard-Reachable Scroll Containers In The Shipped Gallery
+
+**Priority:** P3 | **Depends On:** none | **Enables:** ART-004 and ART-005 inheriting a fixed pattern rather than the broken one
+
+**Goal:** Give every horizontally scrolling region in the shipped gallery a
+keyboard route to its own scrollbar, and add the assertion that keeps the next
+fourteen ports from repeating the omission.
+
+**Problem:** A container with `overflow-x: auto` and no `tabindex` is
+mouse-scrollable and touch-scrollable but not keyboard-scrollable. Safari does not
+place a scroll container in the sequential focus order on its own; Chrome and
+Firefox do. A keyboard-only Safari reader therefore cannot reach the right-hand
+content of a wide code block at all. There is no fallback, because the content is
+clipped rather than wrapped.
+
+Five containers across three shipped templates are affected, all measured on
+`main`:
+
+| Template | Container | State |
+|---|---|---|
+| `code-approaches.html` | `:700` | no `tabindex` |
+| `implementation-plan.html` | `:721`, `:942` | no `tabindex` |
+| `module-map.html` | `:587`, `:769` | no `tabindex` |
+| `annotated-diff.html` | `:569` | **fixed**, carries `tabindex="0"` |
+| `flowchart.html` | `:576` | **fixed**, carries `tabindex="0"` |
+
+`pr-writeup.html` and `spec-explainer.html` have no scroll container and need no
+change.
+
+**Reviewability Budget:** Primary surface: docs/process (shipped templates) |
+Projected reviewable LOC: ~40 (five attributes, one assertion, one fixture) |
+Production files: 3 (modify) |
+Total files: ~5 |
+Budget result: within budget
+
+**Scope:**
+- Add `tabindex="0"` to the five containers, matching the form `annotated-diff` and
+  `flowchart` already ship.
+- Give each an accessible name, because a focusable region with no name is a
+  bare stop in the tab order. Follow whatever `annotated-diff` does, so the gallery
+  carries one pattern rather than two.
+- Extend the Layer 4 gallery test so a scroll container without a keyboard route
+  fails, and add the fixture proving the assertion detects one. Without this the
+  fix does not survive ART-004 and ART-005.
+- Regenerate the payloads and installed-cache proofs, since shipped bytes change.
+
+**Out of Scope:**
+- Vertical scroll containers, of which the gallery currently has none.
+- Any other accessibility finding; this entry is one defect, deliberately.
+- The remaining fourteen unported templates. They inherit the assertion, not a fix.
+
+**Verification:** The extended Layer 4 assertion failing against today's `main` and
+passing after the change, plus a keyboard traversal of each of the five containers
+confirming the container takes focus and arrow keys scroll it. The ART-003 harness
+already performs exactly this check (`COINED-SCROLL-KEYBOARD`, in
+`.process/ART-003-uat-harness/uat_flowchart.py`), so the manual half is a matter of
+pointing an existing driver at three more artifacts.
+
+**Key Decisions:**
+**Recorded during ART-003 slice 2 (2026-08-14), filed 2026-08-14.** Slice 2 found
+the defect while fixing its own container and wrote it down at
+`.process/ART-003-slice-2-workflow.md:622-624` — "the other five are a recorded
+gap" — but no entry owned it, so the record had nowhere to go. Filed as its own
+entry rather than folded into ART-004 or ART-005 because those port *new*
+templates, and a repair to three already-shipped ones would be scope drift in
+either.
+
+**Key Files:**
+- `speckit-pro/artifact-gallery/templates/code-approaches.html`
+- `speckit-pro/artifact-gallery/templates/implementation-plan.html`
+- `speckit-pro/artifact-gallery/templates/module-map.html`
+- `speckit-pro/artifact-gallery/templates/annotated-diff.html` — the pattern to copy
+- `tests/speckit-pro/unit/test-artifact-gallery.py` — where the assertion belongs
 
 ---
 
