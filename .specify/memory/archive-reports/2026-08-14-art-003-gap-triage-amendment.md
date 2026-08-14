@@ -74,9 +74,25 @@ path became a repository root resolved from the file's own location, screenshots
 default to a temp directory rather than the tree, and both are overridable by
 environment variable.
 
+A third change came from CodeQL, and it is a real imprecision rather than a false
+positive: the drivers identified the brand webfont request with
+`"fonts.googleapis.com" in url`, which also matches
+`https://example.com/fonts.googleapis.com`. A request from an unrelated origin
+would have been waved through as "just the webfont" and the offline assertions
+would have passed while missing it. Replaced by `is_brand_font_request()`, which
+compares the parsed host.
+
 **Re-verified end to end on the committed design**: 58/58, 65/65, 53/53 against
 `main`, with the full repository suite at 7399/7399 and the Bash-confinement guard
 back to `blocking_count: 0`.
+
+**A green sweep is not yet a reliable one, and the record says so.** Of two
+consecutive full sweeps, the first produced 58/58, 64/64 with a stage raising, and
+50/53; the second was clean and is what the committed JSON records. Two causes,
+both documented in `ART-003-uat-results.md`: stages sharing one browser can
+interfere during teardown, and one assertion reaches `fonts.gstatic.com`, which was
+observed returning 404 during this work. Neither is an artifact defect, and the
+second cannot be fixed from inside the repository.
 
 ## Corrected: the unchecked task boxes were a gate, not a ledger
 

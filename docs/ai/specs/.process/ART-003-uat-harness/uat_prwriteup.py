@@ -8,7 +8,7 @@ import sys
 import tempfile
 import time
 
-from cdp import Chrome, Report
+from cdp import Chrome, Report, is_brand_font_request
 
 # The run this evidence records was performed in a feature worktree that no longer
 # exists. Resolve the repository root from this file instead, so the harness runs
@@ -55,11 +55,11 @@ try:
     R.eq("1", "console carries exactly one line offline", len(console), 1)
     R.check("1", "that one line is the shared header's font request, nothing else",
             len(console) == 1
-            and "fonts.googleapis.com" in (console[0].get("url") or "")
+            and is_brand_font_request(console[0].get("url"))
             and "ERR_INTERNET_DISCONNECTED" in (console[0].get("text") or ""),
             json.dumps(console, indent=2))
     R.check("1", "the page itself adds no console message",
-            [m for m in console if "fonts.googleapis.com" not in (m.get("url") or "")] == [],
+            [m for m in console if not is_brand_font_request(m.get("url"))] == [],
             json.dumps(console, indent=2))
     # The corrected step also promises silence once the network is back. Fresh
     # browser, because this one has already failed the font fetch.

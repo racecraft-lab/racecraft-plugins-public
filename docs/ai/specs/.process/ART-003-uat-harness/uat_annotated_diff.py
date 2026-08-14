@@ -12,7 +12,7 @@ import tempfile
 import time
 import traceback
 
-from cdp import Chrome, Report
+from cdp import Chrome, Report, is_brand_font_request
 
 # The run this evidence records was performed in a feature worktree that no longer
 # exists. Resolve the repository root from this file instead, so the harness runs
@@ -74,12 +74,12 @@ def s1_load_and_render():
     c = open_page(offline=True, clipboard=True, settle=3.5)
     try:
         console = c.console_report()
-        non_font = [m for m in console if "fonts.googleapis.com" not in (m.get("url") or "")]
+        non_font = [m for m in console if not is_brand_font_request(m.get("url"))]
         R.check("SC-001", "console silent on load apart from the shared webfont request",
                 non_font == [], json.dumps(non_font, indent=1))
         R.check("SC-001", "the only outbound request is the shared webfont",
                 [r for r in c.requests() if not r["url"].startswith("file:")
-                 and "fonts.googleapis.com" not in r["url"]] == [], "")
+                 and not is_brand_font_request(r["url"])] == [], "")
 
         ids = ["artifact-title", "feature-id", "feature-name", H1, H2, "export",
                "copy-prompt", "copy-markdown", "export-status", "fallback", "fallback-field"]
@@ -211,8 +211,7 @@ def s2_layout_and_keyboard():
         R.check("FR-019d", "the hunk heading sits outside the scroll container",
                 all(d["headingOutside"] for d in cont), cont)
 
-        c.call("Emulation.setDeviceMetricsOverride",
-               {"width": 420, "height": 900, "deviceScaleFactor": 1, "mobile": False})
+        c.viewport(420)
         time.sleep(0.5)
         probe = c.js("""
           (() => { const d=document.querySelector('.diff'); d.focus(); d.scrollLeft=0;
@@ -227,8 +226,7 @@ def s2_layout_and_keyboard():
 
         widths = {}
         for w in (320, 375, 768, 1280):
-            c.call("Emulation.setDeviceMetricsOverride",
-                   {"width": w, "height": 900, "deviceScaleFactor": 1, "mobile": False})
+            c.viewport(w)
             time.sleep(0.4)
             widths[w] = c.js("document.scrollingElement.scrollWidth <= window.innerWidth + 1")
         R.check("FR-035", "the page never scrolls horizontally at 320/375/768/1280",

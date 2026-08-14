@@ -21,9 +21,26 @@ import os
 import socket
 import struct
 import time
+import urllib.parse
 import urllib.request
 
 DEFAULT_ENDPOINT = "http://127.0.0.1:9222"
+
+BRAND_FONT_HOST = "fonts.googleapis.com"
+
+
+def is_brand_font_request(url):
+    """True when `url`'s host IS the brand font host.
+
+    Compare the parsed host, never a substring. `"fonts.googleapis.com" in url`
+    also matches `https://example.com/fonts.googleapis.com`, so a console entry
+    from an unrelated origin would be waved through as "just the webfont" and
+    the offline assertions would pass while missing a real request.
+    """
+    try:
+        return urllib.parse.urlsplit(url or "").hostname == BRAND_FONT_HOST
+    except ValueError:
+        return False
 
 
 class WS:
@@ -273,6 +290,24 @@ class Chrome:
             {
                 "width": self.width,
                 "height": self.height,
+                "deviceScaleFactor": self.scale,
+                "mobile": False,
+            },
+        )
+
+    def viewport(self, width, height=None):
+        """Resize the emulated viewport, keeping this session's scale factor.
+
+        Changing `deviceScaleFactor` between overrides is what stalls the
+        renderer: a breakpoint sweep that flips 2 to 1 and back leaves a later
+        `Runtime.evaluate` waiting past any sane timeout. Width is the variable
+        a breakpoint sweep actually cares about, so hold everything else fixed.
+        """
+        self.call(
+            "Emulation.setDeviceMetricsOverride",
+            {
+                "width": width,
+                "height": height if height is not None else self.height,
                 "deviceScaleFactor": self.scale,
                 "mobile": False,
             },

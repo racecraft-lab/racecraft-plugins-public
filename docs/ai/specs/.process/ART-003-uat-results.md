@@ -131,6 +131,31 @@ Capabilities the steps depend on:
 The focus emulation is not optional: `readText` throws "Document is not focused"
 in headless without it.
 
+## Stability, stated because a green run is not a reliable run
+
+**A clean sweep needs a retry sometimes.** Over two consecutive full sweeps of all
+three drivers, the first produced 58/58, 64/64 with one stage raising, and 50/53;
+the second produced 58/58, 65/65 and 53/53. The committed JSON records the second.
+
+Two distinct causes, both understood, neither an artifact defect:
+
+- **A shared browser makes stages interfere.** Every stage opens its own context
+  in one browser, so a stage that starts while the previous one is still tearing
+  down can find the endpoint briefly unresponsive, or can stall a renderer. The
+  connect retry and `Chrome.viewport()` reduce this a great deal but do not
+  eliminate it. This is the price of not launching a browser per stage, and it is
+  the right price: see *Why the harness does not launch Chrome*.
+- **One check depends on a live third party.** "With the network back, the console
+  is completely silent" fails whenever `fonts.gstatic.com` returns anything other
+  than the woff2 it is asked for. It was observed returning **404** for a
+  `spacegrotesk` woff2 during this work. Nothing in the artifact changed, and
+  nothing in the artifact can fix it: the assertion reaches outside the
+  repository by construction.
+
+Treat a single failing run as inconclusive and re-run before believing it. A
+failure that reproduces across runs is real; one that does not is one of the two
+above. Restarting the browser between drivers removes most of the first cause.
+
 ## Scope limits, stated because "176 passing" reads broader than it is
 
 - **One engine.** Every check ran on Chrome. Nothing here says anything about

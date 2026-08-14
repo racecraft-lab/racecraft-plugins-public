@@ -6,7 +6,7 @@ import sys
 import tempfile
 import time
 
-from cdp import Chrome, Report
+from cdp import Chrome, Report, is_brand_font_request
 
 # The run this evidence records was performed in a feature worktree that no longer
 # exists. Resolve the repository root from this file instead, so the harness runs
@@ -275,8 +275,7 @@ try:
     # ---------- FR-025 no horizontal page scroll / scroll container ----------
     widths = {}
     for w in (320, 480, 768, 1280):
-        c.call("Emulation.setDeviceMetricsOverride",
-               {"width": w, "height": 900, "deviceScaleFactor": 1, "mobile": False})
+        c.viewport(w)
         time.sleep(0.35)
         widths[w] = c.js("""
           (() => ({page: document.scrollingElement.scrollWidth <= window.innerWidth + 1,
@@ -288,8 +287,7 @@ try:
             all(v["page"] for v in widths.values()), json.dumps(widths, indent=1))
     R.eq("COINED-SCROLL-KEYBOARD", "the drawing's scroll container is keyboard-focusable",
          widths[480]["fig"]["tabindex"], "0")
-    c.call("Emulation.setDeviceMetricsOverride",
-           {"width": 480, "height": 900, "deviceScaleFactor": 1, "mobile": False})
+    c.viewport(480)
     time.sleep(0.3)
     scrolled = c.js("""
       (() => { const f=document.querySelector('figure.diagram'); f.focus(); f.scrollLeft=0;
@@ -300,8 +298,7 @@ try:
     after = c.js("document.querySelector('figure.diagram').scrollLeft")
     R.check("COINED-SCROLL-KEYBOARD", "arrow keys scroll the focused container",
             scrolled["focused"] and after > 0, {"before": scrolled, "after": after})
-    c.call("Emulation.setDeviceMetricsOverride",
-           {"width": 1280, "height": 900, "deviceScaleFactor": 2, "mobile": False})
+    c.viewport(1280)
 
     # ---------- FR-002 themes ----------
     c.js("location.reload()")
@@ -329,7 +326,7 @@ try:
         off_c.navigate(URL, settle=3.0)
         off = off_c.console_report()
         R.check("FR-047", "offline: only the webfont request fails, nothing else",
-                all("fonts.googleapis.com" in (m.get("url") or "") for m in off),
+                all(is_brand_font_request(m.get("url")) for m in off),
                 json.dumps(off, indent=1))
         loaded = off_c.js("[...document.fonts].filter(f => f.status === 'loaded').map(f => f.family)")
         R.check("FR-047", "offline: no webfont is applied", loaded == [], loaded)
