@@ -1,13 +1,13 @@
 {
-  "workflow_file": "docs/ai/specs/.process/ART-003-slice-2-workflow.md",
-  "spec_id": "ART-003-slice-2",
-  "feature_dir": "specs/art-003-final-pr-template-set-slice-2",
-  "branch": "art-003-final-pr-template-set-slice-2",
-  "status": "in_progress",
+  "workflow_file": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
+  "spec_id": "ART-003-slice-3",
+  "feature_dir": "specs/art-003-final-pr-template-set-slice-3",
+  "branch": "art-003-final-pr-template-set-slice-3",
+  "status": "completed_pr_open",
   "stage": "full",
-  "active_step": "Phase 7: Implement",
-  "prior_run_note": "completed_pr_open",
-  "reclaimed_from": "docs/ai/specs/.process/ART-003-workflow.md",
+  "active_step": null,
+  "prior_run_note": "in_progress",
+  "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-2-workflow.md",
   "settings": {
     "consensus_mode": "tier-a",
     "gate_failure": "stop",
@@ -19,14 +19,14 @@
     "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py"
   },
   "test_baseline_g0": {
-    "passed": 7379,
-    "total": 7379,
+    "passed": 7380,
+    "total": 7380,
     "l1": 1447,
-    "l4": 5746,
+    "l4": 5747,
     "l5": 186
   },
-  "base_branch": "art-003-final-pr-template-set",
-  "stacked_on_pr": 435,
+  "base_branch": "art-003-final-pr-template-set-slice-2",
+  "stacked_on_pr": 436,
   "plan": [
     {
       "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
@@ -41,56 +41,48 @@
       "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Slot inventory and hunk granularity",
+      "step": "Phase 2: Clarify - Slot inventory and the diagram's text equivalent",
       "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Slot inventory and hunk granularity Consensus",
+      "step": "Phase 2: Clarify - Slot inventory and the diagram's text equivalent Consensus",
       "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Export payload and objection shape",
+      "step": "Phase 2: Clarify - The disclosure mechanism",
       "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Export payload and objection shape Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Diff rendering edges",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Diff rendering edges Consensus",
+      "step": "Phase 2: Clarify - The disclosure mechanism Consensus",
       "status": "completed"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "completed"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 4: Checklist - accessibility",
-      "status": "skipped: slice 1 ran all three domains against the same contract; findings carried into this spec at Specify and Clarify"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 4: Checklist - accessibility Consensus",
-      "status": "skipped: slice 1 ran all three domains against the same contract; findings carried into this spec at Specify and Clarify"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 4: Checklist - ux",
-      "status": "skipped: slice 1 ran all three domains against the same contract; findings carried into this spec at Specify and Clarify"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 4: Checklist - ux Consensus",
-      "status": "skipped: slice 1 ran all three domains against the same contract; findings carried into this spec at Specify and Clarify"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "skipped: slice 1 ran all three domains against the same contract; findings carried into this spec at Specify and Clarify"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "skipped: slice 1 ran all three domains against the same contract; findings carried into this spec at Specify and Clarify"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 5: Tasks",
@@ -98,85 +90,91 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "skipped: cross-artifact consistency verified inline \u2014 all three artifacts declare 750, verified by running the parser; coverage checked at Plan"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "skipped: no analyze phase run"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "skipped: advisory; slice 1's recorded verdict and this slice's stronger measurement basis carry forward"
+      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
     },
     {
       "step": "Phase 7: Implement",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed"
     }
   ],
   "gates": {
     "G1": {
-      "pass": true,
-      "markers": 0
+      "pass": true
     },
     "G2": {
-      "pass": true,
-      "markers": 0
-    },
-    "G3": {
-      "pass": true,
-      "markers": 0
-    },
-    "G5": {
-      "pass": true,
-      "task_count": 41
+      "pass": true
     }
+  },
+  "final": {
+    "authored": 408,
+    "css": 209,
+    "js": 0,
+    "markup": 199,
+    "declared": 460,
+    "block": 800,
+    "suite": "7381/7381",
+    "baseline": 7380,
+    "measured_zeros": {
+      "authored_script": 0,
+      "export_affordances": 0,
+      "control": "annotated-diff shows 1 and 12, so the search binds"
+    },
+    "unverified": "manual render \u2014 file:// navigation refused; FR-041c's fragment reveal not confirmed, and the zero-script property is NOT claimed as verified"
   }
 }

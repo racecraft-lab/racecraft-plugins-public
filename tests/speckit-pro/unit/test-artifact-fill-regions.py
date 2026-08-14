@@ -90,6 +90,7 @@ FLOOR: dict[str, tuple[str, ...]] = {
     "module-map": ("module-graph",),
     "pr-writeup": ("motivation", "before-after", "file-by-file", "implementation-notes"),
     "annotated-diff": ("hunks",),
+    "flowchart": ("flow-diagram",),
 }
 
 # The slots whose items an objection or a selection attaches to, and which
@@ -105,6 +106,7 @@ LIST_SLOTS: dict[str, tuple[str, ...]] = {
     "module-map": ("modules",),
     "pr-writeup": ("file-by-file",),
     "annotated-diff": ("hunks",),
+    "flowchart": ("nodes",),
 }
 
 # The two anchored items a list slot needs at a minimum. One item shows a reader
