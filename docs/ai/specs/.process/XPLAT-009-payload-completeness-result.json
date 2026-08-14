@@ -208,7 +208,7 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "8172b252b863ce2dedd2fa26fcd5969f5459b12bec11027fbe910c16029184ef",
+            "sha256": "a40b15f49b3ba54a954931acbd98133de6144f843528b8e80193fba2cf26493a",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
             "transform": "none"
           },
@@ -237,6 +237,15 @@
             "required": true,
             "sha256": "cdf0511d330a5e9507ca82b471d1d8beeb748db0e7b6feab1af1011af00be8ff",
             "source_path": "speckit-pro/artifact-gallery/templates/module-map.html",
+            "transform": "none"
+          },
+          {
+            "byte_count": 50347,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/pr-writeup.html",
+            "required": true,
+            "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
+            "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
             "transform": "none"
           },
           {
@@ -1227,7 +1236,7 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "8172b252b863ce2dedd2fa26fcd5969f5459b12bec11027fbe910c16029184ef",
+            "sha256": "a40b15f49b3ba54a954931acbd98133de6144f843528b8e80193fba2cf26493a",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
             "transform": "none"
           },
@@ -1256,6 +1265,15 @@
             "required": true,
             "sha256": "cdf0511d330a5e9507ca82b471d1d8beeb748db0e7b6feab1af1011af00be8ff",
             "source_path": "speckit-pro/artifact-gallery/templates/module-map.html",
+            "transform": "none"
+          },
+          {
+            "byte_count": 50347,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/pr-writeup.html",
+            "required": true,
+            "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
+            "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
             "transform": "none"
           },
           {
@@ -2070,7 +2088,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "bb17109b64515eda3ed6a4f223a9f2a97f84691221ca0f4cecbf123e1ea70796",
+        "file_tree_hash": "0c3a59116fe04d36bfa34af6ff74f450eca2cdab72b512b7cebe35af9e335c2a",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
@@ -2162,7 +2180,7 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "8172b252b863ce2dedd2fa26fcd5969f5459b12bec11027fbe910c16029184ef",
+            "sha256": "a40b15f49b3ba54a954931acbd98133de6144f843528b8e80193fba2cf26493a",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
             "transform": "none"
           },
@@ -2191,6 +2209,15 @@
             "required": true,
             "sha256": "cdf0511d330a5e9507ca82b471d1d8beeb748db0e7b6feab1af1011af00be8ff",
             "source_path": "speckit-pro/artifact-gallery/templates/module-map.html",
+            "transform": "none"
+          },
+          {
+            "byte_count": 50347,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/pr-writeup.html",
+            "required": true,
+            "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
+            "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
             "transform": "none"
           },
           {
@@ -3334,7 +3361,7 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "8172b252b863ce2dedd2fa26fcd5969f5459b12bec11027fbe910c16029184ef",
+            "sha256": "a40b15f49b3ba54a954931acbd98133de6144f843528b8e80193fba2cf26493a",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
             "transform": "none"
           },
@@ -3363,6 +3390,15 @@
             "required": true,
             "sha256": "cdf0511d330a5e9507ca82b471d1d8beeb748db0e7b6feab1af1011af00be8ff",
             "source_path": "speckit-pro/artifact-gallery/templates/module-map.html",
+            "transform": "none"
+          },
+          {
+            "byte_count": 50347,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/pr-writeup.html",
+            "required": true,
+            "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
+            "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
             "transform": "none"
           },
           {
@@ -4429,7 +4465,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "afeb19c44f3594b0bfd558a940a3265a5870cb77532c046aa9c6f0c5bf81f7ab",
+        "file_tree_hash": "b4f50f3dcc8b06e405ca8bc92baf8472201e903f9a3842f88eba77ddc2e240c5",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],

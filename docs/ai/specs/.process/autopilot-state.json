@@ -1,40 +1,59 @@
 {
-  "schema_version": "1.0",
-  "spec_id": "ART-011",
-  "workflow_file": "docs/ai/specs/.process/ART-011-workflow.md",
-  "feature_dir": "specs/art-011-scaffold-integration",
-  "branch": "art-011-scaffold-integration",
-  "status": "completed_archived",
+  "workflow_file": "docs/ai/specs/.process/ART-003-workflow.md",
+  "spec_id": "ART-003",
+  "feature_dir": "specs/art-003-final-pr-template-set",
+  "branch": "art-003-final-pr-template-set",
+  "status": "completed_pr_open",
   "stage": "implement",
-  "active_step": "Post: Archive \u2014 merged in PR #434 and archived 2026-08-13",
-  "updated_at": "2026-08-13T21:45:00Z",
-  "prior_run_note": "Reclaimed the single state slot from docs/ai/specs/.process/ART-012-workflow.md (prior status: completed_archived). Reclaiming is normal operation - one slot, many specs.",
+  "stage_source": "auto-detect",
+  "stage_basis": "auto-detect: the first non-terminal planning phase is Specify, which is \u23f3 Pending",
+  "prior_run_note": "completed_archived",
+  "reclaimed_from": "docs/ai/specs/.process/ART-012-workflow.md",
+  "active_step": null,
+  "updated_at": "2026-08-12T18:00:00Z",
   "settings": {
-    "source": "defaults - no .claude/speckit-pro.local.md present",
-    "consensus_mode": "default",
+    "consensus_mode": "tier-a",
     "gate_failure": "stop",
-    "confidence_gate_mode": "advisory"
+    "auto_commit": true,
+    "confidence_gate_mode": "advisory",
+    "agent_teams_available": true,
+    "settings_source": "defaults (.claude/speckit-pro.local.md absent)"
+  },
+  "archive_sweep": {
+    "status": "no_eligible_candidates",
+    "reason": "specs/ holds only the current target and specs/brand-001-racecraft-identity-system, whose SPEC-MOC records status pending (scaffolded, never executed, no merged PR). Nothing is archive-eligible.",
+    "archived_specs": []
   },
   "project_commands": {
-    "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
     "UNIT_TEST": "python3 tests/speckit-pro/run-all.py",
+    "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py",
     "TYPECHECK": "N/A",
     "LINT": "N/A",
     "BUILD": "N/A",
-    "INTEGRATION_TEST": "N/A",
-    "stack": "python",
-    "detection_source": "test_runner_script"
+    "INTEGRATION_TEST": "N/A"
+  },
+  "preset_conventions": {
+    "has_presets": true,
+    "presets": [
+      "speckit-pro-reviewability 1.0.0"
+    ],
+    "templates": [
+      "spec-template",
+      "plan-template",
+      "tasks-template"
+    ]
+  },
+  "feature_pin": {
+    "file": ".specify/feature.json",
+    "value": "specs/art-003-final-pr-template-set",
+    "reason": "gitignored pin; the vendored check-prerequisites.sh ^[0-9]{3}- regex does not match this repo's namespaced spec IDs"
   },
   "test_baseline_g0": {
-    "count": 7378,
-    "command": "python3 tests/speckit-pro/run-all.py",
-    "captured_at_commit": "779c3f59",
-    "breakdown": {
-      "L1": 1447,
-      "L4": 5745,
-      "L5": 186
-    },
-    "note": "Captured before Phase 1. G7 compares against this baseline; do not recompute it later in the run."
+    "passed": 7378,
+    "total": 7378,
+    "l1": 1447,
+    "l4": 5745,
+    "l5": 186
   },
   "plan": [
     {
@@ -50,48 +69,40 @@
       "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Description Reword and Trigger Routing",
+      "step": "Phase 2: Clarify - Fill-region inventory and granularity",
       "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Description Reword and Trigger Routing Consensus",
+      "step": "Phase 2: Clarify - Fill-region inventory and granularity Consensus",
+      "status": "skipped: executor returned zero unresolved items"
+    },
+    {
+      "step": "Phase 2: Clarify - Export payload shape",
       "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Blind-Spot Pass Contract",
+      "step": "Phase 2: Clarify - Export payload shape Consensus",
+      "status": "skipped: executor returned zero unresolved items"
+    },
+    {
+      "step": "Phase 2: Clarify - Implementation-notes rendering edges",
       "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Blind-Spot Pass Contract Consensus",
-      "status": "skipped: executor reported zero unresolved items"
-    },
-    {
-      "step": "Phase 2: Clarify - Chain Confirmation and Closing Report",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Chain Confirmation and Closing Report Consensus",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Implementation-notes rendering edges Consensus",
+      "status": "skipped: executor returned zero unresolved items"
     },
     {
       "step": "Phase 3: Plan",
       "status": "completed"
     },
     {
-      "step": "Phase 4: Checklist - api-contracts",
+      "step": "Phase 4: Checklist - accessibility",
       "status": "completed"
     },
     {
-      "step": "Phase 4: Checklist - api-contracts Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - error-handling",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "skipped: executor reported zero unresolved items"
+      "step": "Phase 4: Checklist - accessibility Consensus",
+      "status": "skipped: zero unresolved items"
     },
     {
       "step": "Phase 4: Checklist - ux",
@@ -100,6 +111,14 @@
     {
       "step": "Phase 4: Checklist - ux Consensus",
       "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling Consensus",
+      "status": "pending"
     },
     {
       "step": "Phase 5: Tasks",
@@ -111,7 +130,7 @@
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "skipped: executor reported zero unresolved items"
+      "status": "skipped: analyze reported zero unresolved items"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
@@ -119,19 +138,19 @@
     },
     {
       "step": "Phase 7: Implement",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Post: Code Review",
@@ -151,7 +170,7 @@
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "skipped: generate-uat-skeleton deferred on the installed runner"
+      "status": "completed"
     },
     {
       "step": "Post: PR Body Generation",
@@ -167,107 +186,151 @@
     },
     {
       "step": "Post: Retrospective",
-      "status": "completed"
+      "status": "pending"
     }
   ],
   "gates": {
     "G1": {
-      "verdict": "routed_to_clarify",
-      "markers_true_count": 3,
-      "helper_reported": {
-        "gate": "G1",
-        "pass": true,
-        "markers": 0
-      },
-      "discrepancy": "validate-gate counts the literal regex [NEEDS CLARIFICATION] (read_only.py:885); the active spec template prescribes the colon form (spec-template.md:98-99), so template-shaped markers are never counted. G1 decided on the true count."
+      "pass": true,
+      "markers": 0,
+      "reason": "spec.md exists with 0 markers"
     },
     "G2": {
-      "verdict": "pass",
+      "pass": true,
       "markers": 0,
-      "reason": "all 3 [NEEDS CLARIFICATION] markers resolved across 3 clarify sessions"
+      "reason": "clarify complete; one annotated marker remains by design (CSS ceiling, owned by Plan)"
     },
     "G3": {
-      "verdict": "pass",
+      "pass": true,
       "markers": 0,
-      "reason": "plan.md exists with 0 unresolved markers; all six constitution gates pass"
+      "reason": "plan.md exists with 0 unresolved markers"
     },
     "G4": {
-      "verdict": "pass",
-      "gaps": 0,
-      "reason": "42 gaps raised across 3 domains, 42 remediated, 0 outstanding"
+      "pass": true,
+      "markers": 0,
+      "reason": "0 [Gap] across spec, plan and all four checklists \u2014 verified by direct scan",
+      "caveat": "G4 itself counts only spec.md and plan.md and never opens checklists/; its PASS is not evidence"
     },
     "G5": {
-      "verdict": "pass",
-      "task_count": 47,
-      "markers": 0,
-      "reason": "47 tasks, 16 of 16 edit sites covered, zero boundary crossings"
+      "pass": true,
+      "task_count": 40,
+      "reason": "40 tasks found"
     },
     "G6": {
-      "verdict": "pass",
-      "findings": {
-        "critical": 0,
-        "high": 3,
-        "medium": 3,
-        "low": 2,
-        "remediated": 8,
-        "outstanding": 0
-      },
-      "reason": "0 CRITICAL/HIGH findings outstanding after remediation"
+      "pass": true,
+      "markers": 0,
+      "reason": "0 CRITICAL/HIGH findings"
     }
   },
-  "archive_sweep": {
-    "status": "read_only_discovery",
-    "eligible_count": 0,
-    "candidates": [
-      {
-        "dir": "specs/brand-001-racecraft-identity-system",
-        "eligible": false,
-        "reason": "SPEC-MOC.md:6 status: pending; roadmap row reads parked, all seven phases still pending; no implementation merge commit"
-      }
-    ],
-    "recent_reports": [
-      "2026-08-12-art-012-post-merge-hygiene.md",
-      "2026-08-12-art-002-post-merge-hygiene.md",
-      "2026-08-09-art-006-post-merge-hygiene.md"
-    ],
-    "deviation": "Ran read-only rather than apply-on-feature-branch: archiving another spec would add unrelated file moves to ART-011's diff. Outcome identical - nothing was eligible."
+  "spec_metrics": {
+    "functional_requirements": 42,
+    "user_stories": 2,
+    "lines": 458,
+    "annotated_clarification_markers": 3,
+    "note": "G1/G2 count the bare [NEEDS CLARIFICATION] literal only; the annotated form is not gate-enforced"
   },
-  "agent_teams_available": false,
-  "agent_teams_evidence": "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 and Claude Code 2.1.228, but no TeamCreate tool in this build and the Agent tool documents team_name as deprecated/ignored. Using batched background subagents.",
-  "project_implementation_agent": "speckit-pro:phase-executor",
+  "reviewability_evidence": {
+    "authoritative": "measurement of the four shipped templates, recorded in the workflow Slice Plan correction",
+    "measured_authored_lines": {
+      "spec-explainer": 316,
+      "module-map": 1003,
+      "code-approaches": 1026,
+      "implementation-plan": 1222
+    },
+    "decomposition_note": "export JS floor ~280 and irreducible; component CSS 450-663 is the larger item; spec-explainer renders six regions in 171 CSS with 0 authored JS",
+    "slice1_projection": {
+      "constrained_document_class_css": 750,
+      "unconstrained": "1000-1200",
+      "block_threshold": 800
+    },
+    "estimate_reviewable_loc_is_blind": {
+      "reason": "projected = production_file_count * 40 (read_only.py:1042); is_production_file returns False for the html template, manifest.json and the test module",
+      "expected_output": {
+        "status": "pass",
+        "projected": 0
+      },
+      "treat_as": "known-blind diagnostic, never as evidence"
+    }
+  },
+  "clarify": {
+    "session_1": {
+      "focus": "fill-region inventory and granularity",
+      "questions": 5,
+      "consensus": "skipped - zero unresolved items; orchestrator verified every load-bearing claim",
+      "outcomes": [
+        "feature-header seventh slot with feature-id/feature-name (FR-011a)",
+        "implementation-notes.md added to the closed source set (FR-017/017a)",
+        "file-by-file is the only list slot; implementation-notes excluded because duplicate anchors break FR-019 (FR-020/020a)",
+        "port mapping settled; drops worth ~141 lines are the size lever (FR-011b-e)",
+        "three peer findings recorded as known gaps, none built"
+      ],
+      "markers_closed": [
+        "spec.md:211 source reachability",
+        "spec.md:230 list-slot membership"
+      ],
+      "markers_open": [
+        "reviewability boundary - belongs to Plan"
+      ]
+    },
+    "session_2": {
+      "focus": "export payload shape",
+      "questions": 5,
+      "consensus": "skipped - zero unresolved",
+      "key": "stale-settle guard FR-026a; sec-<slot> coordinates FR-023b; pinned slot list FR-023c; dangling export-payload-contract found"
+    },
+    "session_3": {
+      "focus": "implementation-notes rendering edges",
+      "questions": 5,
+      "consensus": "skipped - zero unresolved",
+      "key": "empty state is a fill obligation FR-019b; standing intro outside the pair FR-019a; no retry grouping FR-019c; three-entry sample"
+    }
+  },
   "plan_reviewability": {
-    "estimate_reviewable_loc": {
+    "declared": 750,
+    "result": "warn",
+    "headroom_to_block": 50,
+    "decomposition": {
+      "js": 288,
+      "control_css": 97,
+      "section_css": 150,
+      "markup": 215
+    },
+    "css_ceiling": "adopted as a checkable constraint; 5 numeric constraints, 3 checkpoints, stop rule",
+    "estimate_reviewable_loc_live": {
+      "status": "pass",
       "projected": 0,
       "production": 0,
-      "status": "pass",
-      "note": "structurally blind here: is_production_file counts only src/|app/|lib/|scripts/ prefixes or .ts/.tsx/.js/.jsx/.mjs/.cjs/.sql suffixes, so a Markdown-shipping plugin repo scores 0 by construction. Advisory only; never blocks."
+      "greenfield": false,
+      "note": "blind as predicted; greenfield resolved false (2 NEW + 2 MODIFIED), so thresholds are base 400/800 not 600/1200"
     },
-    "estimate_spec_size": {
-      "estimated_loc": 300,
-      "suggested_slices": 1,
-      "status": "ok",
-      "inputs": {
-        "user_stories": 4,
-        "files": 2,
-        "frs": 28,
-        "new_vs_modify": "modify"
-      }
+    "declaration_parser_traps_fixed": [
+      "spec.md read 2 from 'reviewable LOC. ART-002'",
+      "workflow read 17 from 'reviewable LOC.' + '17-pr-writeup.html'",
+      "workflow read 1 from the superseded table header + separator + '| 1'"
+    ],
+    "all_three_artifacts_declare": 750
+  },
+  "checklist": {
+    "domains": 3,
+    "gaps_found": 33,
+    "gaps_closed": 33,
+    "budget_moved": {
+      "from": 750,
+      "to": 758,
+      "markup": "215->223",
+      "headroom": 42,
+      "charges": "ux +7 measured, accessibility +1"
     },
-    "roadmap_declared": {
-      "production_files": "~4",
-      "reviewable_loc": 162
-    },
-    "measured": {
-      "production_files": 2,
-      "reviewable_loc": 300
-    },
-    "reconciliation": "surface shrank, LOC rose with FR granularity (13 FRs reproduces 187 exactly). Both under the 400 warn ceiling. Roadmap entry is in the Declared File Operations table for correction.",
-    "estimate_spec_size_final": {
-      "estimated_loc": 322,
-      "suggested_slices": 1,
-      "status": "ok",
-      "frs": 31,
-      "note": "re-measured after checklist phase added FR-002a, FR-010a, FR-015c and split others. Surface still 2 production files; rise is FR granularity."
+    "unresolved_routed": [
+      "[codebase] CHK023 FR-021 outward reference",
+      "[ambiguous] CHK028 no colour-distinction list"
+    ],
+    "consensus": {
+      "items": 2,
+      "analysts": 3,
+      "CHK023": "closed - added FR-021a third property (live recompute), narrowed FR-021 precedent, added FR-021b ARIA prohibition",
+      "CHK028": "closed, no change - enumerated list is not a WCAG 1.4.1 technique; SC-006 is the holistic pass; codebase lens dissented on structural symmetry",
+      "line_cost": 0
     }
   },
   "atomicity_route": {
@@ -276,91 +339,182 @@
     "signals": [
       "change-shape:modify-heavy"
     ],
-    "warnings": [],
     "hints": [],
-    "exit_code": 0
+    "warnings": []
   },
   "layer_plan": {
     "status": "skipped",
-    "reason": "layer planner runs only for a split-PR route; this route is one-navigable-PR"
+    "reason": "route is one-navigable-PR, not split-PR"
   },
   "tasks_reviewability": {
+    "mode": "tasks",
     "helper_id": "reviewability-gate",
-    "requested_mode": "tasks",
     "status": "deferred",
-    "deferral_reason": "installed runner supports setup mode only",
-    "fallback_evidence": {
-      "setup_mode_gate": "warn, no blockers, diagnosed roadmap-wide artifact",
-      "plan_phase_estimator": "pass, projected 0, structurally blind to Markdown surfaces",
-      "operator_split_decision": "one vertical slice, unchanged since scaffold",
-      "measured_size": {
-        "estimated_loc": 322,
-        "suggested_slices": 1,
-        "status": "ok",
-        "frs": 31
-      }
+    "reason": "tasks mode is deferred on the installed runner; not invoked",
+    "fallback_evidence": "setup-mode gate warn at 758 against plan.md; plan-phase estimate-reviewable-loc pass (known blind, projected 0); operator-ratified three-slice split recorded in the workflow Slice Plan",
+    "verdict": "warn - continues to marker planning inputs; no manual re-slicing stop"
+  },
+  "marker_planning": {
+    "required": false,
+    "reason": "reviewability evidence is warn at 758 against an 800 block, not a size block, so no marker split is planned",
+    "note": "recorded as plain prose rather than as a pr_marker_plan object: that key is schema-validated (pr-marker-plan.v1/v2) and an object written only to say 'not needed' fails the coverage guard"
+  },
+  "analyze": {
+    "findings": 11,
+    "by_severity": {
+      "critical": 1,
+      "high": 3,
+      "medium": 4,
+      "low": 3
     },
-    "outcome": "continue - no size-only block, no correctness block, no stale marker state; marker planning not required for a non-split route"
+    "remediated": 11,
+    "unresolved": 0,
+    "line_cost": 0,
+    "critical": "FR-011c had zero task coverage - the ~141-line drop lever was true only by omission",
+    "coverage": {
+      "requirement_to_task": "72/72",
+      "task_to_requirement": "35/40, five infra tasks trace to none"
+    },
+    "orchestrator_error_corrected": "414-435 JS lines was a naive pre-excision count sweeping in the canonical theme script; measured 277/293/298"
   },
   "confidence_gate": {
     "mode": "advisory",
-    "composite_confidence": 0.88,
-    "verdict": "proceed",
-    "recorded_at": "Phase 6.5 section of the workflow file",
-    "evidence": "G1-G6 all pass, zero markers/gaps/findings, 31 FRs + 12 SCs + 4 stories all tasked, contracts fix exact strings with byte-identical shared blocks, suite 7378/7378. Held below 0.95 by three under-determined wordings, one stipulated deadline, and an unresolvable-before-implementation Layer 2 routing risk."
-  },
-  "post_implementation_audit": {
-    "doctor": "pass",
-    "verify_implementation": "pass (1 medium, reconciled)",
-    "verify_tasks": "no phantom completions",
-    "code_review": "no high-severity findings",
-    "integration_suite": "7378/7378 equal to G0 baseline; prose-only spec adds no runnable test",
-    "reviewability_diff": {
-      "production_files": 2,
-      "production_changed_lines": 1160,
-      "declared_estimate": 322,
-      "note": "forward projection vs actual prose line count; estimator blind to Markdown surfaces"
+    "composite": 0.9,
+    "threshold": 0.9,
+    "verdict": "proceed with reservations",
+    "criteria": {
+      "task_understanding": 0.96,
+      "approach_clarity": 0.94,
+      "requirements_alignment": 0.96,
+      "risk_assessment": 0.75,
+      "completeness": 0.88
     },
-    "self_review": "recorded in workflow file",
-    "uat_runbook": "skipped: generate-uat-skeleton deferred on the installed runner; fail-open, logged"
+    "adversarial_challenge": {
+      "verdict": "WEAKENED",
+      "serious": 3,
+      "minor": 3,
+      "serious_findings": [
+        "C1 ceiling of 150 asserted not derived; a miss to spec-explainer's own 169 cuts headroom 42->23, and before-after's new rules are uncosted",
+        "the details-sharing reduction lever is booked against C1's margin in research.md and against C1+C2 jointly in plan.md",
+        "T027's mirror case (slow success after fast failure) has no described construction mechanism"
+      ],
+      "unfinished": "attack 4 (expected-intermediate-red) partially verified only; check_d2 confirmed, rest of Group D and the fill-region module unaudited"
+    },
+    "stage_terminal": true,
+    "helper_result": {
+      "pass": true,
+      "composite": 0.9,
+      "threshold": 0.9,
+      "mode": "advisory",
+      "recommended_action": "proceed",
+      "exit_code": 0
+    },
+    "read_not_rerun": "G6.5 belongs to the plan stage; the recorded verdict (0.90, proceed with reservations) is read, never re-scored"
   },
-  "final_gate": {
-    "helper": "final-reviewability-backstop",
-    "status": "deferred",
-    "evidence_used": "committed diff measurement + recorded atomicity route one-navigable-PR",
-    "outcome": "proceed to single-PR path"
+  "stage_boundary": {
+    "plan_stage": "completed and pushed at cf3d2f63",
+    "implement_stage": "entered by explicit --stage implement invocation"
+  },
+  "test_baseline_g0_policy": "preserved from the plan stage, not recomputed; G7 verifies an increase against 7378",
+  "implement": {
+    "group_a": {
+      "tasks": "T004-T011",
+      "status": "complete",
+      "artifact_lines": 496,
+      "authored": 38,
+      "css": 1,
+      "js": 0,
+      "markup": 37,
+      "byte_identity": "BRAND-KIT and GALLERY-HEAD verified by sha256, diff, and a live red-green on the A4 drift checker",
+      "literals_added": 3,
+      "deviation": "T011 found total files is 14 not 13; requirements.md from Specify was uncounted. Budget unchanged, still below the 15 warn threshold.",
+      "expected_red_incomplete": "tasks.md documented only the D2 orphan; the real floor is 8 failures in 3 families (D2, payload parity, release-readiness+bash-confinement fixtures). Documented at T005-T031 note."
+    },
+    "group_b": {
+      "tasks": "T012-T021",
+      "status": "complete",
+      "M1": {
+        "criterion": "css <= 150",
+        "measured": {
+          "authored": 279,
+          "css": 131,
+          "js": 0,
+          "markup": 148
+        },
+        "result": "HELD",
+        "headroom": 19,
+        "levers": "all five applied pre-emptively, none remedially"
+      },
+      "regions": 7,
+      "file_by_file_items": 3,
+      "implementation_notes_entries": 3,
+      "fr_011c_drops": "all six verified absent by name; zero grid, columns or nav in authored CSS",
+      "deviation_accepted": "no code sample shipped; FR-011d is a prohibition, the file-by-file Fills value never mentions code, and a code block would exceed the 6.0-line per-entry basis",
+      "budget_remaining_for_group_c": 479
+    },
+    "group_c": {
+      "tasks": "T022-T030",
+      "status": "complete",
+      "M2": {
+        "criterion": "css <= 247",
+        "measured": {
+          "authored": 727,
+          "css": 227,
+          "js": 326,
+          "markup": 174
+        },
+        "result": "HELD",
+        "headroom": 20
+      },
+      "m3_position": "authored 727 already inside the 758 ceiling with 31 spare; no later task adds authored lines",
+      "vs_declared": "JS 326 against ~288 (+38); markup 174 against ~223 (-49); net 31 under",
+      "currency_guard": "scoped by effect at 4 sites: announce entry, announce deferred callback, reveal entry, focus timer. Proven dynamically in BOTH settle directions under a stubbed DOM; the shipped defect reproduces in both directions on module-map and in neither here.",
+      "failure_message": "byte-identical to all three shipped templates, verified by sha1 of the whole declaration",
+      "stale_doc_fixed": "data-model.md Invocation currency said the synchronous paths stay unguarded, contradicting FR-026b; rewritten with the reasoning that was wrong and why"
+    }
+  },
+  "hazards": {
+    "suite_writes_dist": {
+      "finding": "tests/speckit-pro/layer1-structural/validate-plugin-payload.py runs the real payload builder against the real tree, so every suite run rewrites dist/**/pr-writeup.html; with the source moved aside it DELETES the mirrors",
+      "impact": "the Group A commit used git add -A and absorbed two dist mirrors written by the suite rather than by refresh-release-artifacts.py, so they landed without trust metadata, cache proofs or payload evidence",
+      "masked_anything": "no - the mirrors are stale (496 lines vs source 737) so payload parity still fails at the documented floor of 8",
+      "handling": "dist restored to HEAD; explicit-path commits only for the rest of this run; T035 regenerates dist properly and MUST be verified byte-identical to source with metadata updated",
+      "rule": "never git add -A in this run despite the skill's phase-7 default"
+    },
+    "layer4_alone_overcounts": "running --layer 4 in isolation reports 13 failures where a full run reports 8; the full-suite number is the floor",
+    "fr_031a_self_reference": "naming --rc-border-subtle in a CSS comment to explain its absence fails FR-031a's own search; spec-explainer.html:501 ships that same mistake",
+    "suite_leaves_untracked_debris": "a failing suite run leaves an untracked plugin-bash-confinement cache dir; it escapes a dist-scoped status check and the spec-index generator bakes untracked paths into committed SPEC-MOC backlinks. Check bare git status before the index regen."
   },
   "pr": {
-    "title": "feat(speckit-pro): scaffold checks for blind spots and can continue into planning",
-    "body_path": "specs/art-011-scaffold-integration/.process/pr-body.md",
+    "number": 435,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/435",
+    "title": "feat(art-003): add the pull request write-up artifact to the gallery",
     "base": "main",
-    "head": "art-011-scaffold-integration",
-    "title_contract": "validate-pr-workflow-contract passed, exit 0",
-    "release_note": "compose-release-notes.py --validate-pr passed: valid release-note fence",
-    "packet_helpers": "pr-packet-output / validate-pr-packet-* are golden_only on the installed runner; title, body and changed-file scope validated through the repository's own validators instead, recorded as a deviation",
-    "number": 434,
-    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/434",
-    "state": "MERGED",
-    "merge_commit": "6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b"
+    "head": "art-003-final-pr-template-set",
+    "merged": false,
+    "note": "created, never merged - merging is the operator's call"
   },
-  "archive": {
-    "archived_at": "2026-08-13",
-    "cleanup_applied": true,
-    "cleanup_branch": "art-011-post-merge-hygiene",
-    "cleanup_gate_7_note": "Gate 7 names main as the normal cleanup branch. This archive ran on art-011-post-merge-hygiene, cut from main at 4ed7309a, because this repository forbids committing directly to main and lands every change through a pull request. Same shape as PR #438, PR #431 and PR #424.",
-    "merge_commit": "6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b",
-    "merged_at": "2026-08-13T21:06:20Z",
-    "process_evidence_preserved": [
-      "docs/ai/specs/.process/ART-011-workflow.md",
-      "docs/ai/specs/.process/ART-011-design-concept.md"
-    ],
-    "pull_request": 434,
-    "report": ".specify/memory/archive-reports/2026-08-13-art-011-post-merge-hygiene.md",
-    "source_spec_path_removed": "specs/art-011-scaffold-integration",
-    "retrospective_note": "No ART-011 retrospective exists. ART-011-workflow.md records Post: Retrospective as pending; this state file previously claimed the step completed and was wrong.",
-    "open_followups": [
-      "Layer 2 trigger evaluation for speckit-scaffold-spec (task T044) never ran; the description changed from 975 to 1013 characters in this feature.",
-      "ART-019 slice D owns the 984-line skill body and supersedes ART-011 FR-022."
-    ]
+  "final_gate": {
+    "suite": "7379/7379",
+    "baseline": 7378,
+    "delta": "+1 in Layer 4",
+    "reviewability": {
+      "measured": 735,
+      "declared": 758,
+      "block": 800,
+      "result": "warn"
+    },
+    "checkpoints": {
+      "M1": "131 <= 150",
+      "M2": "227 <= 247",
+      "M3": "735 <= 758"
+    },
+    "code_review": "1 serious (artifact title vs catalog), 2 minor, all fixed",
+    "artifact_consistency": "generated artifacts match the source tree"
+  },
+  "slices_remaining": {
+    "slice_2": "annotated-diff, branch art-003-final-pr-template-set-slice-2 cut from slice 1",
+    "slice_3": "flowchart, branch art-003-final-pr-template-set-slice-3 cut from slice 2",
+    "blocker": "each needs its own interactive scaffold; scaffold-spec mandates grill-me, which is human-in-the-loop only and which autopilot is forbidden from invoking. They cannot be started autonomously."
   }
 }
