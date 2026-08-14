@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.25.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.24.0...speckit-pro-v2.25.0) (2026-08-14)
+
+
+### Features
+
+* **art-003:** add the pull request write-up artifact to the gallery ([#435](https://github.com/racecraft-lab/racecraft-plugins-public/issues/435)) ([ad6cab5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/ad6cab53395fd410aa7acca05fd29531f0c9cd89))
+* **art-014:** make the phase guard's workflow-identity check enforce its documented authority ([#433](https://github.com/racecraft-lab/racecraft-plugins-public/issues/433)) ([12d8c2d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/12d8c2d48469df9293227cb2c28cf05a4847fc61))
+* **speckit-pro:** add the annotated diff gallery template ([#436](https://github.com/racecraft-lab/racecraft-plugins-public/issues/436)) ([6a1518c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6a1518c395fc3fcce4de315a70691eee33f4de94))
+* **speckit-pro:** add the flowchart gallery template ([#439](https://github.com/racecraft-lab/racecraft-plugins-public/issues/439)) ([780a672](https://github.com/racecraft-lab/racecraft-plugins-public/commit/780a6724915ce481199073de84fa007ca16deb8b))
+* **speckit-pro:** scaffold checks for blind spots and hands off to planning ([#434](https://github.com/racecraft-lab/racecraft-plugins-public/issues/434)) ([6437ecd](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b))
+
 ## [2.24.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.23.0...speckit-pro-v2.24.0) (2026-08-12)
 
 
