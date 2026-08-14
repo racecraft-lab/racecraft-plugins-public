@@ -2542,3 +2542,65 @@ git checkout 6437ecd2f12d1ee0e3aaeb54895b9a48a0e3670b -- specs/art-011-scaffold-
 
 The detailed archive and verification record is stored in
 `.specify/memory/archive-reports/2026-08-13-art-011-post-merge-hygiene.md`.
+
+## 2026-08-14 — ART-003 Final-PR Template Set archived
+
+ART-003 shipped as three stacked slices, one template per pull request, all
+merged and archived on 2026-08-14 UTC.
+
+| PR | Template | Merged at | Merge commit |
+|---|---|---|---|
+| [#435](https://github.com/racecraft-lab/racecraft-plugins-public/pull/435) | `pr-writeup` | `2026-08-14T13:25:49Z` | `ad6cab53395fd410aa7acca05fd29531f0c9cd89` |
+| [#436](https://github.com/racecraft-lab/racecraft-plugins-public/pull/436) | `annotated-diff` | `2026-08-14T14:14:24Z` | `6a1518c395fc3fcce4de315a70691eee33f4de94` |
+| [#439](https://github.com/racecraft-lab/racecraft-plugins-public/pull/439) | `flowchart` | `2026-08-14T14:54:54Z` | `780a6724915ce481199073de84fa007ca16deb8b` |
+
+CI on each: 19 pass, 1 skipped, 0 failures. Merged by `fgabelmannjr`, base
+`main` for all three; slices 2 and 3 were auto-retargeted when their stacked
+parents squash-merged. The gallery now carries seven shipped templates of
+twenty-one catalogued, and `flowchart` is the first declared read-only.
+
+Every slice landed under its own reviewability declaration — 735 against 758,
+724 against 750, 408 against 460 — the first ART spec where none overran. The
+budget was re-declared at scaffold on ART-002's realized measurement rather than
+the roadmap's original 285 estimate.
+
+Manual acceptance ran in full against the shipped bytes for the first time in
+this roadmap: **176 checks, all passing**, on `file://`. The blocker every pull
+request had recorded was the browser automation tool's own URL validation, not
+Chrome's. The pass found and fixed two defects — a diff row that copied as two
+lines because `display: grid` blockifies its cells, and a flowchart link that
+left focus behind — and missed a third that code review caught.
+
+### Cleanup
+
+Three active spec folders removed. The acceptance runbook was relocated to
+`docs/ai/specs/.process/ART-003-uat-runbook.md` rather than deleted: nothing
+cites it, but it is the only committed statement of what acceptance means for
+`pr-writeup.html`, and its Step 1 carries the console finding. Design concept
+and all three workflow files stay under `docs/ai/specs/.process/`. No
+retrospective was produced.
+
+Three gaps leave with the archive: no acceptance record was merged, the three
+workflow files still record runbook generation as pending, and slices 2 and 3
+merged with every task box unchecked.
+
+### Canonical Artifacts
+
+- `speckit-pro/artifact-gallery/templates/pr-writeup.html`,
+  `annotated-diff.html` and `flowchart.html`
+- `speckit-pro/artifact-gallery/manifest.json` (three rows flipped to `shipped`)
+- `tests/speckit-pro/unit/test-artifact-fill-regions.py` and
+  `test-artifact-gallery.py`
+- Generated payload copies under `dist/claude`, `dist/codex`, and the
+  installed-cache proofs
+
+### Recovery Commands
+
+```text
+git checkout ad6cab53395fd410aa7acca05fd29531f0c9cd89 -- specs/art-003-final-pr-template-set
+git checkout 6a1518c395fc3fcce4de315a70691eee33f4de94 -- specs/art-003-final-pr-template-set-slice-2
+git checkout 780a6724915ce481199073de84fa007ca16deb8b -- specs/art-003-final-pr-template-set-slice-3
+```
+
+The detailed archive and verification record is stored in
+`.specify/memory/archive-reports/2026-08-14-art-003-post-merge-hygiene.md`.
