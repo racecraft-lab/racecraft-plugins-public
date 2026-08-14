@@ -12,15 +12,19 @@ import tempfile
 import time
 import traceback
 
+from pathlib import Path
+
 from cdp import Chrome, Report, is_brand_font_request
 
 # The run this evidence records was performed in a feature worktree that no longer
 # exists. Resolve the repository root from this file instead, so the harness runs
 # from any clone. ART003_ROOT points it at a different checkout; UAT_URL replaces
-# the whole path.
-ROOT = os.environ.get("ART003_ROOT") or os.path.abspath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), *[os.pardir] * 5))
-URL = os.environ.get("UAT_URL") or ("file://" + ROOT + "/speckit-pro/artifact-gallery/templates/annotated-diff.html")
+# the whole URL.
+ROOT = Path(os.environ.get("ART003_ROOT") or Path(__file__).resolve().parents[5])
+# as_uri() rather than "file://" + path. Concatenation yields file:////... for an
+# absolute POSIX path, leaves spaces unescaped, and produces nothing usable from a
+# Windows drive path. as_uri() is correct on all three counts.
+URL = os.environ.get("UAT_URL") or (ROOT / "speckit-pro/artifact-gallery/templates/annotated-diff.html").as_uri()
 # Screenshots land outside the tree by default: a run must not leave untracked
 # files in the repository.
 SHOTS = os.environ.get("ART003_SHOTS") or os.path.join(tempfile.gettempdir(), "art003-uat-shots")
@@ -224,6 +228,18 @@ def s2_layout_and_keyboard():
                 probe["overflows"] and probe["focused"] and after > 0,
                 {"probe": probe, "scrollLeft": after})
 
+    finally:
+        c.close()
+
+    # The width sweep gets its own page, and the reason is a Chrome defect rather
+    # than tidiness. Focus a scroll container, dispatch eight rapid ArrowRight
+    # events into it, then resize the viewport, and the renderer wedges: the next
+    # CDP call never returns. Isolated and measured -- one key press is fine,
+    # eight are not, and eight with no prior `.focus()` are fine too. Blurring
+    # afterwards does not release it, and neither does a two-second settle. Only
+    # a page that never had the key events survives the resize.
+    c = open_page()
+    try:
         widths = {}
         for w in (320, 375, 768, 1280):
             c.viewport(w)

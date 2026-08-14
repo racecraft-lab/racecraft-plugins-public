@@ -110,8 +110,10 @@ because each produced a wrong result first:
 
 The runbook's steps cannot be executed by ordinary browser automation, because the
 tooling refuses `file://` at its own URL validation layer. Chrome does not. The
-harness launches Chrome with a debugging port and drives the DevTools Protocol
-directly, which makes every step executable on the real scheme.
+harness attaches to a Chrome running with a debugging port and drives the DevTools
+Protocol directly, which makes every step executable on the real scheme. Who
+started that Chrome is the operator's business: see *Why the harness does not
+launch Chrome*.
 
 Serving the artifacts over `http://` is not an equivalent substitute and the
 runbook forbids it: it changes the clipboard permission model, so the failure
@@ -131,30 +133,36 @@ Capabilities the steps depend on:
 The focus emulation is not optional: `readText` throws "Document is not focused"
 in headless without it.
 
-## Stability, stated because a green run is not a reliable run
+## Stability
 
-**A clean sweep needs a retry sometimes.** Over two consecutive full sweeps of all
-three drivers, the first produced 58/58, 64/64 with one stage raising, and 50/53;
-the second produced 58/58, 65/65 and 53/53. The committed JSON records the second.
+Two consecutive full sweeps of all three drivers both produced 58/58, 65/65 and
+53/53. The committed JSON records the second.
 
-Two distinct causes, both understood, neither an artifact defect:
+Getting there took fixing two defects that the move to a shared browser exposed.
+Both are recorded because each produced a **wrong verdict rather than an error**,
+which is the dangerous shape:
 
-- **A shared browser makes stages interfere.** Every stage opens its own context
-  in one browser, so a stage that starts while the previous one is still tearing
-  down can find the endpoint briefly unresponsive, or can stall a renderer. The
-  connect retry and `Chrome.viewport()` reduce this a great deal but do not
-  eliminate it. This is the price of not launching a browser per stage, and it is
-  the right price: see *Why the harness does not launch Chrome*.
-- **One check depends on a live third party.** "With the network back, the console
-  is completely silent" fails whenever `fonts.gstatic.com` returns anything other
-  than the woff2 it is asked for. It was observed returning **404** for a
-  `spacegrotesk` woff2 during this work. Nothing in the artifact changed, and
-  nothing in the artifact can fix it: the assertion reaches outside the
-  repository by construction.
+- **Focus is not free in a shared browser.** When each stage owned a whole
+  browser, its single window was focused and `Tab` moved focus for nothing.
+  Sharing one browser opens each page in the background, where `Tab` moves
+  nothing and `activeElement` never leaves `body`. The flowchart tab-order
+  traversal recorded **zero stops** and reported it as a failed expectation,
+  reading exactly like a broken artifact. `Chrome.enable_all()` now enables focus
+  emulation and brings the page to front on every page, unconditionally.
+- **Chrome wedges on resize after rapid keys into a focused scroll container.**
+  Focus a `.diff`, dispatch eight `ArrowRight` events, then change the viewport,
+  and the renderer stops answering: the next CDP call never returns. Isolated by
+  bisection: one key press is fine, eight are not, and eight *without* the prior
+  `.focus()` are fine too. Neither blurring nor a two-second settle releases it.
+  The width sweep therefore runs on its own page, which never receives the key
+  events. This is a browser defect, not an artifact defect.
 
-Treat a single failing run as inconclusive and re-run before believing it. A
-failure that reproduces across runs is real; one that does not is one of the two
-above. Restarting the browser between drivers removes most of the first cause.
+**One check still depends on a live third party**, and cannot be fixed from
+inside this repository. "With the network back, the console is completely silent"
+fails whenever `fonts.gstatic.com` returns anything other than the woff2 it is
+asked for; it was observed returning **404** for a `spacegrotesk` woff2 during
+this work. Treat that single check failing in isolation as inconclusive and
+re-run it. Any other failure that reproduces is real.
 
 ## Scope limits, stated because "176 passing" reads broader than it is
 

@@ -6,15 +6,19 @@ import sys
 import tempfile
 import time
 
+from pathlib import Path
+
 from cdp import Chrome, Report, is_brand_font_request
 
 # The run this evidence records was performed in a feature worktree that no longer
 # exists. Resolve the repository root from this file instead, so the harness runs
 # from any clone. ART003_ROOT points it at a different checkout; UAT_URL replaces
-# the whole path.
-ROOT = os.environ.get("ART003_ROOT") or os.path.abspath(
-    os.path.join(os.path.dirname(os.path.abspath(__file__)), *[os.pardir] * 5))
-URL = os.environ.get("UAT_URL") or ("file://" + ROOT + "/speckit-pro/artifact-gallery/templates/flowchart.html")
+# the whole URL.
+ROOT = Path(os.environ.get("ART003_ROOT") or Path(__file__).resolve().parents[5])
+# as_uri() rather than "file://" + path. Concatenation yields file:////... for an
+# absolute POSIX path, leaves spaces unescaped, and produces nothing usable from a
+# Windows drive path. as_uri() is correct on all three counts.
+URL = os.environ.get("UAT_URL") or (ROOT / "speckit-pro/artifact-gallery/templates/flowchart.html").as_uri()
 # Screenshots land outside the tree by default: a run must not leave untracked
 # files in the repository.
 SHOTS = os.environ.get("ART003_SHOTS") or os.path.join(tempfile.gettempdir(), "art003-uat-shots")
@@ -376,7 +380,6 @@ try:
     c.clear_events()
     c.call("Page.navigate", {"url": URL})
     c.pump(2.5)
-    ns = c.call("Runtime.evaluate", {"expression": "1", "returnByValue": True})
     nos = c.call("DOM.getDocument", {"depth": -1})
     html = c.call("DOM.getOuterHTML", {"nodeId": nos["root"]["nodeId"]})["outerHTML"]
     R.check("SC-006", "scripting disabled: no dead control is offered (no button/input)",

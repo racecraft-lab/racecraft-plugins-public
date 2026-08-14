@@ -86,13 +86,20 @@ compares the parsed host.
 `main`, with the full repository suite at 7399/7399 and the Bash-confinement guard
 back to `blocking_count: 0`.
 
-**A green sweep is not yet a reliable one, and the record says so.** Of two
-consecutive full sweeps, the first produced 58/58, 64/64 with a stage raising, and
-50/53; the second was clean and is what the committed JSON records. Two causes,
-both documented in `ART-003-uat-results.md`: stages sharing one browser can
-interfere during teardown, and one assertion reaches `fonts.gstatic.com`, which was
-observed returning 404 during this work. Neither is an artifact defect, and the
-second cannot be fixed from inside the repository.
+**Review then found two more, and both produced a wrong verdict rather than an
+error.** Focus is not free in a shared browser: a page opened in the background
+never takes `Tab`, so the flowchart tab-order traversal recorded **zero stops** and
+reported it as a failed expectation, reading exactly like a broken artifact.
+`enable_all()` now enables focus emulation and brings every page to front. And
+Chrome wedges on a viewport change after rapid key events into a focused scroll
+container: isolated by bisection to eight `ArrowRight` presses following a
+`.focus()`, with one press fine and eight without the focus fine too. The width
+sweep now runs on its own page. Two consecutive full sweeps then produced 58/58,
+65/65 and 53/53 twice.
+
+One check still reaches `fonts.gstatic.com`, which was observed returning 404
+during this work. That one cannot be fixed from inside the repository and is
+documented as such.
 
 ## Corrected: the unchecked task boxes were a gate, not a ledger
 

@@ -51,7 +51,10 @@ class WS:
         rest = url[len("ws://"):]
         hostport, _, path = rest.partition("/")
         host, _, port = hostport.partition(":")
-        self.sock = socket.create_connection((host, int(port or 80)))
+        # Bound the connect too, not only the reads. settimeout() applies after
+        # the socket exists, so an unreachable endpoint would otherwise block for
+        # the OS-level connect timeout regardless of what the caller asked for.
+        self.sock = socket.create_connection((host, int(port or 80)), timeout=timeout)
         self.sock.settimeout(timeout)
         key = base64.b64encode(os.urandom(16)).decode()
         req = (
@@ -137,6 +140,9 @@ class WS:
         try:
             self.sock.close()
         except Exception:
+            # Best effort. A socket the browser already dropped raises here, and
+            # a failed close has nothing left to recover: the caller is done with
+            # it either way.
             pass
 
 
@@ -207,8 +213,11 @@ class Chrome:
     # ---- protocol ----
 
     def _get(self, path):
-        raw = urllib.request.urlopen(self.endpoint + path, timeout=10).read()
-        return json.loads(raw)
+        # Close each response rather than leaving it to the collector: a full
+        # sweep opens one of these per stage plus a polling loop per target, and
+        # the descriptors accumulate.
+        with urllib.request.urlopen(self.endpoint + path, timeout=10) as resp:
+            return json.loads(resp.read())
 
     def grant(self, permissions):
         """Grant browser permissions to THIS page's context.
@@ -284,6 +293,29 @@ class Chrome:
             try:
                 self.call(d + ".enable")
             except RuntimeError:
+                # Not every domain exists on every target or Chrome build. A
+                # domain that will not enable simply yields no events, and every
+                # assertion that needs one fails loudly on its own.
+                pass
+        # Give every page focus, unconditionally.
+        #
+        # This harness dispatches real key events and reads the clipboard, and
+        # both need a focused document. When each stage owned a whole browser its
+        # single window was focused for free; sharing one browser means a new
+        # target opens in the background, where Tab moves nothing and
+        # `activeElement` never leaves `body`. A tab-order traversal then records
+        # ZERO stops and reports it as a failed expectation, which reads exactly
+        # like a broken artifact and is not one. `readText` fails the same way,
+        # with "Document is not focused".
+        for method, params in (
+            ("Emulation.setFocusEmulationEnabled", {"enabled": True}),
+            ("Page.bringToFront", None),
+        ):
+            try:
+                self.call(method, params)
+            except RuntimeError:
+                # Older Chrome builds lack one or the other. Any assertion that
+                # actually depends on focus fails on its own if this did nothing.
                 pass
         self.call(
             "Emulation.setDeviceMetricsOverride",
@@ -470,7 +502,14 @@ class Chrome:
         ]
 
     def close(self):
-        """Drop this instance's page and context. The browser keeps running."""
+        """Drop this instance's page and context. The browser keeps running.
+
+        Every step here is best effort by design. This runs from a `finally` in
+        each stage, including the ones reached because an assertion already
+        failed, and a teardown that raises would replace the real failure with
+        its own. Anything left behind is bounded: the operator ends the browser
+        and the whole profile goes with it.
+        """
         try:
             self.ws.close()
         except Exception:
