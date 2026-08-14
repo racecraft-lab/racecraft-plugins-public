@@ -2143,3 +2143,101 @@ deterministic suite. No `refresh-release-artifacts.py` run is required, because
 nothing under `speckit-pro/` changes in this archive. Layer 2 trigger evaluation
 for `speckit-scaffold-spec` remains owed to the operator and is not closed by this
 cleanup.
+
+## ART-003 Final-PR Template Set
+
+### Dependencies
+
+ART-001 only, satisfied by PR #407. The brand kit, gallery manifest, SPA
+contract and validator all predate this work; ART-003 adds three entries to a
+system already built.
+
+### Shipped Surface
+
+Three self-contained single-file artifacts and their routing rows:
+
+| Template | Lines | Stage | Trigger | Exports |
+|---|---|---|---|---|
+| `pr-writeup.html` | 1193 | `final-pr` | always | `["prompt", "markdown"]` |
+| `annotated-diff.html` | 1199 | `final-pr` | `self_review_findings` or `large_diff` | `["prompt", "markdown"]` |
+| `flowchart.html` | 866 | `final-pr` | `operational_flow_change` | `[]` |
+
+The gallery now carries seven shipped templates of twenty-one catalogued.
+`flowchart` is the first declared read-only, so it is the first to exercise
+ART-001 FR-028's empty-`exports` branch.
+
+### Architecture Note
+
+**Re-declaring the budget on realized measurement is what kept every slice in
+range.** ART-002 declared 530 reviewable LOC per slice and measured 1494 and
+2027 — two hard blocks, one of them forcing a mid-implement re-slice. ART-003
+re-declared at scaffold against that realized number rather than the roadmap's
+original 285 estimate, and split into three slices instead of one. Every slice
+then landed under its own declaration: 735 against 758, 724 against 750, 408
+against 460. Every projection held within 6%.
+
+The projections came from ART-002's realized ~2.2× multiplier over upstream line
+count, discounting the 458 canonical block lines a reviewer never reads. This is
+ART-015's thesis demonstrated in the positive direction: the estimator is sound,
+and the failure mode it names is that nothing re-feeds it.
+
+**Stacking again finished the run, and again it cost something at merge.** The
+three slices append to the same manifest block and the same fill-region test
+literals, so stacking keeps them conflict-free while all three are open. When
+each parent squash-merged, GitHub retargeted the child to `main` and the squash
+landed the parent's content as one commit sharing no history with the child, so
+every shared line conflicted. Both conflicts hit
+`tests/speckit-pro/unit/test-artifact-fill-regions.py` with the same ambiguous
+shape — the child's added rows on one side, nothing on `main`'s, which git
+cannot distinguish from a deletion. The resolution that worked both times:
+prove the child is a strict superset of `main` on that file, then take the
+child's side and confirm the specific rows survived.
+
+### Testing Strategy
+
+Deterministic coverage moved the suite 7396 to 7399 and reaches the manifest
+rows, the declared fill regions, and the SPA constraint scan. It does not reach
+what these artifacts exist to do.
+
+The manual half was executed in full for the first time in this roadmap's
+history: **176 checks across three templates, all passing**, on `file://`
+against the shipped bytes. The recorded blocker — browser automation refusing
+`file://` — was the automation tool's URL validation, not Chrome's; launching
+Chrome with a debugging port and driving the DevTools Protocol made every step
+executable, including genuine console capture, offline emulation, an
+achromatopsia filter, real `Tab` traversal, and real clipboard reads. Serving
+over `http://` was not an option: the runbook forbids it, and it changes the
+clipboard permission model so the failure paths never fire.
+
+That pass found and fixed two real defects, and **missed a third that code
+review caught** — the flowchart focus defect, because the harness checked
+`:target` and scroll position and never `activeElement`. Two checks were added
+afterward. The harness itself produced several false results before it produced
+true ones; the sharpest was a fallback probe using `delete navigator.clipboard`,
+which is a no-op because `clipboard` is an accessor on `Navigator.prototype`.
+
+### Follow-Ups Opened
+
+None new. Three existing entries gain evidence:
+
+- **ART-015** — the spec-size re-estimation trigger. This run is its first
+  positive data point rather than another overrun.
+- **ART-009** — the UAT walkthrough replacement, and the natural owner of the
+  question this run raises: the only thing that has ever executed these runbooks
+  end to end is scratchpad Python driving Chrome over CDP, which is not
+  repository tooling and cannot be reproduced from the repository.
+- **ART-010** — unblocked by one dependency. It still needs ART-007, which is
+  Ready.
+
+### Testing and Cleanup
+
+The cleanup removes the three merged ART-003 active spec folders, relocates the
+acceptance runbook to `docs/ai/specs/.process/ART-003-uat-runbook.md`, marks the
+process state archived, regenerates and checks the SpecKit index and the roadmap
+map of content, updates the technical roadmap to Complete / Archived, and runs
+the full deterministic suite. No `refresh-release-artifacts.py` run is required,
+because nothing under `speckit-pro/` changes in this archive.
+
+Three things remain owed and are not closed by this cleanup: no acceptance
+record was merged, the three workflow files still record runbook generation as
+pending, and slices 2 and 3 merged with every task box unchecked.

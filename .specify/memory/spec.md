@@ -2788,3 +2788,100 @@ Historical workflow and design-concept evidence remains under
 `docs/ai/specs/.process/`. No retrospective was produced. Detailed provenance,
 canonical artifact locations and recovery commands live in the dated ART-011
 archive report.
+
+## ART-003 Final-PR Template Set
+
+Merged across three stacked pull requests on 2026-08-14 and archived the same
+day: #435 at `ad6cab53` (`pr-writeup`), #436 at `6a1518c3` (`annotated-diff`),
+#439 at `780a6724` (`flowchart`).
+
+### User Stories
+
+Each slice carried the same two-story shape, one P1 and one P2:
+
+1. **Read the finished work** (P1) — read the change, the diff with its review
+   attached, or the operational flow the change affects, without the artifact
+   asking for anything.
+2. **Hand something back, or nothing** (P2) — export the reader's questions
+   (`pr-writeup`) or per-hunk objections (`annotated-diff`) as a prompt or as
+   Markdown. `flowchart` is the inverse case: it opens one step's detail and is
+   declared read-only, producing nothing at all.
+
+### Requirements
+
+72, 83 and 68 functional requirements across the three specs. The load-bearing
+set is inherited rather than new: ART-001 FR-028 governs the export affordance,
+and each template's declared `exports` fixes which affordances it may carry.
+`flowchart` is the first shipped template to declare `[]`, so it is the first
+to exercise the no-export branch of that requirement.
+
+### Success Criteria
+
+11, 13 and 13 criteria. Two are worth recording because they were measured
+rather than asserted:
+
+- **The copied hunk must be a valid patch fragment.** It was not, until
+  slice 2's `.diff-row` moved off `display: grid`. Grid blockifies its items and
+  a plain-text copy breaks between block boxes, so every row copied as two lines.
+- **Activating a node link must move focus into the revealed node.** It did not;
+  focus stayed on the link and landed on `BODY`. Fixed with `tabindex="-1"` on
+  the node bodies and by pointing each link at `#nodes-<slug>-detail`, since a
+  browser opens a closed disclosure only when the fragment names something
+  inside it.
+
+### Key Entities
+
+Three shipped templates (`pr-writeup.html` 1193 lines, `annotated-diff.html`
+1199, `flowchart.html` 866), their three `final-pr` manifest rows, the declared
+fill regions each carries, and the shared canonical head block — `BRAND-KIT` 318
+lines and `GALLERY-HEAD` 140, byte-verified copies a reviewer never reads.
+
+### Edge Cases
+
+The clipboard that refuses, the export invoked twice in quick succession, the
+export with nothing written, the page loaded with no network, the page with
+scripting disabled, and the reader who navigates only by keyboard. Each has one
+stated outcome, and each was executed against the shipped bytes.
+
+### Evidence Framing
+
+The deterministic suite moved 7396 to 7399 and covers the manifest rows, the
+fill regions, and the SPA constraints. It cannot see what these artifacts are
+for. Everything a reader actually does with them — copy a hunk, tab to a
+control, read it in greyscale, use it offline — was verified manually: **176
+checks across the three templates, all passing**, executed on `file://` by
+driving Chrome over the DevTools Protocol. The blocker every pull request had
+recorded ("browser automation refuses `file://`") was the automation tool's own
+URL validation, not the browser's.
+
+**That evidence is not in the repository.** See the Cleanup Note.
+
+### Cleanup Note
+
+All three active folders were removed after merge provenance and a tree-wide
+live-reader scan on each **bare directory name**. Every match outside the folders
+sits in preserved documentation: the four `.process/` workflow and design files,
+the machine-written `autopilot-state.json`, the technical roadmap, and one live
+backlink in `html-artifacts-roadmap-MOC.md` that the spec index regenerates
+rather than receiving a hand edit. No test, script, or shipped file reads a spec
+folder; both Layer 4 tests read the gallery under `speckit-pro/`.
+
+The acceptance runbook was **relocated, not deleted**, to
+`docs/ai/specs/.process/ART-003-uat-runbook.md`. Nothing cites it, so the
+ART-002 dangling-pointer reason does not apply; it survives on the other reason
+alone. It is the only committed statement of what acceptance means for
+`pr-writeup.html`, and its Step 1 carries a finding that exists nowhere else:
+the console cannot be silent while the shared head requests a webfont, because a
+failed `@font-face` fetch logs identically to a failed `<link>`. Inlining the
+typeface is the only silent option, costs 2.2 MB across seven templates, and is
+a gallery-wide decision rather than a template port's.
+
+`contracts/export-payload-contract.md` was **not** relocated. Nothing reads it,
+and its load-bearing content — the exact pinned export strings — is asserted by
+`tests/speckit-pro/unit/test-artifact-gallery.py` against the shipped templates.
+
+**Three gaps leave with this archive rather than closing.** No acceptance record
+was merged, so the 176 verdicts live only in the dated archive report. All three
+workflow files still read `Post: UAT Runbook Generation | ⏳ Pending` while
+slice 1's runbook exists and slices 2 and 3 have none. And slices 2 and 3 merged
+with every task box unchecked, 0 of 41 and 0 of 36, against slice 1's 40 of 40.
