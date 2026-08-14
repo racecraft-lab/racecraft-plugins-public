@@ -1,0 +1,395 @@
+{
+  "name": "slice2 / annotated-diff",
+  "rows": [
+    {
+      "step": "SC-001",
+      "claim": "console silent on load apart from the shared webfont request",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "SC-001",
+      "claim": "the only outbound request is the shared webfont",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "SC-002",
+      "claim": "every pinned id resolves while offline",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "US1-AS6",
+      "claim": "rendered title matches the catalog entry byte for byte",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "RENDER",
+      "claim": "document title",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "RENDER",
+      "claim": "two hunks",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "RENDER",
+      "claim": "thirteen diff rows",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "RENDER",
+      "claim": "three annotations",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "RENDER",
+      "claim": "two severities, stated as words",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "RENDER",
+      "claim": "export buttons named by destination",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "RENDER",
+      "claim": "no webfont applied while offline",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-019c",
+      "claim": "row state is literal text in the document",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-019c",
+      "claim": "no marker comes from CSS generated content",
+      "ok": true,
+      "detail": "[{'mk': ' ', 'before': 'none', 'after': 'none', 'lnSelect': 'none'}, {'mk': '-', 'before': 'none', 'after': 'none', 'lnSelect': 'none'}, {'mk': '+', 'before': 'none', 'after': 'none', 'lnSelect': 'none'}]"
+    },
+    {
+      "step": "FR-019c",
+      "claim": "the line-number cell alone is unselectable",
+      "ok": true,
+      "detail": "[{'mk': ' ', 'before': 'none', 'after': 'none', 'lnSelect': 'none'}, {'mk': '-', 'before': 'none', 'after': 'none', 'lnSelect': 'none'}, {'mk': '+', 'before': 'none', 'after': 'none', 'lnSelect': 'none'}]"
+    },
+    {
+      "step": "PASTE",
+      "claim": "a pasted row never carries the line number",
+      "ok": true,
+      "detail": "[\" async function flush() {\", \"-  for (const edit of queue) {\", \"+  for (const edit of queue.inOrder()) {\"]"
+    },
+    {
+      "step": "PASTE",
+      "claim": "a context row pastes as one valid unified-diff line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "PASTE",
+      "claim": "a removed row pastes as one valid unified-diff line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "PASTE",
+      "claim": "an added row pastes as one valid unified-diff line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "PASTE",
+      "claim": "three consecutive rows paste as three lines",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "SC-006",
+      "claim": "added/removed/context rows share one background (no hue carrier)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "SC-006",
+      "claim": "added/removed/context rows share one text colour",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-019f",
+      "claim": "severity is one style rule with no branch on the word",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "US1-AS6",
+      "claim": "an annotation with no severity carries no severity element",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "US1-AS6",
+      "claim": "absence of severity renders as no rank, not a fourth level",
+      "ok": true,
+      "detail": "{'sevCount': 0, 'diffs': []}"
+    },
+    {
+      "step": "FR-020b",
+      "claim": "the clean hunk carries no annotation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-020b",
+      "claim": "the clean hunk says so in words",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-020b",
+      "claim": "no style distinguishes the clean hunk",
+      "ok": true,
+      "detail": "{'anns': 0, 'note': 'This hunk was read and carries no annotation. Nothing needed saying\\n            about it, which is a finished state rather than an unfinished one.', 'diffs': []}"
+    },
+    {
+      "step": "FR-019d",
+      "claim": "both scroll containers are focusable, grouped and named",
+      "ok": true,
+      "detail": "[{'tabindex': '0', 'role': 'group', 'label': 'Diff rows, packages/editor/src/draft-queue.ts lines 18-23', 'headingOutside': True}, {'tabindex': '0', 'role': 'group', 'label': 'Diff rows, config/editor.json lines 12-16', 'headingOutside': True}]"
+    },
+    {
+      "step": "FR-019d",
+      "claim": "the hunk heading sits outside the scroll container",
+      "ok": true,
+      "detail": "[{'tabindex': '0', 'role': 'group', 'label': 'Diff rows, packages/editor/src/draft-queue.ts lines 18-23', 'headingOutside': True}, {'tabindex': '0', 'role': 'group', 'label': 'Diff rows, config/editor.json lines 12-16', 'headingOutside': True}]"
+    },
+    {
+      "step": "FR-019d",
+      "claim": "the focused container scrolls from the keyboard",
+      "ok": true,
+      "detail": "{'probe': {'overflows': True, 'focused': True}, 'scrollLeft': 31}"
+    },
+    {
+      "step": "FR-035",
+      "claim": "the page never scrolls horizontally at 320/375/768/1280",
+      "ok": true,
+      "detail": "{320: True, 375: True, 768: True, 1280: True}"
+    },
+    {
+      "step": "FR-034",
+      "claim": "a jump link moves focus, not only scroll position",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-034",
+      "claim": "the reverse jump link moves focus too",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-036",
+      "claim": "nine tab stops with both disclosures closed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-036",
+      "claim": "every stop shows a visible focus indicator",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "FR-036",
+      "claim": "no positive tabindex anywhere",
+      "ok": true,
+      "detail": "['0', '-1', '-1', '0']"
+    },
+    {
+      "step": "FR-036",
+      "claim": "the two export buttons are the last two stops",
+      "ok": true,
+      "detail": "['Dark theme', 'Diff rows, packages/editor/src/draft-queue.t', 'Next finding', 'Previous finding', 'Objection on packages/editor/src/draft-queue', 'Diff rows, config/editor.json lines 12-16', 'Objection on config/editor.json lines 12-16:', 'Copy as prompt', 'Copy as Markdown']"
+    },
+    {
+      "step": "FR-021a",
+      "claim": "an unfilled objection control states so in text",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-021b",
+      "claim": "the disclosure carries no ARIA role or state",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "US2-AS1",
+      "claim": "the objection disclosure opens from the keyboard",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "US2-AS1",
+      "claim": "Tab lands in the objection field",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-021a",
+      "claim": "the control's text state recomputes on a single keystroke",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "COPY-SUCCESS",
+      "claim": "a successful copy is confirmed in words, with a count",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "SC-004",
+      "claim": "the export carries exactly the one objection recorded",
+      "ok": true,
+      "detail": "Artifact: Annotated Diff\nFeature: NIMBUS-101 Offline Draft Sync\n\nAct on each objection recorded below. The value in parentheses is the anchor of the hunk it attaches to.\n\nhunks / packages/editor/src/draft-queue.ts lines 18-23  (#hunks-packages-editor-src-draft-queue-ts-l18)\nThe guard should skip the edit, not the flush."
+    },
+    {
+      "step": "SC-004",
+      "claim": "the export names the artifact and the feature",
+      "ok": true,
+      "detail": "Artifact: Annotated Diff\nFeature: NIMBUS-101 Offline Draft Sync\n\nAct on each objection recorded below. The value in parentheses is"
+    },
+    {
+      "step": "FR-023a",
+      "claim": "the markdown export differs in exactly one line",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-023a",
+      "claim": "no markdown syntax is emitted",
+      "ok": true,
+      "detail": "Artifact: Annotated Diff\nFeature: NIMBUS-101 Offline Draft Sync\n\nObjections recorded while reading this annotated diff.\n\nhunks / packages/editor/src/draft-queue.ts lines 18-23  (#hunks-packages-editor-src-draft-queue-ts-l18)\nThe guard should skip the edit, not the flush."
+    },
+    {
+      "step": "FR-026",
+      "claim": "an export is derived from live state at the moment of invocation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-030",
+      "claim": "whitespace-only counts as empty, and the export denies approval",
+      "ok": true,
+      "detail": "Artifact: Annotated Diff\nFeature: NIMBUS-101 Offline Draft Sync\n\nNo objection was recorded. There is nothing here to act on. Do not treat this as approval."
+    },
+    {
+      "step": "FR-030b",
+      "claim": "all three refusal modes produce exactly one distinct message",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "SC-005",
+      "claim": "the refusal message never claims success",
+      "ok": true,
+      "detail": "['Copy failed. The text is in the field below. Select it and copy it by hand.', 'Copy failed. The text is in the field below. Select it and copy it by hand.', 'Copy failed. The text is in the field below. Select it and copy it by hand.']"
+    },
+    {
+      "step": "FR-030b",
+      "claim": "no message names the local-file scheme or guesses a cause",
+      "ok": true,
+      "detail": "['Copy failed. The text is in the field below. Select it and copy it by hand.', 'Copy failed. The text is in the field below. Select it and copy it by hand.', 'Copy failed. The text is in the field below. Select it and copy it by hand.']"
+    },
+    {
+      "step": "SC-005",
+      "claim": "every refusal reveals the text, fills it, and moves focus to it",
+      "ok": true,
+      "detail": "[\n {\n  \"mode\": \"rejected promise\",\n  \"revealed\": true,\n  \"focused\": true,\n  \"filled\": true\n },\n {\n  \"mode\": \"synchronous throw\",\n  \"revealed\": true,\n  \"focused\": true,\n  \"filled\": true\n },\n {\n  \"mode\": \"clipboard absent\",\n  \"revealed\": true,\n  \"focused\": true,\n  \"filled\": true\n }\n]"
+    },
+    {
+      "step": "SC-007",
+      "claim": "a superseded slow FAILURE never overwrites the later success",
+      "ok": true,
+      "detail": "{'status': 'Copied. 1 objection is on the clipboard.', 'hidden': True, 'focus': 'copy-markdown', 'seen': ['Copied. 1 objection is on the clipboard.']}"
+    },
+    {
+      "step": "SC-007",
+      "claim": "the superseded failure never reveals the fallback or steals focus",
+      "ok": true,
+      "detail": "{'status': 'Copied. 1 objection is on the clipboard.', 'hidden': True, 'focus': 'copy-markdown', 'seen': ['Copied. 1 objection is on the clipboard.']}"
+    },
+    {
+      "step": "FR-027",
+      "claim": "the mirror race reports the later invocation's failure",
+      "ok": true,
+      "detail": "{'status': 'Copy failed. The text is in the field below. Select it and copy it by hand.', 'hidden': False, 'focus': 'fallback-field', 'seen': ['Copy failed. The text is in the field below. Select it and copy it by hand.']}"
+    },
+    {
+      "step": "FR-027",
+      "claim": "a superseded slow SUCCESS never overwrites that failure",
+      "ok": true,
+      "detail": "{'status': 'Copy failed. The text is in the field below. Select it and copy it by hand.', 'hidden': False, 'focus': 'fallback-field', 'seen': ['Copy failed. The text is in the field below. Select it and copy it by hand.']}"
+    },
+    {
+      "step": "US1-AS8",
+      "claim": "the theme control flips both themes",
+      "ok": true,
+      "detail": "{'light': 'rgb(247, 246, 244)', 'theme': 'dark', 'bg': 'rgb(26, 26, 26)'}"
+    },
+    {
+      "step": "US1-AS8",
+      "claim": "dark theme: every text node meets WCAG AA contrast",
+      "ok": true,
+      "detail": "[]"
+    },
+    {
+      "step": "FR-037",
+      "claim": "reduced motion is honoured: the preference is seen",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-037",
+      "claim": "nothing animates perceptibly under reduced motion",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-043",
+      "claim": "scripting disabled: no objection control is mounted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-043",
+      "claim": "scripting disabled: no theme control is offered",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-043",
+      "claim": "scripting disabled: the diff and its findings still render",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "step": "FR-043",
+      "claim": "scripting disabled: the export panel is hidden, not dead",
+      "ok": true,
+      "detail": " aria-labelledby=\"sec-export\" hidden=\"\">\n      <h2 id=\"sec-export\">Take your obj"
+    }
+  ]
+}

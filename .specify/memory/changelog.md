@@ -2604,3 +2604,65 @@ git checkout 780a6724915ce481199073de84fa007ca16deb8b -- specs/art-003-final-pr-
 
 The detailed archive and verification record is stored in
 `.specify/memory/archive-reports/2026-08-14-art-003-post-merge-hygiene.md`.
+
+## 2026-08-14 — ART-003 gap triage, and ART-020 opened
+
+A triage of the five gaps the ART-003 archive carried forward. Three resolve to no
+action, one was discharged immediately, and the sweep found the archive had
+misdiagnosed one of its own findings. Full record in
+`.specify/memory/archive-reports/2026-08-14-art-003-gap-triage-amendment.md`; the
+archive report itself is left unedited.
+
+### Discharged
+
+The ART-003 acceptance evidence and the harness that produced it are now in the
+repository under `docs/ai/specs/.process/`: `ART-003-uat-results.md`, plus
+`ART-003-uat-harness/` carrying `cdp.py`, three drivers, and three results files
+totalling 176 rows with every `ok` true. They had been sitting in a session
+scratchpad under `/private/tmp`, which clears. All three drivers were re-run from
+their new location against `main` at `bb3f425e` before commit, so the evidence
+describes the merged bytes: 58/58, 65/65, 53/53.
+
+Preserving it required removing its launcher. The harness as run started Chrome
+from a hard-coded macOS path, which no shared repository should carry, and which
+the repository's own Bash-confinement guard independently refused: a `subprocess`
+executable it cannot statically resolve reports as `<dynamic executable>` and
+blocks release readiness. Satisfying the guard with a literal would have
+reintroduced the portability defect, so `cdp.py` now connects to a browser the
+operator starts, over `CDP_ENDPOINT`. It carries no `subprocess` call, no platform
+assumption, and no absolute path. Per-stage isolation is preserved by giving each
+`Chrome()` its own browser context.
+
+### Corrected
+
+The unchecked task boxes on slices 2 and 3 were recorded as ledger hygiene. Measured
+at the merge commits they are a gate finding. `count_tasks` anchors on
+`^\s*-\s+\[[ xX]\]\s+T[0-9]` (`read_only.py:4143`), so slice 3's decorated
+`**T001**` form counted zero of 36; G7 consumes that at `:935` and gates on
+`remaining == 0 and total > 0`, producing a reason that names the wrong problem.
+Separately, neither slice records a G7 result while both declare the gate. Slice 2's
+tasks were readable, so G7 would have failed loudly had it run. Both halves are now
+ART-018's, which gains a fourth matcher row and a verification requirement that the
+check is proven to *run*.
+
+### Withdrawn
+
+The offline console line is not an open question. The roadmap carries a dated
+2026-07-28 Key Decision rejecting embedded woff2 at ~300KB per artifact. ART-003
+rediscovered a settled decision and correctly rewrote its runbook step to match.
+
+### Opened
+
+**ART-020 — Keyboard-Reachable Scroll Containers In The Shipped Gallery.** Five
+`overflow-x: auto` containers carry no `tabindex`, so a keyboard-only Safari reader
+cannot reach their clipped content: `code-approaches.html:700`,
+`implementation-plan.html:721` and `:942`, `module-map.html:587` and `:769`.
+ART-003's own two templates already ship the fix. The gap was recorded during
+ART-003 slice 2 and no entry owned it.
+
+### Still owed
+
+ART-002's fifteen unexecuted acceptance steps, across four shipped templates. The
+preserved harness covers two of the four kinds; reduced motion needs a CDP method
+`cdp.py` does not implement, and focus-indicator perceptibility is a human
+judgement. No driver exists for those templates. Belongs in ART-009's scoping.
