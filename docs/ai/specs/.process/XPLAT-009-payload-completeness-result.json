@@ -208,8 +208,17 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "a40b15f49b3ba54a954931acbd98133de6144f843528b8e80193fba2cf26493a",
+            "sha256": "eba399ec34d66dd06d95dc6cd6f35e8f8952f5e0557b51697304853f85ace861",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
+            "transform": "none"
+          },
+          {
+            "byte_count": 51625,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/annotated-diff.html",
+            "required": true,
+            "sha256": "1c252ffa2dafe46fbce2b2a2b1b288dc3460bca2a1b29f1b5d9e57f3dbfc1c44",
+            "source_path": "speckit-pro/artifact-gallery/templates/annotated-diff.html",
             "transform": "none"
           },
           {
@@ -1236,8 +1245,17 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "a40b15f49b3ba54a954931acbd98133de6144f843528b8e80193fba2cf26493a",
+            "sha256": "eba399ec34d66dd06d95dc6cd6f35e8f8952f5e0557b51697304853f85ace861",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
+            "transform": "none"
+          },
+          {
+            "byte_count": 51625,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/annotated-diff.html",
+            "required": true,
+            "sha256": "1c252ffa2dafe46fbce2b2a2b1b288dc3460bca2a1b29f1b5d9e57f3dbfc1c44",
+            "source_path": "speckit-pro/artifact-gallery/templates/annotated-diff.html",
             "transform": "none"
           },
           {
@@ -2088,7 +2106,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "0c3a59116fe04d36bfa34af6ff74f450eca2cdab72b512b7cebe35af9e335c2a",
+        "file_tree_hash": "db1cf73493c8f0e43cbb7d58d89868a0f359788391e246dfe915acd7d414852a",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
@@ -2180,8 +2198,17 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "a40b15f49b3ba54a954931acbd98133de6144f843528b8e80193fba2cf26493a",
+            "sha256": "eba399ec34d66dd06d95dc6cd6f35e8f8952f5e0557b51697304853f85ace861",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
+            "transform": "none"
+          },
+          {
+            "byte_count": 51625,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/annotated-diff.html",
+            "required": true,
+            "sha256": "1c252ffa2dafe46fbce2b2a2b1b288dc3460bca2a1b29f1b5d9e57f3dbfc1c44",
+            "source_path": "speckit-pro/artifact-gallery/templates/annotated-diff.html",
             "transform": "none"
           },
           {
@@ -3361,8 +3388,17 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "a40b15f49b3ba54a954931acbd98133de6144f843528b8e80193fba2cf26493a",
+            "sha256": "eba399ec34d66dd06d95dc6cd6f35e8f8952f5e0557b51697304853f85ace861",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
+            "transform": "none"
+          },
+          {
+            "byte_count": 51625,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/annotated-diff.html",
+            "required": true,
+            "sha256": "1c252ffa2dafe46fbce2b2a2b1b288dc3460bca2a1b29f1b5d9e57f3dbfc1c44",
+            "source_path": "speckit-pro/artifact-gallery/templates/annotated-diff.html",
             "transform": "none"
           },
           {
@@ -4465,7 +4501,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "b4f50f3dcc8b06e405ca8bc92baf8472201e903f9a3842f88eba77ddc2e240c5",
+        "file_tree_hash": "5bacf9fc403a81043b54a98a7c8fc4ec30315d51b4902f71d3d9894ec82d8c23",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],

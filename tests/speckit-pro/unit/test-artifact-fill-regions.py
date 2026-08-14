@@ -89,6 +89,7 @@ FLOOR: dict[str, tuple[str, ...]] = {
     "code-approaches": ("approaches",),
     "module-map": ("module-graph",),
     "pr-writeup": ("motivation", "before-after", "file-by-file", "implementation-notes"),
+    "annotated-diff": ("hunks",),
 }
 
 # The slots whose items an objection or a selection attaches to, and which
@@ -103,6 +104,7 @@ LIST_SLOTS: dict[str, tuple[str, ...]] = {
     "code-approaches": ("approaches",),
     "module-map": ("modules",),
     "pr-writeup": ("file-by-file",),
+    "annotated-diff": ("hunks",),
 }
 
 # The two anchored items a list slot needs at a minimum. One item shows a reader
@@ -136,6 +138,9 @@ SOURCE_LABEL = "Source:"
 INVENTORY_LABELS: tuple[str, ...] = (SLOT_LABEL, FILLS_LABEL, SOURCE_LABEL)
 
 # Closed vocabulary. A slot drawing on two names both, separated by a comma.
+# Most members are files under the feature directory. ``git-diff`` is not one: it
+# names the change's own diff, so a reader does not go looking for a file of that
+# name.
 SOURCE_ARTIFACTS: tuple[str, ...] = (
     "spec.md",
     "plan.md",
@@ -143,6 +148,7 @@ SOURCE_ARTIFACTS: tuple[str, ...] = (
     "research.md",
     "design-concept.md",
     "implementation-notes.md",
+    "git-diff",
 )
 
 # The attribution header's own labels and literals, mirrored from the gallery
