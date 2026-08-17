@@ -28,7 +28,7 @@ FR-022; ART-003 shipped as three stacked slices in PRs #435, #436 and #439 and w
 archived 2026-08-14, leaving ART-010 blocked only by ART-007, and its acceptance
 evidence and harness are preserved under `.process/`; ART-020 was opened
 2026-08-14 from a gallery accessibility gap ART-003 recorded and nobody owned;
-ART-004, ART-005, ART-007 and ART-009 are ready;
+ART-005 is in progress; ART-004, ART-007 and ART-009 are ready;
 ART-015 was opened from ART-006 findings and is ready with no dependencies;
 ART-016, ART-017 and ART-018 were opened from ART-014 findings on 2026-08-12 and
 are ready; ART-019 was opened on 2026-08-13 and is ready with no dependencies
@@ -138,7 +138,7 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-002 | Draft-PR Template Set | ✅ Complete / Archived | [.process/ART-002-workflow.md](.process/ART-002-workflow.md) | Shipped as two stacked slices — PR #425 (`implementation-plan`, `spec-explainer`) and PR #427 (`code-approaches`, `module-map`) — then PR #430 recorded the acceptance result; archived 2026-08-12. All four templates and the manifest live outside `specs/**`. The runbook ran against `4ecb1b4b` with every executed step passing and 15 of its 61 steps recorded as *not executed*; it is preserved at [.process/ART-002-uat-runbook.md](.process/ART-002-uat-runbook.md) |
 | ART-003 | Final-PR Template Set | ✅ Complete / Archived | [.process/ART-003-workflow.md](.process/ART-003-workflow.md) | Shipped as three stacked slices — PR #435 (`pr-writeup`), PR #436 (`annotated-diff`), PR #439 (`flowchart`) — and archived 2026-08-14. All three templates and the manifest live outside `specs/**`. Re-sliced at scaffold on ART-002's realized measurement rather than the original 285 estimate, and **every slice landed under its own declaration** (735/758, 724/750, 408/460) — the first ART spec where none overran. Manual acceptance ran in full against the shipped bytes: 176 checks, all passing. Procedure at [.process/ART-003-uat-runbook.md](.process/ART-003-uat-runbook.md), verdicts and scope limits at [.process/ART-003-uat-results.md](.process/ART-003-uat-results.md), and the CDP harness that executed them at [.process/ART-003-uat-harness/](.process/ART-003-uat-harness/), re-run against `main` before it was committed |
 | ART-004 | Gallery Completion: Design & Prototyping | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
-| ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
+| ART-005 | Gallery Completion: Knowledge, Reports & Editors | 🔄 In Progress | [.process/ART-005-workflow.md](.process/ART-005-workflow.md) | Scaffolded 2026-08-17 for staged autopilot planning; the design concept records the accepted one-combined-slice warning and the plan-time measurement checkpoint |
 | ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
 | ART-007 | Draft-PR Emission | ⏳ Ready | - | Both dependencies satisfied: ART-002 by PRs #425/#427/#430, ART-006 by PR #422 |
 | ART-008 | Feedback Sweep | ⏳ Pending | - | Blocked by ART-007 |
