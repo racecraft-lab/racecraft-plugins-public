@@ -5,7 +5,7 @@
   "branch": "art-007-draft-pr-emission",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 2: Clarify - Session 1: Draft-PR Row Protocol",
+  "active_step": "Phase 2: Clarify - Session 2: Corroboration Discrepancy Classes",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
@@ -35,15 +35,15 @@
     },
     {
       "step": "Phase 2: Clarify - Session 1: Draft-PR Row Protocol",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Session 1: Draft-PR Row Protocol Consensus",
-      "status": "queued"
+      "status": "skipped: executor reported zero unresolved items"
     },
     {
       "step": "Phase 2: Clarify - Session 2: Corroboration Discrepancy Classes",
-      "status": "queued"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Session 2: Corroboration Discrepancy Classes Consensus",

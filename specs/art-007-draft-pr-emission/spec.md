@@ -197,21 +197,37 @@ value is the one used.
   unchanged and no pull request MUST be opened.
 - **FR-007**: The system MUST open the pull request in draft state with a
   final-shape conventional title that it self-validates against the repository's
-  release-readiness title shape before creation.
-  [NEEDS CLARIFICATION: re-entry behavior when the workflow file already records
-  an open draft pull request for this feature — refresh the existing pull
-  request's artifacts and description in place, or skip emission and report the
-  existing URL?]
+  release-readiness title shape before creation. Exactly one draft pull request
+  MUST exist per feature branch. Before creating one, the system MUST test for an
+  existing one two ways — the workflow file's draft-PR record, and a live query
+  for an open pull request on the head branch — and MUST treat either positive as
+  proof that one exists, because the record is written after creation and a run
+  interrupted between the two leaves a pull request with no record. When an open
+  pull request exists for the branch, the system MUST refresh its description, and
+  its title if the title changed, repair or write the workflow file's record, and
+  report that existing URL as the emission outcome. It MUST NOT open a second pull
+  request. Creation runs only when no open pull request exists for the head
+  branch. A recorded pull request that is closed or merged is a discrepancy under
+  FR-011, not grounds to open a second one.
 - **FR-008**: The draft pull request's description MUST contain exactly two
   blocks: an artifacts index table listing each artifact with its purpose and a
   copy-paste command to open it locally, and a resume/status block. It MUST NOT
   contain a release-note fence, verification sections, or placeholder final
   writeup content.
-- **FR-009**: The draft pull request's identity (number and URL) MUST be
-  recorded on the workflow file's status surface at creation time, and the
-  workflow file MUST be the only place that identity is stored.
-  [NEEDS CLARIFICATION: exact row name, column format, and placement of the
-  draft-PR record on the workflow file's status surface]
+- **FR-009**: The draft pull request's identity MUST be recorded on the workflow
+  file as a single scalar row keyed `Draft PR` in the
+  `## Specification Context` → `### Basic Information` table, the same key/value
+  table that carries `Branch` and `Stage`. No row MUST be added to the
+  `## Workflow Overview` table, whose rows are phase status records. The row's
+  value MUST begin with the pull request's number and URL as one linked
+  reference — link text `#<number>`, link target the URL — and MAY carry an
+  artifact-shortfall note after that link in the same cell. The workflow file
+  MUST be the only place this identity is stored. Before a pull request exists
+  the row MUST be absent; an absent row means no pull request has been opened,
+  is legal, and MUST NOT be reported as an error, and the scaffold workflow
+  template MUST NOT ship a placeholder row. The record MUST be written only
+  after creation or refresh succeeds, and MUST be committed by the bookkeeping
+  commit described in FR-013.
 - **FR-010**: The plan-stage stop report MUST carry the pull request URL, the
   artifact index, and resume instructions when emission ran; when the gate
   blocked, it MUST name the blocked gate in place of a URL; when emission was
@@ -227,6 +243,13 @@ value is the one used.
   multiple pull requests, the draft pull request MUST become the first slice
   pull request of the stack rather than being closed or superseded, so the
   review thread collected on it is preserved.
+- **FR-013**: Once the final gate resolves pass or warn, the plan stage's
+  terminal step MUST run in this order: generate the artifacts, take the
+  existing stage-boundary commit, push the branch, create or refresh the draft
+  pull request, write the draft-PR record, then take a separate bookkeeping
+  commit carrying that record and push it. The stage-boundary commit's own
+  contract — its message, its staged path set, and its non-emptiness — MUST be
+  unchanged, and the draft-PR record MUST NOT be folded into it.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -335,8 +358,10 @@ value is the one used.
 - The repository's pull-request checks skip every job while a pull request is in
   draft state, so the draft description needs no release-note fence and nothing
   goes red before the later ready flip.
-- The branch is pushed as part of the existing stage-boundary step, which is
-  what makes pull-request creation possible at the terminal step.
+- The branch is not pushed by any earlier step of the plan stage: the
+  stage-boundary commit stages and commits but does not push. The terminal step
+  MUST push the branch itself, after the boundary commit and before pull-request
+  creation. That push is what makes creation possible.
 - The command-line tool used to open and query pull requests is installed and
   authenticated in the environment where the stage runs. If it is not, emission
   fails open per FR-010 rather than failing the stage.

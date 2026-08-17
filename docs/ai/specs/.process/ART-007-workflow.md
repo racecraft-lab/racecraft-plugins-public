@@ -408,7 +408,7 @@ fail-open zero-artifact case still opens the PR with a gap-marked index.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | | | |
+| 1 | Draft-PR row protocol + FR-007 re-entry | 5 | All accepted, 0 to consensus. FR-007 rewritten: refresh-in-place with a dual existence test (workflow record OR live head-branch query); closed/merged PR routes to FR-011, never a second PR. FR-009 rewritten: single `Draft PR` linked row in Basic Information (never Workflow Overview), absent-before-creation is the legal empty state, no template placeholder. NEW FR-013: emission order = artifacts → boundary commit → push → create/refresh → record → separate bookkeeping commit; boundary-commit contract untouched. **Spec defect fixed:** the assumption that the boundary step pushes was false (the shipped boundary block has no push; the only shipped push lives in the post-G7 PR Creation Protocol) — the terminal step owns its push. Markers 3 → 1 |
 | 2 | | | |
 | 3 | | | |
 
