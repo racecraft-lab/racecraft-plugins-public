@@ -133,6 +133,39 @@ output, no hand adjustment. 327 sits under the 400 warn ceiling and the
 slice is end-to-end (artifact generation → commit → draft PR → stop
 report), so no split question was warranted.
 
+### Phase 0 Prerequisites (recorded at run time, 2026-08-17)
+
+Stage resolution (Step 0.6c): `Stage: plan (argv) — explicit --stage plan`.
+The state slot was reclaimed from
+`docs/ai/specs/.process/ART-003-slice-3-workflow.md` (prior status:
+`completed_archived`).
+
+| Check | Result |
+|-------|--------|
+| `check-prerequisites` | `all_pass: true` — CLI `specify 0.11.8`, project initialized, constitution present, all SpecKit commands installed, workflow file exists, `branch: art-007-draft-pr-emission` (`worktree=true,feature=true`) |
+| `detect-commands` | stack `python`; `UNIT_TEST` / `FULL_VERIFY` = `python3 tests/speckit-pro/run-all.py`; `BUILD` / `TYPECHECK` / `LINT` = `N/A` (evidence: `tests/speckit-pro/run-all.py`) |
+| `detect-presets` | `speckit-pro-reviewability` v1.0.0 resolves spec/plan/tasks templates; 18 hook events configured |
+| `resolve-confidence-mode` | `advisory` (no `--strict` / `--advisory` flag, no local config file) |
+| Settings | no `.claude/speckit-pro.local.md` — defaults: consensus `tier-a`, gate-failure `stop`, auto-commit on |
+| Extensions installed | `archive`, `git`, `verify` per `.specify/extensions.yml`; hooks also reference `verify-tasks` and `retrospective` |
+| `PROJECT_IMPLEMENTATION_AGENT` | none detected in `.claude/agents/` (only `plugin-release-auditor`, `speckit-skill-reviewer`) → fallback `speckit-pro:phase-executor` |
+| `AGENT_TEAMS_AVAILABLE` | **true** — `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` set and Claude Code 2.1.234 ≥ 2.1.32 |
+| Archive sweep | **no-op, no mutations** — `specs/art-007-draft-pr-emission` excluded as the current target; `specs/brand-001-racecraft-identity-system` not proven merged (its only merged PR #432 is scaffold provenance, not implementation merge provenance; dir holds only SPEC-MOC.md, status "pending") and left in active specs |
+| Tier-2 relocation | no candidate surfaced — `brand-001-racecraft-identity-system` suppressed (`non_speckit_namespace`); the current target suppressed (frozen/in-flight, named by `.specify/feature.json`) |
+
+**G0 test-count baseline (preserve; do not recompute):** `python3
+tests/speckit-pro/run-all.py` → **7399/7399 passed** (L1 1447, L4 5766,
+L5 186), toolchain preflight ok, exit 0. G7 verifies the count *increased*
+against this number, so a later `--stage implement` run in a fresh session
+MUST read it from here rather than re-measuring a tree that already contains
+this spec's additions.
+
+**Constitution validation:** the only runnable `PROJECT_COMMANDS` gate for
+this stack is the test suite, and it passes at the baseline above.
+`TYPECHECK`, `LINT`, and `BUILD` are `N/A` for a Markdown-plus-stdlib-Python
+surface, so no principle has an unrun check. Principles I, II, IV, and VI
+show no conflict with this spec's scope; re-verify after Plan.
+
 ---
 
 ## Specification Context
@@ -144,6 +177,7 @@ report), so no split question was warranted.
 | **Spec ID** | ART-007 |
 | **Name** | Draft-PR Emission |
 | **Branch** | `art-007-draft-pr-emission` |
+| **Stage** | plan |
 | **Dependencies** | ART-002 (Draft-PR Template Set) — complete, PRs #425/#427/#430; ART-006 (Autopilot Staging) — complete, PR #422 |
 | **Enables** | ART-008 (Feedback Sweep); ART-010 (Final-PR Writeup, Companions & Ready Flip) |
 | **Priority** | P1 |

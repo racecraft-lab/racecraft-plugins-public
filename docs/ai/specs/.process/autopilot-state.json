@@ -1,13 +1,13 @@
 {
-  "workflow_file": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
-  "spec_id": "ART-003-slice-3",
-  "feature_dir": "specs/art-003-final-pr-template-set-slice-3",
-  "branch": "art-003-final-pr-template-set-slice-3",
-  "status": "completed_archived",
-  "stage": "full",
-  "active_step": null,
-  "prior_run_note": "in_progress",
-  "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-2-workflow.md",
+  "workflow_file": "docs/ai/specs/.process/ART-007-workflow.md",
+  "spec_id": "ART-007",
+  "feature_dir": "specs/art-007-draft-pr-emission",
+  "branch": "art-007-draft-pr-emission",
+  "status": "in_progress",
+  "stage": "plan",
+  "active_step": "Phase 1: Specify",
+  "prior_run_note": "completed_archived",
+  "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
     "consensus_mode": "tier-a",
     "gate_failure": "stop",
@@ -18,15 +18,8 @@
     "UNIT_TEST": "python3 tests/speckit-pro/run-all.py",
     "FULL_VERIFY": "python3 tests/speckit-pro/run-all.py"
   },
-  "test_baseline_g0": {
-    "passed": 7380,
-    "total": 7380,
-    "l1": 1447,
-    "l4": 5747,
-    "l5": 186
-  },
-  "base_branch": "art-003-final-pr-template-set-slice-2",
-  "stacked_on_pr": 436,
+  "agent_teams_available": true,
+  "project_implementation_agent": "speckit-pro:phase-executor",
   "plan": [
     {
       "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
@@ -38,209 +31,126 @@
     },
     {
       "step": "Phase 1: Specify",
-      "status": "completed"
+      "status": "in_progress"
     },
     {
-      "step": "Phase 2: Clarify - Slot inventory and the diagram's text equivalent",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Session 1: Draft-PR Row Protocol",
+      "status": "queued"
     },
     {
-      "step": "Phase 2: Clarify - Slot inventory and the diagram's text equivalent Consensus",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Session 1: Draft-PR Row Protocol Consensus",
+      "status": "queued"
     },
     {
-      "step": "Phase 2: Clarify - The disclosure mechanism",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Session 2: Corroboration Discrepancy Classes",
+      "status": "queued"
     },
     {
-      "step": "Phase 2: Clarify - The disclosure mechanism Consensus",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Session 2: Corroboration Discrepancy Classes Consensus",
+      "status": "queued"
+    },
+    {
+      "step": "Phase 2: Clarify - Session 3: Settled-Decision Verification",
+      "status": "queued"
+    },
+    {
+      "step": "Phase 2: Clarify - Session 3: Settled-Decision Verification Consensus",
+      "status": "queued"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
-    },
-    {
-      "step": "Phase 4: Checklist - accessibility",
-      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
-    },
-    {
-      "step": "Phase 4: Checklist - accessibility Consensus",
-      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
-    },
-    {
-      "step": "Phase 4: Checklist - ux",
-      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
-    },
-    {
-      "step": "Phase 4: Checklist - ux Consensus",
-      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
+      "status": "queued"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
+      "status": "queued"
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
+      "status": "queued"
+    },
+    {
+      "step": "Phase 4: Checklist - state-management",
+      "status": "queued"
+    },
+    {
+      "step": "Phase 4: Checklist - state-management Consensus",
+      "status": "queued"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "completed"
+      "status": "queued"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
+      "status": "queued"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
+      "status": "queued"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "skipped: budget comfortable and design settled at Clarify; recorded rather than silently dropped"
+      "status": "queued"
     },
     {
       "step": "Phase 7: Implement",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage"
     },
     {
       "step": "Post: Code Review",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage"
     },
     {
       "step": "Post: Self-Review",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage"
     },
     {
       "step": "Post: PR Creation",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage"
     },
     {
       "step": "Post: Retrospective",
-      "status": "completed"
+      "status": "skipped: outside the resolved plan stage"
     }
   ],
-  "gates": {
-    "G1": {
-      "pass": true
-    },
-    "G2": {
-      "pass": true
-    }
-  },
-  "final": {
-    "authored": 408,
-    "css": 209,
-    "js": 0,
-    "markup": 199,
-    "declared": 460,
-    "block": 800,
-    "suite": "7381/7381",
-    "baseline": 7380,
-    "measured_zeros": {
-      "authored_script": 0,
-      "export_affordances": 0,
-      "control": "annotated-diff shows 1 and 12, so the search binds"
-    },
-    "unverified": "Manual acceptance executed in full against the shipped bytes on file:// (see archive.acceptance_note); the automation tool cannot validate file:// directly"
-  },
-  "archive": {
-    "archived_at": "2026-08-14",
-    "cleanup_applied": true,
-    "cleanup_branch": "art-003-post-merge-hygiene",
-    "cleanup_gate_7_note": "Gate 7 names main as the normal cleanup branch. This archive ran on art-003-post-merge-hygiene, cut from main at 780a6724, because this repository forbids committing directly to main and lands every change through a pull request. Same shape as PR #441, PR #438, PR #431 and PR #424.",
-    "spec_id": "ART-003",
-    "slices": [
-      {
-        "slice": 1,
-        "template": "pr-writeup",
-        "pull_request": 435,
-        "merge_commit": "ad6cab53395fd410aa7acca05fd29531f0c9cd89",
-        "merged_at": "2026-08-14T13:25:49Z",
-        "source_spec_path_removed": "specs/art-003-final-pr-template-set",
-        "reviewable_loc": {
-          "declared": 758,
-          "measured": 735,
-          "gate": "warn"
-        }
-      },
-      {
-        "slice": 2,
-        "template": "annotated-diff",
-        "pull_request": 436,
-        "merge_commit": "6a1518c395fc3fcce4de315a70691eee33f4de94",
-        "merged_at": "2026-08-14T14:14:24Z",
-        "source_spec_path_removed": "specs/art-003-final-pr-template-set-slice-2",
-        "reviewable_loc": {
-          "declared": 750,
-          "measured": 724,
-          "gate": "warn"
-        }
-      },
-      {
-        "slice": 3,
-        "template": "flowchart",
-        "pull_request": 439,
-        "merge_commit": "780a6724915ce481199073de84fa007ca16deb8b",
-        "merged_at": "2026-08-14T14:54:54Z",
-        "source_spec_path_removed": "specs/art-003-final-pr-template-set-slice-3",
-        "reviewable_loc": {
-          "declared": 460,
-          "measured": 408,
-          "gate": "warn"
-        }
-      }
-    ],
-    "process_evidence_preserved": [
-      "docs/ai/specs/.process/ART-003-design-concept.md",
-      "docs/ai/specs/.process/ART-003-workflow.md",
-      "docs/ai/specs/.process/ART-003-slice-2-workflow.md",
-      "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
-      "docs/ai/specs/.process/ART-003-uat-runbook.md"
-    ],
-    "runbook_relocation_note": "specs/art-003-final-pr-template-set/.process/ART-003-uat-runbook.md was moved to docs/ai/specs/.process/ART-003-uat-runbook.md rather than deleted. Nothing cites it, so the ART-002 dangling-pointer reason does not apply; it survives because it is the only committed statement of what acceptance means for pr-writeup.html, and its Step 1 carries the console finding.",
-    "report": ".specify/memory/archive-reports/2026-08-14-art-003-post-merge-hygiene.md",
-    "retrospective_note": "No ART-003 retrospective exists, as a separate file or inline. This archive does not invent one.",
-    "acceptance_note": "Manual acceptance was executed in full against the shipped bytes on file://: 176 checks, all passing (58 slice 1, 65 slice 2, 53 slice 3). It found and fixed two defects and missed a third that code review caught. No acceptance record was merged; the verdicts live only in the archive report.",
-    "open_followups": [
-      "No ART-003 acceptance record was merged. ART-002 recorded its result in PR #430; ART-003 has no equivalent.",
-      "All three workflow files record 'Post: UAT Runbook Generation' as pending, yet slice 1's runbook exists and slices 2 and 3 have none.",
-      "Slices 2 and 3 merged with every task box unchecked (0 of 41 and 0 of 36) against slice 1's 40 of 40.",
-      "All seven shipped gallery templates emit one console line when the network is unavailable. Inlining the typeface is the only silent option and is a gallery-wide decision.",
-      "ART-009 owns the question of whether the CDP acceptance harness becomes repository tooling."
-    ]
+  "test_baseline_g0": {
+    "passed": 7399,
+    "total": 7399,
+    "l1": 1447,
+    "l4": 5766,
+    "l5": 186
   }
 }
