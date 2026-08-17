@@ -5,7 +5,7 @@
   "branch": "art-007-draft-pr-emission",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 3: Plan",
+  "active_step": "Phase 4: Checklist - error-handling",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
@@ -59,11 +59,11 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "queued"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
@@ -164,6 +164,10 @@
       "markers": 0,
       "sessions": 3,
       "consensus_rounds": 3
+    },
+    "G3": {
+      "pass": true,
+      "markers": 0
     }
   }
 }

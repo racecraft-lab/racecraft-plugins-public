@@ -34,7 +34,7 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 12 FRs, 3 user stories, 12 acceptance scenarios, 8 success criteria, 3 colon-form markers routed to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass — 3 sessions, 15 questions/findings, 3 consensus rounds (Q4 3-of-3, Q5 and F1 2-of-2), 0 markers remain |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Plan | `/speckit-plan` | ✅ Complete | G3 pass — 8 artifacts, 15 research decisions, 16 declared file ops (11 production), 4 contracts, constitution 6/6, 0 markers |
 | Checklist | `/speckit-checklist` | ⏳ Pending | error-handling, state-management |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -514,11 +514,31 @@ fail-open zero-artifact case still opens the PR with a gap-marked index.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Entities and types |
-| `contracts/` | ⏳ | Schema/contract specifications |
-| `quickstart.md` | ⏳ | Developer onboarding |
+| `plan.md` | ✅ | 313 lines; Declared File Operations (16 entries), Constitution Check 6/6 pass, Complexity Tracking empty |
+| `research.md` | ✅ | 15 decisions (D1-D15). Key discoveries: D2 FR-005 relaxation must land in the schema AND the validator's hand-written evidence assertions; D4 the packet-schema and release-gate title regexes disagree (SC-007 binds the stricter, lowercase scope); D10 `install.py` pins a closed frozenset of Codex agent filenames that must admit the new TOML |
+| `data-model.md` | ✅ | 214 lines; entities incl. corroboration outcome, draft packet, Draft PR row |
+| `contracts/` | ✅ | 4 contracts: draft-packet-mode, stage-corroboration, draft-pr-row, artifact-author-agent |
+| `quickstart.md` | ✅ | 257 lines |
+
+#### Plan-phase reviewability budget (step 7b, advisory)
+
+Runner `estimate-reviewable-loc` against plan.md:
+`{"status":"pass","projected":0,"declared_files":{"production":0,"new":4,"modified":12,"total_entries":16}}`.
+The projected 0 is the helper's documented path-pattern blindness on this
+Markdown+Python+JSON surface (it recognises only `src/`/`app/`/`lib/`/`scripts/`
+paths and JS/TS/SQL extensions), not a real measurement. The honest advisory
+sizing remains the live `estimate-spec-size` run:
+`{"estimated_loc":335,"suggested_slices":1,"status":"ok"}` — one slice, under
+the 400 warn ceiling.
+
+**Recorded deviations from the spec's projection (none blocking):** production
+files 11 (spec projected ~10) and total files 16 (spec projected ~14; one above
+the 15-file warn line, well under the 25 block line) — two entries discovered in
+planning (`helpers/install.py` for the Codex agent frozenset;
+`test-speckit-pro-mutation-helpers.py` for draft packet emission). The
+prompt-suggested Codex reference-doc trim did not hold: `phase-execution` is an
+independently-written `-codex.md` mirror pair, so the terminal-step change costs
+two files. Split decision unchanged: no split.
 
 ---
 
