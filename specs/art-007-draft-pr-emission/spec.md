@@ -134,6 +134,11 @@ value is the one used.
 3. **Given** a workflow file carrying no draft-PR record, **When** stage
    auto-detect runs, **Then** the stage resolves from the workflow file alone,
    no corroboration is attempted, and no discrepancy is logged.
+4. **Given** a workflow file carrying a draft-PR record and a live check that
+   cannot be completed — the query tool absent, unauthenticated, cancelled, or
+   failing for any reason — **When** stage auto-detect runs, **Then** the stage
+   resolves from the workflow file, the outcome is reported as skipped with its
+   reason, and no discrepancy is logged.
 
 ---
 
@@ -152,6 +157,11 @@ value is the one used.
 - **Re-entering a stage that already emitted.** The workflow file already
   carries a draft-PR record for an open pull request. The run must not open a
   second pull request for the same feature. See FR-007.
+- **Re-entering a stage whose recorded pull request was closed or merged.**
+  The run does not reopen the pull request and does not open a second one.
+  It logs the discrepancy, leaves the workflow file's `Draft PR` row
+  unchanged, and the stop report names the discrepancy and the resume path.
+  See FR-011.
 - **Pull request creation itself fails.** The artifacts are already committed on
   the branch, so the planning work is not lost. The stop report must say the
   pull request could not be opened and name the resume path, rather than
@@ -233,12 +243,57 @@ value is the one used.
   blocked, it MUST name the blocked gate in place of a URL; when emission was
   attempted but the pull request could not be opened, it MUST say so and name
   the resume path.
-- **FR-011**: Stage auto-detect MUST read the draft-PR record from the workflow
-  file, corroborate it against the live pull request, log a discrepancy when the
-  two disagree, and treat the workflow file as authoritative in every case.
-  [NEEDS CLARIFICATION: discrepancy log format and sink, and what auto-detect
-  does in each discrepancy class — pull request closed, pull request missing, or
-  identity mismatch]
+- **FR-011**: Stage auto-detect MUST corroborate the workflow file's draft-PR
+  record against the live pull request and MUST treat the workflow file as
+  authoritative in every outcome: corroboration MUST NOT change the resolved
+  stage, MUST NOT block stage resolution, and MUST NOT stop the run.
+  Corroboration MUST be attempted only when the `Draft PR` row is present. The
+  live observation MUST be taken by the orchestrator as one read-only query
+  scoped to the feature's head branch and returning pull requests in every
+  state; the classification MUST be performed by the same stage-resolution step
+  that already parses the workflow file's rows, from that observation supplied
+  to it as input, so the record is parsed in exactly one place. The outcome
+  MUST be exactly one of six statuses: `match`, `no_record`, `skipped`,
+  `pr_closed`, `pr_missing`, `identity_mismatch`. The last three are
+  discrepancies; the first three are not. Classification MUST run in this
+  order, first match winning, and only against a successful observation: an
+  open pull request on the head branch whose number differs from the recorded
+  number, or a recorded number that is open but whose live URL differs from the
+  recorded URL, is `identity_mismatch`; a recorded number whose live state is
+  closed or merged is `pr_closed`, carrying whether it was merged; a recorded
+  number absent from the observation is `pr_missing`; anything else is `match`.
+  This status vocabulary is shared with the emission-time existence test in
+  FR-007.
+
+  The stage-resolution result MUST always carry the corroboration status, the
+  recorded identity, the observed identity, and a reason when the check could
+  not run, so a run that could not check is distinguishable from a run that
+  checked and agreed. The run report MUST carry one line naming the status
+  alongside the stage-resolution line it already prints. Only the three
+  discrepancy statuses MUST be recorded durably, as that same line, in the
+  workflow file's run-time Step 0.6c record, written in the same edit turn as
+  the `Stage` row so it lands in the same commit. `match`, `no_record`, and
+  `skipped` MUST write nothing durable, and the scaffold workflow template MUST
+  NOT ship a placeholder line.
+
+  A discrepancy MUST be classified only from a query that succeeded and
+  returned a parseable result. Any other outcome — the query tool absent,
+  unauthenticated, cancelled, rate-limited, failing for any reason, or
+  returning output that cannot be parsed — MUST resolve to `skipped` with the
+  reason recorded, MUST degrade to the workflow file, and MUST NOT be reported
+  or recorded as a discrepancy.
+
+  When the classification is `pr_closed` (`merged` true or false, carried on
+  the same class per the classification paragraph above), the terminal step
+  MUST NOT reopen the pull request and MUST NOT create a second one for the
+  branch; the workflow file's `Draft PR` row MUST be left unchanged as the
+  pointer to the closed pull request. The discrepancy MUST be logged through
+  the sink named above, and the stop report MUST name the discrepancy, the
+  closed pull request's number and URL, and the resume path — reopen the
+  pull request manually (for example `gh pr reopen <number>`) if the close
+  was unintended, then re-run the stage. This is a fail-open response: it
+  ends the emission attempt for the run without invoking FR-006's
+  strict-mode blocked-stop contract.
 - **FR-012**: When final reviewability later requires splitting the work across
   multiple pull requests, the draft pull request MUST become the first slice
   pull request of the stack rather than being closed or superseded, so the
@@ -302,6 +357,10 @@ value is the one used.
 - **Stop report**: The plan stage's terminal message to the operator. Carries
   the pull request URL, the artifact index, and resume instructions, or names
   the blocked gate when no pull request was opened.
+- **Corroboration outcome**: The result of comparing the draft-PR record
+  against the live pull request. One status from a closed set, the recorded
+  and observed identities, and a reason when the check could not run. Always
+  reported; durably recorded only when it is a discrepancy.
 
 ## Out of Scope
 
@@ -322,8 +381,11 @@ value is the one used.
 
 ### Measurable Outcomes
 
-- **SC-001**: 100% of plan stages whose final gate resolves pass or warn end
-  with an open draft pull request for the feature.
+- **SC-001**: 100% of plan stages whose final gate resolves pass or warn
+  either end with an open draft pull request for the feature, or — when the
+  recorded pull request was closed or merged outside automation — end with a
+  logged discrepancy and an operator-actionable stop report naming the
+  resume path.
 - **SC-002**: A reviewer can open every generated artifact directly from the
   pull request description without searching the branch: the index lists 100% of
   generated artifacts, each with a copy-paste open command.
@@ -364,7 +426,10 @@ value is the one used.
   creation. That push is what makes creation possible.
 - The command-line tool used to open and query pull requests is installed and
   authenticated in the environment where the stage runs. If it is not, emission
-  fails open per FR-010 rather than failing the stage.
+  fails open per FR-010 rather than failing the stage. The same applies to
+  corroboration: when the tool cannot be reached or cannot answer,
+  corroboration is skipped rather than treated as evidence that the recorded
+  pull request is gone.
 - The workflow file is the authoritative record of workflow state, inherited
   from the prior feature's OQ-4 decision. Live pull-request data corroborates it
   but never overrides it.

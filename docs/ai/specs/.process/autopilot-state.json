@@ -5,7 +5,7 @@
   "branch": "art-007-draft-pr-emission",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 2: Clarify - Session 2: Corroboration Discrepancy Classes",
+  "active_step": "Phase 2: Clarify - Session 3: Settled-Decision Verification",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
@@ -43,15 +43,15 @@
     },
     {
       "step": "Phase 2: Clarify - Session 2: Corroboration Discrepancy Classes",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Session 2: Corroboration Discrepancy Classes Consensus",
-      "status": "queued"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Session 3: Settled-Decision Verification",
-      "status": "queued"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Session 3: Settled-Decision Verification Consensus",
