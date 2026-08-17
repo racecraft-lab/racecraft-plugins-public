@@ -16,8 +16,8 @@ stop_reason: "natural"
 > **Source:** `docs/ai/specs/html-artifacts-technical-roadmap.md` § ART-005
 > **Date:** 2026-08-17
 > **Questions asked:** 8
-> **Stop reason:** natural — the scope, export contract, provenance, state model, failure path, port fidelity, UAT evidence, and accessibility baseline are resolved
-> **Blind-spot pass:** did not run — dispatch error: Full-history forked agents inherit the parent agent type; omit agent_type, or spawn without a full-history fork.
+> **Stop reason:** natural — the interview resolved the primary scope decisions; the remedial blind-spot pass left one semantic export-classification question for Clarify
+> **Blind-spot pass:** ran — 5 findings surfaced, 1 set aside
 
 ## Goals
 
@@ -29,9 +29,11 @@ stop_reason: "natural"
   and fresh estimator recommending two slices.
 - Resolve one immutable commit from `anthropics/html-effectiveness` during Plan
   research and use that same revision for all seven derivatives (Q3).
-- Keep the four read-only templates free of export controls and give the three
-  editors exactly one `Copy as Markdown` affordance, matching their manifest
-  declarations.
+- Verify whether the four templates currently declared with `exports: []` are
+  semantically read-only under the gallery contract. Keep them free of export
+  controls only when the pinned upstream interaction confirms consumption rather
+  than durable user-authored state; give the three known editors exactly one
+  `Copy as Markdown` affordance.
 - Serialize structured feature-flag and prompt-tuner state as a Markdown
   document containing fenced JSON, preserving lossless structured data without
   inventing a second export kind (Q2).
@@ -57,8 +59,10 @@ stop_reason: "natural"
 - Persistent editor content in `localStorage`, shareable URL state, server-side
   storage, or an import-back workflow.
 - Pixel-for-pixel reproduction of upstream styling or a ground-up redesign.
-- Export affordances on `slide-deck`, `concept-explainer`, `status-report`, or
-  `incident-report`; their manifest entries declare `exports: []`.
+- Unjustified export affordances on templates that are confirmed semantically
+  read-only. The current `exports: []` declarations for `slide-deck`,
+  `concept-explainer`, `status-report`, and `incident-report` remain unchanged
+  unless Clarify resolves the contract conflict from pinned upstream evidence.
 - Shared gallery-foundation changes. Each port embeds the canonical blocks and
   changes only its own catalog `status`, as required by `SPA-CONTRACT.md:60-71`.
 - Repairs to already-shipped templates owned by ART-020. ART-005 applies the
@@ -94,6 +98,11 @@ re-estimation (`.specify/memory/archive-reports/2026-08-14-art-003-post-merge-hy
 If the combined plan crosses the final reviewability block, planning must stop
 and surface the conflict rather than silently overriding either the user's
 one-slice decision or the repository gate.
+
+The roadmap's approximate file count covers authored surfaces, not the generated
+footprint. Plan must separately declare the regenerated Claude and Codex payload
+copies and installed-cache proof updates required by source/dist byte parity;
+generated mirrors remain excluded from hand-authored reviewable LOC.
 
 ## Design Tree (Q&A log)
 
@@ -312,10 +321,9 @@ need another interview turn.
 
 - **Catalog routing:** all seven entries remain `ad-hoc` and retain their
   existing identifiers, categories, guidance, triggers, sources, and exports.
-  Each port changes only its own `status` from `planned` to `shipped`.
-- **Read-only behavior:** `slide-deck`, `concept-explainer`, `status-report`, and
-  `incident-report` carry no export control because `exports: []` is an explicit
-  read-only declaration (`SPA-CONTRACT.md:384-390`).
+  Each port must land atomically with its own `status` change from `planned` to
+  `shipped`; neither files without status flips nor status flips without files
+  satisfy the gallery contract.
 - **Standalone delivery:** each artifact is one HTML file with no build step,
   bundler, preprocessing, or post-processing (`SPA-CONTRACT.md:17-25`).
 - **Export labels:** the exact control label is `Copy as Markdown`, never a
@@ -325,20 +333,36 @@ need another interview turn.
 - **No shared-foundation edits:** do not modify `brand-kit.css`,
   `theme-toggle.html`, `SPA-CONTRACT.md`, or another template's catalog row.
 - **Payload contract:** shipped gallery bytes affect the plugin payload, so the
-  implementation must regenerate release artifacts and installed-cache proofs
-  through authoritative repository tooling rather than editing generated files.
+  implementation must regenerate both Claude and Codex payload copies plus
+  installed-cache proofs through authoritative repository tooling rather than
+  editing generated files.
 - **Automated verification:** extend the Layer 4 gallery and fill-region
-  coverage for all seven templates, run Layer 1, and run the repository's
+  coverage for all seven templates, including semantic export agreement and the
+  ART-020 keyboard-scroll prevention pattern; run Layer 1 and the repository's
   generated-artifact consistency gates.
 
 ## Open Questions
 
 - **What:** Which immutable upstream commit and exact source-file digests form
   the seven-port baseline?
-  **Why deferred:** Resolving current external repository state is Plan research,
-  and the user chose the immutable policy rather than a specific revision.
+  **Why deferred:** The seven upstream source bytes are absent from both the
+  working tree and repository history. Resolving current external repository
+  state is Plan research, and the user chose the immutable policy rather than a
+  specific revision.
   **Suggested next step:** During Plan research, resolve one reachable commit,
   verify all seven manifest paths at it, and record the SHA and digests.
+
+- **What:** Are `slide-deck`, `concept-explainer`, `status-report`, and
+  `incident-report` genuinely read-only examples, or do any let the user produce
+  durable state that requires a Markdown export under SPA-CONTRACT.md?
+  **Why deferred:** Their current manifest rows declare `exports: []`, but row
+  descriptions such as “Report” and “Record” are not enough to prove the pinned
+  upstream interaction is consumption-only. Changing an export declaration from
+  the roadmap contract requires evidence rather than inference.
+  **Suggested next step:** During Clarify, inspect all four pinned sources and
+  record the semantic classification. Preserve `[]` for true readers; if any is
+  state-producing, stop and reconcile its roadmap, manifest, UI, and acceptance
+  contract before implementation.
 
 - **What:** What exact fill-region slot inventory and representative sample data
   does each template carry?
@@ -373,9 +397,6 @@ need another interview turn.
 
 ## Recommended Next Step
 
-Setup has already run in this dedicated worktree. The scaffold command writes
-the ART-005 workflow and SPEC-MOC marker next, then marks ART-005 In Progress in
-the technical roadmap.
-
-After scaffold completion, start the planning stage with the rooted handoff
-command printed by the scaffold workflow.
+Scaffold is complete in this dedicated worktree, including the remedial
+blind-spot findings folded into this design concept and the workflow. Start the
+planning stage with the rooted handoff command printed by the scaffold workflow.

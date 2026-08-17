@@ -33,7 +33,10 @@ docs/ai/specs/.process/ART-005-design-concept.md
 
 Re-read it before each phase if a prompt can be interpreted more than one way.
 The Specify and Clarify prompts below carry the interview decisions, and the
-design concept remains authoritative for decisions captured during scoping.
+design concept remains authoritative for decisions captured during scoping. A
+remedial blind-spot pass surfaced five findings and set one aside; four map to
+existing scaffold decisions, while the semantic read-only/export classification
+for four artifacts is now an explicit Open Question.
 
 > **Note:** Grill Me is human-in-the-loop only. It is not part of the autopilot
 > loop. Later ambiguity is handled by `/speckit-clarify` and the consensus
@@ -46,7 +49,7 @@ design concept remains authoritative for decisions captured during scoping.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ⏳ Pending | Three independently testable outcome groups; one combined implementation slice |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Resolve pinned source, fill slots, export schemas, UAT record, and size risk |
+| Clarify | `/speckit-clarify` | ⏳ Pending | Resolve pinned source, semantic read-only classification, fill slots, export schemas, UAT record, and size risk |
 | Plan | `/speckit-plan` | ⏳ Pending | Measure pinned upstream sources before accepting the combined slice |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Accessibility, UX, data-integrity, and error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | TDD ordering across seven templates and shared integration surfaces |
@@ -64,7 +67,7 @@ G6.5 is advisory by default. Record its verdict in Phase 6.5 when it runs.
 | Gate | Checkpoint | Approval Criteria |
 |------|------------|-------------------|
 | G1 | After Specify | All seven templates and three outcome groups are covered; no `[NEEDS CLARIFICATION]` marker remains unless deliberately routed to Clarify |
-| G2 | After Clarify | Pinned-source policy, fill slots, export schemas, UAT record, and reviewability uncertainty have an explicit disposition |
+| G2 | After Clarify | Pinned-source policy, semantic read-only classification, fill slots, export schemas, UAT record, and reviewability uncertainty have an explicit disposition |
 | G3 | After Plan | Constitution gates pass; the immutable upstream revision is recorded; declared file operations and a measured reviewability projection exist |
 | G4 | After Checklist | Every `[Gap]` from the four selected domains is fixed or explicitly deferred to a named owner |
 | G5 | After Tasks | Requirements map to ordered TDD tasks; the combined-slice checkpoint is explicit |
@@ -116,15 +119,21 @@ Before starting any workflow phase, verify alignment with
 | **Priority** | P2 |
 | **Roadmap** | `docs/ai/specs/html-artifacts-technical-roadmap.md` § ART-005 |
 | **Reviewability** | Fresh estimate: 555 LOC, warn, suggested two slices; user chose one combined slice |
+| **Blind-spot pass** | Ran remedially: 5 findings surfaced, 1 set aside; one new Open Question |
 
 ### Success Criteria Summary
 
 - [ ] All seven named template files exist as branded standalone HTML artifacts,
   and their own manifest rows change from `planned` to `shipped`.
-- [ ] `slide-deck`, `concept-explainer`, `status-report`, and `incident-report`
-  carry no export affordance; their `exports: []` declarations remain unchanged.
+- [ ] The four entries currently declared with `exports: []` are classified
+  against their pinned upstream interaction and SPA-CONTRACT.md semantics. True
+  readers remain export-free; any state-producing conflict is reconciled before
+  implementation rather than silently preserving or changing the declaration.
 - [ ] `triage-board`, `feature-flags`, and `prompt-tuner` each expose exactly one
   keyboard-operable `Copy as Markdown` control derived from live session state.
+- [ ] Any additional template classified as state-producing during Clarify has
+  its roadmap, manifest, UI, and acceptance contract reconciled before work
+  begins; no export change is inferred from wording alone.
 - [ ] Feature-flags and prompt-tuner serialize structured state as deterministic
   fenced JSON inside Markdown; no JSON export kind is added.
 - [ ] Clipboard refusal or failure reveals and focuses the exact export text in
@@ -135,7 +144,7 @@ Before starting any workflow phase, verify alignment with
   reference generation pass after payload regeneration.
 - [ ] A tracked runbook and durable result record show all seven templates
   passing manual `file://` acceptance, including genuine clipboard and forced
-  fallback paths for all three editors.
+  fallback paths for every confirmed state-producing artifact.
 
 ---
 
@@ -161,16 +170,19 @@ Read these sources before writing the specification:
 
 ### Problem Statement
 The gallery already catalogs seven knowledge, report, and editor templates as
-planned, but their standalone artifacts do not exist. Readers cannot use the
-four read-only formats, and operators cannot compose and carry configuration
-out of the three editors. ART-005 completes this catalog segment with branded,
-accessible ports and a tested export-back loop.
+planned, but their standalone artifacts do not exist and their rows remain
+`planned`. The roadmap currently treats four as read-only and three as editors;
+the pinned upstream interaction must verify that semantic classification before
+implementation. ART-005 completes this catalog segment with branded, accessible
+ports, atomic file/status delivery, and every contract-required export loop.
 
 ### Users and User Stories
 1. A reader opens a deck or concept explainer over file:// and can understand
-   its representative content without producing or exporting state.
+   its representative content; Clarify confirms whether the interaction is
+   consumption-only before fixing the export requirement.
 2. A reader opens a status or incident report over file:// and can inspect a
-   complete, representative report without an export affordance.
+   complete, representative report; any state-producing behavior is reconciled
+   with the export contract before implementation.
 3. An operator edits a triage board, feature-flag configuration, or prompt,
    then copies deterministic Markdown derived from current session state and
    can recover the same text manually when clipboard access fails.
@@ -194,8 +206,11 @@ single combined slice selected by the operator.
 - Preserve the core upstream content/interaction model, but apply Racecraft
   branding, canonical embedded blocks, the single-file contract, accessibility,
   and gallery fill-region conventions.
-- Four read-only entries retain exports: []. Three editors retain
-  exports: ["markdown"] and use the exact label Copy as Markdown.
+- The four entries currently declared with exports: [] are a deliberate
+  `[NEEDS CLARIFICATION]`: inspect their pinned upstream interaction and apply
+  SPA-CONTRACT.md's semantic producer/reader rule. Do not change or preserve an
+  export declaration based only on the manifest description. The three known
+  editors retain exports: ["markdown"] and use the exact label Copy as Markdown.
 - Feature-flags and prompt-tuner put lossless structured state in fenced JSON
   inside Markdown. Triage-board exports human-readable Markdown by column.
 - Editor content is memory-only and resets on reload; existing theme preference
@@ -221,7 +236,8 @@ topology decision; do not silently split or invent an exception.
   content, shareable URL state, or server storage.
 - Pixel-perfect upstream styling or a ground-up redesign.
 - Shared gallery foundation changes or repairs to already-shipped templates.
-- Export controls on the four read-only templates.
+- Export controls on any template confirmed as a semantic reader, and any
+  export-declaration change made without resolving the pinned-source conflict.
 ```
 
 ### Specify Results
@@ -243,7 +259,7 @@ topology decision; do not silently split or invent an exception.
 |--------|---------|-------------|
 | `[US1]`, `[US2]`, `[US3]` | User-story reference | Knowledge/deck, reports, interactive editors |
 | `[FR-xxx]` | Functional requirement | Map every gallery, export, accessibility, and UAT obligation |
-| `[NEEDS CLARIFICATION]` | Deliberate Clarify input | Only the five Open Questions from the design concept |
+| `[NEEDS CLARIFICATION]` | Deliberate Clarify input | Only the six Open Questions from the design concept |
 | `[P]` | Parallel-safe task | Different template files only; never shared manifest/test/generated surfaces |
 | `[Gap]` | Missing coverage | Must be closed before implementation |
 
@@ -267,6 +283,10 @@ docs/ai/specs/.process/ART-005-design-concept.md first.
 Resolve only ambiguities that remain after inspecting the upstream repository:
 - the one immutable upstream commit shared by all seven ports;
 - exact source paths and a reproducible digest/identity record;
+- whether slide-deck, concept-explainer, status-report, and incident-report are
+  semantic readers or state-producing tools under SPA-CONTRACT.md; preserve
+  exports: [] only for readers, and stop for contract reconciliation if any
+  pinned source produces durable user-authored state;
 - each template's preserved core mechanism and intentionally changed behavior;
 - exact fill-region slot inventory, slot cardinality, and minimum representative
   sample content for all seven templates;
@@ -353,9 +373,15 @@ shipped templates, and the ART-003 post-merge hygiene report.
 ## Required Research
 - Resolve and record one immutable commit in anthropics/html-effectiveness that
   contains all seven manifest source files. Record repository, commit, retrieval
-  date, file paths, and digests. Keep retrieved upstream bytes outside the repo.
+  date, file paths, and digests. The source bytes are absent from the working
+  tree and git history, so retrieval must be explicit and reproducible. Keep
+  retrieved upstream bytes outside the repo.
 - Inspect each source and state exactly which content/interaction mechanism is
   preserved and what changes to meet Racecraft contracts.
+- For slide-deck, concept-explainer, status-report, and incident-report, record
+  whether the pinned interaction is consumption-only or lets the user produce
+  durable state. Reconcile any state-producing result with the roadmap,
+  manifest, UI, and acceptance contract before design completion.
 - Inspect shipped templates for canonical block placement, fill markers,
   accessible export/fallback behavior, keyboard scroll regions, theme behavior,
   and representative sample-content patterns.
@@ -378,10 +404,12 @@ shipped templates, and the ART-003 post-merge hygiene report.
 
 ## Required Architecture and File Operations
 - Declare each of the seven NEW template paths individually.
-- Declare manifest.json and every modified Layer 4 test file individually.
+- Declare manifest.json and every modified Layer 4 test file individually. The
+  seven template files and their seven `planned` → `shipped` status flips are
+  one atomic gallery-contract operation.
 - Declare the chosen UAT runbook and result-record paths.
-- Identify generated payload/reference/proof files as generated operations, never
-  hand-edited sources of truth.
+- Identify both Claude and Codex payload copies plus reference/proof files as
+  generated operations, never hand-edited sources of truth.
 - Keep all template implementations independent. Shared integration changes are
   serialized: manifest rows, fill-region literals, payload generation, docs test
   reference generation, and final suite execution.
@@ -399,10 +427,11 @@ applies, and the one-slice interview answer cannot be silently overwritten.
 ## Verification Design
 - Write or extend focused Layer 4 assertions before each implementation group.
 - Cover manifest/file agreement, canonical blocks, fill inventories and minimums,
-  read-only/export agreement, exact labels, live-state exports, fallback fields,
-  keyboard/named scroll regions, semantic status, and prohibited constructs.
-- Define manual file:// checks for every artifact and behavioral checks for all
-  three editor success/failure paths.
+  semantic reader/producer export agreement, exact labels, live-state exports,
+  fallback fields, keyboard/named scroll regions including the ART-020 failure
+  pattern, semantic status, and prohibited constructs.
+- Define manual file:// checks for every artifact and behavioral checks for every
+  confirmed state-producing artifact, including the three known editors.
 - Regenerate release artifacts with scripts/refresh-release-artifacts.py after
   source changes; regenerate docs test references after tests/speckit-pro changes.
 - End with Layer 1, Layer 4, the full suite, generated-artifact consistency, and
@@ -460,7 +489,8 @@ Pay special attention to preventing the keyboard-scroll defect documented by ART
 Focus on ART-005 requirements:
 - functional fidelity for each pinned upstream source without pixel-copying;
 - representative sample content and clear empty/boundary states;
-- four honestly read-only templates versus three state-producing editors;
+- evidence-backed reader/producer classification rather than trusting the four
+  current empty export arrays by declaration alone;
 - session reset behavior and explicit Copy as Markdown feedback;
 - consistent gallery branding, responsive layouts, and file:// usability.
 Pay special attention to whether each editor makes the exported state predictable.
@@ -525,7 +555,8 @@ intentional deferral. No unresolved gap reaches Tasks.
 
 Read spec.md, plan.md, research.md, contracts/, quickstart.md, and
 docs/ai/specs/.process/ART-005-design-concept.md. The design concept is the
-source of truth for the one-slice decision and the eight human-approved answers.
+source of truth for the one-slice decision, the eight human-approved answers,
+and the six Open Questions including semantic reader/producer classification.
 
 ## Task Structure
 - Use strict RED → GREEN → REFACTOR ordering for every behavior.
@@ -539,10 +570,12 @@ source of truth for the one-slice decision and the eight human-approved answers.
 ## Implementation Phases
 1. Baseline and contracts: record pinned upstream evidence, finalize fill/export
    contracts, add failing Layer 4 assertions, and confirm the combined budget.
-2. Read-only knowledge artifacts: slide-deck and concept-explainer, each proven
-   independently over file:// with no export affordance.
-3. Read-only reports: status-report and incident-report, each proven independently
-   over file:// with no export affordance.
+2. Provisionally read-only knowledge artifacts: after Clarify confirms their
+   semantic classification, implement slide-deck and concept-explainer and prove
+   each independently over file:// against its resolved export contract.
+3. Provisionally read-only reports: after Clarify confirms their semantic
+   classification, implement status-report and incident-report and prove each
+   independently over file:// against its resolved export contract.
 4. Interactive editors: triage-board, feature-flags, and prompt-tuner, each with
    live-state Markdown, clipboard success, forced fallback, keyboard, and edge tests.
 5. Serialized integration: flip only the seven status values, complete shared
@@ -554,7 +587,8 @@ source of truth for the one-slice decision and the eight human-approved answers.
 ## Non-goal Guardrails
 - No workflow routing, JSON export kind, download, persistent content, import,
   URL state, server storage, shared gallery abstraction, shared foundation edit,
-  existing-template repair, or read-only export control.
+  existing-template repair, or export-control change without a resolved semantic
+  classification and reconciled contract.
 - Preserve functional fidelity without carrying upstream visual defects.
 - Do not hand-edit payloads, installed-cache proofs, generated reference pages,
   or generated spec-index zones.
@@ -562,10 +596,14 @@ source of truth for the one-slice decision and the eight human-approved answers.
 ## Required Verification Tasks
 - Focused Layer 4 gallery and fill-region tests fail before implementation and
   pass afterward.
+- Tests prove each template file lands atomically with its `planned` → `shipped`
+  manifest update, semantic export agreement, and the ART-020 keyboard-scroll
+  prevention rule.
 - Layer 1, Layer 4, full suite, payload consistency, and generated docs reference
   checks pass on final bytes.
 - Manual file:// UAT covers all seven templates and both clipboard outcomes for
-  each editor, with a tracked runbook and tested-commit result record.
+  each confirmed state-producing artifact, with a tracked runbook and
+  tested-commit result record.
 ```
 
 ### Tasks Results
@@ -613,8 +651,9 @@ docs/ai/specs/.process/ART-005-design-concept.md as one system.
 
 Focus on:
 1. Constitution alignment and SPA-CONTRACT.md compliance.
-2. Complete traceability for all seven templates, three editor exports, four
-   read-only declarations, accessibility, generated artifacts, and durable UAT.
+2. Complete traceability for all seven templates, the resolved semantic
+   reader/producer classifications, every required export, accessibility,
+   generated artifacts, and durable UAT.
 3. Drift from the design concept's Goals, Non-goals, Q1-Q8 answers, or Open
    Questions. The design concept wins for human-approved scoping decisions.
 4. Whether the pinned source evidence, fill inventories, export examples, and
@@ -692,8 +731,10 @@ For every behavior:
    branch and one-slice topology.
 3. Confirm the pinned upstream commit and all seven file digests are recorded and
    retrievable; keep upstream bytes outside the worktree.
-4. Run the relevant Layer 1/Layer 4 baseline and record it.
-5. Run the plan reviewability gate. Stop on block unless the operator has supplied
+4. Confirm Clarify reconciled the four provisional `exports: []` declarations
+   against the pinned source interactions; stop if any conflict remains open.
+5. Run the relevant Layer 1/Layer 4 baseline and record it.
+6. Run the plan reviewability gate. Stop on block unless the operator has supplied
    a valid topology decision; do not invent a typed exception.
 
 ## Implementation Guidance
@@ -703,8 +744,10 @@ For every behavior:
   shipped templates and do not create a common runtime abstraction.
 - Preserve representative content and each source's core mechanism while applying
   Racecraft tokens, responsive behavior, accessibility, and fill markers.
-- Keep four artifacts read-only. Give each editor exactly one Copy as Markdown
-  button using live session state.
+- Apply the resolved semantic classification: confirmed readers carry no export
+  control; every confirmed producer has its reconciled manifest declaration and
+  exactly one contract-compliant Copy as Markdown control using live session
+  state. The three known editors remain producers.
 - Use deterministic fenced JSON inside Markdown for feature-flags and prompt-tuner;
   use deterministic column-based Markdown for triage-board.
 - Handle clipboard unavailable, rejected, and throwing paths with the same exact
@@ -712,7 +755,8 @@ For every behavior:
 - Apply named keyboard scroll regions, visible focus, semantic live status,
   color-independent meaning, dark/light parity, and reduced-motion behavior.
 - Serialize shared manifest/test/generated work after template-local changes.
-- Regenerate release artifacts with python3 scripts/refresh-release-artifacts.py.
+- Regenerate both Claude and Codex payload copies plus proofs with python3
+  scripts/refresh-release-artifacts.py.
 - Because tests/speckit-pro files change, run pnpm --dir docs-site
   reference:generate and keep the generated reference page authoritative.
 - Run focused gates while iterating, then Layer 1, Layer 4, and
