@@ -5,7 +5,7 @@
   "branch": "art-007-draft-pr-emission",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 1: Specify",
+  "active_step": "Phase 2: Clarify - Session 1: Draft-PR Row Protocol",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
@@ -31,11 +31,11 @@
     },
     {
       "step": "Phase 1: Specify",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Session 1: Draft-PR Row Protocol",
-      "status": "queued"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Session 1: Draft-PR Row Protocol Consensus",
@@ -152,5 +152,12 @@
     "l1": 1447,
     "l4": 5766,
     "l5": 186
+  },
+  "gates": {
+    "G1": {
+      "pass": true,
+      "markers_bare": 0,
+      "markers_colon_form": 3
+    }
   }
 }

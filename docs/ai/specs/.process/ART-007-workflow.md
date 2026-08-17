@@ -32,7 +32,7 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | G1 pass — 12 FRs, 3 user stories, 12 acceptance scenarios, 8 success criteria, 3 colon-form markers routed to Clarify |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Sessions verify the settled Q1–Q7 decisions and pin the two protocol details |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | error-handling, state-management |
@@ -318,19 +318,30 @@ limb with no draft PR to corroborate against.
 
 ### Specify Results
 
-<!-- Fill in after running the command -->
-
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
-| Success Criteria | |
-| `[NEEDS CLARIFICATION]` markers | |
+| Functional Requirements | FR-001 through FR-012 (12) |
+| User Stories | 3 (US1 orchestrator emission P1; US2 artifact-author generation P2; US3 auto-detect corroboration P3) |
+| Acceptance Criteria | 12 acceptance scenarios (US1=4, US2=5, US3=3) + 7 edge cases |
+| Success Criteria | SC-001 through SC-008 (8) |
+| `[NEEDS CLARIFICATION]` markers | 3 — all colon form, at FR-007 (re-entry with an existing draft-PR row: NEW fork, not from the design concept), FR-009 (row name/format/placement — clarify session focus 1), FR-011 (discrepancy log format and per-class behavior — clarify session focus 2) |
+
+**G1 PASS (routing: Clarify required).** Runner `validate-gate` returned
+`{"gate":"G1","pass":true,"reason":"spec.md exists with 0 markers","markers":0}`.
+That helper counts only the bare literal; an independent
+`/usr/bin/grep -c "NEEDS CLARIFICATION"` shows **3** colon-form markers
+(spec.md lines 201, 213, 223), so Clarify runs on real input. A privacy grep
+(`/(Users|home)/`) confirms no absolute path leaked into either authored file.
+
+The spec's own Reviewability Budget re-derives the figures this workflow
+records under the Reviewability Setup Gate: primary surface harness/adapter,
+~287 projected reviewable LOC (modify-weighted), ~10 production files, ~14
+total files, within budget, one slice, no exception claimed.
 
 ### Files Generated
 
-- [ ] `specs/art-007-draft-pr-emission/spec.md`
+- [x] `specs/art-007-draft-pr-emission/spec.md`
+- [x] `specs/art-007-draft-pr-emission/checklists/requirements.md`
 
 ### SpecKit Traceability Markers
 
