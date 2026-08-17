@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -33,30 +33,20 @@
 
 - Items marked incomplete require spec updates before `/speckit-clarify` or `/speckit-plan`
 
-### Outstanding: three `[NEEDS CLARIFICATION]` markers
+### Resolved: all three markers closed in Clarify
 
-Three markers remain, deliberately, and are the Clarify phase's input. Each has
-multiple reasonable interpretations with different behavioral implications, and
-no defensible default:
-
-1. **FR-007** — re-entry behavior when a draft pull request is already recorded
-   and open. Refresh in place, or skip emission and report the existing URL?
-   Highest impact of the three: the wrong answer opens duplicate pull requests.
-2. **FR-009** — exact row name, column format, and placement of the draft-PR
-   record on the workflow file's status surface. The design concept fixed the
-   contract (workflow file only, number plus URL) and deliberately left the row
-   syntax to be resolved against the workflow-file protocol reference. Carried
-   from the design concept's Open Questions as "clarify session focus 1".
-3. **FR-011** — discrepancy log format and sink, and per-class auto-detect
-   behavior (pull request closed, missing, or identity mismatch). The contract
-   is fixed (workflow file wins, discrepancy logged); the behavior detail is
-   not. Carried as "clarify session focus 2".
+Session 1 closed FR-007 (dual existence test, refresh in place) and FR-009
+(single `Draft PR` row in Basic Information) and added FR-013. Session 2
+closed FR-011 (six-status corroboration vocabulary, three sinks, success-gated
+classification, `pr_closed` response), two items through consensus. Zero
+markers remain; see the Clarify Results and Consensus Resolution Log in the
+ART-007 workflow file.
 
 The interactive question-and-answer step the specify command prescribes for
 unresolved markers was **not** run: this specification was authored inside an
-autonomous phase with no human in the loop, and the Clarify phase owns marker
-resolution through the consensus protocol. The markers are recorded rather than
-guessed so that resolution is deliberate and auditable.
+autonomous phase with no human in the loop, and the Clarify phase owned marker
+resolution through the consensus protocol. The markers were recorded rather
+than guessed so that resolution was deliberate and auditable.
 
 ### Note on "No implementation details"
 

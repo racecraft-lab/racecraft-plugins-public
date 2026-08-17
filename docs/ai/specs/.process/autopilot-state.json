@@ -5,7 +5,7 @@
   "branch": "art-007-draft-pr-emission",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 2: Clarify - Session 3: Settled-Decision Verification",
+  "active_step": "Phase 3: Plan",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
@@ -51,15 +51,15 @@
     },
     {
       "step": "Phase 2: Clarify - Session 3: Settled-Decision Verification",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Session 3: Settled-Decision Verification Consensus",
-      "status": "queued"
+      "status": "completed"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "queued"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
@@ -158,6 +158,12 @@
       "pass": true,
       "markers_bare": 0,
       "markers_colon_form": 3
+    },
+    "G2": {
+      "pass": true,
+      "markers": 0,
+      "sessions": 3,
+      "consensus_rounds": 3
     }
   }
 }

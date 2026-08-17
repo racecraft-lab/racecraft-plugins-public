@@ -33,7 +33,7 @@ captured during scoping.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 12 FRs, 3 user stories, 12 acceptance scenarios, 8 success criteria, 3 colon-form markers routed to Clarify |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Sessions verify the settled Q1–Q7 decisions and pin the two protocol details |
+| Clarify | `/speckit-clarify` | ✅ Complete | G2 pass — 3 sessions, 15 questions/findings, 3 consensus rounds (Q4 3-of-3, Q5 and F1 2-of-2), 0 markers remain |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | error-handling, state-management |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -132,6 +132,11 @@ Advisory `estimate-spec-size` with the enriched post-interview signals
 output, no hand adjustment. 327 sits under the 400 warn ceiling and the
 slice is end-to-end (artifact generation → commit → draft PR → stop
 report), so no split question was warranted.
+
+*Amended at Clarify session 3:* FR-013 (added in session 1) moves the FR
+signal to 13, and the estimator formula then yields
+`{"estimated_loc": 335, "status": "ok", "suggested_slices": 1}` — status and
+slice count unchanged, so the split decision stands.
 
 ### Phase 0 Prerequisites (recorded at run time, 2026-08-17)
 
@@ -410,7 +415,7 @@ fail-open zero-artifact case still opens the PR with a gap-marked index.
 |---------|------------|-----------|--------------|
 | 1 | Draft-PR row protocol + FR-007 re-entry | 5 | All accepted, 0 to consensus. FR-007 rewritten: refresh-in-place with a dual existence test (workflow record OR live head-branch query); closed/merged PR routes to FR-011, never a second PR. FR-009 rewritten: single `Draft PR` linked row in Basic Information (never Workflow Overview), absent-before-creation is the legal empty state, no template placeholder. NEW FR-013: emission order = artifacts → boundary commit → push → create/refresh → record → separate bookkeeping commit; boundary-commit contract untouched. **Spec defect fixed:** the assumption that the boundary step pushes was false (the shipped boundary block has no push; the only shipped push lives in the post-G7 PR Creation Protocol) — the terminal step owns its push. Markers 3 → 1 |
 | 2 | Corroboration discrepancy classes (FR-011) | 5 | Q1-Q3 accepted directly; Q4+Q5 through consensus. FR-011 rewritten as four paragraphs: closed six-status vocabulary (`match`, `no_record`, `skipped`, `pr_closed` carrying merged, `pr_missing`, `identity_mismatch` — only the last three are discrepancies), precedence order, classification inside the stage-resolution helper from one orchestrator-supplied by-branch observation; three sinks by role (envelope always, run-report line always, workflow file discrepancies-only); success-gated classification (only exit-0 + parseable JSON may assert a discrepancy — everything else is `skipped`, never a false `pr_missing`); `pr_closed` at emission = log + no reopen + no second PR + operator-actionable stop report (consensus overrode the executor's reopen recommendation). SC-001 gained the closed-or-merged carve-out; US3 scenario 4 and a new edge case added. Markers 1 → 0 |
-| 3 | | | |
+| 3 | Settled-decision verification (8 checks) | 5 findings | All 8 checks PASS; 5 findings, none re-opening a settled decision. F1 (pr_missing had no emission-time behavior) resolved via consensus → mirrors pr_closed: no creation, no row rewrite, log + operator-actionable stop report; SC-001 carve-out extended to "no longer observable"; new edge case. F2: SC-003/SC-006 gained the discrepancy carve-outs SC-001 already had. F3: requirements checklist updated from "three markers outstanding" to resolved. F4: FR-010 stop-report enumeration gained the discrepancy shape. F5: budget bookkeeping corrected to 13 FRs → estimator 335/ok/1 slice (split decision unchanged). Markers stay 0 |
 
 ### Consensus Resolution Log
 
@@ -418,6 +423,7 @@ fail-open zero-artifact case still opens the PR with a gap-marked index.
 |---|------|-----------|----------|-------|---------|------------------|
 | 1 | How is "could not check" separated from "checked and the PR is missing", so gh-unavailable never logs a false discrepancy? (Session 2 Q4) | `[security]` | codebase-analyst, spec-context-analyst, domain-researcher (all 3, mandatory for `[security]`) | 1 | **3-of-3 AGREE, high confidence → success-gated classification.** Only an exit-0, parseable by-branch observation may produce a discrepancy; every other outcome is `skipped` with reason, degrades to the workflow file, and is never a discrepancy. Domain researcher strengthened the case empirically on gh v2.96.0: exit 4 does not fire for an invalid/revoked token (only for zero credentials), so exit-code mapping is even less reliable than proposed — the only safe discriminator is exit 0 plus parseable JSON, collapsed uniformly. Codebase analyst grounded the shape in `git_worktree_status` (unavailable never resolves to "clean") and `runner_identity_mismatch` (classification only after successful parse); spec-context analyst grounded it in the OQ-4 wording ("discrepancy" presupposes two known values) and ART-012's shipped fail-open sentence naming ART-007 as its precedent. | spec.md FR-011 paragraph 3, US3 scenario 4, gh assumption amendment |
 | 2 | Emission-time behavior when the recorded draft PR is closed or merged (Session 2 Q5) | `[spec]`, `[codebase]` | spec-context-analyst, codebase-analyst | 1 | **2-of-2 PREFER B refined (0.90, 0.83; synthesizer 0.87), overriding the executor's reopen recommendation.** No `gh pr reopen` (zero shipped uses; mutation vocabulary is create/edit/comment-resolve only), no second PR, `Draft PR` row left intact as the durable pointer; discrepancy logged, stop report names the closed PR and the operator resume path (`gh pr reopen <number>` manually if the close was unintended). OQ-4 authority is epistemic, not actuation; closed and merged stay one response class, matching FR-007's existing tail sentence. Executor's dissenting Option A recorded for visibility. | spec.md FR-011 paragraph 4, SC-001 carve-out, new edge case; FR-007 tail kept verbatim |
+| 3 | Emission-time behavior when corroboration classifies `pr_missing` (Session 3 F1) | `[spec]`, `[codebase]` | spec-context-analyst, codebase-analyst | 1 | **2-of-2 PREFER A (0.85+ each): mirror the settled `pr_closed` response.** No creation, no `Draft PR` row rewrite; discrepancy logged through the same sinks; stop report names the recorded identity and the manual resume path (correct or clear the row, re-run). Decisive: FR-007's existence test is an OR-gate — the record alone is a standing positive, so creation while the row stands violates the invariant session 1 built to kill the duplicate-PR failure mode; `pr_missing` on GitHub usually means a wrong/corrupt record or an invisible-but-live PR, exactly when a second PR duplicates the review surface; the discrepancy vocabulary stays behaviorally uniform (log + report + no mutation). Reading B (create on a stale record) rejected 2-of-0. | spec.md FR-011 paragraph 5, SC-001 "no longer observable" extension, new pr_missing edge case |
 
 ---
 

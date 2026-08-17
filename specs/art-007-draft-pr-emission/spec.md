@@ -162,6 +162,11 @@ value is the one used.
   It logs the discrepancy, leaves the workflow file's `Draft PR` row
   unchanged, and the stop report names the discrepancy and the resume path.
   See FR-011.
+- **Re-entering a stage whose recorded pull request cannot be observed.**
+  The record names a pull request the successful live query does not return
+  (`pr_missing`). The run creates nothing and rewrites nothing; it logs the
+  discrepancy, and the stop report names the recorded identity and the
+  manual resume path (correct or clear the row, then re-run). See FR-011.
 - **Pull request creation itself fails.** The artifacts are already committed on
   the branch, so the planning work is not lost. The stop report must say the
   pull request could not be opened and name the resume path, rather than
@@ -242,7 +247,9 @@ value is the one used.
   artifact index, and resume instructions when emission ran; when the gate
   blocked, it MUST name the blocked gate in place of a URL; when emission was
   attempted but the pull request could not be opened, it MUST say so and name
-  the resume path.
+  the resume path; and when a corroboration discrepancy ended the emission
+  attempt, it MUST carry the discrepancy shape FR-011 specifies for that
+  status.
 - **FR-011**: Stage auto-detect MUST corroborate the workflow file's draft-PR
   record against the live pull request and MUST treat the workflow file as
   authoritative in every outcome: corroboration MUST NOT change the resolved
@@ -294,6 +301,14 @@ value is the one used.
   was unintended, then re-run the stage. This is a fail-open response: it
   ends the emission attempt for the run without invoking FR-006's
   strict-mode blocked-stop contract.
+
+  When the classification is `pr_missing`, the terminal step MUST NOT create
+  a pull request for the branch and MUST NOT rewrite the `Draft PR` row; the
+  discrepancy MUST be logged through the sinks named above, and the stop
+  report MUST name the discrepancy, the recorded number and URL, and the
+  resume path — correct or clear the row manually, then re-run the stage.
+  Like `pr_closed`, this is a fail-open response and does not invoke FR-006's
+  strict-mode blocked-stop contract.
 - **FR-012**: When final reviewability later requires splitting the work across
   multiple pull requests, the draft pull request MUST become the first slice
   pull request of the stack rather than being closed or superseded, so the
@@ -319,9 +334,11 @@ value is the one used.
 - **Secondary surfaces, if any**: docs/process
 - **Projected reviewable LOC**: ~287 (modify-weighted, excluding generated
   payloads and installed-cache proofs). The advisory size estimator, given three
-  user stories, ten production files, twelve functional requirements, and a
-  modify-weighted profile, returned `{"estimated_loc": 327, "status": "ok",
-  "suggested_slices": 1}`.
+  user stories, ten production files, thirteen functional requirements, and a
+  modify-weighted profile, returns `{"estimated_loc": 335, "status": "ok",
+  "suggested_slices": 1}`. The twelve-FR run recorded at specify time returned
+  327; FR-013 was added in Clarify session 1 and moves neither the status nor
+  the slice count.
 - **Projected production files**: ~10
 - **Projected total files**: ~14
 - **Budget result**: within budget
@@ -383,15 +400,17 @@ value is the one used.
 
 - **SC-001**: 100% of plan stages whose final gate resolves pass or warn
   either end with an open draft pull request for the feature, or — when the
-  recorded pull request was closed or merged outside automation — end with a
-  logged discrepancy and an operator-actionable stop report naming the
-  resume path.
+  recorded pull request was closed, merged, or no longer observable outside
+  automation — end with a logged discrepancy and an operator-actionable stop
+  report naming the resume path.
 - **SC-002**: A reviewer can open every generated artifact directly from the
   pull request description without searching the branch: the index lists 100% of
   generated artifacts, each with a copy-paste open command.
-- **SC-003**: A generation failure never prevents the review hand-off. 100% of
-  pass or warn runs open the pull request, including runs that produce zero
-  artifacts, and every shortfall is visible in all three places: the index, the
+- **SC-003**: A generation failure never prevents the review hand-off. No pass
+  or warn run is prevented from opening the pull request by a generation
+  failure, including runs that produce zero artifacts (the only non-opening
+  cases are the FR-011 discrepancy responses, which are not generation
+  failures), and every shortfall is visible in all three places: the index, the
   stop report, and the workflow record.
 - **SC-004**: 100% of strict-mode blocked plan stages produce no pull request,
   and their stop report names the blocking gate.
@@ -400,7 +419,9 @@ value is the one used.
   where a record exists.
 - **SC-006**: The operator needs no follow-up action to hand off for review: the
   stop report alone carries the link, the artifact index, and the resume
-  instruction.
+  instruction; when FR-011 records a discrepancy instead, the stop report alone
+  carries the discrepancy, the recorded pull request's identity, and the manual
+  resume path.
 - **SC-007**: 100% of emitted pull-request titles pass the repository's
   release-readiness title shape check at creation time, before any human edit.
 - **SC-008**: Pull-request flows for completed implementations are unaffected:
