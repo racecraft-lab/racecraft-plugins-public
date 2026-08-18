@@ -4,7 +4,7 @@
   "feature_dir": "specs/art-007-draft-pr-emission",
   "branch": "art-007-draft-pr-emission",
   "status": "in_progress",
-  "stage": "plan",
+  "stage": "implement",
   "active_step": null,
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
@@ -95,55 +95,79 @@
     },
     {
       "step": "Phase 7: Implement",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "in_progress"
+    },
+    {
+      "step": "Phase 7: Implement - Task Phase 1 Setup (T001-T003)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Task Phase 2 Foundational draft packet mode (T004-T011)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Task Phase 3 US1 draft-PR emission (T012-T027)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Task Phase 4 US2 artifact authoring (T028-T034)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Task Phase 5 US3 stage corroboration (T035-T043)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Task Phase 6 Polish and regeneration (T044-T054)",
+      "status": "pending"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "pending"
     },
     {
       "step": "Post: Code Review",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "pending"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "pending"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "pending"
     },
     {
       "step": "Post: Self-Review",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "pending"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "pending"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "pending"
     },
     {
       "step": "Post: PR Creation",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "pending"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "pending"
     },
     {
       "step": "Post: Retrospective",
-      "status": "skipped: outside the resolved plan stage"
+      "status": "pending"
     }
   ],
   "test_baseline_g0": {

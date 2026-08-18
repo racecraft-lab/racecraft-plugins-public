@@ -235,6 +235,13 @@ value is the one used.
   (verification evidence, changed-file scope evidence, and hands-on acceptance
   instructions) are conditionally relaxed for that mode only. Validation
   behavior for the two pre-existing modes MUST be unchanged.
+  The conditionality is not confined to those three evidence requirements.
+  Because FR-008 gives a draft description its own two-block body, every packet
+  field that pins the reviewer-packet body shape MUST become conditional on mode
+  as well — the required-heading set, the editable-prose field set, and the
+  declared acceptance-runbook heading. A draft packet that relaxed only the
+  three evidence requirements would still be rejected by its own validator, so
+  this is one requirement rather than two.
 - **FR-006**: Draft-PR emission MUST run only when the plan stage's final gate
   resolves pass or warn. On a strict-mode block, the existing terminal-step
   contract — boundary commit, non-terminal blocked row, STOP — MUST be preserved

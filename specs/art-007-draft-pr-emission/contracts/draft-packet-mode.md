@@ -31,28 +31,137 @@ own validation record unrepresentable.
 
 ### 1.2 Draft relaxations, as a second `allOf` branch
 
-Added alongside the existing `split_slice` branch, not merged into it:
+Added alongside the existing `split_slice` branch, not merged into it.
+
+**Amended at implementation time, 2026-08-18. A `then` branch cannot relax a
+constraint.** This section first specified the relaxation as a `then` arm
+restating `minItems: 0`. That does not work, in this validator or in JSON Schema
+generally: `allOf` branches are conjunctive, so a branch's `minItems: 0` is
+intersected with the top-level `minItems: 1` rather than replacing it, and the
+stricter bound wins. A draft packet with empty `verification_evidence` would
+still have failed `min_items` — the exact defect this contract's own §3 warns
+about, one level lower down.
+
+Proof, run against the shipped `json_schema_failures` at
+`speckit-pro/speckit_pro_runner/helpers/read_only.py:2369-2378`: the original
+shape returns `packet.schema.min_items packet.verification_evidence` for
+`{"mode": "draft", "verification_evidence": []}`; the shape below returns no
+failures for that same document, and still returns `min_items` for
+`{"mode": "single", "verification_evidence": []}`.
+
+The relaxation therefore **inverts**: the strict bound moves off the top-level
+property and into an `else` arm that binds every non-draft mode.
+
+Top-level bounds become permissive on exactly three keys:
+
+| Key | Was | Becomes |
+| --- | --- | --- |
+| `verification_evidence` | `minItems: 1` | `minItems: 0` |
+| `scope_evidence.changed_files` | `minItems: 1` | `minItems: 0` |
+| `uat.how_to_uat` | `minLength: 1` | `minLength: 0` |
+
+And the strictness is restated for every other mode, in the `else` arm of the
+same branch. The full branch is given in §1.2.2, because three further sites
+join it.
+
+`scope_evidence.non_goals` keeps `minItems: 1` and is **not** relaxed. A draft
+packet states its non-goals; only evidence a plan stage cannot yet have produced
+is relaxed.
+
+### 1.2.1 Three further sites pin the single/split shape
+
+Also found at implementation time, 2026-08-18. §1.2 named three keys. The schema
+pins the reviewer-packet shape at **three more**, and each one rejects the draft
+body this contract's own §4 mandates. Enumerated with the constraint that bites:
+
+| Site | Today | Why a draft fails it | Draft value |
+| --- | --- | --- | --- |
+| `required_headings` | `prefixItems` of 8 consts, `minItems: 8`, `maxItems: 8` | §2.2 gives draft two headings, not eight | exactly `["Artifacts", "Resume"]` |
+| `editable_fields` | `prefixItems` pinning `summary`/`what_changed`/`why_it_matters`, `minItems: 3`, `maxItems: 3` | a draft body has no Summary, What Changed, or Why It Matters section, and `$defs/editable_field` restricts `heading` to exactly those three | `[]` |
+| `uat.uat_runbook_heading` | `const "## UAT Runbook"` | §4 forbids a UAT section in a draft body, and `packet_body_structure_failures` requires the declared heading to appear in the body exactly once | `""` |
+
+The `uat_runbook_heading` resolution needs **no validator change**. The body
+checker already guards on truthiness at
+`speckit-pro/speckit_pro_runner/helpers/read_only.py:2669-2671`
+(`if isinstance(uat_heading, str) and uat_heading:`), so an empty declared
+heading is the designed escape rather than a special case bolted on for draft.
+
+`protected_body_fingerprint.elided_fields` needs no schema change — it carries no
+`minItems` — but its truthful draft value is `[]`, because a draft body encloses
+no editable prose.
+
+An empty `editable_fields` array satisfies `prefixItems`, which constrains only
+the positions that exist. Dropping `minItems`/`maxItems` from the top level and
+restoring them in the `else` arm is therefore sufficient; the `prefixItems`
+entries stay where they are and keep binding `single` and `split`.
+
+### 1.2.2 The whole branch, both arms
+
+Draft mode is not the mere absence of constraints — it has a shape of its own —
+so the branch carries **both** arms: `then` pins the draft shape, `else` restores
+the reviewer-packet shape for `single` and `split`.
 
 ```json
 {
   "if":   { "properties": { "mode": { "const": "draft" } }, "required": ["mode"] },
   "then": {
     "properties": {
-      "verification_evidence": { "type": "array", "minItems": 0 },
-      "scope_evidence": {
-        "properties": { "changed_files": { "type": "array", "minItems": 0 } }
+      "required_headings": {
+        "prefixItems": [{ "const": "Artifacts" }, { "const": "Resume" }],
+        "minItems": 2,
+        "maxItems": 2
       },
-      "uat": { "properties": { "how_to_uat": { "type": "string" } } }
+      "editable_fields": { "maxItems": 0 },
+      "uat": { "properties": { "uat_runbook_heading": { "const": "" } } }
+    }
+  },
+  "else": {
+    "properties": {
+      "verification_evidence": { "minItems": 1 },
+      "scope_evidence": {
+        "properties": { "changed_files": { "minItems": 1 } }
+      },
+      "uat": {
+        "properties": {
+          "how_to_uat": { "minLength": 1 },
+          "uat_runbook_heading": { "const": "## UAT Runbook" }
+        }
+      },
+      "required_headings": {
+        "prefixItems": [
+          { "const": "Summary" }, { "const": "What Changed" },
+          { "const": "Why It Matters" }, { "const": "How To Review" },
+          { "const": "How To UAT" }, { "const": "Verification" },
+          { "const": "Scope" }, { "const": "Known Gaps" }
+        ],
+        "minItems": 8,
+        "maxItems": 8
+      },
+      "editable_fields": { "minItems": 3, "maxItems": 3 }
     }
   }
 }
 ```
+
+The matching top-level loosening is: drop `minItems`/`maxItems` and the eight
+`prefixItems` consts from `required_headings`, leaving
+`{"type": "array", "items": {"type": "string", "minLength": 1}}`; drop
+`minItems`/`maxItems` from `editable_fields`, leaving its `prefixItems`; and
+change `uat.uat_runbook_heading` from a `const` to
+`{"type": "string"}`.
+
+Neither arm declares `additionalProperties`, so the root's
+`additionalProperties: false` is unaffected.
 
 **Requiredness is relaxed, presence is not.** The three keys stay in their
 `required` lists so `additionalProperties: false` and the object shapes are
 untouched; draft mode permits them to be empty. This keeps one packet shape
 across the draft-to-ready upgrade, which is what lets ART-010 fill the same
 packet rather than replace it.
+
+SC-008 is what proves the inversion is behaviour-preserving: every existing
+`single` and `split` fixture must keep its exact outcome, and the `else` arm is
+what holds that line.
 
 The existing `split_slice` branch is unchanged, including its `else` arm — a
 draft packet carries no `split_slice`, and the `else` arm already forbids it for

@@ -39,7 +39,7 @@ captured during scoping.
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 54 tasks (T001-T054), 16 [P], all 13 FRs covered, route one-navigable-PR |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 pass — 9 findings (0 CRITICAL, 1 HIGH, 6 MEDIUM, 2 LOW), all remediated in 2 loops; 0 unresolved |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory, composite 0.99 ≥ 0.90 → proceed; plan-stage terminal step, boundary commit taken, STOP |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Implement | `/speckit-implement` | 🔄 In Progress | Stage `implement` resolved 2026-08-18 from explicit `--stage implement`; 54 tasks, one-navigable-PR route |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -182,7 +182,7 @@ show no conflict with this spec's scope; re-verify after Plan.
 | **Spec ID** | ART-007 |
 | **Name** | Draft-PR Emission |
 | **Branch** | `art-007-draft-pr-emission` |
-| **Stage** | plan |
+| **Stage** | implement |
 | **Dependencies** | ART-002 (Draft-PR Template Set) — complete, PRs #425/#427/#430; ART-006 (Autopilot Staging) — complete, PR #422 |
 | **Enables** | ART-008 (Feedback Sweep); ART-010 (Final-PR Writeup, Companions & Ready Flip) |
 | **Priority** | P1 |
@@ -890,15 +890,73 @@ Before starting any task:
   are part of done, not a follow-up.
 ```
 
+### Implementation Record — Design Corrections
+
+Corrections to ratified design artifacts made during Phase 7, each grounded in a
+tool result rather than a reading. Recorded here because they change a contract
+the plan phase settled.
+
+#### DC-1 — the draft relaxation cannot be expressed as a `then` arm (2026-08-18)
+
+`contracts/draft-packet-mode.md` §1.2 specified the draft relaxation as an
+`allOf` branch whose `then` arm restates `minItems: 0`. That cannot relax
+anything. `allOf` branches are conjunctive in this validator exactly as in JSON
+Schema, so the branch's bound is intersected with the top-level `minItems: 1`
+and the stricter one wins.
+
+Proof, run against the shipped
+`speckit_pro_runner.helpers.read_only.json_schema_failures`
+(`speckit-pro/speckit_pro_runner/helpers/read_only.py:2369-2378`):
+`{"mode": "draft", "verification_evidence": []}` returns
+`packet.schema.min_items packet.verification_evidence` under the specified
+shape, and returns no failures under the corrected one, while
+`{"mode": "single", "verification_evidence": []}` still returns `min_items`.
+
+**Resolution**: the relaxation inverts. Top-level bounds go permissive and the
+strict bounds move into an `else` arm binding every non-draft mode. Contract
+§1.2 amended; T009 amended.
+
+#### DC-2 — three further sites pin the reviewer-packet shape (2026-08-18)
+
+§1.2 named three evidence keys. The schema pins the `single`/`split` body shape
+at three more, each of which rejects the draft body FR-008 and contract §4
+mandate: `required_headings` (8 consts, `minItems`/`maxItems` 8),
+`editable_fields` (`minItems`/`maxItems` 3, with `$defs/editable_field`
+restricting `heading` to Summary / What Changed / Why It Matters), and
+`uat.uat_runbook_heading` (`const "## UAT Runbook"`, which
+`packet_body_structure_failures` then requires to appear in the body exactly
+once).
+
+The producer hardcodes the same shape at **four** sites in
+`speckit-pro/speckit_pro_runner/helpers/pr_emission.py`: `required_headings()`
+(427), `editable_fields()` (729), `uat_runbook_heading` (306), and
+`protected_body_fingerprint.elided_fields` (362). Left unconditional, any one of
+them makes `pr-packet-output` emit a draft packet its own schema rejects.
+
+`uat_runbook_heading: ""` needs no validator change: the body checker already
+guards on truthiness at `read_only.py:2669-2671`, so an empty declared heading is
+the designed escape.
+
+**Resolution**: the draft branch carries both arms — `then` pins the draft shape,
+`else` restores the reviewer shape. Contract §1.2.1 and §1.2.2 added; spec.md
+FR-005 extended; T006, T007, T009, T013, T015 amended. No new file; the 16-file
+plan and the T004 reviewability verdict are unaffected.
+
+**Why no consensus round**: neither correction is a design choice. FR-008 and
+contract §4 already fix the draft body's shape, and each site has exactly one
+resolution consistent with SC-008's requirement that `single` and `split`
+behaviour be unchanged. The empirical proof above is the audit trail.
+
 ### Implementation Progress
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | | | |
-| 2 - User Story 1 | | | |
-| 3 - User Story 2 | | | |
-| 4 - User Story 3 | | | |
-| 5 - Polish | | | |
+| 1 - Setup | T001-T003 | 3/3 | Suite green at 7399/7399, matching the G0 baseline exactly (no drift); docs-site deps already installed; merge driver already defined |
+| 2 - Foundational | T004-T011 | | |
+| 3 - User Story 1 | T012-T027 | | |
+| 4 - User Story 2 | T028-T034 | | |
+| 5 - User Story 3 | T035-T043 | | |
+| 6 - Polish | T044-T054 | | |
 
 ---
 
