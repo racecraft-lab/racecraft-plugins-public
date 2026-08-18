@@ -167,3 +167,15 @@
 ### T037
 
 **Deviations/Edge cases/Surprises:** None. After PR #446 opened and Slice 2 closeout reached `beb3727533133a4a3d7b6ac1f2a241e5a8039a1c`, Slice 3 was created from that exact head as `art-005-gallery-completion-knowledge-reports-editors-slice-3`. The plan and topology contract agree on exactly seven implementation-authored paths and a 560 reviewable-LOC ceiling (255 markup/content, 140 CSS, 20 behavior JS, and 145 incremental tests), leaving 240 LOC below the mandatory 800-LOC stop. `status-report` remains `planned` with pinned source `11-status-report.html` and `exports: []` before RED.
+
+### T038
+
+**Deviations/Edge cases/Surprises:** None. Group N adds a static-reader contract for the pinned manifest/source identity, canonical blocks, complete attribution, no export or authored behavior, one semantic main and report heading structure, list-backed repeated sections, text-backed status meaning, mobile viewport, 360px responsive coverage, focus/reduced-motion behavior, positive-tabindex prohibition, and conditional horizontal-scroll semantics.
+
+### T039
+
+**Deviations/Edge cases/Surprises:** None. The fill contract now pins `summary`, `landed`, `in-flight`, `blocked`, and `next-actions`, marks the latter four as repeated list slots, and adds a non-vacuity check requiring the status-report inventory template.
+
+### T040
+
+**Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. Gallery reported 489/490; direct `check_n1` evidence names only the planned manifest status and missing reader template. Fill-region reported 58/59 with only the new missing status-report fill-inventory template failing. Existing Slice 1-2 checks remained green.

@@ -118,9 +118,9 @@ verify complete summary, landed, in-flight, blocked, and next-action content at
 both review widths with reader-only manifest semantics.
 
 - [x] T037 [US2] After PR 2 opens, create `art-005-gallery-completion-knowledge-reports-editors-slice-3` from Slice 2 and confirm the seven-path ledger plus 560-LOC ceiling in `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md` [FR-016-FR-018, SC-008]
-- [ ] T038 [US2] RED: add `status-report` static-reader, semantic headings/lists, no-export, accessibility, responsive, and ART-020 assertions to `tests/speckit-pro/unit/test-artifact-gallery.py` [FR-003, FR-005-FR-006, FR-013-FR-014, FR-022; US2]
-- [ ] T039 [US2] RED: add exact `summary`, `landed`, `in-flight`, `blocked`, and `next-actions` fill floors with two anchors in every list slot to `tests/speckit-pro/unit/test-artifact-fill-regions.py` [FR-020; US2]
-- [ ] T040 [US2] RED proof: run both focused modules under `tests/speckit-pro/unit/` and require intended failures for missing `speckit-pro/artifact-gallery/templates/status-report.html`, status, and fills [FR-004, FR-020; US2]
+- [x] T038 [US2] RED: add `status-report` static-reader, semantic headings/lists, no-export, accessibility, responsive, and ART-020 assertions to `tests/speckit-pro/unit/test-artifact-gallery.py` [FR-003, FR-005-FR-006, FR-013-FR-014, FR-022; US2]
+- [x] T039 [US2] RED: add exact `summary`, `landed`, `in-flight`, `blocked`, and `next-actions` fill floors with two anchors in every list slot to `tests/speckit-pro/unit/test-artifact-fill-regions.py` [FR-020; US2]
+- [x] T040 [US2] RED proof: run both focused modules under `tests/speckit-pro/unit/` and require intended failures for missing `speckit-pro/artifact-gallery/templates/status-report.html`, status, and fills [FR-004, FR-020; US2]
 - [ ] T041 [US2] GREEN: create `speckit-pro/artifact-gallery/templates/status-report.html` from pinned `11-status-report.html` with canonical blocks, complete representative content, semantic sections/lists, text-backed status meaning, responsive/reduced-motion behavior, and no export [FR-002-FR-006, FR-013-FR-014, FR-020, FR-022; US2]
 - [ ] T042 [US2] GREEN: flip only `status-report.status` to `shipped` in `speckit-pro/artifact-gallery/manifest.json`, preserving source and `exports: []` [FR-004-FR-006; US2]
 - [ ] T043 [US2] GREEN proof: rerun `tests/speckit-pro/unit/test-artifact-gallery.py` and `tests/speckit-pro/unit/test-artifact-fill-regions.py` until Slices 1-3 remain green [FR-003-FR-006, FR-020; US2]

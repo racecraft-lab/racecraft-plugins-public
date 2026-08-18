@@ -9538,6 +9538,106 @@ class ConceptExplainerReaderTests(unittest.TestCase):
         self.assertEqual(check_r1(GALLERY_ROOT), [])
 
 
+# ---------------------------------------------------------------------------
+# Group S - ART-005 status-report reader contract (FR-003, FR-005, FR-006,
+# FR-013, FR-014, FR-020, FR-022)
+# ---------------------------------------------------------------------------
+
+STATUS_REPORT_ID = "status-report"
+STATUS_REPORT_SOURCE_FILE = "11-status-report.html"
+STATUS_REPORT_LABEL = f"{TEMPLATES_DIR}/{STATUS_REPORT_ID}.html"
+_STATUS_REPORT_SLOTS = ("summary", "landed", "in-flight", "blocked", "next-actions")
+_STATUS_REPORT_LIST_SLOTS = _STATUS_REPORT_SLOTS[1:]
+
+
+def check_s1(gallery_root: Path) -> list[str]:
+    """S1 - the static report is complete, semantic, and reader-only."""
+    matches = [
+        entry for entry in (_entries(gallery_root) or [])
+        if isinstance(entry, dict) and entry.get("id") == STATUS_REPORT_ID
+    ]
+    if len(matches) != 1:
+        return [f"{MANIFEST_FILE}: expected one '{STATUS_REPORT_ID}' entry, found {len(matches)}"]
+    entry = matches[0]
+    source = entry.get("source")
+    failures: list[str] = []
+    if entry.get("status") != SHIPPED:
+        failures.append(f"{MANIFEST_FILE}: '{STATUS_REPORT_ID}' must be shipped, found {entry.get('status')!r}")
+    if entry.get("exports") != []:
+        failures.append(f"{MANIFEST_FILE}: '{STATUS_REPORT_ID}' is a reader and must keep exports: []")
+    if not isinstance(source, dict) or source.get("origin") != UPSTREAM or source.get("file") != STATUS_REPORT_SOURCE_FILE:
+        failures.append(f"{MANIFEST_FILE}: '{STATUS_REPORT_ID}' must remain sourced from {STATUS_REPORT_SOURCE_FILE}")
+
+    artifact = _artifact_path(gallery_root, STATUS_REPORT_ID)
+    if artifact is None or not artifact.is_file():
+        failures.append(f"{STATUS_REPORT_LABEL}: missing reader artifact")
+        return failures
+
+    text = _document_text(artifact)
+    lowered = text.casefold()
+    elements = _elements(text)
+    attributes = [dict(element.attributes) for element in elements]
+    authored = text
+    for block in CANONICAL_FILES:
+        if not _embeds(text, block):
+            failures.append(f"{STATUS_REPORT_LABEL}: missing canonical {block} block")
+        elif (expected := _canonical_region(gallery_root, block)) is None or _region(text, block) != expected:
+            failures.append(f"{STATUS_REPORT_LABEL}: canonical {block} bytes drifted")
+        else:
+            authored = authored.replace(_region(text, block), "")
+
+    header = _attribution_header(text)
+    if header is None or any(not _carried(header, element) for element in ATTRIBUTION_ELEMENTS):
+        failures.append(f"{STATUS_REPORT_LABEL}: incomplete upstream attribution header")
+    elif _labelled_value(header, UPSTREAM_FILE_LABEL) != STATUS_REPORT_SOURCE_FILE:
+        failures.append(f"{STATUS_REPORT_LABEL}: attribution must name {STATUS_REPORT_SOURCE_FILE}")
+
+    for token in ("copy as", "navigator.clipboard", "execcommand(", "download="):
+        if token in lowered:
+            failures.append(f"{STATUS_REPORT_LABEL}: reader exposes export token {token!r}")
+    if "<script" in authored.casefold():
+        failures.append(f"{STATUS_REPORT_LABEL}: static reader adds behavior outside the canonical head")
+
+    tags = [element.tag for element in elements]
+    if tags.count("main") != 1 or tags.count("h1") != 1 or tags.count("h2") < 5:
+        failures.append(f"{STATUS_REPORT_LABEL}: expected one main, one h1, and five semantic report headings")
+    by_id = {attrs.get("id"): (element.tag, attrs) for element, attrs in zip(elements, attributes) if attrs.get("id")}
+    for slot in _STATUS_REPORT_SLOTS:
+        heading_id = f"{slot}-heading"
+        if by_id.get(heading_id, (None,))[0] not in {"h2", "h3"}:
+            failures.append(f"{STATUS_REPORT_LABEL}: '{slot}' needs a stable semantic heading")
+    for slot in _STATUS_REPORT_LIST_SLOTS:
+        pattern = rf"FILL:{re.escape(slot)}:START.*?<ul\b.*?</ul>.*?FILL:{re.escape(slot)}:END"
+        if not re.search(pattern, text, re.IGNORECASE | re.DOTALL):
+            failures.append(f"{STATUS_REPORT_LABEL}: '{slot}' must be represented by a semantic list")
+
+    if not re.search(r"\b(Status|Owner|Due|Next)\b", text, re.IGNORECASE):
+        failures.append(f"{STATUS_REPORT_LABEL}: status meaning must be visible in text")
+    if not re.search(r"<meta\s+[^>]*name=[\"']viewport[\"']", text, re.IGNORECASE):
+        failures.append(f"{STATUS_REPORT_LABEL}: missing mobile viewport metadata")
+    widths = [int(value) for value in re.findall(r"@media[^{}]*max-width\s*:\s*(\d+)px", text, re.IGNORECASE)]
+    if not any(width >= 360 for width in widths):
+        failures.append(f"{STATUS_REPORT_LABEL}: no responsive rule covers 360 CSS px")
+    if "prefers-reduced-motion" not in text or ":focus-visible" not in text:
+        failures.append(f"{STATUS_REPORT_LABEL}: visible-focus or reduced-motion handling is missing")
+    for element, attrs in zip(elements, attributes):
+        value = attrs.get("tabindex", "")
+        if value.lstrip("-").isdigit() and int(value) > 0:
+            failures.append(f"{STATUS_REPORT_LABEL}: <{element.tag}> uses positive tabindex={value!r}")
+    for selector, declarations in _RULE_RE.findall(text):
+        if _HORIZONTAL_OVERFLOW_RE.search(declarations):
+            classes = re.findall(r"\.([A-Za-z_-][\w-]*)", selector)
+            matched = [attrs for attrs in attributes if any(name in attrs.get("class", "").split() for name in classes)]
+            if not matched or any(attrs.get("tabindex") != "0" or attrs.get("role") != "group" or not (attrs.get("aria-label", "").strip() or attrs.get("aria-labelledby", "").strip()) for attrs in matched):
+                failures.append(f"{STATUS_REPORT_LABEL}: actual horizontal scroll element must be named, grouped, and keyboard reachable")
+    return failures
+
+
+class StatusReportReaderTests(unittest.TestCase):
+    def test_status_report_contract_passes_against_the_shipped_gallery(self) -> None:
+        self.assertEqual(check_s1(GALLERY_ROOT), [])
+
+
 class CheckSignatureTests(unittest.TestCase):
     """Enforce the rule the rest of this module depends on.
 
@@ -9602,6 +9702,7 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     CanonicalBlockAgreementFixtureTests,
     SlideDeckReaderTests,
     ConceptExplainerReaderTests,
+    StatusReportReaderTests,
     KeyboardScrollGuardTests,
     KeyboardScrollGuardFixtureTests,
     ReadOnlyPortContractTests,
