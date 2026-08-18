@@ -707,3 +707,78 @@ The tested template, manifest, focused tests, payload mirrors, installed-cache
 mirrors, and generated proofs remain byte-identical to the source checkpoint.
 Only the three UAT carriers and workflow/control-plane bookkeeping changed after
 that checkpoint.
+
+## Slice 4 Final Boundary Ledger (T062)
+
+Remote refs were refreshed immediately before this measurement. Slice 3 PR
+[#447](https://github.com/racecraft-lab/racecraft-plugins-public/pull/447) is
+open at `2b0fa4eb1d1d5b1daf24eb13946eac4fb7beebd3`; the Slice 4 branch and
+its merge base use that exact head. The Slice 4 source checkpoint is
+`f27b7833e3d3e05772c7ebc44d4640f2b9d129ea`, and cumulative UAT evidence
+is recorded at `50511c8e0512760e823a75b03f8f67e681a7c6a7`.
+
+The source template, manifest, focused tests, payload mirrors, installed-cache
+mirrors, and generated proofs remain byte-identical after the tested source
+checkpoint. All later changes are cumulative UAT and workflow/control-plane
+evidence.
+
+The complete Slice 4 diff against its exact Slice 3 base contains 33 Git paths:
+
+- Seven implementation-authored paths:
+  - `speckit-pro/artifact-gallery/manifest.json`
+  - `speckit-pro/artifact-gallery/templates/incident-report.html`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
+  - `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+  - `tests/speckit-pro/unit/test-artifact-gallery.py`
+- Twenty-two source-derived generated paths:
+  - `dist/claude/speckit-pro/artifact-gallery/manifest.json`
+  - `dist/claude/speckit-pro/artifact-gallery/templates/incident-report.html`
+  - `dist/codex/speckit-pro/artifact-gallery/manifest.json`
+  - `dist/codex/speckit-pro/artifact-gallery/templates/incident-report.html`
+  - `docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json`
+  - `docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json`
+  - `docs/ai/specs/.process/XPLAT-009-release-readiness-result.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/manifest.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/incident-report.html`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/manifest.json`
+  - `tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/incident-report.html`
+- Four required workflow/control-plane paths:
+  - `docs/ai/specs/.process/ART-005-workflow.md`
+  - `docs/ai/specs/.process/autopilot-state.json`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/implementation-notes.md`
+  - `specs/art-005-gallery-completion-knowledge-reports-editors/tasks.md`
+
+The final component method still counts 311 non-canonical template lines plus
+109 incremental test lines = **420 reviewable LOC**, 200 below the 620 ceiling
+and 380 below the mandatory 800 stop. The 33-path total exceeds the 25-file
+threshold by eight, but every excess path is required generated or
+workflow/control-plane evidence. With one production template, exactly seven
+implementation-authored paths, stable tested source bytes, and no correctness
+or non-size blocker, the disposition is **SIZE-ONLY BLOCK / CONTINUE** under the
+operator-ratified seven-branch topology. No typed reviewability exception is
+claimed.
+
+Verification remains bound to the source checkpoint:
+
+- Focused gallery module: **491/491**
+- Focused fill module: **61/61**
+- Layer 1: **1448/1448**
+- Isolated Layer 4: **5778/5778**
+- Isolated full suite: **7412/7412**
+- Isolated policy-control contract: **730/730**
+- Generated release artifact check: **pass**
+- Packet-excluded spec-index dry-run/read-only checks: **pass**
+- Cumulative browser UAT: **72 pass, 72 evidence-backed N/A, 0 fail**
