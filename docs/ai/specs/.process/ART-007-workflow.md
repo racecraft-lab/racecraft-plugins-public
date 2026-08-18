@@ -1026,8 +1026,8 @@ The canonical closeout. Every row must reach Complete or an explicit
 | Post: Self-Review | ✅ Complete | Recorded above; one `[edge-case-gap]` stated, three deferrals carried into the PR body. |
 | Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is registered `deferred` in the runner registry and no committed source-derived runbook exists, so no skeleton could be produced and the runbook author was correctly not spawned. Fail-open, logged. |
 | Post: PR Body Generation | ✅ Complete | Packet emitted in `single` mode through `pr-packet-output`; body carries the eight reviewer headings plus one non-empty release-note fence. |
-| Post: PR Creation | ✅ Complete | See the PR URL recorded below. |
-| Post: Review Remediation | ✅ Complete | Monitoring loop scheduled after creation. |
+| Post: PR Creation | ✅ Complete | https://github.com/racecraft-lab/racecraft-plugins-public/pull/445 — title and changed-file scope validated before creation; body is the packet-owned file, passed with --body-file and never inline. |
+| Post: Review Remediation | 🔄 In Progress | Monitoring PR #445 for Copilot and human review comments. |
 | Post: Retrospective | ⏭️ Skipped | The retrospective extension guards on the same numeric-branch pattern. The durable record is the implementation-notes file, which carries every deviation, contract correction, and orchestrator error from this run. |
 
 - [ ] All tasks marked complete in tasks.md
