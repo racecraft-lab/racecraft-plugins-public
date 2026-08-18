@@ -32,6 +32,7 @@ WORKFLOW_FILE = "docs/ai/specs/.process/XPLAT-005-workflow.md"
 # actually on disk; the archived XPLAT-005 record no longer is.
 AUTOPILOT_STAGE_WORKFLOW_FILE = "docs/ai/specs/.process/ART-006-workflow.md"
 PR_PACKET_FIXTURE_DIR = REPO_ROOT / "tests" / "speckit-pro" / "unit" / "fixtures" / "pr-packet"
+DRAFT_PACKET_VALIDATION_DIR = "specs/art-007-draft-pr-emission/.process/pr-packets"
 PR_PACKET_SCHEMA = (
     PLUGIN_ROOT / "skills" / "speckit-autopilot" / "contracts" / "pr-packet.schema.json"
 )
@@ -1313,6 +1314,306 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     }
                     self.assertTrue(expected_rules.issubset(rules))
                     self.assertEqual(stderr_records, response["diagnostics"])
+
+    def draft_packet_fixture(self) -> dict[str, object]:
+        return json.loads((PR_PACKET_FIXTURE_DIR / "valid-draft.json").read_text(encoding="utf-8"))
+
+    def draft_packet_variant(self, packet_id: str, **overrides: object) -> dict[str, object]:
+        """Re-own a draft packet copy so identity checks stay quiet on the variant."""
+        return {
+            **self.draft_packet_fixture(),
+            "packet_id": packet_id,
+            "validation_result_path": f"{DRAFT_PACKET_VALIDATION_DIR}/{packet_id}/validation.json",
+            **overrides,
+        }
+
+    def packet_failure_rules(self, packet: Path) -> set[str]:
+        completed, response, stderr_records = run_runner(
+            helper_request(
+                "validate-pr-packet-read-only",
+                {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+            )
+        )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure", 1)
+        self.assertEqual(stderr_records, response["diagnostics"])
+        return {failure["rule"] for failure in response["data"]["stdout_json"]["failures"]}
+
+    def test_validate_pr_packet_accepts_draft_without_verification_or_uat_evidence(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet draft acceptance case")
+        draft_packet = self.draft_packet_fixture()
+        self.assertEqual(draft_packet["verification_evidence"], [])
+        self.assertEqual(draft_packet["scope_evidence"]["changed_files"], [])
+        self.assertEqual(draft_packet["uat"]["how_to_uat"], "")
+        self.assertEqual(draft_packet["uat"]["uat_runbook_heading"], "")
+        self.assertTrue(draft_packet["uat"]["uat_source"])
+        # Non-goals are the one piece of scope evidence a plan stage already has,
+        # so draft mode must not relax them.
+        self.assertTrue(draft_packet["scope_evidence"]["non_goals"])
+        self.assertEqual(draft_packet["required_headings"], ["Artifacts", "Resume"])
+        self.assertEqual(draft_packet["editable_fields"], [])
+        self.assertEqual(draft_packet["protected_body_fingerprint"]["elided_fields"], [])
+        self.assertNotIn("split_slice", draft_packet)
+
+        completed, response, stderr_records = run_runner(
+            helper_request(
+                "validate-pr-packet-read-only",
+                {
+                    "packet_path": (PR_PACKET_FIXTURE_DIR / "valid-draft.json")
+                    .relative_to(REPO_ROOT)
+                    .as_posix()
+                },
+            )
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok", 0)
+        payload = response["data"]["stdout_json"]
+        self.assertEqual(payload["status"], "passed")
+        self.assertEqual(payload["mode"], "draft")
+        self.assertEqual(payload["failures"], [])
+        self.assertFalse(payload["pr_blocked"])
+        self.assertEqual(set(payload["source_fingerprints"]), {"body", "packet"})
+        self.assertFalse(response["data"]["writes_state"])
+        self.assertEqual(stderr_records, [])
+
+        from speckit_pro_runner.helpers import read_only
+
+        # The validation_result mode enum is the schema's second mode site. If only
+        # the top-level enum learns draft, a passing draft packet's own validation
+        # record stays unrepresentable.
+        schema = json.loads(PR_PACKET_SCHEMA.read_text(encoding="utf-8"))
+        self.assertEqual(
+            read_only.json_schema_failures(
+                payload, schema["$defs"]["validation_result"], schema, "validation_result"
+            ),
+            [],
+        )
+
+    def test_validate_pr_packet_rejects_draft_that_carries_split_slice(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet draft split_slice case")
+        split_packet = json.loads(
+            (PR_PACKET_FIXTURE_DIR / "valid-split.json").read_text(encoding="utf-8")
+        )
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            packet = Path(project) / "draft-with-slice.json"
+            packet.write_text(
+                json.dumps(
+                    self.draft_packet_variant(
+                        "draft-with-slice",
+                        split_slice=split_packet["split_slice"],
+                    )
+                ),
+                encoding="utf-8",
+            )
+            rules = self.packet_failure_rules(packet)
+        # Only the split branch's else arm may object: a schema-clean split_slice
+        # on a draft packet is forbidden, and nothing else about the packet is.
+        self.assertEqual(rules, {"packet.schema.not"})
+
+    def test_validate_pr_packet_rejects_draft_body_missing_a_required_heading(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet draft heading case")
+        from speckit_pro_runner.helpers import read_only
+
+        body_text = (PR_PACKET_FIXTURE_DIR / "bodies" / "valid-draft.md").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            for heading in ("## Artifacts", "## Resume"):
+                packet_id = f"draft-missing-{heading[3:].lower()}"
+                with self.subTest(missing=heading):
+                    mutated = (
+                        "\n".join(line for line in body_text.splitlines() if line != heading) + "\n"
+                    )
+                    body = project_path / f"{packet_id}.md"
+                    body.write_text(mutated, encoding="utf-8")
+                    packet = project_path / f"{packet_id}.json"
+                    packet.write_text(
+                        json.dumps(
+                            self.draft_packet_variant(
+                                packet_id,
+                                body_file=body.relative_to(REPO_ROOT).as_posix(),
+                                protected_body_fingerprint={
+                                    **self.draft_packet_fixture()["protected_body_fingerprint"],
+                                    "value": read_only.protected_body_sha256(mutated),
+                                },
+                            )
+                        ),
+                        encoding="utf-8",
+                    )
+                    # Fingerprint is recomputed for the mutated body, so the missing
+                    # heading is the only thing left for the validator to object to.
+                    self.assertEqual(self.packet_failure_rules(packet), {"body.required_headings"})
+
+    def test_validate_pr_packet_accepts_draft_body_whose_artifacts_table_holds_only_gap_rows(
+        self,
+    ) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet draft zero-artifact case")
+        from speckit_pro_runner.helpers import read_only
+
+        draft_packet = self.draft_packet_fixture()
+        gap_body = (
+            f"# {draft_packet['generated_title']['value']}\n"
+            "\n"
+            "## Artifacts\n"
+            "\n"
+            "| Artifact | Purpose | Open |\n"
+            "| --- | --- | --- |\n"
+            "| Gap: Implementation Plan | Not generated for this run. | Not available |\n"
+            "| Gap: Spec Explainer | Not generated for this run. | Not available |\n"
+            "\n"
+            "## Resume\n"
+            "\n"
+            "Stage: plan, stopped at the plan-stage boundary for review.\n"
+            "Resume with: `/speckit-pro:speckit-autopilot <workflow-file> --stage implement`\n"
+        )
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            body = project_path / "draft-gap-rows.md"
+            body.write_text(gap_body, encoding="utf-8")
+            packet = project_path / "draft-gap-rows.json"
+            packet.write_text(
+                json.dumps(
+                    self.draft_packet_variant(
+                        "draft-gap-rows",
+                        body_file=body.relative_to(REPO_ROOT).as_posix(),
+                        protected_body_fingerprint={
+                            **draft_packet["protected_body_fingerprint"],
+                            "value": read_only.protected_body_sha256(gap_body),
+                        },
+                    )
+                ),
+                encoding="utf-8",
+            )
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "validate-pr-packet-read-only",
+                    {"packet_path": packet.relative_to(REPO_ROOT).as_posix()},
+                )
+            )
+        # FR-004 / FR-008: a run that generated no artifact still opens a valid draft.
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok", 0)
+        self.assertEqual(response["data"]["stdout_json"]["status"], "passed")
+        self.assertEqual(response["data"]["stdout_json"]["failures"], [])
+        self.assertEqual(stderr_records, [])
+
+    def test_validate_pr_packet_still_rejects_an_unknown_mode_value(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet unknown mode case")
+        valid_packet = json.loads(
+            (PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8")
+        )
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            packet = Path(project) / "unknown-mode.json"
+            for mode in ("sketch", "DRAFT", ""):
+                with self.subTest(mode=mode):
+                    packet.write_text(
+                        json.dumps(
+                            {
+                                **valid_packet,
+                                "packet_id": "unknown-mode",
+                                "mode": mode,
+                                "validation_result_path": (
+                                    "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                                    "pr-packets/unknown-mode/validation.json"
+                                ),
+                            }
+                        ),
+                        encoding="utf-8",
+                    )
+                    # Widening the enum to admit draft must not admit anything else,
+                    # and the enum stays case-sensitive.
+                    self.assertEqual(self.packet_failure_rules(packet), {"packet.schema.enum"})
+
+    def test_validate_pr_packet_rejects_draft_required_headings_other_than_the_two_draft_blocks(
+        self,
+    ) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet draft required-headings case")
+        cases = {
+            "too-few": (["Artifacts"], {"packet.schema.min_items"}),
+            "out-of-order": (
+                ["Resume", "Artifacts"],
+                {"packet.schema.const", "body.required_headings"},
+            ),
+            "too-many": (
+                ["Artifacts", "Resume", "Known Gaps"],
+                {"packet.schema.max_items", "body.required_headings"},
+            ),
+        }
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            for name, (required_headings, expected_rules) in cases.items():
+                with self.subTest(name=name):
+                    packet_id = f"draft-headings-{name}"
+                    packet = project_path / f"{packet_id}.json"
+                    packet.write_text(
+                        json.dumps(
+                            self.draft_packet_variant(
+                                packet_id, required_headings=required_headings
+                            )
+                        ),
+                        encoding="utf-8",
+                    )
+                    self.assertEqual(self.packet_failure_rules(packet), expected_rules)
+
+    def test_validate_pr_packet_rejects_draft_that_declares_editable_fields(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet draft editable-fields case")
+        valid_packet = json.loads(
+            (PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8")
+        )
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            packet = Path(project) / "draft-editable-fields.json"
+            packet.write_text(
+                json.dumps(
+                    self.draft_packet_variant(
+                        "draft-editable-fields",
+                        editable_fields=valid_packet["editable_fields"][:1],
+                    )
+                ),
+                encoding="utf-8",
+            )
+            rules = self.packet_failure_rules(packet)
+        # The schema caps draft editable_fields at zero, and the draft body carries
+        # no editable markers for the declared field to bind to.
+        self.assertEqual(rules, {"packet.schema.max_items", "body.editable_markers"})
+
+    def test_validate_pr_packet_still_rejects_single_required_headings_that_are_not_reviewer_set(
+        self,
+    ) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet single required-headings regression case")
+        valid_packet = json.loads(
+            (PR_PACKET_FIXTURE_DIR / "valid-single.json").read_text(encoding="utf-8")
+        )
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            packet = Path(project) / "single-draft-headings.json"
+            packet.write_text(
+                json.dumps(
+                    {
+                        **valid_packet,
+                        "packet_id": "single-draft-headings",
+                        "required_headings": ["Artifacts", "Resume"],
+                        "validation_result_path": (
+                            "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/"
+                            "pr-packets/single-draft-headings/validation.json"
+                        ),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            rules = self.packet_failure_rules(packet)
+        # SC-008: moving the eight-heading pin into the else arm must keep binding
+        # single mode. If the else arm were omitted, only body.required_headings
+        # would survive here.
+        self.assertEqual(
+            rules,
+            {"packet.schema.const", "packet.schema.min_items", "body.required_headings"},
+        )
 
     def test_validate_pr_workflow_contract_changed_files_is_canonicalized_and_evaluated(self) -> None:
         if self.helper_filter and self.helper_filter != "validate-pr-workflow-contract":

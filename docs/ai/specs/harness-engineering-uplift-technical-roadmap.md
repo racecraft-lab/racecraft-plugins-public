@@ -28,7 +28,7 @@ reviewable implementation branches.
 
 | Tier | Specs | Purpose | Parallelization |
 |---|---|---|---|
-| 1 | HRNS-015 | Repair six observed autopilot and PR-emission defects | Fully independent — no HRNS dependency in either direction, so it can run at any point, including first |
+| 1 | HRNS-015 | Repair eight observed autopilot and PR-emission defects | Fully independent — no HRNS dependency in either direction, so it can run at any point, including first |
 | 1 | HRNS-001 | Inventory harness surfaces and classify SpecKit Pro gaps | Sequential foundation |
 | 2 | HRNS-002, HRNS-003 | Durable context/state and helper/tool contract foundations | Parallel after HRNS-001 |
 | 3 | HRNS-004, HRNS-005 | Permission/sandbox controls and eval readiness | Parallel after HRNS-003 where needed |
@@ -257,7 +257,7 @@ HRNS-002 + HRNS-005 + HRNS-006 + HRNS-009 + HRNS-010 + HRNS-011 + HRNS-012 + HRN
 | HRNS-012 | Knowledge Conformance, Health, and Drift Maintenance | Pending | - | Blocked by HRNS-005, HRNS-006, HRNS-009, and HRNS-010 |
 | HRNS-013 | Code-Intelligence and Vector-Index Interoperability | Pending | - | Blocked by HRNS-003, HRNS-005, HRNS-006, HRNS-009, and HRNS-010 |
 | HRNS-014 | External OKF Exchange and Reviewable Reconciliation | Pending | - | Blocked by HRNS-004, HRNS-006, HRNS-007, HRNS-009, HRNS-010, and HRNS-012 |
-| HRNS-015 | Autopilot and PR-Emission Defect Repair | Ready | - | Independent; six observed defects with reproductions, no dependency on other HRNS specs |
+| HRNS-015 | Autopilot and PR-Emission Defect Repair | Ready | - | Independent; eight observed defects with reproductions, no dependency on other HRNS specs |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -1333,20 +1333,22 @@ explicit decisions -> isolated proposal is one complete safe exchange boundary.
 
 **Priority:** P1 | **Depends On:** none | **Enables:** none
 
-**Goal:** Fix six defects observed during a live autopilot run, each with a
+**Goal:** Fix eight defects observed during live autopilot runs, each with a
 reproduction and a `file:line` cause, so the documented happy path stops
-producing a failing pull request.
+producing a failing pull request or a silently wrong artifact.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 150 |
-Production files: 6 |
-Total files: 12 |
+Projected reviewable LOC: 210 |
+Production files: 7 |
+Total files: 14 |
 Budget result: within budget
 
-These are not speculative hardening items. Every one was hit while running
+These are not speculative hardening items. The first six were hit while running
 ART-001 to a merged-ready PR, and the evidence is recorded in
 `docs/ai/specs/.process/ART-001-workflow.md` under "Raised against speckit-pro"
-and in that spec's retrospective.
+and in that spec's retrospective. The last two were hit during ART-007's manual
+UAT, with the reproduction recorded in
+`specs/art-007-draft-pr-emission/.process/manual-uat.md`.
 
 **Scope:**
 
@@ -1383,6 +1385,25 @@ and in that spec's retrospective.
   `[Gap, <ref>]` — the style the skill's own example uses — under-report
   silently. One checklist domain reported 1 marker against 20 real ones until
   rewritten.
+- **`generate-spec-index` treats git-ignored files as index material.**
+  `_spec_index_walk_regular_files` walks the filesystem rather than the git
+  index, so ignored artifacts become committed backlinks. Measured one variable
+  apart on the ART-007 tree: with the git-ignored `.process/pr-packets/` moved
+  aside the check reports `index current`, with it present it reports `STALE`.
+  Both directions are wrong — a false stale for any operator carrying local
+  artifacts, and a naive regeneration that commits paths absent from a clean
+  checkout. Note the constraint on the fix: the runner is stdlib-only with no
+  shell fallback by contract, so `git ls-files` is not available, and the
+  current walk is deliberately hardened with descriptor-safe reads and symlink
+  skipping that any replacement must keep.
+- **No gate runs the spec-index check against the real tree.**
+  `validate-spec-index-determinism.py` runs the helper against a fixture
+  repository root, so real-tree drift is invisible to CI. ART-007's own
+  `SPEC-MOC.md` sat with three empty generated zones through a full green run
+  and was caught only by hand. This is independent of the defect above: fixing
+  the walk still leaves nothing checking the real tree. The two want to land
+  together, because adding the gate alone would fail on any worktree carrying
+  ignored artifacts, which is the false stale above.
 
 **Out of Scope:**
 
@@ -1391,6 +1412,9 @@ and in that spec's retrospective.
   HRNS-007 (orchestration).
 - Changing any host repository's release-note policy. The gate is correct; the
   generator is what cannot satisfy it.
+- Redesigning the spec-index rendering contract or the `SPEC-MOC.md` zone
+  format. This spec corrects which files the walk selects and adds the missing
+  real-tree gate; the rendered shape stays as it is.
 
 **Key Files:**
 
@@ -1402,8 +1426,17 @@ and in that spec's retrospective.
   twelve-entry list that verifies nothing.
 - `speckit-pro/agents/` - executor definitions needing a team-teardown
   obligation.
-- `docs/ai/specs/.process/ART-001-workflow.md` - the observed evidence for all
-  six, with reproductions.
+- `speckit-pro/speckit_pro_runner/helpers/read_only.py` -
+  `_spec_index_walk_regular_files` at line 1897, the filesystem walk that
+  selects ignored files, and `_spec_index_render_backlinks` at line 1940, its
+  only caller.
+- `tests/speckit-pro/layer1-structural/validate-spec-index-determinism.py` - the
+  test that runs the helper against a fixture repository root instead of the
+  real tree.
+- `docs/ai/specs/.process/ART-001-workflow.md` - the observed evidence for the
+  first six, with reproductions.
+- `specs/art-007-draft-pr-emission/.process/manual-uat.md` - the observed
+  evidence for the last two, with the one-variable-apart reproduction.
 
 **Done When:**
 
@@ -1418,6 +1451,13 @@ and in that spec's retrospective.
   equivalent check proves executors that form teams also tear them down.
 - The gap counter matches `[Gap` rather than `[Gap]`, with a fixture covering the
   `[Gap, <ref>]` form that previously under-reported.
+- The spec-index walk selects the same files whether or not git-ignored
+  artifacts are present on disk, proven by a fixture that renders identically
+  with and without an ignored directory in the spec tree, with the descriptor-
+  safe reads and symlink skipping preserved.
+- A check runs the spec index against the real repository tree and fails on
+  drift, proven by the ART-007 case: the pre-fix `SPEC-MOC.md` with three empty
+  generated zones must fail it.
 
 ---
 

@@ -1,0 +1,68 @@
+{
+  "schema_version": "1.0.0",
+  "packet_id": "valid-draft",
+  "mode": "draft",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "art-007-draft-pr-emission"
+  },
+  "source_feature_dir": "specs/art-007-draft-pr-emission",
+  "generated_title": {
+    "value": "feat(speckit-autopilot): Open a draft pull request at the plan boundary",
+    "type": "feat",
+    "scope": "speckit-autopilot",
+    "description": "Open a draft pull request at the plan boundary",
+    "source_evidence": {
+      "kind": "feature_spec",
+      "source": "specs/art-007-draft-pr-emission/spec.md",
+      "summary": "Draft title derived from the feature spec before implementation evidence exists."
+    },
+    "rejected_candidates": [
+      {
+        "value": "feat(ART-007): Open a draft pull request at the plan boundary",
+        "reason": "Uses an uppercase ticket scope that the release-readiness gate rejects."
+      },
+      {
+        "value": "art-007-draft-pr-emission",
+        "reason": "Uses the branch name instead of reviewer-facing prose."
+      }
+    ]
+  },
+  "body_file": "tests/speckit-pro/unit/fixtures/pr-packet/bodies/valid-draft.md",
+  "required_headings": [
+    "Artifacts",
+    "Resume"
+  ],
+  "verification_evidence": [],
+  "scope_evidence": {
+    "reviewable_loc": 0,
+    "production_files": 0,
+    "total_files": 0,
+    "budget_result": "within_budget",
+    "changed_files": [],
+    "non_goals": [
+      "Implementation evidence is not produced at the plan-stage boundary.",
+      "Flipping the draft pull request to ready is not covered by this packet."
+    ]
+  },
+  "uat": {
+    "how_to_uat": "",
+    "uat_runbook_heading": "",
+    "uat_source": "specs/art-007-draft-pr-emission/contracts/draft-packet-mode.md"
+  },
+  "source_markers": [
+    {
+      "marker_id": "draft-body-contract",
+      "rendered_text": "Source: draft body contract defines the Artifacts and Resume blocks.",
+      "source": "specs/art-007-draft-pr-emission/contracts/draft-packet-mode.md"
+    }
+  ],
+  "editable_fields": [],
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "value": "123e87cba04eb6e71c34eca6b75939be17db1a5c5bf164e5afad3f612e03c172",
+    "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "elided_fields": []
+  },
+  "validation_result_path": "specs/art-007-draft-pr-emission/.process/pr-packets/valid-draft/validation.json"
+}

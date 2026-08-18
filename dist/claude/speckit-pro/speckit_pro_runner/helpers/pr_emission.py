@@ -278,7 +278,16 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     if isinstance(generated_title, dict) and "diagnostic" in generated_title:
         return generated_title
 
-    scope_evidence = normalize_scope_evidence(inputs)
+    # Resolved before the evidence normalizers because draft mode relaxes what they
+    # accept. Left below them, a draft packet dies in input normalization before the
+    # gate is ever reached.
+    mode = inputs.get("mode")
+    if mode is None:
+        mode = "single"
+    elif mode not in {"single", "split", "draft"}:
+        return invalid_packet_input("mode must be single, split, or draft when provided", field="mode")
+
+    scope_evidence = normalize_scope_evidence(inputs, mode)
     if isinstance(scope_evidence, dict) and "diagnostic" in scope_evidence:
         return scope_evidence
 
@@ -287,6 +296,7 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
         fallback=inputs.get("verification"),
         default_kind="verification",
         default_source="validation",
+        mode=mode,
     )
     if isinstance(verification_evidence, dict) and "diagnostic" in verification_evidence:
         return verification_evidence
@@ -295,15 +305,11 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     if isinstance(source_markers, dict) and "diagnostic" in source_markers:
         return source_markers
 
-    mode = inputs.get("mode")
-    if mode is None:
-        mode = "single"
-    elif mode not in {"single", "split"}:
-        return invalid_packet_input("mode must be single or split when provided", field="mode")
-
+    # A draft body carries no UAT section, so it declares neither the runbook heading
+    # nor the fallback prose that would describe one.
     uat = {
-        "how_to_uat": markdown_block(inputs.get("how_to_uat"), "No manual UAT runbook was provided; use verification evidence for this PR."),
-        "uat_runbook_heading": "## UAT Runbook",
+        "how_to_uat": "" if mode == "draft" else markdown_block(inputs.get("how_to_uat"), "No manual UAT runbook was provided; use verification evidence for this PR."),
+        "uat_runbook_heading": "" if mode == "draft" else "## UAT Runbook",
         "uat_source": str(inputs.get("uat_source") or "packet-input"),
     }
 
@@ -326,8 +332,8 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
     body_failures = packet_body_structure_failures(
         {
             "generated_title": generated_title,
-            "required_headings": required_headings(),
-            "editable_fields": editable_fields(),
+            "required_headings": required_headings(mode),
+            "editable_fields": editable_fields(mode),
             "uat": uat,
         },
         rendered_body,
@@ -349,17 +355,17 @@ def normalize_packet_input(request: Any) -> dict[str, Any]:
         "source_feature_dir": source_feature_dir,
         "generated_title": generated_title,
         "body_file": body_file,
-        "required_headings": required_headings(),
+        "required_headings": required_headings(mode),
         "verification_evidence": verification_evidence,
         "scope_evidence": scope_evidence,
         "uat": uat,
         "source_markers": source_markers,
-        "editable_fields": editable_fields(),
+        "editable_fields": editable_fields(mode),
         "protected_body_fingerprint": {
             "algorithm": "sha256",
             "value": fingerprint,
             "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
-            "elided_fields": ["summary", "what_changed", "why_it_matters"],
+            "elided_fields": [] if mode == "draft" else ["summary", "what_changed", "why_it_matters"],
         },
         "validation_result_path": validation_result_path,
     }
@@ -424,7 +430,9 @@ def canonical_packet_paths(source_feature_dir: str, packet_id: str) -> dict[str,
     }
 
 
-def required_headings() -> list[str]:
+def required_headings(mode: str) -> list[str]:
+    if mode == "draft":
+        return ["Artifacts", "Resume"]
     return [
         "Summary",
         "What Changed",
@@ -583,7 +591,10 @@ def normalize_generated_title(inputs: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def normalize_scope_evidence(inputs: dict[str, Any]) -> dict[str, Any]:
+def normalize_scope_evidence(inputs: dict[str, Any], mode: str) -> dict[str, Any]:
+    # Draft mode permits an empty changed_files: the plan-stage boundary has produced
+    # no diff yet. non_goals stays non-empty in every mode.
+    allow_empty = mode == "draft"
     raw = inputs.get("scope_evidence")
     if isinstance(raw, dict):
         required = ["reviewable_loc", "production_files", "total_files", "budget_result", "changed_files", "non_goals"]
@@ -600,7 +611,7 @@ def normalize_scope_evidence(inputs: dict[str, Any]) -> dict[str, Any]:
         if raw.get("budget_result") not in {"within_budget", "warning", "blocked", "exception"}:
             return invalid_packet_input("scope_evidence.budget_result is invalid", field="scope_evidence.budget_result")
         changed_files = raw.get("changed_files")
-        if not isinstance(changed_files, list) or not changed_files or not all(isinstance(item, str) and item for item in changed_files):
+        if not isinstance(changed_files, list) or not (changed_files or allow_empty) or not all(isinstance(item, str) and item for item in changed_files):
             return invalid_packet_input("scope_evidence.changed_files must be a non-empty string array", field="scope_evidence.changed_files")
         non_goals = raw.get("non_goals")
         if not isinstance(non_goals, list) or not non_goals or not all(isinstance(item, str) and item for item in non_goals):
@@ -610,7 +621,7 @@ def normalize_scope_evidence(inputs: dict[str, Any]) -> dict[str, Any]:
             return invalid_packet_input("scope_evidence contains unsupported fields", field="scope_evidence", details={"fields": extra})
         return raw
     changed_files = inputs.get("changed_files")
-    if not isinstance(changed_files, list) or not changed_files or not all(isinstance(item, str) and item for item in changed_files):
+    if not isinstance(changed_files, list) or not (changed_files or allow_empty) or not all(isinstance(item, str) and item for item in changed_files):
         return invalid_packet_input("changed_files must be a non-empty array when scope_evidence is omitted", field="changed_files")
     non_goals = inputs.get("non_goals")
     if not isinstance(non_goals, list) or not non_goals or not all(isinstance(item, str) and item for item in non_goals):
@@ -625,8 +636,10 @@ def normalize_scope_evidence(inputs: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def normalize_evidence_list(raw: Any, *, fallback: Any, default_kind: str, default_source: str) -> list[dict[str, str]] | dict[str, Any]:
-    if isinstance(raw, list) and raw:
+def normalize_evidence_list(raw: Any, *, fallback: Any, default_kind: str, default_source: str, mode: str) -> list[dict[str, str]] | dict[str, Any]:
+    # Draft mode permits an empty list, but not an absent one: the plan-stage boundary
+    # has produced no verification evidence yet, and says so explicitly.
+    if isinstance(raw, list) and (raw or mode == "draft"):
         normalized: list[dict[str, str]] = []
         for index, item in enumerate(raw):
             evidence = normalize_evidence_record(item, field=f"verification_evidence[{index}]")
@@ -726,7 +739,10 @@ def build_packet_body(
     return "\n".join(parts)
 
 
-def editable_fields() -> list[dict[str, str]]:
+def editable_fields(mode: str) -> list[dict[str, str]]:
+    if mode == "draft":
+        # A draft body encloses no editable prose.
+        return []
     return [
         {
             "field_id": "summary",

@@ -592,6 +592,34 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   before Phase 0 with that one-line message — the same fail-fast shape
   0.6b uses. **Print the resolved stage and its basis before any phase
   work begins.**
+  - **Corroborate the `Draft PR` row.** Read the row first; when absent, send no
+    `pr_observation`. When present, take exactly **one** read-only observation,
+    scoped to the head branch. `--state all` separates a closed pull request from
+    an absent one. The trigger is the row's presence, not the stage.
+
+    ```text
+    gh pr list --head <branch> --state all --json number,url,state,isDraft,headRefName
+    ```
+
+  - **Send it as `inputs.pr_observation`; the helper classifies.** Set `ok` to
+    the JSON literal `true` — never `1`, never `"true"` — only when the query
+    exited zero *and* parsed, carrying the array in `pull_requests`; otherwise
+    `ok: false` with a `reason`. **You observe; the helper never runs the tool or
+    touches the network.** Anything less yields `skipped`: an unreachable query
+    is not evidence a pull request is gone.
+  - **Print `corroboration.status` beside the `Stage:` line every run**; all six
+    print:
+
+    ```text
+    Draft PR: pr_closed — #438 recorded, closed (merged: false)
+    ```
+
+  - **Record that line durably only for `pr_closed`, `pr_missing`, and
+    `identity_mismatch`**, in the **same edit turn as the `Stage` row** so one
+    commit carries both.
+  - **It reports; it never decides** — never changes the stage, blocks
+    resolution, or stops the run. Consequences belong to the terminal step, in
+    [phase-execution-codex.md](./references/phase-execution-codex.md).
 - **Step 0.8: Capability Coverage Check** — informational research/context advisory (agents have fallbacks)
 - **Step 0.8b: Capability Enumeration, Grounding & Feed-down** — you are the only component that discovers openly. Enumerate the tools and installed skills this session actually exposes and select best-fit per the capability-discovery directive (speckit-pro/skills/speckit-autopilot/references/capability-discovery.md); assume no fixed set — the user may have installed anything. Subagents inherit the operator's full installed surface and follow the same directive — read-only roles select only read/research capabilities (their mutation built-ins are denied). Still pass the discovered evidence a subagent needs directly in each prompt: shared context beats re-discovery. Ground your OWN output (gate decisions, consensus synthesis, PR bodies) per the grounding contract (speckit-pro/skills/speckit-autopilot/references/grounding.md): cite a real tool/skill/file result for every external fact, and abstain when none grounds it.
 - **Step 0.9: Constitution Validation** — principle checks against current codebase

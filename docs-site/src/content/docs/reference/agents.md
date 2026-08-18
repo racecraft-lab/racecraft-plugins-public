@@ -11,11 +11,12 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 - **Public path:** `/racecraft-plugins-public/reference/agents/`
 - **Generated output:** `docs-site/src/content/docs/reference/agents.md`
-- **Records:** 12
+- **Records:** 13
 
 ## Navigation Summary
 
 - Analyze Executor
+- Artifact Author
 - Autopilot Fast Helper
 - Checklist Executor
 - Clarify Executor
@@ -57,6 +58,29 @@ Claude Code plugin agents and Codex custom-agent templates with runtime-specific
 
 - Runtime-specific agent source formats are parallel surfaces, not generated copies of one another.
   - Based on: `speckit-pro/agents/analyze-executor.md`, `speckit-pro/codex-agents/analyze-executor.toml`
+
+### Artifact Author
+
+- **Purpose:** Fills the shipped HTML artifact-gallery templates for a feature and writes the finished pages into the feature's artifacts/ directory.
+- **Classification:** `source`
+- **Platform concept:** SpecKit Pro artifact-author agent
+- **Claude Code:** artifact-author.md plugin agent source
+- **Codex:** artifact-author.toml custom-agent template
+- **Runtime difference:** Claude Code agent sources are Markdown plugin agent definitions; Codex custom-agent templates are TOML files installed into a Codex agent directory.
+
+#### Source Facts
+
+- artifact-author has Claude Code agent source and Codex custom-agent source. Codex model metadata declares `gpt-5.5` with `xhigh` effort. Source refs: `speckit-pro/agents/artifact-author.md`, `speckit-pro/codex-agents/artifact-author.toml`.
+
+#### Sources
+
+- [speckit-pro/agents/artifact-author.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/agents/artifact-author.md)
+- [speckit-pro/codex-agents/artifact-author.toml](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-agents/artifact-author.toml)
+
+#### Inferred Notes
+
+- Runtime-specific agent source formats are parallel surfaces, not generated copies of one another.
+  - Based on: `speckit-pro/agents/artifact-author.md`, `speckit-pro/codex-agents/artifact-author.toml`
 
 ### Autopilot Fast Helper
 
