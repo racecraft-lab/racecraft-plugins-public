@@ -1,0 +1,41 @@
+{
+  "body_file": "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004/body.md",
+  "error_class": "none",
+  "exit_code": 0,
+  "failures": [],
+  "mode": "single",
+  "packet_id": "art-004",
+  "pr_blocked": false,
+  "remediation_evidence": [],
+  "rule_outcomes": [
+    {
+      "evidence": "no failures",
+      "rule": "packet.validation",
+      "status": "passed"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "source_fingerprints": {
+    "body": {
+      "algorithm": "sha256",
+      "path": "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004/body.md",
+      "sha256": "c0a889e9978e22abf3fc46b46323b28ab7c59c49630fa01d72059581f887def4",
+      "size_bytes": 11784
+    },
+    "packet": {
+      "algorithm": "sha256",
+      "path": "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004.json",
+      "sha256": "21b488db37cc754220ba0cdf92238612de114a21186bbfdf0ef476dd462bdcc3",
+      "size_bytes": 13975
+    }
+  },
+  "status": "passed",
+  "stderr_line": "",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "art-004-gallery-completion-design-prototyping"
+  },
+  "timestamp": "2026-08-18T21:14:06Z",
+  "title_value": "feat(art-004): complete design gallery artifacts",
+  "validation_result_path": "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004/validation.json"
+}

@@ -865,9 +865,9 @@ generated files must never be hand-reverted independently.
 | Post: Self-Review | ✅ Complete | Mandatory four-question audit below records tests, nine acceptance scenarios, FR/task traceability, and tidiness; no gaps found |
 | Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is deferred, no committed feature-local skeleton exists, and no UAT validator is registered; `quickstart.md` remains the executable source-derived matrix |
 | Post: Final Reviewability Backstop | ✅ Complete | Deferred helper was not invoked; proceeded on current committed slice evidence and clean reviewed checkpoint `d65345e65` |
-| Post: PR Packet/Body Generation | ⏳ Pending | Runs after G7 |
-| Post: PR Body Generation | ⏳ Pending | Runs after G7 |
-| Post: PR Creation | ⏳ Pending | Runs after G7 |
+| Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply emitted the current feature-local packet and body; read-only validation passed with `pr_blocked=false` and `writes_state=false`; clean-tree validation was persisted; both title gates pass |
+| Post: PR Body Generation | ✅ Complete | Refined only the sanctioned What Changed and Why It Matters regions, including the required consumer-facing `release-note` fence; protected packet sections and fingerprint remain valid |
+| Post: PR Creation | 🔄 In Progress | Packet-owned base, head, title, and body are validated; push and draft PR creation are next |
 | Post: Review Remediation | ⏳ Pending | Final pre-PR review is clean; live PR feedback is checked after creation |
 | Post: Retrospective | ⏳ Pending | Final Post item |
 
