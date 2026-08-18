@@ -4,104 +4,84 @@
 
 ### R1. Runtime and packaging
 
-**Decision**: Build each new artifact as one browser-native HTML file with inline CSS and JavaScript.
+**Decision**: Build each artifact as one browser-native HTML file with inline CSS and JavaScript.
 
-**Rationale**: The gallery contract requires direct `file://` use, offline readability, no sibling assets, no build step, and no runtime persistence. A local single-file implementation also keeps the user-facing behavior reviewable per artifact.
+**Rationale**: Direct `file://` use, offline readability, no sibling assets, no build step, and no persistence are required. Local behavior in each file keeps the review surface understandable inside each ordered slice.
 
-**Alternatives considered**:
-
-- Shared JavaScript runtime: rejected because the single-file rule requires local behavior and the user explicitly required no new production helper.
-- Framework build: rejected because it adds dependencies and a build step outside the gallery contract.
+**Alternatives considered**: Shared runtime and framework builds were rejected because they violate the single-file/offline contract and add nonessential dependency surface.
 
 ### R2. Source reproducibility
 
-**Decision**: Use the pinned upstream commit `58c305be97f47b26b678f2c07dec01d4242268ec` for all six source templates.
+**Decision**: Use pinned upstream commit `58c305be97f47b26b678f2c07dec01d4242268ec` for all six new ports.
 
-**Rationale**: The recorded answer "Pin one commit" makes attribution, line-count evidence, and reproduction stable across all six ports.
+**Rationale**: The recorded answer "Pin one commit" keeps attribution, source-size evidence, and reproduction stable.
 
-**Alternatives considered**:
-
-- Follow upstream `main`: rejected because review evidence could drift during implementation.
-- Vendor upstream originals: rejected because the repository commits branded derivatives, not pristine upstream copies.
+**Alternatives considered**: Tracking upstream `main` was rejected as drift-prone. Vendoring upstream originals was rejected because the repo ships branded derivatives only.
 
 ### R3. Fidelity rule
 
-**Decision**: Use "Functional fidelity": preserve every distinct section, state, motion timing, decision surface, and interaction, while compacting only the repeated sample groups permitted by the spec.
+**Decision**: Use "Functional fidelity": keep every distinct section, state, motion timing, decision surface, and interaction; compact only repeated sample groups allowed by the spec.
 
-**Rationale**: This keeps the user-visible value of each upstream template without forcing literal sample volume through an already blocked reviewability budget.
+**Rationale**: The user-visible behavior is preserved without forcing literal sample volume through review gates.
 
-**Alternatives considered**:
+**Alternatives considered**: Literal fidelity was rejected for repeated sample overhead. Minimal reinterpretation was rejected because it would drop required acceptance evidence.
 
-- Literal fidelity: rejected because repeated sample rows would increase review size without adding distinct behavior.
-- Minimal reinterpretation: rejected because it would drop required acceptance evidence.
+### R4. Approved review topology
 
-### R4. Export semantics
+**Decision**: Preserve the original "One combined slice" as historical evidence, then execute the user's 2026-08-17 recovery approval: "approve three slices".
 
-**Decision**: `visual-designs` exports "One direction" plus rationale. `component-variants` exports "Base variant" plus rationale while still displaying every required state.
+**Rationale**: The combined Plan gate blocked at 865 reviewable LOC and 9 production files. The recorded fallback was "Stop and split", and the approved split keeps fidelity and ART-020 ownership intact.
 
-**Rationale**: These are the only two decision artifacts in ART-004. The copied payload must preserve the reader's live conclusion, rationale, and relevant control context.
+**Alternatives considered**: Reducing fidelity or removing ART-020 from ART-004 was rejected because both contradict recorded decisions.
 
-**Alternatives considered**:
+### R5. Slice boundaries
 
-- Export all directions or every component state: rejected because the manifest value is the chosen decision, not a full page transcript.
-- Freeform notes only: rejected because the result would not carry an actionable selected option.
+**Decision**: Use three serial slices: keyboard foundation, read-only ports, and decision ports.
 
-### R5. ART-020 ownership
+**Rationale**: Slice 1 lands the keyboard-scroll repair and guard first. Slice 2 ships four read-only ports without export logic. Slice 3 ships the two exportable decision artifacts. Shared manifest, test, payload, proof, and generated-doc paths are assigned serially and are not parallel-safe.
+
+**Alternatives considered**: Seven one-template slices were safer but not the approved topology. Three equal LOC slices were rejected because the split must follow actual capability boundaries.
+
+### R6. Export semantics
+
+**Decision**: `visual-designs` exports "One direction" plus rationale. `component-variants` exports "Base variant" plus rationale while still showing all required component states.
+
+**Rationale**: These are the only two decision artifacts. The durable output is the chosen conclusion, rationale, and live context.
+
+**Alternatives considered**: Exporting all options or freeform notes was rejected because it does not produce one actionable conclusion.
+
+### R7. ART-020 ownership
 
 **Decision**: "Absorb ART-020" and "Mark superseded".
 
-**Rationale**: ART-004 owns all five existing-container repairs, their accessible names, the global Layer 4 guard, the negative fixture, keyboard UAT, and generated artifacts. ART-020 remains a defect record without a duplicate execution path.
+**Rationale**: ART-004 owns the five existing-container repairs, accessible names, global guard, negative fixture, UAT, and generated-artifact updates. ART-020 stays as provenance, not an execution path.
 
-**Alternatives considered**:
-
-- Run ART-020 separately first: rejected by the recorded ownership answer.
-- Remove ART-020 from ART-004 to shrink scope: rejected because the fallback decision is "Stop and split", not scope reduction.
-
-### R6. Review topology
-
-**Decision**: Keep "One combined slice" only until the authoritative Plan evidence is evaluated.
-
-**Rationale**: The setup interview selected one combined slice, but also selected "Stop and split" if the actual Plan evidence blocks. The combined slice is therefore a planning shape, not implementation permission.
-
-**Alternatives considered**:
-
-- Seven ordered slices: safest technical topology, but not the recorded setup answer.
-- Three grouped slices: matches the advisory estimator's suggested slice count, but still needs human approval once G3 blocks.
-
-### R7. Keyboard-scroll validation
-
-**Decision**: Add a global Layer 4 guard over shipped manifest artifacts using `data-rc-keyboard-scroll="horizontal"`, `tabindex="0"`, `role="group"`, and a specific non-empty `aria-label`.
-
-**Rationale**: The guard is markup-contract based, avoids CSS parsing, and makes both the ART-020 repair and new ports inherit the same keyboard-accessibility rule.
-
-**Alternatives considered**:
-
-- Hard-code only the five existing containers: rejected because new ports would not be protected.
-- Infer overflow by selectors alone: rejected because the spec requires self-identifying intentional horizontal scroll regions.
+**Alternatives considered**: Running ART-020 separately or removing it from ART-004 was rejected by the recorded ownership and fallback decisions.
 
 ### R8. Verification and release
 
-**Decision**: Verify with Layer 1/Layer 4 tests, manual `file://` UAT, `scripts/refresh-release-artifacts.py`, `pnpm --dir docs-site reference:generate`, and generated-artifact consistency checks.
+**Decision**: Use Layer 1/Layer 4 validation, manual `file://` UAT, `scripts/refresh-release-artifacts.py`, `pnpm --dir docs-site reference:generate`, and generated-artifact consistency checks.
 
-**Rationale**: Authored gallery bytes affect the Claude and Codex payloads, installed-cache mirrors, proof JSON, and docs reference pages. Generated files must be derived, not hand-edited.
+**Rationale**: Authored gallery bytes affect source, dist payloads, installed-cache mirrors, proof JSON, release-readiness evidence, and generated docs reference pages. Generated files must be derived, not edited.
 
-**Alternatives considered**:
-
-- Automated browser tests in the repository suite: rejected because repository validation remains Python standard library only.
-- Skipping generated-reference refresh after test changes: rejected by the repository release contract.
+**Alternatives considered**: Browser automation inside the repository suite was rejected because the suite remains Python standard library only.
 
 ## Source Inventory
 
-| Artifact | Upstream source | Required fill regions | Export behavior |
-|---|---|---|---|
-| `visual-designs` | `02-exploration-visual-designs.html` | `feature-header`, `design-brief`, `background-toggle`, `directions` | Prompt and Markdown decision export |
-| `design-system` | `05-design-system.html` | `feature-header`, `color`, `typography`, `spacing`, `shape`, `components` | Read-only |
-| `component-variants` | `06-component-variants.html` | `feature-header`, `variant-controls`, `variants`, `snippet-preview` | Prompt and Markdown decision export |
-| `animation-prototype` | `07-prototype-animation.html` | `feature-header`, `completion-stage`, `easing-controls`, `keyframes`, `css-snippet` | Read-only |
-| `interaction-prototype` | `08-prototype-interaction.html` | `feature-header`, `views`, `interaction-notes`, `open-questions` | Read-only |
-| `svg-illustrations` | `10-svg-illustrations.html` | `feature-header`, `illustrations`, `palette-rules` | Read-only |
+| Artifact | Slice | Upstream source | Required fill regions | Export behavior |
+|---|---:|---|---|---|
+| `design-system` | 2 | `05-design-system.html` | `feature-header`, `color`, `typography`, `spacing`, `shape`, `components` | Read-only |
+| `animation-prototype` | 2 | `07-prototype-animation.html` | `feature-header`, `completion-stage`, `easing-controls`, `keyframes`, `css-snippet` | Read-only |
+| `interaction-prototype` | 2 | `08-prototype-interaction.html` | `feature-header`, `views`, `interaction-notes`, `open-questions` | Read-only |
+| `svg-illustrations` | 2 | `10-svg-illustrations.html` | `feature-header`, `illustrations`, `palette-rules` | Read-only |
+| `visual-designs` | 3 | `02-exploration-visual-designs.html` | `feature-header`, `design-brief`, `background-toggle`, `directions` | Prompt and Markdown decision export |
+| `component-variants` | 3 | `06-component-variants.html` | `feature-header`, `variant-controls`, `variants`, `snippet-preview` | Prompt and Markdown decision export |
 
-## Reviewability Evidence
+## Size Reconciliation
 
-The fixed planning evidence records 3,098 upstream source lines and a forward estimate of 865 projected reviewable LOC. Local `wc -l` against the pinned cache reports 3,092 newline-terminated lines; this difference does not change the gate outcome because the accepted planning baseline and the forward estimate already exceed the block threshold.
+The six pinned sources total 3,098 planning lines. Local `wc -l` against the pinned cache reports 3,092 newline-terminated lines. The active Plan uses the required planning baseline and assigns review estimates by capability:
+
+- Slice 1: 160 reviewable LOC, 3 production files, no new upstream source lines.
+- Slice 2: 590 reviewable LOC, 4 production files, 1,976 required planning source lines.
+- Slice 3: 520 reviewable LOC, 2 production files, 1,122 required planning source lines plus export behavior.
 

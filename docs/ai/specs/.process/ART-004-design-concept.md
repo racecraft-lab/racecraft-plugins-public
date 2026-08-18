@@ -43,10 +43,11 @@ stop_reason: "natural"
   through generated release artifacts (Q4, Q5).
 - Mark ART-020 superseded by ART-004 so the same work cannot be executed twice
   (Q5).
-- Plan the expanded scope as **one combined slice**, as explicitly selected in
-  Q8. If the authoritative plan-time reviewability gate blocks that shape, stop
-  and return for a new human-approved split; do not reduce fidelity or silently
-  move ART-020 back out (Q9).
+- Preserve the original Q8 choice as historical evidence: the first Plan
+  attempted **one combined slice**. When its authoritative gate blocked at 865
+  reviewable LOC and 9 production files, Q9 fired. On 2026-08-17 the user
+  approved three ordered slices without reducing fidelity or moving ART-020
+  back out.
 
 ## Non-goals
 
@@ -260,6 +261,29 @@ UAT, and generated-artifact updates.
 
 **User's answer:** Stop and split (Recommended).
 
+## Post-interview human decision: Three-slice recovery
+
+The first Plan attempt measured the Q8 combined topology at 865 reviewable LOC
+and 9 production files. Both values exceeded the repository's block thresholds,
+so G3 stopped before Checklist and Tasks. The user then answered **"approve
+three slices"** on 2026-08-17.
+
+The approved topology is:
+
+1. **Keyboard foundation:** ART-020's five horizontal-scroll repairs, the
+   manifest-wide Layer 4 guard, its negative fixture, and keyboard UAT.
+2. **Read-only ports:** `design-system`, `animation-prototype`,
+   `interaction-prototype`, and `svg-illustrations`.
+3. **Decision ports:** `visual-designs` and `component-variants`, including
+   their live-state prompt/Markdown exports and clipboard-refusal fallback.
+
+This is a review-topology decision only. `Functional fidelity`, the pinned
+commit, ART-020 ownership and supersession, the exact export contracts, and the
+single-file/offline constraints remain unchanged. Shared manifest, test,
+payload, proof, and generated-doc changes must be serialized in slice order.
+The resumed Plan must gate each slice separately and stop again if any one is
+still blocked.
+
 ## Decisions recorded without a question
 
 - **Single-file contract.** Each new artifact embeds the canonical brand and
@@ -285,7 +309,8 @@ UAT, and generated-artifact updates.
   generated mirrors.
 - **Shared integration.** Manifest status flips, Layer 4 assertions, payloads,
   proofs, and generated documentation are shared integration surfaces. The
-  combined slice owns them once rather than distributing edits across branches.
+  approved slices own these changes serially in order; later slices build on
+  the prior slice rather than editing the same integration surface in parallel.
 
 ## Open Questions
 
@@ -310,16 +335,9 @@ UAT, and generated-artifact updates.
   **Suggested next step:** Plan from
   `tests/speckit-pro/unit/test-artifact-gallery.py` and its neighboring fixtures.
 
-- **What:** Whether one combined slice clears the authoritative reviewability
-  gate.
-  **Why deferred:** The advisory estimator warns, and actual reviewable LOC can
-  only be measured from the plan's declared operations and later implementation.
-  **Suggested next step:** Run the plan-time gate before Tasks. If blocked, stop
-  for the Q9 split decision rather than continuing.
-
 ## Recommended Next Step
 
-Setup mode continues by generating ART-004's workflow file and SPEC-MOC,
-updating the roadmap to show ART-004 in progress and ART-020 superseded, and
-pushing the scaffold branch. Planning then starts from the generated workflow
-and must resolve the reviewability gate before task generation.
+Resume Plan from the committed blocked checkpoint, encode the approved three
+slices in every planning artifact, and run the authoritative reviewability gate
+for each slice. Continue to Checklist and Tasks only if all three results are
+non-blocking.

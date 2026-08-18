@@ -12,8 +12,8 @@
    "art-004-gallery-completion-design-prototyping".
 2. This file is already populated from the ART-004 roadmap entry and its Grill
    Me interview. Do not reopen settled decisions during autonomous execution.
-3. ART-004 is currently one combined slice. If the authoritative Plan
-   reviewability gate blocks it, stop for a new human-approved split.
+3. ART-004 is now three ordered slices. The original combined plan blocked at
+   G3, and the user approved the three-slice recovery on 2026-08-17.
 4. Track progress in the table below. The scaffold command does not execute any
    phase.
 
@@ -36,7 +36,7 @@ normal consensus protocol.
 
 ## Scope and Reviewability Decision
 
-The combined slice owns:
+ART-004 as a whole owns:
 
 - six new single-file gallery ports;
 - the six matching manifest status flips;
@@ -53,16 +53,31 @@ classification. It returned an 865-line estimate, status "warn", and three
 suggested slices. The pinned upstream sources total 3,098 lines before the
 Racecraft contract is applied.
 
-The user nevertheless selected **one combined slice**. This is not an exception
-to the repository gate. Plan MUST:
+The original interview selected **one combined slice**. This was not an
+exception to the repository gate. The first Plan attempt declared 865
+reviewable LOC and 9 production files, so G3 blocked exactly as Q9 required.
 
-1. declare every actual file operation;
-2. measure the combined shape with the authoritative reviewability gate;
-3. record the evidence and threshold class; and
-4. stop before Tasks if the result is "block", returning for a human-approved
-   split without reducing functional fidelity or reactivating ART-020.
+On 2026-08-17, the user approved this replacement topology:
 
-Projected reviewable LOC: 865
+| Slice | Scope | Ordering reason |
+|---|---|---|
+| 1 — Keyboard foundation | ART-020's five container repairs, the global Layer 4 guard, negative fixture, and keyboard UAT | Establishes the accessibility pattern before any port uses it |
+| 2 — Read-only ports | `design-system`, `animation-prototype`, `interaction-prototype`, and `svg-illustrations` | Groups the four entries whose manifest export declaration is empty |
+| 3 — Decision ports | `visual-designs` and `component-variants`, including live-state prompt/Markdown exports and clipboard fallback | Isolates the two higher-interaction export carriers |
+
+Manifest, shared tests, payload, proof, and generated-doc integration remain
+serialized across the ordered slices. This approval changes review topology,
+not functional fidelity, ART-020 ownership, or export behavior. The resumed
+Plan MUST:
+
+1. declare every actual file operation per slice;
+2. produce durable per-slice reviewability inputs and run the authoritative
+   gate against all three;
+3. record every result and threshold class; and
+4. stop before Checklist if any approved slice still returns `block`.
+
+Historical combined projection: 865 reviewable LOC. It is failure evidence,
+not authority for any individual approved slice.
 
 ---
 
@@ -72,7 +87,7 @@ Projected reviewable LOC: 865
 |---|---|---|---|
 | Specify | /speckit-specify | ✅ Complete | 14 requirements, 3 stories, 0 unresolved markers; G1 passed |
 | Clarify | /speckit-clarify | ✅ Complete | 3 sessions, 15 accepted answers, 0 markers, no consensus fan-out; G2 passed |
-| Plan | /speckit-plan | ⚠️ Blocked | G3 blocked at 865 reviewable LOC and 9 production files; awaiting a human-approved split |
+| Plan | /speckit-plan | ✅ Complete | G3 passed for three approved slices: 160 pass, 590 warn, 520 warn; no blockers |
 | Checklist | /speckit-checklist | ⏳ Pending | UX, accessibility, error handling |
 | Tasks | /speckit-tasks | ⏳ Pending | Only after a non-blocking plan |
 | Analyze | /speckit-analyze | ⏳ Pending | Cross-check against the design concept |
@@ -376,7 +391,9 @@ Read the roadmap, constitution, spec.md, and
 docs/ai/specs/.process/ART-004-design-concept.md. Quote the selected interview
 answers in the design rationale: "Functional fidelity", "Pin one commit",
 "Base variant", "One direction", "Absorb ART-020", "Mark superseded",
-"One combined slice", and "Stop and split".
+"One combined slice", and "Stop and split". Preserve the first topology as
+historical evidence, then record the user's 2026-08-17 recovery decision:
+"approve three slices".
 
 ## Tech stack
 - Runtime: browser-native HTML, CSS, and JavaScript in one file per artifact.
@@ -389,24 +406,26 @@ answers in the design rationale: "Functional fidelity", "Pin one commit",
   reference command when its tracked inputs change.
 
 ## Required architecture
-- Treat each new HTML file as a self-contained vertical capability inside the
-  one combined delivery slice.
+- Treat each new HTML file as a self-contained vertical capability inside its
+  approved ordered slice: keyboard foundation, four read-only ports, then two
+  decision/export ports.
 - Copy canonical blocks verbatim; never refactor them into a shared runtime.
 - Adapt pinned upstream mechanisms to existing Racecraft tokens and contract.
 - Centralize no new production helper: the single-file rule requires local
   behavior, and the global keyboard rule belongs in repository validation.
 - Apply the ART-020 repair before using its pattern in new ports.
 - Serialize shared manifest, test, payload, proof, and generated-doc integration
-  work; do not declare those files parallel-safe.
+  work across slice order; do not declare those files parallel-safe.
 
 ## Reviewability gate — mandatory stop
-- Enumerate every NEW and MODIFIED file in Declared File Operations, including
-  generated paths as generated rather than authored.
-- Run the authoritative plan gate against plan.md.
-- Reconcile its result with the six pinned sources totaling 3,098 lines and the
-  forward estimate of 865.
-- If blocked, write the evidence into plan.md, mark G3 blocked, stop the run,
-  and request a new human-approved split. Do not proceed to Checklist or Tasks.
+- Enumerate every NEW and MODIFIED file per slice in Declared File Operations,
+  including generated paths as generated rather than authored.
+- Create durable, unambiguous gate input for each approved slice and run the
+  authoritative plan gate against all three inputs.
+- Reconcile the per-slice results with the six pinned sources totaling 3,098
+  lines and the blocked combined estimate of 865.
+- If any slice remains blocked, write the evidence into plan.md, mark G3
+  blocked, and stop again. Do not proceed to Checklist or Tasks.
 - Do not claim that the setup helper's full-roadmap result applies to ART-004.
 
 ## Verification design
@@ -432,11 +451,11 @@ answers in the design rationale: "Functional fidelity", "Pin one commit",
 
 | Artifact | Status | Notes |
 |---|---|---|
-| plan.md | ⚠️ Blocked | Complete plan records the binding `Stop and split` verdict |
+| plan.md | ✅ Complete | Failed combined topology retained as history; approved three-slice operations and ordering are authoritative |
 | research.md | ✅ Complete | Pinned-source and shipped-pattern evidence |
 | data-model.md | ✅ Complete | DOM state, manifest state, and keyboard-scroll declaration model |
-| contracts/ | ✅ Complete | Gallery, decision-export, and keyboard-scroll guard contracts |
-| quickstart.md | ✅ Complete | Direct `file://`, suite, UAT, and regeneration instructions |
+| contracts/ | ✅ Complete | Gallery, decision-export, keyboard-scroll, and three durable slice-gate contracts |
+| quickstart.md | ✅ Complete | Ordered slice execution, direct `file://`, suite, UAT, and regeneration instructions |
 
 Plan-phase evidence:
 
@@ -449,8 +468,25 @@ Plan-phase evidence:
   returned `status=block`, `pass=false`, `reviewable_loc=865`,
   `production_files=9`, and `total_files=11`, with no honored exception.
 - Blockers: reviewable LOC exceeds 800 and production files exceed 8.
-- **G3 verdict: BLOCKED.** Per the recorded `Stop and split` answer, the run
-  stops before Checklist and Tasks and awaits a new human-approved split.
+- **First G3 verdict: BLOCKED.** Per the recorded `Stop and split` answer, the
+  run stopped before Checklist and Tasks and awaited a human-approved split.
+
+Approved-split revalidation after the user's `approve three slices` decision:
+
+| Slice | Durable gate input | Reviewable LOC | Production files | Total files | Result | Blockers |
+|---|---|---:|---:|---:|---|---|
+| 1 — Keyboard foundation | `contracts/reviewability-slice-1-keyboard-foundation.md` | 160 | 3 | 4 | `pass` | none |
+| 2 — Read-only ports | `contracts/reviewability-slice-2-read-only-ports.md` | 590 | 4 | 7 | `warn` | none |
+| 3 — Decision ports | `contracts/reviewability-slice-3-decision-ports.md` | 520 | 2 | 5 | `warn` | none |
+
+- All three authoritative helper calls returned `pass=true`; no exception was
+  requested or honored.
+- The revised advisory estimator still returned `projected=0` because its
+  classifier does not count the declared HTML/Python surface. The durable
+  per-slice setup-mode results above remain the applicable evidence.
+- Structure validation found `plan.md` with zero unresolved markers.
+- **G3 gate: PASS.** The approved topology is non-blocking, so Checklist may
+  start. Shared integration remains serialized in slice order.
 
 ---
 

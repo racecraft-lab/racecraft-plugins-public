@@ -3,10 +3,10 @@
   "spec_id": "ART-004",
   "feature_dir": "specs/art-004-gallery-completion-design-prototyping",
   "branch": "art-004-gallery-completion-design-prototyping",
-  "status": "awaiting_review",
+  "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 3: Plan - blocked for human-approved split",
-  "updated_at": "2026-08-18T00:57:47Z",
+  "active_step": "Phase 3: Plan - checkpoint commit",
+  "updated_at": "2026-08-18T02:26:30Z",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
     "consensus_mode": "moderate",
@@ -100,7 +100,8 @@
         "production files 9 exceeds block threshold 8"
       ],
       "decision": "Stop and split",
-      "next_action": "human-approved split required before Checklist or Tasks"
+      "next_action": "superseded by the human-approved three-slice recovery",
+      "superseded_by": "three-slice approval on 2026-08-17"
     },
     "plan_estimator": {
       "status": "pass",
@@ -108,6 +109,23 @@
       "production_files": 0,
       "declared_total_entries": 11,
       "disposition": "non-authoritative for ART-004 because the current classifier omits the declared HTML/Python review surface"
+    },
+    "human_approved_split": {
+      "approved_at": "2026-08-17",
+      "decision": "approve three slices",
+      "status": "non-blocking; G3 passed",
+      "slices": [
+        "Keyboard foundation: ART-020 repair, global guard, negative fixture, keyboard UAT",
+        "Read-only ports: design-system, animation-prototype, interaction-prototype, svg-illustrations",
+        "Decision ports: visual-designs, component-variants, exports, clipboard fallback"
+      ],
+      "shared_integration": "serialized in slice order",
+      "gate_requirement": "all three per-slice reviewability results must be non-blocking before Checklist",
+      "gate_results": [
+        {"slice": "keyboard foundation", "status": "pass", "pass": true, "reviewable_loc": 160, "production_files": 3, "total_files": 4, "blockers": []},
+        {"slice": "read-only ports", "status": "warn", "pass": true, "reviewable_loc": 590, "production_files": 4, "total_files": 7, "blockers": []},
+        {"slice": "decision ports", "status": "warn", "pass": true, "reviewable_loc": 520, "production_files": 2, "total_files": 5, "blockers": []}
+      ]
     }
   },
   "plan": [
@@ -120,7 +138,7 @@
     {"step": "Phase 2: Clarify - Decision exports Consensus", "status": "skipped: executor reported zero unresolved items"},
     {"step": "Phase 2: Clarify - Global keyboard-scroll guard", "status": "completed"},
     {"step": "Phase 2: Clarify - Global keyboard-scroll guard Consensus", "status": "skipped: executor reported zero unresolved items"},
-    {"step": "Phase 3: Plan", "status": "blocked: reviewability gate requires human-approved split"},
+    {"step": "Phase 3: Plan", "status": "completed"},
     {"step": "Phase 4: Checklist - ux", "status": "pending"},
     {"step": "Phase 4: Checklist - ux Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - accessibility", "status": "pending"},
@@ -165,10 +183,12 @@
       "reason": "0 [NEEDS CLARIFICATION] markers"
     },
     "G3": {
-      "pass": false,
+      "pass": true,
       "markers": 0,
-      "reason": "reviewability gate blocked at 865 LOC and 9 production files",
-      "decision": "Stop and split"
+      "reason": "all three approved slice gates are non-blocking and plan.md has 0 unresolved markers",
+      "decision": "approved three-slice topology",
+      "slice_results": ["160/pass", "590/warn", "520/warn"],
+      "prior_attempt": "combined topology blocked at 865 LOC and 9 production files"
     }
   },
   "phase_results": {
@@ -202,7 +222,7 @@
       "consensus": "skipped: executor reported zero unresolved items"
     },
     "plan": {
-      "status": "blocked",
+      "status": "completed",
       "artifacts": [
         "plan.md",
         "research.md",
@@ -213,13 +233,14 @@
         "contracts/keyboard-scroll-guard-contract.md"
       ],
       "markers": 0,
-      "declared_authored_files": 11,
-      "declared_generated_paths": 58,
-      "reviewable_loc": 865,
-      "production_files": 9,
-      "gate": "G3 blocked",
-      "decision": "Stop and split",
-      "downstream": "Checklist and Tasks not started"
+      "declared_authored_operations_by_slice": [4, 7, 5],
+      "declared_generated_paths_by_slice": [30, 38, 30],
+      "reviewable_loc_by_slice": [160, 590, 520],
+      "production_files_by_slice": [3, 4, 2],
+      "gate": "G3 passed",
+      "decision": "approve three slices",
+      "downstream": "Checklist may start",
+      "prior_attempt": "combined topology blocked at 865 LOC and 9 production files"
     }
   }
 }

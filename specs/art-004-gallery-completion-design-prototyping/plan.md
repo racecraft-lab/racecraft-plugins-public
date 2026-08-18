@@ -4,93 +4,125 @@
 
 **Input**: Feature specification from `specs/art-004-gallery-completion-design-prototyping/spec.md`
 
-**Status**: G3 blocked pending human-approved split. Plan artifacts are complete; Checklist and Tasks generation must not proceed from this combined slice.
+**Status**: Active Plan topology revised after human approval: three ordered slices. The failed combined-slice gate remains historical evidence only.
 
 ## Summary
 
-Complete the six planned design and prototyping gallery entries as Racecraft-branded, browser-native, self-contained HTML artifacts, while absorbing ART-020's horizontal-scroll accessibility repair and global guard. The architecture keeps each new artifact as its own single-file vertical capability, copies canonical `BRAND-KIT` and `GALLERY-HEAD` blocks verbatim, adapts the pinned upstream mechanisms to the existing gallery contract, flips only six manifest statuses, and verifies the combined slice through Layer 1, Layer 4, direct `file://` UAT, and generated-artifact consistency.
+Complete the six planned design and prototyping gallery entries as Racecraft-branded, browser-native, self-contained HTML artifacts, while absorbing ART-020's horizontal-scroll repair and global guard. The active implementation topology is now three serial slices: keyboard foundation, four read-only ports, and two decision/export ports.
 
-The selected interview answers are binding design rationale: "Functional fidelity", "Pin one commit", "Base variant", "One direction", "Absorb ART-020", "Mark superseded", "One combined slice", and "Stop and split".
+The selected interview answers remain binding design rationale: "Functional fidelity", "Pin one commit", "Base variant", "One direction", "Absorb ART-020", "Mark superseded", "One combined slice", and "Stop and split". The first topology is preserved as history: the combined slice blocked at G3, then the user approved "approve three slices" on 2026-08-17.
 
 ## Technical Context
 
 **Language/Version**: Browser-native HTML, CSS, and JavaScript for gallery artifacts; Python 3.11+ standard library for repository validation.
 
-**Primary Dependencies**: None for the shipped artifacts. No framework, bundler, package install, sibling asset, active Bash dependency, or `jq`.
+**Primary Dependencies**: None. No dependency, framework, build step, sibling asset, active Bash dependency, or `jq`.
 
-**Storage**: In-memory DOM state only for artifact controls and decisions. Catalog state remains the existing JSON manifest with exactly six status-only flips.
+**Storage**: In-memory DOM state only. The catalog remains the existing JSON manifest with six status-only flips across slices 2 and 3.
 
-**Testing**: Python 3.11+ standard-library Layer 1 and Layer 4 suites through `python3 tests/speckit-pro/run-all.py`; direct `file://` browser UAT for controls, sliders, linked screens, clipboard fallback, focus order, and horizontal keyboard scrolling.
+**Testing**: Python 3.11+ standard-library Layer 1 and Layer 4 suites through `python3 tests/speckit-pro/run-all.py`; manual direct `file://` UAT for controls, sliders, linked screens, clipboard fallback, focus order, and horizontal keyboard scrolling.
 
-**Target Platform**: Local browser over `file://` and the repository's Claude/Codex generated plugin payloads.
+**Target Platform**: Local browser over `file://`, plus regenerated Claude and Codex plugin payloads.
 
 **Project Type**: Static single-file artifact gallery plus repository validation.
 
 **Performance Goals**: Each artifact opens directly from disk without network access or build work; interaction feedback is immediate in the browser; no runtime persistence.
 
-**Constraints**: Preserve all functional sections and interactions from the pinned sources; only repeated sample volume may shrink. Apply ART-020's repair before using its pattern in new ports. Do not centralize a production helper because the single-file rule requires local behavior; keep the global keyboard rule in repository validation.
+**Constraints**: Preserve every distinct upstream section, state, motion timing, decision surface, and interaction. Only repeated sample volume named in the spec may shrink. Apply the ART-020 repair before new ports inherit the keyboard-scroll pattern. Centralize no new production helper.
 
-**Scale/Scope**: Six new ad-hoc gallery artifacts, five existing horizontal-scroll repairs across three shipped artifacts, one manifest status-only update set, one Layer 4 guard expansion, release payload/proof regeneration, and generated docs reference refresh.
+**Scale/Scope**: Three ordered slices:
 
-**Reviewability Budget**: Primary surface: UI gallery artifacts. Secondary surfaces: harness/adapter verification, seed/config catalog metadata, generated release artifacts, and generated docs reference. Projected reviewable LOC: 865. Projected production files: 9. Projected total files: 11 authored files, with generated files listed separately below. Budget result: block for one combined slice because reviewable LOC exceeds 800 and production files exceed 8.
+1. Keyboard foundation: ART-020's five repairs across three existing templates, the global guard, its synthetic negative fixture, and keyboard UAT.
+2. Read-only ports: `design-system`, `animation-prototype`, `interaction-prototype`, and `svg-illustrations`.
+3. Decision ports: `visual-designs` and `component-variants`, live-state prompt/Markdown exports, validation, and clipboard fallback.
+
+**Reviewability Budget**: Active topology gates per slice. Combined historical estimate: 865 reviewable LOC, 9 production files, 11 authored files, blocked. Approved slice estimates: slice 1 = 160 reviewable LOC / 3 production files / 4 authored files; slice 2 = 590 reviewable LOC / 4 production files / 7 authored files; slice 3 = 520 reviewable LOC / 2 production files / 5 authored files.
+
+## Historical Combined Gate
+
+The first Plan attempt kept "One combined slice". The plan-time gate blocked that topology because it reconciled the six pinned upstream sources totaling 3,098 lines with a forward estimate of 865 reviewable LOC and 9 production files. The binding fallback answer was "Stop and split". The user then approved three ordered slices on 2026-08-17. The combined slice is no longer active implementation scope.
 
 ## Declared File Operations
 
-Authored implementation operations:
+Generated paths are declared with `GENERATED` and must be derived from `scripts/refresh-release-artifacts.py` or `pnpm --dir docs-site reference:generate`, never hand-edited. Shared manifest, test, payload, proof, and generated-doc paths are assigned serially; repeated modifications across ordered slices are explicit and not parallel-safe.
 
-- NEW speckit-pro/artifact-gallery/templates/visual-designs.html
-- NEW speckit-pro/artifact-gallery/templates/design-system.html
-- NEW speckit-pro/artifact-gallery/templates/component-variants.html
-- NEW speckit-pro/artifact-gallery/templates/animation-prototype.html
-- NEW speckit-pro/artifact-gallery/templates/interaction-prototype.html
-- NEW speckit-pro/artifact-gallery/templates/svg-illustrations.html
+### Slice 1: Keyboard Foundation
+
+Authored operations:
+
 - MODIFIED speckit-pro/artifact-gallery/templates/code-approaches.html
 - MODIFIED speckit-pro/artifact-gallery/templates/implementation-plan.html
 - MODIFIED speckit-pro/artifact-gallery/templates/module-map.html
-- MODIFIED speckit-pro/artifact-gallery/manifest.json
 - MODIFIED tests/speckit-pro/unit/test-artifact-gallery.py
 
-Generated operations from `scripts/refresh-release-artifacts.py` and `pnpm --dir docs-site reference:generate`; do not hand-edit these paths:
+Generated operations:
 
-- GENERATED NEW dist/claude/speckit-pro/artifact-gallery/templates/visual-designs.html
-- GENERATED NEW dist/claude/speckit-pro/artifact-gallery/templates/design-system.html
-- GENERATED NEW dist/claude/speckit-pro/artifact-gallery/templates/component-variants.html
-- GENERATED NEW dist/claude/speckit-pro/artifact-gallery/templates/animation-prototype.html
-- GENERATED NEW dist/claude/speckit-pro/artifact-gallery/templates/interaction-prototype.html
-- GENERATED NEW dist/claude/speckit-pro/artifact-gallery/templates/svg-illustrations.html
-- GENERATED NEW dist/codex/speckit-pro/artifact-gallery/templates/visual-designs.html
-- GENERATED NEW dist/codex/speckit-pro/artifact-gallery/templates/design-system.html
-- GENERATED NEW dist/codex/speckit-pro/artifact-gallery/templates/component-variants.html
-- GENERATED NEW dist/codex/speckit-pro/artifact-gallery/templates/animation-prototype.html
-- GENERATED NEW dist/codex/speckit-pro/artifact-gallery/templates/interaction-prototype.html
-- GENERATED NEW dist/codex/speckit-pro/artifact-gallery/templates/svg-illustrations.html
 - GENERATED MODIFIED dist/claude/speckit-pro/artifact-gallery/templates/code-approaches.html
 - GENERATED MODIFIED dist/claude/speckit-pro/artifact-gallery/templates/implementation-plan.html
 - GENERATED MODIFIED dist/claude/speckit-pro/artifact-gallery/templates/module-map.html
-- GENERATED MODIFIED dist/claude/speckit-pro/artifact-gallery/manifest.json
 - GENERATED MODIFIED dist/codex/speckit-pro/artifact-gallery/templates/code-approaches.html
 - GENERATED MODIFIED dist/codex/speckit-pro/artifact-gallery/templates/implementation-plan.html
 - GENERATED MODIFIED dist/codex/speckit-pro/artifact-gallery/templates/module-map.html
-- GENERATED MODIFIED dist/codex/speckit-pro/artifact-gallery/manifest.json
-- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/visual-designs.html
-- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/design-system.html
-- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/component-variants.html
-- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/animation-prototype.html
-- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/interaction-prototype.html
-- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/svg-illustrations.html
-- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/visual-designs.html
-- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/design-system.html
-- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/component-variants.html
-- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/animation-prototype.html
-- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/interaction-prototype.html
-- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/svg-illustrations.html
 - GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/code-approaches.html
 - GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/implementation-plan.html
 - GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/module-map.html
-- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/manifest.json
 - GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/code-approaches.html
 - GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/implementation-plan.html
 - GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/module-map.html
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-partial-root.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json
+- GENERATED MODIFIED docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json
+- GENERATED MODIFIED docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json
+- GENERATED MODIFIED docs/ai/specs/.process/XPLAT-009-zero-bash-guard-result.json
+- GENERATED MODIFIED docs/ai/specs/.process/XPLAT-009-release-readiness-result.json
+- GENERATED MODIFIED docs-site/src/content/docs/reference/tests.md
+- GENERATED MODIFIED docs-site/src/content/docs/reference/source-vs-dist.md
+
+Gate input: [contracts/reviewability-slice-1-keyboard-foundation.md](./contracts/reviewability-slice-1-keyboard-foundation.md)
+
+### Slice 2: Read-Only Ports
+
+Authored operations:
+
+- NEW speckit-pro/artifact-gallery/templates/design-system.html
+- NEW speckit-pro/artifact-gallery/templates/animation-prototype.html
+- NEW speckit-pro/artifact-gallery/templates/interaction-prototype.html
+- NEW speckit-pro/artifact-gallery/templates/svg-illustrations.html
+- MODIFIED speckit-pro/artifact-gallery/manifest.json
+- MODIFIED tests/speckit-pro/unit/test-artifact-gallery.py
+- MODIFIED tests/speckit-pro/unit/test-artifact-fill-regions.py
+
+Generated operations:
+
+- GENERATED NEW dist/claude/speckit-pro/artifact-gallery/templates/design-system.html
+- GENERATED NEW dist/claude/speckit-pro/artifact-gallery/templates/animation-prototype.html
+- GENERATED NEW dist/claude/speckit-pro/artifact-gallery/templates/interaction-prototype.html
+- GENERATED NEW dist/claude/speckit-pro/artifact-gallery/templates/svg-illustrations.html
+- GENERATED NEW dist/codex/speckit-pro/artifact-gallery/templates/design-system.html
+- GENERATED NEW dist/codex/speckit-pro/artifact-gallery/templates/animation-prototype.html
+- GENERATED NEW dist/codex/speckit-pro/artifact-gallery/templates/interaction-prototype.html
+- GENERATED NEW dist/codex/speckit-pro/artifact-gallery/templates/svg-illustrations.html
+- GENERATED MODIFIED dist/claude/speckit-pro/artifact-gallery/manifest.json
+- GENERATED MODIFIED dist/codex/speckit-pro/artifact-gallery/manifest.json
+- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/design-system.html
+- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/animation-prototype.html
+- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/interaction-prototype.html
+- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/svg-illustrations.html
+- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/design-system.html
+- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/animation-prototype.html
+- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/interaction-prototype.html
+- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/svg-illustrations.html
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/manifest.json
 - GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/manifest.json
 - GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json
 - GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json
@@ -111,7 +143,52 @@ Generated operations from `scripts/refresh-release-artifacts.py` and `pnpm --dir
 - GENERATED MODIFIED docs-site/src/content/docs/reference/tests.md
 - GENERATED MODIFIED docs-site/src/content/docs/reference/source-vs-dist.md
 
-Declared authored counts: 6 new, 5 modified, 11 total authored files. Generated integration declaration: 24 generated new paths and 34 generated modified paths, 58 generated paths total.
+Gate input: [contracts/reviewability-slice-2-read-only-ports.md](./contracts/reviewability-slice-2-read-only-ports.md)
+
+### Slice 3: Decision Ports
+
+Authored operations:
+
+- NEW speckit-pro/artifact-gallery/templates/visual-designs.html
+- NEW speckit-pro/artifact-gallery/templates/component-variants.html
+- MODIFIED speckit-pro/artifact-gallery/manifest.json
+- MODIFIED tests/speckit-pro/unit/test-artifact-gallery.py
+- MODIFIED tests/speckit-pro/unit/test-artifact-fill-regions.py
+
+Generated operations:
+
+- GENERATED NEW dist/claude/speckit-pro/artifact-gallery/templates/visual-designs.html
+- GENERATED NEW dist/claude/speckit-pro/artifact-gallery/templates/component-variants.html
+- GENERATED NEW dist/codex/speckit-pro/artifact-gallery/templates/visual-designs.html
+- GENERATED NEW dist/codex/speckit-pro/artifact-gallery/templates/component-variants.html
+- GENERATED MODIFIED dist/claude/speckit-pro/artifact-gallery/manifest.json
+- GENERATED MODIFIED dist/codex/speckit-pro/artifact-gallery/manifest.json
+- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/visual-designs.html
+- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/component-variants.html
+- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/visual-designs.html
+- GENERATED NEW tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/component-variants.html
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/manifest.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/manifest.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-partial-root.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json
+- GENERATED MODIFIED tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json
+- GENERATED MODIFIED docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json
+- GENERATED MODIFIED docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json
+- GENERATED MODIFIED docs/ai/specs/.process/XPLAT-009-zero-bash-guard-result.json
+- GENERATED MODIFIED docs/ai/specs/.process/XPLAT-009-release-readiness-result.json
+- GENERATED MODIFIED docs-site/src/content/docs/reference/tests.md
+- GENERATED MODIFIED docs-site/src/content/docs/reference/source-vs-dist.md
+
+Gate input: [contracts/reviewability-slice-3-decision-ports.md](./contracts/reviewability-slice-3-decision-ports.md)
 
 ## Constitution Check
 
@@ -119,17 +196,18 @@ Declared authored counts: 6 new, 5 modified, 11 total authored files. Generated 
 
 Pre-design check:
 
-- **I. Plugin Structure Compliance**: Pass. The plan keeps repository-only tests under `tests/speckit-pro/` and gallery source under `speckit-pro/artifact-gallery/`.
-- **II. Cross-Platform Runtime & Script Safety**: Pass. New validation remains Python 3.11+ standard library. No active Bash or `jq` dependency is introduced.
+- **I. Plugin Structure Compliance**: Pass. Source remains under `speckit-pro/`; repository-only tests remain under `tests/speckit-pro/`.
+- **II. Cross-Platform Runtime & Script Safety**: Pass. Test and helper work stays Python 3.11+ standard library. No active Bash or `jq` dependency is added.
 - **III. Semantic Versioning**: Pass. No manual version edits are planned.
-- **IV. Test Coverage Before Merge**: Pass with required evidence. The feature adds Layer 4 guard coverage and relies on the existing Layer 1/4/5 default suite before completion.
-- **V. Conventional Commits**: Not applicable in this phase because no commit is allowed.
-- **VI. KISS, Simplicity & YAGNI**: Pass for architecture. The plan uses local single-file behavior instead of a new shared runtime. The reviewability budget blocks the combined slice and prevents implementation from proceeding without a new split decision.
+- **IV. Test Coverage Before Merge**: Pass. The plan uses existing registered Layer 4 files: `test-artifact-gallery.py` and `test-artifact-fill-regions.py`; `suite-manifest.json` already lists both.
+- **V. Conventional Commits**: Not applicable in this executor phase because commits are forbidden.
+- **VI. KISS, Simplicity & YAGNI**: Pass. Each artifact keeps local single-file behavior; no shared production runtime is introduced.
 
 Post-design check:
 
-- Design artifacts keep the same constraints: no dependencies, no shared production helper, structured JSON manifest update, Python standard-library tests, and generated outputs derived only from source.
-- Reviewability is blocking: 865 projected reviewable LOC and 9 production files exceed the block thresholds. No typed exception is present or honored. The split decision is the recorded answer "Stop and split"; ART-004 remains full fidelity and ART-020 remains absorbed.
+- The combined topology remains blocked historical evidence.
+- The active three-slice topology is non-blocking if all three slice gate contracts return `pass` or `warn` with no blockers.
+- Shared integration files are serial slice ownership, not parallel-safe files.
 
 ## Project Structure
 
@@ -144,7 +222,10 @@ specs/art-004-gallery-completion-design-prototyping/
 `-- contracts/
     |-- decision-export-contract.md
     |-- gallery-artifact-contract.md
-    `-- keyboard-scroll-guard-contract.md
+    |-- keyboard-scroll-guard-contract.md
+    |-- reviewability-slice-1-keyboard-foundation.md
+    |-- reviewability-slice-2-read-only-ports.md
+    `-- reviewability-slice-3-decision-ports.md
 ```
 
 ### Source Code (repository root)
@@ -153,100 +234,85 @@ specs/art-004-gallery-completion-design-prototyping/
 speckit-pro/artifact-gallery/
 |-- manifest.json
 `-- templates/
-    |-- visual-designs.html
+    |-- code-approaches.html
+    |-- implementation-plan.html
+    |-- module-map.html
     |-- design-system.html
-    |-- component-variants.html
     |-- animation-prototype.html
     |-- interaction-prototype.html
     |-- svg-illustrations.html
-    |-- code-approaches.html
-    |-- implementation-plan.html
-    `-- module-map.html
+    |-- visual-designs.html
+    `-- component-variants.html
 
 tests/speckit-pro/unit/
-`-- test-artifact-gallery.py
-
-dist/
-|-- claude/speckit-pro/artifact-gallery/
-`-- codex/speckit-pro/artifact-gallery/
-
-tests/speckit-pro/unit/fixtures/plugin-bash-confinement/
-`-- installed-cache/
-    |-- claude/speckit-pro/artifact-gallery/
-    `-- codex/speckit-pro/artifact-gallery/
+|-- test-artifact-gallery.py
+`-- test-artifact-fill-regions.py
 ```
 
-**Structure Decision**: Use the existing artifact-gallery source tree and existing unit test file. Each new HTML file is a self-contained vertical capability in the one combined delivery slice, while shared manifest, test, payload, proof, and generated-doc work is serialized.
+**Structure Decision**: Use the existing gallery source tree and existing registered Layer 4 test files. No implementation files are edited during Plan. Implementation slices are ordered and serialized around shared manifest/test/generated paths.
 
 ## Architecture
 
-1. Repair the ART-020 horizontal-scroll pattern first in `code-approaches`, `implementation-plan`, and `module-map`, then reuse that contract in every new port.
-2. Port the six pinned upstream templates from commit `58c305be97f47b26b678f2c07dec01d4242268ec`, carrying the exact attribution header and source filename in the manifest.
-3. Copy the canonical `BRAND-KIT` and `GALLERY-HEAD` blocks verbatim into each new artifact.
-4. Keep each artifact's behavior local: controls, selection, rationale, fallback, slider state, drag state, and inline SVG references all live in the same HTML file.
-5. Preserve all functional sections and interactions. Compact only repeated sample groups allowed by the Functional Fidelity Inventory.
-6. Flip exactly six manifest `status` values from `planned` to `shipped`; leave identifiers, categories, stages, triggers, sources, usage text, signal vocabulary, and export declarations unchanged.
-7. Extend the Layer 4 guard so every shipped artifact with horizontal overflow must declare keyboard reachability and an accessible name. Add the synthetic negative fixture for a declared region missing `tabindex`.
-8. Regenerate release payloads and generated references from source; do not hand-edit generated mirrors.
+1. Slice 1 repairs the five existing horizontal-scroll regions and lands the global guard before any new ports copy the pattern.
+2. Slice 2 ports the four read-only artifacts with functional fidelity and no export affordances.
+3. Slice 3 ports the two decision artifacts with live-state prompt/Markdown exports and clipboard fallback.
+4. Each new HTML file remains a self-contained vertical capability; canonical blocks are copied verbatim; no new shared runtime exists.
+5. Manifest status flips are serial: four in slice 2, two in slice 3.
+6. `test-artifact-fill-regions.py` changes in slices 2 and 3 because ART-004 adds new fill-region floors and list-slot coverage.
+7. Payload, proof, and generated-reference work runs after each slice from authoritative source.
 
 ## Source Evidence
 
 Pinned upstream source baseline:
 
-| Artifact | Upstream file | Required planning lines | Local `wc -l` evidence |
-|---|---|---:|---:|
-| `visual-designs` | `02-exploration-visual-designs.html` | 516 | 515 |
-| `design-system` | `05-design-system.html` | 630 | 629 |
-| `component-variants` | `06-component-variants.html` | 606 | 605 |
-| `animation-prototype` | `07-prototype-animation.html` | 456 | 455 |
-| `interaction-prototype` | `08-prototype-interaction.html` | 397 | 396 |
-| `svg-illustrations` | `10-svg-illustrations.html` | 493 | 492 |
-| **Total** | | **3,098** | **3,092** |
+| Artifact | Slice | Upstream file | Required planning lines | Local `wc -l` evidence |
+|---|---:|---|---:|---:|
+| `design-system` | 2 | `05-design-system.html` | 630 | 629 |
+| `animation-prototype` | 2 | `07-prototype-animation.html` | 456 | 455 |
+| `interaction-prototype` | 2 | `08-prototype-interaction.html` | 397 | 396 |
+| `svg-illustrations` | 2 | `10-svg-illustrations.html` | 493 | 492 |
+| `visual-designs` | 3 | `02-exploration-visual-designs.html` | 516 | 515 |
+| `component-variants` | 3 | `06-component-variants.html` | 606 | 605 |
+| **Total** | | | **3,098** | **3,092** |
 
-The reconciliation uses the ART-004 design-concept baseline of 3,098 lines because it is the fixed planning input. The local `git -C .specify/presets/.cache/art004-upstream/repo show <commit>:<file> | wc -l` commands report 3,092 newline-terminated lines; this does not reduce the reviewability concern because the forward estimate is still 865 projected reviewable LOC.
+Slice 1 has no new ART-004 upstream source; it repairs already shipped gallery templates using ART-020 evidence. Slice 2 carries 1,976 required planning source lines and no export code. Slice 3 carries 1,122 required planning source lines plus the decision/export contract. The slice estimates are derived from those surfaces and shared overhead, not by dividing 865 by three.
 
 ## Reviewability Gate Evidence
 
-Machine-readable gate inputs:
+Gate command for each durable input:
 
-- Primary surface: UI gallery artifacts
-- Projected reviewable LOC: 865
-- Projected production files: 9
-- Projected total files: 11
+```bash
+env PYTHONPATH=/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/fix-codex-same-task-autopilot/speckit-pro /Library/Frameworks/Python.framework/Versions/3.11/bin/python3 -m speckit_pro_runner
+```
 
-Run the plan-time helpers after this plan is written:
+Inputs:
 
-- `python3 -m speckit_pro_runner` with helper `estimate-reviewable-loc`, input `{"plan_file":"specs/art-004-gallery-completion-design-prototyping/plan.md"}`
-- `python3 -m speckit_pro_runner` with helper `reviewability-gate`, input `{"mode_name":"setup","target":"specs/art-004-gallery-completion-design-prototyping/plan.md"}`
+- Slice 1 target: `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-1-keyboard-foundation.md`
+- Slice 2 target: `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-2-read-only-ports.md`
+- Slice 3 target: `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-3-decision-ports.md`
+- Plan estimator target: `specs/art-004-gallery-completion-design-prototyping/plan.md`
 
-Recorded helper results:
+Recorded results:
 
-- Initial `estimate-reviewable-loc` runner status: `ok`; helper stdout status: `pass`; projected: `0`; declared files: `new=6`, `modified=5`, `total_entries=11`, `production=0`. Reconciled as insufficient to unblock because the current helper classifier does not count the HTML gallery artifacts or Python unit test that define this feature's reviewable surface.
-- Initial `reviewability-gate` runner status: `ok`; helper stdout status: `warn`; parsed `reviewable_loc=9`, `production_files=8`, `total_files=11`. Reconciled as a parsing artifact from threshold prose, not the ART-004 budget, so the plan now records the machine-readable gate inputs above and must be rerun.
-- Final `reviewability-gate` runner status: `expected_failure`; helper exit code: `1`; helper stdout status: `block`; parsed `reviewable_loc=865`, `production_files=9`, `total_files=11`, `primary_surfaces=["UI gallery artifacts"]`.
-- Final blockers: `reviewable LOC 865 exceeds block threshold 800`; `production files 9 exceeds block threshold 8`.
+| Check | Runner status | Helper status | Parsed values | Warnings | Blockers |
+|---|---|---|---|---|---|
+| Slice 1 reviewability gate | `ok` | `pass` | `reviewable_loc=160`, `production_files=3`, `total_files=4`, `primary_surfaces=["UI gallery artifacts"]` | none | none |
+| Slice 2 reviewability gate | `ok` | `warn` | `reviewable_loc=590`, `production_files=4`, `total_files=7`, `primary_surfaces=["UI gallery artifacts"]` | `reviewable LOC 590 exceeds warn threshold 400` | none |
+| Slice 3 reviewability gate | `ok` | `warn` | `reviewable_loc=520`, `production_files=2`, `total_files=5`, `primary_surfaces=["UI gallery artifacts"]` | `reviewable LOC 520 exceeds warn threshold 400` | none |
+| Plan `estimate-reviewable-loc` | `ok` | `pass` | `projected=0`, `new=6`, `modified=6`, `total_entries=12`, `production=0` | none | none |
 
-G3 result: blocked. The binding recorded decision is "Stop and split"; Checklist, Tasks, and implementation must not proceed from this combined-slice plan unless the parent records a new human-approved split or updated gate evidence.
+G3 result: non-blocking for the approved three-slice topology. The plan estimator result is recorded only as classifier evidence: it does not count this repository's HTML artifact files or Python test files, so the durable slice gate contracts are the reviewability authority for this revised Plan.
 
 ## Verification Design
 
-- Red test: today's five existing horizontal scroll containers fail the new global assertion before repair.
-- Green test: all existing and new horizontal overflow containers are focusable, named, and declared; the synthetic negative fixture still proves the guard rejects a declared region without a keyboard route.
+- Red test: today's five existing horizontal scroll containers fail the new global assertion before slice 1 repair.
+- Green test: all existing and new horizontal overflow containers are focusable, named, and declared; the negative fixture still proves the guard rejects a declared region without a keyboard route.
 - Per-port Layer 4 checks: manifest/file presence, attribution header, canonical-block markers, fill-region inventory, export declaration, and offline constraints.
 - Manual `file://` UAT matrix: both themes, keyboard-only operation, slider behavior, linked screens, live selection/rationale exports, clipboard refusal fallback, focus order, and horizontal arrow-key scrolling.
-- Completion gates: `python3 tests/speckit-pro/run-all.py`, `scripts/refresh-release-artifacts.py`, `pnpm --dir docs-site reference:generate` when tracked test/source inputs change, and generated-artifact consistency checks.
+- Completion gates per slice: `python3 tests/speckit-pro/run-all.py`, `scripts/refresh-release-artifacts.py`, `pnpm --dir docs-site reference:generate` when tracked source/test inputs change, and generated-artifact consistency checks.
 
 ## Complexity Tracking
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|------------|--------------------------------------|
-| One combined slice exceeds reviewability block thresholds: 865 projected reviewable LOC and 9 production files. | The setup interview selected "One combined slice" while also choosing "Absorb ART-020" and full "Functional fidelity". | Reducing fidelity or removing ART-020 would contradict the recorded answers. The accepted fallback is "Stop and split", so this violation is not approved for implementation from this plan. |
-
-## Final Plan Gate Inputs
-
-These values are repeated at the end of the plan so the `reviewability-gate` helper reads the ART-004 budget values rather than nearby threshold prose:
-
-- Primary surface: UI gallery artifacts
-- Projected reviewable LOC: 865
-- Projected production files: 9
-- Projected total files: 11
+| Historical combined slice exceeded block thresholds. | The setup interview selected "One combined slice" while also choosing "Absorb ART-020" and "Functional fidelity". | The binding fallback was "Stop and split". The user approved three slices, so the violating combined topology is no longer active. |

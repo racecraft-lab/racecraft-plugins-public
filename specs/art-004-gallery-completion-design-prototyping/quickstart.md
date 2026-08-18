@@ -1,79 +1,84 @@
 # Quickstart: ART-004 Gallery Completion - Design & Prototyping
 
-This guide documents the validation path for the ART-004 implementation design. Because G3 is blocked for the combined slice, use it only after a human-approved split or updated gate evidence permits implementation.
-
-## Prerequisites
-
-- Python 3.11+ available as `python3`.
-- Existing repository checkout with no hand edits to generated payloads.
-- For docs reference regeneration, `docs-site/` dependencies installed when needed.
-- Browser capable of opening local `file://` HTML files.
+This guide validates the approved three-slice ART-004 plan.
 
 ## Plan Gate
 
-Run the Plan reviewability helpers against the feature plan:
+Run each setup-mode reviewability gate with the fixed runner:
 
 ```bash
 cd /Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/art-004-gallery-completion-design-prototyping
-printf '%s\n' '{"schema_version":"1.0","request_id":"art-004-plan-estimate","helper_id":"estimate-reviewable-loc","operation":"estimate-reviewable-loc","mode":"read_only","inputs":{"plan_file":"specs/art-004-gallery-completion-design-prototyping/plan.md"}}' | PYTHONPATH=speckit-pro python3 -m speckit_pro_runner
-printf '%s\n' '{"schema_version":"1.0","request_id":"art-004-plan-gate","helper_id":"reviewability-gate","operation":"reviewability-gate","mode":"read_only","inputs":{"mode_name":"setup","target":"specs/art-004-gallery-completion-design-prototyping/plan.md"}}' | PYTHONPATH=speckit-pro python3 -m speckit_pro_runner
+env PYTHONPATH=/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/fix-codex-same-task-autopilot/speckit-pro /Library/Frameworks/Python.framework/Versions/3.11/bin/python3 -m speckit_pro_runner
 ```
 
-Expected outcome for the current combined slice: `reviewability-gate` reports `status: block`.
+Use helper `reviewability-gate`, `mode_name=setup`, and these targets:
 
-## Automated Validation
+- `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-1-keyboard-foundation.md`
+- `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-2-read-only-ports.md`
+- `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-3-decision-ports.md`
 
-After an approved implementation slice exists, run:
+Also run helper `estimate-reviewable-loc` against `specs/art-004-gallery-completion-design-prototyping/plan.md`; record its classifier limitation because it does not count this repository's HTML/Python review surface.
 
-```bash
-python3 tests/speckit-pro/run-all.py
-```
+## Slice 1 Validation
 
-Expected outcomes:
+Expected authored files:
 
-- Layer 1 remains green for plugin structure and generated payload expectations.
-- Layer 4 proves manifest rows, file presence, attribution, canonical blocks, fill regions, export declarations, offline constraints, and the horizontal-scroll guard.
-- The negative fixture `test_rejects_declared_scroll_region_without_keyboard_route` fails when its missing keyboard route is evaluated and passes as a detection proof.
-
-## Manual File Validation
-
-Open these files directly over `file://`:
-
-- `speckit-pro/artifact-gallery/templates/visual-designs.html`
-- `speckit-pro/artifact-gallery/templates/design-system.html`
-- `speckit-pro/artifact-gallery/templates/component-variants.html`
-- `speckit-pro/artifact-gallery/templates/animation-prototype.html`
-- `speckit-pro/artifact-gallery/templates/interaction-prototype.html`
-- `speckit-pro/artifact-gallery/templates/svg-illustrations.html`
 - `speckit-pro/artifact-gallery/templates/code-approaches.html`
 - `speckit-pro/artifact-gallery/templates/implementation-plan.html`
 - `speckit-pro/artifact-gallery/templates/module-map.html`
+- `tests/speckit-pro/unit/test-artifact-gallery.py`
 
-Expected outcomes:
+Expected checks:
 
-- All six new artifacts load offline without sibling assets or build steps.
-- Both themes remain readable where theme controls exist.
-- Keyboard-only traversal reaches every interactive control and declared horizontal overflow region.
-- Horizontal arrow keys change scroll position for focused wide regions while the accessible name remains exposed.
-- `visual-designs` and `component-variants` export prompt and Markdown payloads from live selection and rationale state.
-- Clipboard refusal reveals the same payload in a focused selectable textarea.
-- `design-system`, `animation-prototype`, `interaction-prototype`, and `svg-illustrations` expose no export affordance.
+- Red proof catches the five existing affected containers before repair.
+- Green proof confirms declared regions are focusable, named, and swept.
+- Manual `file://` UAT confirms focused horizontal regions scroll by keyboard.
 
-## Release Artifact Validation
+## Slice 2 Validation
 
-After authored implementation changes, regenerate generated outputs from source:
+Expected authored files:
+
+- `speckit-pro/artifact-gallery/templates/design-system.html`
+- `speckit-pro/artifact-gallery/templates/animation-prototype.html`
+- `speckit-pro/artifact-gallery/templates/interaction-prototype.html`
+- `speckit-pro/artifact-gallery/templates/svg-illustrations.html`
+- `speckit-pro/artifact-gallery/manifest.json`
+- `tests/speckit-pro/unit/test-artifact-gallery.py`
+- `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+
+Expected checks:
+
+- Four files load directly over `file://` while offline.
+- Each required fill region and list-slot rule is covered.
+- No read-only port exposes prompt, Markdown, or other export affordances.
+
+## Slice 3 Validation
+
+Expected authored files:
+
+- `speckit-pro/artifact-gallery/templates/visual-designs.html`
+- `speckit-pro/artifact-gallery/templates/component-variants.html`
+- `speckit-pro/artifact-gallery/manifest.json`
+- `tests/speckit-pro/unit/test-artifact-gallery.py`
+- `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+
+Expected checks:
+
+- Both files load directly over `file://` while offline.
+- Decision radio state, rationale validation, prompt export, Markdown export, clipboard refusal fallback, and stale-copy protection work from live state.
+- Manifest changes are the two remaining status flips only.
+
+## Common Completion Gates
+
+After each implementation slice, run:
 
 ```bash
+python3 tests/speckit-pro/run-all.py
 python3 scripts/refresh-release-artifacts.py
 pnpm --dir docs-site reference:generate
 python3 scripts/refresh-release-artifacts.py --check
 pnpm --dir docs-site reference:check
 ```
 
-Expected outcomes:
-
-- Dist payloads and installed-cache mirrors align with source.
-- Proof JSON and release-readiness evidence are regenerated by the script.
-- Generated docs reference pages are refreshed by the docs command.
-- No generated output is hand-edited.
+Generated outputs must be derived from source and not hand-edited.
 

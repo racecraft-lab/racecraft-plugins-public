@@ -1,30 +1,37 @@
 # Data Model: ART-004 Gallery Completion - Design & Prototyping
 
+## Entity: Implementation Slice
+
+**Fields**:
+
+- `number`: 1, 2, or 3.
+- `name`: `keyboard-foundation`, `read-only-ports`, or `decision-ports`.
+- `authored_operations`: exact new/modified source and test files.
+- `generated_operations`: derived output paths regenerated from source.
+- `gate_input`: durable contract file under `contracts/`.
+- `reviewable_loc`, `production_files`, `total_files`.
+- `gate_status`: `pass`, `warn`, or `block`.
+
+**Validation rules**:
+
+- Slices execute in order.
+- Shared manifest, test, payload, proof, and generated-doc paths are serial and not parallel-safe.
+- A slice with `gate_status=block` stops the workflow before Checklist and Tasks.
+
 ## Entity: Gallery Artifact
 
 **Fields**:
 
-- `id`: stable identifier in `manifest.json`.
-- `title`: reader-facing artifact title.
-- `category`: existing manifest category.
-- `stage`: `ad-hoc` for all six new ART-004 ports.
-- `trigger`: existing manifest trigger; unchanged.
-- `source.origin`: `upstream` for all six new ports.
-- `source.file`: pinned upstream filename.
-- `status`: changes from `planned` to `shipped` for exactly six ART-004 entries.
-- `exports`: existing export declaration; unchanged.
-- `template_file`: self-contained HTML page under `speckit-pro/artifact-gallery/templates/`.
+- `id`, `title`, `category`, `stage`, `trigger`, `source`, `status`, `exports`.
+- `template_file`: one self-contained HTML file under `speckit-pro/artifact-gallery/templates/`.
+- `slice`: 2 for read-only ports, 3 for decision ports.
 
 **Validation rules**:
 
-- The six ART-004 rows change only `status`.
-- Each `source.file` matches the required pinned upstream source.
-- Each shipped artifact file exists, opens without sibling resources, and carries the required attribution, `BRAND-KIT`, and `GALLERY-HEAD` regions.
-
-**State transitions**:
-
-- `planned -> shipped` for `visual-designs`, `design-system`, `component-variants`, `animation-prototype`, `interaction-prototype`, and `svg-illustrations`.
-- No transition for existing shipped artifacts; they receive only the horizontal-scroll repair.
+- Exactly six ART-004 rows transition from `planned` to `shipped`.
+- Slice 2 flips `design-system`, `animation-prototype`, `interaction-prototype`, and `svg-illustrations`.
+- Slice 3 flips `visual-designs` and `component-variants`.
+- No manifest field other than `status` changes for those six rows.
 
 ## Entity: Pinned Upstream Source
 
@@ -37,89 +44,47 @@
 
 **Validation rules**:
 
-- Every new artifact records the exact upstream source filename in the attribution header and manifest row.
-- Source blobs are read-only evidence; upstream originals are not vendored into the repository.
+- Each new artifact records the exact upstream source filename in its attribution and manifest row.
+- Upstream originals are read-only evidence and are not vendored.
 
 ## Entity: Fill Region
 
 **Fields**:
 
-- `artifact_id`: target artifact.
-- `region`: source-of-truth fill-region key.
-- `source_document`: `spec.md` for `feature-header`; `design-concept.md` for all other regions.
+- `artifact_id`
+- `region`
+- `source_document`: `spec.md` for `feature-header`; `design-concept.md` for other regions.
+- `list_slot`: true for `visual-designs.directions`, `component-variants.variants`, and `interaction-prototype.views`.
 
 **Validation rules**:
 
 - Each required region appears in the corresponding artifact.
+- `test-artifact-fill-regions.py` is updated for ART-004 floor/list-slot coverage.
 - Only approved repeated sample groups may be compacted.
-- Load-bearing selectors named in the spec remain present or are intentionally translated with equivalent behavior.
 
 ## Entity: Design Decision Export
 
 **Fields**:
 
-- `artifact_title`
-- `feature_id`
-- `feature_name`
-- `format`: `prompt` or `markdown`.
-- `selected_slot`: visual direction or base component variant.
-- `selected_label`
-- `anchor`
-- `live_context_lines`
-- `rationale`
-- `fallback_payload`
+- `artifact_title`, `feature_id`, `feature_name`, `format`, `selected_slot`, `selected_label`, `anchor`, `live_context_lines`, `rationale`, `fallback_payload`.
 
 **Validation rules**:
 
 - Only `visual-designs` and `component-variants` expose export controls.
 - A valid export requires one persistent radio selection and non-whitespace rationale.
-- Invalid attempts announce the missing input, focus the first missing control, set `aria-invalid` only for blank rationale, and do not call clipboard APIs.
-- Clipboard refusal reveals and focuses a textarea containing the same live payload.
-- Delayed clipboard outcomes cannot overwrite newer status or fallback state.
-
-**State transitions**:
-
-- Empty -> incomplete attempt -> accessible status message.
-- Empty -> selected and rationale supplied -> copy attempt.
-- Copy attempt -> success status.
-- Copy attempt -> refusal fallback with focused selectable payload.
+- Invalid attempts do not call clipboard APIs or reveal fallback text.
+- Clipboard refusal reveals and focuses the same live payload in a textarea.
+- An invocation counter prevents stale copy results from overwriting newer feedback.
 
 ## Entity: Horizontal Overflow Region
 
 **Fields**:
 
-- `artifact_id`
-- `element`
-- `data-rc-keyboard-scroll`
-- `tabindex`
-- `role`
-- `aria-label`
-- `scroll_position`
+- `artifact_id`, `element`, `data-rc-keyboard-scroll`, `tabindex`, `role`, `aria-label`, `scroll_position`.
 
 **Validation rules**:
 
 - Every intentional horizontal overflow region has `data-rc-keyboard-scroll="horizontal"`.
-- Every declared region has `tabindex="0"`, `role="group"`, and a trimmed, artifact-specific `aria-label`.
-- The guard rejects artifacts with horizontal overflow styling but no declared keyboard-scroll regions.
-- The negative fixture omits `tabindex` and must fail.
-
-## Entity: Reviewability Budget
-
-**Fields**:
-
-- `primary_surface`
-- `secondary_surfaces`
-- `projected_reviewable_loc`
-- `production_files`
-- `total_authored_files`
-- `generated_files`
-- `status`
-- `blockers`
-- `split_decision`
-
-**Validation rules**:
-
-- The combined slice is blocked when projected reviewable LOC exceeds 800 or production files exceed 8.
-- Generated files are declared separately and never treated as authored source.
-- If blocked, the binding decision is "Stop and split"; implementation, Checklist, and Tasks do not proceed from this plan.
+- Every declared region has `tabindex="0"`, `role="group"`, and a specific non-empty `aria-label`.
+- Slice 1 repairs the five existing affected regions before later slices add new regions.
 
