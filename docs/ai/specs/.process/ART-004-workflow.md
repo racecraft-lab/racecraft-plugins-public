@@ -70,15 +70,15 @@ Projected reviewable LOC: 865
 
 | Phase | Command | Status | Notes |
 |---|---|---|---|
-| Specify | /speckit-specify | ⏳ Pending | Define three user-visible capabilities |
-| Clarify | /speckit-clarify | ⏳ Pending | Resolve slots, serialization, and test shape |
+| Specify | /speckit-specify | ✅ Complete | 14 requirements, 3 stories, 0 unresolved markers; G1 passed |
+| Clarify | /speckit-clarify | 🔄 In Progress | Session 1: source structure and fill regions |
 | Plan | /speckit-plan | ⏳ Pending | Mandatory reviewability decision |
 | Checklist | /speckit-checklist | ⏳ Pending | UX, accessibility, error handling |
 | Tasks | /speckit-tasks | ⏳ Pending | Only after a non-blocking plan |
 | Analyze | /speckit-analyze | ⏳ Pending | Cross-check against the design concept |
 | Confidence Gate | G6.5 | ⏳ Pending | Composite pre-implementation confidence |
-| Implement | /speckit-implement | ⏳ Pending | TDD and generated-artifact regeneration |
-| Post | Post-Implementation | ⏳ Pending | Canonical closeout |
+| Implement | /speckit-implement | ⏳ Pending | Outside explicit `--stage plan`; mark skipped at the plan-stage boundary |
+| Post | Post-Implementation | ⏳ Pending | Outside explicit `--stage plan`; mark skipped at the plan-stage boundary |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -107,13 +107,13 @@ Before each phase, verify alignment with ".specify/memory/constitution.md":
 
 | Principle | ART-004 requirement | Verification |
 |---|---|---|
-| I. Plugin Structure Compliance | Gallery source and release payload remain structurally valid | python3 tests/speckit-pro/run-all.py --layer 1 |
-| II. Cross-Platform Runtime & Script Safety | Offline single-file artifacts; repository tooling stays Python 3.11+ stdlib | Layer 4 plus manual file:// checks |
-| IV. Test Coverage Before Merge | Global assertion, negative fixture, manifest and fill coverage | python3 tests/speckit-pro/run-all.py |
-| V. Conventional Commits | Lowercase speckit-pro scope and plain-English title | CI validate-pr-title |
-| VI. KISS, Simplicity & YAGNI | Functional fidelity with repeated samples compacted; no undeclared affordance | Plan and code review |
+| I. Plugin Structure Compliance | Gallery source and release payload remain structurally valid | ✅ Layer 1 baseline: 1,447/1,447 |
+| II. Cross-Platform Runtime & Script Safety | Offline single-file artifacts; repository tooling stays Python 3.11+ stdlib | ✅ Layer 4 baseline: 5,766/5,766 |
+| IV. Test Coverage Before Merge | Global assertion, negative fixture, manifest and fill coverage | ✅ Full baseline: 7,399/7,399 |
+| V. Conventional Commits | Lowercase speckit-pro scope and plain-English title | ✅ Phase checkpoint subjects use the repository contract; final PR-title gate remains an implementation-stage task |
+| VI. KISS, Simplicity & YAGNI | Functional fidelity with repeated samples compacted; no undeclared affordance | ✅ Scope is roadmap-backed; Plan and later code review re-check complexity |
 
-**Constitution Check:** Mark ✅ or ❌ before G1.
+**Constitution Check:** ✅ Verified before G1 on 2026-08-17.
 
 ### Worktree Preflight
 
@@ -126,6 +126,29 @@ Before each phase, verify alignment with ".specify/memory/constitution.md":
 - The upstream revision is pinned to
   "58c305be97f47b26b678f2c07dec01d4242268ec". Retrieve sources read-only into
   session scratch space; do not stage upstream originals.
+
+### Autopilot Preflight Results
+
+- **Stage:** `plan`, resolved from the explicit `--stage plan` argument.
+- **Confidence gate:** `advisory` (project default).
+- **Execution root:** the registered ART-004 worktree on branch
+  `art-004-gallery-completion-design-prototyping`; the worktree was clean.
+- **Archive Sweep:** direct extension-contract sweep completed. BRAND-001 is a
+  previously merged archive candidate (PR #432); ART-004 was excluded as the
+  current target. No cleanup was requested or applied.
+- **Agent runtime:** all ten required Codex agents matched the installed
+  `gpt-5.5` bundle; dry-run install status was `no_op`.
+- **Project commands:** BUILD, TYPECHECK, LINT, and INTEGRATION_TEST are `N/A`;
+  UNIT_TEST and FULL_VERIFY are `python3 tests/speckit-pro/run-all.py`.
+- **Reviewability:** the repository-level setup gate returned `warn` and passed
+  G0. The ART-004 865-LOC forward projection independently crosses the current
+  800-LOC block threshold, so it is risk evidence only; Phase 3 must replace it
+  with the declared-file Plan verdict and stop before Tasks if that verdict is
+  `block`.
+- **Capability path:** repository/spec context uses local reads and installed
+  analysts; pinned upstream source extraction uses GitHub plus the exact commit;
+  library and external-domain questions use installed documentation/web
+  capabilities when the phase requires them.
 
 ---
 
@@ -142,6 +165,7 @@ Before each phase, verify alignment with ".specify/memory/constitution.md":
 | **Absorbs** | ART-020, to be marked superseded |
 | **Enables** | Gallery completeness |
 | **Priority** | P2 |
+| **Stage** | plan |
 
 ### Success Criteria Summary
 
@@ -248,13 +272,22 @@ there is no global guard stopping the six new ports from repeating the defect.
 
 | Metric | Value |
 |---|---|
-| Functional Requirements | Fill after Specify |
-| User Stories | Expected: 3 |
-| Acceptance Criteria | Fill after Specify |
+| Functional Requirements | 14 |
+| User Stories | 3 |
+| Acceptance Criteria | 9 |
 
 ### Files Generated
 
-- [ ] specs/art-004-gallery-completion-design-prototyping/spec.md
+- [x] specs/art-004-gallery-completion-design-prototyping/spec.md
+
+**G1 gate:** ✅ PASS — `spec.md` exists with zero
+`[NEEDS CLARIFICATION]` markers.
+
+**After-Specify hook:** The optional project doctor found all five templates,
+the Python runner contract, and the constitution. It also reported the legacy
+`.specify/init-options.json` Claude command-directory check as unavailable;
+the Codex agent dry-run independently passed, so this optional integration
+warning does not block the Codex workflow.
 
 ---
 
@@ -640,18 +673,20 @@ Final verification:
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | |
-| Post: Verify Implementation | ⏳ Pending | |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | |
-| Post: Code Review | ⏳ Pending | |
-| Post: Integration Suite | ⏳ Pending | |
-| Post: Reviewability Diff Gate | ⏳ Pending | |
-| Post: Self-Review | ⏳ Pending | |
-| Post: UAT Runbook Generation | ⏳ Pending | |
-| Post: PR Body Generation | ⏳ Pending | |
-| Post: PR Creation | ⏳ Pending | |
-| Post: Review Remediation | ⏳ Pending | |
-| Post: Retrospective | ⏳ Pending | |
+| Post: Doctor Extension Check | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: Verify Implementation | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: Verify Tasks Phantom Check | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: Code Review | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: Integration Suite | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: Reviewability Diff Gate | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: Self-Review | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: UAT Runbook Generation | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: Final Reviewability Backstop | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: PR Packet/Body Generation | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: PR Body Generation | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: PR Creation | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: Review Remediation | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: Retrospective | ⏭️ Skipped | Outside explicit `--stage plan` |
 
 - [ ] All tasks complete.
 - [ ] Layer 1 and Layer 4 pass.
