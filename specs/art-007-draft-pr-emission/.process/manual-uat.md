@@ -268,38 +268,79 @@ are on paper.
 
 ---
 
-## Finding — this spec's `SPEC-MOC.md` generated zones are empty, and no gate says so
+## Finding 1 — this spec's `SPEC-MOC.md` was never re-indexed (FIXED)
 
-Not a defect in this feature. Surfaced by UAT, so it is recorded here.
+Not a defect in this feature. Surfaced by UAT, and fixed in the same commit that
+records it.
 
-`generate-spec-index-check` against the real repository reports:
+`generate-spec-index-check` against the real repository reported:
 
 ```text
 spec-index: STALE — art-007-draft-pr-emission (regenerated zones differ from committed)
 ```
 
-The writer's dry run plans exactly one file, this spec's `SPEC-MOC.md`, and
-reports `rendered_map_count: 10, stale_map_count: 1`. All three generated zones
-in that file — `INDEX`, `PRS`, `BACKLINKS` — are empty, so the spec was scaffolded
-and never re-indexed. The other nine spec maps are current.
+The writer's dry run planned exactly one file, this spec's `SPEC-MOC.md`, and
+reported `rendered_map_count: 10, stale_map_count: 1`. All three generated zones
+in that file — `INDEX`, `PRS`, `BACKLINKS` — were empty, so the spec was
+scaffolded and never re-indexed. The other nine spec maps were current.
 
-It is genuinely pre-existing, not something this session introduced. The check
-reports the same status with `manual-uat.md` removed, and again with the
-git-ignored `.process/pr-packets/` directory moved aside as well — that second
-state is exactly what CI sees today.
+It was genuinely pre-existing. The check reported the same status with
+`manual-uat.md` removed, and again with the git-ignored `.process/pr-packets/`
+directory moved aside as well — that second state is exactly what CI sees.
 
-**Why CI is green anyway**: the Layer 1 test that owns this helper,
+**Why CI was green anyway**: the Layer 1 test that owns this helper,
 `validate-spec-index-determinism.py`, runs it against a fixture repository root
 under `tests/speckit-pro/layer1-structural/fixtures/spec-index/`. Nothing in the
 suite runs the check against the real tree, so real-tree drift is invisible to
 the gate.
 
-**Left unfixed on purpose.** It is outside this feature's surface, and
-regenerating from this worktree is not safe here: the generator scans the
-filesystem rather than the git index, and `.process/pr-packets/` is present on
-disk but git-ignored, so a local regeneration can bake ignored paths into a
-committed index that then fails on a clean checkout. The writer is also
-registered `golden_only`, so a live apply is not the sanctioned path from here.
+**The fix.** `generate-spec-index-write` in `apply` mode, run with
+`.process/pr-packets/` moved aside so the scan surface matched a clean checkout.
+It touched one path and filled the `BACKLINKS` zone with fifteen relative links
+to tracked files. `INDEX` and `PRS` stay empty, which is correct: this spec has
+no slices and no generated PR rows.
+
+**Verification**
+
+| Check | Result |
+| --- | --- |
+| `generate-spec-index-check`, clean-checkout scan surface | exit 0, `index current — all in-scope maps up to date.` |
+| Layer 1 | 1468/1468, unchanged from baseline |
+| Regenerated diff | 15 backlinks, all tracked relative paths, no ignored paths |
+
+---
+
+## Finding 2 — `generate-spec-index` scans git-ignored paths (NOT FIXED)
+
+Exposed while fixing Finding 1, and the reason that fix needed a holdout step.
+
+The generator walks the filesystem rather than the git index, so it treats
+git-ignored files as index material. Measured on the same tree, one variable
+apart:
+
+| Scan surface | Check result |
+| --- | --- |
+| `.process/pr-packets/` moved aside — what CI and a clean checkout see | exit 0, `index current` |
+| `.process/pr-packets/` present — what this worktree sees | exit 1, `STALE` |
+
+`pr-packets/` is git-ignored. Two consequences follow, and they point in
+opposite directions, which is what makes this worth recording:
+
+1. **A false STALE.** An operator with local ignored artifacts is told the index
+   is stale when it is correct.
+2. **A false green that lands.** Regenerating naively from such a worktree bakes
+   ignored paths into the committed `SPEC-MOC.md`. Those paths do not exist in a
+   clean checkout, so the committed index is then wrong for every other reader —
+   and, because of Finding 1's gate blindness, nothing in CI reports it.
+
+The second is the more serious: it commits an incorrect artifact and passes.
+
+**Left unfixed on purpose.** The generator is repository tooling well outside
+this feature's surface, and the sound fix — scan the git index rather than the
+filesystem — changes behaviour for every spec, not just this one. It wants its
+own change with its own tests. Closing the gate blindness in Finding 1 belongs
+with it: a real-tree spec-index check added to the suite today would fail on any
+worktree carrying ignored artifacts, which is exactly the false STALE above.
 
 ---
 
