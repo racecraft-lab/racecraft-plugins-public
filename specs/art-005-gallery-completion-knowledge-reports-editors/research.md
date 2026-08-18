@@ -11,6 +11,12 @@ Rationale: One immutable commit gives every slice the same reproducible source
 baseline and lets the manifest source filenames, attribution headers, and
 reviewability measurement agree.
 
+Retrieval contract: the `/private/tmp/` directory is a scratch cache, not the
+source of truth. If it is absent, fetch `anthropics/html-effectiveness`, detach
+at commit `58c305be97f47b26b678f2c07dec01d4242268ec`, copy or read the seven named
+root HTML files from that commit, and accept them only after all seven recorded
+SHA-256 digests match. A floating branch or digest mismatch is a hard stop.
+
 Alternatives considered:
 
 - Floating upstream `main`: rejected because implementation and review could use

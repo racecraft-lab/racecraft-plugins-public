@@ -4,8 +4,8 @@
   "feature_dir": "specs/art-005-gallery-completion-knowledge-reports-editors",
   "branch": "art-005-gallery-completion-knowledge-reports-editors",
   "stage": "plan",
-  "updated_at": "2026-08-18T04:29:02Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-08-18T04:58:40Z",
+  "active_step": "Phase 6.5: Confidence Gate",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -161,7 +161,7 @@
     },
     "plan": {
       "status": "completed",
-      "reason": "all seven independently measured slices warn and remain below the 800 LOC block",
+      "reason": "all seven authored-LOC projections warn and remain below 800; the 33-path maximum carries a separate generated/control-plane-only size-block risk",
       "plan_file": "specs/art-005-gallery-completion-knowledge-reports-editors/plan.md",
       "artifacts": [
         "plan.md",
@@ -190,7 +190,7 @@
           "artifact": "slide-deck",
           "projected_reviewable_loc": 670,
           "authored_paths": 7,
-          "maximum_physical_paths": 32,
+          "maximum_physical_paths": 33,
           "verdict": "warn"
         },
         {
@@ -198,7 +198,7 @@
           "artifact": "concept-explainer",
           "projected_reviewable_loc": 535,
           "authored_paths": 7,
-          "maximum_physical_paths": 32,
+          "maximum_physical_paths": 33,
           "verdict": "warn"
         },
         {
@@ -206,7 +206,7 @@
           "artifact": "status-report",
           "projected_reviewable_loc": 560,
           "authored_paths": 7,
-          "maximum_physical_paths": 32,
+          "maximum_physical_paths": 33,
           "verdict": "warn"
         },
         {
@@ -214,7 +214,7 @@
           "artifact": "incident-report",
           "projected_reviewable_loc": 620,
           "authored_paths": 7,
-          "maximum_physical_paths": 32,
+          "maximum_physical_paths": 33,
           "verdict": "warn"
         },
         {
@@ -222,7 +222,7 @@
           "artifact": "triage-board",
           "projected_reviewable_loc": 785,
           "authored_paths": 7,
-          "maximum_physical_paths": 32,
+          "maximum_physical_paths": 33,
           "verdict": "warn"
         },
         {
@@ -230,7 +230,7 @@
           "artifact": "feature-flags",
           "projected_reviewable_loc": 780,
           "authored_paths": 7,
-          "maximum_physical_paths": 32,
+          "maximum_physical_paths": 33,
           "verdict": "warn"
         },
         {
@@ -238,7 +238,7 @@
           "artifact": "prompt-tuner",
           "projected_reviewable_loc": 790,
           "authored_paths": 7,
-          "maximum_physical_paths": 32,
+          "maximum_physical_paths": 33,
           "verdict": "warn"
         }
       ],
@@ -249,6 +249,15 @@
         "declared_modified": 3,
         "production": 0,
         "disposition": "advisory HTML classification blind spot; explicit per-slice component ceilings control"
+      },
+      "full_diff_projection": {
+        "implementation_authored_paths": 7,
+        "maximum_generated_paths": 25,
+        "maximum_control_plane_paths": 1,
+        "maximum_physical_paths": 33,
+        "total_file_block_threshold": 25,
+        "projected_size_only_block": true,
+        "disposition": "record required generated/control-plane-only total-file blocks in per-slice evidence and packets; stop on authored, correctness, or non-size blockers"
       },
       "prior_combined_block": {
         "status": "resolved_by_operator_topology_decision",
@@ -343,6 +352,38 @@
       ],
       "slice_groups": 7,
       "execution_note": "The phase-executor made no progress, and one fresh phase-executor retry also made no progress. Per error-recovery-codex.md, the orchestrator ran the speckit-tasks workflow directly, validated strict formatting and traceability, and passed G5."
+    },
+    "analyze": {
+      "status": "completed",
+      "execution_path": "direct fallback after dedicated executor and one fresh retry remained frozen without a result or diff",
+      "initial_findings": {
+        "critical": 1,
+        "high": 2,
+        "medium": 2,
+        "low": 1,
+        "total": 6
+      },
+      "remaining_findings": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "total": 0
+      },
+      "requirements_covered": 36,
+      "requirements_total": 36,
+      "mapped_tasks": 119,
+      "total_tasks": 119,
+      "unmapped_tasks": 0,
+      "consensus": "skipped: zero unresolved items after remediation",
+      "confidence_emit": {
+        "composite": 0.98,
+        "task_understanding": 0.99,
+        "approach_clarity": 0.98,
+        "requirements_alignment": 0.99,
+        "risk_assessment": 0.97,
+        "completeness": 0.96
+      }
     }
   },
   "task_reviewability": {
@@ -368,9 +409,12 @@
       "block_threshold": 800
     },
     "current_size_only_block": false,
+    "projected_full_diff_size_only_block": true,
+    "maximum_physical_paths_per_slice": 33,
     "correctness_stop": false,
     "pr_marker_plan_required": false,
-    "checkbox_diff_disposition": "control-plane metadata reported separately from the seven authored-path ledgers"
+    "pr_marker_plan_disposition": "not required at this boundary: no actual current full diff exists and delivery already uses seven branch-split slices",
+    "checkbox_diff_disposition": "control-plane metadata excluded from authored LOC, included in the complete physical Git-path ledger"
   },
   "atomicity_route": {
     "route": "one-navigable-PR",
@@ -452,6 +496,14 @@
       "phantom_completions": 0,
       "requirements_covered": 24,
       "slice_boundaries": 7
+    },
+    "G6": {
+      "pass": true,
+      "markers": 0,
+      "reason": "0 CRITICAL/HIGH findings",
+      "initial_findings": 6,
+      "remaining_findings": 0,
+      "consensus": "skipped: zero unresolved items after remediation"
     }
   },
   "extensions": {
@@ -541,15 +593,15 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "skipped: zero unresolved items"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - Setup and foundational checks T001-T010",

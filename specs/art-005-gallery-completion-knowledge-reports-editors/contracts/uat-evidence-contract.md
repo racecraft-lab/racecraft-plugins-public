@@ -14,6 +14,14 @@ specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.
 The files grow serially in slice order. Slice 1 creates them; slices 2 through 7
 modify them.
 
+The JSON is a cumulative run, not a mixture of historical runs. Before each
+slice's UAT, create a source checkpoint commit containing the current template,
+manifest, focused tests, generated outputs, and existing evidence carriers.
+Re-execute all required rows for every artifact shipped through that slice, set
+the top-level `sourceCommit` to that checkpoint, and write the new results in a
+later evidence commit. A carried-forward row from an older checkpoint cannot
+remain under a newer top-level `sourceCommit`.
+
 ## Archival Paths
 
 ```text
@@ -37,6 +45,9 @@ Top-level fields:
 - `driver`
 - `runbookPath`
 - `rows`
+
+`sourceCommit` is the exact source checkpoint against which every current row
+was executed. It is never the later commit that merely records the results.
 
 `environment` includes:
 

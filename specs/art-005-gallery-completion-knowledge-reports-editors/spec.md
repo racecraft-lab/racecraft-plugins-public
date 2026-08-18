@@ -270,6 +270,13 @@ The required fill-region floors are:
   `environment` identifies operating system, browser name/version, `file://`
   scheme, and the network, theme, reduced-motion, and color-mode conditions used.
   `driver` is `manual` or the repository-relative path of the exact harness.
+- **Cumulative source binding:** Before each slice executes UAT, commit the
+  current source, manifest, focused tests, generated outputs, and existing UAT
+  carrier files as a source checkpoint. Re-execute every carried-forward row for
+  all artifacts shipped through that slice, then set the top-level
+  `sourceCommit` to that checkpoint. No row from an older source commit may be
+  retained under a newer top-level `sourceCommit`. Record the resulting evidence
+  in a later commit so the checkpoint hash exists before it is cited.
 - **Per-check evidence:** Every result row has `artifactId`, `templatePath`,
   `step`, `claim`, `observedResult`, optional `accessibilityObservation`,
   optional `responsiveLayoutObservation`, optional `boundaryStateObservation`,
@@ -477,8 +484,8 @@ An operator edits a Triage Board, Feature Flag configuration, or Prompt Tuner se
 - **FR-013**: Every new artifact MUST open directly over `file://`, remain readable with no server or install step, and avoid missing content when the network is unavailable.
 - **FR-014**: Every new artifact MUST satisfy the accessibility contract detail recorded in Clarifications: new horizontal scroll regions use the exact ART-020 focus/name/grouping pattern, controls have visible focus and accessible names, dynamic status is programmatically determinable text, reduced motion removes required animation/transition/smooth-scroll behavior, color is never the sole carrier of meaning, and locally introduced color pairings are either audited Racecraft tokens or explicitly measured for both themes.
 - **FR-015**: The feature MUST preserve the tracked plain-English `file://` UAT runbook, Markdown result summary, and normalized per-check JSON record at the active-feature and archival paths, with the mandatory metadata, row fields, verdicts, and seven-artifact coverage recorded in Clarifications.
-- **FR-016**: Planning MUST include a file-by-file measurement of the pinned upstream sources and declared operations before implementation starts.
-- **FR-017**: If any slice's final projection crosses a reviewability block threshold and no ratified exception exists, planning MUST stop that slice for an operator topology decision instead of splitting the template automatically or inventing an exception.
+- **FR-016**: Planning MUST include a file-by-file measurement of the pinned upstream sources and declared operations before implementation starts; each slice MUST separately report its seven implementation-authored paths, any `tasks.md` control-plane checkbox path, every changed generated path, authored reviewable LOC, and the full physical Git-path count.
+- **FR-017**: If any slice's authored implementation projection crosses a reviewability block threshold, or any full-diff reviewability result contains a correctness or non-size safety blocker, planning or implementation MUST stop that slice for an operator topology decision instead of splitting the template automatically or inventing an exception. A full-diff total-file block caused solely by required source-derived generated paths and the separately reported `tasks.md` control-plane path MUST be recorded as a size-only block and carried through the already-ratified seven-branch review topology; it is not a typed exception and does not authorize another topology change.
 - **FR-018**: The feature MUST use the selected seven-slice topology, one template per sequential stacked review slice in the recorded order, unless an explicit later operator decision changes that topology.
 - **FR-019**: The feature MUST NOT add workflow-stage routing, JSON export kinds, automatic downloads, import-back, persistent editor content, shareable URL state, server storage, shared gallery foundation changes, or repairs to already-shipped templates.
 - **FR-020**: Each artifact MUST implement the exact fill-slot inventory and minimum anchored sample-content floors recorded in Clarifications; list slots MAY exceed their floor only when the template markers and Layer 4 inventory remain in agreement.
@@ -493,7 +500,7 @@ An operator edits a Triage Board, Feature Flag configuration, or Prompt Tuner se
 - The operator initially selected one combined slice after being shown that both
   estimates warned and suggested two slices. The measured combined projection
   later blocked, and the operator superseded that answer with seven slices.
-- Generated templates, generated zones, process files, PR bodies, and code fences are not valid provenance for a typed reviewability exception.
+- Generated templates, generated zones, process files, PR bodies, and code fences are not valid provenance for a typed reviewability exception. Recording a generated/control-plane-only total-file block as size-only is routing evidence, not an exception.
 
 ### Reviewability Budget *(mandatory)*
 
@@ -509,8 +516,13 @@ An operator edits a Triage Board, Feature Flag configuration, or Prompt Tuner se
 - **Split decision**: The feature remains one ART-005 spec and workflow but is
   delivered as seven sequential stacked slices, one template per slice, in the
   order recorded above. Planning must measure each slice's declared operations
-  independently; a blocked slice stops for an operator decision rather than
-  splitting its template automatically or inventing an exception.
+  independently. Every slice has seven implementation-authored paths, up to 25
+  source-derived generated/check paths, and one possible `tasks.md` control-plane
+  path, for a maximum physical footprint of 33 paths. That maximum exceeds the
+  25-file full-diff block and is therefore a projected size-only routing risk,
+  not an unqualified pass. Authored or non-size blockers stop; a block caused
+  only by required generated/control-plane paths is recorded in the slice packet
+  and continues through the already-ratified seven-branch topology.
 
 ### PR Review Packet Requirements *(mandatory)*
 

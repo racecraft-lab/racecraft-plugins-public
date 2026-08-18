@@ -29,6 +29,12 @@ The upstream evidence should remain outside the repository at:
 /private/tmp/art-005-upstream-58c305be97f47b26b678f2c07dec01d4242268ec/
 ```
 
+If that scratch directory has been purged, rehydrate the seven root HTML files
+from `anthropics/html-effectiveness` at the exact commit
+`58c305be97f47b26b678f2c07dec01d4242268ec` into a fresh temporary directory,
+then require every digest in `research.md` to match before continuing. Never
+substitute floating upstream `main`.
+
 ## Per-Slice Validation Flow
 
 Run each slice in stack order. Later branches are created only after the
@@ -68,8 +74,10 @@ pnpm --dir docs-site reference:generate
 ```
 
 11. Confirm generated/check output is within the expected physical footprint:
-    up to 25 generated paths plus seven authored paths. Do not count generated
-    paths as authored reviewability paths, and do not claim byte-identical
+    up to 25 generated paths plus seven implementation-authored paths and one
+    possible `tasks.md` control-plane path. Do not count generated or
+    control-plane paths as implementation-authored reviewability paths, do
+    include them in the complete Git-path count, and do not claim byte-identical
     generated outputs as changed.
 12. Run the default suite:
 
@@ -83,14 +91,23 @@ python3 tests/speckit-pro/run-all.py
 python3 scripts/refresh-release-artifacts.py --check
 ```
 
-14. Execute or update active `file://` UAT evidence under:
+14. Commit a source checkpoint containing the current template, manifest,
+    focused tests, generated outputs, and existing UAT carrier files. Record its
+    SHA before writing new UAT results.
+15. Execute active `file://` UAT under the checkpoint. Re-run the complete row
+    set for every artifact shipped through this slice, replace the cumulative
+    JSON rows, and set its top-level `sourceCommit` to the checkpoint SHA:
 
 ```text
 specs/art-005-gallery-completion-knowledge-reports-editors/.process/
 ```
 
-15. Measure final authored LOC before PR open. Stop the slice if it reaches 800
-    or more, even if all tests pass.
+16. Measure final authored LOC before PR open. Also record the complete physical
+    path count and its authored/control-plane/generated classification. Stop if
+    authored LOC reaches 800 or any non-size/correctness blocker exists. If the
+    only full-diff block is required generated/control-plane file count, record
+    it as size-only in UAT and the PR packet and continue through the ratified
+    branch stack.
 
 ## Manual `file://` Checks
 
@@ -203,13 +220,16 @@ At the end of each slice:
 - exactly one new artifact file exists
 - exactly one manifest row moved from `planned` to `shipped`
 - exactly seven authored paths are present in the slice
+- `tasks.md`, when changed, is reported as one separate control-plane path
 - generated/check paths stay within the 25-path expected generated footprint or
-  any extra generated diff is explicitly explained
+  any extra generated diff is explicitly explained; the complete physical count
+  and any generated/control-plane-only size block are recorded
 - Layer 1 and Layer 4 pass
 - the default suite passes
 - generated payload and proof files are consistent
 - docs reference output is regenerated after test changes
 - active UAT result rows include the slice's artifact
+- every cumulative UAT row was re-executed at the top-level `sourceCommit`
 
 At the end of slice 7:
 

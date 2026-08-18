@@ -34,6 +34,11 @@ UAT files under
 `specs/art-005-gallery-completion-knowledge-reports-editors/.process/`. Slice 1
 creates the active UAT files; later slices modify them.
 
+`tasks.md` checkbox updates are one additional control-plane Git path when they
+are present in a slice. They are excluded from the seven implementation-authored
+paths and from the path-scoped authored-LOC calculation, but they are included
+in the full physical Git-path count and reported separately in the review packet.
+
 No slice may change a later template, a later manifest row, shared foundation
 files, export vocabulary, workflow-stage routing, or existing shipped templates.
 
@@ -49,9 +54,9 @@ Each slice can physically affect up to 25 generated/check paths: four
 Claude/Codex dist gallery mirror paths, four Claude/Codex installed-cache gallery
 mirror paths, twelve `installed-cache-proof*.json` fixtures, four XPLAT-009
 evidence files, and `docs-site/src/content/docs/reference/tests.md`. Together
-with the seven authored paths, the maximum expected physical Git-path footprint
-is 32 paths per slice. Byte-identical generated outputs are valid and must not
-be claimed as changed.
+with the seven authored paths and one possible `tasks.md` control-plane path,
+the maximum expected physical Git-path footprint is 33 paths per slice.
+Byte-identical generated outputs are valid and must not be claimed as changed.
 
 ## Reviewability Gate
 
@@ -65,10 +70,20 @@ Every slice is evaluated independently against:
 - block above 25 total files
 - block above one primary surface without a ratified exception
 
-If a slice reaches a block threshold, planning or implementation stops that
-slice for an operator decision. A blocked slice is not split automatically, and
-no exception is inferred from the seven-slice topology.
+If authored LOC, production-file scope, primary-surface scope, or any non-size
+safety/correctness finding reaches a block threshold, planning or implementation
+stops that slice for an operator decision. A blocked slice is not split
+automatically, and no exception is inferred from the seven-slice topology.
+
+The 33-path maximum means the final full-diff gate can report a total-file block
+even when the seven authored paths are within budget. When every blocking path
+outside those seven is a required source-derived generated path or the separately
+reported `tasks.md` control-plane path, record the result as a size-only block in
+the slice evidence and PR packet and continue through the operator-ratified
+seven-branch topology. This is not a typed exception. Any other blocker stops.
 
 Implementation must measure each slice before generated refresh and before PR
 creation. If actual authored LOC plus remaining declared work would reach 800 or
-more, the slice stops before crossing the block threshold.
+more, the slice stops before crossing the block threshold. Before PR creation it
+also records the full physical path count and classifies every path as authored,
+control-plane, or source-derived generated output.

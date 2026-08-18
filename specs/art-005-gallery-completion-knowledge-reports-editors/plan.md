@@ -15,8 +15,10 @@ order.
 Planning reverified the pinned upstream bytes from
 `anthropics/html-effectiveness@58c305be97f47b26b678f2c07dec01d4242268ec` and
 projects every slice independently. All seven individual slices warn on
-reviewable LOC and pass the 800-LOC block threshold, so Phase 0 and Phase 1
-design artifacts are complete.
+reviewable LOC and pass the 800-LOC block threshold. Their maximum full physical
+footprint can still exceed the 25-file block through required generated outputs
+and one `tasks.md` control-plane path; that projected size-only outcome is
+recorded separately and routed through the operator-ratified branch stack.
 
 ## Technical Context
 
@@ -94,6 +96,9 @@ Assumptions:
   template, the source manifest row flip, the two focused test modules, and the
   three active UAT evidence files. Generated paths are a larger physical
   footprint but are source-derived and excluded from reviewable authored counts.
+- `tasks.md` checkbox updates are one control-plane path when present. They are
+  excluded from the seven implementation-authored paths and path-scoped authored
+  LOC, but included in the full physical Git-path count and PR packet.
 - ART-003 is the closest realized evidence: one-template slices landed under
   their declared ceilings at 735/758, 724/750, and 408/460 reviewable LOC, all
   warn and none block.
@@ -145,13 +150,13 @@ Assumptions:
 
 | Slice | Artifact | Markup/content | CSS | Behavior JS | Incremental tests | Projected reviewable LOC | Production files | Authored file count | Verdict |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---|
-| 1 | `slide-deck` | 255 | 155 | 105 | 155 | 670 | 1 | 7 | Warn: LOC above 400; no block |
-| 2 | `concept-explainer` | 205 | 120 | 105 | 105 | 535 | 1 | 7 | Warn: LOC above 400; no block |
-| 3 | `status-report` | 255 | 140 | 20 | 145 | 560 | 1 | 7 | Warn: LOC above 400; no block |
-| 4 | `incident-report` | 285 | 150 | 45 | 140 | 620 | 1 | 7 | Warn: LOC above 400; no block |
-| 5 | `triage-board` | 240 | 145 | 230 | 170 | 785 | 1 | 7 | Warn: LOC above 400; no block |
-| 6 | `feature-flags` | 230 | 150 | 245 | 155 | 780 | 1 | 7 | Warn: LOC above 400; no block |
-| 7 | `prompt-tuner` | 235 | 145 | 255 | 155 | 790 | 1 | 7 | Warn: LOC above 400; no block, 10 LOC headroom |
+| 1 | `slide-deck` | 255 | 155 | 105 | 155 | 670 | 1 | 7 | Warn: LOC above 400; authored LOC passes; full-diff path risk is size-only |
+| 2 | `concept-explainer` | 205 | 120 | 105 | 105 | 535 | 1 | 7 | Warn: LOC above 400; authored LOC passes; full-diff path risk is size-only |
+| 3 | `status-report` | 255 | 140 | 20 | 145 | 560 | 1 | 7 | Warn: LOC above 400; authored LOC passes; full-diff path risk is size-only |
+| 4 | `incident-report` | 285 | 150 | 45 | 140 | 620 | 1 | 7 | Warn: LOC above 400; authored LOC passes; full-diff path risk is size-only |
+| 5 | `triage-board` | 240 | 145 | 230 | 170 | 785 | 1 | 7 | Warn: LOC above 400; authored LOC passes with 15 LOC headroom; full-diff path risk is size-only |
+| 6 | `feature-flags` | 230 | 150 | 245 | 155 | 780 | 1 | 7 | Warn: LOC above 400; authored LOC passes with 20 LOC headroom; full-diff path risk is size-only |
+| 7 | `prompt-tuner` | 235 | 145 | 255 | 155 | 790 | 1 | 7 | Warn: LOC above 400; authored LOC passes with 10 LOC headroom; full-diff path risk is size-only |
 
 File thresholds: each slice stays at one production file and below the 6-file
 production warning. Each slice has exactly seven reviewability-counted authored
@@ -168,7 +173,18 @@ that slice stops for operator topology review before any branch/PR continuation.
 No template is split automatically, and the seven-slice decision is not a size
 exception.
 
-No individual slice reaches a block threshold.
+The pre-refresh measurements use an explicit pathspec containing only the seven
+implementation-authored paths. The pre-PR measurement also runs against the
+complete slice diff, counts `tasks.md` and every changed generated output, and
+records both ledgers. A complete-diff total-file block may continue only when
+every excess path is classified as required source-derived output or the single
+control-plane carrier and no other blocker exists.
+
+No individual slice projects an authored-LOC or production-file block. The
+maximum physical footprint does project a possible total-file block; the
+full-diff result must be recorded honestly as size-only when its excess paths
+are exclusively required generated outputs and `tasks.md` control-plane state.
+Any authored, correctness, or non-size blocker stops the slice.
 
 ## Slice Stack And Branch Plan
 
@@ -266,8 +282,9 @@ For every slice, the expected generated/check disposition is:
 - `pnpm --dir docs-site reference:generate`: regenerate:
   - `docs-site/src/content/docs/reference/tests.md`
 
-Maximum expected physical Git-path footprint per slice is 32 paths: seven
-authored paths plus up to 25 generated/check output paths listed above. The
+Maximum expected physical Git-path footprint per slice is 33 paths: seven
+implementation-authored paths, up to 25 generated/check output paths listed
+above, and one possible `tasks.md` checkbox control-plane path. The
 payload builder physically rewrites payload directories while rebuilding, but
 ART-005 expects tracked content deltas only on the gallery manifest/template
 mirrors plus proof/evidence/docs outputs. Any additional generated content diff
@@ -443,6 +460,13 @@ Active UAT files grow serially during the seven implementation slices:
 - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
 - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
 - `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+
+Each slice first commits a source checkpoint after source, tests, generated
+outputs, and the existing evidence carriers are stable. UAT then re-executes
+the complete cumulative row set for every artifact shipped through that slice,
+sets the JSON's top-level `sourceCommit` to that checkpoint, and records results
+in a later evidence commit. This prevents rows tested on an older branch head
+from being presented under a newer cumulative run identity.
 
 Post-merge archival preserves the same evidence under:
 

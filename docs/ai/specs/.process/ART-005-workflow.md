@@ -50,11 +50,11 @@ for four artifacts is now an explicit Open Question.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 24 current FRs, 8 scenarios, and 12 success criteria after checklist remediation |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved source/fidelity/fill, editor exports, UAT evidence, and block routing; no consensus needed |
-| Plan | `/speckit-plan` | ✅ Complete | Seven independently measured slices project 535-790 reviewable LOC; all warn and none block |
+| Plan | `/speckit-plan` | ✅ Complete | Seven authored-LOC ceilings are 535-790; full physical diffs carry an explicit generated/control-plane size-only risk |
 | Checklist | `/speckit-checklist` | ✅ Complete | 120 items; 24 initial gaps remediated; G4 passes with 0 remaining gaps |
 | Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | Check all artifacts against the design concept |
-| Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
+| Analyze | `/speckit-analyze` | ✅ Complete | Six findings remediated; G6 passes with 0 CRITICAL/HIGH findings |
+| Confidence Gate | G6.5 | 🔄 In Progress | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | Seven sequential stacked review slices, one template each |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
 
@@ -490,24 +490,28 @@ invent a typed exception.
 
 | Slice | Artifact | Component ceiling | Authored paths | Maximum physical paths | Verdict |
 |---:|---|---:|---:|---:|---|
-| 1 | `slide-deck` | 670 LOC | 7 | 32 | Warn; no block; accessibility-adjusted |
-| 2 | `concept-explainer` | 535 LOC | 7 | 32 | Warn; no block; UX-adjusted |
-| 3 | `status-report` | 560 LOC | 7 | 32 | Warn; no block |
-| 4 | `incident-report` | 620 LOC | 7 | 32 | Warn; no block |
-| 5 | `triage-board` | 785 LOC | 7 | 32 | Warn; no block; accessibility/UX-adjusted |
-| 6 | `feature-flags` | 780 LOC | 7 | 32 | Warn; no block |
-| 7 | `prompt-tuner` | 790 LOC | 7 | 32 | Warn; no block; 10 LOC headroom |
+| 1 | `slide-deck` | 670 LOC | 7 | 33 | Authored LOC warns/passes; full-diff file-count may size-block |
+| 2 | `concept-explainer` | 535 LOC | 7 | 33 | Authored LOC warns/passes; full-diff file-count may size-block |
+| 3 | `status-report` | 560 LOC | 7 | 33 | Authored LOC warns/passes; full-diff file-count may size-block |
+| 4 | `incident-report` | 620 LOC | 7 | 33 | Authored LOC warns/passes; full-diff file-count may size-block |
+| 5 | `triage-board` | 785 LOC | 7 | 33 | Authored LOC warns/passes with 15 LOC headroom; full-diff file-count may size-block |
+| 6 | `feature-flags` | 780 LOC | 7 | 33 | Authored LOC warns/passes with 20 LOC headroom; full-diff file-count may size-block |
+| 7 | `prompt-tuner` | 790 LOC | 7 | 33 | Authored LOC warns/passes with 10 LOC headroom; full-diff file-count may size-block |
 
 - Every component ceiling is the sum of authored markup/content, CSS, behavior
   JavaScript, and incremental test LOC. Canonical copied blocks and generated
-  mirrors are excluded; the 32-path physical ledger remains explicit.
+  mirrors are excluded from authored LOC. The 33-path maximum separately counts
+  seven implementation-authored paths, up to 25 generated paths, and one
+  possible `tasks.md` control-plane path.
 - The parser-facing ledger reports 10 NEW and 3 MODIFIED paths. The advisory
   estimator still returns `production: 0`, `projected: 0`, `pass` because it
   does not classify these net-new HTML gallery files as production. The measured
   per-slice component ceilings control the reviewability decision.
 - Implementation measures each slice after scaffolding, after focused tests,
-  before generated refresh, and before PR open. Reaching 800 LOC stops that
-  slice for an operator decision.
+  before generated refresh, and before PR open. Reaching 800 authored LOC or any
+  non-size/correctness block stops that slice. A generated/control-plane-only
+  total-file block is recorded as size-only in the slice packet and follows the
+  operator-ratified branch stack; it is not a typed exception.
 - Current G3: ✅ Pass. `plan.md`, `research.md`, `data-model.md`, four contracts,
   and `quickstart.md` exist; the constitution re-check passes; zero unresolved
   markers remain; the runner reports `plan.md exists with 0 unresolved markers`.
@@ -701,8 +705,10 @@ reader/producer classification.
   production), and the operator-ratified seven-slice measurements of 535-790
   LOC. Each slice retains its explicit pre-refresh and final stop at 800 LOC.
 - Task-checkbox changes are control-plane metadata. They are reported
-  separately from, and do not enlarge, the seven declared authored-path
-  reviewability ledgers.
+  separately from the seven declared authored-path LOC ledgers and included in
+  the complete physical Git-path ledger. With up to 25 generated paths, the
+  33-path maximum is an explicit projected size-only risk rather than an
+  unqualified reviewability pass.
 
 ---
 
@@ -789,7 +795,39 @@ artifacts agree.
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Analyze has not run | Pending |
+| A1 | CRITICAL | Seven-slice evidence claimed no block while its 32-path maximum already exceeded the 25-file threshold and omitted `tasks.md` | Split authored LOC from the complete 33-path ledger; added explicit size-only generated/control-plane routing and non-size stop rules across spec, plan, contract, quickstart, and tasks |
+| A2 | HIGH | One cumulative UAT JSON could retain old rows while changing its single top-level `sourceCommit` | Every slice now commits a source checkpoint, re-executes all cumulative rows at it, and records results in a later evidence commit |
+| A3 | HIGH | T118 built PR traceability only after all seven PRs were already opened | Each slice boundary now generates and validates its packet before PR creation; T118 is a final audit |
+| A4 | MEDIUM | T014 depended on a result file created five tasks later, so its RED proof could not complete in order | RED proof is now immediate and self-contained; durable UAT begins after its carrier files exist |
+| A5 | MEDIUM | Upstream reproducibility depended on a purgeable `/private/tmp` cache with no restore route | Research, quickstart, and T002 now rehydrate only the pinned commit and stop on any digest mismatch |
+| A6 | LOW | T118 had no FR, SC, or story mapping | Added FR-015-FR-018, FR-024, and SC-007-SC-008 traceability |
+
+Analyze metrics after remediation:
+
+- 36/36 buildable requirements covered (24 FRs and 12 SCs); 119/119 tasks
+  have a requirement or story mapping; 0 unmapped tasks.
+- 0 unresolved placeholders, 0 constitution conflicts, and 0 unresolved
+  CRITICAL/HIGH findings. G3, G5, and G6 runner validation all pass.
+- All seven pinned source digests still match `spec.md`, `plan.md`, and the
+  retrieved bytes. Manifest source/export classification remains exact.
+- The dedicated Analyze executor and one fresh retry remained frozen with no
+  result or diff. The orchestrator followed `error-recovery-codex.md`, ran the
+  analysis/remediation directly, and applied the same G6 validation.
+
+### Consensus Resolution Log
+
+No unresolved item remained for consensus after direct remediation. The
+advisory `one-navigable-PR` classifier result remains recorded without
+overriding the operator-ratified seven-branch topology, and the layer planner
+remains correctly skipped because its trigger is an exact `split-PR` route.
+
+📊 Confidence: 0.98
+
+- Task understanding: 0.99
+- Approach clarity: 0.98
+- Requirements alignment: 0.99
+- Risk assessment: 0.97
+- Completeness: 0.96
 
 ---
 
