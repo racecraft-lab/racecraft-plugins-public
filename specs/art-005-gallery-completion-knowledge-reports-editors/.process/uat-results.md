@@ -974,14 +974,14 @@ or non-size blocker, the disposition is **SIZE-ONLY BLOCK / CONTINUE** under the
 operator-ratified seven-branch topology. No typed reviewability exception is
 claimed.
 
-Runner-emitted packet `art-005-slice-5-triage-board` passed emission dry-run
-and apply, read-only validation with `pr_blocked=false`, persisted
+Runner-emitted packet `art-005-slice-5-triage-board` passed repaired emission
+dry-run and apply, read-only validation with `pr_blocked=false`, persisted
 current-fingerprint validation, workflow-contract validation, exact-title
-release readiness, and release-note policy. The branch was pushed at exact
-emission head `74e3d1bcf2b5c77407d726ca3d8289bcc4a50169`, and PR
+release readiness, and release-note policy. The repaired branch was pushed at
+exact emission head `ae342052330dfbcf10042f1f8b2771c308c13b5c`, and PR
 [#452](https://github.com/racecraft-lab/racecraft-plugins-public/pull/452)
-opened against `art-005-gallery-completion-knowledge-reports-editors-slice-4`
-before Slice 6.
+remains open and clean against
+`art-005-gallery-completion-knowledge-reports-editors-slice-4` before Slice 6.
 
 Verification remains bound to the source checkpoint:
 
