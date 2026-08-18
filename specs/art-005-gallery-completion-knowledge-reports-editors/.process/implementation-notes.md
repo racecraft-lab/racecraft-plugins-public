@@ -387,3 +387,7 @@
 ### T091
 
 **Deviations/Edge cases/Surprises:** The explicit seven-path ledger reports 1,093 physical template lines, including 458 byte-identical canonical lines, leaving 635 non-canonical template lines. With 142 incremental focused-test lines, final reviewable implementation is 777 LOC: three below the 780 ceiling and 23 below the mandatory 800 stop. One production template and exactly seven declared authored paths remain in scope, so regeneration may proceed.
+
+### T092
+
+**Deviations/Edge cases/Surprises:** Authoritative release regeneration and docs `reference:generate` completed, focused gallery and fill checks passed 497/497 and 65/65, Layer 1 passed 1,448/1,448, isolated Layer 4 passed 5,788/5,788, and the isolated default suite passed 7,422/7,422. All five feature-flags template copies share SHA-256 `a51c7b8950613fc25a804a02cabe978bf0edc46a3993f03dc80a797ae184fea9`; all five manifests share `4884d5575eb688ef7b1897b34d22069385a786d5b76ba8ea6fda5ca9d294e640`. Source checkpoint `c0ca43b62b064895c193ba8a8a36580261b84eaa` is clean; its post-commit generated-artifact check passes, and packet-excluded spec-index mutation dry-run/read-only checks report zero stale maps/current index. The complete ignored packet inventory was restored after the scanner-safe check.
