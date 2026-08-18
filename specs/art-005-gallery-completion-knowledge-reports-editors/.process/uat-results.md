@@ -1,54 +1,55 @@
 # ART-005 UAT Results
 
 Feature: ART-005 gallery completion knowledge reports/editors
-Artifacts: `slide-deck`, `concept-explainer`
+Artifacts: `slide-deck`, `concept-explainer`, `status-report`
 Template paths:
 - `speckit-pro/artifact-gallery/templates/slide-deck.html`
 - `speckit-pro/artifact-gallery/templates/concept-explainer.html`
+- `speckit-pro/artifact-gallery/templates/status-report.html`
 Runbook path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
 JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
 Driver: `manual`
-Status: T035 complete; all 72 cumulative Slice 1-2 rows are bound to source
-checkpoint `7c636c361c7593f3a4a5b9f007100af4a4084179`.
+Status: T048 complete; all 108 cumulative Slice 1-3 rows are bound to source
+checkpoint `36ef824dee02292e13704473292084173acb2f91`.
 
 ## Source Checkpoint vs Evidence Commit
 
 The source checkpoint is
-`7c636c361c7593f3a4a5b9f007100af4a4084179`. It contains both source
+`36ef824dee02292e13704473292084173acb2f91`. It contains all three source
 templates, the manifest, cumulative tests, generated outputs, and the
 pre-execution evidence carriers that were tested. The later evidence commit
 records these results without changing the tested source bytes. The JSON names
 the source checkpoint rather than the evidence commit.
 
-Connected browser discovery returned `No browser is available`, and the one
-prescribed availability inspection returned an empty list. Per the operator's
-fallback instruction, Playwright MCP then supplied browser interaction and
-observation. No repository browser harness was committed, so the contract driver
-remains `manual`.
+A fresh connected-browser selection for the exact status-report URL returned
+`No browser is available`. Per the operator's fallback instruction, Playwright
+MCP then supplied browser interaction and observation. No repository browser
+harness was committed, so the contract driver remains `manual`.
 
 ## Execution Environment
 
-- Executed at: `2026-08-18T18:28:26Z`
+- Executed at: `2026-08-18T19:51:16Z`
 - OS: macOS 26.6.2, Build 25G82, arm64
 - Browser: Google Chrome 151.0.7922.138
 - Scheme: direct `file://`
-- Viewports: 360x800 and 1280x900 CSS px
-- Network: online baseline plus context-offline reload with
-  `net::ERR_INTERNET_DISCONNECTED` remote probe
+- Viewports: 360 and 1280 CSS px widths, using a 900 CSS px observation height
+- Network: online baseline plus context-offline reload for all three readers;
+  a disposable remote probe failed with `net::ERR_INTERNET_DISCONNECTED`
 - Themes: light and dark, including persisted-dark reload
 - Motion: no-preference plus `prefers-reduced-motion: reduce`
 - Color-independent review: Ready/Watch/Stop text plus circle/square/block;
-  labeled node circles, square keys, scenario headings, and `Watch:` text
+  labeled node circles, square keys, scenario headings, and `Watch:` text;
+  eight explicit status/next-action cues in the status report
 
 ## Row Totals
 
-- Total cumulative Slice 1-2 rows: 72
-- Executed pass rows: 36
-- Evidence-backed N/A rows in JSON: 36
-- JSON rows currently recorded: 72
-- Pass verdicts: 36
+- Total cumulative Slice 1-3 rows: 108
+- Executed pass rows: 54
+- Evidence-backed N/A rows in JSON: 54
+- JSON rows currently recorded: 108
+- Pass verdicts: 54
 - Fail verdicts: 0
-- Not-applicable verdicts: 36
+- Not-applicable verdicts: 54
 
 Every executable row passed; no result is omitted from the normalized JSON.
 
@@ -98,6 +99,29 @@ Every executable row passed; no result is omitted from the normalized JSON.
 | CE-UAT-017 | Pass | Complete reader passed at 1280 CSS px with no page overflow, clipping, or lost controls. |
 | CE-UAT-018 | Pass | Manifest matched ID, title, pinned source, reader role, shipped status, and `exports: []`. |
 
+## Status-Report Executed Matrix
+
+| Row | Verdict | Evidence summary |
+|---|---|---|
+| SR-UAT-001 | Pass | Exact repository-relative template opened over `file://`; expected title/h1 rendered; zero console or page errors. |
+| SR-UAT-002 | Pass | Summary and all four list fills were complete, with two anchored items in every list. |
+| SR-UAT-003 | Pass | One main landmark exposed five programmatically labelled semantic sections. |
+| SR-UAT-004 | Pass | Summary showed `On track` with visible 2/1/1 landed, in-flight, and blocked counts. |
+| SR-UAT-005 | Pass | Both Landed anchors exposed `Status: Complete`. |
+| SR-UAT-006 | Pass | Both In flight anchors exposed `Status: Building` and `Status: Scheduled`. |
+| SR-UAT-007 | Pass | Both Blocked anchors exposed `Status: Size-only` and `Status: Fallback ready`. |
+| SR-UAT-008 | Pass | Both Next actions anchors exposed explicit owner-facing next-step text. |
+| SR-UAT-009 | Pass | Offline reload preserved title, heading, sections, items, and the theme control. |
+| SR-UAT-010 | Pass | Dark theme was the sole authored keyboard stop; no disguised controls were present. |
+| SR-UAT-011 | Pass | The theme control showed a measured 2px solid outline with 2px offset. |
+| SR-UAT-012 | Pass | Light/dark content matched, dark persisted, and the reader returned to light. |
+| SR-UAT-013 | Pass | Reduce mode computed 0.01ms durations and zero running animations after settle. |
+| SR-UAT-014 | Pass | Eight visible status/next-action cues conveyed state without hue. |
+| SR-UAT-015 | Pass | Source and runtime found no meaningful horizontal-scroll element at either width. |
+| SR-UAT-016 | Pass | Complete report passed at 360 CSS px with no page overflow or clipped reviewed node. |
+| SR-UAT-017 | Pass | Complete report passed at 1280 CSS px with no page overflow or clipped reviewed node. |
+| SR-UAT-018 | Pass | Manifest matched ID, title, pinned source, reader role, shipped status, and `exports: []`. |
+
 ## Slide-Deck Evidence-Backed N/A Matrix
 
 | Row | Case | JSON treatment | Evidence basis |
@@ -144,23 +168,50 @@ Every executable row passed; no result is omitted from the normalized JSON.
 | CE-UAT-035 | `sequential_transition` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No clipboard recovery sequence exists. |
 | CE-UAT-036 | `superseded_attempt` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No overlapping clipboard attempts exist. |
 
-## Source and Browser Evidence Used For T035
+## Status-Report Evidence-Backed N/A Matrix
+
+| Row | Case | JSON treatment | Evidence basis |
+|---|---|---|---|
+| SR-UAT-019 | `horizontal_scroll_region` | `not_applicable` with `accessibilityObservation.notApplicableReason` | Source/runtime found no actual horizontal scroll element at either width. |
+| SR-UAT-020 | `live_export_freshness` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | Reader manifest declares `exports: []`; no export control exists. |
+| SR-UAT-021 | `empty_values` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No producer-owned serialized fields or payload exist. |
+| SR-UAT-022 | `invalid_raw_value` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No producer-owned raw input parsing exists. |
+| SR-UAT-023 | `unavailable_normalized_value` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No producer-owned normalization exists. |
+| SR-UAT-024 | `duplicate_identifiers` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No producer-owned entity collection is exported. |
+| SR-UAT-025 | `special_character_round_trip` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No structured export round trip exists. |
+| SR-UAT-026 | `multiple_issue_order` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No editor issue list exists. |
+| SR-UAT-027 | `clipboard_exact_equality` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No clipboard/fallback export is attempted. |
+| SR-UAT-028 | `superseded_copy_attempt` | `not_applicable` with `dataIntegrityObservation.notApplicableReason` | No copy attempt or stale export race exists. |
+| SR-UAT-029 | `genuine_success` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No clipboard success path exists. |
+| SR-UAT-030 | `clipboard_absent` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No clipboard fallback path exists. |
+| SR-UAT-031 | `method_non_callable` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No clipboard method is called. |
+| SR-UAT-032 | `permission_denied` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No clipboard permission branch exists. |
+| SR-UAT-033 | `generic_rejection` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No rejected clipboard promise exists. |
+| SR-UAT-034 | `synchronous_throw` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No synchronous clipboard call exists. |
+| SR-UAT-035 | `sequential_transition` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No clipboard recovery sequence exists. |
+| SR-UAT-036 | `superseded_attempt` | `not_applicable` with `errorHandlingObservation.notApplicableReason` | No overlapping clipboard attempts exist. |
+
+## Source and Browser Evidence Used For T048
 
 - `specs/art-005-gallery-completion-knowledge-reports-editors/contracts/uat-evidence-contract.md` defines the active paths, JSON schema, row schema, required matrix, and reader `not_applicable` rules.
-- `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md` defines the cumulative Slice 1-2 UAT increments and active carriers.
+- `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md` defines the cumulative Slice 1-3 UAT increments and active carriers.
 - `speckit-pro/artifact-gallery/manifest.json:170-178` declares `slide-deck`, source `09-slide-deck.html`, status `shipped`, and `exports: []`.
 - `speckit-pro/artifact-gallery/templates/slide-deck.html:805-889` shows the reader content, three slide articles, speaker notes, and navigation controls.
 - `speckit-pro/artifact-gallery/templates/slide-deck.html:486-492` sets `overflow-x:hidden` on `html` and `body`; source search found no `overflow-x:auto` or `overflow-x:scroll`.
 - `speckit-pro/artifact-gallery/manifest.json:181-189` declares `concept-explainer`, source `15-research-concept-explainer.html`, status `shipped`, and `exports: []`.
 - `speckit-pro/artifact-gallery/templates/concept-explainer.html:650-885` contains all four fills, deterministic ring, bounded controls, reset/status behavior, and two anchored scenarios.
 - `speckit-pro/artifact-gallery/templates/concept-explainer.html:481` sets `overflow-x:hidden` on `html` and `body`; source search found no `overflow-x:auto` or `overflow-x:scroll`.
+- `speckit-pro/artifact-gallery/manifest.json:192-200` declares `status-report`, source `11-status-report.html`, status `shipped`, and `exports: []`.
+- `speckit-pro/artifact-gallery/templates/status-report.html:611-724` contains the complete summary plus Landed, In flight, Blocked, and Next actions sections with eight anchored items.
+- `speckit-pro/artifact-gallery/templates/status-report.html:482` sets `overflow-x:hidden` on `html` and `body`; source search found no `overflow-x:auto` or `overflow-x:scroll`.
 - Playwright accessibility snapshots and runtime state checks covered navigation
   naming, focus order, hidden/inert state, live position text, responsive
   geometry, reduced motion, theme parity, deterministic/session-only behavior,
-  exact boundary feedback, and zero final-load console errors for both readers.
-- Playwright context offline mode produced
-  `net::ERR_INTERNET_DISCONNECTED` for a remote probe while the local deck
-  reloaded and remained interactive successfully.
+  exact boundary feedback, semantic report sections, eight text-backed status
+  cues, and zero final-load console errors for all three readers.
+- Playwright context offline mode produced `net::ERR_INTERNET_DISCONNECTED`
+  in a disposable remote-probe tab while all three local readers reloaded and
+  remained usable.
 
 ## Slice 1 Pre-Generation Reviewability Measurement
 

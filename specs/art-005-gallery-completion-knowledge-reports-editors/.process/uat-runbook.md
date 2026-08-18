@@ -1,20 +1,21 @@
 # ART-005 UAT Runbook
 
 Feature: ART-005 gallery completion knowledge reports/editors
-Artifacts: `slide-deck`, `concept-explainer`
+Artifacts: `slide-deck`, `concept-explainer`, `status-report`
 Driver: `manual`
 Template paths:
 - `speckit-pro/artifact-gallery/templates/slide-deck.html`
 - `speckit-pro/artifact-gallery/templates/concept-explainer.html`
+- `speckit-pro/artifact-gallery/templates/status-report.html`
 Results path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
 JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
 
-T019 created the active UAT carriers. T035 re-executed the complete cumulative
-Slice 1-2 row set against source checkpoint
-`7c636c361c7593f3a4a5b9f007100af4a4084179` on 2026-08-18. Connected browser
-discovery returned no instances, so the operator-authorized Playwright MCP
-fallback supplied browser interaction and observation while the contract driver
-remained `manual`.
+T019 created the active UAT carriers. T048 re-executed the complete cumulative
+Slice 1-3 row set against source checkpoint
+`36ef824dee02292e13704473292084173acb2f91` on 2026-08-18. A fresh connected
+browser selection returned `No browser is available`, so the
+operator-authorized Playwright MCP fallback supplied browser interaction and
+observation while the contract driver remained `manual`.
 
 ## Manual Setup
 
@@ -325,7 +326,7 @@ steps are the reusable cumulative procedure for later checkpoints.
 
 ### CE-UAT-016 360 CSS px layout
 
-1. Set the viewport to exactly 360x800 CSS px and reload.
+1. Set the viewport to exactly 360 CSS px wide and reload.
 2. Confirm the heading, grids, ring, sliders, buttons, status, and scenarios stay
    inside the viewport without clipping or overlap.
 3. Confirm there is no page-level horizontal overflow.
@@ -343,18 +344,128 @@ steps are the reusable cumulative procedure for later checkpoints.
 2. Confirm the pinned upstream source is `15-research-concept-explainer.html`.
 3. Confirm role is reader, status is `shipped`, and `exports` is `[]`.
 
+## Slice 3 Executable Rows
+
+SR-UAT-001 through SR-UAT-018 passed at the Slice 3 source checkpoint. These
+steps remain the reusable cumulative procedure for later slice checkpoints.
+
+### SR-UAT-001 Direct file open
+
+1. Open `file://<repo-root>/speckit-pro/artifact-gallery/templates/status-report.html`.
+2. Confirm the title is `Status Report - Artifact Gallery Delivery`.
+3. Confirm the visible h1 is `Artifact Gallery Status` and the page needs no server.
+
+### SR-UAT-002 Complete representative fills
+
+1. Confirm the `summary`, `landed`, `in-flight`, `blocked`, and `next-actions`
+   fill regions contain complete representative content.
+2. Confirm each list fill contains at least two anchored items.
+
+### SR-UAT-003 Semantic section structure
+
+1. Confirm one `main` landmark contains five sections.
+2. Confirm their h2 headings are Summary, Landed, In flight, Blocked, and Next actions.
+3. Confirm every heading labels its section programmatically.
+
+### SR-UAT-004 Summary metrics
+
+1. Confirm the summary exposes the current state `On track`.
+2. Confirm the visible counts are 2 landed, 1 in flight, and 1 blocked.
+
+### SR-UAT-005 Landed outcomes
+
+1. Confirm `#landed-slide-deck` and `#landed-concept-explainer` are present.
+2. Confirm both expose the visible text cue `Status: Complete`.
+
+### SR-UAT-006 In-flight work
+
+1. Confirm `#in-flight-status-reader` and `#in-flight-cumulative-uat` are present.
+2. Confirm their visible cues are `Status: Building` and `Status: Scheduled`.
+
+### SR-UAT-007 Blocked work
+
+1. Confirm `#blocked-physical-footprint` and `#blocked-connected-browser` are present.
+2. Confirm their visible cues are `Status: Size-only` and `Status: Fallback ready`.
+
+### SR-UAT-008 Next actions
+
+1. Confirm `#next-actions-verify-reader` and `#next-actions-open-pr` are present.
+2. Confirm their visible cues are `Next: Finalize source checkpoint` and
+   `Next: Publish evidence`.
+
+### SR-UAT-009 Offline reload
+
+1. Put the browser context offline and reload the exact local file.
+2. Confirm title, heading, sections, content, and theme control remain usable.
+3. Restore the online condition after the observation.
+
+### SR-UAT-010 Complete keyboard traversal
+
+1. Reload and begin at the browser viewport.
+2. Press Tab and confirm the theme control is the sole authored keyboard stop.
+3. Confirm the report has no disguised interactive controls.
+
+### SR-UAT-011 Focus visibility
+
+1. Keyboard-focus the Dark theme control.
+2. Confirm a visible solid 2px outline with 2px offset.
+
+### SR-UAT-012 Light/dark parity
+
+1. Record the complete report in light mode, then toggle Dark theme.
+2. Confirm all five sections, eight list items, metrics, and status text remain.
+3. Reload to confirm dark persistence, then return the report to light.
+
+### SR-UAT-013 Reduced motion
+
+1. Enable `prefers-reduced-motion: reduce` and reload.
+2. Confirm transition and animation durations are effectively removed and no
+   animation remains running after settle.
+
+### SR-UAT-014 Color-independent meaning
+
+1. Confirm all status and next-action states use visible text rather than hue alone.
+2. Confirm the eight cues remain understandable in both themes.
+
+### SR-UAT-015 Horizontal scroll actual-element check
+
+1. Confirm source has no `overflow-x:auto` or `overflow-x:scroll` declaration.
+2. At both review widths, compare document client and scroll widths.
+3. Confirm no actual user-scroll element has horizontal overflow.
+
+### SR-UAT-016 360 CSS px layout
+
+1. Set the viewport to exactly 360 CSS px and reload.
+2. Confirm all sections and lists remain inside the viewport without clipping.
+3. Confirm there is no page-level horizontal overflow.
+
+### SR-UAT-017 >=1280 CSS px layout
+
+1. Set the viewport to at least 1280 CSS px and reload.
+2. Confirm all sections and lists remain inside the viewport without clipping.
+3. Confirm there is no page-level horizontal overflow.
+
+### SR-UAT-018 Manifest parity
+
+1. Confirm `id` is `status-report` and title is `Status Report`.
+2. Confirm the pinned upstream source is `11-status-report.html`.
+3. Confirm role is reader, status is `shipped`, and `exports` is `[]`.
+
 ## Source-Backed Not Applicable Rows
 
 The cumulative JSON retains rows that honestly carry
 `verdict: not_applicable` after source and browser execution.
 
-1. SD-UAT-019 and CE-UAT-019 record the horizontal-scroll N/A route from source
+1. SD-UAT-019, CE-UAT-019, and SR-UAT-019 record the horizontal-scroll N/A route from source
    and runtime evidence: there is no `overflow-x: auto` or `overflow-x: scroll`;
    `html` and `body` use `overflow-x: hidden`; 360 and 1280 CSS px observations
    found no actual user-scroll element.
-2. SD-UAT-020 through SD-UAT-028 and CE-UAT-020 through CE-UAT-028 record
-   producer-only data-integrity/export cases that do not apply because both
-   manifests declare `exports: []` and neither template has an export surface.
-3. SD-UAT-029 through SD-UAT-036 and CE-UAT-029 through CE-UAT-036 record
-   producer-only clipboard/recovery/race cases that do not apply because both
-   artifacts are readers with no clipboard action.
+2. SD-UAT-020 through SD-UAT-028, CE-UAT-020 through CE-UAT-028, and
+   SR-UAT-020 through SR-UAT-028 record
+   producer-only data-integrity/export cases that do not apply because all
+   three manifests declare `exports: []` and none of the templates has an
+   export surface.
+3. SD-UAT-029 through SD-UAT-036, CE-UAT-029 through CE-UAT-036, and
+   SR-UAT-029 through SR-UAT-036 record
+   producer-only clipboard/recovery/race cases that do not apply because all
+   three artifacts are readers with no clipboard action.

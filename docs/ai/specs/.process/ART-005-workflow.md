@@ -55,7 +55,7 @@ for four artifacts is now an explicit Open Question.
 | Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | Six findings remediated; G6 passes with 0 CRITICAL/HIGH findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory PASS at 0.98 against the 0.90 threshold |
-| Implement | `/speckit-implement` | 🔄 In Progress | Slices 1-2 complete in PRs #444 and #446; Slice 3 cumulative UAT T048 active |
+| Implement | `/speckit-implement` | 🔄 In Progress | Slices 1-2 complete in PRs #444 and #446; Slice 3 cumulative UAT green, T049 closeout active |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -98,7 +98,7 @@ Before starting any workflow phase, verify alignment with
 ### Worktree and Bootstrap Record
 
 - Required worktree: `.worktrees/art-005-gallery-completion-knowledge-reports-editors`
-- Active branch: `art-005-gallery-completion-knowledge-reports-editors-slice-2`
+- Active branch: `art-005-gallery-completion-knowledge-reports-editors-slice-3`
 - Stack root: `art-005-gallery-completion-knowledge-reports-editors`
 - Base at scaffold: `origin/main` at `1cf86bddecbca620234657f6e59a48991eabbc88`
 - Docs dependency bootstrap completed: `pnpm --dir docs-site install --frozen-lockfile`
@@ -922,7 +922,7 @@ For every behavior:
 | 1 - Shared baseline and contracts | Complete | 10 | Pinned digests match; G4 passes; L1 1448/1448, L4 5766/5766, full 7400/7400 |
 | 2 - Slice 1 | Complete | 13 | PR #444 open; source checkpoint `660bfe9ce`; 18 pass, 18 evidence-backed N/A, zero fail; final gates green |
 | 3 - Slice 2 | Complete | 13 | PR #446 open; source checkpoint `7c636c361`; cumulative UAT 36 pass, 36 evidence-backed N/A, zero fail; final gates green |
-| 4 - Slice 3 | In Progress | 11 | Source checkpoint `36ef824de`; focused/L1/L4/full/generated/spec-index green; T048 active |
+| 4 - Slice 3 | In Progress | 12 | Source checkpoint `36ef824de`; cumulative UAT 54 pass, 54 evidence-backed N/A, zero fail; T049 active |
 | 5 - Slice 4 | Pending | 0 | incident-report plus incremental integration and UAT |
 | 6 - Slice 5 | Pending | 0 | triage-board plus incremental integration and UAT |
 | 7 - Slice 6 | Pending | 0 | feature-flags plus incremental integration and UAT |
