@@ -36,7 +36,7 @@ captured during scoping.
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass — 3 sessions, 15 questions/findings, 3 consensus rounds (Q4 3-of-3, Q5 and F1 2-of-2), 0 markers remain |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass — 8 artifacts, 15 research decisions, 16 declared file ops (11 production), 4 contracts, constitution 6/6, 0 markers |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — 2 domains, 73 items, 24 gaps found and all remediated; 1 consensus round |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 54 tasks (T001-T054), 16 [P], all 13 FRs covered, route one-navigable-PR |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -674,10 +674,34 @@ When checklist identifies `[Gap]` items:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 54 (T001-T054, contiguous, 0 format violations) |
+| **Phases** | 6 — Setup 3, Foundational 8, US1 16, US2 7, US3 9, Polish 11 |
+| **Parallel Opportunities** | 16 `[P]`; cross-story parallelism explicitly discouraged (three stories share the two long phase-execution reference docs) |
+| **User Stories Covered** | US1 16 tasks (MVP: owns the fail-open sinks), US2 7, US3 9; all 13 FRs mapped, none missing. Stories deliberately not fully independent: US2/US3 depend on US1's sink structure and row reader — documented in tasks.md contra the generic template |
+
+**G5 PASS.** Runner `validate-gate` returned
+`{"gate":"G5","pass":true,"reason":"54 tasks found","task_count":54,"markers":0}`.
+TDD ordering holds (T007/T012/T013/T035 write failing tests before their
+implementations). Layer 1 re-run after tasks.md was written: 1447/1447 — the
+new file stales no generated index. Two orchestrator notes carried forward:
+T052 (quickstart scenarios 5-7) is operator-gated — it needs an authenticated
+`gh` and opens real draft PRs, so an autonomous implement run without
+credentials reports it not-run rather than complete; T004 records the ratified
+no-split verdict rather than recomputing it.
+
+### Tasks-Phase Reviewability Boundary (step 8, recorded)
+
+Runner `reviewability-gate` supports setup mode only on the installed runner —
+tasks mode is **deferred** (helper ID `reviewability-gate`, requested mode
+`tasks`, deferral reason: deferred for installed workflows per the skill's
+runner-operations register). Fallback evidence chain, all committed: the
+setup-mode gate at scaffold (`status: warn, pass: true`, sole warning the
+roadmap-wide surface count; ART-007's own budget within threshold), the
+plan-phase step 7b advisory (`estimate-reviewable-loc` status pass; real
+sizing `estimate-spec-size` 335/ok/1 slice), and the operator-ratified
+one-slice split decision (grill-me, re-confirmed at Clarify session 3).
+All three are marker-planning inputs reading pass/ratified — no size-only
+block, no marker planning required, no correctness stop.
 
 ---
 
@@ -698,10 +722,21 @@ line count. Surface the four fields the SKILL extracts from the emitted decision
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
-| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
-| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+| **Route** | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| **Releasable** | `true` | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
+| **Signals** | `change-shape:modify-heavy` | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
+| **Warnings** | none | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+
+Recorded at G5 (2026-08-18) from runner `atomicity-route` against
+`specs/art-007-draft-pr-emission`:
+`{"route":"one-navigable-PR","releasable":true,"signals":["change-shape:modify-heavy"],"warnings":[],"hints":[]}`.
+
+## Layer Plan
+
+`layer_plan.status = skipped` — the route is `one-navigable-PR`, not
+`split-PR`, so the layer planner does not run (step 8d). Recorded in
+`autopilot-state.json` under `layer_plan`; implementation continues with the
+route context above.
 
 To produce the decision, run the classifier against the feature directory:
 
