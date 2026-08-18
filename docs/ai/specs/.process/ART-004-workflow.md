@@ -92,7 +92,7 @@ not authority for any individual approved slice.
 | Tasks | /speckit-tasks | ✅ Complete | 60 tasks, 17/17 requirements, 3/3 stories, 9 safe parallel tasks; G5 passed |
 | Analyze | /speckit-analyze | ✅ Complete | Executor clean, G6 passed, and required clean-pass confidence synthesis completed |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory gate passed at 1.00 against the 0.90 threshold |
-| Implement | /speckit-implement | ✅ Complete | T001-T060 complete; suite 7496/7496 and all release/reference/title gates pass |
+| Implement | /speckit-implement | ✅ Complete | T001-T060 complete; post-review suite 7502/7502 and all release/reference/title gates pass |
 | Post | Post-Implementation | 🔄 In Progress | Required audit chain is now running after G7 implementation completion |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -125,7 +125,7 @@ Before each phase, verify alignment with ".specify/memory/constitution.md":
 | I. Plugin Structure Compliance | Gallery source and release payload remain structurally valid | ✅ Layer 1 baseline: 1,447/1,447 |
 | II. Cross-Platform Runtime & Script Safety | Offline single-file artifacts; repository tooling stays Python 3.11+ stdlib | ✅ Layer 4 baseline: 5,766/5,766 |
 | IV. Test Coverage Before Merge | Global assertion, negative fixture, manifest and fill coverage | ✅ Full baseline: 7,399/7,399 |
-| V. Conventional Commits | Lowercase speckit-pro scope and plain-English title | ✅ Phase checkpoint subjects use the repository contract; final PR-title gate remains an implementation-stage task |
+| V. Conventional Commits | Lowercase scope and plain-English title | ✅ `feat(art-004): complete design gallery artifacts` passes both final title gates |
 | VI. KISS, Simplicity & YAGNI | Functional fidelity with repeated samples compacted; no undeclared affordance | ✅ Scope is roadmap-backed; Plan and later code review re-check complexity |
 
 **Constitution Check:** ✅ Verified before G1 on 2026-08-17.
@@ -816,8 +816,9 @@ Final verification:
 - Human-approved Slice 1 gate: 160 reviewable LOC, 3 production files, `pass`.
 - Human-approved Slice 2 gate: 590 reviewable LOC, 4 production files, `warn`.
 - Human-approved Slice 3 gate: 520 reviewable LOC, 2 production files, `warn`.
-- Realized baseline diff: 72 files, including 10 gallery source paths, 2 test
-  files, and 54 generated payload/proof paths. Review checkpoints are
+- Realized post-review diff at checkpoint `d65345e65`: 90 files, including 10
+  gallery source paths, 2 test files, generated payload/proof paths, and the
+  Verify-Tasks report. Review checkpoints are
   `e15e3a6cc`, `01e97ad65`, and `0a8228a8c`; their bookkeeping checkpoints are
   `be5c90c25`, `caa920d1d`, and `c28eb805d`.
 - Tasks T001-T060 trace to all 17 functional requirements, 9 success criteria,
@@ -826,12 +827,12 @@ Final verification:
 
 ### Verification and known gaps
 
-- Focused gallery: 567/567; fill regions: 70/70; complete suite: 7496/7496.
-- Release payload and docs reference checks pass on checkpoint `0a8228a8c`.
-- The Python-authoritative release-readiness `validate-pr-title` operation passed
-  the exact prospective title
-  `feat(speckit-pro): complete design gallery artifacts` with exit code 0 and
-  `blocking=false`.
+- Focused gallery: 573/573; fill regions: 70/70; complete suite: 7502/7502.
+- Release payload and docs reference checks pass on the clean post-review
+  checkpoint `d65345e65`.
+- Both Python-authoritative title gates pass the exact prospective title
+  `feat(art-004): complete design gallery artifacts`: release readiness reports
+  `blocking=false`, and the PR workflow contract reports `status=passed`.
 - Chromium and Safari passed the repaired-region and read-only matrices;
   Chromium, WebKit, and Safari passed the decision matrix. Safari 26.6.1 used
   Option-Tab and moved the component snippet from `scrollLeft=0` to 29.
@@ -855,28 +856,65 @@ generated files must never be hand-reverted independently.
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏳ Pending | Runs after G7 |
-| Post: Verify Implementation | ⏳ Pending | Runs after G7 |
-| Post: Verify Tasks Phantom Check | ⏳ Pending | Runs after G7 |
-| Post: Code Review | ⏳ Pending | Runs after G7 |
-| Post: Integration Suite | ⏳ Pending | Runs after G7 |
-| Post: Reviewability Diff Gate | ⏳ Pending | Runs after G7 |
-| Post: Self-Review | ⏳ Pending | Runs after G7 |
-| Post: UAT Runbook Generation | ⏳ Pending | Runs after G7 |
-| Post: Final Reviewability Backstop | ⏳ Pending | Runs after G7 |
+| Post: Doctor Extension Check | ✅ Complete | 4 checks passed; one unrelated warning remains for the incomplete `brand-001-racecraft-identity-system` planning directory |
+| Post: Verify Implementation | ✅ Complete | Verify extension found no implementation defect |
+| Post: Verify Tasks Phantom Check | ✅ Complete | 60/60 tasks verified with zero flagged verdicts; privacy-safe report at `specs/art-004-gallery-completion-design-prototyping/verify-tasks-report.md` |
+| Post: Code Review | ✅ Complete | Independent review findings were repaired with RED/GREEN contracts; final re-review found no blocking or minor issue |
+| Post: Integration Suite | ✅ Complete | 7502/7502 passed: L1 1447/1447, L4 5869/5869, L5 186/186; privacy 10/10 |
+| Post: Reviewability Diff Gate | ✅ Complete | Current committed three-slice evidence remains non-blocking at 160/pass, 590/warn, and 520/warn; review remediation did not change the approved topology |
+| Post: Self-Review | ✅ Complete | Mandatory four-question audit below records tests, nine acceptance scenarios, FR/task traceability, and tidiness; no gaps found |
+| Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is deferred, no committed feature-local skeleton exists, and no UAT validator is registered; `quickstart.md` remains the executable source-derived matrix |
+| Post: Final Reviewability Backstop | ✅ Complete | Deferred helper was not invoked; proceeded on current committed slice evidence and clean reviewed checkpoint `d65345e65` |
 | Post: PR Packet/Body Generation | ⏳ Pending | Runs after G7 |
 | Post: PR Body Generation | ⏳ Pending | Runs after G7 |
 | Post: PR Creation | ⏳ Pending | Runs after G7 |
-| Post: Review Remediation | ⏳ Pending | Runs after G7 |
+| Post: Review Remediation | ⏳ Pending | Final pre-PR review is clean; live PR feedback is checked after creation |
 | Post: Retrospective | ⏳ Pending | Final Post item |
 
-- [ ] All tasks complete.
-- [ ] Layer 1 and Layer 4 pass.
-- [ ] Full Python-authoritative suite passes.
-- [ ] Generated artifact consistency passes.
-- [ ] Manual file:// UAT passes.
-- [ ] Exact PR title passes release readiness.
-- [ ] ART-004 roadmap and MOC state agree.
+### Self-Review — 2026-08-18T21:08:19Z
+
+1. **Tests executed?** `BUILD`, `TYPECHECK`, `LINT`, and
+   `INTEGRATION_TEST` are explicitly `N/A` in `PROJECT_COMMANDS`; they were not
+   inferred as passing. `UNIT_TEST` and `FULL_VERIFY` are the same configured
+   command, `python3 tests/speckit-pro/run-all.py`, and its final run passed
+   7502/7502. Focused gallery and fill suites passed 573/573 and 70/70;
+   Chromium and WebKit passed 16/16 post-review browser checks; release payload,
+   docs reference, privacy, and diff checks pass.
+2. **Edge cases?** All nine acceptance scenarios have non-happy-path evidence.
+   Repaired-region focus and scrolling are covered at
+   `test-artifact-gallery.py:7447` and `quickstart.md:47`; new-region coverage
+   is at `test-artifact-gallery.py:7479` and `quickstart.md:108`; the missing
+   keyboard-route negative is at `test-artifact-gallery.py:7555`. Offline and
+   missing-resource failures are covered at `test-artifact-gallery.py:8348`,
+   `:8357`, and `:8561`; fidelity and fill replacement are covered by the
+   Group M/O inventories and `test-artifact-fill-regions.py:931`; status-only
+   manifest drift is rejected at `test-artifact-gallery.py:8314` and `:8527`.
+   Both decision payloads and incomplete-input paths are covered by Group O at
+   `test-artifact-gallery.py:8799` and its fixtures beginning at `:8860`;
+   clipboard refusal, fallback parity, and stale settlement are exercised in
+   `quickstart.md:168` and statically guarded by Group O. No
+   `[edge-case-gap]` remains.
+3. **Requirements matched?** The `tasks.md` traceability matrix maps FR-001
+   through FR-017 and SC-001 through SC-009 to checked tasks. Verify-Tasks
+   confirms T001-T060 are 60/60 verified with no weak, partial, skipped, or
+   missing verdict. Slice checkpoints `e15e3a6cc`, `01e97ad65`, and
+   `0a8228a8c`, final integration `37956a78e`, and review remediation
+   `d65345e65` provide implementation evidence. There are zero orphan FRs,
+   tasks, or acceptance scenarios.
+4. **Follow-up and tidiness?** Scans of `spec.md`, `plan.md`, `tasks.md`, commit
+   messages, and the changed source found no `[TODO]`, `[DEFERRED]`,
+   `[OUT-OF-SCOPE]`, debug logging, breakpoints, commented-out implementations,
+   or temporary fixtures. The deferred UAT-skeleton helper is explicitly
+   dispositioned above, while the committed quickstart carries the real UAT
+   evidence. No silent deferral or leftover scaffolding remains.
+
+- [x] All tasks complete.
+- [x] Layer 1 and Layer 4 pass.
+- [x] Full Python-authoritative suite passes.
+- [x] Generated artifact consistency passes.
+- [x] Manual file:// UAT passes.
+- [x] Exact PR title passes release readiness and the PR workflow contract.
+- [x] ART-004 roadmap and MOC state agree.
 
 ---
 

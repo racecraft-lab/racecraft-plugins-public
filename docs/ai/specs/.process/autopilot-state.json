@@ -5,8 +5,8 @@
   "branch": "art-004-gallery-completion-design-prototyping",
   "status": "in_progress",
   "stage": "implement",
-  "active_step": "Phase 7: Implement T038-T052 - slice 3 decision ports",
-  "updated_at": "2026-08-18T19:20:46Z",
+  "active_step": "Post: PR Packet/Body Generation",
+  "updated_at": "2026-08-18T21:08:19Z",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
     "consensus_mode": "moderate",
@@ -188,15 +188,15 @@
     {"step": "Phase 7: Implement T023-T037 - slice 2 read-only ports", "status": "completed"},
     {"step": "Phase 7: Implement T038-T052 - slice 3 decision ports", "status": "completed"},
     {"step": "Phase 7: Implement T053-T060 - polish and release evidence", "status": "completed"},
-    {"step": "Post: Doctor Extension Check", "status": "in_progress"},
-    {"step": "Post: Verify Implementation", "status": "pending"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
-    {"step": "Post: Code Review", "status": "pending"},
-    {"step": "Post: Integration Suite", "status": "pending"},
-    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: Self-Review", "status": "pending"},
-    {"step": "Post: UAT Runbook Generation", "status": "pending"},
-    {"step": "Post: Final Reviewability Backstop", "status": "pending"},
+    {"step": "Post: Doctor Extension Check", "status": "completed"},
+    {"step": "Post: Verify Implementation", "status": "completed"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
+    {"step": "Post: Code Review", "status": "completed"},
+    {"step": "Post: Integration Suite", "status": "completed"},
+    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
+    {"step": "Post: Self-Review", "status": "completed"},
+    {"step": "Post: UAT Runbook Generation", "status": "skipped: generate-uat-skeleton deferred; no committed runbook"},
+    {"step": "Post: Final Reviewability Backstop", "status": "completed"},
     {"step": "Post: PR Packet/Body Generation", "status": "pending"},
     {"step": "Post: PR Body Generation", "status": "pending"},
     {"step": "Post: PR Creation", "status": "pending"},
@@ -265,7 +265,7 @@
     "G7": {
       "pass": true,
       "markers": 0,
-      "reason": "T001-T060 complete; full suite 7496/7496; generated release artifacts, references, diff, browser UAT, and exact PR title all pass"
+      "reason": "T001-T060 complete; post-review full suite 7502/7502; generated release artifacts, references, diff, browser UAT, and exact PR title all pass"
     }
   },
   "phase_results": {
@@ -523,28 +523,37 @@
         "review_packet": "workflow records change rationale, non-goals, review order, scope gates, traceability, verification, known gaps, and rollback",
         "art_020": "pre-implementation roadmap baseline already records Superseded by ART-004; no implementation-time roadmap drift",
         "pr_title": "release-readiness validate-pr-title passed feat(speckit-pro): complete design gallery artifacts with exit 0 and blocking=false",
-        "final_gate": "7496/7496 passed; release artifacts match source; reference pages current; git diff check clean"
+        "final_gate": "post-review 7502/7502 passed; release artifacts match source at d65345e65; reference pages current; privacy 10/10; git diff check clean"
       },
       "implementation_notes": "specs/art-004-gallery-completion-design-prototyping/.process/implementation-notes.md"
     },
     "post_implementation": {
       "status": "in_progress",
       "items": [
-        {"step": "Post: Doctor Extension Check", "status": "in_progress"},
-        {"step": "Post: Verify Implementation", "status": "pending"},
-        {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
-        {"step": "Post: Code Review", "status": "pending"},
-        {"step": "Post: Integration Suite", "status": "pending"},
-        {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-        {"step": "Post: Self-Review", "status": "pending"},
-        {"step": "Post: UAT Runbook Generation", "status": "pending"},
-        {"step": "Post: Final Reviewability Backstop", "status": "pending"},
+        {"step": "Post: Doctor Extension Check", "status": "completed"},
+        {"step": "Post: Verify Implementation", "status": "completed"},
+        {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
+        {"step": "Post: Code Review", "status": "completed"},
+        {"step": "Post: Integration Suite", "status": "completed"},
+        {"step": "Post: Reviewability Diff Gate", "status": "completed"},
+        {"step": "Post: Self-Review", "status": "completed"},
+        {"step": "Post: UAT Runbook Generation", "status": "skipped: generate-uat-skeleton deferred; no committed runbook"},
+        {"step": "Post: Final Reviewability Backstop", "status": "completed"},
         {"step": "Post: PR Packet/Body Generation", "status": "pending"},
         {"step": "Post: PR Body Generation", "status": "pending"},
         {"step": "Post: PR Creation", "status": "pending"},
         {"step": "Post: Review Remediation", "status": "pending"},
         {"step": "Post: Retrospective", "status": "pending"}
-      ]
+      ],
+      "doctor": {"status": "completed", "passed": 4, "warnings": 1, "warning": "unrelated BRAND-001 planning directory is incomplete"},
+      "verify": {"status": "completed", "findings": 0},
+      "verify_tasks": {"status": "completed", "verified": 60, "total": 60, "flagged": 0, "report": "specs/art-004-gallery-completion-design-prototyping/verify-tasks-report.md"},
+      "code_review": {"status": "completed", "remediation_checkpoint": "d65345e65", "final_findings": 0},
+      "integration": {"status": "completed", "full_suite": "7502/7502", "layer_1": "1447/1447", "layer_4": "5869/5869", "layer_5": "186/186", "privacy": "10/10"},
+      "reviewability_diff_gate": {"status": "completed", "slice_results": ["160/pass", "590/warn", "520/warn"], "topology_changed": false},
+      "self_review": {"status": "completed", "edge_case_gaps": 0, "orphan_requirements": 0, "tidiness_findings": 0},
+      "uat_runbook": {"status": "skipped", "reason": "generate-uat-skeleton deferred; no committed feature-local runbook; no validator registered"},
+      "final_reviewability_backstop": {"status": "completed", "helper": "deferred", "proceeded_on_checkpoint": "d65345e65"}
     }
   }
 }
