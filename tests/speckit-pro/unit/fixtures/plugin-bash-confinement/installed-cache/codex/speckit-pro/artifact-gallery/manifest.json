@@ -108,7 +108,7 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "02-exploration-visual-designs.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": ["prompt", "markdown"]
     },
     {
@@ -130,7 +130,7 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "06-component-variants.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": ["prompt", "markdown"]
     },
     {

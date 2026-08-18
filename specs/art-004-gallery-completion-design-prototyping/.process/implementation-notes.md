@@ -151,3 +151,51 @@
 ### T037
 
 **Deviations/Edge cases/Surprises:** The full suite passed 7450/7450. The release `--check` intentionally rejects any generated-path Git status, even when regeneration is correct, so it was rerun after Slice 2 checkpoint `01e97ad65`; the isolated regeneration comparison and docs reference check then passed on a clean tree.
+
+### T038
+
+**Deviations/Edge cases/Surprises:** Group N reuses generalized status-baseline, attribution/canonical, control, and offline helpers from Group M. Eight fixtures pass; the real gallery fails only because the two rows remain planned and the two files are absent.
+
+### T039
+
+**Deviations/Edge cases/Surprises:** R9 pins all four required markers for each decision port plus the exact `directions` and `variants` list slots. Thirty-four fixtures pass; the only real failure reports the two planned rows and two missing files.
+
+### T040
+
+**Deviations/Edge cases/Surprises:** Group O statically pins the decision-export structure, exact payload and validation contract, one guarded clipboard-write path, shared refusal handling, fallback invalidation, and stale invocation suppression. All twelve fixtures pass; the real gallery fails only O1 for the two missing decision-port files. Runtime behavior remains deliberately assigned to T048.
+
+### T041
+
+**Deviations/Edge cases/Surprises:** Group P checks planned decision files directly so labelled native controls, state/value semantics, logical focus order, audited token colors, non-color component-state markers, and local reduced-motion overrides cannot pass vacuously before the manifest flip. Group L additionally requires the component snippet's one intentional horizontal-scroll declaration. Seventeen shared decision fixtures pass; the real gallery remains RED only on the two missing files and the not-yet-shipped snippet route.
+
+### T042
+
+**Deviations/Edge cases/Surprises:** The visual-design port preserves four directions and the background comparison while deriving both exports from the selected direction, rationale, and live background. Its refusal path is shared locally by the two copy controls without introducing cross-file runtime code.
+
+### T043
+
+**Deviations/Edge cases/Surprises:** The component port preserves six visible state families and live padding, border, and shadow controls. The reset path resolves the currently selected base variant before refreshing the snippet, preventing reset from silently returning export context to the first card.
+
+### T044
+
+**Deviations/Edge cases/Surprises:** The manifest diff contains only the two intended `planned` to `shipped` changes for `visual-designs` and `component-variants`.
+
+### T045
+
+**Deviations/Edge cases/Surprises:** Refactoring remained inside each standalone HTML file. No shared runtime or new abstraction was introduced.
+
+### T046
+
+**Deviations/Edge cases/Surprises:** The tightened contract requires one exact refusal message, one guarded `writeText` call, three invocation checks plus the declaration, one focus/select operation, and suppression of stale success after a newer attempt.
+
+### T047
+
+**Deviations/Edge cases/Surprises:** Fill-region coverage passed 70/70 and all focused Group N/O/P/L checks passed. The full gallery passed 563/567; only the four generated-payload parity checks remained for T050.
+
+### T048
+
+**Deviations/Edge cases/Surprises:** Playwright Chromium/WebKit passed seventeen decision-export scenario groups, including the six refusal modes, exact prompt/Markdown order, validation without clipboard calls, fallback parity and focus, invalidation, and stale-settle protection. The installed MCP profile was already in use, so the approved isolated Playwright fallback preserved the active browser session.
+
+### T049
+
+**Deviations/Edge cases/Surprises:** Chromium passed the complete offline accessibility matrix at 360 px. Safari 26.6.1 used Option-Tab and passed both ports, including native ArrowRight snippet scrolling from 0 to 29. Headless WebKit did not synthesize the generic scroller's default key action, so that single native-engine path is supported by the real Safari result rather than inferred from the headless runner.

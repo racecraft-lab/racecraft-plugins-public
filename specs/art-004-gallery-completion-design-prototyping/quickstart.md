@@ -165,6 +165,37 @@ Expected checks:
   update status text without moving focus except for the focused fallback
   textarea on clipboard refusal.
 
+### Slice 3 `file://` UAT Evidence
+
+Playwright Chromium and WebKit exercised both decision ports directly over
+`file://` on 2026-08-18 with network resources blocked. Seventeen scenario
+groups passed: exact prompt and Markdown payload order; missing choice, missing
+rationale, and whitespace-only rationale validation without a clipboard call;
+all six refusal modes (unavailable API, non-callable `writeText`, synchronous
+exception, rejected promise, denied permission, and local-file restriction);
+focused/selectable fallback parity; stale-fallback clearing; and stale-settle
+suppression. Live background, direction, padding, border, shadow, base-variant,
+and reset changes were reflected in the next payload.
+
+At a 360 by 900 Chromium viewport, both documents fit the viewport, sequential
+keyboard navigation reached and operated the labelled native controls, focus
+was visibly outlined, no positive `tabindex` was present, reduced motion was
+honored, and the canonical fallback font stack preserved content and controls
+offline. Light and dark body contrast measured 16.42:1 and 13.94:1. The
+component snippet had real internal overflow and ArrowRight moved its own
+scroll position from 0 to 29.
+
+Safari 26.6.1 then exercised both files with a requested 360 by 900 window and
+a measured 360 by 825 content viewport. The active full-control route was
+**Option-Tab**. Six visual-design controls and fifteen component-variant
+controls were reached in logical source order and operated with ArrowRight,
+Space, or Enter. The component snippet measured 285 px client width against
+401 px scroll width and moved from `scrollLeft=0` to `scrollLeft=29` with an
+element-targeted WebDriver ArrowRight key. Headless WebKit completed the
+remaining offline, semantics, contrast, and reduced-motion matrix but did not
+synthesize a generic scroller's browser-default ArrowRight action; the real
+Safari result above is the native-engine evidence for that path.
+
 ## Manual file:// UAT Interaction Matrix
 
 | Artifact | Interaction | Observable outcome | Reset or cleanup outcome |

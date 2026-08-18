@@ -7220,6 +7220,9 @@ READ_ONLY_KEYBOARD_SCROLL_REGION_MINIMUMS: dict[str, int] = {
     "animation-prototype": 1,
     "svg-illustrations": 1,
 }
+DECISION_KEYBOARD_SCROLL_REGION_MINIMUMS: dict[str, int] = {
+    "component-variants": 1,
+}
 
 # This is deliberately a bounded raw-source check rather than a CSS parser. It
 # catches the two values the gallery uses to opt into horizontal scrolling and
@@ -7486,6 +7489,19 @@ class KeyboardScrollGuardTests(unittest.TestCase):
                     "the read-only port is not shipped or its keyboard-scroll declaration is missing",
                 )
 
+    def test_decision_keyboard_scroll_regions_are_declared_for_manual_review(self) -> None:
+        regions = _keyboard_scroll_regions(GALLERY_ROOT)
+
+        for artifact_id, minimum in DECISION_KEYBOARD_SCROLL_REGION_MINIMUMS.items():
+            with self.subTest(msg=artifact_id):
+                declared = sum(region.artifact_id == artifact_id for region in regions)
+                self.assertGreaterEqual(
+                    declared,
+                    minimum,
+                    f"{artifact_id}: expected at least {minimum} intentional horizontal-scroll region(s); "
+                    "the decision port is not shipped or its keyboard-scroll declaration is missing",
+                )
+
 
 class KeyboardScrollGuardFixtureTests(GalleryFixtureCase):
     """Group L against synthetic shipped artifacts built in a temporary directory."""
@@ -7611,7 +7627,7 @@ class KeyboardScrollGuardFixtureTests(GalleryFixtureCase):
 # ---------------------------------------------------------------------------
 
 PINNED_UPSTREAM_COMMIT = "58c305be97f47b26b678f2c07dec01d4242268ec"
-READ_ONLY_DERIVATIVE_NOTICE = (
+PORT_DERIVATIVE_NOTICE = (
     "yes — re-skinned with Racecraft brand tokens; not the upstream original"
 )
 READ_ONLY_PORT_MANIFEST_BASELINE: dict[str, dict[str, object]] = {
@@ -7703,15 +7719,15 @@ INTERACTION_BEHAVIOR_TOKENS: tuple[str, ...] = (
     "initialOrder", "reset.addEventListener('click'", "insertBefore",
 )
 _EXPORT_AFFORDANCE_RE = re.compile(r"(?i)\b(?:copy|download|export|markdown|prompt)\b")
-_READ_ONLY_CONTROL_TAGS: frozenset[str] = frozenset(
+_CONTROL_TAGS: frozenset[str] = frozenset(
     {"a", "area", "button", "input", "select", "textarea"}
 )
-_READ_ONLY_CONTROL_ROLES: frozenset[str] = frozenset(
+_CONTROL_ROLES: frozenset[str] = frozenset(
     {"button", "link", "menuitem", "menuitemcheckbox", "menuitemradio"}
 )
 
 
-class _ReadOnlyControlCollector(HTMLParser):
+class _ControlCollector(HTMLParser):
     """Interactive elements with their attributes and nested visible text."""
 
     def __init__(self) -> None:
@@ -7723,7 +7739,7 @@ class _ReadOnlyControlCollector(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         values = tuple((name.lower(), value or "") for name, value in attrs)
         roles = [value.casefold() for name, value in values if name == "role"]
-        control = tag in _READ_ONLY_CONTROL_TAGS or any(role in _READ_ONLY_CONTROL_ROLES for role in roles)
+        control = tag in _CONTROL_TAGS or any(role in _CONTROL_ROLES for role in roles)
         index: int | None = None
         if control:
             index = len(self.controls)
@@ -7752,24 +7768,27 @@ class _ReadOnlyControlCollector(HTMLParser):
                 text.append(data)
 
 
-def _read_only_controls(text: str) -> list[dict[str, object]]:
+def _interactive_controls(text: str) -> list[dict[str, object]]:
     controls: list[dict[str, object]] = []
     for markup in (text, *_script_markup_literals(text)):
-        collector = _ReadOnlyControlCollector()
+        collector = _ControlCollector()
         collector.feed(markup)
         collector.close()
         controls.extend(collector.controls)
     return controls
 
 
-def _read_only_port_path(gallery_root: Path, artifact_id: str) -> Path:
+def _port_path(gallery_root: Path, artifact_id: str) -> Path:
     return gallery_root / TEMPLATES_DIR / f"{artifact_id}.html"
 
 
-def _read_only_port_texts(gallery_root: Path) -> list[tuple[str, Path, str]]:
+def _port_texts(
+    gallery_root: Path,
+    baselines: dict[str, dict[str, object]],
+) -> list[tuple[str, Path, str]]:
     documents: list[tuple[str, Path, str]] = []
-    for artifact_id in READ_ONLY_PORT_MANIFEST_BASELINE:
-        path = _read_only_port_path(gallery_root, artifact_id)
+    for artifact_id in baselines:
+        path = _port_path(gallery_root, artifact_id)
         if path.is_file():
             documents.append((artifact_id, path, _document_text(path)))
     return documents
@@ -7820,57 +7839,50 @@ def _canonical_optional_typeface_references(gallery_root: Path) -> frozenset[str
     return frozenset(typefaces)
 
 
-def check_m1(gallery_root: Path) -> list[str]:
-    """M1 — read-only rows retain their exact baseline and flip only status."""
+def _status_only_port_failures(
+    gallery_root: Path,
+    baselines: dict[str, dict[str, object]],
+    port_kind: str,
+) -> list[str]:
     entries = _entries(gallery_root)
     if entries is None:
-        return [f"{MANIFEST_FILE}: read-only port rows cannot be checked"]
+        return [f"{MANIFEST_FILE}: {port_kind} port rows cannot be checked"]
 
     failures: list[str] = []
-    for artifact_id, baseline in READ_ONLY_PORT_MANIFEST_BASELINE.items():
+    for artifact_id, baseline in baselines.items():
         matches = [entry for entry in entries if isinstance(entry, dict) and entry.get("id") == artifact_id]
         if len(matches) != 1:
             failures.append(
-                f"{MANIFEST_FILE}: read-only port '{artifact_id}' appears {len(matches)} times rather than once"
+                f"{MANIFEST_FILE}: {port_kind} port '{artifact_id}' appears {len(matches)} times rather than once"
             )
             continue
         entry = matches[0]
         for field, expected in baseline.items():
-            if field == "status":
-                continue
-            if entry.get(field) != expected:
+            if field != "status" and entry.get(field) != expected:
                 failures.append(
-                    f"{MANIFEST_FILE}: read-only port '{artifact_id}': field '{field}' drifted from "
+                    f"{MANIFEST_FILE}: {port_kind} port '{artifact_id}': field '{field}' drifted from "
                     f"the pinned baseline at {UPSTREAM_REPOSITORY}@{PINNED_UPSTREAM_COMMIT}"
                 )
         if set(entry) != set(baseline):
-            failures.append(
-                f"{MANIFEST_FILE}: read-only port '{artifact_id}': keys changed from the pinned baseline"
-            )
+            failures.append(f"{MANIFEST_FILE}: {port_kind} port '{artifact_id}': keys changed from the pinned baseline")
         if entry.get("status") != SHIPPED:
             failures.append(
-                f"{MANIFEST_FILE}: read-only port '{artifact_id}': status must be '{SHIPPED}' after the "
+                f"{MANIFEST_FILE}: {port_kind} port '{artifact_id}': status must be '{SHIPPED}' after the "
                 f"only permitted transition, found {entry.get('status')!r}"
             )
     return failures
 
 
-def check_m2(gallery_root: Path) -> list[str]:
-    """M2 — every declared read-only port has its directly openable file."""
-    return [
-        f"{_artifact_label(artifact_id)}: read-only port file is missing"
-        for artifact_id in READ_ONLY_PORT_MANIFEST_BASELINE
-        if not _read_only_port_path(gallery_root, artifact_id).is_file()
-    ]
-
-
-def check_m3(gallery_root: Path) -> list[str]:
-    """M3 — each read-only file carries exact attribution and canonical blocks."""
+def _attribution_and_canonical_failures(
+    gallery_root: Path,
+    baselines: dict[str, dict[str, object]],
+) -> list[str]:
     failures: list[str] = []
     canonical = {block: _canonical_region(gallery_root, block) for block in CANONICAL_FILES}
-    for artifact_id, _path, text in _read_only_port_texts(gallery_root):
+    for artifact_id, _path, text in _port_texts(gallery_root, baselines):
         label = _artifact_label(artifact_id)
-        source_file = READ_ONLY_PORT_MANIFEST_BASELINE[artifact_id]["source"]["file"]
+        source = baselines[artifact_id].get("source")
+        source_file = source.get("file") if isinstance(source, dict) else None
         header = _attribution_header(text)
         if header is None:
             failures.append(f"{label}: exact upstream attribution header is missing")
@@ -7880,7 +7892,7 @@ def check_m3(gallery_root: Path) -> list[str]:
                 UPSTREAM_FILE_LABEL: source_file,
                 LICENSE_LABEL: UPSTREAM_LICENSE_ID,
                 LICENSE_TEXT_LABEL: UPSTREAM_LICENSE_REFERENCE,
-                DERIVATIVE_LABEL: READ_ONLY_DERIVATIVE_NOTICE,
+                DERIVATIVE_LABEL: PORT_DERIVATIVE_NOTICE,
             }
             for attribution_label, expected in expected_values.items():
                 if header.count(attribution_label) != 1 or _labelled_value(header, attribution_label) != expected:
@@ -7898,12 +7910,55 @@ def check_m3(gallery_root: Path) -> list[str]:
     return failures
 
 
+def _offline_port_failures(
+    gallery_root: Path,
+    baselines: dict[str, dict[str, object]],
+    port_kind: str,
+) -> list[str]:
+    labels = {_artifact_label(artifact_id) for artifact_id in baselines}
+    canonical_typefaces = _canonical_optional_typeface_references(gallery_root)
+    references, unrecognized = _references(gallery_root)
+    failures = [failure for failure in unrecognized if failure.split(":", 1)[0] in labels]
+    for reference in references:
+        if reference.label not in labels or reference.kind != RESOURCE:
+            continue
+        if (
+            _embedded_asset(reference.value)
+            or reference.value.startswith("#")
+            or reference.value in canonical_typefaces
+        ):
+            continue
+        failures.append(
+            _named(reference, f"requires a sibling or network resource, so the {port_kind} port is not offline")
+        )
+    return failures
+
+
+def check_m1(gallery_root: Path) -> list[str]:
+    """M1 — read-only rows retain their exact baseline and flip only status."""
+    return _status_only_port_failures(gallery_root, READ_ONLY_PORT_MANIFEST_BASELINE, "read-only")
+
+
+def check_m2(gallery_root: Path) -> list[str]:
+    """M2 — every declared read-only port has its directly openable file."""
+    return [
+        f"{_artifact_label(artifact_id)}: read-only port file is missing"
+        for artifact_id in READ_ONLY_PORT_MANIFEST_BASELINE
+        if not _port_path(gallery_root, artifact_id).is_file()
+    ]
+
+
+def check_m3(gallery_root: Path) -> list[str]:
+    """M3 — each read-only file carries exact attribution and canonical blocks."""
+    return _attribution_and_canonical_failures(gallery_root, READ_ONLY_PORT_MANIFEST_BASELINE)
+
+
 def check_m4(gallery_root: Path) -> list[str]:
     """M4 — read-only ports expose no export-looking control, even disabled."""
     failures: list[str] = []
-    for artifact_id, _path, text in _read_only_port_texts(gallery_root):
+    for artifact_id, _path, text in _port_texts(gallery_root, READ_ONLY_PORT_MANIFEST_BASELINE):
         label = _artifact_label(artifact_id)
-        for order, control in enumerate(_read_only_controls(text), start=1):
+        for order, control in enumerate(_interactive_controls(text), start=1):
             attributes = control["attributes"]
             nested_text = control["text"]
             if not isinstance(attributes, tuple) or not isinstance(nested_text, list):
@@ -7922,29 +7977,13 @@ def check_m4(gallery_root: Path) -> list[str]:
 
 def check_m5(gallery_root: Path) -> list[str]:
     """M5 — read-only ports require no sibling or network resource offline."""
-    labels = {_artifact_label(artifact_id) for artifact_id in READ_ONLY_PORT_MANIFEST_BASELINE}
-    canonical_typefaces = _canonical_optional_typeface_references(gallery_root)
-    references, unrecognized = _references(gallery_root)
-    failures = [failure for failure in unrecognized if failure.split(":", 1)[0] in labels]
-    for reference in references:
-        if reference.label not in labels or reference.kind != RESOURCE:
-            continue
-        if (
-            _embedded_asset(reference.value)
-            or reference.value.startswith("#")
-            or reference.value in canonical_typefaces
-        ):
-            continue
-        failures.append(
-            _named(reference, "requires a sibling or network resource, so the read-only port is not offline")
-        )
-    return failures
+    return _offline_port_failures(gallery_root, READ_ONLY_PORT_MANIFEST_BASELINE, "read-only")
 
 
 def check_m6(gallery_root: Path) -> list[str]:
     """M6 — pinned read-only concepts survive only the approved compactions."""
     failures: list[str] = []
-    for artifact_id, _path, text in _read_only_port_texts(gallery_root):
+    for artifact_id, _path, text in _port_texts(gallery_root, READ_ONLY_PORT_MANIFEST_BASELINE):
         label = _artifact_label(artifact_id)
         elements = _elements(text)
         issues: list[str] = []
@@ -8071,17 +8110,19 @@ class ReadOnlyPortContractTests(unittest.TestCase):
                 self.assertEqual(check(GALLERY_ROOT), [])
 
 
-class ReadOnlyPortContractFixtureTests(GalleryFixtureCase):
-    """Group M against complete synthetic read-only ports."""
+class _PortContractFixtureCase(GalleryFixtureCase):
+    """Shared exact-baseline, attribution, and canonical fixture setup."""
+
+    PORT_BASELINES: dict[str, dict[str, object]] = {}
 
     def manifest(self) -> dict:
-        entries = json.loads(json.dumps(list(READ_ONLY_PORT_MANIFEST_BASELINE.values())))
+        entries = json.loads(json.dumps(list(self.PORT_BASELINES.values())))
         for entry in entries:
             entry["status"] = SHIPPED
         return {"templates": entries}
 
     def attribution_header(self, artifact_id: str, *, upstream_file: str | None = None) -> str:
-        source = READ_ONLY_PORT_MANIFEST_BASELINE[artifact_id]["source"]
+        source = self.PORT_BASELINES[artifact_id]["source"]
         declared_file = source["file"] if isinstance(source, dict) else ""
         return (
             "<!--\n"
@@ -8089,7 +8130,7 @@ class ReadOnlyPortContractFixtureTests(GalleryFixtureCase):
             f"  {UPSTREAM_FILE_LABEL} {upstream_file or declared_file}\n"
             f"  {LICENSE_LABEL} {UPSTREAM_LICENSE_ID}\n"
             f"  {LICENSE_TEXT_LABEL} {UPSTREAM_LICENSE_REFERENCE}\n"
-            f"  {DERIVATIVE_LABEL} {READ_ONLY_DERIVATIVE_NOTICE}\n"
+            f"  {DERIVATIVE_LABEL} {PORT_DERIVATIVE_NOTICE}\n"
             f"  {UPSTREAM_COPYRIGHT}\n"
             "-->"
         )
@@ -8097,6 +8138,12 @@ class ReadOnlyPortContractFixtureTests(GalleryFixtureCase):
     def write_canonical_files(self, *, head_body: str = FIXTURE_HEAD_BODY) -> None:
         self.write(CANONICAL_FILES[BRAND_BLOCK], _marked(BRAND_BLOCK, FIXTURE_BRAND_BODY))
         self.write(CANONICAL_FILES[HEAD_BLOCK], _marked(HEAD_BLOCK, head_body))
+
+
+class ReadOnlyPortContractFixtureTests(_PortContractFixtureCase):
+    """Group M against complete synthetic read-only ports."""
+
+    PORT_BASELINES = READ_ONLY_PORT_MANIFEST_BASELINE
 
     def capability_body(self, artifact_id: str) -> str:
         bodies = {
@@ -8285,6 +8332,804 @@ class ReadOnlyPortContractFixtureTests(GalleryFixtureCase):
         self.assertReports(check_m5(self.gallery), "design-system.html", "fonts.gstatic.com", "offline")
 
 
+# ---------------------------------------------------------------------------
+# Group N — decision/export gallery ports
+# ---------------------------------------------------------------------------
+
+DECISION_PORT_MANIFEST_BASELINE: dict[str, dict[str, object]] = {
+    "visual-designs": {
+        "id": "visual-designs",
+        "category": "exploration-planning",
+        "title": "Visual Design Options",
+        "when_to_use": (
+            "Show several visual directions for the same screen so a reader can choose one. "
+            "Reach for it before any of them is built."
+        ),
+        "stage": "ad-hoc",
+        "trigger": {"always": True},
+        "source": {"origin": UPSTREAM, "file": "02-exploration-visual-designs.html"},
+        "status": PLANNED,
+        "exports": ["prompt", "markdown"],
+    },
+    "component-variants": {
+        "id": "component-variants",
+        "category": "design",
+        "title": "Component Variants",
+        "when_to_use": (
+            "Render every state of one component on a single page: default, hover, focus, disabled, "
+            "error, and loading. Reach for it when a state is easy to miss and expensive to get wrong."
+        ),
+        "stage": "ad-hoc",
+        "trigger": {"always": True},
+        "source": {"origin": UPSTREAM, "file": "06-component-variants.html"},
+        "status": PLANNED,
+        "exports": ["prompt", "markdown"],
+    },
+}
+DECISION_EXPORT_CONTROL_LABELS: tuple[str, ...] = ("Copy as prompt", "Copy as Markdown")
+
+
+def check_n1(gallery_root: Path) -> list[str]:
+    """N1 — decision rows retain their exact baseline and flip only status."""
+    return _status_only_port_failures(gallery_root, DECISION_PORT_MANIFEST_BASELINE, "decision")
+
+
+def check_n2(gallery_root: Path) -> list[str]:
+    """N2 — every declared decision port has its directly openable file."""
+    return [
+        f"{_artifact_label(artifact_id)}: decision port file is missing"
+        for artifact_id in DECISION_PORT_MANIFEST_BASELINE
+        if not _port_path(gallery_root, artifact_id).is_file()
+    ]
+
+
+def check_n3(gallery_root: Path) -> list[str]:
+    """N3 — each decision file carries exact attribution and canonical blocks."""
+    return _attribution_and_canonical_failures(gallery_root, DECISION_PORT_MANIFEST_BASELINE)
+
+
+def check_n4(gallery_root: Path) -> list[str]:
+    """N4 — both exact, enabled decision-export controls are visible once."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _port_texts(gallery_root, DECISION_PORT_MANIFEST_BASELINE):
+        label = _artifact_label(artifact_id)
+        controls = _interactive_controls(text)
+        for expected in DECISION_EXPORT_CONTROL_LABELS:
+            matches: list[dict[str, object]] = []
+            for control in controls:
+                nested_text = control["text"]
+                visible_text = (
+                    " ".join(" ".join(str(value) for value in nested_text).split())
+                    if isinstance(nested_text, list)
+                    else ""
+                )
+                if visible_text == expected:
+                    matches.append(control)
+            if len(matches) != 1:
+                failures.append(
+                    f"{label}: visible export control {expected!r} appears {len(matches)} times rather than once"
+                )
+                continue
+            attributes = matches[0]["attributes"]
+            disabled = isinstance(attributes, tuple) and any(
+                name == "disabled" or (name == "aria-disabled" and value.casefold() == "true")
+                for name, value in attributes
+            )
+            if matches[0]["tag"] != "button" or disabled:
+                failures.append(f"{label}: visible export control {expected!r} is not an enabled button")
+    return failures
+
+
+def check_n5(gallery_root: Path) -> list[str]:
+    """N5 — decision ports require no sibling or network resource offline."""
+    return _offline_port_failures(gallery_root, DECISION_PORT_MANIFEST_BASELINE, "decision")
+
+
+GROUP_N_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("N1", check_n1),
+    ("N2", check_n2),
+    ("N3", check_n3),
+    ("N4", check_n4),
+    ("N5", check_n5),
+)
+
+
+class DecisionPortContractTests(unittest.TestCase):
+    """Group N against the two manifest-declared decision ports."""
+
+    def test_group_n_passes_against_the_gallery(self) -> None:
+        self.maxDiff = None
+        for name, check in GROUP_N_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+
+class DecisionPortContractFixtureTests(_PortContractFixtureCase):
+    """Group N against complete synthetic decision ports."""
+
+    PORT_BASELINES = DECISION_PORT_MANIFEST_BASELINE
+
+    def export_controls(self) -> str:
+        return "".join(f'<button type="button">{label}</button>' for label in DECISION_EXPORT_CONTROL_LABELS)
+
+    def write_decision_artifact(
+        self,
+        artifact_id: str,
+        *,
+        body: str | None = None,
+        upstream_file: str | None = None,
+        include_brand: bool = True,
+        include_head: bool = True,
+    ) -> None:
+        brand = _marked(BRAND_BLOCK, FIXTURE_BRAND_BODY) if include_brand else ""
+        head = _marked(HEAD_BLOCK, FIXTURE_HEAD_BODY) if include_head else ""
+        self.write(
+            f"{TEMPLATES_DIR}/{artifact_id}.html",
+            "<!doctype html>\n"
+            f"{self.attribution_header(artifact_id, upstream_file=upstream_file)}\n"
+            '<html lang="en"><head><style>\n'
+            f"{brand}\n</style>\n{head}\n</head>\n"
+            f"<body><main>{self.export_controls() if body is None else body}</main></body></html>\n",
+        )
+
+    def write_conforming_gallery(self, *, omit: frozenset[str] = frozenset()) -> None:
+        self.write_canonical_files()
+        self.write(MANIFEST_FILE, json.dumps(self.manifest(), indent=2))
+        for artifact_id in DECISION_PORT_MANIFEST_BASELINE:
+            if artifact_id not in omit:
+                self.write_decision_artifact(artifact_id)
+
+    def test_accepts_complete_decision_ports(self) -> None:
+        self.write_conforming_gallery()
+
+        self.assertEqual([failure for _, check in GROUP_N_CHECKS for failure in check(self.gallery)], [])
+
+    def test_rejects_a_decision_row_that_has_not_shipped(self) -> None:
+        self.write_conforming_gallery()
+        manifest = self.manifest()
+        manifest["templates"][0]["status"] = PLANNED
+        self.write(MANIFEST_FILE, json.dumps(manifest, indent=2))
+
+        self.assertReports(check_n1(self.gallery), "visual-designs", "status", PLANNED)
+
+    def test_rejects_non_status_decision_manifest_drift(self) -> None:
+        self.write_conforming_gallery()
+        manifest = self.manifest()
+        manifest["templates"][1]["title"] = "Drifted title"
+        self.write(MANIFEST_FILE, json.dumps(manifest, indent=2))
+
+        self.assertReports(check_n1(self.gallery), "component-variants", "title", "drifted")
+
+    def test_rejects_a_missing_decision_port_file(self) -> None:
+        self.write_conforming_gallery(omit=frozenset({"component-variants"}))
+
+        self.assertReports(check_n2(self.gallery), "component-variants.html", "missing")
+
+    def test_rejects_attribution_for_a_different_decision_source(self) -> None:
+        self.write_conforming_gallery()
+        self.write_decision_artifact("visual-designs", upstream_file="03-neighbour.html")
+
+        self.assertReports(check_n3(self.gallery), "visual-designs.html", UPSTREAM_FILE_LABEL)
+
+    def test_rejects_a_missing_decision_canonical_block(self) -> None:
+        self.write_conforming_gallery()
+        self.write_decision_artifact("component-variants", include_head=False)
+
+        self.assertReports(check_n3(self.gallery), "component-variants.html", HEAD_BLOCK)
+
+    def test_rejects_a_missing_required_export_control(self) -> None:
+        self.write_conforming_gallery()
+        self.write_decision_artifact(
+            "visual-designs",
+            body='<button type="button">Copy as prompt</button>',
+        )
+
+        self.assertReports(check_n4(self.gallery), "visual-designs.html", "Copy as Markdown", "0 times")
+
+    def test_rejects_a_decision_port_sibling_resource(self) -> None:
+        self.write_conforming_gallery()
+        self.write_decision_artifact(
+            "component-variants",
+            body=self.export_controls() + '<img src="preview.png" alt="Variant preview">',
+        )
+
+        self.assertReports(check_n5(self.gallery), "component-variants.html", "preview.png", "offline")
+
+
+# ---------------------------------------------------------------------------
+# Group O — decision export behavior contract
+# ---------------------------------------------------------------------------
+
+DECISION_EXPORT_CONTRACTS: dict[str, dict[str, object]] = {
+    "visual-designs": {
+        "radio_name": "chosen-direction",
+        "slot": "Direction",
+        "prompt_lead": (
+            "Implement the visual direction named below and no other. "
+            "The value in parentheses is the anchor of the direction it names."
+        ),
+        "markdown_lead": "Visual direction chosen while reviewing these options.",
+        "choice_message": "Choose one visual direction before copying.",
+        "context": ("Background:", "Direction note:"),
+    },
+    "component-variants": {
+        "radio_name": "chosen-base-variant",
+        "slot": "Base variant",
+        "prompt_lead": (
+            "Implement the base component variant named below and no other. "
+            "The value in parentheses is the anchor of the variant it names."
+        ),
+        "markdown_lead": "Base component variant chosen while reviewing these states.",
+        "choice_message": "Choose one base variant before copying.",
+        "context": (
+            "Variant note:",
+            "States displayed: default, hover, focus, disabled, error, loading",
+            "Padding:",
+            "Border:",
+            "Shadow:",
+            "Snippet:",
+        ),
+    },
+}
+DECISION_BOTH_MISSING_MESSAGE = "Choose one option and enter a rationale before copying."
+DECISION_RATIONALE_MISSING_MESSAGE = "Enter a rationale before copying."
+DECISION_REFUSAL_MESSAGE = (
+    "Copy failed. The text is in the field below. Select it and copy it by hand."
+)
+
+
+def _attrs(element: _Element) -> dict[str, str]:
+    return dict(element.attributes)
+
+
+def _id_matches(elements: list[_Element], identifier: str) -> list[_Element]:
+    return [element for element in elements if _attrs(element).get("id") == identifier]
+
+
+def _has_explicit_label(elements: list[_Element], identifier: str) -> bool:
+    return any(
+        element.tag == "label" and _attrs(element).get("for") == identifier
+        for element in elements
+    )
+
+
+def check_o1(gallery_root: Path) -> list[str]:
+    """O1 — persistent decisions and export feedback have stable semantics."""
+    failures: list[str] = []
+    for artifact_id, contract in DECISION_EXPORT_CONTRACTS.items():
+        path = _port_path(gallery_root, artifact_id)
+        label = _artifact_label(artifact_id)
+        if not path.is_file():
+            failures.append(f"{label}: decision export contract cannot be checked because the file is missing")
+            continue
+        text = _document_text(path)
+        elements = _elements(text)
+        radio_name = str(contract["radio_name"])
+        radios = [
+            element
+            for element in elements
+            if element.tag == "input"
+            and _attrs(element).get("type", "").casefold() == "radio"
+            and _attrs(element).get("name") == radio_name
+        ]
+        if not radios or any("value" not in _attrs(radio) for radio in radios):
+            failures.append(f"{label}: input[name={radio_name!r}] is not a persistent valued radio group")
+
+        required_ids = {
+            "rationale-field": "textarea",
+            "export-status": "",
+            "fallback": "",
+            "fallback-field": "textarea",
+            "copy-prompt": "button",
+            "copy-markdown": "button",
+        }
+        for identifier, expected_tag in required_ids.items():
+            matches = _id_matches(elements, identifier)
+            if len(matches) != 1 or (expected_tag and matches[0].tag != expected_tag):
+                failures.append(f"{label}: #{identifier} does not appear exactly once with the required element type")
+        if len(_id_matches(elements, "rationale-field")) == 1 and not _has_explicit_label(elements, "rationale-field"):
+            failures.append(f"{label}: #rationale-field has no explicit label")
+        if len(_id_matches(elements, "fallback-field")) == 1 and not _has_explicit_label(elements, "fallback-field"):
+            failures.append(f"{label}: #fallback-field has no explicit label")
+
+        statuses = _id_matches(elements, "export-status")
+        if len(statuses) == 1:
+            attrs = _attrs(statuses[0])
+            if not (
+                attrs.get("role") == "status"
+                and attrs.get("aria-live") == "polite"
+                and attrs.get("aria-atomic") == "true"
+            ):
+                failures.append(f"{label}: #export-status is not a polite atomic status region")
+        fallbacks = _id_matches(elements, "fallback")
+        if len(fallbacks) == 1 and "hidden" not in _attrs(fallbacks[0]):
+            failures.append(f"{label}: #fallback is not initially hidden")
+    return failures
+
+
+def check_o2(gallery_root: Path) -> list[str]:
+    """O2 — source pins exact live payload and validation behavior."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _port_texts(gallery_root, DECISION_PORT_MANIFEST_BASELINE):
+        label = _artifact_label(artifact_id)
+        contract = DECISION_EXPORT_CONTRACTS[artifact_id]
+        expected_literals = (
+            "Artifact:",
+            "Feature:",
+            str(contract["prompt_lead"]),
+            str(contract["markdown_lead"]),
+            f'{contract["slot"]} /',
+            *(str(value) for value in contract["context"]),
+            "Rationale:",
+            DECISION_BOTH_MISSING_MESSAGE,
+            str(contract["choice_message"]),
+            DECISION_RATIONALE_MISSING_MESSAGE,
+        )
+        missing = [literal for literal in expected_literals if literal not in text]
+        if missing:
+            failures.append(f"{label}: decision payload/validation literals are missing: {missing!r}")
+        source_tokens = (
+            f'input[name="{contract["radio_name"]}"]:checked',
+            ".value.trim()",
+            "aria-invalid",
+            ".focus()",
+        )
+        absent_tokens = [token for token in source_tokens if token not in text]
+        if absent_tokens:
+            failures.append(f"{label}: live decision validation source is missing: {absent_tokens!r}")
+        order = [text.find(token) for token in ("Artifact:", "Feature:", f'{contract["slot"]} /', "Rationale:")]
+        if any(position < 0 for position in order) or order != sorted(order):
+            failures.append(f"{label}: common decision payload fields are not declared in contract order")
+    return failures
+
+
+def check_o3(gallery_root: Path) -> list[str]:
+    """O3 — every refusal, invalidation, and delayed settle uses one current path."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _port_texts(gallery_root, DECISION_PORT_MANIFEST_BASELINE):
+        label = _artifact_label(artifact_id)
+        required_tokens = (
+            DECISION_REFUSAL_MESSAGE,
+            "var invocation = 0",
+            "invocation += 1",
+            "token !== invocation",
+            "function invalidateFallback(",
+            "fallback.hidden = true",
+            "fallbackField.value = ''",
+            "function refuseCopy(",
+            "fallback.hidden = false",
+            "fallbackField.value = text",
+            "fallbackField.focus()",
+            "fallbackField.select()",
+            "typeof clipboard.writeText",
+            ".then(",
+            "catch",
+            ".addEventListener('input'",
+            ".addEventListener('change'",
+        )
+        missing = [token for token in required_tokens if token not in text]
+        if missing:
+            failures.append(f"{label}: refusal/currentness source is missing: {missing!r}")
+        if text.count(DECISION_REFUSAL_MESSAGE) != 1:
+            failures.append(
+                f"{label}: exact clipboard-refusal message must have one shared source, found "
+                f"{text.count(DECISION_REFUSAL_MESSAGE)}"
+            )
+        if text.count(".writeText(") != 1:
+            failures.append(f"{label}: clipboard writeText must have one call site, found {text.count('.writeText(')}")
+        if text.count("refuseCopy(") != 4:
+            failures.append(
+                f"{label}: unavailable, synchronous, and rejected writes must share exactly three calls "
+                f"to one refuseCopy definition, found {text.count('refuseCopy(')} sites"
+            )
+        if text.count("token !== invocation") != 2:
+            failures.append(
+                f"{label}: success and refusal must each suppress stale settlement, found "
+                f"{text.count('token !== invocation')} current-token checks"
+            )
+        for token in ("fallbackField.focus()", "fallbackField.select()"):
+            if text.count(token) != 1:
+                failures.append(f"{label}: shared refusal path must contain {token} exactly once")
+        if artifact_id == "component-variants" and ".addEventListener('click'" not in text:
+            failures.append(f"{label}: reset does not invalidate stale fallback state")
+    return failures
+
+
+GROUP_O_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("O1", check_o1),
+    ("O2", check_o2),
+    ("O3", check_o3),
+)
+
+
+class DecisionExportContractTests(unittest.TestCase):
+    """Group O against the two decision artifacts."""
+
+    def test_group_o_passes_against_the_gallery(self) -> None:
+        self.maxDiff = None
+        for name, check in GROUP_O_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+
+class DecisionExportContractFixtureTests(DecisionPortContractFixtureTests):
+    """Focused non-vacuity fixtures for Group O."""
+
+    def export_body(self, artifact_id: str, *, source: str | None = None) -> str:
+        contract = DECISION_EXPORT_CONTRACTS[artifact_id]
+        context = "\n".join(str(value) for value in contract["context"])
+        script = source or (
+            "var invocation = 0;\n"
+            "var rationale = document.getElementById('rationale-field');\n"
+            "var fallback = document.getElementById('fallback');\n"
+            "var fallbackField = document.getElementById('fallback-field');\n"
+            "function invalidateFallback() { fallback.hidden = true; fallbackField.value = ''; }\n"
+            f"var chosen = document.querySelector('input[name=\"{contract['radio_name']}\"]:checked');\n"
+            "var rationaleValue = rationale.value.trim(); rationale.setAttribute('aria-invalid', 'true'); rationale.focus();\n"
+            f"var lines = ['Artifact: title', 'Feature: ID Name', '', 'lead', '', '{contract['slot']} / label  (#anchor)',\n"
+            f"'{context}', 'Rationale: ' + rationaleValue];\n"
+            f"var promptLead = {str(contract['prompt_lead'])!r};\n"
+            f"var markdownLead = {str(contract['markdown_lead'])!r};\n"
+            f"var bothMissing = {DECISION_BOTH_MISSING_MESSAGE!r};\n"
+            f"var choiceMissing = {str(contract['choice_message'])!r};\n"
+            f"var rationaleMissing = {DECISION_RATIONALE_MISSING_MESSAGE!r};\n"
+            f"var refusal = {DECISION_REFUSAL_MESSAGE!r};\n"
+            "function refuseCopy(text, token) { if (token !== invocation) return; fallback.hidden = false; fallbackField.value = text; fallbackField.focus(); fallbackField.select(); }\n"
+            "function copy(text) { invocation += 1; var token = invocation; invalidateFallback(); var clipboard = window.navigator.clipboard; if (!clipboard || typeof clipboard.writeText !== 'function') { refuseCopy(text, token); return; } try { clipboard.writeText(text).then(function () { if (token !== invocation) return; }, function () { refuseCopy(text, token); }); } catch (error) { refuseCopy(text, token); } }\n"
+            "rationale.addEventListener('input', invalidateFallback);\n"
+            "document.addEventListener('change', invalidateFallback);\n"
+            "document.addEventListener('click', invalidateFallback);\n"
+        )
+        return (
+            f'<fieldset><legend>Decision</legend><label><input type="radio" name="{contract["radio_name"]}" value="anchor">Option</label></fieldset>'
+            '<label for="rationale-field">Rationale</label><textarea id="rationale-field"></textarea>'
+            '<button id="copy-prompt" type="button">Copy as prompt</button>'
+            '<button id="copy-markdown" type="button">Copy as Markdown</button>'
+            '<p id="export-status" role="status" aria-live="polite" aria-atomic="true"></p>'
+            '<div id="fallback" hidden><label for="fallback-field">Manual copy</label>'
+            '<textarea id="fallback-field"></textarea></div>'
+            f"<script>{script}</script>"
+        )
+
+    def write_export_gallery(self) -> None:
+        self.write_canonical_files()
+        self.write(MANIFEST_FILE, json.dumps(self.manifest(), indent=2))
+        for artifact_id in DECISION_EXPORT_CONTRACTS:
+            self.write_decision_artifact(artifact_id, body=self.export_body(artifact_id))
+
+    def test_accepts_complete_decision_export_contract(self) -> None:
+        self.write_export_gallery()
+        self.assertEqual([failure for _, check in GROUP_O_CHECKS for failure in check(self.gallery)], [])
+
+    def test_rejects_non_atomic_export_status(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("visual-designs").replace(' aria-atomic="true"', "")
+        self.write_decision_artifact("visual-designs", body=body)
+        self.assertReports(check_o1(self.gallery), "visual-designs.html", "atomic")
+
+    def test_rejects_missing_exact_validation_message(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("component-variants").replace(DECISION_BOTH_MISSING_MESSAGE, "Choose inputs.")
+        self.write_decision_artifact("component-variants", body=body)
+        self.assertReports(check_o2(self.gallery), "component-variants.html", "payload/validation")
+
+    def test_rejects_multiple_clipboard_write_sites(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("visual-designs").replace("</script>", "navigator.clipboard.writeText('retry');</script>")
+        self.write_decision_artifact("visual-designs", body=body)
+        self.assertReports(check_o3(self.gallery), "visual-designs.html", "one call site", "found 2")
+
+    def test_rejects_a_success_path_without_stale_settle_suppression(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("component-variants").replace(
+            "then(function () { if (token !== invocation) return; },",
+            "then(function () { return; },",
+        )
+        self.write_decision_artifact("component-variants", body=body)
+        self.assertReports(check_o3(self.gallery), "component-variants.html", "success and refusal", "1 current-token")
+
+    def accessibility_body(self, artifact_id: str) -> str:
+        choice_count = DECISION_ACCESSIBILITY_CONTRACTS[artifact_id]["choice_count"]
+        if not isinstance(choice_count, int):
+            raise AssertionError("fixture choice count must be an integer")
+        radio_name = str(DECISION_EXPORT_CONTRACTS[artifact_id]["radio_name"])
+        body = self.export_body(artifact_id)
+        extra_choices = "".join(
+            f'<label><input type="radio" name="{radio_name}" value="choice-{index}">Choice {index}</label>'
+            for index in range(2, choice_count + 1)
+        )
+        body = body.replace("</fieldset>", extra_choices + "</fieldset>", 1)
+
+        if artifact_id == "visual-designs":
+            controls = (
+                '<fieldset id="bg-seg"><legend>Background</legend>'
+                '<label><input type="radio" name="bg" value="light" checked>Light</label>'
+                '<label><input type="radio" name="bg" value="dark">Dark</label></fieldset>'
+            )
+        else:
+            states = "".join(
+                f'<article data-state="{state}">{state}</article>'
+                for state in COMPONENT_VARIANT_STATE_VALUES
+            )
+            controls = (
+                '<label for="ctl-pad">Padding</label>'
+                '<input id="ctl-pad" type="range" min="12" max="32" step="2" value="20">'
+                '<output id="pad-out" for="ctl-pad">20px</output>'
+                '<fieldset><legend>Border</legend>'
+                '<label><input type="radio" name="border" value="none">None</label>'
+                '<label><input type="radio" name="border" value="hairline" checked>Hairline</label>'
+                '<label><input type="radio" name="border" value="solid">Solid</label></fieldset>'
+                '<label><input id="ctl-shadow" type="checkbox" checked>Show shadow</label>'
+                '<button id="reset-controls" type="button">Reset controls</button>'
+                '<button type="button" disabled>Disabled state</button>'
+                '<span aria-busy="true">Loading state</span>'
+                f"{states}"
+            )
+
+        styles = (
+            "<style>\n"
+            ".decision-motion { color: var(--rc-text); transition: border-color 120ms ease; }\n"
+            "input:checked { outline: 2px solid var(--rc-focus); }\n"
+            "input:focus-visible, button:focus-visible, textarea:focus-visible { "
+            "outline: 2px solid var(--rc-focus); }\n"
+            "@media (prefers-reduced-motion: reduce) {\n"
+            "  .decision-motion { animation: none !important; transition: none !important; }\n"
+            "}\n"
+            "</style>"
+        )
+        return styles + controls + body
+
+    def write_accessibility_gallery(self) -> None:
+        self.write_canonical_files()
+        self.write(MANIFEST_FILE, json.dumps(self.manifest(), indent=2))
+        for artifact_id in DECISION_ACCESSIBILITY_CONTRACTS:
+            self.write_decision_artifact(artifact_id, body=self.accessibility_body(artifact_id))
+
+    def test_group_p_accepts_accessible_decision_controls(self) -> None:
+        self.write_accessibility_gallery()
+        self.assertEqual([failure for _, check in GROUP_P_CHECKS for failure in check(self.gallery)], [])
+
+    def test_group_p_rejects_an_unlabelled_live_control(self) -> None:
+        self.write_accessibility_gallery()
+        body = self.accessibility_body("component-variants").replace(
+            '<label for="ctl-pad">Padding</label>', "<span>Padding</span>"
+        )
+        self.write_decision_artifact("component-variants", body=body)
+        self.assertReports(check_p1(self.gallery), "component-variants.html", "#ctl-pad", "label")
+
+    def test_group_p_rejects_positive_tabindex_before_manifest_shipping(self) -> None:
+        self.write_accessibility_gallery()
+        body = self.accessibility_body("visual-designs").replace(
+            '<textarea id="rationale-field">', '<textarea id="rationale-field" tabindex="3">'
+        )
+        self.write_decision_artifact("visual-designs", body=body)
+        self.assertReports(check_p2(self.gallery), "visual-designs.html", "positive tabindex", "3")
+
+    def test_group_p_rejects_missing_local_reduced_motion_override(self) -> None:
+        self.write_accessibility_gallery()
+        body = self.accessibility_body("visual-designs").replace(
+            "@media (prefers-reduced-motion: reduce)", "@media (min-width: 1px)"
+        )
+        self.write_decision_artifact("visual-designs", body=body)
+        self.assertReports(check_p3(self.gallery), "visual-designs.html", "reduced-motion")
+
+    def test_group_p_rejects_unaudited_authored_color_literal(self) -> None:
+        self.write_accessibility_gallery()
+        body = self.accessibility_body("component-variants").replace(
+            "color: var(--rc-text)", "color: #777777", 1
+        )
+        self.write_decision_artifact("component-variants", body=body)
+        self.assertReports(check_p3(self.gallery), "component-variants.html", "unaudited color")
+
+
+# ---------------------------------------------------------------------------
+# Group P — decision-port accessibility contract
+# ---------------------------------------------------------------------------
+
+COMPONENT_VARIANT_STATE_VALUES: tuple[str, ...] = (
+    "default",
+    "hover",
+    "focus",
+    "disabled",
+    "error",
+    "loading",
+)
+DECISION_ACCESSIBILITY_CONTRACTS: dict[str, dict[str, object]] = {
+    "visual-designs": {
+        "choice_count": 4,
+        "radio_counts": {"bg": 2, "chosen-direction": 4},
+        "defaulted_radios": ("bg",),
+    },
+    "component-variants": {
+        "choice_count": 6,
+        "radio_counts": {"border": 3, "chosen-base-variant": 6},
+        "defaulted_radios": ("border",),
+    },
+}
+_STYLE_BLOCK_RE = re.compile(r"(?is)<style\b[^>]*>(.*?)</style>")
+_HIDDEN_INPUT_RULE_RE = re.compile(r"(?is)\binput\b[^{}]*\{[^{}]*\bdisplay\s*:\s*none\b")
+_UNAUDITED_COLOR_RE = re.compile(
+    r"(?i)(?:^|[;{])\s*(?:color|background(?:-color)?|border(?:-(?:top|right|bottom|left))?-color|"
+    r"outline-color|fill|stroke)\s*:\s*(?:#[0-9a-f]{3,8}\b|rgba?\(|hsla?\()"
+)
+
+
+def _control_is_labelled(element: _Element, elements: list[_Element]) -> bool:
+    attrs = _attrs(element)
+    if attrs.get("aria-label", "").strip():
+        return True
+    labelledby = attrs.get("aria-labelledby", "").split()
+    if labelledby and all(identifier in _element_ids(elements) for identifier in labelledby):
+        return True
+    if element.parent == "label":
+        return True
+    return bool(attrs.get("id") and _has_explicit_label(elements, attrs["id"]))
+
+
+def _decision_authored_styles(text: str) -> str:
+    scrubbed = text
+    if _embeds(text, BRAND_BLOCK):
+        scrubbed = scrubbed.replace(_region(text, BRAND_BLOCK), "", 1)
+    return "\n".join(_STYLE_BLOCK_RE.findall(scrubbed))
+
+
+def check_p1(gallery_root: Path) -> list[str]:
+    """P1 — decision values use labelled native controls and stable state."""
+    failures: list[str] = []
+    for artifact_id, contract in DECISION_ACCESSIBILITY_CONTRACTS.items():
+        path = _port_path(gallery_root, artifact_id)
+        label = _artifact_label(artifact_id)
+        if not path.is_file():
+            failures.append(f"{label}: decision accessibility cannot be checked because the file is missing")
+            continue
+        elements = _elements(_document_text(path))
+        if sum(element.tag == "fieldset" for element in elements) < 2 or sum(
+            element.tag == "legend" for element in elements
+        ) < 2:
+            failures.append(f"{label}: radio choices do not expose two native named groups")
+
+        radio_counts = contract["radio_counts"]
+        if not isinstance(radio_counts, dict):
+            raise AssertionError("decision radio contract must be a mapping")
+        for name, expected_count in radio_counts.items():
+            radios = [
+                element
+                for element in elements
+                if element.tag == "input"
+                and _attrs(element).get("type", "").casefold() == "radio"
+                and _attrs(element).get("name") == name
+            ]
+            if len(radios) != expected_count:
+                failures.append(
+                    f"{label}: input[name={name!r}] has {len(radios)} choices rather than {expected_count}"
+                )
+                continue
+            if any(not _attrs(radio).get("value", "").strip() for radio in radios):
+                failures.append(f"{label}: input[name={name!r}] has a choice without a value")
+            if any(not _control_is_labelled(radio, elements) for radio in radios):
+                failures.append(f"{label}: input[name={name!r}] has a choice without a visible or programmatic label")
+            checked = sum("checked" in _attrs(radio) for radio in radios)
+            expected_checked = 1 if name in contract["defaulted_radios"] else 0
+            if checked != expected_checked:
+                failures.append(
+                    f"{label}: input[name={name!r}] has {checked} authored checked choices rather than "
+                    f"{expected_checked}"
+                )
+
+        if artifact_id == "visual-designs":
+            background_groups = _id_matches(elements, "bg-seg")
+            if len(background_groups) != 1 or background_groups[0].tag != "fieldset":
+                failures.append(f"{label}: #bg-seg is not exactly one native fieldset")
+        else:
+            required_inputs = {"ctl-pad": "range", "ctl-shadow": "checkbox"}
+            for identifier, input_type in required_inputs.items():
+                matches = _id_matches(elements, identifier)
+                if (
+                    len(matches) != 1
+                    or matches[0].tag != "input"
+                    or _attrs(matches[0]).get("type", "").casefold() != input_type
+                ):
+                    failures.append(f"{label}: #{identifier} is not exactly one native {input_type} input")
+                elif not _control_is_labelled(matches[0], elements):
+                    failures.append(f"{label}: #{identifier} has no visible or programmatic label")
+
+            pads = _id_matches(elements, "ctl-pad")
+            if len(pads) == 1 and any(
+                _attrs(pads[0]).get(name) != value
+                for name, value in {"min": "12", "max": "32", "step": "2", "value": "20"}.items()
+            ):
+                failures.append(f"{label}: #ctl-pad does not expose its authored min/max/step/value")
+            outputs = _id_matches(elements, "pad-out")
+            if len(outputs) != 1 or outputs[0].tag != "output" or _attrs(outputs[0]).get("for") != "ctl-pad":
+                failures.append(f"{label}: #pad-out is not an output associated with #ctl-pad")
+            resets = _id_matches(elements, "reset-controls")
+            if len(resets) != 1 or resets[0].tag != "button":
+                failures.append(f"{label}: #reset-controls is not exactly one native button")
+    return failures
+
+
+def check_p2(gallery_root: Path) -> list[str]:
+    """P2 — planned decision files preserve native keyboard focus order."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _port_texts(gallery_root, DECISION_PORT_MANIFEST_BASELINE):
+        label = _artifact_label(artifact_id)
+        elements = _elements(text)
+        for element in elements:
+            for value in _attribute_values(element, "tabindex"):
+                try:
+                    positive = int(value.strip()) > 0
+                except ValueError:
+                    positive = False
+                if positive:
+                    failures.append(f"{label}: positive tabindex {value!r} replaces logical source order")
+        if _HIDDEN_INPUT_RULE_RE.search(text):
+            failures.append(f"{label}: CSS display:none removes native inputs from keyboard operation")
+        if re.search(r"(?i)\boutline\s*:\s*none\b", text):
+            failures.append(f"{label}: outline:none suppresses visible keyboard focus")
+        if ":focus-visible" not in text:
+            failures.append(f"{label}: no focus-visible treatment is present")
+        custom_roles = [
+            element
+            for element in elements
+            if element.tag not in _CONTROL_TAGS
+            and any(value.casefold() in _CONTROL_ROLES for value in _attribute_values(element, "role"))
+        ]
+        if custom_roles:
+            failures.append(f"{label}: action controls use custom roles instead of native controls")
+    return failures
+
+
+def check_p3(gallery_root: Path) -> list[str]:
+    """P3 — theme, non-color state, and reduced-motion contracts stay explicit."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _port_texts(gallery_root, DECISION_PORT_MANIFEST_BASELINE):
+        label = _artifact_label(artifact_id)
+        styles = _decision_authored_styles(text)
+        if _UNAUDITED_COLOR_RE.search(styles):
+            failures.append(f"{label}: port-authored CSS introduces an unaudited color literal")
+        if not _REDUCED_MOTION_RE.search(styles) or not re.search(
+            r"(?i)\banimation\s*:\s*none\b", styles
+        ) or not re.search(r"(?i)\btransition\s*:\s*none\b", styles):
+            failures.append(f"{label}: local reduced-motion override does not remove animation and transition")
+        if re.search(r"(?i)\bscroll-behavior\s*:\s*smooth\b", styles):
+            failures.append(f"{label}: authored smooth scrolling is not reduced-motion safe")
+
+        if artifact_id == "component-variants":
+            elements = _elements(text)
+            states = tuple(
+                values[0]
+                for element in elements
+                if len(values := _attribute_values(element, "data-state")) == 1
+            )
+            if states != COMPONENT_VARIANT_STATE_VALUES:
+                failures.append(
+                    f"{label}: visible non-color state markers are {states!r} rather than "
+                    f"{COMPONENT_VARIANT_STATE_VALUES!r}"
+                )
+            if not any("disabled" in _attrs(element) for element in elements):
+                failures.append(f"{label}: disabled state has no native disabled marker")
+            if not any(_attrs(element).get("aria-busy") == "true" for element in elements):
+                failures.append(f"{label}: loading state has no aria-busy marker")
+    return failures
+
+
+GROUP_P_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("P1", check_p1),
+    ("P2", check_p2),
+    ("P3", check_p3),
+)
+
+
+class DecisionAccessibilityContractTests(unittest.TestCase):
+    """Group P against the two decision artifacts."""
+
+    def test_group_p_passes_against_the_gallery(self) -> None:
+        self.maxDiff = None
+        for name, check in GROUP_P_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+
 class CheckSignatureTests(unittest.TestCase):
     """Enforce the rule the rest of this module depends on.
 
@@ -8351,6 +9196,11 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     KeyboardScrollGuardFixtureTests,
     ReadOnlyPortContractTests,
     ReadOnlyPortContractFixtureTests,
+    DecisionPortContractTests,
+    DecisionPortContractFixtureTests,
+    DecisionExportContractTests,
+    DecisionExportContractFixtureTests,
+    DecisionAccessibilityContractTests,
 )
 
 

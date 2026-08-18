@@ -96,6 +96,11 @@ READ_ONLY_PORT_FLOOR: dict[str, tuple[str, ...]] = {
     "svg-illustrations": ("feature-header", "illustrations", "palette-rules"),
 }
 
+DECISION_PORT_FLOOR: dict[str, tuple[str, ...]] = {
+    "visual-designs": ("feature-header", "design-brief", "background-toggle", "directions"),
+    "component-variants": ("feature-header", "variant-controls", "variants", "snippet-preview"),
+}
+
 FLOOR: dict[str, tuple[str, ...]] = {
     "implementation-plan": ("phases", "data-flow", "mockups", "risk-register", "task-inventory"),
     "spec-explainer": ("tldr", "goals", "non-goals", "acceptance-criteria", "clarification-faq"),
@@ -105,6 +110,7 @@ FLOOR: dict[str, tuple[str, ...]] = {
     "annotated-diff": ("hunks",),
     "flowchart": ("flow-diagram",),
     **READ_ONLY_PORT_FLOOR,
+    **DECISION_PORT_FLOOR,
 }
 
 # The slots whose items an objection or a selection attaches to, and which
@@ -122,6 +128,8 @@ LIST_SLOTS: dict[str, tuple[str, ...]] = {
     "annotated-diff": ("hunks",),
     "flowchart": ("nodes",),
     "interaction-prototype": ("views",),
+    "visual-designs": ("directions",),
+    "component-variants": ("variants",),
 }
 
 # One anchored item shows nothing about how a repeated list renders. Most slots
@@ -863,6 +871,37 @@ def check_r8(gallery_root: Path) -> list[str]:
     return failures
 
 
+def check_r9(gallery_root: Path) -> list[str]:
+    """R9 — approved decision-port floor targets are shipped and present.
+
+    R1-R7 intentionally defer a planned entry. The two decision ports now have
+    approved fill-region/list-slot floors, so leaving them planned or fileless
+    must keep this RED task non-vacuous.
+    """
+    entries = _entries(gallery_root)
+    if entries is None:
+        return []  # R6 owns an unreadable catalog
+
+    failures: list[str] = []
+    for identifier in DECISION_PORT_FLOOR:
+        matches = [entry for entry in entries if isinstance(entry, dict) and entry.get("id") == identifier]
+        if not matches:
+            continue  # R6 owns a floor identifier absent from the catalog
+        status = matches[0].get("status")
+        if status != SHIPPED:
+            failures.append(
+                f"{MANIFEST_FILE}: decision-port fill-region target '{identifier}' remains {status!r} rather "
+                f"than '{SHIPPED}', so its floor is not active"
+            )
+        path = gallery_root / _template_path(identifier)
+        if not path.is_file():
+            failures.append(
+                f"{_template_path(identifier)}: decision-port fill-region target is missing, so its floor "
+                "and list slots cannot be checked"
+            )
+    return failures
+
+
 FILL_REGION_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
     ("R1", check_r1),
     ("R2", check_r2),
@@ -872,6 +911,7 @@ FILL_REGION_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
     ("R6", check_r6),
     ("R7", check_r7),
     ("R8", check_r8),
+    ("R9", check_r9),
 )
 
 
@@ -883,9 +923,9 @@ FILL_REGION_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
 class FillRegionTests(unittest.TestCase):
     """Every check against the shipped gallery.
 
-    R1-R7 bind from the moment a template's catalog entry flips. R8 closes the
-    active read-only slice by rejecting its four targets while they remain
-    planned or fileless.
+    R1-R7 bind from the moment a template's catalog entry flips. R8 and R9 close
+    active slices by rejecting their targets while they remain planned or
+    fileless.
     """
 
     def test_every_check_passes_against_the_shipped_gallery(self) -> None:
@@ -1095,15 +1135,16 @@ class FillRegionFixtureTests(FillRegionFixtureCase):
                 self.assertEqual(check(self.gallery), [])
 
     def test_per_template_checks_defer_while_every_entry_reads_planned(self) -> None:
-        """R1-R7 defer planned entries; R8 keeps the active read-only slice RED."""
+        """R1-R7 defer planned entries; R8 and R9 keep active slices RED."""
         self.write_catalog(*({"id": name, "status": PLANNED} for name in sorted(FLOOR)))
 
         for name, check in FILL_REGION_CHECKS:
-            if check is check_r8:
+            if check in (check_r8, check_r9):
                 continue
             with self.subTest(msg=name):
                 self.assertEqual(check(self.gallery), [])
         self.assertReports(check_r8(self.gallery), "design-system", PLANNED)
+        self.assertReports(check_r9(self.gallery), "visual-designs", PLANNED)
 
     # -- R1 --
 
@@ -1118,6 +1159,12 @@ class FillRegionFixtureTests(FillRegionFixtureCase):
         self.build("design-system", slots=carried)
 
         self.assertReports(check_r1(self.gallery), "design-system", "shape")
+
+    def test_r1_detects_a_missing_decision_floor_region(self) -> None:
+        carried = tuple(slot for slot in _template_slots("visual-designs") if slot != "background-toggle")
+        self.build("visual-designs", slots=carried)
+
+        self.assertReports(check_r1(self.gallery), "visual-designs", "background-toggle")
 
     def test_r1_accepts_a_template_carrying_more_slots_than_the_floor_names(self) -> None:
         """The floor is a floor, not an equality."""
@@ -1270,6 +1317,16 @@ class FillRegionFixtureTests(FillRegionFixtureCase):
 
         self.assertReports(check_r5(self.gallery), "interaction-prototype", "views")
 
+    def test_r5_detects_an_unanchored_decision_direction_item(self) -> None:
+        self.build("visual-designs", anchors={"directions": ("technical-depth", None)})
+
+        self.assertReports(check_r5(self.gallery), "visual-designs", "directions")
+
+    def test_r5_requires_two_anchored_component_variants(self) -> None:
+        self.build("component-variants", anchors={"variants": ("default",)})
+
+        self.assertReports(check_r5(self.gallery), "component-variants", "variants", "1 anchored", "the 2")
+
     # -- R6 --
 
     def test_r6_detects_a_floor_template_the_catalog_does_not_carry(self) -> None:
@@ -1283,6 +1340,17 @@ class FillRegionFixtureTests(FillRegionFixtureCase):
         self.write(MANIFEST_FILE, "{ not valid json")
 
         self.assertReports(check_r6(self.gallery), MANIFEST_FILE)
+
+    # -- R9 --
+
+    def test_r9_reports_planned_and_missing_decision_ports(self) -> None:
+        self.write_catalog(*({"id": name, "status": PLANNED} for name in sorted(FLOOR)))
+
+        failures = check_r9(self.gallery)
+        self.assertReports(failures, "visual-designs", PLANNED)
+        self.assertReports(failures, "templates/visual-designs.html", "missing")
+        self.assertReports(failures, "component-variants", PLANNED)
+        self.assertReports(failures, "templates/component-variants.html", "missing")
 
     # -- R7 --
 
