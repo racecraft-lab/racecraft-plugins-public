@@ -5,8 +5,8 @@
   "branch": "art-004-gallery-completion-design-prototyping",
   "status": "in_progress",
   "stage": "implement",
-  "active_step": "Post: PR Creation",
-  "updated_at": "2026-08-18T21:38:17Z",
+  "active_step": "Post: Review Remediation",
+  "updated_at": "2026-08-18T21:40:38Z",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
     "consensus_mode": "moderate",
@@ -199,8 +199,8 @@
     {"step": "Post: Final Reviewability Backstop", "status": "completed"},
     {"step": "Post: PR Packet/Body Generation", "status": "completed"},
     {"step": "Post: PR Body Generation", "status": "completed"},
-    {"step": "Post: PR Creation", "status": "in_progress"},
-    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "completed"},
+    {"step": "Post: Review Remediation", "status": "in_progress"},
     {"step": "Post: Retrospective", "status": "pending"}
   ],
   "gates": {
@@ -541,8 +541,8 @@
         {"step": "Post: Final Reviewability Backstop", "status": "completed"},
         {"step": "Post: PR Packet/Body Generation", "status": "completed"},
         {"step": "Post: PR Body Generation", "status": "completed"},
-        {"step": "Post: PR Creation", "status": "in_progress"},
-        {"step": "Post: Review Remediation", "status": "pending"},
+        {"step": "Post: PR Creation", "status": "completed"},
+        {"step": "Post: Review Remediation", "status": "in_progress"},
         {"step": "Post: Retrospective", "status": "pending"}
       ],
       "doctor": {"status": "completed", "passed": 4, "warnings": 1, "warning": "unrelated BRAND-001 planning directory is incomplete"},
@@ -566,7 +566,18 @@
         "title": "feat(art-004): complete design gallery artifacts",
         "title_gates": ["release-readiness:pass", "validate-pr-workflow-contract:pass"]
       },
-      "pr_body": {"status": "completed", "editable_fields_changed": ["what_changed", "why_it_matters"], "protected_sections_changed": false, "release_note": "present"}
+      "pr_body": {"status": "completed", "editable_fields_changed": ["what_changed", "why_it_matters"], "protected_sections_changed": false, "release_note": "present"},
+      "pr_creation": {
+        "status": "completed",
+        "number": 450,
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/450",
+        "is_draft": true,
+        "state": "OPEN",
+        "base_branch": "main",
+        "head_branch": "art-004-gallery-completion-design-prototyping",
+        "head_oid": "c7237e9e89fbb04e6dfe3eb3d0013d6358847355",
+        "mergeable": "MERGEABLE"
+      }
     }
   }
 }

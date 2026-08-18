@@ -180,6 +180,7 @@ Before each phase, verify alignment with ".specify/memory/constitution.md":
 | **Spec ID** | ART-004 |
 | **Name** | Gallery Completion — Design & Prototyping |
 | **Branch** | art-004-gallery-completion-design-prototyping |
+| **Draft PR** | [#450](https://github.com/racecraft-lab/racecraft-plugins-public/pull/450) |
 | **Dependencies** | ART-001 |
 | **Absorbs** | ART-020, to be marked superseded |
 | **Enables** | Gallery completeness |
@@ -867,8 +868,8 @@ generated files must never be hand-reverted independently.
 | Post: Final Reviewability Backstop | ✅ Complete | Deferred helper was not invoked; proceeded on current committed slice evidence and clean reviewed checkpoint `d65345e65` |
 | Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply emitted the current feature-local packet and body; read-only validation passed with `pr_blocked=false` and `writes_state=false`; clean-tree validation was persisted; both title gates pass |
 | Post: PR Body Generation | ✅ Complete | Refined only the sanctioned What Changed and Why It Matters regions, including the required consumer-facing `release-note` fence; protected packet sections and fingerprint remain valid |
-| Post: PR Creation | 🔄 In Progress | Packet-owned base, head, title, and body are validated; push and draft PR creation are next |
-| Post: Review Remediation | ⏳ Pending | Final pre-PR review is clean; live PR feedback is checked after creation |
+| Post: PR Creation | ✅ Complete | Draft PR [#450](https://github.com/racecraft-lab/racecraft-plugins-public/pull/450) opened from the packet-owned base, head, title, and body at head `c7237e9e8` |
+| Post: Review Remediation | 🔄 In Progress | Initial live PR feedback and check audit is running; queued or in-progress CI is recorded without being claimed green |
 | Post: Retrospective | ⏳ Pending | Final Post item |
 
 ### Self-Review — 2026-08-18T21:08:19Z
