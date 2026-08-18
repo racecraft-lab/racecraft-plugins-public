@@ -1,0 +1,230 @@
+{
+  "body_file": "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004/body.md",
+  "editable_fields": [
+    {
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->",
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->",
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->"
+    },
+    {
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->",
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->"
+    }
+  ],
+  "generated_title": {
+    "description": "complete design gallery artifacts",
+    "rejected_candidates": [
+      {
+        "reason": "The final packet uses the active lowercase feature scope.",
+        "value": "feat(speckit-pro): complete design gallery artifacts"
+      },
+      {
+        "reason": "The release title gate requires a lowercase scope.",
+        "value": "feat(ART-004): complete design gallery artifacts"
+      }
+    ],
+    "scope": "art-004",
+    "source_evidence": {
+      "kind": "workflow",
+      "source": "docs/ai/specs/.process/ART-004-workflow.md",
+      "summary": "Post title passed release-readiness and PR workflow validation."
+    },
+    "type": "feat",
+    "value": "feat(art-004): complete design gallery artifacts"
+  },
+  "mode": "single",
+  "packet_id": "art-004",
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ],
+    "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "value": "9c007f040fcc7c83cd8727e0daa634dd17ca584d6e66283813d69d6a8e1217e5"
+  },
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "schema_version": "1.0.0",
+  "scope_evidence": {
+    "budget_result": "warning",
+    "changed_files": [
+      "dist/claude/speckit-pro/artifact-gallery/manifest.json",
+      "dist/claude/speckit-pro/artifact-gallery/templates/animation-prototype.html",
+      "dist/claude/speckit-pro/artifact-gallery/templates/code-approaches.html",
+      "dist/claude/speckit-pro/artifact-gallery/templates/component-variants.html",
+      "dist/claude/speckit-pro/artifact-gallery/templates/design-system.html",
+      "dist/claude/speckit-pro/artifact-gallery/templates/implementation-plan.html",
+      "dist/claude/speckit-pro/artifact-gallery/templates/interaction-prototype.html",
+      "dist/claude/speckit-pro/artifact-gallery/templates/module-map.html",
+      "dist/claude/speckit-pro/artifact-gallery/templates/svg-illustrations.html",
+      "dist/claude/speckit-pro/artifact-gallery/templates/visual-designs.html",
+      "dist/codex/speckit-pro/artifact-gallery/manifest.json",
+      "dist/codex/speckit-pro/artifact-gallery/templates/animation-prototype.html",
+      "dist/codex/speckit-pro/artifact-gallery/templates/code-approaches.html",
+      "dist/codex/speckit-pro/artifact-gallery/templates/component-variants.html",
+      "dist/codex/speckit-pro/artifact-gallery/templates/design-system.html",
+      "dist/codex/speckit-pro/artifact-gallery/templates/implementation-plan.html",
+      "dist/codex/speckit-pro/artifact-gallery/templates/interaction-prototype.html",
+      "dist/codex/speckit-pro/artifact-gallery/templates/module-map.html",
+      "dist/codex/speckit-pro/artifact-gallery/templates/svg-illustrations.html",
+      "dist/codex/speckit-pro/artifact-gallery/templates/visual-designs.html",
+      "docs/ai/specs/.process/ART-004-design-concept.md",
+      "docs/ai/specs/.process/ART-004-workflow.md",
+      "docs/ai/specs/.process/XPLAT-009-installed-cache-proof.json",
+      "docs/ai/specs/.process/XPLAT-009-payload-completeness-result.json",
+      "docs/ai/specs/.process/XPLAT-009-release-readiness-result.json",
+      "docs/ai/specs/.process/autopilot-state.json",
+      "docs/ai/specs/html-artifacts-roadmap-MOC.md",
+      "docs/ai/specs/html-artifacts-technical-roadmap.md",
+      "speckit-pro/artifact-gallery/manifest.json",
+      "speckit-pro/artifact-gallery/templates/animation-prototype.html",
+      "speckit-pro/artifact-gallery/templates/code-approaches.html",
+      "speckit-pro/artifact-gallery/templates/component-variants.html",
+      "speckit-pro/artifact-gallery/templates/design-system.html",
+      "speckit-pro/artifact-gallery/templates/implementation-plan.html",
+      "speckit-pro/artifact-gallery/templates/interaction-prototype.html",
+      "speckit-pro/artifact-gallery/templates/module-map.html",
+      "speckit-pro/artifact-gallery/templates/svg-illustrations.html",
+      "speckit-pro/artifact-gallery/templates/visual-designs.html",
+      "specs/art-004-gallery-completion-design-prototyping/.process/implementation-notes.md",
+      "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004.json",
+      "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004/body.md",
+      "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004/validation.json",
+      "specs/art-004-gallery-completion-design-prototyping/SPEC-MOC.md",
+      "specs/art-004-gallery-completion-design-prototyping/checklists/accessibility.md",
+      "specs/art-004-gallery-completion-design-prototyping/checklists/error-handling.md",
+      "specs/art-004-gallery-completion-design-prototyping/checklists/requirements.md",
+      "specs/art-004-gallery-completion-design-prototyping/checklists/ux.md",
+      "specs/art-004-gallery-completion-design-prototyping/contracts/decision-export-contract.md",
+      "specs/art-004-gallery-completion-design-prototyping/contracts/gallery-artifact-contract.md",
+      "specs/art-004-gallery-completion-design-prototyping/contracts/keyboard-scroll-guard-contract.md",
+      "specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-1-keyboard-foundation.md",
+      "specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-2-read-only-ports.md",
+      "specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-3-decision-ports.md",
+      "specs/art-004-gallery-completion-design-prototyping/data-model.md",
+      "specs/art-004-gallery-completion-design-prototyping/plan.md",
+      "specs/art-004-gallery-completion-design-prototyping/quickstart.md",
+      "specs/art-004-gallery-completion-design-prototyping/research.md",
+      "specs/art-004-gallery-completion-design-prototyping/retrospective.md",
+      "specs/art-004-gallery-completion-design-prototyping/spec.md",
+      "specs/art-004-gallery-completion-design-prototyping/tasks.md",
+      "specs/art-004-gallery-completion-design-prototyping/verify-tasks-report.md",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-file-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-missing-source-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-mutable.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-root-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-same-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-single-product.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-source-mismatch.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-stale-hash.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof-traversal-root.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache-proof.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/animation-prototype.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/code-approaches.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/component-variants.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/design-system.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/implementation-plan.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/interaction-prototype.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/module-map.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/svg-illustrations.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/claude/speckit-pro/artifact-gallery/templates/visual-designs.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/manifest.json",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/animation-prototype.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/code-approaches.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/component-variants.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/design-system.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/implementation-plan.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/interaction-prototype.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/module-map.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/svg-illustrations.html",
+      "tests/speckit-pro/unit/fixtures/plugin-bash-confinement/installed-cache/codex/speckit-pro/artifact-gallery/templates/visual-designs.html",
+      "tests/speckit-pro/unit/test-artifact-fill-regions.py",
+      "tests/speckit-pro/unit/test-artifact-gallery.py"
+    ],
+    "non_goals": [
+      "No shared gallery runtime, framework, persistence, network export, or new manifest vocabulary.",
+      "No export-looking controls in read-only artifacts.",
+      "No unrelated roadmap, plugin-version, marketplace, or docs-site content changes."
+    ],
+    "production_files": 9,
+    "reviewable_loc": 1270,
+    "total_files": 94
+  },
+  "source_feature_dir": "specs/art-004-gallery-completion-design-prototyping",
+  "source_markers": [
+    {
+      "marker_id": "art-004",
+      "rendered_text": "feat(art-004): complete design gallery artifacts",
+      "source": "specs/art-004-gallery-completion-design-prototyping"
+    }
+  ],
+  "target": {
+    "base_branch": "main",
+    "head_branch": "art-004-gallery-completion-design-prototyping"
+  },
+  "uat": {
+    "how_to_uat": "Open the nine named source artifacts directly with file:// and disable network access. At a narrow viewport, reach each declared wide region by keyboard, confirm its visible focus and accessible name, and move its own horizontal position. Exercise every read-only interaction and reset. In each decision artifact, choose an option, enter a rationale, copy both formats, then refuse clipboard access and confirm the focused manual fallback exactly matches the live payload.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "packet-input"
+  },
+  "validation_result_path": "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004/validation.json",
+  "verification_evidence": [
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "python3 tests/speckit-pro/run-all.py passed 7628/7628"
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "test-artifact-gallery.py passed 573/573 and test-artifact-fill-regions.py passed 70/70"
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "Chromium and WebKit passed 16/16 post-review checks; Safari 26.6.1 passed the native keyboard matrix"
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "refresh-release-artifacts.py --check reports generated artifacts match source"
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "docs-site reference:check reports reference pages are current"
+    },
+    {
+      "kind": "verification",
+      "result": "pass",
+      "source": "validation",
+      "summary": "release-readiness and validate-pr-workflow-contract both passed the packet title"
+    }
+  ]
+}
