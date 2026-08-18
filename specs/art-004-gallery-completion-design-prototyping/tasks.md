@@ -24,10 +24,10 @@
 
 **Purpose**: Confirm the execution root, approved topology, and pinned-source inputs before implementation begins.
 
-- [ ] T001 VERIFY confirm branch `art-004-gallery-completion-design-prototyping`, execution root, and unrelated local changes with `git status --short` in `/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/art-004-gallery-completion-design-prototyping`
-- [ ] T002 VERIFY confirm G3 remains non-blocking by reading the three approved slice contracts in `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-1-keyboard-foundation.md`, `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-2-read-only-ports.md`, and `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-3-decision-ports.md`, then confirm the deferred tasks-mode `reviewability-gate` fallback remains tied to G0 setup evidence, `160/pass`, `590/warn`, `520/warn`, and the human-approved split
-- [ ] T003 VERIFY retrieve the six pinned upstream sources at commit `58c305be97f47b26b678f2c07dec01d4242268ec` into `/private/tmp/art-004-upstream/` for read-only implementation evidence
-- [ ] T004 VERIFY confirm no implementation task will hand-edit generated payload, installed-cache proof, or generated reference paths listed in `specs/art-004-gallery-completion-design-prototyping/plan.md`
+- [x] T001 VERIFY confirm branch `art-004-gallery-completion-design-prototyping`, execution root, and unrelated local changes with `git status --short` in the registered ART-004 worktree root
+- [x] T002 VERIFY confirm G3 remains non-blocking by reading the three approved slice contracts in `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-1-keyboard-foundation.md`, `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-2-read-only-ports.md`, and `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-3-decision-ports.md`, then confirm the deferred tasks-mode `reviewability-gate` fallback remains tied to G0 setup evidence, `160/pass`, `590/warn`, `520/warn`, and the human-approved split
+- [x] T003 VERIFY retrieve the six pinned upstream sources at commit `58c305be97f47b26b678f2c07dec01d4242268ec` into `/private/tmp/art-004-upstream/` for read-only implementation evidence
+- [x] T004 VERIFY confirm no implementation task will hand-edit generated payload, installed-cache proof, or generated reference paths listed in `specs/art-004-gallery-completion-design-prototyping/plan.md`
 
 ---
 
@@ -35,11 +35,11 @@
 
 **Purpose**: Establish the serial review route and baseline validation commands that block all user-story implementation.
 
-- [ ] T005 RED run `python3 tests/speckit-pro/run-all.py` and preserve the baseline result for comparison with later changes in `tests/speckit-pro/run-all.py`
-- [ ] T006 VERIFY run the setup-mode reviewability gate against `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-1-keyboard-foundation.md`
-- [ ] T007 VERIFY run the setup-mode reviewability gate against `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-2-read-only-ports.md`
-- [ ] T008 VERIFY run the setup-mode reviewability gate against `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-3-decision-ports.md`
-- [ ] T009 VERIFY stop before implementation if any gate returns `block` and record the failed gate path in `specs/art-004-gallery-completion-design-prototyping/plan.md`
+- [x] T005 RED run `python3 tests/speckit-pro/run-all.py` and preserve the baseline result for comparison with later changes in `tests/speckit-pro/run-all.py`
+- [x] T006 VERIFY run the setup-mode reviewability gate against `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-1-keyboard-foundation.md`
+- [x] T007 VERIFY run the setup-mode reviewability gate against `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-2-read-only-ports.md`
+- [x] T008 VERIFY run the setup-mode reviewability gate against `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-3-decision-ports.md`
+- [x] T009 VERIFY stop before implementation if any gate returns `block` and record the failed gate path in `specs/art-004-gallery-completion-design-prototyping/plan.md`
 
 **Checkpoint**: Foundation ready only when all three approved slice gates remain non-blocking.
 
@@ -53,21 +53,21 @@
 
 ### Tests for User Story 1
 
-- [ ] T010 [US1] RED add durable Layer 4 collector coverage for declared keyboard-scroll regions, missing `tabindex="0"`, missing `role="group"`, missing or generic `aria-label`, positive `tabindex`, and undeclared horizontal overflow styling in `tests/speckit-pro/unit/test-artifact-gallery.py`
-- [ ] T011 [US1] RED add the in-memory negative fixture named `test_rejects_declared_scroll_region_without_keyboard_route` in `tests/speckit-pro/unit/test-artifact-gallery.py`
-- [ ] T012 [US1] RED prove the five existing affected horizontal-scroll containers fail before repair in `tests/speckit-pro/unit/test-artifact-gallery.py`
+- [x] T010 [US1] RED add durable Layer 4 collector coverage for declared keyboard-scroll regions, missing `tabindex="0"`, missing `role="group"`, missing or generic `aria-label`, positive `tabindex`, and undeclared horizontal overflow styling in `tests/speckit-pro/unit/test-artifact-gallery.py`
+- [x] T011 [US1] RED add the in-memory negative fixture named `test_rejects_declared_scroll_region_without_keyboard_route` in `tests/speckit-pro/unit/test-artifact-gallery.py`
+- [x] T012 [US1] RED prove the five existing affected horizontal-scroll containers fail before repair in `tests/speckit-pro/unit/test-artifact-gallery.py`
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] GREEN add `data-rc-keyboard-scroll="horizontal"`, `tabindex="0"`, `role="group"`, and a specific `aria-label` to the affected horizontal region in `speckit-pro/artifact-gallery/templates/code-approaches.html`
-- [ ] T014 [P] [US1] GREEN add `data-rc-keyboard-scroll="horizontal"`, `tabindex="0"`, `role="group"`, and specific `aria-label` values to the affected horizontal regions in `speckit-pro/artifact-gallery/templates/implementation-plan.html`
-- [ ] T015 [P] [US1] GREEN add `data-rc-keyboard-scroll="horizontal"`, `tabindex="0"`, `role="group"`, and specific `aria-label` values to the affected horizontal regions in `speckit-pro/artifact-gallery/templates/module-map.html`
-- [ ] T016 [US1] REFACTOR keep the keyboard-scroll guard helpers durable and capability-named, with `gallery_root` as the first argument, in `tests/speckit-pro/unit/test-artifact-gallery.py`
-- [ ] T017 [US1] VERIFY run focused Layer 4 gallery tests for keyboard-scroll behavior in `tests/speckit-pro/unit/test-artifact-gallery.py`
-- [ ] T018 [US1] VERIFY complete `file://` keyboard-scroll UAT for `code-approaches`, `implementation-plan`, and `module-map` using the ART-004 matrix in `specs/art-004-gallery-completion-design-prototyping/quickstart.md`
-- [ ] T019 [US1] VERIFY record Safari Tab or Option-Tab reachability, source-order focus, visible focus, accessible names, arrow-key scroll change, and no keyboard trap for repaired regions in `specs/art-004-gallery-completion-design-prototyping/quickstart.md`
-- [ ] T020 [US1] VERIFY regenerate derived payloads and installed-cache proof files from source with `python3 scripts/refresh-release-artifacts.py`
-- [ ] T021 [US1] VERIFY regenerate generated reference pages affected by tracked test/source changes with `pnpm --dir docs-site reference:generate` for `docs-site/src/content/docs/reference/tests.md` and `docs-site/src/content/docs/reference/source-vs-dist.md`
+- [x] T013 [P] [US1] GREEN add `data-rc-keyboard-scroll="horizontal"`, `tabindex="0"`, `role="group"`, and a specific `aria-label` to the affected horizontal region in `speckit-pro/artifact-gallery/templates/code-approaches.html`
+- [x] T014 [P] [US1] GREEN add `data-rc-keyboard-scroll="horizontal"`, `tabindex="0"`, `role="group"`, and specific `aria-label` values to the affected horizontal regions in `speckit-pro/artifact-gallery/templates/implementation-plan.html`
+- [x] T015 [P] [US1] GREEN add `data-rc-keyboard-scroll="horizontal"`, `tabindex="0"`, `role="group"`, and specific `aria-label` values to the affected horizontal regions in `speckit-pro/artifact-gallery/templates/module-map.html`
+- [x] T016 [US1] REFACTOR keep the keyboard-scroll guard helpers durable and capability-named, with `gallery_root` as the first argument, in `tests/speckit-pro/unit/test-artifact-gallery.py`
+- [x] T017 [US1] VERIFY run focused Layer 4 gallery tests for keyboard-scroll behavior in `tests/speckit-pro/unit/test-artifact-gallery.py`
+- [x] T018 [US1] VERIFY complete `file://` keyboard-scroll UAT for `code-approaches`, `implementation-plan`, and `module-map` using the ART-004 matrix in `specs/art-004-gallery-completion-design-prototyping/quickstart.md`
+- [x] T019 [US1] VERIFY record Safari Tab or Option-Tab reachability, source-order focus, visible focus, accessible names, arrow-key scroll change, and no keyboard trap for repaired regions in `specs/art-004-gallery-completion-design-prototyping/quickstart.md`
+- [x] T020 [US1] VERIFY regenerate derived payloads and installed-cache proof files from source with `python3 scripts/refresh-release-artifacts.py`
+- [x] T021 [US1] VERIFY regenerate generated reference pages affected by tracked test/source changes with `pnpm --dir docs-site reference:generate` for `docs-site/src/content/docs/reference/tests.md` and `docs-site/src/content/docs/reference/source-vs-dist.md`
 - [ ] T022 [US1] VERIFY run `python3 tests/speckit-pro/run-all.py`, `python3 scripts/refresh-release-artifacts.py --check`, and `pnpm --dir docs-site reference:check` against `tests/speckit-pro/run-all.py`
 
 **Checkpoint**: User Story 1 is complete when the global guard passes for repaired artifacts and manual keyboard-scroll UAT is recorded separately from ART-003.

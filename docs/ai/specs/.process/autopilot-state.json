@@ -3,10 +3,10 @@
   "spec_id": "ART-004",
   "feature_dir": "specs/art-004-gallery-completion-design-prototyping",
   "branch": "art-004-gallery-completion-design-prototyping",
-  "status": "completed",
-  "stage": "plan",
-  "active_step": "Plan stage boundary complete",
-  "updated_at": "2026-08-18T04:47:03Z",
+  "status": "in_progress",
+  "stage": "implement",
+  "active_step": "Phase 7: Implement T010-T022 - slice 1 keyboard foundation",
+  "updated_at": "2026-08-18T16:50:04Z",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
     "consensus_mode": "moderate",
@@ -44,26 +44,34 @@
     "l5": 186
   },
   "archive_sweep": {
-    "status": "candidates_found",
+    "status": "no_candidates",
     "execution_path": "extension_contract",
     "invocation_available": true,
     "prerequisite_available": true,
     "prerequisite_mode": "codex_native_worktree_binding",
     "archive_extension_installed": true,
-    "eligible_previous_specs": [
+    "eligible_previous_specs": [],
+    "ineligible_active_specs": [
       {
         "spec": "specs/brand-001-racecraft-identity-system",
-        "pull_request": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/432",
-        "merge_commit": "3af4764e6ed502f40e0c3c16c7a4dd4f4dbc945d",
-        "eligible_for_archive": true,
-        "archive_already_recorded": false,
-        "eligible_for_cleanup": false
+        "reason": "PR #432 merged the planning package, but the roadmap records all seven feature phases as pending"
       }
     ],
     "excluded_current_spec": "specs/art-004-gallery-completion-design-prototyping",
     "cleanup_mode": "report_only",
     "cleanup_applied": false,
     "safeToApplyCleanup": false
+  },
+  "agent_runtime_check": {
+    "destination": "~/.codex/agents",
+    "model": "gpt-5.5",
+    "required_agents": 10,
+    "mutation_status": "no_op",
+    "pass": true
+  },
+  "relocation_suggestion": {
+    "status": "suppressed",
+    "reason": "ART-004 is the active feature and SPEC-MOC.md already declares structureVersion 1"
   },
   "capability_coverage": {
     "codebase_context": "local repository reads plus codebase-analyst",
@@ -150,6 +158,10 @@
     "warnings": [],
     "layer_plan_required": false
   },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity route one-navigable-PR does not require layer planning"
+  },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
@@ -171,25 +183,25 @@
     {"step": "Phase 6: Analyze", "status": "completed"},
     {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
-    {"step": "Phase 7: Implement T001-T009 - setup and foundational gates", "status": "skipped: outside plan stage"},
-    {"step": "Phase 7: Implement T010-T022 - slice 1 keyboard foundation", "status": "skipped: outside plan stage"},
-    {"step": "Phase 7: Implement T023-T037 - slice 2 read-only ports", "status": "skipped: outside plan stage"},
-    {"step": "Phase 7: Implement T038-T052 - slice 3 decision ports", "status": "skipped: outside plan stage"},
-    {"step": "Phase 7: Implement T053-T060 - polish and release evidence", "status": "skipped: outside plan stage"},
-    {"step": "Post: Doctor Extension Check", "status": "skipped: outside plan stage"},
-    {"step": "Post: Verify Implementation", "status": "skipped: outside plan stage"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "skipped: outside plan stage"},
-    {"step": "Post: Code Review", "status": "skipped: outside plan stage"},
-    {"step": "Post: Integration Suite", "status": "skipped: outside plan stage"},
-    {"step": "Post: Reviewability Diff Gate", "status": "skipped: outside plan stage"},
-    {"step": "Post: Self-Review", "status": "skipped: outside plan stage"},
-    {"step": "Post: UAT Runbook Generation", "status": "skipped: outside plan stage"},
-    {"step": "Post: Final Reviewability Backstop", "status": "skipped: outside plan stage"},
-    {"step": "Post: PR Packet/Body Generation", "status": "skipped: outside plan stage"},
-    {"step": "Post: PR Body Generation", "status": "skipped: outside plan stage"},
-    {"step": "Post: PR Creation", "status": "skipped: outside plan stage"},
-    {"step": "Post: Review Remediation", "status": "skipped: outside plan stage"},
-    {"step": "Post: Retrospective", "status": "skipped: outside plan stage"}
+    {"step": "Phase 7: Implement T001-T009 - setup and foundational gates", "status": "completed"},
+    {"step": "Phase 7: Implement T010-T022 - slice 1 keyboard foundation", "status": "in_progress"},
+    {"step": "Phase 7: Implement T023-T037 - slice 2 read-only ports", "status": "pending"},
+    {"step": "Phase 7: Implement T038-T052 - slice 3 decision ports", "status": "pending"},
+    {"step": "Phase 7: Implement T053-T060 - polish and release evidence", "status": "pending"},
+    {"step": "Post: Doctor Extension Check", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "pending"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Code Review", "status": "pending"},
+    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+    {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: UAT Runbook Generation", "status": "pending"},
+    {"step": "Post: Final Reviewability Backstop", "status": "pending"},
+    {"step": "Post: PR Packet/Body Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Retrospective", "status": "pending"}
   ],
   "gates": {
     "G0": {
@@ -400,7 +412,28 @@
       },
       "verdict": "G6.5 passed",
       "recommended_action": "proceed",
-      "implementation_started": false
+      "implementation_started": true
+    },
+    "implement": {
+      "status": "in_progress",
+      "completed_tasks": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014", "T015", "T016", "T017", "T018", "T019", "T020", "T021"],
+      "pending_browser_tasks": [],
+      "browser_attempt": "Playwright MCP completed T018 in Chromium, then Safari 26.6.1 WebDriver completed the Safari-specific T019 matrix after the operator enabled remote automation",
+      "browser_evidence": {
+        "protocol": "file:",
+        "regions": {"code-approaches": "3/3", "implementation-plan": "2/2", "module-map": "6/6"},
+        "checks": "source-order keyboard reach, specific accessible name, role=group, tabindex=0, 2px solid focus outline, ArrowRight scrollLeft 0->40, and Tab focus exit all passed",
+        "uat_finding_fixed": "module-map grid second track changed from 1fr to minmax(0, 1fr) so its five code regions receive internal overflow instead of expanding the page",
+        "t018": {"status": "passed", "engine": "Chromium 151.0.7922.138", "viewport": "320x900"},
+        "t019": {"status": "passed", "engine": "Safari 26.6.1", "requested_window": "320x900", "measured_viewport": "336x825", "keyboard_route": "Tab", "module_map_disclosures": "5/5 opened with Enter"}
+      },
+      "pending_release_check": "T022 refresh-release-artifacts --check requires generated paths to be clean after the Phase 7 checkpoint commit",
+      "slice_1_automated_evidence": {
+        "full_suite": "7418/7418 passed after the UAT-discovered module-map sizing repair",
+        "reference_check": "passed",
+        "release_check": "expected exit 1 while regenerated payload and proof paths are uncommitted; rerun after the Slice 1 checkpoint commit"
+      },
+      "implementation_notes": "specs/art-004-gallery-completion-design-prototyping/.process/implementation-notes.md"
     }
   }
 }

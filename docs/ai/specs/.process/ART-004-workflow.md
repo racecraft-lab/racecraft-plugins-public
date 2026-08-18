@@ -92,8 +92,8 @@ not authority for any individual approved slice.
 | Tasks | /speckit-tasks | ✅ Complete | 60 tasks, 17/17 requirements, 3/3 stories, 9 safe parallel tasks; G5 passed |
 | Analyze | /speckit-analyze | ✅ Complete | Executor clean, G6 passed, and required clean-pass confidence synthesis completed |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory gate passed at 1.00 against the 0.90 threshold |
-| Implement | /speckit-implement | ⏭️ Skipped | Outside explicit `--stage plan`; implementation did not start |
-| Post | Post-Implementation | ⏭️ Skipped | Outside explicit `--stage plan`; post-implementation work did not start |
+| Implement | /speckit-implement | 🔄 In Progress | Explicit `--stage implement`; setup and foundational gates active |
+| Post | Post-Implementation | ⏳ Pending | Starts after Phase 7 and G7 pass |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -144,15 +144,17 @@ Before each phase, verify alignment with ".specify/memory/constitution.md":
 
 ### Autopilot Preflight Results
 
-- **Stage:** `plan`, resolved from the explicit `--stage plan` argument.
+- **Stage:** `implement`, resolved from the explicit `--stage implement`
+  argument. The recorded `✅ Complete` G6.5 verdict was read and not rerun.
 - **Confidence gate:** `advisory` (project default).
 - **Execution root:** the registered ART-004 worktree on branch
   `art-004-gallery-completion-design-prototyping`; the worktree was clean.
-- **Archive Sweep:** direct extension-contract sweep completed. BRAND-001 is a
-  previously merged archive candidate (PR #432); ART-004 was excluded as the
-  current target. No cleanup was requested or applied.
+- **Archive Sweep:** direct extension-contract sweep completed with no archive
+  candidates. ART-004 was excluded as the current target. BRAND-001 remains
+  active work: PR #432 merged its planning package, while its roadmap still
+  records all seven phases as pending. No cleanup was requested or applied.
 - **Agent runtime:** all ten required Codex agents matched the installed
-  `gpt-5.5` bundle; dry-run install status was `no_op`.
+  user-level `gpt-5.5` bundle; dry-run install status was `no_op`.
 - **Project commands:** BUILD, TYPECHECK, LINT, and INTEGRATION_TEST are `N/A`;
   UNIT_TEST and FULL_VERIFY are `python3 tests/speckit-pro/run-all.py`.
 - **Reviewability:** the repository-level setup gate returned `warn` and passed
@@ -164,6 +166,8 @@ Before each phase, verify alignment with ".specify/memory/constitution.md":
   analysts; pinned upstream source extraction uses GitHub plus the exact commit;
   library and external-domain questions use installed documentation/web
   capabilities when the phase requires them.
+- **Tier-2 relocation:** suppressed because ART-004 is the active feature and
+  its `SPEC-MOC.md` already declares `structureVersion: 1`.
 
 ---
 
@@ -180,7 +184,7 @@ Before each phase, verify alignment with ".specify/memory/constitution.md":
 | **Absorbs** | ART-020, to be marked superseded |
 | **Enables** | Gallery completeness |
 | **Priority** | P2 |
-| **Stage** | plan |
+| **Stage** | implement |
 
 ### Success Criteria Summary
 
@@ -621,11 +625,11 @@ dependency-ordered, testable tasks grouped by user story.
 
 | Group | Task IDs | Plan-stage disposition |
 |---|---|---|
-| Setup and foundational gates | `T001-T009` | Skipped outside `--stage plan` |
-| Slice 1 — keyboard foundation | `T010-T022` | Skipped outside `--stage plan` |
-| Slice 2 — read-only ports | `T023-T037` | Skipped outside `--stage plan` |
-| Slice 3 — decision ports | `T038-T052` | Skipped outside `--stage plan` |
-| Polish and release evidence | `T053-T060` | Skipped outside `--stage plan` |
+| Setup and foundational gates | `T001-T009` | Complete — clean baseline `7399/7399` |
+| Slice 1 — keyboard foundation | `T010-T022` | In progress |
+| Slice 2 — read-only ports | `T023-T037` | Pending |
+| Slice 3 — decision ports | `T038-T052` | Pending |
+| Polish and release evidence | `T053-T060` | Pending |
 
 ---
 
@@ -766,7 +770,7 @@ Final verification:
 
 | Phase | Tasks | Completed | Notes |
 |---|---|---|---|
-| 1 - Keyboard-scroll guard and repair | | | |
+| 1 - Keyboard-scroll guard and repair | `T001-T022` | `T001-T021`; T022 partial | Chromium and Safari 26.6.1 file:// UAT passed 11/11 regions after correcting module-map grid sizing; Safari used Tab and Enter for the five source disclosures; suite `7418/7418` and docs reference check pass; release `--check` waits for the Slice 1 checkpoint commit |
 | 2 - Read-only ports | | | |
 | 3 - Decision ports | | | |
 | 4 - Shared integration and UAT | | | |
@@ -777,20 +781,20 @@ Final verification:
 
 | Canonical Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | ⏭️ Skipped | Outside explicit `--stage plan` |
-| Post: Verify Implementation | ⏭️ Skipped | Outside explicit `--stage plan` |
-| Post: Verify Tasks Phantom Check | ⏭️ Skipped | Outside explicit `--stage plan` |
-| Post: Code Review | ⏭️ Skipped | Outside explicit `--stage plan` |
-| Post: Integration Suite | ⏭️ Skipped | Outside explicit `--stage plan` |
-| Post: Reviewability Diff Gate | ⏭️ Skipped | Outside explicit `--stage plan` |
-| Post: Self-Review | ⏭️ Skipped | Outside explicit `--stage plan` |
-| Post: UAT Runbook Generation | ⏭️ Skipped | Outside explicit `--stage plan` |
-| Post: Final Reviewability Backstop | ⏭️ Skipped | Outside explicit `--stage plan` |
-| Post: PR Packet/Body Generation | ⏭️ Skipped | Outside explicit `--stage plan` |
-| Post: PR Body Generation | ⏭️ Skipped | Outside explicit `--stage plan` |
-| Post: PR Creation | ⏭️ Skipped | Outside explicit `--stage plan` |
-| Post: Review Remediation | ⏭️ Skipped | Outside explicit `--stage plan` |
-| Post: Retrospective | ⏭️ Skipped | Outside explicit `--stage plan` |
+| Post: Doctor Extension Check | ⏳ Pending | Runs after G7 |
+| Post: Verify Implementation | ⏳ Pending | Runs after G7 |
+| Post: Verify Tasks Phantom Check | ⏳ Pending | Runs after G7 |
+| Post: Code Review | ⏳ Pending | Runs after G7 |
+| Post: Integration Suite | ⏳ Pending | Runs after G7 |
+| Post: Reviewability Diff Gate | ⏳ Pending | Runs after G7 |
+| Post: Self-Review | ⏳ Pending | Runs after G7 |
+| Post: UAT Runbook Generation | ⏳ Pending | Runs after G7 |
+| Post: Final Reviewability Backstop | ⏳ Pending | Runs after G7 |
+| Post: PR Packet/Body Generation | ⏳ Pending | Runs after G7 |
+| Post: PR Body Generation | ⏳ Pending | Runs after G7 |
+| Post: PR Creation | ⏳ Pending | Runs after G7 |
+| Post: Review Remediation | ⏳ Pending | Runs after G7 |
+| Post: Retrospective | ⏳ Pending | Final Post item |
 
 - [ ] All tasks complete.
 - [ ] Layer 1 and Layer 4 pass.

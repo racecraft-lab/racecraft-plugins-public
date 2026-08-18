@@ -7185,6 +7185,409 @@ class CanonicalBlockAgreementFixtureTests(CanonicalBlockAgreementFixtureCase):
         self.assertEqual(check_k2(self.gallery), [])
 
 
+# ---------------------------------------------------------------------------
+# Group L — horizontal keyboard-scroll regions (FR-022, FR-023)
+# ---------------------------------------------------------------------------
+
+KEYBOARD_SCROLL_ATTRIBUTE = "data-rc-keyboard-scroll"
+KEYBOARD_SCROLL_VALUE = "horizontal"
+KEYBOARD_SCROLL_TARGET_IDS: frozenset[str] = frozenset(
+    {
+        "animation-prototype",
+        "code-approaches",
+        "component-variants",
+        "design-system",
+        "implementation-plan",
+        "interaction-prototype",
+        "module-map",
+        "svg-illustrations",
+        "visual-designs",
+    }
+)
+PREDECLARATION_KEYBOARD_SCROLL_ROUTE_IDS: frozenset[str] = frozenset(
+    {"annotated-diff", "flowchart"}
+)
+REPAIRED_KEYBOARD_SCROLL_REGION_MINIMUMS: dict[str, int] = {
+    "code-approaches": 3,
+    "implementation-plan": 2,
+    "module-map": 6,
+}
+REPAIRED_KEYBOARD_SCROLL_TARGET_IDS: frozenset[str] = frozenset(
+    REPAIRED_KEYBOARD_SCROLL_REGION_MINIMUMS
+)
+
+# This is deliberately a bounded raw-source check rather than a CSS parser. It
+# catches the two values the gallery uses to opt into horizontal scrolling and
+# does not try to map selectors back to elements. The declaration in markup is
+# the source of truth for that relationship.
+_HORIZONTAL_OVERFLOW_RE = re.compile(r"(?i)\boverflow-x\s*:\s*(?:auto|scroll)\b")
+_GENERIC_SCROLL_LABELS: frozenset[str] = frozenset(
+    {
+        "horizontal scroll area",
+        "horizontal scroll container",
+        "horizontal scroll region",
+        "scroll area",
+        "scroll container",
+        "scroll region",
+        "scrollable area",
+        "scrollable container",
+        "scrollable region",
+    }
+)
+
+
+class _KeyboardScrollDocument(NamedTuple):
+    """One manifest-shipped artifact and its parsed element positions."""
+
+    artifact_id: str
+    label: str
+    text: str
+    elements: tuple[_Element, ...]
+
+
+class _KeyboardScrollRegion(NamedTuple):
+    """One declared horizontal region, in declaration order within its artifact."""
+
+    artifact_id: str
+    source_order: int
+    accessible_name: str
+    element: _Element
+
+
+def _attribute_values(element: _Element, name: str) -> list[str]:
+    return [value for attribute, value in element.attributes if attribute == name]
+
+
+def _declares_horizontal_keyboard_scroll(element: _Element) -> bool:
+    return _attribute_values(element, KEYBOARD_SCROLL_ATTRIBUTE) == [KEYBOARD_SCROLL_VALUE]
+
+
+def _specific_scroll_label(value: str) -> bool:
+    normalized = " ".join(value.split()).casefold()
+    return bool(normalized) and normalized not in _GENERIC_SCROLL_LABELS
+
+
+def _shipped_keyboard_scroll_documents(gallery_root: Path) -> list[_KeyboardScrollDocument]:
+    """Manifest-shipped artifacts, parsed once each in manifest order."""
+    documents: list[_KeyboardScrollDocument] = []
+    resolved, _ = _derived_artifacts(gallery_root, SHIPPED)
+    for _, identifier, path in resolved:
+        if not path.is_file():
+            continue  # D1 owns a shipped entry whose derived artifact is absent
+        text = _document_text(path)
+        documents.append(
+            _KeyboardScrollDocument(
+                artifact_id=identifier,
+                label=_artifact_label(identifier),
+                text=text,
+                elements=tuple(_elements(text)),
+            )
+        )
+    return documents
+
+
+def _shipped_keyboard_scroll_target_ids(gallery_root: Path) -> set[str]:
+    """Target IDs marked shipped, held independently from the document sweep."""
+    entries = _entries(gallery_root)
+    if entries is None:
+        return set()
+    targets: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("status") != SHIPPED:
+            continue
+        identifier = entry.get("id")
+        if isinstance(identifier, str) and identifier in KEYBOARD_SCROLL_TARGET_IDS:
+            targets.add(identifier)
+    return targets
+
+
+def _keyboard_scroll_regions(gallery_root: Path) -> list[_KeyboardScrollRegion]:
+    """Declared regions with artifact ID, declaration order, and accessible name."""
+    regions: list[_KeyboardScrollRegion] = []
+    for document in _shipped_keyboard_scroll_documents(gallery_root):
+        source_order = 0
+        for element in document.elements:
+            if not _declares_horizontal_keyboard_scroll(element):
+                continue
+            source_order += 1
+            labels = _attribute_values(element, "aria-label")
+            accessible_name = labels[0].strip() if len(labels) == 1 else ""
+            regions.append(
+                _KeyboardScrollRegion(
+                    artifact_id=document.artifact_id,
+                    source_order=source_order,
+                    accessible_name=accessible_name,
+                    element=element,
+                )
+            )
+    return regions
+
+
+def _keyboard_scroll_region_label(region: _KeyboardScrollRegion) -> str:
+    return (
+        f"{_artifact_label(region.artifact_id)}: declared keyboard-scroll region "
+        f"source-order {region.source_order}"
+    )
+
+
+def _document_has_keyboard_scroll_route(document: _KeyboardScrollDocument) -> bool:
+    """Whether a document declares a route or carries the complete legacy route.
+
+    ``annotated-diff`` and ``flowchart`` shipped the complete keyboard route
+    before the explicit data declaration existed. Treating their focusable,
+    grouped, specifically named regions as routes keeps this guard focused on
+    the five still-unreachable source declarations while every new or repaired
+    region adopts the explicit marker.
+    """
+    if any(_declares_horizontal_keyboard_scroll(element) for element in document.elements):
+        return True
+    if document.artifact_id not in PREDECLARATION_KEYBOARD_SCROLL_ROUTE_IDS:
+        return False
+    for element in document.elements:
+        if _attribute_values(element, "tabindex") != ["0"]:
+            continue
+        if _attribute_values(element, "role") != ["group"]:
+            continue
+        labels = _attribute_values(element, "aria-label")
+        if len(labels) == 1 and _specific_scroll_label(labels[0]):
+            return True
+    return False
+
+
+def check_l1(gallery_root: Path) -> list[str]:
+    """L1 — every declared horizontal region has exactly ``tabindex=\"0\"``."""
+    return [
+        f"{_keyboard_scroll_region_label(region)}: expected exactly tabindex=\"0\", "
+        f"found {_attribute_values(region.element, 'tabindex')!r}"
+        for region in _keyboard_scroll_regions(gallery_root)
+        if _attribute_values(region.element, "tabindex") != ["0"]
+    ]
+
+
+def check_l2(gallery_root: Path) -> list[str]:
+    """L2 — every declared horizontal region has exactly ``role=\"group\"``."""
+    return [
+        f"{_keyboard_scroll_region_label(region)}: expected exactly role=\"group\", "
+        f"found {_attribute_values(region.element, 'role')!r}"
+        for region in _keyboard_scroll_regions(gallery_root)
+        if _attribute_values(region.element, "role") != ["group"]
+    ]
+
+
+def check_l3(gallery_root: Path) -> list[str]:
+    """L3 — every declared horizontal region has one specific ``aria-label``."""
+    failures: list[str] = []
+    for region in _keyboard_scroll_regions(gallery_root):
+        labels = _attribute_values(region.element, "aria-label")
+        prefix = _keyboard_scroll_region_label(region)
+        if len(labels) != 1:
+            failures.append(f"{prefix}: expected exactly one specific aria-label, found {labels!r}")
+        elif not labels[0].strip():
+            failures.append(f"{prefix}: aria-label is empty after trimming")
+        elif not _specific_scroll_label(labels[0]):
+            failures.append(f"{prefix}: aria-label {labels[0].strip()!r} is generic")
+    return failures
+
+
+def check_l4(gallery_root: Path) -> list[str]:
+    """L4 — no manifest-shipped artifact uses a positive ``tabindex``."""
+    failures: list[str] = []
+    for document in _shipped_keyboard_scroll_documents(gallery_root):
+        for element in document.elements:
+            for value in _attribute_values(element, "tabindex"):
+                try:
+                    positive = int(value.strip()) > 0
+                except ValueError:
+                    positive = False
+                if positive:
+                    failures.append(
+                        f"{document.label}: element source-order {element.order + 1}: "
+                        f"positive tabindex {value!r} replaces the document's sequential focus order"
+                    )
+    return failures
+
+
+def check_l5(gallery_root: Path) -> list[str]:
+    """L5 — raw horizontal-overflow declarations have a keyboard route."""
+    failures: list[str] = []
+    for document in _shipped_keyboard_scroll_documents(gallery_root):
+        matches = list(_HORIZONTAL_OVERFLOW_RE.finditer(document.text))
+        if not matches or _document_has_keyboard_scroll_route(document):
+            continue
+        for match in matches:
+            line = document.text.count("\n", 0, match.start()) + 1
+            declaration = " ".join(match.group(0).split())
+            failures.append(
+                f"{document.label}: line {line}: horizontal overflow styling {declaration!r} has no "
+                f"{KEYBOARD_SCROLL_ATTRIBUTE}=\"{KEYBOARD_SCROLL_VALUE}\" declaration"
+            )
+    return failures
+
+
+GROUP_L_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("L1", check_l1),
+    ("L2", check_l2),
+    ("L3", check_l3),
+    ("L4", check_l4),
+    ("L5", check_l5),
+)
+
+
+class KeyboardScrollGuardTests(unittest.TestCase):
+    """Group L against the shipped gallery."""
+
+    def test_group_l_passes_against_the_shipped_gallery(self) -> None:
+        self.maxDiff = None
+        for name, check in GROUP_L_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+    def test_keyboard_scroll_target_artifacts_are_swept_when_shipped(self) -> None:
+        shipped_targets = _shipped_keyboard_scroll_target_ids(GALLERY_ROOT)
+        swept = {document.artifact_id for document in _shipped_keyboard_scroll_documents(GALLERY_ROOT)}
+
+        self.assertEqual(
+            shipped_targets,
+            swept.intersection(KEYBOARD_SCROLL_TARGET_IDS),
+            "a shipped keyboard-scroll target artifact is outside the collector sweep",
+        )
+
+    def test_repaired_keyboard_scroll_regions_are_declared_for_manual_review(self) -> None:
+        regions = [
+            region
+            for region in _keyboard_scroll_regions(GALLERY_ROOT)
+            if region.artifact_id in REPAIRED_KEYBOARD_SCROLL_TARGET_IDS
+        ]
+
+        for artifact_id, minimum in REPAIRED_KEYBOARD_SCROLL_REGION_MINIMUMS.items():
+            with self.subTest(msg=artifact_id):
+                declared = sum(region.artifact_id == artifact_id for region in regions)
+                self.assertGreaterEqual(
+                    declared,
+                    minimum,
+                    f"{artifact_id}: expected at least {minimum} declared region(s) for keyboard focus-order review",
+                )
+
+
+class KeyboardScrollGuardFixtureTests(GalleryFixtureCase):
+    """Group L against synthetic shipped artifacts built in a temporary directory."""
+
+    def write_scroll_artifact(
+        self,
+        body: str,
+        *,
+        identifier: str = "keyboard-scroll-sample",
+        status: str = SHIPPED,
+    ) -> None:
+        self.write(MANIFEST_FILE, json.dumps({"templates": [{"id": identifier, "status": status}]}, indent=2))
+        self.write(
+            f"{TEMPLATES_DIR}/{identifier}.html",
+            "<!doctype html>\n"
+            "<html lang=\"en\">\n"
+            "<head><title>Keyboard Scroll Fixture</title></head>\n"
+            f"<body>\n{body}\n</body>\n"
+            "</html>\n",
+        )
+
+    def assertKeyboardScrollReports(self, failures: list[str], *fragments: str) -> None:
+        self.assertReports(failures, "keyboard-scroll-sample", *fragments)
+
+    def test_accepts_a_declared_scroll_region_with_keyboard_route(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="Keyboard scroll fixture comparison table"></section>'
+        )
+
+        self.assertEqual([failure for _, check in GROUP_L_CHECKS for failure in check(self.gallery)], [])
+
+    def test_collects_declared_regions_for_manual_focus_order_review(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="First comparison strip"></section>\n'
+            '<div><section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="Second comparison strip"></section></div>'
+        )
+
+        regions = _keyboard_scroll_regions(self.gallery)
+
+        self.assertEqual(
+            [
+                ("keyboard-scroll-sample", 1, "First comparison strip"),
+                ("keyboard-scroll-sample", 2, "Second comparison strip"),
+            ],
+            [(region.artifact_id, region.source_order, region.accessible_name) for region in regions],
+        )
+
+    def test_rejects_declared_scroll_region_without_keyboard_route(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" role="group" '
+            'aria-label="Keyboard scroll fixture comparison table"></section>'
+        )
+
+        self.assertKeyboardScrollReports(check_l1(self.gallery), "source-order 1", 'tabindex="0"')
+
+    def test_rejects_declared_scroll_region_without_group_role(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" '
+            'aria-label="Keyboard scroll fixture comparison table"></section>'
+        )
+
+        self.assertKeyboardScrollReports(check_l2(self.gallery), "source-order 1", 'role="group"')
+
+    def test_rejects_declared_scroll_region_without_accessible_name(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group"></section>'
+        )
+
+        self.assertKeyboardScrollReports(check_l3(self.gallery), "source-order 1", "aria-label")
+
+    def test_rejects_declared_scroll_region_with_empty_accessible_name(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="   "></section>'
+        )
+
+        self.assertKeyboardScrollReports(check_l3(self.gallery), "source-order 1", "aria-label")
+
+    def test_rejects_declared_scroll_region_with_generic_accessible_name(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="scroll area"></section>'
+        )
+
+        self.assertKeyboardScrollReports(check_l3(self.gallery), "source-order 1", "scroll area", "generic")
+
+    def test_rejects_positive_tabindex_anywhere_in_a_shipped_artifact(self) -> None:
+        self.write_scroll_artifact(
+            '<section data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="Keyboard scroll fixture comparison table"></section>\n'
+            '<button tabindex="2">Jump ahead</button>'
+        )
+
+        self.assertKeyboardScrollReports(check_l4(self.gallery), "tabindex", "2")
+
+    def test_rejects_horizontal_overflow_styling_without_a_declared_region(self) -> None:
+        self.write_scroll_artifact(
+            "<style>.wide-region { overflow-x: auto; }</style>\n"
+            '<div class="wide-region"><table><tr><td>wide</td></tr></table></div>'
+        )
+
+        self.assertKeyboardScrollReports(
+            check_l5(self.gallery),
+            "overflow-x: auto",
+            'data-rc-keyboard-scroll="horizontal"',
+        )
+
+    def test_accepts_horizontal_overflow_styling_when_a_region_is_declared(self) -> None:
+        self.write_scroll_artifact(
+            "<style>.wide-region { overflow-x: auto; }</style>\n"
+            '<section class="wide-region" data-rc-keyboard-scroll="horizontal" tabindex="0" role="group" '
+            'aria-label="Keyboard scroll fixture comparison table"></section>'
+        )
+
+        self.assertEqual(check_l5(self.gallery), [])
+
+
 class CheckSignatureTests(unittest.TestCase):
     """Enforce the rule the rest of this module depends on.
 
@@ -7247,6 +7650,8 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     SuiteRegistrationFixtureTests,
     CanonicalBlockAgreementTests,
     CanonicalBlockAgreementFixtureTests,
+    KeyboardScrollGuardTests,
+    KeyboardScrollGuardFixtureTests,
 )
 
 

@@ -7,7 +7,7 @@ This guide validates the approved three-slice ART-004 plan.
 Run each setup-mode reviewability gate with the fixed runner:
 
 ```bash
-cd /Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/art-004-gallery-completion-design-prototyping
+cd "$(git rev-parse --show-toplevel)"
 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner
 ```
 
@@ -43,6 +43,41 @@ Expected checks:
   show visible focus, expose specific names, and remain reachable in source
   order in Safari using Tab or Option-Tab according to the active browser
   setting.
+
+### Slice 1 `file://` UAT Evidence
+
+Playwright Chromium 151.0.7922.138 exercised the authored source files directly
+over `file://` on 2026-08-18 at a 320 by 900 viewport. This run completes the
+browser-independent keyboard-scroll matrix in T018. The Safari-specific T019
+result is recorded below as a separate browser run.
+
+| Artifact | Regions | Keyboard route | Source order | ArrowRight result | Focus and name | Focus exit | Result |
+|---|---:|---|---|---|---|---|---|
+| `code-approaches` | 3 | Tab | 1, 2, 3 | Every region moved from `scrollLeft=0` to `40` | Every region exposed its specific `aria-label`, `role="group"`, and a 2 px solid focus outline | Tab left every region | Pass |
+| `implementation-plan` | 2 | Tab | 1, 2 | Every region moved from `scrollLeft=0` to `40` | Every region exposed its specific `aria-label`, `role="group"`, and a 2 px solid focus outline | Tab left every region | Pass |
+| `module-map` | 6 | Tab; Enter opened each of the five `Show source` disclosures | 1 through 6 | Every region moved from `scrollLeft=0` to `40` | Every region exposed its specific `aria-label`, `role="group"`, and a 2 px solid focus outline | Tab left every region | Pass |
+
+Observed accessible names, in source order:
+
+- `code-approaches`: `Code example for the inline timer approach`, `Code
+  example for the shared debounce hook approach`, and `Code example for the
+  third-party debounce library approach`.
+- `implementation-plan`: `Offline draft sync data flow diagram` and `Risks and
+  mitigations for offline draft sync`.
+- `module-map`: `Offline draft sync module request path diagram`, `Draft editor
+  source example`, `Local draft store source example`, `Push and replay source
+  example`, `Drafts table migration source example`, and `Conflict worker
+  source example`.
+
+Safari status: pass. Safari 26.6.1 exercised the same authored source files over
+`file://` on 2026-08-18 with a requested 320 by 900 window and a measured 336
+by 825 content viewport. The active sequential keyboard route was **Tab**.
+All 11 regions were reached in source order, exposed the same specific names
+and `role="group"`, showed the 2 px solid focus outline, moved from
+`scrollLeft=0` to `40` with ArrowRight, and released focus with Tab. The five
+`module-map` source disclosures opened with Enter before their code regions
+entered the focus sequence. No positive `tabindex` and no keyboard trap were
+observed.
 
 ## Slice 2 Validation
 

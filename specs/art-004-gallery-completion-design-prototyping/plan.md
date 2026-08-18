@@ -282,7 +282,7 @@ Slice 1 has no new ART-004 upstream source; it repairs already shipped gallery t
 Gate command for each durable input:
 
 ```bash
-cd /Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/art-004-gallery-completion-design-prototyping
+cd "$(git rev-parse --show-toplevel)"
 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner
 ```
 
