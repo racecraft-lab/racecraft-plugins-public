@@ -319,3 +319,7 @@
 ### T075
 
 **Deviations/Edge cases/Surprises:** The explicit seven-path `git diff --numstat` measurement reports 949 physical template lines, including 458 byte-identical canonical marker-block lines, leaving 491 non-canonical template lines. With 164 incremental focused-test lines, final reviewable implementation is 655 LOC: 130 below the 785 ceiling and 145 below the mandatory 800 stop. One production template and exactly seven declared authored paths remain in scope, so regeneration may proceed.
+
+### T076
+
+**Deviations/Edge cases/Surprises:** Authoritative regeneration and docs `reference:generate` completed, focused gallery and fill checks passed 494/494 and 63/63, Layer 1 passed 1,448/1,448, isolated Layer 4 passed 5,783/5,783, and the isolated default suite passed 7,417/7,417. Source checkpoint `9b0fdb9e6d1af9266dd7e27616091df3e9ebaa49` is clean; its post-commit generated-artifact check passes, and packet-excluded spec-index mutation dry-run/read-only checks report zero stale maps/current index. An initially relative packet restore destination failed after a directory change; the exact temporary packet tree was immediately restored to its absolute destination and its complete inventory verified.
