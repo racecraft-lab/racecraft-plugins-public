@@ -1263,6 +1263,32 @@ def workflow_recorded_stage(lines: list[str]) -> str | None:
     return None
 
 
+def workflow_draft_pr_row(lines: list[str]) -> dict[str, Any] | None:
+    """The `Draft PR` row of `### Basic Information`, or None when absent (legal).
+
+    Sibling of `workflow_recorded_stage`, differing only in the key it matches and in
+    parsing a linked value rather than a bare scalar. Takes lines whose HTML comment
+    spans the caller has already blanked, exactly as `workflow_stage_signals` does, so
+    a commented-out row is never read as evidence. A malformed value reads as absent
+    rather than raising: the workflow file is operator-edited prose, and a traceback
+    there would stop a run over a typo.
+
+    `number` is an int because corroboration compares it against the number a `--json`
+    query returns; a string would silently never match.
+    """
+    for cells in workflow_table_rows(lines, AUTOPILOT_BASIC_INFO_HEADING):
+        if len(cells) >= 2 and cells[0].strip("*` ").casefold() == "draft pr":
+            # The link target admits neither whitespace nor parentheses, so a gap note
+            # carrying its own parentheses or a second link cannot be swallowed into
+            # the URL and corrupt the identity. The em dash is the separator, not part
+            # of the note; no other separator form is specified.
+            match = re.fullmatch(r"\[#(\d+)\]\(([^()\s]+)\)(?: — (.+))?", cells[1])
+            if match is None:
+                return None
+            return {"number": int(match.group(1)), "url": match.group(2), "gap_note": match.group(3)}
+    return None
+
+
 def auto_detect_basis(first_open: tuple[str, str | None] | None) -> str:
     """The plain-English reason the orchestrator prints before phase work begins.
 
