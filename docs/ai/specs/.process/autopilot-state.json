@@ -5,8 +5,8 @@
   "branch": "art-004-gallery-completion-design-prototyping",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 3: Plan - checkpoint commit",
-  "updated_at": "2026-08-18T02:26:30Z",
+  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-08-18T03:24:45Z",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
     "consensus_mode": "moderate",
@@ -139,13 +139,13 @@
     {"step": "Phase 2: Clarify - Global keyboard-scroll guard", "status": "completed"},
     {"step": "Phase 2: Clarify - Global keyboard-scroll guard Consensus", "status": "skipped: executor reported zero unresolved items"},
     {"step": "Phase 3: Plan", "status": "completed"},
-    {"step": "Phase 4: Checklist - ux", "status": "pending"},
-    {"step": "Phase 4: Checklist - ux Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - accessibility", "status": "pending"},
-    {"step": "Phase 4: Checklist - accessibility Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - error-handling", "status": "pending"},
-    {"step": "Phase 4: Checklist - error-handling Consensus", "status": "pending"},
-    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 4: Checklist - ux", "status": "completed"},
+    {"step": "Phase 4: Checklist - ux Consensus", "status": "skipped: executor reported zero unresolved items"},
+    {"step": "Phase 4: Checklist - accessibility", "status": "completed"},
+    {"step": "Phase 4: Checklist - accessibility Consensus", "status": "skipped: executor reported zero unresolved items"},
+    {"step": "Phase 4: Checklist - error-handling", "status": "completed"},
+    {"step": "Phase 4: Checklist - error-handling Consensus", "status": "skipped: executor reported zero unresolved items"},
+    {"step": "Phase 5: Tasks", "status": "in_progress"},
     {"step": "Phase 6: Analyze", "status": "pending"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
@@ -189,6 +189,15 @@
       "decision": "approved three-slice topology",
       "slice_results": ["160/pass", "590/warn", "520/warn"],
       "prior_attempt": "combined topology blocked at 865 LOC and 9 production files"
+    },
+    "G4": {
+      "pass": true,
+      "markers": 0,
+      "reason": "0 [Gap] markers across spec, plan, and all three checklist domains",
+      "checklist_items": 111,
+      "initial_gaps": 16,
+      "fixed_gaps": 16,
+      "unresolved_for_consensus": 0
     }
   },
   "phase_results": {
@@ -241,6 +250,49 @@
       "decision": "approve three slices",
       "downstream": "Checklist may start",
       "prior_attempt": "combined topology blocked at 865 LOC and 9 production files"
+    },
+    "checklist_ux": {
+      "status": "completed",
+      "items": 36,
+      "initial_gaps": 3,
+      "fixed_gaps": 3,
+      "remaining_gaps": 0,
+      "remediation_loops": 1,
+      "unresolved_for_consensus": 0,
+      "consensus": "skipped: executor reported zero unresolved items"
+    },
+    "checklist_accessibility": {
+      "status": "completed",
+      "items": 37,
+      "initial_gaps": 9,
+      "fixed_gaps": 9,
+      "remaining_gaps": 0,
+      "remediation_loops": 1,
+      "unresolved_for_consensus": 0,
+      "consensus": "skipped: executor reported zero unresolved items",
+      "recovery": "initial executor interrupted after repeated no-progress; replacement executor completed"
+    },
+    "checklist_error_handling": {
+      "status": "completed",
+      "items": 38,
+      "initial_gaps": 4,
+      "fixed_gaps": 4,
+      "remaining_gaps": 0,
+      "remediation_loops": 1,
+      "unresolved_for_consensus": 0,
+      "consensus": "skipped: executor reported zero unresolved items",
+      "non_blocking_error": "initial checklist path was corrected before verification; final artifact is under WORKFLOW_ROOT"
+    },
+    "checklist": {
+      "status": "completed",
+      "domains": ["ux", "accessibility", "error-handling"],
+      "items": 111,
+      "initial_gaps": 16,
+      "fixed_gaps": 16,
+      "remaining_gaps": 0,
+      "current_functional_requirements": 17,
+      "gate": "G4 passed",
+      "downstream": "Tasks may start"
     }
   }
 }

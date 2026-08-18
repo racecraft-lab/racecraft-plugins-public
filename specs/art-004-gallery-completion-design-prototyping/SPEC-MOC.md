@@ -32,6 +32,9 @@ upstream templates and absorbs ART-020's keyboard-scroll repair and guard.
 - [contracts/reviewability-slice-1-keyboard-foundation.md](contracts/reviewability-slice-1-keyboard-foundation.md)
 - [contracts/reviewability-slice-2-read-only-ports.md](contracts/reviewability-slice-2-read-only-ports.md)
 - [contracts/reviewability-slice-3-decision-ports.md](contracts/reviewability-slice-3-decision-ports.md)
+- [checklists/accessibility.md](checklists/accessibility.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/ux.md](checklists/ux.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

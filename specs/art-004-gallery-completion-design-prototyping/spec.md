@@ -46,10 +46,10 @@ A reader can open each of the six new design and prototyping files directly from
 |---|---|
 | `visual-designs` | Four directions remain visible; the light/dark background choice updates every stage; exports use the selected direction and rationale. |
 | `design-system` | Color, typography, spacing, shape, and components sections render offline; every wide region is keyboard-scrollable and named. |
-| `component-variants` | Padding, border, shadow, all variant states, the live snippet, and selected base-variant/rationale exports remain operable. |
-| `animation-prototype` | The task completes through its staged sequence; easing controls update the active choice and timing. |
-| `interaction-prototype` | Dragging exposes the insertion indicator, reorders the DOM, and removes transient dragging state at completion. |
-| `svg-illustrations` | Queue, retry, and fan-out illustrations plus palette rules render inline without external assets or any export affordance. |
+| `component-variants` | Padding value, border selection, shadow state, all variant states, reset-to-default behavior, the live snippet, and selected base-variant/rationale exports remain operable. |
+| `animation-prototype` | The task completes through its staged sequence, the second task activation visibly resets the row, and easing controls update the active choice and timing. |
+| `interaction-prototype` | Dragging exposes the insertion indicator, reorders the DOM, removes transient dragging state at completion, and provides a visible path back to the initial retained order. |
+| `svg-illustrations` | Queue, retry, and fan-out illustrations plus palette rules render inline without external assets; upstream download controls are omitted because this catalog row declares no exports. |
 
 ---
 
@@ -75,6 +75,11 @@ A reader chooses one visual direction or one base component variant, records a r
 - Optional typeface substitution occurs because the preferred typeface is not available offline.
 - A pinned upstream template contains repeated examples that can be compacted without losing a distinct section, state, motion, or interaction.
 - A horizontal overflow region is visually subtle, nested inside a larger section, or introduced by a new port rather than one of the five known affected shipped regions.
+- Safari keyboard navigation requires browser or system settings that make all
+  webpage controls reachable by sequential keyboard navigation.
+- A reader enables reduced motion while reviewing animation timing, drag or
+  linked-screen transitions, background/theme transitions, or horizontal scroll
+  behavior.
 - The plan-time reviewability gate blocks the chosen combined slice.
 
 ## Clarifications
@@ -129,19 +134,44 @@ A reader chooses one visual direction or one base component variant, records a r
 ### Functional Requirements
 
 - **FR-001**: The gallery MUST ship one directly openable local artifact for each planned design and prototyping entry: `visual-designs`, `design-system`, `component-variants`, `animation-prototype`, `interaction-prototype`, and `svg-illustrations`.
-- **FR-002**: Each new artifact MUST work fully offline when opened directly from the local file system, with no build step, bundled runtime, sibling asset, or external dependency except optional typeface substitution.
-- **FR-003**: Each new artifact MUST preserve every distinct section, state, motion, decision surface, and interaction from its pinned upstream source while allowing only the repeated sample groups named in the Functional Fidelity Inventory to be compacted.
+- **FR-002**: Each new artifact MUST work fully offline when opened directly from the local file system, with no build step, bundled runtime, sibling asset, or external dependency except optional typeface substitution. If the preferred typeface is unavailable or its remote request fails, the artifact MUST fall through to the canonical brand-kit system or generic font stacks, keep visible text and controls readable, and avoid making any icon font or private-use glyph the only carrier of control, status, or artifact meaning.
+- **FR-003**: Each new artifact MUST preserve every distinct section, state, motion, decision surface, and interaction from its pinned upstream source while allowing only the repeated sample groups named in the Functional Fidelity Inventory to be compacted. For read-only artifacts, this preservation is constrained by FR-009: upstream export, copy, or download controls are not retained as active, disabled, or placeholder controls when the manifest declares `exports: []`; the informational content they expose MUST remain discoverable in-page.
 - **FR-004**: All six upstream sources MUST be pinned to `anthropics/html-effectiveness` commit `58c305be97f47b26b678f2c07dec01d4242268ec` and carry the exact five-label attribution header with the matching source filename recorded in `manifest.json`.
 - **FR-005**: Each new artifact MUST embed the canonical `BRAND-KIT` and `GALLERY-HEAD` regions with their markers byte for byte.
-- **FR-006**: Each new port MUST change exactly one existing catalog value, its status from planned to shipped; identifiers, categories, stages, triggers, source metadata, when-to-use text, signal vocabulary, and export declarations MUST remain stable.
+- **FR-006**: Each new port MUST change exactly one existing catalog value, its status from planned to shipped; identifiers, categories, stages, triggers, source metadata, when-to-use text, signal vocabulary, and export declarations MUST remain stable. Manifest validation MUST treat any missing row, extra row, non-status field mutation, or wrong status-flip count as blocking drift.
 - **FR-007**: `visual-designs` MUST allow exactly one keyboard-persistent selected visual direction plus a required reader-provided rationale and MUST expose visible controls labeled `Copy as prompt` and `Copy as Markdown`; its payload MUST follow the Decision Export Contract.
 - **FR-008**: `component-variants` MUST show all required component states, allow exactly one keyboard-persistent selected base variant plus a required reader-provided rationale, and expose visible controls labeled `Copy as prompt` and `Copy as Markdown`; its payload MUST follow the Decision Export Contract.
-- **FR-009**: `design-system`, `animation-prototype`, `interaction-prototype`, and `svg-illustrations` MUST remain read-only and MUST NOT expose prompt, Markdown, or other export affordances.
-- **FR-010**: Prompt and Markdown exports MUST derive from the live reader state in the exact Decision Export Contract order, name the conclusion and rationale, include enough context to act without reopening the page, reject incomplete decisions accessibly before calling the clipboard, announce copy results in text, reveal a focused selectable fallback containing the same payload when clipboard access is refused, and prevent stale copy attempts from replacing newer feedback.
+- **FR-009**: `design-system`, `animation-prototype`, `interaction-prototype`, and `svg-illustrations` MUST remain read-only and MUST NOT expose prompt, Markdown, copy, download, disabled export-looking controls, or other export affordances, including upstream-derived `Download SVG` controls.
+- **FR-010**: Prompt and Markdown exports MUST derive from the live reader state in the exact Decision Export Contract order, name the conclusion and rationale, include enough context to act without reopening the page, reject incomplete decisions accessibly before calling the clipboard, announce copy results in text, reveal a focused selectable fallback containing the same payload when clipboard access is refused, and prevent stale copy attempts from replacing newer feedback. Clipboard refusal includes an unavailable Clipboard API, missing or non-callable `writeText`, a synchronous clipboard exception, a rejected write promise, denied permission, or a local-file security restriction; every refusal mode uses the same fallback path without retrying or reporting success.
 - **FR-011**: Every intentional horizontal overflow region in shipped and newly completed artifacts MUST declare `data-rc-keyboard-scroll="horizontal"`, be sequentially focusable with `tabindex="0"`, use `role="group"`, and have a specific non-empty `aria-label`.
 - **FR-012**: The five existing affected horizontal scroll containers in `code-approaches`, `implementation-plan`, and `module-map` MUST receive the declaration, keyboard focus, group role, and accessible-name repair required for new wide regions.
 - **FR-013**: The gallery verification guard MUST sweep every manifest-shipped artifact, reject undeclared horizontal-overflow styling and noncompliant declared regions, prove the nine ART-004/repaired artifact IDs are included, and contain a synthetic negative fixture whose declared region omits its keyboard route; neither test nor fixture may be named after ART-004 or ART-020.
 - **FR-014**: ART-004 MUST absorb ART-020 completely, mark ART-020 as superseded, keep one combined slice through specification, and stop for a human-approved split if the plan-time reviewability gate blocks the combined scope.
+- **FR-015**: Every interactive control in the six new artifacts and the three
+  repaired artifacts MUST be keyboard operable without pointer input, expose a
+  visible focus indicator, avoid keyboard traps, and remain in a logical
+  source-order focus sequence with no positive `tabindex` values. This includes
+  direction/base-variant selection, background choice, padding slider,
+  border/shadow controls, task completion, easing controls, drag/reorder or
+  linked-screen controls, copy controls, fallback textarea, reset paths, theme
+  control, and declared horizontal-scroll regions.
+- **FR-016**: Every control and custom control group listed in FR-015 MUST have
+  a programmatically determinable name, role, state, and value, plus visible
+  labels or instructions where the reader enters or chooses data. `#export-status`
+  MUST be a polite atomic live status region, fallback textarea controls MUST
+  be labelled, invalid rationale state MUST be exposed with `aria-invalid`
+  only while blank, and copy/status messages MUST not move focus except when
+  clipboard refusal reveals and focuses the fallback textarea.
+- **FR-017**: Both light and dark themes MUST keep all meaningful foreground,
+  background, control, focus, status/error, and SVG/palette pairings within the
+  audited brand-kit WCAG AA contract; normal text uses the 4.5:1 floor, large
+  text and meaningful non-text indicators use the 3:1 floor, and no custom
+  color pairing may be introduced without equivalent measurement. Color MUST
+  NOT be the only carrier of selected, active, invalid, disabled/loading, drag
+  insertion, SVG/palette, or theme/background meaning. When reduced motion is
+  requested, template-added animation, transitions, smooth scrolling, and
+  motion-like feedback MUST be removed or replaced while preserving the same
+  visible state and control meaning.
 
 ### Functional Fidelity Inventory
 
@@ -179,6 +209,37 @@ comments and gallery fill-region validation. `feature-header` is sourced from
 | `interaction-prototype` | `views` | DOM order, dragging row, and insertion indicator |
 | `svg-illustrations` | None | Inline SVG IDs used by internal references only; no export state |
 
+**State visibility and reset requirements**:
+
+- Every stateful control listed above MUST expose its current state in visible
+  text, selected control state, or changed content before any export or UAT
+  observation is accepted.
+- Every stateful control listed above MUST expose a reset path when the state can
+  persist in-page. The reset may be an explicit reset control or a
+  source-faithful visible instruction, but the expected post-reset state must be
+  observable without reading code.
+- `visual-designs` current state is the checked background choice plus the
+  visible stage theme. Selecting another background or direction visibly changes
+  the active choice; no hidden persistence is required.
+- `component-variants` current state is the `#pad-out` value, checked border
+  option, checked shadow control, live card presentation, selected base variant,
+  rationale field, and snippet text. Reset returns padding to `20px`, border to
+  `hairline`, shadow to `shown`, clears transient hover-only emphasis, and
+  refreshes the card/snippet/export context to match those defaults.
+- `animation-prototype` current state is the visible done/not-done task row plus
+  the active easing choice. Activating the task again resets the row to its
+  initial not-done state while preserving the active easing choice.
+- `interaction-prototype` current state is the visible order of retained views,
+  the active dragging row, and the insertion indicator. Reset returns the list to
+  the initial retained order; if the port translates upstream row reordering into
+  linked screens, the active screen name is visible and reset returns to the
+  first retained screen.
+- Keyboard operation, focus visibility, names/roles/states, visible labels or
+  instructions, live status, non-color meaning, both-theme contrast, and reduced
+  motion remain acceptance requirements for every stateful control above. Native
+  HTML controls are preferred; any custom control must declare its accessible
+  role/state/value and keyboard behavior in markup or visible text.
+
 **Load-bearing selector contract**:
 
 - `visual-designs`: `#bg-seg`, `input[name="bg"]`, `.stage`, `.stage.dark`.
@@ -199,7 +260,8 @@ comments and gallery fill-region validation. `feature-header` is sourced from
   input resolves its owning variant and visible `.variant-label` plus
   `data-snippet`/`#snippet` content.
 - Both decision artifacts use a labeled `#rationale-field`, `#export-status`
-  with `role="status"`, `#fallback`, and selectable `#fallback-field`.
+  with `role="status"`, `aria-live="polite"`, and `aria-atomic="true"`,
+  `#fallback`, and a labelled selectable `#fallback-field`.
 
 ### Decision Export Contract
 
@@ -249,13 +311,25 @@ announce `Enter a rationale before copying.` Invalid attempts focus the first
 missing control, set `aria-invalid="true"` only for a blank rationale, and do
 not call the clipboard or expose fallback text.
 
-Before a valid attempt, hide stale fallback content. On clipboard refusal,
-announce exactly `Copy failed. The text is in the field below. Select it and
-copy it by hand.`, place the same live payload in `#fallback-field`, reveal
-`#fallback`, and focus the textarea. Do not retry automatically or infer the
-browser's reason. An invocation counter gates all delayed success/failure
-effects so an older attempt cannot move focus, reveal stale text, or overwrite
-the newest status.
+Before a valid attempt, hide stale fallback content. An export-bearing state
+change, reset, or invalid attempt after a revealed fallback MUST hide
+`#fallback`, clear `#fallback-field`, and leave focus unchanged before the next
+status message so an old payload is never visible beside a newer invalid or
+changed state. On clipboard refusal, announce exactly `Copy failed. The text is
+in the field below. Select it and copy it by hand.`, place the same live payload
+in `#fallback-field`, reveal `#fallback`, and focus the textarea. Treat an
+unavailable Clipboard API, missing or non-callable `writeText`, synchronous
+exception, rejected write promise, denied permission, and local-file security
+restriction as the same refusal outcome. Do not retry automatically, infer the
+browser's reason, or report success for any refusal mode. An invocation counter
+gates all delayed success/failure effects so an older attempt cannot move focus,
+reveal stale text, or overwrite the newest status.
+
+`#export-status` is not focused when its text changes; it exists only to expose
+advisory success, invalid-input, failure, and stale-attempt outcomes to sighted
+readers and assistive technologies. The fallback textarea is the only export
+status path that intentionally receives focus, because the reader must be able
+to select and copy the revealed payload manually.
 
 ### Keyboard-Scroll Guard Contract
 
@@ -266,6 +340,14 @@ non-empty, artifact-specific `aria-label`. It does not implement a CSS parser
 or hard-code ART-020 selectors. A bounded raw-source check for horizontal
 overflow styling rejects an artifact that declares no keyboard-scroll regions,
 preventing the markup contract from passing vacuously.
+
+The guard also rejects positive `tabindex` values in shipped gallery artifacts,
+because sequential focus order must come from native controls and source order.
+Its report records each declared region's artifact ID, source-order index, and
+accessible name so manual Safari UAT can confirm the visible focus sequence
+without relying on CSS order. Label checks reject absent, empty, or generic
+names; the missing-`tabindex` negative fixture proves the keyboard-route
+failure path, while the same guard assertions cover the naming path.
 
 The RED fixture is constructed in the existing in-memory `GalleryFixtureCase`
 style: one synthetic shipped artifact contains one declared horizontal region
@@ -310,10 +392,17 @@ result record; it never overwrites ART-003 harness outputs or results.
 - Traceability MUST map each major requirement or success criterion to changed files and verification evidence.
 - Deferred work MUST name the follow-up spec or issue.
 - Review order MUST separate the ART-020 accessibility repair and guard, the six gallery ports, catalog status flips, generated release artifacts, and PR review packet evidence.
-- Verification evidence MUST include the repository suite result, the global horizontal-scroll guard result, direct local-file/offline artifact checks, export success and clipboard-refusal checks for the two decision artifacts, generated-artifact regeneration evidence, and the plan-time reviewability gate result.
+- Verification evidence MUST include the repository suite result, the global horizontal-scroll guard result, direct local-file/offline artifact checks, a manual UAT matrix with action, observable current-state outcome, and reset or cleanup outcome for every stateful interaction, export success and clipboard-refusal checks for the two decision artifacts, manifest-drift failure evidence, generated-artifact regeneration evidence with stale/missing/mismatched drift categories, and the plan-time reviewability gate result.
+- Accessibility evidence MUST include keyboard operability, no keyboard traps,
+  visible focus, names/roles/states/values, labels or instructions, polite live
+  status, fallback focus, non-color meaning, reduced-motion behavior, and
+  light/dark WCAG AA brand-kit contrast checks for the six new artifacts and
+  the three repaired artifacts.
 - Keyboard-scroll UAT evidence MUST reuse ART-003's real `file://`/CDP focus,
   arrow-key, and scroll-position procedure against the ART-004 target matrix and
-  MUST be recorded separately without altering ART-003 results.
+  MUST be recorded separately without altering ART-003 results. Safari evidence
+  MUST state whether Tab or Option-Tab was used according to the active Safari
+  keyboard-navigation setting.
 - Known gaps MUST explicitly state whether the combined slice passed the authoritative reviewability gate; if it did not pass, the PR must not proceed without the human-approved split.
 
 ### Key Entities *(include if feature involves data)*
@@ -333,15 +422,28 @@ result record; it never overwrites ART-003 harness outputs or results.
 - **SC-003**: 100% of horizontal overflow regions in shipped gallery artifacts carry the declaration, focus, group-role, and naming contract; the global guard fails on the synthetic missing-`tabindex` fixture and proves all nine ART-004/repaired artifact IDs were swept.
 - **SC-004**: For both exportable artifacts, a reader can complete selection, rationale entry, prompt copy, Markdown copy, incomplete-decision validation, clipboard-refusal fallback, and stale-copy-settle checks in under 3 minutes per artifact.
 - **SC-005**: Catalog review confirms exactly six status changes from planned to shipped and zero unintended changes to identifiers, categories, stages, triggers, source metadata, when-to-use text, signal vocabulary, or export declarations.
-- **SC-006**: Release review finds regenerated payloads, proofs, and generated reference artifacts aligned with the authored source changes, with no hand-edited generated mirrors.
+- **SC-006**: Release review finds regenerated payloads, proofs, and generated reference artifacts aligned with the authored source changes, with no hand-edited generated mirrors; stale, missing, extra, truncated, rewritten, or byte-mismatched generated outputs are blocking validation failures.
 - **SC-007**: Plan evidence either clears the authoritative reviewability gate for one combined slice or records a stop before task generation for a human-approved split.
+- **SC-008**: Keyboard-only review can operate 100% of selection, slider,
+  linked-screen or reorder, copy, fallback, reset, theme, and horizontal-scroll
+  controls in logical focus order with visible focus and no trap, including the
+  Safari keyboard-navigation path used for UAT.
+- **SC-009**: Accessibility review confirms 100% of meaningful text,
+  non-text/control indicators, focus indicators, status/error treatments, and
+  SVG/palette annotations use audited light/dark brand-kit pairings or measured
+  equivalents, convey meaning without color alone, and honor reduced-motion
+  preference without losing state or control meaning.
 
 ## Assumptions
 
 - The six gallery entries and the three existing affected shipped artifacts already exist in the catalog and can be updated without changing their identifiers or meaning.
 - The pinned upstream source files remain accessible for planning and implementation evidence, but the upstream originals are not committed as gallery artifacts.
 - Repeated sample groups may shrink only within the Functional Fidelity Inventory's compaction boundary; the remaining samples must still prove the same behavior or design range.
-- Optional typeface substitution is acceptable when a reader is offline, provided the artifacts remain readable and usable.
+- Optional typeface substitution is acceptable when a reader is offline, provided the artifacts remain readable and usable through canonical brand-kit fallback stacks and do not rely on font-only glyphs for meaning.
+- ART-001's canonical brand kit remains the accessibility source of truth for
+  theme control behavior, focus-visible styling, contrast pairings, color-use
+  rules, and reduced-motion defaults unless this feature states a stricter
+  requirement.
 - Empty rationale handling can guide the reader to provide a rationale before export rather than inventing rationale text.
 - Generated release artifacts are derived from authoritative source after authored changes and are excluded from reviewability LOC accounting.
 - No vertical-scroll or unrelated accessibility remediation is part of this feature.

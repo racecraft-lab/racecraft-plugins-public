@@ -85,11 +85,11 @@ not authority for any individual approved slice.
 
 | Phase | Command | Status | Notes |
 |---|---|---|---|
-| Specify | /speckit-specify | ✅ Complete | 14 requirements, 3 stories, 0 unresolved markers; G1 passed |
+| Specify | /speckit-specify | ✅ Complete | 14 initial requirements, 3 stories, 0 unresolved markers; Checklist remediation raised the current requirement total to 17 |
 | Clarify | /speckit-clarify | ✅ Complete | 3 sessions, 15 accepted answers, 0 markers, no consensus fan-out; G2 passed |
 | Plan | /speckit-plan | ✅ Complete | G3 passed for three approved slices: 160 pass, 590 warn, 520 warn; no blockers |
-| Checklist | /speckit-checklist | ⏳ Pending | UX, accessibility, error handling |
-| Tasks | /speckit-tasks | ⏳ Pending | Only after a non-blocking plan |
+| Checklist | /speckit-checklist | ✅ Complete | 111 checks; 16 gaps fixed; 0 remaining; G4 passed |
+| Tasks | /speckit-tasks | 🔄 In Progress | Generate ordered TDD coverage for the three approved slices |
 | Analyze | /speckit-analyze | ⏳ Pending | Cross-check against the design concept |
 | Confidence Gate | G6.5 | ⏳ Pending | Composite pre-implementation confidence |
 | Implement | /speckit-implement | ⏳ Pending | Outside explicit `--stage plan`; mark skipped at the plan-stage boundary |
@@ -546,12 +546,16 @@ Pay special attention to behavior under file:// security restrictions.
 
 | Checklist | Items | Gaps | Spec references |
 |---|---|---|---|
-| ux | | | |
-| accessibility | | | |
-| error-handling | | | |
-| **Total** | | | |
+| ux | 36 | 0 remaining (3 fixed) | `spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, gallery contract |
+| accessibility | 37 | 0 remaining (9 fixed) | keyboard/focus, Safari traversal, semantics/live status, reduced motion, non-color meaning, contrast, UAT evidence |
+| error-handling | 38 | 0 remaining (4 fixed) | file:// refusal, stale fallback, font fallback, blocking drift categories |
+| **Total** | **111** | **0 remaining (16 fixed)** | All three consensus steps skipped: executors reported zero unresolved items |
 
 Resolve every Gap in spec.md or plan.md and rerun its checklist before G4.
+
+- Authoritative `count-markers` result: `total=0`, `spec=0`, `plan=0`,
+  `checklists=0`.
+- **G4 gate: PASS.** All three domains completed with zero unresolved items.
 
 ---
 

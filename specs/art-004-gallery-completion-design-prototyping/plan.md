@@ -20,7 +20,7 @@ The selected interview answers remain binding design rationale: "Functional fide
 
 **Storage**: In-memory DOM state only. The catalog remains the existing JSON manifest with six status-only flips across slices 2 and 3.
 
-**Testing**: Python 3.11+ standard-library Layer 1 and Layer 4 suites through `python3 tests/speckit-pro/run-all.py`; manual direct `file://` UAT for controls, sliders, linked screens, clipboard fallback, focus order, and horizontal keyboard scrolling.
+**Testing**: Python 3.11+ standard-library Layer 1 and Layer 4 suites through `python3 tests/speckit-pro/run-all.py`; manual direct `file://` UAT for controls, sliders, linked screens, clipboard fallback across absent API, rejected write, denied permission, and local-file restriction paths, focus order, horizontal keyboard scrolling, Safari keyboard reachability, visible focus, names/roles/states, live status, reduced motion, non-color meaning, typeface fallback readability, and both-theme contrast.
 
 **Target Platform**: Local browser over `file://`, plus regenerated Claude and Codex plugin payloads.
 
@@ -28,7 +28,7 @@ The selected interview answers remain binding design rationale: "Functional fide
 
 **Performance Goals**: Each artifact opens directly from disk without network access or build work; interaction feedback is immediate in the browser; no runtime persistence.
 
-**Constraints**: Preserve every distinct upstream section, state, motion timing, decision surface, and interaction. Only repeated sample volume named in the spec may shrink. Apply the ART-020 repair before new ports inherit the keyboard-scroll pattern. Centralize no new production helper.
+**Constraints**: Preserve every distinct upstream section, state, motion timing, decision surface, and interaction. Only repeated sample volume named in the spec may shrink. For read-only rows whose manifest `exports` value is `[]`, preserve upstream informational content but omit upstream export, copy, and download controls instead of rendering active, disabled, or placeholder affordances. Apply the ART-020 repair before new ports inherit the keyboard-scroll pattern. Every interactive control must be keyboard operable, visibly focused, named, stateful where applicable, and free of positive `tabindex`; Safari UAT records the active Tab or Option-Tab path. Theme/color work uses audited brand-kit WCAG AA pairings, preserves non-color meaning, uses canonical brand-kit system/generic font fallbacks for offline typeface failure, and suppresses template-added motion under reduced-motion preference. Centralize no new production helper.
 
 **Scale/Scope**: Three ordered slices:
 
@@ -254,7 +254,7 @@ tests/speckit-pro/unit/
 ## Architecture
 
 1. Slice 1 repairs the five existing horizontal-scroll regions and lands the global guard before any new ports copy the pattern.
-2. Slice 2 ports the four read-only artifacts with functional fidelity and no export affordances.
+2. Slice 2 ports the four read-only artifacts with functional fidelity and no export affordances; upstream download/export controls become in-page informational content only when their catalog row declares `exports: []`.
 3. Slice 3 ports the two decision artifacts with live-state prompt/Markdown exports and clipboard fallback.
 4. Each new HTML file remains a self-contained vertical capability; canonical blocks are copied verbatim; no new shared runtime exists.
 5. Manifest status flips are serial: four in slice 2, two in slice 3.
@@ -308,8 +308,12 @@ G3 result: non-blocking for the approved three-slice topology. The plan estimato
 - Red test: today's five existing horizontal scroll containers fail the new global assertion before slice 1 repair.
 - Green test: all existing and new horizontal overflow containers are focusable, named, and declared; the negative fixture still proves the guard rejects a declared region without a keyboard route.
 - Per-port Layer 4 checks: manifest/file presence, attribution header, canonical-block markers, fill-region inventory, export declaration, and offline constraints.
-- Manual `file://` UAT matrix: both themes, keyboard-only operation, slider behavior, linked screens, live selection/rationale exports, clipboard refusal fallback, focus order, and horizontal arrow-key scrolling.
-- Completion gates per slice: `python3 tests/speckit-pro/run-all.py`, `scripts/refresh-release-artifacts.py`, `pnpm --dir docs-site reference:generate` when tracked source/test inputs change, and generated-artifact consistency checks.
+- Accessibility UAT matrix: every selection, slider, linked-screen or reorder, copy, fallback, reset, theme, and horizontal-scroll control is reachable in logical source order, operable by keyboard, visibly focused, and not trapped. Safari rows state whether Tab or Option-Tab is required under the active Safari keyboard-navigation setting.
+- Semantic UAT matrix: every control and custom control group exposes a name, role, state, and value; inputs and choices have visible labels or instructions; export status uses a polite atomic live region; fallback textarea focus is the only copy-status path that intentionally moves focus.
+- Presentation UAT matrix: light and dark themes use audited brand-kit WCAG AA pairings or measured equivalents for text, meaningful non-text indicators, focus indicators, status/error text, and SVG/palette annotations; selected, active, invalid, disabled/loading, drag insertion, theme/background, and SVG/palette meaning is also available without color.
+- Motion UAT matrix: with reduced motion requested, template-added animation, transitions, smooth scrolling, and motion-like feedback are removed or replaced while the same current state, reset, and control meaning remain visible.
+- Manual `file://` UAT matrix: both themes, keyboard-only operation, slider behavior, linked screens or reorderable views, read-only no-export checks, live selection/rationale exports, clipboard refusal fallback across unavailable API, rejected write, denied permission, and local-file restriction paths, focus order, typeface fallback readability, and horizontal arrow-key scrolling. Each row records the precondition, action, expected visible current-state outcome, and reset or cleanup outcome.
+- Completion gates per slice: `python3 tests/speckit-pro/run-all.py`, `scripts/refresh-release-artifacts.py`, `pnpm --dir docs-site reference:generate` when tracked source/test inputs change, and generated-artifact consistency checks. Manifest drift and stale, missing, extra, truncated, rewritten, or byte-mismatched generated outputs are blocking failures until regenerated from authoritative source.
 
 ## Complexity Tracking
 
