@@ -111,14 +111,45 @@ Assumptions:
   manifest status flip and active `.process` UAT evidence contribute to total
   file count; implementation LOC measurement must separately report whether the
   local reviewability tool counts any of those lines.
+- Accessibility checklist remediation adds explicit implementation budget only
+  where it changes per-template behavior: slice 1 gains named slide controls,
+  current-position text, deterministic focus handling, and focused tests; slice 5
+  gains keyboard ticket movement/reordering, movement status, and focused tests.
+  Producer status-region and clipboard fallback semantics for slices 6 and 7
+  were already budgeted under semantic status and visible fallback coverage, so
+  their ceilings do not change. Every revised slice remains below the 800-LOC
+  block threshold.
+- UX checklist remediation adds explicit implementation budget only where it
+  changes per-template behavior: slice 2 gains visible current-count and min/max
+  helper/status feedback for concept controls; slice 5 gains visible empty-column
+  and filtered-empty feedback. Feature-flag and prompt-tuner empty, invalid,
+  dependency, issue, and preview states were already budgeted under schema edge
+  coverage and semantic status-region coverage, so their ceilings do not change.
+  Responsive review bounds are UAT measurement criteria within existing CSS
+  budgets. Every revised slice remains below the 800-LOC block threshold.
+- Data-integrity checklist remediation selects exact issue schemas, issue
+  ordering, raw/normalized representation, live-export freshness proof,
+  clipboard/fallback equality proof, and stale/superseded-attempt evidence
+  already included in the producer schema-edge, deterministic export,
+  clipboard-fallback, semantic-status, and focused-test budgets. It adds no new
+  runtime surface, export kind, persistence, import, download, URL state, server
+  behavior, shared foundation change, or implementation feature. The projected
+  ceilings remain unchanged: `triage-board` 785, `feature-flags` 780, and
+  `prompt-tuner` 790 reviewable LOC.
+- Error-handling checklist remediation makes the already-budgeted recovery matrix
+  explicit: invocation-time absent/non-callable checks, permission and generic
+  rejections, synchronous throw, latest-attempt focus/fallback transitions, and
+  both superseded-settlement directions. These are parameterized cases within the
+  existing clipboard-fallback and stale-attempt test budget, not new runtime
+  surfaces or export paths, so all seven projected ceilings remain unchanged.
 
 | Slice | Artifact | Markup/content | CSS | Behavior JS | Incremental tests | Projected reviewable LOC | Production files | Authored file count | Verdict |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---|
-| 1 | `slide-deck` | 245 | 155 | 95 | 145 | 640 | 1 | 7 | Warn: LOC above 400; no block |
-| 2 | `concept-explainer` | 205 | 120 | 95 | 100 | 520 | 1 | 7 | Warn: LOC above 400; no block |
+| 1 | `slide-deck` | 255 | 155 | 105 | 155 | 670 | 1 | 7 | Warn: LOC above 400; no block |
+| 2 | `concept-explainer` | 205 | 120 | 105 | 105 | 535 | 1 | 7 | Warn: LOC above 400; no block |
 | 3 | `status-report` | 255 | 140 | 20 | 145 | 560 | 1 | 7 | Warn: LOC above 400; no block |
 | 4 | `incident-report` | 285 | 150 | 45 | 140 | 620 | 1 | 7 | Warn: LOC above 400; no block |
-| 5 | `triage-board` | 225 | 145 | 215 | 155 | 740 | 1 | 7 | Warn: LOC above 400; no block |
+| 5 | `triage-board` | 240 | 145 | 230 | 170 | 785 | 1 | 7 | Warn: LOC above 400; no block |
 | 6 | `feature-flags` | 230 | 150 | 245 | 155 | 780 | 1 | 7 | Warn: LOC above 400; no block |
 | 7 | `prompt-tuner` | 235 | 145 | 255 | 155 | 790 | 1 | 7 | Warn: LOC above 400; no block, 10 LOC headroom |
 
@@ -188,6 +219,9 @@ Generated operations are source-derived and must be produced by
 `pnpm --dir docs-site reference:generate`; they are never hand-edited. These are
 declared generated/check operations: an idempotent run can leave an output
 byte-identical, and a byte-identical output should not be claimed as changed.
+Generated mirrors, installed-cache fixtures, proof files, XPLAT evidence, and
+docs references are never export-data sources for ART-005 UAT; export evidence
+must come from the current source artifact opened directly over `file://`.
 
 The generated-path exclusion follows the repository generated-artifact rule in
 `.gitattributes`, which marks `dist/**`, docs reference output, installed-cache
@@ -254,11 +288,16 @@ Authored operations:
 Generated operations: replace `<artifact>` with `slide-deck` in the common
 generated path list above.
 
-UAT increment: direct `file://` open, slide navigation by keyboard and scroll,
-representative content for `deck-title`, at least two anchored `slides`, speaker
-notes, offline reload, complete keyboard traversal, focus visibility,
-light/dark parity, reduced motion, and color-independent meaning. Horizontal
-scroll region checks are recorded as present or evidence-backed not applicable.
+UAT increment: direct `file://` open, named slide navigation group, named
+previous/next or direct-slide controls, current-position text such as `Slide X of
+Y`, deterministic focus behavior after control and non-control slide changes, no
+auto-rotation, slide navigation by keyboard and scroll, representative content
+for `deck-title`, at least two anchored `slides`, speaker notes, offline reload,
+complete keyboard traversal, focus visibility, light/dark parity, reduced motion,
+color-independent meaning, and responsive review at 360 CSS px and at least 1280
+CSS px. Horizontal scroll region checks are recorded as present or
+evidence-backed not applicable with selector, role, name, `tabindex`, and
+actual-scroll-element evidence.
 
 ### Slice 2 - `concept-explainer`
 
@@ -277,7 +316,9 @@ UAT increment: direct `file://` open, transient add/remove/reset and slider
 simulation behavior, representative content for all fill slots with at least
 two anchored simulation scenarios, offline reload, keyboard traversal, focus,
 theme parity, reduced motion, color-independent meaning, and scroll-region
-disposition.
+disposition. Boundary-state checks cover visible current-count and min/max
+helper/status feedback for add/remove/slider limits, and responsive review at
+360 CSS px and at least 1280 CSS px.
 
 ### Slice 3 - `status-report`
 
@@ -295,7 +336,7 @@ generated path list above.
 UAT increment: direct `file://` open, complete static report content, at least
 two anchored items in each list slot, offline reload, keyboard traversal, focus,
 theme parity, reduced motion, color-independent meaning, and scroll-region
-disposition.
+disposition. Responsive review covers 360 CSS px and at least 1280 CSS px.
 
 ### Slice 4 - `incident-report`
 
@@ -314,6 +355,7 @@ UAT increment: direct `file://` open, timeline/report navigation, complete
 impact/root-cause/follow-up content, at least two anchored timeline and
 follow-up items, offline reload, keyboard traversal, focus, theme parity,
 reduced motion, color-independent meaning, and scroll-region disposition.
+Responsive review covers 360 CSS px and at least 1280 CSS px.
 
 ### Slice 5 - `triage-board`
 
@@ -321,19 +363,27 @@ Authored operations:
 
 - **NEW** `speckit-pro/artifact-gallery/templates/triage-board.html`
 - MODIFIED `speckit-pro/artifact-gallery/manifest.json`: flip only `triage-board.status` from `planned` to `shipped`; keep `exports: ["markdown"]`
-- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`: add `triage-board` producer coverage for exact label `Copy as Markdown`, absence of hidden copy/download paths, live-state export generation hooks, visible fallback field, semantic status, and keyboard-accessible board controls
+- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`: add `triage-board` producer coverage for exact label `Copy as Markdown`, absence of hidden copy/download paths, live-state export generation hooks, stale/superseded attempt guards, visible fallback field, semantic status, keyboard-accessible board controls, duplicate ticket IDs, issue appendix ordering, and special-character escaping
 - MODIFIED `tests/speckit-pro/unit/test-artifact-fill-regions.py`: add `FLOOR["triage-board"] = ("triage-items", "column-labels")` and `LIST_SLOTS["triage-board"] = ("triage-items",)`
 - MODIFIED `.process/uat-runbook.md`, `.process/uat-results.md`, and `.process/uat-results.json` under the ART-005 feature directory
 
 Generated operations: replace `<artifact>` with `triage-board` in the common
 generated path list above.
 
-UAT increment: direct `file://` open, memory-only board editing, visible ticket
-ordering by `now`, `next`, `later`, `cut`, deterministic Markdown export, real
-clipboard success with read-back or paste equality, unavailable clipboard,
-rejected promise, synchronous throw, exact focused fallback text, reset on
-reload, keyboard traversal, focus, theme parity, reduced motion, color-independent
-meaning, and scroll-region disposition.
+UAT increment: direct `file://` open, memory-only board editing, named board,
+columns, tickets, filters, reset, and export affordances, keyboard-operable
+ticket movement between columns and reordering within a column, visible ticket
+ordering by `now`, `next`, `later`, `cut`, movement/filter status announcements,
+explicit empty-column and filtered-empty messages, deterministic Markdown export,
+duplicate ticket IDs across columns, fixed issue appendix ordering, empty and
+all-empty board states, multiline Unicode/special-character escaping, multiple
+issue ordering, live-export freshness sentinels, exact per-attempt
+clipboard/fallback equality, superseded copy attempts in both settlement
+directions, real clipboard success with read-back or paste equality, unavailable
+clipboard, rejected promise, synchronous throw, exact focused fallback text,
+reset on reload, keyboard traversal, focus, theme parity, reduced motion,
+color-independent meaning, responsive review at 360 CSS px and at least 1280 CSS
+px, and scroll-region disposition.
 
 ### Slice 6 - `feature-flags`
 
@@ -341,7 +391,7 @@ Authored operations:
 
 - **NEW** `speckit-pro/artifact-gallery/templates/feature-flags.html`
 - MODIFIED `speckit-pro/artifact-gallery/manifest.json`: flip only `feature-flags.status` from `planned` to `shipped`; keep `exports: ["markdown"]`
-- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`: add `feature-flags` producer coverage for exact label `Copy as Markdown`, single fenced JSON block in Markdown, field/order/schema expectations, issue recording, visible fallback field, semantic status, and no hidden copy/download paths
+- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`: add `feature-flags` producer coverage for exact label `Copy as Markdown`, single fenced JSON block in Markdown, field/order/schema expectations, JSON round-trip, duplicate group/flag identifiers, raw invalid rollout/dependency values, deterministic issue recording, stale/superseded attempt guards, visible fallback field, semantic status, and no hidden copy/download paths
 - MODIFIED `tests/speckit-pro/unit/test-artifact-fill-regions.py`: add `FLOOR["feature-flags"] = ("flags", "environment-notes")` and `LIST_SLOTS["feature-flags"] = ("flags",)`
 - MODIFIED `.process/uat-runbook.md`, `.process/uat-results.md`, and `.process/uat-results.json` under the ART-005 feature directory
 
@@ -350,9 +400,15 @@ generated path list above.
 
 UAT increment: direct `file://` open, memory-only flag toggles and dependency
 warnings, deterministic Markdown wrapper with one JSON block, null/empty/invalid
-edge representation, real clipboard success, unavailable/rejected/throw fallback
-paths, reset on reload, keyboard traversal, focus, theme parity, reduced motion,
-color-independent meaning, and scroll-region disposition.
+edge representation, duplicate group and flag IDs, invalid rollout text,
+unavailable dependency text, raw/null issue proof, empty groups/flags, JSON
+round-trip byte equality, multiple issue ordering, live-export freshness
+sentinels, exact per-attempt clipboard/fallback equality, superseded copy
+attempts in both settlement directions, real clipboard success,
+unavailable/rejected/throw fallback paths, status-region semantics for copy,
+dependency, validation, and issue messages, reset on reload, keyboard traversal,
+focus, theme parity, reduced motion, color-independent meaning, responsive
+review at 360 CSS px and at least 1280 CSS px, and scroll-region disposition.
 
 ### Slice 7 - `prompt-tuner`
 
@@ -360,7 +416,7 @@ Authored operations:
 
 - **NEW** `speckit-pro/artifact-gallery/templates/prompt-tuner.html`
 - MODIFIED `speckit-pro/artifact-gallery/manifest.json`: flip only `prompt-tuner.status` from `planned` to `shipped`; keep `exports: ["markdown"]`
-- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`: add `prompt-tuner` producer coverage for exact label `Copy as Markdown`, single fenced JSON block in Markdown, template/slot/sample/preview order, visible fallback field, semantic status, and no hidden copy/download paths
+- MODIFIED `tests/speckit-pro/unit/test-artifact-gallery.py`: add `prompt-tuner` producer coverage for exact label `Copy as Markdown`, single fenced JSON block in Markdown, template/slot/sample/preview order, first-occurrence field ordering, JSON round-trip, duplicate slot/sample identifiers, raw invalid slot text, deterministic issue recording, stale/superseded attempt guards, visible fallback field, semantic status, and no hidden copy/download paths
 - MODIFIED `tests/speckit-pro/unit/test-artifact-fill-regions.py`: add `FLOOR["prompt-tuner"] = ("prompt-variants", "evaluation-notes")` and `LIST_SLOTS["prompt-tuner"] = ("prompt-variants",)`
 - MODIFIED `.process/uat-runbook.md`, `.process/uat-results.md`, and `.process/uat-results.json` under the ART-005 feature directory
 
@@ -369,10 +425,16 @@ generated path list above.
 
 UAT increment: direct `file://` open, memory-only prompt editing and derived
 previews, deterministic Markdown wrapper with one JSON block, slot/sample/order
-preservation, multiline and Unicode values, real clipboard success,
-unavailable/rejected/throw fallback paths, reset on reload, keyboard traversal,
-focus, theme parity, reduced motion, color-independent meaning, scroll-region
-disposition, and stack-wide closeout totals.
+preservation, first-occurrence field ordering, duplicate slots and sample IDs,
+raw invalid slot text, empty template/collections/fields/previews, multiline
+Unicode/special-character round-trip, JSON round-trip byte equality, multiple
+issue ordering, live-export freshness sentinels, exact per-attempt
+clipboard/fallback equality, superseded copy attempts in both settlement
+directions, real clipboard success, unavailable/rejected/throw fallback paths,
+status-region semantics for copy, validation, editor-state, and preview
+messages, reset on reload, keyboard traversal, focus, theme parity, reduced
+motion, color-independent meaning, responsive review at 360 CSS px and at least
+1280 CSS px, scroll-region disposition, and stack-wide closeout totals.
 
 ### Archival Evidence Contract
 
@@ -388,6 +450,24 @@ Post-merge archival preserves the same evidence under:
 - `docs/ai/specs/.process/ART-005-uat-results.md`
 - `docs/ai/specs/.process/ART-005-uat-results.json`
 - `docs/ai/specs/.process/ART-005-uat-harness/` if an implementation harness is committed
+
+Accessibility evidence rows keep the human-readable `observedResult` and include
+structured fields for focus order, focused fallback targets, scroll-region
+selector/role/name/`tabindex` and actual-scroll-element evidence, status-region
+semantics, and audited-token or measured contrast evidence when the row exercises
+those requirements.
+
+UX evidence rows record the exercised viewport width, page-level horizontal
+overflow result, clipped or overlapping text observation, documented named-scroll
+exceptions, and the visible text/status-region feedback for empty, limit,
+invalid, dependency, and filtered-no-result states where applicable.
+
+Data-integrity evidence rows record manifest/export parity, baseline and
+attempted export text, freshness sentinel comparisons, JSON parse and
+`JSON.stringify(value, null, 2)` round-trip equality, expected versus observed
+collection/field/issue order, raw and normalized issue values, exact
+clipboard/fallback equality for the current invocation, and stale/superseded copy
+attempt outcomes.
 
 ## Constitution Check
 

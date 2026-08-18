@@ -197,14 +197,62 @@ The required fill-region floors are:
   multiline, Unicode, quotes, backticks, pipes, and other special characters;
   fenced JSON uses `JSON.stringify(value, null, 2)`, while triage field bodies
   use deterministic Markdown escaping and indented continuation lines.
+- **Fresh export snapshots:** Every producer export invocation clears prior
+  status/fallback text, hides and empties the prior fallback, captures one fresh
+  immutable snapshot from the current visible state after the triggering UI
+  change is applied, serializes that snapshot exactly once, and uses that exact
+  string for clipboard equality or fallback. Export strings MUST NOT be
+  precomputed at page initialization, cached across invocations, or regenerated
+  differently for fallback than for clipboard. If an earlier asynchronous copy
+  attempt settles after a later invocation, it records no current UI effect and
+  MUST NOT replace the later status, fallback contents, fallback visibility, or
+  focus target.
+- **Issue records:** Structured editor `issues[]` entries, and the
+  `triage-board` `## Issues` appendix, use this exact field order: `code`,
+  `artifactId`, `entityType`, `entityId`, `field`, `occurrenceIndex`,
+  `relatedOccurrenceIndex`, `rawValue`, `normalizedValue`, `message`. `code` is
+  one of `empty_required_value`, `invalid_value`, `unavailable_value`, or
+  `duplicate_identifier`. `artifactId` is one of the three producer IDs.
+  `entityType` is `artifact`, `feature_flag_group`, `feature_flag`,
+  `prompt_slot`, `prompt_sample`, or `triage_ticket`. `entityId`, `field`,
+  `rawValue`, and `normalizedValue` are strings, numbers, booleans, or `null`
+  as applicable; `occurrenceIndex` and `relatedOccurrenceIndex` are one-based
+  integers or `null`. Stable messages are: `Required value is empty.`, `Value is
+  invalid and was not normalized.`, `A normalized value is unavailable.`, and
+  `Identifier duplicates the first visible occurrence.`
+- **Issue ordering:** When multiple issues exist, emit them by traversing
+  entities in export order, fields in declared schema order, and conditions in
+  this order: `empty_required_value`, `invalid_value`, `unavailable_value`,
+  `duplicate_identifier`. Duplicate issues attach to every occurrence after the
+  first and set `relatedOccurrenceIndex` to the first visible occurrence. Issue
+  ordering never depends on arbitrary object-key enumeration.
+- **Duplicate and raw invalid handling:** Duplicate feature-flag group IDs, flag
+  keys, prompt slot identifiers, prompt sample identifiers, and triage ticket IDs
+  remain in visible/export order and are not deduplicated or renamed. Invalid
+  rollout or dependency input preserves its exact original text in `rawValue`;
+  the normalized exported field and issue `normalizedValue` are `null`, with no
+  clamping, truncation, coercion, or sanitization. Prompt `slots` preserves
+  duplicate/raw strings; each sample's `fields` object contains each distinct
+  slot key once, in first-occurrence slot order, with duplicates represented by
+  `slots` and issue records. Multiline text, Unicode, quotes, backticks, pipes,
+  slash, backslash, tab, newline, and other special characters round-trip
+  through the fenced JSON or triage Markdown without data loss. `triage-board`
+  appends `## Issues` after `Cut`, using `- _No issues._` when empty and JSON
+  scalar representation for issue string/null values.
 - **Clipboard behavior:** Each editor has exactly one control labeled
-  `Copy as Markdown`. On invocation, clear any stale fallback, generate the
-  export once from live state, and attempt `navigator.clipboard.writeText()`
-  once when available. Success announces `Copied. Markdown is on the
-  clipboard.` Failure, rejection, unavailability, or synchronous throw
-  announces `Copy failed. The Markdown export is available below for manual
-  copy.`, reveals a labeled selectable textarea containing the exact attempted
-  string, focuses it, and uses no hidden copy or download path.
+  `Copy as Markdown`. On every invocation, read `navigator.clipboard` afresh,
+  clear prior status/fallback state, generate the export once from live state,
+  and call `writeText()` at most once only when it is callable. An absent
+  clipboard object or absent/non-callable `writeText` is unavailable and makes
+  no write attempt. Success announces `Copied. Markdown is on the clipboard.`,
+  leaves the invoked control's focus unchanged, and leaves the fallback hidden
+  and empty. Unavailability, a permission-denied rejection such as
+  `NotAllowedError`, any other rejected promise, or a synchronous throw all
+  announce only `Copy failed. The Markdown export is available below for manual
+  copy.`, reveal a labeled selectable textarea containing the exact attempted
+  string, and focus it. Browser exception text is not exposed as the user-facing
+  message. A later current attempt replaces, rather than appends to, any prior
+  fallback; hidden copy, silent failure, and download recovery are prohibited.
 
 ### Session 2026-08-17 - Acceptance Evidence and Reviewability
 
@@ -223,19 +271,28 @@ The required fill-region floors are:
   scheme, and the network, theme, reduced-motion, and color-mode conditions used.
   `driver` is `manual` or the repository-relative path of the exact harness.
 - **Per-check evidence:** Every result row has `artifactId`, `templatePath`,
-  `step`, `claim`, `observedResult`, `verdict`, `date`, and `driver`. `verdict` is
-  `pass`, `fail`, or `not_applicable`; `not_applicable` still requires an
-  observation proving why the check does not apply. The Markdown summary reports
-  totals and identifies the exact source commit represented by the JSON rows.
+  `step`, `claim`, `observedResult`, optional `accessibilityObservation`,
+  optional `responsiveLayoutObservation`, optional `boundaryStateObservation`,
+  optional `dataIntegrityObservation`, optional `errorHandlingObservation`,
+  `verdict`, `date`, and `driver`.
+  `verdict` is `pass`, `fail`, or `not_applicable`; `not_applicable` still
+  requires an observation proving why the check does not apply. The Markdown
+  summary reports totals and identifies the exact source commit represented by
+  the JSON rows.
 - **Clipboard proof:** Each editor requires one genuine `file://` success in
   which a real clipboard read-back or paste exactly equals the live-state export,
-  the success message is present, and the fallback is absent. Separate checks
-  force an unavailable clipboard, rejected promise, and synchronous throw, and
-  prove that all three reveal and focus the exact fallback text without reporting
-  success. The unavailable probe uses
+  the success message is present, the fallback is hidden and empty, and focus is
+  not moved away from the invoked control. Separate checks force an absent
+  clipboard object, an absent/non-callable method, permission-denied rejection,
+  generic rejected promise, and synchronous throw, and prove that every path
+  makes zero or one write attempt as applicable, reveals and focuses the exact
+  fallback text, and never reports success. The unavailable probe uses
   `Object.defineProperty(navigator,'clipboard',{value:undefined,configurable:true});`;
   `delete navigator.clipboard` is prohibited because the inherited accessor makes
-  that expression a no-op and can produce a false pass.
+  that expression a no-op and can produce a false pass. A sequential
+  failure-success-failure check proves status, fallback visibility/content, and
+  focus always reflect the latest invocation; the two opposite delayed-settlement
+  races prove superseded attempts cannot mutate current UI state.
 - **Seven-artifact matrix:** Every artifact receives result rows for direct
   `file://` open, complete representative content, offline reload, complete
   keyboard traversal, visible focus, light/dark theme parity, reduced-motion
@@ -244,6 +301,17 @@ The required fill-region floors are:
   `not_applicable` with the observed layout. The three editors additionally
   receive live-state serialization, genuine clipboard success, and all three
   forced-fallback checks.
+- **Data-integrity evidence matrix:** Every artifact receives manifest parity
+  rows that bind ID, source file, status, role, and export declaration to the
+  exhaustive ART-005 table. Every producer receives rows for live export
+  freshness, empty values/collections, duplicate identifiers, special-character
+  round-trip, multiple simultaneous issue ordering, exact clipboard/fallback
+  equality, and superseded copy attempts in both settlement directions. Relevant
+  structured editor rows also cover raw invalid input and unavailable normalized
+  values. Reader-only entries record producer-only data-integrity cases as
+  evidence-backed `not_applicable`. For structured exports, UAT extracts the sole
+  JSON fence, parses it, reserializes it with `JSON.stringify(value, null, 2)`,
+  and records byte equality with the original JSON block.
 - **Reviewability response:** The combined plan-time projection reached the
   800-LOC block and stopped before Checklist, Tasks, or Implementation. The
   operator resolved that stop by selecting seven slices. Planning now measures
@@ -268,6 +336,67 @@ The required fill-region floors are:
 - **Per-slice gate:** Planning MUST project each slice independently. A measured
   block stops only that slice for an explicit operator decision; this topology
   does not authorize splitting a template or inventing a reviewability exception.
+
+### Session 2026-08-17 - Accessibility Contract Detail
+
+- **Scroll-region prevention:** Any meaningful horizontal overflow container MUST
+  follow the ART-020 gallery pattern: the actual element with `overflow-x` is in
+  normal focus order with `tabindex="0"`, carries grouping semantics such as
+  `role="group"`, has a non-empty programmatic name through `aria-label` or
+  `aria-labelledby`, and does not delegate focus to a wrapper or descendant. No
+  ART-005 artifact may use a positive `tabindex`.
+- **Contrast and color meaning:** Locally introduced colors MUST either reuse
+  audited Racecraft token pairings from the gallery brand kit or carry explicit
+  contrast evidence for both light and dark themes. Normal text clears 4.5:1;
+  large text, focus indicators, controls, meaningful boundaries, and meaningful
+  graphics clear 3:1. `--rc-border-subtle` remains decorative only and cannot
+  carry state, grouping, priority, warning, or error meaning by itself.
+- **Status semantics:** Dynamic success, failure, warning, dependency, movement,
+  filter, validation, and editor-state messages MUST update a persistent
+  programmatically determinable status region, using `role="status"` or an
+  equivalent live-region semantic. The visible message remains text, and the
+  clipboard failure path still moves focus to the labeled fallback textarea.
+- **Slide navigation:** `slide-deck` MUST expose a named navigation group with
+  named previous/next controls or named direct-slide controls, current position
+  text such as `Slide X of Y`, no auto-rotation, and deterministic focus behavior.
+  Control-invoked slide changes keep focus on the invoked control while updating
+  the current-position text; non-control slide changes move focus to the active
+  slide's named heading or container. Hidden slides are excluded from sequential
+  focus and the accessibility tree.
+- **Triage-board controls:** `triage-board` MUST expose the board, each column,
+  each ticket, filters, reset, and export affordances with programmatic names.
+  Any pointer drag/drop movement or priority/filter interaction preserved from
+  upstream MUST have a keyboard-operable equivalent for moving tickets between
+  columns and reordering them within a column. Movement and filtering update
+  visible order immediately, keep focus on the moved ticket or movement control,
+  and announce the resulting column, position, or filter state through the status
+  region.
+- **Structured UAT evidence:** Accessibility UAT rows MUST keep the human-readable
+  `observedResult` and, where applicable, add structured observations for focus
+  order, focused fallback target, scroll-region selector/role/name/tabindex,
+  actual scroll element, status-region semantics, and contrast evidence source or
+  measured ratios.
+
+### Session 2026-08-17 - UX Boundary And Responsive Criteria
+
+- **Visible boundary states:** User-changeable ART-005 surfaces MUST expose empty,
+  limit, invalid, dependency, and filtered-no-result states in visible text and,
+  when the state changes dynamically, through the applicable status region rather
+  than relying on color, disabled controls, or silent clamping alone.
+  `concept-explainer` shows current node/key counts and min/max control limits;
+  add/remove or slider actions at a limit leave the simulation state unchanged and
+  update helper or status text. `triage-board` shows explicit empty-column text
+  and an explicit filtered-no-result message when a filter hides every ticket in a
+  column or across the board. `feature-flags` shows dependency, invalid, empty, or
+  unavailable normalized values beside the affected flag, group, or preview.
+  `prompt-tuner` shows empty template, slot, sample, and derived-preview values as
+  intentional empty strings and surfaces duplicate or invalid slot issues visibly.
+- **Responsive review bounds:** Every artifact MUST remain readable and operable
+  at a 360 CSS px mobile review width and a desktop review width of at least 1280
+  CSS px, with no clipped or overlapping text and no page-level horizontal
+  overflow. Horizontal scrolling is permitted only inside named, meaningful
+  regions that satisfy the ART-020 focus/name/grouping pattern and carry UAT
+  evidence.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -340,19 +469,23 @@ An operator edits a Triage Board, Feature Flag configuration, or Prompt Tuner se
 - **FR-005**: `slide-deck`, `concept-explainer`, `status-report`, and `incident-report` MUST remain semantic readers with `exports: []`; their pinned navigation, static reading, and transient simulation controls do not produce durable user-authored output meant to leave the SPA.
 - **FR-006**: Any artifact confirmed as a semantic reader MUST carry no export control and MUST retain an empty export declaration.
 - **FR-007**: The three known editor artifacts, `triage-board`, `feature-flags`, and `prompt-tuner`, MUST retain `markdown` as their only export kind and MUST label the export control exactly `Copy as Markdown`.
-- **FR-008**: `feature-flags` and `prompt-tuner` exports MUST be deterministic Markdown documents containing lossless structured session state in one fenced JSON block with the exact versioned schemas, field order, collection order, and edge-value rules recorded in Clarifications.
-- **FR-009**: `triage-board` exports MUST use the exact human-readable, column-grouped Markdown shape, declared column order, current ticket order, empty-column representation, and escaping rules recorded in Clarifications.
-- **FR-010**: Every export MUST be generated from the artifact's live state at the moment the operator invokes it.
-- **FR-011**: Each editor MUST implement the one-attempt clipboard success and visible focused fallback behavior recorded in Clarifications; hidden `execCommand` copying and automatic download are prohibited.
+- **FR-008**: `feature-flags` and `prompt-tuner` exports MUST be deterministic Markdown documents containing lossless structured session state in one fenced JSON block with the exact versioned schemas, wrapper/group/flag/sample/issue field order, collection order, issue ordering, and edge-value rules recorded in Clarifications.
+- **FR-009**: `triage-board` exports MUST use the exact human-readable, column-grouped Markdown shape, declared column order, current ticket order, empty-column representation, deterministic issue appendix, duplicate-ticket reporting, and escaping rules recorded in Clarifications.
+- **FR-010**: Every export MUST be generated from one fresh immutable snapshot of the artifact's live visible state at the moment the operator invokes it; precomputed or cross-invocation cached export strings are prohibited.
+- **FR-011**: Each editor MUST implement the invocation-time capability check, zero-or-one-attempt clipboard success, normalized visible focused fallback for every declared failure class, stale-state clearing/replacement, current-invocation focus behavior, and superseded-attempt suppression recorded in Clarifications; hidden `execCommand` copying, silent failure, and automatic download are prohibited.
 - **FR-012**: Editor working state MUST be memory-only and reset on reload; existing gallery theme preference behavior MUST remain unaffected.
 - **FR-013**: Every new artifact MUST open directly over `file://`, remain readable with no server or install step, and avoid missing content when the network is unavailable.
-- **FR-014**: New horizontal scroll regions MUST be keyboard-focusable and named; all controls MUST have visible focus and accessible names; status MUST be announced as text; reduced motion MUST be respected; color MUST never be the sole carrier of meaning.
+- **FR-014**: Every new artifact MUST satisfy the accessibility contract detail recorded in Clarifications: new horizontal scroll regions use the exact ART-020 focus/name/grouping pattern, controls have visible focus and accessible names, dynamic status is programmatically determinable text, reduced motion removes required animation/transition/smooth-scroll behavior, color is never the sole carrier of meaning, and locally introduced color pairings are either audited Racecraft tokens or explicitly measured for both themes.
 - **FR-015**: The feature MUST preserve the tracked plain-English `file://` UAT runbook, Markdown result summary, and normalized per-check JSON record at the active-feature and archival paths, with the mandatory metadata, row fields, verdicts, and seven-artifact coverage recorded in Clarifications.
 - **FR-016**: Planning MUST include a file-by-file measurement of the pinned upstream sources and declared operations before implementation starts.
 - **FR-017**: If any slice's final projection crosses a reviewability block threshold and no ratified exception exists, planning MUST stop that slice for an operator topology decision instead of splitting the template automatically or inventing an exception.
 - **FR-018**: The feature MUST use the selected seven-slice topology, one template per sequential stacked review slice in the recorded order, unless an explicit later operator decision changes that topology.
 - **FR-019**: The feature MUST NOT add workflow-stage routing, JSON export kinds, automatic downloads, import-back, persistent editor content, shareable URL state, server storage, shared gallery foundation changes, or repairs to already-shipped templates.
 - **FR-020**: Each artifact MUST implement the exact fill-slot inventory and minimum anchored sample-content floors recorded in Clarifications; list slots MAY exceed their floor only when the template markers and Layer 4 inventory remain in agreement.
+- **FR-021**: User-changeable ART-005 surfaces MUST implement the visible boundary-state contract recorded in Clarifications for empty, limit, invalid, dependency, and filtered-no-result states.
+- **FR-022**: Every new artifact MUST satisfy the responsive review bounds recorded in Clarifications at 360 CSS px and at a desktop width of at least 1280 CSS px, with page-level horizontal overflow prohibited except for documented named scroll regions.
+- **FR-023**: Producer exports MUST preserve raw and normalized issue evidence for empty, invalid, unavailable, duplicate, and special-character conditions using the issue-record schema and deterministic ordering recorded in Clarifications; values MUST NOT be clamped, truncated, coerced, sanitized away, deduplicated, or renamed.
+- **FR-024**: The UAT evidence record MUST include structured data-integrity observations for manifest/export parity, live export freshness, edge-case round-trips, issue ordering, exact per-attempt clipboard/fallback equality, and superseded copy attempts.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -392,8 +525,12 @@ An operator edits a Triage Board, Feature Flag configuration, or Prompt Tuner se
 - **Upstream Source Baseline**: The immutable upstream repository commit and seven source files used as derivative inputs; key attributes are commit identity, file path, retrieval date, and per-file digest or equivalent evidence.
 - **Editor Session State**: The in-memory working data for a triage board, feature-flag configuration, or prompt tuning session; key attributes are visible values, ordering, current selections, and reset behavior.
 - **Markdown Export**: The deterministic record produced from live editor state; key attributes are artifact name, generated content, stable ordering, and fenced JSON when structured state is required.
+- **Data Integrity Issue**: A deterministic record attached to a producer export
+  when visible data is empty, invalid, unavailable, or duplicated; key
+  attributes are stable code, entity locator, occurrence indexes, raw value,
+  normalized value, and exact message.
 - **Manual Copy Recovery**: The fallback path used when clipboard copy fails; key attributes are visible status, labeled selectable field, exact export text, and focus movement.
-- **UAT Evidence Record**: The durable acceptance record for `file://` checks; top-level attributes bind the feature, tested commit, execution time, environment, driver, and runbook, while each row binds an artifact and template path to a step, claim, observed result, verdict, date, and driver.
+- **UAT Evidence Record**: The durable acceptance record for `file://` checks; top-level attributes bind the feature, tested commit, execution time, environment, driver, and runbook, while each row binds an artifact and template path to a step, claim, observed result, verdict, date, driver, and applicable accessibility, responsive-layout, boundary-state, data-integrity, or error-handling observations.
 
 ## Success Criteria *(mandatory)*
 
@@ -402,11 +539,21 @@ An operator edits a Triage Board, Feature Flag configuration, or Prompt Tuner se
 - **SC-001**: All seven ART-005 catalog entries can be opened directly over `file://` and present complete representative content with no missing artifact content.
 - **SC-002**: The manifest and artifact files agree for 100% of the seven entries: each shipped entry has its artifact, and no ART-005 artifact remains planned.
 - **SC-003**: For all three known editors, changing visible state before `Copy as Markdown` changes the exported Markdown deterministically to match the current session state.
-- **SC-004**: For all three known editors, forced clipboard unavailability, rejection, and synchronous failure each expose a labeled manual-copy field containing the same text the clipboard path would have produced.
+- **SC-004**: For all three known editors, forced absent/non-callable clipboard access, permission denial, generic rejection, and synchronous failure each expose and focus a labeled selectable manual-copy field containing the exact attempted export after no more than one write attempt.
 - **SC-005**: Keyboard-only UAT covers all seven artifacts and verifies reachable named scroll regions where present, visible focus on controls, and no color-only status or priority meaning.
 - **SC-006**: Reduced-motion UAT verifies that all seven artifacts remain usable without required animation, transition, or smooth-scroll behavior.
-- **SC-007**: The tracked UAT result record contains a `pass`, `fail`, or evidence-backed `not_applicable` row for every required check across all seven artifacts, including genuine clipboard success and unavailable, rejected, and synchronous-failure fallback paths for each editor.
+- **SC-007**: The tracked UAT result record contains a `pass`, `fail`, or evidence-backed `not_applicable` row for every required check across all seven artifacts, including structured accessibility and error-handling observations where applicable plus genuine clipboard success, every declared forced-fallback class, the sequential failure-success-failure transition, and both superseded-attempt races for each editor.
 - **SC-008**: The plan-time reviewability record preserves both warned estimates and the measured combined block, records the explicit seven-slice operator decision, and provides file-by-file declared operations plus an independently evaluated projection for every slice.
+- **SC-009**: UAT covers the visible boundary-state contract for `concept-explainer`, `triage-board`, `feature-flags`, and `prompt-tuner`, including empty, limit, invalid, dependency, and filtered-no-result cases where applicable.
+- **SC-010**: UAT covers every artifact at 360 CSS px and at a desktop width of at least 1280 CSS px, with no clipped or overlapping text and no page-level horizontal overflow except documented named scroll regions.
+- **SC-011**: Every producer passes freshness, empty-value, duplicate-identifier,
+  special-character, multiple-issue-order, exact clipboard/fallback equality, and
+  superseded-attempt UAT checks; `feature-flags` and `prompt-tuner` also pass
+  raw-invalid and unavailable-normalization checks.
+- **SC-012**: For each structured editor export, extracting the sole JSON fence,
+  parsing it, and reserializing it with `JSON.stringify(value, null, 2)` produces
+  the exact original JSON block with the expected collection, field, and issue
+  ordering.
 
 ## Assumptions
 

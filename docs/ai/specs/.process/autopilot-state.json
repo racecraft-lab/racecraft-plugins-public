@@ -4,8 +4,8 @@
   "feature_dir": "specs/art-005-gallery-completion-knowledge-reports-editors",
   "branch": "art-005-gallery-completion-knowledge-reports-editors",
   "stage": "plan",
-  "updated_at": "2026-08-18T02:36:28Z",
-  "active_step": "Phase 3: Plan complete - next Phase 4 checklist accessibility",
+  "updated_at": "2026-08-18T03:51:17Z",
+  "active_step": "Phase 5: Tasks",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -108,9 +108,9 @@
     "specify": {
       "status": "completed",
       "user_stories": 3,
-      "functional_requirements": 20,
+      "functional_requirements": 24,
       "acceptance_scenarios": 8,
-      "success_criteria": 8,
+      "success_criteria": 12,
       "needs_clarification_markers": 1,
       "gap_markers": 0,
       "artifact": "specs/art-005-gallery-completion-knowledge-reports-editors/spec.md"
@@ -188,7 +188,7 @@
         {
           "slice": 1,
           "artifact": "slide-deck",
-          "projected_reviewable_loc": 640,
+          "projected_reviewable_loc": 670,
           "authored_paths": 7,
           "maximum_physical_paths": 32,
           "verdict": "warn"
@@ -196,7 +196,7 @@
         {
           "slice": 2,
           "artifact": "concept-explainer",
-          "projected_reviewable_loc": 520,
+          "projected_reviewable_loc": 535,
           "authored_paths": 7,
           "maximum_physical_paths": 32,
           "verdict": "warn"
@@ -220,7 +220,7 @@
         {
           "slice": 5,
           "artifact": "triage-board",
-          "projected_reviewable_loc": 740,
+          "projected_reviewable_loc": 785,
           "authored_paths": 7,
           "maximum_physical_paths": 32,
           "verdict": "warn"
@@ -273,6 +273,54 @@
         },
         "operator_resolution": "seven sequential stacked slices, one template per slice"
       }
+    },
+    "checklist": {
+      "status": "completed",
+      "total_items": 120,
+      "initial_gaps": 24,
+      "remaining_gaps": 0,
+      "domains": {
+        "accessibility": {
+          "status": "completed",
+          "items": 32,
+          "initial_gaps": 6,
+          "remaining_gaps": 0,
+          "consensus": "skipped: zero unresolved items",
+          "slice_budget_adjustments": {
+            "slide-deck": 670,
+            "triage-board": 770
+          }
+        },
+        "ux": {
+          "status": "completed",
+          "items": 28,
+          "initial_gaps": 2,
+          "remaining_gaps": 0,
+          "consensus": "skipped: zero unresolved items",
+          "slice_budget_adjustments": {
+            "concept-explainer": 535,
+            "triage-board": 785
+          }
+        },
+        "data-integrity": {
+          "status": "completed",
+          "items": 30,
+          "initial_gaps": 12,
+          "remaining_gaps": 0,
+          "consensus": "skipped: zero unresolved items",
+          "slice_budget_adjustments": {},
+          "execution_note": "The executor applied remediation but its result turn hit model capacity; after one retry and one fresh-agent retry also hit capacity, the orchestrator followed error-recovery-codex.md and directly validated the preserved artifacts."
+        },
+        "error-handling": {
+          "status": "completed",
+          "items": 30,
+          "initial_gaps": 4,
+          "remaining_gaps": 0,
+          "consensus": "skipped: zero unresolved items",
+          "slice_budget_adjustments": {},
+          "execution_note": "The checklist-executor and its one retry hit model capacity; the orchestrator followed error-recovery-codex.md, ran the domain workflow directly, and validated the result with the same runner gates."
+        }
+      }
     }
   },
   "gates": {
@@ -316,6 +364,18 @@
         "operator_decision_required": false,
         "operator_resolution": "seven sequential stacked slices, one template per slice"
       }
+    },
+    "G4": {
+      "pass": true,
+      "markers": 0,
+      "reason": "0 [Gap] markers across 120 checklist items",
+      "domains": {
+        "accessibility": "32 items; 6 initial gaps; 0 remaining",
+        "ux": "28 items; 2 initial gaps; 0 remaining",
+        "data-integrity": "30 items; 12 initial gaps; 0 remaining",
+        "error-handling": "30 items; 4 initial gaps; 0 remaining"
+      },
+      "executor_recovery": "data-integrity result delivery and error-handling execution hit model capacity; direct validation fallback completed per error-recovery-codex.md"
     }
   },
   "extensions": {
@@ -369,39 +429,39 @@
     },
     {
       "step": "Phase 4: Checklist - accessibility",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - accessibility Consensus",
-      "status": "pending"
+      "status": "skipped: zero unresolved items"
     },
     {
       "step": "Phase 4: Checklist - ux",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - ux Consensus",
-      "status": "pending"
+      "status": "skipped: zero unresolved items"
     },
     {
       "step": "Phase 4: Checklist - data-integrity",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - data-integrity Consensus",
-      "status": "pending"
+      "status": "skipped: zero unresolved items"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "pending"
+      "status": "skipped: zero unresolved items"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",

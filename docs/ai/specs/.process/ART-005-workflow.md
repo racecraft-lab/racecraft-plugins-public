@@ -48,11 +48,11 @@ for four artifacts is now an explicit Open Question.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ✅ Complete | 3 stories, 20 current FRs, 8 scenarios, and 8 success criteria; the intentional marker was resolved in Clarify |
+| Specify | `/speckit-specify` | ✅ Complete | 3 stories, 24 current FRs, 8 scenarios, and 12 success criteria after checklist remediation |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved source/fidelity/fill, editor exports, UAT evidence, and block routing; no consensus needed |
-| Plan | `/speckit-plan` | ✅ Complete | Seven independently measured slices project 520-790 reviewable LOC; all warn and none block |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Accessibility, UX, data-integrity, and error-handling |
-| Tasks | `/speckit-tasks` | ⏳ Pending | TDD ordering across seven templates and shared integration surfaces |
+| Plan | `/speckit-plan` | ✅ Complete | Seven independently measured slices project 535-790 reviewable LOC; all warn and none block |
+| Checklist | `/speckit-checklist` | ✅ Complete | 120 items; 24 initial gaps remediated; G4 passes with 0 remaining gaps |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | TDD ordering across seven templates and shared integration surfaces |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Check all artifacts against the design concept |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | Seven sequential stacked review slices, one template each |
@@ -246,7 +246,7 @@ for an operator decision; do not split a template or invent an exception.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 20 current after Clarify |
+| Functional Requirements | 24 current after checklist remediation |
 | User Stories | 3 |
 | Acceptance Criteria | 8 scenarios |
 | Reviewability result | Initial 555/560 LOC warning; combined projection later blocked at 2,856 LOC; operator selected seven slices |
@@ -490,11 +490,11 @@ invent a typed exception.
 
 | Slice | Artifact | Component ceiling | Authored paths | Maximum physical paths | Verdict |
 |---:|---|---:|---:|---:|---|
-| 1 | `slide-deck` | 640 LOC | 7 | 32 | Warn; no block |
-| 2 | `concept-explainer` | 520 LOC | 7 | 32 | Warn; no block |
+| 1 | `slide-deck` | 670 LOC | 7 | 32 | Warn; no block; accessibility-adjusted |
+| 2 | `concept-explainer` | 535 LOC | 7 | 32 | Warn; no block; UX-adjusted |
 | 3 | `status-report` | 560 LOC | 7 | 32 | Warn; no block |
 | 4 | `incident-report` | 620 LOC | 7 | 32 | Warn; no block |
-| 5 | `triage-board` | 740 LOC | 7 | 32 | Warn; no block |
+| 5 | `triage-board` | 785 LOC | 7 | 32 | Warn; no block; accessibility/UX-adjusted |
 | 6 | `feature-flags` | 780 LOC | 7 | 32 | Warn; no block |
 | 7 | `prompt-tuner` | 790 LOC | 7 | 32 | Warn; no block; 10 LOC headroom |
 
@@ -593,17 +593,22 @@ Pay special attention to recovery that remains usable by keyboard and screen rea
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| accessibility | Pending | Pending | Pending |
-| ux | Pending | Pending | Pending |
-| data-integrity | Pending | Pending | Pending |
-| error-handling | Pending | Pending | Pending |
-| **Total** | Pending | Pending | Pending |
+| accessibility | 32 | 0 | FR-014, SC-005-SC-007, accessibility contract detail, gallery/UAT contracts |
+| ux | 28 | 0 | FR-021-FR-022, SC-009-SC-010, UX boundary/responsive contracts |
+| data-integrity | 30 | 0 | FR-008-FR-011, FR-023-FR-024, SC-011-SC-012, editor/UAT contracts |
+| error-handling | 30 | 0 | FR-011, SC-004, SC-007, clipboard attempt/UAT contracts |
+| **Total** | **120** | **0** | All 24 initial gaps remediated; no consensus escalation required |
 
 ### Addressing Gaps
 
 For each `[Gap]`: decide whether it is a genuine missing requirement, update
 `spec.md` or `plan.md`, re-run the checklist, and name a follow-up owner for any
 intentional deferral. No unresolved gap reaches Tasks.
+
+**Gate G4:** ✅ PASS — runner `validate-gate` reported `0 [Gap] markers`.
+The data-integrity executor's result channel and both error-handling executor
+attempts hit model capacity; the documented Codex recovery path directly
+validated the preserved/remediated artifacts with the same marker and diff gates.
 
 ---
 

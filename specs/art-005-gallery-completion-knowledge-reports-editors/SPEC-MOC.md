@@ -38,6 +38,10 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [contracts/gallery-template-contract.md](contracts/gallery-template-contract.md)
 - [contracts/slice-topology-contract.md](contracts/slice-topology-contract.md)
 - [contracts/uat-evidence-contract.md](contracts/uat-evidence-contract.md)
+- [checklists/accessibility.md](checklists/accessibility.md)
+- [checklists/data-integrity.md](checklists/data-integrity.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/ux.md](checklists/ux.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

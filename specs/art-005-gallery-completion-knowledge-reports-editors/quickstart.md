@@ -104,8 +104,22 @@ For every artifact:
 - switch light/dark theme and confirm parity
 - enable reduced motion and confirm no required motion remains
 - confirm status/priority/error meaning is not color-only
+- review at 360 CSS px and at a desktop width of at least 1280 CSS px; record
+  page-level horizontal overflow, clipped text, overlapping text, and any named
+  scroll-region exception
 - record horizontal scroll regions as pass when focusable/named, or
   `not_applicable` with an observed layout explanation when absent
+- for each accessibility row, record structured evidence where relevant:
+  focus-order selector/role/name/indicator sequence, focused fallback target,
+  scroll-region selector/role/name/`tabindex` and actual-scroll-element evidence,
+  status-region role or live-region semantic, and audited-token or measured
+  light/dark contrast source
+
+For `concept-explainer`:
+
+- exercise add/remove and slider min/max boundaries
+- confirm the visible node/key counts and helper or status text explain the
+  boundary while leaving state unchanged at the limit
 
 For the three editors:
 
@@ -114,10 +128,73 @@ For the three editors:
 - confirm the exported text matches current live state
 - confirm a genuine clipboard success by read-back or paste equality
 - force clipboard unavailable with `Object.defineProperty`
-- force promise rejection
+- force `writeText` absent or non-callable and confirm zero write attempts
+- force a permission-denied rejection such as `NotAllowedError`
+- force a generic promise rejection
 - force synchronous throw
-- confirm each forced failure reveals and focuses the exact fallback text
+- confirm each forced failure uses the exact failure message, makes zero or one
+  write attempt as applicable, and reveals a labeled selectable field containing
+  and focusing the exact attempted export
+- run failure, success, then failure with three distinct values; after each step,
+  confirm status, fallback visibility/content, and focus reflect only that attempt
+- confirm success, failure, warning, dependency, movement, filter, validation, and
+  editor-state messages update a status region without adding a tab stop
+- trigger applicable empty, invalid, dependency, unavailable-value, and
+  filtered-no-result states; record the visible text or inline cue and
+  status-region feedback where the state changes dynamically
 - reload and confirm editor working state resets to representative sample data
+
+## Data-Integrity Validation
+
+For every slice, verify manifest/export parity against the exhaustive ART-005
+table in the spec: artifact ID, upstream source file, digest, semantic role,
+status, and `exports` must match the slice being shipped. Reader artifacts record
+producer-only data-integrity cases as evidence-backed `not_applicable`.
+
+For each producer:
+
+1. Set a visible field to `FRESHNESS-OLD-<artifact>`.
+2. Export and retain the baseline string.
+3. Replace that field with `FRESHNESS-NEW-<artifact>`.
+4. Export again.
+5. Confirm the second string differs from the baseline, contains the new
+   sentinel, excludes the replaced old sentinel, and is the exact text observed
+   in the clipboard read-back or fallback field for that invocation.
+
+For each structured export:
+
+1. Extract the sole fenced JSON block.
+2. Parse it.
+3. Reserialize it with `JSON.stringify(value, null, 2)`.
+4. Confirm byte equality with the extracted block, including wrapper, collection,
+   field, and issue ordering.
+
+Exercise and record data-integrity rows for applicable producer cases:
+
+- empty required text and empty collections
+- duplicate identifiers
+- raw invalid values
+- unavailable normalized values
+- multiple simultaneous issues
+- multiline and special-character values containing:
+
+```text
+Zoë / 東京 | `quoted` "double" \ path\tline\nsecond
+```
+
+Compare expected and observed entity order, field order, ticket order, and issue
+order explicitly. For issue records, compare `code`, `artifactId`, `entityType`,
+`entityId`, `field`, `occurrenceIndex`, `relatedOccurrenceIndex`, `rawValue`,
+`normalizedValue`, and `message`.
+
+For stale-copy prevention, start two controllable copy attempts and settle them
+out of order in both directions: older delayed success after newer failure, and
+older delayed failure after newer success. Confirm the older settlement cannot
+restore stale status text, fallback text, fallback visibility, or focus.
+
+Reload each producer after data-integrity checks and confirm representative seed
+state returns with no previous raw invalid value, issue state, fallback text, or
+export string persisted.
 
 ## Expected Closeout
 
