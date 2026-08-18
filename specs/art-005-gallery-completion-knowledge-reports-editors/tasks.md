@@ -142,7 +142,7 @@ timeline and no export path.
 `speckit-pro/artifact-gallery/templates/incident-report.html` over `file://` and
 verify complete incident summary, timeline, impact, root cause, and follow-ups.
 
-- [ ] T050 [US2] After PR 3 opens, create `art-005-gallery-completion-knowledge-reports-editors-slice-4` from Slice 3 and confirm the seven-path ledger plus 620-LOC ceiling in `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md` [FR-016-FR-018, SC-008]
+- [x] T050 [US2] After PR 3 opens, create `art-005-gallery-completion-knowledge-reports-editors-slice-4` from Slice 3 and confirm the seven-path ledger plus 620-LOC ceiling in `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md` [FR-016-FR-018, SC-008]
 - [ ] T051 [US2] RED: add `incident-report` static reader, anchored timeline/report navigation, semantic structure, no-export, accessibility, responsive, and ART-020 assertions to `tests/speckit-pro/unit/test-artifact-gallery.py` [FR-003, FR-005-FR-006, FR-013-FR-014, FR-022; US2]
 - [ ] T052 [US2] RED: add exact `summary`, `timeline`, `impact`, `root-cause`, and `follow-ups` fills with two anchored timeline/follow-up items to `tests/speckit-pro/unit/test-artifact-fill-regions.py` [FR-020; US2]
 - [ ] T053 [US2] RED proof: run both focused modules in `tests/speckit-pro/unit/` and require intended missing-template/status/fill failures for `speckit-pro/artifact-gallery/templates/incident-report.html` [FR-004, FR-020; US2]
