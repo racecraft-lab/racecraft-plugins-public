@@ -111,7 +111,31 @@ The eight existing keys are untouched. One object is added:
 ```
 
 `corroboration` is **always present**, so a run that could not check is
-distinguishable from a run that checked and agreed.
+distinguishable from a run that checked and agreed. It is the **ninth** envelope
+key, appended after `from_phase`, and it always carries all five of its own keys
+— absent information is `null` rather than an omitted key, so a consumer never
+has to distinguish "missing" from "not applicable".
+
+`recorded` is exactly `{number, url}`. The row's optional gap note is **not**
+part of it: the note is FR-004 run prose about artifact shortfalls, not identity.
+`observed` is exactly `{number, url, state}`.
+
+**The two `skipped` reason strings**, settled 2026-08-18 because §5.1 requires a
+reason but names none for the cases the orchestrator itself produces:
+
+| Cause | `reason` |
+| --- | --- |
+| `pr_observation` key absent, or explicitly `null` | `no observation supplied` |
+| present but not usable — `ok` is not `true`, or `pull_requests` is missing or unparseable — and the request supplied no reason of its own | `observation unusable` |
+
+A reason supplied in the request is used verbatim in preference to either. An
+explicit JSON `null` is treated exactly as an absent key; neither is an error.
+
+**`ok` must be the JSON literal `true`**, not merely truthy. `1` and `"true"`
+yield `skipped`. This is worth stating because Python's `1 == True`, so a
+truthiness test would silently accept a malformed observation as a successful
+one — and the whole point of the success gate is that only a genuinely successful
+query may produce a discrepancy.
 
 ---
 
@@ -137,6 +161,27 @@ distinguishable from a run that checked and agreed.
 
 The order is load-bearing. Rule 1 before rule 4 means a branch that grew a second
 pull request reports the conflict rather than the absence.
+
+**Rule 3 reads an allowlist, not a negation — settled 2026-08-18.** "Closed or
+merged" means the live `state` is exactly `CLOSED` or `MERGED`, compared without
+regard to case. Any other value, including one this tool has never seen, falls
+through to rule 5 and reports `match`.
+
+The tempting alternative is "anything that is not `OPEN` is closed", which feels
+safer and is not. `pr_closed` is a **stop**: it ends the emission attempt and
+tells the operator to reopen the pull request by hand. Reaching that state off an
+unrecognised token would halt a healthy run on no evidence — the false stop this
+contract's fail-open-on-outcome posture exists to prevent. Treating it as `match`
+costs nothing by comparison: the run refreshes a pull request it can see, and if
+that pull request turns out not to be editable after all, the refresh fails and
+reports through FR-010's could-not-be-opened path, which is the same place every
+other unreachable-tool outcome lands.
+
+So the allowlist is both the literal reading of the table above and the reading
+the rest of the contract implies. `merged` is derived from the same token: `true`
+when the state is `MERGED`, `false` when it is `CLOSED`, and `null` in every
+other status, because §2's `--json` field list carries no separate merged field
+and `state` is the only source available.
 
 ### 5.3 Closed vocabulary
 

@@ -626,3 +626,63 @@ baseline is unchanged, re-verified by machine diff after the T014-T016 commit.
 
 The live end-to-end arm of User Story 1's independent test remains quickstart
 Scenario 5, which is operator-gated in T052 and is not run here.
+
+### T035
+
+**Deviations/Edge cases/Surprises:** Twelve methods, 64 counted units, all
+failing on the absent surface — no `KeyError`, no `TypeError`, no import error.
+The 193 pre-existing units in the file all still pass.
+
+**The precedence test is stronger than the contract asks for.** Contract §8 only
+requires that an extra open pull request outrank a missing recorded number. Each
+of the three precedence observations was built to *also* satisfy the later rule
+its label names, so a resolver evaluating in any other order reports a different
+status rather than passing by luck. That is the difference between testing the
+rule and testing an example of it.
+
+**Eight contract silences were pinned rather than guessed at silently**, each
+centralised in a module constant carrying an in-file `CONTRACT GAP` comment that
+tells T036 where to change it. The two that matter most:
+
+`ok` must be the JSON literal `true`, not merely truthy — because Python's
+`1 == True` means a truthiness check silently accepts `ok: 1` as a successful
+query, and the entire success gate exists so that only a genuinely successful
+query can produce a discrepancy.
+
+An entry whose `number` is a string yields `skipped`, not `pr_missing`. A
+never-matching entry reported as `pr_missing` is precisely the false negative the
+fail-closed rule is there to prevent.
+
+**One question was deliberately left open for the orchestrator rather than
+resolved by an executor**, which is the right instinct: rule 3's "closed or
+merged" against an unrecognised `state` token. Settled in contract §5.2 as an
+**allowlist** — exactly `CLOSED` or `MERGED`, case-insensitively; anything else
+falls through to `match`.
+
+The reasoning, recorded because the alternative feels safer and is not:
+`pr_closed` is a **stop** that ends the emission attempt and sends the operator
+to reopen a pull request by hand. Reaching it off an unrecognised token would
+halt a healthy run on no evidence, which is the false stop this contract's
+fail-open-on-outcome posture exists to prevent. `match` costs nothing by
+comparison — the run refreshes a pull request it can see, and if that pull
+request is not editable after all, the refresh fails into FR-010's
+could-not-be-opened path, where every other unreachable-tool outcome already
+lands.
+
+**A test-harness trap the executor found and worked around.** The runner
+re-serialises `stdout_json` with **sorted keys**, while the helper's own `stdout`
+preserves source order. A key-order assertion against the runner envelope would
+be permanently red no matter what T036 writes. Key order is therefore asserted
+only against `json.loads(result["stdout"])`, and the runner-level test uses dict
+equality.
+
+**Nothing at module level touches the not-yet-existing surface**, so an
+import-time `AttributeError` cannot zero out the whole file's count and disguise
+itself as a passing suite.
+
+**Cross-agent attribution held.** Its first layer-4 run showed 66 failures, two
+of which belonged to the concurrent Codex-mirror agent's in-flight edit; runs two
+and three showed 64 with its own file as the only FAIL line, the two transients
+having cleared when that agent's work committed. HEAD moved underneath it
+mid-run, from the other agent, and it reported that rather than being confused by
+it.
