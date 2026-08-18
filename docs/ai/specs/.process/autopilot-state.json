@@ -4,8 +4,8 @@
   "feature_dir": "specs/art-005-gallery-completion-knowledge-reports-editors",
   "branch": "art-005-gallery-completion-knowledge-reports-editors",
   "stage": "implement",
-  "updated_at": "2026-08-18T17:07:11Z",
-  "active_step": "Phase 7: Implement - Slice 1 slide-deck T011-T023",
+  "updated_at": "2026-08-18T17:43:11Z",
+  "active_step": "Phase 7: Implement - Slice 2 concept-explainer T024-T036",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -407,10 +407,23 @@
     },
     "implement": {
       "status": "in_progress",
-      "active_group": "Slice 1 slide-deck T011-T023",
-      "active_task": "T023",
-      "completed_tasks": 22,
+      "active_group": "Slice 2 concept-explainer T024-T036",
+      "active_task": "T024",
+      "completed_tasks": 23,
       "total_tasks": 119,
+      "slice_prs": [
+        {
+          "slice": 1,
+          "artifact": "slide-deck",
+          "branch": "art-005-gallery-completion-knowledge-reports-editors",
+          "base": "main",
+          "number": 444,
+          "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/444",
+          "status": "open",
+          "source_checkpoint": "660bfe9ce8365afbe6d98af28dd26eccf46a2c9e",
+          "evidence_checkpoint": "373881395f40115dd80953c4b8892dc79346ce22"
+        }
+      ],
       "baseline": {
         "layer_1": "1448/1448",
         "layer_4": "5766/5766",
