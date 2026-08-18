@@ -9858,7 +9858,7 @@ def check_u2(gallery_root: Path) -> list[str]:
         "const snapshot = captureSnapshot();", "const markdown = serializeBoard(snapshot);",
     )
     failures.extend(f"{TRIAGE_BOARD_LABEL}: missing serializer contract {token!r}" for token in required if token not in text)
-    if "cachedMarkdown" in text or text.count("serializeBoard(snapshot)") != 1:
+    if "cachedMarkdown" in text or text.count("const markdown = serializeBoard(snapshot);") != 1:
         failures.append(f"{TRIAGE_BOARD_LABEL}: export must serialize one fresh snapshot exactly once per invocation")
     if 'split("\\n")' not in text or 'JSON.stringify(value)' not in text:
         failures.append(f"{TRIAGE_BOARD_LABEL}: multiline Markdown or JSON-scalar issue escaping is not explicit")

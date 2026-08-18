@@ -55,7 +55,7 @@ for four artifacts is now an explicit Open Question.
 | Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | Six findings remediated; G6 passes with 0 CRITICAL/HIGH findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory PASS at 0.98 against the 0.90 threshold |
-| Implement | `/speckit-implement` | 🔄 In Progress | Slices 1-4 complete in PRs #444, #446, #447, and #448; Slice 5 triage-board T069 GREEN active |
+| Implement | `/speckit-implement` | 🔄 In Progress | Slices 1-4 complete in PRs #444, #446, #447, and #448; Slice 5 triage-board T076 regeneration/gates active |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -924,7 +924,7 @@ For every behavior:
 | 3 - Slice 2 | Complete | 13 | PR #446 open; source checkpoint `7c636c361`; cumulative UAT 36 pass, 36 evidence-backed N/A, zero fail; final gates green |
 | 4 - Slice 3 | Complete | 13 | PR #447 open; source checkpoint `36ef824de`; cumulative UAT 54 pass, 54 evidence-backed N/A, zero fail; final gates green |
 | 5 - Slice 4 | Complete | 13 | PR #448 open; source checkpoint `f27b7833e`; cumulative UAT 72 pass, 72 evidence-backed N/A, zero fail; final gates green |
-| 6 - Slice 5 | In Progress | 6 | Formal RED: gallery 491/494 and fill 62/63, only intended triage-board failures; T069 active |
+| 6 - Slice 5 | In Progress | 13 | Source contracts green; 655/785 reviewable LOC and 145 below mandatory stop; T076 active |
 | 7 - Slice 6 | Pending | 0 | feature-flags plus incremental integration and UAT |
 | 8 - Slice 7 | Pending | 0 | prompt-tuner plus incremental integration and closeout |
 

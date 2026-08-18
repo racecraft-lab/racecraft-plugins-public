@@ -291,3 +291,31 @@
 ### T068
 
 **Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. Gallery reported 491/494; direct P1-P3 evidence names only the planned manifest status and missing triage-board producer. Fill-region reported 62/63 with only the new missing triage-board fill-inventory template failing. Existing Slice 1-4 checks remained green.
+
+### T069
+
+**Deviations/Edge cases/Surprises:** The derivative preserves the pinned Cycle 14 board identity while replacing drag-only interaction with a static semantic board whose focused tickets move between columns with Left/Right and reorder with Up/Down. Six representative contenteditable tickets, named filter/reset/export controls, explicit empty and filtered-empty text, focus retention, and one persistent status region keep the session usable over direct `file://` without storage or URL state.
+
+### T070
+
+**Deviations/Edge cases/Surprises:** One immutable snapshot reads only currently visible tickets in exact `now`, `next`, `later`, `cut` and DOM order. The serializer uses exact ticket and issue field arrays, deterministic Markdown escaping with indented continuation lines, empty-column text, duplicate/empty issue records, JSON scalar issue values, and a fixed Issues appendix. The snapshot is captured and serialized once inside the current copy invocation; no export text is cached.
+
+### T071
+
+**Deviations/Edge cases/Surprises:** The copy handler clears stale status/fallback state, reads clipboard capability on every invocation, attempts callable `writeText` exactly once, makes zero attempts for absent/non-callable capability, normalizes every failure class to the labeled focused selectable textarea, and guards both success and failure settlements with the current attempt ordinal. Hidden copying, downloads, and exception-text exposure are absent.
+
+### T072
+
+**Deviations/Edge cases/Surprises:** None. The manifest diff changes only `triage-board.status` from `planned` to `shipped`; pinned source `18-editor-triage-board.html`, `exports: ["markdown"]`, and every other row remain unchanged.
+
+### T073
+
+**Deviations/Edge cases/Surprises:** Slice 1 `check_l1`, Slice 2 `check_m1`, Slice 3 `check_n1`, Slice 4 `check_o1`, and Slice 5 `check_p1`-`check_p3` all return no failures, and fill-region checks pass 63/63. The complete gallery module reports 490/494 only because F1-F4 require T076 regeneration of the Claude/Codex payload copies; no source producer assertion is failing.
+
+### T074
+
+**Deviations/Edge cases/Surprises:** No further refactor was warranted. The editor already uses flat named functions for filtering, movement, snapshotting, issue collection, serialization, and copy recovery; source checks are green and `git diff --check` passes. The measured implementation retains substantially more than the required 15-LOC mandatory-stop headroom.
+
+### T075
+
+**Deviations/Edge cases/Surprises:** The explicit seven-path `git diff --numstat` measurement reports 949 physical template lines, including 458 byte-identical canonical marker-block lines, leaving 491 non-canonical template lines. With 164 incremental focused-test lines, final reviewable implementation is 655 LOC: 130 below the 785 ceiling and 145 below the mandatory 800 stop. One production template and exactly seven declared authored paths remain in scope, so regeneration may proceed.

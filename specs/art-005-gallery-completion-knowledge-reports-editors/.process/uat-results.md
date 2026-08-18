@@ -791,3 +791,42 @@ Verification remains bound to the source checkpoint:
 - Generated release artifact check: **pass**
 - Packet-excluded spec-index dry-run/read-only checks: **pass**
 - Cumulative browser UAT: **72 pass, 72 evidence-backed N/A, 0 fail**
+
+## Slice 5 Pre-Generation Reviewability Measurement
+
+Slice base: `4c9f4fe521994ba43150532572f8ee7e5a442401`, the exact Slice 4
+closeout head from which `art-005-gallery-completion-knowledge-reports-editors-slice-5`
+was created after PR #448 opened.
+
+The seven implementation-authored paths remain the declared Slice 5 ledger:
+
+1. `speckit-pro/artifact-gallery/templates/triage-board.html`
+2. `speckit-pro/artifact-gallery/manifest.json`
+3. `tests/speckit-pro/unit/test-artifact-gallery.py`
+4. `tests/speckit-pro/unit/test-artifact-fill-regions.py`
+5. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`
+6. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
+7. `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
+
+| Component | Physical additions | Canonical/excluded | Reviewable LOC |
+|---|---:|---:|---:|
+| `triage-board.html` | 949 | 458 byte-identical canonical lines | 491 |
+| `test-artifact-gallery.py` | 160 | 0 | 160 |
+| `test-artifact-fill-regions.py` | 4 | 0 | 4 |
+| Manifest status flip | 1 | 1 metadata line | 0 |
+| UAT carriers | pending cumulative evidence refresh | evidence-only | 0 |
+| **Total** | — | — | **655** |
+
+- Slice 5 component ceiling: **785** (130 LOC headroom)
+- Mandatory authored stop: **800** (145 LOC headroom)
+- Production templates: **1**
+- Primary surfaces: **1**
+- Pre-generation verdict: **WARN / CONTINUE**
+
+The producer adds no persistence, import-back, download, hidden-copy path,
+network dependency, shared gallery runtime, or page-level horizontal scroller.
+All Slice 1-5 source contracts pass, fill-region checks pass 63/63, and the only
+four focused-gallery failures are the T076-owned source/dist payload set-and-byte
+parity checks. The declared maximum physical boundary remains 33 paths; any
+final total-file block may continue only if every excess path is generated or
+workflow/control-plane evidence.
