@@ -27,7 +27,12 @@ Everything fails open. A generation failure of any size still opens the pull
 request, with the shortfall visible in the body's index, the stop report, and the
 workflow file's record. The three corroboration discrepancies end the emission
 attempt without creating, reopening, or rewriting anything, and without invoking
-the strict-mode blocked-stop contract.
+the strict-mode blocked-stop contract. No step of the emission sequence is
+retried automatically either: a failed branch push stops the run before creation
+with nothing on the remote, and a failed bookkeeping push leaves the pull request
+standing with its record local-only. Both report through the stop report and are
+recovered by the operator re-run, which the dual existence test keeps free of a
+duplicate pull request.
 
 ## Technical Context
 

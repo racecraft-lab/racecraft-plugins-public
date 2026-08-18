@@ -167,7 +167,7 @@ Draft PR: pr_closed — #438 recorded, closed (merged: false)
 | --- | --- |
 | `match` | refresh the existing pull request's description, and its title if it changed; report that URL |
 | `no_record` | fall through to the live by-branch existence test, then create or refresh |
-| `skipped` | fall through to the live by-branch existence test, then create or refresh |
+| `skipped` | never create; the present row is already a positive under FR-007's two-way existence test; refresh the recorded pull request when the tool can be reached; when it cannot, report through FR-010's could-not-be-opened path. A `skipped` corroboration is never grounds for creation |
 | `identity_mismatch` | do not create; log; stop report names both identities and the manual resume path |
 | `pr_closed` | do not reopen, do not create a second one; leave the row unchanged; stop report names the number, URL, `gh pr reopen <number>`, and re-run |
 | `pr_missing` | do not create, do not rewrite the row; stop report names the recorded identity and "correct or clear the row, then re-run" |

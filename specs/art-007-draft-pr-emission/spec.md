@@ -167,10 +167,24 @@ value is the one used.
   (`pr_missing`). The run creates nothing and rewrites nothing; it logs the
   discrepancy, and the stop report names the recorded identity and the
   manual resume path (correct or clear the row, then re-run). See FR-011.
+- **Re-entering a stage whose branch carries a different open pull request.**
+  The live query returns an open pull request whose number differs from the
+  recorded one (`identity_mismatch`). The run creates nothing and rewrites
+  nothing; it logs the discrepancy, and the stop report names both identities
+  and the manual resume path. See FR-011.
 - **Pull request creation itself fails.** The artifacts are already committed on
   the branch, so the planning work is not lost. The stop report must say the
   pull request could not be opened and name the resume path, rather than
   reporting a hand-off that did not happen.
+- **The branch push fails.** The push sits between the boundary commit and
+  creation, so a failure there leaves the artifacts and the boundary commit on
+  the local branch and nothing on the remote. No pull request is created, no
+  `Draft PR` row is written, and the stop report names the failed push and the
+  resume path. See FR-013.
+- **The bookkeeping commit or its push fails.** The pull request already exists,
+  so it is neither closed nor recreated. The stop report carries its URL and says
+  the record did not reach the remote; the re-run finds the open pull request
+  through FR-007's existence test and repairs the record. See FR-013.
 - **A later reviewability split.** If final reviewability requires slicing the
   work into multiple pull requests, the draft pull request becomes the first
   slice rather than being closed, so the review thread already collected on it
@@ -200,7 +214,12 @@ value is the one used.
   partial or total, MUST NOT block emission; it MUST instead be recorded as a
   gap-marked row in the pull request's artifacts index, a note in the stop
   report, and a note on the workflow file's draft-PR record. A run that produces
-  zero artifacts MUST still open the pull request.
+  zero artifacts MUST still open the pull request. A page whose marked fill
+  regions are not all populated counts as a generation failure for that page
+  rather than as a partial success. Every gap-marked row MUST name what is
+  missing — the individual page, or the whole set when selection itself could
+  not run — and the reason it is missing, so the same shortfall is legible in
+  all three sinks.
 - **FR-005**: The pull-request packet contract MUST gain a third mode
   representing a draft pull request, whose implementation-evidence requirements
   (verification evidence, changed-file scope evidence, and hands-on acceptance
@@ -209,7 +228,10 @@ value is the one used.
 - **FR-006**: Draft-PR emission MUST run only when the plan stage's final gate
   resolves pass or warn. On a strict-mode block, the existing terminal-step
   contract — boundary commit, non-terminal blocked row, STOP — MUST be preserved
-  unchanged and no pull request MUST be opened.
+  unchanged and no pull request MUST be opened. The terminal step MUST
+  short-circuit before artifact generation on that block, so a blocked stage
+  generates no artifact pages and the blocked path never fails open into a pull
+  request.
 - **FR-007**: The system MUST open the pull request in draft state with a
   final-shape conventional title that it self-validates against the repository's
   release-readiness title shape before creation. Exactly one draft pull request
@@ -223,33 +245,46 @@ value is the one used.
   report that existing URL as the emission outcome. It MUST NOT open a second pull
   request. Creation runs only when no open pull request exists for the head
   branch. A recorded pull request that is closed or merged is a discrepancy under
-  FR-011, not grounds to open a second one.
+  FR-011, not grounds to open a second one. When the title fails its
+  self-validation, the system MUST NOT create the pull request and MUST report
+  through FR-010's could-not-be-opened path, rather than creating a pull request
+  whose title a human would have to repair.
 - **FR-008**: The draft pull request's description MUST contain exactly two
   blocks: an artifacts index table listing each artifact with its purpose and a
   copy-paste command to open it locally, and a resume/status block. It MUST NOT
   contain a release-note fence, verification sections, or placeholder final
-  writeup content.
+  writeup content. When no artifact was generated, the index table MUST still be
+  present under its heading and MUST carry gap rows — one per selected page, or
+  a single whole-set row when selection itself could not run — rather than being
+  omitted or left as a table with no rows.
 - **FR-009**: The draft pull request's identity MUST be recorded on the workflow
   file as a single scalar row keyed `Draft PR` in the
   `## Specification Context` → `### Basic Information` table, the same key/value
   table that carries `Branch` and `Stage`. No row MUST be added to the
   `## Workflow Overview` table, whose rows are phase status records. The row's
   value MUST begin with the pull request's number and URL as one linked
-  reference — link text `#<number>`, link target the URL — and MAY carry an
-  artifact-shortfall note after that link in the same cell. The workflow file
-  MUST be the only place this identity is stored. Before a pull request exists
-  the row MUST be absent; an absent row means no pull request has been opened,
-  is legal, and MUST NOT be reported as an error, and the scaffold workflow
-  template MUST NOT ship a placeholder row. The record MUST be written only
-  after creation or refresh succeeds, and MUST be committed by the bookkeeping
-  commit described in FR-013.
+  reference — link text `#<number>`, link target the URL — and MUST carry an
+  artifact-shortfall note after that link in the same cell whenever generation
+  fell short under FR-004; with no shortfall the cell carries the link alone.
+  The workflow file MUST be the only place this identity is stored. Before a
+  pull request exists the row MUST be absent; an absent row means no pull
+  request has been opened, is legal, and MUST NOT be reported as an error, and
+  the scaffold workflow template MUST NOT ship a placeholder row. The record
+  MUST be written only after creation or refresh succeeds, and MUST be
+  committed by the bookkeeping commit described in FR-013.
 - **FR-010**: The plan-stage stop report MUST carry the pull request URL, the
   artifact index, and resume instructions when emission ran; when the gate
   blocked, it MUST name the blocked gate in place of a URL; when emission was
   attempted but the pull request could not be opened, it MUST say so and name
-  the resume path; and when a corroboration discrepancy ended the emission
-  attempt, it MUST carry the discrepancy shape FR-011 specifies for that
-  status.
+  the resume path; when the branch push that precedes creation failed, it MUST
+  name the failed push, state that no pull request was opened and no draft-PR
+  record was written, and name the resume path; when the bookkeeping commit or
+  its push failed after the pull request was created or refreshed, it MUST carry
+  the pull request URL and say that the draft-PR record did not reach the
+  remote; and when a corroboration discrepancy ended the emission attempt, it
+  MUST carry the discrepancy shape FR-011 specifies for that status. In each of
+  these failure cases the report MUST name the step that failed, the state it
+  left behind, and the resume path.
 - **FR-011**: Stage auto-detect MUST corroborate the workflow file's draft-PR
   record against the live pull request and MUST treat the workflow file as
   authoritative in every outcome: corroboration MUST NOT change the resolved
@@ -309,6 +344,25 @@ value is the one used.
   resume path — correct or clear the row manually, then re-run the stage.
   Like `pr_closed`, this is a fail-open response and does not invoke FR-006's
   strict-mode blocked-stop contract.
+
+  When the classification is `identity_mismatch`, the terminal step MUST NOT
+  create a pull request for the branch and MUST NOT rewrite the `Draft PR` row;
+  the discrepancy MUST be logged through the sinks named above, and the stop
+  report MUST name both identities — the recorded number and URL, and the
+  observed one — and the resume path: correct or clear the row so it names the
+  pull request the branch actually carries, then re-run the stage. Like
+  `pr_closed` and `pr_missing`, this is a fail-open response and does not invoke
+  FR-006's strict-mode blocked-stop contract.
+
+  The three non-discrepancy statuses MUST carry terminal-step consequences too.
+  On `match` the run refreshes the recorded pull request and reports its URL. On
+  `no_record` the run falls through to FR-007's live existence test and creates
+  or refreshes from that result. On `skipped` the `Draft PR` row is present by
+  definition, so it still stands as a positive under FR-007's two-way existence
+  test: the run MUST NOT create a second pull request, it refreshes the recorded
+  pull request when it can, and when the tool cannot be reached at all it reports
+  through FR-010's could-not-be-opened path. A `skipped` corroboration is never
+  grounds for creation.
 - **FR-012**: When final reviewability later requires splitting the work across
   multiple pull requests, the draft pull request MUST become the first slice
   pull request of the stack rather than being closed or superseded, so the
@@ -320,6 +374,19 @@ value is the one used.
   commit carrying that record and push it. The stage-boundary commit's own
   contract — its message, its staged path set, and its non-emptiness — MUST be
   unchanged, and the draft-PR record MUST NOT be folded into it.
+
+  Each step in that order is a precondition for the next, and a failed step
+  MUST NOT be retried automatically; the operator re-run is the recovery path,
+  and FR-007's two-way existence test is what makes that re-run safe. If the
+  branch push fails, the terminal step MUST stop before creation: the generated
+  artifacts and the boundary commit remain on the local branch, no pull request
+  is created, no `Draft PR` row is written, and the stop report carries the
+  FR-010 push-failure shape. If the bookkeeping commit or its push fails after
+  the pull request was created or refreshed, the pull request MUST NOT be
+  closed or recreated and the record MUST NOT be discarded; the stop report
+  carries the FR-010 record-not-pushed shape, and the re-run finds the open
+  pull request through FR-007's existence test and repairs the record instead
+  of opening a second one.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -400,18 +467,21 @@ value is the one used.
 
 - **SC-001**: 100% of plan stages whose final gate resolves pass or warn
   either end with an open draft pull request for the feature, or — when the
-  recorded pull request was closed, merged, or no longer observable outside
-  automation — end with a logged discrepancy and an operator-actionable stop
-  report naming the resume path.
+  recorded pull request was closed, merged, no longer observable outside
+  automation, or contradicted by a different open pull request on the branch, or
+  when a step of the FR-013 emission sequence failed — end with a logged
+  discrepancy or failure note and an operator-actionable stop report naming the
+  resume path.
 - **SC-002**: A reviewer can open every generated artifact directly from the
   pull request description without searching the branch: the index lists 100% of
   generated artifacts, each with a copy-paste open command.
 - **SC-003**: A generation failure never prevents the review hand-off. No pass
   or warn run is prevented from opening the pull request by a generation
   failure, including runs that produce zero artifacts (the only non-opening
-  cases are the FR-011 discrepancy responses, which are not generation
-  failures), and every shortfall is visible in all three places: the index, the
-  stop report, and the workflow record.
+  cases are the FR-011 discrepancy responses and the FR-013 emission-sequence
+  failures, none of which are generation failures), and every shortfall is
+  visible in all three places: the index, the stop report, and the workflow
+  record.
 - **SC-004**: 100% of strict-mode blocked plan stages produce no pull request,
   and their stop report names the blocking gate.
 - **SC-005**: Resuming the workflow locates the feature's pull request from the
@@ -421,6 +491,8 @@ value is the one used.
   stop report alone carries the link, the artifact index, and the resume
   instruction; when FR-011 records a discrepancy instead, the stop report alone
   carries the discrepancy, the recorded pull request's identity, and the manual
+  resume path; and when a step of the FR-013 sequence failed instead, the stop
+  report alone carries the step that failed, the state it left behind, and the
   resume path.
 - **SC-007**: 100% of emitted pull-request titles pass the repository's
   release-readiness title shape check at creation time, before any human edit.
@@ -460,3 +532,7 @@ value is the one used.
 - The draft pull request becoming the first slice of a later stack is a settled
   decision carried in from the design concept's OQ-1 resolution. Clarify encodes
   it; it does not reopen it.
+- At most one plan-stage run is in flight for a feature branch at a time. The
+  stage is human-paced and stops for review, so FR-007's existence test is not
+  required to be safe against two runs racing between the test and creation.
+  Concurrent runs of the same stage are out of scope.
