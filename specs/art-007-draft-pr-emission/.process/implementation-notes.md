@@ -76,3 +76,56 @@ carry a null `mode`, and a `mode == "single"` guard would silently drop their
 failures. And `mode` is absent on `invalid-malformed-json.json` and
 `split-partial-failure-state.json`, so the guard must tolerate `None` without
 raising.
+
+### T006
+
+**Deviations/Edge cases/Surprises:** None material. Fixture pair authored
+together; `protected_body_fingerprint.value` is
+`123e87cba04eb6e71c34eca6b75939be17db1a5c5bf164e5afad3f612e03c172`, computed by
+calling the shipped `protected_body_sha256` rather than reimplementing the
+normalisation. Title carries a lowercase scope per SC-007 and research D4.
+Before authoring, the executor grepped every test `.py` for a glob or `iterdir`
+sweep over `fixtures/pr-packet/`, because a sweep expecting every `valid-*.json`
+to pass would have been broken by adding a fixture that is invalid until T008.
+None exists, so the addition is safe.
+
+Validated bare against the un-relaxed schema, the fixture produces eleven
+failures, all of them draft-mode rejections and **none** of them a `body.*` rule.
+That is the evidence the pair itself is structurally sound and the fingerprint
+matches: the only thing rejecting it is the relaxation T008 and T009 have not
+landed yet.
+
+### T007
+
+**Deviations/Edge cases/Surprises:** Three worth recording.
+
+**Six of the eight fail, not eight.** Tests 5 and 8 pass before and after by
+design — they are SC-008 behaviour-preservation guards, and a guard that changes
+its answer when the implementation lands would not be preserving anything. They
+are armed instead by asserting **exact rule-set equality** rather than
+membership: if T009 drops the top-level strictness without adding the `else` arm,
+test 8's expected set collapses and it fails. Making them artificially red would
+have been gaming the RED bar rather than meeting it.
+
+That equality choice applies to the negative tests generally. Membership
+assertions would all have passed today, since the current failure set is a strict
+superset of every expected set, and would have tested nothing.
+
+**A gap in the contract's own test-obligation table, now closed.** Contract §1.1
+requires the `mode` enum to be widened at **two** sites and explains why — a
+passing draft packet's own validation record is otherwise unrepresentable — but
+§6 lists no obligation covering the second site. An implementation widening only
+`properties.mode` would have passed all eight tests as originally specified. The
+executor closed it inside test 1 by asserting the emitted payload validates clean
+against `$defs/validation_result`, and confirmed the assertion discriminates:
+today it yields `packet.schema.enum validation_result.mode`, and after the
+second-site edit it yields nothing. No test and no fixture was added to close it.
+
+**A third file changed, by repo rule rather than by the task.**
+`docs-site/src/content/docs/reference/tests.md` is generated from the test tree
+and enumerates fixture `.md` files by path, so adding `bodies/valid-draft.md`
+staled it. Regenerated with `pnpm --dir docs-site reference:generate`; the diff is
+5 insertions and 3 deletions, every changed line naming only `valid-draft.md`.
+T049 re-runs this at the end of the phase; running it now keeps every
+intermediate commit `validate-docs`-clean rather than leaving CI red across the
+whole implementation.
