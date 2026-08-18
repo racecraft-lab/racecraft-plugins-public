@@ -1014,3 +1014,42 @@ which rule applies to the file you happened to touch.
 
 Total drift: 30 insertions, 4 deletions across the two pages, every changed line
 attributable to the new agent or the test-file edits. Nothing hand-edited.
+
+### T032, T033, T039, T040 — and an orchestrator error worth recording
+
+All four prose tasks landed: the artifact-generation dispatch on both
+`phase-execution` references, and the Step 0.6c corroboration prose in both
+`SKILL.md` files. 230 insertions across the four files, zero deletions.
+
+**Both executors died to API 500 errors before returning a final report.** Their
+last emitted lines showed the work essentially complete — one had reached
+"substance parity is 27/27", the other was mid-verification. The on-disk state
+was therefore verified directly rather than re-dispatching: all four files carry
+their expected content, the diff is insertions-only, and the suite is the
+arbiter. This is the known failure mode where a subagent completes the work and
+loses the summary; the correct response is to check the tree, not to assume
+either success or failure.
+
+**An orchestrator error, recorded because the commit history is misleading
+without it.** Commit `4afd2ad79`, whose message describes recording the scope
+split and title pre-validation, **also contains all four prose files**. Its
+message does not mention them. The cause was a `git add -A` run by the
+orchestrator while both executors were mid-write — exactly the hazard that had
+been avoided earlier in this run by staging specific paths and holding back a
+live agent's file. The prose is correct and complete; only the commit's
+attribution is wrong. The commit is already pushed, so it is left as it stands
+and documented here rather than rewritten.
+
+The durable lesson: when any agent is live, stage explicit paths. `git add -A` is
+only safe when nothing else is writing.
+
+**One constraint in the dispatch was wrong, and the executor's response to it was
+reverted.** The T040 prompt cited a 32 KiB cap on the Codex `SKILL.md`. That cap
+applies to `AGENTS.md`, not to skill files: no test enforces a size limit on
+`codex-skills/*/SKILL.md`, and three siblings already exceed 32 KiB
+(`speckit-coach` at 34 KB, `speckit-scaffold-spec` at 49 KB, and this file at
+61 KB before any edit). The executor duly compressed its own prose by 1452 bytes
+to fit a cap that does not exist, losing two real clauses — the case of a run with
+no emission terminal step, and the rationale for keeping classification
+offline-testable. The compression was reverted and the fuller committed text
+kept.
