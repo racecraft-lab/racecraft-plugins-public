@@ -4,8 +4,8 @@
   "feature_dir": "specs/art-005-gallery-completion-knowledge-reports-editors",
   "branch": "art-005-gallery-completion-knowledge-reports-editors",
   "stage": "plan",
-  "updated_at": "2026-08-18T00:51:24Z",
-  "active_step": "Phase 3: Plan",
+  "updated_at": "2026-08-18T01:03:01Z",
+  "active_step": "Phase 3: Plan - blocked pending explicit operator topology decision",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -157,6 +157,37 @@
           "reviewability_block_route": "stop for explicit operator topology decision"
         }
       }
+    },
+    "plan": {
+      "status": "blocked",
+      "reason": "combined-slice reviewability projection exceeds the 800 LOC block",
+      "plan_file": "specs/art-005-gallery-completion-knowledge-reports-editors/plan.md",
+      "upstream_measurement": {
+        "files": 7,
+        "lines": 4042,
+        "bytes": 120618,
+        "digests_reverified": true
+      },
+      "projections": {
+        "conservative_reviewable_loc": 2856,
+        "art_003_average_reviewable_loc": 4356,
+        "block_threshold": 800
+      },
+      "runner_estimator": {
+        "status": "pass",
+        "projected": 0,
+        "declared_new": 10,
+        "declared_modified": 3,
+        "production": 0,
+        "disposition": "advisory blind spot for absent net-new production files; explicit measured checkpoint controls"
+      },
+      "outputs_not_created": [
+        "research.md",
+        "data-model.md",
+        "contracts/",
+        "quickstart.md"
+      ],
+      "required_operator_decision": "choose a new topology or ratify a valid combined-slice exception"
     }
   },
   "gates": {
@@ -173,6 +204,20 @@
       "reason": "0 [NEEDS CLARIFICATION] markers",
       "clarify_sessions_completed": 3,
       "consensus": "skipped for all sessions: zero unresolved items"
+    },
+    "G3": {
+      "pass": false,
+      "reason": "workflow reviewability checkpoint blocked before design completion",
+      "runner_syntax_diagnostic": {
+        "pass": true,
+        "markers": 0,
+        "reason": "plan.md exists with 0 unresolved markers"
+      },
+      "reviewability_block": {
+        "conservative_projection": 2856,
+        "threshold": 800,
+        "operator_decision_required": true
+      }
     }
   },
   "extensions": {

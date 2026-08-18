@@ -50,7 +50,7 @@ for four artifacts is now an explicit Open Question.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 3 stories, 20 current FRs, 8 scenarios, and 8 success criteria; the intentional marker was resolved in Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved source/fidelity/fill, editor exports, UAT evidence, and block routing; no consensus needed |
-| Plan | `/speckit-plan` | 🔄 In Progress | Measure pinned upstream sources before accepting the combined slice |
+| Plan | `/speckit-plan` | ⚠️ Blocked | 4,042 upstream LOC; conservative projection 2,856 reviewable LOC exceeds the 800 block; awaiting explicit topology decision |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Accessibility, UX, data-integrity, and error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | TDD ordering across seven templates and shared integration surfaces |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Check all artifacts against the design concept |
@@ -446,11 +446,28 @@ applies, and the one-slice interview answer cannot be silently overwritten.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ Pending | Must contain declared operations and measured budget |
-| `research.md` | ⏳ Pending | Must record pinned upstream evidence and local patterns |
-| `data-model.md` | ⏳ Pending | Editor state and deterministic export models |
-| `contracts/` | ⏳ Pending | Seven fill inventories plus three export examples/contracts |
-| `quickstart.md` | ⏳ Pending | Test, generation, and file:// UAT procedure |
+| `plan.md` | ⚠️ Blocked | STOP record: seven pinned sources measure 4,042 LOC / 120,618 bytes; conservative projection 2,856 reviewable LOC exceeds the 800 block |
+| `research.md` | ⏭️ Not created | Reviewability checkpoint stopped Phase 0/Phase 1 design completion |
+| `data-model.md` | ⏭️ Not created | Reviewability checkpoint stopped Phase 0/Phase 1 design completion |
+| `contracts/` | ⏭️ Not created | Reviewability checkpoint stopped Phase 0/Phase 1 design completion |
+| `quickstart.md` | ⏭️ Not created | Reviewability checkpoint stopped Phase 0/Phase 1 design completion |
+
+### Plan Reviewability Stop
+
+- Pinned-source measurement: 7 files, 4,042 lines, 120,618 bytes; every digest
+  reverified against the official upstream bytes.
+- Conservative realized-port projection: 2,856 reviewable LOC; ART-003-average
+  projection: 4,356 reviewable LOC. Both exceed the 800-LOC block.
+- Runner estimator diagnostic: recognized 10 NEW and 3 MODIFIED declarations,
+  but returned `production: 0`, `projected: 0`, `pass` because the seven net-new
+  production files do not yet exist. This advisory blind spot does not override
+  the explicit measured checkpoint.
+- Runner G3 syntax diagnostic: pass because `plan.md` exists with zero unresolved
+  markers. Workflow G3 is **not cleared**: design outputs are intentionally absent
+  and the human-approved reviewability rule is blocked.
+- Required disposition: record the measured projection and wait. Do not continue
+  to Checklist, Tasks, Analyze, Confidence Gate, or Implementation; do not split
+  automatically and do not treat the earlier one-slice selection as an exception.
 
 ---
 
