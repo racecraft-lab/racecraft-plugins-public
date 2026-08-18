@@ -2666,3 +2666,59 @@ ART-002's fifteen unexecuted acceptance steps, across four shipped templates. Th
 preserved harness covers two of the four kinds; reduced motion needs a CDP method
 `cdp.py` does not implement, and focus-indicator perceptibility is a human
 judgement. No driver exists for those templates. Belongs in ART-009's scoping.
+
+---
+
+## 2026-08-18 — ART-007 Draft-PR Emission archived
+
+ART-007 shipped as a single unstacked pull request, merged and archived on
+2026-08-18 UTC.
+
+| PR | Title | Merged at | Merge commit |
+|---|---|---|---|
+| [#445](https://github.com/racecraft-lab/racecraft-plugins-public/pull/445) | `feat(speckit-autopilot): Open a draft pull request when the plan stage ends` | `2026-08-18T21:06:52Z` | `1d58e5cbb47ce8c79b92e1cd793d6fdb2b29d8c9` |
+
+CI: 19 pass, 1 skipped, 0 failures. Merged by `fgabelmannjr`, base `main`,
+99 files, +14625 −576. Copilot reviewed and reported no blocking issues with
+zero inline comments. The repository suite moved from 7399 to 7525.
+
+### What shipped
+
+The autopilot plan stage can now end at an open draft pull request whose body
+indexes the generated artifact pages, instead of ending privately. Four parts: a
+third packet mode `draft` with a conditional schema branch and mode-aware
+producer; a `Draft PR` workflow-file row with its own grammar and reader; stage
+resolution corroboration over a closed six-status vocabulary computed from one
+read-only `gh` observation; and an `artifact-author` agent on both platforms.
+
+### What the run taught
+
+Four design defects were caught by executing the contract rather than reading it.
+The draft relaxation was first written as an added `allOf` branch, which cannot
+relax anything because `allOf` is conjunctive, and had to be inverted into an
+`else` arm.
+
+The highest-value find was an unnamed authority. The draft contract cited a
+"release-readiness title check" without naming the operation. The obvious
+candidate, `validate-pr-workflow-contract`, would have made draft emission
+structurally impossible on `prsg-`, `spec-`, `doc-` and `xplat-` specs, because
+`spec_scope_from_changed_path` upper-cases those slugs while the contract demands
+a lowercase scope. ART-007's own `art-` slug matches none of them, so the wrong
+choice would have shipped green and broken four other namespaces.
+
+### Opened
+
+Two spec-index defects, both routed to **HRNS-015** as scope bullets 7 and 8
+rather than fixed here. `generate-spec-index` walks the filesystem rather than
+the git index, so git-ignored artifacts become committed backlinks; and no gate
+runs the check against the real repository tree, because the Layer 1 test uses a
+fixture root. ART-007's own `SPEC-MOC.md` sat with three empty generated zones
+through a full green run and was caught only by hand.
+
+### Still owed
+
+T052 never ran: quickstart scenarios 5 through 7 need an installed plugin
+carrying this feature, which exists only after a release cuts from this merge.
+The emission path has therefore never run end to end. Everything at the decision
+layer is confirmed from its own input, but no draft pull request has been opened
+by this code.

@@ -1348,7 +1348,7 @@ ART-001 to a merged-ready PR, and the evidence is recorded in
 `docs/ai/specs/.process/ART-001-workflow.md` under "Raised against speckit-pro"
 and in that spec's retrospective. The last two were hit during ART-007's manual
 UAT, with the reproduction recorded in
-`specs/art-007-draft-pr-emission/.process/manual-uat.md`.
+`docs/ai/specs/.process/ART-007-manual-uat.md`.
 
 **Scope:**
 
@@ -1435,7 +1435,7 @@ UAT, with the reproduction recorded in
   real tree.
 - `docs/ai/specs/.process/ART-001-workflow.md` - the observed evidence for the
   first six, with reproductions.
-- `specs/art-007-draft-pr-emission/.process/manual-uat.md` - the observed
+- `docs/ai/specs/.process/ART-007-manual-uat.md` - the observed
   evidence for the last two, with the one-variable-apart reproduction.
 
 **Done When:**

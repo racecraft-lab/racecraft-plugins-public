@@ -2241,3 +2241,72 @@ because nothing under `speckit-pro/` changes in this archive.
 Three things remain owed and are not closed by this cleanup: no acceptance
 record was merged, the three workflow files still record runbook generation as
 pending, and slices 2 and 3 merged with every task box unchecked.
+
+---
+
+## ART-007 Draft-PR Emission
+
+### Dependencies
+
+ART-002 (draft-PR templates), satisfied by PRs #425, #427 and #430, and ART-006
+(autopilot staging), satisfied by PR #422. Both were complete and archived before
+this run began. ART-007 also absorbed the `gh` corroboration limb that ART-006
+deferred to it, because ART-007 is the spec that creates the pull request the
+limb corroborates.
+
+### Shipped Surface
+
+| Surface | File |
+|---|---|
+| Draft packet mode | `speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json`, `helpers/pr_emission.py` |
+| `Draft PR` row and corroboration | `helpers/read_only.py`, `references/workflow-file-protocol.md` |
+| Emission protocol prose | `references/phase-execution.md` and its Codex mirror, ten subsections each |
+| The new agent | `speckit-pro/agents/artifact-author.md`, `speckit-pro/codex-agents/artifact-author.toml` |
+| Bundle registration | `helpers/install.py`, eleventh required Codex agent |
+
+### Testing
+
+The repository suite is both UNIT_TEST and FULL_VERIFY here, and moved from 7399
+to 7525. No build, typecheck or lint step exists; the stack is Markdown, JSON and
+standard-library Python.
+
+Two runner helpers relevant to the post-implementation sequence are registered
+`deferred` — `generate-uat-skeleton` and `final-reviewability-backstop` — so two
+steps were decided on committed evidence rather than helper output. No UAT
+skeleton could be produced, and the runbook author was correctly never spawned.
+
+Reviewability landed exactly on its declaration at 11 production and 16 total
+files, against a scaffold declaration of ~287 reviewable LOC re-derived from the
+roadmap's original 217. **No measured LOC figure exists**: the estimator scores a
+Markdown-and-Python repository 0 by construction, so the diff gate was decided on
+committed evidence. The atomicity route was `one-navigable-PR` and no split was
+required.
+
+### Downstream
+
+- **ART-008** — was blocked by ART-007 alone. Now Ready.
+- **ART-010** — was blocked by ART-007 alone, its ART-003 dependency satisfied by
+  PRs #435/#436/#439 and its ART-012 dependency by PR #426. **Every dependency is
+  now satisfied.**
+- **ART-009** — still owns Layer 6 corpus membership for `artifact-author`, which
+  ART-007 shipped ungoverned by design. The corpus holds exactly twelve roles and
+  the new agent is outside it, so no digest chain restaled.
+
+### Testing and Cleanup
+
+The cleanup removes the merged ART-007 active spec folder, relocates the manual
+UAT record to `docs/ai/specs/.process/ART-007-manual-uat.md` and repoints its
+three citations, marks the process state archived, regenerates and checks the
+SpecKit index and the roadmap map of content, updates the technical roadmap to
+Complete / Archived while moving ART-008 and ART-010 to Ready, and runs the full
+deterministic suite. No `refresh-release-artifacts.py` run is required, because
+nothing under `speckit-pro/` changes in this archive.
+
+The index had to be regenerated with the git-ignored `.process/pr-packets/`
+directory moved aside, because `generate-spec-index` walks the filesystem rather
+than the git index. That is one of the two defects this run routed to HRNS-015,
+and this cleanup is the second time it has been hit.
+
+Two things remain owed and are not closed by this cleanup: T052 never ran and
+needs an installed plugin carrying this feature, and the emission path has still
+never run end to end.
