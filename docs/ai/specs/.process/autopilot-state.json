@@ -5,7 +5,7 @@
   "branch": "art-007-draft-pr-emission",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "active_step": null,
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
@@ -91,7 +91,7 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement",
@@ -188,6 +188,13 @@
       "medium": 6,
       "low": 2,
       "all_remediated": true
+    },
+    "G6.5": {
+      "pass": true,
+      "composite": 0.99,
+      "threshold": 0.9,
+      "mode": "advisory",
+      "action": "proceed"
     }
   },
   "atomicity_route": {

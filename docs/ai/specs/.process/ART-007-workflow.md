@@ -38,7 +38,7 @@ captured during scoping.
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — 2 domains, 73 items, 24 gaps found and all remediated; 1 consensus round |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 54 tasks (T001-T054), 16 [P], all 13 FRs covered, route one-navigable-PR |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 pass — 9 findings (0 CRITICAL, 1 HIGH, 6 MEDIUM, 2 LOW), all remediated in 2 loops; 0 unresolved |
-| Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
+| Confidence Gate | G6.5 | ✅ Complete | Advisory, composite 0.99 ≥ 0.90 → proceed; plan-stage terminal step, boundary commit taken, STOP |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
 
@@ -425,6 +425,25 @@ fail-open zero-artifact case still opens the PR with a gap-marked index.
 | 2 | Emission-time behavior when the recorded draft PR is closed or merged (Session 2 Q5) | `[spec]`, `[codebase]` | spec-context-analyst, codebase-analyst | 1 | **2-of-2 PREFER B refined (0.90, 0.83; synthesizer 0.87), overriding the executor's reopen recommendation.** No `gh pr reopen` (zero shipped uses; mutation vocabulary is create/edit/comment-resolve only), no second PR, `Draft PR` row left intact as the durable pointer; discrepancy logged, stop report names the closed PR and the operator resume path (`gh pr reopen <number>` manually if the close was unintended). OQ-4 authority is epistemic, not actuation; closed and merged stay one response class, matching FR-007's existing tail sentence. Executor's dissenting Option A recorded for visibility. | spec.md FR-011 paragraph 4, SC-001 carve-out, new edge case; FR-007 tail kept verbatim |
 | 3 | Emission-time behavior when corroboration classifies `pr_missing` (Session 3 F1) | `[spec]`, `[codebase]` | spec-context-analyst, codebase-analyst | 1 | **2-of-2 PREFER A (0.85+ each): mirror the settled `pr_closed` response.** No creation, no `Draft PR` row rewrite; discrepancy logged through the same sinks; stop report names the recorded identity and the manual resume path (correct or clear the row, re-run). Decisive: FR-007's existence test is an OR-gate — the record alone is a standing positive, so creation while the row stands violates the invariant session 1 built to kill the duplicate-PR failure mode; `pr_missing` on GitHub usually means a wrong/corrupt record or an invisible-but-live PR, exactly when a second PR duplicates the review surface; the discrepancy vocabulary stays behaviorally uniform (log + report + no mutation). Reading B (create on a stale record) rejected 2-of-0. | spec.md FR-011 paragraph 5, SC-001 "no longer observable" extension, new pr_missing edge case |
 | 4 | `skipped`-status creation rule + design-contract drift (Checklist error-handling CHK024) | `[security]`, `[spec]` | codebase-analyst, spec-context-analyst, domain-researcher (all 3, mandatory for `[security]`) | 1 | **3-of-3 CONFIRM the applied FR-011 rule (0.95, 0.95, 0.85) + TIGHTEN the contract.** A standing `Draft PR` row under `skipped` is a positive under FR-007's OR-gate and never licenses creation; refresh when reachable, else FR-010's could-not-be-opened report. Spec-context corrected the framing: "skipped with no row" is structurally impossible (row absent routes to `no_record`, where fall-through-and-create is correctly licensed). Domain grounding made the rule's weight empirical: gh's corroboration read runs on GraphQL and creation on REST — independent rate-limit pools, so a real partial-outage window exists where list fails but create would succeed, and GitHub's duplicate-422 guard only fires while the old PR is open (OWASP fail-securely; AWS idempotency precondition absent on the create endpoint). Contract `stage-corroboration.md` §7 `skipped` row was self-contradictory with its own "Never" list and was tightened to the FR text. | contracts/stage-corroboration.md §7 skipped row; checklists/error-handling.md Open Item 1 flipped to resolved |
+
+### Pre-Implement Confidence Emit (G6.5 data source, 2026-08-18)
+
+📊 Confidence: 0.99
+
+- Task understanding: 0.98
+- Approach clarity: 0.98
+- Requirements alignment: 0.97
+- Risk assessment: 1.00
+- Completeness: 1.00
+
+Synthesizer evidence summary: spec.md read in full (625 lines, 0 markers in
+every file); plan.md 327 lines with 16 declared file operations and an
+explicitly empty Complexity Tracking; FR→task traceability spot-checked by
+hand for all 13 FRs (FR-012 thinnest at 1 task, FR-011 richest at 9; the six
+uncited tasks are setup/polish process obligations); F1's HIGH remediation
+verified present verbatim in the committed spec (FR-004 sink-reachability
+paragraph + SC-003 carve-out), not just marked resolved in this log; every
+artifact confirmed present and substantive by direct count (tasks.md 54/54).
 
 ---
 
@@ -816,10 +835,15 @@ are unchanged; this section records the verdict so a later session can read it.
 
 | Field | Value |
 |-------|-------|
-| Mode | <!-- advisory (default) or strict --> |
-| Composite confidence | <!-- 0.00-1.00 --> |
-| Verdict | <!-- proceed / remediate / stop --> |
-| Evidence | <!-- what the score was computed from --> |
+| Mode | advisory (resolved at Step 0.6b: no flag, no local config) |
+| Composite confidence | 0.99 (threshold 0.90) |
+| Verdict | proceed — and the plan stage ends here: this is the stage's terminal step, so the run takes the boundary commit and STOPs without entering Phase 7 |
+| Evidence | Synthesizer Pre-Implement Confidence Emit (2026-08-18, recorded after the Consensus Resolution Log): 0.98 / 0.98 / 0.97 / 1.00 / 1.00. Runner `confidence-gate` read the emit from this file and returned exit 0, `{"composite":0.99,"pass":true,"recommended_action":"proceed","threshold":0.9,"mode":"advisory"}` |
+
+Per this workflow's self-reference note: ART-007 *builds* draft-PR emission, so
+this run ends the pre-ART-007 way — boundary commit, STOP, **no draft PR**. The
+emission behavior specified here activates for later specs' runs once ART-007
+ships and the plugin cache updates.
 
 ---
 
