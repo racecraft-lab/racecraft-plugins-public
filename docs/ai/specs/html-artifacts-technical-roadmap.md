@@ -20,15 +20,17 @@ input.
 **Roadmap MOC:** [html-artifacts-roadmap-MOC.md](html-artifacts-roadmap-MOC.md)
 **Spec ID prefix:** `ART-###`
 **Status:** Active; dependency graph approved 2026-07-28; ART-001, ART-002,
-ART-003, ART-006, ART-011, ART-012 and ART-014 are complete and archived; ART-002
-shipped in PRs #425, #427 and #430, which unblocks ART-007; ART-012 shipped in PR
-#426; ART-014 shipped in PR #433 and archived 2026-08-13, which unblocks ART-017;
+ART-003, ART-006, ART-007, ART-011, ART-012 and ART-014 are complete and archived;
+ART-002 shipped in PRs #425, #427 and #430, which unblocked ART-007; ART-012 shipped in PR #426; ART-014 shipped in PR #433 and archived 2026-08-13, which unblocks ART-017;
 ART-011 shipped in PR #434 and archived 2026-08-13, and ART-019 supersedes its
 FR-022; ART-003 shipped as three stacked slices in PRs #435, #436 and #439 and was
-archived 2026-08-14, leaving ART-010 blocked only by ART-007, and its acceptance
-evidence and harness are preserved under `.process/`; ART-004 entered progress
-on 2026-08-17 and absorbed ART-020's gallery accessibility repair and guard;
-ART-020 is superseded by ART-004; ART-005, ART-007 and ART-009 are ready;
+archived 2026-08-14, and its acceptance evidence and harness are preserved under
+`.process/`; ART-007 shipped in PR #445 and was archived 2026-08-18, which
+unblocks both ART-008 and ART-010 and leaves ART-010 with every dependency
+satisfied, and its acceptance evidence is preserved at
+`.process/ART-007-manual-uat.md`; ART-004 entered progress on 2026-08-17 and
+absorbed ART-020's gallery accessibility repair and guard; ART-020 is superseded
+by ART-004; ART-005, ART-008, ART-009 and ART-010 are ready;
 ART-015 was opened from ART-006 findings and is ready with no dependencies;
 ART-016, ART-017 and ART-018 were opened from ART-014 findings on 2026-08-12 and
 are ready; ART-019 was opened on 2026-08-13 and is ready with no dependencies
@@ -140,10 +142,10 @@ ART-006 (Autopilot Staging) ──────────┼──────�
 | ART-004 | Gallery Completion: Design & Prototyping | 🔄 In Progress | [.process/ART-004-workflow.md](.process/ART-004-workflow.md) | Scaffolded 2026-08-17. ART-001 dependency satisfied by PR #407. One combined planning slice ports six templates and absorbs ART-020's five existing-container fixes plus the global guard; Plan must stop for a human-approved split if its authoritative reviewability gate blocks |
 | ART-005 | Gallery Completion: Knowledge, Reports & Editors | ⏳ Ready | - | ART-001 dependency satisfied by PR #407 |
 | ART-006 | Autopilot Staging | ✅ Complete / Archived | [.process/ART-006-workflow.md](.process/ART-006-workflow.md) | PR #422; archived 2026-08-09; re-audited and re-grilled 2026-08-03. Declared budget 382 reviewable LOC, one slice. `gh` corroboration deferred to ART-007 (see Scope). **Prerequisite discharged** — PRs #416/#417 shipped in speckit-pro 2.22.0, so durable stage state now has a reliable store; ready for autopilot from Phase 1 |
-| ART-007 | Draft-PR Emission | 🔄 In Progress | [.process/ART-007-workflow.md](.process/ART-007-workflow.md) | Scaffolded 2026-08-17; both dependencies satisfied: ART-002 by PRs #425/#427/#430, ART-006 by PR #422. Scoping absorbed the ART-006 `gh` corroboration limb, resolved OQ-1 (the draft becomes the first slice PR), and recorded the corpus deferral to ART-009 (see both Scope amendments) |
-| ART-008 | Feedback Sweep | ⏳ Pending | - | Blocked by ART-007 |
+| ART-007 | Draft-PR Emission | ✅ Complete / Archived | [.process/ART-007-workflow.md](.process/ART-007-workflow.md) | PR #445; archived 2026-08-18. Scoping absorbed the ART-006 `gh` corroboration limb, resolved OQ-1 (the draft becomes the first slice PR), and recorded the corpus deferral to ART-009 (see both Scope amendments). Acceptance evidence preserved at `.process/ART-007-manual-uat.md` |
+| ART-008 | Feedback Sweep | ⏳ Ready | - | ART-007 dependency satisfied by PR #445 |
 | ART-009 | UAT Walkthrough Replacement | ⏳ Ready | - | ART-006 dependency satisfied by PR #422 |
-| ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Pending | - | Blocked by ART-007 alone; ART-003 dependency satisfied by PRs #435/#436/#439, ART-012 by PR #426 |
+| ART-010 | Final-PR Writeup, Companions & Ready Flip | ⏳ Ready | - | All three dependencies satisfied: ART-003 by PRs #435/#436/#439, ART-007 by PR #445, ART-012 by PR #426 |
 | ART-011 | Scaffold Integration | ✅ Complete / Archived | [.process/ART-011-workflow.md](.process/ART-011-workflow.md) | PR #434; archived 2026-08-13. The blind-spot pass and the planning hand-off live on both platforms outside `specs/**`. Shipped inverted from its design: scaffold cannot invoke the autopilot, which carries `disable-model-invocation: true`, so it prints the command instead — nine requirements amended, five superseded. Declared 162 reviewable LOC and estimated 322 at the final 31 FRs; shipped 1160 production changed lines across the two scaffold `SKILL.md` variants, a second data point for ART-015. Layer 2 trigger evaluation is still owed, and the 984-line result is what ART-019 slice D exists to repair |
 | ART-012 | Implementation-Notes Capture | ✅ Complete / Archived | [.process/ART-012-workflow.md](.process/ART-012-workflow.md) | PR #426; archived 2026-08-12. The record contract and the executor reporting field live on both platforms outside `specs/**`. Budget re-estimated at every amendment (115 at scaffold → 155 → 162 → 190 once the operator restored the literal per-task guarantee), and the final six production files matched the declaration exactly |
 | ART-013 | Documentation | ⏳ Pending | - | Blocked by all |
