@@ -895,3 +895,64 @@ branch-guard error on this repository's namespaced spec IDs. That is a known
 environmental limitation of the vendored upstream, not a defect in this feature
 and not a signal about the implementation: those checks are performed by hand and
 recorded as environmental skips.
+
+### T047
+
+**Deviations/Edge cases/Surprises:** Verified by reading both definitions side by
+side, since no test compares them. They are identical in substance on all four
+dimensions the task names.
+
+| Dimension | Both carry |
+|---|---|
+| selection | `stage: draft-pr` filter, then the entry's `trigger`; `always` vs `any_of`; the closed `signals` vocabulary; and the rule that the manifest is read at run time and **wins over the prose** |
+| filling | write only between `START` and `END`, never move or duplicate a marker, fill every declared slot, leave no placeholder, never invent content |
+| output paths | one page per selected entry at `specs/<branch>/artifacts/<entry-id>.html` |
+| failure semantics | the same four-row table — one page fails, every page fails, unreadable template, missing design concept — plus "any unfilled slot is a gap for that page, not a partial success" and "never blocks pull-request creation" |
+
+Only runtime primitives differ, as intended: the Claude body wraps its
+prohibitions in a `<hard_constraints>` block while the Codex
+`developer_instructions` uses a heading, and the Codex copy names the interview
+skill in that platform's command form. Both carry the capability-discovery and
+grounding pointers plus the literal evidence-note line, which is what the two
+Layer 1 capability validators sweep for.
+
+**Two claims in the definitions were checked against the tree rather than taken
+on trust, and both held.** The templates really are named by entry id —
+`templates/implementation-plan.html`, `spec-explainer.html`,
+`code-approaches.html`, `module-map.html` — even though the manifest's
+`source.file` records something different for each (`16-implementation-plan.html`
+and so on). That field is **upstream provenance**, not the local path, so the two
+are not in conflict and the definitions are right. This was nearly filed as a
+discrepancy; checking the directory rather than reasoning from the manifest alone
+is what avoided a false finding.
+
+The fill-marker convention also matches: `implementation-plan.html` carries seven
+`<!-- FILL:<slot>:START -->` / `:END` pairs and a slot inventory the template's
+own prose references.
+
+### PR-time constraint worked out in advance (release-note fence vs the packet body)
+
+This repository's pull-request template carries a `## Release note` section with
+a ```release-note fence, and the release-note policy requires exactly one
+**non-empty** fence on a `feat` or `fix` pull request. The reviewer packet's
+eight required headings — Summary, What Changed, Why It Matters, How To Review,
+How To UAT, Verification, Scope, Known Gaps — contain no such section, and
+`gh pr create --body-file` replaces the template rather than filling it. So the
+naive packet-body path produces a pull request that fails the release-note check.
+
+Two facts resolve it without a hand-edit:
+
+1. `packet_body_structure_failures` requires each **declared** heading to appear
+   exactly once. It does not forbid additional headings, so a body may carry the
+   eight reviewer headings **and** a `## Release note` section.
+2. `pr-packet-output` accepts a finished body as `inputs.body` and uses it
+   verbatim — the same mechanism draft mode relies on, already proven byte-for-byte
+   in this run's round-trip check. The protected fingerprint is then computed over
+   exactly what was supplied, so there is no post-emission edit and no
+   `pr_blocked`.
+
+The plan is therefore to compose the full body — eight reviewer headings plus one
+non-empty release-note fence — and pass it as `inputs.body` at emission time.
+**Never** hand-edit `body.md` afterwards: editing outside the editable markers
+invalidates the fingerprint and blocks the packet, and that is the failure mode
+this note exists to avoid.
