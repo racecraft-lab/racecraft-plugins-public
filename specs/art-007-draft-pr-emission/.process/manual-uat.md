@@ -335,12 +335,22 @@ opposite directions, which is what makes this worth recording:
 
 The second is the more serious: it commits an incorrect artifact and passes.
 
-**Left unfixed on purpose.** The generator is repository tooling well outside
-this feature's surface, and the sound fix — scan the git index rather than the
-filesystem — changes behaviour for every spec, not just this one. It wants its
-own change with its own tests. Closing the gate blindness in Finding 1 belongs
-with it: a real-tree spec-index check added to the suite today would fail on any
-worktree carrying ignored artifacts, which is exactly the false STALE above.
+**Left unfixed on purpose, and routed.** The generator is repository tooling
+well outside this feature's surface, and the sound fix changes behaviour for
+every spec, not just this one. It wants its own change with its own tests.
+Closing the gate blindness in Finding 1 belongs with it: a real-tree
+spec-index check added to the suite today would fail on any worktree carrying
+ignored artifacts, which is exactly the false STALE above.
+
+Both halves are now scope bullets 7 and 8 of **HRNS-015: Autopilot and
+PR-Emission Defect Repair** in
+`docs/ai/specs/harness-engineering-uplift-technical-roadmap.md`, whose stated
+purpose is repairing defects observed during live autopilot runs, each with a
+reproduction and a `file:line` cause. That spec was `Ready` and unscaffolded, so
+the scope was still cheap to change. It carries the constraint that shapes the
+fix: the runner is stdlib-only with no shell fallback, so `git ls-files` is not
+available, and the current walk's descriptor-safe reads and symlink skipping
+must survive whatever replaces it.
 
 ---
 
