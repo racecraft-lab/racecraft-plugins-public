@@ -231,3 +231,27 @@
 ### T053
 
 **Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. Gallery reported 490/491; direct `check_o1` evidence names only the planned manifest status and missing incident reader. Fill-region reported 60/61 with only the new missing incident-report fill-inventory template failing. Existing Slice 1-3 checks remained green.
+
+### T054
+
+**Deviations/Edge cases/Surprises:** The static reader preserves the pinned incident identity, 47-minute event sequence, quantified impact, causal chain, and owned remediation work. It embeds both canonical regions byte-for-byte, fills all five declared slots, puts seven stable anchors in the ordered timeline and four in follow-ups, exposes five semantic sections through labelled navigation, and adds no authored script, export surface, persistence, network dependency, or horizontal scroller. The initial inventory used incident-specific source filenames outside the contract's closed source set; replacing them with the authoritative `spec.md`, `research.md`, `implementation-notes.md`, and `tasks.md` values made R4 green without changing reader behavior.
+
+### T055
+
+**Deviations/Edge cases/Surprises:** None. The manifest diff changes only `incident-report.status` from `planned` to `shipped`; pinned source `12-incident-report.html`, `exports: []`, and every other row remain unchanged.
+
+### T056
+
+**Deviations/Edge cases/Surprises:** Slice 1 `check_l1`, Slice 2 `check_m1`, Slice 3 `check_n1`, and Slice 4 `check_o1` all return no failures, and fill-region checks pass 61/61. The complete gallery module reports 487/491 only because F1-F4 require T059 regeneration of the Claude/Codex payload copies; no source-reader assertion is failing.
+
+### T057
+
+**Deviations/Edge cases/Surprises:** No further refactor was warranted. The reader already uses a single semantic main, stable navigation, ordered and unordered lists with replaceable regions inside persistent containers, audited gallery tokens, and no template-specific behavior. `git diff --check` is clean.
+
+### T058
+
+**Deviations/Edge cases/Surprises:** None. The 769-line physical template contains 458 byte-identical canonical lines, leaving 311 non-canonical template lines. With 109 incremental test lines, final reviewable implementation is 420 LOC: 200 below the 620 ceiling and 380 below the mandatory 800 stop. One production template and the seven declared authored paths remain in scope, so regeneration may proceed.
+
+### T059
+
+**Deviations/Edge cases/Surprises:** Authoritative regeneration completed normally after one silent running window, producing the Claude/Codex dist templates, both installed-cache templates, manifest mirrors, and refreshed proof/XPLAT fixtures; docs `reference:generate` regenerated seven pages byte-identically. All five template copies share SHA-256 `6e7d2afd7af50df884830ae51c1a0f8c5490eda81c144470ad6cb262d0a9adeb`; all five manifests share `7e59af11441cfae9159f0e3adc40e1a20bb9aeb01f0bd6f172f1a604b02e8e71`. Focused gallery and fill checks are green at 491/491 and 61/61.
