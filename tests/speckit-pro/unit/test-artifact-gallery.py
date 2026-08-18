@@ -9908,6 +9908,143 @@ class TriageBoardProducerTests(unittest.TestCase):
         self.assertEqual(check_u3(GALLERY_ROOT), [])
 
 
+# ---------------------------------------------------------------------------
+# Group V - ART-005 feature-flags producer contract (FR-003, FR-007-FR-014,
+# FR-019-FR-023)
+# ---------------------------------------------------------------------------
+
+FEATURE_FLAGS_ID = "feature-flags"
+FEATURE_FLAGS_SOURCE_FILE = "19-editor-feature-flags.html"
+FEATURE_FLAGS_LABEL = f"{TEMPLATES_DIR}/{FEATURE_FLAGS_ID}.html"
+_FLAG_ROOT_FIELDS = ("schemaVersion", "artifactId", "groups", "issues")
+_FLAG_GROUP_FIELDS = ("id", "label", "flags")
+_FLAG_FIELDS = ("key", "description", "enabled", "requires", "rollout")
+
+
+def check_v1(gallery_root: Path) -> list[str]:
+    """V1 - manifest identity, named memory-only controls, and feedback agree."""
+    matches = [entry for entry in (_entries(gallery_root) or []) if isinstance(entry, dict) and entry.get("id") == FEATURE_FLAGS_ID]
+    if len(matches) != 1:
+        return [f"{MANIFEST_FILE}: expected one '{FEATURE_FLAGS_ID}' entry, found {len(matches)}"]
+    entry = matches[0]
+    source = entry.get("source")
+    failures: list[str] = []
+    if entry.get("status") != SHIPPED:
+        failures.append(f"{MANIFEST_FILE}: '{FEATURE_FLAGS_ID}' must be shipped, found {entry.get('status')!r}")
+    if entry.get("exports") != ["markdown"]:
+        failures.append(f"{MANIFEST_FILE}: '{FEATURE_FLAGS_ID}' must export only markdown")
+    if not isinstance(source, dict) or source.get("origin") != UPSTREAM or source.get("file") != FEATURE_FLAGS_SOURCE_FILE:
+        failures.append(f"{MANIFEST_FILE}: '{FEATURE_FLAGS_ID}' must remain sourced from {FEATURE_FLAGS_SOURCE_FILE}")
+
+    artifact = _artifact_path(gallery_root, FEATURE_FLAGS_ID)
+    if artifact is None or not artifact.is_file():
+        failures.append(f"{FEATURE_FLAGS_LABEL}: missing producer artifact")
+        return failures
+    text = _document_text(artifact)
+    authored = text
+    for block in CANONICAL_FILES:
+        if not _embeds(text, block):
+            failures.append(f"{FEATURE_FLAGS_LABEL}: missing canonical {block} block")
+        elif (expected := _canonical_region(gallery_root, block)) is None or _region(text, block) != expected:
+            failures.append(f"{FEATURE_FLAGS_LABEL}: canonical {block} bytes drifted")
+        else:
+            authored = authored.replace(_region(text, block), "")
+    header = _attribution_header(text)
+    if header is None or any(not _carried(header, element) for element in ATTRIBUTION_ELEMENTS):
+        failures.append(f"{FEATURE_FLAGS_LABEL}: incomplete upstream attribution header")
+    elif _labelled_value(header, UPSTREAM_FILE_LABEL) != FEATURE_FLAGS_SOURCE_FILE:
+        failures.append(f"{FEATURE_FLAGS_LABEL}: attribution must name {FEATURE_FLAGS_SOURCE_FILE}")
+
+    elements = _elements(text)
+    attributes = [dict(element.attributes) for element in elements]
+    by_id = {attrs.get("id"): (element.tag, attrs) for element, attrs in zip(elements, attributes) if attrs.get("id")}
+    required_ids = ("flag-groups", "dependency-summary", "reset-flags", "copy-markdown", "copy-status", "copy-fallback")
+    failures.extend(f"{FEATURE_FLAGS_LABEL}: missing named control or region #{item}" for item in required_ids if item not in by_id)
+    groups = [attrs for attrs in attributes if attrs.get("data-group-id") is not None]
+    flags = [attrs for attrs in attributes if attrs.get("data-flag-key") is not None]
+    checkboxes = [attrs for element, attrs in zip(elements, attributes) if element.tag == "input" and attrs.get("type") == "checkbox"]
+    if len(groups) < 3 or any(not attrs.get("aria-labelledby") for attrs in groups):
+        failures.append(f"{FEATURE_FLAGS_LABEL}: expected at least three named flag groups")
+    if len(flags) < 6 or len(checkboxes) < 6 or any(not attrs.get("aria-label") for attrs in checkboxes):
+        failures.append(f"{FEATURE_FLAGS_LABEL}: expected at least six named checkbox flags")
+    for literal in ("No flags in this group.", "Dependency unavailable.", "Invalid rollout; export uses null.", 'role="status"', 'aria-live="polite"'):
+        if literal not in text:
+            failures.append(f"{FEATURE_FLAGS_LABEL}: missing visible state/status contract {literal!r}")
+    if text.count(">Copy as Markdown<") != 1:
+        failures.append(f"{FEATURE_FLAGS_LABEL}: expected exactly one control labeled Copy as Markdown")
+    for token in ("sessionstorage", "indexeddb", "urlsearchparams", "execcommand(", "download="):
+        if token in authored.casefold():
+            failures.append(f"{FEATURE_FLAGS_LABEL}: producer uses prohibited state/export token {token!r}")
+    widths = [int(value) for value in re.findall(r"@media[^{}]*max-width\s*:\s*(\d+)px", text, re.IGNORECASE)]
+    if not any(width >= 360 for width in widths) or "prefers-reduced-motion" not in text or ":focus-visible" not in text:
+        failures.append(f"{FEATURE_FLAGS_LABEL}: responsive, reduced-motion, or visible-focus handling is missing")
+    return failures
+
+
+def check_v2(gallery_root: Path) -> list[str]:
+    """V2 - one fresh snapshot emits typed, ordered, round-trippable JSON."""
+    artifact = _artifact_path(gallery_root, FEATURE_FLAGS_ID)
+    if artifact is None or not artifact.is_file():
+        return [f"{FEATURE_FLAGS_LABEL}: missing producer artifact"]
+    text = _document_text(artifact)
+    failures: list[str] = []
+    for name, expected in (("ROOT_FIELDS", _FLAG_ROOT_FIELDS), ("GROUP_FIELDS", _FLAG_GROUP_FIELDS), ("FLAG_FIELDS", _FLAG_FIELDS), ("ISSUE_FIELDS", _ISSUE_FIELDS)):
+        if _javascript_array(text, name) != expected:
+            failures.append(f"{FEATURE_FLAGS_LABEL}: {name} must declare exact deterministic order {expected!r}")
+    required = (
+        "captureSnapshot", "serializeFlags", "parseRollout", "parseRequires", "collectIssues",
+        "# Feature Flags Export", "Artifact: feature-flags", "Export kind: markdown",
+        "artifact-gallery.feature-flags.export.v1", 'JSON.stringify(snapshot, null, 2)',
+        'schemaVersion: "artifact-gallery.feature-flags.export.v1"', 'artifactId: "feature-flags"',
+        "duplicate_identifier", "invalid_value", "unavailable_value", "rawValue", "normalizedValue",
+        "Required value is empty.", "Value is invalid and was not normalized.",
+        "A normalized value is unavailable.", "Identifier duplicates the first visible occurrence.",
+        "const snapshot = captureSnapshot();", "const markdown = serializeFlags(snapshot);",
+    )
+    failures.extend(f"{FEATURE_FLAGS_LABEL}: missing serializer contract {token!r}" for token in required if token not in text)
+    if "cachedMarkdown" in text or text.count("const markdown = serializeFlags(snapshot);") != 1:
+        failures.append(f"{FEATURE_FLAGS_LABEL}: export must serialize one fresh snapshot exactly once per invocation")
+    if 'String.fromCharCode(96).repeat(3)' not in text or 'FENCE + "json"' not in text:
+        failures.append(f"{FEATURE_FLAGS_LABEL}: export must contain exactly one explicit JSON fence")
+    return failures
+
+
+def check_v3(gallery_root: Path) -> list[str]:
+    """V3 - clipboard recovery is current-invocation and zero/one-attempt."""
+    artifact = _artifact_path(gallery_root, FEATURE_FLAGS_ID)
+    if artifact is None or not artifact.is_file():
+        return [f"{FEATURE_FLAGS_LABEL}: missing producer artifact"]
+    text = _document_text(artifact)
+    failures: list[str] = []
+    required = (
+        "let copyAttempt = 0;", "const attempt = ++copyAttempt;", "clearCopyState();",
+        "const clipboard = navigator.clipboard;", 'typeof clipboard.writeText !== "function"',
+        "await clipboard.writeText(markdown);", "showFallback(markdown);",
+        "Copied. Markdown is on the clipboard.",
+        "Copy failed. The Markdown export is available below for manual copy.",
+        "fallback.hidden = false;", "fallback.value = markdown;", "fallback.focus();", "fallback.select();",
+    )
+    failures.extend(f"{FEATURE_FLAGS_LABEL}: missing clipboard state hook {token!r}" for token in required if token not in text)
+    if text.count("clipboard.writeText(markdown)") != 1:
+        failures.append(f"{FEATURE_FLAGS_LABEL}: current invocation must call writeText at most once")
+    if text.count("attempt !== copyAttempt") < 2:
+        failures.append(f"{FEATURE_FLAGS_LABEL}: both superseded settlement directions need currency guards")
+    if text.casefold().count("execcommand(") or "download=" in text.casefold():
+        failures.append(f"{FEATURE_FLAGS_LABEL}: hidden copying and download recovery are prohibited")
+    return failures
+
+
+class FeatureFlagsProducerTests(unittest.TestCase):
+    def test_feature_flags_editing_contract_passes_against_the_shipped_gallery(self) -> None:
+        self.assertEqual(check_v1(GALLERY_ROOT), [])
+
+    def test_feature_flags_serializer_contract_passes_against_the_shipped_gallery(self) -> None:
+        self.assertEqual(check_v2(GALLERY_ROOT), [])
+
+    def test_feature_flags_clipboard_contract_passes_against_the_shipped_gallery(self) -> None:
+        self.assertEqual(check_v3(GALLERY_ROOT), [])
+
+
 class CheckSignatureTests(unittest.TestCase):
     """Enforce the rule the rest of this module depends on.
 
@@ -9975,6 +10112,7 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     StatusReportReaderTests,
     IncidentReportReaderTests,
     TriageBoardProducerTests,
+    FeatureFlagsProducerTests,
     KeyboardScrollGuardTests,
     KeyboardScrollGuardFixtureTests,
     ReadOnlyPortContractTests,

@@ -339,3 +339,23 @@
 ### T079
 
 **Deviations/Edge cases/Surprises:** None. After PR #452 opened and Slice 5 closeout reached `3473cf84c56302be7df6f3c27316ef898f3b0454`, Slice 6 was created from that exact head as `art-005-gallery-completion-knowledge-reports-editors-slice-6`. The plan and topology contract agree on exactly seven implementation-authored paths and a 780 reviewable-LOC ceiling (230 markup/content, 150 CSS, 245 behavior JS, and 155 incremental tests), leaving 20 LOC below the mandatory 800-LOC stop. `feature-flags` remains `planned` with pinned source `19-editor-feature-flags.html` and `exports: ["markdown"]` before RED.
+
+### T080
+
+**Deviations/Edge cases/Surprises:** None. Group Q1 pins the feature-flags producer identity, canonical bytes, exact export label, named memory-only groups and checkbox controls, reset/fallback surfaces, dependency/invalid/empty feedback, semantic status, responsive handling, reduced motion, visible focus, and prohibited persistence/export paths.
+
+### T081
+
+**Deviations/Edge cases/Surprises:** None. Group Q2 pins the exact root, group, flag, and issue field arrays; schema version; one fenced JSON block; typed booleans/numbers/nulls; fresh pretty-printed serialization; duplicate and raw-invalid issue evidence; and all four stable issue messages.
+
+### T082
+
+**Deviations/Edge cases/Surprises:** None. Group Q3 carries the same invocation-ordinal, fresh-capability, zero/one-attempt, exact fallback, normalized-message, sequential-transition, and two-direction stale-settlement contract proven for triage-board.
+
+### T083
+
+**Deviations/Edge cases/Surprises:** None. The fill contract now pins `flags` and `environment-notes`, treats flags as a repeated list slot, and requires a non-vacuous shipped inventory template with at least two stable flag anchors.
+
+### T084
+
+**Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. Gallery reported 494/497 with all three new Q contracts failing only on the planned manifest state and missing feature-flags producer; fill-region reported 64/65 with only the missing feature-flags inventory template failing. Existing Slice 1-5 assertions remained green.
