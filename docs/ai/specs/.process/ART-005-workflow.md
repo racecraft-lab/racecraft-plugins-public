@@ -52,8 +52,8 @@ for four artifacts is now an explicit Open Question.
 | Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved source/fidelity/fill, editor exports, UAT evidence, and block routing; no consensus needed |
 | Plan | `/speckit-plan` | ✅ Complete | Seven independently measured slices project 535-790 reviewable LOC; all warn and none block |
 | Checklist | `/speckit-checklist` | ✅ Complete | 120 items; 24 initial gaps remediated; G4 passes with 0 remaining gaps |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | TDD ordering across seven templates and shared integration surfaces |
-| Analyze | `/speckit-analyze` | ⏳ Pending | Check all artifacts against the design concept |
+| Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | Check all artifacts against the design concept |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | Seven sequential stacked review slices, one template each |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
@@ -678,10 +678,31 @@ reader/producer classification.
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | Pending |
-| **Phases** | Target: shared baseline plus 7 slice groups |
-| **Parallel Opportunities** | Template-local work only; pending classifier |
-| **User Stories Covered** | Target: US1-US3 |
+| **Total Tasks** | 119 (T001-T119, contiguous) |
+| **Phases** | 10: setup, foundational, 7 sequential slices, stack-wide closeout |
+| **Parallel Opportunities** | T002 and T003 only; both are read-only baseline checks |
+| **User Stories Covered** | US1-US3 across all seven operator-selected slices |
+
+### Tasks Validation
+
+- G5 runner validation passed with `119 tasks found`, `markers: 0`, and
+  `task_count: 119`.
+- The mandatory Verify Tasks check found 0 phantom completions: all 119 tasks
+  are intentionally unchecked and no implementation-path change exists.
+- The phase executor and one fresh retry made no progress. The orchestrator
+  followed `error-recovery-codex.md`, ran the `speckit-tasks` workflow directly,
+  and applied the same formatting, traceability, and gate checks.
+- All 24 FRs and 12 SCs have task references; spec-index write/check and the
+  workflow/state coverage guard pass.
+- Tasks-mode `reviewability-gate` remains unavailable in the installed runner,
+  so it was not invoked. The fallback evidence chain is the scaffold
+  `status=pass` / `verdict=warn` result at 555 LOC, the advisory Plan estimator
+  result (`status=pass`, projected 0 because HTML is not classified as
+  production), and the operator-ratified seven-slice measurements of 535-790
+  LOC. Each slice retains its explicit pre-refresh and final stop at 800 LOC.
+- Task-checkbox changes are control-plane metadata. They are reported
+  separately from, and do not enlarge, the seven declared authored-path
+  reviewability ledgers.
 
 ---
 
@@ -693,15 +714,32 @@ After Tasks/G5, run the read-only classifier against:
 runner helper atomicity-route specs/art-005-gallery-completion-knowledge-reports-editors
 ```
 
-The classifier validates the operator-selected seven-slice navigation. It does
-not authorize a different topology. Record its machine-readable decision here:
+The classifier reports its current structural heuristic. It is advisory and
+does not authorize a different topology or override the operator-selected
+seven-slice navigation. Record its machine-readable decision here:
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** |  | `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| **Releasable** |  | `true` or `false` |
-| **Signals** |  | Decisive structural findings |
-| **Warnings** |  | Release-safety warnings |
+| **Route** | `one-navigable-PR` | Current classifier output; the explicit seven-slice stack remains the delivery topology |
+| **Releasable** | `true` | No release-risk detector applied |
+| **Signals** | `change-shape:modify-heavy` | Current decisive detector finding |
+| **Warnings** | `[]` | No release-safety warnings |
+
+The classifier reads the repeated shared-file modifications as modify-heavy;
+it does not model the seven independently measured template seams ratified by
+the operator. Analyze must preserve this tension as explicit evidence rather
+than silently treating the advisory route as a topology change.
+
+## Layer Plan
+
+| Field | Value |
+|-------|-------|
+| **Status** | `skipped` |
+| **Reason** | `atomicity-route` returned `one-navigable-PR`; the helper contract runs `plan-layers-feature-dir` only for an exact `split-PR` route |
+| **Delivery topology** | Seven sequential stacked slices remain operator-ratified in `plan.md` and `contracts/slice-topology-contract.md` |
+
+No layer-planner helper was invoked, and no implementation branch or PR was
+created during the Plan stage.
 
 ---
 

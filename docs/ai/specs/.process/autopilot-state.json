@@ -4,8 +4,8 @@
   "feature_dir": "specs/art-005-gallery-completion-knowledge-reports-editors",
   "branch": "art-005-gallery-completion-knowledge-reports-editors",
   "stage": "plan",
-  "updated_at": "2026-08-18T03:51:17Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-08-18T04:29:02Z",
+  "active_step": "Phase 6: Analyze",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -321,7 +321,74 @@
           "execution_note": "The checklist-executor and its one retry hit model capacity; the orchestrator followed error-recovery-codex.md, ran the domain workflow directly, and validated the result with the same runner gates."
         }
       }
+    },
+    "tasks": {
+      "status": "completed",
+      "artifact": "specs/art-005-gallery-completion-knowledge-reports-editors/tasks.md",
+      "total_tasks": 119,
+      "first_task": "T001",
+      "last_task": "T119",
+      "contiguous": true,
+      "checked_tasks": 0,
+      "unchecked_tasks": 119,
+      "phantom_completions": 0,
+      "parallel_tasks": [
+        "T002",
+        "T003"
+      ],
+      "user_stories": [
+        "US1",
+        "US2",
+        "US3"
+      ],
+      "slice_groups": 7,
+      "execution_note": "The phase-executor made no progress, and one fresh phase-executor retry also made no progress. Per error-recovery-codex.md, the orchestrator ran the speckit-tasks workflow directly, validated strict formatting and traceability, and passed G5."
     }
+  },
+  "task_reviewability": {
+    "helper_id": "reviewability-gate",
+    "requested_mode": "tasks",
+    "status": "deferred",
+    "invoked": false,
+    "deferral_reason": "installed runner supports setup mode only; tasks mode is deferred",
+    "fallback_evidence": {
+      "setup_mode": {
+        "runner_status": "pass",
+        "runner_mode": "setup",
+        "scaffold_estimate_reviewable_loc": 555,
+        "scaffold_verdict": "warn"
+      },
+      "plan_estimator": {
+        "status": "pass",
+        "projected": 0,
+        "disposition": "HTML production-classification blind spot; explicit per-slice measured ceilings control"
+      },
+      "operator_decision": "seven sequential stacked slices, one template per slice",
+      "per_slice_range": "535-790 reviewable LOC",
+      "block_threshold": 800
+    },
+    "current_size_only_block": false,
+    "correctness_stop": false,
+    "pr_marker_plan_required": false,
+    "checkbox_diff_disposition": "control-plane metadata reported separately from the seven authored-path ledgers"
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [],
+    "warnings": [],
+    "advisory": true,
+    "operator_topology": "seven sequential stacked slices",
+    "disposition": "classifier sees repeated shared-file modification; it does not override the operator-ratified seven-slice topology"
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity-route returned one-navigable-PR; plan-layers-feature-dir runs only for an exact split-PR route",
+    "helper_invoked": false,
+    "operator_topology_preserved": "seven sequential stacked slices"
   },
   "gates": {
     "G1": {
@@ -376,6 +443,15 @@
         "error-handling": "30 items; 4 initial gaps; 0 remaining"
       },
       "executor_recovery": "data-integrity result delivery and error-handling execution hit model capacity; direct validation fallback completed per error-recovery-codex.md"
+    },
+    "G5": {
+      "pass": true,
+      "markers": 0,
+      "reason": "119 tasks found",
+      "task_count": 119,
+      "phantom_completions": 0,
+      "requirements_covered": 24,
+      "slice_boundaries": 7
     }
   },
   "extensions": {
@@ -461,11 +537,11 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -476,7 +552,39 @@
       "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
+      "step": "Phase 7: Implement - Setup and foundational checks T001-T010",
+      "status": "skipped: outside stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 1 slide-deck T011-T023",
+      "status": "skipped: outside stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 2 concept-explainer T024-T036",
+      "status": "skipped: outside stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 3 status-report T037-T049",
+      "status": "skipped: outside stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 4 incident-report T050-T062",
+      "status": "skipped: outside stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 5 triage-board T063-T078",
+      "status": "skipped: outside stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 6 feature-flags T079-T094",
+      "status": "skipped: outside stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Slice 7 prompt-tuner T095-T111",
+      "status": "skipped: outside stage plan"
+    },
+    {
+      "step": "Phase 7: Implement - Stack-wide closeout T112-T119",
       "status": "skipped: outside stage plan"
     },
     {
