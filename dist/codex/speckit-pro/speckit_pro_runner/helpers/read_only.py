@@ -1289,6 +1289,170 @@ def workflow_draft_pr_row(lines: list[str]) -> dict[str, Any] | None:
     return None
 
 
+# Closed corroboration vocabulary: exactly six literal lowercase tokens, no
+# aliases and no alternate casing, in the order the contract lists them. Named on
+# the module the way `AUTOPILOT_STAGES` is, so a seventh status cannot appear
+# without editing this line. The last three are discrepancies; the first three
+# are not.
+AUTOPILOT_CORROBORATION_STATUSES = (
+    "match",
+    "no_record",
+    "skipped",
+    "pr_closed",
+    "pr_missing",
+    "identity_mismatch",
+)
+# The two reasons this operation supplies for itself, because the orchestrator
+# has none to give in either case. A reason carried by the request wins over
+# both: the operator acts on which failure it was, not on the fact of one.
+NO_OBSERVATION_REASON = "no observation supplied"
+UNUSABLE_OBSERVATION_REASON = "observation unusable"
+OPEN_PR_STATE = "open"
+# The two terminal states `gh` reports, mapped to what each says about merging;
+# the query carries no separate merged field, so the state is the only source.
+# Read as an ALLOWLIST rather than as "anything that is not open": `pr_closed` is
+# a stop that sends the operator to reopen a pull request by hand, so reaching it
+# off a token this tool has never seen would halt a healthy run on no evidence.
+# An unrecognized state falls through to `match` instead, which costs nothing —
+# the run refreshes a pull request it can see, and a refresh that turns out to be
+# impossible reports through the same could-not-be-opened path as every other
+# unreachable-tool outcome.
+CLOSED_PR_STATES = {"closed": False, "merged": True}
+
+
+def corroboration_record(
+    status: str,
+    *,
+    recorded: dict[str, Any] | None = None,
+    observed: dict[str, Any] | None = None,
+    merged: bool | None = None,
+    reason: str | None = None,
+) -> dict[str, Any]:
+    """All five keys, for every status, in the order the envelope writes them.
+
+    What a status has nothing to say about is null rather than omitted, so no
+    consumer has to tell "missing" apart from "not applicable".
+    """
+    return {
+        "status": status,
+        "recorded": recorded,
+        "observed": observed,
+        "merged": merged,
+        "reason": reason,
+    }
+
+
+def observation_pull_requests(observation: Any) -> list[dict[str, Any]] | None:
+    """The pull requests of a successful observation, or None when it cannot answer.
+
+    Fail-closed on evidence: the tool being absent, unauthenticated, cancelled,
+    rate-limited, or emitting an unexpected shape are one class, and none of them
+    is evidence that a recorded pull request is gone. A single malformed entry
+    rejects the whole array rather than being dropped, because an entry silently
+    skipped reads downstream as an absence — the false negative this rule exists
+    to prevent. An empty array is usable, not malformed: it is how a branch with
+    no pull request answers.
+    """
+    if not isinstance(observation, dict):
+        return None
+    # `ok` must be the JSON literal `true`, not merely truthy. Python's
+    # `1 == True` means a truthiness test would accept `ok: 1` as a successful
+    # query, and the whole point of the gate is that only a genuine success may
+    # report a discrepancy.
+    if observation.get("ok") is not True:
+        return None
+    entries = observation.get("pull_requests")
+    if not isinstance(entries, list):
+        return None
+    for entry in entries:
+        if not isinstance(entry, dict):
+            return None
+        number = entry.get("number")
+        # The same int/bool conflation from the other side: `True` is an `int`,
+        # and reading it as pull request #1 would fabricate an identity. A string
+        # number would never equal the recorded int, and `pr_missing` drawn from
+        # that would be a false absence.
+        if not isinstance(number, int) or isinstance(number, bool):
+            return None
+        if not isinstance(entry.get("url"), str) or not isinstance(entry.get("state"), str):
+            return None
+    return entries
+
+
+def observation_skip_reason(observation: Any) -> str:
+    """Why corroboration was skipped; a reason the request carries is used verbatim.
+
+    An explicit JSON `null` is indistinguishable from an absent key to any reader
+    that asks for the key's value, and neither is an error.
+    """
+    if observation is None:
+        return NO_OBSERVATION_REASON
+    reason = observation.get("reason") if isinstance(observation, dict) else None
+    return reason if isinstance(reason, str) and reason else UNUSABLE_OBSERVATION_REASON
+
+
+def observed_identity(entry: dict[str, Any]) -> dict[str, Any]:
+    """The three fields the classification reads, echoed as the live state spells them.
+
+    `isDraft` and `headRefName` decide nothing — the query is already scoped to
+    the head branch — so neither is carried.
+    """
+    return {"number": entry["number"], "url": entry["url"], "state": entry["state"]}
+
+
+def corroborate_draft_pr(row: dict[str, Any] | None, observation: Any) -> dict[str, Any]:
+    """Classify the recorded `Draft PR` identity against one supplied observation.
+
+    Reports; never decides. The resolved stage is untouched, resolution is never
+    blocked, and the run is never stopped here — a discrepancy is acted on at the
+    terminal step, which is the only place a pull request is ever written. This
+    operation neither runs `gh` nor touches the network: the orchestrator takes
+    the one read-only observation and passes it in as data, which is what leaves
+    the classification deterministic and offline-testable.
+    """
+    if row is None:
+        # The row's presence is what triggers the observation, so a run without
+        # one has nothing to corroborate and reads no observation at all.
+        return corroboration_record("no_record")
+    # The row's gap note is run prose about artifact shortfalls, never part of
+    # the pull request's identity, so it is not carried.
+    recorded = {"number": row["number"], "url": row["url"]}
+    entries = observation_pull_requests(observation)
+    if entries is None:
+        # The row is present, so a skipped run still knows which pull request it
+        # failed to reach; the terminal step refreshes that one once the tool can
+        # be reached, and never treats `skipped` as grounds to create a second.
+        return corroboration_record(
+            "skipped", recorded=recorded, reason=observation_skip_reason(observation)
+        )
+    # Rule 1, ahead of every later rule and independent of array order: a branch
+    # that grew a second pull request must report the conflict rather than the
+    # absence, the closure, or the moved URL.
+    for entry in entries:
+        if entry["state"].casefold() == OPEN_PR_STATE and entry["number"] != recorded["number"]:
+            return corroboration_record(
+                "identity_mismatch", recorded=recorded, observed=observed_identity(entry)
+            )
+    recorded_entry = next(
+        (entry for entry in entries if entry["number"] == recorded["number"]), None
+    )
+    if recorded_entry is None:
+        # Rule 4, reached only because rule 1 found nothing open to conflict with.
+        return corroboration_record("pr_missing", recorded=recorded)
+    observed = observed_identity(recorded_entry)
+    state = recorded_entry["state"].casefold()
+    if state == OPEN_PR_STATE and recorded_entry["url"] != recorded["url"]:
+        # Rule 2: a repository transfer moves a pull request without changing its
+        # number, so the recorded number can still resolve at a URL the row does
+        # not name.
+        return corroboration_record("identity_mismatch", recorded=recorded, observed=observed)
+    if state in CLOSED_PR_STATES:
+        return corroboration_record(
+            "pr_closed", recorded=recorded, observed=observed, merged=CLOSED_PR_STATES[state]
+        )
+    return corroboration_record("match", recorded=recorded, observed=observed)
+
+
 def auto_detect_basis(first_open: tuple[str, str | None] | None) -> str:
     """The plain-English reason the orchestrator prints before phase work begins.
 
@@ -1337,6 +1501,13 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
         source = "auto-detect"
         stage = "implement" if signals["planning_complete"] else "plan"
         basis = auto_detect_basis(signals["first_open"])
+    # Blanked the way `workflow_stage_signals` blanks them, so a commented-out
+    # row can never become evidence. `corroboration` is always present, so a run
+    # that could not check stays distinguishable from one that checked and agreed.
+    draft_pr_lines = HTML_COMMENT_RE.sub("", text).splitlines()
+    corroboration = corroborate_draft_pr(
+        workflow_draft_pr_row(draft_pr_lines), inputs.get("pr_observation")
+    )
     return make_result(json_text({
         "tool": "resolve-autopilot-stage",
         "stage": stage,
@@ -1346,6 +1517,7 @@ def resolve_autopilot_stage(inputs: dict[str, Any], repo_root: Path) -> dict[str
         "planning_complete": signals["planning_complete"],
         "confidence_gate_status": signals["confidence_gate_status"],
         "from_phase": parsed["from_phase"],
+        "corroboration": corroboration,
     }))
 
 

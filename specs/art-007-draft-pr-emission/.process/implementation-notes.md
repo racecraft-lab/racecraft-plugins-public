@@ -686,3 +686,128 @@ and three showed 64 with its own file as the only FAIL line, the two transients
 having cleared when that agent's work committed. HEAD moved underneath it
 mid-run, from the other agent, and it reported that rather than being confused by
 it.
+
+### T036-T038
+
+**Deviations/Edge cases/Surprises:** `test-autopilot-stage-resolution` reached
+257/257 from 193/257. One file changed, +172 lines, no deletions, no new imports.
+The helper still never shells out to `gh` and never touches the network — the
+orchestrator takes the one read-only observation and passes it in as data, which
+is what keeps the classification deterministic and offline-testable.
+
+**A real gap in my own contract amendment, found by the implementer.** §5.2 as I
+wrote it settled the **closed** side as an allowlist and argued the case at
+length, but said nothing about what "open" means for rule 1. The two readings
+diverge on exactly one input: a competing pull request in an unrecognised state.
+
+The implementer chose the symmetric reading — `OPEN` as an allowlist, so an
+unrecognised competing state is not a conflict — and flagged it rather than
+letting it pass as an implementation detail. That is correct, and §5.2 now says
+so: `identity_mismatch` carries the same consequence as `pr_closed`, ending the
+emission attempt and sending the operator to fix the row by hand. Reading one
+side as an allowlist and the other as a negation would let an unrecognised token
+produce a stop through one rule and a `match` through the other, which is the
+kind of asymmetry that only surfaces in production.
+
+**Three decisions made where neither contract nor fixture pinned anything, all
+flagged rather than assumed.** First-in-array wins among several competing open
+pull requests (the status is identical in every ordering; only which one
+`observed` names is unpinned). A request-supplied `reason` must be a non-empty
+string to be echoed, so an empty or non-string reason falls back rather than
+leaking into the run-report line. And an entry whose `number` is a boolean is
+rejected as unusable — one clause beyond the letter of the contract, added
+because it is the **same int/bool conflation the contract already names for
+`ok`, read from the other side**: `True == 1`, so without the guard a boolean
+would be read as pull request #1 and could fabricate a match against a recorded
+`#1`.
+
+**Whole-observation poisoning is not discretionary.** One malformed entry
+rejects the entire array rather than being dropped, because a silently skipped
+entry reads downstream as an absence — and `pr_missing` drawn from a dropped
+entry is exactly the false negative the fail-closed rule exists to prevent. An
+**empty** array is usable, not malformed: it is how a branch with no pull request
+answers.
+
+**Envelope invariance was demonstrated, not asserted.** Key order on the helper's
+own stdout puts `corroboration` ninth, after `from_phase`, with nothing
+displaced, and a direct witness across three observation classes reported the
+eight pre-existing keys byte-identical to the no-observation baseline in each.
+The suite proves it over a wider matrix — three stage-resolution paths crossed
+with four observation classes.
+
+### T043
+
+**Deviations/Edge cases/Surprises:** Satisfied by the 257/257 result above. All
+six statuses, the precedence rule, the stage-invariance assertion, and the eight
+untouched envelope keys pass, and no unsuccessful observation produces a
+discrepancy in place of `skipped`.
+
+### T028-T031, T034
+
+**Deviations/Edge cases/Surprises:** Both agent definitions landed, the install
+frozenset went from ten entries to eleven, and the full suite reached
+**7525/7525** after regeneration — up 92 from 7433. Layer 5 moved 186 to 192,
+exactly the +6 predicted from the pre-check (two subtests in the tools-allowlist
+sweep, two in the session-shape sweep, and one each for the Claude and Codex
+named-tool guards).
+
+**The pre-check I ran before dispatch was incomplete, and the executor caught
+what it missed.** Two Layer 1 validators also glob the agent directories and
+exclude neither new file: `validate-capability-pointer.py` and
+`validate-capability-resolution.py`. Had the definitions mirrored only
+`uat-runbook-author`'s frontmatter shape they would have failed both. Both
+definitions therefore carry the capability-discovery pointer, the grounding
+pointer, and the literal `Capability path:` evidence-note line. The lesson is
+that "which validators sweep this directory" needs to be answered by grepping
+for globs across **all** layers, not by checking the one layer the task names.
+
+**T031 and the plan's own research decision D10 are both wrong, demonstrably.**
+Both assert that the mutation-helpers test "pins no literal filename list", so a
+new agent and the frozenset move together. That is true of filenames and false
+of **counts**: the test pins the bundle size twice, at
+`len(planned_operations) == 10` and `len(no_op_operations) == 10`. Growing the
+bundle to eleven fired both. D10 inspected `install.py` but never ran the test,
+which is how it missed them.
+
+That put the dispatch's three-file boundary in direct conflict with its own
+53/53 acceptance bar. The executor resolved toward the bar, edited the two
+literals, and reported the deviation rather than hiding it — the right call:
+T031 forbids *adding a test*, and correcting a stale literal is not that, no
+other task owns the count, and this feature's own tests already live in that file
+from T013. The two literals travel in pairs, so fixing one still left 52/53.
+
+**The count was deliberately left as a literal** rather than derived from
+`len(REQUIRED_CODEX_AGENT_NAMES)`. Deriving it would be tautological — the test
+would assert the helper agrees with the same frozenset the helper reads — and the
+pinned number is the closed-inventory property working as designed. Reviewed and
+agreed.
+
+**The parity baselines now diverge and are deliberately left alone.**
+`validate-tool-scoping-baseline.txt` still records 186 against a live 192, and
+`validate-payload-conformance-baseline.txt` 209 against 218. The count-parity
+contract's rule 4 does say to regenerate when a runtime-read data file changes
+the count. Two facts decided it the other way: nothing enforces these files —
+`run-all.py` never reads them and the gates test checks only manifest keys and
+path existence — and, decisively, **the last commit to add an agent
+(`049e6d972`, PR #114, `uat-runbook-author`) touched zero baseline files**. The
+repository's own practice is not to regenerate them for an agent addition, so
+following precedent beats following my reading of the contract. Recorded here so
+the divergence is a known, deliberate state rather than an oversight.
+
+**Colour reuse was unavoidable and is harmless.** All eight conventional values
+were already taken, and reuse is the existing norm (cyan appears three times,
+purple twice). `green` was chosen; its only other holder is a read-only consensus
+analyst that never runs at pull-request time, and `cyan` was deliberately avoided
+because `uat-runbook-author` holds it. No validator constrains the field.
+
+**T034 verified explicitly rather than inferred from the aggregate.** Its
+command order matters because Layer 1 checks shipped bytes, so the sequence ran
+refresh, then Layer 1 (1468/1468), then the full suite. The Layer 6 corpus
+manifest still reports exactly **twelve** roles — analyze-executor,
+autopilot-fast-helper, checklist-executor, clarify-executor, codebase-analyst,
+consensus-synthesizer, domain-researcher, gate-validator, implement-executor,
+phase-executor, spec-context-analyst, uat-runbook-author — with `artifact-author`
+absent from the entire Layer 6 tree and no `source digest does not match role
+source bytes` failure. The Q7 decision to ship the new agent outside the governed
+corpus holds exactly as designed: adding an agent outside the corpus does not
+restale the hand-maintained digest chain.

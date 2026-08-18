@@ -183,6 +183,25 @@ when the state is `MERGED`, `false` when it is `CLOSED`, and `null` in every
 other status, because §2's `--json` field list carries no separate merged field
 and `state` is the only source available.
 
+**Rule 1's "open" is an allowlist too, for the same reason.** An open pull
+request is one whose state is exactly `OPEN`, compared without regard to case.
+A competing pull request in an unrecognised state is **not** a conflict, and the
+run falls through to the later rules.
+
+The two sides must be read symmetrically because they carry the same
+consequence: `identity_mismatch` is as much a stop as `pr_closed` is, ending the
+emission attempt and sending the operator to correct the row by hand. Reading
+rule 1 as "not closed" while reading rule 3 as an allowlist would leave an
+unrecognised token producing a stop through one rule and a `match` through the
+other, which is the kind of asymmetry that only shows up in production.
+
+### 5.4 Statuses report; they never decide
+
+Corroboration never changes the resolved stage, never blocks resolution, and
+never stops the run. It is computed after the stage is decided and only ever
+appended to the envelope. Every consequence of a discrepancy belongs to the
+terminal step (§7), which is the only place a pull request is ever written.
+
 ### 5.3 Closed vocabulary
 
 `match`, `no_record`, `skipped`, `pr_closed`, `pr_missing`, `identity_mismatch`.
