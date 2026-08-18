@@ -8,7 +8,7 @@ Run each setup-mode reviewability gate with the fixed runner:
 
 ```bash
 cd /Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/art-004-gallery-completion-design-prototyping
-env PYTHONPATH=/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/fix-codex-same-task-autopilot/speckit-pro /Library/Frameworks/Python.framework/Versions/3.11/bin/python3 -m speckit_pro_runner
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner
 ```
 
 Use helper `reviewability-gate`, `mode_name=setup`, and these targets:
@@ -18,6 +18,11 @@ Use helper `reviewability-gate`, `mode_name=setup`, and these targets:
 - `specs/art-004-gallery-completion-design-prototyping/contracts/reviewability-slice-3-decision-ports.md`
 
 Also run helper `estimate-reviewable-loc` against `specs/art-004-gallery-completion-design-prototyping/plan.md`; record its classifier limitation because it does not count this repository's HTML/Python review surface.
+
+Do not run a separate tasks-mode reviewability gate. The installed runner
+supports setup mode for this helper, so the recorded fallback remains the G0
+setup evidence, the three G3 slice results (`160/pass`, `590/warn`,
+`520/warn`), and the human-approved split.
 
 ## Slice 1 Validation
 

@@ -80,7 +80,9 @@ A reader chooses one visual direction or one base component variant, records a r
 - A reader enables reduced motion while reviewing animation timing, drag or
   linked-screen transitions, background/theme transitions, or horizontal scroll
   behavior.
-- The plan-time reviewability gate blocks the chosen combined slice.
+- The historical combined-slice reviewability gate blocks, then implementation
+  proceeds only through the human-approved three-slice topology while each slice
+  gate remains non-blocking.
 
 ## Clarifications
 
@@ -146,7 +148,7 @@ A reader chooses one visual direction or one base component variant, records a r
 - **FR-011**: Every intentional horizontal overflow region in shipped and newly completed artifacts MUST declare `data-rc-keyboard-scroll="horizontal"`, be sequentially focusable with `tabindex="0"`, use `role="group"`, and have a specific non-empty `aria-label`.
 - **FR-012**: The five existing affected horizontal scroll containers in `code-approaches`, `implementation-plan`, and `module-map` MUST receive the declaration, keyboard focus, group role, and accessible-name repair required for new wide regions.
 - **FR-013**: The gallery verification guard MUST sweep every manifest-shipped artifact, reject undeclared horizontal-overflow styling and noncompliant declared regions, prove the nine ART-004/repaired artifact IDs are included, and contain a synthetic negative fixture whose declared region omits its keyboard route; neither test nor fixture may be named after ART-004 or ART-020.
-- **FR-014**: ART-004 MUST absorb ART-020 completely, mark ART-020 as superseded, keep one combined slice through specification, and stop for a human-approved split if the plan-time reviewability gate blocks the combined scope.
+- **FR-014**: ART-004 MUST absorb ART-020 completely, mark ART-020 as superseded, remain one feature spec/branch/delivery, and implement only through the human-approved three-slice topology after the combined plan-time reviewability gate block.
 - **FR-015**: Every interactive control in the six new artifacts and the three
   repaired artifacts MUST be keyboard operable without pointer input, expose a
   visible focus indicator, avoid keyboard traps, and remain in a logical
@@ -370,21 +372,38 @@ result record; it never overwrites ART-003 harness outputs or results.
 
 ### Reviewability Notes *(if applicable)*
 
-- The combined scope is intentional because the fixed design-concept answer selected one combined slice after weighing the advisory reviewability warning.
-- The advisory setup estimate was 865 projected reviewable LOC across twelve authored files or surfaces, fourteen functional requirements, and seven capability groups, with a warning and a suggested three-slice topology.
-- The advisory estimate is not plan evidence. The authoritative plan-time reviewability gate must measure actual declared file operations before task generation.
-- If the authoritative gate blocks the combined slice, the feature stops for a human-approved split. Fidelity must not be reduced, and ART-020 must not be removed from ART-004 as a workaround.
+- The original combined-slice answer is preserved as historical rationale. The
+  authoritative plan-time gate blocked it at 865 reviewable LOC, 9 production
+  files, and 11 total authored files.
+- The binding fallback answer was `Stop and split`; the user approved three
+  ordered review slices on 2026-08-17 without reducing functional fidelity or
+  moving ART-020 back out of ART-004.
+- The active reviewability authority is the three durable slice-gate contracts:
+  slice 1 `160/pass`, slice 2 `590/warn`, and slice 3 `520/warn`, all with no
+  blockers.
+- Tasks-mode `reviewability-gate` remains deferred by the installed runner; the
+  non-blocking fallback chain is the G0 setup evidence, the three G3 slice
+  results, and the human-approved split.
 - Typed reviewability exceptions are rare operator-owned overrides. Accepted classes are refactor, infra, and upgrade, but generated templates, generated zones, `.process` files, PR bodies, and code fences are not valid provenance.
 
 ### Reviewability Budget *(mandatory)*
 
 - **Primary surface**: UI gallery artifacts
 - **Secondary surfaces, if any**: harness/adapter verification, seed/config catalog metadata, docs/process roadmap disposition, generated release artifacts
-- **Projected reviewable LOC**: 865 advisory net-new LOC before plan evidence; excludes generated payloads, installed-cache proofs, generated reference pages, vendored upstream originals, and lockfiles
-- **Projected production files**: 9 authored surfaces: six gallery artifacts, three existing gallery artifact repairs
-- **Projected total files**: 12 authored files or surfaces before generated release artifacts
-- **Budget result**: warning accepted pending authoritative plan gate
-- **Split decision**: Remains one ART-004 spec because the recorded user answer selected one combined slice; if Plan blocks this shape, stop for a human-approved split while preserving full functional fidelity and keeping ART-020 absorbed.
+- **Projected reviewable LOC**: active slices are 160, 590, and 520 reviewable
+  LOC; the historical combined gate blocked at 865 reviewable LOC. Generated
+  payloads, installed-cache proofs, generated reference pages, vendored upstream
+  originals, and lockfiles remain excluded.
+- **Projected production files**: active slices are 3, 4, and 2 production files;
+  the historical combined gate blocked at 9 production files.
+- **Projected total files**: active slices are 4, 7, and 5 total files before
+  generated release artifacts; the historical combined gate measured 11 authored
+  files.
+- **Budget result**: G3 is non-blocking for the approved three-slice topology:
+  `160/pass`, `590/warn`, and `520/warn`.
+- **Split decision**: ART-004 remains one feature spec/branch/delivery, but
+  implementation and review proceed through the three approved serial slices
+  while preserving full functional fidelity and keeping ART-020 absorbed.
 
 ### PR Review Packet Requirements *(mandatory)*
 
@@ -423,7 +442,7 @@ result record; it never overwrites ART-003 harness outputs or results.
 - **SC-004**: For both exportable artifacts, a reader can complete selection, rationale entry, prompt copy, Markdown copy, incomplete-decision validation, clipboard-refusal fallback, and stale-copy-settle checks in under 3 minutes per artifact.
 - **SC-005**: Catalog review confirms exactly six status changes from planned to shipped and zero unintended changes to identifiers, categories, stages, triggers, source metadata, when-to-use text, signal vocabulary, or export declarations.
 - **SC-006**: Release review finds regenerated payloads, proofs, and generated reference artifacts aligned with the authored source changes, with no hand-edited generated mirrors; stale, missing, extra, truncated, rewritten, or byte-mismatched generated outputs are blocking validation failures.
-- **SC-007**: Plan evidence either clears the authoritative reviewability gate for one combined slice or records a stop before task generation for a human-approved split.
+- **SC-007**: Plan evidence records the historical combined-slice block and proves the approved three slice gates are non-blocking (`160/pass`, `590/warn`, `520/warn`) before implementation starts.
 - **SC-008**: Keyboard-only review can operate 100% of selection, slider,
   linked-screen or reorder, copy, fallback, reset, theme, and horizontal-scroll
   controls in logical focus order with visible focus and no trap, including the

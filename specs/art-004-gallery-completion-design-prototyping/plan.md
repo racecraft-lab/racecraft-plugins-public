@@ -282,7 +282,8 @@ Slice 1 has no new ART-004 upstream source; it repairs already shipped gallery t
 Gate command for each durable input:
 
 ```bash
-env PYTHONPATH=/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/fix-codex-same-task-autopilot/speckit-pro /Library/Frameworks/Python.framework/Versions/3.11/bin/python3 -m speckit_pro_runner
+cd /Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/art-004-gallery-completion-design-prototyping
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner
 ```
 
 Inputs:
@@ -301,7 +302,7 @@ Recorded results:
 | Slice 3 reviewability gate | `ok` | `warn` | `reviewable_loc=520`, `production_files=2`, `total_files=5`, `primary_surfaces=["UI gallery artifacts"]` | `reviewable LOC 520 exceeds warn threshold 400` | none |
 | Plan `estimate-reviewable-loc` | `ok` | `pass` | `projected=0`, `new=6`, `modified=6`, `total_entries=12`, `production=0` | none | none |
 
-G3 result: non-blocking for the approved three-slice topology. The plan estimator result is recorded only as classifier evidence: it does not count this repository's HTML artifact files or Python test files, so the durable slice gate contracts are the reviewability authority for this revised Plan.
+G3 result: non-blocking for the approved three-slice topology. The plan estimator result is recorded only as classifier evidence: it does not count this repository's HTML artifact files or Python test files, so the durable slice gate contracts are the reviewability authority for this revised Plan. Tasks-mode `reviewability-gate` remains deferred by the installed runner; the fallback chain is non-blocking because G0 setup evidence, the three G3 slice results, and the human-approved split remain valid.
 
 ## Verification Design
 

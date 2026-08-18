@@ -90,8 +90,8 @@ not authority for any individual approved slice.
 | Plan | /speckit-plan | ✅ Complete | G3 passed for three approved slices: 160 pass, 590 warn, 520 warn; no blockers |
 | Checklist | /speckit-checklist | ✅ Complete | 111 checks; 16 gaps fixed; 0 remaining; G4 passed |
 | Tasks | /speckit-tasks | ✅ Complete | 60 tasks, 17/17 requirements, 3/3 stories, 9 safe parallel tasks; G5 passed |
-| Analyze | /speckit-analyze | 🔄 In Progress | Cross-check spec, plan, tasks, and settled design decisions |
-| Confidence Gate | G6.5 | ⏳ Pending | Composite pre-implementation confidence |
+| Analyze | /speckit-analyze | ✅ Complete | 3 findings fixed (1 HIGH, 2 MEDIUM); clean rerun; G6 passed |
+| Confidence Gate | G6.5 | 🔄 In Progress | Composite pre-implementation confidence |
 | Implement | /speckit-implement | ⏳ Pending | Outside explicit `--stage plan`; mark skipped at the plan-stage boundary |
 | Post | Post-Implementation | ⏳ Pending | Outside explicit `--stage plan`; mark skipped at the plan-stage boundary |
 
@@ -681,7 +681,16 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |---|---|---|---|
-| | | | |
+| A-001 | HIGH | `spec.md` still treated the combined reviewability block as pending | Reframed it as history and made the three approved slice gates current authority |
+| A-002 | MEDIUM | Plan and quickstart referenced a sibling-worktree runner | Replaced with the repository-local Python runner invocation |
+| A-003 | MEDIUM | T002 omitted the deferred tasks-mode reviewability fallback | Added G0, per-slice G3, and human-approval fallback evidence |
+
+- Rerun result: zero CRITICAL, HIGH, MEDIUM, or LOW findings.
+- `T001-T060`, 17/17 requirement traceability, and all nine `[P]` tasks remain
+  intact.
+- Analyze consensus skipped: executor reported zero unresolved items.
+- **G6 gate: PASS.** The authoritative validator found zero CRITICAL/HIGH
+  findings.
 
 ---
 
