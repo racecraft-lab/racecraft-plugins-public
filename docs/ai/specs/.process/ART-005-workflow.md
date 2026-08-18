@@ -54,13 +54,13 @@ for four artifacts is now an explicit Open Question.
 | Checklist | `/speckit-checklist` | ✅ Complete | 120 items; 24 initial gaps remediated; G4 passes with 0 remaining gaps |
 | Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | Six findings remediated; G6 passes with 0 CRITICAL/HIGH findings |
-| Confidence Gate | G6.5 | 🔄 In Progress | Pre-Implement composite confidence |
+| Confidence Gate | G6.5 | ✅ Complete | Advisory PASS at 0.98 against the 0.90 threshold |
 | Implement | `/speckit-implement` | ⏳ Pending | Seven sequential stacked review slices, one template each |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
-G6.5 is advisory by default. Record its verdict in Phase 6.5 when it runs.
+G6.5 ran in advisory mode and passed at 0.98 against the 0.90 threshold.
 
 ### Phase Gates
 
@@ -837,10 +837,10 @@ remains correctly skipped because its trigger is an exact `split-PR` route.
 
 | Field | Value |
 |-------|-------|
-| Mode | advisory unless explicitly changed |
-| Composite confidence | Pending |
-| Verdict | Pending |
-| Evidence | Pending |
+| Mode | advisory |
+| Composite confidence | 0.98 |
+| Verdict | PASS (`0.98 >= 0.90`) |
+| Evidence | `confidence-gate` request `art-005-g6-5`; recommended action `proceed` |
 
 Confidence evidence must include the measured reviewability result, clean
 cross-artifact analysis, pinned-source availability, focused baseline tests,
