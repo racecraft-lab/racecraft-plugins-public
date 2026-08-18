@@ -48,9 +48,9 @@ for four artifacts is now an explicit Open Question.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs, 8 scenarios, and 8 success criteria; one intentional marker routed to Clarify |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | Session 1 resolving pinned source, semantic reader/producer classification, fidelity, and fill slots |
-| Plan | `/speckit-plan` | ⏳ Pending | Measure pinned upstream sources before accepting the combined slice |
+| Specify | `/speckit-specify` | ✅ Complete | 3 stories, 20 current FRs, 8 scenarios, and 8 success criteria; the intentional marker was resolved in Clarify |
+| Clarify | `/speckit-clarify` | ✅ Complete | Three sessions resolved source/fidelity/fill, editor exports, UAT evidence, and block routing; no consensus needed |
+| Plan | `/speckit-plan` | 🔄 In Progress | Measure pinned upstream sources before accepting the combined slice |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Accessibility, UX, data-integrity, and error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | TDD ordering across seven templates and shared integration surfaces |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Check all artifacts against the design concept |
@@ -208,11 +208,10 @@ single combined slice selected by the operator.
 - Preserve the core upstream content/interaction model, but apply Racecraft
   branding, canonical embedded blocks, the single-file contract, accessibility,
   and gallery fill-region conventions.
-- The four entries currently declared with exports: [] are a deliberate
-  `[NEEDS CLARIFICATION]`: inspect their pinned upstream interaction and apply
-  SPA-CONTRACT.md's semantic producer/reader rule. Do not change or preserve an
-  export declaration based only on the manifest description. The three known
-  editors retain exports: ["markdown"] and use the exact label Copy as Markdown.
+- The four entries currently declared with exports: [] are confirmed semantic
+  readers from pinned upstream evidence and retain that declaration. The three
+  known editors retain exports: ["markdown"] and use the exact label Copy as
+  Markdown.
 - Feature-flags and prompt-tuner put lossless structured state in fenced JSON
   inside Markdown. Triage-board exports human-readable Markdown by column.
 - Editor content is memory-only and resets on reload; existing theme preference
@@ -246,7 +245,7 @@ topology decision; do not silently split or invent an exception.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 19 |
+| Functional Requirements | 20 current after Clarify |
 | User Stories | 3 |
 | Acceptance Criteria | 8 scenarios |
 | Reviewability result | 555/560 LOC warn; operator-selected one combined slice retained with a plan-time block stop |
@@ -339,9 +338,12 @@ for operator review, not permission to split automatically.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Source, fidelity, fill regions | Pending | Pending |
-| 2 | Editor state and exports | Pending | Pending |
-| 3 | UAT evidence and reviewability | Pending | Pending |
+| 1 | Source, fidelity, fill regions | 5 | Pinned commit and digests; four readers confirmed; preservation boundaries and seven fill inventories recorded; no consensus needed |
+| 2 | Editor state and exports | 5 | Three complete Markdown contracts, stable ordering and edge rules, and one visible focused fallback behavior; no consensus needed |
+| 3 | UAT evidence and reviewability | 5 | Active and archival evidence paths; mandatory run/row fields; genuine clipboard success plus three forced failures; seven-artifact matrix; explicit stop on block; no consensus needed |
+
+**G2 result:** ✅ Pass — zero `[NEEDS CLARIFICATION]` markers remain and all
+three Clarify sessions have an explicit disposition.
 
 ---
 

@@ -351,6 +351,9 @@ need another interview turn.
   specific revision.
   **Suggested next step:** During Plan research, resolve one reachable commit,
   verify all seven manifest paths at it, and record the SHA and digests.
+  **Resolved in Clarify Session 1:** Pin
+  `anthropics/html-effectiveness@58c305be97f47b26b678f2c07dec01d4242268ec`;
+  the seven exact SHA-256 values are recorded in `spec.md`.
 
 - **What:** Are `slide-deck`, `concept-explainer`, `status-report`, and
   `incident-report` genuinely read-only examples, or do any let the user produce
@@ -363,6 +366,9 @@ need another interview turn.
   record the semantic classification. Preserve `[]` for true readers; if any is
   state-producing, stop and reconcile its roadmap, manifest, UI, and acceptance
   contract before implementation.
+  **Resolved in Clarify Session 1:** All four are semantic readers and retain
+  `exports: []`. The concept explainer changes only a transient teaching
+  visualization and produces no durable result meant to leave the SPA.
 
 - **What:** What exact fill-region slot inventory and representative sample data
   does each template carry?
@@ -371,6 +377,8 @@ need another interview turn.
   weaken functional fidelity.
   **Suggested next step:** Derive and validate all seven inventories during
   Clarify/Plan after upstream inspection.
+  **Resolved in Clarify Session 1:** `spec.md` now records the seven exact slot
+  inventories and the minimum two-item floor for each list slot.
 
 - **What:** What exact deterministic Markdown schema does each editor export?
   **Why deferred:** Q2 fixes fenced JSON for `feature-flags` and `prompt-tuner`,
@@ -378,6 +386,10 @@ need another interview turn.
   markers, and triage-board headings depend on the pinned editor models.
   **Suggested next step:** Specify an example export and stable ordering for
   each editor in Plan contracts.
+  **Resolved in Clarify Session 2:** `spec.md` now fixes the triage column
+  format, versioned fenced-JSON schemas for feature flags and prompt tuning,
+  stable collection/field order, lossless edge-value rules, and one consistent
+  clipboard/focused-fallback state machine.
 
 - **What:** Where do the tracked ART-005 UAT runbook and result record live, and
   what evidence fields are mandatory?
@@ -386,6 +398,14 @@ need another interview turn.
   than guessed in setup.
   **Suggested next step:** Reuse the current UAT runbook/result convention and
   require per-template, per-check verdicts plus environment and commit identity.
+  **Resolved in Clarify Session 3:** Active evidence lives at
+  `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md`,
+  `uat-results.md`, and `uat-results.json`; archival renames them to the
+  `docs/ai/specs/.process/ART-005-*` convention. The JSON binds run-level
+  environment, commit, date, driver, and runbook identity to per-artifact rows
+  carrying template path, step, claim, observation, verdict, date, and driver.
+  The seven-artifact matrix and the real-versus-forced clipboard procedure are
+  fixed in `spec.md`.
 
 - **What:** Can the combined seven-template slice remain below the final
   reviewability block after the pinned upstream files are measured?
@@ -394,6 +414,10 @@ need another interview turn.
   **Suggested next step:** Plan must produce a file-by-file reviewable-LOC
   projection before implementation. If it blocks, stop for a topology decision;
   do not split without explicit approval.
+  **Resolved in Clarify Session 3:** A measured block stops the workflow before
+  Checklist, Tasks, or Implementation. It records the projection and waits for
+  an explicit operator topology decision; the prior one-slice answer is not an
+  exception and no automatic split is authorized.
 
 ## Recommended Next Step
 
