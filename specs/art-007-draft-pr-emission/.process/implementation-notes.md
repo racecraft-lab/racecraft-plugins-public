@@ -541,3 +541,88 @@ are committed" read as conflicting requirements.
 No `FR-xxx` reference appears in the added prose: lines 425 and 428 of that file
 already carry `FR-004` and `FR-005` belonging to a **different** feature, so
 ART-007 FR numbers would be ambiguous on the shipped surface.
+
+### T025-T026
+
+**Deviations/Edge cases/Surprises:** 273 lines inserted into the Codex mirror,
+`git diff --numstat` reading `273 0`, between the same two anchors the Claude
+file uses. The mirror was written from the **landed Claude text**, not from the
+task description, which is what stops two platform files from drifting apart on
+day one. Substance parity was corroborated mechanically as well as by reading:
+28 bold lead-ins in each block, aligned one to one.
+
+Six deliberate wording differences, all justified by platform: "the parent
+session" for "the orchestrator" (this file's own vocabulary); the resume command
+in Codex invocation form rather than a slash command; a directly stated
+remote-resolution rule because Codex has no PR Creation Protocol section to point
+at; and an inlined row grammar because the Codex protocol mirror has no `Stage`
+section to carry it.
+
+One addition the Claude text does not need: an explicit "do not substitute
+`validate-pr-workflow-contract`". This file names that operation as *the* title
+validator for PR creation, so the wrong-validator trap is concretely reachable
+here in a way it is not on the Claude surface.
+
+**The suite total moved for a reason worth writing down.** The run reported
+7433/7497 with 64 failures. Passed held at exactly the 7433 baseline; the
+*denominator* grew because a concurrent agent added 64 corroboration tests to
+`test-autopilot-stage-resolution.py` in the same worktree. Every one of the 64
+failures was in that file and none anywhere else, which is the acceptance
+predicate for a prose task run beside a live RED task: `total_failed ==
+other_agent_file_failed`, and zero elsewhere.
+
+**Three findings, one of which resolves an open question about the repository's
+own guard.**
+
+The verification grep prescribed in the dispatch was **narrower than the live
+guard**. It checked `--jq`, but `active_path_guard.py` also matches bare `jq`
+case-insensitively, plus `bash`, shell-script suffixes, `$(`, and grep/sed/awk
+pipelines. A phrase spelling the tool out differently would have passed the
+prescribed check and failed Layer 4. The executor ran the wider battery instead
+of the one it was given, which is the right instinct.
+
+It then flagged an apparent contradiction: `codex-skills/speckit-autopilot/SKILL.md`
+line 28 contains `` `jq` `` and `speckit-pro/codex-skills` is a live scan root, yet
+the suite is green. Chased to the bottom by the orchestrator rather than left as
+folklore. **The guard classifies at clause level, not token level.**
+`zero_bash_active_guidance` blocks a clause that carries a shell marker *and* a
+verb from `run|use|execute|invoke|call|require|install`;
+`zero_bash_negative_policy_exception` exempts a clause phrased as negative
+policy. Line 28 reads "Do not add a shell fallback, `jq` parsing path", so it is
+negative policy and exempt by design. Nothing is relying on luck.
+
+The practical rule for the remaining prose tasks: a prohibition sentence is safe,
+an instruction is not, and the safest course is still to avoid the token, because
+the exemption depends on clause splitting that is easy to defeat by accident.
+
+**Two pre-existing defects were found and correctly left alone**, since fixing
+either would have broken the insertions-only guarantee: the Codex `## Contents`
+block carries a dead anchor (`#pr-body-generation`, whose real heading is
+`## PR Packet and Body Boundary`) and omits three existing sections; and
+`workflow-file-protocol-codex.md` is a three-section stub documenting neither
+`Stage` nor `Draft PR`. The second confirms the contract's routing decision was
+right rather than arbitrary.
+
+**One self-inflicted cost, disclosed rather than hidden.** The executor edited
+source after refreshing artifacts while the full suite was running, restaling
+`dist/` mid-run and invalidating it. It stopped the run, re-refreshed, and re-ran
+refresh and suite as one chained command so nothing could change underneath.
+About 25 minutes lost. The durable lesson is that refresh and suite belong in one
+uninterruptible sequence, not two steps with an edit window between them.
+
+**The repo-root path trap fired twice more** and was caught both times before any
+write — once by line numbers disagreeing with grep, once by an edit tool's
+no-match error. Neither reached the main checkout. This is now three separate
+encounters on one feature.
+
+### T027
+
+**Deviations/Edge cases/Surprises:** Satisfied by attribution rather than by a
+clean run, because a concurrent RED task was live in the same worktree. The
+T012 row-reader units and the T013 packet-producer units all pass: the file's
+193 pre-existing units are green and every one of the 64 failures belongs to
+T035's newly added corroboration tests in the same file. The T005 fixture
+baseline is unchanged, re-verified by machine diff after the T014-T016 commit.
+
+The live end-to-end arm of User Story 1's independent test remains quickstart
+Scenario 5, which is operator-gated in T052 and is not run here.

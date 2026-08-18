@@ -2889,11 +2889,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 38347,
+              "byte_count": 52648,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution-codex.md",
               "required": true,
-              "sha256": "302b5af312780e7d6affed45e309389b158755bb71c0b2befaa8c86819b29f84",
+              "sha256": "963c431e3475cc8644188899347e98cd7ecd7985465dd8a92565ca9b0625c188",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
               "transform": "path_normalization"
             },
@@ -4088,11 +4088,11 @@
               "transform": "none"
             },
             {
-              "byte_count": 38347,
+              "byte_count": 52648,
               "kind": "skill",
               "path": "skills/speckit-autopilot/references/phase-execution-codex.md",
               "required": true,
-              "sha256": "302b5af312780e7d6affed45e309389b158755bb71c0b2befaa8c86819b29f84",
+              "sha256": "963c431e3475cc8644188899347e98cd7ecd7985465dd8a92565ca9b0625c188",
               "source_path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
               "transform": "path_normalization"
             },
@@ -4728,7 +4728,7 @@
             }
           ],
           "extra_paths": [],
-          "file_tree_hash": "0c15a4613b0b444628ba4a56216ff29041d56c80e96c5ca46c1252fc0250a460",
+          "file_tree_hash": "c0ed232926fda7d577c7c8aa8781915c48e9b71fa1c70c5705bd2c171ea7a073",
           "mismatched_paths": [],
           "missing_paths": [],
           "path_leaks": [],
