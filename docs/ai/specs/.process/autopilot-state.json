@@ -5,8 +5,8 @@
   "branch": "art-004-gallery-completion-design-prototyping",
   "status": "in_progress",
   "stage": "implement",
-  "active_step": "Post: Review Remediation",
-  "updated_at": "2026-08-18T21:40:38Z",
+  "active_step": "Post: Retrospective",
+  "updated_at": "2026-08-18T21:47:04Z",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
     "consensus_mode": "moderate",
@@ -200,8 +200,8 @@
     {"step": "Post: PR Packet/Body Generation", "status": "completed"},
     {"step": "Post: PR Body Generation", "status": "completed"},
     {"step": "Post: PR Creation", "status": "completed"},
-    {"step": "Post: Review Remediation", "status": "in_progress"},
-    {"step": "Post: Retrospective", "status": "pending"}
+    {"step": "Post: Review Remediation", "status": "completed"},
+    {"step": "Post: Retrospective", "status": "in_progress"}
   ],
   "gates": {
     "G0": {
@@ -542,8 +542,8 @@
         {"step": "Post: PR Packet/Body Generation", "status": "completed"},
         {"step": "Post: PR Body Generation", "status": "completed"},
         {"step": "Post: PR Creation", "status": "completed"},
-        {"step": "Post: Review Remediation", "status": "in_progress"},
-        {"step": "Post: Retrospective", "status": "pending"}
+        {"step": "Post: Review Remediation", "status": "completed"},
+        {"step": "Post: Retrospective", "status": "in_progress"}
       ],
       "doctor": {"status": "completed", "passed": 4, "warnings": 1, "warning": "unrelated BRAND-001 planning directory is incomplete"},
       "verify": {"status": "completed", "findings": 0},
@@ -577,6 +577,19 @@
         "head_branch": "art-004-gallery-completion-design-prototyping",
         "head_oid": "c7237e9e89fbb04e6dfe3eb3d0013d6358847355",
         "mergeable": "MERGEABLE"
+      },
+      "review_remediation": {
+        "status": "completed",
+        "source_findings": 1,
+        "review_threads": 2,
+        "remediation_commit": "37fcc4d4f",
+        "focused_gallery": "573/573",
+        "fill_regions": "70/70",
+        "release_artifacts": "match source",
+        "reference_pages": "current",
+        "resolved_threads": 2,
+        "remaining_actionable_feedback": 0,
+        "ci_status_at_audit": "running"
       }
     }
   }

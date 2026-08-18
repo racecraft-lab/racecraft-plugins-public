@@ -869,8 +869,8 @@ generated files must never be hand-reverted independently.
 | Post: PR Packet/Body Generation | ✅ Complete | `pr-packet-output` dry-run/apply emitted the current feature-local packet and body; read-only validation passed with `pr_blocked=false` and `writes_state=false`; clean-tree validation was persisted; both title gates pass |
 | Post: PR Body Generation | ✅ Complete | Refined only the sanctioned What Changed and Why It Matters regions, including the required consumer-facing `release-note` fence; protected packet sections and fingerprint remain valid |
 | Post: PR Creation | ✅ Complete | Draft PR [#450](https://github.com/racecraft-lab/racecraft-plugins-public/pull/450) opened from the packet-owned base, head, title, and body at head `c7237e9e8` |
-| Post: Review Remediation | 🔄 In Progress | Initial live PR feedback and check audit is running; queued or in-progress CI is recorded without being claimed green |
-| Post: Retrospective | ⏳ Pending | Final Post item |
+| Post: Review Remediation | ✅ Complete | GitHub code quality reported one unused source declaration through two generated-payload threads; removed at source in `37fcc4d4f`, regenerated mirrors/proofs, passed focused and consistency checks, replied with evidence, and resolved both threads; no other live feedback remains, while CI is still running and is not claimed green |
+| Post: Retrospective | 🔄 In Progress | Final Post item is running after live review remediation completed |
 
 ### Self-Review — 2026-08-18T21:08:19Z
 
