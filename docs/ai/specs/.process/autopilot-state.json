@@ -5,8 +5,8 @@
   "branch": "art-004-gallery-completion-design-prototyping",
   "status": "in_progress",
   "stage": "implement",
-  "active_step": "Phase 7: Implement T010-T022 - slice 1 keyboard foundation",
-  "updated_at": "2026-08-18T16:50:04Z",
+  "active_step": "Phase 7: Implement T023-T037 - slice 2 read-only ports",
+  "updated_at": "2026-08-18T16:53:11Z",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
     "consensus_mode": "moderate",
@@ -184,8 +184,8 @@
     {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
     {"step": "Phase 7: Implement T001-T009 - setup and foundational gates", "status": "completed"},
-    {"step": "Phase 7: Implement T010-T022 - slice 1 keyboard foundation", "status": "in_progress"},
-    {"step": "Phase 7: Implement T023-T037 - slice 2 read-only ports", "status": "pending"},
+    {"step": "Phase 7: Implement T010-T022 - slice 1 keyboard foundation", "status": "completed"},
+    {"step": "Phase 7: Implement T023-T037 - slice 2 read-only ports", "status": "in_progress"},
     {"step": "Phase 7: Implement T038-T052 - slice 3 decision ports", "status": "pending"},
     {"step": "Phase 7: Implement T053-T060 - polish and release evidence", "status": "pending"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
@@ -416,7 +416,7 @@
     },
     "implement": {
       "status": "in_progress",
-      "completed_tasks": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014", "T015", "T016", "T017", "T018", "T019", "T020", "T021"],
+      "completed_tasks": ["T001", "T002", "T003", "T004", "T005", "T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014", "T015", "T016", "T017", "T018", "T019", "T020", "T021", "T022"],
       "pending_browser_tasks": [],
       "browser_attempt": "Playwright MCP completed T018 in Chromium, then Safari 26.6.1 WebDriver completed the Safari-specific T019 matrix after the operator enabled remote automation",
       "browser_evidence": {
@@ -427,11 +427,10 @@
         "t018": {"status": "passed", "engine": "Chromium 151.0.7922.138", "viewport": "320x900"},
         "t019": {"status": "passed", "engine": "Safari 26.6.1", "requested_window": "320x900", "measured_viewport": "336x825", "keyboard_route": "Tab", "module_map_disclosures": "5/5 opened with Enter"}
       },
-      "pending_release_check": "T022 refresh-release-artifacts --check requires generated paths to be clean after the Phase 7 checkpoint commit",
       "slice_1_automated_evidence": {
         "full_suite": "7418/7418 passed after the UAT-discovered module-map sizing repair",
-        "reference_check": "passed",
-        "release_check": "expected exit 1 while regenerated payload and proof paths are uncommitted; rerun after the Slice 1 checkpoint commit"
+        "reference_check": "passed after checkpoint e15e3a6cc",
+        "release_check": "passed after checkpoint e15e3a6cc"
       },
       "implementation_notes": "specs/art-004-gallery-completion-design-prototyping/.process/implementation-notes.md"
     }

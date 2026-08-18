@@ -68,7 +68,7 @@
 - [x] T019 [US1] VERIFY record Safari Tab or Option-Tab reachability, source-order focus, visible focus, accessible names, arrow-key scroll change, and no keyboard trap for repaired regions in `specs/art-004-gallery-completion-design-prototyping/quickstart.md`
 - [x] T020 [US1] VERIFY regenerate derived payloads and installed-cache proof files from source with `python3 scripts/refresh-release-artifacts.py`
 - [x] T021 [US1] VERIFY regenerate generated reference pages affected by tracked test/source changes with `pnpm --dir docs-site reference:generate` for `docs-site/src/content/docs/reference/tests.md` and `docs-site/src/content/docs/reference/source-vs-dist.md`
-- [ ] T022 [US1] VERIFY run `python3 tests/speckit-pro/run-all.py`, `python3 scripts/refresh-release-artifacts.py --check`, and `pnpm --dir docs-site reference:check` against `tests/speckit-pro/run-all.py`
+- [x] T022 [US1] VERIFY run `python3 tests/speckit-pro/run-all.py`, `python3 scripts/refresh-release-artifacts.py --check`, and `pnpm --dir docs-site reference:check` against `tests/speckit-pro/run-all.py`
 
 **Checkpoint**: User Story 1 is complete when the global guard passes for repaired artifacts and manual keyboard-scroll UAT is recorded separately from ART-003.
 

@@ -90,4 +90,4 @@
 
 ### T022
 
-**Deviations/Edge cases/Surprises:** Partial. The full suite passed 7418/7418 and the docs reference check passed after the UAT remediation. `refresh-release-artifacts.py --check` correctly remains red while regenerated payload and proof paths are uncommitted; rerun it after the Slice 1 checkpoint commit.
+**Deviations/Edge cases/Surprises:** The full suite passed 7418/7418 after the UAT remediation. After checkpoint `e15e3a6cc`, `refresh-release-artifacts.py --check` confirmed generated release artifacts match source and the docs reference check confirmed reference pages are current.
