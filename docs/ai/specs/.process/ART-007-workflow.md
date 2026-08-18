@@ -35,7 +35,7 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 12 FRs, 3 user stories, 12 acceptance scenarios, 8 success criteria, 3 colon-form markers routed to Clarify |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass — 3 sessions, 15 questions/findings, 3 consensus rounds (Q4 3-of-3, Q5 and F1 2-of-2), 0 markers remain |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass — 8 artifacts, 15 research decisions, 16 declared file ops (11 production), 4 contracts, constitution 6/6, 0 markers |
-| Checklist | `/speckit-checklist` | ⏳ Pending | error-handling, state-management |
+| Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — 2 domains, 73 items, 24 gaps found and all remediated; 1 consensus round |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
@@ -615,8 +615,8 @@ Focus on Draft-PR Emission requirements:
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
 | error-handling | 38 | 15 found, 15 remediated in 1 loop (0 remain); 1 item ([security] CHK024) through 3-analyst consensus — see Consensus Resolution Log row 4 | FR-004, FR-006, FR-007, FR-008, FR-009, FR-010, FR-011, FR-013, SC-001, SC-003, SC-006, +3 edge cases, +1 assumption; contracts/stage-corroboration.md §7 |
-| state-management | | | |
-| **Total** | | | |
+| state-management | 35 | 9 found, 9 remediated in 1 loop (0 remain); 0 to consensus | FR-004, FR-007, FR-009, FR-011, FR-012, FR-013, SC-001, SC-005; contracts/stage-corroboration.md §2 §7, contracts/draft-pr-row.md §4 |
+| **Total** | 73 | 24 found, 24 remediated, 0 remain | G4 pass: runner `validate-gate` `{"gate":"G4","pass":true,"markers":0}`; tree-wide `[Gap]` grep 0. Tooling note recorded: `count-markers` gaps mode matches only the bare `[Gap]` literal and is blind to the combined `[Coverage, Gap]` form the checklist command prescribes — same failure family as the G1/G2 literal blindness; both domains normalized markers to the bare form before counting |
 
 ### Addressing Gaps
 

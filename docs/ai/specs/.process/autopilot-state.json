@@ -5,7 +5,7 @@
   "branch": "art-007-draft-pr-emission",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 4: Checklist - state-management",
+  "active_step": "Phase 5: Tasks",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
@@ -71,15 +71,15 @@
     },
     {
       "step": "Phase 4: Checklist - state-management",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - state-management Consensus",
-      "status": "queued"
+      "status": "skipped: executor reported zero unresolved items"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "queued"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",
@@ -168,6 +168,14 @@
     "G3": {
       "pass": true,
       "markers": 0
+    },
+    "G4": {
+      "pass": true,
+      "markers": 0,
+      "domains": 2,
+      "items": 73,
+      "gaps_found": 24,
+      "gaps_remediated": 24
     }
   }
 }

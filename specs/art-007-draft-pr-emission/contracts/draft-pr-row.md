@@ -66,8 +66,10 @@ are blanked before the table is parsed, so it could never be read as evidence.
 | when | only after creation or refresh succeeds |
 | which commit | the separate bookkeeping commit of FR-013, never the stage-boundary commit |
 | repair | when a pull request exists but the row is missing or wrong, the row is written or repaired |
+| whole value | every write rewrites the whole cell from the current run's outcome, so a stale gap note never survives a refresh that no longer fell short |
 | leave alone | under `pr_closed` and `pr_missing`, the row is left exactly as found |
 | sole store | this row is the only place the identity is stored — no state-file mirror |
+| independent of `Stage` | writing this row neither counts against nor re-triggers the `Stage` row's own write cadence, and needs no state-file write, because this identity has no mirror |
 
 The last rule is the inherited OQ-4 decision: the workflow file is authoritative,
 and a second sink would introduce the status-versus-evidence drift the coverage

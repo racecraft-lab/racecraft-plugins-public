@@ -272,6 +272,24 @@ value is the one used.
   the scaffold workflow template MUST NOT ship a placeholder row. The record
   MUST be written only after creation or refresh succeeds, and MUST be
   committed by the bookkeeping commit described in FR-013.
+
+  Every write of the row MUST rewrite its whole value from the current run's
+  outcome. A refresh whose shortfall differs from the recorded one MUST replace
+  the note, and a refresh that generated every selected page MUST leave the cell
+  carrying the link alone. A note describing an earlier run's shortfall MUST NOT
+  survive a later refresh that no longer fell short.
+
+  Writing this row is independent of the `Stage` row that shares the table. It
+  MUST NOT count against, defer, or re-trigger the `Stage` row's own write
+  cadence, and it MUST NOT require a state-file write, because this identity has
+  no mirror to keep in step. Both rows are matched by key, so neither writer
+  disturbs the other's value.
+
+  The sole-store rule binds this feature's draft-PR identity. It does not forbid
+  the shipped multi-pull-request slice manifest from recording the same pull
+  request in its own slice role once FR-012's split makes it the first slice.
+  That entry is a slice record written by a later stage's flow, not a second
+  copy of the draft-PR record, and nothing in this feature writes it.
 - **FR-010**: The plan-stage stop report MUST carry the pull request URL, the
   artifact index, and resume instructions when emission ran; when the gate
   blocked, it MUST name the blocked gate in place of a URL; when emission was
@@ -354,6 +372,33 @@ value is the one used.
   `pr_closed` and `pr_missing`, this is a fail-open response and does not invoke
   FR-006's strict-mode blocked-stop contract.
 
+  All three discrepancy responses MUST end the emission attempt at the same
+  point in FR-013's sequence. The run generates the artifacts, takes the
+  stage-boundary commit, and pushes the branch exactly as it always does, then
+  stops at create-or-refresh without creating, refreshing, or recording
+  anything, and takes no bookkeeping commit. It MUST NOT end earlier than that.
+  Ending earlier would strand the durable discrepancy record, which is written
+  at stage resolution and reaches version history only in a commit this stage
+  goes on to take. This is the opposite of FR-006's strict-mode block, which
+  short-circuits before generation.
+
+  Corroboration is scoped by the presence of the row, not by the stage or by how
+  the stage was resolved. It MUST run on every invocation whose `Draft PR` row
+  is present, including one whose stage was named by an explicit argument rather
+  than auto-detected, and including one that resolves a stage other than plan.
+  On a run whose resolved stage has no emission terminal step, the status MUST
+  still be reported and a discrepancy MUST still be recorded durably; the
+  terminal-step consequences do not arise, because such a run opens, refreshes,
+  and records nothing.
+
+  The resolution-time observation and FR-007's emission-time existence test are
+  two separate reads. The observation is taken once per run, at stage
+  resolution, and only when the row is present. FR-007's live by-branch query is
+  taken later, at the terminal step, and is what a `no_record` run falls through
+  to, since no observation was taken for it at resolution. The terminal step
+  MUST NOT treat the resolution-time observation as current evidence of the pull
+  request's state, because the whole stage runs between the two reads.
+
   The three non-discrepancy statuses MUST carry terminal-step consequences too.
   On `match` the run refreshes the recorded pull request and reports its URL. On
   `no_record` the run falls through to FR-007's live existence test and creates
@@ -387,6 +432,26 @@ value is the one used.
   carries the FR-010 record-not-pushed shape, and the re-run finds the open
   pull request through FR-007's existence test and repairs the record instead
   of opening a second one.
+
+  The bookkeeping commit MUST stage the workflow file, which is where the record
+  lives and is the only file this step writes. Like the stage-boundary commit it
+  MUST NOT stage the workflow directory, which also holds untracked run
+  byproducts a directory-wide add would sweep in, and its message MUST follow the
+  repository's conventional-commit shape.
+
+  A re-run reaching a step whose content is already committed has nothing left
+  to stage there. Such a commit is a no-op, not a failed step, and the sequence
+  MUST continue past it. This does not weaken the boundary commit's preserved
+  contract above, which describes what a first pass produces: that pass's
+  non-emptiness comes from the gate row advancing off its pending state, and a
+  re-run of an already-resolved stage does not repeat that advance. Treating the
+  resulting empty commit as a failure would strand the operator re-run this
+  requirement names as the only recovery path.
+
+  Because the push precedes creation and FR-009's record is written only after
+  creation succeeds, a written `Draft PR` row always names a pull request whose
+  branch reached the remote. No ordering this requirement permits can leave the
+  row pointing at a pull request that was never pushed.
 
 ### Reviewability Notes *(if applicable)*
 

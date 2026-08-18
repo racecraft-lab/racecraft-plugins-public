@@ -33,6 +33,18 @@ gh pr list --head <branch> --state all \
 Read-only. Scoped to the feature's head branch. Returns pull requests in every
 state, which is what makes `pr_closed` distinguishable from `pr_missing`.
 
+"Once per run" counts **this** observation, the corroboration read at stage
+resolution. FR-007's emission-time existence query is a separate, later read
+taken at the terminal step, and it is what a `no_record` run falls through to —
+no observation was taken for that run here, because the row was absent. The
+terminal step never reuses this observation as current evidence: the whole stage
+runs between the two reads.
+
+The trigger is the row's presence, not the stage. Any invocation carrying a
+`Draft PR` row takes this observation, including one whose stage came from an
+explicit `--stage` argument (`source: "argv"`, as in §3's example) and one that
+resolves a stage other than `plan`.
+
 ---
 
 ## 3. Input surface
@@ -173,7 +185,20 @@ Draft PR: pr_closed — #438 recorded, closed (merged: false)
 | `pr_missing` | do not create, do not rewrite the row; stop report names the recorded identity and "correct or clear the row, then re-run" |
 
 The three discrepancy responses end the emission attempt fail-open. They do not
-invoke FR-006's strict-mode blocked-stop contract, and they never mutate GitHub.
+invoke FR-006's strict-mode blocked-stop contract, and they never create,
+reopen, edit, or close a pull request, and never rewrite the row.
+
+**Where they end it.** All three stop at create-or-refresh, not earlier. The run
+still generates the artifacts, still takes the stage-boundary commit, and still
+pushes the branch; it then creates nothing, refreshes nothing, records nothing,
+and takes no bookkeeping commit. Stopping earlier would strand the durable
+discrepancy line, which is written at resolution (§6) and reaches version history
+only in a commit the stage goes on to take.
+
+**On a run with no emission terminal step** — a resolved stage other than `plan` —
+the status is still reported and a discrepancy is still recorded durably per §6,
+and this table simply does not arise: that run opens, refreshes, and records
+nothing.
 
 **Never**: change the resolved stage, block stage resolution, stop the run at
 resolution time, reopen a pull request, or open a second one.
