@@ -90,10 +90,10 @@ not authority for any individual approved slice.
 | Plan | /speckit-plan | ✅ Complete | G3 passed for three approved slices: 160 pass, 590 warn, 520 warn; no blockers |
 | Checklist | /speckit-checklist | ✅ Complete | 111 checks; 16 gaps fixed; 0 remaining; G4 passed |
 | Tasks | /speckit-tasks | ✅ Complete | 60 tasks, 17/17 requirements, 3/3 stories, 9 safe parallel tasks; G5 passed |
-| Analyze | /speckit-analyze | ✅ Complete | 3 findings fixed (1 HIGH, 2 MEDIUM); clean rerun; G6 passed |
-| Confidence Gate | G6.5 | 🔄 In Progress | Composite pre-implementation confidence |
-| Implement | /speckit-implement | ⏳ Pending | Outside explicit `--stage plan`; mark skipped at the plan-stage boundary |
-| Post | Post-Implementation | ⏳ Pending | Outside explicit `--stage plan`; mark skipped at the plan-stage boundary |
+| Analyze | /speckit-analyze | ✅ Complete | Executor clean, G6 passed, and required clean-pass confidence synthesis completed |
+| Confidence Gate | G6.5 | ✅ Complete | Advisory gate passed at 1.00 against the 0.90 threshold |
+| Implement | /speckit-implement | ⏭️ Skipped | Outside explicit `--stage plan`; implementation did not start |
+| Post | Post-Implementation | ⏭️ Skipped | Outside explicit `--stage plan`; post-implementation work did not start |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
 
@@ -688,9 +688,22 @@ Focus on:
 - Rerun result: zero CRITICAL, HIGH, MEDIUM, or LOW findings.
 - `T001-T060`, 17/17 requirement traceability, and all nine `[P]` tasks remain
   intact.
-- Analyze consensus skipped: executor reported zero unresolved items.
+- Analyze had zero unresolved findings; the required clean-pass synthesizer is
+  still invoked to emit the canonical pre-implementation confidence block.
 - **G6 gate: PASS.** The authoritative validator found zero CRITICAL/HIGH
   findings.
+
+The host did not expose the installed `consensus-synthesizer` agent type, so a
+read-only default subagent executed the exact clean-pass synthesis rubric and
+canonical output contract as the closest callable semantic equivalent.
+
+📊 Confidence: 1.00
+
+- Task understanding: 1.00
+- Approach clarity: 1.00
+- Requirements alignment: 1.00
+- Risk assessment: 1.00
+- Completeness: 1.00
 
 ---
 
@@ -698,10 +711,10 @@ Focus on:
 
 | Field | Value |
 |---|---|
-| Mode | |
-| Composite confidence | |
-| Verdict | |
-| Evidence | |
+| Mode | advisory |
+| Composite confidence | 1.00 (threshold 0.90) |
+| Verdict | G6.5 PASS — proceed |
+| Evidence | Deterministic `confidence-gate` runner exit 0; all five confidence criteria scored 1.00 |
 
 Do not proceed on a "stop" verdict or while the reviewability decision remains
 unresolved.
