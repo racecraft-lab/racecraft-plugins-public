@@ -246,9 +246,11 @@ foundation paths are:
 - `tests/speckit-pro/layer1-structural/validate-codex-skills.py`
 - `tests/speckit-pro/parity/bash-to-python/validate-codex-skills-baseline.txt`
 
-PR-packet generation adds the packet JSON, generated body, and validation JSON,
-bringing the final review boundary to 60 physical paths. The packet records the
-complete 60-path boundary and keeps the result `blocked` for budget evidence,
+The clone-local `.git/info/exclude` intentionally excludes the feature-local
+`.process/pr-packets/` directory. The packet JSON, generated body, and validation
+JSON are current PR-emission evidence but are not committed PR paths. The final
+review boundary therefore remains 57 physical paths. The packet records the
+complete 57-path boundary and keeps the result `blocked` for budget evidence,
 with the size-only continuation stated in the body.
 
 ### Final verification rerun
