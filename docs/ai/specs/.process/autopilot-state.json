@@ -5,8 +5,8 @@
   "branch": "art-004-gallery-completion-design-prototyping",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 5: Tasks",
-  "updated_at": "2026-08-18T03:24:45Z",
+  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-08-18T04:23:28Z",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
     "consensus_mode": "moderate",
@@ -126,7 +126,29 @@
         {"slice": "read-only ports", "status": "warn", "pass": true, "reviewable_loc": 590, "production_files": 4, "total_files": 7, "blockers": []},
         {"slice": "decision ports", "status": "warn", "pass": true, "reviewable_loc": 520, "production_files": 2, "total_files": 5, "blockers": []}
       ]
+    },
+    "tasks_mode": {
+      "helper_id": "reviewability-gate",
+      "requested_mode": "tasks",
+      "status": "deferred",
+      "reason": "installed runner supports setup mode only",
+      "fallback_evidence": [
+        "G0 setup gate warn/pass",
+        "G3 slice 1 160/pass",
+        "G3 slice 2 590/warn",
+        "G3 slice 3 520/warn",
+        "human-approved three-slice recovery"
+      ],
+      "decision": "non-blocking; no unexpected correctness block"
     }
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": ["change-shape:modify-heavy"],
+    "hints": [],
+    "warnings": [],
+    "layer_plan_required": false
   },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
@@ -145,11 +167,15 @@
     {"step": "Phase 4: Checklist - accessibility Consensus", "status": "skipped: executor reported zero unresolved items"},
     {"step": "Phase 4: Checklist - error-handling", "status": "completed"},
     {"step": "Phase 4: Checklist - error-handling Consensus", "status": "skipped: executor reported zero unresolved items"},
-    {"step": "Phase 5: Tasks", "status": "in_progress"},
-    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "completed"},
+    {"step": "Phase 6: Analyze", "status": "in_progress"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "skipped: outside plan stage"},
+    {"step": "Phase 7: Implement T001-T009 - setup and foundational gates", "status": "skipped: outside plan stage"},
+    {"step": "Phase 7: Implement T010-T022 - slice 1 keyboard foundation", "status": "skipped: outside plan stage"},
+    {"step": "Phase 7: Implement T023-T037 - slice 2 read-only ports", "status": "skipped: outside plan stage"},
+    {"step": "Phase 7: Implement T038-T052 - slice 3 decision ports", "status": "skipped: outside plan stage"},
+    {"step": "Phase 7: Implement T053-T060 - polish and release evidence", "status": "skipped: outside plan stage"},
     {"step": "Post: Doctor Extension Check", "status": "skipped: outside plan stage"},
     {"step": "Post: Verify Implementation", "status": "skipped: outside plan stage"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "skipped: outside plan stage"},
@@ -198,6 +224,15 @@
       "initial_gaps": 16,
       "fixed_gaps": 16,
       "unresolved_for_consensus": 0
+    },
+    "G5": {
+      "pass": true,
+      "markers": 0,
+      "reason": "60 tasks found",
+      "task_count": 60,
+      "functional_requirements_covered": "17/17",
+      "user_stories_covered": "3/3",
+      "success_criteria_covered": "9/9"
     }
   },
   "phase_results": {
@@ -293,6 +328,24 @@
       "current_functional_requirements": 17,
       "gate": "G4 passed",
       "downstream": "Tasks may start"
+    },
+    "tasks": {
+      "status": "completed",
+      "tasks": 60,
+      "task_ids": "T001-T060",
+      "phases": 6,
+      "parallel_tasks": 9,
+      "parallel_sets": 3,
+      "functional_requirements": "17/17",
+      "user_stories": "3/3",
+      "success_criteria": "9/9",
+      "acceptance_scenarios": "9/9",
+      "tdd_mix": {"red": 11, "green": 12, "refactor": 5, "verify": 32},
+      "markers": {"clarifications": 0, "gaps": 0, "critical": 0, "high": 0, "medium": 0, "low": 0},
+      "gate": "G5 passed",
+      "atomicity_route": "one-navigable-PR",
+      "phase7_groups_reconciled": true,
+      "recovery": "three file-silent attempts interrupted; one capacity-error turn retried; final required phase executor completed"
     }
   }
 }

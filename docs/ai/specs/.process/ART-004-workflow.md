@@ -89,8 +89,8 @@ not authority for any individual approved slice.
 | Clarify | /speckit-clarify | ✅ Complete | 3 sessions, 15 accepted answers, 0 markers, no consensus fan-out; G2 passed |
 | Plan | /speckit-plan | ✅ Complete | G3 passed for three approved slices: 160 pass, 590 warn, 520 warn; no blockers |
 | Checklist | /speckit-checklist | ✅ Complete | 111 checks; 16 gaps fixed; 0 remaining; G4 passed |
-| Tasks | /speckit-tasks | 🔄 In Progress | Generate ordered TDD coverage for the three approved slices |
-| Analyze | /speckit-analyze | ⏳ Pending | Cross-check against the design concept |
+| Tasks | /speckit-tasks | ✅ Complete | 60 tasks, 17/17 requirements, 3/3 stories, 9 safe parallel tasks; G5 passed |
+| Analyze | /speckit-analyze | 🔄 In Progress | Cross-check spec, plan, tasks, and settled design decisions |
 | Confidence Gate | G6.5 | ⏳ Pending | Composite pre-implementation confidence |
 | Implement | /speckit-implement | ⏳ Pending | Outside explicit `--stage plan`; mark skipped at the plan-stage boundary |
 | Post | Post-Implementation | ⏳ Pending | Outside explicit `--stage plan`; mark skipped at the plan-stage boundary |
@@ -586,7 +586,9 @@ dependency-ordered, testable tasks grouped by user story.
    artifacts, run the complete suite, and execute the file:// UAT matrix.
 
 ## Constraints
-- Keep ART-004 one combined branch and delivery slice.
+- Keep ART-004 on one combined branch and delivery, but group implementation
+  tasks into the three human-approved ordered review slices: keyboard
+  foundation, read-only ports, then decision ports.
 - A task may be [P] only when it touches no shared manifest, shared test literal,
   generated output, payload, proof, or documentation surface.
 - Never mark the six HTML ports parallel if their results would concurrently
@@ -602,10 +604,28 @@ dependency-ordered, testable tasks grouped by user story.
 
 | Metric | Value |
 |---|---|
-| Total Tasks | |
-| Phases | |
-| Parallel Opportunities | |
-| User Stories Covered | |
+| Total Tasks | 60 (`T001`-`T060`) |
+| Phases | 6 |
+| Parallel Opportunities | 9 tasks across 3 disjoint HTML-only sets |
+| User Stories Covered | 3/3; functional requirements 17/17; success criteria 9/9 |
+
+- Task mix: 11 RED, 12 GREEN, 5 REFACTOR, and 32 VERIFY.
+- **G5 gate: PASS.** The authoritative validator found 60 tasks and the
+  marker scan found zero gaps, clarifications, or severity findings.
+- Tasks-mode `reviewability-gate` is deferred by the installed runner. The
+  fallback chain is non-blocking: G0 setup evidence, the three authoritative
+  G3 slice results (`160/pass`, `590/warn`, `520/warn`), and the human-approved
+  split all remain valid with no correctness blocker.
+
+### Phase 7 Task Groups
+
+| Group | Task IDs | Plan-stage disposition |
+|---|---|---|
+| Setup and foundational gates | `T001-T009` | Skipped outside `--stage plan` |
+| Slice 1 — keyboard foundation | `T010-T022` | Skipped outside `--stage plan` |
+| Slice 2 — read-only ports | `T023-T037` | Skipped outside `--stage plan` |
+| Slice 3 — decision ports | `T038-T052` | Skipped outside `--stage plan` |
+| Polish and release evidence | `T053-T060` | Skipped outside `--stage plan` |
 
 ---
 
@@ -617,15 +637,20 @@ Autopilot fills this after Tasks by running the read-only classifier against:
 runner helper atomicity-route specs/art-004-gallery-completion-design-prototyping
 ~~~
 
-The user selected one combined slice for scaffold. The classifier is evidence,
-not permission to override Q8 or Q9.
+The scaffold interview originally selected one combined slice. G3 then blocked
+that topology, and the user approved the durable three-slice recovery. The
+classifier is evidence, not permission to collapse or replace those approved
+slices.
 
 | Field | Value | Meaning |
 |---|---|---|
-| **Route** | | Classifier route |
-| **Releasable** | | true or false |
-| **Signals** | | Decisive structural findings |
-| **Warnings** | | Release-safety warnings |
+| **Route** | `one-navigable-PR` | Classifier route |
+| **Releasable** | `true` | One delivery remains releasable |
+| **Signals** | `change-shape:modify-heavy` | Decisive structural finding |
+| **Warnings** | none | No release-safety warnings |
+
+The classifier is advisory and does not collapse the three approved review
+slices. No layer-plan helper is required for `one-navigable-PR`.
 
 ---
 
