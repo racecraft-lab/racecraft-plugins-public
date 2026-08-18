@@ -195,6 +195,12 @@ and takes no bookkeeping commit. Stopping earlier would strand the durable
 discrepancy line, which is written at resolution (§6) and reaches version history
 only in a commit the stage goes on to take.
 
+Because such a run writes no pull-request description and no `Draft PR` row, a
+generation shortfall on it reaches the stop report alone. FR-004's three sinks
+bind only the runs that reach them, so this is the run stopping short of two
+sinks rather than a fail-open violation — and the artifacts themselves are not
+lost, since the boundary commit was still taken.
+
 **On a run with no emission terminal step** — a resolved stage other than `plan` —
 the status is still reported and a discrepancy is still recorded durably per §6,
 and this table simply does not arise: that run opens, refreshes, and records

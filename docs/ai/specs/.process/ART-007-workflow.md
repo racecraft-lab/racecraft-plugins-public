@@ -37,7 +37,7 @@ captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass — 8 artifacts, 15 research decisions, 16 declared file ops (11 production), 4 contracts, constitution 6/6, 0 markers |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — 2 domains, 73 items, 24 gaps found and all remediated; 1 consensus round |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 54 tasks (T001-T054), 16 [P], all 13 FRs covered, route one-navigable-PR |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ✅ Complete | G6 pass — 9 findings (0 CRITICAL, 1 HIGH, 6 MEDIUM, 2 LOW), all remediated in 2 loops; 0 unresolved |
 | Confidence Gate | G6.5 | ⏳ Pending | Pre-Implement composite confidence |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 | Post | Post-Implementation | ⏳ Pending | Canonical 12-item closeout |
@@ -651,9 +651,9 @@ When checklist identifies `[Gap]` items:
    (phase-execution.md both platforms), draft packet path
    (post-implementation.md), workflow-file draft-PR row
    (workflow-file-protocol.md + workflow-template.md)
-3. User Story 2 (P1): artifact-author agent (both platforms) + manifest
+3. User Story 2 (P2): artifact-author agent (both platforms) + manifest
    routing + fail-open branches
-4. User Story 3 (P2): gh corroboration limb in stage auto-detect
+4. User Story 3 (P3): gh corroboration limb in stage auto-detect
    (SKILL.md both platforms + runner helper)
 5. Polish: stop report wording, payload regeneration, parity verification
 
@@ -787,7 +787,25 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| F1 | HIGH | FR-004 mandated all three shortfall sinks for every shortfall, but FR-011 discrepancy runs record nothing durable and FR-013 push failures stop before creation, leaving 2 of 3 sinks structurally unreachable; SC-003's tail was falsifiable there | Sink-reachability carve-out added to FR-004 + SC-003 (continuing the SC-001/SC-006 pattern); propagated to T022, T026, stage-corroboration.md §7 |
+| F2 | MEDIUM | Stop-report shape count drifted three ways: FR-010 six, T023/T045 five, data-model.md §5 four | All reconciled to six; T023/T026 note the sixth is T041's |
+| F3 | MEDIUM | quickstart S5 step 5 named a non-existent helper (`validate-pr-title` is a gate, not a helper) and was unrunnable | Replaced with a runnable stdlib check of the gate's exact regex |
+| F4 | MEDIUM | quickstart used `gh --jq`, the exact dependency constitution II forbids and the active-path guard matches | Replaced with stdlib json parse; negative constraint added to tasks.md Boundaries (T021/T039 land inside scan roots) |
+| F5 | MEDIUM | plan.md claimed the 335 estimate came from the final counts, but 335 derives from 10 production files while the plan declares 11 | Actual inputs named beside 335; 11-file re-derivation recorded (355/ok/1 — verdict unchanged) across plan, research D15, tasks, spec |
+| F6 | MEDIUM | FR-013's two sequence failures and FR-010's could-not-be-opened shape had no validation scenario | quickstart 7e/7f added; T052 extended |
+| F7 | MEDIUM | FR-008's zero-artifact gap-row index had only the operator-gated T052 check | Deterministic test obligation added to draft-packet-mode.md §6 and T007 (footprint unchanged at 16 files) |
+| F8 | LOW | Workflow Tasks Prompt labeled US2=P1/US3=P2 against spec.md's P2/P3 | Fixed by the orchestrator (this file) |
+| F9 | LOW | Roadmap ART-007 headline budget cells still read 217/327 beside the superseding amendment | Fixed by the orchestrator: headline cells now carry the 217 → 287/335 → 355 progression |
+
+**G6 PASS.** Runner `validate-gate` returned
+`{"gate":"G6","pass":true,"reason":"0 CRITICAL/HIGH findings","markers":0}`
+after remediation (the one HIGH, F1, was fixed in-loop). 2 remediation loops;
+loop 2 caught one self-introduced residual (T026) and a pre-ship review caught
+a second (SC-003 wording). Clean results: design-concept drift none (Q1-Q7 and
+all four consensus rounds verified encoded); constitution 6/6; FR coverage
+13/13; SC coverage 8/8; all 22 contract test obligations mapped; all 16
+declared file ops task-covered; Q7's corpus deferral verified genuinely
+tracked in the roadmap's ART-009 entry. Layer 1 re-run: 1447/1447.
 
 ---
 

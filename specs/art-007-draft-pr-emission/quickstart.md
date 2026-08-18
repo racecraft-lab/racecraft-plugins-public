@@ -165,21 +165,33 @@ confidence gate resolves pass or warn.
 3. The branch is pushed.
 4. `gh pr view --json isDraft,title,body` on the branch reports `isDraft` true.
 5. The title matches `<type>(<lowercase-scope>): <plain English description>`.
-   Confirm it independently:
+   The authority is the release-readiness gate's own pattern, which lives at
+   `speckit-pro/speckit_pro_runner/gates/release.py` under the
+   `validate-pr-title` operation. That is a **gate** operation, not one of the
+   runner's helper IDs, so it is reached through a full `release-readiness` gate
+   case rather than a standalone request. Confirm the emitted title against the
+   same pattern directly:
 
    ```bash
-   python3 -m speckit_pro_runner   # validate-pr-title, with the emitted title
+   gh pr view --json title | python3 -c 'import json,re,sys; t=json.load(sys.stdin)["title"]; print(t, bool(re.match(r"^(feat|fix|chore|docs|test|refactor)\([a-z0-9-]+\): .+", t)))'
    ```
+
+   Expect the emitted title followed by `True`. Note the lowercase scope: research D4 records that the packet
+   schema would also accept an uppercase ticket-style scope, and SC-007 binds
+   the stricter release-readiness shape.
 
 6. The body contains exactly an artifacts index table and a resume/status block.
    It contains no release-note fence and no verification section. Confirm the
-   absence directly:
+   absence directly, parsing the JSON with the standard library rather than a
+   `jq` expression — constitution VI requires a structured parser, and the
+   repository's own active-path guard treats `--jq` as a jq dependency
+   (`speckit-pro/speckit_pro_runner/gates/active_path_guard.py`):
 
    ```bash
-   gh pr view --json body --jq '.body' | grep -c 'release-note' || true
+   gh pr view --json body | python3 -c 'import json,sys; print("release-note" in json.load(sys.stdin)["body"])'
    ```
 
-   Expect `0`.
+   Expect `False`.
 7. The workflow file's `### Basic Information` table carries one `Draft PR` row
    whose value begins with `[#<number>](<url>)`, and the `## Workflow Overview`
    table gained no row.
@@ -214,11 +226,12 @@ artifacts.
 
 ---
 
-## Scenario 7 — Fail-open and re-entry
+## Scenario 7 — Fail-open, re-entry, and the emission-sequence failures
 
-**Proves**: FR-004, FR-007, FR-011 discrepancy responses, SC-003, SC-005.
+**Proves**: FR-004, FR-007, FR-010's failure shapes, FR-011 discrepancy
+responses, FR-013's sequence failures, SC-001, SC-003, SC-005, SC-006.
 
-Four sub-runs against the same branch:
+Six sub-runs against the same branch:
 
 **7a. Zero artifacts.** Make every selected template unreadable, then run a pass
 stage. Expect: the draft pull request still opens; its index carries gap rows
@@ -240,6 +253,30 @@ leave the row in place, and re-run. Expect: no reopen, no second pull request,
 the row untouched, a `pr_closed` discrepancy logged, and a stop report naming the
 number, the URL, `gh pr reopen <number>`, and re-run the stage.
 
+**7e. Creation refused by title self-validation.** Force the emitted title to a
+shape the release-readiness pattern rejects — an uppercase scope such as
+`feat(ART-007): ...` is the realistic case, since the packet schema accepts it
+and the gate does not (research D4). Expect: no pull request is created, no
+`Draft PR` row is written, and the stop report carries FR-010's
+could-not-be-opened shape — that the pull request could not be opened, that the
+artifacts are already committed, and the resume path. This is the one arm where
+a validation refusal, not an external failure, ends the attempt.
+
+**7f. The two FR-013 sequence failures.** Run each separately, because they
+leave different state behind.
+
+- *Push fails.* Point the branch at an unreachable remote and run a pass stage.
+  Expect: the artifacts and the boundary commit sit on the local branch, nothing
+  reaches the remote, no pull request is created, the `Draft PR` row is absent,
+  and the stop report names the failed push and the resume path. Nothing is
+  retried automatically.
+- *Bookkeeping commit or its push fails.* Let creation succeed, then break the
+  bookkeeping push. Expect: the pull request is neither closed nor recreated, the
+  record is not discarded, and the stop report carries the URL and says the
+  record did not reach the remote. Re-run and confirm FR-007's existence test
+  finds the open pull request and repairs the record instead of opening a
+  second one.
+
 ---
 
 ## Green means
@@ -248,7 +285,9 @@ number, the URL, `gh pr reopen <number>`, and re-run the stage.
 python3 tests/speckit-pro/run-all.py     →  zero failures across Layers 1, 4, 5
 Scenario 5                               →  a draft PR whose body indexes the artifacts
 Scenario 6                               →  no PR, and a stop report naming the gate
-Scenario 7                               →  a PR every time the gate passed, gaps visible in all three sinks
+Scenario 7                               →  a PR every time the gate passed and the sequence completed,
+                                            gaps visible in every sink that run reached, and each
+                                            failure arm stopping where FR-013 says it stops
 ```
 
 Before calling the work done, confirm the generated-artifact contract was

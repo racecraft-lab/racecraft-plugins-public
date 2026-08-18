@@ -533,10 +533,12 @@ workflow state; explicit flags override. Alternatives: mandatory flag
 draft PR whose body indexes the artifacts, then stop for human review.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 217 (estimator: ok, modify-weighted) |
-Production files: ~6 |
-Total files: ~10 |
-Budget result: within budget
+Projected reviewable LOC: 217 at roadmap authoring → ~287 declared at scaffold
+(estimator 335 at 13 FRs) → 355 at the plan phase's 11-file count (estimator:
+ok at every step, modify-weighted, one slice throughout) |
+Production files: ~6 at roadmap authoring → 11 at plan |
+Total files: ~10 at roadmap authoring → 16 at plan |
+Budget result: within budget (see the scaffold amendment below for what moved)
 
 **Scope:**
 - One vertical slice — artifact generation → commit → draft PR → stop report.

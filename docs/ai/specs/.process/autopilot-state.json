@@ -5,7 +5,7 @@
   "branch": "art-007-draft-pr-emission",
   "status": "in_progress",
   "stage": "plan",
-  "active_step": "Phase 6: Analyze",
+  "active_step": "Phase 6.5: Confidence Gate",
   "prior_run_note": "completed_archived",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
@@ -83,15 +83,15 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "queued"
+      "status": "skipped: executor reported zero unresolved items"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "queued"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement",
@@ -180,6 +180,14 @@
     "G5": {
       "pass": true,
       "task_count": 54
+    },
+    "G6": {
+      "pass": true,
+      "critical": 0,
+      "high": 1,
+      "medium": 6,
+      "low": 2,
+      "all_remediated": true
     }
   },
   "atomicity_route": {

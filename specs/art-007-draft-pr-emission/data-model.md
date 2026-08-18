@@ -159,14 +159,20 @@ and never empty.
 The plan stage's terminal message to the operator. Printed prose, not a stored
 artifact, composed in the same one-line style Step 0.6c already uses.
 
-**Four shapes, selected by outcome**:
+**Six shapes, selected by outcome** — the enumeration FR-010 carries:
 
 | Outcome | Carries |
 | --- | --- |
 | emitted (gate pass or warn) | the PR URL, the artifact index, resume instructions |
 | gate blocked (strict mode) | the blocked gate's name in place of a URL; no PR |
 | creation failed | that the PR could not be opened, and the resume path; artifacts are already committed |
+| branch push failed | the failed push, that no PR was opened and no `Draft PR` row was written, and the resume path; the artifacts and the boundary commit are local only (FR-013) |
+| bookkeeping commit or its push failed | the PR URL, and that the draft-PR record did not reach the remote; the PR stands and the re-run repairs the record (FR-013) |
 | corroboration discrepancy | the status, the recorded identity, and the manual resume path for that status |
+
+The last five are failure shapes, and each names the step that failed, the state
+it left behind, and the resume path. The two FR-013 sequence failures arrived
+with FR-013 in Clarify session 1.
 
 **Rule (SC-006)**: the stop report alone is sufficient. The operator needs no
 follow-up action to hand off for review.

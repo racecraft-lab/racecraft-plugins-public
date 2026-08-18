@@ -73,11 +73,12 @@ Committed artifacts are not marked `merge=generated`.
 16 declared file operations across 4 surfaces.
 
 **Reviewability Budget**: Primary surface harness/adapter, secondary docs/process;
-projected reviewable LOC 335 by the advisory spec-size estimator (`ok`, 1 slice)
-and 0 by `estimate-reviewable-loc`, which recognises no production file types in
-this repository; 11 production files; 16 total files; budget result — within
-budget on the machine gates, one file above the total-files warn line by hand
-count, no split.
+projected reviewable LOC by the advisory spec-size estimator 335 at the spec's
+projected ten production files and 355 at this plan's eleven — `ok` with one
+suggested slice either way — and 0 by `estimate-reviewable-loc`, which
+recognises no production file types in this repository; 11 production files;
+16 total files; budget result — within budget on the machine gates, one file
+above the total-files warn line by hand count, no split.
 
 ## Declared File Operations
 
@@ -209,9 +210,16 @@ Evaluated against `.specify/memory/constitution.md` v1.2.0.
   and JavaScript, TypeScript, or SQL extensions — none of which this repository's
   Markdown, Python, and JSON surface uses. The 0 is a property of the estimator,
   not a claim about this slice, so the advisory spec-size estimator carries the
-  real sizing: run live against the final counts, it returns
-  `{"estimated_loc":335,"suggested_slices":1,"status":"ok"}`, comfortably under
-  the 400 warn ceiling. By hand count the change is 11 files under
+  real sizing. Run against the spec's projected counts — three user stories, ten
+  production files, thirteen functional requirements, modify-weighted — it
+  returns `{"estimated_loc":335,"suggested_slices":1,"status":"ok"}`, which is
+  the figure the spec and the workflow file record. Re-run against this plan's
+  own eleven production files, the same estimator returns
+  `{"estimated_loc":355,"suggested_slices":1,"status":"ok"}`. Both sit
+  comfortably under the 400 warn ceiling and both return one slice, so the
+  eleventh file moves neither the status nor the verdict; the estimator weights
+  a file at 40 lines before the modify halving, which is the whole of the
+  20-line delta. By hand count the change is 11 files under
   `speckit-pro/` and 5 under `tests/speckit-pro/`, 16 in all — one above the
   15-file warn line, well under the 25-file block line.
 - **Split decision**: no split. The spec's ratified decision stands: this is one

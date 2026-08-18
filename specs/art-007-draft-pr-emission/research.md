@@ -505,14 +505,29 @@ production files and a projected zero LOC regardless of its real size. That is a
 property of the estimator, not a claim about this slice.
 
 The authoritative sizing is the advisory spec-size estimator, run live during
-this phase against the final counts (three user stories, ten files, thirteen
-functional requirements, modify-weighted):
+this phase against the spec's projected counts (three user stories, ten
+production files, thirteen functional requirements, modify-weighted):
 
 ```json
 {"estimated_loc":335,"suggested_slices":1,"status":"ok"}
 ```
 
 This reproduces the figure `spec.md` records and confirms one slice.
+
+D10 raises the production-file count to eleven, so the same estimator was run
+again at that input to check the verdict survived it:
+
+```json
+{"estimated_loc":355,"suggested_slices":1,"status":"ok"}
+```
+
+The formula is `user_stories * 25 + files * 40 + frs * 15`, halved for a
+modify-weighted profile
+(`speckit-pro/speckit_pro_runner/helpers/read_only.py`, `estimate_spec_size`),
+so one more file is worth twenty reviewable lines here. Status `ok` and one
+suggested slice hold at both inputs, and both sit under the 400 warn ceiling.
+The 335 stays the figure of record because it is what `spec.md` and the workflow
+file cite; the 355 is the same verdict re-derived at the plan's own count.
 
 ---
 

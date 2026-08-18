@@ -220,6 +220,16 @@ value is the one used.
   missing — the individual page, or the whole set when selection itself could
   not run — and the reason it is missing, so the same shortfall is legible in
   all three sinks.
+
+  Each sink binds only the runs that reach it. A run that stops at
+  create-or-refresh under an FR-011 discrepancy, or before creation under an
+  FR-013 sequence failure, writes no pull-request description and no draft-PR
+  record, so its shortfall reaches the stop report alone; a run whose
+  bookkeeping commit failed after creation has written the description but not
+  the record. In each case the unwritten sinks are a consequence of the run not
+  reaching them and MUST NOT be treated as a fail-open violation. The stop
+  report is the one sink every such run reaches, and it MUST carry the shortfall
+  on all of them.
 - **FR-005**: The pull-request packet contract MUST gain a third mode
   representing a draft pull request, whose implementation-evidence requirements
   (verification evidence, changed-file scope evidence, and hands-on acceptance
@@ -473,6 +483,15 @@ value is the one used.
   the slice count.
 - **Projected production files**: ~10
 - **Projected total files**: ~14
+- **Plan-phase refinement**: the three figures above are the projections made at
+  specification time, and they are what produced the 335 estimate. Planning
+  discovered two further entries and declared eleven production files and
+  sixteen total. Re-running the advisory estimator at eleven production files,
+  with the same three user stories and thirteen functional requirements on a
+  modify-weighted profile, returns `{"estimated_loc": 355, "status": "ok",
+  "suggested_slices": 1}` — the status and the slice count are unchanged, so the
+  split decision below stands on the refined counts as well as the projected
+  ones. The plan itemises both new entries.
 - **Budget result**: within budget
 - **Split decision**: Remains one spec. The work is a single vertical slice —
   artifact generation, then commit, then draft pull request, then stop report —
@@ -545,8 +564,11 @@ value is the one used.
   failure, including runs that produce zero artifacts (the only non-opening
   cases are the FR-011 discrepancy responses and the FR-013 emission-sequence
   failures, none of which are generation failures), and every shortfall is
-  visible in all three places: the index, the stop report, and the workflow
-  record.
+  visible in all three places — the index, the stop report, and the workflow
+  record — on every run that reaches all three. On a run that ended at an
+  FR-011 discrepancy or an FR-013 sequence failure, the sinks that run never
+  reached are not written, and the stop report carries the shortfall in every
+  case, per FR-004.
 - **SC-004**: 100% of strict-mode blocked plan stages produce no pull request,
   and their stop report names the blocking gate.
 - **SC-005**: Resuming the workflow locates the feature's pull request from the

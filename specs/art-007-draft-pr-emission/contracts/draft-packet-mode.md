@@ -178,7 +178,17 @@ proceeding with a title that would need a human edit.
 | A valid draft packet passes read-only validation with no verification, changed-file, or UAT evidence | `tests/speckit-pro/unit/test-speckit-pro-read-only-helpers.py` |
 | A draft packet carrying `split_slice` fails | same |
 | A draft body missing either required heading fails | same |
+| A draft body whose `Artifacts` table carries only gap rows still passes — the zero-artifact case FR-008 requires to remain a valid, openable draft | same |
 | An unknown mode value is still rejected | same |
+
+The zero-artifact obligation is the deterministic half of FR-004's fail-open
+mandate. The rest of that mandate is orchestrator prose whose only check is the
+operator-gated quickstart run, but the body itself is machine-checkable here:
+`required_headings` for draft is `["Artifacts", "Resume"]`, so a body whose
+`Artifacts` heading is present and whose table holds gap rows instead of
+artifact rows must validate exactly as a fully-populated one does. Build that
+body variant in memory in the existing test file — the fixture pair stays the
+populated case, so no fixture is added and the declared file set does not grow.
 | `pr-packet-output` emits a draft packet and its body | `tests/speckit-pro/unit/test-speckit-pro-mutation-helpers.py` |
 | Every existing `single` and `split` fixture keeps its exact outcome | both, unchanged assertions (SC-008) |
 
