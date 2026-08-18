@@ -1048,15 +1048,64 @@ The canonical closeout. Every row must reach Complete or an explicit
 
 ### What Worked Well
 
--
+- **Running the thing instead of reading it caught four design defects before any
+  of them shipped.** Each was found by executing the shipped validator against a
+  synthetic input, not by reasoning about the source. The most consequential —
+  that a `then` arm cannot relax a constraint, because `allOf` branches are
+  conjunctive — would have produced a draft mode incapable of passing its own
+  validator, which is exactly the failure the contract warned about one level
+  further down.
+- **Asking executors to report contract problems, and meaning it.** Every
+  dispatch ended with "anything wrong, ambiguous, or impossible — do not paper
+  over it". Six of seven executors returned a real finding. The single most
+  valuable one, that the obvious title validator would make draft emission
+  structurally impossible on four spec families, came from an executor that
+  stopped to check which validator the contract meant rather than picking the
+  familiar one.
+- **Verifying every executor's claim against the tree.** Two claims that looked
+  like defects were not (the template naming convention, the guard's apparent
+  `jq` contradiction), and two that looked routine were real. Neither outcome was
+  predictable from the report alone.
+- **Recording baselines as failure *rule sets*, not pass/fail.** SC-008 asks that
+  two shipped modes be unchanged. A pass/fail baseline cannot see a fixture that
+  still fails for a newly different reason, which is exactly what an `else` arm
+  can cause.
 
 ### Challenges Encountered
 
--
+- **Three executors were lost to API 500 errors mid-run**, two of them after the
+  work was already on disk. The recovery is to verify the tree rather than
+  re-dispatch or assume failure. A fourth was stopped and its work completed by
+  the orchestrator directly, which was faster than a fifth dispatch once the
+  context was already in hand.
+- **A `git add -A` while two agents were mid-write** swept their prose into a
+  commit whose message describes something else. Staging explicit paths had been
+  working; the one lapse produced a permanently misleading commit.
+- **Reverting a correct change on a wrong premise.** A dispatch cited a byte cap
+  that does not bind skill files; the executor compressed prose to fit it and the
+  compression was reverted as unnecessary. A word cap did bind, the file was over
+  it, and the compression had to be redone. The executor was right and the
+  orchestrator's framing was wrong.
+- **Concurrent shipped-source edits corrupt each other's measurements.** Any
+  `speckit-pro/` edit stales `dist/`, the trust manifest, and the cache proofs,
+  reddening gate tests with an opaque `AssertionError: 1 != 0` that names
+  nothing.
 
 ### Patterns to Reuse
 
--
+- **Give parallel agents disjoint files and tell each one what failures belong to
+  the other.** Two independent agents then agreeing on the failure split is
+  stronger evidence than either one's self-report.
+- **Make the acceptance bar the changed test file, not the layer total**, whenever
+  generated artifacts are stale by design mid-phase.
+- **Pin the worktree path in every prompt and check the other checkout
+  afterwards.** The path trap fired four times in this run; pinning is necessary
+  and not sufficient, and `git -C <root> status` is a two-second check.
+- **Ask for the deliverable in the final message, and ask for it short.** Long
+  final reports are where the API failures landed.
+- **Settle contract silences in the contract, not in the code.** Every question an
+  executor raised was answered by amending the design artifact, so the next
+  reader inherits the decision and its reasoning instead of re-deriving it.
 
 ---
 
