@@ -203,3 +203,7 @@
 ### T046
 
 **Deviations/Edge cases/Surprises:** The first tool window treated the still-running silent generator as a failure; monitoring showed it completed normally, and the intentional second invocation reported that outputs were already consistent. Authoritative regeneration produced the Claude/Codex dist templates, both installed-cache templates, manifest mirrors, and refreshed proof/XPLAT fixtures; docs `reference:generate` regenerated seven pages byte-identically. All five template copies share SHA-256 `fc7059c6ae26a6556b564862e628dc59fb39344c72de7508cb512dc240a09d3f`; all five manifests share `f13e42ff6252f33595008ee2b65df0d4f09181385a27d0c9d594e71dffe56c48`. Focused gallery and fill checks are now green at 490/490 and 59/59.
+
+### T047
+
+**Deviations/Edge cases/Surprises:** Focused checks passed 490/490 and 59/59, Layer 1 passed 1,448/1,448, isolated Layer 4 passed 5,775/5,775, and the isolated default suite passed 7,409/7,409. Running Layer 4 and the full suite concurrently first caused shared policy-control interference (different 1- and 2-failure results); the isolated policy module passed 730/730 and both authoritative sequential reruns passed, so the concurrent results were discarded. Source checkpoint `36ef824dee02292e13704473292084173acb2f91` is clean; its post-commit generated-artifact check passes, and packet-excluded spec-index dry-run/read-only checks report zero stale maps/current index. The ignored packet directory was restored unchanged.
