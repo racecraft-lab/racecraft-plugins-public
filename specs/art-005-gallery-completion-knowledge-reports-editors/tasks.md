@@ -199,7 +199,7 @@ lossless, deterministic, typed JSON block.
 typed group/flag state and issue ordering round-trip, then execute the complete
 clipboard and recovery matrix.
 
-- [ ] T079 [US3] After PR 5 opens, create `art-005-gallery-completion-knowledge-reports-editors-slice-6` from Slice 5 and confirm the seven-path ledger plus 780-LOC ceiling in `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md` [FR-016-FR-018, SC-008]
+- [x] T079 [US3] After PR 5 opens, create `art-005-gallery-completion-knowledge-reports-editors-slice-6` from Slice 5 and confirm the seven-path ledger plus 780-LOC ceiling in `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md` [FR-016-FR-018, SC-008]
 - [ ] T080 [US3] RED: add `feature-flags` producer, exact control, memory reset, named groups/controls, dependency/invalid/empty feedback, semantic status, accessibility, responsive, and prohibited-path assertions to `tests/speckit-pro/unit/test-artifact-gallery.py` [FR-003, FR-007, FR-012-FR-014, FR-019, FR-021-FR-022; US3]
 - [ ] T081 [US3] RED: add exact schema/version/wrapper/group/flag/issue field order, typed/null values, one JSON fence, `JSON.stringify(value, null, 2)` round-trip, duplicate group/flag preservation, raw invalid rollout/dependency evidence, special characters, and issue ordering to `tests/speckit-pro/unit/test-artifact-gallery.py` [FR-008, FR-010, FR-023, SC-011-SC-012; US3]
 - [ ] T082 [US3] RED: add the complete zero/one-attempt clipboard, sequential-transition, and two-race guard matrix for `feature-flags` to `tests/speckit-pro/unit/test-artifact-gallery.py` [FR-010-FR-011, SC-003-SC-004, SC-007; US3]
