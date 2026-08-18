@@ -42,7 +42,7 @@ Open the nine named source artifacts directly with file:// and disable network a
 
 ## Verification
 
-- python3 tests/speckit-pro/run-all.py passed 7502/7502
+- python3 tests/speckit-pro/run-all.py passed 7628/7628
 - test-artifact-gallery.py passed 573/573 and test-artifact-fill-regions.py passed 70/70
 - Chromium and WebKit passed 16/16 post-review checks; Safari 26.6.1 passed the native keyboard matrix
 - refresh-release-artifacts.py --check reports generated artifacts match source

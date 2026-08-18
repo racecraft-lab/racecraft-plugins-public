@@ -51,7 +51,7 @@
       "why_it_matters"
     ],
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
-    "value": "69a55763ae78b9e2c13306aad3479443e314b7f3e2124cd351359258cb4f3955"
+    "value": "9c007f040fcc7c83cd8727e0daa634dd17ca584d6e66283813d69d6a8e1217e5"
   },
   "required_headings": [
     "Summary",
@@ -194,7 +194,7 @@
       "kind": "verification",
       "result": "pass",
       "source": "validation",
-      "summary": "python3 tests/speckit-pro/run-all.py passed 7502/7502"
+      "summary": "python3 tests/speckit-pro/run-all.py passed 7628/7628"
     },
     {
       "kind": "verification",
