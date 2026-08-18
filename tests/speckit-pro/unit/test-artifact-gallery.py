@@ -8018,11 +8018,31 @@ def check_m6(gallery_root: Path) -> list[str]:
                 issues.append("ordered keyframe phases " + ", ".join(missing_phases))
 
             snippet_markup = _read_only_fill_region(text, "css-snippet")
-            if not any(element.tag == "pre" for element in _elements(snippet_markup)):
+            snippet_elements = _elements(snippet_markup)
+            if not any(element.tag == "pre" for element in snippet_elements):
                 issues.append("visible preformatted CSS snippet")
             missing_snippet_selectors = [token for token in (".task.done", "--ease") if token not in snippet_markup]
             if missing_snippet_selectors:
                 issues.append("snippet selectors " + ", ".join(missing_snippet_selectors))
+            snippet_ids = _element_ids(snippet_elements)
+            missing_snippet_ids = [
+                identifier
+                for identifier in ("snippet-easing-name", "snippet-easing-value")
+                if identifier not in snippet_ids
+            ]
+            if missing_snippet_ids:
+                issues.append("live easing snippet selectors " + ", ".join(f"#{value}" for value in missing_snippet_ids))
+            script_text = "\n".join(_script_bodies(text))
+            missing_easing_bindings = [
+                token
+                for token in (
+                    "snippetEasingName.textContent = selected.getAttribute('data-name')",
+                    "snippetEasingValue.textContent = selected.getAttribute('data-ease')",
+                )
+                if token not in script_text
+            ]
+            if missing_easing_bindings:
+                issues.append("live easing snippet bindings " + ", ".join(missing_easing_bindings))
 
         elif artifact_id == "interaction-prototype":
             ids = _element_ids(elements)
@@ -8159,8 +8179,13 @@ class ReadOnlyPortContractFixtureTests(_PortContractFixtureCase):
                 '<!-- FILL:keyframes:START --><ol><li>Fill 0ms</li><li>Check 80ms</li>'
                 '<li>Strike 120ms</li><li>Confetti 200ms</li><li>Collapse 600ms</li></ol>'
                 '<!-- FILL:keyframes:END --><!-- FILL:css-snippet:START -->'
-                '<pre>.task.done { transition: all 200ms var(--ease); }</pre>'
-                '<!-- FILL:css-snippet:END --></main>'
+                '<pre>.task.done { transition: all 200ms var(--ease); }'
+                '<span id="snippet-easing-name">Spring</span>'
+                '<span id="snippet-easing-value">cubic-bezier(.34,1.56,.64,1)</span></pre>'
+                '<!-- FILL:css-snippet:END -->'
+                "<script>var snippetEasingName; var snippetEasingValue; function selectEasing(selected) {"
+                "snippetEasingName.textContent = selected.getAttribute('data-name');"
+                "snippetEasingValue.textContent = selected.getAttribute('data-ease');}</script></main>"
             ),
             "interaction-prototype": (
                 "<main><style>.item.dragging {} .indicator.on {}</style>"
@@ -8246,6 +8271,13 @@ class ReadOnlyPortContractFixtureTests(_PortContractFixtureCase):
                 'data-ease="linear"',
                 'data-timing="linear"',
                 ("all three .ease-btn[data-ease]",),
+            ),
+            (
+                "live easing snippet",
+                "animation-prototype",
+                'id="snippet-easing-value"',
+                'id="stale-easing-value"',
+                ("#snippet-easing-value",),
             ),
             (
                 "retained views",
@@ -8468,7 +8500,7 @@ class DecisionPortContractFixtureTests(_PortContractFixtureCase):
             "<!doctype html>\n"
             f"{self.attribution_header(artifact_id, upstream_file=upstream_file)}\n"
             '<html lang="en"><head><style>\n'
-            f"{brand}\n</style>\n{head}\n</head>\n"
+            f'{brand}\n</style>\n{head}\n<meta name="viewport" content="width=device-width, initial-scale=1">\n</head>\n'
             f"<body><main>{self.export_controls() if body is None else body}</main></body></html>\n",
         )
 
@@ -8605,6 +8637,10 @@ def check_o1(gallery_root: Path) -> list[str]:
         text = _document_text(path)
         elements = _elements(text)
         radio_name = str(contract["radio_name"])
+        if "preserve #feature-id and #feature-name for live exports" not in text:
+            failures.append(
+                f"{label}: feature-header fill instruction does not preserve #feature-id and #feature-name for live exports"
+            )
         radios = [
             element
             for element in elements
@@ -8616,6 +8652,8 @@ def check_o1(gallery_root: Path) -> list[str]:
             failures.append(f"{label}: input[name={radio_name!r}] is not a persistent valued radio group")
 
         required_ids = {
+            "feature-id": "",
+            "feature-name": "",
             "rationale-field": "textarea",
             "export-status": "",
             "fallback": "",
@@ -8673,11 +8711,24 @@ def check_o2(gallery_root: Path) -> list[str]:
             ".value.trim()",
             "aria-invalid",
             ".focus()",
+            "function featureLine()",
+            "textOf(FEATURE_ID_ID)",
+            "textOf(FEATURE_NAME_ID)",
         )
         absent_tokens = [token for token in source_tokens if token not in text]
         if absent_tokens:
             failures.append(f"{label}: live decision validation source is missing: {absent_tokens!r}")
-        order = [text.find(token) for token in ("Artifact:", "Feature:", f'{contract["slot"]} /', "Rationale:")]
+        if text.count("featureLine()") != 2 or "Feature: ART-004 Gallery Completion Design Prototyping" in text:
+            failures.append(
+                f"{label}: decision payload feature line is not derived once per export from the live feature header"
+            )
+        artifact_position = text.find("Artifact:")
+        order = [
+            artifact_position,
+            text.find("featureLine()", artifact_position),
+            text.find(f'{contract["slot"]} /', artifact_position),
+            text.find("Rationale:", artifact_position),
+        ]
         if any(position < 0 for position in order) or order != sorted(order):
             failures.append(f"{label}: common decision payload fields are not declared in contract order")
     return failures
@@ -8759,14 +8810,17 @@ class DecisionExportContractFixtureTests(DecisionPortContractFixtureTests):
         contract = DECISION_EXPORT_CONTRACTS[artifact_id]
         context = "\n".join(str(value) for value in contract["context"])
         script = source or (
+            "var FEATURE_ID_ID = 'feature-id'; var FEATURE_NAME_ID = 'feature-name';\n"
             "var invocation = 0;\n"
             "var rationale = document.getElementById('rationale-field');\n"
             "var fallback = document.getElementById('fallback');\n"
             "var fallbackField = document.getElementById('fallback-field');\n"
             "function invalidateFallback() { fallback.hidden = true; fallbackField.value = ''; }\n"
+            "function textOf(identifier) { var element = document.getElementById(identifier); return element ? element.textContent.replace(/\\s+/g, ' ').trim() : ''; }\n"
+            "function featureLine() { var identifier = textOf(FEATURE_ID_ID); var name = textOf(FEATURE_NAME_ID); if (!identifier && !name) return 'Feature: not named in this document'; return 'Feature: ' + (identifier ? identifier + ' ' + name : name).trim(); }\n"
             f"var chosen = document.querySelector('input[name=\"{contract['radio_name']}\"]:checked');\n"
             "var rationaleValue = rationale.value.trim(); rationale.setAttribute('aria-invalid', 'true'); rationale.focus();\n"
-            f"var lines = ['Artifact: title', 'Feature: ID Name', '', 'lead', '', '{contract['slot']} / label  (#anchor)',\n"
+            f"var lines = ['Artifact: title', featureLine(), '', 'lead', '', '{contract['slot']} / label  (#anchor)',\n"
             f"'{context}', 'Rationale: ' + rationaleValue];\n"
             f"var promptLead = {str(contract['prompt_lead'])!r};\n"
             f"var markdownLead = {str(contract['markdown_lead'])!r};\n"
@@ -8781,6 +8835,8 @@ class DecisionExportContractFixtureTests(DecisionPortContractFixtureTests):
             "document.addEventListener('click', invalidateFallback);\n"
         )
         return (
+            '<!-- Slot: feature-header | Fills: feature identity; preserve #feature-id and #feature-name for live exports | Source: spec.md -->'
+            '<p id="feature-id">ID</p><h1 id="feature-name">Name</h1>'
             f'<fieldset><legend>Decision</legend><label><input type="radio" name="{contract["radio_name"]}" value="anchor">Option</label></fieldset>'
             '<label for="rationale-field">Rationale</label><textarea id="rationale-field"></textarea>'
             '<button id="copy-prompt" type="button">Copy as prompt</button>'
@@ -8807,11 +8863,36 @@ class DecisionExportContractFixtureTests(DecisionPortContractFixtureTests):
         self.write_decision_artifact("visual-designs", body=body)
         self.assertReports(check_o1(self.gallery), "visual-designs.html", "atomic")
 
+    def test_rejects_a_fill_instruction_that_drops_live_feature_selectors(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("visual-designs").replace(
+            "; preserve #feature-id and #feature-name for live exports",
+            "",
+        )
+        self.write_decision_artifact("visual-designs", body=body)
+        self.assertReports(check_o1(self.gallery), "visual-designs.html", "fill instruction", "#feature-id")
+
+    def test_rejects_a_replacement_feature_header_without_live_ids(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("component-variants").replace(' id="feature-id"', "", 1)
+        self.write_decision_artifact("component-variants", body=body)
+        self.assertReports(check_o1(self.gallery), "component-variants.html", "#feature-id", "exactly once")
+
     def test_rejects_missing_exact_validation_message(self) -> None:
         self.write_export_gallery()
         body = self.export_body("component-variants").replace(DECISION_BOTH_MISSING_MESSAGE, "Choose inputs.")
         self.write_decision_artifact("component-variants", body=body)
         self.assertReports(check_o2(self.gallery), "component-variants.html", "payload/validation")
+
+    def test_rejects_a_feature_line_hard_coded_to_the_template_sample(self) -> None:
+        self.write_export_gallery()
+        body = self.export_body("visual-designs").replace(
+            "featureLine(),",
+            "'Feature: ART-004 Gallery Completion Design Prototyping',",
+            1,
+        )
+        self.write_decision_artifact("visual-designs", body=body)
+        self.assertReports(check_o2(self.gallery), "visual-designs.html", "live feature header")
 
     def test_rejects_multiple_clipboard_write_sites(self) -> None:
         self.write_export_gallery()
@@ -8845,6 +8926,8 @@ class DecisionExportContractFixtureTests(DecisionPortContractFixtureTests):
                 '<fieldset id="bg-seg"><legend>Background</legend>'
                 '<label><input type="radio" name="bg" value="light" checked>Light</label>'
                 '<label><input type="radio" name="bg" value="dark">Dark</label></fieldset>'
+                '<span class="stage-copy"><strong>Title</strong><span>Description</span>'
+                '<span class="float-stack"></span></span>'
             )
         else:
             states = "".join(
@@ -8866,9 +8949,18 @@ class DecisionExportContractFixtureTests(DecisionPortContractFixtureTests):
                 f"{states}"
             )
 
+        visual_layout_styles = (
+            ".stage-copy { display: block; }\n"
+            ".stage-copy > strong { display: block; }\n"
+            ".stage-copy > strong + span { display: block; }\n"
+            ".float-stack { display: block; }\n"
+            if artifact_id == "visual-designs"
+            else ""
+        )
         styles = (
             "<style>\n"
             ".decision-motion { color: var(--rc-text); transition: border-color 120ms ease; }\n"
+            f"{visual_layout_styles}"
             "input:checked { outline: 2px solid var(--rc-focus); }\n"
             "input:focus-visible, button:focus-visible, textarea:focus-visible { "
             "outline: 2px solid var(--rc-focus); }\n"
@@ -8912,6 +9004,28 @@ class DecisionExportContractFixtureTests(DecisionPortContractFixtureTests):
         )
         self.write_decision_artifact("visual-designs", body=body)
         self.assertReports(check_p3(self.gallery), "visual-designs.html", "reduced-motion")
+
+    def test_group_p_rejects_a_missing_mobile_viewport_contract(self) -> None:
+        self.write_accessibility_gallery()
+        relative = f"{TEMPLATES_DIR}/component-variants.html"
+        text = _document_text(self.gallery / relative).replace(
+            '<meta name="viewport" content="width=device-width, initial-scale=1">',
+            "",
+            1,
+        )
+        self.write(relative, text)
+        self.assertReports(check_p3(self.gallery), "component-variants.html", "viewport")
+
+    def test_group_p_rejects_an_inline_playful_preview_wrapper(self) -> None:
+        self.write_accessibility_gallery()
+        relative = f"{TEMPLATES_DIR}/visual-designs.html"
+        text = _document_text(self.gallery / relative).replace(
+            ".float-stack { display: block; }",
+            ".float-stack { color: inherit; }",
+            1,
+        )
+        self.write(relative, text)
+        self.assertReports(check_p3(self.gallery), "visual-designs.html", ".float-stack", "display:block")
 
     def test_group_p_rejects_unaudited_authored_color_literal(self) -> None:
         self.write_accessibility_gallery()
@@ -9084,7 +9198,15 @@ def check_p3(gallery_root: Path) -> list[str]:
     failures: list[str] = []
     for artifact_id, _path, text in _port_texts(gallery_root, DECISION_PORT_MANIFEST_BASELINE):
         label = _artifact_label(artifact_id)
+        elements = _elements(text)
         styles = _decision_authored_styles(text)
+        viewports = [
+            element
+            for element in elements
+            if element.tag == "meta" and _attrs(element).get("name", "").casefold() == "viewport"
+        ]
+        if len(viewports) != 1 or _attrs(viewports[0]).get("content") != "width=device-width, initial-scale=1":
+            failures.append(f"{label}: mobile viewport metadata is missing or non-canonical")
         if _UNAUDITED_COLOR_RE.search(styles):
             failures.append(f"{label}: port-authored CSS introduces an unaudited color literal")
         if not _REDUCED_MOTION_RE.search(styles) or not re.search(
@@ -9094,8 +9216,24 @@ def check_p3(gallery_root: Path) -> list[str]:
         if re.search(r"(?i)\bscroll-behavior\s*:\s*smooth\b", styles):
             failures.append(f"{label}: authored smooth scrolling is not reduced-motion safe")
 
+        if artifact_id == "visual-designs":
+            required_layout_rules = {
+                ".stage-copy": r"(?is)\.stage-copy\s*\{[^}]*\bdisplay\s*:\s*block\b",
+                ".stage-copy > strong": r"(?is)\.stage-copy\s*>\s*strong\s*\{[^}]*\bdisplay\s*:\s*block\b",
+                ".stage-copy > strong + span": r"(?is)\.stage-copy\s*>\s*strong\s*\+\s*span\s*\{[^}]*\bdisplay\s*:\s*block\b",
+                ".float-stack": r"(?is)\.float-stack\s*\{[^}]*\bdisplay\s*:\s*block\b",
+            }
+            missing_layout_rules = [
+                selector for selector, pattern in required_layout_rules.items() if re.search(pattern, styles) is None
+            ]
+            if missing_layout_rules:
+                failures.append(
+                    f"{label}: inline preview wrappers lack display:block layout for {missing_layout_rules!r}"
+                )
+            if re.search(r"(?i)\.stage-copy\s+(?:h3|p)\b", styles):
+                failures.append(f"{label}: preview styles target absent h3/p children instead of shipped inline markup")
+
         if artifact_id == "component-variants":
-            elements = _elements(text)
             states = tuple(
                 values[0]
                 for element in elements

@@ -8,7 +8,7 @@
   Copyright (c) 2026 Anthropic PBC
 -->
 <!--
-  Slot: feature-header | Fills: the feature identifier, feature name, and purpose for the component-state matrix | Source: spec.md
+  Slot: feature-header | Fills: the feature identifier, feature name, and purpose for the component-state matrix; preserve #feature-id and #feature-name for live exports | Source: spec.md
   Slot: variant-controls | Fills: the live padding, border, shadow, reset, and current-value controls | Source: design-concept.md, spec.md
   Slot: variants | Fills: all six component-state families, stable anchors, base-selection radios, notes, and live cards | Source: design-concept.md
   Slot: snippet-preview | Fills: the focusable live snippet, current variant context, and export decision surface | Source: design-concept.md, spec.md
@@ -156,6 +156,7 @@
 })();
 </script>
 <!-- GALLERY-HEAD:END -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Component Variants — Racecraft</title>
 <style>
 /* BRAND-KIT:START */
@@ -981,8 +982,8 @@ textarea[aria-invalid="true"] {
 <!-- FILL:feature-header:START -->
 <header class="feature-header">
   <div>
-    <p class="eyebrow">ART-004 / component design</p>
-    <h1>Card variant and state matrix</h1>
+    <p class="eyebrow"><span id="feature-id">ART-004</span> / component design</p>
+    <h1 id="feature-name">Card variant and state matrix</h1>
     <p class="subhead">Compare six structural treatments and the six required states while live density, border, shadow, snippet, and export context stay synchronized.</p>
   </div>
   <div class="brand-lockup">
@@ -1146,8 +1147,28 @@ textarea[aria-invalid="true"] {
   var fallback = document.getElementById('fallback');
   var fallbackField = document.getElementById('fallback-field');
   var reset = document.getElementById('reset-controls');
+  var FEATURE_ID_ID = 'feature-id';
+  var FEATURE_NAME_ID = 'feature-name';
   var activeCard = cards[0];
   var invocation = 0;
+
+  function textOf(identifier) {
+    var element = document.getElementById(identifier);
+    return element ? element.textContent.replace(/\s+/g, ' ').trim() : '';
+  }
+
+  function featureLine() {
+    var identifier = textOf(FEATURE_ID_ID);
+    var name = textOf(FEATURE_NAME_ID);
+    if (!name) {
+      var heading = document.querySelector('h1');
+      name = heading ? heading.textContent.replace(/\s+/g, ' ').trim() : '';
+    }
+    if (!identifier && !name) {
+      return 'Feature: not named in this document';
+    }
+    return 'Feature: ' + (identifier ? identifier + ' ' + name : name).trim();
+  }
 
   function invalidateFallback() {
     invocation += 1;
@@ -1241,7 +1262,7 @@ textarea[aria-invalid="true"] {
       : 'Base component variant chosen while reviewing these states.';
     var lines = [
       'Artifact: Component Variants',
-      'Feature: ART-004 Gallery Completion Design Prototyping',
+      featureLine(),
       '',
       lead,
       '',

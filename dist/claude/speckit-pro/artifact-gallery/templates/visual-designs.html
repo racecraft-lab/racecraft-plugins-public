@@ -8,7 +8,7 @@
   Copyright (c) 2026 Anthropic PBC
 -->
 <!--
-  Slot: feature-header | Fills: the feature identifier, feature name, and purpose for the visual exploration | Source: spec.md
+  Slot: feature-header | Fills: the feature identifier, feature name, and purpose for the visual exploration; preserve #feature-id and #feature-name for live exports | Source: spec.md
   Slot: design-brief | Fills: the shared empty-state problem, comparison guidance, and fidelity note | Source: design-concept.md, spec.md
   Slot: background-toggle | Fills: the labelled light and dark stage-background controls and current-state instruction | Source: design-concept.md
   Slot: directions | Fills: all four visual directions, stable anchors, live stages, labels, and direction notes | Source: design-concept.md
@@ -156,6 +156,7 @@
 })();
 </script>
 <!-- GALLERY-HEAD:END -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Visual Design Options — Racecraft</title>
 <style>
 /* BRAND-KIT:START */
@@ -685,16 +686,20 @@ legend {
 }
 
 .stage-copy {
+  display: block;
+  width: 100%;
   max-width: 23rem;
   text-align: center;
 }
 
-.stage-copy h3 {
+.stage-copy > strong {
+  display: block;
   margin: 0.6rem 0 0.25rem;
   color: inherit;
 }
 
-.stage-copy p {
+.stage-copy > strong + span {
+  display: block;
   margin: 0;
   color: inherit;
 }
@@ -722,6 +727,7 @@ legend {
 }
 
 .float-stack {
+  display: block;
   position: relative;
   width: 7rem;
   height: 4.5rem;
@@ -892,8 +898,8 @@ textarea[aria-invalid="true"] {
 <!-- FILL:feature-header:START -->
 <header class="feature-header">
   <div>
-    <p class="eyebrow">ART-004 / design exploration</p>
-    <h1>Four visual directions for an empty state</h1>
+    <p class="eyebrow"><span id="feature-id">ART-004</span> / design exploration</p>
+    <h1 id="feature-name">Four visual directions for an empty state</h1>
     <p class="subhead">Compare tone, density, and clarity before one direction becomes implementation guidance.</p>
   </div>
   <div class="brand-lockup">
@@ -1027,7 +1033,27 @@ textarea[aria-invalid="true"] {
   var status = document.getElementById('export-status');
   var fallback = document.getElementById('fallback');
   var fallbackField = document.getElementById('fallback-field');
+  var FEATURE_ID_ID = 'feature-id';
+  var FEATURE_NAME_ID = 'feature-name';
   var invocation = 0;
+
+  function textOf(identifier) {
+    var element = document.getElementById(identifier);
+    return element ? element.textContent.replace(/\s+/g, ' ').trim() : '';
+  }
+
+  function featureLine() {
+    var identifier = textOf(FEATURE_ID_ID);
+    var name = textOf(FEATURE_NAME_ID);
+    if (!name) {
+      var heading = document.querySelector('h1');
+      name = heading ? heading.textContent.replace(/\s+/g, ' ').trim() : '';
+    }
+    if (!identifier && !name) {
+      return 'Feature: not named in this document';
+    }
+    return 'Feature: ' + (identifier ? identifier + ' ' + name : name).trim();
+  }
 
   function invalidateFallback() {
     invocation += 1;
@@ -1091,7 +1117,7 @@ textarea[aria-invalid="true"] {
       : 'Visual direction chosen while reviewing these options.';
     var lines = [
       'Artifact: Visual Design Options',
-      'Feature: ART-004 Gallery Completion Design Prototyping',
+      featureLine(),
       '',
       lead,
       '',

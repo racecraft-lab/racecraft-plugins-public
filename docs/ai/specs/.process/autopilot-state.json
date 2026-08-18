@@ -185,10 +185,10 @@
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
     {"step": "Phase 7: Implement T001-T009 - setup and foundational gates", "status": "completed"},
     {"step": "Phase 7: Implement T010-T022 - slice 1 keyboard foundation", "status": "completed"},
-    {"step": "Phase 7: Implement T023-T037 - slice 2 read-only ports", "status": "in_progress"},
-    {"step": "Phase 7: Implement T038-T052 - slice 3 decision ports", "status": "pending"},
-    {"step": "Phase 7: Implement T053-T060 - polish and release evidence", "status": "pending"},
-    {"step": "Post: Doctor Extension Check", "status": "pending"},
+    {"step": "Phase 7: Implement T023-T037 - slice 2 read-only ports", "status": "completed"},
+    {"step": "Phase 7: Implement T038-T052 - slice 3 decision ports", "status": "completed"},
+    {"step": "Phase 7: Implement T053-T060 - polish and release evidence", "status": "completed"},
+    {"step": "Post: Doctor Extension Check", "status": "in_progress"},
     {"step": "Post: Verify Implementation", "status": "pending"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
     {"step": "Post: Code Review", "status": "pending"},
@@ -261,6 +261,11 @@
       "threshold": 0.9,
       "recommended_action": "proceed",
       "reason": "composite at or above threshold"
+    },
+    "G7": {
+      "pass": true,
+      "markers": 0,
+      "reason": "T001-T060 complete; full suite 7496/7496; generated release artifacts, references, diff, browser UAT, and exact PR title all pass"
     }
   },
   "phase_results": {
@@ -521,6 +526,25 @@
         "final_gate": "7496/7496 passed; release artifacts match source; reference pages current; git diff check clean"
       },
       "implementation_notes": "specs/art-004-gallery-completion-design-prototyping/.process/implementation-notes.md"
+    },
+    "post_implementation": {
+      "status": "in_progress",
+      "items": [
+        {"step": "Post: Doctor Extension Check", "status": "in_progress"},
+        {"step": "Post: Verify Implementation", "status": "pending"},
+        {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+        {"step": "Post: Code Review", "status": "pending"},
+        {"step": "Post: Integration Suite", "status": "pending"},
+        {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+        {"step": "Post: Self-Review", "status": "pending"},
+        {"step": "Post: UAT Runbook Generation", "status": "pending"},
+        {"step": "Post: Final Reviewability Backstop", "status": "pending"},
+        {"step": "Post: PR Packet/Body Generation", "status": "pending"},
+        {"step": "Post: PR Body Generation", "status": "pending"},
+        {"step": "Post: PR Creation", "status": "pending"},
+        {"step": "Post: Review Remediation", "status": "pending"},
+        {"step": "Post: Retrospective", "status": "pending"}
+      ]
     }
   }
 }

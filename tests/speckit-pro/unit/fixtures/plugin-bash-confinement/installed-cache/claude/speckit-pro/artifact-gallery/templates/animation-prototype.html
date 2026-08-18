@@ -1129,9 +1129,9 @@ pre .v {
         tabindex="0"
         role="group"
         aria-label="Task completion animation CSS snippet"
-      ><code><span class="c">/* circle: brand-red flash, settle to link blue with spring overshoot */</span>
+      ><code><span class="c">/* circle: brand-red flash, settle to link blue with <span id="snippet-easing-name">Spring</span> easing */</span>
 <span class="k">.task.done .check</span> {
-  animation: settle 380ms <span class="v">cubic-bezier(.34,1.56,.64,1)</span> forwards;
+  animation: settle 380ms <span class="v" id="snippet-easing-value">cubic-bezier(0.34, 1.56, 0.64, 1)</span> forwards;
 }
 <span class="k">@keyframes settle</span> {
   0%   { transform: scale(.8);  background: <span class="v">var(--rc-brand-red)</span>; }
@@ -1179,6 +1179,8 @@ pre .v {
 
   var root = document.documentElement;
   var easingStatus = document.getElementById('easing-status');
+  var snippetEasingName = document.getElementById('snippet-easing-name');
+  var snippetEasingValue = document.getElementById('snippet-easing-value');
   var buttons = document.querySelectorAll('.ease-btn[data-ease]');
 
   function selectEasing(selected) {
@@ -1188,6 +1190,8 @@ pre .v {
       buttons[index].setAttribute('aria-pressed', active ? 'true' : 'false');
     }
     root.style.setProperty('--ease', selected.getAttribute('data-ease'));
+    snippetEasingName.textContent = selected.getAttribute('data-name');
+    snippetEasingValue.textContent = selected.getAttribute('data-ease');
     easingStatus.textContent = 'Selected easing: ' + selected.getAttribute('data-name') + '.';
   }
 
