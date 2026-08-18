@@ -219,3 +219,15 @@
 ### T050
 
 **Deviations/Edge cases/Surprises:** None. After PR #447 opened and Slice 3 closeout reached `2b0fa4eb1d1d5b1daf24eb13946eac4fb7beebd3`, Slice 4 was created from that exact head as `art-005-gallery-completion-knowledge-reports-editors-slice-4`. The plan and topology contract agree on exactly seven implementation-authored paths and a 620 reviewable-LOC ceiling (285 markup/content, 150 CSS, 45 behavior JS, and 140 incremental tests), leaving 180 LOC below the mandatory 800-LOC stop. `incident-report` remains `planned` with pinned source `12-incident-report.html` and `exports: []` before RED.
+
+### T051
+
+**Deviations/Edge cases/Surprises:** None. Group O pins the incident reader's manifest/source identity, canonical bytes, attribution, reader-only behavior, semantic main and five report headings, stable section navigation, list-backed timeline/follow-ups, text-backed incident meaning, mobile viewport, 360px responsive coverage, focus/reduced-motion handling, positive-tabindex prohibition, and conditional horizontal-scroll semantics.
+
+### T052
+
+**Deviations/Edge cases/Surprises:** None. The fill contract now pins `summary`, `timeline`, `impact`, `root-cause`, and `follow-ups`, marks timeline and follow-ups as repeated list slots, and adds a non-vacuity check requiring the incident-report inventory template.
+
+### T053
+
+**Deviations/Edge cases/Surprises:** Formal RED passed for the intended reason. Gallery reported 490/491; direct `check_o1` evidence names only the planned manifest status and missing incident reader. Fill-region reported 60/61 with only the new missing incident-report fill-inventory template failing. Existing Slice 1-3 checks remained green.

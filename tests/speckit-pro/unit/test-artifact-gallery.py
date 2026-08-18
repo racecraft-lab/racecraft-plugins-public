@@ -9638,6 +9638,110 @@ class StatusReportReaderTests(unittest.TestCase):
         self.assertEqual(check_s1(GALLERY_ROOT), [])
 
 
+# ---------------------------------------------------------------------------
+# Group T - ART-005 incident-report reader contract (FR-003, FR-005, FR-006,
+# FR-013, FR-014, FR-020, FR-022)
+# ---------------------------------------------------------------------------
+
+INCIDENT_REPORT_ID = "incident-report"
+INCIDENT_REPORT_SOURCE_FILE = "12-incident-report.html"
+INCIDENT_REPORT_LABEL = f"{TEMPLATES_DIR}/{INCIDENT_REPORT_ID}.html"
+_INCIDENT_REPORT_SLOTS = ("summary", "timeline", "impact", "root-cause", "follow-ups")
+_INCIDENT_REPORT_LIST_SLOTS = ("timeline", "follow-ups")
+
+
+def check_t1(gallery_root: Path) -> list[str]:
+    """T1 - the incident narrative, navigation, and reader-only contract agree."""
+    matches = [
+        entry for entry in (_entries(gallery_root) or [])
+        if isinstance(entry, dict) and entry.get("id") == INCIDENT_REPORT_ID
+    ]
+    if len(matches) != 1:
+        return [f"{MANIFEST_FILE}: expected one '{INCIDENT_REPORT_ID}' entry, found {len(matches)}"]
+    entry = matches[0]
+    source = entry.get("source")
+    failures: list[str] = []
+    if entry.get("status") != SHIPPED:
+        failures.append(f"{MANIFEST_FILE}: '{INCIDENT_REPORT_ID}' must be shipped, found {entry.get('status')!r}")
+    if entry.get("exports") != []:
+        failures.append(f"{MANIFEST_FILE}: '{INCIDENT_REPORT_ID}' is a reader and must keep exports: []")
+    if not isinstance(source, dict) or source.get("origin") != UPSTREAM or source.get("file") != INCIDENT_REPORT_SOURCE_FILE:
+        failures.append(f"{MANIFEST_FILE}: '{INCIDENT_REPORT_ID}' must remain sourced from {INCIDENT_REPORT_SOURCE_FILE}")
+
+    artifact = _artifact_path(gallery_root, INCIDENT_REPORT_ID)
+    if artifact is None or not artifact.is_file():
+        failures.append(f"{INCIDENT_REPORT_LABEL}: missing reader artifact")
+        return failures
+
+    text = _document_text(artifact)
+    lowered = text.casefold()
+    elements = _elements(text)
+    attributes = [dict(element.attributes) for element in elements]
+    authored = text
+    for block in CANONICAL_FILES:
+        if not _embeds(text, block):
+            failures.append(f"{INCIDENT_REPORT_LABEL}: missing canonical {block} block")
+        elif (expected := _canonical_region(gallery_root, block)) is None or _region(text, block) != expected:
+            failures.append(f"{INCIDENT_REPORT_LABEL}: canonical {block} bytes drifted")
+        else:
+            authored = authored.replace(_region(text, block), "")
+
+    header = _attribution_header(text)
+    if header is None or any(not _carried(header, element) for element in ATTRIBUTION_ELEMENTS):
+        failures.append(f"{INCIDENT_REPORT_LABEL}: incomplete upstream attribution header")
+    elif _labelled_value(header, UPSTREAM_FILE_LABEL) != INCIDENT_REPORT_SOURCE_FILE:
+        failures.append(f"{INCIDENT_REPORT_LABEL}: attribution must name {INCIDENT_REPORT_SOURCE_FILE}")
+
+    for token in ("copy as", "navigator.clipboard", "execcommand(", "download="):
+        if token in lowered:
+            failures.append(f"{INCIDENT_REPORT_LABEL}: reader exposes export token {token!r}")
+    if "<script" in authored.casefold():
+        failures.append(f"{INCIDENT_REPORT_LABEL}: static reader adds behavior outside the canonical head")
+
+    tags = [element.tag for element in elements]
+    if tags.count("main") != 1 or tags.count("h1") != 1 or tags.count("h2") < 5:
+        failures.append(f"{INCIDENT_REPORT_LABEL}: expected one main, one h1, and five semantic report headings")
+    by_id = {attrs.get("id"): element.tag for element, attrs in zip(elements, attributes) if attrs.get("id")}
+    for slot in _INCIDENT_REPORT_SLOTS:
+        if by_id.get(f"{slot}-heading") not in {"h2", "h3"}:
+            failures.append(f"{INCIDENT_REPORT_LABEL}: '{slot}' needs a stable semantic heading")
+
+    nav = re.search(r"<nav\b.*?</nav>", text, re.IGNORECASE | re.DOTALL)
+    if nav is None or any(f'href="#{slot}"' not in nav.group(0) for slot in _INCIDENT_REPORT_SLOTS):
+        failures.append(f"{INCIDENT_REPORT_LABEL}: report navigation must link every stable report section")
+    for slot in _INCIDENT_REPORT_LIST_SLOTS:
+        pattern = rf"<(?:ol|ul)\b.*?FILL:{re.escape(slot)}:START.*?<li\b.*?FILL:{re.escape(slot)}:END.*?</(?:ol|ul)>"
+        if not re.search(pattern, text, re.IGNORECASE | re.DOTALL):
+            failures.append(f"{INCIDENT_REPORT_LABEL}: '{slot}' must be represented by a semantic list")
+
+    for literal in ("SEV-2", "Resolved", "Duration", "Owner", "Root cause", "Impact", "Follow-ups"):
+        if literal.casefold() not in lowered:
+            failures.append(f"{INCIDENT_REPORT_LABEL}: missing text-backed incident meaning {literal!r}")
+    if not re.search(r"<meta\s+[^>]*name=[\"']viewport[\"']", text, re.IGNORECASE):
+        failures.append(f"{INCIDENT_REPORT_LABEL}: missing mobile viewport metadata")
+    widths = [int(value) for value in re.findall(r"@media[^{}]*max-width\s*:\s*(\d+)px", text, re.IGNORECASE)]
+    if not any(width >= 360 for width in widths):
+        failures.append(f"{INCIDENT_REPORT_LABEL}: no responsive rule covers 360 CSS px")
+    if "prefers-reduced-motion" not in text or ":focus-visible" not in text:
+        failures.append(f"{INCIDENT_REPORT_LABEL}: visible-focus or reduced-motion handling is missing")
+    for element, attrs in zip(elements, attributes):
+        value = attrs.get("tabindex", "")
+        if value.lstrip("-").isdigit() and int(value) > 0:
+            failures.append(f"{INCIDENT_REPORT_LABEL}: <{element.tag}> uses positive tabindex={value!r}")
+    for selector, declarations in _RULE_RE.findall(text):
+        if _HORIZONTAL_OVERFLOW_RE.search(declarations):
+            classes = re.findall(r"\.([A-Za-z_-][\w-]*)", selector)
+            matched = [attrs for attrs in attributes if any(name in attrs.get("class", "").split() for name in classes)]
+            if not matched or any(attrs.get("tabindex") != "0" or attrs.get("role") != "group" or not (attrs.get("aria-label", "").strip() or attrs.get("aria-labelledby", "").strip()) for attrs in matched):
+                failures.append(f"{INCIDENT_REPORT_LABEL}: actual horizontal scroll element must be named, grouped, and keyboard reachable")
+    return failures
+
+
+class IncidentReportReaderTests(unittest.TestCase):
+    def test_incident_report_contract_passes_against_the_shipped_gallery(self) -> None:
+        self.assertEqual(check_t1(GALLERY_ROOT), [])
+
+
 class CheckSignatureTests(unittest.TestCase):
     """Enforce the rule the rest of this module depends on.
 
@@ -9703,6 +9807,7 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     SlideDeckReaderTests,
     ConceptExplainerReaderTests,
     StatusReportReaderTests,
+    IncidentReportReaderTests,
     KeyboardScrollGuardTests,
     KeyboardScrollGuardFixtureTests,
     ReadOnlyPortContractTests,
