@@ -48,8 +48,8 @@ for four artifacts is now an explicit Open Question.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | Three independently testable outcome groups; one combined implementation slice |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Resolve pinned source, semantic read-only classification, fill slots, export schemas, UAT record, and size risk |
+| Specify | `/speckit-specify` | ✅ Complete | 3 stories, 19 FRs, 8 scenarios, and 8 success criteria; one intentional marker routed to Clarify |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | Session 1 resolving pinned source, semantic reader/producer classification, fidelity, and fill slots |
 | Plan | `/speckit-plan` | ⏳ Pending | Measure pinned upstream sources before accepting the combined slice |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Accessibility, UX, data-integrity, and error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | TDD ordering across seven templates and shared integration surfaces |
@@ -92,7 +92,8 @@ Before starting any workflow phase, verify alignment with
 | V. Conventional Commits | Commits and final PR title use `type(lowercase-scope): plain English description` | release-readiness/PR-title validation |
 | VI. KISS, Simplicity & YAGNI | Keep seven standalone ports explicit; add no shared abstraction, storage layer, import workflow, or undeclared export kind | Plan and code review |
 
-**Constitution Check:** ⏳ Pending at G1; re-check after Plan.
+**Constitution Check:** ✅ Verified at G0 with `7400/7400` passing
+(`L1 1448/1448`, `L4 5766/5766`, `L5 186/186`); re-check after Plan.
 
 ### Worktree and Bootstrap Record
 
@@ -114,6 +115,7 @@ Before starting any workflow phase, verify alignment with
 | **Spec ID** | ART-005 |
 | **Name** | Gallery Completion — Knowledge, Reports & Editors |
 | **Branch** | `art-005-gallery-completion-knowledge-reports-editors` |
+| **Stage** | `plan` |
 | **Dependencies** | ART-001; dependency is satisfied on `main` |
 | **Enables** | Gallery completeness |
 | **Priority** | P2 |
@@ -244,14 +246,14 @@ topology decision; do not silently split or invent an exception.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending phase execution |
-| User Stories | Target: 3 |
-| Acceptance Criteria | Pending phase execution |
-| Reviewability result | Must record 555/560 warn and the one-slice decision |
+| Functional Requirements | 19 |
+| User Stories | 3 |
+| Acceptance Criteria | 8 scenarios |
+| Reviewability result | 555/560 LOC warn; operator-selected one combined slice retained with a plan-time block stop |
 
 ### Files Generated
 
-- [ ] `specs/art-005-gallery-completion-knowledge-reports-editors/spec.md`
+- [x] `specs/art-005-gallery-completion-knowledge-reports-editors/spec.md`
 
 ### SpecKit Traceability Markers
 
