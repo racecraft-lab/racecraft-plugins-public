@@ -19,13 +19,13 @@
     "body": {
       "algorithm": "sha256",
       "path": "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004/body.md",
-      "sha256": "c0a889e9978e22abf3fc46b46323b28ab7c59c49630fa01d72059581f887def4",
+      "sha256": "81c33d085e8d679a7c9ddecf9e9c7cb8d28160adb27885c49f4fc4efd8c4aabf",
       "size_bytes": 11784
     },
     "packet": {
       "algorithm": "sha256",
       "path": "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004.json",
-      "sha256": "21b488db37cc754220ba0cdf92238612de114a21186bbfdf0ef476dd462bdcc3",
+      "sha256": "369c002ece83e6795e9acd65fa81f438a43262a91a5cac4dbc0d710ba6fa4a46",
       "size_bytes": 13975
     }
   },
@@ -35,7 +35,7 @@
     "base_branch": "main",
     "head_branch": "art-004-gallery-completion-design-prototyping"
   },
-  "timestamp": "2026-08-18T21:14:06Z",
+  "timestamp": "2026-08-18T21:36:01Z",
   "title_value": "feat(art-004): complete design gallery artifacts",
   "validation_result_path": "specs/art-004-gallery-completion-design-prototyping/.process/pr-packets/art-004/validation.json"
 }

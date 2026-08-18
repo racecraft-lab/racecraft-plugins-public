@@ -6,7 +6,7 @@
   "status": "in_progress",
   "stage": "implement",
   "active_step": "Post: PR Creation",
-  "updated_at": "2026-08-18T21:14:34Z",
+  "updated_at": "2026-08-18T21:38:17Z",
   "reclaimed_from": "docs/ai/specs/.process/ART-003-slice-3-workflow.md",
   "settings": {
     "consensus_mode": "moderate",
@@ -265,7 +265,7 @@
     "G7": {
       "pass": true,
       "markers": 0,
-      "reason": "T001-T060 complete; post-review full suite 7502/7502; generated release artifacts, references, diff, browser UAT, and exact PR title all pass"
+      "reason": "T001-T060 complete; post-merge full suite 7628/7628; generated release artifacts, references, diff, browser UAT, and exact PR title all pass"
     }
   },
   "phase_results": {
@@ -523,7 +523,7 @@
         "review_packet": "workflow records change rationale, non-goals, review order, scope gates, traceability, verification, known gaps, and rollback",
         "art_020": "pre-implementation roadmap baseline already records Superseded by ART-004; no implementation-time roadmap drift",
         "pr_title": "release-readiness validate-pr-title passed feat(speckit-pro): complete design gallery artifacts with exit 0 and blocking=false",
-        "final_gate": "post-review 7502/7502 passed; release artifacts match source at d65345e65; reference pages current; privacy 10/10; git diff check clean"
+        "final_gate": "post-merge 7628/7628 passed; release artifacts match source after current-main integration; reference pages current; privacy 10/10; git diff check clean"
       },
       "implementation_notes": "specs/art-004-gallery-completion-design-prototyping/.process/implementation-notes.md"
     },
@@ -549,7 +549,7 @@
       "verify": {"status": "completed", "findings": 0},
       "verify_tasks": {"status": "completed", "verified": 60, "total": 60, "flagged": 0, "report": "specs/art-004-gallery-completion-design-prototyping/verify-tasks-report.md"},
       "code_review": {"status": "completed", "remediation_checkpoint": "d65345e65", "final_findings": 0},
-      "integration": {"status": "completed", "full_suite": "7502/7502", "layer_1": "1447/1447", "layer_4": "5869/5869", "layer_5": "186/186", "privacy": "10/10"},
+      "integration": {"status": "completed", "full_suite": "7628/7628", "layer_1": "1468/1468", "layer_4": "5968/5968", "layer_5": "192/192", "privacy": "10/10"},
       "reviewability_diff_gate": {"status": "completed", "slice_results": ["160/pass", "590/warn", "520/warn"], "topology_changed": false},
       "self_review": {"status": "completed", "edge_case_gaps": 0, "orphan_requirements": 0, "tidiness_findings": 0},
       "uat_runbook": {"status": "skipped", "reason": "generate-uat-skeleton deferred; no committed feature-local runbook; no validator registered"},

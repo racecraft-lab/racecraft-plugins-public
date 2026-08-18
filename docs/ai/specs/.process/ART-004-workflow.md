@@ -92,7 +92,7 @@ not authority for any individual approved slice.
 | Tasks | /speckit-tasks | ✅ Complete | 60 tasks, 17/17 requirements, 3/3 stories, 9 safe parallel tasks; G5 passed |
 | Analyze | /speckit-analyze | ✅ Complete | Executor clean, G6 passed, and required clean-pass confidence synthesis completed |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory gate passed at 1.00 against the 0.90 threshold |
-| Implement | /speckit-implement | ✅ Complete | T001-T060 complete; post-review suite 7502/7502 and all release/reference/title gates pass |
+| Implement | /speckit-implement | ✅ Complete | T001-T060 complete; post-merge suite 7628/7628 and all release/reference/title gates pass |
 | Post | Post-Implementation | 🔄 In Progress | Required audit chain is now running after G7 implementation completion |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -827,7 +827,7 @@ Final verification:
 
 ### Verification and known gaps
 
-- Focused gallery: 573/573; fill regions: 70/70; complete suite: 7502/7502.
+- Focused gallery: 573/573; fill regions: 70/70; post-merge complete suite: 7628/7628.
 - Release payload and docs reference checks pass on the clean post-review
   checkpoint `d65345e65`.
 - Both Python-authoritative title gates pass the exact prospective title
@@ -860,7 +860,7 @@ generated files must never be hand-reverted independently.
 | Post: Verify Implementation | ✅ Complete | Verify extension found no implementation defect |
 | Post: Verify Tasks Phantom Check | ✅ Complete | 60/60 tasks verified with zero flagged verdicts; privacy-safe report at `specs/art-004-gallery-completion-design-prototyping/verify-tasks-report.md` |
 | Post: Code Review | ✅ Complete | Independent review findings were repaired with RED/GREEN contracts; final re-review found no blocking or minor issue |
-| Post: Integration Suite | ✅ Complete | 7502/7502 passed: L1 1447/1447, L4 5869/5869, L5 186/186; privacy 10/10 |
+| Post: Integration Suite | ✅ Complete | Post-merge 7628/7628 passed: L1 1468/1468, L4 5968/5968, L5 192/192; privacy 10/10 |
 | Post: Reviewability Diff Gate | ✅ Complete | Current committed three-slice evidence remains non-blocking at 160/pass, 590/warn, and 520/warn; review remediation did not change the approved topology |
 | Post: Self-Review | ✅ Complete | Mandatory four-question audit below records tests, nine acceptance scenarios, FR/task traceability, and tidiness; no gaps found |
 | Post: UAT Runbook Generation | ⏭️ Skipped | `generate-uat-skeleton` is deferred, no committed feature-local skeleton exists, and no UAT validator is registered; `quickstart.md` remains the executable source-derived matrix |
@@ -877,7 +877,7 @@ generated files must never be hand-reverted independently.
    `INTEGRATION_TEST` are explicitly `N/A` in `PROJECT_COMMANDS`; they were not
    inferred as passing. `UNIT_TEST` and `FULL_VERIFY` are the same configured
    command, `python3 tests/speckit-pro/run-all.py`, and its final run passed
-   7502/7502. Focused gallery and fill suites passed 573/573 and 70/70;
+   7628/7628 after integrating current `origin/main`. Focused gallery and fill suites passed 573/573 and 70/70;
    Chromium and WebKit passed 16/16 post-review browser checks; release payload,
    docs reference, privacy, and diff checks pass.
 2. **Edge cases?** All nine acceptance scenarios have non-happy-path evidence.
