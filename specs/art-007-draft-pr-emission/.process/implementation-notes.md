@@ -1053,3 +1053,85 @@ to fit a cap that does not exist, losing two real clauses — the case of a run 
 no emission terminal step, and the rationale for keeping classification
 offline-testable. The compression was reverted and the fuller committed text
 kept.
+
+### T052 — NOT RUN (operator-gated)
+
+Marked `[~]` in tasks.md rather than `[x]`, because reporting it complete would
+be false.
+
+The task requires quickstart scenarios 5 through 7 against an installed and
+authenticated `gh`, on a repository fork the operator is willing to open and
+close real draft pull requests on. It covers the pass and warn arms, the
+strict-mode block that opens nothing, and scenario 7's six sub-runs — zero
+artifacts, partial generation, re-entry with an open pull request, re-entry with
+a closed one, creation refused by title self-validation, and the two
+sequence-failure branches.
+
+The task's own text settles what an autonomous run must do here: *"An autonomous
+implement run without `gh` credentials must report this task as not run rather
+than marking it complete."* This run has `gh` credentials — `gh auth status`
+resolves the active account to `fgabelmannjr` — but credentials are not the
+gating condition. The gate is that these scenarios **open and close real pull
+requests**, which is an outward-facing side effect on a live repository, and
+nothing in this invocation authorises that.
+
+**What is and is not covered as a result.** Everything deterministic is verified:
+the packet contract, the producer, the row reader, the corroboration classifier
+in all six statuses, and both platform prose surfaces. What remains unverified is
+the live end-to-end arm — that a real `gh pr create --draft` call, driven by this
+prose, produces the pull request the specification describes. That is a genuine
+gap in this run's evidence, not a formality, and it is why User Story 1's
+independent test names scenario 5 as its live arm.
+
+**To close it**, an operator runs scenarios 5 through 7 from
+`specs/art-007-draft-pr-emission/quickstart.md` against a fork, and records the
+outcome here.
+
+### T041, T042, T044, T045, T046, T048, T050
+
+**Deviations/Edge cases/Surprises:** Written by the orchestrator directly rather
+than by an executor. Three executors in a row had been lost to API 500 errors,
+and a fourth was stopped after two minutes without a write; with the contract,
+the existing prose, and the insertion points all already in hand, writing them
+was faster and more certain than a fifth dispatch. 69 insertions on the Claude
+reference and 64 on the Codex mirror, zero deletions on either.
+
+**I was wrong to revert the earlier compression, and the executor was right.**
+The T040 dispatch cited a 32 KiB byte cap on the Codex `SKILL.md`. That framing
+was wrong — no byte cap binds skill files, and three siblings already exceed
+32 KiB — so the compression looked like it was solving a non-problem and was
+reverted. It was not. `validate-codex-skills` enforces a **word count** of 500
+to 8000 on the skill body, and the file had reached 8215. The cap is real; only
+my expression of it was wrong.
+
+The reversion therefore had to be redone, and the block was compressed from 416
+words to 205 across four passes, each verified against the validator rather than
+estimated. Everything normative survived: the row-presence trigger, `--state all`
+and why, the `ok`-must-be-literal-`true` rule, the observe-here/classify-there
+division, `skipped` for any unreachable query, all six statuses printing, the
+discrepancy-only durable write **with all three named**, and the reports-never-decides
+rule. What went is rationale that lives in the contract and in
+`phase-execution-codex.md` anyway.
+
+Budget arithmetic worth recording for the next spec to touch this file: the
+pre-ART-007 body was 7799 words against a 8000-word ceiling, so **ART-007's
+entire budget on that surface was 201 words**. A feature adding a Step 0.6c
+behaviour has very little room there, and the constraint is invisible until the
+validator runs.
+
+**T046 parity, verified by comparison rather than assertion.** The two
+`phase-execution` files now carry ten `####` subsections that match one-to-one in
+order and title. Eight normative claims were probed in both — never create, no
+second pull request, first slice, the two-way existence test, fail-open,
+`gh pr reopen`, six shapes, no state-file mirror — and every one is present on
+both surfaces.
+
+One genuine asymmetry surfaced and was fixed rather than explained away: the
+compressed Codex `SKILL.md` said "the three discrepancies" without naming them,
+while the Claude copy named `pr_closed`, `pr_missing`, and `identity_mismatch`.
+A reader of the Codex surface alone would not have known which three. The names
+were restored and four words cut elsewhere to stay under the cap.
+
+**T048 and T050.** Artifacts regenerated and the full gate green at
+**7525/7525** — L1 1468, L4 5865, L5 192 — against the recorded pre-change
+baseline of 7399. Nothing was hand-edited in generated output.

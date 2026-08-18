@@ -416,6 +416,18 @@ the report alone is enough to hand off.
   name the resume path. The pull request is neither closed nor recreated and the
   record is not discarded: the re-run finds the open pull request through the
   two-way existence test and repairs the record instead of opening a second one.
+- **The recorded and live identities disagree.** Name which disagreement it is —
+  the recorded pull request is closed or merged, it could not be found at all, or
+  a different pull request is open on the branch. State that nothing was created,
+  refreshed, or recorded and that the row was left exactly as found, and name the
+  manual resume path for that case: reopen it yourself and re-run, or correct or
+  clear the row and re-run. Carry both identities when they differ. The artifacts
+  and the boundary commit are already committed and pushed, so no planning work
+  is lost.
+
+That is six shapes, and the set is closed. Every one names the step that failed,
+the state it left behind, and the resume path, so an operator can act on the
+report without reading the run's logs.
 
 #### The `Draft PR` row
 
@@ -455,6 +467,58 @@ key, so neither writer disturbs the other's value, and this identity has no
 mirror to keep in step. A second sink would introduce exactly the
 status-versus-evidence drift the Step 1.1 coverage guard and the tree-wide CI
 gate already fail on.
+
+#### What each corroboration status means at the terminal step
+
+Step 0.6c classifies the recorded `Draft PR` row against one live observation and
+reports one of six statuses — three ordinary, three discrepancies. Here is what
+each means at create-or-refresh:
+
+| Status | Terminal-step behaviour |
+| --- | --- |
+| `match` | refresh the recorded pull request's description, and its title if the title changed; report that URL |
+| `no_record` | fall through to the live by-branch existence test, then create or refresh |
+| `skipped` | **never create.** The present row is already a positive under the two-way existence test, so a run that could not reach the tool has not learned that no pull request exists. Refresh when the tool can be reached; otherwise report through the could-not-be-opened path |
+| `pr_closed` | do not reopen, do not open a second one, leave the row as found. The stop report names the number, the URL, that **the operator** may reopen it with `gh pr reopen <number>`, and that a re-run then proceeds normally |
+| `pr_missing` | do not create, do not rewrite the row. The stop report names the recorded identity and says to correct or clear the row, then re-run |
+| `identity_mismatch` | do not create. The stop report names **both** identities — recorded and observed — and the manual resume path |
+
+**`gh pr reopen` belongs to the operator, never to this sequence.** It appears
+here only as prose inside a resume path. Nothing in the flow runs it, and the
+stop report mentioning it grants no permission to.
+
+**No second pull request is opened in any discrepancy class.** That invariant is
+what makes each discrepancy row a stop rather than a fall-through to creation.
+
+**All three discrepancies end the attempt at create-or-refresh** — after
+generation, after the stage-boundary commit, and after the push, never earlier.
+The durable discrepancy line is written at stage resolution and reaches version
+history only inside a commit this stage goes on to take, so a run that stopped
+before its own boundary commit would discard the record of why it stopped.
+
+**This is fail-open.** A discrepancy does not invoke the strict-mode
+blocked-stop contract, does not mark the gate blocked, and does not change the
+resolved stage.
+
+**The two reads are separate.** The observation taken at Step 0.6c and the
+existence query taken before creating are different reads with the whole stage
+between them. The emission-time query is the current evidence; a pull request can
+be opened, closed, or replaced while the stage runs.
+
+#### When reviewability later splits the work
+
+A draft pull request opened here is not a throwaway. When the final reviewability
+boundary later requires the work to land as more than one pull request, this
+draft becomes the **first slice** of that stack rather than being closed or
+superseded.
+
+The reason is the review thread. By then the draft may already carry comments,
+and replacing it would discard that conversation and make reviewers repeat
+themselves. The packet identity is stable across the transition, and that
+stability is what preserves the thread.
+
+Nothing in this sequence closes, supersedes, or recreates the draft pull request.
+Refresh is the only mutation it performs on an existing one.
 
 ### Implementation Stage: Read The Recorded Verdict, Do Not Re-Run The Gate
 
