@@ -919,7 +919,7 @@ For every behavior:
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
 | 1 - Shared baseline and contracts | Complete | 10 | Pinned digests match; G4 passes; L1 1448/1448, L4 5766/5766, full 7400/7400 |
-| 2 - Slice 1 | In Progress | 11 | authoritative release/docs regeneration complete; gallery parity 488/488; source checkpoint and UAT next |
+| 2 - Slice 1 | In Progress | 12 | T022 complete at source checkpoint `660bfe9ce`: 18 pass, 18 evidence-backed N/A, zero fail; T023 verification and PR boundary next |
 | 3 - Slice 2 | Pending | 0 | concept-explainer plus incremental integration and UAT |
 | 4 - Slice 3 | Pending | 0 | status-report plus incremental integration and UAT |
 | 5 - Slice 4 | Pending | 0 | incident-report plus incremental integration and UAT |

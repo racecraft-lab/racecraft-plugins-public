@@ -1,16 +1,16 @@
 {
   "featureId": "ART-005",
-  "sourceCommit": "PENDING_SOURCE_CHECKPOINT_T022",
-  "executedAt": "PENDING_MANUAL_EXECUTION_T022",
+  "sourceCommit": "660bfe9ce8365afbe6d98af28dd26eccf46a2c9e",
+  "executedAt": "2026-08-18T17:07:11Z",
   "environment": {
-    "operatingSystem": "pending_manual_uat_t022",
-    "browserNameAndVersion": "pending_manual_uat_t022",
+    "operatingSystem": "macOS 26.6.2 (Build 25G82; arm64)",
+    "browserNameAndVersion": "Google Chrome 151.0.7922.138 via Playwright MCP fallback",
     "scheme": "file://",
-    "networkCondition": "pending_offline_reload_t022",
-    "themeCondition": "pending_light_dark_manual_t022",
-    "reducedMotionCondition": "pending_reduced_motion_manual_t022",
-    "colorModeCondition": "pending_color_independent_manual_t022",
-    "notes": "T019 records source-backed not_applicable classifications only; executable file:// rows remain pending for T022."
+    "networkCondition": "Online baseline plus Playwright context offline reload; a remote probe failed with net::ERR_INTERNET_DISCONNECTED while the local deck remained usable.",
+    "themeCondition": "Light and dark modes exercised; the dark override persisted across reload and the deck returned to light after the test.",
+    "reducedMotionCondition": "No-preference baseline plus prefers-reduced-motion: reduce emulation; representative transition and animation durations were 0.01ms with zero running animations.",
+    "colorModeCondition": "Light and dark color schemes plus text-and-shape Ready, Watch, and Stop cues.",
+    "notes": "The connected browser was unavailable, so the operator-authorized Playwright MCP fallback executed the manual UAT at 360 and 1280 CSS px. The driver remains manual because no repository harness was committed."
   },
   "driver": "manual",
   "runbookPath": "specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md",
@@ -18,9 +18,503 @@
     {
       "artifactId": "slide-deck",
       "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-001 direct_file_open",
+      "claim": "The slide-deck reader opens directly over file:// with its expected title and no server dependency or visible error state.",
+      "observedResult": "Opened the exact repository-relative template over file://. The document title was Slide Deck - RACE-421 Release Confidence, the visible h1 was RACE-421 Release Confidence, the page rendered without a server, and the final online load reported zero console errors.",
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-002 complete_representative_fills",
+      "claim": "The deck-title, slides, and speaker-notes fills contain complete representative reader content.",
+      "observedResult": "The release-review kicker, title, audience/date/presenter subtitle, all three anchored articles (#slides-readiness-map, #slides-evidence-lane, and #slides-release-call), Talk track heading, and three ordered speaker notes were present. The notes matched the visible slide order.",
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-003 named_slide_navigation",
+      "claim": "The deck exposes a named navigation group, named previous/next controls, and a polite current-position region.",
+      "observedResult": "The accessibility snapshot exposed navigation named Slide deck navigation, buttons named Previous slide and Next slide, aria-controls=deck-stage on both buttons, and #slide-count as an aria-live=polite position message.",
+      "accessibilityObservation": {
+        "statusRegions": [
+          {
+            "selector": "#slide-count",
+            "role": "polite live region",
+            "exposedMessageText": "Slide 1 of 3",
+            "coveredMessageKinds": [
+              "current slide position"
+            ]
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-004 previous_next_keyboard_wheel_navigation",
+      "claim": "Previous/next controls, all declared keyboard keys, and a bounded wheel gesture move through the three-slide set.",
+      "observedResult": "Next moved 1 to 2 and Previous moved 3 to 2. ArrowRight, ArrowDown, and PageDown moved forward; ArrowLeft, ArrowUp, and PageUp moved backward; End and Home selected the last and first slides. Trusted Playwright wheel input moved one slide, an immediate repeat was locked at the same slide, and a later reverse gesture moved one slide back.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": "#next-slide",
+            "role": "button",
+            "name": "Next slide",
+            "visibleFocusIndicator": "Control invocation retained focus when the control remained enabled."
+          },
+          {
+            "selector": "#previous-slide",
+            "role": "button",
+            "name": "Previous slide",
+            "visibleFocusIndicator": "Control invocation retained focus when the control remained enabled."
+          },
+          {
+            "selector": ".slide:not([hidden])",
+            "role": "article",
+            "name": "Active slide heading",
+            "visibleFocusIndicator": "Keyboard and wheel navigation focused the active slide with a 3px solid outline."
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-005 current_position_updates",
+      "claim": "The live current-position text follows every slide change and remains clamped to the valid range.",
+      "observedResult": "The region reported Slide 1 of 3, Slide 2 of 3, and Slide 3 of 3 at the matching active articles. PageUp at slide 1 and PageDown at slide 3 left both the active article and position text at the boundary.",
+      "accessibilityObservation": {
+        "statusRegions": [
+          {
+            "selector": "#slide-count",
+            "role": "polite live region",
+            "exposedMessageText": "Slide 1 of 3; Slide 2 of 3; Slide 3 of 3",
+            "coveredMessageKinds": [
+              "forward update",
+              "backward update",
+              "first-slide clamp",
+              "last-slide clamp"
+            ]
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-006 control_vs_non_control_focus",
+      "claim": "Control-triggered navigation retains control focus while keyboard and wheel navigation focus the active slide.",
+      "observedResult": "A Next click from slide 1 to 2 left document.activeElement at #next-slide. A Previous click from slide 3 to 2 left it at #previous-slide. Keyboard and wheel changes set document.activeElement to the newly active slide article.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": "#next-slide",
+            "role": "button",
+            "name": "Next slide",
+            "visibleFocusIndicator": "Focus stayed on #next-slide after its click-driven change."
+          },
+          {
+            "selector": "#previous-slide",
+            "role": "button",
+            "name": "Previous slide",
+            "visibleFocusIndicator": "Focus stayed on #previous-slide after its click-driven change."
+          },
+          {
+            "selector": "#slides-evidence-lane",
+            "role": "article",
+            "name": "How reviewers move through it",
+            "visibleFocusIndicator": "Keyboard and wheel paths focused the article; focus-visible rendered a 3px solid outline with 6px offset."
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-007 hidden_slide_accessibility",
+      "claim": "Only the active slide remains visible and interactive; inactive slides are removed from keyboard and accessibility traversal.",
+      "observedResult": "At every position, the active article had hidden=false, inert=false, and aria-hidden=false. Both inactive articles had hidden=true, inert=true, and aria-hidden=true. Accessibility snapshots exposed only the active article, and Tab traversal never entered inactive slide content.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": ".slide:not([hidden])",
+            "role": "article",
+            "name": "Current slide heading",
+            "visibleFocusIndicator": "Programmatic keyboard focus was visible on the active article."
+          },
+          {
+            "selector": ".slide[hidden]",
+            "role": "article",
+            "name": "Inactive slide headings",
+            "visibleFocusIndicator": "Not a keyboard stop; each inactive article was hidden, inert, and aria-hidden=true."
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-008 no_autorotation",
+      "claim": "The deck never advances automatically while idle or while the deck stage is focused.",
+      "observedResult": "The first observation remained at Slide 1 of 3 for 33.5 seconds with BODY focus unchanged. A second 33.8-second observation remained at Slide 1 of 3 with #deck-stage focused; the stage's temporary runtime tabindex used only for this observation was removed afterward.",
+      "accessibilityObservation": {
+        "statusRegions": [
+          {
+            "selector": "#slide-count",
+            "role": "polite live region",
+            "exposedMessageText": "Slide 1 of 3",
+            "coveredMessageKinds": [
+              "33.5-second idle observation",
+              "33.8-second focused-stage observation"
+            ]
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-009 offline_reload",
+      "claim": "The local reader remains usable after an offline reload.",
+      "observedResult": "Playwright context offline mode produced net::ERR_INTERNET_DISCONNECTED for a remote navigation probe. In the same offline context, the file:// deck reloaded with its expected title, heading, theme control, three notes, and navigation; Next advanced to Slide 2 of 3. Network mode was restored after the observation.",
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-010 complete_keyboard_traversal",
+      "claim": "Forward and backward keyboard traversal reaches every enabled control in deterministic order at each navigation boundary.",
+      "observedResult": "At slide 1 the forward order was .rc-theme-toggle then #next-slide and Shift+Tab returned to the theme control. At slide 2, from the focused article, Tab reached #previous-slide then #next-slide and Shift+Tab returned to #previous-slide. At slide 3, from the focused article, Tab reached #previous-slide while disabled #next-slide and all inactive slide content were skipped.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": ".rc-theme-toggle",
+            "role": "button",
+            "name": "Dark theme",
+            "visibleFocusIndicator": "2px solid rgb(42, 106, 153) outline with 2px offset in light mode."
+          },
+          {
+            "selector": "#next-slide",
+            "role": "button",
+            "name": "Next slide",
+            "visibleFocusIndicator": "3px solid rgb(42, 106, 153) outline with 3px offset."
+          },
+          {
+            "selector": "#slides-evidence-lane",
+            "role": "article",
+            "name": "How reviewers move through it",
+            "visibleFocusIndicator": "3px solid rgb(42, 106, 153) outline with 6px offset."
+          },
+          {
+            "selector": "#previous-slide",
+            "role": "button",
+            "name": "Previous slide",
+            "visibleFocusIndicator": "3px solid rgb(42, 106, 153) outline with 3px offset."
+          },
+          {
+            "selector": "#next-slide",
+            "role": "button",
+            "name": "Next slide",
+            "visibleFocusIndicator": "3px solid rgb(42, 106, 153) outline with 3px offset."
+          },
+          {
+            "selector": "#slides-release-call",
+            "role": "article",
+            "name": "The decision stays visible",
+            "visibleFocusIndicator": "3px solid rgb(42, 106, 153) outline with 6px offset."
+          },
+          {
+            "selector": "#previous-slide",
+            "role": "button",
+            "name": "Previous slide",
+            "visibleFocusIndicator": "3px solid rgb(42, 106, 153) outline with 3px offset."
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-011 focus_visibility",
+      "claim": "Every keyboard-focused control and programmatically focused active slide has a visible focus indicator.",
+      "observedResult": "The theme toggle, both enabled navigation controls, and each active slide matched :focus-visible. Light-mode controls used 2px or 3px solid outlines, slides used 3px solid outlines with 6px offset, and the dark-mode Next control used a 3px solid rgb(124, 179, 221) outline.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": ".rc-theme-toggle",
+            "role": "button",
+            "name": "Dark theme",
+            "visibleFocusIndicator": "2px solid outline with 2px offset."
+          },
+          {
+            "selector": "#previous-slide",
+            "role": "button",
+            "name": "Previous slide",
+            "visibleFocusIndicator": "3px solid outline with 3px offset."
+          },
+          {
+            "selector": "#next-slide",
+            "role": "button",
+            "name": "Next slide",
+            "visibleFocusIndicator": "3px solid outline with 3px offset in both light and dark modes."
+          },
+          {
+            "selector": "#slides-readiness-map",
+            "role": "article",
+            "name": "What is already true",
+            "visibleFocusIndicator": "3px solid outline with 6px offset."
+          },
+          {
+            "selector": "#slides-evidence-lane",
+            "role": "article",
+            "name": "How reviewers move through it",
+            "visibleFocusIndicator": "3px solid outline with 6px offset."
+          },
+          {
+            "selector": "#slides-release-call",
+            "role": "article",
+            "name": "The decision stays visible",
+            "visibleFocusIndicator": "3px solid outline with 6px offset."
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-012 light_dark_parity",
+      "claim": "Light and dark themes preserve the same deck content, controls, focus, and slide state.",
+      "observedResult": "Light rendered rgb(247, 246, 244) background with rgb(17, 24, 39) text; dark rendered rgb(26, 26, 26) with rgb(230, 230, 230) text. The title, three slide headings, three notes, counter, control availability, and hidden/inert states were identical. Dark persisted across reload, and keyboard focus remained visible.",
+      "accessibilityObservation": {
+        "contrastEvidence": {
+          "conditions": [
+            {
+              "theme": "light",
+              "background": "rgb(247, 246, 244)",
+              "text": "rgb(17, 24, 39)",
+              "focusIndicator": "rgb(42, 106, 153)"
+            },
+            {
+              "theme": "dark",
+              "background": "rgb(26, 26, 26)",
+              "text": "rgb(230, 230, 230)",
+              "focusIndicator": "rgb(124, 179, 221)"
+            }
+          ],
+          "auditedTokenSource": "Canonical embedded gallery theme tokens and runtime computed styles."
+        }
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-013 reduced_motion",
+      "claim": "Reduced-motion mode preserves complete slide behavior without requiring animation to understand state.",
+      "observedResult": "With prefers-reduced-motion: reduce matched, representative element and pseudo-element transition/animation durations computed to 1e-05s (0.01ms), document.getAnimations() reported zero running animations, and keyboard navigation still moved from slides 1 to 2 to 3 with matching focus and position text.",
+      "accessibilityObservation": {
+        "focusOrder": [
+          {
+            "selector": "#slides-evidence-lane",
+            "role": "article",
+            "name": "How reviewers move through it",
+            "visibleFocusIndicator": "Focused after reduced-motion ArrowRight navigation with no running animation."
+          },
+          {
+            "selector": "#slides-release-call",
+            "role": "article",
+            "name": "The decision stays visible",
+            "visibleFocusIndicator": "Focused after reduced-motion End navigation with no running animation."
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-014 color_independent_meaning",
+      "claim": "Ready, Watch, and Stop meaning remains understandable without relying on hue.",
+      "observedResult": "Slide 3 exposed the visible labels Status: Ready, Status: Watch, and Status: Stop. Its legend repeated Ready - circle, Watch - square, and Stop - block; computed pseudo-element border radii were 999px, 2px, and 0px respectively.",
+      "accessibilityObservation": {
+        "contrastEvidence": {
+          "statusText": [
+            "Status: Ready",
+            "Status: Watch",
+            "Status: Stop"
+          ],
+          "shapeLegend": [
+            "Ready - circle",
+            "Watch - square",
+            "Stop - block"
+          ],
+          "colorOnlyDependency": false
+        }
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-015 horizontal_scroll_actual_element_check",
+      "claim": "The reader follows the no-horizontal-scroll-region route when source and runtime expose no meaningful horizontal scroll element.",
+      "observedResult": "Source inspection found no overflow-x:auto or overflow-x:scroll and only html/body overflow-x:hidden. At 360 CSS px, document clientWidth and scrollWidth were both 345; at 1280 CSS px both were 1265. All three slides reported no element with horizontal content overflow and no actual user-scroll region.",
+      "accessibilityObservation": {
+        "scrollRegions": [
+          {
+            "selector": "html",
+            "role": "document root",
+            "name": "not_applicable",
+            "tabindex": "not_applicable",
+            "horizontalOverflowEvidence": "360 CSS px: clientWidth=scrollWidth=345; 1280 CSS px: clientWidth=scrollWidth=1265.",
+            "actualScrollElement": "none"
+          },
+          {
+            "selector": "body",
+            "role": "document body",
+            "name": "not_applicable",
+            "tabindex": "not_applicable",
+            "horizontalOverflowEvidence": "No visible descendant had scrollWidth greater than clientWidth on any slide at either reviewed width.",
+            "actualScrollElement": "none"
+          }
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-016 responsive_layout_360_css_px",
+      "claim": "All three slides remain complete and usable at exactly 360 CSS px without horizontal overflow, clipping, or overlap.",
+      "observedResult": "At viewport 360x800, document and body clientWidth equaled scrollWidth at 345 CSS px on all three slides. No visible element extended beyond the viewport, no hidden/clip overflow concealed content, navigation items did not intersect, fixed-theme text-ink overlap was empty, and full-page screenshots showed complete slide, note, legend, and control content.",
+      "responsiveLayoutObservation": {
+        "viewportWidthCssPx": 360,
+        "pageHorizontalOverflow": false,
+        "clippedOrOverlappingText": false,
+        "namedScrollExceptions": []
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-017 responsive_layout_1280_css_px",
+      "claim": "All three slides remain complete and usable at a desktop width of at least 1280 CSS px without horizontal overflow, clipping, or overlap.",
+      "observedResult": "At viewport 1280x900, document and body clientWidth equaled scrollWidth at 1265 CSS px on all three slides. No visible element extended beyond the viewport, no hidden/clip overflow concealed content, navigation items did not intersect, the fixed theme control overlapped no rendered text ink, and full-page screenshots showed complete content.",
+      "responsiveLayoutObservation": {
+        "viewportWidthCssPx": 1280,
+        "pageHorizontalOverflow": false,
+        "clippedOrOverlappingText": false,
+        "namedScrollExceptions": []
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-018 manifest_parity",
+      "claim": "The slide-deck manifest entry matches the exhaustive ART-005 ID, title, source, role, status, and export classification.",
+      "observedResult": "The checkpoint manifest row has id slide-deck, title Slide Deck, source origin upstream, source file 09-slide-deck.html, status shipped, and exports []. The ART-005 plan and spec classify it as a reader with the same pinned source and no durable export.",
+      "dataIntegrityObservation": {
+        "caseId": "manifest_parity",
+        "inputs": [
+          {
+            "selector": "speckit-pro/artifact-gallery/manifest.json:170-178",
+            "field": "id",
+            "rawValue": "slide-deck"
+          },
+          {
+            "selector": "speckit-pro/artifact-gallery/manifest.json:170-178",
+            "field": "title",
+            "rawValue": "Slide Deck"
+          },
+          {
+            "selector": "speckit-pro/artifact-gallery/manifest.json:170-178",
+            "field": "source",
+            "rawValue": "upstream/09-slide-deck.html"
+          },
+          {
+            "selector": "speckit-pro/artifact-gallery/manifest.json:170-178",
+            "field": "status",
+            "rawValue": "shipped"
+          },
+          {
+            "selector": "speckit-pro/artifact-gallery/manifest.json:170-178",
+            "field": "exports",
+            "rawValue": "[]"
+          }
+        ],
+        "expectedOrder": [
+          "id=slide-deck",
+          "title=Slide Deck",
+          "source=upstream/09-slide-deck.html",
+          "role=reader",
+          "status=shipped",
+          "exports=[]"
+        ],
+        "observedOrder": [
+          "id=slide-deck",
+          "title=Slide Deck",
+          "source=upstream/09-slide-deck.html",
+          "role=reader",
+          "status=shipped",
+          "exports=[]"
+        ]
+      },
+      "verdict": "pass",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
       "step": "SD-UAT-019 horizontal_scroll_region_not_applicable_source_check",
       "claim": "No named keyboard-focusable horizontal scroll region is required when the source contains no meaningful horizontal overflow region.",
-      "observedResult": "Source-backed classification only: the template contains no overflow-x:auto or overflow-x:scroll declaration, html/body use overflow-x:hidden, and no runtime horizontal-scroll observation is claimed in T019.",
+      "observedResult": "Checkpoint source and runtime classification: the template contains no overflow-x:auto or overflow-x:scroll declaration, html/body use overflow-x:hidden, both reviewed widths had equal document clientWidth and scrollWidth, and no meaningful horizontal scroll element appeared on any slide.",
       "accessibilityObservation": {
         "scrollRegions": [
           {
@@ -46,7 +540,7 @@
             "speckit-pro/artifact-gallery/templates/slide-deck.html:486-492 html/body overflow-x:hidden",
             "source search found no overflow-x:auto or overflow-x:scroll"
           ],
-          "actualScrollElementDisposition": "No actual scroll element is claimed from runtime in T019; T022 responsive review must replace this if browser execution finds meaningful horizontal overflow."
+          "actualScrollElementDisposition": "T022 runtime review at 360 and 1280 CSS px found no actual user-scroll element; the source-backed not_applicable route remains correct."
         }
       },
       "verdict": "not_applicable",

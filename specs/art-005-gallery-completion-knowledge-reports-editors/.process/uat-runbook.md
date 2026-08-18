@@ -7,9 +7,11 @@ Template path: `speckit-pro/artifact-gallery/templates/slide-deck.html`
 Results path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.md`
 JSON path: `specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-results.json`
 
-T019 creates the active UAT carriers only. T022 owns the source checkpoint and
-manual browser execution. Do not record a pass or fail verdict in this runbook
-until the row has been executed against the T022 source checkpoint.
+T019 created the active UAT carriers. T022 executed the Slice 1 row set against
+source checkpoint `660bfe9ce8365afbe6d98af28dd26eccf46a2c9e` on
+2026-08-18. The connected browser was unavailable, so the operator-authorized
+Playwright MCP fallback supplied browser interaction and observation while the
+contract driver remained `manual`.
 
 ## Manual Setup
 
@@ -25,7 +27,11 @@ until the row has been executed against the T022 source checkpoint.
    after T022. Keep source-backed `not_applicable` rows distinct from browser
    observations.
 
-## Pending Executable Rows
+## Slice 1 Executable Rows
+
+SD-UAT-001 through SD-UAT-018 passed at the Slice 1 source checkpoint. The
+steps below remain the reusable cumulative procedure for later slice
+checkpoints; the normalized observations are in `uat-results.json`.
 
 ### SD-UAT-001 Direct file open
 
@@ -206,12 +212,13 @@ until the row has been executed against the T022 source checkpoint.
 
 ## Source-Backed Not Applicable Rows
 
-The JSON currently records only rows that can honestly carry
-`verdict: not_applicable` before manual UAT execution.
+The cumulative JSON retains rows that honestly carry
+`verdict: not_applicable` after source and browser execution.
 
-1. SD-UAT-019 records the horizontal-scroll N/A route from source evidence:
-   there is no `overflow-x: auto` or `overflow-x: scroll`; `html` and `body`
-   use `overflow-x: hidden`; no actual scroll element is claimed from runtime.
+1. SD-UAT-019 records the horizontal-scroll N/A route from source and runtime
+   evidence: there is no `overflow-x: auto` or `overflow-x: scroll`; `html` and
+   `body` use `overflow-x: hidden`; 360 and 1280 CSS px observations found no
+   actual user-scroll element.
 2. SD-UAT-020 through SD-UAT-028 record producer-only data-integrity/export
    cases that do not apply to the reader because the manifest declares
    `exports: []` and the template has no export surface.

@@ -99,3 +99,11 @@
 ### T021
 
 **Deviations/Edge cases/Surprises:** Authoritative release regeneration and docs `reference:generate` both completed; the docs generator rewrote seven reference pages byte-identically. Gallery parity is now green at 488/488. A pre-commit `refresh-release-artifacts.py --check` reports the newly generated uncommitted paths as drift by design; T022 will commit the source checkpoint, after which the clean-tree check can pass. No generated mirror was hand-edited.
+
+### T022
+
+**Deviations/Edge cases/Surprises:** First direct attempt passed focused 488/488 and 55/55, Layer 1 1448/1448, Layer 4 5769/5769, full suite 7403/7403, generator idempotence, post-commit generated check, and spec-index check; source checkpoint `660bfe9ce8365afbe6d98af28dd26eccf46a2c9e` is clean. Manual UAT did not start because browser selection returned `No browser is available` and the one permitted availability inspection returned an empty list. T022 remains incomplete pending a connected browser in this session; no pass/fail UAT verdict was fabricated.
+
+### T022 (resumed)
+
+**Deviations/Edge cases/Surprises:** The operator clarified that Playwright or Chrome DevTools MCP is the fallback only when connected browser/computer-use is unavailable, so the prior `No browser is available` result activated Playwright MCP. Its safe navigation wrapper blocked `file://`; the narrow Playwright code action opened only the exact local template. Google Chrome 151.0.7922.138 then completed all 36 rows at source checkpoint `660bfe9ce8365afbe6d98af28dd26eccf46a2c9e`: 18 pass, 18 evidence-backed `not_applicable`, zero fail. Coverage included trusted wheel input, complete keyboard/focus traversal, two 30-second no-autorotation observations, context-offline reload, light/dark persistence, reduced motion, color-independent cues, and all slides at 360 and 1280 CSS px. The cumulative JSON is checkpoint-bound and the tested source bytes remain unchanged.
