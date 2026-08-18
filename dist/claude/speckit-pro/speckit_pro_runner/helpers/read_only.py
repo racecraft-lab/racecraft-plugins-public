@@ -2869,10 +2869,11 @@ def validate_pr_packet_read_only(inputs: dict[str, Any], repo_root: Path) -> dic
     if target is not None and not isinstance(target, dict):
         failures.append({"rule": "input.shape.target", "field": "target", "message": "target must be an object."})
         target = {}
-    if not data.get("verification_evidence"):
-        failures.append({"rule": "evidence.verification", "field": "verification_evidence", "message": "Packet must include verification evidence."})
-    if not (scope_evidence or {}).get("changed_files"):
-        failures.append({"rule": "evidence.scope.changed_files", "field": "scope_evidence.changed_files", "message": "Packet must include changed-file scope evidence."})
+    if data.get("mode") != "draft":
+        if not data.get("verification_evidence"):
+            failures.append({"rule": "evidence.verification", "field": "verification_evidence", "message": "Packet must include verification evidence."})
+        if not (scope_evidence or {}).get("changed_files"):
+            failures.append({"rule": "evidence.scope.changed_files", "field": "scope_evidence.changed_files", "message": "Packet must include changed-file scope evidence."})
     validation_path = data.get("validation_result_path")
     if not isinstance(validation_path, str) or not validation_path:
         failures.append({"rule": "input.path.validation_result_path", "field": "validation_result_path", "message": "validation_result_path must be a non-empty string."})

@@ -59,6 +59,64 @@ phase, and write the other later. On disagreement the workflow file wins and the
 mirror is repaired from it — the Step 1.1 coverage guard reports a two-sided
 mismatch as `stage_mirror_errors` and fails.
 
+## The `Draft PR` Entry
+
+The draft pull request the plan stage opens is recorded as a row in the same
+`### Basic Information` table that carries `Branch` and `Stage`:
+
+```text
+| **Draft PR** | [#438](https://github.com/owner/repo/pull/438) |
+| **Draft PR** | [#438](https://github.com/owner/repo/pull/438) — 2 of 4 artifacts missing |
+```
+
+It does **not** go in `## Workflow Overview`. That table's rows are phase status
+records with `Phase | Command | Status | Notes` columns. A pull-request identity
+is neither a phase nor a status, and putting it there would break every reader
+that treats those rows as phase records.
+
+**Grammar.** The key is `Draft PR`, matched case-insensitively after stripping
+`*`, backticks, and spaces — the same normalization `Stage` already uses. The
+value begins with one Markdown link whose text is `#<number>` and whose target is
+the pull request URL. The number and the URL are one linked reference, not two
+columns: readers take the number from the link text and the URL from the link
+target. An optional gap note may follow the link in the same cell.
+
+**Two states, both legal.** A row that is absent means no pull request has been
+opened for this feature. That is information, never a fault, and it is the same
+shape `Stage` already uses for "no run yet". A row that is present means a pull
+request exists at that identity.
+
+The scaffold workflow template ships **no placeholder row**, following the
+`Stage` precedent exactly. A commented-out example would not help either: HTML
+comments are blanked before the table is parsed, so it could never be read as
+evidence.
+
+**Write rules.**
+
+| Rule | Detail |
+| --- | --- |
+| when | only after creation or refresh succeeds |
+| which commit | the separate bookkeeping commit, never the stage-boundary commit |
+| repair | when a pull request exists but the row is missing or wrong, write or repair it |
+| whole value | every write rewrites the whole cell from the current run's outcome, so a stale gap note never survives a refresh that no longer fell short |
+| leave alone | under a closed or unobservable recorded pull request, leave the row exactly as found |
+| sole store | this row is the only place the identity is stored — there is **no state-file mirror** |
+
+That last rule is deliberate, and it is why this entry reads differently from
+`Stage` directly above. `Stage` has a mirror and therefore a write cadence and a
+same-edit-turn rule to keep the two in step. This identity has no mirror, so
+writing this row neither counts against nor re-triggers the `Stage` row's own
+cadence, and needs no state-file write at all. A second sink would introduce
+exactly the status-versus-evidence drift the Step 1.1 coverage guard and the
+tree-wide CI gate already fail on.
+
+**Reader.** `workflow_draft_pr_row(lines)` sits beside `workflow_recorded_stage`
+and reuses `workflow_table_rows` and `AUTOPILOT_BASIC_INFO_HEADING` unchanged. It
+returns the parsed number, URL, and gap note, or nothing when the row is absent.
+The two readers differ only in the key they match, which is three near-duplicate
+lines rather than a generic scalar-row abstraction — the trade the constitution's
+KISS and YAGNI principle asks for until a third caller exists.
+
 ## `workflow_file` State Authority
 
 `autopilot-state.json.workflow_file` names the workflow a run is authorized

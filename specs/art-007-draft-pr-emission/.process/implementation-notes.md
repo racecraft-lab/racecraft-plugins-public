@@ -129,3 +129,75 @@ staled it. Regenerated with `pnpm --dir docs-site reference:generate`; the diff 
 T049 re-runs this at the end of the phase; running it now keeps every
 intermediate commit `validate-docs`-clean rather than leaving CI red across the
 whole implementation.
+
+### T008
+
+**Deviations/Edge cases/Surprises:** None. Both enum sites widened, the
+`$defs.validation_result` copy included. Test 1's added assertion against
+`$defs/validation_result` confirms the second site landed: it emitted
+`packet.schema.enum validation_result.mode` before and emits nothing now.
+
+### T009
+
+**Deviations/Edge cases/Surprises:** None. Contract §1.2.2 applied verbatim, with
+only whitespace expanded to the surrounding house style. The `split_slice` branch
+and its `else` arm are byte-identical to before. Five top-level bounds loosened
+plus `uat_runbook_heading` demoted from `const` to `{"type": "string"}`;
+`scope_evidence.non_goals` untouched at `minItems: 1`.
+
+The §1.2.1 note that `prefixItems` constrains only the positions that exist is
+what makes `editable_fields: []` validate while the three `prefixItems` entries
+stay at the top level and keep binding `single` and `split`.
+
+### T010
+
+**Deviations/Edge cases/Surprises:** None. The guard is
+`if data.get("mode") != "draft":` at `read_only.py:2872`, with the two existing
+assertions indented under it and unchanged in content. `.get()` returns `None`
+for an absent `mode` and `None != "draft"` is true, so the two null-mode fixtures
+keep emitting both rules — which is what holds their baseline rule sets.
+
+### T011
+
+**Deviations/Edge cases/Surprises:** Two, and the second is a measurement trap
+worth carrying forward.
+
+**The layer-4 total was not the right bar mid-phase.** The dispatch set
+5774/5774 as the acceptance bar, which was unreachable inside T008-T010's scope:
+editing shipped source under `speckit-pro/` stales `dist/`, the runner trust
+manifest, and the installed-cache proofs, and regenerating those is T048's job.
+Seven failures remained, all generated-artifact staleness. Running
+`scripts/refresh-release-artifacts.py` cleared every one and took the full suite
+to **7407/7407** — 8 above the 7399 G0 baseline, exactly the eight new test
+methods. That is the proof the residual failures were staleness and not
+regressions. T048 still runs at the end of the phase; the generator is
+idempotent, and regenerating here keeps the intermediate commits CI-clean and
+keeps later agents from measuring a contaminated baseline.
+
+**A validator sweep must run against the worktree source, not the plugin cache.**
+The first SC-008 re-sweep reported `valid-draft.json` as still failing, which
+contradicted a green 76/76 on the test file. The cause was `PYTHONPATH` pointing
+at the installed plugin cache rather than `speckit-pro/` in this worktree. The
+cache still holds the un-relaxed schema, so it was faithfully reporting a tree
+that is not the tree under test. The T005 baseline was taken the same way, but
+was valid then because source and cache still agreed; they diverge the moment a
+shipped file is edited. Re-run against `PYTHONPATH=speckit-pro`,
+`valid-draft.json` passes with zero failures.
+
+**SC-008 verified by machine diff, not by eye.** All nine pre-existing fixtures
+reproduce their exact failure rule sets — no drift.
+
+### T017
+
+**Deviations/Edge cases/Surprises:** Landed early, out of task order. T017 is a
+User Story 1 task, but it is pure protocol prose describing the `Draft PR` row
+grammar and has no dependency on the packet schema Phase 2 relaxes, so nothing
+about it could be invalidated by the Phase 2 outcome. Written by the orchestrator
+while the Phase 2 GREEN agent was working, on a file that agent was not touching.
+
+That had one cost worth recording: editing a shipped file mid-measurement staled
+`dist/` and contaminated the GREEN agent's own baseline reading, which it spent
+effort diagnosing before correctly attributing it. A concurrent edit to shipped
+source is invisible to an agent measuring the suite, and surfaces only as an
+opaque `AssertionError: 1 != 0` in the gate tests. Future overlapping work should
+either stay off `speckit-pro/` or tell the agent which failures to expect.
