@@ -771,7 +771,7 @@ Final verification:
 | Phase | Tasks | Completed | Notes |
 |---|---|---|---|
 | 1 - Keyboard-scroll guard and repair | `T001-T022` | `T001-T022` | Chromium and Safari 26.6.1 file:// UAT passed 11/11 regions after correcting module-map grid sizing; Safari used Tab and Enter for the five source disclosures; suite `7418/7418`, release-artifact `--check`, and docs reference check pass after checkpoint `e15e3a6cc` |
-| 2 - Read-only ports | | | |
+| 2 - Read-only ports | `T023-T037` | `T023-T034` | Four self-contained ports and exactly four status flips are present; Group M/L and fill-region checks pass. Chromium offline UAT and Safari 26.6.1 Option-Tab UAT pass after repairing the interaction port's 360px overflow; payload/reference regeneration is next |
 | 3 - Decision ports | | | |
 | 4 - Shared integration and UAT | | | |
 

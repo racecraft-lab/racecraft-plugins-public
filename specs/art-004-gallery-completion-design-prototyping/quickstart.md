@@ -105,6 +105,38 @@ Expected checks:
   color alone, and suppress template-added motion when reduced motion is
   requested.
 
+### Slice 2 `file://` UAT Evidence
+
+Chromium 149.0.7827.55 exercised all four authored source files directly over
+`file://` on 2026-08-18 with a 360 by 900 viewport and network access disabled.
+The optional canonical Google Fonts request failed as intended; the canonical
+system/generic fallback stack remained readable. Light and dark body contrast
+measured 16.42:1 and 13.94:1. Every page fit the viewport, exposed no positive
+`tabindex` or export-looking control, showed a 2 px solid focus outline, and
+suppressed template-added motion when reduced motion was requested.
+
+| Artifact | Keyboard interaction and state | Reset or cleanup | Wide region | Result |
+|---|---|---|---|---|
+| `design-system` | Tab reached the spacing ruler and demo controls; Space toggled the checkbox | The alternate checkbox state was visible | Ruler `326/752`; ArrowRight moved its own `scrollLeft` | Pass |
+| `animation-prototype` | Enter completed and reset the task; Enter selected the linear easing | Task returned to not-done without changing easing | Snippet `326/1066`; ArrowRight moved its own `scrollLeft` | Pass |
+| `interaction-prototype` | Enter moved the first retained view down | Reset restored all six views and removed drag/indicator state | No intentional horizontal region | Pass |
+| `svg-illustrations` | Tab reached the named read-only illustration strip; all three IDs, captions, and descriptions remained present | Read-only; no reset required | Strip `328/1680`; ArrowRight moved its own `scrollLeft` | Pass |
+
+The first Chromium run found a real interaction-port overflow: the document was
+412 px wide at a 360 px viewport. Zero-minimum mobile grid/content tracks and
+wrapping for the pinned source note reduced the document to exactly 360 px; the
+desktop two-column layout remained intact.
+
+Safari status: pass. Safari 26.6.1 exercised isolated direct `file://` runs on
+2026-08-18 with a requested 360 by 900 window and a measured 360 by 825 content
+viewport. The active full-control route was **Option-Tab**. All required
+controls and named scroll regions were reached in source order, showed a 2 px
+solid outline, and released focus. Enter or Space operated theme, checkbox,
+task/easing, reorder, and reset paths. The three declared scrollers had real
+overflow and moved with ArrowRight. Every page fit within the measured viewport,
+used the canonical fallback stack, exposed no positive `tabindex`, and showed
+no export-looking control.
+
 ## Slice 3 Validation
 
 Expected authored files:

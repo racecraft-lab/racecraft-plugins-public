@@ -7215,6 +7215,11 @@ REPAIRED_KEYBOARD_SCROLL_REGION_MINIMUMS: dict[str, int] = {
 REPAIRED_KEYBOARD_SCROLL_TARGET_IDS: frozenset[str] = frozenset(
     REPAIRED_KEYBOARD_SCROLL_REGION_MINIMUMS
 )
+READ_ONLY_KEYBOARD_SCROLL_REGION_MINIMUMS: dict[str, int] = {
+    "design-system": 1,
+    "animation-prototype": 1,
+    "svg-illustrations": 1,
+}
 
 # This is deliberately a bounded raw-source check rather than a CSS parser. It
 # catches the two values the gallery uses to opt into horizontal scrolling and
@@ -7468,6 +7473,19 @@ class KeyboardScrollGuardTests(unittest.TestCase):
                     f"{artifact_id}: expected at least {minimum} declared region(s) for keyboard focus-order review",
                 )
 
+    def test_read_only_keyboard_scroll_regions_are_declared_for_manual_review(self) -> None:
+        regions = _keyboard_scroll_regions(GALLERY_ROOT)
+
+        for artifact_id, minimum in READ_ONLY_KEYBOARD_SCROLL_REGION_MINIMUMS.items():
+            with self.subTest(msg=artifact_id):
+                declared = sum(region.artifact_id == artifact_id for region in regions)
+                self.assertGreaterEqual(
+                    declared,
+                    minimum,
+                    f"{artifact_id}: expected at least {minimum} intentional horizontal-scroll region(s); "
+                    "the read-only port is not shipped or its keyboard-scroll declaration is missing",
+                )
+
 
 class KeyboardScrollGuardFixtureTests(GalleryFixtureCase):
     """Group L against synthetic shipped artifacts built in a temporary directory."""
@@ -7588,6 +7606,685 @@ class KeyboardScrollGuardFixtureTests(GalleryFixtureCase):
         self.assertEqual(check_l5(self.gallery), [])
 
 
+# ---------------------------------------------------------------------------
+# Group M — read-only gallery ports
+# ---------------------------------------------------------------------------
+
+PINNED_UPSTREAM_COMMIT = "58c305be97f47b26b678f2c07dec01d4242268ec"
+READ_ONLY_DERIVATIVE_NOTICE = (
+    "yes — re-skinned with Racecraft brand tokens; not the upstream original"
+)
+READ_ONLY_PORT_MANIFEST_BASELINE: dict[str, dict[str, object]] = {
+    "design-system": {
+        "id": "design-system",
+        "category": "design",
+        "title": "Design System",
+        "when_to_use": (
+            "Document the tokens, type scale, and components a surface is built from, each rendered as "
+            "itself. Reach for it when contributors need one place to check what a color or a spacing "
+            "step is called."
+        ),
+        "stage": "ad-hoc",
+        "trigger": {"always": True},
+        "source": {"origin": UPSTREAM, "file": "05-design-system.html"},
+        "status": PLANNED,
+        "exports": [],
+    },
+    "animation-prototype": {
+        "id": "animation-prototype",
+        "category": "prototyping",
+        "title": "Animation Prototype",
+        "when_to_use": (
+            "Play a motion design at real speed so timing and easing can be judged rather than described. "
+            "Reach for it when a still image cannot settle the question."
+        ),
+        "stage": "ad-hoc",
+        "trigger": {"always": True},
+        "source": {"origin": UPSTREAM, "file": "07-prototype-animation.html"},
+        "status": PLANNED,
+        "exports": [],
+    },
+    "interaction-prototype": {
+        "id": "interaction-prototype",
+        "category": "prototyping",
+        "title": "Interaction Prototype",
+        "when_to_use": (
+            "Make a flow clickable so a reader can walk it themselves. Reach for it when the open question "
+            "is how a sequence of steps behaves, not how one screen looks."
+        ),
+        "stage": "ad-hoc",
+        "trigger": {"always": True},
+        "source": {"origin": UPSTREAM, "file": "08-prototype-interaction.html"},
+        "status": PLANNED,
+        "exports": [],
+    },
+    "svg-illustrations": {
+        "id": "svg-illustrations",
+        "category": "diagrams",
+        "title": "SVG Illustrations",
+        "when_to_use": (
+            "Draw a diagram or illustration as vector markup that stays sharp at any size and loads no image "
+            "file. Reach for it when the picture carries the explanation."
+        ),
+        "stage": "ad-hoc",
+        "trigger": {"always": True},
+        "source": {"origin": UPSTREAM, "file": "10-svg-illustrations.html"},
+        "status": PLANNED,
+        "exports": [],
+    },
+}
+DESIGN_SYSTEM_SECTION_IDS: tuple[str, ...] = ("color", "typography", "spacing", "shape", "components")
+ANIMATION_EASING_CHOICES: tuple[str, ...] = (
+    "linear",
+    "cubic-bezier(0.16, 1, 0.3, 1)",
+    "cubic-bezier(0.34, 1.56, 0.64, 1)",
+)
+ANIMATION_KEYFRAME_PHASES: tuple[tuple[str, str], ...] = (
+    ("Fill", "0ms"), ("Check", "80ms"), ("Strike", "120ms"), ("Confetti", "200ms"), ("Collapse", "600ms"),
+)
+INTERACTION_MINIMUM_RETAINED_VIEWS = 3
+INTERACTION_NOTE_CONCEPTS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("nearest-gap drop indicator", ("drop indicator", "nearest gap")), ("in-place dragged row", ("dragged row", "stays in place")),
+    ("whole-row grip affordance", ("grip dots", "whole row")), ("omitted edge motion", ("auto-scroll", "drop animation")),
+)
+INTERACTION_QUESTION_CONCEPTS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("pinned Trash and Archive", ("trash", "archive", "pinned", "reordering")), ("slide versus instant snap", ("slide", "instant snap")),
+    ("Alt+Arrow keyboard path", ("keyboard", "alt", "arrow")),
+)
+SVG_ILLUSTRATION_IDS: tuple[str, ...] = ("ill-queue", "ill-retry", "ill-fanout")
+SVG_PALETTE_CONCEPTS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("non-color stroke emphasis", ("stroke", "outline", "without color")), ("written state labels", ("labels", "text")),
+    ("monochrome pattern meaning", ("pattern", "monochrome")),
+)
+INTERACTION_BEHAVIOR_TOKENS: tuple[str, ...] = (
+    ".item.dragging", ".indicator.on",
+    "addEventListener('dragstart'", "addEventListener('dragover'", "addEventListener('drop'", "addEventListener('dragend'",
+    "classList.add('dragging')", "classList.remove('dragging')", "classList.add('on')", "classList.remove('on')",
+    "initialOrder", "reset.addEventListener('click'", "insertBefore",
+)
+_EXPORT_AFFORDANCE_RE = re.compile(r"(?i)\b(?:copy|download|export|markdown|prompt)\b")
+_READ_ONLY_CONTROL_TAGS: frozenset[str] = frozenset(
+    {"a", "area", "button", "input", "select", "textarea"}
+)
+_READ_ONLY_CONTROL_ROLES: frozenset[str] = frozenset(
+    {"button", "link", "menuitem", "menuitemcheckbox", "menuitemradio"}
+)
+
+
+class _ReadOnlyControlCollector(HTMLParser):
+    """Interactive elements with their attributes and nested visible text."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.controls: list[dict[str, object]] = []
+        self._stack: list[tuple[str, int | None]] = []
+        self._active: list[int] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = tuple((name.lower(), value or "") for name, value in attrs)
+        roles = [value.casefold() for name, value in values if name == "role"]
+        control = tag in _READ_ONLY_CONTROL_TAGS or any(role in _READ_ONLY_CONTROL_ROLES for role in roles)
+        index: int | None = None
+        if control:
+            index = len(self.controls)
+            self.controls.append({"tag": tag, "attributes": values, "text": []})
+            self._active.append(index)
+        if tag not in VOID_ELEMENTS:
+            self._stack.append((tag, index))
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+        if self._stack and self._stack[-1][0] == tag:
+            self.handle_endtag(tag)
+
+    def handle_endtag(self, tag: str) -> None:
+        while self._stack:
+            opened, index = self._stack.pop()
+            if index is not None and index in self._active:
+                self._active.remove(index)
+            if opened == tag:
+                break
+
+    def handle_data(self, data: str) -> None:
+        for index in self._active:
+            text = self.controls[index]["text"]
+            if isinstance(text, list):
+                text.append(data)
+
+
+def _read_only_controls(text: str) -> list[dict[str, object]]:
+    controls: list[dict[str, object]] = []
+    for markup in (text, *_script_markup_literals(text)):
+        collector = _ReadOnlyControlCollector()
+        collector.feed(markup)
+        collector.close()
+        controls.extend(collector.controls)
+    return controls
+
+
+def _read_only_port_path(gallery_root: Path, artifact_id: str) -> Path:
+    return gallery_root / TEMPLATES_DIR / f"{artifact_id}.html"
+
+
+def _read_only_port_texts(gallery_root: Path) -> list[tuple[str, Path, str]]:
+    documents: list[tuple[str, Path, str]] = []
+    for artifact_id in READ_ONLY_PORT_MANIFEST_BASELINE:
+        path = _read_only_port_path(gallery_root, artifact_id)
+        if path.is_file():
+            documents.append((artifact_id, path, _document_text(path)))
+    return documents
+
+
+def _read_only_fill_region(text: str, slot: str) -> str:
+    block = f"FILL:{slot}"
+    return _region(text, block) if _embeds(text, block) else ""
+
+
+def _element_has_class(element: _Element, class_name: str) -> bool:
+    return any(class_name in value.split() for value in _attribute_values(element, "class"))
+
+
+def _element_ids(elements: list[_Element], *, tag: str | None = None) -> set[str]:
+    return {value for element in elements if tag is None or element.tag == tag
+            for value in _attribute_values(element, "id")}
+
+
+def _missing_concepts(visible_text: str, concepts: tuple[tuple[str, tuple[str, ...]], ...]) -> list[str]:
+    return [name for name, terms in concepts if not all(term.casefold() in visible_text for term in terms)]
+
+
+def _missing_ordered_phases(markup: str) -> list[str]:
+    missing: list[str] = []
+    cursor = 0
+    for name, time in ANIMATION_KEYFRAME_PHASES:
+        for token in (name, time):
+            position = markup.find(token, cursor)
+            if position < 0:
+                missing.append(f"{name} {time}")
+                break
+            cursor = position + len(token)
+    return missing
+
+
+def _canonical_optional_typeface_references(gallery_root: Path) -> frozenset[str]:
+    """Canonical font references after the same HTML normalization as artifacts."""
+    canonical_head = _canonical_region(gallery_root, HEAD_BLOCK) or ""
+    label = f"{CANONICAL_FILES[HEAD_BLOCK]}: canonical {HEAD_BLOCK} region"
+    references, _ = _element_references(label, _elements(canonical_head))
+    typefaces: set[str] = set()
+    for reference in references:
+        parsed = _parsed(reference.value)
+        host = (parsed.hostname or "").casefold() if parsed is not None else ""
+        if reference.kind == RESOURCE and host in ALLOWED_HOSTS:
+            typefaces.add(reference.value)
+    return frozenset(typefaces)
+
+
+def check_m1(gallery_root: Path) -> list[str]:
+    """M1 — read-only rows retain their exact baseline and flip only status."""
+    entries = _entries(gallery_root)
+    if entries is None:
+        return [f"{MANIFEST_FILE}: read-only port rows cannot be checked"]
+
+    failures: list[str] = []
+    for artifact_id, baseline in READ_ONLY_PORT_MANIFEST_BASELINE.items():
+        matches = [entry for entry in entries if isinstance(entry, dict) and entry.get("id") == artifact_id]
+        if len(matches) != 1:
+            failures.append(
+                f"{MANIFEST_FILE}: read-only port '{artifact_id}' appears {len(matches)} times rather than once"
+            )
+            continue
+        entry = matches[0]
+        for field, expected in baseline.items():
+            if field == "status":
+                continue
+            if entry.get(field) != expected:
+                failures.append(
+                    f"{MANIFEST_FILE}: read-only port '{artifact_id}': field '{field}' drifted from "
+                    f"the pinned baseline at {UPSTREAM_REPOSITORY}@{PINNED_UPSTREAM_COMMIT}"
+                )
+        if set(entry) != set(baseline):
+            failures.append(
+                f"{MANIFEST_FILE}: read-only port '{artifact_id}': keys changed from the pinned baseline"
+            )
+        if entry.get("status") != SHIPPED:
+            failures.append(
+                f"{MANIFEST_FILE}: read-only port '{artifact_id}': status must be '{SHIPPED}' after the "
+                f"only permitted transition, found {entry.get('status')!r}"
+            )
+    return failures
+
+
+def check_m2(gallery_root: Path) -> list[str]:
+    """M2 — every declared read-only port has its directly openable file."""
+    return [
+        f"{_artifact_label(artifact_id)}: read-only port file is missing"
+        for artifact_id in READ_ONLY_PORT_MANIFEST_BASELINE
+        if not _read_only_port_path(gallery_root, artifact_id).is_file()
+    ]
+
+
+def check_m3(gallery_root: Path) -> list[str]:
+    """M3 — each read-only file carries exact attribution and canonical blocks."""
+    failures: list[str] = []
+    canonical = {block: _canonical_region(gallery_root, block) for block in CANONICAL_FILES}
+    for artifact_id, _path, text in _read_only_port_texts(gallery_root):
+        label = _artifact_label(artifact_id)
+        source_file = READ_ONLY_PORT_MANIFEST_BASELINE[artifact_id]["source"]["file"]
+        header = _attribution_header(text)
+        if header is None:
+            failures.append(f"{label}: exact upstream attribution header is missing")
+        else:
+            expected_values = {
+                REPOSITORY_LABEL: UPSTREAM_REPOSITORY,
+                UPSTREAM_FILE_LABEL: source_file,
+                LICENSE_LABEL: UPSTREAM_LICENSE_ID,
+                LICENSE_TEXT_LABEL: UPSTREAM_LICENSE_REFERENCE,
+                DERIVATIVE_LABEL: READ_ONLY_DERIVATIVE_NOTICE,
+            }
+            for attribution_label, expected in expected_values.items():
+                if header.count(attribution_label) != 1 or _labelled_value(header, attribution_label) != expected:
+                    failures.append(
+                        f"{label}: attribution field '{attribution_label}' does not equal {expected!r}"
+                    )
+            if header.count(UPSTREAM_COPYRIGHT) != 1:
+                failures.append(f"{label}: attribution header does not carry the exact upstream copyright")
+
+        for block, expected_region in canonical.items():
+            if not _embeds(text, block):
+                failures.append(f"{label}: canonical block {block} is missing or malformed")
+            elif expected_region is None or _region(text, block) != expected_region:
+                failures.append(f"{label}: canonical block {block} differs from its source region")
+    return failures
+
+
+def check_m4(gallery_root: Path) -> list[str]:
+    """M4 — read-only ports expose no export-looking control, even disabled."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _read_only_port_texts(gallery_root):
+        label = _artifact_label(artifact_id)
+        for order, control in enumerate(_read_only_controls(text), start=1):
+            attributes = control["attributes"]
+            nested_text = control["text"]
+            if not isinstance(attributes, tuple) or not isinstance(nested_text, list):
+                continue
+            evidence = " ".join(
+                [*(f"{name} {value}" for name, value in attributes), *(str(value) for value in nested_text)]
+            )
+            carries_download = any(name == "download" for name, _ in attributes)
+            if carries_download or _EXPORT_AFFORDANCE_RE.search(evidence):
+                failures.append(
+                    f"{label}: interactive element source-order {order}: read-only port exposes an "
+                    "export-looking control"
+                )
+    return failures
+
+
+def check_m5(gallery_root: Path) -> list[str]:
+    """M5 — read-only ports require no sibling or network resource offline."""
+    labels = {_artifact_label(artifact_id) for artifact_id in READ_ONLY_PORT_MANIFEST_BASELINE}
+    canonical_typefaces = _canonical_optional_typeface_references(gallery_root)
+    references, unrecognized = _references(gallery_root)
+    failures = [failure for failure in unrecognized if failure.split(":", 1)[0] in labels]
+    for reference in references:
+        if reference.label not in labels or reference.kind != RESOURCE:
+            continue
+        if (
+            _embedded_asset(reference.value)
+            or reference.value.startswith("#")
+            or reference.value in canonical_typefaces
+        ):
+            continue
+        failures.append(
+            _named(reference, "requires a sibling or network resource, so the read-only port is not offline")
+        )
+    return failures
+
+
+def check_m6(gallery_root: Path) -> list[str]:
+    """M6 — pinned read-only concepts survive only the approved compactions."""
+    failures: list[str] = []
+    for artifact_id, _path, text in _read_only_port_texts(gallery_root):
+        label = _artifact_label(artifact_id)
+        elements = _elements(text)
+        issues: list[str] = []
+
+        if artifact_id == "design-system":
+            section_ids = _element_ids(elements, tag="section")
+            missing = [section_id for section_id in DESIGN_SYSTEM_SECTION_IDS if section_id not in section_ids]
+            if missing:
+                issues.append("section concepts " + ", ".join(f"#{section_id}" for section_id in missing))
+
+        elif artifact_id == "animation-prototype":
+            if "task" not in _element_ids(elements):
+                issues.append("completion selector #task")
+
+            easing_controls = [
+                element
+                for element in elements
+                if element.tag == "button" and _element_has_class(element, "ease-btn")
+            ]
+            easing_values = tuple(
+                values[0]
+                for element in easing_controls
+                if len(values := _attribute_values(element, "data-ease")) == 1
+            )
+            if easing_values != ANIMATION_EASING_CHOICES:
+                issues.append("all three .ease-btn[data-ease] choices in source order")
+            if sum(_element_has_class(element, "active") for element in easing_controls) != 1:
+                issues.append("exactly one .ease-btn.active state")
+
+            missing_phases = _missing_ordered_phases(_read_only_fill_region(text, "keyframes"))
+            if missing_phases:
+                issues.append("ordered keyframe phases " + ", ".join(missing_phases))
+
+            snippet_markup = _read_only_fill_region(text, "css-snippet")
+            if not any(element.tag == "pre" for element in _elements(snippet_markup)):
+                issues.append("visible preformatted CSS snippet")
+            missing_snippet_selectors = [token for token in (".task.done", "--ease") if token not in snippet_markup]
+            if missing_snippet_selectors:
+                issues.append("snippet selectors " + ", ".join(missing_snippet_selectors))
+
+        elif artifact_id == "interaction-prototype":
+            ids = _element_ids(elements)
+            missing_ids = [element_id for element_id in ("list", "indicator", "reset-order") if element_id not in ids]
+            if missing_ids:
+                issues.append("interaction selectors " + ", ".join(f"#{element_id}" for element_id in missing_ids))
+
+            retained_views = [
+                element
+                for element in elements
+                if element.tag == "li"
+                and _element_has_class(element, "item")
+                and _attribute_values(element, "draggable") == ["true"]
+                and any(value.startswith("views-") for value in _attribute_values(element, "id"))
+            ]
+            if len(retained_views) < INTERACTION_MINIMUM_RETAINED_VIEWS:
+                issues.append(
+                    f"at least {INTERACTION_MINIMUM_RETAINED_VIEWS} .item[draggable=\"true\"] view anchors "
+                    f"(found {len(retained_views)})"
+                )
+
+            missing_behavior = [token for token in INTERACTION_BEHAVIOR_TOKENS if token not in text]
+            if missing_behavior:
+                issues.append("reorder/indicator/reset tokens " + ", ".join(missing_behavior))
+
+            notes = _read_only_fill_region(text, "interaction-notes").casefold()
+            missing_notes = _missing_concepts(notes, INTERACTION_NOTE_CONCEPTS)
+            if missing_notes:
+                issues.append("interaction notes " + ", ".join(missing_notes))
+
+            questions = _read_only_fill_region(text, "open-questions").casefold()
+            missing_questions = _missing_concepts(questions, INTERACTION_QUESTION_CONCEPTS)
+            if missing_questions:
+                issues.append("open questions " + ", ".join(missing_questions))
+
+        elif artifact_id == "svg-illustrations":
+            illustration_markup = _read_only_fill_region(text, "illustrations")
+            illustration_elements = _elements(illustration_markup)
+            svg_ids = _element_ids(illustration_elements, tag="svg")
+            missing_ids = [svg_id for svg_id in SVG_ILLUSTRATION_IDS if svg_id not in svg_ids]
+            if missing_ids:
+                issues.append("SVG selectors " + ", ".join(f"#{svg_id}" for svg_id in missing_ids))
+            caption_count = sum(element.tag == "figcaption" for element in illustration_elements)
+            if caption_count < len(SVG_ILLUSTRATION_IDS):
+                issues.append(f"three illustration captions (found {caption_count})")
+
+            palette = _read_only_fill_region(text, "palette-rules").casefold()
+            missing_palette = _missing_concepts(palette, SVG_PALETTE_CONCEPTS)
+            if missing_palette:
+                issues.append("palette meaning " + ", ".join(missing_palette))
+
+            has_download_attribute = any(
+                name == "download" for element in elements for name, _value in element.attributes
+            )
+            has_download_script = re.search(
+                r"(?i)\burl\s*\.\s*createobjecturl\s*\(|\.download\b",
+                "\n".join(_script_bodies(text)),
+            )
+            if has_download_attribute or has_download_script:
+                issues.append("download implementation")
+
+        if issues:
+            failures.append(f"{label}: pinned source inventory or compaction boundary failed: {'; '.join(issues)}")
+
+    return failures
+
+
+GROUP_M_CHECKS: tuple[tuple[str, Callable[[Path], list[str]]], ...] = (
+    ("M1", check_m1),
+    ("M2", check_m2),
+    ("M3", check_m3),
+    ("M4", check_m4),
+    ("M5", check_m5),
+    ("M6", check_m6),
+)
+
+
+class ReadOnlyPortContractTests(unittest.TestCase):
+    """Group M against the four manifest-declared read-only ports."""
+
+    def test_group_m_passes_against_the_gallery(self) -> None:
+        self.maxDiff = None
+        for name, check in GROUP_M_CHECKS:
+            with self.subTest(msg=name):
+                self.assertEqual(check(GALLERY_ROOT), [])
+
+
+class ReadOnlyPortContractFixtureTests(GalleryFixtureCase):
+    """Group M against complete synthetic read-only ports."""
+
+    def manifest(self) -> dict:
+        entries = json.loads(json.dumps(list(READ_ONLY_PORT_MANIFEST_BASELINE.values())))
+        for entry in entries:
+            entry["status"] = SHIPPED
+        return {"templates": entries}
+
+    def attribution_header(self, artifact_id: str, *, upstream_file: str | None = None) -> str:
+        source = READ_ONLY_PORT_MANIFEST_BASELINE[artifact_id]["source"]
+        declared_file = source["file"] if isinstance(source, dict) else ""
+        return (
+            "<!--\n"
+            f"  {REPOSITORY_LABEL} {UPSTREAM_REPOSITORY}\n"
+            f"  {UPSTREAM_FILE_LABEL} {upstream_file or declared_file}\n"
+            f"  {LICENSE_LABEL} {UPSTREAM_LICENSE_ID}\n"
+            f"  {LICENSE_TEXT_LABEL} {UPSTREAM_LICENSE_REFERENCE}\n"
+            f"  {DERIVATIVE_LABEL} {READ_ONLY_DERIVATIVE_NOTICE}\n"
+            f"  {UPSTREAM_COPYRIGHT}\n"
+            "-->"
+        )
+
+    def write_canonical_files(self, *, head_body: str = FIXTURE_HEAD_BODY) -> None:
+        self.write(CANONICAL_FILES[BRAND_BLOCK], _marked(BRAND_BLOCK, FIXTURE_BRAND_BODY))
+        self.write(CANONICAL_FILES[HEAD_BLOCK], _marked(HEAD_BLOCK, head_body))
+
+    def capability_body(self, artifact_id: str) -> str:
+        bodies = {
+            "design-system": "<main>" + "".join(
+                f'<section id="{section_id}">{section_id}</section>'
+                for section_id in DESIGN_SYSTEM_SECTION_IDS
+            ) + "</main>",
+            "animation-prototype": (
+                '<main><button id="task" class="task" type="button">Task</button>'
+                '<button class="ease-btn" data-ease="linear">Linear</button>'
+                '<button class="ease-btn" data-ease="cubic-bezier(0.16, 1, 0.3, 1)">Ease-out</button>'
+                '<button class="ease-btn active" data-ease="cubic-bezier(0.34, 1.56, 0.64, 1)">Spring</button>'
+                '<!-- FILL:keyframes:START --><ol><li>Fill 0ms</li><li>Check 80ms</li>'
+                '<li>Strike 120ms</li><li>Confetti 200ms</li><li>Collapse 600ms</li></ol>'
+                '<!-- FILL:keyframes:END --><!-- FILL:css-snippet:START -->'
+                '<pre>.task.done { transition: all 200ms var(--ease); }</pre>'
+                '<!-- FILL:css-snippet:END --></main>'
+            ),
+            "interaction-prototype": (
+                "<main><style>.item.dragging {} .indicator.on {}</style>"
+                '<ul id="list"><li class="item" id="views-a" draggable="true">A</li>'
+                '<li class="item" id="views-b" draggable="true">B</li><li class="item" id="views-c" draggable="true">C</li>'
+                '<li class="indicator" id="indicator">Insert here</li>'
+                '</ul><button id="reset-order" type="button">Reset order</button>'
+                '<!-- FILL:interaction-notes:START --><p>Drop indicator snaps to the nearest gap. Dragged row stays in place. '
+                'Grip dots identify the whole row. No auto-scroll and no drop animation.</p><!-- FILL:interaction-notes:END -->'
+                '<!-- FILL:open-questions:START --><p>Should Trash and Archive be pinned and excluded from reordering? '
+                'Should rows slide or use an instant snap? Is the keyboard Alt plus Arrow path enough?</p><!-- FILL:open-questions:END -->'
+                "<script>var initialOrder=[];list.addEventListener('dragstart',noop);list.addEventListener('dragover',noop);"
+                "list.addEventListener('drop',noop);document.addEventListener('dragend',noop);"
+                "item.classList.add('dragging'); item.classList.remove('dragging');"
+                "indicator.classList.add('on'); indicator.classList.remove('on');"
+                "reset.addEventListener('click',function(){list.insertBefore(item,indicator);});"
+                "</script></main>"
+            ),
+            "svg-illustrations": (
+                '<main><!-- FILL:illustrations:START -->'
+                '<figure><svg id="ill-queue"></svg><figcaption>Queue</figcaption></figure>'
+                '<figure><svg id="ill-retry"></svg><figcaption>Retry</figcaption></figure>'
+                '<figure><svg id="ill-fanout"></svg><figcaption>Fanout</figcaption></figure>'
+                '<!-- FILL:illustrations:END --><!-- FILL:palette-rules:START -->'
+                '<p>Stroke and outline preserve emphasis without color. Labels write every state as text. '
+                'Pattern distinguishes repeated states in monochrome.</p><!-- FILL:palette-rules:END --></main>'
+            ),
+        }
+        return bodies[artifact_id]
+
+    def write_read_only_artifact(
+        self,
+        artifact_id: str,
+        *,
+        body: str | None = None,
+        upstream_file: str | None = None,
+        include_brand: bool = True,
+        include_head: bool = True,
+        head_body: str = FIXTURE_HEAD_BODY,
+    ) -> None:
+        body = self.capability_body(artifact_id) if body is None else body
+        brand = _marked(BRAND_BLOCK, FIXTURE_BRAND_BODY) if include_brand else ""
+        head = _marked(HEAD_BLOCK, head_body) if include_head else ""
+        self.write(
+            f"{TEMPLATES_DIR}/{artifact_id}.html",
+            "<!doctype html>\n"
+            f"{self.attribution_header(artifact_id, upstream_file=upstream_file)}\n"
+            "<html lang=\"en\">\n"
+            f"<head><style>\n{brand}\n</style>\n{head}\n</head>\n"
+            f"<body>{body}</body>\n"
+            "</html>\n",
+        )
+
+    def write_conforming_gallery(
+        self, *, omit: frozenset[str] = frozenset(), head_body: str = FIXTURE_HEAD_BODY
+    ) -> None:
+        self.write_canonical_files(head_body=head_body)
+        self.write(MANIFEST_FILE, json.dumps(self.manifest(), indent=2))
+        for artifact_id in READ_ONLY_PORT_MANIFEST_BASELINE:
+            if artifact_id not in omit:
+                self.write_read_only_artifact(artifact_id, head_body=head_body)
+
+    def test_accepts_complete_read_only_ports(self) -> None:
+        self.write_conforming_gallery()
+
+        self.assertEqual([failure for _, check in GROUP_M_CHECKS for failure in check(self.gallery)], [])
+
+    def test_accepts_entity_normalized_canonical_typeface_reference(self) -> None:
+        canonical_head = (
+            '<link rel="stylesheet" '
+            'href="https://fonts.googleapis.com/css2?family=Geist&amp;display=swap">'
+        )
+        self.write_conforming_gallery(head_body=canonical_head)
+
+        self.assertEqual(check_m5(self.gallery), [])
+
+    def test_rejects_pinned_inventory_or_compaction_drift(self) -> None:
+        cases = (
+            ("design section", "design-system", 'id="components"', 'id="component-samples"', ("#components",)),
+            (
+                "easing choice",
+                "animation-prototype",
+                'data-ease="linear"',
+                'data-timing="linear"',
+                ("all three .ease-btn[data-ease]",),
+            ),
+            (
+                "retained views",
+                "interaction-prototype",
+                'id="views-c"',
+                'id="compacted-c"',
+                ("at least 3 .item", "found 2"),
+            ),
+            (
+                "illustration selector",
+                "svg-illustrations",
+                'id="ill-fanout"',
+                'id="ill-branch"',
+                ("#ill-fanout",),
+            ),
+        )
+        for name, artifact_id, old, new, fragments in cases:
+            with self.subTest(msg=name):
+                self.write_conforming_gallery()
+                relative = f"{TEMPLATES_DIR}/{artifact_id}.html"
+                text = _document_text(self.gallery / relative)
+                self.assertEqual(text.count(old), 1, f"fixture mutation is not uniquely targeted: {old}")
+                self.write(relative, text.replace(old, new, 1))
+                self.assertReports(check_m6(self.gallery), *fragments)
+
+    def test_rejects_a_read_only_row_that_has_not_shipped(self) -> None:
+        self.write_conforming_gallery()
+        manifest = self.manifest()
+        manifest["templates"][0]["status"] = PLANNED
+        self.write(MANIFEST_FILE, json.dumps(manifest, indent=2))
+
+        self.assertReports(check_m1(self.gallery), "design-system", "status", PLANNED)
+
+    def test_rejects_non_status_manifest_drift(self) -> None:
+        self.write_conforming_gallery()
+        manifest = self.manifest()
+        manifest["templates"][0]["title"] = "Drifted title"
+        self.write(MANIFEST_FILE, json.dumps(manifest, indent=2))
+
+        self.assertReports(check_m1(self.gallery), "design-system", "title", "drifted")
+
+    def test_rejects_a_missing_read_only_port_file(self) -> None:
+        self.write_conforming_gallery(omit=frozenset({"svg-illustrations"}))
+
+        self.assertReports(check_m2(self.gallery), "svg-illustrations.html", "missing")
+
+    def test_rejects_attribution_for_a_different_pinned_source(self) -> None:
+        self.write_conforming_gallery()
+        self.write_read_only_artifact("animation-prototype", upstream_file="08-neighbour.html")
+
+        self.assertReports(check_m3(self.gallery), "animation-prototype.html", UPSTREAM_FILE_LABEL)
+
+    def test_rejects_a_missing_canonical_block(self) -> None:
+        self.write_conforming_gallery()
+        self.write_read_only_artifact("interaction-prototype", include_head=False)
+
+        self.assertReports(check_m3(self.gallery), "interaction-prototype.html", HEAD_BLOCK)
+
+    def test_rejects_a_disabled_export_looking_control(self) -> None:
+        self.write_conforming_gallery()
+        self.write_read_only_artifact(
+            "svg-illustrations",
+            body="<main><button type=\"button\" disabled>Download SVG</button></main>",
+        )
+
+        self.assertReports(check_m4(self.gallery), "svg-illustrations.html", "export-looking")
+
+    def test_rejects_a_sibling_resource_required_offline(self) -> None:
+        self.write_conforming_gallery()
+        self.write_read_only_artifact(
+            "design-system",
+            body='<main><img src="tokens.png" alt="Token preview"></main>',
+        )
+
+        self.assertReports(check_m5(self.gallery), "design-system.html", "tokens.png", "offline")
+
+    def test_rejects_a_noncanonical_network_resource(self) -> None:
+        self.write_conforming_gallery()
+        self.write_read_only_artifact(
+            "design-system",
+            body='<main><img src="https://fonts.gstatic.com/not-a-typeface.png" alt="Token preview"></main>',
+        )
+
+        self.assertReports(check_m5(self.gallery), "design-system.html", "fonts.gstatic.com", "offline")
+
+
 class CheckSignatureTests(unittest.TestCase):
     """Enforce the rule the rest of this module depends on.
 
@@ -7652,6 +8349,8 @@ CHECK_GROUPS: tuple[type[unittest.TestCase], ...] = (
     CanonicalBlockAgreementFixtureTests,
     KeyboardScrollGuardTests,
     KeyboardScrollGuardFixtureTests,
+    ReadOnlyPortContractTests,
+    ReadOnlyPortContractFixtureTests,
 )
 
 

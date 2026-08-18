@@ -119,7 +119,7 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "05-design-system.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": []
     },
     {
@@ -141,7 +141,7 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "07-prototype-animation.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": []
     },
     {
@@ -152,7 +152,7 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "08-prototype-interaction.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": []
     },
     {
@@ -163,7 +163,7 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "10-svg-illustrations.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": []
     },
     {
