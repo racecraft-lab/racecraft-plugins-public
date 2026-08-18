@@ -4,8 +4,8 @@
   "feature_dir": "specs/art-005-gallery-completion-knowledge-reports-editors",
   "branch": "art-005-gallery-completion-knowledge-reports-editors",
   "stage": "implement",
-  "updated_at": "2026-08-18T13:32:19Z",
-  "active_step": "Phase 7: Implement - Setup and foundational checks T001-T010",
+  "updated_at": "2026-08-18T13:58:11Z",
+  "active_step": "Phase 7: Implement - Slice 1 slide-deck T011-T023",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -407,10 +407,18 @@
     },
     "implement": {
       "status": "in_progress",
-      "active_group": "Setup and foundational checks T001-T010",
-      "active_task": "T001",
-      "completed_tasks": 0,
+      "active_group": "Slice 1 slide-deck T011-T023",
+      "active_task": "T022",
+      "completed_tasks": 21,
       "total_tasks": 119,
+      "baseline": {
+        "layer_1": "1448/1448",
+        "layer_4": "5766/5766",
+        "default_suite": "7400/7400",
+        "g4_markers": 0,
+        "upstream_digests_matched": 7,
+        "planning_privacy_repair": "quickstart absolute home path replaced before implementation source changes"
+      },
       "slice_order": [
         "slide-deck",
         "concept-explainer",
@@ -650,11 +658,11 @@
     },
     {
       "step": "Phase 7: Implement - Setup and foundational checks T001-T010",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Slice 1 slide-deck T011-T023",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - Slice 2 concept-explainer T024-T036",

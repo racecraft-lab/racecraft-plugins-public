@@ -1,0 +1,448 @@
+{
+  "featureId": "ART-005",
+  "sourceCommit": "PENDING_SOURCE_CHECKPOINT_T022",
+  "executedAt": "PENDING_MANUAL_EXECUTION_T022",
+  "environment": {
+    "operatingSystem": "pending_manual_uat_t022",
+    "browserNameAndVersion": "pending_manual_uat_t022",
+    "scheme": "file://",
+    "networkCondition": "pending_offline_reload_t022",
+    "themeCondition": "pending_light_dark_manual_t022",
+    "reducedMotionCondition": "pending_reduced_motion_manual_t022",
+    "colorModeCondition": "pending_color_independent_manual_t022",
+    "notes": "T019 records source-backed not_applicable classifications only; executable file:// rows remain pending for T022."
+  },
+  "driver": "manual",
+  "runbookPath": "specs/art-005-gallery-completion-knowledge-reports-editors/.process/uat-runbook.md",
+  "rows": [
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-019 horizontal_scroll_region_not_applicable_source_check",
+      "claim": "No named keyboard-focusable horizontal scroll region is required when the source contains no meaningful horizontal overflow region.",
+      "observedResult": "Source-backed classification only: the template contains no overflow-x:auto or overflow-x:scroll declaration, html/body use overflow-x:hidden, and no runtime horizontal-scroll observation is claimed in T019.",
+      "accessibilityObservation": {
+        "scrollRegions": [
+          {
+            "selector": "html",
+            "role": "document root",
+            "name": "not_applicable",
+            "tabindex": "not_applicable",
+            "horizontalOverflowEvidence": "Source CSS sets overflow-x:hidden; this is not a named interactive scroll region.",
+            "actualScrollElement": "not_applicable_no_user_scroll_region"
+          },
+          {
+            "selector": "body",
+            "role": "document body",
+            "name": "not_applicable",
+            "tabindex": "not_applicable",
+            "horizontalOverflowEvidence": "Source CSS sets overflow-x:hidden; no overflow-x:auto or overflow-x:scroll declaration exists in the template.",
+            "actualScrollElement": "not_applicable_no_user_scroll_region"
+          }
+        ],
+        "notApplicableReason": {
+          "caseId": "horizontal_scroll_region",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:486-492 html/body overflow-x:hidden",
+            "source search found no overflow-x:auto or overflow-x:scroll"
+          ],
+          "actualScrollElementDisposition": "No actual scroll element is claimed from runtime in T019; T022 responsive review must replace this if browser execution finds meaningful horizontal overflow."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-020 producer_only_live_export_freshness_not_applicable",
+      "claim": "Live export freshness is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: manifest exports is an empty array and the template has no export control or generated export payload.",
+      "dataIntegrityObservation": {
+        "caseId": "live_export_freshness",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "live export freshness",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:885-889 navigation controls only"
+          ],
+          "reason": "No producer-owned export state exists for slide-deck."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-021 producer_only_empty_values_not_applicable",
+      "claim": "Empty-value serialization is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: slide-deck has no editable fields, no structured export, and no issue-producing serialization path.",
+      "dataIntegrityObservation": {
+        "caseId": "empty_values",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "empty values",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:805-889 reader content and navigation only"
+          ],
+          "reason": "No producer-owned empty field or empty collection is serialized by slide-deck."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-022 producer_only_invalid_raw_value_not_applicable",
+      "claim": "Invalid raw value handling is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: the template has no user-entered raw values and no export issue schema.",
+      "dataIntegrityObservation": {
+        "caseId": "invalid_raw_value",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "invalid raw value",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:805-889 no editor inputs"
+          ],
+          "reason": "No raw producer input is parsed or serialized by slide-deck."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-023 producer_only_unavailable_normalized_value_not_applicable",
+      "claim": "Unavailable normalized value handling is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: the template has no normalization path and no exported issue record.",
+      "dataIntegrityObservation": {
+        "caseId": "unavailable_normalized_value",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "unavailable normalized value",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:805-889 static reader surface"
+          ],
+          "reason": "No normalized producer value exists for slide-deck."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-024 producer_only_duplicate_identifiers_not_applicable",
+      "claim": "Duplicate identifier preservation and issue reporting are producer-only and do not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: the reader has anchored slides for navigation but no exported producer entity collection.",
+      "dataIntegrityObservation": {
+        "caseId": "duplicate_identifiers",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "duplicate identifiers",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:819-849 anchored slide articles only"
+          ],
+          "reason": "No producer-owned exported identifiers or issue records exist."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-025 producer_only_special_character_round_trip_not_applicable",
+      "claim": "Special-character round trip is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: no structured JSON or Markdown export is generated from reader-entered values.",
+      "dataIntegrityObservation": {
+        "caseId": "special_character_round_trip",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "special character round trip",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:805-889 no export UI"
+          ],
+          "reason": "No serialized producer text can round-trip through an export."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-026 producer_only_multiple_issue_order_not_applicable",
+      "claim": "Multiple issue ordering is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: the reader has no issue list, editor export contract, or validation output.",
+      "dataIntegrityObservation": {
+        "caseId": "multiple_issue_order",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "multiple issue order",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:805-889 static reader content"
+          ],
+          "reason": "No ordered producer issues are emitted by slide-deck."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-027 producer_only_clipboard_exact_equality_not_applicable",
+      "claim": "Clipboard/fallback exact equality is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: no attempted export string, clipboard write, or fallback export text exists.",
+      "dataIntegrityObservation": {
+        "caseId": "clipboard_exact_equality",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "clipboard exact equality",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:885-889 slide navigation controls only"
+          ],
+          "reason": "No clipboard or fallback export text is generated."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-028 producer_only_superseded_copy_attempt_not_applicable",
+      "claim": "Superseded copy-attempt data integrity is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: no copy attempts can race because the reader exposes no copy/export action.",
+      "dataIntegrityObservation": {
+        "caseId": "superseded_copy_attempt",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "superseded copy attempt",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:885-889 no copy/export button"
+          ],
+          "reason": "No producer copy operation or stale export mutation path exists."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-029 producer_only_clipboard_genuine_success_not_applicable",
+      "claim": "Genuine clipboard success recovery evidence is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: the reader has no clipboard write action.",
+      "errorHandlingObservation": {
+        "caseId": "genuine_success",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "genuine clipboard success",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:885-889 navigation controls only"
+          ],
+          "reason": "No successful clipboard path is implemented or required for slide-deck."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-030 producer_only_clipboard_absent_not_applicable",
+      "claim": "Unavailable clipboard fallback evidence is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: no clipboard method is invoked and no fallback export region exists.",
+      "errorHandlingObservation": {
+        "caseId": "clipboard_absent",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "clipboard absent",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:885-889 no export fallback control"
+          ],
+          "reason": "No clipboard fallback branch exists for this reader."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-031 producer_only_method_non_callable_not_applicable",
+      "claim": "Non-callable clipboard method fallback evidence is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: no clipboard method is called by the reader.",
+      "errorHandlingObservation": {
+        "caseId": "method_non_callable",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "method non-callable",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:885-889 controls are Previous/Next only"
+          ],
+          "reason": "No clipboard API dependency exists for slide-deck."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-032 producer_only_permission_denied_not_applicable",
+      "claim": "Permission-denied clipboard fallback evidence is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: no clipboard permission request or rejection branch exists.",
+      "errorHandlingObservation": {
+        "caseId": "permission_denied",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "permission denied",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:885-889 no clipboard control"
+          ],
+          "reason": "No permission-denied clipboard state can be triggered by slide-deck."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-033 producer_only_generic_rejection_not_applicable",
+      "claim": "Generic rejected-promise clipboard fallback evidence is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: the reader has no asynchronous clipboard write path.",
+      "errorHandlingObservation": {
+        "caseId": "generic_rejection",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "generic rejection",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:885-889 no export action"
+          ],
+          "reason": "No rejected clipboard promise can occur for slide-deck."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-034 producer_only_synchronous_throw_not_applicable",
+      "claim": "Synchronous clipboard throw fallback evidence is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: the reader has no synchronous clipboard call.",
+      "errorHandlingObservation": {
+        "caseId": "synchronous_throw",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "synchronous throw",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:885-889 slide controls only"
+          ],
+          "reason": "No synchronous copy attempt is implemented for slide-deck."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-035 producer_only_sequential_transition_not_applicable",
+      "claim": "Failure-success-failure sequential transition evidence is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: the reader has no clipboard status transition sequence.",
+      "errorHandlingObservation": {
+        "caseId": "sequential_transition",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "sequential transition",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:887 #slide-count is navigation status, not export recovery status"
+          ],
+          "reason": "No producer clipboard recovery status sequence exists for slide-deck."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    },
+    {
+      "artifactId": "slide-deck",
+      "templatePath": "speckit-pro/artifact-gallery/templates/slide-deck.html",
+      "step": "SD-UAT-036 producer_only_superseded_attempt_not_applicable",
+      "claim": "Superseded clipboard attempt recovery evidence is producer-only and does not apply to the slide-deck reader.",
+      "observedResult": "Source-backed classification only: the reader exposes no overlapping clipboard attempts.",
+      "errorHandlingObservation": {
+        "caseId": "superseded_attempt",
+        "notApplicableReason": {
+          "artifactRole": "reader",
+          "manifestExports": [],
+          "producerCase": "superseded attempt",
+          "sourceEvidence": [
+            "speckit-pro/artifact-gallery/manifest.json:170-178 exports []",
+            "speckit-pro/artifact-gallery/templates/slide-deck.html:885-889 no copy/export action"
+          ],
+          "reason": "No stale clipboard recovery mutation can occur for slide-deck."
+        }
+      },
+      "verdict": "not_applicable",
+      "date": "2026-08-18",
+      "driver": "manual"
+    }
+  ]
+}

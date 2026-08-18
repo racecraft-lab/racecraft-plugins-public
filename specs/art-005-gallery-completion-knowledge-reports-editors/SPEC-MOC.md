@@ -44,5 +44,9 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/ux.md](checklists/ux.md)
+- [.process/implementation-notes.md](.process/implementation-notes.md)
+- [.process/uat-results.json](.process/uat-results.json)
+- [.process/uat-results.md](.process/uat-results.md)
+- [.process/uat-runbook.md](.process/uat-runbook.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

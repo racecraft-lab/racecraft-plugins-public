@@ -208,7 +208,7 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "b87a43b9bd12e1d502594de54d036f63ca3c80d23e168b95c31d59fb19bb5687",
+            "sha256": "f83ce0d3c29571c170758afc449af4d2ce83412714f5cbfbd60b21e4bb75fd02",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
             "transform": "none"
           },
@@ -264,6 +264,15 @@
             "required": true,
             "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
             "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
+            "transform": "none"
+          },
+          {
+            "byte_count": 34329,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/slide-deck.html",
+            "required": true,
+            "sha256": "3eae61580e81c2aaeecd2373dbcc794fa1e2c37fd4252a4c5f69d6d2df964e5e",
+            "source_path": "speckit-pro/artifact-gallery/templates/slide-deck.html",
             "transform": "none"
           },
           {
@@ -1254,7 +1263,7 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "b87a43b9bd12e1d502594de54d036f63ca3c80d23e168b95c31d59fb19bb5687",
+            "sha256": "f83ce0d3c29571c170758afc449af4d2ce83412714f5cbfbd60b21e4bb75fd02",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
             "transform": "none"
           },
@@ -1310,6 +1319,15 @@
             "required": true,
             "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
             "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
+            "transform": "none"
+          },
+          {
+            "byte_count": 34329,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/slide-deck.html",
+            "required": true,
+            "sha256": "3eae61580e81c2aaeecd2373dbcc794fa1e2c37fd4252a4c5f69d6d2df964e5e",
+            "source_path": "speckit-pro/artifact-gallery/templates/slide-deck.html",
             "transform": "none"
           },
           {
@@ -2124,7 +2142,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "d39b44b9f4c51f92d257da46cad3c263d9daa5a481b61bf7edd9903df0a1e2f2",
+        "file_tree_hash": "f0d67d4ad68d31f6d4bbd6fe395fa76935fe82a17d9b86c257f72c7c654e5bcd",
         "generated_root": "dist/claude/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],
@@ -2216,7 +2234,7 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "b87a43b9bd12e1d502594de54d036f63ca3c80d23e168b95c31d59fb19bb5687",
+            "sha256": "f83ce0d3c29571c170758afc449af4d2ce83412714f5cbfbd60b21e4bb75fd02",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
             "transform": "none"
           },
@@ -2272,6 +2290,15 @@
             "required": true,
             "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
             "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
+            "transform": "none"
+          },
+          {
+            "byte_count": 34329,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/slide-deck.html",
+            "required": true,
+            "sha256": "3eae61580e81c2aaeecd2373dbcc794fa1e2c37fd4252a4c5f69d6d2df964e5e",
+            "source_path": "speckit-pro/artifact-gallery/templates/slide-deck.html",
             "transform": "none"
           },
           {
@@ -3415,7 +3442,7 @@
             "kind": "docs",
             "path": "artifact-gallery/manifest.json",
             "required": true,
-            "sha256": "b87a43b9bd12e1d502594de54d036f63ca3c80d23e168b95c31d59fb19bb5687",
+            "sha256": "f83ce0d3c29571c170758afc449af4d2ce83412714f5cbfbd60b21e4bb75fd02",
             "source_path": "speckit-pro/artifact-gallery/manifest.json",
             "transform": "none"
           },
@@ -3471,6 +3498,15 @@
             "required": true,
             "sha256": "5ed717ac46d4fbaaf5ea4213bbc82b4fdfbe9d38ac5391932d1ea4a3bace2ccc",
             "source_path": "speckit-pro/artifact-gallery/templates/pr-writeup.html",
+            "transform": "none"
+          },
+          {
+            "byte_count": 34329,
+            "kind": "docs",
+            "path": "artifact-gallery/templates/slide-deck.html",
+            "required": true,
+            "sha256": "3eae61580e81c2aaeecd2373dbcc794fa1e2c37fd4252a4c5f69d6d2df964e5e",
+            "source_path": "speckit-pro/artifact-gallery/templates/slide-deck.html",
             "transform": "none"
           },
           {
@@ -4537,7 +4573,7 @@
           }
         ],
         "extra_paths": [],
-        "file_tree_hash": "02cdc6fece27d2024b69234a30864cd211d8da678814f3e62dbf3f77468ea844",
+        "file_tree_hash": "4a684fefcd949ac50788a3df3b7bd6cb30644203bfc11ad6558b1f69b931b968",
         "generated_root": "dist/codex/speckit-pro",
         "mismatched_paths": [],
         "missing_paths": [],

@@ -55,7 +55,7 @@ for four artifacts is now an explicit Open Question.
 | Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | Six findings remediated; G6 passes with 0 CRITICAL/HIGH findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory PASS at 0.98 against the 0.90 threshold |
-| Implement | `/speckit-implement` | 🔄 In Progress | Setup and foundational checks T001-T010 |
+| Implement | `/speckit-implement` | 🔄 In Progress | Slice 1 slide-deck T011-T023 |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -918,8 +918,8 @@ For every behavior:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Shared baseline and contracts | In Progress | 0 | Pinned source and cross-slice contracts |
-| 2 - Slice 1 | Pending | 0 | slide-deck plus incremental integration and UAT |
+| 1 - Shared baseline and contracts | Complete | 10 | Pinned digests match; G4 passes; L1 1448/1448, L4 5766/5766, full 7400/7400 |
+| 2 - Slice 1 | In Progress | 11 | authoritative release/docs regeneration complete; gallery parity 488/488; source checkpoint and UAT next |
 | 3 - Slice 2 | Pending | 0 | concept-explainer plus incremental integration and UAT |
 | 4 - Slice 3 | Pending | 0 | status-report plus incremental integration and UAT |
 | 5 - Slice 4 | Pending | 0 | incident-report plus incremental integration and UAT |

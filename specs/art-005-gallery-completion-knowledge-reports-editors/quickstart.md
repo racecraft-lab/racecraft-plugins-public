@@ -8,7 +8,7 @@ planning artifact, not the UAT runbook itself.
 Start from the ART-005 worktree:
 
 ```bash
-cd /Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/art-005-gallery-completion-knowledge-reports-editors
+cd "$(git rev-parse --show-toplevel)"
 ```
 
 Confirm the current branch for slice 1:

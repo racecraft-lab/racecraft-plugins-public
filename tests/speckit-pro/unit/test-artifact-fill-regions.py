@@ -91,6 +91,7 @@ FLOOR: dict[str, tuple[str, ...]] = {
     "pr-writeup": ("motivation", "before-after", "file-by-file", "implementation-notes"),
     "annotated-diff": ("hunks",),
     "flowchart": ("flow-diagram",),
+    "slide-deck": ("deck-title", "slides", "speaker-notes"),
 }
 
 # The slots whose items an objection or a selection attaches to, and which
@@ -107,6 +108,7 @@ LIST_SLOTS: dict[str, tuple[str, ...]] = {
     "pr-writeup": ("file-by-file",),
     "annotated-diff": ("hunks",),
     "flowchart": ("nodes",),
+    "slide-deck": ("slides",),
 }
 
 # The two anchored items a list slot needs at a minimum. One item shows a reader
@@ -847,6 +849,8 @@ class FillRegionTests(unittest.TestCase):
         for identifier in sorted(FLOOR):
             with self.subTest(msg=identifier):
                 self.assertIn(identifier, identifiers or set())
+    def test_slide_deck_fill_inventory_template_exists(self) -> None:
+        self.assertTrue((path := GALLERY_ROOT / _template_path("slide-deck")).is_file() and all(f"Slot: {slot} |" in path.read_text(encoding="utf-8") for slot in FLOOR["slide-deck"]), f"{_template_path('slide-deck')}: missing slide-deck fill-inventory template")
 
 
 # ---------------------------------------------------------------------------

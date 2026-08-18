@@ -174,7 +174,7 @@
       "stage": "ad-hoc",
       "trigger": { "always": true },
       "source": { "origin": "upstream", "file": "09-slide-deck.html" },
-      "status": "planned",
+      "status": "shipped",
       "exports": []
     },
     {
