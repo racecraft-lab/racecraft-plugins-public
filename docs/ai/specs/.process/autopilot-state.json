@@ -3,9 +3,9 @@
   "spec_id": "ART-005",
   "feature_dir": "specs/art-005-gallery-completion-knowledge-reports-editors",
   "branch": "art-005-gallery-completion-knowledge-reports-editors",
-  "stage": "plan",
-  "updated_at": "2026-08-18T05:01:40Z",
-  "active_step": "Stage plan complete",
+  "stage": "implement",
+  "updated_at": "2026-08-18T13:32:19Z",
+  "active_step": "Phase 7: Implement - Setup and foundational checks T001-T010",
   "settings": {
     "consensus_mode": "moderate",
     "gate_failure": "stop",
@@ -14,8 +14,8 @@
   },
   "stage_resolution": {
     "source": "argv",
-    "basis": "explicit --stage plan",
-    "recorded_stage": null,
+    "basis": "explicit --stage implement",
+    "recorded_stage": "plan",
     "planning_complete": true,
     "confidence_gate_status": "✅ Complete",
     "from_phase": null
@@ -404,6 +404,22 @@
         "risk_assessment": 0.97,
         "completeness": 0.96
       }
+    },
+    "implement": {
+      "status": "in_progress",
+      "active_group": "Setup and foundational checks T001-T010",
+      "active_task": "T001",
+      "completed_tasks": 0,
+      "total_tasks": 119,
+      "slice_order": [
+        "slide-deck",
+        "concept-explainer",
+        "status-report",
+        "incident-report",
+        "triage-board",
+        "feature-flags",
+        "prompt-tuner"
+      ]
     }
   },
   "task_reviewability": {
@@ -634,95 +650,95 @@
     },
     {
       "step": "Phase 7: Implement - Setup and foundational checks T001-T010",
-      "status": "skipped: outside stage plan"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - Slice 1 slide-deck T011-T023",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - Slice 2 concept-explainer T024-T036",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - Slice 3 status-report T037-T049",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - Slice 4 incident-report T050-T062",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - Slice 5 triage-board T063-T078",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - Slice 6 feature-flags T079-T094",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - Slice 7 prompt-tuner T095-T111",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - Stack-wide closeout T112-T119",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Code Review",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Self-Review",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Final Reviewability Backstop",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: PR Packet/Body Generation",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: PR Creation",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     },
     {
       "step": "Post: Retrospective",
-      "status": "skipped: outside stage plan"
+      "status": "pending"
     }
   ]
 }

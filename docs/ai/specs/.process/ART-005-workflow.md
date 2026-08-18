@@ -55,7 +55,7 @@ for four artifacts is now an explicit Open Question.
 | Tasks | `/speckit-tasks` | ✅ Complete | 119 ordered tasks; G5 and phantom-completion checks pass |
 | Analyze | `/speckit-analyze` | ✅ Complete | Six findings remediated; G6 passes with 0 CRITICAL/HIGH findings |
 | Confidence Gate | G6.5 | ✅ Complete | Advisory PASS at 0.98 against the 0.90 threshold |
-| Implement | `/speckit-implement` | ⏳ Pending | Seven sequential stacked review slices, one template each |
+| Implement | `/speckit-implement` | 🔄 In Progress | Setup and foundational checks T001-T010 |
 | Post | Post-Implementation | ⏳ Pending | Canonical closeout plus tracked `file://` UAT results |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⏭️ Skipped | ⚠️ Blocked
@@ -115,7 +115,7 @@ Before starting any workflow phase, verify alignment with
 | **Spec ID** | ART-005 |
 | **Name** | Gallery Completion — Knowledge, Reports & Editors |
 | **Branch** | `art-005-gallery-completion-knowledge-reports-editors` |
-| **Stage** | `plan` |
+| **Stage** | `implement` |
 | **Dependencies** | ART-001; dependency is satisfied on `main` |
 | **Enables** | Gallery completeness |
 | **Priority** | P2 |
@@ -918,7 +918,7 @@ For every behavior:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Shared baseline and contracts | Pending | 0 | Pinned source and cross-slice contracts |
+| 1 - Shared baseline and contracts | In Progress | 0 | Pinned source and cross-slice contracts |
 | 2 - Slice 1 | Pending | 0 | slide-deck plus incremental integration and UAT |
 | 3 - Slice 2 | Pending | 0 | concept-explainer plus incremental integration and UAT |
 | 4 - Slice 3 | Pending | 0 | status-report plus incremental integration and UAT |
