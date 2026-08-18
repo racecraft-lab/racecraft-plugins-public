@@ -811,3 +811,87 @@ absent from the entire Layer 6 tree and no `source digest does not match role
 source bytes` failure. The Q7 decision to ship the new agent outside the governed
 corpus holds exactly as designed: adding an agent outside the corpus does not
 restale the hand-maintained digest chain.
+
+### T051 — quickstart scenarios 1 through 4 (deterministic half)
+
+Run by the orchestrator, live, not inferred from the suite.
+
+**Scenario 1 — the tripwire.** The declared draft fixture through
+`validate-pr-packet-read-only`: envelope `status: ok`, `exit_code: 0`,
+`data.stdout_json.status: passed`, `pr_blocked: false`, zero failures — for a
+packet carrying `mode: draft` with empty `verification_evidence`, empty
+`scope_evidence.changed_files`, and empty `uat.how_to_uat`. This is the scenario
+that catches a schema relaxed without the validator's two hand-written evidence
+assertions, which the plan called the single most likely defect in the feature.
+
+**Scenario 2 — SC-008.** Verified twice over: by machine diff of all nine
+pre-existing packet fixtures' failure rule sets after the Phase 2 commit, and by
+the layer-4 suite. Not one pre-existing packet assertion changed.
+
+**Scenario 3 — all six statuses by hand**, against the quickstart's own table:
+
+| Observation | `corroboration.status` | `merged` | `reason` | `stage` |
+|---|---|---|---|---|
+| recorded number, open, matching URL | `match` | null | null | plan |
+| recorded number, state closed | `pr_closed` | **false** | null | plan |
+| empty `pull_requests` array | `pr_missing` | null | null | plan |
+| a different open number on the head branch | `identity_mismatch` | null | null | plan |
+| `{"ok": false, "reason": "gh not authenticated"}` | `skipped` | null | **echoed verbatim** | plan |
+| workflow file with no `Draft PR` row | `no_record` | null | null | plan |
+
+Stage invariance checked directly: the same workflow file with and without an
+observation resolves to the same stage, and all eight pre-existing envelope keys
+compare identical. No input path changed `stage`, and no unsuccessful
+observation produced a discrepancy in place of `skipped`.
+
+**Scenario 4** ran in T034's mandated order — refresh, then Layer 1
+(1468/1468), then Layer 4 — with the corpus manifest still reporting exactly
+twelve roles and `artifact-author` absent from the Layer 6 tree entirely.
+
+### Pre-flight for the pull request
+
+`gh auth status` resolves the active account to **fgabelmannjr**, which is the
+account with push rights here. Checked early rather than at PR time, because the
+recurring failure mode in this repository is a 403 from the wrong active account
+and it surfaces only at the push.
+
+### Post-implementation pre-flight (recorded before the closeout runs)
+
+**Deferred helpers, confirmed by reading the registry rather than by invoking
+them.** `speckit-pro/speckit_pro_runner/helpers/registry.py` records promotion
+status `deferred` for both `generate-uat-skeleton` (line 364-372) and
+`final-reviewability-backstop` (line 373-381). The installed protocol says not to
+invoke a deferred helper, so the evidence for the deferral is the registry entry
+itself.
+
+Consequences, both fail-open and both logged rather than silent:
+
+- **UAT runbook**: no committed source-derived runbook exists at
+  `specs/art-007-draft-pr-emission/.process/`, and the skeleton generator is
+  deferred, so no skeleton can be produced. The `uat-runbook-author` subagent is
+  therefore **not** spawned — the protocol spawns it only when a skeleton exists,
+  and an author agent with no skeleton would be inventing rather than rewriting.
+  Recorded as skipped with deferred-helper evidence.
+- **Final reviewability gate**: the backstop is deferred, so the decision runs on
+  current committed reviewability evidence instead. That evidence chain is the
+  setup-mode gate recorded at scaffold (`warn`, `pass: true`, with the warning
+  scoped to a whole-roadmap surface count rather than this spec's own budget of
+  one primary surface), the plan-phase `estimate-reviewable-loc` verdict of 0
+  projected against a 400 warn ceiling, and the operator-ratified **no split**
+  decision recorded in plan.md and restated at T004. All three are `pass` or
+  `warn` with the split decision settled, so PR preparation proceeds on the
+  single-PR path. There is no `pr_marker_plan`, because the atomicity route
+  resolved `one-navigable-PR` and the layer planner was correctly skipped.
+
+**Extension availability.** `.specify/extensions.yml` lists `archive`, `git`, and
+`verify` as installed; the `.registry` directory also carries `agent-context`,
+`checkpoint`, `retrospective`, `speckit-utils`, and `verify-tasks`. The
+`after_implement` hooks reference `verify-tasks` and `retrospective`, both marked
+`optional: true`.
+
+The branch is `art-007-draft-pr-emission`, which is non-numeric. The vendored
+extension commands guard on a `^[0-9]{3}-` branch pattern, so they abort with a
+branch-guard error on this repository's namespaced spec IDs. That is a known
+environmental limitation of the vendored upstream, not a defect in this feature
+and not a signal about the implementation: those checks are performed by hand and
+recorded as environmental skips.
