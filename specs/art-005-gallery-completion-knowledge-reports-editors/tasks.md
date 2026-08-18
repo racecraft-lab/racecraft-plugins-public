@@ -90,7 +90,7 @@ the branch cut from Slice 1 after PR 1 opens.
 exercise add/remove/reset and slider limits, verify visible counts/boundary
 feedback and representative fills, and confirm reload resets transient state.
 
-- [ ] T024 [US1] After PR 1 opens, create `art-005-gallery-completion-knowledge-reports-editors-slice-2` from the Slice 1 head and confirm the Slice 2 seven-path ledger plus 535-LOC ceiling in `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md` [FR-016-FR-018, SC-008]
+- [x] T024 [US1] After PR 1 opens, create `art-005-gallery-completion-knowledge-reports-editors-slice-2` from the Slice 1 head and confirm the Slice 2 seven-path ledger plus 535-LOC ceiling in `specs/art-005-gallery-completion-knowledge-reports-editors/plan.md` [FR-016-FR-018, SC-008]
 - [ ] T025 [US1] RED: add `concept-explainer` reader, transient control/reset, visible count/limit feedback, no-export, accessibility, responsive, and ART-020 scroll assertions to `tests/speckit-pro/unit/test-artifact-gallery.py` [FR-003, FR-005-FR-006, FR-013-FR-014, FR-021-FR-022; US1]
 - [ ] T026 [US1] RED: add the exact `concept-title`, `principles`, `worked-example`, and two-item `simulation-scenarios` contract to `tests/speckit-pro/unit/test-artifact-fill-regions.py` [FR-020; US1]
 - [ ] T027 [US1] RED proof: run both focused modules in `tests/speckit-pro/unit/` and require failures for missing `speckit-pro/artifact-gallery/templates/concept-explainer.html`, planned status, controls, and fills [FR-004, FR-020-FR-022; US1]
